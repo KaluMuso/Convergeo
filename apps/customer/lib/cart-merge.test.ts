@@ -30,4 +30,25 @@ describe("mergeGuestCartIntoAccount", () => {
     expect(new Headers(init.headers).get("Authorization")).toBe("Bearer real-session-token");
     expect(init.body).toBeUndefined();
   });
+
+  it("sends an explicit conflict resolution on retry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({ id: "account-cart" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const resolution = {
+      accept_price_changes: ["listing-price"],
+      pickup_location_choices: { "listing-pickup": "location-guest" },
+      remove_listing_ids: ["listing-unavailable"],
+    };
+
+    await mergeGuestCartIntoAccount("real-session-token", resolution);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(String(init.body))).toEqual(resolution);
+  });
 });

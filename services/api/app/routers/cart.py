@@ -13,7 +13,12 @@ from app.errors import AppError
 from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import CartLineView, group_by_vendor
-from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
+from app.services.cart.merge import (
+    MergeConflict,
+    MergeResolution,
+    merge_cart_items,
+    validate_item_qty_for_listing,
+)
 from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.store import (
     create_guest_cart,
@@ -146,6 +151,12 @@ class SaveForLaterResponse(BaseModel):
     product_slug: str | None = None
     removed: bool
     cart: CartResponse
+
+
+class CartMergeResolutionInput(BaseModel):
+    accept_price_changes: list[str] = Field(default_factory=list)
+    pickup_location_choices: dict[str, str | None] = Field(default_factory=dict)
+    remove_listing_ids: list[str] = Field(default_factory=list)
 
 
 def _sign_guest_cart_cookie(guest_token: str, settings: Settings) -> str:
@@ -539,11 +550,7 @@ def _enforce_listing_cart_rules(
             .maybe_single()
             .execute()
         )
-        row = (
-            response.data
-            if response is not None and isinstance(response.data, dict)
-            else None
-        )
+        row = response.data if response is not None and isinstance(response.data, dict) else None
         # A missing flag must not make a pre-release product class purchasable.
         if row is None or row.get("enabled") is not True:
             customer_released = False
@@ -968,30 +975,105 @@ async def save_cart_item_for_later(
     )
 
 
+def _merge_conflict_payload(conflicts: list[MergeConflict]) -> list[dict[str, Any]]:
+    return [
+        {
+            "listing_id": conflict.listing_id,
+            "code": conflict.code,
+            "message_key": conflict.message_key,
+            "details": conflict.details,
+        }
+        for conflict in conflicts
+    ]
+
+
+def _removed_merge_items(
+    items: list[dict[str, Any]],
+    remove_listing_ids: frozenset[str],
+) -> list[dict[str, Any]]:
+    quantities: dict[str, int] = {}
+    for item in items:
+        listing_id = str(item["listing_id"])
+        if listing_id in remove_listing_ids:
+            quantities[listing_id] = quantities.get(listing_id, 0) + int(item["qty"])
+    return [
+        {"listing_id": listing_id, "qty": quantities[listing_id]}
+        for listing_id in sorted(quantities)
+    ]
+
+
+def _validate_merge_resolution(
+    body: CartMergeResolutionInput,
+    conflicts: list[MergeConflict],
+) -> MergeResolution:
+    conflicts_by_listing: dict[str, list[MergeConflict]] = {}
+    for conflict in conflicts:
+        conflicts_by_listing.setdefault(conflict.listing_id, []).append(conflict)
+
+    accept_price_changes = frozenset(body.accept_price_changes)
+    pickup_location_choices = dict(body.pickup_location_choices)
+    remove_listing_ids = frozenset(body.remove_listing_ids)
+
+    invalid_accepts = {
+        listing_id
+        for listing_id in accept_price_changes
+        if not any(
+            conflict.code == "cart.price_changed"
+            for conflict in conflicts_by_listing.get(listing_id, [])
+        )
+    }
+    invalid_pickups = {
+        listing_id
+        for listing_id, choice in pickup_location_choices.items()
+        if not any(
+            conflict.code == "cart.pickup_conflict"
+            and choice
+            in {
+                conflict.details.get("user_pickup_location_id"),
+                conflict.details.get("guest_pickup_location_id"),
+            }
+            for conflict in conflicts_by_listing.get(listing_id, [])
+        )
+    }
+    invalid_removals = remove_listing_ids.difference(conflicts_by_listing)
+    if invalid_accepts or invalid_pickups or invalid_removals:
+        raise AppError(
+            code="cart.merge_resolution_stale",
+            message="Cart conflicts changed; review the current choices",
+            http_status=409,
+            details={
+                "retry": False,
+                "conflicts": _merge_conflict_payload(conflicts),
+            },
+        )
+
+    return MergeResolution(
+        accept_price_changes=accept_price_changes,
+        pickup_location_choices=pickup_location_choices,
+        remove_listing_ids=remove_listing_ids,
+    )
+
+
 @router.post("/merge", response_model=CartResponse)
 async def merge_cart_on_login(
     response: Response,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
+    body: CartMergeResolutionInput | None = None,
 ) -> CartResponse:
     from app.services.cart.merge_atomic import (
         AtomicMergeOutcome,
         apply_login_cart_merge_atomic,
+        fetch_cart_merge_authority,
     )
-    from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
 
     guest_token = _resolve_guest_token(request, settings)
     user_client = get_user_client(current_user.token, settings)
-
-    user_cart = _fetch_active_cart_by_user(user_client, current_user.id)
-    if user_cart is None:
-        user_cart = _create_user_cart(user_client, current_user.id)
-    user_cart_id = str(user_cart["id"])
-
     service = service_db_client()
+    ensure_response = service.rpc("ensure_account_cart", {"p_user_id": current_user.id}).execute()
+    user_cart_id = str(ensure_response.data)
     business_eligible = _business_eligible_for_user(current_user.id)
-    conflicts: list[MergeConflict] = []
 
     # Three deterministic optimistic attempts cover a concurrent ordinary cart
     # mutation without ever applying a stale proposal. A concurrent duplicate
@@ -1008,8 +1090,44 @@ async def merge_cart_on_login(
         guest_cart_id = str(guest_cart["id"])
         guest_items = _fetch_cart_items(service, guest_cart_id)
         all_items = user_items + guest_items
-        listings = fetch_listings_for_items(all_items)
-        rfq_threads_by_id = fetch_rfq_threads_for_items(service, all_items)
+        authority = fetch_cart_merge_authority(
+            service,
+            user_id=current_user.id,
+            items=all_items,
+        )
+        raw_listing_rows = authority.get("listings")
+        listing_rows = raw_listing_rows if isinstance(raw_listing_rows, list) else []
+        listings = {
+            str(row["id"]): row for row in listing_rows if isinstance(row, dict) and row.get("id")
+        }
+        raw_rfq_rows = authority.get("rfq_threads")
+        rfq_rows = raw_rfq_rows if isinstance(raw_rfq_rows, list) else []
+        rfq_threads_by_id = {
+            str(row["id"]): row for row in rfq_rows if isinstance(row, dict) and row.get("id")
+        }
+        stock_rows = authority.get("location_stock")
+        location_stock = (
+            [row for row in stock_rows if isinstance(row, dict)]
+            if isinstance(stock_rows, list)
+            else []
+        )
+        business_eligible = authority.get("business_status") == "verified"
+
+        _, current_conflicts = merge_cart_items(
+            user_items=user_items,
+            guest_items=guest_items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=current_user.id,
+            rfq_threads_by_id=rfq_threads_by_id,
+            location_stock=location_stock,
+        )
+
+        resolution = (
+            _validate_merge_resolution(body, current_conflicts)
+            if body is not None
+            else MergeResolution()
+        )
         merged_items, conflicts = merge_cart_items(
             user_items=user_items,
             guest_items=guest_items,
@@ -1017,7 +1135,19 @@ async def merge_cart_on_login(
             business_eligible=business_eligible,
             customer_id=current_user.id,
             rfq_threads_by_id=rfq_threads_by_id,
+            location_stock=location_stock,
+            resolution=resolution,
         )
+        if conflicts:
+            raise AppError(
+                code="cart.merge_conflict",
+                message="Review cart conflicts before continuing",
+                http_status=409,
+                details={
+                    "retry": False,
+                    "conflicts": _merge_conflict_payload(conflicts),
+                },
+            )
 
         outcome = apply_login_cart_merge_atomic(
             service,
@@ -1027,9 +1157,19 @@ async def merge_cart_on_login(
             guest_token=guest_token,
             expected_user_items=user_items,
             expected_guest_items=guest_items,
+            expected_authority=authority,
             merged_items=merged_items,
+            removed_items=_removed_merge_items(all_items, resolution.remove_listing_ids),
+            resolution={
+                "accept_price_changes": sorted(resolution.accept_price_changes),
+                "pickup_location_choices": resolution.pickup_location_choices,
+                "remove_listing_ids": sorted(resolution.remove_listing_ids),
+            },
         )
-        if outcome is not AtomicMergeOutcome.STALE_SNAPSHOT:
+        if outcome not in {
+            AtomicMergeOutcome.STALE_SNAPSHOT,
+            AtomicMergeOutcome.STALE_AUTHORITY,
+        }:
             break
         if attempt == 2:
             raise AppError(
@@ -1048,7 +1188,6 @@ async def merge_cart_on_login(
         items=final_items,
         listings_by_id=listings,
         business_eligible=business_eligible,
-        conflicts=conflicts,
         customer_id=current_user.id,
     )
 
@@ -1119,9 +1258,9 @@ async def accept_rfq_into_cart(
     }
 
     if rows and isinstance(rows[0], dict):
-        line_writer.table("cart_items").update(line_payload).eq(
-            "id", str(rows[0]["id"])
-        ).eq("cart_id", cart_id).execute()
+        line_writer.table("cart_items").update(line_payload).eq("id", str(rows[0]["id"])).eq(
+            "cart_id", cart_id
+        ).execute()
     else:
         line_writer.table("cart_items").insert(
             {

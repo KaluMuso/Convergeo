@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
@@ -19,7 +18,11 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { ResendCountdown } from "../../../(auth)/_components/resend-countdown";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
-import { mergeGuestCartIntoAccount } from "../../../../../lib/cart-merge";
+import {
+  reconcileCustomerSession,
+  type CustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 
 export type ContactStepLabels = {
   title: string;
@@ -65,7 +68,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   /** Single-flight lock for OTP verification — see handleVerifyOtp. */
   const verifyingRef = useRef(false);
   /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
-  const acceptedTokenRef = useRef<string | null>(null);
+  const acceptedSessionRef = useRef<CustomerSession | null>(null);
 
   const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
@@ -162,9 +165,10 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
     setLoading(true);
 
     try {
-      let token = acceptedTokenRef.current;
+      let acceptedSession = acceptedSessionRef.current;
+      const retryReconciliation = acceptedSession !== null;
 
-      if (!token) {
+      if (!acceptedSession) {
         const supabase = await getBrowserClient();
         const { data, error } = await supabase.auth.verifyOtp({
           phone,
@@ -189,19 +193,20 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
           setLoading(false);
           return;
         }
-        token = data.session?.access_token ?? null;
-        if (!token) {
+        acceptedSession = data.session;
+        if (!acceptedSession?.access_token) {
           setErrorMessage(labels.generic);
           verifyingRef.current = false;
           setLoading(false);
           return;
         }
 
-        acceptedTokenRef.current = token;
+        acceptedSessionRef.current = acceptedSession;
       }
 
-      await mergeGuestCartIntoAccount(token);
-      await completeContactStep(token, phone);
+      const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
+      if (!readySession?.access_token) throw new Error("auth.session_required");
+      await completeContactStep(readySession.access_token, phone);
     } catch {
       // Before acceptance this retries verification; after acceptance it
       // retries only merge/contact with the saved session token.

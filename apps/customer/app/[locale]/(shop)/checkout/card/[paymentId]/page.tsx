@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
@@ -9,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { useSession } from "../../../../../../lib/customer-session";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
 type WidgetCustomer = {

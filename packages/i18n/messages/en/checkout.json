@@ -68,7 +68,16 @@
     "escrowTeaser": "When you pay online, Convergeo holds your money until delivery — then releases it to the seller.",
     "stockUnavailableNotice": "An item is no longer available. Review your cart before continuing to checkout.",
     "summaryHeading": "Order summary",
-    "sellerIndex": "Seller {index} of {total}"
+    "sellerIndex": "Seller {index} of {total}",
+    "mergeRecoveryTitle": "Review your cart before continuing",
+    "mergeRecoveryBody": "Your guest cart and account cart disagree. Nothing has been removed. Choose how to resolve the listed items.",
+    "mergeConflictLine": "Item {listing}: {code}",
+    "mergeAccountChoice": "Keep account pickup choices",
+    "mergeGuestChoice": "Use guest pickup choices",
+    "mergeApply": "Accept current prices and remove unavailable items",
+    "mergeRetry": "Retry cart merge",
+    "mergeSignOut": "Sign out",
+    "mergeFailure": "We could not finish securing your cart. Your items are still saved."
   },
   "checkout": {
     "pageTitle": "Checkout",

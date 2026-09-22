@@ -146,8 +146,18 @@ class _Client:
         return _Query(self.store)
 
     def rpc(self, function_name: str, params: dict[str, Any]) -> _RpcQuery:
+        if function_name == "ensure_account_cart":
+            return cast(Any, _StaticRpcQuery(USER_CART_ID))
         assert function_name == "apply_login_cart_merge"
         return _RpcQuery(self.store, params)
+
+
+class _StaticRpcQuery:
+    def __init__(self, data: Any) -> None:
+        self.data = data
+
+    def execute(self) -> SimpleNamespace:
+        return SimpleNamespace(data=self.data)
 
 
 class _RpcQuery:
@@ -184,6 +194,7 @@ def test_ambiguous_concurrent_merge_preserves_account_and_guest_lines(
 ) -> None:
     """A retry while request A is still executing must not replace U with G."""
     from app.routers import cart
+    from app.services.cart import merge_atomic
     from app.services.rfq import listing_cart_authority
 
     store = _LegacyRaceStore()
@@ -210,6 +221,7 @@ def test_ambiguous_concurrent_merge_preserves_account_and_guest_lines(
         lambda _client, _items: {},
     )
     monkeypatch.setattr(cart, "merge_cart_items", _merge_proposal)
+    monkeypatch.setattr(merge_atomic, "fetch_cart_merge_authority", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(cart, "_business_eligible_for_user", lambda _user_id: False)
     monkeypatch.setattr(cart, "service_db_client", lambda: service_client)
     monkeypatch.setattr(cart, "_clear_guest_cookie", lambda _response: None)
@@ -218,11 +230,11 @@ def test_ambiguous_concurrent_merge_preserves_account_and_guest_lines(
     def run_request(request_name: str) -> None:
         threading.current_thread().name = request_name
         asyncio.run(
-                cart.merge_cart_on_login(
-                    Response(),
-                    cast(Any, SimpleNamespace(id=USER_ID, token=f"token-{request_name}")),
-                    cast(Any, SimpleNamespace()),
-                    cast(Any, SimpleNamespace()),
+            cart.merge_cart_on_login(
+                Response(),
+                cast(Any, SimpleNamespace(id=USER_ID, token=f"token-{request_name}")),
+                cast(Any, SimpleNamespace()),
+                cast(Any, SimpleNamespace()),
             )
         )
 
@@ -246,6 +258,7 @@ def _patch_endpoint(
     guest_token: str | None = "guest-token",
 ) -> None:
     from app.routers import cart
+    from app.services.cart import merge_atomic
     from app.services.rfq import listing_cart_authority
 
     client = _Client(store)
@@ -277,6 +290,7 @@ def _patch_endpoint(
         lambda _client, _items: {},
     )
     monkeypatch.setattr(cart, "merge_cart_items", _merge_proposal)
+    monkeypatch.setattr(merge_atomic, "fetch_cart_merge_authority", lambda *_args, **_kwargs: {})
     monkeypatch.setattr(cart, "_business_eligible_for_user", lambda _user_id: False)
     monkeypatch.setattr(cart, "service_db_client", lambda: client)
     monkeypatch.setattr(cart, "_clear_guest_cookie", lambda _response: None)

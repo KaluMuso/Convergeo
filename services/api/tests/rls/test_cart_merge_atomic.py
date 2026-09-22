@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+import httpx
 import psycopg
 import pytest
 from tests.rls.conftest import SqlResult, seed_matrix_fixtures
@@ -21,7 +23,10 @@ select public.apply_login_cart_merge(
   %(guest_token)s::text,
   %(user_snapshot)s::jsonb,
   %(guest_snapshot)s::jsonb,
-  %(proposal)s::jsonb
+  %(authority)s::jsonb,
+  %(proposal)s::jsonb,
+  %(removed)s::jsonb,
+  %(resolution)s::jsonb
 )::text
 """
 
@@ -69,7 +74,6 @@ def _service_call(dsn: str, params: dict[str, Any], barrier: threading.Barrier) 
     with psycopg.connect(dsn) as conn:
         with conn.cursor() as cursor:
             cursor.execute("set local role service_role")
-            cursor.execute("set local request.jwt.claim.role = 'service_role'")
             barrier.wait(timeout=10)
             cursor.execute(_RPC_SQL, params)
             row = cursor.fetchone()
@@ -84,9 +88,7 @@ def _seed_merge_case(db: _PsycopgDb) -> dict[str, Any]:
     user_line_id = str(uuid.uuid4())
     guest_line_id = str(uuid.uuid4())
     guest_token = f"merge-test-{uuid.uuid4()}"
-    listings = db.run(
-        "select id::text from public.vendor_listings order by id limit 3"
-    )
+    listings = db.run("select id::text from public.vendor_listings order by id limit 3")
     assert listings.ok, listings.error
     assert len(listings.rows) == 3
     user_listing_id, guest_listing_id, concurrent_listing_id = listings.rows
@@ -143,6 +145,7 @@ def _seed_merge_case(db: _PsycopgDb) -> dict[str, Any]:
             "qty": 1,
             "unit_price_ngwee": 10000,
             "wholesale": False,
+            "pickup_location_id": None,
             "rfq_thread_id": None,
         },
         {
@@ -150,9 +153,17 @@ def _seed_merge_case(db: _PsycopgDb) -> dict[str, Any]:
             "qty": 1,
             "unit_price_ngwee": 20000,
             "wholesale": False,
+            "pickup_location_id": None,
             "rfq_thread_id": None,
         },
     ]
+    authority_result = db.run(
+        "select public.cart_merge_authority("
+        f"'{user_id}'::uuid, "
+        f"array['{user_listing_id}','{guest_listing_id}']::uuid[], "
+        "array[]::uuid[])::text"
+    )
+    assert authority_result.ok, authority_result.error
     return {
         "user_id": user_id,
         "user_cart_id": user_cart_id,
@@ -160,11 +171,49 @@ def _seed_merge_case(db: _PsycopgDb) -> dict[str, Any]:
         "guest_token": guest_token,
         "user_snapshot": json.dumps(user_snapshot),
         "guest_snapshot": json.dumps(guest_snapshot),
+        "authority": authority_result.rows[0],
         "proposal": json.dumps(proposal),
+        "removed": "[]",
+        "resolution": "{}",
         "expected_listings": {user_listing_id, guest_listing_id},
+        "user_line_id": user_line_id,
+        "guest_line_id": guest_line_id,
         "user_listing_id": user_listing_id,
+        "guest_listing_id": guest_listing_id,
         "concurrent_listing_id": concurrent_listing_id,
     }
+
+
+def _service_error(db: _PsycopgDb, params: dict[str, Any]) -> tuple[str | None, str]:
+    try:
+        _service_call(db.dsn, params, threading.Barrier(1))
+    except psycopg.Error as exc:
+        return exc.sqlstate, str(exc)
+    raise AssertionError("merge unexpectedly succeeded")
+
+
+def _authority(db: _PsycopgDb, user_id: str, listing_ids: list[str]) -> str:
+    ids = ",".join(f"'{listing_id}'" for listing_id in listing_ids)
+    result = db.run(
+        "select public.cart_merge_authority("
+        f"'{user_id}'::uuid, array[{ids}]::uuid[], array[]::uuid[])::text"
+    )
+    assert result.ok, result.error
+    return result.rows[0]
+
+
+def _wait_for_advisory_lock(db: _PsycopgDb, mode: str, granted: bool) -> None:
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        result = db.run(
+            "select count(*)::text from pg_locks "
+            "where locktype = 'advisory' and classid = 72419 and objid = 1 "
+            f"and mode = '{mode}' and granted = {str(granted).lower()}"
+        )
+        assert result.ok, result.error
+        if int(result.rows[0]) > 0:
+            return
+    raise AssertionError(f"advisory {mode} granted={granted} was not observed")
 
 
 def test_two_database_merges_preserve_both_lines_exactly_once(atomic_db: _PsycopgDb) -> None:
@@ -190,10 +239,8 @@ def test_two_database_merges_preserve_both_lines_exactly_once(atomic_db: _Psycop
     assert set(final.rows) == params["expected_listings"]
     assert len(final.rows) == 2
 
-    converted = atomic_db.run(
-        "select status from public.carts "
-        f"where id = '{params['guest_cart_id']}'"
-    )
+    converted_sql = f"select status from public.carts where id = '{params['guest_cart_id']}'"
+    converted = atomic_db.run(converted_sql)
     assert converted.ok, converted.error
     assert converted.rows == ["converted"]
 
@@ -224,12 +271,232 @@ def test_stale_snapshot_refuses_to_clobber_concurrent_account_line(
         params["concurrent_listing_id"],
     }
 
-    guest = atomic_db.run(
-        "select status from public.carts "
-        f"where id = '{params['guest_cart_id']}'"
-    )
+    guest = atomic_db.run(f"select status from public.carts where id = '{params['guest_cart_id']}'")
     assert guest.ok, guest.error
     assert guest.rows == ["active"]
+
+    params["user_snapshot"] = json.dumps(
+        [
+            *json.loads(params["user_snapshot"]),
+            {
+                "id": concurrent_line_id,
+                "listing_id": params["concurrent_listing_id"],
+                "qty": 1,
+                "unit_price_ngwee": 30000,
+                "wholesale": False,
+                "pickup_location_id": None,
+                "rfq_thread_id": None,
+            },
+        ]
+    )
+    params["proposal"] = json.dumps(
+        [
+            *json.loads(params["proposal"]),
+            {
+                "listing_id": params["concurrent_listing_id"],
+                "qty": 1,
+                "unit_price_ngwee": 30000,
+                "wholesale": False,
+                "pickup_location_id": None,
+                "rfq_thread_id": None,
+            },
+        ]
+    )
+    params["authority"] = _authority(
+        atomic_db,
+        params["user_id"],
+        [
+            params["user_listing_id"],
+            params["guest_listing_id"],
+            params["concurrent_listing_id"],
+        ],
+    )
+    retry = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(retry)["outcome"] == "applied"
+
+
+def test_empty_guest_cart_preserves_account_lines(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    deleted = atomic_db.run(f"delete from public.cart_items where id = '{params['guest_line_id']}'")
+    assert deleted.ok, deleted.error
+    params["guest_snapshot"] = "[]"
+    params["proposal"] = json.dumps([json.loads(params["user_snapshot"])[0]])
+    params["authority"] = _authority(atomic_db, params["user_id"], [params["user_listing_id"]])
+
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "applied"
+    final = atomic_db.run(
+        f"select listing_id::text from public.cart_items where cart_id = '{params['user_cart_id']}'"
+    )
+    assert final.rows == [params["user_listing_id"]]
+
+
+def test_same_sku_quantities_are_conserved(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    changed = atomic_db.run(
+        "update public.cart_items "
+        f"set listing_id = '{params['user_listing_id']}' "
+        f"where id = '{params['guest_line_id']}'"
+    )
+    assert changed.ok, changed.error
+    guest = json.loads(params["guest_snapshot"])[0]
+    guest["listing_id"] = params["user_listing_id"]
+    params["guest_snapshot"] = json.dumps([guest])
+    proposal = json.loads(params["proposal"])[0]
+    proposal["qty"] = 2
+    params["proposal"] = json.dumps([proposal])
+    params["authority"] = _authority(atomic_db, params["user_id"], [params["user_listing_id"]])
+
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "applied"
+    final = atomic_db.run(
+        f"select qty::text from public.cart_items where cart_id = '{params['user_cart_id']}'"
+    )
+    assert final.rows == ["2"]
+
+
+def test_rpc_refuses_silent_item_loss_and_rolls_back(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    params["proposal"] = json.dumps([json.loads(params["user_snapshot"])[0]])
+
+    sqlstate, message = _service_error(atomic_db, params)
+    assert sqlstate == "PT409"
+    assert "conserve or explicitly remove" in message
+    guest = atomic_db.run(f"select status from public.carts where id = '{params['guest_cart_id']}'")
+    assert guest.rows == ["active"]
+    account = atomic_db.run(
+        f"select count(*)::text from public.cart_items where cart_id = '{params['user_cart_id']}'"
+    )
+    assert account.rows == ["1"]
+
+
+def test_pickup_location_cannot_be_dropped_and_is_preserved(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    locations = atomic_db.run("select id::text from public.vendor_locations order by id limit 1")
+    assert locations.ok and locations.rows, locations.error
+    location_id = locations.rows[0]
+    changed = atomic_db.run(
+        "update public.cart_items "
+        f"set pickup_location_id = '{location_id}' "
+        f"where id = '{params['guest_line_id']}'"
+    )
+    assert changed.ok, changed.error
+    guest = json.loads(params["guest_snapshot"])[0]
+    guest["pickup_location_id"] = location_id
+    params["guest_snapshot"] = json.dumps([guest])
+
+    sqlstate, message = _service_error(atomic_db, params)
+    assert sqlstate == "PT409"
+    assert "pickup location must be preserved" in message
+
+    proposal = json.loads(params["proposal"])
+    proposal[1]["pickup_location_id"] = location_id
+    params["proposal"] = json.dumps(proposal)
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "applied"
+    final = atomic_db.run(
+        "select pickup_location_id::text from public.cart_items "
+        f"where cart_id = '{params['user_cart_id']}' "
+        f"and listing_id = '{params['guest_listing_id']}'"
+    )
+    assert final.rows == [location_id]
+
+
+def test_different_pickups_require_recorded_resolution(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    locations = atomic_db.run("select id::text from public.vendor_locations order by id limit 2")
+    if len(locations.rows) < 2:
+        pytest.skip("fixture needs two vendor locations")
+    location_a, location_b = locations.rows
+    changed = atomic_db.run(
+        "update public.cart_items "
+        f"set pickup_location_id = '{location_a}' "
+        f"where id = '{params['user_line_id']}'; "
+        "update public.cart_items "
+        f"set listing_id = '{params['user_listing_id']}', pickup_location_id = '{location_b}' "
+        f"where id = '{params['guest_line_id']}'"
+    )
+    assert changed.ok, changed.error
+    user = json.loads(params["user_snapshot"])[0]
+    guest = json.loads(params["guest_snapshot"])[0]
+    user["pickup_location_id"] = location_a
+    guest["listing_id"] = params["user_listing_id"]
+    guest["pickup_location_id"] = location_b
+    params["user_snapshot"] = json.dumps([user])
+    params["guest_snapshot"] = json.dumps([guest])
+    proposal = json.loads(params["proposal"])[0]
+    proposal["qty"] = 2
+    proposal["pickup_location_id"] = location_b
+    params["proposal"] = json.dumps([proposal])
+    params["authority"] = _authority(atomic_db, params["user_id"], [params["user_listing_id"]])
+
+    sqlstate, _ = _service_error(atomic_db, params)
+    assert sqlstate == "PT409"
+    params["resolution"] = json.dumps(
+        {"pickup_location_choices": {params["user_listing_id"]: location_b}}
+    )
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "applied"
+    receipt = atomic_db.run(
+        "select resolution -> 'pickup_location_choices' ->> "
+        f"'{params['user_listing_id']}' from public.cart_merge_receipts "
+        f"where guest_cart_id = '{params['guest_cart_id']}'"
+    )
+    assert receipt.rows == [location_b]
+
+
+def test_authority_change_returns_stale_without_consuming_guest(
+    atomic_db: _PsycopgDb,
+) -> None:
+    params = _seed_merge_case(atomic_db)
+    changed = atomic_db.run(
+        "update public.vendor_listings set price_ngwee = price_ngwee + 1 "
+        f"where id = '{params['guest_listing_id']}'"
+    )
+    assert changed.ok, changed.error
+
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "stale_authority"
+    guest = atomic_db.run(f"select status from public.carts where id = '{params['guest_cart_id']}'")
+    assert guest.rows == ["active"]
+
+
+def test_service_role_works_through_real_postgrest_and_anon_is_denied(
+    atomic_db: _PsycopgDb,
+) -> None:
+    rest_url = os.environ.get("SUPABASE_REST_URL")
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY")
+    if not rest_url or not service_key or not anon_key:
+        pytest.skip("real PostgREST credentials were not provided")
+    params = _seed_merge_case(atomic_db)
+    payload = {
+        "p_user_id": params["user_id"],
+        "p_user_cart_id": params["user_cart_id"],
+        "p_guest_cart_id": params["guest_cart_id"],
+        "p_guest_token": params["guest_token"],
+        "p_expected_user_items": json.loads(params["user_snapshot"]),
+        "p_expected_guest_items": json.loads(params["guest_snapshot"]),
+        "p_expected_authority": json.loads(params["authority"]),
+        "p_merged_items": json.loads(params["proposal"]),
+        "p_removed_items": [],
+        "p_resolution": {},
+    }
+    with httpx.Client(timeout=10) as client:
+        denied = client.post(
+            f"{rest_url}/rpc/apply_login_cart_merge",
+            headers={"apikey": anon_key, "Authorization": f"Bearer {anon_key}"},
+            json=payload,
+        )
+        accepted = client.post(
+            f"{rest_url}/rpc/apply_login_cart_merge",
+            headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+            json=payload,
+        )
+
+    assert denied.status_code in {401, 403, 404}
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["outcome"] == "applied"
 
 
 def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
@@ -243,7 +510,6 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
         try:
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
-                cursor.execute("set local request.jwt.claim.role = 'service_role'")
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -258,7 +524,6 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
     with psycopg.connect(atomic_db.dsn) as merge_conn:
         with merge_conn.cursor() as cursor:
             cursor.execute("set local role service_role")
-            cursor.execute("set local request.jwt.claim.role = 'service_role'")
             cursor.execute(_RPC_SQL, params)
             row = cursor.fetchone()
             assert row is not None and json.loads(str(row[0]))["outcome"] == "applied"
@@ -266,20 +531,18 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
             with ThreadPoolExecutor(max_workers=1) as executor:
                 late_insert = executor.submit(late_guest_insert)
                 assert insert_started.wait(timeout=10)
+                _wait_for_advisory_lock(atomic_db, "ShareLock", False)
                 merge_conn.commit()
-                assert late_insert.result(timeout=10) == "40001"
+                assert late_insert.result(timeout=10) == "PT409"
 
     account = atomic_db.run(
-        "select listing_id::text from public.cart_items "
-        f"where cart_id = '{params['user_cart_id']}'"
+        f"select listing_id::text from public.cart_items where cart_id = '{params['user_cart_id']}'"
     )
     assert account.ok, account.error
     assert set(account.rows) == params["expected_listings"]
 
-    late_guest_line = atomic_db.run(
-        "select count(*) from public.cart_items "
-        f"where id = '{late_line_id}'"
-    )
+    late_guest_sql = f"select count(*) from public.cart_items where id = '{late_line_id}'"
+    late_guest_line = atomic_db.run(late_guest_sql)
     assert late_guest_line.ok, late_guest_line.error
     assert late_guest_line.rows == ["0"]
 
@@ -295,7 +558,6 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
         try:
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
-                cursor.execute("set local request.jwt.claim.role = 'service_role'")
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -310,7 +572,6 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
     with psycopg.connect(atomic_db.dsn) as merge_conn:
         with merge_conn.cursor() as cursor:
             cursor.execute("set local role service_role")
-            cursor.execute("set local request.jwt.claim.role = 'service_role'")
             cursor.execute(_RPC_SQL, params)
             row = cursor.fetchone()
             assert row is not None and json.loads(str(row[0]))["outcome"] == "applied"
@@ -318,12 +579,12 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
             with ThreadPoolExecutor(max_workers=1) as executor:
                 late_insert = executor.submit(late_account_insert)
                 assert insert_started.wait(timeout=10)
+                _wait_for_advisory_lock(atomic_db, "ShareLock", False)
                 merge_conn.commit()
                 assert late_insert.result(timeout=10) is None
 
     account = atomic_db.run(
-        "select listing_id::text from public.cart_items "
-        f"where cart_id = '{params['user_cart_id']}'"
+        f"select listing_id::text from public.cart_items where cart_id = '{params['user_cart_id']}'"
     )
     assert account.ok, account.error
     assert set(account.rows) == {
@@ -332,10 +593,105 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
     }
 
 
+@pytest.mark.parametrize(
+    ("mutation_sql", "expected_rows"),
+    [
+        ("update public.cart_items set qty = 7 where id = '{line_id}'", ["7"]),
+        ("delete from public.cart_items where id = '{line_id}'", []),
+    ],
+    ids=["simultaneous-update", "simultaneous-delete"],
+)
+def test_account_mutations_wait_and_apply_after_merge(
+    atomic_db: _PsycopgDb,
+    mutation_sql: str,
+    expected_rows: list[str],
+) -> None:
+    params = _seed_merge_case(atomic_db)
+    started = threading.Event()
+
+    def mutate() -> str | None:
+        try:
+            with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
+                cursor.execute("set local role service_role")
+                started.set()
+                cursor.execute(mutation_sql.format(line_id=params["user_line_id"]))
+        except psycopg.Error as exc:
+            return exc.sqlstate
+        return None
+
+    with psycopg.connect(atomic_db.dsn) as merge_conn, merge_conn.cursor() as cursor:
+        cursor.execute("set local role service_role")
+        cursor.execute(_RPC_SQL, params)
+        assert json.loads(str(cursor.fetchone()[0]))["outcome"] == "applied"
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            mutation = executor.submit(mutate)
+            assert started.wait(timeout=10)
+            _wait_for_advisory_lock(atomic_db, "ShareLock", False)
+            merge_conn.commit()
+            assert mutation.result(timeout=10) is None
+
+    final = atomic_db.run(
+        f"select qty::text from public.cart_items where id = '{params['user_line_id']}'"
+    )
+    assert final.rows == expected_rows
+
+
+def test_authority_writer_precedes_merge_and_forces_recompute(
+    atomic_db: _PsycopgDb,
+) -> None:
+    params = _seed_merge_case(atomic_db)
+    merge_started = threading.Event()
+
+    def merge() -> str:
+        merge_started.set()
+        return _service_call(atomic_db.dsn, params, threading.Barrier(1))
+
+    with psycopg.connect(atomic_db.dsn) as authority_conn, authority_conn.cursor() as cursor:
+        cursor.execute(
+            "update public.vendor_listings set price_ngwee = price_ngwee + 1 where id = %s",
+            (params["guest_listing_id"],),
+        )
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending_merge = executor.submit(merge)
+            assert merge_started.wait(timeout=10)
+            _wait_for_advisory_lock(atomic_db, "ExclusiveLock", False)
+            authority_conn.commit()
+            outcome = json.loads(pending_merge.result(timeout=10))["outcome"]
+
+    assert outcome == "stale_authority"
+
+
+def test_concurrent_first_login_creates_one_account_cart(atomic_db: _PsycopgDb) -> None:
+    user_id = str(uuid.uuid4())
+    inserted = atomic_db.run(
+        "insert into auth.users (instance_id,id,aud,role,email,encrypted_password,"
+        "email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values ("
+        f"'00000000-0000-0000-0000-000000000000','{user_id}','authenticated',"
+        f"'authenticated','{user_id}@merge.test','hash',timezone('utc',now()),"
+        "'{}'::jsonb,'{}'::jsonb,timezone('utc',now()),timezone('utc',now()))"
+    )
+    assert inserted.ok, inserted.error
+    barrier = threading.Barrier(4)
+
+    def ensure() -> str:
+        with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
+            cursor.execute("set local role service_role")
+            barrier.wait(timeout=10)
+            cursor.execute("select public.ensure_account_cart(%s)::text", (user_id,))
+            return str(cursor.fetchone()[0])
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        cart_ids = list(executor.map(lambda _index: ensure(), range(4)))
+    assert len(set(cart_ids)) == 1
+    count = atomic_db.run(
+        f"select count(*)::text from public.carts where user_id = '{user_id}' and status = 'active'"
+    )
+    assert count.rows == ["1"]
+
+
 def test_rpc_execute_is_service_role_only(atomic_db: _PsycopgDb) -> None:
     signature = (
-        "public.apply_login_cart_merge"
-        "(uuid,uuid,uuid,text,jsonb,jsonb,jsonb)"
+        "public.apply_login_cart_merge(uuid,uuid,uuid,text,jsonb,jsonb,jsonb,jsonb,jsonb,jsonb)"
     )
     privileges = atomic_db.run(
         "select "
@@ -358,11 +714,12 @@ def test_rpc_execute_is_service_role_only(atomic_db: _PsycopgDb) -> None:
 def test_rpc_rejects_wrong_verified_guest_token(atomic_db: _PsycopgDb) -> None:
     params = _seed_merge_case(atomic_db)
     result = atomic_db.run(
-        "select public.apply_login_cart_merge("
+        "set local role service_role; select public.apply_login_cart_merge("
         f"'{params['user_id']}'::uuid, "
         f"'{params['user_cart_id']}'::uuid, "
         f"'{params['guest_cart_id']}'::uuid, "
-        "'wrong-token', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)"
+        "'wrong-token', '[]'::jsonb, '[]'::jsonb, '{}'::jsonb, "
+        "'[]'::jsonb, '[]'::jsonb, '{}'::jsonb)"
     )
     assert not result.ok
     assert result.sqlstate == "42501"

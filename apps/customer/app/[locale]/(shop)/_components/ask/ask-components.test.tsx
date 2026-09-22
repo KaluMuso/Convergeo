@@ -15,7 +15,7 @@ vi.mock("@vergeo/config", async () => {
   return { ...actual, createApiClient: () => ({ request }) };
 });
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => ({ session: null, user: null, loading: false }),
 }));
 

@@ -11,7 +11,9 @@ const verifyOtp = vi.fn();
 const exchangeCodeForSession = vi.fn();
 const getSession = vi.fn();
 const getPreferences = vi.fn();
-const mergeGuestCartIntoAccount = vi.fn();
+const { getReadyCustomerSession } = vi.hoisted(() => ({
+  getReadyCustomerSession: vi.fn(),
+}));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -30,8 +32,8 @@ vi.mock("../../account/_components/account-api", () => ({
   }),
 }));
 
-vi.mock("../../../../lib/cart-merge", () => ({
-  mergeGuestCartIntoAccount: (accessToken: string) => mergeGuestCartIntoAccount(accessToken),
+vi.mock("../../../../lib/customer-session", () => ({
+  getReadyCustomerSession,
 }));
 
 const push = vi.fn();
@@ -54,7 +56,7 @@ beforeEach(() => {
   getPreferences.mockResolvedValue({
     onboarding: { completed_at: "2026-01-01T00:00:00Z" },
   });
-  mergeGuestCartIntoAccount.mockResolvedValue(undefined);
+  getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
 });
 
 import { OtpForm } from "./otp-form";
@@ -261,7 +263,7 @@ describe("OtpForm", () => {
         token: "123456",
         type: "sms",
       });
-      expect(mergeGuestCartIntoAccount).toHaveBeenCalledWith("tok");
+      expect(getReadyCustomerSession).toHaveBeenCalledWith();
       expect(getPreferences).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en");
       expect(refresh).toHaveBeenCalled();
@@ -270,9 +272,9 @@ describe("OtpForm", () => {
 
   it("retries failed post-auth reconciliation without consuming the OTP twice", async () => {
     verifyOtp.mockResolvedValue({ error: null });
-    mergeGuestCartIntoAccount
+    getReadyCustomerSession
       .mockRejectedValueOnce(new Error("merge failed"))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ access_token: "tok" });
     const user = userEvent.setup();
 
     render(
@@ -291,13 +293,13 @@ describe("OtpForm", () => {
     });
 
     expect(verifyOtp).toHaveBeenCalledTimes(1);
-    expect(mergeGuestCartIntoAccount).toHaveBeenCalledTimes(1);
+    expect(getReadyCustomerSession).toHaveBeenCalledTimes(1);
     expect(push).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Verify" }));
 
     await waitFor(() => {
-      expect(mergeGuestCartIntoAccount).toHaveBeenCalledTimes(2);
+      expect(getReadyCustomerSession).toHaveBeenCalledTimes(2);
       expect(push).toHaveBeenCalledWith("/en");
     });
     expect(verifyOtp).toHaveBeenCalledTimes(1);
@@ -323,7 +325,7 @@ describe("OtpForm", () => {
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalled();
-      expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
+      expect(getReadyCustomerSession).not.toHaveBeenCalled();
       expect(getPreferences).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en/listings");
     });

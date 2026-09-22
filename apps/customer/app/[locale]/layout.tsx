@@ -21,6 +21,7 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
+import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
 import { LocaleSwitcher } from "./_components/locale-switcher";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
@@ -111,10 +112,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
-  const legalMessages = await loadNamespace(locale as Locale, "legal");
+  const [legalMessages, checkoutMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "legal"),
+    loadNamespace(locale as Locale, "checkout"),
+  ]);
   const messages = {
     ...baseMessages,
     legal: legalMessages,
+    checkout: checkoutMessages,
   } as AbstractIntlMessages;
 
   const tLegal = createTranslator({
@@ -127,6 +132,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     messages,
     namespace: "common",
   }) as unknown as LegalTranslator;
+  const tCheckout = createTranslator({ locale, messages, namespace: "checkout" });
   const year = new Date().getFullYear();
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
@@ -220,6 +226,20 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
             <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+            <CustomerAuthBarrier
+              labels={{
+                title: tCheckout("cart.mergeRecoveryTitle"),
+                body: tCheckout("cart.mergeRecoveryBody"),
+                conflictLine: (listing, code) =>
+                  tCheckout("cart.mergeConflictLine", { listing, code } as never),
+                accountChoice: tCheckout("cart.mergeAccountChoice"),
+                guestChoice: tCheckout("cart.mergeGuestChoice"),
+                apply: tCheckout("cart.mergeApply"),
+                retry: tCheckout("cart.mergeRetry"),
+                signOut: tCheckout("cart.mergeSignOut"),
+                failure: tCheckout("cart.mergeFailure"),
+              }}
+            />
             <div className="flex flex-1 flex-col">{children}</div>
             <Footer
               appName={appName}

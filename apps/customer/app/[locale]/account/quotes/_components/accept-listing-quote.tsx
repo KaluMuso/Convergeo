@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -9,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
+import { useSession } from "../../../../../lib/customer-session";
 import { createRfqApiClient } from "../../../../../lib/rfq-api";
 
 import type { RfqThread } from "../../../../../lib/rfq-api";

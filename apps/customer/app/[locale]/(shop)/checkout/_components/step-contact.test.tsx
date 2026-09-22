@@ -5,10 +5,10 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { signInWithOtp, verifyOtp, mergeGuestCartIntoAccount, contactRequest } = vi.hoisted(() => ({
+const { signInWithOtp, verifyOtp, reconcileCustomerSession, contactRequest } = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
   verifyOtp: vi.fn(),
-  mergeGuestCartIntoAccount: vi.fn(),
+  reconcileCustomerSession: vi.fn(),
   contactRequest: vi.fn(),
 }));
 
@@ -18,16 +18,13 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   }),
 }));
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => ({ session: null, loading: false }),
+  reconcileCustomerSession,
 }));
 
 vi.mock("@vergeo/config", () => ({
   createApiClient: () => ({ request: contactRequest }),
-}));
-
-vi.mock("../../../../../lib/cart-merge", () => ({
-  mergeGuestCartIntoAccount,
 }));
 
 import { StepContact, type ContactStepLabels } from "./step-contact";
@@ -72,7 +69,7 @@ async function submitOtp(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
   signInWithOtp.mockReset();
   verifyOtp.mockReset();
-  mergeGuestCartIntoAccount.mockReset();
+  reconcileCustomerSession.mockReset();
   contactRequest.mockReset();
 
   signInWithOtp.mockResolvedValue({ error: null });
@@ -80,7 +77,7 @@ beforeEach(() => {
     data: { session: { access_token: "real-session-token" } },
     error: null,
   });
-  mergeGuestCartIntoAccount.mockResolvedValue(undefined);
+  reconcileCustomerSession.mockResolvedValue({ access_token: "real-session-token" });
   contactRequest.mockResolvedValue({ contact_skipped: false });
 });
 
@@ -99,8 +96,9 @@ describe("StepContact authenticated OTP ordering", () => {
         error: null,
       };
     });
-    mergeGuestCartIntoAccount.mockImplementation(async () => {
+    reconcileCustomerSession.mockImplementation(async () => {
       events.push("cart merge");
+      return { access_token: "real-session-token" };
     });
     contactRequest.mockImplementation(async () => {
       events.push("contact POST");
@@ -114,7 +112,10 @@ describe("StepContact authenticated OTP ordering", () => {
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
     expect(events).toEqual(["verifyOtp", "cart merge", "contact POST", "onComplete"]);
-    expect(mergeGuestCartIntoAccount).toHaveBeenCalledWith("real-session-token");
+    expect(reconcileCustomerSession).toHaveBeenCalledWith(
+      expect.objectContaining({ access_token: "real-session-token" }),
+      false,
+    );
     expect(contactRequest).toHaveBeenCalledWith("/checkout/steps/contact", {
       method: "POST",
       body: JSON.stringify({ phone: "+260971234567" }),
@@ -122,9 +123,9 @@ describe("StepContact authenticated OTP ordering", () => {
   });
 
   it("fails closed on merge and retries post-auth work without resubmitting the spent OTP", async () => {
-    mergeGuestCartIntoAccount
+    reconcileCustomerSession
       .mockRejectedValueOnce(new Error("merge failed"))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ access_token: "real-session-token" });
     const onComplete = vi.fn();
     const user = userEvent.setup();
 
@@ -142,7 +143,11 @@ describe("StepContact authenticated OTP ordering", () => {
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
     expect(verifyOtp).toHaveBeenCalledOnce();
-    expect(mergeGuestCartIntoAccount).toHaveBeenCalledTimes(2);
+    expect(reconcileCustomerSession).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ access_token: "real-session-token" }),
+      true,
+    );
     expect(contactRequest).toHaveBeenCalledOnce();
   });
 });

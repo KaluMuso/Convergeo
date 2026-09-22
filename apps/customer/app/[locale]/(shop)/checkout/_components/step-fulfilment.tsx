@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -14,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { useSession } from "../../../../../lib/customer-session";
 import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
 import { ReservationCountdown } from "./reservation-countdown";
