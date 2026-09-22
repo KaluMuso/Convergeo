@@ -1,3 +1,5 @@
+import type { Locator } from "@playwright/test";
+
 import { expect, test as base } from "./test-base";
 
 /**
@@ -9,6 +11,27 @@ export const SCANNER_ARTIFACT_POLICY = {
   video: "off",
   screenshot: "off",
 } as const;
+
+/**
+ * Enter a scanner credential without serializing its value into a Playwright
+ * action title. A value-bearing Playwright fill is unsafe even with tracing disabled:
+ * the HTML reporter retains `Fill "<value>"` inside an embedded base64 ZIP.
+ */
+export async function fillScannerCredential(locator: Locator, secret: string): Promise<void> {
+  await locator.evaluate((element, value) => {
+    if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+      throw new Error("scanner credential target must be a text control");
+    }
+    const prototype = element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    if (!setter) throw new Error("scanner credential value setter unavailable");
+    setter.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }, secret);
+}
 
 type ScannerArtifactWorkerFixtures = {
   _scannerPromptSnapshotGuard: boolean;

@@ -1,5 +1,6 @@
 import {
   expect,
+  fillScannerCredential,
   SCANNER_ARTIFACT_POLICY,
   test,
 } from "../fixtures/scanner-artifact-test";
@@ -15,7 +16,7 @@ test("scanner secret cannot enter retained artifacts", async ({ page }) => {
       <input data-testid="event-scan-manual-pin" type="password" />
     </form>
   `);
-  await page.getByTestId("event-scan-manual-pin").fill(sentinel!);
+  await fillScannerCredential(page.getByTestId("event-scan-manual-pin"), sentinel!);
 
   // Deliberate failure: the outer runner requires a failed attempt and retry,
   // then proves neither diagnostics tree contains the entered credential.

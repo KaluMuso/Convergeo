@@ -4,6 +4,7 @@ import { sandboxEnabled } from "../fixtures/lenco";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
 import {
   expect,
+  fillScannerCredential,
   SCANNER_ARTIFACT_POLICY,
   test,
 } from "../fixtures/scanner-artifact-test";
@@ -142,7 +143,7 @@ test.describe("event · ticket lifecycle", () => {
 
     // First check-in → verified by the server, not by the browser.
     await ticketIdInput.fill(SEED.event.ticketId);
-    await pinInput.fill(scannerPin);
+    await fillScannerCredential(pinInput, scannerPin);
     await submit.click();
     const accepted = page.getByTestId("event-scan-flash-success");
     await expect(accepted).toBeVisible({ timeout: 20_000 });
@@ -157,7 +158,7 @@ test.describe("event · ticket lifecycle", () => {
     // as proof of single-use enforcement. Those are real failures of this leg,
     // not evidence for it.
     await ticketIdInput.fill(SEED.event.ticketId);
-    await pinInput.fill(scannerPin);
+    await fillScannerCredential(pinInput, scannerPin);
     await submit.click();
     const rejection = page.getByTestId("event-scan-flash-error");
     await expect(rejection).toBeVisible({ timeout: 20_000 });

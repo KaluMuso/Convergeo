@@ -34,6 +34,17 @@ test("scanner fixture suppresses prompt snapshots and restores the environment",
   assert.match(fixture, /scope:\s*"worker"/);
   assert.match(fixture, /delete process\.env\.PLAYWRIGHT_NO_COPY_PROMPT/);
   assert.match(fixture, /process\.env\.PLAYWRIGHT_NO_COPY_PROMPT\s*=\s*previous/);
+  assert.match(fixture, /export async function fillScannerCredential/);
+  assert.doesNotMatch(fixture, /locator\.fill\(secret\)/);
+  assert.match(fixture, /setter\.call\(element, value\)/);
+});
+
+test("scanner secrets never use Playwright's value-bearing fill step", () => {
+  for (const file of ["e2e/specs/event-ticket.spec.ts", "e2e/artifact-regression/scanner-secret.spec.ts"]) {
+    const source = read(file);
+    assert.match(source, /fillScannerCredential/);
+    assert.doesNotMatch(source, /\.fill\((?:scannerPin|sentinel!?)/);
+  }
 });
 
 test("CI runs the behavioral sentinel regression before the suite", () => {
