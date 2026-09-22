@@ -25,7 +25,7 @@ import { CustomerAuthBarrier } from "./customer-auth-barrier";
 const labels = {
   title: "Resolve cart",
   body: "Choose what to keep",
-  conflictLine: (listing: string, code: string) => `${listing}:${code}`,
+  conflictLine: "{listing}:{code}",
   accountChoice: "Keep account pickup",
   guestChoice: "Keep guest pickup",
   apply: "Apply choices",
@@ -67,7 +67,9 @@ describe("CustomerAuthBarrier", () => {
     const user = userEvent.setup();
 
     render(<CustomerAuthBarrier labels={labels} />);
-    expect(screen.getByRole("dialog")).toHaveTextContent("listing-a:cart.pickup_conflict");
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "listing-a:cart.pickup_conflict",
+    );
     await user.click(screen.getByRole("button", { name: labels.guestChoice }));
 
     expect(mocks.retry).toHaveBeenCalledWith({

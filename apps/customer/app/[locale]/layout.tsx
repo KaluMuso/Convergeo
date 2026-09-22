@@ -16,7 +16,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import {
+  getMessages,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
@@ -132,7 +136,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     messages,
     namespace: "common",
   }) as unknown as LegalTranslator;
-  const tCheckout = createTranslator({ locale, messages, namespace: "checkout" });
+  const tCheckout = createTranslator({
+    locale,
+    messages,
+    namespace: "checkout",
+  });
   const year = new Date().getFullYear();
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
@@ -225,13 +233,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             <ServiceWorkerRegister />
             {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
-            <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+            <AnalyticsProvider
+              measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
+            />
             <CustomerAuthBarrier
               labels={{
                 title: tCheckout("cart.mergeRecoveryTitle"),
                 body: tCheckout("cart.mergeRecoveryBody"),
-                conflictLine: (listing, code) =>
-                  tCheckout("cart.mergeConflictLine", { listing, code } as never),
+                conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
                 accountChoice: tCheckout("cart.mergeAccountChoice"),
                 guestChoice: tCheckout("cart.mergeGuestChoice"),
                 apply: tCheckout("cart.mergeApply"),
@@ -249,8 +258,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               LinkComponent={Link}
               trailing={
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                  <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} />
-                  <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
+                  <LocaleSwitcher
+                    locale={locale}
+                    labels={localeSwitcherLabels}
+                  />
+                  <p
+                    className="m-0 text-micro"
+                    style={{ color: "var(--panel-muted)" }}
+                  >
                     <Link
                       href={`/${locale}/account/preferences`}
                       className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
