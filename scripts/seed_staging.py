@@ -47,9 +47,14 @@ from app.staging.auth_personas import (  # noqa: E402
     ensure_auth_personas,
     verify_auth_personas,
 )
+from app.staging.event_scanner import (  # noqa: E402
+    ScannerTicket,
+    apply_rsvp_scanner_ticket,
+)
 from app.staging.seed_sql import (  # noqa: E402
     build_cleanup_sql,
     build_seed_sql,
+    parse_scanner_verification,
     parse_verification,
     verification_queries,
 )
@@ -67,7 +72,6 @@ from app.staging.synthetic_contract import (  # noqa: E402
 from app.staging.ticket_credentials import (  # noqa: E402
     TicketCredential,
     mint_ticket_credentials,
-    primary_ticket_pin,
 )
 from app.staging.transactional import apply_cod_placed  # noqa: E402
 from supabase import create_client  # noqa: E402
@@ -149,14 +153,18 @@ def _connection_hint(dsn: str) -> str | None:
     )
 
 
-def _write_private_runtime_file(
-    path: Path, credentials: tuple[TicketCredential, ...]
-) -> None:
-    """Hand the run-scoped scanner PIN to the caller through a 0600 file.
+def _write_private_runtime_file(path: Path, scanner: ScannerTicket) -> None:
+    """Hand the run's scanner ticket to the caller through a 0600 file.
 
-    A file — not stdout, not GITHUB_OUTPUT — so the value never passes through a
+    A file — not stdout, not GITHUB_OUTPUT — so the PIN never passes through a
     log buffer on its way out. The service-role key is deliberately NOT written
-    here: only the credential the scanner spec needs.
+    here: only what the scanner spec needs to drive one check-in.
+
+    The ticket ID rides along with the PIN because it is run-scoped too: the
+    scanner ticket is claimed by the real rsvp() service path, so Postgres mints
+    its id the same way it mints any other ticket's. It is not secret — the
+    generated contract used to publish a ticket id in plain sight — but it is
+    not fixture identity either, so it cannot live in seed.generated.ts.
     """
     import json
 
@@ -164,7 +172,7 @@ def _write_private_runtime_file(
     # Create with the restrictive mode from the start; never widen it afterwards.
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        json.dump({"ticketPin": primary_ticket_pin(credentials)}, handle)
+        json.dump({"ticketPin": scanner.pin, "ticketId": scanner.ticket_id}, handle)
     os.chmod(path, 0o600)
 
 
@@ -220,6 +228,11 @@ def _verify_contract(conn: StagingPgConn) -> None:
             raise RuntimeError(result.error or f"cannot verify {key}")
         results[key] = result.rows
     parse_verification(results)
+    # Separate gate: the scanner ticket is issued by the rsvp() service path,
+    # not by build_seed_sql(), so it is only assertable here — after
+    # apply_rsvp_scanner_ticket() has run. SQL-only callers of
+    # parse_verification() must not be held to it.
+    parse_scanner_verification(results)
 
 
 def main() -> int:
@@ -251,8 +264,8 @@ def main() -> int:
         "--private-file",
         default=None,
         help=(
-            "Write run-scoped scanner credentials (ticket PIN) to this path with "
-            "mode 0600. Requires SUPABASE_SERVICE_ROLE_KEY; never logged."
+            "Write run-scoped scanner credentials (ticket id + PIN) to this path "
+            "with mode 0600. Requires SUPABASE_SERVICE_ROLE_KEY; never logged."
         ),
     )
     parser.add_argument(
@@ -316,7 +329,8 @@ def main() -> int:
 
     _plan()
     print(f"  - catalogue products: {len(CATALOG_FIXTURES)}")
-    print(f"  - events: {len(EVENTS)} (organiser scanner journey)")
+    print(f"  - events: {len(EVENTS)} (paid lane + free_rsvp scanner lane)")
+    print("  - scanner ticket: issued via the real rsvp() service path (no payment)")
     print(f"  - fixture version: {fixture_version()}")
 
     if args.dry_run or not mutating:
@@ -395,9 +409,28 @@ def main() -> int:
     if not seed.ok:
         return _die(seed.error or "seed SQL failed")
 
+    # The organiser scanner ticket. The static SQL above cannot produce one: a
+    # hand-written ticket row has no order_item_id, and POST /tickets/verify
+    # refuses exactly that with ticket_unpaid_hold — a production safety rule
+    # (services/api/app/routers/ticket_verify.py) that is never relaxed for a
+    # fixture. So the ticket is claimed through the real rsvp() service path,
+    # which issues it against a completed order spine with no provider payment
+    # and no fabricated payments row. Runs on every --apply, because the scanner
+    # ticket is part of the fixture whether or not this run exports credentials,
+    # and BEFORE _verify_contract so the seed fails here rather than in the E2E.
+    try:
+        scanner = apply_rsvp_scanner_ticket(auth_client)
+    except Exception as exc:  # noqa: BLE001
+        return _die(f"scanner ticket fixture failed: {exc}")
+    # Identity only — the PIN never reaches stdout.
+    print(
+        f"Scanner ticket ready (replayed={scanner.replayed}, "
+        f"ticket_id={scanner.ticket_id}, order_item_id={scanner.order_item_id})"
+    )
+
     if args.private_file:
         try:
-            _write_private_runtime_file(Path(args.private_file), credentials)
+            _write_private_runtime_file(Path(args.private_file), scanner)
         except OSError as exc:
             return _die(f"cannot write private runtime file: {exc}")
         # Path only — never the contents.

@@ -10,7 +10,8 @@ output drifts from the Python source.
 
 Only NON-SECRET identity is emitted: slugs, handles, phone numbers and ids that
 already live in the committed Python contract. OTP codes and the run-scoped
-ticket PIN are credentials and are never written here.
+ticket PIN are credentials and are never written here, and the scanner ticket id
+is omitted because `rsvp()` mints it per run (see `app.staging.event_scanner`).
 
 Usage:
   python3 scripts/ci/generate-e2e-fixtures.py            # write the file
@@ -32,7 +33,9 @@ from app.staging.synthetic_contract import (  # noqa: E402
     VENDOR_LOCATIONS,
     event_fixture,
     fixture_version,
+    paid_ticket_type,
     persona_by_key,
+    scanner_ticket_type,
 )
 from app.staging.transactional import cod_placed_fixture  # noqa: E402
 
@@ -52,8 +55,9 @@ def render() -> str:
     vendor = persona_by_key("APPROVED_VENDOR_A")
     product = CATALOG_FIXTURES[0]
     event = event_fixture("EVENT_LAUNCH_EXPO")
-    ticket_type = event.ticket_types[0]
-    ticket = event.tickets[0]
+    paid_type = paid_ticket_type(event)
+    scanner_type = scanner_ticket_type(event)
+    unpaid_hold = event.tickets[0]
     location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == "APPROVED_VENDOR_A")
     cod = cod_placed_fixture()
 
@@ -65,7 +69,8 @@ def render() -> str:
 //
 // NON-SECRET identity only. OTP codes and the run-scoped ticket scanner PIN are
 // credentials: they arrive through the environment at run time and are never
-// generated into source.
+// generated into source. The scanner TICKET ID is not a credential but is still
+// absent: the real rsvp() service path mints it per run, so it is run state.
 
 /** Reserved synthetic namespace. Every identifier below sits under it. */
 export const SEED_PREFIX = {_ts(SEED_PREFIX)};
@@ -110,7 +115,13 @@ export const SEED = {{
     vendorSlug: {_ts(vendor.slug or "")},
     initialStatus: {_ts("placed")},
   }},
-  /** Published event with an un-scanned ticket for the organiser scanner. */
+  /**
+   * Published event with two ticket lanes. The SCANNER ticket id is NOT here:
+   * it is claimed per run by the real `rsvp()` service path so it carries a
+   * genuine `order_item_id`, which is what `POST /tickets/verify` requires
+   * (`ticket_unpaid_hold` otherwise). Postgres mints that id, so it arrives
+   * through `E2E_TICKET_ID` alongside the PIN, never from source.
+   */
   event: {{
     /**
      * Canonical event UUID. The organiser scanner route and the ticket verify
@@ -120,10 +131,19 @@ export const SEED = {{
     id: {_ts(event.event_id)},
     slug: {_ts(event.slug)},
     title: {_ts(event.title)},
-    /** The session the seeded ticket belongs to. */
+    /** The session both ticket lanes are allocated against. */
     instanceId: {_ts(event.instance_id)},
-    ticketTypeName: {_ts(ticket_type.name)},
-    ticketId: {_ts(ticket.ticket_id)},
+    /** Paid lane — what the Lenco-gated purchase leg buys. */
+    paidTicketTypeName: {_ts(paid_type.name)},
+    /** Free-RSVP lane the per-run scanner ticket is issued on. */
+    scannerTicketTypeName: {_ts(scanner_type.name)},
+    /**
+     * Statically seeded paid ticket. It has no `order_item_id` by construction,
+     * so it can NEVER be checked in — it is the live negative control for
+     * `ticket_unpaid_hold`, not a scanner subject. Do not fill it into the
+     * scanner form expecting a pass.
+     */
+    unpaidHoldTicketId: {_ts(unpaid_hold.ticket_id)},
   }},
   /** Landmark/GPS-style delivery address used at checkout (Lusaka). */
   address: {{

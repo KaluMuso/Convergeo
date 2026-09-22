@@ -208,6 +208,25 @@ export function ticketPinReady(): boolean {
   return ticketPin().length > 0;
 }
 
+/**
+ * The ticket the organiser scanner checks in, for this run only.
+ *
+ * Not a credential and not a constant. `POST /tickets/verify` refuses any
+ * ticket without an `order_item_id` (`ticket_unpaid_hold`), so the scanner
+ * subject has to be issued by the real RSVP service path during the canonical
+ * seed — and that path lets Postgres mint the id, exactly as it would for a
+ * live holder. It therefore travels with the PIN through `E2E_TICKET_ID`
+ * instead of living in `seed.generated.ts`, whose `unpaidHoldTicketId` is the
+ * deliberately-unscannable negative control.
+ */
+export function ticketId(): string {
+  return str("E2E_TICKET_ID");
+}
+
+export function ticketIdReady(): boolean {
+  return ticketId().length > 0;
+}
+
 /** Convenience: build a locale-prefixed path. */
 export function path(p: string): string {
   const clean = p.startsWith("/") ? p : `/${p}`;
