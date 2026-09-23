@@ -167,7 +167,9 @@ def test_route_retries_stale_authority_without_broadening_price_consent(
         cart, "fetch_active_cart_by_guest", lambda *_args: {"id": GUEST_CART}
     )
     monkeypatch.setattr(
-        cart, "_fetch_cart_items", lambda _client, cart_id: [guest_line] if cart_id == GUEST_CART else []
+        cart,
+        "_fetch_cart_items",
+        lambda _client, cart_id: [guest_line] if cart_id == GUEST_CART else [],
     )
     monkeypatch.setattr(merge_atomic, "fetch_cart_merge_authority", authority)
     monkeypatch.setattr(merge_atomic, "apply_login_cart_merge_atomic", apply)
