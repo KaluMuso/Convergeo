@@ -132,7 +132,7 @@ def apply_login_cart_merge_atomic(
                 message="Cart merge ownership verification failed",
                 http_status=403,
             ) from exc
-        if code in {"40001", "40P01"}:
+        if code in {"40001", "40P01", "55P03"}:
             return AtomicMergeOutcome.STALE_SNAPSHOT
         if code == "PT409":
             raise AppError(

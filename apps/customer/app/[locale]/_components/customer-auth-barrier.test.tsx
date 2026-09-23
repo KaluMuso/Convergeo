@@ -26,6 +26,10 @@ const labels = {
   title: "Resolve cart",
   body: "Choose what to keep",
   conflictLine: "{listing}:{code}",
+  priceLine: "{item}: {previous} -> {current} x {quantity} = {total}",
+  unnamedItem: "Item #{id}",
+  wholesaleTerms: "Wholesale minimum {moq}",
+  priceNeedsReview: "Review quote",
   accountChoice: "Keep account pickup",
   guestChoice: "Keep guest pickup",
   apply: "Apply choices",
@@ -59,7 +63,14 @@ describe("CustomerAuthBarrier", () => {
           {
             listing_id: "listing-b",
             code: "cart.price_changed",
-            details: {},
+            details: {
+              item_name: "Copper pipe",
+              previous_unit_prices_ngwee: [10000],
+              current_unit_price_ngwee: 12000,
+              current_line_total_ngwee: 24000,
+              quantity: 2,
+              proposal_token: "signed-price-terms",
+            },
           },
         ],
       },
@@ -68,14 +79,48 @@ describe("CustomerAuthBarrier", () => {
 
     render(<CustomerAuthBarrier labels={labels} />);
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      "listing-a:cart.pickup_conflict",
+      "Item #listing-:cart.pickup_conflict",
     );
+    expect(screen.getByRole("dialog")).toHaveTextContent("Copper pipe: K100.00 -> K120.00 x 2 = K240.00");
     await user.click(screen.getByRole("button", { name: labels.guestChoice }));
 
     expect(mocks.retry).toHaveBeenCalledWith({
       accept_price_changes: ["listing-b"],
+      accepted_price_proposals: { "listing-b": "signed-price-terms" },
       pickup_location_choices: { "listing-a": "location-guest" },
       remove_listing_ids: [],
+    });
+  });
+
+  it("shows wholesale terms and requires explicit removal for a changed RFQ quote", async () => {
+    mocks.retry.mockResolvedValue(null);
+    mocks.error = new ApiError("cart.merge_conflict", "conflict", {
+      status: 409,
+      details: {
+        conflicts: [{
+          listing_id: "listing-rfq",
+          code: "cart.price_changed",
+          details: {
+            item_name: "Steel rods",
+            previous_unit_prices_ngwee: [10000],
+            current_unit_price_ngwee: 12000,
+            quantity: 3,
+            wholesale: true,
+            moq: 3,
+            proposal_token: null,
+          },
+        }],
+      },
+    });
+    render(<CustomerAuthBarrier labels={labels} />);
+    expect(screen.getByRole("dialog")).toHaveTextContent("Steel rods: K100.00 -> K120.00 x 3 = K360.00");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Wholesale minimum 3 Review quote");
+    await userEvent.setup().click(screen.getByRole("button", { name: labels.apply }));
+    expect(mocks.retry).toHaveBeenCalledWith({
+      accept_price_changes: [],
+      accepted_price_proposals: {},
+      pickup_location_choices: {},
+      remove_listing_ids: ["listing-rfq"],
     });
   });
 });

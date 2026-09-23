@@ -41,6 +41,7 @@ describe("mergeGuestCartIntoAccount", () => {
     vi.stubGlobal("fetch", fetchMock);
     const resolution = {
       accept_price_changes: ["listing-price"],
+      accepted_price_proposals: { "listing-price": "signed-price-terms" },
       pickup_location_choices: { "listing-pickup": "location-guest" },
       remove_listing_ids: ["listing-unavailable"],
     };

@@ -34,6 +34,7 @@ describe("AuthTransition", () => {
   it("keeps the session unpublished after failure and retries with a resolution", async () => {
     const resolution: CartMergeResolution = {
       accept_price_changes: ["listing"],
+      accepted_price_proposals: { listing: "signed-price-terms" },
       pickup_location_choices: {},
       remove_listing_ids: [],
     };

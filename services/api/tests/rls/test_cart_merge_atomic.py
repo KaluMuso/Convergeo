@@ -202,18 +202,56 @@ def _authority(db: _PsycopgDb, user_id: str, listing_ids: list[str]) -> str:
     return result.rows[0]
 
 
-def _wait_for_advisory_lock(db: _PsycopgDb, mode: str, granted: bool) -> None:
+def _wait_for_lock_wait(db: _PsycopgDb, pid: int) -> None:
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
         result = db.run(
-            "select count(*)::text from pg_locks "
-            "where locktype = 'advisory' and classid = 72419 and objid = 1 "
-            f"and mode = '{mode}' and granted = {str(granted).lower()}"
+            "select count(*)::text from pg_stat_activity "
+            f"where pid = {pid} and wait_event_type = 'Lock'"
         )
         assert result.ok, result.error
         if int(result.rows[0]) > 0:
             return
-    raise AssertionError(f"advisory {mode} granted={granted} was not observed")
+    raise AssertionError(f"connection {pid} did not reach a lock wait")
+
+
+def test_unrelated_cart_and_authority_progress_during_merge(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    other_cart = str(uuid.uuid4())
+    other_line = str(uuid.uuid4())
+    seeded = atomic_db.run(
+        f"insert into public.carts (id, guest_token, status) "
+        f"values ('{other_cart}', 'unrelated-{other_cart}', 'active')"
+    )
+    assert seeded.ok, seeded.error
+
+    def unrelated_write() -> None:
+        with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
+            cursor.execute("set local role service_role")
+            cursor.execute("set local statement_timeout = '5s'")
+            cursor.execute(
+                "insert into public.cart_items "
+                "(id, cart_id, listing_id, qty, unit_price_ngwee, wholesale) "
+                "values (%s, %s, %s, 1, 30000, false)",
+                (other_line, other_cart, params["concurrent_listing_id"]),
+            )
+            cursor.execute(
+                "update public.vendor_listings set price_ngwee = price_ngwee + 1 where id = %s",
+                (params["concurrent_listing_id"],),
+            )
+
+    with psycopg.connect(atomic_db.dsn) as merge_conn, merge_conn.cursor() as cursor:
+        cursor.execute("set local role service_role")
+        cursor.execute(_RPC_SQL, params)
+        assert json.loads(str(cursor.fetchone()[0]))["outcome"] == "applied"
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            executor.submit(unrelated_write).result(timeout=10)
+        merge_conn.commit()
+
+    result = atomic_db.run(
+        f"select count(*)::text from public.cart_items where id = '{other_line}'"
+    )
+    assert result.ok and result.rows == ["1"], result.error
 
 
 def test_two_database_merges_preserve_both_lines_exactly_once(atomic_db: _PsycopgDb) -> None:
@@ -229,7 +267,13 @@ def test_two_database_merges_preserve_both_lines_exactly_once(atomic_db: _Psycop
         )
 
     outcomes = {json.loads(result)["outcome"] for result in results}
-    assert outcomes == {"applied", "already_converted"}
+    assert "applied" in outcomes
+    assert outcomes.issubset({"applied", "stale_snapshot", "already_converted"})
+    # A non-waiting scoped lock may reject the simultaneous caller. Retrying
+    # after the winner commits must find the same receipt, never insert twice.
+    assert json.loads(_service_call(atomic_db.dsn, params, threading.Barrier(1)))[
+        "outcome"
+    ] == "already_converted"
 
     final = atomic_db.run(
         "select listing_id::text from public.cart_items "
@@ -504,12 +548,15 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
 ) -> None:
     params = _seed_merge_case(atomic_db)
     insert_started = threading.Event()
+    insert_pid: list[int] = []
     late_line_id = str(uuid.uuid4())
 
     def late_guest_insert() -> str | None:
         try:
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
+                cursor.execute("select pg_backend_pid()")
+                insert_pid.append(int(cursor.fetchone()[0]))
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -531,7 +578,7 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
             with ThreadPoolExecutor(max_workers=1) as executor:
                 late_insert = executor.submit(late_guest_insert)
                 assert insert_started.wait(timeout=10)
-                _wait_for_advisory_lock(atomic_db, "ShareLock", False)
+                _wait_for_lock_wait(atomic_db, insert_pid[0])
                 merge_conn.commit()
                 assert late_insert.result(timeout=10) == "PT409"
 
@@ -552,12 +599,15 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
 ) -> None:
     params = _seed_merge_case(atomic_db)
     insert_started = threading.Event()
+    insert_pid: list[int] = []
     late_line_id = str(uuid.uuid4())
 
     def late_account_insert() -> str | None:
         try:
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
+                cursor.execute("select pg_backend_pid()")
+                insert_pid.append(int(cursor.fetchone()[0]))
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -579,7 +629,7 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
             with ThreadPoolExecutor(max_workers=1) as executor:
                 late_insert = executor.submit(late_account_insert)
                 assert insert_started.wait(timeout=10)
-                _wait_for_advisory_lock(atomic_db, "ShareLock", False)
+                _wait_for_lock_wait(atomic_db, insert_pid[0])
                 merge_conn.commit()
                 assert late_insert.result(timeout=10) is None
 
@@ -608,11 +658,14 @@ def test_account_mutations_wait_and_apply_after_merge(
 ) -> None:
     params = _seed_merge_case(atomic_db)
     started = threading.Event()
+    mutation_pid: list[int] = []
 
     def mutate() -> str | None:
         try:
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
+                cursor.execute("select pg_backend_pid()")
+                mutation_pid.append(int(cursor.fetchone()[0]))
                 started.set()
                 cursor.execute(mutation_sql.format(line_id=params["user_line_id"]))
         except psycopg.Error as exc:
@@ -626,7 +679,7 @@ def test_account_mutations_wait_and_apply_after_merge(
         with ThreadPoolExecutor(max_workers=1) as executor:
             mutation = executor.submit(mutate)
             assert started.wait(timeout=10)
-            _wait_for_advisory_lock(atomic_db, "ShareLock", False)
+            _wait_for_lock_wait(atomic_db, mutation_pid[0])
             merge_conn.commit()
             assert mutation.result(timeout=10) is None
 
@@ -654,9 +707,8 @@ def test_authority_writer_precedes_merge_and_forces_recompute(
         with ThreadPoolExecutor(max_workers=1) as executor:
             pending_merge = executor.submit(merge)
             assert merge_started.wait(timeout=10)
-            _wait_for_advisory_lock(atomic_db, "ExclusiveLock", False)
-            authority_conn.commit()
             outcome = json.loads(pending_merge.result(timeout=10))["outcome"]
+            authority_conn.commit()
 
     assert outcome == "stale_authority"
 

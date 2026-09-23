@@ -2,6 +2,7 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { ApiError } from "@vergeo/config";
+import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { Modal } from "@vergeo/ui/src/modal";
 import { useMemo, useState } from "react";
@@ -21,6 +22,10 @@ type CustomerAuthBarrierLabels = {
   title: string;
   body: string;
   conflictLine: string;
+  priceLine: string;
+  unnamedItem: string;
+  wholesaleTerms: string;
+  priceNeedsReview: string;
   accountChoice: string;
   guestChoice: string;
   apply: string;
@@ -37,6 +42,25 @@ function formatConflictLine(
   code: string,
 ): string {
   return pattern.replace("{listing}", listing).replace("{code}", code);
+}
+
+function priceConflictLine(pattern: string, conflict: MergeConflict, item: string): string | null {
+  const current = conflict.details.current_unit_price_ngwee;
+  const quantity = conflict.details.quantity;
+  const previous = conflict.details.previous_unit_prices_ngwee;
+  if (typeof current !== "number" || typeof quantity !== "number") return null;
+  const oldPrices = Array.isArray(previous)
+    ? previous.filter((value): value is number => typeof value === "number")
+    : [conflict.details.previous_unit_price_ngwee].filter(
+        (value): value is number => typeof value === "number",
+      );
+  if (!oldPrices.length) return null;
+  return pattern
+    .replace("{item}", item)
+    .replace("{previous}", oldPrices.map((price) => formatK(price)).join(" / "))
+    .replace("{current}", formatK(current))
+    .replace("{quantity}", String(quantity))
+    .replace("{total}", formatK(current * quantity));
 }
 
 function mergeConflicts(error: unknown): MergeConflict[] {
@@ -81,10 +105,17 @@ function resolutionFor(
 
   const pickupLocationChoices: Record<string, string | null> = {};
   const acceptPriceChanges = new Set<string>();
+  const acceptedPriceProposals: Record<string, string> = {};
   for (const conflict of conflicts) {
     if (removeListingIds.has(conflict.listing_id)) continue;
     if (conflict.code === "cart.price_changed") {
-      acceptPriceChanges.add(conflict.listing_id);
+      const token = conflict.details.proposal_token;
+      if (typeof token === "string" && token.length > 0) {
+        acceptPriceChanges.add(conflict.listing_id);
+        acceptedPriceProposals[conflict.listing_id] = token;
+      } else {
+        removeListingIds.add(conflict.listing_id);
+      }
     }
     if (conflict.code === "cart.pickup_conflict") {
       const key =
@@ -99,6 +130,7 @@ function resolutionFor(
 
   return {
     accept_price_changes: [...acceptPriceChanges].sort(),
+    accepted_price_proposals: acceptedPriceProposals,
     pickup_location_choices: pickupLocationChoices,
     remove_listing_ids: [...removeListingIds].sort(),
   };
@@ -160,11 +192,24 @@ export function CustomerAuthBarrier({
             <ul className="space-y-1 font-body text-sm text-text-2">
               {conflicts.map((conflict) => (
                 <li key={`${conflict.listing_id}:${conflict.code}`}>
-                  {formatConflictLine(
-                    labels.conflictLine,
-                    conflict.listing_id,
-                    conflict.code,
-                  )}
+                  {(() => {
+                    const name = typeof conflict.details.item_name === "string"
+                      ? conflict.details.item_name
+                      : labels.unnamedItem.replace("{id}", conflict.listing_id.slice(0, 8));
+                    const price = conflict.code === "cart.price_changed"
+                      ? priceConflictLine(labels.priceLine, conflict, name)
+                      : null;
+                    if (price) {
+                      const wholesale = conflict.details.wholesale === true
+                        ? ` ${labels.wholesaleTerms.replace("{moq}", String(conflict.details.moq ?? 1))}`
+                        : "";
+                      const review = typeof conflict.details.proposal_token === "string"
+                        ? ""
+                        : ` ${labels.priceNeedsReview}`;
+                      return `${price}${wholesale}${review}`;
+                    }
+                    return formatConflictLine(labels.conflictLine, name, conflict.code);
+                  })()}
                 </li>
               ))}
             </ul>

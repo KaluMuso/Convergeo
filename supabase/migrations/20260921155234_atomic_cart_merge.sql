@@ -1,14 +1,20 @@
--- Customer login cart merge and ordinary cart writes share one lock protocol.
---
--- This migration is intentionally corrected in place: the rejected candidate
--- was local-only, absent from the S3 migration inventory, and never published.
--- Every ordinary carts/cart_items statement takes the shared advisory lock
--- before PostgreSQL visits any row. Login merge takes the exclusive form before
--- locking carts or items and before reading its commerce-authority snapshot. This prevents the previous
--- item-row -> parent-cart inversion without relying on a late row trigger.
+-- This confirmed-unpublished candidate migration is corrected in place.
+-- Writers lock the affected cart or authority identity after their row change.
+-- Merge uses non-waiting exclusive scope locks and NOWAIT row locks, so a writer
+-- holding a row cannot wait behind a merge that is waiting for that same row.
 
 drop trigger if exists cart_items_lock_parent_cart_trg on public.cart_items;
 drop function if exists public.lock_cart_for_item_mutation();
+
+create or replace function public.cart_scope_key(p_scope text, p_id uuid)
+returns bigint
+language sql
+immutable
+strict
+set search_path = pg_catalog, public
+as $$
+  select hashtextextended(p_scope || ':' || p_id::text, 0);
+$$;
 
 create or replace function public.cart_write_barrier()
 returns trigger
@@ -16,53 +22,101 @@ language plpgsql
 security invoker
 set search_path = pg_catalog, public
 as $$
+declare
+  v_scope text;
+  v_old uuid;
+  v_new uuid;
+  v_id uuid;
 begin
-  perform pg_advisory_xact_lock_shared(72419, 1);
+  if tg_table_name = 'cart_items' then
+    v_scope := 'cart';
+    if tg_op <> 'INSERT' then v_old := old.cart_id; end if;
+    if tg_op <> 'DELETE' then v_new := new.cart_id; end if;
+  elsif tg_table_name = 'carts' then
+    v_scope := 'cart';
+    if tg_op <> 'INSERT' then v_old := old.id; end if;
+    if tg_op <> 'DELETE' then v_new := new.id; end if;
+  elsif tg_table_name = 'vendor_listings' then
+    v_scope := 'listing';
+    if tg_op <> 'INSERT' then v_old := old.id; end if;
+    if tg_op <> 'DELETE' then v_new := new.id; end if;
+  elsif tg_table_name = 'listing_location_stock' then
+    v_scope := 'listing';
+    if tg_op <> 'INSERT' then v_old := old.listing_id; end if;
+    if tg_op <> 'DELETE' then v_new := new.listing_id; end if;
+  elsif tg_table_name = 'rfq_threads' then
+    v_scope := 'rfq';
+    if tg_op <> 'INSERT' then v_old := old.id; end if;
+    if tg_op <> 'DELETE' then v_new := new.id; end if;
+  elsif tg_table_name = 'business_buyers' then
+    v_scope := 'buyer';
+    if tg_op <> 'INSERT' then v_old := old.user_id; end if;
+    if tg_op <> 'DELETE' then v_new := new.user_id; end if;
+  else
+    raise exception 'unsupported cart authority table: %', tg_table_name;
+  end if;
+
+  for v_id in
+    select distinct value from unnest(array[v_old, v_new]) value
+    where value is not null order by value
+  loop
+    perform pg_advisory_xact_lock_shared(public.cart_scope_key(v_scope, v_id));
+  end loop;
+
+  -- An insert can pass the BEFORE ROW check before a concurrent merge commits.
+  -- Recheck after the scope lock so the converted guest cannot gain a late line.
+  if tg_table_name = 'cart_items' then
+    if tg_op <> 'DELETE' then
+      if not exists (
+        select 1 from public.carts c where c.id = new.cart_id and c.status = 'active'
+      ) then
+        raise sqlstate 'PT409' using message = 'cart is no longer active';
+      end if;
+    end if;
+  end if;
   return null;
 end;
 $$;
 
 drop trigger if exists carts_write_barrier_trg on public.carts;
 create trigger carts_write_barrier_trg
-  before insert or update or delete on public.carts
-  for each statement
+  after insert or update or delete on public.carts
+  for each row
   execute function public.cart_write_barrier();
 
 drop trigger if exists cart_items_write_barrier_trg on public.cart_items;
 create trigger cart_items_write_barrier_trg
-  before insert or update or delete on public.cart_items
-  for each statement
+  after insert or update or delete on public.cart_items
+  for each row
   execute function public.cart_write_barrier();
 
--- These tables are part of the authority snapshot used to price and validate
--- the proposal.  Their writers join the same protocol before taking row locks,
--- so an authority update cannot invert merge's barrier -> row lock order.
+-- Authority writers take the same listing, RFQ, or buyer scope as the merge.
 drop trigger if exists vendor_listings_cart_write_barrier_trg on public.vendor_listings;
 create trigger vendor_listings_cart_write_barrier_trg
-  before insert or update or delete on public.vendor_listings
-  for each statement
+  after insert or update or delete on public.vendor_listings
+  for each row
   execute function public.cart_write_barrier();
 
 drop trigger if exists business_buyers_cart_write_barrier_trg on public.business_buyers;
 create trigger business_buyers_cart_write_barrier_trg
-  before insert or update or delete on public.business_buyers
-  for each statement
+  after insert or update or delete on public.business_buyers
+  for each row
   execute function public.cart_write_barrier();
 
 drop trigger if exists rfq_threads_cart_write_barrier_trg on public.rfq_threads;
 create trigger rfq_threads_cart_write_barrier_trg
-  before insert or update or delete on public.rfq_threads
-  for each statement
+  after insert or update or delete on public.rfq_threads
+  for each row
   execute function public.cart_write_barrier();
 
 drop trigger if exists listing_location_stock_cart_write_barrier_trg on public.listing_location_stock;
 create trigger listing_location_stock_cart_write_barrier_trg
-  before insert or update or delete on public.listing_location_stock
-  for each statement
+  after insert or update or delete on public.listing_location_stock
+  for each row
   execute function public.cart_write_barrier();
 
 comment on function public.cart_write_barrier() is
-  'Takes the shared cart-write advisory lock before a statement can acquire cart, cart-item, or merge-authority row locks.';
+  'Takes a shared transaction lock for the affected cart or authority row and rejects late writes to converted carts.';
 
 create or replace function public.cart_active_line_guard()
 returns trigger
@@ -130,7 +184,7 @@ end;
 $$;
 
 comment on function public.ensure_account_cart(uuid) is
-  'Returns one active account cart under the cart write barrier, including concurrent first-login calls.';
+  'Returns one active account cart, including concurrent first-login calls.';
 
 create or replace function public.cart_merge_authority(
   p_user_id uuid,
@@ -158,6 +212,7 @@ as $$
           vl.id,
           vl.vendor_id,
           vl.title_override,
+          coalesce(nullif(vl.title_override, ''), p.name) as display_name,
           vl.price_ngwee,
           vl.wholesale,
           vl.moq,
@@ -175,6 +230,7 @@ as $$
           vl.stock_mode,
           vl.stock_qty
         from public.vendor_listings vl
+        left join public.products p on p.id = vl.product_id
         where vl.id = any(coalesce(p_listing_ids, array[]::uuid[]))
         order by vl.id
       ) listing_row
@@ -252,6 +308,7 @@ declare
   v_actual_authority jsonb;
   v_listing_ids uuid[];
   v_rfq_thread_ids uuid[];
+  v_id uuid;
 begin
   -- Hosted PostgREST connects as authenticator and SET LOCAL ROLEs from the
   -- verified JWT. current_user is therefore the reliable effective role;
@@ -276,15 +333,21 @@ begin
     raise invalid_parameter_value using message = 'cart merge payload has an invalid shape';
   end if;
 
-  -- Exclusive is always the first lock in a merge transaction. Ordinary DML
-  -- takes the matching shared lock in its BEFORE STATEMENT trigger.
-  perform pg_advisory_xact_lock(72419, 1);
+  -- All advisory attempts are non-waiting: an ordinary writer can already
+  -- hold a row lock when its AFTER ROW trigger reaches the shared scope lock.
+  -- Returning stale releases all acquired locks at the end of this RPC.
+  if not pg_try_advisory_xact_lock(public.cart_scope_key('cart', least(p_user_cart_id, p_guest_cart_id))) then
+    return jsonb_build_object('outcome', 'stale_snapshot');
+  end if;
+  if not pg_try_advisory_xact_lock(public.cart_scope_key('cart', greatest(p_user_cart_id, p_guest_cart_id))) then
+    return jsonb_build_object('outcome', 'stale_snapshot');
+  end if;
 
   perform 1
   from public.carts c
   where c.id in (p_user_cart_id, p_guest_cart_id)
   order by c.id
-  for update;
+  for update nowait;
 
   select c.* into v_user_cart
   from public.carts c
@@ -323,7 +386,7 @@ begin
   from public.cart_items ci
   where ci.cart_id in (p_user_cart_id, p_guest_cart_id)
   order by ci.cart_id, ci.id
-  for update;
+  for update nowait;
 
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', ci.id::text,
@@ -372,9 +435,23 @@ begin
   ) source_ids
   where nullif(value, '') is not null;
 
-  -- Authority writers already hold the shared form of the transaction barrier,
-  -- so this exclusive holder sees a stable authority set without taking row
-  -- locks that would require broad UPDATE privileges for service_role.
+  -- Acquire authority scopes in a deterministic order before the snapshot.
+  -- A writer that modified a row but has not reached its AFTER trigger can
+  -- finish only after this transaction, giving a valid merge-before-write order.
+  for v_id in select unnest(v_listing_ids) order by 1 loop
+    if not pg_try_advisory_xact_lock(public.cart_scope_key('listing', v_id)) then
+      return jsonb_build_object('outcome', 'stale_authority');
+    end if;
+  end loop;
+  for v_id in select unnest(v_rfq_thread_ids) order by 1 loop
+    if not pg_try_advisory_xact_lock(public.cart_scope_key('rfq', v_id)) then
+      return jsonb_build_object('outcome', 'stale_authority');
+    end if;
+  end loop;
+  if not pg_try_advisory_xact_lock(public.cart_scope_key('buyer', p_user_id)) then
+    return jsonb_build_object('outcome', 'stale_authority');
+  end if;
+
   select public.cart_merge_authority(p_user_id, v_listing_ids, v_rfq_thread_ids)
   into v_actual_authority;
 

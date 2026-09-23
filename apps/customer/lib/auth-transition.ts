@@ -4,6 +4,7 @@ export type CustomerSession = NonNullable<UseSessionResult["session"]>;
 
 export type CartMergeResolution = {
   accept_price_changes: string[];
+  accepted_price_proposals: Record<string, string>;
   pickup_location_choices: Record<string, string | null>;
   remove_listing_ids: string[];
 };

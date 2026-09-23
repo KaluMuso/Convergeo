@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -155,6 +157,7 @@ class SaveForLaterResponse(BaseModel):
 
 class CartMergeResolutionInput(BaseModel):
     accept_price_changes: list[str] = Field(default_factory=list)
+    accepted_price_proposals: dict[str, str] = Field(default_factory=dict)
     pickup_location_choices: dict[str, str | None] = Field(default_factory=dict)
     remove_listing_ids: list[str] = Field(default_factory=list)
 
@@ -1002,9 +1005,142 @@ def _removed_merge_items(
     ]
 
 
+def _price_proposal_terms(
+    conflict: MergeConflict,
+    *,
+    user_id: str,
+    user_cart_id: str,
+    guest_cart_id: str,
+    user_items: list[dict[str, Any]],
+    guest_items: list[dict[str, Any]],
+    authority: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind consent to source lines and the authority used to quote this price."""
+    listing_id = conflict.listing_id
+    lines = [
+        {"cart_id": cart_id, **item}
+        for cart_id, items in ((user_cart_id, user_items), (guest_cart_id, guest_items))
+        for item in items
+        if str(item["listing_id"]) == listing_id
+    ]
+    lines.sort(key=lambda item: (item["cart_id"], str(item["id"])))
+    listing = next(
+        (row for row in authority.get("listings", []) if str(row.get("id")) == listing_id),
+        None,
+    )
+    rfq_ids = {str(item["rfq_thread_id"]) for item in lines if item.get("rfq_thread_id")}
+    relevant_authority = {
+        "business_status": authority.get("business_status"),
+        "listing": listing,
+        "rfq_threads": sorted(
+            (row for row in authority.get("rfq_threads", []) if str(row.get("id")) in rfq_ids),
+            key=lambda row: str(row["id"]),
+        ),
+        "location_stock": sorted(
+            (
+                row for row in authority.get("location_stock", [])
+                if str(row.get("listing_id")) == listing_id
+            ),
+            key=lambda row: str(row.get("location_id")),
+        ),
+    }
+    revision = hashlib.sha256(
+        json.dumps(relevant_authority, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "version": 1,
+        "user_id": user_id,
+        "user_cart_id": user_cart_id,
+        "guest_cart_id": guest_cart_id,
+        "listing_id": listing_id,
+        "currency": "ZMW",
+        "lines": lines,
+        "quantity": sum(int(item["qty"]) for item in lines),
+        "previous_unit_prices_ngwee": sorted(
+            {int(item["unit_price_ngwee"]) for item in lines}
+        ),
+        "current_unit_price_ngwee": int(conflict.details["current_unit_price_ngwee"]),
+        "wholesale": bool(listing and listing.get("wholesale")),
+        "moq": int(listing.get("moq", 1)) if listing else 1,
+        "price_tiers": listing.get("price_tiers") if listing else None,
+        "authority_revision": revision,
+    }
+
+
+def _price_conflicts_with_proposals(
+    conflicts: list[MergeConflict],
+    *,
+    settings: Settings,
+    user_id: str,
+    user_cart_id: str,
+    guest_cart_id: str,
+    user_items: list[dict[str, Any]],
+    guest_items: list[dict[str, Any]],
+    authority: dict[str, Any],
+) -> list[MergeConflict]:
+    result: list[MergeConflict] = []
+    for conflict in conflicts:
+        listing = next(
+            (
+                row for row in authority.get("listings", [])
+                if str(row.get("id")) == conflict.listing_id
+            ),
+            None,
+        )
+        title = listing.get("display_name") if listing else None
+        name = title if isinstance(title, str) and title.strip() else None
+        if conflict.code != "cart.price_changed":
+            result.append(MergeConflict(
+                listing_id=conflict.listing_id,
+                code=conflict.code,
+                message_key=conflict.message_key,
+                details={**conflict.details, "item_name": name},
+            ))
+            continue
+        terms = _price_proposal_terms(
+            conflict,
+            user_id=user_id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            user_items=user_items,
+            guest_items=guest_items,
+            authority=authority,
+        )
+        # RFQ-pinned prices require quote review; the ordinary price acceptance
+        # path cannot silently turn a changed quote into a listing-priced line.
+        can_accept = name is not None and not any(
+            item.get("rfq_thread_id") for item in terms["lines"]
+        )
+        result.append(
+            MergeConflict(
+                listing_id=conflict.listing_id,
+                code=conflict.code,
+                message_key=conflict.message_key,
+                details={
+                    **conflict.details,
+                    "item_name": name,
+                    "currency": "ZMW",
+                    "quantity": terms["quantity"],
+                    "wholesale": terms["wholesale"],
+                    "moq": terms["moq"],
+                    "current_line_total_ngwee": (
+                        terms["quantity"] * terms["current_unit_price_ngwee"]
+                    ),
+                    "proposal_token": jwt.encode(
+                        {"typ": "cart_price_proposal", "terms": terms},
+                        settings.supabase_service_role_key,
+                        algorithm="HS256",
+                    ) if can_accept else None,
+                },
+            )
+        )
+    return result
+
+
 def _validate_merge_resolution(
     body: CartMergeResolutionInput,
     conflicts: list[MergeConflict],
+    settings: Settings,
 ) -> MergeResolution:
     conflicts_by_listing: dict[str, list[MergeConflict]] = {}
     for conflict in conflicts:
@@ -1036,9 +1172,31 @@ def _validate_merge_resolution(
         )
     }
     invalid_removals = remove_listing_ids.difference(conflicts_by_listing)
-    if invalid_accepts or invalid_pickups or invalid_removals:
+    invalid_proposals = set(body.accepted_price_proposals).difference(accept_price_changes)
+    for listing_id in accept_price_changes:
+        price_conflict = next(
+            (conflict for conflict in conflicts_by_listing.get(listing_id, [])
+             if conflict.code == "cart.price_changed"),
+            None,
+        )
+        if price_conflict is None:
+            continue
+        supplied = body.accepted_price_proposals.get(listing_id)
+        current = price_conflict.details.get("proposal_token")
+        try:
+            verified = jwt.decode(
+                supplied or "", settings.supabase_service_role_key, algorithms=["HS256"]
+            )
+            current_verified = jwt.decode(
+                str(current or ""), settings.supabase_service_role_key, algorithms=["HS256"]
+            )
+            if verified != current_verified or verified.get("typ") != "cart_price_proposal":
+                invalid_proposals.add(listing_id)
+        except InvalidTokenError:
+            invalid_proposals.add(listing_id)
+    if invalid_accepts or invalid_pickups or invalid_removals or invalid_proposals:
         raise AppError(
-            code="cart.merge_resolution_stale",
+            code="cart.merge_conflict",
             message="Cart conflicts changed; review the current choices",
             http_status=409,
             details={
@@ -1122,9 +1280,19 @@ async def merge_cart_on_login(
             rfq_threads_by_id=rfq_threads_by_id,
             location_stock=location_stock,
         )
+        current_conflicts = _price_conflicts_with_proposals(
+            current_conflicts,
+            settings=settings,
+            user_id=current_user.id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            user_items=user_items,
+            guest_items=guest_items,
+            authority=authority,
+        )
 
         resolution = (
-            _validate_merge_resolution(body, current_conflicts)
+            _validate_merge_resolution(body, current_conflicts, settings)
             if body is not None
             else MergeResolution()
         )
@@ -1139,6 +1307,16 @@ async def merge_cart_on_login(
             resolution=resolution,
         )
         if conflicts:
+            conflicts = _price_conflicts_with_proposals(
+                conflicts,
+                settings=settings,
+                user_id=current_user.id,
+                user_cart_id=user_cart_id,
+                guest_cart_id=guest_cart_id,
+                user_items=user_items,
+                guest_items=guest_items,
+                authority=authority,
+            )
             raise AppError(
                 code="cart.merge_conflict",
                 message="Review cart conflicts before continuing",
