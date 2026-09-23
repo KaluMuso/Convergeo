@@ -63,7 +63,7 @@ const redirect = {
   targets: [] as string[],
 };
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => ({ session: { access_token: "test-access-token" }, loading: false }),
 }));
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
@@ -11,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { useSession } from "../../../../../lib/customer-session";
 
 const SERVICE_CATEGORIES = [
   "beauty",

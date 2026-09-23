@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
@@ -19,6 +18,11 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { ResendCountdown } from "../../../(auth)/_components/resend-countdown";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  reconcileCustomerSession,
+  type CustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 
 export type ContactStepLabels = {
   title: string;
@@ -63,6 +67,8 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   const skippedRef = useRef(false);
   /** Single-flight lock for OTP verification — see handleVerifyOtp. */
   const verifyingRef = useRef(false);
+  /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
+  const acceptedSessionRef = useRef<CustomerSession | null>(null);
 
   const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
@@ -158,48 +164,53 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
     setErrorMessage(null);
     setLoading(true);
 
-    let codeAccepted = false;
-
     try {
-      const supabase = await getBrowserClient();
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otpCode,
-        type: "sms",
-      });
-      if (error) {
-        const parsed = parseAuthError(error);
-        if (parsed.code === "wrong_code") {
-          setErrorMessage(labels.wrongCode);
-        } else if (parsed.code === "expired") {
-          setErrorMessage(labels.expired);
-        } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
-        } else {
-          setErrorMessage(labels.generic);
+      let acceptedSession = acceptedSessionRef.current;
+      const retryReconciliation = acceptedSession !== null;
+
+      if (!acceptedSession) {
+        const supabase = await getBrowserClient();
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone,
+          token: otpCode,
+          type: "sms",
+        });
+        if (error) {
+          const parsed = parseAuthError(error);
+          if (parsed.code === "wrong_code") {
+            setErrorMessage(labels.wrongCode);
+          } else if (parsed.code === "expired") {
+            setErrorMessage(labels.expired);
+          } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
+          } else {
+            setErrorMessage(labels.generic);
+          }
+          // Recoverable — let the buyer correct and resubmit the code.
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
         }
-        // Recoverable — let the buyer correct and resubmit the code.
-        verifyingRef.current = false;
-        setLoading(false);
-        return;
-      }
-      const token = data.session?.access_token;
-      if (!token) {
-        setErrorMessage(labels.generic);
-        verifyingRef.current = false;
-        setLoading(false);
-        return;
+        acceptedSession = data.session;
+        if (!acceptedSession?.access_token) {
+          setErrorMessage(labels.generic);
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
+        }
+
+        acceptedSessionRef.current = acceptedSession;
       }
 
-      codeAccepted = true;
-
-      // Held through the step transition: the code is spent, so re-arming
-      // submission could only ever fire a doomed second verifyOtp.
-      await completeContactStep(token, phone);
+      const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
+      if (!readySession?.access_token) throw new Error("auth.session_required");
+      await completeContactStep(readySession.access_token, phone);
     } catch {
-      if (!codeAccepted) {
-        verifyingRef.current = false;
-      }
+      // Before acceptance this retries verification; after acceptance it
+      // retries only merge/contact with the saved session token.
+      verifyingRef.current = false;
       setLoading(false);
       setErrorMessage(labels.generic);
     }

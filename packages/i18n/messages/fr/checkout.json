@@ -65,7 +65,20 @@
     "escrowTeaser": "Lorsque vous payez en ligne, Convergeo conserve votre argent jusqu'à la livraison — puis le libère au vendeur.",
     "stockUnavailableNotice": "Un article n'est plus disponible. Vérifiez votre panier avant de continuer.",
     "summaryHeading": "Récapitulatif",
-    "sellerIndex": "Vendeur {index} sur {total}"
+    "sellerIndex": "Vendeur {index} sur {total}",
+    "mergeRecoveryTitle": "Vérifiez votre panier avant de continuer",
+    "mergeRecoveryBody": "Votre panier invité et votre panier de compte diffèrent. Aucun article n'a été supprimé. Choisissez comment résoudre les articles affichés.",
+    "mergeConflictLine": "Article {listing} : {code}",
+    "mergePriceLine": "{item} : {previous} → {current} l’unité × {quantity} = {total} au total",
+    "mergeUnnamedItem": "Article n° {id}",
+    "mergeWholesaleTerms": "Quantité minimale en gros : {moq} unités.",
+    "mergePriceNeedsReview": "Ce devis ne peut pas être accepté ici et sera retiré ; vérifiez-le avant l’achat.",
+    "mergeAccountChoice": "Garder les lieux de retrait du compte",
+    "mergeGuestChoice": "Utiliser les lieux de retrait invités",
+    "mergeApply": "Accepter les prix actuels et retirer les articles indisponibles",
+    "mergeRetry": "Réessayer la fusion du panier",
+    "mergeSignOut": "Se déconnecter",
+    "mergeFailure": "Nous n'avons pas pu sécuriser votre panier. Vos articles sont toujours enregistrés."
   },
   "checkout": {
     "pageTitle": "Paiement",

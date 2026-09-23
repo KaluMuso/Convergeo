@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -9,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { useSession } from "../../../../../../lib/customer-session";
 
 export const DEFAULT_DEPOSIT_PCT = 50;
 

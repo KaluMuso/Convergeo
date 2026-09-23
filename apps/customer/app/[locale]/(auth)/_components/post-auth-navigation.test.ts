@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const getSession = vi.fn();
-const getPreferences = vi.fn();
+const { getReadyCustomerSession, getPreferences } = vi.hoisted(() => ({
+  getReadyCustomerSession: vi.fn(),
+  getPreferences: vi.fn(),
+}));
 
-vi.mock("@vergeo/auth/browser-client-lazy", () => ({
-  getBrowserClient: async () => ({
-    auth: { getSession },
-  }),
+vi.mock("../../../../lib/customer-session", () => ({
+  getReadyCustomerSession,
 }));
 
 vi.mock("../../account/_components/account-api", () => ({
@@ -21,7 +21,7 @@ describe("navigateAfterPortalAuth", () => {
   const router = { push: vi.fn(), refresh: vi.fn() };
 
   beforeEach(() => {
-    getSession.mockReset();
+    getReadyCustomerSession.mockReset();
     getPreferences.mockReset();
     router.push.mockReset();
     router.refresh.mockReset();
@@ -32,7 +32,7 @@ describe("navigateAfterPortalAuth", () => {
   });
 
   it("customer email auth still loads preferences and welcome when onboarding is incomplete", async () => {
-    getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
+    getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
     getPreferences.mockResolvedValue({ onboarding: { completed_at: null } });
 
     await navigateAfterPortalAuth({
@@ -44,12 +44,19 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).toHaveBeenCalledOnce();
+    expect(getReadyCustomerSession).toHaveBeenCalledWith();
+    expect(getReadyCustomerSession.mock.invocationCallOrder[0]).toBeLessThan(
+      getPreferences.mock.invocationCallOrder[0]!,
+    );
+    expect(getPreferences.mock.invocationCallOrder[0]).toBeLessThan(
+      router.push.mock.invocationCallOrder[0]!,
+    );
     expect(router.push).toHaveBeenCalledWith("/en/welcome?next=%2Fen%2Faccount");
     expect(router.refresh).toHaveBeenCalled();
   });
 
   it("customer email auth preserves the destination when onboarding is complete", async () => {
-    getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
+    getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
     getPreferences.mockResolvedValue({
       onboarding: { completed_at: "2026-08-13T00:00:00Z" },
     });
@@ -75,7 +82,7 @@ describe("navigateAfterPortalAuth", () => {
       fallbackPath: "/en",
     });
 
-    expect(getSession).not.toHaveBeenCalled();
+    expect(getReadyCustomerSession).not.toHaveBeenCalled();
     expect(getPreferences).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en/listings");
     expect(router.refresh).toHaveBeenCalled();
@@ -91,6 +98,7 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(getReadyCustomerSession).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en");
   });
 
@@ -104,6 +112,7 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(getReadyCustomerSession).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/fr/kyc");
   });
 
@@ -117,6 +126,25 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(getReadyCustomerSession).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en");
+  });
+
+  it("fails closed when the Customer cart merge fails", async () => {
+    getReadyCustomerSession.mockRejectedValue(new Error("merge failed"));
+
+    await expect(
+      navigateAfterPortalAuth({
+        router,
+        locale: "en",
+        portal: "customer",
+        nextParam: "/en/account",
+        fallbackPath: "/en",
+      }),
+    ).rejects.toThrow("merge failed");
+
+    expect(getPreferences).not.toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.refresh).not.toHaveBeenCalled();
   });
 });

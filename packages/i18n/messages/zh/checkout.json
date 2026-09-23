@@ -65,7 +65,20 @@
     "escrowTeaser": "在线支付时，Convergeo 会托管您的款项直至送达，再释放给卖家。",
     "stockUnavailableNotice": "有商品已不可用。请在继续结账前检查购物车。",
     "summaryHeading": "订单摘要",
-    "sellerIndex": "卖家 {index}/{total}"
+    "sellerIndex": "卖家 {index}/{total}",
+    "mergeRecoveryTitle": "继续前请检查购物车",
+    "mergeRecoveryBody": "访客购物车与账户购物车存在差异。尚未移除任何商品，请选择处理方式。",
+    "mergeConflictLine": "商品 {listing}：{code}",
+    "mergePriceLine": "{item}：单价 {previous} → {current}，数量 {quantity}，合计 {total}",
+    "mergeUnnamedItem": "商品 #{id}",
+    "mergeWholesaleTerms": "批发最低数量：{moq} 件。",
+    "mergePriceNeedsReview": "此报价不能在这里接受，将从购物车移除；购买前请重新查看。",
+    "mergeAccountChoice": "保留账户取货点",
+    "mergeGuestChoice": "使用访客取货点",
+    "mergeApply": "接受当前价格并移除不可用商品",
+    "mergeRetry": "重试购物车合并",
+    "mergeSignOut": "退出登录",
+    "mergeFailure": "无法完成购物车保护。您的商品仍已保存。"
   },
   "checkout": {
     "pageTitle": "结账",

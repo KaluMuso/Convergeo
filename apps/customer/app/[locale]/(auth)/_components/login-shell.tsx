@@ -101,13 +101,17 @@ export function AuthLoginShell({
         return;
       }
 
-      await navigateAfterPortalAuth({
-        router,
-        locale,
-        portal: variant,
-        nextParam,
-        fallbackPath: defaultNextPath,
-      });
+      try {
+        await navigateAfterPortalAuth({
+          router,
+          locale,
+          portal: variant,
+          nextParam,
+          fallbackPath: defaultNextPath,
+        });
+      } catch {
+        setOauthError(labels.genericError);
+      }
     };
 
     void completeOAuth();
@@ -248,13 +252,17 @@ export function AuthSignupShell({
         return;
       }
 
-      await navigateAfterPortalAuth({
-        router,
-        locale,
-        portal: "customer",
-        nextParam,
-        fallbackPath: defaultNextPath,
-      });
+      try {
+        await navigateAfterPortalAuth({
+          router,
+          locale,
+          portal: "customer",
+          nextParam,
+          fallbackPath: defaultNextPath,
+        });
+      } catch {
+        setOauthError(labels.genericError);
+      }
     };
 
     void completeOAuth();

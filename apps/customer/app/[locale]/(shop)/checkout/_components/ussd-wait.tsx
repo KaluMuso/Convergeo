@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
@@ -10,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { useSession } from "../../../../../lib/customer-session";
 import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
 
 import { PaymentFailed, type PaymentFailedLabels } from "./payment-failed";
