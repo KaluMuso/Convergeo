@@ -1,6 +1,5 @@
 "use client";
 
-import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
@@ -18,6 +17,7 @@ import {
 } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { customerAuth, getReadyCustomerSession } from "../../../../../lib/customer-session";
 import {
   formatMadeToOrderLeadTime,
   formatListingQuantity,
@@ -102,21 +102,52 @@ type CartStoreState = {
 
 type CartStoreListener = () => void;
 
-async function getAccessToken(): Promise<string | null> {
-  const supabase = await getBrowserClient();
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+type CartIdentity = { generation: number; userId: string | null; token: string | null };
+
+async function readyCartIdentity(): Promise<CartIdentity> {
+  // Wait for reconciliation before permitting either account or guest cart I/O.
+  const session = await getReadyCustomerSession();
+  const state = customerAuth.snapshot();
+  if (state.loading || state.error || state.session?.user.id !== session?.user.id) {
+    throw new ApiError("cart.auth_transition_pending", "Cart is waiting for sign-in review", {
+      status: 409,
+    });
+  }
+  return {
+    generation: state.generation,
+    userId: session?.user.id ?? null,
+    token: session?.access_token ?? null,
+  };
 }
 
-async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+function assertCartIdentity(identity: CartIdentity): void {
+  const state = customerAuth.snapshot();
+  if (
+    state.generation !== identity.generation ||
+    state.loading ||
+    state.error ||
+    (state.session?.user.id ?? null) !== identity.userId
+  ) {
+    throw new ApiError("cart.auth_transition_changed", "Cart identity changed; review your cart", {
+      status: 409,
+    });
+  }
+}
+
+async function cartRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  identity?: CartIdentity,
+): Promise<T> {
+  const current = identity ?? (await readyCartIdentity());
+  assertCartIdentity(current);
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const token = await getAccessToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  if (current.token) {
+    headers.set("Authorization", `Bearer ${current.token}`);
   }
 
   let response: Response;
@@ -133,6 +164,7 @@ async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   const contentType = response.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
   const payload: unknown = isJson ? await response.json() : null;
+  assertCartIdentity(current);
 
   if (!response.ok) {
     if (
@@ -154,11 +186,14 @@ async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   return payload as T;
 }
 
-async function fetchRevalidateNotices(): Promise<ChangeNotice[]> {
+async function fetchRevalidateNotices(identity: CartIdentity): Promise<ChangeNotice[]> {
   try {
-    const result = await cartRequest<RevalidateResponse>("/cart/revalidate", { method: "POST" });
+    const result = await cartRequest<RevalidateResponse>(
+      "/cart/revalidate", { method: "POST" }, identity,
+    );
     return result.notices ?? [];
   } catch (error) {
+    assertCartIdentity(identity);
     if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
       return [];
     }
@@ -166,12 +201,12 @@ async function fetchRevalidateNotices(): Promise<ChangeNotice[]> {
   }
 }
 
-async function loadCartWithNotices(): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
-  const cart = await cartRequest<CartResponse>("/cart");
+async function loadCartWithNotices(identity: CartIdentity): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
+  const cart = await cartRequest<CartResponse>("/cart", {}, identity);
   if (cart.notices && cart.notices.length > 0) {
     return { cart, notices: cart.notices };
   }
-  const notices = await fetchRevalidateNotices();
+  const notices = await fetchRevalidateNotices(identity);
   return { cart, notices };
 }
 
@@ -187,6 +222,27 @@ let storeState: CartStoreState = {
 };
 
 const storeListeners = new Set<CartStoreListener>();
+
+let observedGeneration = customerAuth.snapshot().generation;
+let lastReadyUserId: string | null = null;
+customerAuth.subscribe(() => {
+  const state = customerAuth.snapshot();
+  if (state.generation !== observedGeneration) {
+    observedGeneration = state.generation;
+    lastReadyUserId = null;
+    setStoreState({
+      cart: null,
+      notices: [],
+      loading: state.loading,
+      loadError: Boolean(state.error),
+      lastAddedMessage: null,
+    });
+  }
+  if (!state.loading && !state.error && state.session && lastReadyUserId !== state.session.user.id) {
+    lastReadyUserId = state.session.user.id;
+    void refreshCart();
+  }
+});
 
 function emitStore() {
   storeListeners.forEach((listener) => listener());
@@ -221,13 +277,24 @@ export function getCartItemCount(cart: CartResponse | null): number {
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
+  let requestGeneration: number | null = null;
   setStoreState({ loading: true, loadError: false });
   try {
-    const { cart, notices } = await loadCartWithNotices();
+    const identity = await readyCartIdentity();
+    requestGeneration = identity.generation;
+    const { cart, notices } = await loadCartWithNotices(identity);
+    assertCartIdentity(identity);
     setStoreState({ cart, notices, loading: false, loadError: false });
     return cart;
   } catch {
-    setStoreState({ loading: false, loadError: true });
+    const state = customerAuth.snapshot();
+    if (
+      requestGeneration === state.generation &&
+      !state.loading &&
+      !state.error
+    ) {
+      setStoreState({ loading: false, loadError: true });
+    }
     return null;
   }
 }
@@ -254,6 +321,7 @@ export async function addCartItem(
   clipId?: string,
   locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
+  const identity = await readyCartIdentity();
   const cart = await cartRequest<CartResponse>("/cart/items", {
     method: "POST",
     body: JSON.stringify({
@@ -265,27 +333,32 @@ export async function addCartItem(
         : {}),
       ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
     }),
-  });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
+  }, identity);
+  const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
+  assertCartIdentity(identity);
   setStoreState({ cart, notices });
   return cart;
 }
 
 export async function updateCartItemQty(listingId: string, qty: number): Promise<CartResponse> {
+  const identity = await readyCartIdentity();
   const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
     method: "PATCH",
     body: JSON.stringify({ qty }),
-  });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
+  }, identity);
+  const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
+  assertCartIdentity(identity);
   setStoreState({ cart, notices });
   return cart;
 }
 
 export async function removeCartItem(listingId: string): Promise<CartResponse> {
+  const identity = await readyCartIdentity();
   const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
     method: "DELETE",
-  });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
+  }, identity);
+  const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
+  assertCartIdentity(identity);
   setStoreState({ cart, notices });
   return cart;
 }
@@ -297,21 +370,25 @@ export type SaveForLaterResult = {
 };
 
 export async function saveCartItemForLater(listingId: string): Promise<SaveForLaterResult> {
+  const identity = await readyCartIdentity();
   const result = await cartRequest<{
     cart: CartResponse;
     product_id: string | null;
     product_slug: string | null;
-  }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" });
-  const notices = result.cart.notices ?? (await fetchRevalidateNotices());
+  }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" }, identity);
+  const notices = result.cart.notices ?? (await fetchRevalidateNotices(identity));
+  assertCartIdentity(identity);
   setStoreState({ cart: result.cart, notices });
 
   if (result.product_slug) {
     const { upsertWishlistLocal } = await import("../../../../../lib/wishlist-local");
+    assertCartIdentity(identity);
     upsertWishlistLocal({
       productId: result.product_id,
       slug: result.product_slug,
     });
     const { syncWishlistWithServer } = await import("../../../../../lib/engagement-api");
+    assertCartIdentity(identity);
     void syncWishlistWithServer();
   }
 

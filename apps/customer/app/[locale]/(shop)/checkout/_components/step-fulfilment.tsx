@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
-import { useSession } from "../../../../../lib/customer-session";
+import { getReadyCustomerSession, useSession } from "../../../../../lib/customer-session";
 import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
 import { ReservationCountdown } from "./reservation-countdown";
@@ -658,11 +658,13 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
   }, [session, sessionLoading, checkoutSession, initializing, initSession, step]);
 
   const handleContactComplete = async () => {
-    const supabase = await import("@vergeo/auth/browser-client").then((mod) =>
-      mod.createBrowserClient(),
-    );
-    const { data } = await supabase.auth.getSession();
-    const nextToken = data.session?.access_token;
+    let nextToken: string | undefined;
+    try {
+      nextToken = (await getReadyCustomerSession())?.access_token;
+    } catch {
+      setErrorMessage(labels.error);
+      return;
+    }
     if (!nextToken) {
       setErrorMessage(labels.error);
       return;

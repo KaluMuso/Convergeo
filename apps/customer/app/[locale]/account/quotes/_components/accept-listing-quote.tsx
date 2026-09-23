@@ -6,9 +6,13 @@ import { Button } from "@vergeo/ui/src/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
-import { useSession } from "../../../../../lib/customer-session";
+import {
+  customerAuth,
+  getReadyCustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 import { createRfqApiClient } from "../../../../../lib/rfq-api";
 
 import type { RfqThread } from "../../../../../lib/rfq-api";
@@ -20,7 +24,7 @@ type AcceptListingQuoteProps = {
 
 export function AcceptListingQuote({ locale, thread }: AcceptListingQuoteProps) {
   const t = useTranslations("account.listingQuotes.accept");
-  const { session } = useSession();
+  const { loading: authLoading, error: authError } = useSession();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,17 +32,25 @@ export function AcceptListingQuote({ locale, thread }: AcceptListingQuoteProps) 
 
   const quotePrice = thread.quote_price_ngwee ?? 0;
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
-
-  const rfqClient = useMemo(() => createRfqApiClient(getToken), [getToken]);
-
   const handleAccept = useCallback(async () => {
     setSubmitting(true);
     setError(null);
     try {
+      const ready = await getReadyCustomerSession();
+      if (!ready) {
+        throw new ApiError("cart.auth_required", "Sign in before accepting a quote", { status: 401 });
+      }
+      const generation = customerAuth.snapshot().generation;
+      const rfqClient = createRfqApiClient(() => ready.access_token);
       await rfqClient.acceptQuoteIntoCart(thread.id, 1);
+      if (customerAuth.snapshot().generation !== generation) {
+        throw new ApiError("cart.auth_transition_changed", "Cart identity changed", { status: 409 });
+      }
       const { refreshCart } = await import("../../../(shop)/_components/cart/mini-cart-drawer");
       await refreshCart();
+      if (customerAuth.snapshot().generation !== generation) {
+        throw new ApiError("cart.auth_transition_changed", "Cart identity changed", { status: 409 });
+      }
       setSuccess(true);
       router.refresh();
     } catch (err) {
@@ -55,7 +67,7 @@ export function AcceptListingQuote({ locale, thread }: AcceptListingQuoteProps) 
       }
       setSubmitting(false);
     }
-  }, [rfqClient, router, t, thread.id]);
+  }, [router, t, thread.id]);
 
   if (success) {
     return (
@@ -99,7 +111,7 @@ export function AcceptListingQuote({ locale, thread }: AcceptListingQuoteProps) 
         variant="primary"
         loading={submitting}
         loadingLabel={t("submitting")}
-        disabled={submitting}
+        disabled={submitting || authLoading || Boolean(authError)}
         data-testid="listing-quote-accept-cta"
         onClick={() => void handleAccept()}
       >
