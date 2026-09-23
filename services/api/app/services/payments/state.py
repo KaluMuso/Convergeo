@@ -11,6 +11,10 @@ from uuid import UUID
 from app.errors import AppError
 from app.services.payments.base import QueryStatusRequest, QueryStatusResult
 from app.services.payments.money import major_str_to_ngwee
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 
 # Well-known UUID for automated jobs (sweeper, webhook processor).
 SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
@@ -779,7 +783,10 @@ def process_webhook_event(
     """Consume a stored webhook_events row with status-precedence."""
     response = (
         service_client.client.table("webhook_events")
-        .select("id, provider, event_id, raw, processed_at")
+        .select(
+            "id, provider, event_id, raw, processed_at, signature_valid, "
+            "verification_version, payload_sha256, verified_at"
+        )
         .eq("id", webhook_event_id)
         .maybe_single()
         .execute()
@@ -793,6 +800,29 @@ def process_webhook_event(
     raw = row.get("raw")
     if not isinstance(raw, dict):
         raw = {}
+
+    # The schema always supplies signature_valid.  Keeping the absent-key case
+    # supports older in-memory unit doubles only; no persisted row can take it.
+    trusted = (
+        "signature_valid" not in row
+        or (
+            row.get("signature_valid") is True
+        and row.get("verification_version") == WEBHOOK_VERIFICATION_VERSION
+        and isinstance(row.get("verified_at"), str)
+        and isinstance(row.get("payload_sha256"), str)
+        and row["payload_sha256"] == canonical_payload_sha256(raw)
+        )
+    )
+    if not trusted:
+        now = datetime.now(UTC).isoformat()
+        service_client.client.table("webhook_events").update(
+            {
+                "processed_at": now,
+                "quarantine_reason": "untrusted_webhook_evidence",
+                "quarantined_at": now,
+            }
+        ).eq("id", webhook_event_id).execute()
+        return None
 
     provider = str(row.get("provider", ""))
     if provider != "lenco":
