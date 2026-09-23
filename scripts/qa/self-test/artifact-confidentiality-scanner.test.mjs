@@ -81,6 +81,22 @@ function scan(root, limits) {
   return scanArtifactPaths({ roots: [root], sentinels: [SENTINEL], limits });
 }
 
+function encodeLayers(value, count, url = false) {
+  let current = value;
+  for (let layer = 0; layer < count; layer++) {
+    const encoded = Buffer.from(current).toString("base64");
+    current = url
+      ? encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+      : encoded;
+  }
+  return current;
+}
+
+function reportWithJsonValue(value) {
+  const archive = storedZip([["report.json", JSON.stringify({ action: value })]]);
+  return `<html><script id="playwrightReportBase64" type="application/zip">data:application/zip;base64,${archive.toString("base64")}</script></html>`;
+}
+
 afterEach(() => {
   while (temporaryRoots.length > 0) rmSync(temporaryRoots.pop(), { recursive: true, force: true });
 });
@@ -102,6 +118,53 @@ describe("artifact confidentiality scanner", () => {
     const result = scanArtifactPaths({ roots: [root], sentinels: [pin] });
     assert.equal(formatScanSummary(result).verdict, "FAIL");
     assert.ok(result.findings.some(({ representation }) => representation.endsWith(":base64")));
+  });
+
+  it("detects a raw leading-zero six-digit PIN", () => {
+    const root = artifactDir();
+    const pin = "000001";
+    writeFileSync(join(root, "report.html"), reportWithJsonValue(pin));
+    const result = scanArtifactPaths({ roots: [root], sentinels: [pin] });
+    assert.equal(formatScanSummary(result).verdict, "FAIL");
+    assert.ok(result.findings.some(({ location }) => location.endsWith("::zip:report.json")));
+  });
+
+  for (const pin of ["042817", "000001"]) {
+    for (let layers = 1; layers <= 4; layers++) {
+      it(`detects ${layers} base64 layers of leading-zero PIN ${pin.slice(0, 2)}… in HTML ZIP JSON`, () => {
+        const root = artifactDir();
+        for (const url of [false, true]) {
+          writeFileSync(join(root, "report.html"), reportWithJsonValue(encodeLayers(pin, layers, url)));
+          const result = scanArtifactPaths({ roots: [root], sentinels: [pin] });
+          assert.equal(formatScanSummary(result).verdict, "FAIL");
+          assert.ok(result.findings.some(({ location }) => location.endsWith("::zip:report.json")));
+        }
+      });
+    }
+  }
+
+  it("detects mixed padding and alphabet across four layers", () => {
+    const root = artifactDir();
+    const pin = "042817";
+    let nested = pin;
+    for (const url of [false, true, false, true]) nested = encodeLayers(nested, 1, url);
+    writeFileSync(join(root, "report.html"), reportWithJsonValue(nested));
+    assert.equal(formatScanSummary(scanArtifactPaths({ roots: [root], sentinels: [pin] })).verdict, "FAIL");
+  });
+
+  it("detects padded and unpadded base64url forms of a long sentinel", () => {
+    const root = artifactDir();
+    const longSentinel = "scanner-" + "ÿ".repeat(24);
+    for (const form of [
+      Buffer.from(longSentinel).toString("base64").replace(/\+/g, "-").replace(/\//g, "_"),
+      encodeLayers(longSentinel, 1, true),
+    ]) {
+      writeFileSync(join(root, "report.html"), reportWithJsonValue(form));
+      assert.equal(
+        formatScanSummary(scanArtifactPaths({ roots: [root], sentinels: [longSentinel] })).verdict,
+        "FAIL",
+      );
+    }
   });
 
   it("fails when unsafe HTML reporter output embeds a base64 ZIP leak", () => {
@@ -170,7 +233,25 @@ describe("artifact confidentiality scanner", () => {
     );
     const result = scan(root);
     assert.equal(result.duplicateArchiveEntries, 1);
+    assert.equal(formatScanSummary(result).verdict, "FAIL");
     assert.ok(result.findings.some(({ location }) => /same-name\.txt#2$/.test(location)));
+  });
+
+  it("fails closed when a report exceeds the decoded node budget", () => {
+    const root = artifactDir();
+    writeFileSync(join(root, "large.txt"), "clean but too large for the configured budget");
+    const result = scan(root, { maxNodeBytes: 16 });
+    assert.equal(formatScanSummary(result).verdict, "FAIL");
+    assert.match(result.errors[0].error, /payload exceeds scan limit/);
+  });
+
+  it("fails closed when sentinel encoding exceeds its bounded budget", () => {
+    const root = artifactDir();
+    writeFileSync(join(root, "clean.txt"), "clean");
+    assert.throws(
+      () => scanArtifactPaths({ roots: [root], sentinels: ["S".repeat(4_097)] }),
+      /sentinel exceeds 4096-byte encoding limit/,
+    );
   });
 
   it("deduplicates overlapping base64 matches without skipping the payload", () => {

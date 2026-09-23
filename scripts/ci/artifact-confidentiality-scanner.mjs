@@ -20,6 +20,12 @@ const DEFAULT_LIMITS = Object.freeze({
   maxCompressionRatio: 1_000,
 });
 
+// Short unmarked base64 tokens are too common to decode generically. Match only
+// bounded encodings of the supplied credential, including nested six-digit PINs.
+const MAX_SENTINEL_BYTES = 4_096;
+const MAX_SENTINEL_ENCODING_LAYERS = 4;
+const MAX_SENTINEL_FORMS = 1_024;
+
 const TEXT_EXTENSIONS = new Set([
   ".css", ".csv", ".htm", ".html", ".js", ".json", ".log", ".md",
   ".mjs", ".svg", ".txt", ".xml", ".yaml", ".yml",
@@ -51,6 +57,31 @@ function crc32(buffer) {
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
+}
+
+function encodedSentinelForms(value) {
+  if (Buffer.byteLength(value) > MAX_SENTINEL_BYTES) {
+    throw new Error(`sentinel exceeds ${MAX_SENTINEL_BYTES}-byte encoding limit`);
+  }
+  const seen = new Set();
+  let frontier = [value];
+  for (let layer = 0; layer < MAX_SENTINEL_ENCODING_LAYERS; layer++) {
+    const next = [];
+    for (const previous of frontier) {
+      const padded = Buffer.from(previous).toString("base64");
+      const urlPadded = padded.replace(/\+/g, "-").replace(/\//g, "_");
+      for (const form of [padded, padded.replace(/=+$/, ""), urlPadded, urlPadded.replace(/=+$/, "")]) {
+        if (seen.has(form)) continue;
+        seen.add(form);
+        if (seen.size > MAX_SENTINEL_FORMS) {
+          throw new Error(`sentinel encoding form limit exceeded (${MAX_SENTINEL_FORMS})`);
+        }
+        next.push(form);
+      }
+    }
+    frontier = next;
+  }
+  return [...seen].map((form) => Buffer.from(form));
 }
 
 function hasZipMagic(buffer) {
@@ -228,13 +259,11 @@ function scanInputs(inputs, sentinels, suppliedLimits = {}) {
     .filter((value) => value.length > 0)
     .map((value, index) => {
       const utf8 = Buffer.from(value);
-      const base64 = utf8.toString("base64");
       return {
         index,
         utf8,
         utf16le: Buffer.from(value, "utf16le"),
-        encoded: [...new Set([base64, base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")])]
-          .map((candidate) => Buffer.from(candidate)),
+        encoded: encodedSentinelForms(value),
       };
     });
   if (sentinelBuffers.length === 0) throw new Error("at least one non-empty sentinel is required");
