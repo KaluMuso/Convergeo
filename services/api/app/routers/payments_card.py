@@ -24,6 +24,7 @@ from app.services.payments.state import (
     PaymentObservationMismatch,
     PaymentStatus,
     apply_payment_status,
+    collection_observation_from_webhook,
     lenco_collection_status_to_payment_status,
     lenco_webhook_event_to_payment_status,
     process_webhook_event,
@@ -429,8 +430,6 @@ async def verify_card_payment_return(
                 order_confirmed=True,
             )
 
-    webhook_confirmed = webhook_row is not None
-
     if client_status == "success" and lenco_status != PaymentStatus.SUCCESS:
         _hold_payment_mismatch(
             service_client,
@@ -448,19 +447,40 @@ async def verify_card_payment_return(
             held=True,
         )
 
-    if lenco_status == PaymentStatus.SUCCESS and webhook_confirmed:
+    if lenco_status == PaymentStatus.SUCCESS and webhook_row is not None:
+        webhook_data = webhook_row.get("raw", {}).get("data", {})
+        if not isinstance(webhook_data, dict):
+            raise AppError(
+                code="payment_observation_required",
+                message="Verified webhook collection data is missing",
+                http_status=409,
+            )
         outcome = apply_payment_status(
             service_client,
             payment_id=payment_id,
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="Card payment verified via Lenco status query and webhook cross-check",
+            observation=collection_observation_from_webhook(
+                webhook_data, webhook_event_id=str(webhook_row["id"])
+            ),
         )
         if outcome is not None:
             _mark_fulfilled(
                 service_client,
                 payment_id=payment_id,
                 note="Card payment fulfilled after server verification",
+            )
+        else:
+            settled = _load_payment(service_client, payment_id=payment_id)
+            settled_status = PaymentStatus(str(settled["status"]))
+            return VerifyCardReturnResponse(
+                payment_id=payment_id,
+                checkout_group_id=checkout_group_id,
+                status=settled_status.value,
+                verified=settled_status == PaymentStatus.SUCCESS,
+                order_confirmed=settled_status == PaymentStatus.SUCCESS,
+                held=settled_status != PaymentStatus.SUCCESS,
             )
         return VerifyCardReturnResponse(
             payment_id=payment_id,

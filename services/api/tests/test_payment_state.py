@@ -179,6 +179,38 @@ class FakeSupabaseClient:
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
 
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        """Unit-only RPC stand-in; real transaction assertions live in lane_d."""
+        assert name == "apply_prepaid_collection_success"
+        payment = next(
+            row for row in self.tables["payments"].rows
+            if row["id"] == params["p_payment_id"]
+        )
+        observation = params["p_observation"]
+        assert observation["reference"] == payment["lenco_reference"]
+        assert observation["amount_ngwee"] == payment["amount_ngwee"]
+        prior = payment["status"]
+        if prior == "success":
+            result = "duplicate"
+        elif prior == "cancelled":
+            result = "late_collection"
+        else:
+            payment["status"] = "success"
+            self.tables["audit_log"].rows.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "action": "payment.transition",
+                    "entity_type": "payment",
+                    "entity_id": params["p_payment_id"],
+                    "before": {"status": prior},
+                    "after": {"status": "success", "note": params["p_note"]},
+                }
+            )
+            result = "applied"
+        return MagicMock(execute=lambda: MagicMock(data={
+            "result": result, "from_status": prior,
+        }))
+
 
 class FakeServiceClient:
     def __init__(self, fake: FakeSupabaseClient) -> None:
@@ -365,6 +397,13 @@ class TestStatusPrecedence:
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="late success webhook",
+            observation={
+                "reference": f"ord-{payment_id}",
+                "amount_ngwee": 10_000,
+                "currency": "ZMW",
+                "provider_reference": None,
+                "source": "unit",
+            },
         )
         assert outcome is not None
         assert outcome.to_status == PaymentStatus.SUCCESS
@@ -556,6 +595,13 @@ class TestSweeper:
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="late success after expiry",
+            observation={
+                "reference": f"ord-{payment_id}",
+                "amount_ngwee": 10_000,
+                "currency": "ZMW",
+                "provider_reference": None,
+                "source": "unit",
+            },
         )
         assert outcome is not None
         assert outcome.from_status == PaymentStatus.EXPIRED

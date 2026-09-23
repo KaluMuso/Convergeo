@@ -245,6 +245,26 @@ class TestForgedReturn:
 
 class TestVerifyWebhookRace:
     @pytest.mark.asyncio
+    async def test_cancelled_late_collection_is_held_not_verified(
+        self, card_service: FakeServiceClient
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        webhook_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id, status="cancelled")
+        _seed_success_webhook(card_service.client, webhook_id=webhook_id)
+        result = await verify_card_payment_return(
+            card_service,
+            payment_id=payment_id,
+            customer_id=CUSTOMER_ID,
+            client_status="success",
+            strategy=_mock_strategy(lenco_status="successful"),
+        )
+        assert result.status == "cancelled"
+        assert result.held is True
+        assert result.verified is False
+        assert result.order_confirmed is False
+
+    @pytest.mark.asyncio
     async def test_verify_first_then_webhook_converges_once(
         self,
         card_service: FakeServiceClient,

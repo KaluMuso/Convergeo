@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime
+from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from app.services.ledger.engine import LedgerError
 from app.services.ledger.templates import LedgerTemplate
+from app.services.orders.audit import sql_literal
 from app.services.payments.reconcile import fetch_ledger_day_rows
 from app.services.payments.settlement import (
     prepaid_collection_idempotency_key,
@@ -37,8 +41,34 @@ def payment_id() -> str:
     return str(uuid.uuid4())
 
 
+@pytest.fixture(autouse=True)
+def reset_prepaid_checkout_fixture(db: PgConn) -> None:
+    """Each test gets the same seeded checkout without another test's money rows."""
+    reset = db.run_script(
+        f"""
+        BEGIN;
+        DELETE FROM public.ledger_postings lp
+        USING public.ledger_transactions t
+        WHERE lp.transaction_id = t.id
+          AND t.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+        DELETE FROM public.ledger_transactions
+        WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+        DELETE FROM public.payment_collection_exceptions e
+        USING public.payments p
+        WHERE e.payment_id = p.id
+          AND p.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+        DELETE FROM public.payments
+        WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+        DELETE FROM public.notification_outbox
+        WHERE dedupe_key LIKE '%:{CHECKOUT_GROUP_ID}:whatsapp';
+        COMMIT;
+        """
+    )
+    assert reset.ok, reset.error
+
+
 @pytest.fixture
-def fake_service() -> FakeServiceClient:
+def fake_service(db: PgConn, monkeypatch: pytest.MonkeyPatch) -> FakeServiceClient:
     fake = FakeSupabaseClient()
     fake.tables["checkout_groups"].rows.append(
         {
@@ -47,7 +77,41 @@ def fake_service() -> FakeServiceClient:
             "status": "pending",
         }
     )
+
+    def rpc(name: str, params: dict[str, Any]) -> SimpleNamespace:
+        assert name == "apply_prepaid_collection_success"
+
+        def execute() -> SimpleNamespace:
+            result = db.run(
+                "SELECT public.apply_prepaid_collection_success("
+                f"'{params['p_payment_id']}'::uuid, "
+                f"'{params['p_actor_id']}'::uuid, "
+                f"{sql_literal(params['p_note'])}, "
+                f"{sql_literal(json.dumps(params['p_observation']))}::jsonb);"
+            )
+            if not result.ok or not result.rows:
+                raise LedgerError(result.error or "atomic success RPC failed")
+            decision = json.loads(result.rows[0])
+            if decision["result"] == "applied":
+                for row in fake.tables["payments"].rows:
+                    if row["id"] == params["p_payment_id"]:
+                        row["status"] = "success"
+            return SimpleNamespace(data=decision)
+
+        return SimpleNamespace(execute=execute)
+
+    monkeypatch.setattr(fake, "rpc", rpc)
     return FakeServiceClient(fake)
+
+
+def _observation(payment_id: str) -> dict[str, Any]:
+    return {
+        "reference": f"ord-{payment_id}",
+        "amount_ngwee": AMOUNT_NGWEE,
+        "currency": "ZMW",
+        "provider_reference": None,
+        "source": "legacy_db_test",
+    }
 
 
 def _seed_db_payment(pg: PgConn, *, payment_id: str, reference: str) -> None:
@@ -239,6 +303,7 @@ def test_late_success_sibling_does_not_double_settle(
         incoming_status=PaymentStatus.SUCCESS,
         actor_id="00000000-0000-0000-0000-000000000001",
         note="Retry payment success",
+        observation=_observation(payment_b),
     )
     assert b_outcome is not None
     assert b_outcome.to_status == PaymentStatus.SUCCESS
@@ -251,6 +316,7 @@ def test_late_success_sibling_does_not_double_settle(
         incoming_status=PaymentStatus.SUCCESS,
         actor_id="00000000-0000-0000-0000-000000000001",
         note="Late success after sibling settled",
+        observation=_observation(payment_a),
     )
     assert a_outcome is None
     assert _checkout_charge_count(db, CHECKOUT_GROUP_ID) == 1
@@ -262,15 +328,13 @@ def test_late_success_sibling_does_not_double_settle(
     )
     assert payment_a_row["status"] == PaymentStatus.FAILED.value
 
-    audits = [
-        row
-        for row in fake_service.client.tables["audit_log"].rows
-        if row.get("entity_id") == payment_a
-    ]
-    assert any(
-        "late_success_after_sibling_settled" in str(row.get("after", {}))
-        for row in audits
+    exception = db.run(
+        f"""
+        SELECT reason FROM public.payment_collection_exceptions
+        WHERE payment_id = '{payment_a}'::uuid
+        """
     )
+    assert exception.ok and exception.rows == ["checkout_already_allocated"]
 
 
 def test_settle_sibling_payment_skips_second_charge(
@@ -317,6 +381,7 @@ def test_apply_success_settles_before_status_transition(
         incoming_status=PaymentStatus.SUCCESS,
         actor_id="00000000-0000-0000-0000-000000000001",
         note="Test prepaid success",
+        observation=_observation(payment_id),
     )
 
     assert outcome is not None
@@ -378,6 +443,7 @@ def test_webhook_and_card_parity_single_ledger_txn(
         incoming_status=PaymentStatus.SUCCESS,
         actor_id="00000000-0000-0000-0000-000000000001",
         note="Card verify replay",
+        observation=_observation(payment_id),
     )
     assert card_outcome is None
     assert _ledger_txn_count(db, payment_id) == 1
@@ -389,9 +455,8 @@ def test_ledger_failure_blocks_payment_success(
 ) -> None:
     _seed_ussd_payment(fake_service.client, payment_id=payment_id)
 
-    with patch(
-        "app.services.payments.settlement.fulfill_prepaid_checkout_escrow",
-        side_effect=LedgerError("ledger post failed"),
+    with patch.object(
+        fake_service.client, "rpc", side_effect=LedgerError("atomic RPC failed")
     ):
         with pytest.raises(LedgerError):
             apply_payment_status(
@@ -400,6 +465,7 @@ def test_ledger_failure_blocks_payment_success(
                 incoming_status=PaymentStatus.SUCCESS,
                 actor_id="00000000-0000-0000-0000-000000000001",
                 note="Should fail closed",
+                observation=_observation(payment_id),
             )
 
     payment = fake_service.client.tables["payments"].rows[0]
