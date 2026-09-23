@@ -653,7 +653,13 @@ def _seed_webhook(
             "created_at": created_at,
             "raw": {
                 "event": event,
-                "data": {"id": event_id, "reference": reference, "status": status},
+                "data": {
+                    "id": event_id,
+                    "reference": reference,
+                    "status": status,
+                    "amount": "250.00",
+                    "currency": "ZMW",
+                },
             },
         }
     )

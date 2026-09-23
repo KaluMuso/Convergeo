@@ -9,7 +9,8 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from app.errors import AppError
-from app.services.payments.base import QueryStatusRequest
+from app.services.payments.base import QueryStatusRequest, QueryStatusResult
+from app.services.payments.money import major_str_to_ngwee
 
 # Well-known UUID for automated jobs (sweeper, webhook processor).
 SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
@@ -109,6 +110,18 @@ class PaymentTransitionError(AppError):
             message=message,
             http_status=409,
             details={"from_status": from_status, "event": event},
+        )
+
+
+class PaymentObservationMismatch(AppError):
+    """A provider observation does not identify the expected collection."""
+
+    def __init__(self, payment_id: str, reason: str) -> None:
+        super().__init__(
+            code="payment_provider_observation_mismatch",
+            message="Provider collection does not match the payment",
+            http_status=409,
+            details={"payment_id": payment_id, "reason": reason},
         )
 
 
@@ -319,6 +332,68 @@ def _load_payment_by_reference(
         rail=str(row["rail"]),
         provider=str(row["provider"]),
         raw=cast(dict[str, Any], raw) if isinstance(raw, dict) else {},
+    )
+
+
+def validate_collection_observation(
+    payment: PaymentSnapshot,
+    *,
+    reference: object,
+    amount_major: object,
+    currency: object,
+    provider_reference: object,
+) -> None:
+    """Require a collection's identity and value to match before any transition."""
+    if payment.provider != "lenco" or reference != payment.lenco_reference:
+        raise PaymentObservationMismatch(payment.id, "reference")
+    if currency != "ZMW":
+        raise PaymentObservationMismatch(payment.id, "currency")
+    if not isinstance(amount_major, str):
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid")
+    try:
+        observed_ngwee = major_str_to_ngwee(amount_major, currency="ZMW")
+    except (TypeError, ValueError) as exc:
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid") from exc
+    if observed_ngwee != payment.amount_ngwee:
+        raise PaymentObservationMismatch(payment.id, "amount")
+    expected_provider_reference = payment.raw.get("provider_reference")
+    if (
+        isinstance(expected_provider_reference, str)
+        and expected_provider_reference
+        and provider_reference != expected_provider_reference
+    ):
+        raise PaymentObservationMismatch(payment.id, "provider_reference")
+
+
+def validate_query_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    result: QueryStatusResult,
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation(
+        payment,
+        reference=result.reference,
+        amount_major=result.amount_major,
+        currency=result.currency,
+        provider_reference=result.provider_reference,
+    )
+
+
+def validate_webhook_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    data: dict[str, Any],
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation(
+        payment,
+        reference=data.get("reference"),
+        amount_major=data.get("amount"),
+        currency=data.get("currency"),
+        provider_reference=data.get("lencoReference", data.get("lenco_reference")),
     )
 
 
@@ -587,6 +662,13 @@ async def sweep_stale_payments(
         query_result = await query_status(
             QueryStatusRequest(reference=payment.lenco_reference)
         )
+        validate_collection_observation(
+            payment,
+            reference=query_result.reference,
+            amount_major=query_result.amount_major,
+            currency=query_result.currency,
+            provider_reference=query_result.provider_reference,
+        )
         lenco_status = lenco_collection_status_to_payment_status(query_result.status)
         if lenco_status == PaymentStatus.SUCCESS:
             outcome = apply_payment_status(
@@ -700,14 +782,23 @@ def process_webhook_event(
         ).eq("id", webhook_event_id).execute()
         return None
 
+    # A transfer event can carry a status and even a matching-looking reference;
+    # it is never evidence that a collection was paid.
     incoming = lenco_webhook_event_to_payment_status(event_name)
-    if incoming is None:
+    if incoming is None and event_name.startswith("collection."):
         collection_status = data.get("status")
         if isinstance(collection_status, str):
             incoming = lenco_collection_status_to_payment_status(collection_status)
 
     outcome: TransitionOutcome | None = None
     if incoming is not None:
+        validate_collection_observation(
+            payment,
+            reference=reference,
+            amount_major=data.get("amount"),
+            currency=data.get("currency"),
+            provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+        )
         outcome = apply_payment_status(
             service_client,
             payment_id=payment.id,

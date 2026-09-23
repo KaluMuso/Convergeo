@@ -21,6 +21,7 @@ from app.services.payments.registry import get as get_payment_strategy
 from app.services.payments.state import (
     SYSTEM_ACTOR_ID,
     PaymentEvent,
+    PaymentObservationMismatch,
     PaymentStatus,
     apply_payment_status,
     lenco_collection_status_to_payment_status,
@@ -28,6 +29,8 @@ from app.services.payments.state import (
     process_webhook_event,
     release_checkout_for_retry,
     transition_payment,
+    validate_query_collection_observation,
+    validate_webhook_collection_observation,
 )
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -212,6 +215,8 @@ def _widget_customer(profile: dict[str, Any], *, email: str | None) -> WidgetCus
 
 def _webhook_indicates_success(raw: dict[str, Any]) -> bool:
     event_name = str(raw.get("event", ""))
+    if not event_name.startswith("collection."):
+        return False
     mapped = lenco_webhook_event_to_payment_status(event_name)
     if mapped == PaymentStatus.SUCCESS:
         return True
@@ -226,6 +231,7 @@ def _webhook_indicates_success(raw: dict[str, Any]) -> bool:
 def _find_success_webhook(
     service_client: ServiceRoleClient,
     *,
+    payment_id: str,
     reference: str,
 ) -> dict[str, Any] | None:
     response = (
@@ -246,6 +252,11 @@ def _find_success_webhook(
         if row_reference != reference:
             continue
         if _webhook_indicates_success(raw):
+            validate_webhook_collection_observation(
+                service_client,
+                payment_id=payment_id,
+                data=data,
+            )
             return row
     return None
 
@@ -313,9 +324,16 @@ def _mark_fulfilled(
 async def _query_lenco_status(
     strategy: PaymentStrategy,
     *,
+    service_client: ServiceRoleClient,
+    payment_id: str,
     reference: str,
 ) -> PaymentStatus | None:
     result = await strategy.query_status(QueryStatusRequest(reference=reference))
+    validate_query_collection_observation(
+        service_client,
+        payment_id=payment_id,
+        result=result,
+    )
     return lenco_collection_status_to_payment_status(result.status)
 
 
@@ -365,9 +383,34 @@ async def verify_card_payment_return(
         )
 
     provider = strategy or get_payment_strategy(str(payment.get("provider", LENCO_PROVIDER)))
-    lenco_status = await _query_lenco_status(provider, reference=lenco_reference)
-
-    webhook_row = _find_success_webhook(service_client, reference=lenco_reference)
+    try:
+        lenco_status = await _query_lenco_status(
+            provider,
+            service_client=service_client,
+            payment_id=payment_id,
+            reference=lenco_reference,
+        )
+        webhook_row = _find_success_webhook(
+            service_client,
+            payment_id=payment_id,
+            reference=lenco_reference,
+        )
+    except PaymentObservationMismatch as exc:
+        _hold_payment_mismatch(
+            service_client,
+            payment_id=payment_id,
+            lenco_reference=lenco_reference,
+            reason=str(exc.details.get("reason", "provider_observation")),
+            lenco_status=None,
+        )
+        return VerifyCardReturnResponse(
+            payment_id=payment_id,
+            checkout_group_id=checkout_group_id,
+            status=current_status.value,
+            verified=False,
+            order_confirmed=False,
+            held=True,
+        )
     if webhook_row is not None and webhook_row.get("processed_at") is None:
         process_webhook_event(service_client, webhook_event_id=str(webhook_row["id"]))
         payment = _load_payment(service_client, payment_id=payment_id)

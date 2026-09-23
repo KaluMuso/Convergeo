@@ -23,6 +23,7 @@ from app.services.payments.state import (
     apply_payment_status,
     lenco_collection_status_to_payment_status,
     process_webhook_event,
+    validate_query_collection_observation,
 )
 
 logger = logging.getLogger(__name__)
@@ -397,6 +398,12 @@ async def poll_non_terminal_payments(
                 )
                 errors += 1
                 continue
+
+            validate_query_collection_observation(
+                service_client,
+                payment_id=payment_id,
+                result=query_result,
+            )
 
             incoming = lenco_collection_status_to_payment_status(query_result.status)
             if incoming is None:

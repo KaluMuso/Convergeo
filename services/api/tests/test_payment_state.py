@@ -393,7 +393,12 @@ class TestWebhookProcessing:
                 "processed_at": None,
                 "raw": {
                     "event": "collection.successful",
-                    "data": {"reference": reference, "status": "successful"},
+                    "data": {
+                        "reference": reference,
+                        "status": "successful",
+                        "amount": "100.00",
+                        "currency": "ZMW",
+                    },
                 },
             }
         )

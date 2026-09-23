@@ -116,6 +116,8 @@ def _seed_webhook(
                     "id": event_id.split(":", 1)[-1],
                     "reference": reference,
                     "status": "successful" if "successful" in event else "settled",
+                    "amount": "250.00",
+                    "currency": "ZMW",
                 },
             },
         }
