@@ -21,8 +21,10 @@ from app.services.payments.state import (
     PaymentStatus,
     PaymentTransitionError,
     apply_payment_status,
+    collection_observation_from_query,
     lenco_collection_status_to_payment_status,
     process_webhook_event,
+    validate_query_collection_observation,
 )
 
 logger = logging.getLogger(__name__)
@@ -398,6 +400,12 @@ async def poll_non_terminal_payments(
                 errors += 1
                 continue
 
+            validate_query_collection_observation(
+                service_client,
+                payment_id=payment_id,
+                result=query_result,
+            )
+
             incoming = lenco_collection_status_to_payment_status(query_result.status)
             if incoming is None:
                 unchanged += 1
@@ -409,6 +417,13 @@ async def poll_non_terminal_payments(
                 incoming_status=incoming,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Reconciliation poller re-query",
+                observation=(
+                    collection_observation_from_query(
+                        query_result, source="poller"
+                    )
+                    if incoming == PaymentStatus.SUCCESS
+                    else None
+                ),
             )
             if outcome is None:
                 unchanged += 1

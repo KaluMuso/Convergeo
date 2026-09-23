@@ -426,20 +426,6 @@ def transition_order(
             actor_role=actor_role.value,
         )
 
-    if event in CANCELLATION_EVENTS and is_order_paid(snapshot) and not refund_path:
-        raise RefundPathRequiredError()
-
-    if (
-        event in PREPAID_PAYMENT_REQUIRED_EVENTS
-        and not snapshot.cod
-        and not snapshot.paid
-    ):
-        raise PrepaidPaymentRequiredError(
-            from_status=snapshot.status.value,
-            event=event.value,
-            actor_role=actor_role.value,
-        )
-
     order_sql = sql_uuid(order_id, "order_id")
     to_status = resolved.to_status.value
     from_status = snapshot.status.value
@@ -447,17 +433,46 @@ def transition_order(
 BEGIN;
 SELECT set_config('app.order_actor', {sql_literal(actor_id)}, true);
 SELECT set_config('app.order_note', {sql_literal(note)}, true);
-WITH locked AS (
-  SELECT id, status
-  FROM public.orders
-  WHERE id = {order_sql}
-  FOR UPDATE
+WITH locked_checkout AS MATERIALIZED (
+  SELECT c.id
+  FROM public.checkout_groups c
+  JOIN public.orders o ON o.checkout_group_id = c.id
+  WHERE o.id = {order_sql}
+  FOR UPDATE OF c
+), locked_payments AS MATERIALIZED (
+  SELECT p.id, p.status
+  FROM public.payments p
+  JOIN locked_checkout c ON c.id = p.checkout_group_id
+  ORDER BY p.id
+  FOR UPDATE OF p
+), locked_order AS MATERIALIZED (
+  SELECT o.id, o.status, o.cod,
+         EXISTS (
+           SELECT 1 FROM locked_payments p WHERE p.status = 'success'
+         ) AS paid
+  FROM public.orders o
+  JOIN locked_checkout c ON c.id = o.checkout_group_id
+  WHERE o.id = {order_sql}
+  FOR UPDATE OF o
+), eligible AS (
+  SELECT id
+  FROM locked_order
+  WHERE status = '{from_status}'
+    AND (
+      '{event.value}' NOT IN ('cancel', 'reject')
+      OR {str(refund_path).lower()}
+      OR NOT paid
+    )
+    AND (
+      '{event.value}' NOT IN ('confirm', 'start_processing', 'mark_ready', 'ship')
+      OR cod
+      OR paid
+    )
 )
 UPDATE public.orders o
 SET status = '{to_status}'
-FROM locked l
-WHERE o.id = l.id
-  AND l.status = '{from_status}'
+FROM eligible e
+WHERE o.id = e.id
 RETURNING o.status;
 COMMIT;
 """
@@ -465,6 +480,25 @@ COMMIT;
     if not update_result.ok:
         raise RuntimeError(f"order transition failed: {update_result.error}")
     if not update_result.rows or update_result.rows[-1] != to_status:
+        current = _fetch_order_snapshot(order_id)
+        if (
+            event in CANCELLATION_EVENTS
+            and current is not None
+            and is_order_paid(current)
+            and not refund_path
+        ):
+            raise RefundPathRequiredError()
+        if (
+            event in PREPAID_PAYMENT_REQUIRED_EVENTS
+            and current is not None
+            and not current.cod
+            and not current.paid
+        ):
+            raise PrepaidPaymentRequiredError(
+                from_status=current.status.value,
+                event=event.value,
+                actor_role=actor_role.value,
+            )
         raise OrderTransitionError(
             "Concurrent transition changed order state",
             from_status=from_status,

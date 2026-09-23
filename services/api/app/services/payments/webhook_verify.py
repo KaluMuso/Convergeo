@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -13,6 +14,7 @@ from app.services.payments.lenco.config import get_api_token
 
 LENCO_PROVIDER = "lenco"
 SIGNATURE_HEADER = "X-Lenco-Signature"
+WEBHOOK_VERIFICATION_VERSION = "lenco_hmac_sha512_v1"
 
 KNOWN_LENCO_EVENTS = frozenset(
     {
@@ -38,6 +40,14 @@ class LencoWebhookVerifyResult(StrictModel):
     event_id: str | None = None
     raw: dict[str, Any] | None = None
     flags: list[str] = []
+
+
+def canonical_payload_sha256(raw: dict[str, Any]) -> str:
+    """Bind the persisted JSON document to the ingress verification result."""
+    document = json.dumps(
+        raw, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    return hashlib.sha256(document).hexdigest()
 
 
 def _fallback_event_id(raw_body: bytes) -> str:
@@ -141,5 +151,8 @@ def build_webhook_event_row(result: LencoWebhookVerifyResult) -> dict[str, Any]:
         "event_id": result.event_id,
         "signature_valid": True,
         "raw": result.raw,
+        "verification_version": WEBHOOK_VERIFICATION_VERSION,
+        "payload_sha256": canonical_payload_sha256(result.raw),
+        "verified_at": datetime.now(UTC).isoformat(),
         "processed_at": None,
     }

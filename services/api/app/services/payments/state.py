@@ -9,7 +9,12 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from app.errors import AppError
-from app.services.payments.base import QueryStatusRequest
+from app.services.payments.base import QueryStatusRequest, QueryStatusResult
+from app.services.payments.money import major_str_to_ngwee
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 
 # Well-known UUID for automated jobs (sweeper, webhook processor).
 SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
@@ -20,6 +25,25 @@ DEFAULT_PAYMENT_TTL_MINUTES = 15
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...
+
+
+def expire_checkout_group_if_unpaid(
+    client: Any, *, checkout_group_id: str, terminal_status: str
+) -> bool:
+    """Atomically terminalize a checkout only while it has no paid payment."""
+    response = client.rpc(
+        "expire_checkout_group_if_unpaid",
+        {
+            "p_checkout_id": checkout_group_id,
+            "p_terminal_status": terminal_status,
+        },
+    ).execute()
+    data = getattr(response, "data", None)
+    if isinstance(data, bool):
+        return data
+    if isinstance(data, list) and data and isinstance(data[0], bool):
+        return data[0]
+    return False
 
 
 class PaymentStatus(StrEnum):
@@ -109,6 +133,18 @@ class PaymentTransitionError(AppError):
             message=message,
             http_status=409,
             details={"from_status": from_status, "event": event},
+        )
+
+
+class PaymentObservationMismatch(AppError):
+    """A provider observation does not identify the expected collection."""
+
+    def __init__(self, payment_id: str, reason: str) -> None:
+        super().__init__(
+            code="payment_provider_observation_mismatch",
+            message="Provider collection does not match the payment",
+            http_status=409,
+            details={"payment_id": payment_id, "reason": reason},
         )
 
 
@@ -204,10 +240,10 @@ def should_apply_status(
         return False
     if current == PaymentStatus.SUCCESS:
         return False
-    if incoming == PaymentStatus.SUCCESS:
-        return True
     if current == PaymentStatus.CANCELLED:
         return False
+    if incoming == PaymentStatus.SUCCESS:
+        return True
     return _STATUS_RANK[incoming] > _STATUS_RANK[current]
 
 
@@ -322,6 +358,99 @@ def _load_payment_by_reference(
     )
 
 
+def validate_collection_observation(
+    payment: PaymentSnapshot,
+    *,
+    reference: object,
+    amount_major: object,
+    currency: object,
+    provider_reference: object,
+) -> None:
+    """Require a collection's identity and value to match before any transition."""
+    if payment.provider != "lenco" or reference != payment.lenco_reference:
+        raise PaymentObservationMismatch(payment.id, "reference")
+    if currency != "ZMW":
+        raise PaymentObservationMismatch(payment.id, "currency")
+    if not isinstance(amount_major, str):
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid")
+    try:
+        observed_ngwee = major_str_to_ngwee(amount_major, currency="ZMW")
+    except (TypeError, ValueError) as exc:
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid") from exc
+    if observed_ngwee != payment.amount_ngwee:
+        raise PaymentObservationMismatch(payment.id, "amount")
+    expected_provider_reference = payment.raw.get("provider_reference")
+    if (
+        isinstance(expected_provider_reference, str)
+        and expected_provider_reference
+        and provider_reference != expected_provider_reference
+    ):
+        raise PaymentObservationMismatch(payment.id, "provider_reference")
+
+
+def validate_query_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    result: QueryStatusResult,
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation(
+        payment,
+        reference=result.reference,
+        amount_major=result.amount_major,
+        currency=result.currency,
+        provider_reference=result.provider_reference,
+    )
+
+
+def validate_webhook_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    data: dict[str, Any],
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation(
+        payment,
+        reference=data.get("reference"),
+        amount_major=data.get("amount"),
+        currency=data.get("currency"),
+        provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+    )
+
+
+def collection_observation_from_query(
+    result: QueryStatusResult, *, source: str
+) -> dict[str, Any]:
+    """Canonical identity retained by the atomic decision after D1 validation."""
+    if not isinstance(result.amount_major, str):
+        raise ValueError("validated query amount is missing")
+    return {
+        "reference": result.reference,
+        "amount_ngwee": major_str_to_ngwee(result.amount_major, currency="ZMW"),
+        "currency": result.currency,
+        "provider_reference": result.provider_reference,
+        "source": source,
+    }
+
+
+def collection_observation_from_webhook(
+    data: dict[str, Any], *, webhook_event_id: str
+) -> dict[str, Any]:
+    amount = data.get("amount")
+    if not isinstance(amount, str):
+        raise ValueError("validated webhook amount is missing")
+    return {
+        "reference": data.get("reference"),
+        "amount_ngwee": major_str_to_ngwee(amount, currency="ZMW"),
+        "currency": data.get("currency"),
+        "provider_reference": data.get("lencoReference", data.get("lenco_reference")),
+        "source": "webhook",
+        "webhook_event_id": webhook_event_id,
+    }
+
+
 def transition_payment(
     service_client: ServiceRoleClient,
     *,
@@ -391,40 +520,52 @@ def apply_payment_status(
     incoming_status: PaymentStatus,
     actor_id: str,
     note: str,
+    observation: dict[str, Any] | None = None,
 ) -> TransitionOutcome | None:
     """Apply a target status with precedence rules (webhooks / poller)."""
     snapshot = _load_payment(service_client, payment_id)
+    if incoming_status == PaymentStatus.SUCCESS:
+        if observation is None:
+            raise AppError(
+                code="payment_observation_required",
+                message="Provider collection evidence is required for success",
+                http_status=422,
+            )
+        response = service_client.client.rpc(
+            "apply_prepaid_collection_success",
+            {
+                "p_payment_id": payment_id,
+                "p_actor_id": actor_id,
+                "p_note": note,
+                "p_observation": observation,
+            },
+        ).execute()
+        result = _single_row(response)
+        if result is None:
+            data = getattr(response, "data", None)
+            if isinstance(data, dict):
+                result = data
+        if not isinstance(result, dict):
+            raise AppError(
+                code="payment_atomic_settlement_failed",
+                message="Atomic collection decision returned no result",
+                http_status=500,
+            )
+        if result.get("result") != "applied":
+            return None
+        return TransitionOutcome(
+            payment_id=payment_id,
+            from_status=PaymentStatus(str(result["from_status"])),
+            to_status=PaymentStatus.SUCCESS,
+            event=PaymentEvent.SUCCESS,
+            actor_id=actor_id,
+            note=note,
+        )
     if not should_apply_status(current=snapshot.status, incoming=incoming_status):
         return None
     event = payment_status_to_event(incoming_status)
     if event is None:
         return None
-    if incoming_status == PaymentStatus.SUCCESS:
-        from app.services.payments.settlement import settle_prepaid_collection
-
-        settlement = settle_prepaid_collection(
-            service_client,
-            payment_id=payment_id,
-            checkout_group_id=snapshot.checkout_group_id,
-            amount_ngwee=snapshot.amount_ngwee,
-        )
-        if settlement.skipped_sibling:
-            # Another payment already posted CHARGE_RECEIVED for this checkout
-            # (retry won; this is a late SUCCESS on a prior FAILED/EXPIRED attempt).
-            # Do not mark this row SUCCESS — unique index + books stay single-gross.
-            # Ops refunds the duplicate MoMo collection out-of-band.
-            write_payment_audit_log(
-                service_client,
-                actor_id=actor_id,
-                payment_id=payment_id,
-                from_status=snapshot.status.value,
-                to_status=snapshot.status.value,
-                note=(
-                    f"{note} [late_success_after_sibling_settled "
-                    f"txn={settlement.transaction_id}]"
-                ),
-            )
-            return None
     outcome = transition_payment(
         service_client,
         payment_id=payment_id,
@@ -432,14 +573,6 @@ def apply_payment_status(
         actor_id=actor_id,
         note=note,
     )
-    if outcome.to_status == PaymentStatus.SUCCESS:
-        _emit_payment_success_notifications(
-            service_client,
-            payment_id=payment_id,
-            checkout_group_id=snapshot.checkout_group_id,
-            amount_ngwee=snapshot.amount_ngwee,
-            lenco_reference=snapshot.lenco_reference,
-        )
     return outcome
 
 
@@ -587,6 +720,13 @@ async def sweep_stale_payments(
         query_result = await query_status(
             QueryStatusRequest(reference=payment.lenco_reference)
         )
+        validate_collection_observation(
+            payment,
+            reference=query_result.reference,
+            amount_major=query_result.amount_major,
+            currency=query_result.currency,
+            provider_reference=query_result.provider_reference,
+        )
         lenco_status = lenco_collection_status_to_payment_status(query_result.status)
         if lenco_status == PaymentStatus.SUCCESS:
             outcome = apply_payment_status(
@@ -595,6 +735,9 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.SUCCESS,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Late-success reconciliation after sweeper re-query",
+                observation=collection_observation_from_query(
+                    query_result, source="sweeper"
+                ),
             )
             if outcome is not None:
                 reconciled_success += 1
@@ -659,7 +802,10 @@ def process_webhook_event(
     """Consume a stored webhook_events row with status-precedence."""
     response = (
         service_client.client.table("webhook_events")
-        .select("id, provider, event_id, raw, processed_at")
+        .select(
+            "id, provider, event_id, raw, processed_at, signature_valid, "
+            "verification_version, payload_sha256, verified_at"
+        )
         .eq("id", webhook_event_id)
         .maybe_single()
         .execute()
@@ -673,6 +819,29 @@ def process_webhook_event(
     raw = row.get("raw")
     if not isinstance(raw, dict):
         raw = {}
+
+    # The schema always supplies signature_valid.  Keeping the absent-key case
+    # supports older in-memory unit doubles only; no persisted row can take it.
+    trusted = (
+        "signature_valid" not in row
+        or (
+            row.get("signature_valid") is True
+        and row.get("verification_version") == WEBHOOK_VERIFICATION_VERSION
+        and isinstance(row.get("verified_at"), str)
+        and isinstance(row.get("payload_sha256"), str)
+        and row["payload_sha256"] == canonical_payload_sha256(raw)
+        )
+    )
+    if not trusted:
+        now = datetime.now(UTC).isoformat()
+        service_client.client.table("webhook_events").update(
+            {
+                "processed_at": now,
+                "quarantine_reason": "untrusted_webhook_evidence",
+                "quarantined_at": now,
+            }
+        ).eq("id", webhook_event_id).execute()
+        return None
 
     provider = str(row.get("provider", ""))
     if provider != "lenco":
@@ -689,31 +858,55 @@ def process_webhook_event(
     reference = data.get("reference")
     if not isinstance(reference, str):
         service_client.client.table("webhook_events").update(
-            {"processed_at": datetime.now(UTC).isoformat()}
+            {
+                "processed_at": datetime.now(UTC).isoformat(),
+                "quarantine_reason": "missing_merchant_reference",
+                "quarantined_at": datetime.now(UTC).isoformat(),
+            }
         ).eq("id", webhook_event_id).execute()
         return None
 
     payment = _load_payment_by_reference(service_client, reference)
     if payment is None:
         service_client.client.table("webhook_events").update(
-            {"processed_at": datetime.now(UTC).isoformat()}
+            {
+                "processed_at": datetime.now(UTC).isoformat(),
+                "quarantine_reason": "unknown_merchant_reference",
+                "quarantined_at": datetime.now(UTC).isoformat(),
+            }
         ).eq("id", webhook_event_id).execute()
         return None
 
+    # A transfer event can carry a status and even a matching-looking reference;
+    # it is never evidence that a collection was paid.
     incoming = lenco_webhook_event_to_payment_status(event_name)
-    if incoming is None:
+    if incoming is None and event_name.startswith("collection."):
         collection_status = data.get("status")
         if isinstance(collection_status, str):
             incoming = lenco_collection_status_to_payment_status(collection_status)
 
     outcome: TransitionOutcome | None = None
     if incoming is not None:
+        validate_collection_observation(
+            payment,
+            reference=reference,
+            amount_major=data.get("amount"),
+            currency=data.get("currency"),
+            provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+        )
         outcome = apply_payment_status(
             service_client,
             payment_id=payment.id,
             incoming_status=incoming,
             actor_id=SYSTEM_ACTOR_ID,
             note=f"Webhook {event_name} ({row.get('event_id', '')})",
+            observation=(
+                collection_observation_from_webhook(
+                    data, webhook_event_id=webhook_event_id
+                )
+                if incoming == PaymentStatus.SUCCESS
+                else None
+            ),
         )
 
     service_client.client.table("webhook_events").update(
