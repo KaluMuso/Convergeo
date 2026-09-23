@@ -1,6 +1,6 @@
-import type { Page, Route } from "@playwright/test";
-
 import { BASE_URL, flag, lencoSandboxReady, str } from "./env";
+
+import type { Page, Route } from "@playwright/test";
 
 /**
  * Deterministic payment-status / card-verify fixtures for CI (provider-mock mode).
@@ -235,4 +235,4 @@ export async function mockCardVerify(
 
 /** Copy that must never appear for pending/failed/unknown MoMo collections. */
 export const FORBIDDEN_SUCCESS_COPY =
-  /order confirmed|payment (is )?held by vergeo5|you paid|paid upfront|payment successful|successfully paid/i;
+  /order (?:is )?confirmed|payment (?:is )?held by\b|you paid|paid upfront|payment successful|successfully paid/i;
