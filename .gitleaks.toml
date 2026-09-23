@@ -64,7 +64,15 @@ description = "RELCTRL-01 merge evidence — 40-char git SHAs in staging_api_sha
 paths = [
   '''(?i)infra/merge-release-evidence\.json$''',
   '''(?i)infra/merge-release-evidence\.example\.json$''',
-  # Deliberately invalid self-attestation fixture; all three values are the
-  # same non-secret commit SHA and the test asserts that the evidence rejects.
-  '''(?i)scripts/ci/fixtures/merge-evidence-incident-640\.json$''',
+]
+
+[[allowlists]]
+description = "RELCTRL-01 rejected self-attestation fixture — exact nonsecret SHA only"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''(?i)^scripts/ci/fixtures/merge-evidence-incident-640\.json$''',
+]
+regexes = [
+  '''^8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25$''',
 ]
