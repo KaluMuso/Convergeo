@@ -15,7 +15,9 @@
     "release-certify": "bash scripts/qa/release-certify.sh --mode ci",
     "release-certify:local": "bash scripts/qa/release-certify.sh --mode local-development",
     "release-certify:static": "bash scripts/qa/release-certify.sh --mode ci --layer static --skip-e2e --skip-rls",
-    "release-certify:self-test": "node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs"
+    "release-certify:self-test": "node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs",
+    "audit:dependencies": "node scripts/ci/pnpm-audit-gate.mjs",
+    "test:audit-gate": "node --test scripts/ci/pnpm-audit-gate.test.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -50,6 +52,8 @@
       "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
       "postcss@>=8.0.0 <8.5.23": "8.5.23",
       "sharp@<0.35.4": "0.35.4",
+      "tmp@0.0.33": "0.2.7",
+      "tmp@0.1.0": "0.2.7",
       "nanoid@^3.0.0": "3.3.18",
       "browserslist": "4.28.8"
     }
