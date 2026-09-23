@@ -19,6 +19,12 @@ import psycopg
 import pytest
 from app.deps import get_supabase_client
 from app.main import create_app
+from app.services.orders.state import (
+    ActorRole,
+    OrderEvent,
+    RefundPathRequiredError,
+    transition_order,
+)
 from app.services.payments.base import QueryStatusResult
 from app.services.payments.reconcile import (
     drain_pending_webhook_events,
@@ -30,6 +36,7 @@ from app.services.payments.state import (
     PaymentStatus,
     PaymentTransitionError,
     apply_payment_status,
+    expire_checkout_group_if_unpaid,
     process_webhook_event,
     transition_payment,
 )
@@ -879,3 +886,227 @@ def test_notification_failure_rolls_back_status_allocation_and_claim() -> None:
     )
     assert outcome is not None
     assert _counts(payment_id) == (1, 1, 0, 1)
+
+
+def test_browser_admin_cannot_mutate_evidence_and_untrusted_rows_quarantine() -> None:
+    payment_id, reference, provider_reference = _seed_payment()
+    customer = _db().run(
+        f"""
+        SELECT c.customer_id FROM public.payments p
+        JOIN public.checkout_groups c ON c.id = p.checkout_group_id
+        WHERE p.id = '{payment_id}'::uuid
+        """
+    )
+    assert customer.ok and customer.rows
+    admin_id = customer.rows[0]
+    role = _db().run_script(
+        f"INSERT INTO public.user_roles(user_id, role) VALUES ('{admin_id}', 'admin');"
+    )
+    assert role.ok, role.error
+
+    service = _service()
+    event_id = str(uuid4())
+    assert _post_signed_callback(
+        service, reference=reference, provider_reference=provider_reference,
+        amount="250.00", event_id=event_id,
+    ) == 200
+    browser = SyncPostgrestClient(
+        os.environ["LANE_D_POSTGREST_URL"],
+        headers={"Authorization": f"Bearer {_jwt('authenticated', subject=admin_id)}"},
+    )
+    with pytest.raises(APIError):
+        browser.table("webhook_events").select("id").execute()
+    with pytest.raises(APIError):
+        browser.table("webhook_events").insert(
+            {"provider": "lenco", "event_id": f"browser-{event_id}", "raw": {}}
+        ).execute()
+    with pytest.raises(APIError):
+        browser.table("webhook_events").update({"processed_at": None}).eq(
+            "event_id", f"collection.successful:{event_id}"
+        ).execute()
+
+    service.client.table("webhook_events").delete().eq(
+        "event_id", f"collection.successful:{event_id}"
+    ).execute()
+
+    # Service-role insertion simulates an unsafe legacy/manual row.  Its lack
+    # of ingress proof must quarantine, never credit the matching payment.
+    service.client.table("webhook_events").insert(
+        {
+            "provider": "lenco",
+            "event_id": f"untrusted-{uuid4()}",
+            "signature_valid": False,
+            "raw": {
+                "event": "collection.successful",
+                "data": {
+                    "reference": reference,
+                    "lencoReference": provider_reference,
+                    "amount": "250.00",
+                    "currency": "ZMW",
+                },
+            },
+        }
+    ).execute()
+    drain_pending_webhook_events(service)
+    untrusted = service.client.table("webhook_events").select(
+        "processed_at, quarantine_reason"
+    ).like("event_id", "untrusted-*").order(
+        "created_at", desc=True
+    ).limit(1).single().execute().data
+    assert untrusted["processed_at"] is not None
+    assert untrusted["quarantine_reason"] == "untrusted_webhook_evidence"
+    assert _money_state(payment_id) == (0, 0, 0, "ussd_pushed")
+
+
+def test_accepted_receipt_identity_keeps_a_a_duplicate_and_records_b() -> None:
+    payment_id, reference, _ = _seed_payment()
+    service = _service()
+    service.client.table("payments").update({"raw": {}}).eq("id", payment_id).execute()
+    receipt_a = _observation(reference, "provider-receipt-A", "poller")
+    receipt_b = _observation(reference, "provider-receipt-B", "webhook")
+    assert apply_payment_status(
+        service, payment_id=payment_id, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="accepted receipt A", observation=receipt_a,
+    ) is not None
+    assert apply_payment_status(
+        _service(), payment_id=payment_id, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="duplicate receipt A", observation=receipt_a,
+    ) is None
+    assert apply_payment_status(
+        _service(), payment_id=payment_id, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="distinct receipt B", observation=receipt_b,
+    ) is None
+    assert apply_payment_status(
+        _service(), payment_id=payment_id, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="replayed distinct receipt B", observation=receipt_b,
+    ) is None
+    result = _db().run(
+        f"""
+        SELECT
+          (SELECT count(*) FROM public.ledger_transactions WHERE payment_id = '{payment_id}'::uuid),
+          (SELECT count(*) FROM public.payment_collection_receipts
+           WHERE payment_id = '{payment_id}'::uuid),
+          (SELECT reason || ':' || occurrences::text FROM public.payment_collection_exceptions
+           WHERE payment_id = '{payment_id}'::uuid AND provider_reference = 'provider-receipt-B');
+        """
+    )
+    assert result.ok and result.rows == ["1|1|distinct_provider_collection:2"], result.error
+
+
+def test_checkout_terminal_state_and_success_coordinate_in_both_orders() -> None:
+    expired_payment, expired_reference, expired_provider_reference = _seed_payment()
+    expired_checkout = _db().run(
+        f"SELECT checkout_group_id FROM public.payments WHERE id = '{expired_payment}'::uuid"
+    )
+    assert expired_checkout.ok and expired_checkout.rows
+    assert expire_checkout_group_if_unpaid(
+        _service().client,
+        checkout_group_id=expired_checkout.rows[0],
+        terminal_status="expired",
+    )
+    assert apply_payment_status(
+        _service(), payment_id=expired_payment, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="success after checkout expired",
+        observation=_observation(expired_reference, expired_provider_reference, "poller"),
+    ) is None
+    late = _db().run(
+        "SELECT reason FROM public.payment_collection_exceptions "
+        f"WHERE payment_id = '{expired_payment}'::uuid"
+    )
+    assert late.ok and late.rows == ["checkout_expired"]
+
+    paid_payment, paid_reference, paid_provider_reference = _seed_payment()
+    paid_checkout = _db().run(
+        f"SELECT checkout_group_id FROM public.payments WHERE id = '{paid_payment}'::uuid"
+    )
+    assert paid_checkout.ok and paid_checkout.rows
+    assert apply_payment_status(
+        _service(), payment_id=paid_payment, incoming_status=PaymentStatus.SUCCESS,
+        actor_id=SYSTEM_ACTOR_ID, note="success before checkout expiry",
+        observation=_observation(paid_reference, paid_provider_reference, "poller"),
+    ) is not None
+    assert not expire_checkout_group_if_unpaid(
+        _service().client,
+        checkout_group_id=paid_checkout.rows[0],
+        terminal_status="expired",
+    )
+    status = _db().run(
+        f"SELECT status FROM public.checkout_groups WHERE id = '{paid_checkout.rows[0]}'::uuid"
+    )
+    assert status.ok and status.rows == ["completed"]
+
+
+def test_success_wins_over_stale_order_cancellation_under_coordinated_locks() -> None:
+    payment_id, reference, provider_reference = _seed_payment()
+    checkout = _db().run(
+        f"SELECT checkout_group_id FROM public.payments WHERE id = '{payment_id}'::uuid"
+    )
+    customer = _db().run(
+        f"SELECT customer_id FROM public.checkout_groups WHERE id = '{checkout.rows[0]}'::uuid"
+    )
+    assert checkout.ok and customer.ok
+    vendor_owner, vendor_id, order_id = str(uuid4()), str(uuid4()), str(uuid4())
+    seed = _db().run_script(
+        f"""
+        BEGIN;
+        INSERT INTO auth.users (id, email)
+        VALUES ('{vendor_owner}', 'd3-{vendor_owner}@test.invalid');
+        INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
+        VALUES ('{vendor_id}', '{vendor_owner}', 'd3-{vendor_id}', 'D3 vendor', 'active');
+        INSERT INTO public.orders (
+          id, checkout_group_id, vendor_id, customer_id, status, fulfilment, cod
+        ) VALUES (
+          '{order_id}', '{checkout.rows[0]}', '{vendor_id}', '{customer.rows[0]}',
+          'placed', 'pickup', false
+        );
+        INSERT INTO public.order_items (order_id, item_kind, qty, unit_price_ngwee, title_snapshot)
+        VALUES ('{order_id}', 'product', 1, 25000, 'D3 item');
+        COMMIT;
+        """
+    )
+    assert seed.ok, seed.error
+    lock_key = 2026092303
+    setup = _db().run_script(
+        f"""
+        CREATE FUNCTION public.lane_d3_wait_allocation() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.payment_id = '{payment_id}'::uuid THEN
+            PERFORM pg_advisory_xact_lock({lock_key});
+          END IF;
+          RETURN NEW;
+        END $$;
+        CREATE TRIGGER lane_d3_wait_allocation BEFORE INSERT ON public.ledger_transactions
+        FOR EACH ROW EXECUTE FUNCTION public.lane_d3_wait_allocation();
+        """
+    )
+    assert setup.ok, setup.error
+    try:
+        with psycopg.connect(os.environ["SUPABASE_DB_URL"], autocommit=True) as blocker:
+            blocker.execute("SELECT pg_advisory_lock(%s)", (lock_key,))
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                success = pool.submit(
+                    apply_payment_status, _service(), payment_id=payment_id,
+                    incoming_status=PaymentStatus.SUCCESS, actor_id=SYSTEM_ACTOR_ID,
+                    note="success races cancellation",
+                    observation=_observation(reference, provider_reference, "poller"),
+                )
+                _wait_for_db_lock("advisory")
+                cancellation = pool.submit(
+                    transition_order, order_id=order_id, event=OrderEvent.CANCEL,
+                    actor_role=ActorRole.CUSTOMER, actor_id=customer.rows[0],
+                    note="stale cancellation request",
+                )
+                _wait_for_db_lock("transactionid")
+                blocker.execute("SELECT pg_advisory_unlock(%s)", (lock_key,))
+                assert success.result(timeout=20) is not None
+                with pytest.raises(RefundPathRequiredError):
+                    cancellation.result(timeout=20)
+    finally:
+        cleanup = _db().run_script(
+            "DROP TRIGGER IF EXISTS lane_d3_wait_allocation ON public.ledger_transactions; "
+            "DROP FUNCTION IF EXISTS public.lane_d3_wait_allocation();"
+        )
+        assert cleanup.ok, cleanup.error
+    state = _db().run(f"SELECT status FROM public.orders WHERE id = '{order_id}'::uuid")
+    assert state.ok and state.rows == ["placed"]
+    assert _money_state(payment_id) == (1, 0, 0, "success")

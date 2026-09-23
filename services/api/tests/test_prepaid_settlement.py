@@ -23,6 +23,10 @@ from app.services.payments.state import (
     apply_payment_status,
     process_webhook_event,
 )
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 from tests.rls.conftest import PgConn
 from tests.test_payment_state import (
     FakeServiceClient,
@@ -166,24 +170,28 @@ def _seed_webhook(
     reference: str,
     processed_at: str | None = None,
 ) -> None:
+    raw = {
+        "event": event,
+        "data": {
+            "id": event_id.split(":", 1)[-1],
+            "reference": reference,
+            "status": "successful" if "successful" in event else "settled",
+            "amount": "250.00",
+            "currency": "ZMW",
+        },
+    }
     fake.tables["webhook_events"].rows.append(
         {
             "id": webhook_id,
             "provider": "lenco",
             "event_id": event_id,
             "signature_valid": True,
+            "verification_version": WEBHOOK_VERIFICATION_VERSION,
+            "payload_sha256": canonical_payload_sha256(raw),
+            "verified_at": datetime.now(UTC).isoformat(),
             "processed_at": processed_at,
             "created_at": datetime.now(UTC).isoformat(),
-            "raw": {
-                "event": event,
-                "data": {
-                    "id": event_id.split(":", 1)[-1],
-                    "reference": reference,
-                    "status": "successful" if "successful" in event else "settled",
-                    "amount": "250.00",
-                    "currency": "ZMW",
-                },
-            },
+            "raw": raw,
         }
     )
 

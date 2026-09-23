@@ -27,6 +27,25 @@ class ServiceRoleClient(Protocol):
     def client(self) -> Any: ...
 
 
+def expire_checkout_group_if_unpaid(
+    client: Any, *, checkout_group_id: str, terminal_status: str
+) -> bool:
+    """Atomically terminalize a checkout only while it has no paid payment."""
+    response = client.rpc(
+        "expire_checkout_group_if_unpaid",
+        {
+            "p_checkout_id": checkout_group_id,
+            "p_terminal_status": terminal_status,
+        },
+    ).execute()
+    data = getattr(response, "data", None)
+    if isinstance(data, bool):
+        return data
+    if isinstance(data, list) and data and isinstance(data[0], bool):
+        return data[0]
+    return False
+
+
 class PaymentStatus(StrEnum):
     """DB values; initiated is the created state."""
 

@@ -24,6 +24,10 @@ from app.services.payments.reconcile import (
     run_daily_reconciliation_report,
 )
 from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -679,24 +683,28 @@ def _seed_webhook(
     processed_at: str | None = None,
 ) -> str:
     row_id = str(uuid.uuid4())
+    raw = {
+        "event": event,
+        "data": {
+            "id": event_id,
+            "reference": reference,
+            "status": status,
+            "amount": "250.00",
+            "currency": "ZMW",
+        },
+    }
     fake_service.client.table("webhook_events").rows.append(
         {
             "id": row_id,
             "provider": "lenco",
             "event_id": event_id,
             "signature_valid": True,
+            "verification_version": WEBHOOK_VERIFICATION_VERSION,
+            "payload_sha256": canonical_payload_sha256(raw),
+            "verified_at": created_at,
             "processed_at": processed_at,
             "created_at": created_at,
-            "raw": {
-                "event": event,
-                "data": {
-                    "id": event_id,
-                    "reference": reference,
-                    "status": status,
-                    "amount": "250.00",
-                    "currency": "ZMW",
-                },
-            },
+            "raw": raw,
         }
     )
     return row_id
