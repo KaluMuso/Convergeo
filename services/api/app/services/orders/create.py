@@ -295,7 +295,9 @@ def _fetch_existing_by_idempotency_key(
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None when the idempotency key has no
+    # row. That is the normal first-order path, not a failed read.
+    data = response.data if response is not None else None
     return data if isinstance(data, dict) else None
 
 
@@ -308,7 +310,7 @@ def _fetch_checkout_session(client: Any, *, session_id: str, customer_id: str) -
         .maybe_single()
         .execute()
     )
-    row = response.data
+    row = response.data if response is not None else None
     if not isinstance(row, dict):
         raise AppError(
             code="checkout.session_not_found",
