@@ -32,7 +32,8 @@ SESSION_B = "c9a00000-0000-4000-8000-00000000000b"
 
 def _seed_summary(db: PgConn) -> None:
     cleaned = db.run(
-        f"DELETE FROM public.listing_view_dedup WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}'); "
+        "DELETE FROM public.listing_view_dedup "
+        f"WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}'); "
         f"DELETE FROM public.listing_analytics WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}');"
     )
     assert cleaned.ok, cleaned.error
