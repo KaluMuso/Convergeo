@@ -391,6 +391,10 @@ class TestEscrowLedgerIntegration:
             USING public.payments p
             WHERE e.payment_id = p.id
               AND p.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.payment_collection_receipts r
+            USING public.payments p
+            WHERE r.payment_id = p.id
+              AND p.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
             DELETE FROM public.payments WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
             DELETE FROM public.order_items
             WHERE order_id IN (
