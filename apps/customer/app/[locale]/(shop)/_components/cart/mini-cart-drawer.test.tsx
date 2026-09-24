@@ -20,7 +20,10 @@ import {
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: vi.fn(async () => ({
-    auth: { getSession: async () => ({ data: { session: null } }) },
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    },
   })),
 }));
 

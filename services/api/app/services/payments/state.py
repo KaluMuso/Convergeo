@@ -306,9 +306,7 @@ def write_payment_audit_log(
 def _load_payment(service_client: ServiceRoleClient, payment_id: str) -> PaymentSnapshot:
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .eq("id", payment_id)
         .maybe_single()
         .execute()
@@ -335,9 +333,7 @@ def _load_payment_by_reference(
 ) -> PaymentSnapshot | None:
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .eq("lenco_reference", reference)
         .maybe_single()
         .execute()
@@ -420,9 +416,7 @@ def validate_webhook_collection_observation(
     )
 
 
-def collection_observation_from_query(
-    result: QueryStatusResult, *, source: str
-) -> dict[str, Any]:
+def collection_observation_from_query(result: QueryStatusResult, *, source: str) -> dict[str, Any]:
     """Canonical identity retained by the atomic decision after D1 validation."""
     if not isinstance(result.amount_major, str):
         raise ValueError("validated query amount is missing")
@@ -679,9 +673,7 @@ def _fetch_stale_payments(
     cutoff = datetime.now(UTC) - timedelta(minutes=ttl_minutes)
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .in_("status", [PaymentStatus.PAY_OFFLINE.value, PaymentStatus.USSD_PUSHED.value])
         .lt("updated_at", cutoff.isoformat())
         .execute()
@@ -717,9 +709,7 @@ async def sweep_stale_payments(
     released = 0
 
     for payment in stale:
-        query_result = await query_status(
-            QueryStatusRequest(reference=payment.lenco_reference)
-        )
+        query_result = await query_status(QueryStatusRequest(reference=payment.lenco_reference))
         validate_collection_observation(
             payment,
             reference=query_result.reference,
@@ -735,9 +725,7 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.SUCCESS,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Late-success reconciliation after sweeper re-query",
-                observation=collection_observation_from_query(
-                    query_result, source="sweeper"
-                ),
+                observation=collection_observation_from_query(query_result, source="sweeper"),
             )
             if outcome is not None:
                 reconciled_success += 1
@@ -820,17 +808,13 @@ def process_webhook_event(
     if not isinstance(raw, dict):
         raw = {}
 
-    # The schema always supplies signature_valid.  Keeping the absent-key case
-    # supports older in-memory unit doubles only; no persisted row can take it.
+    # Missing or incomplete proof is untrusted, including legacy rows.
     trusted = (
-        "signature_valid" not in row
-        or (
-            row.get("signature_valid") is True
+        row.get("signature_valid") is True
         and row.get("verification_version") == WEBHOOK_VERIFICATION_VERSION
         and isinstance(row.get("verified_at"), str)
         and isinstance(row.get("payload_sha256"), str)
         and row["payload_sha256"] == canonical_payload_sha256(raw)
-        )
     )
     if not trusted:
         now = datetime.now(UTC).isoformat()
@@ -901,9 +885,7 @@ def process_webhook_event(
             actor_id=SYSTEM_ACTOR_ID,
             note=f"Webhook {event_name} ({row.get('event_id', '')})",
             observation=(
-                collection_observation_from_webhook(
-                    data, webhook_event_id=webhook_event_id
-                )
+                collection_observation_from_webhook(data, webhook_event_id=webhook_event_id)
                 if incoming == PaymentStatus.SUCCESS
                 else None
             ),

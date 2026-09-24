@@ -20,6 +20,7 @@ from app.services.payments.state import (
     process_webhook_event,
 )
 from fastapi.testclient import TestClient
+from tests.support.webhook_evidence import verified_webhook_row
 from tests.test_payment_state import (
     CHECKOUT_GROUP_ID,
     CUSTOMER_ID,
@@ -84,22 +85,24 @@ def _seed_success_webhook(
     processed_at: str | None = None,
 ) -> None:
     fake.tables["webhook_events"].rows.append(
-        {
-            "id": webhook_id,
-            "provider": "lenco",
-            "event_id": f"evt-{webhook_id}",
-            "processed_at": processed_at,
-            "raw": {
-                "event": "collection.successful",
-                "data": {
-                    "reference": reference,
-                    "status": "successful",
-                    "amount": "100.00",
-                    "currency": "ZMW",
+        verified_webhook_row(
+            {
+                "id": webhook_id,
+                "provider": "lenco",
+                "event_id": f"evt-{webhook_id}",
+                "processed_at": processed_at,
+                "raw": {
+                    "event": "collection.successful",
+                    "data": {
+                        "reference": reference,
+                        "status": "successful",
+                        "amount": "100.00",
+                        "currency": "ZMW",
+                    },
                 },
-            },
-            "created_at": datetime.now(UTC).isoformat(),
-        }
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        )
     )
 
 

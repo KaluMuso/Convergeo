@@ -461,6 +461,7 @@ WITH locked_checkout AS MATERIALIZED (
     AND (
       '{event.value}' NOT IN ('cancel', 'reject')
       OR {str(refund_path).lower()}
+      OR cod
       OR NOT paid
     )
     AND (
