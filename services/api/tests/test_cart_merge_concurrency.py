@@ -145,9 +145,9 @@ class _Client:
         assert table_name == "cart_items"
         return _Query(self.store)
 
-    def rpc(self, function_name: str, params: dict[str, Any]) -> _RpcQuery:
+    def rpc(self, function_name: str, params: dict[str, Any]) -> _RpcQuery | _StaticRpcQuery:
         if function_name == "ensure_account_cart":
-            return cast(Any, _StaticRpcQuery(USER_CART_ID))
+            return _StaticRpcQuery(USER_CART_ID)
         assert function_name == "apply_login_cart_merge"
         return _RpcQuery(self.store, params)
 

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from app.core.auth import CurrentUser
 from app.errors import AppError
 from app.routers.cart import (
     CartMergeResolutionInput,
@@ -15,7 +16,8 @@ from app.routers.cart import (
 )
 from app.services.cart.merge import MergeConflict
 from app.services.cart.merge_atomic import AtomicMergeOutcome
-from fastapi import Response
+from app.settings import Settings
+from fastapi import Request, Response
 
 USER = "11111111-1111-4111-8111-111111111111"
 OTHER_USER = "22222222-2222-4222-8222-222222222222"
@@ -177,8 +179,8 @@ def test_route_retries_stale_authority_without_broadening_price_consent(
 
     def run(body: CartMergeResolutionInput | None = None) -> None:
         asyncio.run(cart.merge_cart_on_login(
-            Response(), SimpleNamespace(id=USER, token="account-token"),
-            settings, SimpleNamespace(), body,
+            Response(), cast(CurrentUser, SimpleNamespace(id=USER, token="account-token")),
+            cast(Settings, settings), cast(Request, SimpleNamespace()), body,
         ))
 
     with pytest.raises(AppError) as initial:

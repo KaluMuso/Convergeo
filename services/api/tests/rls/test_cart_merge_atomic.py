@@ -15,6 +15,12 @@ import psycopg
 import pytest
 from tests.rls.conftest import SqlResult, seed_matrix_fixtures
 
+
+def _required_row(row: tuple[Any, ...] | None) -> tuple[Any, ...]:
+    assert row is not None, "Expected a database result row"
+    return row
+
+
 _RPC_SQL = """
 select public.apply_login_cart_merge(
   %(user_id)s::uuid,
@@ -243,7 +249,7 @@ def test_unrelated_cart_and_authority_progress_during_merge(atomic_db: _PsycopgD
     with psycopg.connect(atomic_db.dsn) as merge_conn, merge_conn.cursor() as cursor:
         cursor.execute("set local role service_role")
         cursor.execute(_RPC_SQL, params)
-        assert json.loads(str(cursor.fetchone()[0]))["outcome"] == "applied"
+        assert json.loads(str(_required_row(cursor.fetchone())[0]))["outcome"] == "applied"
         with ThreadPoolExecutor(max_workers=1) as executor:
             executor.submit(unrelated_write).result(timeout=10)
         merge_conn.commit()
@@ -561,7 +567,7 @@ def test_guest_insert_waiting_behind_merge_fails_instead_of_being_lost(
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
                 cursor.execute("select pg_backend_pid()")
-                insert_pid.append(int(cursor.fetchone()[0]))
+                insert_pid.append(int(_required_row(cursor.fetchone())[0]))
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -612,7 +618,7 @@ def test_account_insert_waiting_behind_merge_commits_afterward(
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
                 cursor.execute("select pg_backend_pid()")
-                insert_pid.append(int(cursor.fetchone()[0]))
+                insert_pid.append(int(_required_row(cursor.fetchone())[0]))
                 insert_started.set()
                 cursor.execute(
                     "insert into public.cart_items "
@@ -670,7 +676,7 @@ def test_account_mutations_wait_and_apply_after_merge(
             with psycopg.connect(atomic_db.dsn) as conn, conn.cursor() as cursor:
                 cursor.execute("set local role service_role")
                 cursor.execute("select pg_backend_pid()")
-                mutation_pid.append(int(cursor.fetchone()[0]))
+                mutation_pid.append(int(_required_row(cursor.fetchone())[0]))
                 started.set()
                 cursor.execute(mutation_sql.format(line_id=params["user_line_id"]))
         except psycopg.Error as exc:
@@ -680,7 +686,7 @@ def test_account_mutations_wait_and_apply_after_merge(
     with psycopg.connect(atomic_db.dsn) as merge_conn, merge_conn.cursor() as cursor:
         cursor.execute("set local role service_role")
         cursor.execute(_RPC_SQL, params)
-        assert json.loads(str(cursor.fetchone()[0]))["outcome"] == "applied"
+        assert json.loads(str(_required_row(cursor.fetchone())[0]))["outcome"] == "applied"
         with ThreadPoolExecutor(max_workers=1) as executor:
             mutation = executor.submit(mutate)
             assert started.wait(timeout=10)
@@ -735,7 +741,7 @@ def test_concurrent_first_login_creates_one_account_cart(atomic_db: _PsycopgDb) 
             cursor.execute("set local role service_role")
             barrier.wait(timeout=10)
             cursor.execute("select public.ensure_account_cart(%s)::text", (user_id,))
-            return str(cursor.fetchone()[0])
+            return str(_required_row(cursor.fetchone())[0])
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         cart_ids = list(executor.map(lambda _index: ensure(), range(4)))
@@ -841,7 +847,7 @@ def test_product_writer_serializes_after_merge_and_unrelated_product_progresses(
 
     def edit() -> None:
         with psycopg.connect(atomic_db.dsn) as writer:
-            pid.append(writer.execute("select pg_backend_pid()").fetchone()[0])
+            pid.append(_required_row(writer.execute("select pg_backend_pid()").fetchone())[0])
             started.set()
             writer.execute(
                 "update public.products set name = name || ' later' where id = %s", (product_id,)
@@ -849,7 +855,10 @@ def test_product_writer_serializes_after_merge_and_unrelated_product_progresses(
 
     with psycopg.connect(atomic_db.dsn) as merge:
         merge.execute("set local role service_role")
-        assert json.loads(merge.execute(_RPC_SQL, params).fetchone()[0])["outcome"] == "applied"
+        assert (
+            json.loads(_required_row(merge.execute(_RPC_SQL, params).fetchone())[0])["outcome"]
+            == "applied"
+        )
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(edit)
             try:

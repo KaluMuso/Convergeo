@@ -3224,6 +3224,10 @@ def _probe_vendor_listings_insert(session: RoleSession) -> Any:
 
 
 def _update_probe_sql(db: PgConn, table: str) -> str:
+    if table == "payment_collection_receipts":
+        # This receipt table uses payment_id and has no id/created_at.
+        # Probe a real column so a missing-column error cannot mask its ACL.
+        return f"UPDATE public.{table} SET accepted_at = accepted_at WHERE false"
     col_result = db.run(
         f"""
         SELECT column_name FROM information_schema.columns

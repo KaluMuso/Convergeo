@@ -428,7 +428,9 @@ class TestStatusPrecedence:
 
 
 class TestWebhookProcessing:
-    def test_missing_verification_flag_is_quarantined(self, fake_service: FakeServiceClient) -> None:
+    def test_missing_verification_flag_is_quarantined(
+        self, fake_service: FakeServiceClient
+    ) -> None:
         webhook_id = str(uuid.uuid4())
         fake_service.client.tables["webhook_events"].rows.append(
             {"id": webhook_id, "provider": "lenco", "processed_at": None, "raw": {}}
