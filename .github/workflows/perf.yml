@@ -255,7 +255,9 @@ jobs:
         # Bundle-guard + image-lint remain the hard first-load JS/image gates.
         # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
         # itself is unavailable (not for score dips) — document in the PR.
-        run: pnpm exec lhci autorun --config=lighthouserc.json
+        run: |
+          node --test scripts/ci/lighthouse-budget.test.mjs
+          node scripts/ci/lighthouse-budget.mjs
 
       - name: Install a11y smoke deps (standalone e2e package)
         working-directory: e2e
