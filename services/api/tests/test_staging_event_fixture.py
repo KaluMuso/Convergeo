@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 from app.core.env_guards import PROD_SUPABASE_PROJECT_REF, StagingIsolationError
-from app.services.tickets.qr import verify_pin
+from app.services.tickets.qr import seal_pin_storage, verify_pin
 from app.staging.seed_sql import (
     build_cleanup_sql,
     build_events_sql,
@@ -38,10 +38,14 @@ from app.staging.synthetic_contract import (
     guard_seed_targets,
     persona_by_key,
 )
-from app.staging.ticket_credentials import mint_ticket_credentials, primary_ticket_pin
+from app.staging.ticket_credentials import (
+    primary_ticket_pin,
+    recover_service_issued_credential,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SERVICE_ROLE_STUB = "staging-service-role-key-under-test"
+GENERATED_TICKET_ID = "01000000-0000-4000-8000-000000000001"
 
 
 @pytest.fixture
@@ -81,7 +85,9 @@ def test_event_sql_is_created_and_cleaned_in_dependency_order() -> None:
     assert "public.events" in seed
     assert "public.event_instances" in seed
     assert "public.ticket_types" in seed
-    assert "public.tickets" in seed
+    assert "INSERT INTO public.tickets" not in seed, (
+        "the static seed must not fabricate an issued ticket"
+    )
 
     cleanup = build_cleanup_sql()
     # Children before parents, and events before the vendors/users they point at.
@@ -96,10 +102,8 @@ def test_event_sql_is_created_and_cleaned_in_dependency_order() -> None:
     )
 
 
-def test_reseeding_restores_an_unscanned_ticket() -> None:
-    # Idempotency that matters for the scanner: a re-run must clear checked_in_at
-    # or the duplicate-reject assertion inverts on the second run.
-    assert "checked_in_at = NULL" in build_events_sql()
+def test_static_event_seed_leaves_ticket_issuance_to_the_rsvp_service() -> None:
+    assert "INSERT INTO public.tickets" not in build_events_sql()
 
 
 def test_event_verification_queries_are_scoped_to_the_synthetic_prefix() -> None:
@@ -123,7 +127,7 @@ def test_event_verification_rejects_a_missing_issued_ticket() -> None:
         "zero_price_guard": ["0"],
         "event_published": ["1"],
         "event_instances_scheduled": ["1"],
-        "event_ticket_types": ["1"],
+        "event_ticket_types": ["2"],
         "issued_tickets": ["0"],
     }
     with pytest.raises(RuntimeError, match="issued-ticket"):
@@ -145,6 +149,19 @@ def test_contract_rejects_an_event_slug_without_the_seed_prefix(
     broken = replace(EVENTS[0], slug="launch-expo")
     monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (broken,))
     with pytest.raises(StagingIsolationError, match="seed prefix"):
+        assert_contract_valid()
+
+
+def test_contract_rejects_aggregate_ticket_allocations_over_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ticket_types = tuple(
+        replace(item, allocation=EVENTS[0].capacity)
+        for item in EVENTS[0].ticket_types
+    )
+    broken = replace(EVENTS[0], ticket_types=ticket_types)
+    monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (broken,))
+    with pytest.raises(StagingIsolationError, match="allocations exceed"):
         assert_contract_valid()
 
 
@@ -186,17 +203,36 @@ def test_seed_allows_the_exact_staging_project_ref() -> None:
 # ── Scanner credentials ───────────────────────────────────────────────────
 
 
-def test_ticket_pin_seeding_fails_closed_without_the_service_role_key(
+def _service_issued_credential(pin: str = "421937") -> Any:
+    ticket = event_fixture("EVENT_LAUNCH_EXPO").tickets[0]
+    return recover_service_issued_credential(
+        issued_ticket_id=GENERATED_TICKET_ID,
+        canonical_ticket_id=ticket.ticket_id,
+        stored_pin_hash=seal_pin_storage(pin=pin, ticket_id=GENERATED_TICKET_ID),
+    )
+
+
+def test_ticket_pin_recovery_fails_closed_without_the_service_role_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    stored = seal_pin_storage(
+        pin="421937",
+        ticket_id=GENERATED_TICKET_ID,
+        secret=SERVICE_ROLE_STUB,
+    )
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
-    with pytest.raises(RuntimeError, match="SUPABASE_SERVICE_ROLE_KEY"):
-        mint_ticket_credentials()
+    with pytest.raises(RuntimeError, match="could not be recovered"):
+        recover_service_issued_credential(
+            issued_ticket_id=GENERATED_TICKET_ID,
+            canonical_ticket_id=event_fixture("EVENT_LAUNCH_EXPO").tickets[0].ticket_id,
+            stored_pin_hash=stored,
+        )
 
 
-def test_minted_pin_verifies_through_the_real_contract(service_role_key: str) -> None:
-    credentials = mint_ticket_credentials()
-    credential = credentials[0]
+def test_service_issued_pin_verifies_through_the_real_contract(
+    service_role_key: str,
+) -> None:
+    credential = _service_issued_credential()
     assert verify_pin(
         pin=credential.pin,
         ticket_id=credential.ticket_id,
@@ -205,22 +241,24 @@ def test_minted_pin_verifies_through_the_real_contract(service_role_key: str) ->
 
 
 def test_a_tampered_pin_is_rejected(service_role_key: str) -> None:
-    credential = mint_ticket_credentials()[0]
+    credential = _service_issued_credential()
     wrong = "000000" if credential.pin != "000000" else "111111"
     assert not verify_pin(
         pin=wrong, ticket_id=credential.ticket_id, pin_hash=credential.pin_hash
     )
 
 
-def test_pin_is_run_scoped_not_a_committed_constant(service_role_key: str) -> None:
-    first = mint_ticket_credentials()[0]
-    second = mint_ticket_credentials()[0]
-    assert first.ticket_id == second.ticket_id, "ticket identity is canonical"
-    assert (first.pin, first.qr_secret) != (second.pin, second.qr_secret)
+def test_distinct_service_issued_pins_remain_distinct(service_role_key: str) -> None:
+    first = _service_issued_credential("421937")
+    second = _service_issued_credential("804216")
+    assert first.ticket_id == second.ticket_id
+    assert first.pin != second.pin
+    assert first.pin_hash != second.pin_hash
+    assert first.pin not in json.dumps(canonical_contract_document(), default=str)
 
 
 def test_credential_repr_never_prints_the_pin(service_role_key: str) -> None:
-    credential = mint_ticket_credentials()[0]
+    credential = _service_issued_credential()
     assert credential.pin not in repr(credential)
     assert "<redacted>" in repr(credential)
 
@@ -228,12 +266,13 @@ def test_credential_repr_never_prints_the_pin(service_role_key: str) -> None:
 def test_service_role_value_never_appears_in_seed_output_or_errors(
     service_role_key: str,
 ) -> None:
-    credentials = mint_ticket_credentials()
-    seed = build_seed_sql(credentials)
+    credential = _service_issued_credential()
+    seed = build_seed_sql()
     assert SERVICE_ROLE_STUB not in seed
-    # Only the sealed hash reaches SQL — never the PIN itself.
-    assert credentials[0].pin_hash in seed
-    assert credentials[0].pin not in seed
+    # Credentials reach the DB only after real RSVP issuance, never through the
+    # static event SQL.
+    assert credential.pin_hash not in seed
+    assert credential.pin not in seed
 
 
 def test_primary_ticket_pin_requires_minted_credentials() -> None:
@@ -263,14 +302,14 @@ def test_fixture_version_is_stable_across_processes() -> None:
     assert runs == {fixture_version()}
 
 
-def test_fixture_version_excludes_run_scoped_credentials(service_role_key: str) -> None:
+def test_fixture_version_excludes_runtime_credentials(service_role_key: str) -> None:
     before = fixture_version()
-    credentials = mint_ticket_credentials()
+    credential = _service_issued_credential()
     after = fixture_version()
-    assert before == after, "minting a run PIN must not move fixture identity"
+    assert before == after, "recovering a PIN must not move fixture identity"
     document = json.dumps(canonical_contract_document(), default=str)
-    assert credentials[0].pin not in document
-    assert credentials[0].qr_secret not in document
+    assert credential.pin not in document
+    assert credential.pin_hash not in document
     assert SERVICE_ROLE_STUB not in document
 
 
@@ -352,7 +391,7 @@ def test_private_runtime_file_is_mode_0600_and_holds_no_service_role_key(
     tmp_path: Path, service_role_key: str
 ) -> None:
     seed_staging = _load_seed_script()
-    credentials = mint_ticket_credentials()
+    credentials = (_service_issued_credential(),)
     target = tmp_path / "convergeo-e2e-private.json"
     seed_staging._write_private_runtime_file(target, credentials)
 

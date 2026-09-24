@@ -161,7 +161,8 @@ class TestSweeper:
         db.run(
             f"""
             UPDATE public.stock_reservations
-            SET expires_at = timezone('utc', now()) - interval '1 minute'
+            SET expires_at = timezone('utc', now()) - interval '1 minute',
+                created_at = timezone('utc', now()) - interval '16 minutes'
             WHERE listing_id = '{listing_id}' AND checkout_group_id = '{group_id}';
             """
         )
@@ -198,7 +199,8 @@ class TestSweeper:
         db.run(
             f"""
             UPDATE public.stock_reservations
-            SET expires_at = timezone('utc', now()) - interval '1 minute'
+            SET expires_at = timezone('utc', now()) - interval '1 minute',
+                created_at = timezone('utc', now()) - interval '16 minutes'
             WHERE checkout_group_id = '{expired_group}';
             """
         )
@@ -297,7 +299,7 @@ class TestInternalSweeperEndpoint:
         assert denied.status_code == 401
 
         with patch(
-            "app.routers.internal_stock_sweeper.sweep_expired_reservations",
+            "app.routers.internal_stock_sweeper.sweep_expired_cart_reservations",
             return_value=type(
                 "Stats",
                 (),

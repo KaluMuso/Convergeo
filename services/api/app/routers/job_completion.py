@@ -358,9 +358,20 @@ def _require_service_release_amounts(
     *, order_id: str, delivery_fee_ngwee: int
 ) -> tuple[dict[str, Any], int]:
     """Load snapshot + net; fail closed before any confirm-side money movement."""
-    gross = _order_gross_ngwee(order_id, delivery_fee_ngwee)
     snapshot = _load_commission_snapshot(order_id)
     try:
+        gross = _order_gross_ngwee(order_id, delivery_fee_ngwee)
+        # The balance item is created later, after the release gate is claimed.
+        # A service snapshot covers the whole accepted job, including that
+        # pending balance, so deposit-only order items understate the payout.
+        if snapshot.get("basis") == "total_job_value":
+            lines = snapshot.get("lines")
+            if not isinstance(lines, list) or len(lines) != 1:
+                raise ReleaseAccountingError("invalid service job value snapshot")
+            total = lines[0].get("line_total_ngwee") if isinstance(lines[0], dict) else None
+            if isinstance(total, bool) or not isinstance(total, int) or total < gross:
+                raise ReleaseAccountingError("service job value is below collected deposit")
+            gross = total
         amounts = compute_release_amounts(
             order_id=order_id,
             gross_ngwee=gross,

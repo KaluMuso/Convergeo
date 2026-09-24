@@ -21,13 +21,12 @@ from tests.rls.conftest import (
 )
 from tests.test_kyc_state import (
     ADMIN_ID,
-    VENDOR_OWNER_ID,
     _ensure_matrix_seed,
     _ServiceWrapper,
 )
 
 
-def _approval_invariant_broken(db: PgConn, *, vendor_id: str, owner_id: str) -> bool:
+def _approval_invariant_broken(db: PgConn, *, vendor_id: str) -> bool:
     """True when active+approved without a legitimate vendor role for the owner."""
     vendor = db.run(
         f"SELECT status FROM public.vendors WHERE id = '{vendor_id}';"
@@ -43,7 +42,8 @@ def _approval_invariant_broken(db: PgConn, *, vendor_id: str, owner_id: str) -> 
     role = db.run(
         f"""
         SELECT 1 FROM public.user_roles
-        WHERE user_id = '{owner_id}' AND role = 'vendor';
+        WHERE user_id = (SELECT owner_user_id FROM public.vendors WHERE id = '{vendor_id}')
+          AND role = 'vendor';
         """
     )
     if not vendor.ok or not kyc.ok:
@@ -60,13 +60,20 @@ def _seed_pending(
     *,
     vendor_id: str,
     kyc_id: str,
-    owner_id: str = VENDOR_OWNER_ID,
+    owner_id: str | None = None,
     momo_matched: bool = True,
     tier: int = 2,
     kyc_status: str = "submitted",
     vendor_status: str = "pending_kyc",
 ) -> None:
     _ensure_matrix_seed(db)
+    owner_id = owner_id or str(uuid.uuid4())
+    owner = db.run(
+        f"INSERT INTO auth.users (id, email, raw_user_meta_data) "
+        f"VALUES ('{owner_id}', 'atomic-{owner_id}@example.test', '{{}}'::jsonb) "
+        "ON CONFLICT (id) DO NOTHING;"
+    )
+    assert owner.ok, owner.error
     slug = f"atomic-{vendor_id[:8]}"
     momo = json.dumps({"matched": momo_matched})
     vendor_result = db.run(
@@ -126,6 +133,39 @@ def _call_rpc(
 
 @pytest.mark.usefixtures("db")
 class TestApproveKycVendorAtomic:
+    @pytest.mark.parametrize(
+        ("database_role", "jwt_role", "allowed"),
+        [
+            ("service_role", "service_role", True),
+            ("service_role", "authenticated", False),
+            ("authenticated", "authenticated", False),
+            ("anon", "anon", False),
+        ],
+    )
+    def test_verified_role_authority(
+        self, db: PgConn, database_role: str, jwt_role: str, allowed: bool
+    ) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_pending(db, vendor_id=vendor_id, kyc_id=kyc_id)
+        claims = json.dumps({"role": jwt_role, "sub": ADMIN_ID})
+        result = db.run_script(
+            f"""
+            BEGIN;
+            SET LOCAL SESSION AUTHORIZATION {database_role};
+            SELECT set_config('request.jwt.claims', '{claims}', true);
+            SELECT public.approve_kyc_vendor('{ADMIN_ID}', '{kyc_id}', 2, NULL);
+            COMMIT;
+            """
+        )
+        assert result.ok is allowed, result.error
+        if not allowed:
+            assert result.error and (
+                "permission denied" in result.error or "requires service role" in result.error
+            )
+        status = db.run(f"SELECT status FROM public.kyc_records WHERE id = '{kyc_id}';")
+        assert status.ok and status.rows == ["approved" if allowed else "submitted"]
+
     def test_happy_path_writes_role_and_audit(self, db: PgConn) -> None:
         vendor_id = str(uuid.uuid4())
         kyc_id = str(uuid.uuid4())
@@ -144,7 +184,7 @@ class TestApproveKycVendorAtomic:
         )
         assert audit.ok and audit.rows == ["1"]
         assert not _approval_invariant_broken(
-            db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+            db, vendor_id=vendor_id
         )
 
     def test_momo_mismatch_rejects_without_partial_state(self, db: PgConn) -> None:
@@ -156,7 +196,7 @@ class TestApproveKycVendorAtomic:
             _call_rpc(db, kyc_id=kyc_id)
         assert exc.value.code == "kyc_name_match_required"
         assert not _approval_invariant_broken(
-            db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+            db, vendor_id=vendor_id
         )
 
     def test_invalid_tier_rejects_without_partial_state(self, db: PgConn) -> None:
@@ -168,7 +208,7 @@ class TestApproveKycVendorAtomic:
             _call_rpc(db, kyc_id=kyc_id, tier=3)
         assert exc.value.code == "validation_error"
         assert not _approval_invariant_broken(
-            db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+            db, vendor_id=vendor_id
         )
 
     def test_rejected_kyc_cannot_approve(self, db: PgConn) -> None:
@@ -180,7 +220,7 @@ class TestApproveKycVendorAtomic:
             _call_rpc(db, kyc_id=kyc_id)
         assert exc.value.code == "kyc_invalid_transition"
         assert not _approval_invariant_broken(
-            db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+            db, vendor_id=vendor_id
         )
 
     def test_duplicate_approval_is_idempotent(self, db: PgConn) -> None:
@@ -194,7 +234,8 @@ class TestApproveKycVendorAtomic:
         counted = db.run(
             f"""
             SELECT count(*)::text FROM public.user_roles
-            WHERE user_id = '{VENDOR_OWNER_ID}' AND role = 'vendor';
+            WHERE user_id = (SELECT owner_user_id FROM public.vendors WHERE id = '{vendor_id}')
+              AND role = 'vendor';
             """
         )
         assert counted.ok and counted.rows == ["1"]
@@ -210,8 +251,7 @@ class TestApproveKycVendorAtomic:
             LANGUAGE plpgsql AS $$
             BEGIN
               IF NEW.role = 'vendor' THEN
-                RAISE EXCEPTION 'forced role insert failure'
-                  USING ERRCODE = '22023', MESSAGE = 'vendor_role_grant_failed';
+                RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'vendor_role_grant_failed';
               END IF;
               RETURN NEW;
             END;
@@ -227,7 +267,7 @@ class TestApproveKycVendorAtomic:
             with pytest.raises(AppError):
                 _call_rpc(db, kyc_id=kyc_id)
             assert not _approval_invariant_broken(
-                db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+                db, vendor_id=vendor_id
             )
             vendor = db.run(f"SELECT status FROM public.vendors WHERE id = '{vendor_id}';")
             kyc = db.run(f"SELECT status FROM public.kyc_records WHERE id = '{kyc_id}';")
@@ -254,8 +294,7 @@ class TestApproveKycVendorAtomic:
             LANGUAGE plpgsql AS $$
             BEGIN
               IF NEW.action = 'kyc.approve' THEN
-                RAISE EXCEPTION 'forced audit insert failure'
-                  USING ERRCODE = '22023', MESSAGE = 'audit_write_failed';
+                RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'audit_write_failed';
               END IF;
               RETURN NEW;
             END;
@@ -271,7 +310,7 @@ class TestApproveKycVendorAtomic:
             with pytest.raises(AppError):
                 _call_rpc(db, kyc_id=kyc_id)
             assert not _approval_invariant_broken(
-                db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+                db, vendor_id=vendor_id
             )
             vendor = db.run(f"SELECT status FROM public.vendors WHERE id = '{vendor_id}';")
             kyc = db.run(f"SELECT status FROM public.kyc_records WHERE id = '{kyc_id}';")
@@ -314,7 +353,7 @@ class TestApproveKycVendorAtomic:
         assert outcomes.count("granted") == 1
         assert all(outcome in ("granted", "already_present") for outcome in outcomes)
         assert not _approval_invariant_broken(
-            db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
+            db, vendor_id=vendor_id
         )
 
     def test_transition_approve_uses_rpc_path(self, db: PgConn) -> None:

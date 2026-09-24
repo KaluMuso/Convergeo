@@ -10,6 +10,7 @@ import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
 import { resolveWorkers } from "./fixtures/worker-policy";
 
 const isCI = !!process.env.CI;
+const privateCredentialRun = process.env.E2E_PRIVATE_CREDENTIAL_RUN === "1";
 
 /**
  * Vercel Deployment Protection bypass is deliberately ABSENT from this file.
@@ -130,11 +131,14 @@ export default defineConfig({
     ["json", { outputFile: "results/results.json" }],
   ],
   outputDir: "results/artifacts",
+  // Private local Auth/scanner runs retain statuses and structured assertions,
+  // while Playwright drops DOM/media output that can contain OTPs or ticket PINs.
+  preserveOutput: privateCredentialRun ? "never" : "always",
   use: {
     baseURL: BASE_URL,
-    trace: "on-first-retry",
-    video: "retain-on-failure",
-    screenshot: "only-on-failure",
+    trace: privateCredentialRun ? "off" : "on-first-retry",
+    video: privateCredentialRun ? "off" : "retain-on-failure",
+    screenshot: privateCredentialRun ? "off" : "only-on-failure",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     launchOptions: executablePath ? { executablePath } : {},

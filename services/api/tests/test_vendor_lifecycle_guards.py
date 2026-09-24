@@ -41,29 +41,11 @@ def db() -> Generator[PgConn, None, None]:
     yield conn
 
 
-def _as_authenticated(conn: PgConn, user_id: str) -> None:
-    claims = (
-        '{"role":"authenticated","sub":"'
-        + user_id
-        + '","aal":"aal1"}'
-    ).replace("'", "''")
-    conn.run("BEGIN;")
-    conn.run("SET LOCAL role authenticated;")
-    conn.run(
-        f"DO $$ BEGIN PERFORM set_config('request.jwt.claims', '{claims}', true); END $$;"
-    )
-
-
-def _rollback(conn: PgConn) -> None:
-    conn.run("ROLLBACK;")
-
-
 class TestVendorLifecycleClientGuards:
     def test_owner_cannot_insert_active_vendor(self, db: PgConn) -> None:
         vendor_id = str(uuid.uuid4())
         slug = f"evil-{vendor_id[:8]}"
-        _as_authenticated(db, CUSTOMER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.vendors (
               id, owner_user_id, slug, display_name, status, kyc_tier, preferred_badge
@@ -71,9 +53,8 @@ class TestVendorLifecycleClientGuards:
               '{vendor_id}', '{CUSTOMER_ID}', '{slug}', 'Evil Shop',
               'active', 3, true
             );
-            """
+            """, user_id=CUSTOMER_ID
         )
-        _rollback(db)
         assert not result.ok
         assert result.error is not None
         assert "server-controlled" in result.error
@@ -81,17 +62,15 @@ class TestVendorLifecycleClientGuards:
     def test_owner_can_insert_draft_without_trust_signals(self, db: PgConn) -> None:
         vendor_id = str(uuid.uuid4())
         slug = f"draft-{vendor_id[:8]}"
-        _as_authenticated(db, CUSTOMER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.vendors (
               id, owner_user_id, slug, display_name, status
             ) VALUES (
               '{vendor_id}', '{CUSTOMER_ID}', '{slug}', 'Draft Shop', 'draft'
             );
-            """
+            """, user_id=CUSTOMER_ID
         )
-        _rollback(db)
         # RLS may still deny customer insert in some personas; trigger must not
         # be the failure mode for a legitimate draft row.
         if not result.ok:
@@ -105,11 +84,11 @@ class TestVendorLifecycleClientGuards:
         if not vendor_id_row.ok or not vendor_id_row.rows:
             pytest.skip("seed has no vendor-owned storefront")
         vendor_id = vendor_id_row.rows[0]
-        _as_authenticated(db, VENDOR_OWNER_ID)
-        result = db.run(
-            f"UPDATE public.vendors SET preferred_badge = true WHERE id = '{vendor_id}';"
+        result = db.run_as(
+            "authenticated",
+            f"UPDATE public.vendors SET preferred_badge = true WHERE id = '{vendor_id}';",
+            user_id=VENDOR_OWNER_ID,
         )
-        _rollback(db)
         assert not result.ok
         assert result.error is not None
         assert "server-controlled" in result.error

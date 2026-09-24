@@ -66,10 +66,14 @@ test.describe("vendor · sell", () => {
     // same queue. Product title, price and status are equally unusable — none
     // of them identify an order row.
     await page.goto(urlOn(vendorOrigin, `/orders?status=${SEED.codOrder.initialStatus}`));
+    // Other genuine buyer orders can coexist in this queue. Select the
+    // canonical single-listing product B fixture whose transition chain this
+    // case owns, and require exactly one matching placed order.
     const orderCards = page.getByTestId("vendor-order-card-link");
-    await expect(orderCards).toHaveCount(1);
+    const canonicalOrder = orderCards.filter({ hasText: SEED.codOrder.productName });
+    await expect(canonicalOrder).toHaveCount(1);
 
-    const firstOrder = orderCards.first();
+    const firstOrder = canonicalOrder.first();
     await expect(firstOrder).toBeVisible();
     // The fixture is recreated by the per-run cleanup + seed, so a stale order
     // left in a later state must fail loudly here rather than skip transitions.

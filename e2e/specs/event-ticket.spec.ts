@@ -2,8 +2,15 @@ import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "..
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
+import {
+  expect,
+  fillScannerCredential,
+  SCANNER_ARTIFACT_POLICY,
+  test,
+} from "../fixtures/scanner-artifact-test";
 import { SEED } from "../fixtures/seed";
-import { expect, test } from "../fixtures/test-base";
+
+test.use(SCANNER_ARTIFACT_POLICY);
 
 /**
  * Critical path: buy an event ticket → see it in the wallet → organiser scanner
@@ -12,9 +19,9 @@ import { expect, test } from "../fixtures/test-base";
  * Legs and their gates:
  *  - Ticket PURCHASE is a Lenco charge → gated behind `LENCO_SANDBOX` (F9b).
  *  - Scanner VERIFY / duplicate-reject runs on the vendor app (separate origin)
- *    and needs an organiser session → gated behind OTP test creds. A seeded
- *    run-scoped single-use ticket PIN is supplied via `E2E_TICKET_PIN` so the
- *    duplicate-reject assertion can run without a live purchase.
+ *    and needs an organiser session → gated behind OTP test creds. Its canonical
+ *    ticket is issued through the real FREE-RSVP service path; the private
+ *    `E2E_TICKET_PIN` lets this leg run without forging a paid purchase.
  *
  * The scanner leg drives the EVENT scanner's manual fallback (`event-scan-*`),
  * not the order-pickup scanner: the event surface identifies a ticket by
@@ -53,8 +60,8 @@ test.describe("event · ticket lifecycle", () => {
     }
 
     // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
-    // Stable PIN fallback, minted per run by the canonical seed step — not the
-    // rotating 60-second QR window code, which no stored secret could outlive.
+    // Private holder-visible PIN recovered from this run's real free-RSVP
+    // issuance — not the rotating QR code and never a reusable derivation.
     const scannerPin = ticketPin();
     // The organiser scanner route and the verify API are both keyed on the
     // event's primary key, never its public slug.
@@ -113,7 +120,17 @@ test.describe("event · ticket lifecycle", () => {
     // rather than a still-loading screen. The two states are mutually
     // exclusive in ScannerView, so this cannot double-match.
     if (await switchToManual.isVisible()) {
-      await switchToManual.click();
+      try {
+        await switchToManual.click({ timeout: 3_000 });
+      } catch (error) {
+        // Camera permission can settle between isVisible and click, replacing
+        // the switch with the manual form. Accept only that actual UI state.
+        try {
+          await expect(manualForm).toBeVisible({ timeout: 5_000 });
+        } catch {
+          throw error;
+        }
+      }
     }
     await expect(manualForm).toBeVisible();
 
@@ -136,7 +153,7 @@ test.describe("event · ticket lifecycle", () => {
 
     // First check-in → verified by the server, not by the browser.
     await ticketIdInput.fill(SEED.event.ticketId);
-    await pinInput.fill(scannerPin);
+    await fillScannerCredential(pinInput, scannerPin);
     await submit.click();
     const accepted = page.getByTestId("event-scan-flash-success");
     await expect(accepted).toBeVisible({ timeout: 20_000 });
@@ -151,7 +168,7 @@ test.describe("event · ticket lifecycle", () => {
     // as proof of single-use enforcement. Those are real failures of this leg,
     // not evidence for it.
     await ticketIdInput.fill(SEED.event.ticketId);
-    await pinInput.fill(scannerPin);
+    await fillScannerCredential(pinInput, scannerPin);
     await submit.click();
     const rejection = page.getByTestId("event-scan-flash-error");
     await expect(rejection).toBeVisible({ timeout: 20_000 });

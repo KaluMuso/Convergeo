@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
 }));
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../../lib/customer-session", () => ({
   useSession: () => ({
     loading: false,
     session: { access_token: "token-1" },

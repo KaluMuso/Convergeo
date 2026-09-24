@@ -25,7 +25,7 @@ import type { CheckoutShellLabels } from "./step-fulfilment";
 
 const sessionState = { session: null as { access_token: string } | null, loading: true };
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => ({ session: sessionState.session, loading: sessionState.loading }),
 }));
 

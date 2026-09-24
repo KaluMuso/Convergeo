@@ -22,6 +22,10 @@ import {
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
+// The payment-honesty branch intercepts provider status with page.route.
+// A registered PWA worker would bypass that deterministic network boundary.
+test.use({ serviceWorkers: "block" });
+
 /**
  * VE-P07 / G16 / S7 — highest-value browse-safe critical path.
  *

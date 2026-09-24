@@ -32,6 +32,7 @@ from app.services.payments.state import (
     transition_payment,
 )
 from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url, schema_ready
+from tests.support.webhook_evidence import verified_webhook_row
 
 CUSTOMER_ID = "11111111-1111-1111-1111-111111111111"
 CHECKOUT_GROUP_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
@@ -179,6 +180,42 @@ class FakeSupabaseClient:
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
 
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        """Unit-only RPC stand-in; real transaction assertions live in lane_d."""
+        assert name == "apply_prepaid_collection_success"
+        payment = next(
+            row for row in self.tables["payments"].rows if row["id"] == params["p_payment_id"]
+        )
+        observation = params["p_observation"]
+        assert observation["reference"] == payment["lenco_reference"]
+        assert observation["amount_ngwee"] == payment["amount_ngwee"]
+        prior = payment["status"]
+        if prior == "success":
+            result = "duplicate"
+        elif prior == "cancelled":
+            result = "late_collection"
+        else:
+            payment["status"] = "success"
+            self.tables["audit_log"].rows.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "action": "payment.transition",
+                    "entity_type": "payment",
+                    "entity_id": params["p_payment_id"],
+                    "before": {"status": prior},
+                    "after": {"status": "success", "note": params["p_note"]},
+                }
+            )
+            result = "applied"
+        return MagicMock(
+            execute=lambda: MagicMock(
+                data={
+                    "result": result,
+                    "from_status": prior,
+                }
+            )
+        )
+
 
 class FakeServiceClient:
     def __init__(self, fake: FakeSupabaseClient) -> None:
@@ -316,26 +353,38 @@ class TestTransitionTable:
 
 class TestStatusPrecedence:
     def test_success_is_terminal_winning(self) -> None:
-        assert should_apply_status(
-            current=PaymentStatus.SUCCESS,
-            incoming=PaymentStatus.FAILED,
-        ) is False
-        assert should_apply_status(
-            current=PaymentStatus.SUCCESS,
-            incoming=PaymentStatus.EXPIRED,
-        ) is False
+        assert (
+            should_apply_status(
+                current=PaymentStatus.SUCCESS,
+                incoming=PaymentStatus.FAILED,
+            )
+            is False
+        )
+        assert (
+            should_apply_status(
+                current=PaymentStatus.SUCCESS,
+                incoming=PaymentStatus.EXPIRED,
+            )
+            is False
+        )
 
     def test_late_success_after_failed_wins(self) -> None:
-        assert should_apply_status(
-            current=PaymentStatus.FAILED,
-            incoming=PaymentStatus.SUCCESS,
-        ) is True
+        assert (
+            should_apply_status(
+                current=PaymentStatus.FAILED,
+                incoming=PaymentStatus.SUCCESS,
+            )
+            is True
+        )
 
     def test_late_success_after_expired_wins(self) -> None:
-        assert should_apply_status(
-            current=PaymentStatus.EXPIRED,
-            incoming=PaymentStatus.SUCCESS,
-        ) is True
+        assert (
+            should_apply_status(
+                current=PaymentStatus.EXPIRED,
+                incoming=PaymentStatus.SUCCESS,
+            )
+            is True
+        )
 
     def test_stale_failed_ignored_after_success_via_apply(
         self,
@@ -365,6 +414,13 @@ class TestStatusPrecedence:
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="late success webhook",
+            observation={
+                "reference": f"ord-{payment_id}",
+                "amount_ngwee": 10_000,
+                "currency": "ZMW",
+                "provider_reference": None,
+                "source": "unit",
+            },
         )
         assert outcome is not None
         assert outcome.to_status == PaymentStatus.SUCCESS
@@ -372,6 +428,18 @@ class TestStatusPrecedence:
 
 
 class TestWebhookProcessing:
+    def test_missing_verification_flag_is_quarantined(
+        self, fake_service: FakeServiceClient
+    ) -> None:
+        webhook_id = str(uuid.uuid4())
+        fake_service.client.tables["webhook_events"].rows.append(
+            {"id": webhook_id, "provider": "lenco", "processed_at": None, "raw": {}}
+        )
+        assert process_webhook_event(fake_service, webhook_event_id=webhook_id) is None
+        row = fake_service.client.tables["webhook_events"].rows[0]
+        assert row["quarantine_reason"] == "untrusted_webhook_evidence"
+        assert row["processed_at"] is not None
+
     def test_process_webhook_event_success(
         self,
         fake_service: FakeServiceClient,
@@ -386,16 +454,23 @@ class TestWebhookProcessing:
         )
         webhook_id = str(uuid.uuid4())
         fake_service.client.tables["webhook_events"].rows.append(
-            {
-                "id": webhook_id,
-                "provider": "lenco",
-                "event_id": "evt-1",
-                "processed_at": None,
-                "raw": {
-                    "event": "collection.successful",
-                    "data": {"reference": reference, "status": "successful"},
-                },
-            }
+            verified_webhook_row(
+                {
+                    "id": webhook_id,
+                    "provider": "lenco",
+                    "event_id": "evt-1",
+                    "processed_at": None,
+                    "raw": {
+                        "event": "collection.successful",
+                        "data": {
+                            "reference": reference,
+                            "status": "successful",
+                            "amount": "100.00",
+                            "currency": "ZMW",
+                        },
+                    },
+                }
+            )
         )
         outcome = process_webhook_event(fake_service, webhook_event_id=webhook_id)
         assert outcome is not None
@@ -551,6 +626,13 @@ class TestSweeper:
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="late success after expiry",
+            observation={
+                "reference": f"ord-{payment_id}",
+                "amount_ngwee": 10_000,
+                "currency": "ZMW",
+                "provider_reference": None,
+                "source": "unit",
+            },
         )
         assert outcome is not None
         assert outcome.from_status == PaymentStatus.EXPIRED

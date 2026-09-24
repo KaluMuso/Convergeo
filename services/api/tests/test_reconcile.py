@@ -24,6 +24,10 @@ from app.services.payments.reconcile import (
     run_daily_reconciliation_report,
 )
 from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -164,6 +168,39 @@ class FakeSupabaseTables:
         if name not in self.tables:
             self.tables[name] = FakeTable()
         return self.tables[name]
+
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        """Unit-only atomic decision stand-in; lane_d asserts the real RPC."""
+        assert name == "apply_prepaid_collection_success"
+        payment = next(
+            row for row in self.tables["payments"].rows
+            if row["id"] == params["p_payment_id"]
+        )
+        observation = params["p_observation"]
+        assert observation["reference"] == payment["lenco_reference"]
+        assert observation["amount_ngwee"] == payment["amount_ngwee"]
+        prior = payment["status"]
+        if prior == "success":
+            result = "duplicate"
+        elif prior == "cancelled":
+            result = "late_collection"
+        else:
+            payment["status"] = "success"
+            self.tables["audit_log"].rows.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "actor": params["p_actor_id"],
+                    "action": "payment.transition",
+                    "entity_type": "payment",
+                    "entity_id": params["p_payment_id"],
+                    "before": {"status": prior},
+                    "after": {"status": "success", "note": params["p_note"]},
+                }
+            )
+            result = "applied"
+        return MagicMock(execute=lambda: MagicMock(data={
+            "result": result, "from_status": prior,
+        }))
 
 
 class FakeServiceClient:
@@ -573,6 +610,9 @@ def db() -> Generator[PgConn, None, None]:
 
 class TestMigration0018:
     def test_migration_replays_clean(self, db: PgConn) -> None:
+        report_date = (
+            date(2000, 1, 1) + timedelta(days=uuid.uuid4().int % 1_000_000)
+        ).isoformat()
         discrepancies = (
             '{"balance_diff_ngwee": 0, "orphaned_lenco": [], '
             '"ledger_only": [], "ngwee_mismatches": []}'
@@ -581,7 +621,7 @@ class TestMigration0018:
             f"""
             INSERT INTO public.reconciliation_reports (report_date, summary, discrepancies)
             VALUES (
-              '2026-07-01',
+              '{report_date}',
               '{{"clean": true}}'::jsonb,
               '{discrepancies}'::jsonb
             )
@@ -591,9 +631,9 @@ class TestMigration0018:
         assert result.ok, result.error
 
         dup = db.run(
-            """
+            f"""
             INSERT INTO public.reconciliation_reports (report_date, summary, discrepancies)
-            VALUES ('2026-07-01', '{}'::jsonb, '{}'::jsonb);
+            VALUES ('{report_date}', '{{}}'::jsonb, '{{}}'::jsonb);
             """
         )
         assert not dup.ok
@@ -643,18 +683,28 @@ def _seed_webhook(
     processed_at: str | None = None,
 ) -> str:
     row_id = str(uuid.uuid4())
+    raw = {
+        "event": event,
+        "data": {
+            "id": event_id,
+            "reference": reference,
+            "status": status,
+            "amount": "250.00",
+            "currency": "ZMW",
+        },
+    }
     fake_service.client.table("webhook_events").rows.append(
         {
             "id": row_id,
             "provider": "lenco",
             "event_id": event_id,
             "signature_valid": True,
+            "verification_version": WEBHOOK_VERIFICATION_VERSION,
+            "payload_sha256": canonical_payload_sha256(raw),
+            "verified_at": created_at,
             "processed_at": processed_at,
             "created_at": created_at,
-            "raw": {
-                "event": event,
-                "data": {"id": event_id, "reference": reference, "status": status},
-            },
+            "raw": raw,
         }
     )
     return row_id

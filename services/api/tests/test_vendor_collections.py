@@ -43,8 +43,9 @@ ON CONFLICT (id) DO NOTHING;
     ]:
         script += f"""
 INSERT INTO public.vendor_listings (
-  id, vendor_id, title_override, price_ngwee, condition, stock_mode, status
-) VALUES ('{lid}', '{vid}', '{title}', 25000, 'new', 'always_available', 'active')
+  id, vendor_id, product_id, title_override, price_ngwee, condition, stock_mode, status
+) VALUES ('{lid}', '{vid}', 'b0000000-0000-0000-0000-000000000001',
+          '{title}', 25000, 'new', 'always_available', 'active')
 ON CONFLICT (id) DO NOTHING;
 """
     script += f"""

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -11,9 +10,14 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { Stepper } from "@vergeo/ui/src/stepper";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  customerAuth,
+  getReadyCustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
 import { ReservationCountdown } from "./reservation-countdown";
@@ -596,9 +600,45 @@ type CheckoutShellProps = {
 };
 
 export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellProps) {
+  const identity = useSession();
+  // Reset all checkout state (including child stores and order idempotency) at
+  // the render boundary. A returning account is still a different generation.
+  return (
+    <IdentityCheckoutShell
+      key={`${identity.generation}:${identity.session?.user.id ?? "anonymous"}`}
+      locale={locale}
+      labels={messageLabels}
+      identity={identity}
+    />
+  );
+}
+
+function IdentityCheckoutShell({
+  locale,
+  labels: messageLabels,
+  identity,
+}: CheckoutShellProps & { identity: ReturnType<typeof useSession> }) {
   const labels = resolveLabels(messageLabels);
   const router = useRouter();
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, generation } = identity;
+  const mounted = useRef(false);
+  const started = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const isCurrent = useCallback(() => {
+    const current = customerAuth.snapshot();
+    return (
+      mounted.current &&
+      !current.loading &&
+      !current.error &&
+      current.generation === generation &&
+      current.session?.user.id === session?.user.id
+    );
+  }, [generation, session?.user.id]);
   const [step, setStep] = useState(0);
   const [checkoutSession, setCheckoutSession] = useState<CheckoutSession | null>(null);
   const [fulfilmentTotals, setFulfilmentTotals] = useState<FulfilmentTotals | null>(null);
@@ -616,6 +656,8 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
 
   const initSession = useCallback(
     async (accessToken: string) => {
+      if (!isCurrent() || started.current) return;
+      started.current = true;
       setInitializing(true);
       setErrorMessage(null);
       try {
@@ -626,9 +668,11 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         const response = await client.request<CheckoutSession>("/checkout/session", {
           method: "POST",
         });
+        if (!isCurrent()) return;
         setCheckoutSession(response);
         setStep(response.contact_skipped ? 1 : 0);
       } catch (error) {
+        if (!isCurrent()) return;
         if (error instanceof ApiError) {
           if (error.code === "checkout.cart_empty") {
             router.push(cartPath);
@@ -641,10 +685,10 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         }
         setErrorMessage(labels.error);
       } finally {
-        setInitializing(false);
+        if (isCurrent()) setInitializing(false);
       }
     },
-    [cartPath, labels.error, router],
+    [cartPath, labels.error, router, isCurrent],
   );
 
   useEffect(() => {
@@ -658,16 +702,18 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
   }, [session, sessionLoading, checkoutSession, initializing, initSession, step]);
 
   const handleContactComplete = async () => {
-    const supabase = await import("@vergeo/auth/browser-client").then((mod) =>
-      mod.createBrowserClient(),
-    );
-    const { data } = await supabase.auth.getSession();
-    const nextToken = data.session?.access_token;
+    let nextToken: string | undefined;
+    try {
+      nextToken = (await getReadyCustomerSession())?.access_token;
+    } catch {
+      if (isCurrent()) setErrorMessage(labels.error);
+      return;
+    }
+    if (!isCurrent()) return;
     if (!nextToken) {
       setErrorMessage(labels.error);
       return;
     }
-    setStep(1);
     await initSession(nextToken);
   };
 
@@ -769,6 +815,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           reservationExpiredMessage={labels.reservationExpired}
           cartPath={cartPath}
           onComplete={(totals) => {
+            if (!isCurrent()) return;
             setFulfilmentTotals(totals);
             setStep(2);
           }}
@@ -782,6 +829,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           accessToken={session.access_token}
           labels={labels.payment}
           onComplete={(payment, options) => {
+            if (!isCurrent()) return;
             setPaymentSelection(payment);
             setPaymentOptions(options);
             setStep(3);
@@ -802,6 +850,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           payment={paymentSelection as ReviewPayment}
           labels={labels.review}
           onPlaceOrder={async () => {
+            if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
             if (!fulfilmentTotals.groups.length) {
               throw new Error(labels.review.placeOrderUnavailable);
             }
@@ -821,7 +870,9 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
                 })),
                 addressId: fulfilmentTotals.addressId,
                 idempotencyKey,
-                navigate: (href) => router.push(href),
+                navigate: (href) => {
+                  if (isCurrent()) router.push(href);
+                },
               });
             } catch (error) {
               throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));

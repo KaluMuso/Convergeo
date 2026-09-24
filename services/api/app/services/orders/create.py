@@ -14,6 +14,7 @@ from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import OrderStatus
+from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 _UUID_RE = re.compile(
@@ -294,7 +295,9 @@ def _fetch_existing_by_idempotency_key(
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None when the idempotency key has no
+    # row. That is the normal first-order path, not a failed read.
+    data = response.data if response is not None else None
     return data if isinstance(data, dict) else None
 
 
@@ -307,7 +310,7 @@ def _fetch_checkout_session(client: Any, *, session_id: str, customer_id: str) -
         .maybe_single()
         .execute()
     )
-    row = response.data
+    row = response.data if response is not None else None
     if not isinstance(row, dict):
         raise AppError(
             code="checkout.session_not_found",
@@ -642,7 +645,9 @@ def create_orders_atomic(
             details={"session_id": session_id},
         )
     if _session_expired(client, session_id):
-        client.table("checkout_groups").update({"status": "expired"}).eq("id", session_id).execute()
+        expire_checkout_group_if_unpaid(
+            client, checkout_group_id=session_id, terminal_status="expired"
+        )
         raise AppError(
             code="checkout.reservation_expired",
             message="Your reservation has expired",

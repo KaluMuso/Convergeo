@@ -12,6 +12,7 @@ import uuid
 from collections.abc import Generator
 from typing import Any, cast
 
+import psycopg
 import pytest
 from app.errors import AppError
 from app.services.kyc.state_machine import (
@@ -21,6 +22,7 @@ from app.services.kyc.state_machine import (
     transition_start_review,
 )
 from app.services.kyc.vendor_role import ensure_vendor_owner_role
+from postgrest.exceptions import APIError
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -200,12 +202,19 @@ class _SqlRpc:
     def execute(self) -> _FakeResponse:
         args = ", ".join(f"{key} := {_sql_value(val)}" for key, val in self._params.items())
         sql = f"SELECT public.{self._fn}({args});"
-        with _PG_LOCK:
-            result = self._conn.run(sql)
-        assert result.ok, result.error
-        if not result.rows:
-            return _FakeResponse(None)
-        return _FakeResponse(json.loads(result.rows[0]))
+        # Each RPC has its own real transaction; do not serialize concurrency
+        # probes with the table fixture's process lock.
+        try:
+            with psycopg.connect(self._conn.dsn) as conn:
+                row = conn.execute(sql).fetchone()
+        except psycopg.Error as exc:
+            raise APIError({
+                "code": exc.sqlstate or "P0001",
+                "message": exc.diag.message_primary or str(exc),
+                "details": exc.diag.message_detail,
+                "hint": exc.diag.message_hint,
+            }) from exc
+        return _FakeResponse(row[0] if row else None)
 
 
 class _ServiceWrapper:

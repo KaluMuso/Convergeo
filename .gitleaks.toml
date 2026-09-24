@@ -65,3 +65,14 @@ paths = [
   '''(?i)infra/merge-release-evidence\.json$''',
   '''(?i)infra/merge-release-evidence\.example\.json$''',
 ]
+
+[[allowlists]]
+description = "RELCTRL-01 rejected self-attestation fixture — exact nonsecret SHA only"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''(?i)^scripts/ci/fixtures/merge-evidence-incident-640\.json$''',
+]
+regexes = [
+  '''^8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25$''',
+]

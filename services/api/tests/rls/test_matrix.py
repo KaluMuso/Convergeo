@@ -3164,44 +3164,12 @@ EXPECTATIONS: TableExpectations = {
     # M18-P05 (0075). Same posture: a review link is minted and redeemed through
     # the API, never read directly by a client.
     "intake_deep_links": client_invisible(),
-    "webhook_events": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    # D3 provider evidence is service-only, including for authenticated admins.
+    # Quarantine visibility and replay go through the protected API.
+    "webhook_events": client_invisible(),
+    "payment_collection_receipts": client_invisible(),
+    "payment_collection_exceptions": client_invisible(),
+    "cart_merge_receipts": client_invisible(),
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()
@@ -3256,6 +3224,10 @@ def _probe_vendor_listings_insert(session: RoleSession) -> Any:
 
 
 def _update_probe_sql(db: PgConn, table: str) -> str:
+    if table == "payment_collection_receipts":
+        # This receipt table uses payment_id and has no id/created_at.
+        # Probe a real column so a missing-column error cannot mask its ACL.
+        return f"UPDATE public.{table} SET accepted_at = accepted_at WHERE false"
     col_result = db.run(
         f"""
         SELECT column_name FROM information_schema.columns

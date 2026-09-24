@@ -46,47 +46,19 @@ def db() -> Generator[PgConn, None, None]:
     yield conn
 
 
-def _as_authenticated(conn: PgConn, user_id: str) -> None:
-    claims = (
-        '{"role":"authenticated","sub":"'
-        + user_id
-        + '","aal":"aal1"}'
-    ).replace("'", "''")
-    conn.run("BEGIN;")
-    conn.run("SET LOCAL role authenticated;")
-    conn.run(
-        f"DO $$ BEGIN PERFORM set_config('request.jwt.claims', '{claims}', true); END $$;"
-    )
-
-
-def _as_anon(conn: PgConn) -> None:
-    conn.run("BEGIN;")
-    conn.run("SET LOCAL role anon;")
-    conn.run(
-        "DO $$ BEGIN PERFORM set_config('request.jwt.claims', "
-        "'{\"role\":\"anon\"}', true); END $$;"
-    )
-
-
-def _rollback(conn: PgConn) -> None:
-    conn.run("ROLLBACK;")
-
-
 class TestEventLifecycleClientGuards:
     def test_owner_cannot_insert_published_event(self, db: PgConn) -> None:
         event_id = str(uuid.uuid4())
         slug = f"evil-{event_id[:8]}"
-        _as_authenticated(db, OTHER_VENDOR_OWNER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.events (
               id, organiser_vendor_id, title, slug, status
             ) VALUES (
               '{event_id}', '{SHOP_B_ID}', 'Evil Fest', '{slug}', 'published'
             );
-            """
+            """, user_id=OTHER_VENDOR_OWNER_ID
         )
-        _rollback(db)
         assert not result.ok
         assert result.error is not None
         assert "server-controlled" in result.error
@@ -94,17 +66,15 @@ class TestEventLifecycleClientGuards:
     def test_owner_can_insert_draft_event(self, db: PgConn) -> None:
         event_id = str(uuid.uuid4())
         slug = f"draft-{event_id[:8]}"
-        _as_authenticated(db, OTHER_VENDOR_OWNER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.events (
               id, organiser_vendor_id, title, slug, status
             ) VALUES (
               '{event_id}', '{SHOP_B_ID}', 'Draft Fest', '{slug}', 'draft'
             );
-            """
+            """, user_id=OTHER_VENDOR_OWNER_ID
         )
-        _rollback(db)
         if not result.ok:
             assert "server-controlled" not in (result.error or "")
 
@@ -128,11 +98,11 @@ class TestEventLifecycleClientGuards:
         if not seed.ok:
             pytest.skip(f"could not seed draft event: {seed.error}")
 
-        _as_authenticated(db, OTHER_VENDOR_OWNER_ID)
-        result = db.run(
-            f"UPDATE public.events SET status = 'published' WHERE id = '{draft_id}';"
+        result = db.run_as(
+            "authenticated",
+            f"UPDATE public.events SET status = 'published' WHERE id = '{draft_id}';",
+            user_id=OTHER_VENDOR_OWNER_ID,
         )
-        _rollback(db)
         # Cleanup draft outside the rolled-back client txn.
         db.run(
             f"""
@@ -164,11 +134,9 @@ class TestEventLifecycleClientGuards:
             pytest.skip(f"could not suspend organiser: {suspend.error}")
 
         try:
-            _as_anon(db)
-            result = db.run(
+            result = db.run_as("anon",
                 f"SELECT id::text FROM public.events WHERE id = '{EVENT_ID}';"
             )
-            _rollback(db)
             assert result.ok
             assert result.rows == []
         finally:
@@ -186,34 +154,30 @@ class TestEventLifecycleClientGuards:
 class TestServiceLifecycleClientGuards:
     def test_owner_cannot_insert_active_service(self, db: PgConn) -> None:
         service_id = str(uuid.uuid4())
-        _as_authenticated(db, VENDOR_OWNER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.services (
               id, vendor_id, category, title, status
             ) VALUES (
               '{service_id}', '{SHOP_A_ID}', 'plumbing', 'Evil Plumber', 'active'
             );
-            """
+            """, user_id=VENDOR_OWNER_ID
         )
-        _rollback(db)
         assert not result.ok
         assert result.error is not None
         assert "server-controlled" in result.error
 
     def test_owner_can_insert_draft_service(self, db: PgConn) -> None:
         service_id = str(uuid.uuid4())
-        _as_authenticated(db, VENDOR_OWNER_ID)
-        result = db.run(
+        result = db.run_as("authenticated",
             f"""
             INSERT INTO public.services (
               id, vendor_id, category, title, status
             ) VALUES (
               '{service_id}', '{SHOP_A_ID}', 'plumbing', 'Draft Plumber', 'draft'
             );
-            """
+            """, user_id=VENDOR_OWNER_ID
         )
-        _rollback(db)
         if not result.ok:
             assert "server-controlled" not in (result.error or "")
 
@@ -235,11 +199,11 @@ class TestServiceLifecycleClientGuards:
         if not seed.ok:
             pytest.skip(f"could not seed draft service: {seed.error}")
 
-        _as_authenticated(db, VENDOR_OWNER_ID)
-        result = db.run(
-            f"UPDATE public.services SET status = 'active' WHERE id = '{draft_id}';"
+        result = db.run_as(
+            "authenticated",
+            f"UPDATE public.services SET status = 'active' WHERE id = '{draft_id}';",
+            user_id=VENDOR_OWNER_ID,
         )
-        _rollback(db)
         db.run(
             f"""
             BEGIN;
@@ -267,11 +231,9 @@ class TestServiceLifecycleClientGuards:
             pytest.skip(f"could not suspend provider: {suspend.error}")
 
         try:
-            _as_anon(db)
-            result = db.run(
+            result = db.run_as("anon",
                 f"SELECT id::text FROM public.services WHERE id = '{SERVICE_ID}';"
             )
-            _rollback(db)
             assert result.ok
             assert result.rows == []
         finally:

@@ -20,6 +20,7 @@ from app.services.payments.state import (
     process_webhook_event,
 )
 from fastapi.testclient import TestClient
+from tests.support.webhook_evidence import verified_webhook_row
 from tests.test_payment_state import (
     CHECKOUT_GROUP_ID,
     CUSTOMER_ID,
@@ -84,17 +85,24 @@ def _seed_success_webhook(
     processed_at: str | None = None,
 ) -> None:
     fake.tables["webhook_events"].rows.append(
-        {
-            "id": webhook_id,
-            "provider": "lenco",
-            "event_id": f"evt-{webhook_id}",
-            "processed_at": processed_at,
-            "raw": {
-                "event": "collection.successful",
-                "data": {"reference": reference, "status": "successful"},
-            },
-            "created_at": datetime.now(UTC).isoformat(),
-        }
+        verified_webhook_row(
+            {
+                "id": webhook_id,
+                "provider": "lenco",
+                "event_id": f"evt-{webhook_id}",
+                "processed_at": processed_at,
+                "raw": {
+                    "event": "collection.successful",
+                    "data": {
+                        "reference": reference,
+                        "status": "successful",
+                        "amount": "100.00",
+                        "currency": "ZMW",
+                    },
+                },
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        )
     )
 
 
@@ -137,6 +145,54 @@ def _client_with_service(service: FakeServiceClient) -> TestClient:
 
 
 class TestForgedReturn:
+    @pytest.mark.asyncio
+    async def test_provider_query_wrong_amount_holds_card_payment(
+        self,
+        card_service: FakeServiceClient,
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id)
+        strategy = _mock_strategy(lenco_status="successful")
+        strategy.query_status.return_value = QueryStatusResult(
+            reference=REFERENCE,
+            status="successful",
+            amount_major="1.00",
+        )
+
+        result = await verify_card_payment_return(
+            card_service,
+            payment_id=payment_id,
+            customer_id=CUSTOMER_ID,
+            client_status="success",
+            strategy=strategy,
+        )
+
+        assert result.held is True and result.order_confirmed is False
+        payment = card_service.client.tables["payments"].rows[0]
+        assert payment["status"] == PaymentStatus.USSD_PUSHED.value
+        assert payment["raw"]["hold"]["reason"] == "amount"
+
+    @pytest.mark.asyncio
+    async def test_wrong_amount_webhook_cannot_confirm_card_return(
+        self,
+        card_service: FakeServiceClient,
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id)
+        _seed_success_webhook(card_service.client, webhook_id=str(uuid.uuid4()))
+        card_service.client.tables["webhook_events"].rows[0]["raw"]["data"]["amount"] = "1.00"
+
+        result = await verify_card_payment_return(
+            card_service,
+            payment_id=payment_id,
+            customer_id=CUSTOMER_ID,
+            client_status="success",
+            strategy=_mock_strategy(lenco_status="successful"),
+        )
+
+        assert result.held is True and result.order_confirmed is False
+        assert card_service.client.tables["payments"].rows[0]["status"] == "ussd_pushed"
+
     @pytest.mark.asyncio
     async def test_client_success_claim_without_lenco_success_holds_payment(
         self,
@@ -191,6 +247,26 @@ class TestForgedReturn:
 
 
 class TestVerifyWebhookRace:
+    @pytest.mark.asyncio
+    async def test_cancelled_late_collection_is_held_not_verified(
+        self, card_service: FakeServiceClient
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        webhook_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id, status="cancelled")
+        _seed_success_webhook(card_service.client, webhook_id=webhook_id)
+        result = await verify_card_payment_return(
+            card_service,
+            payment_id=payment_id,
+            customer_id=CUSTOMER_ID,
+            client_status="success",
+            strategy=_mock_strategy(lenco_status="successful"),
+        )
+        assert result.status == "cancelled"
+        assert result.held is True
+        assert result.verified is False
+        assert result.order_confirmed is False
+
     @pytest.mark.asyncio
     async def test_verify_first_then_webhook_converges_once(
         self,
