@@ -19,6 +19,11 @@ import { expect, test } from "../fixtures/test-base";
 
 import type { Route } from "@playwright/test";
 
+// Browser service workers can send payment-status fetches directly to the real
+// API, bypassing Playwright's page.route fixture. Keep this provider-mock
+// contract on the page network path; authenticated flows have their own suite.
+test.use({ serviceWorkers: "block" });
+
 const checkoutMessages = JSON.parse(
   readFileSync(new URL("../../packages/i18n/messages/en/checkout.json", import.meta.url), "utf8"),
 ) as {
@@ -173,7 +178,9 @@ test.describe("checkout · false-success", () => {
      * interception covers the RSC fetch and any document-navigation fallback
      * alike.
      */
-    const orderRoutePattern = "**/account/orders**";
+    // The orders index can be prefetched independently. Hold only this
+    // fixture's final destination, which is the hand-off under test.
+    const orderRoutePattern = `**/account/orders/${FIXTURE_ORDER_ID}**`;
     const orderNavigations: string[] = [];
     const heldNavigationSettlements = new Set<Promise<void>>();
     let releaseOrderNavigation!: () => void;
