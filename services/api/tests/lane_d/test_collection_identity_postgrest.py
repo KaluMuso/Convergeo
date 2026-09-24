@@ -46,7 +46,14 @@ from postgrest import SyncPostgrestClient
 from postgrest.exceptions import APIError
 from tests.rls.conftest import PgConn
 
-pytestmark = pytest.mark.prepaid_settlement_db
+_LOCAL_STACK_ENV = ("LANE_D_POSTGREST_URL", "LANE_D_JWT_SECRET", "LANE_D_WEBHOOK_TOKEN")
+pytestmark = [
+    pytest.mark.prepaid_settlement_db,
+    pytest.mark.skipif(
+        not any(os.environ.get(name) for name in _LOCAL_STACK_ENV),
+        reason="D3 requires the isolated PostgreSQL/PostgREST harness; run its complete stack gate",
+    ),
+]
 
 
 def _b64(document: dict[str, object]) -> str:
