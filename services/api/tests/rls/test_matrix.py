@@ -3164,44 +3164,12 @@ EXPECTATIONS: TableExpectations = {
     # M18-P05 (0075). Same posture: a review link is minted and redeemed through
     # the API, never read directly by a client.
     "intake_deep_links": client_invisible(),
-    "webhook_events": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    # D3 provider evidence is service-only, including for authenticated admins.
+    # Quarantine visibility and replay go through the protected API.
+    "webhook_events": client_invisible(),
+    "payment_collection_receipts": client_invisible(),
+    "payment_collection_exceptions": client_invisible(),
+    "cart_merge_receipts": client_invisible(),
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()
