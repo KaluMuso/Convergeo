@@ -35,6 +35,16 @@ import { expect, test } from "../fixtures/test-base";
  */
 test.describe("shop · cash on delivery", () => {
   test("buyer places a COD order and reaches confirmation", async ({ page }) => {
+    const checkoutFailures: string[] = [];
+    page.on("response", (response) => {
+      if (response.status() < 400 || !response.url().includes("/checkout/steps/fulfilment")) return;
+      void response.json().then((body: unknown) => {
+        const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
+        const error = record.error && typeof record.error === "object"
+          ? record.error as Record<string, unknown> : record;
+        checkoutFailures.push(`${response.status()}:${String(error.code ?? "unknown")}`);
+      }).catch(() => checkoutFailures.push(`${response.status()}:unreadable`));
+    });
     // Checkout is authenticated. The same fixture is already REQUIRED_STRICT at
     // auth-otp.spec.ts, so a certification run cannot silently lose customer-OTP
     // coverage; escalating the identical missing fixture a second time here
@@ -65,7 +75,9 @@ test.describe("shop · cash on delivery", () => {
     await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
 
     // The real wizard, end to end.
-    const run = await completeCheckout(page, { payment: "cod" });
+    const run = await completeCheckout(page, { payment: "cod" }).catch((error: unknown) => {
+      throw new Error(`COD checkout failed; fulfilment API=${checkoutFailures.join(",")}; ${String(error)}`);
+    });
     expect(run.payment).toBe("cod");
     expect(run.fulfilment.length).toBeGreaterThan(0);
     test.info().annotations.push({

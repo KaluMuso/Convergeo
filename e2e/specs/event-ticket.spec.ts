@@ -120,7 +120,17 @@ test.describe("event · ticket lifecycle", () => {
     // rather than a still-loading screen. The two states are mutually
     // exclusive in ScannerView, so this cannot double-match.
     if (await switchToManual.isVisible()) {
-      await switchToManual.click();
+      try {
+        await switchToManual.click({ timeout: 3_000 });
+      } catch (error) {
+        // Camera permission can settle between isVisible and click, replacing
+        // the switch with the manual form. Accept only that actual UI state.
+        try {
+          await expect(manualForm).toBeVisible({ timeout: 5_000 });
+        } catch {
+          throw error;
+        }
+      }
     }
     await expect(manualForm).toBeVisible();
 

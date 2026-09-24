@@ -257,7 +257,9 @@ export async function completeFulfilmentStep(
     // The landmark field is the Fulfilment step's only textbox.
     const landmark = checkoutShell(page).getByRole("textbox");
     await expect(landmark).toHaveCount(1, { timeout });
-    await landmark.fill(SEED.address.landmark);
+    // The UI submits one landmark string. Include the seed's city so the
+    // checkout zone resolver can identify this synthetic Lusaka address.
+    await landmark.fill(`${SEED.address.landmark}, ${SEED.address.area}`);
   }
 
   await stepAdvanceButton(page).click();

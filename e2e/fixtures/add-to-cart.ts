@@ -31,10 +31,15 @@ export async function clickAddToCartAndAwaitOutcome(
   const timeout = options.timeout ?? 15_000;
 
   const pickupSelect = page.getByTestId("pdp-pickup-location-select");
-  const pickupRequired = await pickupSelect
-    .waitFor({ state: "visible", timeout: 5_000 })
-    .then(() => true)
-    .catch(() => false);
+  const addButton = page.getByTestId("pdp-add-to-cart");
+  // The API decides whether this listing requires a pickup branch. Wait for
+  // either its picker or a genuinely enabled untracked-listing button; a slow
+  // successful lookup must not be mistaken for the no-branch case.
+  await expect.poll(
+    async () => (await pickupSelect.isVisible()) || (await addButton.isEnabled()),
+    { timeout },
+  ).toBe(true);
+  const pickupRequired = await pickupSelect.isVisible();
   if (pickupRequired) {
     const branchOptions = await pickupSelect.locator("option:not([value=''])").allTextContents();
     if (branchOptions.length === 0) {
@@ -44,6 +49,7 @@ export async function clickAddToCartAndAwaitOutcome(
     }
     await pickupSelect.selectOption({ index: 1 });
   }
+  await expect(addButton).toBeEnabled({ timeout });
 
   const cartItemsResponse = page
     .waitForResponse(
@@ -52,7 +58,7 @@ export async function clickAddToCartAndAwaitOutcome(
     )
     .catch(() => null);
 
-  await page.getByTestId("pdp-add-to-cart").click();
+  await addButton.click();
 
   const outcome = page
     .getByTestId("pdp-add-to-cart-success")
