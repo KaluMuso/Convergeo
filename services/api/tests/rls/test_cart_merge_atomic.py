@@ -271,9 +271,10 @@ def test_two_database_merges_preserve_both_lines_exactly_once(atomic_db: _Psycop
     assert outcomes.issubset({"applied", "stale_snapshot", "already_converted"})
     # A non-waiting scoped lock may reject the simultaneous caller. Retrying
     # after the winner commits must find the same receipt, never insert twice.
-    assert json.loads(_service_call(atomic_db.dsn, params, threading.Barrier(1)))[
-        "outcome"
-    ] == "already_converted"
+    assert (
+        json.loads(_service_call(atomic_db.dsn, params, threading.Barrier(1)))["outcome"]
+        == "already_converted"
+    )
 
     final = atomic_db.run(
         "select listing_id::text from public.cart_items "
@@ -354,6 +355,10 @@ def test_stale_snapshot_refuses_to_clobber_concurrent_account_line(
             params["guest_listing_id"],
             params["concurrent_listing_id"],
         ],
+    )
+    # The wire snapshot is canonical by row id, including newly appended rows.
+    params["user_snapshot"] = json.dumps(
+        sorted(json.loads(params["user_snapshot"]), key=lambda row: row["id"])
     )
     retry = _service_call(atomic_db.dsn, params, threading.Barrier(1))
     assert json.loads(retry)["outcome"] == "applied"
@@ -776,3 +781,89 @@ def test_rpc_rejects_wrong_verified_guest_token(atomic_db: _PsycopgDb) -> None:
     assert not result.ok
     assert result.sqlstate == "42501"
     assert result.error is not None and "guest cart identity mismatch" in result.error
+
+
+def test_product_writer_conflicts_without_waiting_and_refreshes_authority(
+    atomic_db: _PsycopgDb,
+) -> None:
+    params = _seed_merge_case(atomic_db)
+    row = atomic_db.run(
+        "select product_id::text from public.vendor_listings "
+        f"where id = '{params['guest_listing_id']}'"
+    )
+    product_id = row.rows[0]
+    # Test the product-derived display name, not a listing title override.
+    assert atomic_db.run(
+        "update public.vendor_listings set title_override = null "
+        f"where id = '{params['guest_listing_id']}'"
+    ).ok
+    params["authority"] = _authority(
+        atomic_db, params["user_id"], list(params["expected_listings"])
+    )
+    with psycopg.connect(atomic_db.dsn) as writer:
+        writer.execute(
+            "update public.products set name = name || ' revised' where id = %s", (product_id,)
+        )
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            result = executor.submit(_service_call, atomic_db.dsn, params, threading.Barrier(1))
+            assert json.loads(result.result(timeout=3))["outcome"] == "stale_authority"
+        writer.commit()
+    assert (
+        json.loads(_service_call(atomic_db.dsn, params, threading.Barrier(1)))["outcome"]
+        == "stale_authority"
+    )
+    params["authority"] = _authority(
+        atomic_db, params["user_id"], list(params["expected_listings"])
+    )
+    assert (
+        json.loads(_service_call(atomic_db.dsn, params, threading.Barrier(1)))["outcome"]
+        == "applied"
+    )
+
+
+def test_product_writer_serializes_after_merge_and_unrelated_product_progresses(
+    atomic_db: _PsycopgDb,
+) -> None:
+    params = _seed_merge_case(atomic_db)
+    product_id = atomic_db.run(
+        "select product_id::text from public.vendor_listings "
+        f"where id = '{params['guest_listing_id']}'"
+    ).rows[0]
+    unrelated = str(uuid.uuid4())
+    seeded = atomic_db.run(
+        "insert into public.products (id, name, slug, category_id) "
+        f"select '{unrelated}', 'Unrelated merge product', 'unrelated-{unrelated}', "
+        f"category_id from public.products where id = '{product_id}'"
+    )
+    assert seeded.ok, seeded.error
+    started = threading.Event()
+    pid: list[int] = []
+
+    def edit() -> None:
+        with psycopg.connect(atomic_db.dsn) as writer:
+            pid.append(writer.execute("select pg_backend_pid()").fetchone()[0])
+            started.set()
+            writer.execute(
+                "update public.products set name = name || ' later' where id = %s", (product_id,)
+            )
+
+    with psycopg.connect(atomic_db.dsn) as merge:
+        merge.execute("set local role service_role")
+        assert json.loads(merge.execute(_RPC_SQL, params).fetchone()[0])["outcome"] == "applied"
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(edit)
+            try:
+                assert started.wait(3)
+                _wait_for_lock_wait(atomic_db, pid[0])
+                with psycopg.connect(atomic_db.dsn) as other:
+                    other.execute("set local statement_timeout = '2s'")
+                    other.execute(
+                        "update public.products set name = name where id = %s", (unrelated,)
+                    )
+                    other.execute(
+                        "insert into public.carts (guest_token, status) values (%s, 'active')",
+                        (str(uuid.uuid4()),),
+                    )
+            finally:
+                merge.commit()
+            future.result(timeout=3)
