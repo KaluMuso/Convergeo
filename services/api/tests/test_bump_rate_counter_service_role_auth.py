@@ -80,6 +80,9 @@ def _run_as_role(
     script = "\n".join(
         [
             "BEGIN;",
+            # SET ROLE alone retains the trusted postgres session bypass.
+            # Model the service caller with a non-trusted session identity too.
+            "SET LOCAL SESSION AUTHORIZATION service_role;" if role == "service_role" else "",
             f"SET LOCAL role {role};",
             _claims_do_block(claims_json),
             sql,
