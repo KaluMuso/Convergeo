@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 from collections.abc import Callable, Generator
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal, cast
+from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
@@ -68,7 +70,7 @@ class PgConn:
 
     def run(self, sql: str) -> SqlResult:
         proc = subprocess.run(
-            ["psql", self.dsn, "-v", "ON_ERROR_STOP=1", "-At", "-c", sql],
+            ["psql", self.dsn, "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose", "-At", "-c", sql],
             capture_output=True,
             text=True,
             check=False,
@@ -84,6 +86,40 @@ class PgConn:
             data = [row for row in rows if row not in noise]
             return SqlResult(ok=True, rows=data[-1:] if data else [])
         return SqlResult(ok=True, rows=rows)
+
+    def run_as(self, role: Literal["anon", "authenticated"], sql: str, *, user_id: str | None = None) -> SqlResult:
+        """Execute one assertion in a single RLS-bound transaction.
+
+        ``run`` starts a fresh psql process, so separate BEGIN/SET/statement calls
+        silently run the statement as postgres. The tester hop also prevents a
+        superuser connection from bypassing RLS during these assertions.
+        """
+        if role == "authenticated":
+            if user_id is None:
+                raise ValueError("authenticated run requires user_id")
+            claims = json.dumps({"role": role, "sub": user_id, "aal": "aal1"})
+        else:
+            claims = json.dumps({"role": role})
+        escaped = claims.replace("'", "''")
+        return self.as_rls_tester().run(
+            "BEGIN; "
+            f"SET LOCAL ROLE {role}; "
+            f"DO $$ BEGIN PERFORM set_config('request.jwt.claims', '{escaped}', true); END $$; "
+            f"{sql} ROLLBACK;"
+        )
+
+    def as_rls_tester(self) -> PgConn:
+        """Connect as the real nonprivileged test login, not a SET ROLE superuser."""
+        parsed = urlsplit(self.dsn)
+        if not parsed.hostname or not parsed.path:
+            raise ValueError("run_as requires an explicit test database URL")
+        host = parsed.hostname
+        port = f":{parsed.port}" if parsed.port is not None else ""
+        tester_dsn = urlunsplit((
+            parsed.scheme, f"vergeo_rls_tester:test@{host}{port}",
+            parsed.path, parsed.query, parsed.fragment,
+        ))
+        return PgConn(tester_dsn)
 
     def run_file(self, path: Path) -> SqlResult:
         proc = subprocess.run(
@@ -114,6 +150,9 @@ class PgConn:
 
 def _extract_sqlstate(stderr: str) -> str | None:
     for line in stderr.splitlines():
+        verbose = re.search(r"\b(?:ERROR|FATAL):\s+([A-Z0-9]{5}):", line)
+        if verbose:
+            return verbose.group(1)
         if line.startswith("ERROR:") and "(SQLSTATE " in line:
             start = line.rfind("(SQLSTATE ") + len("(SQLSTATE ")
             end = line.rfind(")")
@@ -773,7 +812,7 @@ class RoleSession:
 
     def execute(self, sql: str) -> SqlResult:
         script = f"BEGIN; {self._role_preamble().replace(chr(10), ' ')} {sql}; COMMIT;"
-        return self.conn.run(script)
+        return self.conn.as_rls_tester().run(script)
 
 
 @pytest.fixture(scope="session")
