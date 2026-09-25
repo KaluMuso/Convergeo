@@ -510,8 +510,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — required for migration 0001 (vector extension).
-        image: pgvector/pgvector:pg16
+        # Qualification input; runtime checks below prove the mutable tag contents.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -537,6 +537,12 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: postgres
+
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            bash scripts/ci/verify-postgres-runtime.sh
 
       - name: Setup uv (canonical migration re-entrant replay)
         uses: astral-sh/setup-uv@v5
@@ -576,6 +582,19 @@ jobs:
     name: Database / typegen drift
     needs: migrations
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     # config.toml uses env() substitution for the enabled send_sms auth hook and
     # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
     # job cannot bring the stack up without them and previously failed (which let
@@ -598,14 +617,48 @@ jobs:
           # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
           version: 2.109.1
 
-      - name: Start local database
-        run: supabase db start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Reset local database
-        run: supabase db reset --no-seed
+      - name: Replay and qualify disposable database
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          bash scripts/ci/migration-replay.sh
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            bash scripts/ci/verify-postgres-runtime.sh
+
+      - name: Prefetch pinned postgres-meta generator
+        run: bash scripts/ci/prefetch-postgres-meta.sh
 
       - name: Regenerate types
         run: bash scripts/gen-types.sh
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
+      - name: Record generated type provenance
+        run: |
+          mkdir -p generated-types
+          cp packages/types/src/db.ts generated-types/db.ts
+          {
+            echo "source_sha=${GITHUB_SHA}"
+            echo "source_ref=${GITHUB_REF}"
+            echo "server_version_num=$(psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -Atc 'show server_version_num')"
+            echo "vector_version=$(psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -Atc \"select extversion from pg_extension where extname='vector'\")"
+            docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format 'container_image={{.Image}} container_id={{.ID}}'
+          } > generated-types/provenance.txt
+
+      - name: Upload generated database types
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-database-types-${{ github.sha }}
+          path: generated-types
+          if-no-files-found: error
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
@@ -613,6 +666,19 @@ jobs:
   rls:
     name: RLS isolation matrix
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     # Same auth-hook/OAuth dummy env as db — stack cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -630,21 +696,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
-        with:
-          # Pinned (not `latest`) so setup-cli skips the unauthenticated
-          # GitHub "resolve latest release" API call, which intermittently
-          # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
-          version: 2.109.1
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Start local database
-        run: supabase db start
-
-      - name: Reset local database (no demo seed)
-        # The RLS fixture owns its matrix data. `supabase/config.toml` also has
-        # db.seed.enabled=false, so make the observed no-seed precondition explicit.
-        run: supabase db reset --no-seed
+      - name: Replay migrations
+        working-directory: ${{ github.workspace }}
+        env:
+          PGHOST: localhost
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: bash scripts/ci/migration-replay.sh
 
       # Provision the matrix's impersonation roles in ISOLATION, before any
       # pytest process touches the database. On 2026-08-02 the same bootstrap,
@@ -659,6 +722,11 @@ jobs:
             docker ps --format '{{.Names}}' | grep -i 'supabase_db' | head -1 | xargs -r docker logs --tail 100
             exit 1
           fi
+
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            bash ../../scripts/ci/verify-postgres-runtime.sh
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -700,7 +768,7 @@ jobs:
     # re-applies migrations). Keeps this money coverage from silently skipping in CI.
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -810,8 +878,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — the same image the `migrations` job replays onto.
-        image: pgvector/pgvector:pg16
+        # Same explicitly qualified image input as migration replay.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
