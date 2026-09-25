@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fast Dockerless migration pre-flight: plain Postgres 16 + minimal Supabase shim,
+# Fast Dockerless migration pre-flight: qualified Postgres + minimal Supabase shim,
 # then replay every supabase/migrations/*.sql file in deterministic sort order
 # (matching Supabase CLI db push / db reset) with ON_ERROR_STOP=1.
 # Catches immutability/ordering/column bugs (the 0009 class) in seconds before the
@@ -55,7 +55,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
     CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vergeo_rls_tester') THEN
+    CREATE ROLE vergeo_rls_tester LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
+  END IF;
 END $$;
+
+GRANT authenticated, anon TO vergeo_rls_tester;
 
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE SCHEMA IF NOT EXISTS auth;

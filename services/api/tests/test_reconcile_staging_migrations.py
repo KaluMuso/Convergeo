@@ -14,6 +14,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = REPO_ROOT / "scripts" / "ci" / "reconcile_staging_migrations.py"
 LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
 POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
+# Independently maintained inventory of migrations that were not present in the
+# immutable 2026-08-13 post-repair ledger fixture.  Keep the captured ledger
+# bytes untouched: repository migrations appended after that snapshot belong
+# here and must remain visibly pending.
 PENDING_REPAIR_VERSIONS = {
     "20260812090000",
     "20260813064106",
@@ -39,6 +43,10 @@ PENDING_REPAIR_VERSIONS = {
     "20260924001011",
     "20260924015610",
     "20260924071905",
+    "20260924095638",
+    "20260924120417",
+    "20260924120418",
+    "20260924120419",
 }
 
 
@@ -94,6 +102,16 @@ def test_post_repair_ledger_does_not_accept_rehearsal_rows() -> None:
     extra = remote + ["20260813072110"]
     with pytest.raises(reconcile.MigrationReconcileError, match="absent from repository"):
         reconcile.reconcile_versions(_repo_versions_applied_after_repair(), extra)
+
+
+def test_appended_repository_migration_remains_pending() -> None:
+    """A future repository tip must not turn a historical snapshot green."""
+    appended_version = "29991231235959"
+    repository_versions = [*_repo_versions(), appended_version]
+    remote = reconcile.parse_remote_versions(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
+
+    with pytest.raises(reconcile.MigrationReconcileError, match=appended_version):
+        reconcile.reconcile_versions(repository_versions, remote)
 
 
 def test_cli_live_fixture_fails() -> None:

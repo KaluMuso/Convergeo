@@ -190,6 +190,15 @@
       "budget_band_min_ngwee": 100000,
       "budget_band_max_ngwee": 250000,
       "status": "open"
+    },
+    {
+      "id_key": "completed_job",
+      "customer_key": "customer_a",
+      "category": "plumbing",
+      "description": "Completed verified service review fixture",
+      "budget_band_min_ngwee": 100000,
+      "budget_band_max_ngwee": 250000,
+      "status": "completed"
     }
   ],
   "job_quotes": [
@@ -208,6 +217,14 @@
       "amount_ngwee": 200000,
       "message": "Available Friday",
       "status": "submitted"
+    },
+    {
+      "id_key": "accepted_completed",
+      "job_key": "completed_job",
+      "provider_key": "shop_a",
+      "amount_ngwee": 180000,
+      "message": "Accepted completed service fixture",
+      "status": "accepted"
     }
   ],
   "orders": [
@@ -237,6 +254,15 @@
       "status": "delivered",
       "fulfilment": "delivery",
       "delivery_zone": "lusaka_central"
+    },
+    {
+      "id_key": "completed",
+      "checkout_group_key": "paid",
+      "vendor_key": "shop_a",
+      "customer_key": "customer_a",
+      "status": "completed",
+      "fulfilment": "pickup",
+      "delivery_zone": null
     }
   ]
 }

@@ -2332,16 +2332,15 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "reviews": {
-        # DEFAULT VALUES insert hits the verified-purchase BEFORE INSERT trigger
-        # ("order_item not found") before RLS WITH CHECK — counted permit for any
-        # persona with INSERT grant. ANON has no grant → deny_all. Legitimate
-        # insert authz is proven by 0007 pgTAP + cross-tenant tests below.
+        # INSERT probes use a real delivered order item. The owner succeeds;
+        # other identities reach the verified-purchase trigger and must receive
+        # its exact wrong-owner rejection (never an arbitrary P0001).
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: malformed_write_probe(),
-        Persona.OTHER_CUSTOMER: malformed_write_probe(),
-        Persona.VENDOR: malformed_write_probe(),
-        Persona.OTHER_VENDOR: malformed_write_probe(),
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: {**malformed_write_probe(), "insert": "permit"},
+        Persona.OTHER_CUSTOMER: {**malformed_write_probe(), "insert": "reject"},
+        Persona.VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.OTHER_VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.ADMIN: {**all_permit(), "insert": "reject"},
     },
     # Listing/service RFQ — same two-party read / API-only write posture as enquiries.
     "rfq_messages": {
@@ -2451,16 +2450,13 @@ EXPECTATIONS: TableExpectations = {
     "service_reviews": {
         # 0054: authenticated CRUD grant + published SELECT policy + author insert
         # + vendor reply update + admin_all. ANON has no table GRANT → deny_all.
-        # Authenticated DEFAULT VALUES insert hits the verified-engagement BEFORE
-        # INSERT trigger ("job not found") before RLS WITH CHECK — counted permit
-        # (same convention as other trigger-gated tables). Update/delete WHERE
-        # false are RLS-filtered no-ops → permit. FORCE already set in 0054.
+        # INSERT probes use the completed job/accepted quote/service-order chain.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: malformed_write_probe(),
-        Persona.OTHER_CUSTOMER: malformed_write_probe(),
-        Persona.VENDOR: malformed_write_probe(),
-        Persona.OTHER_VENDOR: malformed_write_probe(),
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: {**malformed_write_probe(), "insert": "permit"},
+        Persona.OTHER_CUSTOMER: {**malformed_write_probe(), "insert": "reject"},
+        Persona.VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.OTHER_VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.ADMIN: {**all_permit(), "insert": "reject"},
     },
     "stock_reservations": {
         Persona.ANON: {
@@ -3201,10 +3197,37 @@ def _probe_select(session: RoleSession, table: str) -> Any:
 def _probe_insert(session: RoleSession, table: str) -> Any:
     if table == "vendor_listings":
         return _probe_vendor_listings_insert(session)
+    if table == "reviews":
+        return _probe_review_insert(session)
+    if table == "service_reviews":
+        return _probe_service_review_insert(session)
     session.execute("SAVEPOINT rls_probe")
     result = session.execute(f"INSERT INTO public.{table} DEFAULT VALUES RETURNING 1")
     session.execute("ROLLBACK TO SAVEPOINT rls_probe")
     return result
+
+
+def _probe_review_insert(session: RoleSession) -> Any:
+    return session.execute(
+        "INSERT INTO public.reviews (id, order_item_id, rating, body) VALUES "
+        "('71000000-0000-4000-8000-000000000001', "
+        "'c3000000-0000-0000-0000-000000000002', 5, 'RLS probe'); "
+        "SELECT id::text || '|' || count(*)::text FROM public.reviews "
+        "WHERE id = '71000000-0000-4000-8000-000000000001' GROUP BY id; ROLLBACK"
+    )
+
+
+def _probe_service_review_insert(session: RoleSession) -> Any:
+    return session.execute(
+        "INSERT INTO public.service_reviews "
+        "(id, job_id, provider_vendor_id, customer_id, rating, body) VALUES "
+        "('72000000-0000-4000-8000-000000000001', "
+        "'f1000000-0000-0000-0000-000000000002', "
+        "'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', "
+        "'11111111-1111-1111-1111-111111111111', 5, 'RLS probe'); "
+        "SELECT id::text || '|' || count(*)::text FROM public.service_reviews "
+        "WHERE id = '72000000-0000-4000-8000-000000000001' GROUP BY id; ROLLBACK"
+    )
 
 
 def _probe_vendor_listings_insert(session: RoleSession) -> Any:
@@ -3316,7 +3339,19 @@ def test_matrix_cell(
     denied = _is_permission_denied(result)
     if expected == "permit":
         assert not denied, f"{table}/{persona}/{verb}: expected permit, got {result.error}"
+        if table in {"reviews", "service_reviews"} and verb == "insert":
+            assert result.ok and len(result.rows) == 1, result.error
+            assert result.rows[0].endswith("|1"), result.rows
         MATRIX_SUMMARY["allow"] += 1
+    elif expected == "reject":
+        expected_message = (
+            "review author must be the order customer"
+            if table == "reviews"
+            else "service review author must be the job customer"
+        )
+        assert result.sqlstate == "P0001", result.error
+        assert expected_message in (result.error or ""), result.error
+        MATRIX_SUMMARY["business_reject"] += 1
     else:
         assert denied, f"{table}/{persona}/{verb}: expected deny, query succeeded"
         MATRIX_SUMMARY["deny"] += 1
@@ -3407,6 +3442,9 @@ def test_matrix_summary(db: PgConn, role_factory: Callable[[Persona], RoleSessio
                 if expected == "permit":
                     assert not _is_permission_denied(result)
                     allow += 1
+                elif expected == "reject":
+                    assert result.sqlstate == "P0001"
+                    deny += 1
                 else:
                     assert _is_permission_denied(result)
                     deny += 1

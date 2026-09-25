@@ -30,6 +30,38 @@ PRODUCTION_DEPLOY_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-production.ym
 LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
 POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
 
+# Expected pending suffix relative to the immutable 2026-08-13 fixture.  This is
+# deliberately test-owned data rather than output derived from the evaluator.
+POST_REPAIR_PENDING_VERSIONS = [
+    "20260812090000",
+    "20260813064106",
+    "20260813150000",
+    "20260813160000",
+    "20260813160100",
+    "20260813160200",
+    "20260815194500",
+    "20260815230000",
+    "20260816220000",
+    "20260817200000",
+    "20260827020000",
+    "20260829120000",
+    "20260831050000",
+    "20260831051000",
+    "20260921155234",
+    "20260923010000",
+    "20260923192645",
+    "20260923193047",
+    "20260923234129",
+    "20260923234132",
+    "20260924001011",
+    "20260924015610",
+    "20260924071905",
+    "20260924095638",
+    "20260924120417",
+    "20260924120418",
+    "20260924120419",
+]
+
 def _module() -> Any:
     spec = importlib.util.spec_from_file_location("schema_convergence", MODULE_PATH)
     assert spec is not None and spec.loader is not None
@@ -244,31 +276,7 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
     assert plan.unresolved_remote_versions == []
     assert len(plan.equivalent_remote_aliases) == 4
     assert len(plan.superseded_rehearsal_rows) == 3
-    assert plan.truly_pending_repository_migrations == [
-        "20260812090000",
-        "20260813064106",
-        "20260813150000",
-        "20260813160000",
-        "20260813160100",
-        "20260813160200",
-        "20260815194500",
-        "20260815230000",
-        "20260816220000",
-        "20260817200000",
-        "20260827020000",
-        "20260829120000",
-        "20260831050000",
-        "20260831051000",
-        "20260921155234",
-        "20260923010000",
-        "20260923192645",
-        "20260923193047",
-        "20260923234129",
-        "20260923234132",
-        "20260924001011",
-        "20260924015610",
-        "20260924071905",
-    ]
+    assert plan.truly_pending_repository_migrations == POST_REPAIR_PENDING_VERSIONS
 
 
 def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> None:
@@ -286,31 +294,7 @@ def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> N
     assert plan.ledger_repair_required is False
     assert plan.unresolved_physical_drift == []
     assert plan.schema_apply_required is True
-    assert plan.truly_pending_repository_migrations == [
-        "20260812090000",
-        "20260813064106",
-        "20260813150000",
-        "20260813160000",
-        "20260813160100",
-        "20260813160200",
-        "20260815194500",
-        "20260815230000",
-        "20260816220000",
-        "20260817200000",
-        "20260827020000",
-        "20260829120000",
-        "20260831050000",
-        "20260831051000",
-        "20260921155234",
-        "20260923010000",
-        "20260923192645",
-        "20260923193047",
-        "20260923234129",
-        "20260923234132",
-        "20260924001011",
-        "20260924015610",
-        "20260924071905",
-    ]
+    assert plan.truly_pending_repository_migrations == POST_REPAIR_PENDING_VERSIONS
     assert any(
         "record_listing_view_defaults" in item
         for item in plan.pending_migration_physical_drift
