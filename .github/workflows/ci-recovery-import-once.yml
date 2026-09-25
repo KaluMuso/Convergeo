@@ -1,0 +1,38 @@
+name: CI repair transport (one-time)
+on:
+  push:
+    branches: [hardening/20260925-ci-recovery]
+    paths:
+      - .github/workflows/ci-recovery-import-once.yml
+      - .ci-recovery-transport/**
+permissions:
+  contents: write
+concurrency:
+  group: ci-recovery-import-once
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.repository == 'KaluMuso/Convergeo' && github.ref == 'refs/heads/hardening/20260925-ci-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact transport event
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate exact patch and create candidate Git tree only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat .ci-recovery-transport/payload-{00..07}.b64 | tr -d '\r\n' > .ci-recovery-transport/payload.b64
+          python3 .ci-recovery-transport/import_repair.py
+      - name: Preserve sanitized import proof
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-recovery-import-${{ github.sha }}
+          path: ${{ runner.temp }}/ci-recovery-export/
+          if-no-files-found: error
+          retention-days: 7
