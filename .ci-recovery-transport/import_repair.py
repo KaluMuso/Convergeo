@@ -1,13 +1,13 @@
-"""One-use, exact-payload GitHub-tree importer. Never changes a ref or deploys."""
+"""One-use exact-payload importer. Stores blobs only; never changes refs."""
 from __future__ import annotations
 import base64
 import hashlib
-import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import tarfile
+import urllib.error
 import urllib.request
 import zlib
 
@@ -48,7 +48,7 @@ def main() -> None:
     decoder = zlib.decompressobj(wbits=31)
     patch = decoder.decompress(compressed, 100_001)
     if not decoder.eof or decoder.unused_data or len(patch) != 39_034:
-        raise RuntimeError('Unexpected compressed-payload structure/size')
+        raise RuntimeError('Unexpected compressed payload')
     if hashlib.sha256(patch).hexdigest() != PATCH_SHA256:
         raise RuntimeError('Patch SHA-256 mismatch')
     out = Path(os.environ['RUNNER_TEMP']) / 'ci-recovery-export'
@@ -59,68 +59,66 @@ def main() -> None:
     subprocess.run(['git', 'worktree', 'add', '--detach', str(work), BASE], check=True)
     subprocess.run(['git', '-C', str(work), 'apply', '--check', '--index', str(patch_path)], check=True)
     subprocess.run(['git', '-C', str(work), 'apply', '--index', '--whitespace=error-all', str(patch_path)], check=True)
-    names = sorted(git('diff', '--cached', '--name-only', cwd=work).splitlines())
-    if names != PATHS:
-        raise RuntimeError('Changed-path inventory differs from the approved 16 paths')
+    if sorted(git('diff', '--cached', '--name-only', cwd=work).splitlines()) != PATHS:
+        raise RuntimeError('Changed-path inventory mismatch')
     subprocess.run(['git', '-C', str(work), 'diff', '--cached', '--check'], check=True)
     tree = git('write-tree', cwd=work)
-    entries = []
-    manifest_files = []
+    files = []
     for name in PATHS:
         p = work / name
         if p.is_symlink() or not p.is_file():
             raise RuntimeError(f'Not a regular source file: {name}')
         data = p.read_bytes()
-        mode, blob, stage_path = git('ls-files', '--stage', '--', name, cwd=work).split(maxsplit=2)
+        mode, blob, _ = git('ls-files', '--stage', '--', name, cwd=work).split(maxsplit=2)
         if mode not in {'100644', '100755'}:
-            raise RuntimeError('Unexpected Git file mode')
-        text = data.decode('utf-8')
-        entries.append({'path': name, 'mode': mode, 'type': 'blob', 'content': text})
-        manifest_files.append({'path': name, 'mode': mode, 'blob': blob,
-                               'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)})
+            raise RuntimeError('Unexpected file mode')
+        files.append({'path': name, 'mode': mode, 'type': 'blob', 'sha': blob,
+                      'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)})
     for name in ['vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json', 'apps/admin/vercel.json']:
         guards = json.loads((work / name).read_text())['git']['deploymentEnabled']
         if guards.get(BRANCH) is not False or guards.get('hardening/20260924-converged-implementation') is not False:
-            raise RuntimeError(f'Missing branch deployment guard: {name}')
-    # This creates unreachable Git data ONLY. The orchestrator must separately
-    # verify and fast-forward the guarded child ref after inspecting this result.
-    body = json.dumps({'base_tree': BASE_TREE, 'tree': entries}).encode('utf-8')
-    request = urllib.request.Request(
-        f'https://api.github.com/repos/{REPO}/git/trees', data=body, method='POST',
-        headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
-                 'Accept': 'application/vnd.github+json',
-                 'X-GitHub-Api-Version': '2022-11-28',
-                 'User-Agent': 'convergeo-exact-patch-import',
-                 'Content-Type': 'application/json'},
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        remote = json.load(response)
-    if remote.get('sha') != tree:
-        raise RuntimeError('Remote tree does not match independently computed local tree')
-    manifest = {
-        'source_base': BASE, 'source_base_tree': BASE_TREE,
-        'transport_seed': seed, 'patch_sha256': PATCH_SHA256,
-        'envelope_commit': patch.splitlines()[0].decode().split()[1],
-        'computed_tree': tree, 'reported_tree': REPORTED_TREE,
-        'matches_reported_tree': tree == REPORTED_TREE,
-        'github_tree': remote['sha'], 'changed_files': manifest_files,
-        'git_apply_check': 'PASS', 'git_apply_index': 'PASS',
-        'application_tests': 'NOT_RUN', 'published_ref': 'NOT_CHANGED',
-        'workflow_run_id': os.environ['GITHUB_RUN_ID'],
-    }
+            raise RuntimeError('Missing deployment guard')
+    manifest = {'source_base': BASE, 'source_base_tree': BASE_TREE,
+                'transport_seed': seed, 'patch_sha256': PATCH_SHA256,
+                'computed_tree': tree, 'reported_tree': REPORTED_TREE,
+                'matches_reported_tree': tree == REPORTED_TREE,
+                'changed_files': files, 'application_tests': 'NOT_RUN',
+                'workflow_run_id': os.environ['GITHUB_RUN_ID']}
     (out / 'MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    # Plain tar retains executable mode; no dependency caches or credentials.
     with tarfile.open(out / 'applied-files.tar.gz', 'w:gz') as archive:
         for name in PATHS:
             archive.add(work / name, arcname=name, recursive=False)
-    lines = [hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name
-             for p in sorted(out.iterdir()) if p.is_file()]
-    (out / 'SHA256SUMS').write_text('\n'.join(lines) + '\n')
-    print(json.dumps({k: v for k, v in manifest.items() if k != 'changed_files'}, indent=2))
+    print('VERIFIED_IMPORT_MANIFEST=' + json.dumps(manifest), flush=True)
+    uploaded = []
+    try:
+        for entry in files:
+            data = (work / entry['path']).read_bytes()
+            body = json.dumps({'encoding': 'base64', 'content': base64.b64encode(data).decode()}).encode()
+            request = urllib.request.Request(
+                f'https://api.github.com/repos/{REPO}/git/blobs', data=body, method='POST',
+                headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                         'Accept': 'application/vnd.github+json',
+                         'X-GitHub-Api-Version': '2022-11-28',
+                         'User-Agent': 'convergeo-exact-patch-import',
+                         'Content-Type': 'application/json'})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                remote = json.load(response)
+            if remote.get('sha') != entry['sha']:
+                raise RuntimeError('Uploaded blob hash mismatch')
+            uploaded.append({'path': entry['path'], 'sha': remote['sha']})
+            print('VERIFIED_REMOTE_BLOB=' + json.dumps(uploaded[-1]), flush=True)
+    except urllib.error.HTTPError as error:
+        print('BLOB_API_FAILURE=' + error.read(4096).decode('utf-8', errors='replace'), flush=True)
+        raise
+    finally:
+        (out / 'uploaded-blobs.json').write_text(json.dumps(uploaded, indent=2) + '\n')
+        lines = [hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name
+                 for p in sorted(out.iterdir()) if p.is_file() and p.name != 'SHA256SUMS']
+        (out / 'SHA256SUMS').write_text('\n'.join(lines) + '\n')
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-        summary.write(f'Exact patch imported. Computed/remote tree: `{tree}`.\n\n')
-        summary.write(f'Reported tree match: **{tree == REPORTED_TREE}**. '
-                      '16 changed files; no ref, deployment, database, or money change.\n')
+        summary.write(f'Exact patch applied: `{tree}`; all 16 blobs verified.\n\n')
+        summary.write('No tree, commit, ref, database, deployment or money action. '
+                      'Final tree/ref publication remains with the authorized MCP.\n')
 
 if __name__ == '__main__':
     main()
