@@ -94,6 +94,16 @@ AS $$
   );
 $$;
 
+-- Match the Auth claim lookup used by hosted Supabase. A missing claim is
+-- NULL; the test database must not invent a service_role for every caller.
+CREATE OR REPLACE FUNCTION auth.role()
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT NULLIF(auth.jwt() ->> 'role', '');
+$$;
+
 GRANT SELECT ON auth.users TO anon, authenticated, service_role;
 SQL
 
