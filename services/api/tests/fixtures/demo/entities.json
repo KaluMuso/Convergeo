@@ -257,7 +257,7 @@
     },
     {
       "id_key": "completed",
-      "checkout_group_key": "paid",
+      "checkout_group_key": "completed_service",
       "vendor_key": "shop_a",
       "customer_key": "customer_a",
       "status": "completed",

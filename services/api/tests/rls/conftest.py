@@ -456,12 +456,9 @@ def seed_matrix_fixtures(conn: PgConn) -> None:
         auth_parts.append(
             f"""
 INSERT INTO auth.users (
-  instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  id, email, created_at
 ) VALUES (
-  '00000000-0000-0000-0000-000000000000', '{uid}', 'authenticated', 'authenticated',
-  '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-  timezone('utc', now()), timezone('utc', now())
+  '{uid}', '{email}', timezone('utc', now())
 ) ON CONFLICT (id) DO NOTHING;
 """
         )
@@ -694,6 +691,15 @@ ON CONFLICT (id) DO NOTHING;
             15000,
             465000,
             "pending",
+        ),
+        (
+            ids["checkout_groups"]["completed_service"],
+            users["customer_a"],
+            "seed-completed-service-cg",
+            180000,
+            0,
+            180000,
+            "completed",
         ),
     ]
     for cg_id, cust, key, sub, fee, total, status in checkout_groups:
