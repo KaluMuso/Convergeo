@@ -401,18 +401,65 @@ cat >"${tmp}/bin/docker" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1:-}" == "inspect" ]]; then
-  printf '%s\n' 'public.ecr.aws/supabase/postgres:17.6.1.143|sha256:db-image'
+  [[ "${FAKE_CONTAINER_INSPECT_FAIL:-0}" != "1" ]] || exit 41
+  printf 'public.ecr.aws/supabase/postgres:17.6.1.143|sha256:%064d\n' 1
 elif [[ "${1:-}" == "image" && "${2:-}" == "inspect" ]]; then
-  target="${*: -1}"
-  if [[ "${target}" == "sha256:db-image" ]]; then
-    printf '%s\n' "${FAKE_POSTGRES_REPO_DIGEST:-public.ecr.aws/supabase/postgres@sha256:db-digest}"
-  else
-    if [[ "${FAKE_MISSING_META_DIGEST:-0}" == "1" ]]; then
-      printf '%s\n' 'sha256:meta-image|'
-    else
-      printf '%s\n' 'sha256:meta-image|public.ecr.aws/supabase/postgres-meta@sha256:meta-digest'
-    fi
+  # Match the actual hosted failure instead of making a broken join look valid.
+  if [[ "$*" == *'join .RepoDigests'* ]]; then
+    echo 'wrong type for value; expected []string; got []interface {}' >&2
+    exit 42
   fi
+  [[ "$#" == "3" ]] || exit 25
+  target="${3}"
+  python3 - "${target}" <<'PY_IMAGE_FIXTURE'
+import json
+import os
+import sys
+
+is_db = sys.argv[1] == "sha256:" + f"{1:064d}"
+kind = "postgres" if is_db else "meta"
+mode = os.environ.get("FAKE_IMAGE_MODE", "normal") if os.environ.get("FAKE_IMAGE_TARGET", kind) == kind else "normal"
+image_id = "sha256:" + f"{1 if is_db else 2:064d}"
+repo = "public.ecr.aws/supabase/postgres" + ("" if is_db else "-meta")
+digest = repo + "@sha256:" + f"{3 if is_db else 4:064d}"
+image = {"Id": image_id, "RepoDigests": [digest]}
+if not is_db and os.environ.get("FAKE_MISSING_META_DIGEST") == "1":
+    image["RepoDigests"] = []
+if mode == "command-failure":
+    raise SystemExit(43)
+if mode == "malformed":
+    print("{truncated")
+    raise SystemExit(0)
+if mode == "null":
+    image["RepoDigests"] = None
+elif mode == "empty":
+    image["RepoDigests"] = []
+elif mode == "missing":
+    del image["RepoDigests"]
+elif mode == "string":
+    image["RepoDigests"] = digest
+elif mode == "nonstring":
+    image["RepoDigests"] = [7]
+elif mode == "invalid-digest":
+    image["RepoDigests"] = [repo + "@sha256:not-a-digest"]
+elif mode == "newline":
+    image["RepoDigests"] = [digest + "\nforged_provenance=true"]
+elif mode == "bad-id":
+    image["Id"] = "not-an-image-id"
+elif mode == "missing-id":
+    del image["Id"]
+elif mode == "id-mismatch":
+    image["Id"] = "sha256:" + f"{9:064d}"
+elif mode == "multiple-digests":
+    image["RepoDigests"] = [digest, "mirror.invalid/supabase/image@sha256:" + f"{5:064d}", digest]
+if mode == "duplicate-key":
+    print('[{"Id":' + json.dumps(image_id) + ',"RepoDigests":[],"RepoDigests":' + json.dumps([digest]) + '}]')
+else:
+    result = [image, image] if mode == "multiple-images" else image if mode == "object" else [image]
+    print(json.dumps(result))
+if mode == "valid-then-failure":
+    raise SystemExit(44)
+PY_IMAGE_FIXTURE
 else
   echo "unexpected docker invocation: $*" >&2
   exit 25
@@ -482,8 +529,8 @@ run_provenance() {
 run_provenance
 grep -Fx 'supabase_cli_version=2.109.1' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'migration_versions=0001,0002' "${tmp}/provenance.txt" >/dev/null
-grep -Fx 'postgres_image_id=sha256:db-image' "${tmp}/provenance.txt" >/dev/null
-grep -Fx 'postgres_meta_image_id=sha256:meta-image' "${tmp}/provenance.txt" >/dev/null
+grep -Fx "$(printf 'postgres_image_id=sha256:%064d' 1)" "${tmp}/provenance.txt" >/dev/null
+grep -Fx "$(printf 'postgres_meta_image_id=sha256:%064d' 2)" "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'generation_schema_scope=public,graphql_public' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'expected_profile.server_version_num=170006' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'expected_profile.vector=0.8.2@extensions' "${tmp}/provenance.txt" >/dev/null
@@ -493,6 +540,48 @@ grep -Fx 'graphql_initialization_action=enabled' "${tmp}/provenance.txt" >/dev/n
 grep -E '^graphql_initializer_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -E '^graphql_initialization_evidence_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'database_shape.graphql_public.graphql=real extension-owned wrapper' "${tmp}/provenance.txt" >/dev/null
+
+# Docker's JSON contract must fail closed without replacing prior evidence.
+# Each failure is tested with an existing file AND with no output file.
+image_cases=0
+for target in postgres meta; do
+  for mode in command-failure valid-then-failure malformed null empty missing string \
+    nonstring invalid-digest newline bad-id missing-id multiple-images object duplicate-key; do
+    printf '%s\n' preserve-image-provenance >"${tmp}/provenance.txt"
+    cp "${tmp}/provenance.txt" "${tmp}/provenance.before"
+    if FAKE_IMAGE_TARGET="${target}" FAKE_IMAGE_MODE="${mode}" run_provenance >/dev/null 2>&1; then
+      echo "error: ${target} image ${mode} was accepted" >&2
+      exit 1
+    fi
+    cmp "${tmp}/provenance.before" "${tmp}/provenance.txt"
+    missing_output="${tmp}/image-no-prior-${target}-${mode}.txt"
+    if PROVENANCE_OUTPUT_OVERRIDE="${missing_output}" FAKE_IMAGE_TARGET="${target}" \
+      FAKE_IMAGE_MODE="${mode}" run_provenance >/dev/null 2>&1; then
+      echo "error: ${target} image ${mode} published new provenance" >&2
+      exit 1
+    fi
+    [[ ! -e "${missing_output}" ]]
+    image_cases=$((image_cases + 2))
+  done
+done
+if FAKE_IMAGE_TARGET=postgres FAKE_IMAGE_MODE=id-mismatch run_provenance >/dev/null 2>&1; then
+  echo "error: different database image ID was accepted" >&2
+  exit 1
+fi
+cmp "${tmp}/provenance.before" "${tmp}/provenance.txt"
+if FAKE_CONTAINER_INSPECT_FAIL=1 run_provenance >/dev/null 2>&1; then
+  echo "error: failed database container inspection was accepted" >&2
+  exit 1
+fi
+cmp "${tmp}/provenance.before" "${tmp}/provenance.txt"
+FAKE_IMAGE_MODE=multiple-digests run_provenance
+for field in postgres_image_repo_digests postgres_meta_image_repo_digests; do
+  [[ "$(grep -c "^${field}=" "${tmp}/provenance.txt")" == "1" ]]
+  line="$(grep "^${field}=" "${tmp}/provenance.txt")"
+  [[ "${line}" == *'=mirror.invalid/'* && "${line}" == *',public.ecr.aws/'* ]]
+  [[ "${line//[^,]/}" == "," ]] # Two sorted, unique digests; no dropped alias.
+done
+printf 'typegen image provenance controls: %s failure/atomicity cases, ID binding, container failure, multi-digest success PASS\n' "${image_cases}"
 
 printf '%s\n' 'preserve-on-failure' >"${tmp}/provenance.txt"
 if FAKE_QUALIFIER_FAIL=1 run_provenance >/dev/null 2>&1; then

@@ -86,16 +86,64 @@ container_image_id="${container_identity#*|}"
   echo "error: typegen database used unexpected image ${container_image_ref}" >&2
   exit 1
 }
-postgres_repo_digests="$(${DOCKER_BIN} image inspect --format='{{join .RepoDigests ","}}' "${container_image_id}")"
-[[ -n "${postgres_repo_digests}" ]] || { echo "error: PostgreSQL image digest is missing" >&2; exit 1; }
+# Consume Docker's documented JSON output, not Go-template join: newer
+# clients may expose RepoDigests as []interface{} rather than []string.
+# Validate both images before the final atomic provenance replacement.
+image_identity() {
+  local target="$1" expected_id="${2:-}" inspection identity
+  if ! inspection="$("${DOCKER_BIN}" image inspect "${target}")"; then
+    echo "error: failed to inspect typegen image ${target}" >&2
+    return 1
+  fi
+  if ! identity="$(python3 -c '
+import json
+import re
+import sys
 
-meta_identity="$(${DOCKER_BIN} image inspect --format='{{.Id}}|{{join .RepoDigests ","}}' "${meta_image}")"
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate image metadata key")
+        result[key] = value
+    return result
+
+try:
+    records = json.load(sys.stdin, object_pairs_hook=unique_object)
+    if not isinstance(records, list) or len(records) != 1 or not isinstance(records[0], dict):
+        raise ValueError("expected exactly one image object")
+    image = records[0]
+    image_id = image.get("Id")
+    if not isinstance(image_id, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image_id):
+        raise ValueError("missing or malformed image ID")
+    if sys.argv[1] and image_id != sys.argv[1]:
+        raise ValueError("image ID does not match the running database container")
+    digests = image.get("RepoDigests")
+    if not isinstance(digests, list) or not digests:
+        raise ValueError("image repository digests are missing")
+    if any(not isinstance(digest, str) or not re.fullmatch(
+        r"[A-Za-z0-9._:/-]+@sha256:[0-9a-f]{64}", digest
+    ) for digest in digests):
+        raise ValueError("malformed image repository digest")
+    print(image_id + "|" + ",".join(sorted(set(digests))))
+except (ValueError, TypeError) as exc:
+    raise SystemExit("error: invalid typegen image JSON: " + str(exc))
+' "${expected_id}" <<<"${inspection}")"; then
+    return 1
+  fi
+  printf '%s\n' "${identity}"
+}
+
+if ! postgres_identity="$(image_identity "${container_image_id}" "${container_image_id}")"; then
+  exit 1
+fi
+postgres_repo_digests="${postgres_identity#*|}"
+
+if ! meta_identity="$(image_identity "${meta_image}")"; then
+  exit 1
+fi
 meta_image_id="${meta_identity%%|*}"
 meta_repo_digests="${meta_identity#*|}"
-[[ -n "${meta_image_id}" && -n "${meta_repo_digests}" ]] || {
-  echo "error: actual postgres-meta generator image identity is missing" >&2
-  exit 1
-}
 
 source_sha="$(${GIT_BIN} -C "${ROOT_DIR}" rev-parse HEAD)"
 source_tree="$(${GIT_BIN} -C "${ROOT_DIR}" rev-parse 'HEAD^{tree}')"
