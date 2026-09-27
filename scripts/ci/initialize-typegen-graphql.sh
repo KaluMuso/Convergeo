@@ -92,6 +92,20 @@ union all select 'event_trigger|' || coalesce((
   select e.evtname || '|' || e.evtenabled::text || '|' || e.evtfoid::regprocedure::text
     from pg_event_trigger e where e.evtname = 'issue_pg_graphql_access'
 ), '<missing>')
+-- regprocedure text is diagnostic only: its qualification follows search_path.
+-- Inspect the actual trigger target's namespace/signature and compare local OIDs.
+union all select 'event_trigger_catalog_identity|' || coalesce((
+  select e.evtname || '|' || e.evtenabled::text || '|' || n.nspname || '|' ||
+         p.proname || '|' || p.pronargs::text
+    from pg_event_trigger e
+    join pg_proc p on p.oid = e.evtfoid
+    join pg_namespace n on n.oid = p.pronamespace
+   where e.evtname = 'issue_pg_graphql_access'
+), '<missing>')
+union all select 'event_trigger_function_matches|' || coalesce((
+  select (e.evtfoid = to_regprocedure('extensions.grant_pg_graphql_access()')::oid)::text
+    from pg_event_trigger e where e.evtname = 'issue_pg_graphql_access'
+), 'false')
 union all select 'mechanism_creates_wrapper|' || coalesce((
   select (position('create or replace function graphql_public.graphql' in lower(pg_get_functiondef(p.oid))) > 0)::text
     from pg_proc p where p.oid = to_regprocedure('extensions.grant_pg_graphql_access()')
@@ -121,6 +135,11 @@ union all select 'wrapper_extension_member|' || count(*)::text
  where p.oid = to_regprocedure('graphql_public.graphql(text,text,jsonb,jsonb)')
 union all select 'resolver_identity|' || coalesce(
   to_regprocedure('graphql.resolve(text,jsonb,text,jsonb)')::text, '<missing>')
+union all select 'resolver_identity_matches|' || exists(
+  select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where p.oid = to_regprocedure('graphql.resolve(text,jsonb,text,jsonb)')::oid
+     and n.nspname = 'graphql'
+)::text
 union all select 'resolver_owner|' || coalesce((
   select r.rolname from pg_proc p join pg_roles r on r.oid = p.proowner
    where p.oid = to_regprocedure('graphql.resolve(text,jsonb,text,jsonb)')
@@ -159,7 +178,8 @@ validate_common_profile() {
   assert_catalog "${catalog}" available_pg_graphql_exact 1
   assert_catalog "${catalog}" vector "${expected_vector}|extensions"
   assert_catalog "${catalog}" pgcrypto "${expected_pgcrypto}|extensions"
-  assert_catalog "${catalog}" event_trigger 'issue_pg_graphql_access|O|extensions.grant_pg_graphql_access()'
+  assert_catalog "${catalog}" event_trigger_catalog_identity 'issue_pg_graphql_access|O|extensions|grant_pg_graphql_access|0'
+  assert_catalog "${catalog}" event_trigger_function_matches true
   assert_catalog "${catalog}" mechanism_creates_wrapper true
   assert_catalog "${catalog}" mechanism_calls_resolver true
   assert_catalog "${catalog}" mechanism_attaches_wrapper true
@@ -178,7 +198,7 @@ validate_installed_graphql() {
     return 1
   }
   assert_catalog "${catalog}" wrapper_extension_member 1
-  assert_catalog "${catalog}" resolver_identity 'graphql.resolve(text,jsonb,text,jsonb)'
+  assert_catalog "${catalog}" resolver_identity_matches true
   assert_catalog "${catalog}" resolver_extension_member 1
 }
 

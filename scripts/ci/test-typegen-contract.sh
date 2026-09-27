@@ -19,7 +19,7 @@ from pathlib import Path
 source = Path(sys.argv[1]).read_text()
 catalog = source.split("-- typegen_graphql_catalog\n", 1)[1].split("\nSQL\n", 1)[0]
 uses = re.findall(r"\be\.evtenabled\b(?:\s*::\s*text\b)?", catalog)
-if len(uses) != 1 or not re.fullmatch(r"e\.evtenabled\s*::\s*text", uses[0]):
+if not uses or any(not re.fullmatch(r"e\.evtenabled\s*::\s*text", use) for use in uses):
     raise SystemExit("error: catalog evtenabled must be explicitly cast to text")
 PY_CATALOG_CAST
 
@@ -207,13 +207,17 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
     'pgcrypto|1.3|extensions'
   if [[ "${mechanism}" == "correct" ]]; then
     printf '%s\n' \
-      'event_trigger|issue_pg_graphql_access|O|extensions.grant_pg_graphql_access()' \
+      "event_trigger|issue_pg_graphql_access|O|${FAKE_TRIGGER_RENDERING:-extensions.grant_pg_graphql_access()}" \
+      "event_trigger_catalog_identity|${FAKE_TRIGGER_CATALOG_IDENTITY:-issue_pg_graphql_access|O|extensions|grant_pg_graphql_access|0}" \
+      "event_trigger_function_matches|${FAKE_TRIGGER_FUNCTION_MATCHES:-true}" \
       'mechanism_creates_wrapper|true' \
       'mechanism_calls_resolver|true' \
       'mechanism_attaches_wrapper|true'
   else
     printf '%s\n' \
       'event_trigger|<missing>' \
+      'event_trigger_catalog_identity|<missing>' \
+      'event_trigger_function_matches|false' \
       'mechanism_creates_wrapper|false' \
       'mechanism_calls_resolver|false' \
       'mechanism_attaches_wrapper|false'
@@ -227,6 +231,7 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
         'wrapper_definition|CREATE FUNCTION graphql_public.graphql placeholder' \
         'wrapper_extension_member|0' \
         'resolver_identity|<missing>' \
+        'resolver_identity_matches|false' \
         'resolver_owner|<missing>' \
         'resolver_extension_member|0'
       ;;
@@ -255,9 +260,10 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
       'wrapper_owner|supabase_admin' \
       "wrapper_definition|${definition}" \
       "wrapper_extension_member|${membership}" \
-      'resolver_identity|graphql.resolve(text,jsonb,text,jsonb)' \
+      "resolver_identity|${FAKE_RESOLVER_RENDERING:-graphql.resolve(text,jsonb,text,jsonb)}" \
+      "resolver_identity_matches|${FAKE_RESOLVER_IDENTITY_MATCHES:-true}" \
       'resolver_owner|supabase_admin' \
-      'resolver_extension_member|1'
+      "resolver_extension_member|${FAKE_RESOLVER_MEMBERSHIP:-1}"
   fi
 elif [[ "${sql}" == *typegen_graphql_initialize* ]]; then
   printf '%s\n' mutation >>"${FAKE_INIT_MUTATION_LOG}"
@@ -320,6 +326,45 @@ expect_initializer_rejects_without_mutation 'wrong preinstalled version' wrong-v
 expect_initializer_rejects_without_mutation 'wrong preinstalled schema' wrong-schema
 expect_initializer_rejects_without_mutation 'missing upstream wrapper mechanism' absent FAKE_GRAPHQL_MECHANISM=missing
 expect_initializer_rejects_without_mutation 'broken existing wrapper' broken-wrapper
+
+# Same catalog identities, different regprocedure rendering: display is not
+# authority. These command doubles test the consumer, not PostgreSQL resolution.
+for state in absent correct; do
+  printf '%s\n' "${state}" >"${init_state}"
+  : >"${init_mutations}"
+  FAKE_TRIGGER_RENDERING='grant_pg_graphql_access()' \
+  FAKE_RESOLVER_RENDERING='resolve(text,jsonb,text,jsonb)' \
+    run_initializer >"${tmp}/graphql-init-unqualified-${state}.txt"
+  expected_action=retained
+  expected_mutations=0
+  if [[ "${state}" == "absent" ]]; then
+    expected_action=enabled
+    expected_mutations=1
+  fi
+  grep -Fx "graphql_initialization_action|${expected_action}" \
+    "${tmp}/graphql-init-unqualified-${state}.txt" >/dev/null
+  [[ "$(wc -l <"${init_mutations}" | tr -d ' ')" == "${expected_mutations}" ]]
+done
+
+# A plausible diagnostic name cannot override namespace/OID/status evidence.
+expect_initializer_rejects_without_mutation 'wrong trigger namespace' absent \
+  'FAKE_TRIGGER_CATALOG_IDENTITY=issue_pg_graphql_access|O|public|grant_pg_graphql_access|0'
+expect_initializer_rejects_without_mutation 'wrong trigger function' absent \
+  'FAKE_TRIGGER_CATALOG_IDENTITY=issue_pg_graphql_access|O|extensions|different_handler|0'
+expect_initializer_rejects_without_mutation 'wrong trigger arity' absent \
+  'FAKE_TRIGGER_CATALOG_IDENTITY=issue_pg_graphql_access|O|extensions|grant_pg_graphql_access|1'
+for enabled in D R A; do
+  expect_initializer_rejects_without_mutation "wrong trigger mode ${enabled}" absent \
+    "FAKE_TRIGGER_CATALOG_IDENTITY=issue_pg_graphql_access|${enabled}|extensions|grant_pg_graphql_access|0"
+done
+expect_initializer_rejects_without_mutation 'trigger OID mismatch' absent \
+  FAKE_TRIGGER_FUNCTION_MATCHES=false
+expect_initializer_rejects_without_mutation 'missing trigger catalog evidence' absent \
+  'FAKE_TRIGGER_CATALOG_IDENTITY=<missing>'
+expect_initializer_rejects_without_mutation 'wrong resolver identity' correct \
+  FAKE_RESOLVER_IDENTITY_MATCHES=false
+expect_initializer_rejects_without_mutation 'missing resolver extension membership' correct \
+  FAKE_RESOLVER_MEMBERSHIP=0
 
 printf '%s\n' absent >"${init_state}"
 : >"${init_mutations}"
