@@ -188,6 +188,16 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
     ), (
         "runtime verification must precede database tests"
     )
+    curated = named["DB-backed integration (curated, isolation-clean)"]
+    matrix = named["RLS isolation matrix"]
+    assert re.search(
+        r"(?m)^        run: uv run pytest tests/test_db_adapter\.py .+ -q$", curated
+    ), (
+        "curated database suite must execute"
+    )
+    assert re.search(r"(?m)^        run: uv run pytest tests/rls -q$", matrix), (
+        "RLS matrix must execute"
+    )
     assert "seed_matrix_fixtures(conn)" in fixture, "matrix fixture must own its seed"
 
 
@@ -285,6 +295,18 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
                 "        if: false\n",
             ),
             provision, verifier, "execute and block",
+        ),
+        (
+            "missing curated",
+            mutate_job(
+                "run: uv run pytest tests/test_db_adapter.py",
+                "run: echo skipped tests/test_db_adapter.py",
+            ),
+            provision, verifier, "curated database suite",
+        ),
+        (
+            "missing matrix", mutate_job("run: uv run pytest tests/rls -q", "run: echo skipped"),
+            provision, verifier, "RLS matrix must execute",
         ),
         (
             "privilege", CI, provision.replace(role_sql, role_sql.replace("NO", ""), 1),
