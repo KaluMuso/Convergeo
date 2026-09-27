@@ -9,6 +9,20 @@ QUALIFIER="${ROOT_DIR}/scripts/ci/qualify-typegen-database.sh"
 PREPARE="${ROOT_DIR}/scripts/ci/prepare-typegen-workdir.sh"
 INITIALIZER="${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh"
 PROVENANCE="${ROOT_DIR}/scripts/ci/record-typegen-provenance.sh"
+# Command doubles below do not resolve PostgreSQL catalog types. Keep the
+# required cast in the actual SQL block; real SQL is exercised by hosted init.
+python3 - "${INITIALIZER}" <<'PY_CATALOG_CAST'
+import re
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).read_text()
+catalog = source.split("-- typegen_graphql_catalog\n", 1)[1].split("\nSQL\n", 1)[0]
+uses = re.findall(r"\be\.evtenabled\b(?:\s*::\s*text\b)?", catalog)
+if len(uses) != 1 or not re.fullmatch(r"e\.evtenabled\s*::\s*text", uses[0]):
+    raise SystemExit("error: catalog evtenabled must be explicitly cast to text")
+PY_CATALOG_CAST
+
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 

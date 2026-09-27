@@ -89,7 +89,7 @@ union all select 'pgcrypto|' || coalesce((
   join pg_namespace n on n.oid = e.extnamespace where e.extname = 'pgcrypto'
 ), '<missing>')
 union all select 'event_trigger|' || coalesce((
-  select e.evtname || '|' || e.evtenabled || '|' || e.evtfoid::regprocedure::text
+  select e.evtname || '|' || e.evtenabled::text || '|' || e.evtfoid::regprocedure::text
     from pg_event_trigger e where e.evtname = 'issue_pg_graphql_access'
 ), '<missing>')
 union all select 'mechanism_creates_wrapper|' || coalesce((
