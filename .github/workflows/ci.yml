@@ -632,6 +632,15 @@ jobs:
           fi
           echo "TYPEGEN_DB_CONTAINER_ID=${TYPEGEN_DB_CONTAINER_ID}" >> "${GITHUB_ENV}"
 
+      - name: Initialize disposable typegen GraphQL
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/initialize-typegen-graphql.sh \
+            | tee generated-types/graphql-initialization.txt
+
       - name: Qualify migrations and Supabase database shape
         shell: bash
         env:
@@ -660,6 +669,7 @@ jobs:
           SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
           TYPEGEN_OUTPUT: packages/types/src/db.ts
           PROVENANCE_OUTPUT: generated-types/provenance.txt
+          TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE: generated-types/graphql-initialization.txt
         run: |
           bash scripts/ci/record-typegen-provenance.sh
 

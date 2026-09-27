@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Capture the real executable before any command-double PATH is installed.
+system_tee_bin="$(command -v tee)"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 QUALIFIER="${ROOT_DIR}/scripts/ci/qualify-typegen-database.sh"
 PREPARE="${ROOT_DIR}/scripts/ci/prepare-typegen-workdir.sh"
+INITIALIZER="${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh"
 PROVENANCE="${ROOT_DIR}/scripts/ci/record-typegen-provenance.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
@@ -163,6 +167,169 @@ PY
 [[ "$(cat "${tmp}/prepared/supabase/.temp/postgres-version")" == "17.6.1.143" ]]
 [[ "$(cat "${tmp}/prepared/supabase/.temp/pgmeta-version")" == "v0.96.6" ]]
 
+# GraphQL initialization must verify the disposable target before mutation,
+# use the pinned available extension, and reject broken upstream machinery.
+cat >"${tmp}/bin/init-docker" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+[[ "${1:-}" == "inspect" ]]
+printf '%s\n' "${FAKE_INIT_CONTAINER_IDENTITY:-/supabase_db_vergeo5-typegen|public.ecr.aws/supabase/postgres:17.6.1.143|true|54322}"
+EOF
+cat >"${tmp}/bin/init-psql" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+sql="$(cat)"
+state="$(cat "${FAKE_INIT_STATE_FILE}")"
+if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
+  available="${FAKE_GRAPHQL_AVAILABLE:-1}"
+  mechanism="${FAKE_GRAPHQL_MECHANISM:-correct}"
+  printf '%s\n' \
+    'server_version_num|170006' \
+    'required_schema_count|2' \
+    "available_pg_graphql_exact|${available}" \
+    'available_pg_graphql_default|1.6.1' \
+    'available_pg_graphql_versions|1.5.11,1.6.1' \
+    'vector|0.8.2|extensions' \
+    'pgcrypto|1.3|extensions'
+  if [[ "${mechanism}" == "correct" ]]; then
+    printf '%s\n' \
+      'event_trigger|issue_pg_graphql_access|O|extensions.grant_pg_graphql_access()' \
+      'mechanism_creates_wrapper|true' \
+      'mechanism_calls_resolver|true' \
+      'mechanism_attaches_wrapper|true'
+  else
+    printf '%s\n' \
+      'event_trigger|<missing>' \
+      'mechanism_creates_wrapper|false' \
+      'mechanism_calls_resolver|false' \
+      'mechanism_attaches_wrapper|false'
+  fi
+  case "${state}" in
+    absent)
+      printf '%s\n' \
+        'pg_graphql|<missing>' \
+        'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
+        'wrapper_owner|supabase_admin' \
+        'wrapper_definition|CREATE FUNCTION graphql_public.graphql placeholder' \
+        'wrapper_extension_member|0' \
+        'resolver_identity|<missing>' \
+        'resolver_owner|<missing>' \
+        'resolver_extension_member|0'
+      ;;
+    wrong-version)
+      extension='1.5.11|graphql'
+      ;;
+    wrong-schema)
+      extension='1.6.1|public'
+      ;;
+    correct|broken-wrapper)
+      extension='1.6.1|graphql'
+      ;;
+    *) exit 29 ;;
+  esac
+  if [[ "${state}" != "absent" ]]; then
+    if [[ "${state}" == "broken-wrapper" ]]; then
+      definition='CREATE FUNCTION graphql_public.graphql placeholder'
+      membership=0
+    else
+      definition='CREATE FUNCTION graphql_public.graphql AS select graphql.resolve'
+      membership=1
+    fi
+    printf '%s\n' \
+      "pg_graphql|${extension}" \
+      'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
+      'wrapper_owner|supabase_admin' \
+      "wrapper_definition|${definition}" \
+      "wrapper_extension_member|${membership}" \
+      'resolver_identity|graphql.resolve(text,jsonb,text,jsonb)' \
+      'resolver_owner|supabase_admin' \
+      'resolver_extension_member|1'
+  fi
+elif [[ "${sql}" == *typegen_graphql_initialize* ]]; then
+  printf '%s\n' mutation >>"${FAKE_INIT_MUTATION_LOG}"
+  [[ "${FAKE_INIT_SQL_FAIL:-0}" != "1" ]] || exit 37
+  printf '%s\n' correct >"${FAKE_INIT_STATE_FILE}"
+elif [[ "${sql}" == *typegen_graphql_smoke* ]]; then
+  if [[ "${FAKE_GRAPHQL_SMOKE_BAD:-0}" == "1" ]]; then
+    printf '%s\n' '{"data": null, "errors": [{"message": "broken"}]}'
+  else
+    printf '%s\n' '{"data": {"__typename": "Query"}}'
+  fi
+else
+  echo "unexpected initializer query" >&2
+  exit 30
+fi
+EOF
+chmod +x "${tmp}/bin/init-docker" "${tmp}/bin/init-psql"
+
+init_state="${tmp}/init-state"
+init_mutations="${tmp}/init-mutations"
+run_initializer() {
+  SUPABASE_DB_URL="${INIT_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}" \
+  TYPEGEN_WORKDIR="${tmp}/prepared" \
+  TYPEGEN_DB_CONTAINER_ID=fixture-container \
+  PSQL_BIN="${tmp}/bin/init-psql" \
+  DOCKER_BIN="${tmp}/bin/init-docker" \
+  FAKE_INIT_STATE_FILE="${init_state}" \
+  FAKE_INIT_MUTATION_LOG="${init_mutations}" \
+    "${INITIALIZER}"
+}
+
+printf '%s\n' absent >"${init_state}"
+: >"${init_mutations}"
+run_initializer >"${tmp}/graphql-init-enabled.txt"
+grep -Fx 'graphql_initialization_action|enabled' "${tmp}/graphql-init-enabled.txt" >/dev/null
+grep -Fx 'graphql_smoke|{"data": {"__typename": "Query"}}' "${tmp}/graphql-init-enabled.txt" >/dev/null
+[[ "$(wc -l <"${init_mutations}" | tr -d ' ')" == "1" ]]
+run_initializer >"${tmp}/graphql-init-retained.txt"
+grep -Fx 'graphql_initialization_action|retained' "${tmp}/graphql-init-retained.txt" >/dev/null
+[[ "$(wc -l <"${init_mutations}" | tr -d ' ')" == "1" ]]
+
+expect_initializer_rejects_without_mutation() {
+  local label="$1" state="$2"
+  shift 2
+  printf '%s\n' "${state}" >"${init_state}"
+  : >"${init_mutations}"
+  if env "$@" bash -c 'run_initializer >/dev/null 2>&1' 2>/dev/null; then
+    echo "error: GraphQL initializer accepted ${label}" >&2
+    exit 1
+  fi
+  [[ ! -s "${init_mutations}" ]] || {
+    echo "error: GraphQL initializer mutated ${label}" >&2
+    exit 1
+  }
+}
+export -f run_initializer
+export INITIALIZER init_state init_mutations tmp
+expect_initializer_rejects_without_mutation 'unsupported extension version' absent FAKE_GRAPHQL_AVAILABLE=0
+expect_initializer_rejects_without_mutation 'wrong preinstalled version' wrong-version
+expect_initializer_rejects_without_mutation 'wrong preinstalled schema' wrong-schema
+expect_initializer_rejects_without_mutation 'missing upstream wrapper mechanism' absent FAKE_GRAPHQL_MECHANISM=missing
+expect_initializer_rejects_without_mutation 'broken existing wrapper' broken-wrapper
+
+printf '%s\n' absent >"${init_state}"
+: >"${init_mutations}"
+if FAKE_INIT_SQL_FAIL=1 run_initializer >/dev/null 2>&1; then
+  echo "error: GraphQL initialization SQL failure was accepted" >&2
+  exit 1
+fi
+[[ "$(wc -l <"${init_mutations}" | tr -d ' ')" == "1" ]]
+
+printf '%s\n' absent >"${init_state}"
+: >"${init_mutations}"
+if INIT_DB_URL=postgresql://shared.example.invalid/postgres run_initializer >/dev/null 2>&1; then
+  echo "error: non-disposable GraphQL initialization target was accepted" >&2
+  exit 1
+fi
+[[ ! -s "${init_mutations}" ]]
+
+printf '%s\n' absent >"${init_state}"
+: >"${init_mutations}"
+if FAKE_GRAPHQL_SMOKE_BAD=1 run_initializer >/dev/null 2>&1; then
+  echo "error: broken real GraphQL resolution response was accepted" >&2
+  exit 1
+fi
+
 # Provenance must identify the selected runtime and generator, and it must be
 # atomic when catalog collection or image identity resolution fails.
 cat >"${tmp}/bin/supabase" <<'EOF'
@@ -232,6 +399,7 @@ EOF
 chmod +x "${tmp}/bin/supabase" "${tmp}/bin/docker" "${tmp}/bin/provenance-qualifier" \
   "${tmp}/bin/sha256sum"
 printf '%s\n' 'generated database types' >"${tmp}/generated.ts"
+cp "${tmp}/graphql-init-enabled.txt" "${tmp}/graphql-initialization.txt"
 
 run_provenance() {
   local provenance_output="${PROVENANCE_OUTPUT_OVERRIDE:-${tmp}/provenance.txt}"
@@ -240,6 +408,7 @@ run_provenance() {
   TYPEGEN_OUTPUT="${tmp}/generated.ts" \
   TYPEGEN_DB_CONTAINER_ID=fixture-container \
   PROVENANCE_OUTPUT="${provenance_output}" \
+  TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE="${tmp}/graphql-initialization.txt" \
   TYPEGEN_MIGRATIONS_DIR="${tmp}/migrations" \
   TYPEGEN_QUALIFIER="${tmp}/bin/provenance-qualifier" \
   SUPABASE_BIN="${tmp}/bin/supabase" \
@@ -261,6 +430,9 @@ grep -Fx 'expected_profile.server_version_num=170006' "${tmp}/provenance.txt" >/
 grep -Fx 'expected_profile.vector=0.8.2@extensions' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'expected_profile.pg_graphql=1.6.1@graphql' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'expected_profile.pgcrypto=1.3@extensions' "${tmp}/provenance.txt" >/dev/null
+grep -Fx 'graphql_initialization_action=enabled' "${tmp}/provenance.txt" >/dev/null
+grep -E '^graphql_initializer_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
+grep -E '^graphql_initialization_evidence_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'database_shape.graphql_public.graphql=real extension-owned wrapper' "${tmp}/provenance.txt" >/dev/null
 
 printf '%s\n' 'preserve-on-failure' >"${tmp}/provenance.txt"
@@ -307,7 +479,9 @@ for required_hash in \
   "${ROOT_DIR}/supabase/config.toml" \
   "${tmp}/prepared/supabase/config.toml" \
   "${tmp}/prepared/supabase/.temp/postgres-version" \
-  "${tmp}/prepared/supabase/.temp/pgmeta-version"; do
+  "${tmp}/prepared/supabase/.temp/pgmeta-version" \
+  "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh" \
+  "${tmp}/graphql-initialization.txt"; do
   expect_hash_reject_preserves_prior "required input hash failure: ${required_hash}" fail \
     "${required_hash}"
 done
@@ -349,7 +523,8 @@ fi
 # Exercise the exact qualification run block extracted from ci.yml. GitHub's
 # explicit `shell: bash` contract is bash --noprofile --norc -e -o pipefail.
 workflow_run="${tmp}/workflow-qualify-run.sh"
-python3 - "${ROOT_DIR}/.github/workflows/ci.yml" "${workflow_run}" <<'PY'
+workflow_init_run="${tmp}/workflow-initialize-run.sh"
+python3 - "${ROOT_DIR}/.github/workflows/ci.yml" "${workflow_run}" "${workflow_init_run}" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -402,6 +577,24 @@ if required not in run:
     raise SystemExit("error: qualification run block no longer contains the reviewed logging pipeline")
 Path(sys.argv[2]).write_text(run, encoding="utf-8")
 
+initialize = step("Initialize disposable typegen GraphQL")
+if initialize.count("        shell: bash") != 1:
+    raise SystemExit("error: GraphQL initialization step must use explicit shell: bash")
+init_run_index = initialize.index("        run: |")
+init_run_lines: list[str] = []
+for line in initialize[init_run_index + 1 :]:
+    if line and not line.startswith("          "):
+        break
+    init_run_lines.append(line[10:] if line else "")
+init_run = "\n".join(init_run_lines).rstrip() + "\n"
+required_init = (
+    "bash scripts/ci/initialize-typegen-graphql.sh \\\n"
+    "  | tee generated-types/graphql-initialization.txt"
+)
+if required_init not in init_run:
+    raise SystemExit("error: GraphQL initialization run block no longer contains the reviewed pipeline")
+Path(sys.argv[3]).write_text(init_run, encoding="utf-8")
+
 downstream = [
     "Prefetch pinned postgres-meta generator",
     "Regenerate types",
@@ -410,16 +603,85 @@ downstream = [
     "Fail on stale committed types",
 ]
 positions = [db.index(f"      - name: {name}") for name in downstream]
+if db.index("      - name: Initialize disposable typegen GraphQL") >= db.index(
+    "      - name: Qualify migrations and Supabase database shape"
+):
+    raise SystemExit("error: GraphQL initialization must precede read-only qualification")
 if db.index("      - name: Qualify migrations and Supabase database shape") >= min(positions):
     raise SystemExit("error: qualification must precede all evidence and drift steps")
 for name in downstream:
     body = step(name)
     if any(line.startswith("        if:") for line in body):
         raise SystemExit(f"error: {name} must remain success-dependent")
+if any(line.startswith("        if:") for line in initialize):
+    raise SystemExit("error: GraphQL initialization must remain success-dependent")
+provenance = step("Record generated type provenance")
+if provenance.count(
+    "          TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE: generated-types/graphql-initialization.txt"
+) != 1:
+    raise SystemExit("error: provenance must consume GraphQL initialization evidence")
 cleanup = step("Stop disposable Supabase database")
 if cleanup.count("        if: always()") != 1:
     raise SystemExit("error: only disposable cleanup may run after qualification failure")
 PY
+
+mkdir -p "${tmp}/init-caller-bin" "${tmp}/init-caller-work"
+cat >"${tmp}/init-caller-bin/bash" <<'EOF'
+#!/bin/bash
+set -u
+[[ "$*" == "scripts/ci/initialize-typegen-graphql.sh" ]] || exit 24
+printf '%s\n' 'before|pg_graphql|<missing>'
+exit "${FAKE_INITIALIZER_STATUS:-0}"
+EOF
+cat >"${tmp}/init-caller-bin/tee" <<'EOF'
+#!/bin/bash
+set -u
+"${REAL_TEE_BIN}" "$@"
+tee_status=$?
+[[ "${tee_status}" == "0" ]] || exit "${tee_status}"
+exit "${FAKE_TEE_STATUS:-0}"
+EOF
+chmod +x "${tmp}/init-caller-bin/bash" "${tmp}/init-caller-bin/tee"
+run_workflow_initializer() {
+  local initializer_status="$1" tee_status="$2"
+  (
+    cd "${tmp}/init-caller-work"
+    PATH="${tmp}/init-caller-bin:${PATH}" \
+    REAL_TEE_BIN="${system_tee_bin}" \
+    FAKE_INITIALIZER_STATUS="${initializer_status}" \
+    FAKE_TEE_STATUS="${tee_status}" \
+      /bin/bash --noprofile --norc -e -o pipefail "${workflow_init_run}"
+  )
+}
+
+set +e
+run_workflow_initializer 37 0 >/dev/null 2>&1
+initializer_failure_status=$?
+run_workflow_initializer 0 61 >/dev/null 2>&1
+initializer_tee_status=$?
+run_workflow_initializer 0 0 >/dev/null 2>&1
+initializer_success_status=$?
+set -e
+[[ "${initializer_failure_status}" == "37" ]] || {
+  echo "error: workflow masked GraphQL initializer status ${initializer_failure_status}" >&2
+  exit 1
+}
+[[ "${initializer_tee_status}" == "61" ]] || {
+  echo "error: workflow masked GraphQL initialization logging status ${initializer_tee_status}" >&2
+  exit 1
+}
+[[ "${initializer_success_status}" == "0" ]] || {
+  echo "error: workflow rejected normal GraphQL initialization/logging" >&2
+  exit 1
+}
+graphql_generation_marker="${tmp}/graphql-generation-success"
+if run_workflow_initializer 37 0 >/dev/null 2>&1; then
+  printf '%s\n' success >"${graphql_generation_marker}"
+fi
+[[ ! -e "${graphql_generation_marker}" ]] || {
+  echo "error: failed GraphQL initialization permitted generation" >&2
+  exit 1
+}
 
 mkdir -p "${tmp}/caller-bin" "${tmp}/caller-work"
 cat >"${tmp}/caller-bin/bash" <<'EOF'
@@ -444,7 +706,6 @@ tee_status=$?
 exit "${FAKE_TEE_STATUS:-0}"
 EOF
 chmod +x "${tmp}/caller-bin/bash" "${tmp}/caller-bin/tee"
-system_tee_bin="$(command -v tee)"
 
 run_workflow_caller() {
   local mode="$1" qualifier_status="$2" tee_status="$3"

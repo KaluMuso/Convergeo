@@ -6,6 +6,7 @@ set -euo pipefail
 : "${TYPEGEN_OUTPUT:?TYPEGEN_OUTPUT is required}"
 : "${TYPEGEN_DB_CONTAINER_ID:?TYPEGEN_DB_CONTAINER_ID is required}"
 : "${PROVENANCE_OUTPUT:?PROVENANCE_OUTPUT is required}"
+: "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE:?TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE is required}"
 
 ROOT_DIR="${REPO_ROOT_OVERRIDE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 MIGRATIONS_DIR="${TYPEGEN_MIGRATIONS_DIR:-${ROOT_DIR}/supabase/migrations}"
@@ -27,6 +28,10 @@ expected_graphql="${EXPECTED_PG_GRAPHQL_VERSION:-1.6.1}"
 expected_pgcrypto="${EXPECTED_PGCRYPTO_VERSION:-1.3}"
 
 [[ -s "${TYPEGEN_OUTPUT}" ]] || { echo "error: missing generated output ${TYPEGEN_OUTPUT}" >&2; exit 1; }
+[[ -s "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}" ]] || {
+  echo "error: missing GraphQL initialization evidence ${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}" >&2
+  exit 1
+}
 [[ -x "${QUALIFIER}" ]] || { echo "error: missing executable qualifier ${QUALIFIER}" >&2; exit 1; }
 [[ "${schema_scope}" == "public,graphql_public" ]] || { echo "error: unexpected generation schema scope ${schema_scope}" >&2; exit 1; }
 
@@ -147,6 +152,18 @@ if ! checked_in_config_sha256="$(sha256_file "${ROOT_DIR}/supabase/config.toml")
 if ! disposable_config_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/config.toml")"; then exit 1; fi
 if ! postgres_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/postgres-version")"; then exit 1; fi
 if ! postgres_meta_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/pgmeta-version")"; then exit 1; fi
+if ! graphql_initializer_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh")"; then exit 1; fi
+if ! graphql_initialization_evidence_sha256="$(sha256_file "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")"; then exit 1; fi
+graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_action" {print $2}' \
+  "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")"
+[[ "${graphql_initialization_action}" == "enabled" || "${graphql_initialization_action}" == "retained" ]] || {
+  echo "error: invalid or missing GraphQL initialization action evidence" >&2
+  exit 1
+}
+[[ "$(grep -c '^graphql_initialization_action|' "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")" == "1" ]] || {
+  echo "error: ambiguous GraphQL initialization action evidence" >&2
+  exit 1
+}
 
 {
   printf 'source_sha=%s\n' "${source_sha}"
@@ -168,6 +185,9 @@ if ! postgres_meta_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/
   printf 'disposable_config_sha256=%s\n' "${disposable_config_sha256}"
   printf 'postgres_selection_sha256=%s\n' "${postgres_selection_sha256}"
   printf 'postgres_meta_selection_sha256=%s\n' "${postgres_meta_selection_sha256}"
+  printf 'graphql_initialization_action=%s\n' "${graphql_initialization_action}"
+  printf 'graphql_initializer_sha256=%s\n' "${graphql_initializer_sha256}"
+  printf 'graphql_initialization_evidence_sha256=%s\n' "${graphql_initialization_evidence_sha256}"
   printf 'postgres_image_ref=%s\n' "${container_image_ref}"
   printf 'postgres_image_id=%s\n' "${container_image_id}"
   printf 'postgres_image_repo_digests=%s\n' "${postgres_repo_digests}"
