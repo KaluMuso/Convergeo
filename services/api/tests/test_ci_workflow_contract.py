@@ -61,7 +61,9 @@ def test_authorization_matrix_has_one_unconditional_owner() -> None:
 
 def _active_lines(source: str) -> str:
     """Exclude YAML and SQL comments from the executable contract."""
-    return "\n".join(line for line in source.splitlines() if not line.lstrip().startswith(("#", "--")))
+    return "\n".join(
+        line for line in source.splitlines() if not line.lstrip().startswith(("#", "--"))
+    )
 
 
 def _rls_steps(rls: str) -> list[tuple[str, str]]:
@@ -83,8 +85,12 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
     assert service is not None and re.search(r"(?m)^      postgres:$", service.group(1)), (
         "disposable PostgreSQL service"
     )
-    assert re.findall(r"(?m)^      [\w-]+:$", service.group(1)) == ["      postgres:"], "unexpected service"
-    assert re.search(r"(?m)^        image: pgvector/pgvector:0\.8\.0-pg17-trixie$", service.group(1)), (
+    assert re.findall(r"(?m)^      [\w-]+:$", service.group(1)) == ["      postgres:"], (
+        "unexpected service"
+    )
+    assert re.search(
+        r"(?m)^        image: pgvector/pgvector:0\.8\.0-pg17-trixie$", service.group(1)
+    ), (
         "qualified disposable PostgreSQL image missing"
     )
     ports = re.findall(r"(?m)^          - (\d+):5432$", service.group(1))
@@ -99,18 +105,28 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
         "RLS database target must be loopback on the disposable service"
     )
     for name, body in steps:
-        overrides = [value.strip() for value in re.findall(r"(?m)^          SUPABASE_DB_URL:(.*)$", body)]
+        overrides = [
+            value.strip() for value in re.findall(r"(?m)^          SUPABASE_DB_URL:(.*)$", body)
+        ]
         assert not overrides or overrides == [db_url], f"{name} overrides the local database target"
-        assert not re.search(r"(?m)^        if:|^        continue-on-error:", body), f"{name} must execute and block"
-        assert not re.search(r"\|\|\s*true\b|\bset\s+\+e\b", body), f"{name} must not suppress failures"
+        assert not re.search(r"(?m)^        if:|^        continue-on-error:", body), (
+            f"{name} must execute and block"
+        )
+        assert not re.search(r"\|\|\s*true\b|\bset\s+\+e\b", body), (
+            f"{name} must not suppress failures"
+        )
 
     replay = named.get("Replay migrations", "")
     for key, value in (
         ("PGHOST", "localhost"), ("PGPORT", "54322"),
         ("PGUSER", "postgres"), ("PGDATABASE", "postgres"),
     ):
-        assert re.search(rf"(?m)^          {key}: {value}$", replay), f"migration replay {key} mismatch"
-    assert re.search(r"(?m)^        run: bash scripts/ci/migration-replay\.sh$", replay), "migration replay absent"
+        assert re.search(rf"(?m)^          {key}: {value}$", replay), (
+            f"migration replay {key} mismatch"
+        )
+    assert re.search(r"(?m)^        run: bash scripts/ci/migration-replay\.sh$", replay), (
+        "migration replay absent"
+    )
     assert names.index("Replay migrations") < names.index(
         "DB-backed integration (curated, isolation-clean)"
     ), (
@@ -129,7 +145,8 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
 
     role = named.get("Provision RLS tester role", "")
     assert re.search(
-        r'psql "\$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f ../../scripts/ci/provision-rls-tester\.sql',
+        r'psql "\$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 '
+        r'-f ../../scripts/ci/provision-rls-tester\.sql',
         role,
     ), (
         "checked RLS tester provisioning missing"
@@ -142,17 +159,28 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
         "tester must be NOSUPERUSER and NOBYPASSRLS"
     )
     for browser_role in ("anon", "authenticated"):
-        assert re.search(rf"GRANT {browser_role} TO vergeo_rls_tester;", _active_lines(provision)), (
+        assert re.search(
+            rf"GRANT {browser_role} TO vergeo_rls_tester;", _active_lines(provision)
+        ), (
             f"tester needs {browser_role} membership"
         )
-    assert "IF attrs IS DISTINCT FROM 'false,false'" in _active_lines(provision), "tester privilege assertion missing"
+    assert "IF attrs IS DISTINCT FROM 'false,false'" in _active_lines(provision), (
+        "tester privilege assertion missing"
+    )
     assert "IF memberships < 2" in _active_lines(provision), "tester membership assertion missing"
     verify = named.get("Verify PostgreSQL/vector runtime and role shape", "")
-    assert re.search(r"bash ../../scripts/ci/verify-postgres-runtime\.sh", verify), "runtime verification missing"
-    assert "vergeo_rls_tester" in _active_lines(verifier) and '${role}|f|f' in _active_lines(verifier), (
+    assert re.search(r"bash ../../scripts/ci/verify-postgres-runtime\.sh", verify), (
+        "runtime verification missing"
+    )
+    assert (
+        "vergeo_rls_tester" in _active_lines(verifier)
+        and '${role}|f|f' in _active_lines(verifier)
+    ), (
         "runtime verifier must reject privileged tester"
     )
-    assert names.index("Provision RLS tester role") < names.index("Verify PostgreSQL/vector runtime and role shape"), (
+    assert names.index("Provision RLS tester role") < names.index(
+        "Verify PostgreSQL/vector runtime and role shape"
+    ), (
         "role provisioning must precede verification"
     )
     assert names.index("Verify PostgreSQL/vector runtime and role shape") < names.index(
@@ -181,7 +209,10 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
         prefix, job_and_later = CI.split("  rls:\n", 1)
         rls, later = job_and_later.split("  money-db-triggers:\n", 1)
         assert before in rls, f"mutation target absent: {before}"
-        return prefix + "  rls:\n" + rls.replace(before, after, 1) + "  money-db-triggers:\n" + later
+        return (
+            prefix + "  rls:\n" + rls.replace(before, after, 1)
+            + "  money-db-triggers:\n" + later
+        )
 
     replay = "run: bash scripts/ci/migration-replay.sh"
     local_url = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
@@ -189,7 +220,10 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
     cases = (
         (
             "service",
-            mutate_job("      postgres:\n        image: pgvector", "      shared_db:\n        image: pgvector"),
+            mutate_job(
+                "      postgres:\n        image: pgvector",
+                "      shared_db:\n        image: pgvector",
+            ),
             provision, verifier, "service",
         ),
         (
@@ -197,12 +231,18 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
             mutate_job("image: pgvector/pgvector:0.8.0-pg17-trixie", "image: postgres:latest"),
             provision, verifier, "image",
         ),
-        ("port", mutate_job("          - 54322:5432", "          - 54323:5432"), provision, verifier, "port"),
+        (
+            "port", mutate_job("          - 54322:5432", "          - 54323:5432"),
+            provision, verifier, "port",
+        ),
         (
             "replay port", mutate_job("          PGPORT: 54322", "          PGPORT: 5432"),
             provision, verifier, "PGPORT",
         ),
-        ("shared", mutate_job(local_url, "${{ secrets.SHARED_DATABASE_URL }}"), provision, verifier, "loopback"),
+        (
+            "shared", mutate_job(local_url, "${{ secrets.SHARED_DATABASE_URL }}"),
+            provision, verifier, "loopback",
+        ),
         (
             "override",
             mutate_job(
@@ -220,12 +260,16 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
         ),
         (
             "seed",
-            mutate_job(replay, replay + "\n\n      - name: Seed demo\n        run: python scripts/seed.py"),
+            mutate_job(
+                replay, replay + "\n\n      - name: Seed demo\n        run: python scripts/seed.py"
+            ),
             provision, verifier, "demo seed",
         ),
         (
             "role",
-            mutate_job("-f ../../scripts/ci/provision-rls-tester.sql", "-f ../../scripts/ci/missing.sql"),
+            mutate_job(
+                "-f ../../scripts/ci/provision-rls-tester.sql", "-f ../../scripts/ci/missing.sql"
+            ),
             provision, verifier, "provisioning",
         ),
         (
@@ -237,14 +281,20 @@ def test_rls_isolation_contract_rejects_unsafe_mutations() -> None:
             "skipped verification",
             mutate_job(
                 "      - name: Verify PostgreSQL/vector runtime and role shape\n",
-                "      - name: Verify PostgreSQL/vector runtime and role shape\n        if: false\n",
+                "      - name: Verify PostgreSQL/vector runtime and role shape\n"
+                "        if: false\n",
             ),
             provision, verifier, "execute and block",
         ),
-        ("privilege", CI, provision.replace(role_sql, role_sql.replace("NO", ""), 1), verifier, "NOSUPERUSER"),
+        (
+            "privilege", CI, provision.replace(role_sql, role_sql.replace("NO", ""), 1),
+            verifier, "NOSUPERUSER",
+        ),
         (
             "membership", CI,
-            provision.replace("GRANT anon TO vergeo_rls_tester;", "-- GRANT anon TO vergeo_rls_tester;", 1),
+            provision.replace(
+                "GRANT anon TO vergeo_rls_tester;", "-- GRANT anon TO vergeo_rls_tester;", 1
+            ),
             verifier, "anon membership",
         ),
     )
