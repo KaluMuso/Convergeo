@@ -582,19 +582,6 @@ jobs:
     name: Database / typegen drift
     needs: migrations
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:0.8.0-pg17-trixie
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     # config.toml uses env() substitution for the enabled send_sms auth hook and
     # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
     # job cannot bring the stack up without them and previously failed (which let
@@ -620,38 +607,55 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Replay and qualify disposable database
-        env:
-          PGHOST: localhost
-          PGPORT: 5432
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          PGDATABASE: postgres
-          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      - name: Typegen helper negative controls
+        run: bash scripts/ci/test-typegen-contract.sh
+
+      - name: Prepare pinned Supabase-compatible database
         run: |
-          bash scripts/ci/migration-replay.sh
-          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
-            bash scripts/ci/verify-postgres-runtime.sh
+          TYPEGEN_WORKDIR="$(mktemp -d)"
+          echo "TYPEGEN_WORKDIR=${TYPEGEN_WORKDIR}" >> "${GITHUB_ENV}"
+          bash scripts/ci/prepare-typegen-workdir.sh "${TYPEGEN_WORKDIR}"
+          supabase --workdir "${TYPEGEN_WORKDIR}" db start
+          supabase --workdir "${TYPEGEN_WORKDIR}" db reset --no-seed
+
+          TYPEGEN_DB_CONTAINER_ID="$(docker ps \
+            --filter 'name=^/supabase_db_vergeo5-typegen$' \
+            --format '{{.ID}}')"
+          if [[ -z "${TYPEGEN_DB_CONTAINER_ID}" ]]; then
+            echo "error: disposable Supabase database container was not found" >&2
+            exit 1
+          fi
+          echo "TYPEGEN_DB_CONTAINER_ID=${TYPEGEN_DB_CONTAINER_ID}" >> "${GITHUB_ENV}"
+
+      - name: Qualify migrations and Supabase database shape
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/qualify-typegen-database.sh \
+            | tee generated-types/database-shape.txt
 
       - name: Prefetch pinned postgres-meta generator
         run: bash scripts/ci/prefetch-postgres-meta.sh
 
       - name: Regenerate types
-        run: bash scripts/gen-types.sh
         env:
-          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+        run: |
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cp packages/types/src/db.ts generated-types/db.first.ts
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cmp generated-types/db.first.ts packages/types/src/db.ts
+          cp packages/types/src/db.ts generated-types/db.ts
 
       - name: Record generated type provenance
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+          TYPEGEN_OUTPUT: packages/types/src/db.ts
+          PROVENANCE_OUTPUT: generated-types/provenance.txt
         run: |
-          mkdir -p generated-types
-          cp packages/types/src/db.ts generated-types/db.ts
-          {
-            echo "source_sha=${GITHUB_SHA}"
-            echo "source_ref=${GITHUB_REF}"
-            echo "server_version_num=$(psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -Atc 'show server_version_num')"
-            echo "vector_version=$(psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -Atc \"select extversion from pg_extension where extname='vector'\")"
-            docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format 'container_image={{.Image}} container_id={{.ID}}'
-          } > generated-types/provenance.txt
+          bash scripts/ci/record-typegen-provenance.sh
 
       - name: Upload generated database types
         uses: actions/upload-artifact@v7
@@ -662,6 +666,13 @@ jobs:
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
+
+      - name: Stop disposable Supabase database
+        if: always()
+        run: |
+          if [[ -n "${TYPEGEN_WORKDIR:-}" ]]; then
+            supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+          fi
 
   rls:
     name: RLS isolation matrix
