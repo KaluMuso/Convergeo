@@ -21,6 +21,10 @@ expected_postgres_image_version="${TYPEGEN_POSTGRES_IMAGE_VERSION:-17.6.1.143}"
 expected_meta_version="${TYPEGEN_POSTGRES_META_VERSION:-v0.96.6}"
 meta_image="${POSTGRES_META_IMAGE:-public.ecr.aws/supabase/postgres-meta:${expected_meta_version}}"
 schema_scope="${SUPABASE_TYPEGEN_SCHEMAS:-public,graphql_public}"
+expected_server="${EXPECTED_SERVER_VERSION_NUM:-170006}"
+expected_vector="${EXPECTED_VECTOR_VERSION:-0.8.2}"
+expected_graphql="${EXPECTED_PG_GRAPHQL_VERSION:-1.6.1}"
+expected_pgcrypto="${EXPECTED_PGCRYPTO_VERSION:-1.3}"
 
 [[ -s "${TYPEGEN_OUTPUT}" ]] || { echo "error: missing generated output ${TYPEGEN_OUTPUT}" >&2; exit 1; }
 [[ -x "${QUALIFIER}" ]] || { echo "error: missing executable qualifier ${QUALIFIER}" >&2; exit 1; }
@@ -156,6 +160,10 @@ if ! postgres_meta_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/
   done
   printf 'checked_in_postgres_major=%s\n' "${checked_in_major}"
   printf 'disposable_postgres_major=%s\n' "${disposable_major}"
+  printf 'expected_profile.server_version_num=%s\n' "${expected_server}"
+  printf 'expected_profile.vector=%s@extensions\n' "${expected_vector}"
+  printf 'expected_profile.pg_graphql=%s@graphql\n' "${expected_graphql}"
+  printf 'expected_profile.pgcrypto=%s@extensions\n' "${expected_pgcrypto}"
   printf 'checked_in_config_sha256=%s\n' "${checked_in_config_sha256}"
   printf 'disposable_config_sha256=%s\n' "${disposable_config_sha256}"
   printf 'postgres_selection_sha256=%s\n' "${postgres_selection_sha256}"

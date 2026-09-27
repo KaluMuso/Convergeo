@@ -592,6 +592,11 @@ jobs:
       SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
       SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
       SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
+      # Explicit typegen-only profile for supabase/postgres:17.6.1.143.
+      EXPECTED_SERVER_VERSION_NUM: "170006"
+      EXPECTED_VECTOR_VERSION: "0.8.2"
+      EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
+      EXPECTED_PGCRYPTO_VERSION: "1.3"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -628,6 +633,7 @@ jobs:
           echo "TYPEGEN_DB_CONTAINER_ID=${TYPEGEN_DB_CONTAINER_ID}" >> "${GITHUB_ENV}"
 
       - name: Qualify migrations and Supabase database shape
+        shell: bash
         env:
           SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |

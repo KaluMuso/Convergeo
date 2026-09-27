@@ -8,9 +8,11 @@ PSQL_BIN="${PSQL_BIN:-psql}"
 FIND_BIN="${FIND_BIN:-find}"
 SORT_BIN="${SORT_BIN:-sort}"
 
+# Reviewed defaults for supabase/postgres:17.6.1.143 at upstream source
+# 7bb86cb00a2c552bd84e00ed6dd8db32a0da4c9a. Catalog state must still match.
 expected_server="${EXPECTED_SERVER_VERSION_NUM:-170006}"
-expected_vector="${EXPECTED_VECTOR_VERSION:-0.8.0}"
-expected_graphql="${EXPECTED_PG_GRAPHQL_VERSION:-1.5.11}"
+expected_vector="${EXPECTED_VECTOR_VERSION:-0.8.2}"
+expected_graphql="${EXPECTED_PG_GRAPHQL_VERSION:-1.6.1}"
 expected_pgcrypto="${EXPECTED_PGCRYPTO_VERSION:-1.3}"
 
 [[ -d "${MIGRATIONS_DIR}" ]] || { echo "error: missing migrations directory ${MIGRATIONS_DIR}" >&2; exit 1; }
