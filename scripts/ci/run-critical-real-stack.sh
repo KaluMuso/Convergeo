@@ -35,12 +35,17 @@ psql_admin=(psql -X -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d
 
 created_dbs=()
 rest_container=''
+gateway_pid=''
 cleanup() {
   local status=$? db
   trap - EXIT
   python3 scripts/ci/critical-real-stack-report.py results \
     --manifest "$manifest" --dir "$evidence/junit" --exits "$evidence/exits.tsv" \
     --output "$evidence/results.json" || status=1
+  if [[ -n "$gateway_pid" ]]; then
+    kill "$gateway_pid" 2>/dev/null || status=1
+    wait "$gateway_pid" 2>/dev/null || :
+  fi
   if [[ -n "$rest_container" ]]; then
     docker rm -f "$rest_container" >/dev/null || status=1
   fi
@@ -89,11 +94,33 @@ ALTER TABLE auth.users
   ADD COLUMN IF NOT EXISTS updated_at timestamptz;
 SQL
 
+# The service factory must read a marker created in its group's SQL database.
+# This is a real PostgreSQL table, accessible only to the service role.
+psql -X -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$template" <<'SQL' > "$evidence/logs/binding-probe-bootstrap.log" 2>&1
+CREATE TABLE public.ci_critical_binding_probe (
+  group_name text NOT NULL,
+  database_name text NOT NULL
+);
+REVOKE ALL ON public.ci_critical_binding_probe FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.ci_critical_binding_probe TO service_role;
+SQL
+
 groups=(cart checkout kyc prepaid collection tickets concurrency creation)
 for db in "${groups[@]}"; do
   name="ci_critical_$db"
   "${psql_admin[@]}" -q -c "CREATE DATABASE \"$name\" TEMPLATE \"$template\""
   created_dbs+=("$name")
+  psql -X -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$name" \
+    -c "INSERT INTO public.ci_critical_binding_probe
+      SELECT '$db', current_database()" > "$evidence/logs/binding-probe-$db.log" 2>&1
+done
+for db in checkout creation; do
+  name="ci_critical_focus_$db"
+  "${psql_admin[@]}" -q -c "CREATE DATABASE \"$name\" TEMPLATE \"$template\""
+  created_dbs+=("$name")
+  psql -X -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$name" \
+    -c "INSERT INTO public.ci_critical_binding_probe
+      SELECT '$db', current_database()" > "$evidence/logs/binding-probe-focus-$db.log" 2>&1
 done
 "${psql_admin[@]}" -Atqc "SELECT datname FROM pg_database WHERE datname LIKE 'ci_critical_%' ORDER BY datname" >> "$evidence/runtime.txt"
 psql -X -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d ci_critical_collection \
@@ -103,9 +130,12 @@ export ENV=development
 export LANE_D_JWT_SECRET='ci-only-local-jwt-signing-material-do-not-use-outside-disposable-job'
 export LANE_D_WEBHOOK_TOKEN='ci-only-local-webhook-signing-material'
 export LENCO_API_TOKEN="$LANE_D_WEBHOOK_TOKEN"
-export SUPABASE_URL=https://example.supabase.co
+# Pinned supabase-py appends /rest/v1 to this origin; the loopback gateway
+# strips that prefix and forwards the request to the real current PostgREST.
+export SUPABASE_URL=http://127.0.0.1:3007
 export LANE_D_POSTGREST_URL=http://127.0.0.1:3006
-export SUPABASE_REST_URL="$LANE_D_POSTGREST_URL"
+export SUPABASE_REST_URL="$SUPABASE_URL/rest/v1"
+export NO_PROXY=127.0.0.1,localhost
 
 sign_jwt() {
   python3 - "$1" <<'PY'
@@ -132,6 +162,11 @@ export SUPABASE_SERVICE_ROLE_KEY SUPABASE_ANON_KEY
 
 docker pull "$rest_image" > "$evidence/logs/postgrest-pull.log" 2>&1
 echo "postgrest_image=$(docker image inspect --format '{{.Id}}' "$rest_image")" >> "$evidence/runtime.txt"
+if rest_version="$(docker run --rm --entrypoint postgrest "$rest_image" --version 2> "$evidence/logs/postgrest-version.log")"; then
+  printf 'postgrest_binary_version=%s\n' "$rest_version" >> "$evidence/runtime.txt"
+else
+  printf 'postgrest_binary_version=NOT_AVAILABLE\n' >> "$evidence/runtime.txt"
+fi
 
 selectors=(
   'tests/rls/test_cart_merge_atomic.py::test_service_role_works_through_real_postgrest_and_anon_is_denied'
@@ -158,17 +193,23 @@ python3 scripts/ci/critical-real-stack-report.py collection \
 
 start_postgrest() {
   local database="$1" status attempt
+  [[ -z "$rest_container" && -z "$gateway_pid" ]] || {
+    echo 'ERROR: previous HTTP service was not stopped between fixture groups' >&2
+    exit 1
+  }
   rest_container="$(docker run -d --rm --network host \
     -e PGRST_DB_URI="postgresql://ci_critical_authenticator:ci-disposable-authenticator-only@127.0.0.1:54322/$database" \
     -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon \
     -e PGRST_JWT_SECRET="$LANE_D_JWT_SECRET" -e PGRST_SERVER_HOST=127.0.0.1 \
     -e PGRST_SERVER_PORT=3006 \
     "$rest_image")"
+  python3 scripts/ci/critical_real_stack_http.py gateway > "$raw/gateway.log" 2>&1 &
+  gateway_pid=$!
   for attempt in {1..30}; do
-    status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$LANE_D_POSTGREST_URL/" || true)"
+    status="$(curl --noproxy '*' --silent --max-time 2 --output /dev/null --write-out '%{http_code}' "$SUPABASE_REST_URL/" || true)"
     if [[ "$status" == 200 ]]; then
-      status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
-        -H 'Authorization: Bearer invalid.invalid.invalid' "$LANE_D_POSTGREST_URL/" || true)"
+      status="$(curl --noproxy '*' --silent --max-time 2 --output /dev/null --write-out '%{http_code}' \
+        -H 'Authorization: Bearer invalid.invalid.invalid' "$SUPABASE_REST_URL/" || true)"
       if [[ "$status" != 401 ]]; then
         echo "ERROR: PostgREST did not reject invalid JWT (status $status)" >&2
         exit 1
@@ -177,12 +218,18 @@ start_postgrest() {
     fi
     sleep 1
   done
-  echo "ERROR: PostgREST did not serve OpenAPI from $database (status $status)" >&2
-  docker logs --tail 50 "$rest_container" >&2
+  echo "ERROR: gateway/PostgREST did not serve OpenAPI from $database (status $status)" >&2
   exit 1
 }
 
 stop_postgrest() {
+  if ! kill -0 "$gateway_pid" 2>/dev/null; then
+    echo 'ERROR: local REST gateway exited during a fixture group' >&2
+    exit 1
+  fi
+  kill "$gateway_pid"
+  wait "$gateway_pid" 2>/dev/null || :
+  gateway_pid=''
   docker rm -f "$rest_container" >/dev/null
   rest_container=''
 }
@@ -194,55 +241,91 @@ import pathlib
 import sys
 
 data = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8', errors='replace')
-for name in ('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY', 'LANE_D_JWT_SECRET', 'LANE_D_WEBHOOK_TOKEN'):
+for name in (
+    'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
+    'LANE_D_JWT_SECRET', 'LANE_D_WEBHOOK_TOKEN',
+    'SUPABASE_DB_URL', 'ORDER_TEST_DB_URL',
+):
     value = os.environ.get(name, '')
     if value:
         data = data.replace(value, '[REDACTED]')
+data = data.replace('ci-disposable-authenticator-only', '[REDACTED]')
+data = data.replace('postgres:postgres@127.0.0.1:54322', 'postgres:[REDACTED]@127.0.0.1:54322')
 pathlib.Path(sys.argv[2]).write_text(data, encoding='utf-8')
 PY
 }
 
 run_group() {
-  local group="$1" exit_code
-  shift
-  export SUPABASE_DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/ci_critical_$group"
+  local group="$1" database="$2" label="$3" mode="$4" exit_code
+  local junit_dir="$evidence/junit" exits="$evidence/exits.tsv"
+  shift 4
+  if [[ "$mode" == focus ]]; then
+    junit_dir="$evidence/focus-junit"
+    exits="$evidence/focus-exits.tsv"
+  elif [[ "$mode" != full ]]; then
+    echo 'ERROR: unknown execution mode' >&2
+    exit 1
+  fi
+  mkdir -p "$junit_dir"
+  export SUPABASE_DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/$database"
+  export CRITICAL_REAL_STACK_GROUP="$group"
+  unset CRITICAL_REAL_STACK_DIAGNOSTICS
+  if [[ "$group" == checkout ]]; then export CRITICAL_REAL_STACK_DIAGNOSTICS=1; fi
   unset ORDER_TEST_DB_URL
   if [[ "$group" == concurrency || "$group" == creation ]]; then
     export ORDER_TEST_DB_URL="$SUPABASE_DB_URL"
   fi
   {
-    printf 'database=ci_critical_%s command=uv run pytest -q -o xfail_strict=true -rA --junitxml=<group.xml>' "$group"
+    printf 'database=%s command=uv run pytest -q -o xfail_strict=true -rA --junitxml=<group.xml>' "$database"
     printf ' %q' "$@"
     printf '\n'
   } >> "$evidence/commands.txt"
+  start_postgrest "$database"
+  if ! (
+    cd services/api
+    uv run python ../../scripts/ci/critical_real_stack_http.py preflight \
+      --group "$group" --database "$database" --container "$rest_container"
+  ) > "$evidence/preflight-$label.txt" 2> "$raw/preflight-$label.log"; then
+    sanitize "$raw/preflight-$label.log" "$evidence/logs/preflight-$label.log"
+    echo "ERROR: HTTP/SQL client binding preflight failed for $label" >&2
+    exit 1
+  fi
   if (
     cd services/api
-    uv run pytest -q -o xfail_strict=true -rA --junitxml="$raw/$group.xml" "$@"
-  ) > "$raw/$group.log" 2>&1; then
+    uv run pytest -q -o xfail_strict=true -rA --junitxml="$raw/$label.xml" "$@"
+  ) > "$raw/$label.log" 2>&1; then
     exit_code=0
   else
     exit_code=$?
   fi
-  printf '%s\t%s\n' "$group" "$exit_code" >> "$evidence/exits.tsv"
-  sanitize "$raw/$group.log" "$evidence/logs/$group.log"
-  if [[ -f "$raw/$group.xml" ]]; then
-    sanitize "$raw/$group.xml" "$evidence/junit/$group.xml"
+  printf '%s\t%s\n' "$label" "$exit_code" >> "$exits"
+  sanitize "$raw/$label.log" "$evidence/logs/$label.log"
+  if [[ -f "$raw/$label.xml" ]]; then
+    sanitize "$raw/$label.xml" "$junit_dir/$label.xml"
   fi
-  echo "critical $group pytest exit=$exit_code"
+  echo "critical $label pytest exit=$exit_code"
+  stop_postgrest
 }
 
-start_postgrest ci_critical_cart
-run_group cart "${selectors[0]}"
-stop_postgrest
-run_group checkout "${selectors[@]:1:5}"
-run_group kyc tests/test_kyc_approve_atomic.py
-run_group prepaid tests/test_prepaid_settlement.py
-start_postgrest ci_critical_collection
-run_group collection tests/lane_d/test_collection_identity_postgrest.py
-stop_postgrest
-run_group tickets tests/test_ticket_inventory.py
-run_group concurrency tests/test_order_create_concurrency.py
-run_group creation tests/test_order_creation.py
+# Diagnose the six original failures in expendable clones first. The full
+# 88-node report still covers only the eight independent original databases.
+run_group checkout ci_critical_focus_checkout focus_checkout focus "${selectors[@]:1:5}"
+run_group creation ci_critical_focus_creation focus_creation focus \
+  'tests/test_order_creation.py::TestCreateOrdersEndpoint::test_post_orders_happy_path'
+
+run_group cart ci_critical_cart cart full "${selectors[0]}"
+run_group checkout ci_critical_checkout checkout full "${selectors[@]:1:5}"
+run_group kyc ci_critical_kyc kyc full tests/test_kyc_approve_atomic.py
+run_group prepaid ci_critical_prepaid prepaid full tests/test_prepaid_settlement.py
+run_group collection ci_critical_collection collection full tests/lane_d/test_collection_identity_postgrest.py
+run_group tickets ci_critical_tickets tickets full tests/test_ticket_inventory.py
+run_group concurrency ci_critical_concurrency concurrency full tests/test_order_create_concurrency.py
+run_group creation ci_critical_creation creation full tests/test_order_creation.py
+
+if awk '$2 != 0 { failed=1 } END { exit !failed }' "$evidence/focus-exits.tsv"; then
+  echo 'ERROR: one or more focused original failures remain' >&2
+  exit 1
+fi
 
 python3 scripts/ci/critical-real-stack-report.py results \
   --manifest "$manifest" --dir "$evidence/junit" \
