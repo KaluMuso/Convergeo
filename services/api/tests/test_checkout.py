@@ -133,6 +133,25 @@ def _require_fixture_sql(conn: PgConn, sql: str) -> None:
     assert result.ok, f"checkout fixture SQL failed ({result.sqlstate}): {result.error}"
 
 
+@pytest.fixture
+def owned_cart_id(db: PgConn) -> Generator[str, None, None]:
+    """Remove only this case's cart so the shared customer can have one active cart."""
+    cart_id = str(uuid.uuid4())
+    try:
+        yield cart_id
+    finally:
+        _require_fixture_sql(
+            db,
+            f"""
+            BEGIN;
+            DELETE FROM public.cart_items WHERE cart_id = '{cart_id}'::uuid;
+            DELETE FROM public.carts
+            WHERE id = '{cart_id}'::uuid AND user_id = '{CUSTOMER_ID}'::uuid;
+            COMMIT;
+            """,
+        )
+
+
 def _insert_checkout_group(
     conn: PgConn,
     *,
@@ -413,7 +432,9 @@ class TestFeeMath:
 
 
 class TestMixedDeliveryPickup:
-    def test_mixed_groups_compute_separate_fees(self, db: PgConn, db_url_env: None) -> None:
+    def test_mixed_groups_compute_separate_fees(
+        self, db: PgConn, db_url_env: None, owned_cart_id: str
+    ) -> None:
         listing_a = str(uuid.uuid4())
         listing_b = str(uuid.uuid4())
         _insert_tracked_listing(db, listing_id=listing_a, vendor_id=VENDOR_A, stock_qty=5)
@@ -421,7 +442,7 @@ class TestMixedDeliveryPickup:
             db, listing_id=listing_b, vendor_id=VENDOR_B, stock_qty=5, price_ngwee=25_000
         )
 
-        cart_id = str(uuid.uuid4())
+        cart_id = owned_cart_id
         _insert_cart_with_items(
             db,
             cart_id=cart_id,
@@ -544,10 +565,12 @@ class TestGuestOtpContactFlow:
 
 
 class TestReservationClaimOnSessionInit:
-    def test_session_init_claims_reservations(self, db: PgConn, db_url_env: None) -> None:
+    def test_session_init_claims_reservations(
+        self, db: PgConn, db_url_env: None, owned_cart_id: str
+    ) -> None:
         listing_id = str(uuid.uuid4())
         _insert_tracked_listing(db, listing_id=listing_id, vendor_id=VENDOR_A, stock_qty=3)
-        cart_id = str(uuid.uuid4())
+        cart_id = owned_cart_id
         _insert_cart_with_items(db, cart_id=cart_id, items=[(listing_id, 2, 10_000)])
 
         client = _make_client()
