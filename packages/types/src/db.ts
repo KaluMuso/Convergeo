@@ -383,6 +383,48 @@ export type Database = {
           },
         ]
       }
+      cart_merge_receipts: {
+        Row: {
+          created_at: string
+          guest_cart_id: string
+          resolution: Json
+          source_items: Json
+          user_cart_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          guest_cart_id: string
+          resolution?: Json
+          source_items: Json
+          user_cart_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          guest_cart_id?: string
+          resolution?: Json
+          source_items?: Json
+          user_cart_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_merge_receipts_guest_cart_id_fkey"
+            columns: ["guest_cart_id"]
+            isOneToOne: true
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_merge_receipts_user_cart_id_fkey"
+            columns: ["user_cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carts: {
         Row: {
           created_at: string
@@ -3530,6 +3572,82 @@ export type Database = {
           },
         ]
       }
+      payment_collection_exceptions: {
+        Row: {
+          created_at: string
+          first_observation: Json
+          id: string
+          latest_observation: Json
+          occurrences: number
+          payment_id: string
+          provider_reference: string
+          reason: string
+          resolved_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_observation: Json
+          id?: string
+          latest_observation: Json
+          occurrences?: number
+          payment_id: string
+          provider_reference: string
+          reason: string
+          resolved_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_observation?: Json
+          id?: string
+          latest_observation?: Json
+          occurrences?: number
+          payment_id?: string
+          provider_reference?: string
+          reason?: string
+          resolved_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_collection_exceptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_collection_receipts: {
+        Row: {
+          accepted_at: string
+          payment_id: string
+          provider_reference: string
+          receipt_identity: Json
+        }
+        Insert: {
+          accepted_at?: string
+          payment_id: string
+          provider_reference: string
+          receipt_identity: Json
+        }
+        Update: {
+          accepted_at?: string
+          payment_id?: string
+          provider_reference?: string
+          receipt_identity?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_collection_receipts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_ngwee: number
@@ -5671,28 +5789,43 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          payload_sha256: string | null
           processed_at: string | null
           provider: string
+          quarantine_reason: string | null
+          quarantined_at: string | null
           raw: Json
           signature_valid: boolean
+          verification_version: string | null
+          verified_at: string | null
         }
         Insert: {
           created_at?: string
           event_id: string
           id?: string
+          payload_sha256?: string | null
           processed_at?: string | null
           provider: string
+          quarantine_reason?: string | null
+          quarantined_at?: string | null
           raw?: Json
           signature_valid?: boolean
+          verification_version?: string | null
+          verified_at?: string | null
         }
         Update: {
           created_at?: string
           event_id?: string
           id?: string
+          payload_sha256?: string | null
           processed_at?: string | null
           provider?: string
+          quarantine_reason?: string | null
+          quarantined_at?: string | null
           raw?: Json
           signature_valid?: boolean
+          verification_version?: string | null
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -5756,6 +5889,30 @@ export type Database = {
       }
     }
     Functions: {
+      apply_login_cart_merge: {
+        Args: {
+          p_expected_authority: Json
+          p_expected_guest_items: Json
+          p_expected_user_items: Json
+          p_guest_cart_id: string
+          p_guest_token: string
+          p_merged_items: Json
+          p_removed_items: Json
+          p_resolution: Json
+          p_user_cart_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      apply_prepaid_collection_success: {
+        Args: {
+          p_actor_id: string
+          p_note: string
+          p_observation: Json
+          p_payment_id: string
+        }
+        Returns: Json
+      }
       approve_kyc_vendor: {
         Args: {
           p_actor_id: string
@@ -5784,6 +5941,18 @@ export type Database = {
         }[]
       }
       cart_guest_token: { Args: never; Returns: string }
+      cart_merge_authority: {
+        Args: {
+          p_listing_ids: string[]
+          p_rfq_thread_ids: string[]
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      cart_scope_key: {
+        Args: { p_id: string; p_scope: string }
+        Returns: number
+      }
       claim_embedding_jobs: {
         Args: { p_limit: number }
         Returns: {
@@ -5820,7 +5989,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_account_cart: { Args: { p_user_id: string }; Returns: string }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
+      expire_checkout_group_if_unpaid: {
+        Args: { p_checkout_id: string; p_terminal_status: string }
+        Returns: boolean
+      }
       finalize_ask_answer: {
         Args: {
           p_model: string
