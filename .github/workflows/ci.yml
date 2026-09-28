@@ -783,6 +783,55 @@ jobs:
         # to stabilise the environment, not to hide the signal again.
         run: uv run pytest tests/rls -q
 
+  critical-real-stack:
+    name: Critical real-stack execution (88 identities)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
+        shell: bash
+        run: bash scripts/ci/run-critical-real-stack.sh
+
+      - name: Retain critical execution identity and JUnit evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: critical-real-stack-${{ github.sha }}-${{ github.run_attempt }}
+          path: critical-real-stack-evidence
+          if-no-files-found: warn
+
   money-db-triggers:
     name: Money DB-trigger integration
     runs-on: ubuntu-latest
