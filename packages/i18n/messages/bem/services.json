@@ -215,7 +215,7 @@
   "completion": {
     "provider": {
       "title": "Marka umulimo ugapwa",
-      "intro": "Ishibisheni customer ati umulimo wapwa. Bali na maola 48 ukukonfirma before auto-confirm no kufumya payment yenu.",
+      "intro": "Marking work complete does not collect an outstanding balance. Release requires verified funding and cleared holds.",
       "markCta": "Marka umulimo ugapwa",
       "marking": "Ilemarka complete…",
       "marked": "Yamarkwa complete. Tulolesha customer akonfirme.",
@@ -230,20 +230,21 @@
     },
     "customer": {
       "title": "Konfirma ati umulimo wapwa",
-      "intro": "Konfirmisha ukufumya balance ku provider wenu. Nga tamucita cimo, tukakonfirma automatic after maola 48.",
+      "intro": "Acknowledge the completed work, then pay any outstanding amount. Financial completion requires verified payment and cleared holds.",
       "balanceLabel": "Balance ilefwailwa pa completion",
-      "confirmCta": "Konfirma no kulipila {amount}",
+      "confirmCta": "Confirm work / check completion",
       "confirming": "Ilekonfirma…",
-      "confirmed": "Yakonfirmwa. Provider wenu alipilwa.",
+      "confirmed": "Work and funding confirmed.",
       "awaitingProvider": "Tulolesha provider wenu akamarke umulimo ugapwa.",
-      "escrowNote": "Mwalipila → Yasungwa na Convergeo → Yafumya ku provider nga mwakonfirma.",
+      "escrowNote": "Collected funds remain held until the completion and release checks pass.",
       "reviewUnlocked": "Natotela! Mungaleka review pa uyu provider.",
       "errors": {
         "notOwner": "Mungakonfirma imilimo yenu fye.",
         "notMarked": "Provider wenu taamarka umulimo ugapwa pano.",
         "generic": "Tatwakwanisha ukukonfirma umulimo. Esheni again.",
         "rateLimited": "Requests shingi. Loleni akanya."
-      }
+      },
+      "awaitingPayment": "Work acknowledged. Pay the outstanding amount below, then check completion."
     }
   },
   "reviews": {
@@ -289,5 +290,31 @@
       "rateLimited": "Requests shingi. Loleni akanya.",
       "generic": "Tatwakwanisha ukutampa booking yenu. Esheni again."
     }
+  },
+  "funding": {
+    "title": "Service payments",
+    "deposit": "Deposit",
+    "balance": "Remaining balance",
+    "pay": "Pay outstanding amount",
+    "retry": "Retry payment",
+    "refresh": "Refresh payment status",
+    "rail": "Payment method",
+    "phone": "Mobile money number",
+    "mtn": "MTN",
+    "airtel": "Airtel",
+    "card": "Card",
+    "error": "Unable to update payment. Refresh before trying again.",
+    "status": {
+      "paid": "Paid and verified",
+      "unpaid": "Unpaid",
+      "initiated": "Payment pending",
+      "ussd_pushed": "Payment pending",
+      "pay_offline": "Awaiting mobile approval",
+      "failed": "Payment failed",
+      "expired": "Payment unresolved — awaiting reconciliation",
+      "cancelled": "Cancelled",
+      "success": "Receipt under review"
+    },
+    "backToJob": "Return to job and check completion"
   }
 }

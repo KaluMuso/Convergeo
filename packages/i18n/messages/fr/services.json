@@ -210,7 +210,7 @@
   "completion": {
     "provider": {
       "title": "Marquer cette mission comme terminée",
-      "intro": "Informez le client que le travail est terminé. Il dispose de 48 heures pour confirmer avant la confirmation automatique et le versement de votre paiement.",
+      "intro": "Marking work complete does not collect an outstanding balance. Release requires verified funding and cleared holds.",
       "markCta": "Marquer la mission comme terminée",
       "marking": "Marquage en cours…",
       "marked": "Marquée comme terminée. En attente de confirmation du client.",
@@ -225,20 +225,21 @@
     },
     "customer": {
       "title": "Confirmez que le travail est terminé",
-      "intro": "Confirmez pour verser le solde à votre prestataire. Si vous ne faites rien, nous confirmons automatiquement après 48 heures.",
+      "intro": "Acknowledge the completed work, then pay any outstanding amount. Financial completion requires verified payment and cleared holds.",
       "balanceLabel": "Solde dû à la fin",
-      "confirmCta": "Confirmer et payer {amount}",
+      "confirmCta": "Confirm work / check completion",
       "confirming": "Confirmation…",
-      "confirmed": "Confirmé. Votre prestataire a été payé.",
+      "confirmed": "Work and funding confirmed.",
       "awaitingProvider": "En attente que votre prestataire marque la mission comme terminée.",
-      "escrowNote": "Vous avez payé → Conservé par Convergeo → Versé à votre prestataire dès votre confirmation.",
+      "escrowNote": "Collected funds remain held until the completion and release checks pass.",
       "reviewUnlocked": "Merci ! Vous pouvez maintenant laisser un avis sur ce prestataire.",
       "errors": {
         "notOwner": "Vous ne pouvez confirmer que vos propres missions.",
         "notMarked": "Votre prestataire n'a pas encore marqué cette mission comme terminée.",
         "generic": "Impossible de confirmer la mission. Veuillez réessayer.",
         "rateLimited": "Trop de demandes. Veuillez patienter un instant."
-      }
+      },
+      "awaitingPayment": "Work acknowledged. Pay the outstanding amount below, then check completion."
     }
   },
   "reviews": {
@@ -267,5 +268,31 @@
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter un instant.",
       "loadFailed": "Impossible de charger le statut de l'avis."
     }
+  },
+  "funding": {
+    "title": "Service payments",
+    "deposit": "Deposit",
+    "balance": "Remaining balance",
+    "pay": "Pay outstanding amount",
+    "retry": "Retry payment",
+    "refresh": "Refresh payment status",
+    "rail": "Payment method",
+    "phone": "Mobile money number",
+    "mtn": "MTN",
+    "airtel": "Airtel",
+    "card": "Card",
+    "error": "Unable to update payment. Refresh before trying again.",
+    "status": {
+      "paid": "Paid and verified",
+      "unpaid": "Unpaid",
+      "initiated": "Payment pending",
+      "ussd_pushed": "Payment pending",
+      "pay_offline": "Awaiting mobile approval",
+      "failed": "Payment failed",
+      "expired": "Payment unresolved — awaiting reconciliation",
+      "cancelled": "Cancelled",
+      "success": "Receipt under review"
+    },
+    "backToJob": "Return to job and check completion"
   }
 }

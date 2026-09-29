@@ -9,7 +9,12 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from app.errors import AppError
-from app.services.payments.base import QueryStatusRequest, QueryStatusResult
+from app.services.payments.base import (
+    PaymentProviderError,
+    ProviderOutcome,
+    QueryStatusRequest,
+    QueryStatusResult,
+)
 from app.services.payments.money import major_str_to_ngwee
 from app.services.payments.webhook_verify import (
     WEBHOOK_VERIFICATION_VERSION,
@@ -247,8 +252,8 @@ def should_apply_status(
     return _STATUS_RANK[incoming] > _STATUS_RANK[current]
 
 
-def lenco_collection_status_to_payment_status(lenco_status: str) -> PaymentStatus | None:
-    normalized = lenco_status.strip().lower().replace("_", "-")
+def lenco_collection_status_to_payment_status(lenco_status: str | None) -> PaymentStatus | None:
+    normalized = (lenco_status or "").strip().lower().replace("_", "-")
     mapping: dict[str, PaymentStatus] = {
         "pending": PaymentStatus.USSD_PUSHED,
         "pay-offline": PaymentStatus.PAY_OFFLINE,
@@ -426,6 +431,8 @@ def collection_observation_from_query(result: QueryStatusResult, *, source: str)
         "currency": result.currency,
         "provider_reference": result.provider_reference,
         "source": source,
+        "canonical_status_verified": result.outcome == ProviderOutcome.SUCCESSFUL,
+        "provider_outcome": result.outcome,
     }
 
 
@@ -441,6 +448,7 @@ def collection_observation_from_webhook(
         "currency": data.get("currency"),
         "provider_reference": data.get("lencoReference", data.get("lenco_reference")),
         "source": "webhook",
+        "provider_outcome": data.get("status"),
         "webhook_event_id": webhook_event_id,
     }
 
@@ -525,6 +533,12 @@ def apply_payment_status(
                 message="Provider collection evidence is required for success",
                 http_status=422,
             )
+        if snapshot.rail == "card" and observation.get("canonical_status_verified") is not True:
+            raise AppError(
+                code="card_verification_required",
+                message="Canonical provider status verification is required",
+                http_status=409,
+            )
         response = service_client.client.rpc(
             "apply_prepaid_collection_success",
             {
@@ -555,6 +569,16 @@ def apply_payment_status(
             actor_id=actor_id,
             note=note,
         )
+    if incoming_status == PaymentStatus.FAILED and observation is not None:
+        # Merge validated terminal evidence under the same checkout/payment locks
+        # as new claims; never turn a local timeout/close into retry permission.
+        service_client.client.rpc(
+            "record_collection_failure",
+            {
+                "p_payment_id": payment_id,
+                "p_observation": observation,
+            },
+        ).execute()
     if not should_apply_status(current=snapshot.status, incoming=incoming_status):
         return None
     event = payment_status_to_event(incoming_status)
@@ -630,7 +654,7 @@ def release_checkout_for_retry(
         service_client.client.table("checkout_groups")
         .update({"status": "pending"})
         .eq("id", checkout_group_id)
-        .neq("status", "completed")
+        .eq("status", "pending")
         .execute()
     )
     _ = _single_row(response)
@@ -709,7 +733,13 @@ async def sweep_stale_payments(
     released = 0
 
     for payment in stale:
-        query_result = await query_status(QueryStatusRequest(reference=payment.lenco_reference))
+        try:
+            query_result = await query_status(QueryStatusRequest(reference=payment.lenco_reference))
+        except PaymentProviderError:
+            # One ambiguous reference must not abort recovery of the batch.
+            continue
+        if query_result.outcome == ProviderOutcome.NOT_FOUND:
+            continue
         validate_collection_observation(
             payment,
             reference=query_result.reference,
@@ -747,6 +777,7 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.FAILED,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Sweeper re-query reported failed",
+                observation=collection_observation_from_query(query_result, source="sweeper"),
             )
             if outcome is not None:
                 release_checkout_for_retry(
@@ -758,21 +789,9 @@ async def sweep_stale_payments(
                 released += 1
             continue
 
-        transition_payment(
-            service_client,
-            payment_id=payment.id,
-            event=PaymentEvent.EXPIRED,
-            actor_id=SYSTEM_ACTOR_ID,
-            note="Stale payment expired after Lenco re-query confirmed unpaid",
-        )
-        expired += 1
-        release_checkout_for_retry(
-            service_client,
-            checkout_group_id=payment.checkout_group_id,
-            actor_id=SYSTEM_ACTOR_ID,
-            note="Payment expired — checkout released for retry",
-        )
-        released += 1
+        # Pending, not-found and unknown are not proof that a submitted
+        # collection cannot arrive. Keep its reference in flight for reconciliation.
+        continue
 
     return SweepResult(
         scanned=len(stale),
@@ -878,6 +897,28 @@ def process_webhook_event(
             currency=data.get("currency"),
             provider_reference=data.get("lencoReference", data.get("lenco_reference")),
         )
+        if payment.rail == "card" and incoming == PaymentStatus.SUCCESS:
+            # Durable ingress remains undrained until canonical polling/return has
+            # settled this receipt. This synchronous worker never calls an async
+            # provider through a second client or trusts a local success flag.
+            receipt = _single_row(
+                service_client.client.table("payment_collection_receipts")
+                .select("receipt_identity,canonical_status_verified_at")
+                .eq("payment_id", payment.id)
+                .maybe_single()
+                .execute()
+            )
+            if receipt is None or receipt.get("canonical_status_verified_at") is None:
+                return None
+            identity = receipt.get("receipt_identity", {})
+            if identity.get("merchant_reference") != reference or identity.get(
+                "provider_reference"
+            ) != data.get("lencoReference", data.get("lenco_reference")):
+                return None
+            service_client.client.table("webhook_events").update(
+                {"processed_at": datetime.now(UTC).isoformat()}
+            ).eq("id", webhook_event_id).execute()
+            return None
         outcome = apply_payment_status(
             service_client,
             payment_id=payment.id,
@@ -886,7 +927,7 @@ def process_webhook_event(
             note=f"Webhook {event_name} ({row.get('event_id', '')})",
             observation=(
                 collection_observation_from_webhook(data, webhook_event_id=webhook_event_id)
-                if incoming == PaymentStatus.SUCCESS
+                if incoming in {PaymentStatus.SUCCESS, PaymentStatus.FAILED}
                 else None
             ),
         )

@@ -90,6 +90,7 @@ class OrderSnapshot:
     checkout_group_id: str
     cod: bool
     paid: bool
+    has_collected_money: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,10 +157,7 @@ class RefundPathRequiredError(AppError):
     def __init__(self) -> None:
         super().__init__(
             code="order_refund_path_required",
-            message=(
-                "Paid order cancellation requires refund_path=True "
-                "(M08 refund execution pending)"
-            ),
+            message=("Collected money requires an authorized financial-resolution path"),
             http_status=409,
             details={"refund_path_required": True},
         )
@@ -297,11 +295,13 @@ SELECT
     WHEN EXISTS (
       SELECT 1
       FROM public.payments p
+      JOIN public.checkout_groups c ON c.id=p.checkout_group_id AND c.customer_id=o.customer_id
       WHERE p.checkout_group_id = o.checkout_group_id
         AND p.status = 'success'
     ) THEN 'true'
     ELSE 'false'
-  END
+  END,
+  public.order_has_collected_money(o.id)::text
 FROM public.orders o
 WHERE o.id = {order_sql}
 {lock_clause};
@@ -310,7 +310,7 @@ WHERE o.id = {order_sql}
     if not result.ok or not result.rows:
         return None
     parts = result.rows[0].split("|")
-    if len(parts) != 6:
+    if len(parts) != 7:
         return None
     return OrderSnapshot(
         id=parts[0],
@@ -320,12 +320,13 @@ WHERE o.id = {order_sql}
         # psql -At / ::text may render boolean as t/f or true/false.
         cod=parts[4].lower() in {"t", "true", "1"},
         paid=parts[5].lower() in {"t", "true", "1"},
+        has_collected_money=parts[6].lower() in {"t", "true", "1"},
     )
 
 
 def is_order_paid(order: OrderSnapshot) -> bool:
-    """Paid = successful checkout payment and not COD (collection-at-delivery)."""
-    return order.paid and not order.cod
+    """Any collected money requires resolution; this is not full service funding."""
+    return order.has_collected_money and not order.cod
 
 
 def resolve_transition(
@@ -345,16 +346,14 @@ def resolve_transition(
         return TransitionResult(
             permitted=False,
             reason=(
-                f"Actor {actor_role.value} not permitted for "
-                f"{from_status.value} + {event.value}"
+                f"Actor {actor_role.value} not permitted for {from_status.value} + {event.value}"
             ),
         )
     if spec.fulfilment is not None and spec.fulfilment != fulfilment:
         return TransitionResult(
             permitted=False,
             reason=(
-                f"Event {event.value} requires fulfilment={spec.fulfilment}, "
-                f"order has {fulfilment}"
+                f"Event {event.value} requires fulfilment={spec.fulfilment}, order has {fulfilment}"
             ),
         )
     return TransitionResult(permitted=True, to_status=spec.to_status)
@@ -429,56 +428,106 @@ def transition_order(
     order_sql = sql_uuid(order_id, "order_id")
     to_status = resolved.to_status.value
     from_status = snapshot.status.value
+    actor_sql = sql_uuid(actor_id, "actor_id")
+    # Roles alone and a caller-supplied refund_path flag are not order authority.
+    authority_sql = {
+        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
+        ActorRole.VENDOR: (
+            "EXISTS (SELECT 1 FROM public.vendors v "
+            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
+        ),
+        ActorRole.ADMIN: (
+            "EXISTS (SELECT 1 FROM public.user_roles ur "
+            f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+        ),
+        ActorRole.SYSTEM: "true",  # identity checked above; internal trusted caller only
+    }[actor_role]
+    cancellation = event in CANCELLATION_EVENTS
+    refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""
 BEGIN;
 SELECT set_config('app.order_actor', {sql_literal(actor_id)}, true);
 SELECT set_config('app.order_note', {sql_literal(note)}, true);
-WITH locked_checkout AS MATERIALIZED (
-  SELECT c.id
-  FROM public.checkout_groups c
-  JOIN public.orders o ON o.checkout_group_id = c.id
-  WHERE o.id = {order_sql}
-  FOR UPDATE OF c
-), locked_payments AS MATERIALIZED (
-  SELECT p.id, p.status
-  FROM public.payments p
-  JOIN locked_checkout c ON c.id = p.checkout_group_id
-  ORDER BY p.id
-  FOR UPDATE OF p
-), locked_order AS MATERIALIZED (
-  SELECT o.id, o.status, o.cod,
-         EXISTS (
-           SELECT 1 FROM locked_payments p WHERE p.status = 'success'
-         ) AS paid
-  FROM public.orders o
-  JOIN locked_checkout c ON c.id = o.checkout_group_id
-  WHERE o.id = {order_sql}
-  FOR UPDATE OF o
-), eligible AS (
-  SELECT id
-  FROM locked_order
-  WHERE status = '{from_status}'
-    AND (
-      '{event.value}' NOT IN ('cancel', 'reject')
-      OR {str(refund_path).lower()}
-      OR cod
-      OR NOT paid
-    )
-    AND (
-      '{event.value}' NOT IN ('confirm', 'start_processing', 'mark_ready', 'ship')
-      OR cod
-      OR paid
-    )
-)
+SELECT public.lock_payment_checkout_scope(
+  (SELECT checkout_group_id FROM public.orders WHERE id={order_sql}));
+SELECT id FROM public.orders WHERE id={order_sql} FOR UPDATE;
+SELECT pg_advisory_xact_lock(hashtext('order_escrow:' || {order_sql}::text));
+DO $order_authority$
+DECLARE o public.orders%rowtype; has_money boolean; has_uncertain_attempt boolean;
+BEGIN
+  SELECT * INTO STRICT o FROM public.orders WHERE id={order_sql};
+  IF NOT ({authority_sql}) THEN
+    RAISE EXCEPTION 'ORDER_ACTOR_FORBIDDEN';
+  END IF;
+  IF o.status <> '{from_status}' THEN
+    RAISE EXCEPTION 'ORDER_TRANSITION_CONFLICT';
+  END IF;
+  has_money := public.order_has_collected_money(o.id);
+  has_uncertain_attempt := EXISTS (
+    SELECT 1 FROM public.order_payment_checkouts(o.id) scope
+    JOIN public.payments p ON p.checkout_group_id=scope.checkout_group_id
+    WHERE p.status NOT IN ('success','cancelled')
+      AND (p.status<>'failed' OR coalesce(p.raw->>'terminal_provider_failure','false')<>'true')
+  );
+  IF {str(cancellation).lower()} AND has_money AND NOT o.cod THEN
+    IF NOT {str(refund_authority).lower()} THEN
+      RAISE EXCEPTION 'ORDER_REFUND_AUTHORITY_REQUIRED';
+    END IF;
+    -- An authorized cancellation reserves financial resolution, not a refund
+    -- entitlement or provider payout. Existing release ownership is preserved.
+    INSERT INTO public.order_money_gates(order_id,gate)
+    SELECT o.id,'refund' WHERE NOT EXISTS (
+      SELECT 1 FROM public.ledger_transactions
+      WHERE order_id=o.id AND kind='release_to_vendor')
+    ON CONFLICT(order_id) DO NOTHING;
+  END IF;
+  IF {str(cancellation).lower()} AND (has_money OR has_uncertain_attempt) AND NOT o.cod THEN
+    INSERT INTO public.audit_log(actor,action,entity_type,entity_id,after)
+    VALUES ({actor_sql},'order.financial_resolution_required','order',o.id,
+      jsonb_build_object('event','{event.value}','reason',{sql_literal(note)},
+        'collected_money',has_money,'uncertain_attempt',has_uncertain_attempt,
+        'checkout_groups',(SELECT jsonb_agg(checkout_group_id)
+                          FROM public.order_payment_checkouts(o.id))));
+  END IF;
+END $order_authority$;
 UPDATE public.orders o
 SET status = '{to_status}'
-FROM eligible e
-WHERE o.id = e.id
+WHERE o.id = {order_sql} AND o.status = '{from_status}'
+  AND (
+    '{event.value}' NOT IN ('confirm', 'start_processing', 'mark_ready', 'ship')
+    OR o.cod
+    OR EXISTS (SELECT 1 FROM public.payments p
+               JOIN public.checkout_groups c ON c.id=p.checkout_group_id
+                 AND c.customer_id=o.customer_id
+               WHERE p.checkout_group_id=o.checkout_group_id AND p.status='success')
+  )
 RETURNING o.status;
 COMMIT;
 """
     update_result = run_sql_script(update_script)
     if not update_result.ok:
+        error = update_result.error or ""
+        if "ORDER_ACTOR_FORBIDDEN" in error:
+            raise AppError(
+                code="forbidden", message="Order actor is not authorized", http_status=403
+            )
+        if "ORDER_REFUND_AUTHORITY_REQUIRED" in error:
+            raise RefundPathRequiredError()
+        if "ORDER_TRANSITION_CONFLICT" in error:
+            current = _fetch_order_snapshot(order_id)
+            if (
+                cancellation
+                and current is not None
+                and is_order_paid(current)
+                and not refund_authority
+            ):
+                raise RefundPathRequiredError()
+            raise OrderTransitionError(
+                "Concurrent transition changed order state",
+                from_status=from_status,
+                event=event.value,
+                actor_role=actor_role.value,
+            )
         raise RuntimeError(f"order transition failed: {update_result.error}")
     if not update_result.rows or update_result.rows[-1] != to_status:
         current = _fetch_order_snapshot(order_id)
@@ -486,7 +535,7 @@ COMMIT;
             event in CANCELLATION_EVENTS
             and current is not None
             and is_order_paid(current)
-            and not refund_path
+            and not refund_authority
         ):
             raise RefundPathRequiredError()
         if (

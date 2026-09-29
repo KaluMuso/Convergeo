@@ -81,6 +81,7 @@ export type OrderDetail = {
   payments: Payment[];
   ledger: LedgerTransaction[];
   timeline: TimelineEvent[];
+  service_obligations?: ServiceObligation[];
 };
 
 export type OrderEvent =
@@ -95,3 +96,15 @@ export type OrderEvent =
   | "confirm_received";
 
 export const MANUAL_ESCROW_CONFIRMATION = "MANUAL ESCROW";
+
+export type ServiceObligation = {
+  id: string;
+  job_id: string;
+  order_id: string;
+  checkout_group_id: string;
+  leg: string;
+  amount_ngwee: number;
+  status: string;
+  payment_id: string | null;
+  can_pay: boolean;
+};

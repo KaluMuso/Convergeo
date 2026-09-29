@@ -47,12 +47,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   setRequestLocale(locale);
   const [commonMessages, adminBundle] = await Promise.all([
     getMessages(),
-    loadMessages(locale as Locale, ["admin"]),
+    loadMessages(locale as Locale, ["admin", "services"]),
   ]);
 
   const messages = {
     ...commonMessages,
     admin: adminBundle.admin,
+    services: adminBundle.services,
   };
   const navCapabilities = resolveAdminNavCapabilities();
 

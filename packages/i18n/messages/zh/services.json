@@ -210,7 +210,7 @@
   "completion": {
     "provider": {
       "title": "标记此需求为已完成",
-      "intro": "告知客户工作已完成。客户有 48 小时进行确认，逾期将自动确认并向您放款。",
+      "intro": "Marking work complete does not collect an outstanding balance. Release requires verified funding and cleared holds.",
       "markCta": "标记需求为已完成",
       "marking": "标记中…",
       "marked": "已标记为完成。等待客户确认。",
@@ -225,20 +225,21 @@
     },
     "customer": {
       "title": "确认工作已完成",
-      "intro": "确认后将余款放款给您的服务商。如果您不操作，我们将在 48 小时后自动确认。",
+      "intro": "Acknowledge the completed work, then pay any outstanding amount. Financial completion requires verified payment and cleared holds.",
       "balanceLabel": "完成后应付余款",
-      "confirmCta": "确认并支付 {amount}",
+      "confirmCta": "Confirm work / check completion",
       "confirming": "确认中…",
-      "confirmed": "已确认。已向您的服务商付款。",
+      "confirmed": "Work and funding confirmed.",
       "awaitingProvider": "等待您的服务商标记需求为已完成。",
-      "escrowNote": "您已付款 → 由 Convergeo 保管 → 确认后放款给您的服务商。",
+      "escrowNote": "Collected funds remain held until the completion and release checks pass.",
       "reviewUnlocked": "谢谢！您现在可以为此服务商留下评价。",
       "errors": {
         "notOwner": "您只能确认自己的需求。",
         "notMarked": "您的服务商尚未将此需求标记为已完成。",
         "generic": "无法确认需求。请重试。",
         "rateLimited": "请求过于频繁。请稍候。"
-      }
+      },
+      "awaitingPayment": "Work acknowledged. Pay the outstanding amount below, then check completion."
     }
   },
   "reviews": {
@@ -267,5 +268,31 @@
       "rateLimited": "评价请求过多。请稍候。",
       "loadFailed": "无法加载评价状态。"
     }
+  },
+  "funding": {
+    "title": "Service payments",
+    "deposit": "Deposit",
+    "balance": "Remaining balance",
+    "pay": "Pay outstanding amount",
+    "retry": "Retry payment",
+    "refresh": "Refresh payment status",
+    "rail": "Payment method",
+    "phone": "Mobile money number",
+    "mtn": "MTN",
+    "airtel": "Airtel",
+    "card": "Card",
+    "error": "Unable to update payment. Refresh before trying again.",
+    "status": {
+      "paid": "Paid and verified",
+      "unpaid": "Unpaid",
+      "initiated": "Payment pending",
+      "ussd_pushed": "Payment pending",
+      "pay_offline": "Awaiting mobile approval",
+      "failed": "Payment failed",
+      "expired": "Payment unresolved — awaiting reconciliation",
+      "cancelled": "Cancelled",
+      "success": "Receipt under review"
+    },
+    "backToJob": "Return to job and check completion"
   }
 }

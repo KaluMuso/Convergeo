@@ -13,7 +13,7 @@ from app.services.escrow.release_accounting import build_release_accounting_day_
 from app.services.ledger.engine import account_balance_ngwee, resolve_account_id
 from app.services.ledger.templates import AccountRef
 from app.services.orders.audit import run_sql_script, sql_literal
-from app.services.payments.base import QueryStatusRequest, QueryStatusResult
+from app.services.payments.base import ProviderOutcome, QueryStatusRequest, QueryStatusResult
 from app.services.payments.lenco.config import get_api_token, get_base_url
 from app.services.payments.money import major_str_to_ngwee
 from app.services.payments.state import (
@@ -400,12 +400,29 @@ async def poll_non_terminal_payments(
                 errors += 1
                 continue
 
+            if query_result.outcome == ProviderOutcome.NOT_FOUND:
+                logger.warning(
+                    "reconciliation poll: provider has no collection for payment %s "
+                    "(requested_reference=%s)",
+                    payment_id,
+                    query_result.requested_reference,
+                )
+                errors += 1
+                continue
+
             validate_query_collection_observation(
                 service_client,
                 payment_id=payment_id,
                 result=query_result,
             )
 
+            if query_result.status is None:
+                logger.warning(
+                    "reconciliation poll: provider status missing for payment %s",
+                    payment_id,
+                )
+                errors += 1
+                continue
             incoming = lenco_collection_status_to_payment_status(query_result.status)
             if incoming is None:
                 unchanged += 1
@@ -421,7 +438,7 @@ async def poll_non_terminal_payments(
                     collection_observation_from_query(
                         query_result, source="poller"
                     )
-                    if incoming == PaymentStatus.SUCCESS
+                    if incoming in (PaymentStatus.SUCCESS, PaymentStatus.FAILED)
                     else None
                 ),
             )

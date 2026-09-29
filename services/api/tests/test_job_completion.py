@@ -116,9 +116,7 @@ def _any_vendor_id(conn: PgConn) -> str:
 
 
 def _vendor_owner(conn: PgConn, vendor_id: str) -> str:
-    result = conn.run(
-        f"SELECT owner_user_id::text FROM public.vendors WHERE id = '{vendor_id}'"
-    )
+    result = conn.run(f"SELECT owner_user_id::text FROM public.vendors WHERE id = '{vendor_id}'")
     assert result.ok and result.rows
     return result.rows[0]
 
@@ -155,6 +153,42 @@ def _accept(conn: PgConn, *, customer_id: str = CUSTOMER_A, total: int = 250_000
     return accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=customer_id)
 
 
+def _fund_required_legs(
+    conn: PgConn, accepted: Any, job_id: str, *, acknowledge: bool = True
+) -> None:
+    """Synthetic receipts, through the authoritative settlement RPC, before release."""
+    import json
+
+    if acknowledge:
+        pending = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert pending.status == "awaiting_payment" and not pending.released
+    rows = conn.run(
+        f"SELECT checkout_group_id::text || '|' || amount_ngwee::text "
+        f"FROM public.service_payment_obligations WHERE order_id='{accepted.order_id}';"
+    )
+    assert rows.ok and rows.rows
+    for row in rows.rows:
+        checkout, amount = row.split("|")
+        payment = str(uuid.uuid4())
+        observation = json.dumps(
+            {
+                "reference": f"ord-{payment}",
+                "currency": "ZMW",
+                "amount_ngwee": int(amount),
+                "provider_reference": f"synthetic-{payment}",
+                "source": "service-test",
+            }
+        )
+        result = conn.run_script(f"""
+        INSERT INTO public.payments(id,checkout_group_id,provider,rail,
+          lenco_reference,amount_ngwee,status)
+        VALUES ('{payment}','{checkout}','lenco','mtn','ord-{payment}',{amount},'ussd_pushed');
+        SELECT public.apply_prepaid_collection_success('{payment}','{CUSTOMER_A}',
+            'synthetic service receipt','{observation}'::jsonb);
+        """)
+        assert result.ok, result.error
+
+
 def _order_status(conn: PgConn, order_id: str) -> str:
     result = conn.run(f"SELECT status FROM public.orders WHERE id = '{order_id}'")
     assert result.ok and result.rows
@@ -164,8 +198,7 @@ def _order_status(conn: PgConn, order_id: str) -> str:
 def _release_count(conn: PgConn, order_id: str) -> int:
     key = release_idempotency_key(order_id)
     result = conn.run(
-        f"SELECT count(*)::text FROM public.ledger_transactions "
-        f"WHERE idempotency_key = '{key}';"
+        f"SELECT count(*)::text FROM public.ledger_transactions WHERE idempotency_key = '{key}';"
     )
     assert result.ok and result.rows
     return int(result.rows[0])
@@ -228,13 +261,14 @@ class TestDoubleConfirmIdempotency:
         mark = mark_job_complete(job_id, provider)
         assert mark.marked is True
         assert mark.order_id == accepted.order_id
+        _fund_required_legs(db, accepted, job_id)
 
         first = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert first.already_confirmed is False
         assert first.released is True
         assert first.release_created is True
-        assert first.balance_created is True
-        assert first.balance_ngwee == accepted.balance_ngwee
+        assert first.balance_created is False
+        assert first.balance_ngwee == 0
         # Vendor net == total − 12% commission (single snapshot), integer-exact.
         assert first.net_ngwee == accepted.total_job_ngwee - accepted.commission_ngwee
 
@@ -250,9 +284,7 @@ class TestDoubleConfirmIdempotency:
         assert _balance_item_count(db, accepted.order_id) == 1
         assert _release_count(db, accepted.order_id) == 1
 
-    def test_confirm_before_mark_complete_rejected(
-        self, db: PgConn, db_url_env: None
-    ) -> None:
+    def test_confirm_before_mark_complete_rejected(self, db: PgConn, db_url_env: None) -> None:
         accepted = _accept(db)
         job_row = db.run(
             f"SELECT ois.job_id::text FROM public.order_item_services ois "
@@ -278,6 +310,7 @@ class TestDoubleConfirmIdempotency:
         )
         job_id = job_row.rows[0]
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
 
         with pytest.raises(AppError) as exc:
             confirm_job_completion(job_id, actor_id=OTHER_CUSTOMER)
@@ -316,6 +349,7 @@ class TestAutoConfirmWindow:
         )
         job_id = job_row.rows[0]
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
         marked_at = _marker_at(db, job_id)
 
         # 47h after the marker — inside the 48h window → THIS order is held, no release.
@@ -324,7 +358,8 @@ class TestAutoConfirmWindow:
         assert _order_status(db, accepted.order_id) == "placed"
         assert _release_count(db, accepted.order_id) == 0
 
-        # 49h after the marker — window elapsed → THIS order auto-confirms + releases once.
+        # This positive recovery case has EXPLICIT buyer acknowledgement above.
+        # Elapsed time alone is not acknowledgement; the separate silence case proves that.
         after = auto_confirm_due_jobs(now=marked_at + timedelta(hours=49))
         assert after.confirmed >= 1
         assert _order_status(db, accepted.order_id) == "completed"
@@ -335,15 +370,44 @@ class TestAutoConfirmWindow:
         assert _release_count(db, accepted.order_id) == 1
 
 
+    def test_funded_silent_buyer_never_auto_acknowledged(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        accepted = _accept(db, total=300_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        jobs = db.run(
+            "SELECT job_id::text FROM public.service_payment_obligations "
+            f"WHERE order_id='{accepted.order_id}' AND leg='deposit';"
+        )
+        assert jobs.ok and len(jobs.rows) == 1
+        job_id = jobs.rows[0]
+        mark_job_complete(job_id, provider)
+        # Model genuine already-received funds, not a permitted new unacknowledged charge.
+        _fund_required_legs(db, accepted, job_id, acknowledge=False)
+        marked_at = _marker_at(db, job_id)
+        for age in (49, 72):
+            auto_confirm_due_jobs(now=marked_at + timedelta(hours=age))
+            assert _order_status(db, accepted.order_id) == "placed"
+            assert _release_count(db, accepted.order_id) == 0
+            ack = db.run(
+                "SELECT count(*)::text FROM public.audit_log "
+                f"WHERE entity_type='job' AND entity_id='{job_id}' "
+                "AND action='job.work_acknowledged';"
+            )
+            assert ack.ok and ack.rows == ["0"]
+        # Explicit buyer action, not another timer, can now permit funded finalization.
+        completed = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert completed.released
+        assert _release_count(db, accepted.order_id) == 1
+
+
 # ---------------------------------------------------------------------------
 # Review gating — only post-completion (verified engagement)
 # ---------------------------------------------------------------------------
 
 
 class TestReviewGating:
-    def test_review_locked_pre_completion_unlocked_post(
-        self, db: PgConn, db_url_env: None
-    ) -> None:
+    def test_review_locked_pre_completion_unlocked_post(self, db: PgConn, db_url_env: None) -> None:
         accepted = _accept(db)
         provider = _vendor_owner(db, accepted.vendor_id)
         job_row = db.run(
@@ -353,6 +417,7 @@ class TestReviewGating:
         )
         job_id = job_row.rows[0]
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
 
         # Pre-completion: order is 'placed' → the reviews gate rejects it.
         assert _order_status(db, accepted.order_id) == "placed"
@@ -393,67 +458,9 @@ def _completion_event_actor(db: PgConn, order_id: str) -> str | None:
     return result.rows[0] or None
 
 
-class TestConfirmFailureNoStrand:
-    def test_failure_after_release_before_complete_then_rerun_completes_single_release(
-        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Inject a failure between the vendor RELEASE and the order completion.
-
-        The release has already posted, but the crash pre-empts the placed→completed
-        flip. Net invariant: the order is NOT left completed-without-release — it stays
-        'placed' (never falsely done), and a re-run re-drives to completion with the
-        release posted EXACTLY ONCE (idempotency key ``release-{order_id}``).
-        """
-        accepted = _accept(db, total=280_000)
-        provider = _vendor_owner(db, accepted.vendor_id)
-        job_id = _job_id_for(db, accepted.order_id)
-        mark_job_complete(job_id, provider)
-
-        def _boom(*_args: Any, **_kwargs: Any) -> None:
-            raise RuntimeError("injected crash after release, before complete")
-
-        monkeypatch.setattr(jc, "_complete_order", _boom)
-        with pytest.raises(RuntimeError):
-            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
-
-        # Release posted, but the order is NOT stranded as completed — it stays 'placed'.
-        assert _order_status(db, accepted.order_id) == "placed"
-        assert _release_count(db, accepted.order_id) == 1
-
-        # Re-run drives to completion; the release is still posted exactly once.
-        monkeypatch.undo()
-        recovered = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
-        assert recovered.already_confirmed is False
-        assert recovered.release_created is False  # release already posted on the first pass
-        assert _order_status(db, accepted.order_id) == "completed"
-        assert _release_count(db, accepted.order_id) == 1
-        assert _balance_item_count(db, accepted.order_id) == 1
-
-    def test_failure_during_release_leaves_order_placed_no_release(
-        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A crash inside the release step must not complete the order (release is first)."""
-        accepted = _accept(db, total=260_000)
-        provider = _vendor_owner(db, accepted.vendor_id)
-        job_id = _job_id_for(db, accepted.order_id)
-        mark_job_complete(job_id, provider)
-
-        def _boom(*_args: Any, **_kwargs: Any) -> tuple[bool, int]:
-            raise RuntimeError("injected crash during release")
-
-        monkeypatch.setattr(jc, "_release_service_order", _boom)
-        with pytest.raises(RuntimeError):
-            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
-
-        assert _order_status(db, accepted.order_id) == "placed"
-        assert _release_count(db, accepted.order_id) == 0
-
-        # Recovery: full re-run completes with a single release.
-        monkeypatch.undo()
-        confirm_job_completion(job_id, actor_id=CUSTOMER_A)
-        assert _order_status(db, accepted.order_id) == "completed"
-        assert _release_count(db, accepted.order_id) == 1
-
+# Replaced the two obsolete Python-helper crash injections with
+# The SQL trigger-injection rollback case in test_f2_service_funding_postgrest.py.
+# The new RPC has no externally observable release-before-completion intermediate state.
 
 # ---------------------------------------------------------------------------
 # Audit actor — the completion order_events row records the real confirmer (#8)
@@ -463,9 +470,7 @@ class TestConfirmFailureNoStrand:
 class TestServiceReleaseFailClosedUnit:
     """Service confirm shares product release accounting fail-closed gates."""
 
-    def test_require_amounts_rejects_empty_snapshot(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_require_amounts_rejects_empty_snapshot(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from app.services.escrow.release_accounting import ReleaseAccountingError
 
         monkeypatch.setattr(jc, "_order_gross_ngwee", lambda *_a, **_k: 250_000)
@@ -476,21 +481,13 @@ class TestServiceReleaseFailClosedUnit:
 
         monkeypatch.setattr(jc, "compute_release_amounts", _boom)
         with pytest.raises(AppError) as exc_info:
-            jc._require_service_release_amounts(
-                order_id=str(uuid.uuid4()), delivery_fee_ngwee=0
-            )
+            jc._require_service_release_amounts(order_id=str(uuid.uuid4()), delivery_fee_ngwee=0)
         assert exc_info.value.code == "invalid_commission_snapshot"
 
-    def test_assert_release_allowed_blocks_on_refund(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(
-            jc, "release_blocked_reason", lambda **_k: "order_refunded"
-        )
+    def test_assert_release_allowed_blocks_on_refund(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(jc, "release_blocked_reason", lambda **_k: "order_refunded")
         with pytest.raises(AppError) as exc_info:
-            jc._assert_service_release_allowed(
-                order_id=str(uuid.uuid4()), status="placed"
-            )
+            jc._assert_service_release_allowed(order_id=str(uuid.uuid4()), status="placed")
         assert exc_info.value.code == "release_blocked"
         assert exc_info.value.details == {"reason": "order_refunded"}
 
@@ -506,9 +503,7 @@ class TestServiceReleaseFailClosedUnit:
 
         monkeypatch.setattr(jc, "order_has_open_dispute", _boom)
         with pytest.raises(AppError) as exc_info:
-            jc._assert_service_release_allowed(
-                order_id=str(uuid.uuid4()), status="placed"
-            )
+            jc._assert_service_release_allowed(order_id=str(uuid.uuid4()), status="placed")
         assert exc_info.value.code == "release_blocked"
         assert exc_info.value.details == {"reason": "dispute_lookup_failed"}
         assert exc_info.value.http_status == 503
@@ -517,13 +512,12 @@ class TestServiceReleaseFailClosedUnit:
 class TestCompletionCapturesCommission:
     """M08-P08b: confirm captures commission (once) before the vendor release."""
 
-    def test_confirm_captures_commission_before_release(
-        self, db: PgConn, db_url_env: None
-    ) -> None:
+    def test_confirm_captures_commission_before_release(self, db: PgConn, db_url_env: None) -> None:
         accepted = _accept(db, total=250_000)
         provider = _vendor_owner(db, accepted.vendor_id)
         job_id = _job_id_for(db, accepted.order_id)
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
 
         commission_before = account_balance_ngwee(COMMISSION_ID)
 
@@ -533,10 +527,7 @@ class TestCompletionCapturesCommission:
         captured = _commission_capture_count(db, accepted.order_id)
         assert captured >= 1
         # Commission recognized as revenue (credit-negative), exactly the snapshot value.
-        assert (
-            account_balance_ngwee(COMMISSION_ID)
-            == commission_before - accepted.commission_ngwee
-        )
+        assert account_balance_ngwee(COMMISSION_ID) == commission_before - accepted.commission_ngwee
         # Vendor net unchanged: total − commission (single snapshot).
         assert result.net_ngwee == accepted.total_job_ngwee - accepted.commission_ngwee
 
@@ -544,10 +535,7 @@ class TestCompletionCapturesCommission:
         second = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert second.already_confirmed is True
         assert _commission_capture_count(db, accepted.order_id) == captured
-        assert (
-            account_balance_ngwee(COMMISSION_ID)
-            == commission_before - accepted.commission_ngwee
-        )
+        assert account_balance_ngwee(COMMISSION_ID) == commission_before - accepted.commission_ngwee
 
 
 class TestCompletionAuditActor:
@@ -556,6 +544,7 @@ class TestCompletionAuditActor:
         provider = _vendor_owner(db, accepted.vendor_id)
         job_id = _job_id_for(db, accepted.order_id)
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
 
         confirm_job_completion(job_id, actor_id=CUSTOMER_A)
 
@@ -570,6 +559,7 @@ class TestCompletionAuditActor:
         provider = _vendor_owner(db, accepted.vendor_id)
         job_id = _job_id_for(db, accepted.order_id)
         mark_job_complete(job_id, provider)
+        _fund_required_legs(db, accepted, job_id)
         marked_at = _marker_at(db, job_id)
 
         auto_confirm_due_jobs(now=marked_at + timedelta(hours=49))

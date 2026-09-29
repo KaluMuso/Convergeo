@@ -175,6 +175,8 @@ class FakeSupabaseClient:
             "audit_log": FakeTable(),
             "webhook_events": FakeTable(),
             "platform_config": FakeTable(),
+            "payment_collection_receipts": FakeTable(),
+            "service_payment_obligations": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -182,6 +184,35 @@ class FakeSupabaseClient:
 
     def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
         """Unit-only RPC stand-in; real transaction assertions live in lane_d."""
+        if name == "claim_payable_payment":
+            group = next(
+                r for r in self.tables["checkout_groups"].rows if r["id"] == params["p_checkout_id"]
+            )
+            if group["status"] != "pending":
+                return MagicMock(execute=lambda: MagicMock(data={"result": "not_payable"}))
+            self.tables["payments"].insert(
+                {
+                    "id": params["p_payment_id"],
+                    "checkout_group_id": group["id"],
+                    "provider": "lenco",
+                    "rail": params["p_rail"],
+                    "lenco_reference": params["p_reference"],
+                    "amount_ngwee": group["total_ngwee"],
+                    "status": "initiated",
+                    "raw": params["p_raw"],
+                }
+            ).execute()
+            return MagicMock(
+                execute=lambda: MagicMock(
+                    data={"result": "claimed", "amount_ngwee": group["total_ngwee"]}
+                )
+            )
+        if name == "record_collection_failure":
+            payment = next(
+                r for r in self.tables["payments"].rows if r["id"] == params["p_payment_id"]
+            )
+            payment["raw"]["terminal_provider_failure"] = True
+            return MagicMock(execute=lambda: MagicMock(data=None))
         assert name == "apply_prepaid_collection_success"
         payment = next(
             row for row in self.tables["payments"].rows if row["id"] == params["p_payment_id"]
@@ -204,6 +235,18 @@ class FakeSupabaseClient:
                     "entity_id": params["p_payment_id"],
                     "before": {"status": prior},
                     "after": {"status": "success", "note": params["p_note"]},
+                }
+            )
+            self.tables["payment_collection_receipts"].rows.append(
+                {
+                    "payment_id": payment["id"],
+                    "receipt_identity": {
+                        "merchant_reference": payment["lenco_reference"],
+                        "provider_reference": observation.get("provider_reference")
+                        or observation["reference"],
+                        "amount_ngwee": observation["amount_ngwee"],
+                        "currency": "ZMW",
+                    },
                 }
             )
             result = "applied"
@@ -546,7 +589,7 @@ class TestInitiateCollection:
 
 class TestSweeper:
     @pytest.mark.asyncio
-    async def test_stale_unpaid_requery_expires_and_releases(
+    async def test_stale_pending_keeps_reference_unresolved(
         self,
         fake_service: FakeServiceClient,
     ) -> None:
@@ -567,17 +610,17 @@ class TestSweeper:
         )
         stats = await sweep_stale_payments(fake_service, query_status=query_status)
         assert stats.scanned == 1
-        assert stats.expired == 1
+        assert stats.expired == 0
         assert stats.reconciled_success == 0
-        assert stats.released == 1
-        assert fake_service.client.tables["payments"].rows[0]["status"] == "expired"
+        assert stats.released == 0
+        assert fake_service.client.tables["payments"].rows[0]["status"] == "pay_offline"
         query_status.assert_awaited_once()
         checkout_audits = [
             row
             for row in fake_service.client.tables["audit_log"].rows
             if row.get("action") == "checkout.release_for_retry"
         ]
-        assert len(checkout_audits) == 1
+        assert len(checkout_audits) == 0
 
     @pytest.mark.asyncio
     async def test_stale_lenco_success_reconciles_not_expires(
@@ -721,14 +764,17 @@ class TestInternalSweeperRouter:
         denied = app_client.post("/internal/payment-sweeper/tick")
         assert denied.status_code == 401
 
-        with patch(
-            "app.routers.internal_payment_sweeper.sweep_stale_payments",
-            new_callable=AsyncMock,
-            return_value=SweepResult(
-                scanned=0,
-                expired=0,
-                reconciled_success=0,
-                released=0,
+        with (
+            patch("app.deps.get_supabase_client", side_effect=lambda: iter([MagicMock()])),
+            patch(
+                "app.routers.internal_payment_sweeper.sweep_stale_payments",
+                new_callable=AsyncMock,
+                return_value=SweepResult(
+                    scanned=0,
+                    expired=0,
+                    reconciled_success=0,
+                    released=0,
+                ),
             ),
         ):
             ok = app_client.post(

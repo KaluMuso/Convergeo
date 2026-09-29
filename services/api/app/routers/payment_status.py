@@ -3,26 +3,16 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal, Protocol
-from uuid import uuid4
 
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.payments.base import (
-    CollectionStatus,
-    InitiateCollectionRequest,
     PaymentStrategy,
 )
-from app.services.payments.gate import (
-    PaymentsDisabledError,
-    log_payment_blocked,
-    payments_gate_status,
-)
-from app.services.payments.initiate import InitiatePaymentRequest
-from app.services.payments.references import make_order_reference
-from app.services.payments.registry import get as get_payment_strategy
-from app.services.payments.state import PaymentEvent, PaymentStatus, transition_payment
+from app.services.payments.initiate import InitiatePaymentRequest, initiate_checkout_payment
+from app.services.payments.state import PaymentStatus
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
@@ -142,7 +132,24 @@ def _load_orders_for_group(
         .order("created_at", desc=False)
         .execute()
     )
-    return _rows(response)
+    rows = _rows(response)
+    if rows:
+        return rows
+    obligation = _single_row(
+        service.client.table("service_payment_obligations")
+        .select("order_id")
+        .eq("checkout_group_id", checkout_group_id)
+        .maybe_single()
+        .execute()
+    )
+    if obligation:
+        return _rows(
+            service.client.table("orders")
+            .select("id, cod, customer_id")
+            .eq("id", obligation["order_id"])
+            .execute()
+        )
+    return []
 
 
 def _load_latest_payment(
@@ -151,9 +158,7 @@ def _load_latest_payment(
 ) -> dict[str, Any] | None:
     response = (
         service.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, amount_ngwee, rail, raw, created_at, updated_at"
-        )
+        .select("id, checkout_group_id, status, amount_ngwee, rail, raw, created_at, updated_at")
         .eq("checkout_group_id", checkout_group_id)
         .order("created_at", desc=True)
         .limit(1)
@@ -169,9 +174,7 @@ def _load_payment_by_id(
 ) -> dict[str, Any] | None:
     response = (
         service.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, amount_ngwee, rail, raw, created_at, updated_at"
-        )
+        .select("id, checkout_group_id, status, amount_ngwee, rail, raw, created_at, updated_at")
         .eq("id", payment_id)
         .maybe_single()
         .execute()
@@ -263,89 +266,8 @@ async def _create_retry_payment_attempt(
     actor_id: str,
     strategy: PaymentStrategy | None = None,
 ) -> tuple[str, PaymentStatus]:
-    """Start a new payment row for an existing checkout group (retry path)."""
-    # Safe-by-default payment gate: same guard as the first-attempt path so the
-    # retry/resume route can never reach Lenco while payments are disabled.
-    enabled, reason_code = payments_gate_status()
-    if not enabled:
-        log_payment_blocked(
-            reason_code,
-            method=request.rail,
-            reference=request.checkout_group_id,
-        )
-        raise PaymentsDisabledError()
-
-    group = _load_checkout_group(service, request.checkout_group_id)
-    if group is None:
-        raise AppError(code="not_found", message="Checkout group not found", http_status=404)
-
-    amount_ngwee = request.amount_ngwee
-    group_total = group.get("total_ngwee")
-    if isinstance(group_total, int) and group_total > 0:
-        amount_ngwee = group_total
-
-    payment_id = str(uuid4())
-    reference_source = request.order_id or request.checkout_group_id
-    # Salt with this retry attempt's payment_id so the new reference is distinct
-    # and cannot collide on the UNIQUE payments.lenco_reference constraint.
-    lenco_reference = make_order_reference(reference_source, attempt=payment_id)
-
-    insert_row = {
-        "id": payment_id,
-        "checkout_group_id": request.checkout_group_id,
-        "provider": request.provider,
-        "rail": request.rail,
-        "lenco_reference": lenco_reference,
-        "amount_ngwee": amount_ngwee,
-        "status": PaymentStatus.INITIATED.value,
-        "raw": {"payer_phone": request.phone},
-    }
-    insert_response = service.client.table("payments").insert(insert_row).execute()
-    if _single_row(insert_response) is None and not getattr(insert_response, "data", None):
-        raise AppError(
-            code="payment_write_failed",
-            message="Failed to create payment row",
-            http_status=500,
-        )
-
-    provider = strategy or get_payment_strategy(request.provider)
-    collection = await provider.initiate_collection(
-        InitiateCollectionRequest(
-            reference=lenco_reference,
-            amount_ngwee=amount_ngwee,
-            phone=request.phone,
-            operator=request.rail,
-        )
-    )
-
-    transition_payment(
-        service,
-        payment_id=payment_id,
-        event=PaymentEvent.USSD_PUSHED,
-        actor_id=actor_id,
-        note="USSD push initiated (payment retry)",
-    )
-
-    current_status = PaymentStatus.USSD_PUSHED
-    if collection.status == CollectionStatus.PAY_OFFLINE:
-        transition_payment(
-            service,
-            payment_id=payment_id,
-            event=PaymentEvent.PAY_OFFLINE,
-            actor_id=actor_id,
-            note="Lenco collection entered pay-offline (payment retry)",
-        )
-        current_status = PaymentStatus.PAY_OFFLINE
-
-    raw_patch: dict[str, Any] = {
-        "payer_phone": request.phone,
-        "collection": collection.model_dump(),
-    }
-    if collection.provider_reference:
-        raw_patch["provider_reference"] = collection.provider_reference
-    service.client.table("payments").update({"raw": raw_patch}).eq("id", payment_id).execute()
-
-    return payment_id, current_status
+    result = await initiate_checkout_payment(service, request, actor_id=actor_id, strategy=strategy)
+    return result.payment_id, result.status
 
 
 @router.get("/status", response_model=PaymentStatusResponse)

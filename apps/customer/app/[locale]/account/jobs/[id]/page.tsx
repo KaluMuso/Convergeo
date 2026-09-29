@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
 
-import { AcceptFlow, DEFAULT_DEPOSIT_PCT, previewDepositNgwee } from "./_components/accept-flow";
+import { AcceptFlow } from "./_components/accept-flow";
 import { CompleteConfirm } from "./_components/complete-confirm";
 import { canAcceptQuote, shouldShowCompletion } from "./_components/job-status";
 import { ServiceReviewForm } from "./_components/service-review-form";
@@ -44,14 +44,18 @@ type QuoteItem = {
   provider: QuoteProvider | null;
 };
 
-function createQuotesClient(getToken: () => string | null | Promise<string | null>) {
+function createQuotesClient(
+  getToken: () => string | null | Promise<string | null>,
+) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
   return {
     getJob(jobId: string): Promise<JobDetail> {
       return client.request<JobDetail>(`/jobs/${jobId}`);
     },
     listQuotes(jobId: string): Promise<{ items: QuoteItem[]; view: string }> {
-      return client.request<{ items: QuoteItem[]; view: string }>(`/jobs/${jobId}/quotes`);
+      return client.request<{ items: QuoteItem[]; view: string }>(
+        `/jobs/${jobId}/quotes`,
+      );
     },
     declineQuote(quoteId: string, reason?: string): Promise<void> {
       return client.request(`/quotes/${quoteId}/decline`, {
@@ -87,7 +91,10 @@ export default function JobComparePage({ params }: PageProps) {
     });
   }, [params]);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
   const quotesClient = useMemo(() => createQuotesClient(getToken), [getToken]);
 
   const loadJobAndQuotes = useCallback(async () => {
@@ -128,7 +135,10 @@ export default function JobComparePage({ params }: PageProps) {
   const handleDecline = async (quoteId: string) => {
     setSubmitting(true);
     try {
-      await quotesClient.declineQuote(quoteId, declineReason.trim() || undefined);
+      await quotesClient.declineQuote(
+        quoteId,
+        declineReason.trim() || undefined,
+      );
       setDeclineQuoteId(null);
       setDeclineReason("");
       await loadJobAndQuotes();
@@ -139,11 +149,8 @@ export default function JobComparePage({ params }: PageProps) {
     }
   };
 
-  const acceptedQuote = quotes.find((quote) => quote.status === "accepted") ?? null;
-  const acceptedBalanceNgwee = acceptedQuote
-    ? acceptedQuote.amount_ngwee -
-      previewDepositNgwee(acceptedQuote.amount_ngwee, DEFAULT_DEPOSIT_PCT)
-    : 0;
+  const acceptedQuote =
+    quotes.find((quote) => quote.status === "accepted") ?? null;
 
   if (sessionLoading || loading) {
     return (
@@ -160,10 +167,15 @@ export default function JobComparePage({ params }: PageProps) {
   return (
     <section className="space-y-6">
       <header className="space-y-2">
-        <Link href={`/${locale}/account/jobs`} className="text-sm font-medium text-primary">
+        <Link
+          href={`/${locale}/account/jobs`}
+          className="text-sm font-medium text-primary"
+        >
           {t("back")}
         </Link>
-        <h2 className="font-display text-h2 text-display-ink">{t("compareTitle")}</h2>
+        <h2 className="font-display text-h2 text-display-ink">
+          {t("compareTitle")}
+        </h2>
         <p className="text-sm text-text-2">{t("compareIntro")}</p>
         {job ? (
           <p className="text-xs text-text-2">
@@ -189,7 +201,9 @@ export default function JobComparePage({ params }: PageProps) {
                 <p className="text-sm font-medium text-display-ink">
                   {quote.provider?.display_name ?? t("unknownProvider")}
                 </p>
-                <p className="font-mono text-lg text-display-ink">{formatK(quote.amount_ngwee)}</p>
+                <p className="font-mono text-lg text-display-ink">
+                  {formatK(quote.amount_ngwee)}
+                </p>
               </header>
 
               <div className="flex flex-wrap gap-2">
@@ -197,7 +211,10 @@ export default function JobComparePage({ params }: PageProps) {
                   <Badge variant="free" label={t("preferredBadge")} />
                 ) : null}
                 {quote.provider?.response_time_tier ? (
-                  <Badge variant="public" label={tb(quote.provider.response_time_tier)} />
+                  <Badge
+                    variant="public"
+                    label={tb(quote.provider.response_time_tier)}
+                  />
                 ) : null}
                 {quote.provider?.rating_avg != null ? (
                   <Badge
@@ -210,7 +227,9 @@ export default function JobComparePage({ params }: PageProps) {
                 ) : null}
               </div>
 
-              {quote.message ? <p className="text-sm text-text-2">{quote.message}</p> : null}
+              {quote.message ? (
+                <p className="text-sm text-text-2">{quote.message}</p>
+              ) : null}
 
               {quote.expires_at ? (
                 <p className="text-xs text-text-2">
@@ -225,14 +244,20 @@ export default function JobComparePage({ params }: PageProps) {
                   locale={locale}
                   jobId={jobId}
                   quoteId={quote.id}
-                  vendorName={quote.provider?.display_name ?? t("unknownProvider")}
+                  vendorName={
+                    quote.provider?.display_name ?? t("unknownProvider")
+                  }
                   totalNgwee={quote.amount_ngwee}
                 />
               ) : null}
 
-              {declineQuoteId === quote.id && canAcceptQuote(job?.status, quote.status) ? (
+              {declineQuoteId === quote.id &&
+              canAcceptQuote(job?.status, quote.status) ? (
                 <div className="mt-auto space-y-2 border-t border-border pt-3">
-                  <FormField id={`decline-${quote.id}`} label={t("decline.reasonLabel")}>
+                  <FormField
+                    id={`decline-${quote.id}`}
+                    label={t("decline.reasonLabel")}
+                  >
                     <Input
                       value={declineReason}
                       onChange={(event) => setDeclineReason(event.target.value)}
@@ -282,10 +307,10 @@ export default function JobComparePage({ params }: PageProps) {
         </div>
       )}
 
-      {shouldShowCompletion(job?.status, acceptedQuote?.status) && acceptedQuote ? (
+      {shouldShowCompletion(job?.status, acceptedQuote?.status) &&
+      acceptedQuote ? (
         <CompleteConfirm
           jobId={jobId}
-          balanceNgwee={acceptedBalanceNgwee}
           allowConfirmAttempt
           onConfirmed={() => void loadJobAndQuotes()}
         />

@@ -238,7 +238,7 @@
   "completion": {
     "provider": {
       "title": "Mark this job complete",
-      "intro": "Let the customer know the work is done. They have 48 hours to confirm before it is auto-confirmed and your payment is released.",
+      "intro": "Marking work complete does not collect an outstanding balance. Release requires verified funding and cleared holds.",
       "markCta": "Mark job complete",
       "marking": "Marking complete…",
       "marked": "Marked complete. Waiting for the customer to confirm.",
@@ -253,20 +253,21 @@
     },
     "customer": {
       "title": "Confirm the work is done",
-      "intro": "Confirm to release the balance to your provider. If you do nothing, we auto-confirm after 48 hours.",
+      "intro": "Acknowledge the completed work, then pay any outstanding amount. Financial completion requires verified payment and cleared holds.",
       "balanceLabel": "Balance due on completion",
-      "confirmCta": "Confirm and pay {amount}",
+      "confirmCta": "Confirm work / check completion",
       "confirming": "Confirming…",
-      "confirmed": "Confirmed. Your provider has been paid.",
+      "confirmed": "Work and funding confirmed.",
       "awaitingProvider": "Waiting for your provider to mark the job complete.",
-      "escrowNote": "You paid → Held by Convergeo → Released to your provider once you confirm.",
+      "escrowNote": "Collected funds remain held until the completion and release checks pass.",
       "reviewUnlocked": "Thanks! You can now leave a review for this provider.",
       "errors": {
         "notOwner": "You can only confirm your own jobs.",
         "notMarked": "Your provider has not marked this job complete yet.",
         "generic": "Could not confirm the job. Please try again.",
         "rateLimited": "Too many requests. Please wait a moment."
-      }
+      },
+      "awaitingPayment": "Work acknowledged. Pay the outstanding amount below, then check completion."
     }
   },
   "reviews": {
@@ -312,5 +313,31 @@
       "rateLimited": "Too many requests. Please wait a moment.",
       "generic": "Could not start your booking. Please try again."
     }
+  },
+  "funding": {
+    "title": "Service payments",
+    "deposit": "Deposit",
+    "balance": "Remaining balance",
+    "pay": "Pay outstanding amount",
+    "retry": "Retry payment",
+    "refresh": "Refresh payment status",
+    "rail": "Payment method",
+    "phone": "Mobile money number",
+    "mtn": "MTN",
+    "airtel": "Airtel",
+    "card": "Card",
+    "error": "Unable to update payment. Refresh before trying again.",
+    "status": {
+      "paid": "Paid and verified",
+      "unpaid": "Unpaid",
+      "initiated": "Payment pending",
+      "ussd_pushed": "Payment pending",
+      "pay_offline": "Awaiting mobile approval",
+      "failed": "Payment failed",
+      "expired": "Payment unresolved — awaiting reconciliation",
+      "cancelled": "Cancelled",
+      "success": "Receipt under review"
+    },
+    "backToJob": "Return to job and check completion"
   }
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import Generator
+from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,8 +13,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from app.errors import AppError
 from app.main import create_app
-from app.services.payments.base import InitiatePayoutResult, ResolveAccountResult, TransferStatus
-from app.services.payments.lenco.models import LencoTransferData, LencoTransferStatusResponse
+from app.services.payments.base import (
+    InitiatePayoutResult,
+    ProviderOutcome,
+    ProviderResult,
+    ResolveAccountResult,
+    TransferStatus,
+)
+from app.services.payments.money import ngwee_to_major_str
 from app.services.payouts.eligibility import (
     _vendor_lock,
     assert_payout_eligible,
@@ -25,13 +32,70 @@ from app.services.payouts.execution import (
     _insert_payout_row,
     execute_vendor_payout,
 )
+from app.services.payouts.obligation import PayoutObservationMismatch
 from app.services.payouts.resolve_check import VendorPayoutProfile, run_resolve_name_check
-from app.services.payouts.retry import retry_payout_row
+from app.services.payouts.retry import retry_payout_row, retry_pending_payouts
+from app.services.refunds.payout_port import initiate_customer_refund_payout
 from fastapi.testclient import TestClient
 
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 OWNER_ID = "11111111-1111-1111-1111-111111111111"
 RELEASED_NGWEE = 100_000
+
+
+def _momo_obligation(
+    reference: str,
+    amount_ngwee: int,
+    phone: str,
+    operator: str,
+) -> dict[str, Any]:
+    return {
+        "merchant_reference": reference,
+        "amount_ngwee": amount_ngwee,
+        "currency": "ZMW",
+        "debit_account_id": "lenco-acct-1",
+        "destination": {
+            "type": "mobile-money",
+            "phone": phone,
+            "operator": operator,
+        },
+    }
+
+
+def _processing_payout_row(
+    *,
+    reference: str,
+    amount_ngwee: int = 30_000,
+    phone: str = "0961111111",
+    operator: str = "mtn",
+) -> dict[str, Any]:
+    return {
+        "id": str(uuid.uuid4()),
+        "vendor_id": VENDOR_ID,
+        "amount_ngwee": amount_ngwee,
+        "rail": operator,
+        "lenco_reference": reference,
+        "status": "processing",
+        "resolve_snapshot": {
+            "matched": True,
+            "obligation": _momo_obligation(
+                reference,
+                amount_ngwee,
+                phone,
+                operator,
+            ),
+            "dispatch": {"state": "pending"},
+        },
+    }
+
+
+def _fake_column_value(row: dict[str, Any], column: str) -> Any:
+    """Model the one JSON-path equality used by the real PostgREST claim."""
+    if column == "resolve_snapshot->dispatch->>state":
+        snapshot = row.get("resolve_snapshot")
+        dispatch = snapshot.get("dispatch") if isinstance(snapshot, dict) else None
+        return dispatch.get("state") if isinstance(dispatch, dict) else None
+    return row.get(column)
 
 
 class FakeQuery:
@@ -100,7 +164,7 @@ class FakeQuery:
             updated: list[dict[str, Any]] = []
             for row in self._parent.rows:
                 if all(
-                    row.get(column) == value
+                    _fake_column_value(row, column) == value
                     for op, column, value in self._filters
                     if op == "eq"
                 ):
@@ -123,7 +187,7 @@ class FakeQuery:
         filtered = rows
         for op, column, value in self._filters:
             if op == "eq":
-                filtered = [row for row in filtered if row.get(column) == value]
+                filtered = [row for row in filtered if _fake_column_value(row, column) == value]
             elif op == "in":
                 allowed = set(value)
                 filtered = [row for row in filtered if row.get(column) in allowed]
@@ -272,13 +336,21 @@ def matched_resolve() -> AsyncMock:
 
 @pytest.fixture
 def successful_momo_payout() -> AsyncMock:
-    return AsyncMock(
-        return_value=InitiatePayoutResult(
+    async def _success(request: Any) -> InitiatePayoutResult:
+        return InitiatePayoutResult(
+            reference=request.reference,
             provider_reference="lenco-ref-1",
             status=TransferStatus.SUCCESSFUL,
-            amount_major="1000.00",
+            amount_major=ngwee_to_major_str(request.amount_ngwee),
+            debit_account_id=request.account_id,
+            destination={
+                "type": "mobile-money",
+                "phone": request.phone,
+                "operator": request.operator,
+            },
         )
-    )
+
+    return AsyncMock(side_effect=_success)
 
 
 @pytest.fixture
@@ -409,23 +481,35 @@ async def test_retry_after_timeout_status_requery_no_double_pay(
             "rail": "mtn",
             "lenco_reference": lenco_ref,
             "status": "processing",
-            "resolve_snapshot": {"matched": True, "retry_attempts": 1},
+            "resolve_snapshot": {
+                "matched": True,
+                "obligation": _momo_obligation(
+                    lenco_ref,
+                    30_000,
+                    "0961111111",
+                    "mtn",
+                ),
+                "dispatch": {"state": "possibly_sent"},
+            },
         }
     )
 
     query_client = MagicMock()
     query_client.query_transfer_status = AsyncMock(
-        return_value=LencoTransferStatusResponse(
-            status=True,
-            message="ok",
-            data=LencoTransferData(
-                id="tx-1",
-                amount="300.00",
-                currency="ZMW",
-                reference=lenco_ref,
-                lenco_reference="lenco-1",
-                status="successful",
-            ),
+        return_value=ProviderResult(
+            requested_reference=lenco_ref,
+            outcome=ProviderOutcome.SUCCESSFUL,
+            reference=lenco_ref,
+            status="successful",
+            amount_major="300.00",
+            currency="ZMW",
+            provider_reference="lenco-1",
+            debit_account_id="lenco-acct-1",
+            destination={
+                "type": "mobile-money",
+                "phone": "0961111111",
+                "operator": "mtn",
+            },
         )
     )
     momo_payout = AsyncMock()
@@ -480,20 +564,26 @@ async def test_customer_refund_payout_sends_to_customer_and_skips_vendor_ledger(
                 "customer_momo": customer_momo,
                 "rail": "mtn",
                 "retry_attempts": 0,
+                "dispatch": {"state": "never_sent"},
             },
         }
     )
 
-    # Never sent yet → provider has no record → proceed to send.
+    # Never sent yet → claim first, then send without an unsafe preflight query.
     query_client = MagicMock()
-    query_client.query_transfer_status = AsyncMock(
-        return_value=LencoTransferStatusResponse(status=True, message="not found", data=None)
-    )
+    query_client.query_transfer_status = AsyncMock()
     momo_payout = AsyncMock(
         return_value=InitiatePayoutResult(
+            reference="rfd-abc123",
             provider_reference="lenco-rfd-1",
             status=TransferStatus.SUCCESSFUL,
             amount_major="420.00",
+            debit_account_id="lenco-acct-1",
+            destination={
+                "type": "mobile-money",
+                "phone": customer_momo,
+                "operator": "mtn",
+            },
         )
     )
 
@@ -513,6 +603,7 @@ async def test_customer_refund_payout_sends_to_customer_and_skips_vendor_ledger(
     sent_request = momo_payout.await_args.args[0]
     assert sent_request.phone == customer_momo
     assert sent_request.amount_ngwee == 42_000
+    query_client.query_transfer_status.assert_not_awaited()
     # Refund payout must NOT post the vendor payout_executed ledger.
     ledger_mock.assert_not_called()
 
@@ -549,18 +640,24 @@ async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
                 "customer_momo": customer_momo,
                 "rail": "mtn",
                 "retry_attempts": 0,
+                "dispatch": {"state": "never_sent"},
             },
         }
     )
     query_client = MagicMock()
-    query_client.query_transfer_status = AsyncMock(
-        return_value=LencoTransferStatusResponse(status=True, message="none", data=None)
-    )
+    query_client.query_transfer_status = AsyncMock()
     momo_payout = AsyncMock(
         return_value=InitiatePayoutResult(
+            reference="rfd-batch-1",
             provider_reference="lenco-rfd-batch",
             status=TransferStatus.SUCCESSFUL,
             amount_major="300.00",
+            debit_account_id="lenco-acct-1",
+            destination={
+                "type": "mobile-money",
+                "phone": customer_momo,
+                "operator": "mtn",
+            },
         )
     )
 
@@ -577,6 +674,7 @@ async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
     momo_payout.assert_awaited_once()
     assert momo_payout.await_args is not None
     assert momo_payout.await_args.args[0].phone == customer_momo
+    query_client.query_transfer_status.assert_not_awaited()
     ledger_mock.assert_not_called()
     assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
 
@@ -626,7 +724,13 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
                 "refund_id": refund_id,
                 "customer_momo": "260961112222",
                 "rail": "airtel",
-                "retry_attempts": 1,
+                "obligation": _momo_obligation(
+                    lenco_ref,
+                    15_000,
+                    "260961112222",
+                    "airtel",
+                ),
+                "dispatch": {"state": "pending"},
             },
         }
     )
@@ -644,17 +748,20 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
     )
     query_client = MagicMock()
     query_client.query_transfer_status = AsyncMock(
-        return_value=LencoTransferStatusResponse(
-            status=True,
-            message="ok",
-            data=LencoTransferData(
-                id="tx-9",
-                amount="150.00",
-                currency="ZMW",
-                reference=lenco_ref,
-                lenco_reference="lenco-9",
-                status="successful",
-            ),
+        return_value=ProviderResult(
+            requested_reference=lenco_ref,
+            outcome=ProviderOutcome.SUCCESSFUL,
+            reference=lenco_ref,
+            status="successful",
+            amount_major="150.00",
+            currency="ZMW",
+            provider_reference="lenco-9",
+            debit_account_id="lenco-acct-1",
+            destination={
+                "type": "mobile-money",
+                "phone": "260961112222",
+                "operator": "airtel",
+            },
         )
     )
     momo_payout = AsyncMock()
@@ -673,6 +780,382 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
     ledger_mock.assert_not_called()
     assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
     assert fake_client.tables["refunds"].rows[0]["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_provider_pending_is_polled_without_another_transfer_post(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+) -> None:
+    row = _processing_payout_row(reference="pay-pending-1")
+    fake_client.tables["payouts"].rows.append(row)
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        return_value=ProviderResult(
+            requested_reference="pay-pending-1",
+            outcome=ProviderOutcome.PENDING,
+            reference="pay-pending-1",
+            status="pending",
+            amount_major="300.00",
+            currency="ZMW",
+            provider_reference="lenco-pending-1",
+        )
+    )
+    momo_payout = AsyncMock()
+
+    outcome = await retry_payout_row(
+        service_client,
+        row,
+        query_transfer_status=query_client,
+        initiate_momo_payout=momo_payout,
+        initiate_bank_payout=bank_payout_mock,
+    )
+
+    assert outcome == "retried"
+    momo_payout.assert_not_awaited()
+    assert row["status"] == "processing"
+    assert row["resolve_snapshot"]["dispatch"]["state"] == "pending"
+
+
+@pytest.mark.parametrize(
+    ("outcome", "reason"),
+    [
+        (ProviderOutcome.FAILED, "provider_failed_reference_reuse_unconfirmed"),
+        (ProviderOutcome.NOT_FOUND, "not_found_after_dispatch"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_attempted_transfer_failed_or_not_found_is_held_without_resend(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    outcome: ProviderOutcome,
+    reason: str,
+) -> None:
+    row = _processing_payout_row(reference="pay-held-1")
+    fake_client.tables["payouts"].rows.append(row)
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        return_value=ProviderResult(
+            requested_reference="pay-held-1",
+            outcome=outcome,
+            reference="pay-held-1" if outcome == ProviderOutcome.FAILED else None,
+            status="failed" if outcome == ProviderOutcome.FAILED else None,
+            failure_reason="declined" if outcome == ProviderOutcome.FAILED else None,
+        )
+    )
+    momo_payout = AsyncMock()
+
+    result = await retry_payout_row(
+        service_client,
+        row,
+        query_transfer_status=query_client,
+        initiate_momo_payout=momo_payout,
+        initiate_bank_payout=bank_payout_mock,
+    )
+
+    assert result == "manual"
+    momo_payout.assert_not_awaited()
+    assert row["status"] == "processing"
+    assert row["resolve_snapshot"]["held"] is True
+    assert row["resolve_snapshot"]["hold_reason"] == reason
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value", "reason"),
+    [
+        ("reference", "pay-other", "merchant_reference"),
+        ("amount_major", "301.00", "amount"),
+        ("currency", "USD", "currency"),
+        ("debit_account_id", None, "debit_account_missing"),
+        ("debit_account_id", "other-account", "debit_account"),
+        (
+            "destination",
+            {"type": "mobile-money", "phone": "0969999999", "operator": "mtn"},
+            "destination",
+        ),
+        ("provider_reference", "other-provider-ref", "provider_reference"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_success_identity_mismatch_never_completes_or_posts_ledger(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    field: str,
+    bad_value: Any,
+    reason: str,
+) -> None:
+    row = _processing_payout_row(reference="pay-identity-1")
+    row["resolve_snapshot"]["provider_reference"] = "lenco-identity-1"
+    fake_client.tables["payouts"].rows.append(row)
+    result = ProviderResult(
+        requested_reference="pay-identity-1",
+        outcome=ProviderOutcome.SUCCESSFUL,
+        reference="pay-identity-1",
+        status="successful",
+        amount_major="300.00",
+        currency="ZMW",
+        provider_reference="lenco-identity-1",
+        debit_account_id="lenco-acct-1",
+        destination={
+            "type": "mobile-money",
+            "phone": "0961111111",
+            "operator": "mtn",
+        },
+    ).model_copy(update={field: bad_value})
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(return_value=result)
+
+    with patch("app.services.payouts.retry._post_payout_ledger") as ledger:
+        with pytest.raises(PayoutObservationMismatch) as exc_info:
+            await retry_payout_row(
+                service_client,
+                row,
+                query_transfer_status=query_client,
+                initiate_momo_payout=AsyncMock(),
+                initiate_bank_payout=bank_payout_mock,
+            )
+
+    assert exc_info.value.details["reason"] == reason
+    ledger.assert_not_called()
+    assert row["status"] == "processing"
+    assert row["resolve_snapshot"]["held"] is True
+
+
+@pytest.mark.asyncio
+async def test_concurrent_first_dispatch_claims_send_once(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    row: dict[str, Any] = {
+        "id": str(uuid.uuid4()),
+        "vendor_id": VENDOR_ID,
+        "amount_ngwee": 30_000,
+        "rail": "mtn",
+        "lenco_reference": "rfd-concurrent-1",
+        "status": "pending",
+        "resolve_snapshot": {
+            "kind": "customer_refund",
+            "customer_momo": "260955551111",
+            "rail": "mtn",
+            "dispatch": {"state": "never_sent"},
+        },
+    }
+    fake_client.tables["payouts"].rows.append(row)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def pending_transfer(request: Any) -> InitiatePayoutResult:
+        entered.set()
+        await release.wait()
+        return InitiatePayoutResult(
+            reference=request.reference,
+            provider_reference="lenco-concurrent-1",
+            status=TransferStatus.PENDING,
+            amount_major="300.00",
+            debit_account_id=request.account_id,
+            destination={
+                "type": "mobile-money",
+                "phone": request.phone,
+                "operator": request.operator,
+            },
+        )
+
+    momo_payout = AsyncMock(side_effect=pending_transfer)
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock()
+    # Both workers read independent snapshots before either claims the row.
+    # Never pair a post-claim dispatch marker with a fabricated pending status.
+    first_snapshot = deepcopy(row)
+    second_snapshot = deepcopy(row)
+    first = asyncio.create_task(
+        retry_payout_row(
+            service_client,
+            first_snapshot,
+            query_transfer_status=query_client,
+            initiate_momo_payout=momo_payout,
+            initiate_bank_payout=bank_payout_mock,
+        )
+    )
+    try:
+        await asyncio.wait_for(entered.wait(), timeout=5)
+        assert row["status"] == "processing"
+        assert second_snapshot["status"] == "pending"
+        assert second_snapshot["resolve_snapshot"]["dispatch"] == {"state": "never_sent"}
+        second = await retry_payout_row(
+            service_client,
+            second_snapshot,
+            query_transfer_status=query_client,
+            initiate_momo_payout=momo_payout,
+            initiate_bank_payout=bank_payout_mock,
+        )
+    finally:
+        release.set()
+        first_result = await asyncio.wait_for(first, timeout=5)
+
+    assert {first_result, second} == {"retried", "skipped"}
+    assert momo_payout.await_count == 1
+    query_client.query_transfer_status.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ledger_failure_keeps_verified_payout_processing_for_idempotent_replay(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+) -> None:
+    row = _processing_payout_row(reference="pay-ledger-rollback-1")
+    fake_client.tables["payouts"].rows.append(row)
+    successful = ProviderResult(
+        requested_reference="pay-ledger-rollback-1",
+        outcome=ProviderOutcome.SUCCESSFUL,
+        reference="pay-ledger-rollback-1",
+        status="successful",
+        amount_major="300.00",
+        currency="ZMW",
+        provider_reference="lenco-ledger-1",
+        debit_account_id="lenco-acct-1",
+        destination={
+            "type": "mobile-money",
+            "phone": "0961111111",
+            "operator": "mtn",
+        },
+    )
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(return_value=successful)
+
+    with patch(
+        "app.services.payouts.retry._post_payout_ledger",
+        side_effect=RuntimeError("ledger transaction rolled back"),
+    ):
+        with pytest.raises(RuntimeError, match="rolled back"):
+            await retry_payout_row(
+                service_client,
+                row,
+                query_transfer_status=query_client,
+                initiate_momo_payout=AsyncMock(),
+                initiate_bank_payout=bank_payout_mock,
+            )
+
+    assert row["status"] == "processing"
+
+    with patch(
+        "app.services.payouts.retry._post_payout_ledger",
+        return_value="ledger-replayed-1",
+    ) as ledger:
+        outcome = await retry_payout_row(
+            service_client,
+            row,
+            query_transfer_status=query_client,
+            initiate_momo_payout=AsyncMock(),
+            initiate_bank_payout=bank_payout_mock,
+        )
+        replay = await retry_payout_row(
+            service_client,
+            row,
+            query_transfer_status=query_client,
+            initiate_momo_payout=AsyncMock(),
+            initiate_bank_payout=bank_payout_mock,
+        )
+
+    assert outcome == "completed"
+    assert replay == "skipped"
+    ledger.assert_called_once()
+    assert row["status"] == "paid"
+
+
+@pytest.mark.asyncio
+async def test_batch_isolates_failed_query_and_completes_healthy_first_send(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    broken = _processing_payout_row(reference="pay-broken-1")
+    healthy = {
+        "id": str(uuid.uuid4()),
+        "vendor_id": VENDOR_ID,
+        "amount_ngwee": 25_000,
+        "rail": "mtn",
+        "lenco_reference": "rfd-healthy-1",
+        "status": "pending",
+        "created_at": "2026-09-28T00:00:01+00:00",
+        "resolve_snapshot": {
+            "kind": "customer_refund",
+            "customer_momo": "260955552222",
+            "rail": "mtn",
+            "dispatch": {"state": "never_sent"},
+        },
+    }
+    broken["created_at"] = "2026-09-28T00:00:00+00:00"
+    fake_client.tables["payouts"].rows.extend([broken, healthy])
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        side_effect=RuntimeError("provider query unavailable")
+    )
+
+    async def success(request: Any) -> InitiatePayoutResult:
+        return InitiatePayoutResult(
+            reference=request.reference,
+            provider_reference="lenco-healthy-1",
+            status=TransferStatus.SUCCESSFUL,
+            amount_major="250.00",
+            debit_account_id=request.account_id,
+            destination={
+                "type": "mobile-money",
+                "phone": request.phone,
+                "operator": request.operator,
+            },
+        )
+
+    stats = await retry_pending_payouts(
+        service_client,
+        query_transfer_status=query_client,
+        initiate_momo_payout=AsyncMock(side_effect=success),
+        initiate_bank_payout=bank_payout_mock,
+    )
+
+    assert stats.scanned == 2
+    assert stats.errors == 1
+    assert stats.completed == 1
+    assert broken["status"] == "processing"
+    assert healthy["status"] == "paid"
+
+
+def test_refund_reference_replay_rejects_changed_obligation(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    first = initiate_customer_refund_payout(
+        service_client=service_client,
+        refund_id=str(uuid.uuid4()),
+        reference_key="immutable-refund-1",
+        vendor_id=VENDOR_ID,
+        amount_ngwee=12_500,
+        rail="mtn",
+        customer_momo="260971111111",
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        initiate_customer_refund_payout(
+            service_client=service_client,
+            refund_id=str(uuid.uuid4()),
+            reference_key="immutable-refund-1",
+            vendor_id=VENDOR_ID,
+            amount_ngwee=12_501,
+            rail="mtn",
+            customer_momo="260971111111",
+        )
+
+    assert exc_info.value.code == "refund_payout_obligation_mismatch"
+    assert len(fake_client.tables["payouts"].rows) == 1
+    assert fake_client.tables["payouts"].rows[0]["id"] == first.payout_id
 
 
 @pytest.mark.asyncio
@@ -884,3 +1367,99 @@ def test_scheduled_payout_routes_respect_staging_suppression(
     )
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "payouts_suppressed_on_staging"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", list(ProviderOutcome))
+async def test_historical_pending_queries_original_reference_without_reposting(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    outcome: ProviderOutcome,
+) -> None:
+    """Upgrade crash window: pending without dispatch provenance may already be sent."""
+    row = _processing_payout_row(reference="pay-historical-crash")
+    row["status"] = "pending"
+    row["resolve_snapshot"].pop("dispatch")
+    fake_client.tables["payouts"].rows.append(row)
+    query = MagicMock()
+    query.query_transfer_status = AsyncMock(return_value=ProviderResult(
+        requested_reference=row["lenco_reference"], outcome=outcome,
+        reference=row["lenco_reference"], provider_reference="provider-historical-crash",
+        status=outcome.value, amount_major="300.00", currency="ZMW",
+        debit_account_id="lenco-acct-1",
+        destination={"type": "mobile-money", "phone": "0961111111", "operator": "mtn"},
+    ))
+    post = AsyncMock()
+    with patch(
+        "app.services.payouts.retry._post_payout_ledger", return_value="ledger-old"
+    ) as ledger:
+        result = await retry_payout_row(
+            service_client, row, query_transfer_status=query,
+            initiate_momo_payout=post, initiate_bank_payout=bank_payout_mock,
+        )
+    query.query_transfer_status.assert_awaited_once_with(row["lenco_reference"])
+    post.assert_not_awaited()
+    bank_payout_mock.assert_not_awaited()
+    if outcome == ProviderOutcome.SUCCESSFUL:
+        assert result == "completed" and row["status"] == "paid"
+        ledger.assert_called_once()
+    else:
+        ledger.assert_not_called()
+        assert row["status"] != "paid"
+        if outcome in {ProviderOutcome.FAILED, ProviderOutcome.NOT_FOUND}:
+            assert result == "manual" and row["resolve_snapshot"]["held"] is True
+
+
+@pytest.mark.asyncio
+async def test_historical_pending_query_timeout_never_creates_dispatch_marker(
+    service_client: FakeServiceClient, fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+) -> None:
+    row = _processing_payout_row(reference="pay-historical-timeout")
+    row["status"] = "pending"
+    row["resolve_snapshot"].pop("dispatch")
+    fake_client.tables["payouts"].rows.append(row)
+    query = MagicMock()
+    query.query_transfer_status = AsyncMock(side_effect=TimeoutError("synthetic timeout"))
+    post = AsyncMock()
+    with pytest.raises(TimeoutError):
+        await retry_payout_row(service_client, row, query_transfer_status=query,
+                               initiate_momo_payout=post, initiate_bank_payout=bank_payout_mock)
+    post.assert_not_awaited()
+    assert row["status"] == "processing"
+    assert row["resolve_snapshot"]["dispatch"]["state"] == "possibly_sent"
+
+
+@pytest.mark.parametrize("snapshot", [
+    {}, {"retry_attempts": 0},
+    {"dispatch": {"state": "never_sent"}, "retry_attempts": 1},
+    {"dispatch": {"state": "never_sent"}, "retry_attempts": False},
+    {"dispatch": {"state": "never_sent"}, "last_error": "lost response"},
+    {"dispatch": {"state": "never_sent", "claimed_at": "earlier"}},
+])
+def test_first_dispatch_requires_unconsumed_server_provenance(snapshot: dict[str, Any]) -> None:
+    from app.services.payouts.retry import _has_never_sent_provenance
+
+    assert not _has_never_sent_provenance(snapshot)
+    assert _has_never_sent_provenance({"dispatch": {"state": "never_sent"}})
+
+
+def test_first_dispatch_cas_rechecks_database_marker(
+    service_client: FakeServiceClient, fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.payouts.retry import _claim_first_dispatch
+
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    row = _processing_payout_row(reference="pay-stale-marker")
+    row["status"] = "pending"
+    stale = {**row["resolve_snapshot"], "dispatch": {"state": "never_sent"}}
+    # Stored marker changed between the caller's read and its conditional UPDATE.
+    fake_client.tables["payouts"].rows.append(row)
+    profile = VendorPayoutProfile(vendor_id=VENDOR_ID, owner_user_id=OWNER_ID,
+                                 phone="0961111111", operator="mtn",
+                                 legal_name="Synthetic", rail="mtn")
+    assert _claim_first_dispatch(service_client, payout_row=row, snapshot=stale,
+                                 profile=profile, clock=datetime.now(UTC)) is None
+    assert row["resolve_snapshot"]["dispatch"]["state"] == "pending"
