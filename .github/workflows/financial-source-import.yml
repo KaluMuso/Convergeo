@@ -1,0 +1,137 @@
+name: Financial reviewed-source import
+on:
+  push:
+    branches: [hardening/20260925-ci-recovery]
+    paths: [.github/workflows/financial-source-import.yml]
+permissions:
+  contents: write
+jobs:
+  custody:
+    if: github.repository == 'KaluMuso/Convergeo' && github.ref == 'refs/heads/hardening/20260925-ci-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 8f78448e4b340787fae98eeee58c372cc5ded307
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Reproduce the independently reviewed tree and preserve source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY_IMPORT'
+          import base64, hashlib, json, lzma, os, pathlib, subprocess, urllib.request
+
+          REPO = 'KaluMuso/Convergeo'
+          BASE = '8f78448e4b340787fae98eeee58c372cc5ded307'
+          FINAL = 'b4503cbce5718b0ec93daa52cc89d3790b149bdb'
+          SHAS = [
+          '3e7879bea5279bed3be40f96dbbf7b7250b3fb7d',
+          'e843f35ab02c121a3226f2b7629e497252b35c20',
+          '830e5e6d2714a9fd24ee7ec5321f3b2f165b443a',
+          '3da98087ee993f268a612e4c287c6fd69cd267c9',
+          'dfc94b7528b2b19e88fbc612ff018d42b70ac9cf',
+          'e9beb5d55c013f12f90c6ff1d73c1050973a09b0',
+          '55670658cd8efccad1b8a7e3e7434bc8135f54bc',
+          '1b63743271f6892dfa40e54bffe38c8a58599bfe',
+          '9a7d8356e87a5cec5dc880ed537cc697fc8aadea',
+          '6b8c963c837fce8ad42cc2279d5335d78ba38a69',
+          '66831b5cbe24ab92405baa34a487f71e147fbcae',
+          '0a3fac1a520c45775ada30a94e95fb221cf63b5e']
+          PATCHES = [
+          ('f1-provider-outcomes-transfers-updated.patch', 122832, '310faa3093d9c02c00bc19ba87e686d18140297d5defa6d007b141157e67299e', 'a9f46b82e8bd15a5a32efc07535ec83915a23ae8'),
+          ('f2-implementation.patch', 328804, 'c581d67cd4de18e4d08a7cfb0a9a6cff441e26be11a1d9a677cc34a044126fcf', 'ea7648e3d1a0d32bf33639594af73f8ad1035842'),
+          ('convergeo-financial-three-findings-corrected.patch', 56182, '2bdb7d6d6aba5e38d970c14864765cdb1e110136743c5fb9a5aff973cc15945d', FINAL)]
+          OUT = pathlib.Path(os.environ['RUNNER_TEMP']) / 'financial-source-custody'
+          OUT.mkdir(exist_ok=True)
+
+          def git(*args):
+              return subprocess.check_output(['git', *args])
+
+          def api(path, body=None):
+              req = urllib.request.Request('https://api.github.com/repos/' + REPO + path,
+                  data=None if body is None else json.dumps(body).encode(),
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                           'Accept': 'application/vnd.github+json', 'User-Agent': 'convergeo-reviewed-source-import'})
+              with urllib.request.urlopen(req, timeout=45) as response:
+                  return json.load(response)
+
+          def blob_hash(data):
+              return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+
+          assert git('rev-parse', 'HEAD').decode().strip() == BASE
+          assert git('rev-parse', 'HEAD^{tree}').decode().strip() == '11593d708d8011a346ea24048a7b2b09476a44d5'
+          assert not git('status', '--porcelain')
+          for path in ['vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json', 'apps/admin/vercel.json']:
+              config = json.loads(pathlib.Path(path).read_text())
+              assert config['git']['deploymentEnabled']['hardening/20260925-ci-recovery'] is False
+          chunks = []
+          for number, sha in enumerate(SHAS):
+              raw = api('/git/blobs/' + sha)
+              assert raw['encoding'] == 'base64'
+              data = base64.b64decode(raw['content'])
+              assert blob_hash(data) == sha
+              assert len(data) == (5084 if number == 11 else 8192)
+              chunks.append(data)
+          compressed = b''.join(chunks)
+          assert len(compressed) == 95196
+          assert hashlib.sha256(compressed).hexdigest() == '197d54b6af9b275506fa091c4f23ab46154964c2ff9e5e3d6f27a8beef6a120b'
+          decoder = lzma.LZMADecompressor(memlimit=128 * 1024 * 1024)
+          raw = decoder.decompress(compressed, max_length=1024 * 1024)
+          assert decoder.eof and not decoder.unused_data and len(raw) == 528975
+          payload = json.loads(raw)
+          assert isinstance(payload, list) and len(payload) == 3
+          identities = []
+          for item, (name, size, sha, expected_tree) in zip(payload, PATCHES, strict=True):
+              assert item['name'] == name and item['sha256'] == sha
+              data = item['content'].encode()
+              assert len(data) == size and hashlib.sha256(data).hexdigest() == sha
+              patch = OUT / name
+              patch.write_bytes(data)
+              subprocess.run(['git', 'apply', '--check', '--index', str(patch)], check=True)
+              subprocess.run(['git', 'apply', '--index', str(patch)], check=True)
+              tree = git('write-tree').decode().strip()
+              assert tree == expected_tree, (name, tree, expected_tree)
+              identities.append({'name': name, 'sha256': sha, 'bytes': size, 'resulting_tree': tree})
+          subprocess.run(['git', 'diff', '--cached', '--check'], check=True)
+          # Publish only immutable blob objects, never a branch or commit from this runner.
+          entries = []
+          for record in git('diff', '--cached', '--name-status', '-z').split(b'\0')[:-1][::2]:
+              assert record.decode() in {'A','M','D'}
+          status = git('diff', '--cached', '--name-status', '-z').split(b'\0')[:-1]
+          for op, name in zip(status[::2], status[1::2], strict=True):
+              path = name.decode()
+              assert not path.startswith('.github/') and path != 'packages/types/src/db.ts'
+              if op == b'D':
+                  entries.append({'path':path, 'mode':'100644', 'type':'blob', 'sha':None})
+                  continue
+              record = git('ls-files', '--stage', '--', path).decode().strip()
+              metadata, returned_path = record.split('\t', 1)
+              mode, sha, stage = metadata.split()
+              assert returned_path == path and stage == '0' and mode in {'100644','100755'}
+              data = git('show', ':' + path)
+              assert blob_hash(data) == sha
+              result = api('/git/blobs', {'encoding':'base64', 'content':base64.b64encode(data).decode()})
+              assert result['sha'] == sha
+              entries.append({'path':path,'mode':mode,'type':'blob','sha':sha})
+          (OUT/'tree-entries.json').write_text(json.dumps(entries, indent=2)+'\n')
+          (OUT/'IDENTITY.json').write_text(json.dumps({'base':BASE,'base_tree':'11593d708d8011a346ea24048a7b2b09476a44d5','reviewed_tree':FINAL,'patches':identities,'paths':len(entries),'runner_commit':os.environ.get('GITHUB_SHA'),'run_id':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'tests':'NOT_RUN_SOURCE_CUSTODY_ONLY'},indent=2)+'\n')
+          (OUT/'source.patch').write_bytes(git('diff','--cached','--binary','--full-index'))
+          # Tracked sources only: never archive .git, runtime credentials or environment data.
+          with (OUT/'reviewed-source.tar.gz').open('wb') as handle:
+              subprocess.run(['git','archive','--format=tar.gz',FINAL],stdout=handle,check=True)
+          checks = {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in OUT.iterdir() if p.is_file()}
+          (OUT/'SHA256SUMS.json').write_text(json.dumps(checks,indent=2)+'\n')
+          print(json.dumps({'source_custody':'PASS','tree':FINAL,'paths':len(entries),'tests':'NOT_RUN'}))
+          PY_IMPORT
+      - name: Retain sanitized custody evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: financial-reviewed-source-${{ github.sha }}
+          path: ${{ runner.temp }}/financial-source-custody/
+          if-no-files-found: error
+          retention-days: 14
