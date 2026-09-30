@@ -47,6 +47,11 @@ PENDING_REPAIR_VERSIONS = {
     "20260924120417",
     "20260924120418",
     "20260924120419",
+    # Published F1/F2 schema remains pending in the immutable historical ledger.
+    "20260929120000",
+    "20260929120001",
+    "20260929120002",
+    "20260929120003",
 }
 
 

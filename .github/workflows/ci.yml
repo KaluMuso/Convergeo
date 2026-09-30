@@ -832,6 +832,56 @@ jobs:
           path: critical-real-stack-evidence
           if-no-files-found: warn
 
+  financial-real-stack:
+    name: Financial real-stack execution (fresh and upgrade)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout full accepted-baseline history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Setup pinned Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Frozen API dependency install
+        working-directory: services/api
+        run: uv sync --dev --frozen
+      - name: Financial orchestration controls
+        run: python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+      - name: Execute real financial database gates
+        shell: bash
+        run: python scripts/ci/run_financial_real_stack.py
+      - name: Retain sanitized financial evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: financial-real-stack-${{ github.sha }}-${{ github.run_attempt }}
+          path: financial-real-stack-evidence
+          if-no-files-found: error
+
   money-db-triggers:
     name: Money DB-trigger integration
     runs-on: ubuntu-latest

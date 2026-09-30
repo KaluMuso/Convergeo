@@ -37,6 +37,7 @@ from tests.rls.conftest import (
     schema_ready,
     seed_matrix_fixtures,
 )
+from tests.rls.conftest import fixture_ids as fixture_ids
 
 
 def _required_env(name: str) -> str:

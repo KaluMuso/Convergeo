@@ -3622,18 +3622,21 @@ export type Database = {
       payment_collection_receipts: {
         Row: {
           accepted_at: string
+          canonical_status_verified_at: string | null
           payment_id: string
           provider_reference: string
           receipt_identity: Json
         }
         Insert: {
           accepted_at?: string
+          canonical_status_verified_at?: string | null
           payment_id: string
           provider_reference: string
           receipt_identity: Json
         }
         Update: {
           accepted_at?: string
+          canonical_status_verified_at?: string | null
           payment_id?: string
           provider_reference?: string
           receipt_identity?: Json
@@ -4530,6 +4533,61 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "service_categories"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      service_payment_obligations: {
+        Row: {
+          amount_ngwee: number
+          checkout_group_id: string
+          created_at: string
+          id: string
+          job_id: string
+          leg: string
+          order_id: string
+          work_acknowledged_at: string | null
+        }
+        Insert: {
+          amount_ngwee: number
+          checkout_group_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          leg: string
+          order_id: string
+          work_acknowledged_at?: string | null
+        }
+        Update: {
+          amount_ngwee?: number
+          checkout_group_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          leg?: string
+          order_id?: string
+          work_acknowledged_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_payment_obligations_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: true
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_payment_obligations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_payment_obligations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5965,6 +6023,18 @@ export type Database = {
           title: string
         }[]
       }
+      claim_payable_payment: {
+        Args: {
+          p_actor_id: string
+          p_checkout_id: string
+          p_payment_id: string
+          p_rail: string
+          p_raw: Json
+          p_reference: string
+          p_resume?: boolean
+        }
+        Returns: Json
+      }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
       clip_bump_counter: {
         Args: { p_clip_id: string; p_column: string; p_delta: number }
@@ -5979,6 +6049,20 @@ export type Database = {
           p_usd_micros: number
         }
         Returns: number
+      }
+      confirm_funded_service: {
+        Args: { p_actor_id: string; p_job_id: string; p_system?: boolean }
+        Returns: Json
+      }
+      create_service_payment_obligations: {
+        Args: {
+          p_customer_id: string
+          p_deposit: number
+          p_job_id: string
+          p_order_id: string
+          p_total: number
+        }
+        Returns: undefined
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       embedding_enqueue_document: {
@@ -6014,7 +6098,18 @@ export type Database = {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
         Returns: number
       }
+      lock_payment_checkout_scope: {
+        Args: { p_checkout: string }
+        Returns: undefined
+      }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
+      order_has_collected_money: { Args: { p_order: string }; Returns: boolean }
+      order_payment_checkouts: {
+        Args: { p_order: string }
+        Returns: {
+          checkout_group_id: string
+        }[]
+      }
       product_class_customer_released: {
         Args: { p_class: string }
         Returns: boolean
@@ -6026,6 +6121,10 @@ export type Database = {
       }
       recompute_review_aggregate_for_order_item: {
         Args: { p_order_item_id: string }
+        Returns: undefined
+      }
+      record_collection_failure: {
+        Args: { p_observation: Json; p_payment_id: string }
         Returns: undefined
       }
       record_listing_view: {
@@ -6129,6 +6228,14 @@ export type Database = {
       search_upsert_vendor: {
         Args: { p_vendor_id: string }
         Returns: undefined
+      }
+      service_buyer_acknowledged: {
+        Args: { p_job_id: string }
+        Returns: boolean
+      }
+      service_obligation_is_valid: {
+        Args: { p_obligation: string }
+        Returns: boolean
       }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {
