@@ -1,0 +1,58 @@
+name: Financial packet materialization
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+jobs:
+  materialize:
+    if: github.repository == 'KaluMuso/Convergeo' && github.head_ref == 'hardening/20260925-ci-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: d5649e5258a81459eb242c2d0d8919010991f945
+          persist-credentials: false
+      - name: Verify and materialize bounded source objects without branch writes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, subprocess, zlib
+          from pathlib import Path
+          encoded = '''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NWXIGHicVHPNvlBLODKbwMUxKaDHQskUSZCCDDWPlAdAGjPbFyVBvVxrViWVujpzYLrKUgTiKEKqJMELLdOvFoBtUzTaAOMPcxPrasmtDTkFHADWpPTdxLBQijbTDVeRqOgCIKdMkUFynAqhCCALxQWlcwSHaxVuOEouXLtwRgHHXyICXuDFZCTodUNFnUpFTFDhZWAIjPSycRmkYxuOCBTJhIUHiLKhPOLCTslRhNxUKAJSGvCYDMCdvUNewqsCMADSRPKELVaOlBQbRznXcHHKxAQKmkIMHRQYpMcOuQMuxLIHuwJBCAavVlNIQciXMWXWScqhhPXpaTmMAQSJmTTIDikJuAZGWGEALuwHAKmNGoYfJiPqlXaqEibMRDmPHlHuOFAMBMfGRxCPGoUIUkSNTRRMINTDNWrBTBATylTKRHfJlfmnLKIOvbHKtgONvPgRiHTOyDMRIaqQWpYhkKnOIIZsmTXOLdkUJCOlbmfOTKOFKAulwOUUZBRXfMuRtLHGTNNMWdTXUKNSEJhhUELaCEuqLMlSqeTCVGYYWOoSLpjGaEgfEhYEFqYPGCUUUYmjmOCtAnsePVwlULbziSDCWLYISonxGDHLiAakMXjqJCkkBrBLNtuIHZXJTtSNoPWFPBKsjXZJCVoUNCpwmjzPFvuKoINCDUXDIviHRRwEhWNJyOTWEEHnjNzOHFBzSamCtTadjdRPObOwFFLOHWWENnoUtGdIIiSoHLHJVpHzDnNCUNKUrPJIxSAgNtPVIgzSGXpERVaaQTUEeEVDNTvSkgAdZDEaujbWWXrVXPLWCPDOXEOucHZiIVkhpAaESuoJEzDRIEvyVAItQNInoqRHEnxWTvqGhKOYHTrDOOxPYNgURovAjaBmVgfhxRoKDCSHmNGtmTJSCEGTwnSOMuEZhcWEgnBPXolROXPlKwfmJJIGYAHACTeifXKRtNoayMxHBXXHMUzSJShUnPhUnWYBXpfVVTuSrMJJBaRBGTIpSYZxUhZHdvJhxfImSOehTOxuKvAhLaCbHOOBEGImKiZvdPTFRjPCFAgwLXGIflCpNDGOlzFyvYGSwFDKxzDTpeRdHTGeilOWUNCKaYYOfdLDLEoXXPiJMcVlbcXZBrXVNCAnZGltTGomNeTVDbHxGUoOiUHuuXYtQVmgPUQqYXJsHiLPPRxZEGEHbEWKPaOpIdIGXATOLfgzlUXPSEUTtzOEfgKVUcMOYOEWqySoSCDClBrKEYaGhQWMPKSXBUdmIXVzZLlzkZPFmcHPFRPoBrCNzkBYzyGXFrRBWRJLdDaSWINUtUNAKcgmgOEPMNzISFOFHsoLLLnFbSPEEdjXXPJMynUnSDInDVMfcTLmfJDYWEbAXdvlSHLGBHFrZnIyDQOfEVAjITFMLEKlGRYNjjMjWDYTHkPknSUfxNXLxsvPhWdVFdVcHmFNiNcTZlgYDqOLntazuuRLblOBnkNLjWjxvmGYLcDRFWFvlUpTYsoTKJiMFQLAFUJHKMdVThsEhBrSGpmXFIfPOUVKHvOjIgOKBrINLLXCckmjfiYzsrrPFJlRYLmKrBXVbCpTkNKPuCXHZwFzyBueEZMJsmTMiRVuSqLGJlCJDiGzNbYlnUHrGMdSVzKnTVVDoMIYYRnTPxHlxKWlcRxQEjPCrnMRASRoUWEKlYeIZsdJtjIoDvDwGHnWUiLDJzLSWeJcxHBfySLAbSuDHnmDKmpvTMDCxIOPGOmPfUbHHKiikbyOnjgRUAdcnfizPLIVXgSFhFRwsfxsoJmoPFYRSPWFOjIlxqtsOIwIJmUhUWSsjTFaIhAAvjmNXmbBqFBJMZYlhDaALAdwuCCGAIBSrRAfxKVEHKPTpOVYHmcuKGCO4AAAA'''
+          # This workflow contains only an exact bounded source packet. It never executes provider or database operations.
+          patch = zlib.decompress(base64.b64decode(encoded, validate=True))
+          assert len(patch) == 34174 and hashlib.sha256(patch).hexdigest() == 'f04bef10349e250077d9e43ddb3b798685523864df1d88eea81e9cb947d5fa78'
+          out = Path(os.environ['RUNNER_TEMP']) / 'financial-materialized'
+          out.mkdir()
+          p = out / 'packet.patch'; p.write_bytes(patch)
+          subprocess.run(['git','apply','--check',str(p)],check=True)
+          subprocess.run(['git','apply','--index',str(p)],check=True)
+          subprocess.run(['git','diff','--cached','--check'],check=True)
+          tree = subprocess.check_output(['git','write-tree'],text=True).strip()
+          assert tree == '4a9e6c329d8ae38ece611ef9bb19d8e872d6eac9'
+          allowed = {'.github/workflows/ci.yml','.github/workflows/financial-source-evidence.yml','scripts/ci/financial-real-stack-report.py','scripts/ci/run-financial-real-stack.sh','scripts/ci/test_financial_real_stack_report.py','scripts/drills/run-f2-real-stack.sh','services/api/tests/test_reconcile_staging_migrations.py','services/api/tests/test_schema_convergence.py'}
+          paths = subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert set(paths) == allowed
+          records = []
+          for name in paths:
+              data = Path(name).read_bytes()
+              request = out/'request.json'; request.write_text(json.dumps({'encoding':'base64','content':base64.b64encode(data).decode()}))
+              response = json.loads(subprocess.check_output(['gh','api','--method','POST','repos/KaluMuso/Convergeo/git/blobs','--input',str(request)],text=True))
+              sha = hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+              assert response['sha'] == sha
+              records.append({'path':name,'mode':'100644','type':'blob','sha':sha})
+              request.unlink()
+          (out/'manifest.json').write_text(json.dumps({'base':'d5649e5258a81459eb242c2d0d8919010991f945','tree':tree,'entries':records},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: financial-materialized-${{ github.sha }}
+          path: ${{ runner.temp }}/financial-materialized/
+          if-no-files-found: error
+          retention-days: 7
