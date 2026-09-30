@@ -1,0 +1,49 @@
+name: Financial source evidence
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  source-evidence:
+    name: Financial source custody (not execution acceptance)
+    if: github.repository == 'KaluMuso/Convergeo' && github.head_ref == 'hardening/20260925-ci-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bind tracked source and preserved deployment guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 56f845f32338d116ad99a432597fa83c88f519dd HEAD
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          branches = ('hardening/20260924-converged-implementation', 'hardening/20260925-ci-recovery')
+          for name in ('vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json', 'apps/admin/vercel.json'):
+              config = json.loads(Path(name).read_text())
+              guards = config.get('git', {}).get('deploymentEnabled', {})
+              if not isinstance(guards, dict) or any(guards.get(branch) is not False for branch in branches):
+                  raise SystemExit(f'Deployment guard missing: {name}')
+          PY
+          mkdir -p "$RUNNER_TEMP/financial-source"
+          git rev-parse HEAD 'HEAD^{tree}' > "$RUNNER_TEMP/financial-source/identity.txt"
+          git ls-tree -rz HEAD > "$RUNNER_TEMP/financial-source/tree.z"
+          git archive --format=tar HEAD | gzip -n > "$RUNNER_TEMP/financial-source/source.tar.gz"
+          git archive --format=tar 8f78448e4b340787fae98eeee58c372cc5ded307 supabase scripts/ci/migration-replay.sh | gzip -n > "$RUNNER_TEMP/financial-source/accepted-baseline-schema.tar.gz"
+          printf '%s\n' 'SOURCE CUSTODY ONLY. Does not certify financial tests, provider transactions or deployment.' > "$RUNNER_TEMP/financial-source/STATUS.txt"
+          (cd "$RUNNER_TEMP/financial-source" && sha256sum identity.txt tree.z source.tar.gz accepted-baseline-schema.tar.gz STATUS.txt > SHA256SUMS)
+      - name: Preserve exact tracked source for isolated financial acceptance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: financial-source-${{ github.sha }}
+          path: ${{ runner.temp }}/financial-source/
+          if-no-files-found: error
+          retention-days: 7
