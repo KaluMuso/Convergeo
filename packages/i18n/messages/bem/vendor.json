@@ -481,7 +481,9 @@
       "template": {
         "heading": "Download template",
         "body": "⚠ Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing. Leave product_id blank to get catalogue-match suggestions in the preview.",
-        "download": "Download CSV template"
+        "download": "Download CSV template",
+        "stockNote": "Imports set opening stock for new SKUs. Reimporting an existing SKU preserves its current stock, stock mode, and units; it does not restock reserved or sold units.",
+        "unitsHelp": "Prices and stock counts are per sale step. For 250 g steps use sale_unit kg and unit_step_milli 250; min_steps 4 means a minimum of 1 kg. Wholesale tiers are for verified business buyers and require each units."
       },
       "upload": {
         "heading": "Upload CSV",
@@ -498,7 +500,8 @@
         "details": "Details",
         "ok": "OK",
         "failed": "Failed",
-        "imported": "Imported"
+        "imported": "Imported",
+        "stockPreserved": "Listing updated; existing stock and stock mode were kept."
       },
       "preview": {
         "previewButton": "Preview rows",
@@ -521,7 +524,15 @@
         "uploadFailed": "Import failed. Check your file and try again.",
         "previewFailed": "Could not check your file. Esheni limbi.",
         "no_file": "CSV file is required",
-        "no_payload": "Provide a CSV file or JSON rows"
+        "no_payload": "Provide a CSV file or JSON rows",
+        "templateFailed": "Could not download the template. Please try again.",
+        "invalidUnits": "Check the sale unit, quantity step and minimum quantity. Measured units cannot use wholesale tiers.",
+        "duplicateHeaders": "CSV column names must be unique.",
+        "notEditable": "This existing listing cannot be edited by import.",
+        "unitChange": "An import cannot change the units or minimum steps of an existing SKU.",
+        "productChange": "This SKU is already linked to a different product.",
+        "wholesaleEligibility": "Wholesale requires current approval at tier T2 and at least one valid price tier.",
+        "invalidListing": "These changes are not valid for the existing listing. Review its listing fields."
       }
     },
     "manage": {
@@ -593,7 +604,29 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
-      "statusLabel": "Status"
+      "statusLabel": "Status",
+      "stock": {
+        "heading": "Adjust available stock",
+        "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
+        "refresh": "Refresh availability",
+        "units": "Sale unit: {unit}; each step is {step}/1000 of that unit.",
+        "branch": "Branch",
+        "choose": "Select a branch",
+        "inactive": "Inactive",
+        "pooled": "Available pooled stock: {qty}",
+        "delta": "Change (+ received / − removed)",
+        "reason": "Reason",
+        "retry": "Retry the same operation",
+        "apply": "Apply adjustment",
+        "saved": "Recorded {old} → {next} available steps. Operation: {id}.",
+        "invalid": "Choose an active branch, a nonzero integer change and a reason.",
+        "conflict": "The adjustment was rejected. Refresh availability, review the branch and units, then submit a new adjustment.",
+        "retrySame": "The outcome is uncertain. Retry this same operation to retrieve its recorded result; do not create another adjustment.",
+        "loadFailed": "Could not load availability. Use Refresh to try again.",
+        "storageFailed": "Could not preserve the operation for a safe retry. Enable session storage before adjusting stock.",
+        "notTracked": "This listing does not use tracked stock.",
+        "authorityRequired": "Use the stock adjustment section. Existing stock, sale units and stock mode cannot be replaced in the listing editor."
+      }
     },
     "kycGate": {
       "title": "Verification still in progress",
