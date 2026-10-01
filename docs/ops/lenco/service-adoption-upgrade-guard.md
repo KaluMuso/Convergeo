@@ -20,7 +20,11 @@ signature are restored before commit. SQL errors roll back both adoption and
 temporary DDL; unique violations are never swallowed.
 
 The helper verifies SHA256 of both immutable input migrations and verifies that
-the installed function body matches the reviewed authority before replacing it.
+the installed function body and execution metadata match the reviewed authority
+before replacing it. Security mode, volatility, parallel/strict/leakproof flags,
+empty search path and client/service grants must match; identical routine bodies
+with changed execution privileges are rejected. Owner identity is preserved
+without assuming the hosted role name.
 It fails rather than overwriting newer financial authority. Routine replacement
 is transaction-local to the applying session and is restored before other
 sessions can observe a committed change.

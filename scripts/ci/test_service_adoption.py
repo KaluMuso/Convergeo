@@ -23,6 +23,19 @@ class AdoptionControls(unittest.TestCase):
         self.assertNotIn("exception when unique_violation", sql.lower())
         self.assertNotIn("delete from", sql.lower())
 
+    def test_metadata_guard_precedes_any_authority_replacement(self) -> None:
+        sql = adoption.migration_sql(adoption.ROOT / "supabase/migrations")
+        boundary = sql.index("create or replace function")
+        metadata = sql[:boundary]
+        for control in (
+            "authority.prosecdef", "authority.proisstrict", "authority.proleakproof",
+            "authority.provolatile", "authority.proparallel", "authority.proconfig",
+            "aclexplode", "a.grantee<>authority.proowner", "a.is_grantable",
+            "a.grantee='service_role'::regrole", "authority metadata differs",
+        ):
+            self.assertIn(control, metadata)
+        self.assertNotIn("'postgres'::regrole", metadata)
+
     def test_unknown_immutable_input_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)

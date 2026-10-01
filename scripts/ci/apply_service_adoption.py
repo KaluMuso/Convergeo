@@ -60,9 +60,26 @@ def migration_sql(migrations: Path) -> str:
         raise ValueError("Service authority lock boundary changed")
     guarded = original.replace(anchor, anchor + GUARD)
     # Fail closed if a different routine is installed: never overwrite newer
-    # financial authority. Compare the actual body, not formatted SQL metadata.
+    # financial authority. Check security metadata and the actual routine body.
     body = original.split("as $$", 1)[1].split("$$;", 1)[0]
-    check = """do $adoption_check$ begin
+    check = """do $adoption_check$ declare authority pg_proc%rowtype; begin
+ select * into strict authority from pg_proc where oid=
+   'public.create_service_payment_obligations(uuid,uuid,uuid,bigint,bigint)'::regprocedure;
+ -- Owner is retained by CREATE OR REPLACE; compare privileges relative to that
+ -- actual owner rather than assuming a hosted/local role name.
+ if not authority.prosecdef or authority.proisstrict or authority.proleakproof
+    or authority.provolatile<>'v' or authority.proparallel<>'u'
+    or authority.proconfig is distinct from array['search_path=""']::text[]
+    or exists(select 1 from aclexplode(coalesce(authority.proacl,
+                 acldefault('f',authority.proowner))) a
+              where a.grantee<>authority.proowner
+                and (a.grantee<>'service_role'::regrole or a.is_grantable))
+    or not exists(select 1 from aclexplode(coalesce(authority.proacl,
+                     acldefault('f',authority.proowner))) a
+                  where a.grantee='service_role'::regrole
+                    and a.privilege_type='EXECUTE') then
+   raise exception 'Service obligation authority metadata differs from reviewed legacy input';
+ end if;
  if (select prosrc from pg_proc where oid=
    'public.create_service_payment_obligations(uuid,uuid,uuid,bigint,bigint)'::regprocedure)
    is distinct from $adoption_body$""" + body + """$adoption_body$ then
