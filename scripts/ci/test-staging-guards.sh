@@ -426,12 +426,24 @@ fi
 
 # 13b) deploy-staging must preflight ledger drift before db push
 preflight_line="$(grep -n 'preflight-staging-schema-convergence.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
-push_line="$(grep -n 'supabase db push --include-all' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+push_line="$(grep -n '^[[:space:]]*supabase db push ' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
 if [[ -n "${preflight_line}" && -n "${push_line}" && "${preflight_line}" -lt "${push_line}" ]] \
   && grep -q 'STAGING_LEDGER_REPAIR_REQUIRED' .github/workflows/deploy-staging.yml; then
   ok "deploy-staging preflight blocks db push when ledger repair is required"
 else
   bad "deploy-staging must run schema preflight before supabase db push"
+fi
+
+# The adoption prerequisite and push must use the same explicit connection.
+# A linked CLI target must not silently replace the database that was checked.
+adoption_guard_line="$(grep -n 'python3 scripts/ci/guard_shared_service_adoption.py' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${adoption_guard_line}" && -n "${push_line}" ]] \
+  && [[ "${preflight_line}" -lt "${adoption_guard_line}" && "${adoption_guard_line}" -lt "${push_line}" ]] \
+  && grep -Fq 'supabase db push --db-url "${SUPABASE_DB_URL}" --include-all' .github/workflows/deploy-staging.yml \
+  && grep -Fq 'unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS' .github/workflows/deploy-staging.yml; then
+  ok "reviewed installed adoption guards an explicit same-target migration push"
+else
+  bad "migration push must follow installed-adoption proof and retain its explicit database target"
 fi
 
 # 14) Preview prove dry-run validates portal mapping without Vercel calls
