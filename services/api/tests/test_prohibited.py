@@ -167,9 +167,15 @@ class _FakeTable:
 
 class _FakeClient:
     def __init__(self) -> None:
-        # "products" backs the canonical-match lookup in import_listing_rows
-        # (load_active_candidates); empty here — these rows don't attach.
         self.tables = {"vendor_listings": _FakeTable(), "products": _FakeTable()}
+        self.tables["products"].rows.append(
+            {
+                "id": "90000000-0000-0000-0000-000000000001",
+                "name": "Test catalogue product",
+                "status": "active",
+                "aliases": [],
+            }
+        )
 
     def table(self, name: str) -> _FakeTable:
         return self.tables[name]
@@ -196,6 +202,7 @@ def _row(sku: str, title: str) -> dict[str, str]:
     return {
         "sku": sku,
         "title": title,
+        "product_id": "90000000-0000-0000-0000-000000000001",
         "price_ngwee": "2500",
         "stock_mode": "tracked",
         "stock_qty": "5",
@@ -218,8 +225,7 @@ def test_import_rejects_prohibited_row_and_keeps_clean_rows() -> None:
     assert by_row[1].ok is True
     assert by_row[3].ok is True
     assert by_row[2].ok is False
-    assert any("prohibited" in err for err in by_row[2].errors)
-    assert "beer" in by_row[2].errors[0]
+    assert by_row[2].errors == ["listings.import.errors.prohibitedListing"]
 
 
 def test_import_accepts_all_clean_rows() -> None:

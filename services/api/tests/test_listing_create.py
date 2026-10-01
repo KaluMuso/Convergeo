@@ -315,11 +315,8 @@ def test_quick_list_creation_path(listing_client: TestClient) -> None:
             title_override="Fresh tomatoes per kg",
         ),
     )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["mode"] == "quick_list"
-    assert body["status"] == "active"
-    assert body["product_id"] is None
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "canonical_product_required"
 
 
 def test_per_measure_fields_are_persisted(
@@ -330,8 +327,7 @@ def test_per_measure_fields_are_persisted(
         "/vendor/listings",
         headers=_auth_headers(),
         json=_base_payload(
-            mode="quick_list",
-            product_id=None,
+            mode="attach",
             title_override="Fabric sold by half metre",
             sale_unit="metre",
             unit_step_milli=500,
@@ -357,6 +353,8 @@ def test_class_d_draft_persists_used_disclosure(
             mode="quick_list",
             product_id=None,
             title_override="Pre-owned carved chair",
+            category_id=CATEGORY_ID,
+            description="Hand-carved chair with the disclosed arm scratch.",
             product_class="D",
             condition="used",
             defect_notes="Visible scratch along the left arm",
@@ -370,6 +368,8 @@ def test_class_d_draft_persists_used_disclosure(
     created = fake_client.tables["vendor_listings"].rows[-1]
     assert created["product_id"] is None
     assert created["product_class"] == "D"
+    assert created["category_id"] == CATEGORY_ID
+    assert len(created["description"]) >= 20
     assert created["condition"] == "used"
     assert created["defect_notes"] == "Visible scratch along the left arm"
 
@@ -382,6 +382,8 @@ def test_class_d_cannot_publish_before_evidence_upload(listing_client: TestClien
             mode="quick_list",
             product_id=None,
             title_override="Pre-owned carved chair",
+            category_id=CATEGORY_ID,
+            description="Hand-carved chair with the disclosed arm scratch.",
             product_class="D",
             condition="used",
             defect_notes="Visible scratch along the left arm",
@@ -430,6 +432,9 @@ def test_class_e_quick_list_persists_made_to_order_fields(
             mode="quick_list",
             product_id=None,
             title_override="Custom dining table",
+            category_id=CATEGORY_ID,
+            description="Made to order dining table with custom dimensions.",
+            publish=False,
             product_class="E",
             fulfilment_mode="made_to_order",
             lead_time_days=21,
@@ -441,6 +446,9 @@ def test_class_e_quick_list_persists_made_to_order_fields(
     created = fake_client.tables["vendor_listings"].rows[-1]
     assert created["product_id"] is None
     assert created["product_class"] == "E"
+    assert created["status"] == "draft"
+    assert created["category_id"] == CATEGORY_ID
+    assert len(created["description"]) >= 20
     assert created["fulfilment_mode"] == "made_to_order"
     assert created["lead_time_days"] == 21
     assert created["vendor_capacity_per_week"] == 3

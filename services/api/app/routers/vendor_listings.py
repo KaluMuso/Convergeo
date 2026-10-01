@@ -41,6 +41,7 @@ class ListingCreateRequest(StrictModel):
     brand: str | None = None
     spec: dict[str, Any] | None = None
     category_id: str | None = None
+    description: str | None = Field(default=None, max_length=5000)
     aliases: list[str] = Field(default_factory=list)
     title_override: str | None = None
     price_ngwee: NgweeInt
@@ -190,11 +191,7 @@ def _unique_product_slug(service_client: ServiceRoleClient, base_name: str) -> s
     for suffix in range(0, 100):
         candidate = base if suffix == 0 else f"{base}-{suffix}"
         existing = (
-            client.table("products")
-            .select("id")
-            .eq("slug", candidate)
-            .maybe_single()
-            .execute()
+            client.table("products").select("id").eq("slug", candidate).maybe_single().execute()
         )
         if _single_row(existing) is None:
             return candidate
@@ -457,12 +454,35 @@ def create_listing_for_vendor(
             },
         )
 
+    if body.mode == "quick_list":
+        if body.product_class in {"A", "B", "C"}:
+            raise AppError(
+                code="canonical_product_required",
+                message="Attach a catalogue product or create one for Classes A, B and C",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.canonicalRequired"},
+            )
+        if body.product_id is not None:
+            raise AppError(
+                code="standalone_product_class_required",
+                message="Standalone listings cannot attach a catalogue product",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.standalone_required"},
+            )
+        if not body.category_id or len((body.description or "").strip()) < 20:
+            raise AppError(
+                code="standalone_details_required",
+                message="Select a category and provide a description of at least 20 characters",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.standaloneDetailsRequired"},
+            )
+
     # Resolve the vendor-supplied category up front so the moderation screen's
     # category-block layer runs and DB-flagged prohibited categories are rejected
     # (D8) before anything is written.
     category_name: str | None = None
     resolved_commission_key: str | None = None
-    if body.mode == "new_canonical" and body.category_id:
+    if body.mode in {"new_canonical", "quick_list"} and body.category_id:
         category_name, resolved_commission_key = _load_category_commission_key(
             service_client,
             body.category_id,
@@ -470,7 +490,7 @@ def create_listing_for_vendor(
 
     guard = screen_listing(
         title=body.title_override or body.product_name,
-        description=body.brand,
+        description=" ".join(value for value in (body.brand, body.description) if value),
         category=category_name,
     )
     if not guard.allowed:
@@ -578,8 +598,31 @@ def create_listing_for_vendor(
 
     if body.mode == "quick_list":
         listing_payload["product_id"] = None
+        listing_payload["category_id"] = body.category_id
+        listing_payload["description"] = (body.description or "").strip()
 
-    listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
+    try:
+        # The database guard makes quota admission atomic across API/import writers.
+        listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
+    except Exception as exc:
+        if (
+            getattr(exc, "code", None) == "PT403"
+            and getattr(exc, "message", None) == "listing_cap_exceeded"
+        ):
+            raise AppError(
+                code="listing_cap_exceeded",
+                message="Vendor listing limit reached",
+                http_status=403,
+                details={"message_key": "vendor.caps.listing_limit"},
+            ) from exc
+        if getattr(exc, "code", None) == "23514":
+            raise AppError(
+                code="listing_policy_blocked",
+                message="This listing does not satisfy the current category or release policy",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.policyBlocked"},
+            ) from exc
+        raise
     created_listing = _single_row(listing_insert)
     if created_listing is None:
         raise AppError(

@@ -29,13 +29,13 @@ def inputs() -> dict[str, Any]:
     data: dict[str, Any] = json.loads(INPUTS.read_text())
     if data.get("schema") != "convergeo.coordinator.new-proposal.v1":
         raise RuntimeError("Unknown coordinator input contract")
-    for key, count in (("f3", 7), ("db", 26), ("ui", 6), ("normal", 258)):
+    for key, count in (("f3", 7), ("db", 26), ("review_db", 15), ("ui", 6), ("normal", 258)):
         if len(data[key]) != count or len(set(data[key])) != count:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / "supabase/migrations").glob("*.sql"))}
-    if len(actual) != 135 or actual != data["migrations"]:
-        raise RuntimeError("Qualified 135-input source inventory differs")
+    if len(actual) != 137 or actual != data["migrations"]:
+        raise RuntimeError("Qualified 137-input source inventory differs")
     if any(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != digest
            for path, digest in data["source_sha256"].items()):
         raise RuntimeError("Retained test/runner source binding differs")
@@ -266,6 +266,10 @@ class Runner(financial.Runner):
         if not self.test_gate("merchant-db", ["tests/test_vendor_stock_adjustment_db.py",
                               "tests/test_location_stock.py"], self.contract["db"]):
             raise RuntimeError("Merchant 26 DB identities incomplete")
+        if not self.test_gate("merchant-review-db",
+                              ["tests/test_merchant_review_boundaries_db.py"],
+                              self.contract["review_db"]):
+            raise RuntimeError("Merchant review database regressions incomplete")
         if not self.test_gate("merchant-normal", self.contract["normal_selectors"],
                               self.contract["normal"]):
             raise RuntimeError("Merchant 258 compatibility identities incomplete")

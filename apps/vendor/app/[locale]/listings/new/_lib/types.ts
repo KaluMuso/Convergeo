@@ -47,6 +47,7 @@ export type ListingCreatePayload = {
   brand?: string | null;
   spec?: Record<string, unknown>;
   category_id?: string;
+  description?: string;
   aliases?: string[];
   title_override?: string;
   price_ngwee: number;

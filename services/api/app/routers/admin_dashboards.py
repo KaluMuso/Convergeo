@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Protocol, cast
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
@@ -60,10 +61,22 @@ class PayoutLiabilitiesOut(BaseModel):
 
 
 class ReconciliationTileOut(BaseModel):
-    status: str = Field(description="green when clean, red when mismatches exist")
+    status: str = Field(
+        description="green for certified current evidence; red for discrepancies; otherwise unknown"
+    )
     report_id: str | None = None
     report_date: date | None = None
     has_mismatch: bool = False
+    provenance: str = "MISSING"
+    evidence_state: str = "missing"
+    expected_report_date: date | None = None
+    provider_account_id: str | None = None
+    currency: str | None = None
+    version_number: int | None = None
+    input_fingerprint: str | None = None
+    source_version: str | None = None
+    certifiable: bool = False
+    discrepancies: dict[str, Any] = Field(default_factory=dict)
 
 
 class CatalogCountsOut(BaseModel):
@@ -191,12 +204,7 @@ WHERE o.status <> 'cancelled';
 
 
 def _count_table(service_client: ServiceRoleClient, table: str) -> int:
-    response = (
-        service_client.client.table(table)
-        .select("id", count="exact")
-        .limit(0)
-        .execute()
-    )
+    response = service_client.client.table(table).select("id", count="exact").limit(0).execute()
     count = getattr(response, "count", None)
     if isinstance(count, int):
         return count
@@ -214,34 +222,87 @@ def _orders_by_status(service_client: ServiceRoleClient) -> OrdersByStatusOut:
 
 
 def _latest_reconciliation(service_client: ServiceRoleClient) -> ReconciliationTileOut:
-    response = (
-        service_client.client.table("reconciliation_reports")
-        .select("id, report_date, summary, discrepancies")
+    # Writer's daily default is the most recent completed UTC day. Read only
+    # this configured account and supported currency, not a globally newest row.
+    expected = datetime.now(UTC).date() - timedelta(days=1)
+    account = os.environ.get("LENCO_ACCOUNT_ID", "").strip()
+    if not account:
+        return ReconciliationTileOut(
+            status="unknown", evidence_state="account_unconfigured", expected_report_date=expected
+        )
+    row = _single_row(
+        service_client.client.table("reconciliation_report_versions")
+        .select("*")
+        .eq("provider_account_id", account)
+        .eq("currency", "ZMW")
+        .lte("report_date", expected.isoformat())
         .order("report_date", desc=True)
+        .order("version_number", desc=True)
         .limit(1)
         .maybe_single()
         .execute()
     )
-    row = _single_row(response)
+    provenance = "VERSIONED_ACCOUNT_BOUND"
     if row is None:
-        return ReconciliationTileOut(status="green", has_mismatch=False)
-
-    discrepancies = cast(dict[str, Any], row.get("discrepancies", {}))
-    has_mismatch = _has_discrepancies(discrepancies)
-    report_date_raw = row.get("report_date")
-    report_date: date | None
-    if isinstance(report_date_raw, str):
-        report_date = date.fromisoformat(report_date_raw)
-    elif isinstance(report_date_raw, date):
-        report_date = report_date_raw
+        row = _single_row(
+            service_client.client.table("reconciliation_reports")
+            .select("id, report_date, summary, discrepancies")
+            .lte("report_date", expected.isoformat())
+            .order("report_date", desc=True)
+            .limit(1)
+            .maybe_single()
+            .execute()
+        )
+        provenance = "LEGACY_UNVERSIONED_ACCOUNT_UNBOUND"
+    if row is None:
+        return ReconciliationTileOut(
+            status="unknown",
+            expected_report_date=expected,
+            provider_account_id=account,
+            currency="ZMW",
+        )
+    raw_date = row.get("report_date")
+    try:
+        observed = date.fromisoformat(raw_date) if isinstance(raw_date, str) else raw_date
+    except ValueError:
+        observed = None
+    summary = row.get("summary")
+    discrepancies = row.get("discrepancies")
+    valid_payload = isinstance(summary, dict) and isinstance(discrepancies, dict)
+    discrepancies = discrepancies if isinstance(discrepancies, dict) else {}
+    try:
+        mismatch = _has_discrepancies(discrepancies)
+    except (TypeError, ValueError):
+        mismatch = False
+        valid_payload = False
+    certifiable = isinstance(summary, dict) and summary.get("certifiable") is True
+    if provenance.startswith("LEGACY"):
+        state = "legacy_unbound"
+    elif not valid_payload or not isinstance(observed, date):
+        state = "invalid"
+    elif observed != expected:
+        state = "stale"
+    elif mismatch:
+        state = "unresolved"
+    elif not certifiable:
+        state = "noncertifying"
     else:
-        report_date = None
-
+        state = "current_clean"
     return ReconciliationTileOut(
-        status="red" if has_mismatch else "green",
+        status="red" if mismatch else "green" if state == "current_clean" else "unknown",
         report_id=str(row["id"]),
-        report_date=report_date,
-        has_mismatch=has_mismatch,
+        report_date=observed,
+        has_mismatch=mismatch,
+        provenance=provenance,
+        evidence_state=state,
+        expected_report_date=expected,
+        provider_account_id=row.get("provider_account_id"),
+        currency=row.get("currency"),
+        version_number=row.get("version_number"),
+        input_fingerprint=row.get("input_fingerprint"),
+        source_version=row.get("source_version"),
+        certifiable=certifiable,
+        discrepancies=discrepancies,
     )
 
 
@@ -265,9 +326,7 @@ def _ai_monthly_cap_usd(service_client: ServiceRoleClient) -> int:
 
 
 def _funnel_snapshot(service_client: ServiceRoleClient) -> FunnelSnapshotOut:
-    checkout_response = (
-        service_client.client.table("checkout_groups").select("status").execute()
-    )
+    checkout_response = service_client.client.table("checkout_groups").select("status").execute()
     checkout_started = 0
     checkout_completed = 0
     for row in _rows(checkout_response):

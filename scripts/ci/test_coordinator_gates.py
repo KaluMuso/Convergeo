@@ -21,7 +21,8 @@ class CoordinatorControls(unittest.TestCase):
         assert broad is not None
         self.assertEqual(re.findall(r"--ignore=([^\s]+)", broad.group()), [
             "tests/test_authz_matrix.py", "tests/test_f1_payout_real_stack.py",
-            "tests/test_vendor_stock_adjustment_db.py"])
+            "tests/test_vendor_stock_adjustment_db.py",
+            "tests/test_merchant_review_boundaries_db.py"])
         self.assertIn("run: python scripts/ci/run_financial_real_stack.py", workflow)
         self.assertIn("gate: [f3, merchant, curated]", workflow)
         self.assertIsNone(re.search(r"(?m)^\s+continue-on-error:", workflow))
@@ -30,9 +31,10 @@ class CoordinatorControls(unittest.TestCase):
         contract = gates.inputs()
         self.assertEqual(len(contract["f3"]), 7)
         self.assertEqual(len(contract["db"]), 26)
+        self.assertEqual(len(contract["review_db"]), 15)
         self.assertEqual(len(contract["ui"]), 6)
         self.assertEqual(len(contract["normal"]), 258)
-        self.assertEqual(len(contract["migrations"]), 135)
+        self.assertEqual(len(contract["migrations"]), 137)
         self.assertEqual(sum(map(len, financial.financial_identities().values())), 804)
 
     def test_local_host_rejected_before_resource_allocation(self) -> None:
@@ -66,7 +68,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(prefix), 131)
         self.assertIn("20260929120003_adopt_existing_service_obligations.sql", prefix)
         self.assertNotIn(gates.F3_MIGRATION, prefix)
-        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 3)
+        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 5)
 
     def test_mounted_false_success_partial_skip_duplicate_and_exit_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

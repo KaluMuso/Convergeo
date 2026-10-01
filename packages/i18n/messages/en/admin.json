@@ -865,7 +865,22 @@
       "drillIn": "View report details",
       "hideDrillIn": "Hide details",
       "mismatchAlert": "Ledger mismatch detected — investigate discrepancies.",
-      "cleanDay": "No discrepancies on the latest report."
+      "cleanDay": "No discrepancies on the latest report.",
+      "evidenceState": "Evidence: {state}",
+      "version": "Report version {number}",
+      "accountCurrency": "Account {account} · {currency}",
+      "states": {
+        "missing": "No report",
+        "account_unconfigured": "Provider account is not configured",
+        "legacy_unbound": "Legacy report without account or version binding",
+        "invalid": "Invalid evidence",
+        "stale": "Report is older than the expected reporting day",
+        "unresolved": "Unresolved discrepancies",
+        "noncertifying": "Evidence does not certify reconciliation",
+        "current_clean": "Current certified clean evidence"
+      },
+      "provenanceBound": "Immutable report bound to the configured provider account",
+      "provenanceLegacy": "Legacy evidence without account or version binding"
     },
     "orders": {
       "title": "Orders by status",

@@ -395,7 +395,10 @@
       "titleLabel": "Listing title",
       "titlePlaceholder": "e.g. Tomatoes per kg",
       "publish": "Publish listing",
-      "publishing": "Publishing…"
+      "publishing": "Publishing…",
+      "descriptionLabel": "Description",
+      "descriptionHelp": "Describe this offer in at least 20 characters. Include the details buyers need.",
+      "draftNotice": "Standalone offers are saved as drafts. Review the category, release policy and any required photos before publishing."
     },
     "fields": {
       "priceLabel": "Your price (ZMW)",
@@ -453,7 +456,8 @@
     "success": {
       "live": "Listing is live!",
       "moderation": "Submitted for review — we will notify you on WhatsApp.",
-      "evidence": "Draft saved. Add evidence photos before publishing."
+      "evidence": "Draft saved. Add evidence photos before publishing.",
+      "draft": "Draft saved. Review the listing before publishing."
     },
     "errors": {
       "required": "This field is required",
@@ -467,7 +471,10 @@
       "authRequired": "Sign in to manage listings.",
       "permissionDenied": "You do not have access to this vendor catalogue.",
       "notFound": "That listing was not found for your shop.",
-      "retryHint": "Check your connection, then try again."
+      "retryHint": "Check your connection, then try again.",
+      "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
+      "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
+      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
     },
     "import": {
       "meta": {
@@ -514,7 +521,8 @@
         "attached": "Attached: {name}",
         "matched": "Matches: {name}",
         "detach": "Change",
-        "standalone": "No match — lists on its own"
+        "standalone": "No match — lists on its own",
+        "selectionRequired": "Select an active catalogue product before importing."
       },
       "apply": {
         "button": "Apply import",
@@ -532,7 +540,28 @@
         "unitChange": "An import cannot change the units or minimum steps of an existing SKU.",
         "productChange": "This SKU is already linked to a different product.",
         "wholesaleEligibility": "Wholesale requires current approval at tier T2 and at least one valid price tier.",
-        "invalidListing": "These changes are not valid for the existing listing. Review its listing fields."
+        "invalidListing": "These changes are not valid for the existing listing. Review its listing fields.",
+        "invalidTiers": "Price tiers must use positive quantities and strictly decreasing prices.",
+        "invalidBoolean": "Use true or false for boolean fields.",
+        "missingField": "Complete the required CSV fields, including SKU, title, price and tracked stock.",
+        "invalidInteger": "Prices, stock counts and quantity fields must be whole numbers.",
+        "invalidMinimum": "Prices and quantity steps must be positive; stock cannot be negative.",
+        "invalidProduct": "Select an active catalogue product.",
+        "unknownColumns": "The CSV has unsupported columns or extra cells. Use the downloaded template.",
+        "invalidStockMode": "Choose tracked or always available stock.",
+        "invalidCondition": "Choose new or refurbished condition.",
+        "invalidStatus": "Choose draft, active or paused status.",
+        "emptyCsv": "The CSV file is empty.",
+        "missingHeaders": "The CSV must include all required column headers.",
+        "rowLimit": "Import at most 500 data rows at a time.",
+        "prohibitedListing": "This item is prohibited. Review the listing content.",
+        "duplicateSku": "Each SKU must appear only once in the file.",
+        "listingCap": "Your listing limit has been reached. Update existing SKUs or review your verification tier.",
+        "fileSize": "The CSV must be no larger than 512,000 bytes.",
+        "invalidEncoding": "Save the CSV using UTF-8 encoding.",
+        "canonicalRequired": "Select a catalogue product before importing this new SKU.",
+        "databaseFailure": "This row could not be saved. Please try again or contact support.",
+        "unknownError": "This row needs review. Check the CSV fields and try again."
       }
     },
     "manage": {

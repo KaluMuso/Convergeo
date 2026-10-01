@@ -475,7 +475,9 @@
     "20260930170000_reconciliation_report_versions.sql": "a94fb1fac2187fda1f1007d88b7b0928a5be387a8fb6a5e68c4d3edec23a074e",
     "20260930170100_vendor_stock_adjustment_authority.sql": "3aec8abb59a58e9fdf64e75657657a52572215cf0acc8398cfd28f30e5f21437",
     "20260930203000_service_completion_variable_disambiguation.sql": "4a07d3df406022e7e62c5d744f7055a32962ff4b6fbfad2dc526bd137c0779ba",
-    "20260930203100_service_adoption_ambiguity_holds.sql": "bffb8217f2ab6425b1cb17855e7dabb2ac7c83baac451886fcf04f13e4daa486"
+    "20260930203100_service_adoption_ambiguity_holds.sql": "bffb8217f2ab6425b1cb17855e7dabb2ac7c83baac451886fcf04f13e4daa486",
+    "20261001120000_merchant_protected_listing_admission.sql": "301466ad39d1bb0655943bf86fc7ef8366660d35c0a1455b537719114ef66d46",
+    "20261001120100_stock_claim_replay_authority.sql": "b5e415a00ee2f41030c634e926b1611575433c8bb6aa59493835386fcf0743a0"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -491,7 +493,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "e68d9f4163f1b5abec85481412a764dafb3d4bcece66da83dcb132efcc87310f",
-    "scripts/ci/run_financial_real_stack.py": "5ca2b7284541492e8330339d6625f04e71689c63f598f85d134a482559ae803a",
+    "scripts/ci/run_financial_real_stack.py": "fec133d55eace685c7b67858da5683af8f03a7f30e1f2fe1914d2c67596cb8c6",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "5558c87a1f11661e7dbb4c7071092f36cfa028eaf0e7a6b3ba9999b9079edead",
@@ -507,27 +509,27 @@
     "services/api/tests/rls/test_force_rls_d32.py": "e048db6d6377bc08baadc7e7315972cf865399644b2b7381c7752ff6ea9be76a",
     "services/api/tests/rls/test_intake_force_rls.py": "5538c60345b6298dd4cd2dfc3822f1bfe0fec3782f7642dfbfd7ea5943d48dc3",
     "services/api/tests/rls/test_launch_table_access.py": "67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f",
-    "services/api/tests/rls/test_matrix.py": "a8860e16343e8cb3656174dced1644650784dc7f2d24c62947b63a33a4f30b33",
+    "services/api/tests/rls/test_matrix.py": "a110c3109f070ec73df88c1efe9f992aec38289bea983da075fc61dd2b2aa024",
     "services/api/tests/rls/test_no_untested_tables.py": "0b98732ac77e83dbcb94db6b968d2cd7c30da6c8b91f882134f311d27d3abaa1",
     "services/api/tests/rls/test_privileged_function_grants.py": "1249c2e2e616f2632b8a90113f6a82e67d5454b036495ba03de03747c0f7efdd",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",
     "services/api/tests/test_cart.py": "1a4ad85b3c856a184568863ed3eebaae12562f99c34fc9a8ed420a182727259f",
     "services/api/tests/test_cart_merge_price_consent.py": "ce0cf7001cf50846a4d78e0a8825b86872f29024b2b609f5669ae7e79c03fe08",
     "services/api/tests/test_checkout.py": "c2c3207fd41606a3ddf53fc344561c42605b88bacbb798877c719dcaa9afcfe7",
-    "services/api/tests/test_csv_import.py": "60e0fe811d423cb82922da0112f06142d0df63ffa453b683b9e54b2d12eadd65",
+    "services/api/tests/test_csv_import.py": "ebeaa13b3102ede13a001b78941d7d8b4afc1cd1946c51d78a1ca569b1d80ae3",
     "services/api/tests/test_db_adapter.py": "33a45e139093aaafaf2f81668a4c47e14cf17460ea659d8c89ba45fbb04bad75",
     "services/api/tests/test_event_release.py": "735409cf11645e51ed87f02aa36f2265ad9693fb236beb75afb9e30ed636e156",
     "services/api/tests/test_f1_payout_real_stack.py": "aadad0e4f550e8d18148101f360513f40e2abf2c6b9bd1b059d90143bb68c0f4",
     "services/api/tests/test_job_completion.py": "9e0a1280b0b671aa46f96ad533aa779b30d7620166dd7105adbd58bad8c0ca75",
     "services/api/tests/test_kyc_state.py": "d21615ea47e9b11b9c5ff9f857462d5e1fda75a806d0d92e5383bebe2f4c83ff",
     "services/api/tests/test_listing_below_median.py": "9f7e814f2c4c58f088f6f41ade21790edeede53b32e928e7801ad48db3d08796",
-    "services/api/tests/test_listing_create.py": "9f63f280585c7175bb03d49dfea95729fa97d29e466e585720ec5b4aeba7b05a",
-    "services/api/tests/test_listing_manage.py": "390c16d974909e030ffbdf831ae4e35c50b6815f8c2a1cf6579a6f38c618a93c",
+    "services/api/tests/test_listing_create.py": "adcde10300a94c9c03e4c0b0435d2964a1952ec63f829ef9203b7856240229c9",
+    "services/api/tests/test_listing_manage.py": "c793e4f67b2cb4625daa86050e75c7f4d315eaf6f7f5093fbda1b709ea2be546",
     "services/api/tests/test_listing_pricing.py": "4fd1cff67152052fa9e49f84a69f8011ad058e568affe22cbd03bd87a81bd5ce",
     "services/api/tests/test_location_stock.py": "9695617bfcb9813bd788aaa3b12bf9806895fe5c43ab4cafde8c83332f7d64e8",
     "services/api/tests/test_order_state.py": "7b88b1218d35c61bfb11b916a1621220d7a3adf1fa2d7c33d93dc203c0314382",
     "services/api/tests/test_product_class_cart.py": "93bdf90c83a55471000e0aa0846611529def547eb8f593995b56b4cfc3299377",
-    "services/api/tests/test_prohibited.py": "47b2114c0ddd7ca5804fb8a08bd646180d9781c19577e00047c0441b06313911",
+    "services/api/tests/test_prohibited.py": "a1b708a5c8be267ad6435430525b4cf569ccf59a4fdac74020fb94c84367dac9",
     "services/api/tests/test_review_aggregate.py": "552c6e4dbde3c21b7635db758a0ef87f83d0a175cd20adcefb8aef273a777743",
     "services/api/tests/test_search_analytics.py": "80c4da7f41058131647448501206174020ddf1e785eacb27830880f3a347c91e",
     "services/api/tests/test_service_booking.py": "17a3544168d0ffd002b84ee6350b7a048f2ee6a03fbde9126a1351abaaa70e86",
@@ -540,7 +542,8 @@
     "services/api/tests/test_vendor_analytics.py": "57c16d6b817b39c52955fa1983fbb104384c43f170f0dcd9eea375264e20df1b",
     "services/api/tests/test_vendor_listing_schema.py": "58ce16f654e99bd9c004e14b2834c21a8208e58d27e60fc7e64ea65c9d146fc1",
     "services/api/tests/test_vendor_stock_adjustment.py": "fcd24d0e9b5c68e208967620513906eccdc8122d23323b10ebb4c1dd3ab08adb",
-    "services/api/tests/test_vendor_stock_adjustment_db.py": "4da1a95be8d73b4feccc64d0a4628ab162292b1d611a6c2f28c47414e3c3f281"
+    "services/api/tests/test_vendor_stock_adjustment_db.py": "4da1a95be8d73b4feccc64d0a4628ab162292b1d611a6c2f28c47414e3c3f281",
+    "services/api/tests/test_merchant_review_boundaries_db.py": "55d29a0248cf1e60f280a8379462d2f27ccd32d0316b784f4005242618cbd7b2"
   },
   "critical": [
     "tests/rls/test_cart_merge_atomic.py::test_service_role_works_through_real_postgrest_and_anon_is_denied",
@@ -1443,5 +1446,22 @@
       "tests/test_service_booking.py::test_book_own_service_rejected",
       "tests/test_service_booking.py::test_book_requires_idempotency_key"
     ]
-  }
+  },
+  "review_db": [
+    "tests/test_merchant_review_boundaries_db.py::test_browser_roles_cannot_seed_stock_or_bypass_wholesale[33333333-3333-3333-3333-333333333333]",
+    "tests/test_merchant_review_boundaries_db.py::test_browser_roles_cannot_seed_stock_or_bypass_wholesale[44444444-4444-4444-4444-444444444444]",
+    "tests/test_merchant_review_boundaries_db.py::test_minimum_is_frozen_and_price_only_service_save_passes[each-1000-1]",
+    "tests/test_merchant_review_boundaries_db.py::test_minimum_is_frozen_and_price_only_service_save_passes[kg-250-4]",
+    "tests/test_merchant_review_boundaries_db.py::test_effective_client_acl_and_definer_catalog",
+    "tests/test_merchant_review_boundaries_db.py::test_atomic_admission_waits_and_recounts_last_slot",
+    "tests/test_merchant_review_boundaries_db.py::test_same_claim_replay_and_release_conserve[False]",
+    "tests/test_merchant_review_boundaries_db.py::test_same_claim_replay_and_release_conserve[True]",
+    "tests/test_merchant_review_boundaries_db.py::test_duplicate_claim_race_and_changed_branch_no_double_consume",
+    "tests/test_merchant_review_boundaries_db.py::test_replay_vs_release_or_sweep_conserves[False]",
+    "tests/test_merchant_review_boundaries_db.py::test_replay_vs_release_or_sweep_conserves[True]",
+    "tests/test_merchant_review_boundaries_db.py::test_claim_adjustment_release_conservation",
+    "tests/test_merchant_review_boundaries_db.py::test_claim_failure_rolls_back_identity_and_stock",
+    "tests/test_merchant_review_boundaries_db.py::test_real_cart_merge_and_claim_preserve_lock_order[True]",
+    "tests/test_merchant_review_boundaries_db.py::test_real_cart_merge_and_claim_preserve_lock_order[False]"
+  ]
 }
