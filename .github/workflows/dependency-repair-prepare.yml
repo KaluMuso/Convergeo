@@ -29,7 +29,7 @@ jobs:
           import hashlib, json, pathlib, subprocess
           root = pathlib.Path.cwd()
           base = '8bacd9c51fb4edd42838c3089128976026d525f3'
-          assert subprocess.check_output(['git','rev-parse','HEAD^'], text=True).strip() == base
+          subprocess.run(['git','merge-base','--is-ancestor',base,'HEAD'],check=True)
           changed = subprocess.check_output(['git','diff','--name-only',base,'HEAD'], text=True).splitlines()
           assert changed == ['.github/workflows/dependency-repair-prepare.yml'], changed
           for p in ('vercel.json','apps/customer/vercel.json','apps/vendor/vercel.json','apps/admin/vercel.json'):
@@ -67,6 +67,81 @@ jobs:
           p.write_text(json.dumps(document,indent=2)+'\n')
           PY
           pnpm install --lockfile-only --ignore-scripts
+          services/api/.venv/bin/python - <<'PY'
+          """Keep resolver-generated audited records, retaining unrelated baseline peers."""
+          from __future__ import annotations
+          import copy
+          import re
+          from typing import Any
+          import yaml
+
+          PACKAGE_KEYS = {
+              'fast-uri@3.1.6', 'fast-uri@3.1.7',
+              'brace-expansion@1.1.18', 'brace-expansion@1.1.20',
+              'brace-expansion@5.0.9', 'brace-expansion@5.0.11',
+          }
+          SNAPSHOT_KEYS = PACKAGE_KEYS | {'ajv@8.20.0', 'minimatch@10.2.5', 'minimatch@10.2.6', 'minimatch@3.1.5'}
+          UPDATES = {
+              'fast-uri': ('3.1.6', '3.1.7'),
+              'minimatch@10.2.5>brace-expansion': ('5.0.9', '5.0.11'),
+              'minimatch@10.2.6>brace-expansion': ('5.0.9', '5.0.11'),
+              'minimatch@3.1.5>brace-expansion': ('1.1.18', '1.1.20'),
+          }
+
+          def section(text: str, name: str) -> tuple[int, int, dict[str, str]]:
+              start = text.index(name + ':\n')
+              body_start = start + len(name) + 2
+              following = re.search(r'(?m)^\S[^\n]*:', text[body_start:])
+              end = body_start + following.start() if following else len(text)
+              body = text[body_start:end]
+              matches = list(re.finditer(r'(?m)^  ([^ \n][^\n]*?):(?: [^\n]*)?\n', body))
+              records = {}
+              for i, match in enumerate(matches):
+                  key = next(iter(yaml.safe_load(match.group(1) + ': null\n')))
+                  stop = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+                  assert key not in records, key
+                  records[key] = body[match.start():stop]
+              return start, end, records
+
+          def normalize(old_text: str, generated: str) -> str:
+              old: dict[str, Any] = yaml.safe_load(old_text)
+              new: dict[str, Any] = yaml.safe_load(generated)
+              changed_packages = {k for k in old['packages'].keys() | new['packages'].keys()
+                                  if old['packages'].get(k) != new['packages'].get(k)}
+              assert changed_packages <= PACKAGE_KEYS, sorted(changed_packages)
+              expected = copy.deepcopy(old)
+              result = old_text
+              for name, allowed in [('snapshots', SNAPSHOT_KEYS), ('packages', PACKAGE_KEYS)]:
+                  start, end, records = section(result, name)
+                  _, _, resolved = section(generated, name)
+                  assert set(records) == set(old[name]), name
+                  assert set(resolved) == set(new[name]), name
+                  for key in allowed:
+                      if key in resolved:
+                          records[key] = resolved[key]
+                          expected[name][key] = new[name][key]
+                      else:
+                          records.pop(key, None)
+                          expected[name].pop(key, None)
+                  result = result[:start] + name + ':\n\n' + ''.join(records[k] for k in sorted(records)) + result[end:]
+              for key, (before, after) in UPDATES.items():
+                  assert old['overrides'][key] == before and new['overrides'][key] == after, key
+                  line = f'  {key}: {before}\n'
+                  assert result.count(line) == 1, key
+                  result = result.replace(line, f'  {key}: {after}\n')
+                  expected['overrides'][key] = after
+              assert yaml.safe_load(result) == expected
+              return result
+          import pathlib, subprocess
+          out=pathlib.Path('dependency-repair-evidence')
+          path=pathlib.Path('pnpm-lock.yaml')
+          generated=path.read_text()
+          (out/'resolver-generated-pnpm-lock.yaml').write_text(generated)
+          (out/'resolver-generated.patch').write_bytes(subprocess.check_output(['git','diff','--binary','--full-index','--','package.json','pnpm-lock.yaml']))
+          old=subprocess.check_output(['git','show','HEAD:pnpm-lock.yaml'],text=True)
+          path.write_text(normalize(old, generated))
+          assert yaml.safe_load(path.read_text())['importers']==yaml.safe_load(old)['importers']
+          PY
           (cd services/api && uv lock --upgrade-package pyjwt==2.15.0 --upgrade-package urllib3==2.8.0)
           pnpm install --frozen-lockfile
           (cd services/api && uv sync --dev --frozen)
@@ -94,8 +169,10 @@ jobs:
           for section in ('packages','snapshots'):
               previous=old_js[section]; current=new_js[section]
               keys={k for k in previous.keys()|current.keys() if previous.get(k)!=current.get(k)}
-              allowed=('fast-uri@','brace-expansion@','minimatch@','ajv@','uri-js@')
-              assert all(k.startswith(allowed) for k in keys),(section,sorted(keys))
+              allowed={'fast-uri@3.1.6','fast-uri@3.1.7','brace-expansion@1.1.18','brace-expansion@1.1.20','brace-expansion@5.0.9','brace-expansion@5.0.11'}
+              if section == 'snapshots':
+                  allowed |= {'ajv@8.20.0','minimatch@10.2.5','minimatch@10.2.6','minimatch@3.1.5'}
+              assert keys <= allowed,(section,sorted(keys))
               delta[section]=sorted(keys)
           patch=subprocess.check_output(['git','diff','--binary','--full-index','--',*expected])
           (out/'dependency-repair.patch').write_bytes(patch)
