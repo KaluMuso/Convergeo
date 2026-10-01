@@ -467,7 +467,9 @@
       "template": {
         "heading": "Télécharger le modèle",
         "body": "Utilisez notre modèle CSV avec des exemples de lignes. Les prix sont en ngwee (nombre entier). Le SKU est votre code unique par annonce. Laissez product_id vide pour obtenir des suggestions de correspondance au catalogue dans l'aperçu.",
-        "download": "Télécharger le modèle CSV"
+        "download": "Télécharger le modèle CSV",
+        "stockNote": "Les imports définissent le stock initial des nouveaux SKU. Réimporter un SKU existant conserve son stock actuel, son mode et ses unités, sans remettre en stock les unités réservées ou vendues.",
+        "unitsHelp": "Les prix et le stock sont exprimés par palier de vente. Pour des paliers de 250 g, utilisez sale_unit kg et unit_step_milli 250 ; min_steps 4 indique un minimum de 1 kg. Les tarifs de gros sont réservés aux acheteurs professionnels vérifiés et exigent des unités each."
       },
       "upload": {
         "heading": "Importer un CSV",
@@ -484,7 +486,8 @@
         "details": "Détails",
         "ok": "OK",
         "failed": "Échec",
-        "imported": "Importée"
+        "imported": "Importée",
+        "stockPreserved": "Annonce mise à jour ; le stock existant et son mode ont été conservés."
       },
       "preview": {
         "previewButton": "Aperçu des lignes",
@@ -507,7 +510,15 @@
         "uploadFailed": "Échec de l'importation. Vérifiez votre fichier et réessayez.",
         "previewFailed": "Impossible de vérifier votre fichier. Veuillez réessayer.",
         "no_file": "Un fichier CSV est requis",
-        "no_payload": "Fournissez un fichier CSV ou des lignes JSON"
+        "no_payload": "Fournissez un fichier CSV ou des lignes JSON",
+        "templateFailed": "Impossible de télécharger le modèle. Veuillez réessayer.",
+        "invalidUnits": "Vérifiez l’unité de vente, le pas de quantité et la quantité minimale. Les unités mesurées ne peuvent pas utiliser les tarifs de gros.",
+        "duplicateHeaders": "Chaque nom de colonne CSV doit être unique.",
+        "notEditable": "Cette annonce existante ne peut pas être modifiée par importation.",
+        "unitChange": "Une importation ne peut pas modifier les unités ou le nombre minimal de pas d’un SKU existant.",
+        "productChange": "Ce SKU est déjà associé à un autre produit.",
+        "wholesaleEligibility": "La vente en gros nécessite une approbation T2 en cours et au moins un palier de prix valide.",
+        "invalidListing": "Ces modifications ne sont pas valides pour cette annonce. Vérifiez ses champs."
       }
     },
     "manage": {
@@ -575,7 +586,29 @@
         "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
       },
       "emptyTitle": "Aucune annonce",
-      "statusLabel": "Statut"
+      "statusLabel": "Statut",
+      "stock": {
+        "heading": "Ajuster le stock disponible",
+        "help": "Saisissez une variation en pas de vente, pas un total physique compté. Les unités réservées sont déjà exclues. Les unités et le mode de stock sont fixes. La création de stocks par agence nécessite le responsable du stock.",
+        "refresh": "Actualiser la disponibilité",
+        "units": "Unité : {unit} ; chaque pas vaut {step}/1000 de cette unité.",
+        "branch": "Agence",
+        "choose": "Choisir une agence",
+        "inactive": "Inactive",
+        "pooled": "Stock mutualisé disponible : {qty}",
+        "delta": "Variation (+ reçu / − retiré)",
+        "reason": "Motif",
+        "retry": "Réessayer la même opération",
+        "apply": "Appliquer la variation",
+        "saved": "Enregistré : {old} → {next} pas disponibles. Opération : {id}.",
+        "invalid": "Choisissez une agence active, une variation entière non nulle et un motif.",
+        "conflict": "Ajustement refusé. Actualisez la disponibilité, vérifiez l’agence et les unités, puis soumettez un nouvel ajustement.",
+        "retrySame": "Résultat incertain. Réessayez la même opération pour obtenir son résultat enregistré ; ne créez pas un autre ajustement.",
+        "loadFailed": "Impossible de charger la disponibilité. Réessayez avec Actualiser.",
+        "storageFailed": "Impossible de conserver l’opération pour la réessayer sans doublon. Activez le stockage de session.",
+        "notTracked": "Cette annonce n’utilise pas de stock suivi.",
+        "authorityRequired": "Utilisez la section d’ajustement du stock. Le stock existant, les unités et le mode de stock ne peuvent pas être remplacés dans cet éditeur."
+      }
     },
     "kycGate": {
       "title": "Vérification en cours",

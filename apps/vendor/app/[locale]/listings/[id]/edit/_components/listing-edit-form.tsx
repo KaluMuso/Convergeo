@@ -20,6 +20,8 @@ import { Badge, Button, FormField, Input, Spinner, Switch } from "../../../new/_
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
 
+import { StockEditor } from "./stock-editor";
+
 type ListingEditFormProps = {
   locale: string;
   listingId: string;
@@ -184,16 +186,39 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     };
   }, [listingId, manageClient, reloadKey, session, sessionLoading]);
 
-  const buildPriceTiers = (): PriceTier[] | undefined => {
+  const buildPriceTiers = (): PriceTier[] | null => {
     if (!fieldValues?.wholesale) {
-      return undefined;
+      return null;
     }
-    return tiers
-      .filter((tier) => tier.minQty && isValidZmwDecimal(tier.priceZmw))
+    if (
+      tiers.length === 0 ||
+      tiers.some(
+        (tier) =>
+          !/^[1-9]\d*$/.test(tier.minQty.trim()) ||
+          !Number.isSafeInteger(Number(tier.minQty)) ||
+          !isValidZmwDecimal(tier.priceZmw),
+      )
+    ) {
+      return null;
+    }
+    const parsed = tiers
       .map((tier) => ({
         min_qty: Number(tier.minQty),
         price_ngwee: zmwDecimalToNgwee(tier.priceZmw),
-      }));
+      }))
+      .sort((a, b) => a.min_qty - b.min_qty);
+    if (
+      parsed.some((tier, index) => {
+        const previous = parsed[index - 1];
+        return (
+          previous !== undefined &&
+          (tier.min_qty <= previous.min_qty || tier.price_ngwee >= previous.price_ngwee)
+        );
+      })
+    ) {
+      return null;
+    }
+    return parsed;
   };
 
   const handleSave = async () => {
@@ -203,6 +228,11 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     const validationError = validateListingFields(fieldValues, fieldLabels);
     if (validationError) {
       setError(validationError);
+      return;
+    }
+    const priceTiers = buildPriceTiers();
+    if (fieldValues.wholesale && priceTiers === null) {
+      setError(t("listings.errors.invalid_tiers"));
       return;
     }
     if (
@@ -245,11 +275,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         fulfilment_mode: fieldValues.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
-        stock_mode: fieldValues.stockMode,
-        stock_qty: parsed.stockQty,
         wholesale: fieldValues.wholesale,
         moq: parsed.moq,
-        price_tiers: buildPriceTiers(),
+        price_tiers: priceTiers,
         returnable,
         return_window_hours: returnable ? Number(returnWindowHours) : null,
       });
@@ -257,6 +285,19 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         ...response.listing,
         images: response.listing.images ?? current?.images,
       }));
+      // The available quantity may have changed while a price edit was open.
+      // Keep the next save from reintroducing the old stock value.
+      setFieldValues((current) =>
+        current
+          ? {
+              ...current,
+              stockMode: response.listing.stock_mode,
+              stockQty:
+                response.listing.stock_qty === null ? "" : String(response.listing.stock_qty),
+            }
+          : current,
+      );
+      setTiers(tiersFromListing(response.listing));
       setNotice(
         response.cart_revalidation?.has_changes
           ? t("listings.manage.edit.priceChangedNotice")
@@ -392,6 +433,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       ) : null}
 
       <ListingFields
+        inventoryReadOnly
         values={fieldValues}
         onChange={(patch) =>
           setFieldValues((current) => (current ? { ...current, ...patch } : current))
@@ -400,6 +442,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         labels={fieldLabels}
         allowStandaloneClasses={listing.product_id === null}
       />
+
+      <StockEditor listingId={listingId} client={manageClient} ownerId={session?.user.id ?? ""} />
 
       <FormField
         label={t("listings.manage.edit.compareAtLabel")}

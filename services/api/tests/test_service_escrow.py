@@ -32,6 +32,17 @@ from tests.rls.conftest import (
     seed_matrix_fixtures,
 )
 
+
+@pytest.fixture(autouse=True)
+def capture_accept_sql(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    from app.services.rfq import engagement
+    from tests.financial_observed_sql import capture_native_sql
+
+    monkeypatch.setattr(
+        engagement, "run_sql_script", capture_native_sql(request, label="rfq_accept")
+    )
+
+
 CUSTOMER_A = "11111111-1111-1111-1111-111111111111"
 OTHER_CUSTOMER = "22222222-2222-2222-2222-222222222222"
 

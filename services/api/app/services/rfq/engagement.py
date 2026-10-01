@@ -397,12 +397,14 @@ INSERT INTO public.order_items (
 );
 INSERT INTO public.order_item_services (order_item_id, job_id, quote_id)
 VALUES ({item_sql}, {job_sql}, {quote_sql});
-SELECT public.create_service_payment_obligations(
- {order_sql}, {job_sql}, {customer_sql}, {total_job_ngwee}, {deposit_ngwee});
 UPDATE public.job_quotes SET status = 'accepted'
   WHERE id = {quote_sql} AND status = 'submitted';
 UPDATE public.jobs SET status = 'accepted'
   WHERE id = {job_sql} AND status IN ('open', 'quoted');
+-- The obligation function validates the accepted quote. These updates and
+-- obligation creation remain inside the same BEGIN/COMMIT transaction.
+SELECT public.create_service_payment_obligations(
+ {order_sql}, {job_sql}, {customer_sql}, {total_job_ngwee}, {deposit_ngwee});
 INSERT INTO public.notification_outbox (dedupe_key, channel, template, payload, status)
 VALUES ({sql_literal(dedupe_key)}, '{OUTBOX_CHANNEL}', {sql_literal(ACCEPT_OUTBOX_EVENT)},
   {_sql_json(payload)}::jsonb, 'pending')

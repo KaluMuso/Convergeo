@@ -185,9 +185,7 @@ def _seed_base(fake: FakeSupabaseClient, *, kyc_tier: int = 1, listing_count: in
             "payout_velocity": {"max_payouts_per_day": 1, "max_amount_ngwee_per_day": 100_000},
         }
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE}
-    )
+    fake.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE})
     for index in range(listing_count):
         fake.tables["vendor_listings"].rows.append(
             {
@@ -215,6 +213,7 @@ def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) ->
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.deps.get_supabase_client", lambda: iter([service_wrapper]))
     monkeypatch.setattr("app.supabase_client.get_supabase_service_client", lambda: service_wrapper)
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service_wrapper)
     return service_wrapper
 
 

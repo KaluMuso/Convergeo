@@ -34,6 +34,17 @@ from tests.rls.conftest import (
     seed_matrix_fixtures,
 )
 
+
+@pytest.fixture(autouse=True)
+def capture_accept_sql(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    from app.services.rfq import engagement
+    from tests.financial_observed_sql import capture_native_sql
+
+    monkeypatch.setattr(
+        engagement, "run_sql_script", capture_native_sql(request, label="rfq_accept")
+    )
+
+
 CUSTOMER_A = "11111111-1111-1111-1111-111111111111"
 OTHER_CUSTOMER = "22222222-2222-2222-2222-222222222222"
 STRANGER = "33333333-3333-3333-3333-333333333333"
@@ -51,15 +62,16 @@ _SERVICE = _ServiceWrapper()
 
 
 def _seed_platform_accounts(conn: PgConn) -> None:
-    conn.run(
+    result = conn.run(
         f"""
         INSERT INTO public.ledger_accounts (id, kind) VALUES
           ('{PLATFORM_CASH_ID}', 'platform_cash'),
           ('{ESCROW_ID}', 'escrow'),
           ('{COMMISSION_ID}', 'commission_revenue')
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT DO NOTHING;
         """
     )
+    assert result.ok, result.error
 
 
 def _seed_vendor_payable(conn: PgConn, vendor_id: str) -> None:
@@ -162,6 +174,17 @@ def _fund_required_legs(
     if acknowledge:
         pending = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert pending.status == "awaiting_payment" and not pending.released
+    else:
+        # A legacy payable marker permits settlement of an old in-flight
+        # collection, but is not buyer consent and cannot permit new initiation
+        # or completion. Match the authoritative F2 legacy-recovery fixture.
+        legacy = conn.run_script(f"""BEGIN;
+          UPDATE public.service_payment_obligations SET work_acknowledged_at=now()
+            WHERE order_id='{accepted.order_id}';
+          INSERT INTO public.audit_log(actor,action,entity_type,entity_id,after)
+            VALUES (NULL,'job.work_acknowledged','job','{job_id}','{{"system":true}}');
+          COMMIT;""")
+        assert legacy.ok, legacy.error
     rows = conn.run(
         f"SELECT checkout_group_id::text || '|' || amount_ngwee::text "
         f"FROM public.service_payment_obligations WHERE order_id='{accepted.order_id}';"
@@ -187,6 +210,7 @@ def _fund_required_legs(
             'synthetic service receipt','{observation}'::jsonb);
         """)
         assert result.ok, result.error
+        assert result.rows and json.loads(result.rows[-1])["result"] == "applied"
 
 
 def _order_status(conn: PgConn, order_id: str) -> str:
@@ -392,7 +416,8 @@ class TestAutoConfirmWindow:
             ack = db.run(
                 "SELECT count(*)::text FROM public.audit_log "
                 f"WHERE entity_type='job' AND entity_id='{job_id}' "
-                "AND action='job.work_acknowledged';"
+                "AND action='job.work_acknowledged' "
+                f"AND actor='{CUSTOMER_A}';"
             )
             assert ack.ok and ack.rows == ["0"]
         # Explicit buyer action, not another timer, can now permit funded finalization.
@@ -519,7 +544,13 @@ class TestCompletionCapturesCommission:
         mark_job_complete(job_id, provider)
         _fund_required_legs(db, accepted, job_id)
 
-        commission_before = account_balance_ngwee(COMMISSION_ID)
+        accounts = db.run(
+            "SELECT id::text FROM public.ledger_accounts "
+            "WHERE kind='commission_revenue' AND vendor_id IS NULL;"
+        )
+        assert accounts.ok and len(accounts.rows) == 1, accounts.error
+        commission_id = accounts.rows[0]
+        commission_before = account_balance_ngwee(commission_id)
 
         result = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert result.released is True
@@ -527,7 +558,7 @@ class TestCompletionCapturesCommission:
         captured = _commission_capture_count(db, accepted.order_id)
         assert captured >= 1
         # Commission recognized as revenue (credit-negative), exactly the snapshot value.
-        assert account_balance_ngwee(COMMISSION_ID) == commission_before - accepted.commission_ngwee
+        assert account_balance_ngwee(commission_id) == commission_before - accepted.commission_ngwee
         # Vendor net unchanged: total − commission (single snapshot).
         assert result.net_ngwee == accepted.total_job_ngwee - accepted.commission_ngwee
 
@@ -535,7 +566,7 @@ class TestCompletionCapturesCommission:
         second = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert second.already_confirmed is True
         assert _commission_capture_count(db, accepted.order_id) == captured
-        assert account_balance_ngwee(COMMISSION_ID) == commission_before - accepted.commission_ngwee
+        assert account_balance_ngwee(commission_id) == commission_before - accepted.commission_ngwee
 
 
 class TestCompletionAuditActor:

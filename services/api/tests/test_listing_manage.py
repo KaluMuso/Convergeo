@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from copy import deepcopy
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -302,6 +303,7 @@ def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) ->
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.deps.get_supabase_client", lambda: iter([service_wrapper]))
     monkeypatch.setattr("app.supabase_client.get_supabase_service_client", lambda: service_wrapper)
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service_wrapper)
     return service_wrapper
 
 
@@ -443,8 +445,7 @@ def test_tier_validation_rejects_bad_shape(manage_client: TestClient) -> None:
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_price_tiers"
     assert (
-        response.json()["error"]["details"]["message_key"]
-        == "vendor.listings.errors.invalid_tiers"
+        response.json()["error"]["details"]["message_key"] == "vendor.listings.errors.invalid_tiers"
     )
 
 
@@ -522,21 +523,121 @@ def test_list_vendor_listings_scoped_to_owner(manage_client: TestClient) -> None
     assert body[0]["compare_at_ngwee"] is None
 
 
-def test_stock_adjust_updates_qty(manage_client: TestClient) -> None:
+def test_stock_adjust_updates_qty(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The endpoint delegates the atomic mutation to the database RPC. This is an
+    # HTTP/adapter contract test; real arithmetic/replay is tested in PostgreSQL.
+    operation_id = "aaaaaaaa-1234-4234-8234-aaaaaaaaaaaa"
+    request = {
+        "operation_id": operation_id,
+        "delta": -1,
+        "reason": "damaged item",
+        "sale_unit": "each",
+        "unit_step_milli": 1000,
+    }
+    outcome = {"ok": True, "operation_id": operation_id, "old_qty": 5, "new_qty": 4}
+    rpc = MagicMock()
+    rpc.return_value.execute.return_value.data = outcome
+    monkeypatch.setattr(fake_client, "rpc", rpc, raising=False)
+    before = deepcopy(fake_client.tables["vendor_listings"].rows[0])
+
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}/stock",
+        headers=_auth_headers(),
+        json=request,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == outcome
+    rpc.assert_called_once_with(
+        "adjust_vendor_stock",
+        {
+            "p_actor_id": USER_A_ID,
+            "p_vendor_id": VENDOR_A_ID,
+            "p_listing_id": LISTING_A_ID,
+            "p_location_id": None,
+            "p_operation_id": operation_id,
+            "p_delta": -1,
+            "p_reason": "damaged item",
+            "p_sale_unit": "each",
+            "p_unit_step_milli": 1000,
+        },
+    )
+    rpc.return_value.execute.assert_called_once_with()
+    # No alternate absolute table update may accompany the atomic RPC.
+    assert fake_client.tables["vendor_listings"].rows[0] == before
+
+
+def test_stock_adjust_requires_operation_metadata_without_mutation(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    before = deepcopy(fake_client.tables["vendor_listings"].rows[0])
+    rpc = MagicMock()
+    monkeypatch.setattr(fake_client, "rpc", rpc, raising=False)
     response = manage_client.patch(
         f"/vendor/listings/{LISTING_A_ID}/stock",
         headers=_auth_headers(),
         json={"delta": -1},
     )
+    assert response.status_code == 422
+    rpc.assert_not_called()
+    assert fake_client.tables["vendor_listings"].rows[0] == before
 
+
+@pytest.mark.parametrize("tiers", [None, []])
+def test_wholesale_cannot_keep_empty_tiers(
+    manage_client: TestClient, tiers: list[dict[str, int]] | None
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"wholesale": True, "price_tiers": tiers},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_price_tiers"
+
+
+def test_explicit_null_clears_tiers_after_wholesale_is_disabled(
+    manage_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    listing = fake_client.tables["vendor_listings"].rows[0]
+    listing.update(wholesale=True, price_tiers=[{"min_qty": 5, "price_ngwee": 90_000}])
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"wholesale": False, "price_tiers": None},
+    )
     assert response.status_code == 200
-    assert response.json()["listing"]["stock_qty"] == 4
+    assert response.json()["listing"]["price_tiers"] is None
+    assert listing["price_tiers"] is None
+
+
+def test_stock_write_rejects_other_vendor_without_mutation(
+    manage_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    before = dict(fake_client.tables["vendor_listings"].rows[1])
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_B_ID}/stock", headers=_auth_headers(), json={"delta": 3}
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "forbidden"
+    assert fake_client.tables["vendor_listings"].rows[1] == before
 
 
 def test_manage_persists_per_measure_fields(
     manage_client: TestClient,
     fake_client: FakeSupabaseClient,
 ) -> None:
+    # A listing already measured in kg can change its minimum order without
+    # reinterpreting its existing physical stock as a different unit.
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    stored.update(sale_unit="kg", unit_step_milli=250)
+    stock_before = stored["stock_qty"]
     response = manage_client.patch(
         f"/vendor/listings/{LISTING_A_ID}",
         headers=_auth_headers(),
@@ -548,9 +649,29 @@ def test_manage_persists_per_measure_fields(
     assert listing["sale_unit"] == "kg"
     assert listing["unit_step_milli"] == 250
     assert listing["min_steps"] == 4
-    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert listing["stock_qty"] == stock_before
     assert stored["sale_unit"] == "kg"
     assert stored["unit_step_milli"] == 250
+    assert stored["min_steps"] == 4
+    assert stored["stock_qty"] == stock_before
+
+
+def test_manage_rejects_stocked_unit_reinterpretation_without_mutation(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    before = deepcopy(fake_client.tables["vendor_listings"].rows[0])
+    assert before["sale_unit"] == "each"
+    assert before["unit_step_milli"] == 1000
+    assert before["stock_qty"] == 5
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"sale_unit": "kg", "unit_step_milli": 250, "min_steps": 4},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "stock.authority_required"
+    assert fake_client.tables["vendor_listings"].rows[0] == before
 
 
 def test_canonical_listing_cannot_be_changed_to_class_d(

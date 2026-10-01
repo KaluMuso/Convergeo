@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "hardening/20260924-converged-implementation": false,
-      "hardening/20260925-ci-recovery": false
+      "hardening/20260925-ci-recovery": false,
+      "codex/continuity-gap-repair": false
     }
   }
 }

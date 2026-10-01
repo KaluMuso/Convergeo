@@ -15,6 +15,7 @@ from app.schemas.vendor_listing import (
     VendorListing,
     VendorListingEvidenceImage,
 )
+from app.services.inventory.adjustment import adjust_stock, stock_context
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
 from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
@@ -115,7 +116,23 @@ class ListingUpdateRequest(StrictModel):
 
 
 class StockAdjustRequest(StrictModel):
+    operation_id: str = Field(
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    )
+    location_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    )
     delta: int = Field(ge=-999_999, le=999_999)
+    reason: str = Field(min_length=1, max_length=240)
+    sale_unit: SaleUnit
+    unit_step_milli: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_adjustment(self) -> StockAdjustRequest:
+        if self.delta == 0 or not self.reason.strip():
+            raise ValueError("A nonzero delta and a reason are required")
+        return self
 
 
 class CartRevalidationSummary(StrictModel):
@@ -438,13 +455,9 @@ def _validate_strategy_listing(
             status=_effective_update_value(body, listing, "status", "draft"),
             condition=_effective_update_value(body, listing, "condition", "new"),
             sale_unit=_effective_update_value(body, listing, "sale_unit", "each"),
-            unit_step_milli=_effective_update_value(
-                body, listing, "unit_step_milli", 1000
-            ),
+            unit_step_milli=_effective_update_value(body, listing, "unit_step_milli", 1000),
             min_steps=_effective_update_value(body, listing, "min_steps", 1),
-            fulfilment_mode=_effective_update_value(
-                body, listing, "fulfilment_mode", "stocked"
-            ),
+            fulfilment_mode=_effective_update_value(body, listing, "fulfilment_mode", "stocked"),
             lead_time_days=_effective_update_value(body, listing, "lead_time_days"),
             vendor_capacity_per_week=_effective_update_value(
                 body, listing, "vendor_capacity_per_week"
@@ -456,9 +469,7 @@ def _validate_strategy_listing(
             moq=_effective_update_value(body, listing, "moq", 1),
             defect_notes=_effective_update_value(body, listing, "defect_notes"),
             evidence_images=[
-                VendorListingEvidenceImage(
-                    cloudinary_public_id=image.cloudinary_public_id
-                )
+                VendorListingEvidenceImage(cloudinary_public_id=image.cloudinary_public_id)
                 for image in _listing_images(listing)
             ],
         )
@@ -484,6 +495,22 @@ def _apply_listing_update(
 ) -> tuple[dict[str, Any], CartRevalidationSummary | None]:
     _assert_listing_editable(listing, listing_id=listing_id)
 
+    if "stock_qty" in body.model_fields_set or any(
+        field in body.model_fields_set and getattr(body, field) != listing.get(field, default)
+        for field, default in (
+            ("stock_mode", "tracked"),
+            ("sale_unit", "each"),
+            ("unit_step_milli", 1000),
+            ("fulfilment_mode", "stocked"),
+        )
+    ):
+        raise AppError(
+            "stock.authority_required",
+            "Use the intentional stock adjustment flow",
+            409,
+            {"message_key": "vendor.listings.manage.stock.authorityRequired"},
+        )
+
     if body.price_tiers is not None:
         _validate_price_tiers_ordered(body.price_tiers)
 
@@ -502,6 +529,18 @@ def _apply_listing_update(
             vendor_row=vendor,
         )
         require_wholesale_eligible(eligibility)
+        effective_tiers = (
+            body.price_tiers
+            if "price_tiers" in body.model_fields_set
+            else listing.get("price_tiers")
+        )
+        if not effective_tiers:
+            raise AppError(
+                code="invalid_price_tiers",
+                message="Wholesale listings require at least one valid price tier",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.invalid_tiers"},
+            )
 
     stock_mode = body.stock_mode or str(listing.get("stock_mode"))
     stock_qty = body.stock_qty if body.stock_qty is not None else listing.get("stock_qty")
@@ -539,10 +578,6 @@ def _apply_listing_update(
         update_payload["product_class"] = body.product_class
     if body.condition is not None:
         update_payload["condition"] = body.condition
-    if body.sale_unit is not None:
-        update_payload["sale_unit"] = body.sale_unit
-    if body.unit_step_milli is not None:
-        update_payload["unit_step_milli"] = body.unit_step_milli
     if body.min_steps is not None:
         update_payload["min_steps"] = body.min_steps
     if body.fulfilment_mode is not None:
@@ -552,16 +587,10 @@ def _apply_listing_update(
     if "vendor_capacity_per_week" in body.model_fields_set:
         update_payload["vendor_capacity_per_week"] = body.vendor_capacity_per_week
     if "defect_notes" in body.model_fields_set:
-        update_payload["defect_notes"] = (
-            body.defect_notes.strip() if body.defect_notes else None
-        )
-    if body.stock_mode is not None:
-        update_payload["stock_mode"] = body.stock_mode
-    if "stock_qty" in body.model_fields_set:
-        update_payload["stock_qty"] = body.stock_qty
+        update_payload["defect_notes"] = body.defect_notes.strip() if body.defect_notes else None
     if body.wholesale is not None:
         update_payload["wholesale"] = body.wholesale
-    if body.price_tiers is not None:
+    if "price_tiers" in body.model_fields_set:
         update_payload["price_tiers"] = _serialize_price_tiers(body.price_tiers)
     if body.moq is not None:
         update_payload["moq"] = body.moq
@@ -594,16 +623,21 @@ def _apply_listing_update(
                 details={"message_key": "vendor.listings.errors.submitFailed"},
             )
     price_changed = (
-        body.price_ngwee is not None and int(body.price_ngwee) != old_price
-    ) or body.price_tiers is not None
+        (body.price_ngwee is not None and int(body.price_ngwee) != old_price)
+        or "price_tiers" in body.model_fields_set
+        or (body.wholesale is not None and body.wholesale != bool(listing.get("wholesale")))
+    )
 
     response = (
         service_client.client.table("vendor_listings")
         .update(update_payload)
         .eq("id", listing_id)
+        .eq("vendor_id", str(vendor["id"]))
         .execute()
     )
-    updated = _single_row(response) or {**listing, **update_payload}
+    updated = _single_row(response)
+    if updated is None:
+        raise AppError(code="not_found", message="Listing not found", http_status=404)
     revalidation: CartRevalidationSummary | None = None
     if price_changed:
         revalidation = _trigger_cart_revalidation(service_client, listing_id)
@@ -695,40 +729,51 @@ async def update_vendor_listing(
     )
 
 
-@router.patch("/{listing_id}/stock", response_model=ListingUpdateResponse)
-async def adjust_listing_stock(
+@router.get("/{listing_id}/stock")
+async def get_listing_stock(
     listing_id: str,
-    body: StockAdjustRequest,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
-) -> ListingUpdateResponse:
+) -> dict[str, Any]:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     listing = _load_listing(service_client, listing_id)
     _assert_listing_owned_by_vendor(listing, str(vendor["id"]), listing_id=listing_id)
-    _assert_listing_editable(listing, listing_id=listing_id)
+    return stock_context(service_client, listing, str(vendor["id"]))
 
-    if str(listing.get("stock_mode")) != "tracked":
-        raise AppError(
-            code="validation_error",
-            message="Stock adjustments apply only to tracked listings",
-            http_status=422,
-            details={"message_key": "vendor.listings.manage.errors.stock_not_tracked"},
-        )
 
-    current_qty = int(listing.get("stock_qty") or 0)
-    new_qty = max(current_qty + body.delta, 0)
-    update_body = ListingUpdateRequest(stock_qty=new_qty)
-    updated, revalidation = _apply_listing_update(
+def _stock_owner(
+    listing_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> tuple[str, str]:
+    # Preserve owner denial before validating the adjustment body, including old
+    # clients. A foreign listing must never reach the stock mutation authority.
+    vendor = _load_vendor_for_owner(service_client, current_user.id)
+    listing = _load_listing(service_client, listing_id)
+    _assert_listing_owned_by_vendor(listing, str(vendor["id"]), listing_id=listing_id)
+    return str(vendor["id"]), current_user.id
+
+
+@router.patch("/{listing_id}/stock")
+async def adjust_listing_stock(
+    listing_id: str,
+    body: StockAdjustRequest,
+    owner: Annotated[tuple[str, str], Depends(_stock_owner)],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    # RPC rechecks owner, location, units and current mode under locks. Never
+    # precompute an absolute replacement or mutate reservations in this router.
+    return adjust_stock(
         service_client,
-        listing_id,
-        listing,
-        update_body,
-        vendor=vendor,
-    )
-    refreshed = _load_listing(service_client, listing_id)
-    return ListingUpdateResponse(
-        listing=_to_listing_summary(refreshed if refreshed else updated),
-        cart_revalidation=revalidation,
+        p_actor_id=owner[1],
+        p_vendor_id=owner[0],
+        p_listing_id=listing_id,
+        p_location_id=body.location_id,
+        p_operation_id=body.operation_id,
+        p_delta=body.delta,
+        p_reason=body.reason,
+        p_sale_unit=body.sale_unit,
+        p_unit_step_milli=body.unit_step_milli,
     )
 
 

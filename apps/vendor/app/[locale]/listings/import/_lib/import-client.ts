@@ -7,6 +7,7 @@ export type RowImportResult = {
   ok: boolean;
   errors: string[];
   listing_id: string | null;
+  stock_preserved: boolean;
 };
 
 export type ImportSummary = {
@@ -51,6 +52,20 @@ async function authHeaders(
     headers.set("Authorization", `Bearer ${token}`);
   }
   return headers;
+}
+
+/** Use the protected server template so unit and tier columns cannot drift. */
+export async function downloadTemplateCsv(
+  getToken: () => string | null | Promise<string | null>,
+): Promise<string> {
+  const baseUrl = getApiBaseUrl().replace(/\/$/, "");
+  const response = await fetch(`${baseUrl}/listings/import/template`, {
+    headers: await authHeaders(getToken, "text/csv"),
+  });
+  if (!response.ok) {
+    throw new ApiError("template_failed", "Template request failed", { status: response.status });
+  }
+  return response.text();
 }
 
 async function postJson<T>(

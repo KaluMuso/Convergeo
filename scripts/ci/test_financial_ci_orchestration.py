@@ -49,10 +49,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
     def test_reviewed_inventories_preserved(self) -> None:
         self.assertEqual(len(runner.F1_NODES), 6)
         self.assertEqual(len(set(runner.F1_NODES)), 6)
-        self.assertEqual(len(runner.FORWARD), 4)
+        self.assertEqual(len(runner.FORWARD), 8)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
-                             .read_text().splitlines()), 39)
+                             .read_text().splitlines()), 43)
 
     def test_existing_f1_fixture_is_registered_explicitly(self) -> None:
         import ast

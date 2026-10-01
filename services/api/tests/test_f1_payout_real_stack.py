@@ -198,7 +198,11 @@ def test_real_postgrest_claim_rls_and_ledger_replay(
     vendor = as_vendor.execute(
         f"SELECT count(*)::text FROM public.payouts WHERE id = '{payout_id}'::uuid"
     )
-    assert anon.ok and anon.rows == ["0"]
+    # The published money schema revokes anonymous table SELECT entirely.
+    # Exact permission denial is stronger than an empty visible result; do not
+    # grant browser access merely to reach this test's later ledger assertions.
+    assert not anon.ok and anon.sqlstate == "42501", anon.error
+    assert anon.rows == []
     assert vendor.ok and vendor.rows == ["1"]
 
     observation = ProviderResult(

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
-import { Badge, Button, PriceBlock, Spinner } from "../new/_lib/ui";
+import { Badge, PriceBlock, Spinner } from "../new/_lib/ui";
 
 type ListingsManageListProps = {
   locale: string;
@@ -31,8 +31,6 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
   const [listings, setListings] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -76,21 +74,6 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
     void loadListings();
   }, [loadListings, reloadKey, session, sessionLoading]);
 
-  const handleStockAdjust = async (listingId: string, delta: number) => {
-    setAdjustingId(listingId);
-    setActionError(null);
-    try {
-      const response = await manageClient.adjustStock(listingId, delta);
-      setListings((current) =>
-        current.map((listing) => (listing.id === listingId ? response.listing : listing)),
-      );
-    } catch {
-      setActionError(t("listings.manage.errors.saveFailed"));
-    } finally {
-      setAdjustingId(null);
-    }
-  };
-
   if (sessionLoading || loading) {
     return (
       <div className="flex min-h-40 items-center justify-center">
@@ -125,12 +108,6 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
         <h1 className="text-xl font-semibold text-text">{t("listings.manage.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
       </header>
-
-      {actionError ? (
-        <p className="px-1 text-sm text-danger" role="alert">
-          {actionError}
-        </p>
-      ) : null}
 
       <div className="px-1">
         <Link
@@ -185,33 +162,12 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
                 </div>
 
                 {listing.stock_mode === "tracked" ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="min-h-11 min-w-11 px-3"
-                      aria-label={t("listings.manage.decreaseStock")}
-                      loadingLabel={t("listings.manage.loading")}
-                      disabled={adjustingId === listing.id || (listing.stock_qty ?? 0) <= 0}
-                      onClick={() => void handleStockAdjust(listing.id, -1)}
-                    >
-                      {t("listings.manage.decreaseSymbol")}
-                    </Button>
-                    <span className="min-w-8 text-center text-sm font-medium tabular-nums">
-                      {listing.stock_qty ?? 0}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="min-h-11 min-w-11 px-3"
-                      aria-label={t("listings.manage.increaseStock")}
-                      loadingLabel={t("listings.manage.loading")}
-                      disabled={adjustingId === listing.id}
-                      onClick={() => void handleStockAdjust(listing.id, 1)}
-                    >
-                      {t("listings.manage.increaseSymbol")}
-                    </Button>
-                  </div>
+                  <Link
+                    className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+                    href={`/${locale}/listings/${listing.id}/edit#stock`}
+                  >
+                    {t("listings.manage.stock.heading")}
+                  </Link>
                 ) : null}
               </div>
 

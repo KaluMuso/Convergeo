@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import csv
 import io
+import json
 from collections.abc import Generator
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from app.deps import get_supabase_client
+from app.errors import AppError
 from app.main import create_app
+from app.routers.checkout import _rederive_line_prices
+from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.kyc.caps import clear_vendor_cap_cache
 from app.services.listings.csv_import import build_template_csv
 from app.supabase_client import get_supabase_service_client
@@ -172,9 +178,7 @@ def _seed_base(fake: FakeSupabaseClient, *, listing_count: int = 0, kyc_tier: in
             "payout_velocity": {"max_payouts_per_day": 1, "max_amount_ngwee_per_day": 100_000},
         }
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE}
-    )
+    fake.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE})
     for index in range(listing_count):
         fake.tables["vendor_listings"].rows.append(
             {
@@ -206,6 +210,7 @@ def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) ->
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.deps.get_supabase_client", lambda: iter([service_wrapper]))
     monkeypatch.setattr("app.supabase_client.get_supabase_service_client", lambda: service_wrapper)
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service_wrapper)
     return service_wrapper
 
 
@@ -391,6 +396,56 @@ def test_import_stores_plain_display_title_not_encoded_sku(
     assert stored["title_override"] == "Fresh tomatoes per kg"
     assert stored["sku"] == "DISP-001"
     assert "sku:" not in str(stored["title_override"])
+
+
+def test_reimport_preserves_reserved_stock_and_existing_units(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    row = _valid_json_row("RESERVED-001")
+    first = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert first.status_code == 200
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    # Model the result of a claim: only 7 of the original 10 steps remain.
+    # This is a table double, not a SQL reservation/concurrency proof.
+    stored.update(stock_qty=7, sale_unit="kg", unit_step_milli=250, min_steps=4)
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    assert stored["stock_qty"] == 7
+    assert (stored["sale_unit"], stored["unit_step_milli"], stored["min_steps"]) == ("kg", 250, 4)
+    assert response.json()["rows"][0]["stock_preserved"] is True
+
+
+def test_import_measured_unit_and_minimum_steps_round_trip(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    row = {
+        **_valid_json_row("MEASURED-001"),
+        "sale_unit": "kg",
+        "unit_step_milli": 250,
+        "min_steps": 4,
+    }
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert (stored["sale_unit"], stored["unit_step_milli"], stored["min_steps"]) == ("kg", 250, 4)
+
+
+def test_reimport_does_not_detach_canonical_product_when_column_omitted(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    row = _valid_json_row("ATTACHED-001")
+    first = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert first.status_code == 200
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    stored["product_id"] = "b0000000-0000-0000-0000-000000000001"
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.json()["accepted"] == 1
+    assert stored["product_id"] == "b0000000-0000-0000-0000-000000000001"
 
 
 def test_cap_overflow_rejected_at_boundary_in_file_order(
@@ -677,3 +732,266 @@ def test_apply_raw_rows_attaches_confirmed_product(
     stored = fake_client.tables["vendor_listings"].rows[0]
     assert stored["product_id"] == PHONE_PRODUCT_ID
     assert stored["sku"] == "RAW-001"
+
+
+def _approve_wholesale(fake: FakeSupabaseClient) -> None:
+    fake.tables["vendors"].rows[0]["kyc_tier"] = 2
+    fake.tables["kyc_records"].rows[0]["tier"] = 2
+    fake.tables["vendor_quotas"].rows.append(
+        {
+            "tier": 2,
+            "max_listings": 9999,
+            "first_orders_cap_ngwee": None,
+            "first_orders_count": None,
+            "payout_velocity": {},
+        }
+    )
+    clear_vendor_cap_cache()
+
+
+def test_import_edit_and_buyer_price_authorities_share_persisted_tiers(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    """HTTP vendor writes -> table double -> actual cart/checkout pricing functions.
+
+    JWT/roles and Supabase transport are doubled. This is not SQL, location
+    availability, mounted UI, order creation or provider payment acceptance.
+    """
+    _approve_wholesale(fake_client)
+    fake_client.tables["cart_items"] = FakeTable()
+    row = {
+        **_valid_json_row("TIERS-001", price_ngwee=12_000),
+        "wholesale": True,
+        "moq": 2,
+        "price_tiers": [
+            {"min_qty": 3, "price_ngwee": 10_000},
+            {"min_qty": 6, "price_ngwee": 8_000},
+        ],
+    }
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    listing = fake_client.tables["vendor_listings"].rows[0]
+    listing_id = str(listing["id"])
+    edited = import_client.patch(
+        f"/vendor/listings/{listing_id}",
+        headers=_auth_headers(),
+        json={"moq": 2, "price_tiers": row["price_tiers"]},
+    )
+    assert edited.status_code == 200
+    assert edited.json()["listing"]["price_tiers"] == row["price_tiers"]
+    assert listing["stock_qty"] == 10
+
+    for qty, expected in [
+        (2, 12_000),
+        (3, 10_000),
+        (4, 10_000),
+        (5, 10_000),
+        (6, 8_000),
+        (7, 8_000),
+    ]:
+        item = {
+            "id": "cart-line",
+            "listing_id": listing_id,
+            "qty": qty,
+            "unit_price_ngwee": 12_000,
+            "wholesale": False,
+        }
+        read = prepare_cart_items_for_read([item], {listing_id: listing}, business_eligible=True)
+        assert not read.conflicts
+        assert read.items[0]["unit_price_ngwee"] == expected
+        assert read.items[0]["wholesale"] is True
+        assert isinstance(read.items[0]["unit_price_ngwee"], int)
+        _rederive_line_prices(
+            read.items,
+            {listing_id: listing},
+            business_eligible=True,
+            service=SimpleNamespace(client=fake_client),
+            customer_id=USER_ID,
+        )
+
+    below_moq = {
+        "id": "cart-line",
+        "listing_id": listing_id,
+        "qty": 1,
+        "unit_price_ngwee": 12_000,
+        "wholesale": False,
+    }
+    read = prepare_cart_items_for_read([below_moq], {listing_id: listing}, business_eligible=True)
+    assert not read.items
+    assert read.conflicts[0].code == "cart.moq_violation"
+    public = prepare_cart_items_for_read(
+        [below_moq], {listing_id: listing}, business_eligible=False
+    )
+    assert not public.items
+    assert public.conflicts[0].code == "cart.listing_unavailable"
+
+    stale = {**below_moq, "qty": 3}
+    fake_client.tables["cart_items"].rows.append(stale)
+    with pytest.raises(AppError) as error:
+        _rederive_line_prices(
+            [stale],
+            {listing_id: listing},
+            business_eligible=True,
+            service=SimpleNamespace(client=fake_client),
+            customer_id=USER_ID,
+        )
+    assert error.value.http_status == 409
+    assert error.value.code == "checkout.cart_changed"
+    assert error.value.details["conflicts"][0]["code"] == "cart.price_changed"
+    assert stale["unit_price_ngwee"] == 10_000
+
+
+@pytest.mark.parametrize("value", [1.5, True, "invalid"])
+def test_json_import_isolates_invalid_prices_per_row(
+    import_client: TestClient, fake_client: FakeSupabaseClient, value: object
+) -> None:
+    response = import_client.post(
+        "/listings/import",
+        headers=_auth_headers(),
+        json={"rows": [_valid_json_row("GOOD"), {**_valid_json_row("BAD"), "price_ngwee": value}]},
+    )
+    assert response.status_code == 200
+    assert (response.json()["accepted"], response.json()["rejected"]) == (1, 1)
+    assert fake_client.tables["vendor_listings"].rows[0]["sku"] == "GOOD"
+
+
+@pytest.mark.parametrize("transport", ["csv", "raw_rows", "rows"])
+def test_every_import_transport_screens_each_row_before_persisting(
+    import_client: TestClient, fake_client: FakeSupabaseClient, transport: str
+) -> None:
+    rows = [
+        _valid_json_row("GOOD-1"),
+        {**_valid_json_row("BLOCKED"), "title": "Free beer"},
+        _valid_json_row("GOOD-2"),
+    ]
+    raw_rows = [
+        {
+            key: "" if value is None else value if isinstance(value, str) else json.dumps(value)
+            for key, value in row.items()
+        }
+        for row in rows
+    ]
+    if transport == "csv":
+        buffer = io.StringIO()
+        writer = csv.DictWriter(buffer, fieldnames=list(raw_rows[0]))
+        writer.writeheader()
+        writer.writerows(raw_rows)
+        response = import_client.post(
+            "/listings/import",
+            headers={**_auth_headers(), "Content-Type": "text/csv"},
+            content=buffer.getvalue(),
+        )
+    else:
+        response = import_client.post(
+            "/listings/import",
+            headers=_auth_headers(),
+            json={transport: raw_rows if transport == "raw_rows" else rows},
+        )
+    assert response.status_code == 200
+    result = response.json()
+    assert (result["accepted"], result["rejected"]) == (2, 1)
+    assert "prohibited listing blocked" in result["rows"][1]["errors"][0]
+    assert [row["sku"] for row in fake_client.tables["vendor_listings"].rows] == [
+        "GOOD-1",
+        "GOOD-2",
+    ]
+
+
+def test_reimport_keeps_stock_mode_and_rejects_unit_reinterpretation(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    row = _valid_json_row("STOCK-MODE")
+    import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    stored["stock_qty"] = 7
+    repeated = import_client.post(
+        "/listings/import",
+        headers=_auth_headers(),
+        json={"rows": [{**row, "stock_mode": "always_available", "stock_qty": None}]},
+    )
+    assert repeated.json()["accepted"] == 1
+    assert (stored["stock_mode"], stored["stock_qty"]) == ("tracked", 7)
+    changed = import_client.post(
+        "/listings/import",
+        headers=_auth_headers(),
+        json={"rows": [{**row, "sale_unit": "kg", "unit_step_milli": 250}]},
+    )
+    assert changed.json()["rejected"] == 1
+    assert stored["sale_unit"] == "each"
+    assert stored["unit_step_milli"] == 1000
+
+
+def test_duplicate_sku_and_foreign_vendor_rows_do_not_overwrite_stock(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    foreign = {"id": "foreign", "vendor_id": OTHER_VENDOR_ID, "sku": "SAME", "stock_qty": 4}
+    fake_client.tables["vendor_listings"].rows.append(foreign)
+    row = {**_valid_json_row("SAME"), "vendor_id": OTHER_VENDOR_ID}
+    response = import_client.post(
+        "/listings/import", headers=_auth_headers(), json={"rows": [row, row]}
+    )
+    assert (response.json()["accepted"], response.json()["rejected"]) == (1, 1)
+    assert foreign["stock_qty"] == 4
+    assert len(fake_client.tables["vendor_listings"].rows) == 2
+    assert fake_client.tables["vendor_listings"].rows[1]["vendor_id"] == VENDOR_ID
+
+
+def test_reimport_cannot_reactivate_removed_listing(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    row = _valid_json_row("REMOVED")
+    import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    stored["status"] = "removed"
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.json()["rejected"] == 1
+    assert stored["status"] == "removed"
+
+
+def test_measured_wholesale_is_rejected_even_for_approved_vendor(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    _approve_wholesale(fake_client)
+    row = {
+        **_valid_json_row("INVALID-MEASURE"),
+        "wholesale": True,
+        "sale_unit": "kg",
+        "price_tiers": [{"min_qty": 5, "price_ngwee": 2000}],
+    }
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.json()["rejected"] == 1
+    assert not fake_client.tables["vendor_listings"].rows
+
+
+def test_suspended_vendor_cannot_import_wholesale_with_approved_tier(
+    import_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    _approve_wholesale(fake_client)
+    fake_client.tables["vendors"].rows[0]["status"] = "suspended"
+    row = {
+        **_valid_json_row("HELD"),
+        "wholesale": True,
+        "price_tiers": [{"min_qty": 5, "price_ngwee": 2000}],
+    }
+    response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
+    assert response.json()["rejected"] == 1
+    assert not fake_client.tables["vendor_listings"].rows
+
+
+@pytest.mark.parametrize(
+    "csv",
+    [
+        "sku,sku,title,price_ngwee,stock_mode,condition\nA,B,Thing,1000,tracked,new\n",
+        "sku,title,price_ngwee,stock_mode,stock_qty,condition\nA,Thing,1000,tracked,10,new,EXTRA\n",
+    ],
+)
+def test_ambiguous_csv_cells_are_rejected(
+    import_client: TestClient, fake_client: FakeSupabaseClient, csv: str
+) -> None:
+    response = import_client.post(
+        "/listings/import", headers={**_auth_headers(), "Content-Type": "text/csv"}, content=csv
+    )
+    assert response.status_code == 200
+    assert response.json()["rows"][0]["ok"] is False
+    assert not fake_client.tables["vendor_listings"].rows

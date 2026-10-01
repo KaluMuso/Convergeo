@@ -34,6 +34,10 @@ FORWARD = [
     "20260929120001_service_collection_settlement.sql",
     "20260929120002_funded_service_completion.sql",
     "20260929120003_adopt_existing_service_obligations.sql",
+    "20260930170000_reconciliation_report_versions.sql",
+    "20260930170100_vendor_stock_adjustment_authority.sql",
+    "20260930203000_service_completion_variable_disambiguation.sql",
+    "20260930203100_service_adoption_ambiguity_holds.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -294,8 +298,8 @@ class Runner:
         with self.rest(group, f2db, phase + "-f2"):
             label = phase + "-f2"
             expected = (ROOT / "docs/ops/lenco/f2-required-nodes.txt").read_text().splitlines()
-            if len(expected) != 39:
-                raise RuntimeError("Reviewed 39-identity F2 manifest changed; rebind the gate")
+            if len(expected) != 43:
+                raise RuntimeError("Reviewed 43-identity F2 manifest changed; rebind the gate")
             rc, text = self.pytest(label + "-collection", F2_MODULES, collect=True)
             require_collection(expected, nodes_from_collection(text), rc)
             rc, _ = self.pytest(label, F2_MODULES)
@@ -376,7 +380,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 131 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 135 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")
@@ -420,9 +424,13 @@ class Runner:
         args = ["uv", "run", "--no-sync", "python", "../../scripts/drills/f2_upgrade_probe.py"]
         self.command("upgrade-seed", args + ["seed", str(upgrade)], cwd=ROOT / "services/api")
         for filename in FORWARD:
-            self.command("upgrade-" + filename.split("_")[0],
-                         ["psql", "-X", "-v", "ON_ERROR_STOP=1",
-                          "-d", "ci_critical_prepaid", "-f", str(current / filename)])
+            if filename == "20260929120003_adopt_existing_service_obligations.sql":
+                self.command("upgrade-" + filename.split("_")[0],
+                             [sys.executable, str(ROOT / "scripts/ci/apply_service_adoption.py")])
+            else:
+                self.command("upgrade-" + filename.split("_")[0],
+                             ["psql", "-X", "-v", "ON_ERROR_STOP=1",
+                              "-d", "ci_critical_prepaid", "-f", str(current / filename)])
         self.command("upgrade-verify", args + ["verify", str(upgrade)], cwd=ROOT / "services/api")
         (self.output / "upgrade-fingerprint.json").write_text(self.redact(upgrade.read_text()))
         self.create("ci_financial_upgrade", "ci_critical_prepaid")

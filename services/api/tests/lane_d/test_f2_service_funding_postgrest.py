@@ -12,6 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from app.services.db import run_sql_script as native_run_sql_script
 from app.services.escrow import order_money_gate
 from app.services.orders import state as order_state
 from postgrest import SyncPostgrestClient
@@ -295,14 +296,12 @@ def test_release_failure_rolls_back_capture_gate_and_completion() -> None:
             .data
         )
         assert [r["kind"] for r in tx] == ["escrow_hold", "escrow_hold"]
-        assert (
-            not _service()
-            .client.table("order_money_gates")
-            .select("*")
-            .eq("order_id", f["order"])
-            .execute()
-            .data
+        # This private release gate is deliberately not REST-readable. Keep its
+        # grants unchanged and inspect rollback through the bound SQL fixture.
+        gates = _db().run(
+            f"SELECT count(*) FROM public.order_money_gates WHERE order_id='{f['order']}';"
         )
+        assert gates.ok and gates.rows == ["0"], gates.error
     finally:
         result = _db().run_script(
             f"DROP TRIGGER {name} ON public.ledger_transactions; DROP FUNCTION public.{name}();"
@@ -383,7 +382,7 @@ def test_cancellation_racing_claim_preserves_late_money_without_fulfilment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     f = seed()
-    monkeypatch.setattr(order_state, "run_sql_script", _db().run)
+    monkeypatch.setattr(order_state, "run_sql_script", native_run_sql_script)
     barrier = Barrier(2)
 
     def cancel() -> Any:
@@ -463,7 +462,7 @@ def test_metadata_adoption_preserves_existing_receipt_and_ledger() -> None:
     before = fingerprint()
     proposal = (
         Path(__file__).resolve().parents[4]
-        / "supabase/migrations/20260929120003_adopt_existing_service_obligations.sql"
+        / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql"
     )
     for _ in range(2):
         result = _db().run_file(proposal)
@@ -485,7 +484,7 @@ def test_balance_receipt_requires_refund_path_even_without_deposit_receipt(
     f = seed()
     assert confirm(f)["status"] == "awaiting_payment"
     fund(f, "balance")
-    monkeypatch.setattr(order_state, "run_sql_script", _db().run)
+    monkeypatch.setattr(order_state, "run_sql_script", native_run_sql_script)
     with pytest.raises(order_state.RefundPathRequiredError):
         order_state.transition_order(
             order_id=f["order"],
@@ -543,8 +542,17 @@ def test_legacy_system_acknowledgement_does_not_authorize_balance() -> None:
 def test_funded_service_still_requires_buyer_acknowledgement() -> None:
     f = seed()
     fund(f, "deposit")
-    # An existing/in-flight balance receipt must be recorded even without acknowledgement.
-    # Seed that attempt directly in the private DB; do not bypass a real initiation endpoint.
+    # Synthetic legacy payable marker: it is NOT explicit buyer consent under Q1/Q2.
+    # Recover real funds for that old in-flight attempt without granting new initiation.
+    legacy = _db().run_script(f"""BEGIN;
+      UPDATE public.service_payment_obligations SET work_acknowledged_at=now()
+        WHERE order_id='{f["order"]}';
+      INSERT INTO public.audit_log(actor,action,entity_type,entity_id,after)
+        VALUES (NULL,'job.work_acknowledged','job','{f["job"]}','{{"system":true}}');
+      COMMIT;""")
+    assert legacy.ok, legacy.error
+    assert claim(f, "balance")[2]["result"] == "obligation_not_payable"
+    # Seed the old attempt directly in the private DB; never bypass live initiation.
     payment = str(uuid4())
     reference = f"synthetic-prior-balance-{payment}"
     result = _db().run(f"""INSERT INTO public.payments
@@ -578,3 +586,38 @@ def test_worker_can_retry_funded_completion_after_explicit_buyer_acknowledgement
     result = _db().run(f"""SELECT count(*)::text FROM public.ledger_transactions
       WHERE order_id='{f['order']}' AND kind='release_to_vendor';""")
     assert result.ok and result.rows == ["1"]
+
+
+def test_unpayable_balance_observation_retains_late_money_without_funding() -> None:
+    f = seed()
+    fund(f, "deposit")
+    assert claim(f, "balance")[2]["result"] == "obligation_not_payable"
+    payment = str(uuid4())
+    reference = f"synthetic-unpayable-{payment}"
+    result = _db().run(f"""INSERT INTO public.payments
+      (id,checkout_group_id,provider,rail,lenco_reference,amount_ngwee,status)
+      VALUES ('{payment}','{f['balance']['checkout_group_id']}','lenco','mtn',
+        '{reference}',70000,'ussd_pushed');""")
+    assert result.ok, result.error
+    params = {
+        "p_payment_id": payment, "p_actor_id": f["buyer"], "p_note": "Synthetic unpayable attempt",
+        "p_observation": {"reference": reference, "amount_ngwee": 70000, "currency": "ZMW",
+                          "provider_reference": f"synthetic-{payment}", "source": "isolated_test"},
+    }
+    for _ in range(2):
+        observed = _service().client.rpc("apply_prepaid_collection_success", params).execute().data
+        assert observed["result"] == "late_collection"
+        assert observed["reason"] == "service_balance_not_payable"
+    result = _db().run(f"""SELECT
+      (SELECT occurrences FROM public.payment_collection_exceptions WHERE payment_id='{payment}'),
+      (SELECT count(*) FROM public.payment_collection_receipts WHERE payment_id='{payment}'),
+      (SELECT count(*) FROM public.ledger_transactions WHERE payment_id='{payment}'),
+      (SELECT public.order_has_collected_money('{f['order']}'));
+      """)
+    assert result.ok and result.rows == ["2|0|0|t"], result.error
+    with pytest.raises(APIError, match="buyer acknowledgement required"):
+        _system_confirm(f)
+    assert confirm(f)["status"] == "awaiting_payment"
+    result = _db().run(f"""SELECT count(*) FROM public.ledger_transactions
+      WHERE order_id='{f['order']}' AND kind IN ('commission_capture','release_to_vendor');""")
+    assert result.ok and result.rows == ["0"], result.error

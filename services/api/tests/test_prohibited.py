@@ -209,9 +209,7 @@ def test_import_rejects_prohibited_row_and_keeps_clean_rows() -> None:
         _row("BAD-1", "Crate of cold beer"),
         _row("OK-2", "White rice 10kg bag"),
     ]
-    summary = import_listing_rows(
-        _FakeClient(), vendor_id=VENDOR_ID, limits=_limits(), rows=rows
-    )
+    summary = import_listing_rows(_FakeClient(), vendor_id=VENDOR_ID, limits=_limits(), rows=rows)
 
     assert summary.accepted == 2
     assert summary.rejected == 1
@@ -226,9 +224,7 @@ def test_import_rejects_prohibited_row_and_keeps_clean_rows() -> None:
 
 def test_import_accepts_all_clean_rows() -> None:
     rows = [_row("OK-1", "Fresh tomatoes"), _row("OK-2", "Bananas bunch")]
-    summary = import_listing_rows(
-        _FakeClient(), vendor_id=VENDOR_ID, limits=_limits(), rows=rows
-    )
+    summary = import_listing_rows(_FakeClient(), vendor_id=VENDOR_ID, limits=_limits(), rows=rows)
     assert summary.accepted == 2
     assert summary.rejected == 0
 
@@ -247,6 +243,12 @@ def test_import_accepts_all_clean_rows() -> None:
     ],
 )
 def test_screen_listing_invoked_on_every_path(module: Any) -> None:
+    if module is listing_import:
+        # All transport formats delegate to the same per-row moderation guard.
+        # HTTP regressions in test_csv_import cover CSV, raw_rows and JSON rows.
+        assert listing_import.import_listing_rows is csv_import.import_listing_rows
+        assert listing_import.import_csv_bytes is csv_import.import_csv_bytes
+        module = csv_import
     source = inspect.getsource(module)
     assert "from app.services.moderation.prohibited import screen_listing" in source
     assert "screen_listing(" in source

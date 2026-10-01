@@ -135,7 +135,12 @@ fi
 
 for migration in "${migrations[@]}"; do
   echo "  -> $(basename "${migration}")"
-  "${PSQL[@]}" -f "${migration}"
+  if [[ "$(basename "${migration}")" == "20260929120003_adopt_existing_service_obligations.sql" ]]; then
+    PGHOST="$PGHOST" PGPORT="$PGPORT" PGUSER="$PGUSER" PGDATABASE="$PGDATABASE" \
+      python3 "${REPO_ROOT}/scripts/ci/apply_service_adoption.py" --migrations-dir "$MIGRATIONS_DIR"
+  else
+    "${PSQL[@]}" -f "${migration}"
+  fi
 done
 
 echo "==> Migration replay OK (${#migrations[@]} files: $(basename -a "${migrations[@]}" | paste -sd ', ' -))"

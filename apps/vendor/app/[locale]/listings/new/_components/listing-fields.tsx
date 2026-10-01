@@ -108,6 +108,7 @@ type ListingFieldsProps = {
   wholesaleEnabled: boolean;
   labels: ListingFieldLabels;
   allowStandaloneClasses?: boolean;
+  inventoryReadOnly?: boolean;
 };
 
 const POSITIVE_INTEGER_PATTERN = /^[1-9]\d*$/;
@@ -245,6 +246,7 @@ export function ListingFields({
   wholesaleEnabled,
   labels,
   allowStandaloneClasses = true,
+  inventoryReadOnly = false,
 }: ListingFieldsProps) {
   const priceError =
     values.priceZmw && !isValidZmwDecimal(values.priceZmw) ? labels.priceInvalid : undefined;
@@ -257,6 +259,7 @@ export function ListingFields({
     <div className="flex flex-col gap-4">
       <FormField label={labels.productClassLabel}>
         <Select
+          disabled={inventoryReadOnly}
           value={values.productClass}
           onChange={(event: ChangeEvent<HTMLSelectElement>) =>
             handleChange({ productClass: event.target.value as ProductClass })
@@ -282,6 +285,7 @@ export function ListingFields({
 
       <FormField label={labels.saleUnitLabel}>
         <Select
+          disabled={inventoryReadOnly}
           value={values.saleUnit}
           onChange={(event: ChangeEvent<HTMLSelectElement>) =>
             handleChange({ saleUnit: event.target.value as SaleUnit })
@@ -301,6 +305,7 @@ export function ListingFields({
           <FormField label={labels.unitStepLabel} helpText={labels.unitStepHelp}>
             <Input
               inputMode="decimal"
+              disabled={inventoryReadOnly}
               value={values.unitStep}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleChange({ unitStep: event.target.value })
@@ -378,6 +383,7 @@ export function ListingFields({
 
       <FormField label={labels.fulfilmentLabel}>
         <Select
+          disabled={inventoryReadOnly}
           value={values.fulfilmentMode}
           onChange={(event: ChangeEvent<HTMLSelectElement>) =>
             handleChange({ fulfilmentMode: event.target.value as FulfilmentMode })
@@ -420,32 +426,36 @@ export function ListingFields({
         </FormField>
       ) : null}
 
-      <FormField label={labels.stockModeLabel}>
-        <Select
-          value={values.stockMode}
-          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-            handleChange({ stockMode: event.target.value as StockMode })
-          }
-        >
-          <option value="tracked" disabled={values.productClass === "E"}>
-            {labels.stockTracked}
-          </option>
-          <option value="always_available">{labels.stockAlways}</option>
-        </Select>
-      </FormField>
+      {!inventoryReadOnly ? (
+        <>
+          <FormField label={labels.stockModeLabel}>
+            <Select
+              value={values.stockMode}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                handleChange({ stockMode: event.target.value as StockMode })
+              }
+            >
+              <option value="tracked" disabled={values.productClass === "E"}>
+                {labels.stockTracked}
+              </option>
+              <option value="always_available">{labels.stockAlways}</option>
+            </Select>
+          </FormField>
 
-      {values.stockMode === "tracked" ? (
-        <FormField label={labels.stockQtyLabel}>
-          <Input
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={values.stockQty}
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              handleChange({ stockQty: event.target.value })
-            }
-          />
-        </FormField>
+          {values.stockMode === "tracked" ? (
+            <FormField label={labels.stockQtyLabel}>
+              <Input
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={values.stockQty}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  handleChange({ stockQty: event.target.value })
+                }
+              />
+            </FormField>
+          ) : null}
+        </>
       ) : null}
 
       {wholesaleEnabled && values.saleUnit === "each" ? (

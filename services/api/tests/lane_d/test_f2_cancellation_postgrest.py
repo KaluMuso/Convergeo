@@ -22,6 +22,7 @@ from app.services.escrow import order_money_gate
 from app.services.orders import state
 from app.services.payments.lenco import LencoClient, LencoStrategy
 from app.services.payments.reconcile import poll_non_terminal_payments
+from tests.financial_observed_sql import capture_native_sql
 from tests.lane_d.test_collection_identity_postgrest import _db, _service, _wait_for_db_lock
 from tests.lane_d.test_f2_service_funding_postgrest import claim, confirm, fund, seed
 from tests.test_lenco_client import STATUS_FIXTURE
@@ -35,9 +36,10 @@ pytestmark = [
 
 
 @pytest.fixture(autouse=True)
-def bind_real_sql(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(state, "run_sql_script", _db().run)
-    monkeypatch.setattr(order_money_gate, "run_sql_script", _db().run)
+def bind_real_sql(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    native = capture_native_sql(request, label="order_transition")
+    monkeypatch.setattr(state, "run_sql_script", native)
+    monkeypatch.setattr(order_money_gate, "run_sql_script", native)
 
 
 def cancel(f: dict[str, Any], *, vendor: bool = False, refund_path: bool = False) -> Any:
@@ -288,7 +290,7 @@ def test_legacy_adoption_does_not_upgrade_payment_evidence(kind: str) -> None:
     assert before.ok, before.error
     path = (
         Path(__file__).resolve().parents[4]
-        / "supabase/migrations/20260929120003_adopt_existing_service_obligations.sql"
+        / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql"
     )
     adopted = _db().run_file(path)
     assert adopted.ok, adopted.error
@@ -309,7 +311,7 @@ def test_ambiguous_adoption_records_hold_without_financial_mutation() -> None:
     assert result.ok, result.error
     path = (
         Path(__file__).resolve().parents[4]
-        / "supabase/migrations/20260929120003_adopt_existing_service_obligations.sql"
+        / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql"
     )
     for _ in range(2):
         result = _db().run_file(path)
@@ -393,3 +395,96 @@ async def test_real_f1_poller_to_f2_failure_evidence_controls_retry(valid_identi
     assert claim(f, "deposit")[2]["result"] == (
         "claimed" if valid_identity else "unresolved_attempt"
     )
+
+
+def test_adoption_holds_foreign_checkout_and_keeps_healthy_order() -> None:
+    corrupt, foreign, healthy = (seed(obligations=False) for _ in range(3))
+    foreign["deposit"] = {"checkout_group_id": foreign["checkout"], "amount_ngwee": 30000}
+    payment = fund(foreign, "deposit")
+    result = _db().run(f"""INSERT INTO public.service_payment_obligations
+      (order_id,job_id,checkout_group_id,leg,amount_ngwee) VALUES
+      ('{corrupt['order']}','{corrupt['job']}','{foreign['checkout']}','balance',30000);""")
+    assert result.ok, result.error
+    fingerprint = f"""SELECT jsonb_build_object(
+      'foreign',(SELECT to_jsonb(p) FROM public.payments p WHERE id='{payment}'),
+      'receipt',(SELECT to_jsonb(r) FROM public.payment_collection_receipts r
+                 WHERE payment_id='{payment}'),
+      'postings',(SELECT jsonb_agg(to_jsonb(lp) ORDER BY lp.id)
+        FROM public.ledger_postings lp JOIN public.ledger_transactions t ON t.id=lp.transaction_id
+        WHERE t.order_id='{foreign['order']}'),
+      'corrupt',(SELECT jsonb_agg(to_jsonb(ob) ORDER BY ob.id)
+        FROM public.service_payment_obligations ob WHERE order_id='{corrupt['order']}'))::text;"""
+    before = _db().run(fingerprint)
+    assert before.ok, before.error
+    directory = Path(__file__).resolve().parents[4] / "supabase/migrations"
+    # Reproduce the exact published failure inside this isolated fixture, before forward repair.
+    original = directory / "20260929120003_adopt_existing_service_obligations.sql"
+    old = _db().run(original.read_text())
+    assert not old.ok and old.sqlstate == "23505" and old.rows == [], old.error
+    for _ in range(2):
+        result = _db().run_file(directory / "20260930203100_service_adoption_ambiguity_holds.sql")
+        assert result.ok, result.error
+        after = _db().run(fingerprint)
+        assert after.ok and after.rows == before.rows, after.error
+    result = _db().run(f"""SELECT
+      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{foreign['order']}'),
+      (SELECT count(*) FROM public.audit_log WHERE entity_id='{foreign['order']}'
+        AND action='service.obligation_adoption_held'
+        AND after->>'reason'='checkout_linked_to_other_obligation'),
+      (SELECT count(*) FROM public.service_payment_obligations
+       WHERE order_id='{healthy['order']}');""")
+    assert result.ok and result.rows == ["0|1|2"], result.error
+
+
+def test_native_cancellation_records_locked_state_and_one_affected_row(
+    request: pytest.FixtureRequest,
+) -> None:
+    f = seed()
+    import json
+
+    # Real psql projection probe, fully rolled back before exercising the native writer.
+    probe = _db().run(f"""BEGIN;
+      SELECT set_config('app.order_actor','{f["buyer"]}',true);
+      SELECT set_config('app.order_note','isolated command tag probe',true);
+      SELECT id,status FROM public.orders WHERE id='{f["order"]}' FOR UPDATE;
+      UPDATE public.orders SET status=status WHERE id='{f["order"]}' RETURNING status;
+      ROLLBACK;""")
+    request.node.user_properties.append(("legacy_psql_result", json.dumps({
+        "ok": probe.ok, "rows": probe.rows, "error": probe.error,
+    })))
+    assert probe.ok and probe.rows == ["UPDATE 1"], probe.error
+    assert cancel(f).to_status == state.OrderStatus.CANCELLED
+    records = [json.loads(value) for name, value in request.node.user_properties
+               if name == "order_transition_sql_result"]
+    assert records[-1]["locked_rows"] == [f"{f['order']}|placed"]
+    assert records[-1]["returned_status_rows"] == ["cancelled"]
+    assert records[-1]["affected_rows"] == 1
+    result = _db().run(f"SELECT status FROM public.orders WHERE id='{f['order']}';")
+    assert result.ok and result.rows == ["cancelled"], result.error
+    with pytest.raises(state.OrderTransitionError):
+        cancel(f)
+
+
+def test_concurrent_adoption_creates_one_pair_of_obligations() -> None:
+    from threading import Barrier
+
+    f = seed(obligations=False)
+    path = (Path(__file__).resolve().parents[4]
+            / "supabase/migrations/20260930203100_service_adoption_ambiguity_holds.sql")
+    barrier = Barrier(2)
+
+    def adopt() -> None:
+        barrier.wait(timeout=10)
+        result = _db().run_file(path)  # independent psql connection per worker
+        assert result.ok, result.error
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        futures = [workers.submit(adopt) for _ in range(2)]
+        for future in futures:
+            future.result(timeout=30)
+    result = _db().run(f"""SELECT
+      (SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{f['order']}'),
+      (SELECT count(*) FROM public.checkout_groups
+       WHERE idempotency_key='service-balance-{f['order']}'),
+      (SELECT count(*) FROM public.ledger_transactions WHERE order_id='{f['order']}');""")
+    assert result.ok and result.rows == ["2|1|0"], result.error

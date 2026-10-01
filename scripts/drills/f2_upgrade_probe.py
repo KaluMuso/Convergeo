@@ -55,8 +55,29 @@ def main() -> None:
         if sql("SELECT to_regclass('public.service_payment_obligations') IS NULL") != ["t"]:
             raise RuntimeError("seed must run on accepted baseline before F2 migrations")
         fixtures = []
-        for kind in ("pending", "receipt", "card", "ambiguous"):
+        shared: dict[str, str] | None = None
+        for kind in (
+            "pending", "receipt", "card", "ambiguous", "healthy",
+            "shared_primary", "shared_secondary", "foreign_balance",
+        ):
             fixture = seed(obligations=False)
+            if kind == "shared_primary":
+                shared = fixture
+            elif kind == "shared_secondary":
+                assert shared is not None
+                # Distinct jobs/vendors are each otherwise eligible. Both legacy
+                # orders reference the same valid buyer/deposit checkout.
+                sql(f"""BEGIN;
+                  UPDATE public.orders SET customer_id='{shared['buyer']}',
+                    checkout_group_id='{shared['checkout']}' WHERE id='{fixture['order']}';
+                  UPDATE public.jobs SET customer_id='{shared['buyer']}'
+                    WHERE id='{fixture['job']}'; COMMIT;""")
+                fixture["buyer"], fixture["checkout"] = shared["buyer"], shared["checkout"]
+            elif kind == "foreign_balance":
+                sql(f"""INSERT INTO public.checkout_groups(customer_id,idempotency_key,
+                  subtotal_ngwee,delivery_fee_ngwee,total_ngwee,status)
+                  VALUES ('{fixture['buyer']}','service-balance-{fixture['order']}',
+                    70000,0,70000,'pending');""")
             payment = str(uuid4())
             reference = f"f2-upgrade-{payment}"
             rail = "card" if kind == "card" else "mtn"
@@ -87,15 +108,44 @@ def main() -> None:
                     "before": fingerprint(fixture["order"], payment),
                 }
             )
+        # Capture after all fixture construction, including checkout sharing.
+        for fixture in fixtures:
+            order = fixture["order"]
+            fixture["spine_before"] = sql(f"""SELECT jsonb_build_object(
+              'order',(SELECT to_jsonb(o) FROM public.orders o WHERE id='{order}'),
+              'items',(SELECT jsonb_agg(to_jsonb(i) ORDER BY i.id)
+                FROM public.order_items i WHERE i.order_id='{order}'),
+              'checkout',(SELECT to_jsonb(c) FROM public.checkout_groups c
+                JOIN public.orders o ON o.checkout_group_id=c.id WHERE o.id='{order}'),
+              'balance_checkout',(SELECT to_jsonb(c) FROM public.checkout_groups c
+                WHERE c.idempotency_key='service-balance-'||'{order}'))::text;""")
         args.evidence.write_text(json.dumps(fixtures, indent=2) + "\n")
     else:
         fixtures = json.loads(args.evidence.read_text())
-        if {f["kind"] for f in fixtures} != {"pending", "receipt", "card", "ambiguous"}:
+        if {f["kind"] for f in fixtures} != {
+            "pending", "receipt", "card", "ambiguous", "healthy",
+            "shared_primary", "shared_secondary", "foreign_balance",
+        } or len(fixtures) != 8:
             raise RuntimeError("upgrade evidence is incomplete")
         for fixture in fixtures:
             order, payment = fixture["order"], fixture["payment"]
             if fingerprint(order, payment) != fixture["before"]:
                 raise RuntimeError(f"legacy monetary evidence changed: {fixture['kind']}")
+            spine = json.loads(fixture["spine_before"][0])
+            after_spine = json.loads(sql(f"""SELECT jsonb_build_object(
+              'order',(SELECT to_jsonb(o) FROM public.orders o WHERE id='{order}'),
+              'items',(SELECT jsonb_agg(to_jsonb(i) ORDER BY i.id)
+                FROM public.order_items i WHERE i.order_id='{order}'),
+              'checkout',(SELECT to_jsonb(c) FROM public.checkout_groups c
+                JOIN public.orders o ON o.checkout_group_id=c.id WHERE o.id='{order}'),
+              'balance_checkout',(SELECT to_jsonb(c) FROM public.checkout_groups c
+                WHERE c.idempotency_key='service-balance-'||'{order}'))::text;""")[0])
+            # Healthy adoption creates one new balance checkout; all existing
+            # order/item/checkout data and any foreign balance remain identical.
+            if spine["balance_checkout"] is None:
+                after_spine["balance_checkout"] = None
+            if after_spine != spine:
+                raise RuntimeError(f"legacy order/checkout evidence changed: {fixture['kind']}")
             if sql(
                 "SELECT count(*) FROM public.payment_collection_receipts "
                 f"WHERE payment_id='{payment}' "
@@ -105,7 +155,9 @@ def main() -> None:
             count = sql(
                 f"SELECT count(*) FROM public.service_payment_obligations WHERE order_id='{order}'"
             )
-            if fixture["kind"] == "ambiguous":
+            if fixture["kind"] in {
+                "ambiguous", "shared_primary", "shared_secondary", "foreign_balance",
+            }:
                 if count != ["0"] or sql(
                     f"SELECT count(*) FROM public.audit_log WHERE entity_id='{order}' "
                     "AND action='service.obligation_adoption_held'"

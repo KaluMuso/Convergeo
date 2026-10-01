@@ -450,7 +450,7 @@ SELECT set_config('app.order_actor', {sql_literal(actor_id)}, true);
 SELECT set_config('app.order_note', {sql_literal(note)}, true);
 SELECT public.lock_payment_checkout_scope(
   (SELECT checkout_group_id FROM public.orders WHERE id={order_sql}));
-SELECT id FROM public.orders WHERE id={order_sql} FOR UPDATE;
+SELECT id, status FROM public.orders WHERE id={order_sql} FOR UPDATE;
 SELECT pg_advisory_xact_lock(hashtext('order_escrow:' || {order_sql}::text));
 DO $order_authority$
 DECLARE o public.orders%rowtype; has_money boolean; has_uncertain_attempt boolean;
