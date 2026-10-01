@@ -1818,7 +1818,8 @@
       "submit": "Submit for review",
       "submitting": "Submitting…",
       "submitted": "Submitted for review. Convergeo will check it shortly.",
-      "back": "Back to drafts"
+      "back": "Back to drafts",
+      "canonicalProduct": "Catalogue product"
     },
     "fields": {
       "title": "Product name",
@@ -1860,7 +1861,8 @@
       "invalid_price": "The price is not valid.",
       "missing_quantity": "Add how many you have in stock.",
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
-      "unsupported_stock_mode": "That stock option is not supported."
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonical_required": "Choose the matching active catalogue product before submitting this draft."
     }
   },
   "clips": {

@@ -52,6 +52,8 @@ VENDOR_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 VENDOR_USER_ID = "11111111-1111-4111-8111-111111111111"
 ADMIN_USER_ID = "22222222-2222-4222-8222-222222222222"
 BINDING_ID = "33333333-3333-4333-8333-333333333333"
+PRODUCT_ID = "44444444-4444-4444-8444-444444444444"
+CATEGORY_ID = "55555555-5555-4555-8555-555555555555"
 
 MSISDN = "260971234567"
 JID = f"{MSISDN}@c.us"
@@ -228,6 +230,8 @@ class FakeTable:
                 raise UniqueViolation(f"{self.name} {columns} already exists")
 
     def apply_defaults(self, row: dict[str, Any]) -> None:
+        if self.name == "vendor_listings" and row.get("product_class", "A") in {"A", "B", "C"}:
+            assert row.get("product_id"), "normal draft listings require canonical identity"
         for column, value in self.DEFAULTS.get(self.name, {}).items():
             row.setdefault(column, value)
 
@@ -330,6 +334,21 @@ def store() -> Store:
             "payout_velocity": {},
         }
     )
+    # Canonical identity is required even for a draft. The vendor explicitly
+    # selects this active product at submission; inbound extraction never attaches it.
+    st.rows("categories").append(
+        {"id": CATEGORY_ID, "name": "Appliances", "commission_key": "default"}
+    )
+    st.rows("products").append(
+        {
+            "id": PRODUCT_ID,
+            "name": "Samsung RT38 Fridge",
+            "status": "active",
+            "category_id": CATEGORY_ID,
+            "categories": {"name": "Appliances", "commission_key": "default"},
+        }
+    )
+    st.rows("commission_rates").append({"category_key": "default", "rate_bps": 800})
     # Tables the chain touches but never seeds itself.
     for name in (
         "intake_sessions",
@@ -365,9 +384,11 @@ def api(
         monkeypatch.setattr(f"{module}.get_supabase_client", lambda: store, raising=False)
     monkeypatch.setattr("app.routers.vendor_intake.bump_rate_counter", lambda **_k: (True, 0))
 
-    with patch("app.deps.get_supabase_service_client", return_value=store), patch(
-        "app.supabase_client.get_supabase_service_client", return_value=store
-    ), patch("app.core.admin_audit.get_supabase_service_client", return_value=store):
+    with (
+        patch("app.deps.get_supabase_service_client", return_value=store),
+        patch("app.supabase_client.get_supabase_service_client", return_value=store),
+        patch("app.core.admin_audit.get_supabase_service_client", return_value=store),
+    ):
         with TestClient(app, raise_server_exceptions=False) as client:
             yield client
     app.dependency_overrides.clear()
@@ -378,9 +399,7 @@ def _as(monkeypatch: pytest.MonkeyPatch, user_id: str, roles: frozenset[str]) ->
         "app.core.auth.verify_supabase_jwt",
         lambda token, settings: {"sub": user_id, "exp": 9_999_999_999},
     )
-    monkeypatch.setattr(
-        "app.core.auth._load_user_roles", lambda user_id, service_client: roles
-    )
+    monkeypatch.setattr("app.core.auth._load_user_roles", lambda user_id, service_client: roles)
 
 
 def _auth() -> dict[str, str]:
@@ -500,7 +519,9 @@ def test_full_chain_ends_active_only_after_a_human_approves(
 
     # 4. Vendor submits — explicitly.
     submit_response = api.post(
-        f"/vendor/intake/sessions/{session_id}/submit", headers=_auth()
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
     )
     assert submit_response.status_code == 200, submit_response.text
     submitted = submit_response.json()
@@ -508,6 +529,7 @@ def test_full_chain_ends_active_only_after_a_human_approves(
     assert submitted["session_status"] == state_machine.PENDING_ADMIN_REVIEW
     listing_id = submitted["listing_id"]
     assert store.rows("vendor_listings")[0]["status"] == "draft"
+    assert store.rows("vendor_listings")[0]["product_id"] == PRODUCT_ID
 
     # 5. Admin approves — the only step that can make it buyable.
     _as(monkeypatch, ADMIN_USER_ID, frozenset({"admin"}))
@@ -520,21 +542,18 @@ def test_full_chain_ends_active_only_after_a_human_approves(
 
     listing = next(r for r in store.rows("vendor_listings") if r["id"] == listing_id)
     assert listing["status"] == "active"
+    assert listing["product_id"] == PRODUCT_ID
     # Provenance survived the handoff: the session still points at the listing.
     assert str(store.rows("intake_sessions")[0]["listing_id"]) == listing_id
     assert store.rows("intake_field_provenance"), "per-field provenance must persist"
 
 
-def test_missing_details_are_recorded_as_data_not_messaged(
-    api: TestClient, store: Store
-) -> None:
+def test_missing_details_are_recorded_as_data_not_messaged(api: TestClient, store: Store) -> None:
     """The lane is inbound-only: a follow-up is a row, never an outbound message."""
     assert deliver(api, inbound(text="fridge")).status_code == 200
     session_id = str(store.rows("intake_sessions")[0]["id"])
 
-    orchestrator.progress_session(
-        store, session_id=session_id, vendor_id=VENDOR_ID, text="fridge"
-    )
+    orchestrator.progress_session(store, session_id=session_id, vendor_id=VENDOR_ID, text="fridge")
 
     session = store.rows("intake_sessions")[0]
     assert session["status"] == state_machine.NEEDS_DETAILS
@@ -752,8 +771,56 @@ def test_logs_never_carry_a_raw_body_or_a_full_msisdn(
     assert deliver(api, inbound(text=secret_text)).status_code == 200
 
     blob = "\n".join(
-        [record.getMessage() + json.dumps(getattr(record, "__dict__", {}), default=str)
-         for record in caplog.records]
+        [
+            record.getMessage() + json.dumps(getattr(record, "__dict__", {}), default=str)
+            for record in caplog.records
+        ]
     )
     assert MSISDN not in blob, "a full MSISDN reached the logs"
     assert secret_text not in blob, "a raw message body reached the logs"
+
+
+def test_ready_intake_without_explicit_canonical_choice_remains_private(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert deliver(api, inbound()).status_code == 200
+    session_id = str(store.rows("intake_sessions")[0]["id"])
+    orchestrator.progress_session(
+        store,
+        session_id=session_id,
+        vendor_id=VENDOR_ID,
+        text="Samsung fridge, brand new, K3500",
+    )
+    store.rows("intake_sessions")[0]["status"] = state_machine.READY_FOR_VENDOR_REVIEW
+    _as(monkeypatch, VENDOR_USER_ID, frozenset({"vendor"}))
+    response = api.post(f"/vendor/intake/sessions/{session_id}/submit", headers=_auth())
+    assert response.status_code == 422
+    assert response.json()["error"]["details"]["reason"] == "canonical_required"
+    assert_nothing_published(store)
+    assert store.rows("intake_sessions")[0]["listing_id"] is None
+    assert store.rows("intake_sessions")[0]["status"] == state_machine.READY_FOR_VENDOR_REVIEW
+
+
+def test_intake_cannot_attach_an_inactive_canonical_product(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert deliver(api, inbound()).status_code == 200
+    session_id = str(store.rows("intake_sessions")[0]["id"])
+    orchestrator.progress_session(
+        store,
+        session_id=session_id,
+        vendor_id=VENDOR_ID,
+        text="Samsung fridge, brand new, K3500",
+    )
+    store.rows("intake_sessions")[0]["status"] = state_machine.READY_FOR_VENDOR_REVIEW
+    store.rows("products")[0]["status"] = "pending_moderation"
+    _as(monkeypatch, VENDOR_USER_ID, frozenset({"vendor"}))
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "product_not_attachable"
+    assert_nothing_published(store)
+    assert store.rows("intake_sessions")[0]["listing_id"] is None

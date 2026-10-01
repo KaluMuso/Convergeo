@@ -404,3 +404,167 @@ def test_real_cart_merge_and_claim_preserve_lock_order(db: PgConn, merge_first: 
     ).ok
     for listing in listings:
         assert db.run(f"DELETE FROM public.vendor_listings WHERE id='{listing}'").ok
+
+
+@pytest.mark.parametrize("qty", [3, 6])
+def test_distinct_pooled_claims_keep_parent_fk_locks_compatible(db: PgConn, qty: int) -> None:
+    """Both FK references must exist before either pooled lock is upgraded."""
+    listing, first_group, second_group = (str(uuid.uuid4()) for _ in range(3))
+    inserted = db.run(insert_sql(listing))
+    assert inserted.ok, inserted.error
+    for group in (first_group, second_group):
+        _insert_checkout_group(db, group)
+    name = "zz_claim_parent_gate_" + uuid.uuid4().hex
+    gate = int(uuid.uuid4().hex[:12], 16)
+    installed = db.run(f"""
+      CREATE FUNCTION public.{name}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.listing_id='{listing}'::uuid THEN
+          PERFORM pg_advisory_xact_lock_shared({gate});
+        END IF;
+        RETURN NEW;
+      END; $$;
+      CREATE TRIGGER {name} AFTER INSERT ON public.stock_claim_identities
+        FOR EACH ROW EXECUTE FUNCTION public.{name}();
+    """)
+    assert installed.ok, installed.error
+    backends: list[int] = []
+    backend_lock = threading.Lock()
+
+    def claim(group: str) -> tuple[str | None, int | None]:
+        try:
+            with psycopg.connect(db.dsn) as connection:
+                connection.execute("SET LOCAL ROLE service_role")
+                connection.execute("SET LOCAL statement_timeout='10s'")
+                with backend_lock:
+                    backends.append(connection.info.backend_pid)
+                row = connection.execute(
+                    "SELECT public.claim_stock_reservation(%s,%s,%s,null,"
+                    "now()+interval '15 minutes')",
+                    (listing, group, qty),
+                ).fetchone()
+                assert row is not None
+                return None, row[0]
+        except psycopg.Error as exc:
+            return exc.sqlstate, None
+
+    try:
+        with psycopg.connect(db.dsn) as control:
+            control.execute("SELECT pg_advisory_xact_lock(%s)", (gate,))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(claim, group) for group in (first_group, second_group)]
+                waiting = False
+                for _ in range(200):
+                    with backend_lock:
+                        observed_pids = list(backends)
+                    if len(observed_pids) == 2:
+                        states = db.run(
+                            "SELECT count(*) FROM pg_stat_activity WHERE pid IN "
+                            f"({observed_pids[0]},{observed_pids[1]}) "
+                            "AND wait_event_type='Lock' AND wait_event='advisory'"
+                        )
+                        if states.rows == ["2"]:
+                            waiting = True
+                            break
+                    time.sleep(0.01)
+                # Always release the barrier before joining workers, including
+                # on a failed assertion, so the control itself cannot hang.
+                control.commit()
+                outcomes = [future.result(timeout=15) for future in futures]
+                assert waiting, "Both independent FK-backed identities must reach the gate"
+                assert all(state is None for state, _ in outcomes), outcomes
+        expected_claims = 2 if qty == 3 else 1
+        assert sum(remaining is not None for _, remaining in outcomes) == expected_claims
+        assert _legacy_stock_qty(db, listing) == 10 - expected_claims * qty
+        reservations = db.run(
+            f"SELECT count(*),coalesce(sum(qty),0) FROM public.stock_reservations "
+            f"WHERE listing_id='{listing}'"
+        )
+        assert reservations.ok and reservations.rows == [
+            f"{expected_claims}|{expected_claims * qty}"
+        ]
+        for group in (first_group, second_group):
+            release_reservation(listing_id=listing, checkout_group_id=group)
+        assert _legacy_stock_qty(db, listing) == 10
+    finally:
+        assert db.run(
+            f"DROP TRIGGER {name} ON public.stock_claim_identities; DROP FUNCTION public.{name}();"
+        ).ok
+        assert db.run(f"DELETE FROM public.vendor_listings WHERE id='{listing}'").ok
+
+
+def test_pooled_claim_can_upgrade_behind_waiting_adjustment(db: PgConn) -> None:
+    """A stronger adjustment waiter must not trap the FK-holding claim."""
+    listing, group = (str(uuid.uuid4()) for _ in range(2))
+    assert db.run(insert_sql(listing)).ok
+    _insert_checkout_group(db, group)
+    name = "zz_claim_adjust_gate_" + uuid.uuid4().hex
+    gate = int(uuid.uuid4().hex[:12], 16)
+    assert db.run(f"""
+      CREATE FUNCTION public.{name}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.listing_id='{listing}'::uuid THEN
+        PERFORM pg_advisory_xact_lock_shared({gate}); END IF; RETURN NEW; END; $$;
+      CREATE TRIGGER {name} AFTER INSERT ON public.stock_claim_identities
+        FOR EACH ROW EXECUTE FUNCTION public.{name}();
+    """).ok
+    backends: dict[str, int] = {}
+    backend_lock = threading.Lock()
+
+    def write(kind: str) -> object:
+        with psycopg.connect(db.dsn) as connection:
+            connection.execute("SET LOCAL ROLE service_role")
+            connection.execute("SET LOCAL statement_timeout='10s'")
+            with backend_lock:
+                backends[kind] = connection.info.backend_pid
+            if kind == "claim":
+                row = connection.execute(
+                    "SELECT public.claim_stock_reservation(%s,%s,3,null,"
+                    "now()+interval '15 minutes')",
+                    (listing, group),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT public.adjust_vendor_stock(%s,%s,%s,null,%s,2,'delivery','each',1000)",
+                    (ACTOR, VENDOR_ID, listing, str(uuid.uuid4())),
+                ).fetchone()
+            assert row is not None
+            return row[0]
+
+    def wait_for_lock(kind: str, advisory: bool) -> None:
+        for _ in range(200):
+            with backend_lock:
+                pid = backends.get(kind)
+            if pid is not None:
+                extra = " AND wait_event='advisory'" if advisory else ""
+                observed = db.run(
+                    f"SELECT count(*) FROM pg_stat_activity WHERE pid={pid} "
+                    f"AND wait_event_type='Lock'{extra}"
+                )
+                if observed.rows == ["1"]:
+                    return
+            time.sleep(0.01)
+        raise AssertionError(f"{kind} did not reach its expected lock wait")
+
+    try:
+        with psycopg.connect(db.dsn) as control:
+            control.execute("SELECT pg_advisory_xact_lock(%s)", (gate,))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                claim = pool.submit(write, "claim")
+                try:
+                    wait_for_lock("claim", True)
+                    adjustment = pool.submit(write, "adjust")
+                    wait_for_lock("adjust", False)
+                finally:
+                    control.commit()
+                assert claim.result(timeout=15) == 7
+                outcome = adjustment.result(timeout=15)
+                assert isinstance(outcome, dict) and outcome["ok"]
+                assert (outcome["old_qty"], outcome["new_qty"]) == (7, 9)
+        assert _legacy_stock_qty(db, listing) == 9
+        assert release_reservation(listing_id=listing, checkout_group_id=group).released
+        assert _legacy_stock_qty(db, listing) == 12
+    finally:
+        assert db.run(
+            f"DROP TRIGGER {name} ON public.stock_claim_identities; DROP FUNCTION public.{name}();"
+        ).ok
+        assert db.run(f"DELETE FROM public.vendor_listings WHERE id='{listing}'").ok

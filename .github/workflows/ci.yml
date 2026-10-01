@@ -633,7 +633,7 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
-      EXPECTED_TYPEGEN_MIGRATION_COUNT: "137"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "138"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -918,6 +918,8 @@ jobs:
         run: uv sync --dev --frozen
       - name: Financial orchestration controls
         run: python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+      - name: Shared adoption prerequisite negative controls
+        run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
       - name: Execute real financial database gates
         shell: bash
         run: python scripts/ci/run_financial_real_stack.py

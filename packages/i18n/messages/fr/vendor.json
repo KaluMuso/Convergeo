@@ -1649,5 +1649,13 @@
       "orders": "Commandes",
       "profile": "Profil"
     }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "Produit du catalogue"
+    },
+    "errors": {
+      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
+    }
   }
 }

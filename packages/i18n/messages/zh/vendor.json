@@ -1649,5 +1649,13 @@
       "orders": "订单",
       "profile": "资料"
     }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "目录商品"
+    },
+    "errors": {
+      "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
+    }
   }
 }

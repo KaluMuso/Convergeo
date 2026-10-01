@@ -151,6 +151,15 @@ class RedeemLinkRequest(StrictModel):
     token: str = Field(min_length=1, max_length=512)
 
 
+class IntakeSubmitRequest(StrictModel):
+    # Optional body preserves legacy request parsing; a new submission still
+    # requires an explicit catalogue choice before the listing seam is invoked.
+    product_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    )
+
+
 class SubmitResponse(StrictModel):
     session_id: str
     listing_id: str
@@ -243,9 +252,7 @@ def _sign_media(service_client: ServiceRoleClient, session_id: str) -> list[Inta
         signed: str | None = None
         if bucket is not None:
             try:
-                result = bucket.create_signed_url(
-                    str(row["storage_path"]), MEDIA_URL_TTL_SECONDS
-                )
+                result = bucket.create_signed_url(str(row["storage_path"]), MEDIA_URL_TTL_SECONDS)
                 if isinstance(result, dict):
                     raw = (
                         result.get("signedURL")
@@ -286,9 +293,7 @@ def _pending_requests(session: dict[str, Any]) -> list[PendingRequestOut]:
                 key=key,
                 field_name=field_name if isinstance(field_name, str) else None,
                 params=(
-                    {str(k): str(v) for k, v in params.items()}
-                    if isinstance(params, dict)
-                    else {}
+                    {str(k): str(v) for k, v in params.items()} if isinstance(params, dict) else {}
                 ),
             )
         )
@@ -309,9 +314,7 @@ def _draft_out(draft: dict[str, Any]) -> IntakeDraftOut:
     )
 
 
-def _detail(
-    service_client: ServiceRoleClient, *, session: dict[str, Any]
-) -> IntakeSessionDetail:
+def _detail(service_client: ServiceRoleClient, *, session: dict[str, Any]) -> IntakeSessionDetail:
     session_id = str(session["id"])
     draft = _load_draft(service_client, session_id)
     provenance = _rows(
@@ -342,9 +345,7 @@ def _detail(
     )
 
 
-def _rate_limit(
-    service_client: ServiceRoleClient, *, scope: str, key: str, limit: int
-) -> None:
+def _rate_limit(service_client: ServiceRoleClient, *, scope: str, key: str, limit: int) -> None:
     allowed, retry_after = bump_rate_counter(
         scope=scope,
         key=key,
@@ -423,9 +424,7 @@ async def mint_review_link(
     """
     vendor = _load_vendor(service_client, current_user.id)
     require_lane_open_for(service_client, str(vendor["id"]))
-    _rate_limit(
-        service_client, scope="intake_link_mint", key=str(vendor["id"]), limit=10
-    )
+    _rate_limit(service_client, scope="intake_link_mint", key=str(vendor["id"]), limit=10)
     _load_owned_session(service_client, session_id=session_id, vendor_id=str(vendor["id"]))
     token, expires_at = deeplink.mint(service_client, session_id=session_id)
     return DeepLinkResponse(
@@ -449,9 +448,7 @@ async def redeem_review_link(
     """
     vendor = _load_vendor(service_client, current_user.id)
     require_lane_open_for(service_client, str(vendor["id"]))
-    _rate_limit(
-        service_client, scope="intake_link_redeem", key=str(vendor["id"]), limit=20
-    )
+    _rate_limit(service_client, scope="intake_link_redeem", key=str(vendor["id"]), limit=20)
     session_id = deeplink.redeem(service_client, token=body.token)
     session = _load_owned_session(
         service_client, session_id=session_id, vendor_id=str(vendor["id"])
@@ -541,6 +538,7 @@ async def submit_intake_session(
     session_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    body: IntakeSubmitRequest | None = None,
 ) -> SubmitResponse:
     """The vendor's explicit act: turn a reviewed draft into a draft listing.
 
@@ -552,9 +550,7 @@ async def submit_intake_session(
     vendor = _load_vendor(service_client, current_user.id)
     vendor_id = str(vendor["id"])
     require_lane_open_for(service_client, vendor_id)
-    session = _load_owned_session(
-        service_client, session_id=session_id, vendor_id=vendor_id
-    )
+    session = _load_owned_session(service_client, session_id=session_id, vendor_id=vendor_id)
 
     # Idempotent: a repeated submit returns the listing the first one produced.
     if session.get("listing_id"):
@@ -584,16 +580,14 @@ async def submit_intake_session(
         )
 
     draft = _load_draft(service_client, session_id)
-    listing_request = handoff.build_listing_request(draft)
+    listing_request = handoff.build_listing_request(
+        draft, product_id=body.product_id if body else None
+    )
 
     # Same tier quota as a hand-typed listing. Checked before anything is written.
-    enforce_listing_cap(
-        load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor)
-    )
+    enforce_listing_cap(load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor))
 
-    created = create_listing_for_vendor(
-        service_client, vendor=vendor, body=listing_request
-    )
+    created = create_listing_for_vendor(service_client, vendor=vendor, body=listing_request)
     if created.status != "draft":
         # Defensive: the intake path must never mint an active listing. If the
         # shared seam ever changed, fail loudly rather than publish silently.

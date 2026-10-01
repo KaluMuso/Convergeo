@@ -674,9 +674,15 @@ class TestReservationClaimOnSessionInit:
         assert session_id in captured_group_ids
         assert _reservation_count(db, session_id) == 1
 
+        # A competing claim must reference a real checkout. The durable claim
+        # identity validates that foreign key before testing stock availability.
+        overflow_session_id = str(uuid.uuid4())
+        _insert_checkout_group(
+            db, session_id=overflow_session_id, idem_suffix="overflow", status="pending"
+        )
         overflow = claim_reservation(
             listing_id=listing_id,
-            checkout_group_id=str(uuid.uuid4()),
+            checkout_group_id=overflow_session_id,
             qty=2,
             ttl_minutes=15,
         )
