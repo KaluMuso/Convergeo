@@ -510,8 +510,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — required for migration 0001 (vector extension).
-        image: pgvector/pgvector:pg16
+        # Qualification input; runtime checks below prove the mutable tag contents.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -537,6 +537,12 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           PGDATABASE: postgres
+
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            bash scripts/ci/verify-postgres-runtime.sh
 
       - name: Setup uv (canonical migration re-entrant replay)
         uses: astral-sh/setup-uv@v5
@@ -586,6 +592,11 @@ jobs:
       SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
       SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
       SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
+      # Explicit typegen-only profile for supabase/postgres:17.6.1.143.
+      EXPECTED_SERVER_VERSION_NUM: "170006"
+      EXPECTED_VECTOR_VERSION: "0.8.2"
+      EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
+      EXPECTED_PGCRYPTO_VERSION: "1.3"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -598,21 +609,103 @@ jobs:
           # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
           version: 2.109.1
 
-      - name: Start local database
-        run: supabase db start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Reset local database
-        run: supabase db reset --no-seed
+      - name: Typegen helper negative controls
+        run: bash scripts/ci/test-typegen-contract.sh
+
+      - name: Prepare pinned Supabase-compatible database
+        run: |
+          TYPEGEN_WORKDIR="$(mktemp -d)"
+          echo "TYPEGEN_WORKDIR=${TYPEGEN_WORKDIR}" >> "${GITHUB_ENV}"
+          bash scripts/ci/prepare-typegen-workdir.sh "${TYPEGEN_WORKDIR}"
+          supabase --workdir "${TYPEGEN_WORKDIR}" db start
+          supabase --workdir "${TYPEGEN_WORKDIR}" db reset --no-seed
+
+          TYPEGEN_DB_CONTAINER_ID="$(docker ps \
+            --filter 'name=^/supabase_db_vergeo5-typegen$' \
+            --format '{{.ID}}')"
+          if [[ -z "${TYPEGEN_DB_CONTAINER_ID}" ]]; then
+            echo "error: disposable Supabase database container was not found" >&2
+            exit 1
+          fi
+          echo "TYPEGEN_DB_CONTAINER_ID=${TYPEGEN_DB_CONTAINER_ID}" >> "${GITHUB_ENV}"
+
+      - name: Initialize disposable typegen GraphQL
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/initialize-typegen-graphql.sh \
+            | tee generated-types/graphql-initialization.txt
+
+      - name: Qualify migrations and Supabase database shape
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/qualify-typegen-database.sh \
+            | tee generated-types/database-shape.txt
+
+      - name: Prefetch pinned postgres-meta generator
+        run: bash scripts/ci/prefetch-postgres-meta.sh
 
       - name: Regenerate types
-        run: bash scripts/gen-types.sh
+        env:
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+        run: |
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cp packages/types/src/db.ts generated-types/db.first.ts
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cmp generated-types/db.first.ts packages/types/src/db.ts
+          cp packages/types/src/db.ts generated-types/db.ts
+
+      - name: Record generated type provenance
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+          TYPEGEN_OUTPUT: packages/types/src/db.ts
+          PROVENANCE_OUTPUT: generated-types/provenance.txt
+          TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE: generated-types/graphql-initialization.txt
+        run: |
+          bash scripts/ci/record-typegen-provenance.sh
+
+      - name: Upload generated database types
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-database-types-${{ github.sha }}
+          path: generated-types
+          if-no-files-found: error
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
 
+      - name: Stop disposable Supabase database
+        if: always()
+        run: |
+          if [[ -n "${TYPEGEN_WORKDIR:-}" ]]; then
+            supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+          fi
+
   rls:
     name: RLS isolation matrix
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     # Same auth-hook/OAuth dummy env as db — stack cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -630,21 +723,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
-        with:
-          # Pinned (not `latest`) so setup-cli skips the unauthenticated
-          # GitHub "resolve latest release" API call, which intermittently
-          # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
-          version: 2.109.1
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Start local database
-        run: supabase db start
-
-      - name: Reset local database (no demo seed)
-        # The RLS fixture owns its matrix data. `supabase/config.toml` also has
-        # db.seed.enabled=false, so make the observed no-seed precondition explicit.
-        run: supabase db reset --no-seed
+      - name: Replay migrations
+        working-directory: ${{ github.workspace }}
+        env:
+          PGHOST: localhost
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: bash scripts/ci/migration-replay.sh
 
       # Provision the matrix's impersonation roles in ISOLATION, before any
       # pytest process touches the database. On 2026-08-02 the same bootstrap,
@@ -659,6 +749,11 @@ jobs:
             docker ps --format '{{.Names}}' | grep -i 'supabase_db' | head -1 | xargs -r docker logs --tail 100
             exit 1
           fi
+
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            bash ../../scripts/ci/verify-postgres-runtime.sh
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -688,6 +783,105 @@ jobs:
         # to stabilise the environment, not to hide the signal again.
         run: uv run pytest tests/rls -q
 
+  critical-real-stack:
+    name: Critical real-stack execution (88 identities)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
+        shell: bash
+        run: bash scripts/ci/run-critical-real-stack.sh
+
+      - name: Retain critical execution identity and JUnit evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: critical-real-stack-${{ github.sha }}-${{ github.run_attempt }}
+          path: critical-real-stack-evidence
+          if-no-files-found: warn
+
+  financial-real-stack:
+    name: Financial real-stack execution (fresh and upgrade)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout full accepted-baseline history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Setup pinned Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Frozen API dependency install
+        working-directory: services/api
+        run: uv sync --dev --frozen
+      - name: Financial orchestration controls
+        run: python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+      - name: Execute real financial database gates
+        shell: bash
+        run: python scripts/ci/run_financial_real_stack.py
+      - name: Retain sanitized financial evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: financial-real-stack-${{ github.sha }}-${{ github.run_attempt }}
+          path: financial-real-stack-evidence
+          if-no-files-found: error
+
   money-db-triggers:
     name: Money DB-trigger integration
     runs-on: ubuntu-latest
@@ -700,7 +894,7 @@ jobs:
     # re-applies migrations). Keeps this money coverage from silently skipping in CI.
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -810,8 +1004,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — the same image the `migrations` job replays onto.
-        image: pgvector/pgvector:pg16
+        # Same explicitly qualified image input as migration replay.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres

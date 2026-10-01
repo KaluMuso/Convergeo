@@ -90,7 +90,7 @@ def _insert_order(
           id, checkout_group_id, vendor_id, customer_id, status, fulfilment, cod
         ) VALUES (
           '{order_id}', '{checkout_group_id}', '{SHOP_A}', '{CUSTOMER_ID}',
-          '{status}', '{fulfilment}', {'true' if cod else 'false'}
+          '{status}', '{fulfilment}', {"true" if cod else "false"}
         )
         ON CONFLICT (id) DO UPDATE
           SET status = EXCLUDED.status,
@@ -339,9 +339,7 @@ class TestCancellationPaymentRules:
         group_id = str(uuid.uuid4())
         _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
         payment_id = str(uuid.uuid4())
-        _insert_payment(
-            db, payment_id=payment_id, checkout_group_id=group_id, status="success"
-        )
+        _insert_payment(db, payment_id=payment_id, checkout_group_id=group_id, status="success")
 
         with pytest.raises(RefundPathRequiredError):
             transition_order(
@@ -352,24 +350,43 @@ class TestCancellationPaymentRules:
                 note="cancel paid order",
             )
 
-    def test_paid_cancel_with_refund_path_flag_succeeds(self, db: PgConn) -> None:
+    def test_customer_refund_path_flag_does_not_authorize_paid_cancellation(
+        self, db: PgConn
+    ) -> None:
         order_id = str(uuid.uuid4())
         group_id = str(uuid.uuid4())
         _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
         payment_id = str(uuid.uuid4())
-        _insert_payment(
-            db, payment_id=payment_id, checkout_group_id=group_id, status="success"
-        )
+        _insert_payment(db, payment_id=payment_id, checkout_group_id=group_id, status="success")
 
+        with pytest.raises(RefundPathRequiredError):
+            transition_order(
+                order_id=order_id,
+                event=OrderEvent.CANCEL,
+                actor_role=ActorRole.CUSTOMER,
+                actor_id=CUSTOMER_ID,
+                note="untrusted refund flag",
+                refund_path=True,
+            )
+        assert _order_status(db, order_id) == "placed"
+
+    def test_authorized_admin_cancellation_preserves_refund_resolution(self, db: PgConn) -> None:
+        order_id, group_id = str(uuid.uuid4()), str(uuid.uuid4())
+        _insert_order(db, order_id=order_id, checkout_group_id=group_id, status="placed")
+        _insert_payment(
+            db, payment_id=str(uuid.uuid4()), checkout_group_id=group_id, status="success"
+        )
         transition_order(
             order_id=order_id,
             event=OrderEvent.CANCEL,
-            actor_role=ActorRole.CUSTOMER,
-            actor_id=CUSTOMER_ID,
-            note="cancel with refund queued",
+            actor_role=ActorRole.ADMIN,
+            actor_id=ADMIN_ID,
+            note="authorized financial resolution",
             refund_path=True,
         )
         assert _order_status(db, order_id) == "cancelled"
+        result = db.run(f"SELECT gate FROM public.order_money_gates WHERE order_id='{order_id}'")
+        assert result.ok and result.rows == ["refund"]
 
     def test_cod_treated_as_unpaid_for_cancel(self, db: PgConn) -> None:
         order_id = str(uuid.uuid4())
@@ -382,9 +399,7 @@ class TestCancellationPaymentRules:
             cod=True,
         )
         payment_id = str(uuid.uuid4())
-        _insert_payment(
-            db, payment_id=payment_id, checkout_group_id=group_id, status="success"
-        )
+        _insert_payment(db, payment_id=payment_id, checkout_group_id=group_id, status="success")
 
         transition_order(
             order_id=order_id,

@@ -284,9 +284,9 @@ class TestVerifyWebhookRace:
             client_status="success",
             strategy=strategy,
         )
-        assert first.verified is False
-        assert first.order_confirmed is False
-        assert card_service.client.tables["payments"].rows[0]["status"] == "ussd_pushed"
+        assert first.verified is True
+        assert first.order_confirmed is True
+        assert card_service.client.tables["payments"].rows[0]["status"] == "success"
 
         _seed_success_webhook(card_service.client, webhook_id=webhook_id)
         second = await verify_card_payment_return(
@@ -322,9 +322,9 @@ class TestVerifyWebhookRace:
         _seed_success_webhook(card_service.client, webhook_id=webhook_id)
 
         outcome = process_webhook_event(card_service, webhook_event_id=webhook_id)
-        assert outcome is not None
-        assert outcome.to_status == PaymentStatus.SUCCESS
-        assert card_service.client.tables["payments"].rows[0]["status"] == "success"
+        assert outcome is None
+        assert card_service.client.tables["payments"].rows[0]["status"] == "ussd_pushed"
+        assert card_service.client.tables["webhook_events"].rows[0]["processed_at"] is None
 
         strategy = _mock_strategy(lenco_status="successful")
         result = await verify_card_payment_return(

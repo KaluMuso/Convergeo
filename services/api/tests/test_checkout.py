@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from collections.abc import Generator
 from pathlib import Path
@@ -80,7 +81,15 @@ def _make_client(service_override: object | None = None) -> TestClient:
             yield service_override
 
         app.dependency_overrides[get_supabase_client] = _override_service
-    return TestClient(app, raise_server_exceptions=False)
+    # CI's disposable real-stack packet needs the original exception in its
+    # private, sanitized JUnit/log artifact. Normal API/test behavior remains
+    # the existing generic error response.
+    isolated_diagnostics = (
+        os.environ.get("CRITICAL_REAL_STACK_DIAGNOSTICS") == "1"
+        and os.environ.get("CRITICAL_REAL_STACK_GROUP") == "checkout"
+        and os.environ.get("SUPABASE_URL") == "http://127.0.0.1:3007"
+    )
+    return TestClient(app, raise_server_exceptions=isolated_diagnostics)
 
 
 def _mock_profile_execute(phone: str | None) -> MagicMock:
@@ -119,6 +128,30 @@ def _mock_cart_tables(
     return mock_client
 
 
+def _require_fixture_sql(conn: PgConn, sql: str) -> None:
+    result = conn.run(sql)
+    assert result.ok, f"checkout fixture SQL failed ({result.sqlstate}): {result.error}"
+
+
+@pytest.fixture
+def owned_cart_id(db: PgConn) -> Generator[str, None, None]:
+    """Remove only this case's cart so the shared customer can have one active cart."""
+    cart_id = str(uuid.uuid4())
+    try:
+        yield cart_id
+    finally:
+        _require_fixture_sql(
+            db,
+            f"""
+            BEGIN;
+            DELETE FROM public.cart_items WHERE cart_id = '{cart_id}'::uuid;
+            DELETE FROM public.carts
+            WHERE id = '{cart_id}'::uuid AND user_id = '{CUSTOMER_ID}'::uuid;
+            COMMIT;
+            """,
+        )
+
+
 def _insert_checkout_group(
     conn: PgConn,
     *,
@@ -126,7 +159,8 @@ def _insert_checkout_group(
     idem_suffix: str,
     status: str,
 ) -> None:
-    conn.run(
+    _require_fixture_sql(
+        conn,
         f"""
         INSERT INTO public.checkout_groups (
           id, customer_id, idempotency_key,
@@ -145,7 +179,8 @@ def _insert_cart_with_items(
     cart_id: str,
     items: list[tuple[str, int, int]],
 ) -> None:
-    conn.run(
+    _require_fixture_sql(
+        conn,
         f"""
         INSERT INTO public.carts (id, user_id, status)
         VALUES ('{cart_id}', '{CUSTOMER_ID}', 'active')
@@ -154,7 +189,8 @@ def _insert_cart_with_items(
     )
     for listing_id, qty, unit_price in items:
         item_id = str(uuid.uuid4())
-        conn.run(
+        _require_fixture_sql(
+            conn,
             f"""
             INSERT INTO public.cart_items (
               id, cart_id, listing_id, qty, unit_price_ngwee, wholesale
@@ -174,7 +210,8 @@ def _insert_tracked_listing(
     price_ngwee: int = 10_000,
 ) -> None:
     ids = _load_ids()
-    conn.run(
+    _require_fixture_sql(
+        conn,
         f"""
         INSERT INTO public.vendor_listings (
           id, vendor_id, product_id, price_ngwee, condition, stock_mode, stock_qty, status
@@ -395,7 +432,9 @@ class TestFeeMath:
 
 
 class TestMixedDeliveryPickup:
-    def test_mixed_groups_compute_separate_fees(self, db: PgConn, db_url_env: None) -> None:
+    def test_mixed_groups_compute_separate_fees(
+        self, db: PgConn, db_url_env: None, owned_cart_id: str
+    ) -> None:
         listing_a = str(uuid.uuid4())
         listing_b = str(uuid.uuid4())
         _insert_tracked_listing(db, listing_id=listing_a, vendor_id=VENDOR_A, stock_qty=5)
@@ -403,7 +442,7 @@ class TestMixedDeliveryPickup:
             db, listing_id=listing_b, vendor_id=VENDOR_B, stock_qty=5, price_ngwee=25_000
         )
 
-        cart_id = str(uuid.uuid4())
+        cart_id = owned_cart_id
         _insert_cart_with_items(
             db,
             cart_id=cart_id,
@@ -414,7 +453,8 @@ class TestMixedDeliveryPickup:
         )
 
         session_id = str(uuid.uuid4())
-        db.run(
+        _require_fixture_sql(
+            db,
             f"""
             INSERT INTO public.checkout_groups (
               id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee
@@ -525,10 +565,12 @@ class TestGuestOtpContactFlow:
 
 
 class TestReservationClaimOnSessionInit:
-    def test_session_init_claims_reservations(self, db: PgConn, db_url_env: None) -> None:
+    def test_session_init_claims_reservations(
+        self, db: PgConn, db_url_env: None, owned_cart_id: str
+    ) -> None:
         listing_id = str(uuid.uuid4())
         _insert_tracked_listing(db, listing_id=listing_id, vendor_id=VENDOR_A, stock_qty=3)
-        cart_id = str(uuid.uuid4())
+        cart_id = owned_cart_id
         _insert_cart_with_items(db, cart_id=cart_id, items=[(listing_id, 2, 10_000)])
 
         client = _make_client()
@@ -573,7 +615,8 @@ class TestReservationClaimOnSessionInit:
                         delivery = payload["delivery_fee_ngwee"]
                         total = payload["total_ngwee"]
                         status = payload["status"]
-                        db.run(
+                        _require_fixture_sql(
+                            db,
                             f"""
                             INSERT INTO public.checkout_groups (
                               id, customer_id, idempotency_key,
@@ -669,7 +712,8 @@ class TestExpiryReturnsCartNotice:
             idem_suffix="exp2",
             status="pending",
         )
-        db.run(
+        _require_fixture_sql(
+            db,
             f"""
             INSERT INTO public.stock_reservations (
               listing_id, checkout_group_id, qty, expires_at
@@ -710,7 +754,8 @@ class TestExpiryReturnsCartNotice:
         )
         future = "timezone('utc', now()) + interval '10 minutes'"
         listing_id = _load_ids()["listings"]["phone_a"]
-        db.run(
+        _require_fixture_sql(
+            db,
             f"""
             INSERT INTO public.stock_reservations (
               listing_id, checkout_group_id, qty, expires_at

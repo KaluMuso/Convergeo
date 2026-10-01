@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
+import { formatK } from "@vergeo/i18n";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -20,6 +21,10 @@ type PageProps = {
 };
 
 export default function VendorJobCompletePage({ params }: PageProps) {
+  const funding = useTranslations("services.funding");
+  const [legs, setLegs] = useState<
+    { id: string; leg: string; amount_ngwee: number; status: string }[]
+  >([]);
   const t = useTranslations("services.completion.provider");
   const { session, loading: sessionLoading } = useSession();
   const [locale, setLocale] = useState("en");
@@ -35,7 +40,23 @@ export default function VendorJobCompletePage({ params }: PageProps) {
     });
   }, [params]);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
+
+  useEffect(() => {
+    if (!jobId || !session?.access_token) return;
+    const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
+    const load = () =>
+      client
+        .request<typeof legs>(`/jobs/${jobId}/payments`)
+        .then(setLegs)
+        .catch(() => setError(funding("error")));
+    void load();
+    const timer = setInterval(() => void load(), 5000);
+    return () => clearInterval(timer);
+  }, [jobId, session?.access_token, getToken, funding]);
 
   const handleMarkComplete = useCallback(async () => {
     if (!jobId) {
@@ -45,10 +66,13 @@ export default function VendorJobCompletePage({ params }: PageProps) {
     setError(null);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
-      const result = await client.request<MarkCompleteResponse>(`/jobs/${jobId}/complete`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
+      const result = await client.request<MarkCompleteResponse>(
+        `/jobs/${jobId}/complete`,
+        {
+          method: "POST",
+          body: JSON.stringify({}),
+        },
+      );
       setMarked(true);
       void result;
     } catch (err) {
@@ -82,6 +106,15 @@ export default function VendorJobCompletePage({ params }: PageProps) {
         <p className="text-sm text-text-2">{t("intro")}</p>
       </header>
 
+      <section className="space-y-2" aria-label={funding("title")}>
+        <h2>{funding("title")}</h2>
+        {legs.map((leg) => (
+          <p key={leg.id}>
+            {funding(leg.leg)}: {formatK(leg.amount_ngwee)} —{" "}
+            {funding(`status.${leg.status}`)}
+          </p>
+        ))}
+      </section>
       <section className="space-y-4 rounded border border-border bg-surface p-4">
         {marked ? (
           <p className="text-sm font-medium text-success">{t("marked")}</p>
@@ -100,7 +133,10 @@ export default function VendorJobCompletePage({ params }: PageProps) {
             </Button>
           </>
         )}
-        <Link href={`/${locale}/jobs`} className="block text-center text-sm text-text-2 underline">
+        <Link
+          href={`/${locale}/jobs`}
+          className="block text-center text-sm text-text-2 underline"
+        >
           {t("backToJobs")}
         </Link>
       </section>

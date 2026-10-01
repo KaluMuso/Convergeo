@@ -12,7 +12,13 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.identity import lookup_user_email
-from app.services.payments.base import PaymentStrategy, QueryStatusRequest
+from app.services.payments.base import (
+    PaymentProviderError,
+    PaymentStrategy,
+    ProviderOutcome,
+    QueryStatusRequest,
+)
+from app.services.payments.initiate import claim_payment_attempt, require_payments_enabled
 from app.services.payments.lenco.config import LencoEnvironment, get_lenco_environment
 from app.services.payments.money import ngwee_to_major_str
 from app.services.payments.references import make_order_reference
@@ -24,10 +30,9 @@ from app.services.payments.state import (
     PaymentObservationMismatch,
     PaymentStatus,
     apply_payment_status,
-    collection_observation_from_webhook,
+    collection_observation_from_query,
     lenco_collection_status_to_payment_status,
     lenco_webhook_event_to_payment_status,
-    process_webhook_event,
     release_checkout_for_retry,
     transition_payment,
     validate_query_collection_observation,
@@ -71,6 +76,7 @@ class CreateCardSessionResponse(StrictModel):
     amount_ngwee: int
     widget_script_url: str
     customer: WidgetCustomerOut
+    service_job_id: str | None = None
 
 
 class VerifyCardReturnRequest(StrictModel):
@@ -140,9 +146,7 @@ def _load_payment(
 ) -> dict[str, Any]:
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .eq("id", payment_id)
         .maybe_single()
         .execute()
@@ -374,27 +378,35 @@ async def verify_card_payment_return(
     lenco_reference = str(payment["lenco_reference"])
     current_status = PaymentStatus(str(payment["status"]))
 
-    if current_status == PaymentStatus.SUCCESS:
-        return VerifyCardReturnResponse(
-            payment_id=payment_id,
-            checkout_group_id=checkout_group_id,
-            status=PaymentStatus.SUCCESS.value,
-            verified=True,
-            order_confirmed=True,
-        )
-
     provider = strategy or get_payment_strategy(str(payment.get("provider", LENCO_PROVIDER)))
     try:
-        lenco_status = await _query_lenco_status(
-            provider,
-            service_client=service_client,
-            payment_id=payment_id,
-            reference=lenco_reference,
+        query_result = await provider.query_status(QueryStatusRequest(reference=lenco_reference))
+        if query_result.outcome == ProviderOutcome.NOT_FOUND:
+            return VerifyCardReturnResponse(
+                payment_id=payment_id,
+                checkout_group_id=checkout_group_id,
+                status=current_status.value,
+                verified=False,
+                order_confirmed=False,
+                held=True,
+            )
+        validate_query_collection_observation(
+            service_client, payment_id=payment_id, result=query_result
         )
-        webhook_row = _find_success_webhook(
+        lenco_status = lenco_collection_status_to_payment_status(query_result.status)
+        _find_success_webhook(
             service_client,
             payment_id=payment_id,
             reference=lenco_reference,
+        )
+    except PaymentProviderError:
+        return VerifyCardReturnResponse(
+            payment_id=payment_id,
+            checkout_group_id=checkout_group_id,
+            status=current_status.value,
+            verified=False,
+            order_confirmed=False,
+            held=True,
         )
     except PaymentObservationMismatch as exc:
         _hold_payment_mismatch(
@@ -412,24 +424,6 @@ async def verify_card_payment_return(
             order_confirmed=False,
             held=True,
         )
-    if webhook_row is not None and webhook_row.get("processed_at") is None:
-        process_webhook_event(service_client, webhook_event_id=str(webhook_row["id"]))
-        payment = _load_payment(service_client, payment_id=payment_id)
-        current_status = PaymentStatus(str(payment["status"]))
-        if current_status == PaymentStatus.SUCCESS:
-            _mark_fulfilled(
-                service_client,
-                payment_id=payment_id,
-                note="Card payment fulfilled after webhook processing",
-            )
-            return VerifyCardReturnResponse(
-                payment_id=payment_id,
-                checkout_group_id=checkout_group_id,
-                status=PaymentStatus.SUCCESS.value,
-                verified=True,
-                order_confirmed=True,
-            )
-
     if client_status == "success" and lenco_status != PaymentStatus.SUCCESS:
         _hold_payment_mismatch(
             service_client,
@@ -447,23 +441,14 @@ async def verify_card_payment_return(
             held=True,
         )
 
-    if lenco_status == PaymentStatus.SUCCESS and webhook_row is not None:
-        webhook_data = webhook_row.get("raw", {}).get("data", {})
-        if not isinstance(webhook_data, dict):
-            raise AppError(
-                code="payment_observation_required",
-                message="Verified webhook collection data is missing",
-                http_status=409,
-            )
+    if lenco_status == PaymentStatus.SUCCESS:
         outcome = apply_payment_status(
             service_client,
             payment_id=payment_id,
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="Card payment verified via Lenco status query and webhook cross-check",
-            observation=collection_observation_from_webhook(
-                webhook_data, webhook_event_id=str(webhook_row["id"])
-            ),
+            observation=collection_observation_from_query(query_result, source="card_return"),
         )
         if outcome is not None:
             _mark_fulfilled(
@@ -474,6 +459,32 @@ async def verify_card_payment_return(
         else:
             settled = _load_payment(service_client, payment_id=payment_id)
             settled_status = PaymentStatus(str(settled["status"]))
+            receipt = _single_row(
+                service_client.client.table("payment_collection_receipts")
+                .select("receipt_identity")
+                .eq("payment_id", payment_id)
+                .maybe_single()
+                .execute()
+            )
+            identity = (receipt or {}).get("receipt_identity", {})
+            verified_identity = collection_observation_from_query(
+                query_result, source="card_return"
+            )
+            if (
+                identity.get("merchant_reference") != query_result.reference
+                or identity.get("provider_reference")
+                != (query_result.provider_reference or query_result.reference)
+                or identity.get("amount_ngwee") != verified_identity["amount_ngwee"]
+                or identity.get("currency") != "ZMW"
+            ):
+                return VerifyCardReturnResponse(
+                    payment_id=payment_id,
+                    checkout_group_id=checkout_group_id,
+                    status=settled_status.value,
+                    verified=False,
+                    order_confirmed=False,
+                    held=True,
+                )
             return VerifyCardReturnResponse(
                 payment_id=payment_id,
                 checkout_group_id=checkout_group_id,
@@ -490,10 +501,7 @@ async def verify_card_payment_return(
             order_confirmed=True,
         )
 
-    if lenco_status in {PaymentStatus.FAILED, PaymentStatus.EXPIRED} or client_status in {
-        "failed",
-        "closed",
-    }:
+    if lenco_status in {PaymentStatus.FAILED, PaymentStatus.EXPIRED}:
         target = lenco_status or PaymentStatus.FAILED
         if target not in {PaymentStatus.FAILED, PaymentStatus.EXPIRED}:
             target = PaymentStatus.FAILED
@@ -502,7 +510,8 @@ async def verify_card_payment_return(
             payment_id=payment_id,
             incoming_status=target,
             actor_id=SYSTEM_ACTOR_ID,
-            note="Card widget payment failed or closed by customer",
+            note="Canonical provider query reported failed",
+            observation=collection_observation_from_query(query_result, source="card_return"),
         )
         release_checkout_for_retry(
             service_client,
@@ -536,13 +545,14 @@ async def create_card_widget_session(
     actor_id: str,
 ) -> CreateCardSessionResponse:
     """Create a card payment row and return Lenco widget session parameters."""
+    require_payments_enabled(rail="card", reference=checkout_group_id)
     group = _load_checkout_group(
         service_client,
         checkout_group_id=checkout_group_id,
         customer_id=customer_id,
     )
     group_status = str(group.get("status", ""))
-    if group_status == "expired":
+    if group_status != "pending":
         raise AppError(
             code="checkout.reservation_expired",
             message="Your reservation has expired",
@@ -567,7 +577,7 @@ async def create_card_widget_session(
     lenco_reference = make_order_reference(checkout_group_id, attempt=payment_id)
     amount_major = ngwee_to_major_str(total_raw)
 
-    insert_row = {
+    insert_row: dict[str, Any] = {
         "id": payment_id,
         "checkout_group_id": checkout_group_id,
         "provider": LENCO_PROVIDER,
@@ -582,7 +592,15 @@ async def create_card_widget_session(
             }
         },
     }
-    service_client.client.table("payments").insert(insert_row).execute()
+    claim_payment_attempt(
+        service_client,
+        checkout_group_id=checkout_group_id,
+        actor_id=actor_id,
+        payment_id=payment_id,
+        rail="card",
+        reference=lenco_reference,
+        raw=insert_row["raw"],
+    )
 
     transition_payment(
         service_client,
@@ -625,13 +643,28 @@ async def get_card_session(
 ) -> CreateCardSessionResponse:
     """Return widget parameters for an existing in-flight card payment."""
     payment = _load_payment(service_client, payment_id=payment_id)
-    _ensure_card_payment_owned(
-        payment, customer_id=current_user.id, service_client=service_client
+    _ensure_card_payment_owned(payment, customer_id=current_user.id, service_client=service_client)
+    claim_payment_attempt(
+        service_client,
+        checkout_group_id=str(payment["checkout_group_id"]),
+        actor_id=current_user.id,
+        payment_id=payment_id,
+        rail="card",
+        reference=str(payment["lenco_reference"]),
+        raw={},
+        resume=True,
     )
     profile = _load_customer_profile(service_client, customer_id=current_user.id)
     email = lookup_user_email(service_client, user_id=current_user.id)
     customer = _widget_customer(profile, email=email)
     amount_ngwee = int(payment["amount_ngwee"])
+    obligation = _single_row(
+        service_client.client.table("service_payment_obligations")
+        .select("job_id")
+        .eq("checkout_group_id", payment["checkout_group_id"])
+        .maybe_single()
+        .execute()
+    )
     return CreateCardSessionResponse(
         payment_id=payment_id,
         checkout_group_id=str(payment["checkout_group_id"]),
@@ -639,6 +672,7 @@ async def get_card_session(
         amount_major=ngwee_to_major_str(amount_ngwee),
         amount_ngwee=amount_ngwee,
         widget_script_url=_widget_script_url(),
+        service_job_id=str(obligation["job_id"]) if obligation else None,
         customer=customer,
     )
 

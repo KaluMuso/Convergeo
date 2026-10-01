@@ -215,7 +215,7 @@
   "completion": {
     "provider": {
       "title": "Markani ntchito yatha",
-      "intro": "Dziwitsani customer kuti ntchito yatha. Ali ndi maola 48 kutsimikiza before auto-confirm ndi kutulutsa payment yanu.",
+      "intro": "Marking work complete does not collect an outstanding balance. Release requires verified funding and cleared holds.",
       "markCta": "Markani ntchito yatha",
       "marking": "Ikumarka complete…",
       "marked": "Yamarkidwa complete. Tikudikira customer atsimikize.",
@@ -230,20 +230,21 @@
     },
     "customer": {
       "title": "Tsimikizani kuti ntchito yatha",
-      "intro": "Tsimikizani kuti mutulutse balance kwa provider wanu. Ngati simuchita kanthu, tidzatsimikiza automatic pambuyo pa maola 48.",
+      "intro": "Acknowledge the completed work, then pay any outstanding amount. Financial completion requires verified payment and cleared holds.",
       "balanceLabel": "Balance yofunika pa completion",
-      "confirmCta": "Tsimikizani ndi kulipira {amount}",
+      "confirmCta": "Confirm work / check completion",
       "confirming": "Ikutsimikiza…",
-      "confirmed": "Yatsimikizidwa. Provider wanu walipidwa.",
+      "confirmed": "Work and funding confirmed.",
       "awaitingProvider": "Tikudikira provider wanu amarke ntchito yatha.",
-      "escrowNote": "Munalipira → Yasungidwa ndi Convergeo → Yatulusidwa kwa provider mukatsimikiza.",
+      "escrowNote": "Collected funds remain held until the completion and release checks pass.",
       "reviewUnlocked": "Zikomo! Mutha kusiya review pa provider uyu.",
       "errors": {
         "notOwner": "Mutha kutsimikiza ntchito zanu zokha.",
         "notMarked": "Provider wanu sanamarke ntchito yatha pano.",
         "generic": "Situnathe kutsimikiza ntchito. Yesaninso.",
         "rateLimited": "Ma request ambiri. Dikirani pang'ono."
-      }
+      },
+      "awaitingPayment": "Work acknowledged. Pay the outstanding amount below, then check completion."
     }
   },
   "reviews": {
@@ -289,5 +290,31 @@
       "rateLimited": "Ma request ambiri. Dikirani pang'ono.",
       "generic": "Situnathe kuyamba booking yanu. Yesaninso."
     }
+  },
+  "funding": {
+    "title": "Service payments",
+    "deposit": "Deposit",
+    "balance": "Remaining balance",
+    "pay": "Pay outstanding amount",
+    "retry": "Retry payment",
+    "refresh": "Refresh payment status",
+    "rail": "Payment method",
+    "phone": "Mobile money number",
+    "mtn": "MTN",
+    "airtel": "Airtel",
+    "card": "Card",
+    "error": "Unable to update payment. Refresh before trying again.",
+    "status": {
+      "paid": "Paid and verified",
+      "unpaid": "Unpaid",
+      "initiated": "Payment pending",
+      "ussd_pushed": "Payment pending",
+      "pay_offline": "Awaiting mobile approval",
+      "failed": "Payment failed",
+      "expired": "Payment unresolved — awaiting reconciliation",
+      "cancelled": "Cancelled",
+      "success": "Receipt under review"
+    },
+    "backToJob": "Return to job and check completion"
   }
 }

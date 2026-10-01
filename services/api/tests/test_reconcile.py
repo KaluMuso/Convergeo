@@ -8,8 +8,11 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
-from app.services.payments.base import QueryStatusResult
+from app.services.payments import reconcile as reconcile_module
+from app.services.payments.base import ProviderOutcome, QueryStatusResult
+from app.services.payments.lenco.client import LencoClient, LencoStrategy
 from app.services.payments.reconcile import (
     DailyReportResult,
     DrainResult,
@@ -23,7 +26,14 @@ from app.services.payments.reconcile import (
     poll_non_terminal_payments,
     run_daily_reconciliation_report,
 )
-from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
+from app.services.payments.state import (
+    SYSTEM_ACTOR_ID,
+    PaymentStatus,
+    collection_observation_from_query,
+)
+from app.services.payments.state import (
+    apply_payment_status as state_apply_payment_status,
+)
 from app.services.payments.webhook_verify import (
     WEBHOOK_VERIFICATION_VERSION,
     canonical_payload_sha256,
@@ -171,6 +181,13 @@ class FakeSupabaseTables:
 
     def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
         """Unit-only atomic decision stand-in; lane_d asserts the real RPC."""
+        if name == "record_collection_failure":
+            payment = next(
+                row for row in self.tables["payments"].rows
+                if row["id"] == params["p_payment_id"]
+            )
+            payment["raw"]["terminal_provider_failure"] = params["p_observation"]
+            return MagicMock(execute=lambda: MagicMock(data=None))
         assert name == "apply_prepaid_collection_success"
         payment = next(
             row for row in self.tables["payments"].rows
@@ -424,6 +441,140 @@ async def test_poller_isolates_poison_pill_and_continues_batch(
     assert len(audit_rows) == 3
     audited_ids = {row["entity_id"] for row in audit_rows}
     assert audited_ids == set(healthy_ids)
+
+
+@pytest.mark.asyncio
+async def test_poller_retains_authoritative_not_found_without_transition(
+    fake_service: FakeServiceClient,
+) -> None:
+    payment_id = str(uuid.uuid4())
+    fake_service.client.tables["payments"].rows.append(
+        {
+            "id": payment_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": PaymentStatus.USSD_PUSHED.value,
+            "lenco_reference": "ord-missing-1",
+            "amount_ngwee": 25_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {},
+            "updated_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
+        }
+    )
+
+    async def query_status(request: Any) -> QueryStatusResult:
+        return QueryStatusResult(
+            requested_reference=request.reference,
+            outcome=ProviderOutcome.NOT_FOUND,
+            raw={"error_code": "11"},
+        )
+
+    result = await poll_non_terminal_payments(
+        fake_service,
+        query_status=query_status,
+        older_than_minutes=1,
+    )
+
+    assert result == PollResult(scanned=1, updated=0, unchanged=0, errors=1)
+    assert fake_service.client.tables["payments"].rows[0]["status"] == "ussd_pushed"
+
+
+@pytest.mark.asyncio
+async def test_failed_adapter_observation_reaches_state_consumer(
+    fake_service: FakeServiceClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HTTP-200 FAILED evidence crosses the adapter, poller, and state boundary."""
+    payment_id = str(uuid.uuid4())
+    reference = "ord-failed-observation-1"
+    stale_at = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    fake_service.client.tables["payments"].rows.append(
+        {
+            "id": payment_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": PaymentStatus.USSD_PUSHED.value,
+            "lenco_reference": reference,
+            "amount_ngwee": 25_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {"provider_reference": "lenco-failed-observation-1"},
+            "updated_at": stale_at,
+        }
+    )
+    provider_body = {
+        "status": True,
+        "message": "collection failed",
+        "data": {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "initiatedAt": "2026-09-29T08:00:00Z",
+            "completedAt": "2026-09-29T08:01:00Z",
+            "amount": "250.00",
+            "fee": None,
+            "bearer": "merchant",
+            "currency": "ZMW",
+            "reference": reference,
+            "lencoReference": "lenco-failed-observation-1",
+            "type": "mobile-money",
+            "status": "failed",
+            "source": "api",
+            "reasonForFailure": "declined",
+            "settlementStatus": None,
+            "settlement": None,
+            "mobileMoneyDetails": None,
+            "bankAccountDetails": None,
+            "cardDetails": None,
+        },
+    }
+
+    def provider(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == f"/access/v2/collections/status/{reference}"
+        return httpx.Response(200, json=provider_body)
+
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(provider),
+        base_url="https://api.lenco.co/access/v2",
+    )
+    strategy = LencoStrategy(
+        LencoClient(
+            http_client=http,
+            token="controlled-http-token",
+            base_url="https://api.lenco.co/access/v2",
+        )
+    )
+    captured: dict[str, Any] = {}
+
+    def consume_status(*args: Any, **kwargs: Any) -> Any:
+        captured["observation"] = kwargs.get("observation")
+        return state_apply_payment_status(*args, **kwargs)
+
+    monkeypatch.setattr(reconcile_module, "apply_payment_status", consume_status)
+    try:
+        result = await poll_non_terminal_payments(
+            fake_service,
+            query_status=strategy.query_status,
+            older_than_minutes=1,
+        )
+    finally:
+        await http.aclose()
+
+    expected = collection_observation_from_query(
+        QueryStatusResult(
+            requested_reference=reference,
+            outcome=ProviderOutcome.FAILED,
+            reference=reference,
+            status="failed",
+            amount_major="250.00",
+            currency="ZMW",
+            provider_reference="lenco-failed-observation-1",
+            failure_reason="declined",
+        ),
+        source="poller",
+    )
+    assert captured["observation"] == expected
+    assert captured["observation"]["source"] == "poller"
+    assert result == PollResult(scanned=1, updated=1, unchanged=0, errors=0)
+    assert fake_service.client.tables["payments"].rows[0]["status"] == "failed"
 
 
 @pytest.mark.asyncio

@@ -7,23 +7,24 @@ from typing import Any
 from uuid import uuid4
 
 from app.errors import AppError
+from app.services.payments import gate
 from app.services.payments.base import (
     CollectionStatus,
     InitiateCollectionRequest,
+    PaymentProviderError,
     PaymentStrategy,
-)
-from app.services.payments.gate import (
-    PaymentsDisabledError,
-    log_payment_blocked,
-    payments_gate_status,
+    ProviderOutcome,
+    QueryStatusRequest,
 )
 from app.services.payments.references import make_order_reference
 from app.services.payments.registry import LENCO_PROVIDER, get
 from app.services.payments.state import (
-    PaymentEvent,
     PaymentStatus,
     ServiceRoleClient,
-    transition_payment,
+    apply_payment_status,
+    collection_observation_from_query,
+    lenco_collection_status_to_payment_status,
+    validate_query_collection_observation,
 )
 
 
@@ -81,91 +82,99 @@ async def initiate_checkout_payment(
     actor_id: str,
 ) -> InitiatePaymentResult:
     """Start MoMo collection for a checkout group: initiated → ussd_pushed (+ pay_offline)."""
-    # Safe-by-default payment gate: block prepaid initiation (mobile money + card)
-    # unless payments are explicitly enabled for this environment. Runs before any
-    # DB write or provider call, so a disabled gate creates no payment row.
-    enabled, reason_code = payments_gate_status()
-    if not enabled:
-        log_payment_blocked(
-            reason_code,
-            method=request.rail,
-            reference=request.checkout_group_id,
-        )
-        raise PaymentsDisabledError()
-
-    group = _load_checkout_group(service_client, request.checkout_group_id)
-    if str(group.get("status")) == "completed":
+    if request.rail not in {"mtn", "airtel"}:
         raise AppError(
-            code="checkout_completed",
-            message="Checkout group is already completed",
-            http_status=409,
+            code="unsupported_rail", message="Use the hosted card session", http_status=422
         )
-
-    amount_ngwee = request.amount_ngwee
-    group_total = group.get("total_ngwee")
-    if isinstance(group_total, int) and group_total > 0:
-        amount_ngwee = group_total
-
     payment_id = str(uuid4())
-    reference_source = request.order_id or request.checkout_group_id
-    # Salt the reference with this attempt's payment_id so a retry after a
-    # failed/expired attempt gets a distinct, still-decodable reference and does
-    # not collide on the UNIQUE payments.lenco_reference constraint.
-    lenco_reference = make_order_reference(reference_source, attempt=payment_id)
-
-    insert_row = {
-        "id": payment_id,
-        "checkout_group_id": request.checkout_group_id,
-        "provider": request.provider,
-        "rail": request.rail,
-        "lenco_reference": lenco_reference,
-        "amount_ngwee": amount_ngwee,
-        "status": PaymentStatus.INITIATED.value,
-        "raw": {},
-    }
-    insert_response = service_client.client.table("payments").insert(insert_row).execute()
-    if _single_row(insert_response) is None and not getattr(insert_response, "data", None):
-        raise AppError(
-            code="payment_write_failed",
-            message="Failed to create payment row",
-            http_status=500,
-        )
+    lenco_reference = make_order_reference(request.checkout_group_id, attempt=payment_id)
+    claimed = claim_payment_attempt(
+        service_client,
+        checkout_group_id=request.checkout_group_id,
+        actor_id=actor_id,
+        payment_id=payment_id,
+        rail=request.rail,
+        reference=lenco_reference,
+        raw={"payer_phone": request.phone},
+    )
+    amount_ngwee = int(claimed["amount_ngwee"])
 
     provider = strategy or get(request.provider)
-    collection = await provider.initiate_collection(
-        InitiateCollectionRequest(
-            reference=lenco_reference,
-            amount_ngwee=amount_ngwee,
-            phone=request.phone,
-            operator=request.rail,
+    try:
+        collection = await provider.initiate_collection(
+            InitiateCollectionRequest(
+                reference=lenco_reference,
+                amount_ngwee=amount_ngwee,
+                phone=request.phone,
+                operator=request.rail,
+            )
         )
-    )
+    except PaymentProviderError:
+        # The durable claimed reference is still reconcilable after response loss.
+        return InitiatePaymentResult(payment_id, PaymentStatus.INITIATED, lenco_reference, None)
 
-    transition_payment(
-        service_client,
-        payment_id=payment_id,
-        event=PaymentEvent.USSD_PUSHED,
-        actor_id=actor_id,
-        note="USSD push initiated via Lenco collection",
-    )
-
-    current_status = PaymentStatus.USSD_PUSHED
-    if collection.status == CollectionStatus.PAY_OFFLINE:
-        transition_payment(
-            service_client,
-            payment_id=payment_id,
-            event=PaymentEvent.PAY_OFFLINE,
-            actor_id=actor_id,
-            note="Lenco collection entered pay-offline",
-        )
-        current_status = PaymentStatus.PAY_OFFLINE
-
-    raw_patch: dict[str, Any] = {"collection": collection.model_dump()}
+    raw_patch: dict[str, Any] = {
+        "payer_phone": request.phone,
+        "collection": collection.model_dump(),
+    }
     if collection.provider_reference:
         raw_patch["provider_reference"] = collection.provider_reference
     service_client.client.table("payments").update({"raw": raw_patch}).eq(
         "id", payment_id
     ).execute()
+
+    current_status = PaymentStatus.INITIATED
+    if collection.status in {CollectionStatus.SUCCESSFUL, CollectionStatus.FAILED}:
+        try:
+            result = await provider.query_status(QueryStatusRequest(reference=lenco_reference))
+            if result.outcome != ProviderOutcome.NOT_FOUND:
+                validate_query_collection_observation(
+                    service_client, payment_id=payment_id, result=result
+                )
+                incoming = lenco_collection_status_to_payment_status(result.status)
+                if incoming is not None:
+                    apply_payment_status(
+                        service_client,
+                        payment_id=payment_id,
+                        incoming_status=incoming,
+                        actor_id=actor_id,
+                        note="Collection initiation verified by canonical status query",
+                        observation=collection_observation_from_query(
+                            result, source="initiation_query"
+                        ),
+                    )
+        except PaymentProviderError:
+            pass
+    else:
+        apply_payment_status(
+            service_client,
+            payment_id=payment_id,
+            incoming_status=PaymentStatus.USSD_PUSHED,
+            actor_id=actor_id,
+            note="Collection initiated",
+        )
+        incoming = (
+            PaymentStatus.PAY_OFFLINE
+            if collection.status == CollectionStatus.PAY_OFFLINE
+            else PaymentStatus.USSD_PUSHED
+        )
+        apply_payment_status(
+            service_client,
+            payment_id=payment_id,
+            incoming_status=incoming,
+            actor_id=actor_id,
+            note="Collection initiated",
+        )
+    # A callback may have won; return the stored result, never overwrite it.
+    row = _single_row(
+        service_client.client.table("payments")
+        .select("status")
+        .eq("id", payment_id)
+        .maybe_single()
+        .execute()
+    )
+    if row:
+        current_status = PaymentStatus(row["status"])
 
     return InitiatePaymentResult(
         payment_id=payment_id,
@@ -173,3 +182,50 @@ async def initiate_checkout_payment(
         lenco_reference=lenco_reference,
         provider_reference=collection.provider_reference,
     )
+
+
+def require_payments_enabled(*, rail: str, reference: str) -> None:
+    enabled, reason = gate.payments_gate_status()
+    if not enabled:
+        gate.log_payment_blocked(reason, method=rail, reference=reference)
+        raise gate.PaymentsDisabledError()
+
+
+def claim_payment_attempt(
+    service_client: ServiceRoleClient,
+    *,
+    checkout_group_id: str,
+    actor_id: str,
+    payment_id: str,
+    rail: str,
+    reference: str,
+    raw: dict[str, Any],
+    resume: bool = False,
+) -> dict[str, Any]:
+    """Gate before work; lifecycle and competition decided with insertion under DB lock.
+
+    A timeout after claiming leaves the original reference in flight. Only a
+    validated terminal provider failure permits a new attempt. No SELECT fallback.
+    """
+    require_payments_enabled(rail=rail, reference=checkout_group_id)
+    response = service_client.client.rpc(
+        "claim_payable_payment",
+        {
+            "p_checkout_id": checkout_group_id,
+            "p_actor_id": actor_id,
+            "p_payment_id": payment_id,
+            "p_rail": rail,
+            "p_reference": reference,
+            "p_raw": raw,
+            "p_resume": resume,
+        },
+    ).execute()
+    result = _single_row(response)
+    if not result or result.get("result") != "claimed":
+        raise AppError(
+            code="payment.not_payable",
+            message="Payment cannot be started or resumed",
+            http_status=409,
+            details={"reason": (result or {}).get("result", "claim_failed")},
+        )
+    return result

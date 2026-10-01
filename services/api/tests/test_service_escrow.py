@@ -194,8 +194,9 @@ class TestAcceptDeposit:
         quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
 
@@ -225,8 +226,9 @@ class TestAcceptDeposit:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=180_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=180_000
+        )
 
         first = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         second = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
@@ -244,15 +246,14 @@ class TestAcceptDeposit:
 
 
 class TestTwoLegCommissionSingleCount:
-    def test_commission_counted_once_across_both_legs(
-        self, db: PgConn, db_url_env: None
-    ) -> None:
+    def test_commission_counted_once_across_both_legs(self, db: PgConn, db_url_env: None) -> None:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         expected_commission = total * DEFAULT_SERVICE_COMMISSION_BPS // 10_000
@@ -261,8 +262,17 @@ class TestTwoLegCommissionSingleCount:
         assert result.commission_ngwee == expected_commission
 
         # Create the balance leg on the SAME order (completion path helper).
+        from app.routers.job_completion import confirm_job_completion, mark_job_complete
+
+        owner_row = db.run(
+            f"SELECT owner_user_id::text FROM public.vendors WHERE id='{result.vendor_id}'"
+        )
+        assert owner_row.ok and owner_row.rows
+        mark_job_complete(result.job_id, owner_row.rows[0])
+        pending = confirm_job_completion(result.job_id, actor_id=CUSTOMER_A)
+        assert not pending.released
         balance = create_balance_item(result.order_id)
-        assert balance.created is True
+        assert balance.created is False
         assert balance.balance_ngwee == result.balance_ngwee
 
         # Gross across both legs == total; commission from the single snapshot unchanged.
@@ -292,8 +302,9 @@ class TestSnapshotImmunity:
         quote_id = str(uuid.uuid4())
         total = 400_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         before = result.commission_ngwee
@@ -323,8 +334,9 @@ class TestCancellationRefund:
         quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         deposit = result.deposit_ngwee
 
@@ -367,8 +379,9 @@ class TestOwnerAuthz:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=120_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=120_000
+        )
 
         with pytest.raises(AppError) as exc:
             accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=OTHER_CUSTOMER)
@@ -388,8 +401,9 @@ class TestOwnerAuthz:
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
         _seed_job(db, job_id=other_job_id, customer_id=CUSTOMER_A)
         # Quote belongs to other_job_id, not job_id.
-        _seed_quote(db, quote_id=quote_id, job_id=other_job_id, vendor_id=vendor_id,
-                    amount_ngwee=90_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=other_job_id, vendor_id=vendor_id, amount_ngwee=90_000
+        )
 
         with pytest.raises(AppError) as exc:
             accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)

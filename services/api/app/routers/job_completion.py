@@ -1,31 +1,13 @@
-"""Service job completion → confirm → single escrow release (M11-P05).
+"""Service work acknowledgement and provider-funded financial completion.
 
-MONEY-CRITICAL. Integer ngwee everywhere; no float on money.
-
-Completion flow (mirrors the merged order confirm/auto-confirm of M09-P06/P10):
-
-  provider marks complete  →  customer confirms (or 48h auto-confirm)  →
-  balance leg (``create_balance_item``, M11-P04) + balance settlement (M08
-  CHARGE_RECEIVED) + escrow release, all EXACTLY ONCE via the order engine's
-  ``release-{order_id}`` idempotency key.
-
-Single-release / single-capture invariants
--------------------------------------------
-There is exactly ONE order per accepted job (M11-P04). This router NEVER
-re-snapshots or re-captures commission: it reuses ``create_balance_item`` (which
-leaves the commission snapshot untouched) and posts the vendor release via
-``compute_release_amounts`` from that single snapshot (fail-closed on invalid
-snapshots, active refunds, and open disputes). The release ledger post is keyed
-by ``release_idempotency_key(order_id)`` — the SAME key the product escrow engine
-uses — so a double-confirm, a retry, or the background release sweeper can never
-post a second release. The service order sits at ``placed`` until confirm flips it
-straight to ``completed`` (unlocking the verified-engagement review); it is never
-placed into a product-sweeper-eligible status before confirm, so the sweeper never
-releases un-confirmed service work.
+Both buyer confirmation and the automatic worker use confirm_funded_service.
+That service-only RPC serializes funding, holds, commission, release and final
+completion. Work acknowledgement alone never creates a collection or cash entry.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Protocol
@@ -36,11 +18,6 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.commissions.engine import capture_order_commission
-from app.services.escrow.order_money_gate import (
-    OrderMoneyGateError,
-    claim_release_gate,
-)
 from app.services.escrow.release import release_idempotency_key
 from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
@@ -56,7 +33,7 @@ from app.services.orders.audit import (
     run_sql_script,
     sql_literal,
 )
-from app.services.rfq.engagement import create_balance_item
+from app.services.rfq.payment_obligations import ServiceObligationOut, list_service_obligations
 from app.services.stock.claim import sql_uuid
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -312,19 +289,13 @@ def _load_commission_snapshot(order_id: str) -> dict[str, Any]:
 
 
 def _settle_balance(order_id: str, balance_ngwee: int) -> None:
-    """Settle the balance collection into escrow via the M08 CHARGE_RECEIVED template.
-
-    Idempotent on ``charge-balance-{order_id}`` so a retried/auto confirm never
-    double-credits. Skipped for 100%-deposit jobs (balance == 0).
-    """
-    if balance_ngwee <= 0:
-        return
-    post_transaction(
-        idempotency_key=f"charge-balance-{order_id}",
-        template=LedgerTemplate.CHARGE_RECEIVED,
-        order_id=order_id,
-        gross_ngwee=balance_ngwee,
-    )
+    """Legacy entry fails closed: only collection settlement may post cash."""
+    if balance_ngwee > 0:
+        raise AppError(
+            code="service.provider_receipt_required",
+            message="Balance must be collected through its payment obligation",
+            http_status=409,
+        )
 
 
 def _assert_service_release_allowed(*, order_id: str, status: str) -> None:
@@ -423,6 +394,10 @@ def mark_job_complete(job_id: str, provider_user_id: str) -> MarkCompleteResult:
             details={"message_key": "services.completion.errors.notProvider"},
         )
 
+    if order.status not in {PENDING_ORDER_STATUS, COMPLETED_ORDER_STATUS}:
+        raise AppError(
+            code="invalid_transition", message="Job is no longer active", http_status=409
+        )
     if _provider_marked_at(job_id) is not None:
         return MarkCompleteResult(job_id=job_id, order_id=order.order_id, marked=False)
 
@@ -489,67 +464,27 @@ def confirm_job_completion(
             details={"message_key": "services.completion.errors.notMarked"},
         )
 
-    # These steps run as independent psql processes (no enclosing transaction), so
-    # ordering must preserve the net invariant on any partial failure:
-    #   an order can NEVER be 'completed' unless its vendor RELEASE has posted.
-    # The release, balance leg, and settlement are each idempotent (keyed by
-    # order_id), so a partial failure leaves the order at 'placed' and a re-run —
-    # interactive retry or the auto-confirm tick — safely re-drives to completion
-    # with the release posted exactly once. The release therefore precedes the
-    # placed→completed flip; nothing between them can strand escrow.
-    #
-    # 0. Fail closed on cancel/refund/dispute/invalid snapshot before any money movement.
-    _assert_service_release_allowed(order_id=order.order_id, status=order.status)
-    snapshot, net_ngwee = _require_service_release_amounts(
-        order_id=order.order_id, delivery_fee_ngwee=order.delivery_fee_ngwee
+    result = run_sql_script(
+        f"SELECT public.confirm_funded_service({sql_uuid(job_id, 'job_id')}, "
+        f"{sql_uuid(actor_id, 'actor_id')}, {'true' if is_system else 'false'})::text;"
     )
-    # 0b. D17 single-drain claim before capture/release (blocks concurrent refund).
-    try:
-        claim_release_gate(order.order_id)
-    except OrderMoneyGateError as exc:
+    if not result.ok or not result.rows:
         raise AppError(
-            code="release_blocked",
-            message="Service escrow release is blocked for this order",
-            http_status=409 if exc.code == "order_refunded" else 503,
-            details={"reason": exc.code},
-        ) from exc
-    # 1. Balance leg on the SAME order (idempotent; commission snapshot untouched).
-    balance = create_balance_item(order.order_id)
-    # 2. Settle the balance collection into escrow (M08 charge; idempotent).
-    _settle_balance(order.order_id, balance.balance_ngwee)
-    # 2b. Capture platform commission from escrow BEFORE the release (idempotent;
-    #     mirrors COD/product capture-then-release) so commission_revenue is recognized
-    #     and escrow drains to net. Single snapshot — never re-captured across legs.
-    capture_order_commission(
-        order_id=order.order_id,
-        commission_snapshot=snapshot,
-        idempotency_key_prefix=release_idempotency_key(order.order_id),
-    )
-    # 3. Release the whole order to the vendor EXACTLY ONCE — BEFORE completing, so
-    #    completion implies the vendor has been paid (no stranded escrow).
-    release_created, net_ngwee = _release_service_order(order.order_id, order.vendor_id, net_ngwee)
-    # 4. Complete the order (unlocks the verified-engagement review); audited with the
-    #    real confirming actor via the app.order_actor/app.order_note GUCs.
-    _complete_order(order.order_id, actor_id=actor_id, is_system=is_system)
-    # 5. Complete the job.
-    _complete_job(job_id)
-    _record_audit(
-        actor_id=None if is_system else actor_id,
-        action=CONFIRM_ACTION,
-        job_id=job_id,
-        after='{"status":"completed"}',
-    )
-
+            code="service.completion_held",
+            message="Service financial completion requires validated funds and no holds",
+            http_status=409,
+        )
+    data = json.loads(result.rows[-1])
     return ConfirmResult(
         job_id=job_id,
         order_id=order.order_id,
-        status=COMPLETED_ORDER_STATUS,
-        already_confirmed=False,
-        balance_ngwee=balance.balance_ngwee,
-        balance_created=balance.created,
-        released=True,
-        release_created=release_created,
-        net_ngwee=net_ngwee,
+        status=data["status"],
+        already_confirmed=bool(data.get("already_confirmed")),
+        balance_ngwee=int(data["balance_ngwee"]),
+        balance_created=bool(data.get("balance_created")),
+        released=bool(data["released"]),
+        release_created=bool(data["released"]),
+        net_ngwee=int(data["net_ngwee"]),
     )
 
 
@@ -602,8 +537,12 @@ def auto_confirm_due_jobs(
     confirmed = 0
     skipped = 0
     for job_id, _order_id in due:
-        result = confirm_job_completion(job_id, actor_id=SYSTEM_ACTOR_ID, is_system=True)
-        if result.already_confirmed:
+        try:
+            result = confirm_job_completion(job_id, actor_id=SYSTEM_ACTOR_ID, is_system=True)
+        except AppError:
+            skipped += 1
+            continue
+        if result.already_confirmed or not result.released:
             skipped += 1
         else:
             confirmed += 1
@@ -763,3 +702,22 @@ async def auto_confirm_batch(body: BatchJobRequest | None = None) -> AutoConfirm
     return AutoConfirmResponse(
         scanned=result.scanned, confirmed=result.confirmed, skipped=result.skipped
     )
+
+
+@router.get("/jobs/{job_id}/payments")
+async def service_payment_status(
+    job_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
+) -> list[ServiceObligationOut]:
+    """Same protected funding view for buyer, assigned vendor and operators."""
+    order = _load_service_order(job_id)
+    if order is None:
+        raise AppError(code="not_found", message="Job order not found", http_status=404)
+    if (
+        current_user.id != order.customer_id
+        and current_user.id != _vendor_owner_user_id(order.vendor_id)
+        and "admin" not in current_user.roles
+    ):
+        raise AppError(code="forbidden", message="Job access denied", http_status=403)
+    return list_service_obligations(service_client.client, order_id=order.order_id)

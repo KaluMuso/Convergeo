@@ -23,7 +23,7 @@ MIGRATIONS_DIR = REPO_ROOT / "supabase" / "migrations"
 DEFAULT_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 LOCAL_FALLBACK_DB_URL = "postgresql:///vergeo5_rls_test"
 
-Outcome = Literal["permit", "deny", "filter"]
+Outcome = Literal["permit", "deny", "filter", "reject"]
 Verb = Literal["select", "insert", "update", "delete"]
 
 VERBS: tuple[Verb, ...] = ("select", "insert", "update", "delete")
@@ -456,12 +456,9 @@ def seed_matrix_fixtures(conn: PgConn) -> None:
         auth_parts.append(
             f"""
 INSERT INTO auth.users (
-  instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  id, email, created_at
 ) VALUES (
-  '00000000-0000-0000-0000-000000000000', '{uid}', 'authenticated', 'authenticated',
-  '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-  timezone('utc', now()), timezone('utc', now())
+  '{uid}', '{email}', timezone('utc', now())
 ) ON CONFLICT (id) DO NOTHING;
 """
         )
@@ -695,6 +692,15 @@ ON CONFLICT (id) DO NOTHING;
             465000,
             "pending",
         ),
+        (
+            ids["checkout_groups"]["completed_service"],
+            users["customer_a"],
+            "seed-completed-service-cg",
+            180000,
+            0,
+            180000,
+            "completed",
+        ),
     ]
     for cg_id, cust, key, sub, fee, total, status in checkout_groups:
         sql_parts.append(
@@ -726,6 +732,13 @@ INSERT INTO public.orders (
     order_items = [
         (ids["order_items"]["paid"], ids["orders"]["paid"], "product", 1, 450000),
         (ids["order_items"]["delivered"], ids["orders"]["delivered"], "product", 1, 85000),
+        (
+            ids["order_items"]["completed_service"],
+            ids["orders"]["completed"],
+            "service_balance",
+            1,
+            180000,
+        ),
     ]
     for oi_id, order_id, kind, qty, price in order_items:
         sql_parts.append(
@@ -740,6 +753,14 @@ ON CONFLICT (id) DO NOTHING;
         f"""
 INSERT INTO public.order_item_products (order_item_id, listing_id, product_id)
 VALUES ('{ids["order_items"]["paid"]}', '{ids["listings"]["phone_a"]}', '{ids["products"]["phone"]}')
+ON CONFLICT (order_item_id) DO NOTHING;
+"""
+    )
+    sql_parts.append(
+        f"""
+INSERT INTO public.order_item_services (order_item_id, job_id, quote_id)
+VALUES ('{ids["order_items"]["completed_service"]}', '{ids["jobs"]["completed_job"]}',
+        '{ids["job_quotes"]["accepted_completed"]}')
 ON CONFLICT (order_item_id) DO NOTHING;
 """
     )

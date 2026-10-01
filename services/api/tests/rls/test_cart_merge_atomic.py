@@ -101,15 +101,8 @@ def _seed_merge_case(db: _PsycopgDb) -> dict[str, Any]:
 
     seeded = db.run(
         f"""
-        insert into auth.users (
-          instance_id, id, aud, role, email, encrypted_password,
-          email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-        ) values (
-          '00000000-0000-0000-0000-000000000000', '{user_id}',
-          'authenticated', 'authenticated', '{user_id}@merge.test', 'hash',
-          timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-          timezone('utc', now()), timezone('utc', now())
-        );
+        insert into auth.users (id, email, created_at)
+        values ('{user_id}', '{user_id}@merge.test', timezone('utc', now()));
         insert into public.carts (id, user_id, status)
         values ('{user_cart_id}', '{user_id}', 'active');
         insert into public.carts (id, guest_token, status)
@@ -727,11 +720,8 @@ def test_authority_writer_precedes_merge_and_forces_recompute(
 def test_concurrent_first_login_creates_one_account_cart(atomic_db: _PsycopgDb) -> None:
     user_id = str(uuid.uuid4())
     inserted = atomic_db.run(
-        "insert into auth.users (instance_id,id,aud,role,email,encrypted_password,"
-        "email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values ("
-        f"'00000000-0000-0000-0000-000000000000','{user_id}','authenticated',"
-        f"'authenticated','{user_id}@merge.test','hash',timezone('utc',now()),"
-        "'{}'::jsonb,'{}'::jsonb,timezone('utc',now()),timezone('utc',now()))"
+        "insert into auth.users (id, email, created_at) values ("
+        f"'{user_id}', '{user_id}@merge.test', timezone('utc', now()))"
     )
     assert inserted.ok, inserted.error
     barrier = threading.Barrier(4)

@@ -232,9 +232,13 @@ def db() -> Generator[PgConn, None, None]:
     if not conn.run("SELECT 1").ok:
         pytest.skip(f"Postgres not reachable at {url}")
     if not schema_ready(conn):
-        conn.run("DROP SCHEMA IF EXISTS public CASCADE")
-        conn.run("CREATE SCHEMA public")
-        conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        for statement in (
+            "DROP SCHEMA IF EXISTS public CASCADE",
+            "CREATE SCHEMA public",
+            "DROP SCHEMA IF EXISTS auth CASCADE",
+        ):
+            reset = conn.run(statement)
+            assert reset.ok, reset.error
         apply_migrations(conn)
     seed_matrix_fixtures(conn)
     yield conn
@@ -252,7 +256,8 @@ def _ensure_matrix_seed(db: PgConn) -> None:
     the idempotent seed restores it (no-op when already present).
     """
     check = db.run(f"SELECT 1 FROM public.profiles WHERE id = '{VENDOR_OWNER_ID}';")
-    if check.ok and check.rows:
+    assert check.ok, check.error
+    if check.rows:
         return
     seed_matrix_fixtures(db)
 
@@ -303,15 +308,10 @@ class TestKycVendorCas:
         auth = db.run(
             f"""
             INSERT INTO auth.users (
-              instance_id, id, aud, role, email, encrypted_password,
-              email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-              created_at, updated_at
+              id, email, created_at
             ) VALUES (
-              '00000000-0000-0000-0000-000000000000', '{owner_id}',
-              'authenticated', 'authenticated',
-              'concurrent-{owner_id[:8]}@test.local', 'hash',
-              timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-              timezone('utc', now()), timezone('utc', now())
+              '{owner_id}', 'concurrent-{owner_id[:8]}@test.local',
+              timezone('utc', now())
             );
             """
         )
@@ -333,13 +333,15 @@ class TestKycVendorCas:
         )
         assert customer_role.ok, customer_role.error
         _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
-        db.run(
+        owner_update = db.run(
             f"""
             UPDATE public.vendors
             SET owner_user_id = '{owner_id}'
-            WHERE id = '{vendor_id}';
+            WHERE id = '{vendor_id}'
+            RETURNING id;
             """
         )
+        assert owner_update.ok and vendor_id in owner_update.rows, owner_update.error
         wrapper = _ServiceWrapper(db)
 
         # A loser can lose in one of two legitimate ways, depending purely on
@@ -464,15 +466,10 @@ class TestKycVendorCas:
         auth = db.run(
             f"""
             INSERT INTO auth.users (
-              instance_id, id, aud, role, email, encrypted_password,
-              email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-              created_at, updated_at
+              id, email, created_at
             ) VALUES (
-              '00000000-0000-0000-0000-000000000000', '{owner_id}',
-              'authenticated', 'authenticated',
-              'role-grant-{owner_id[:8]}@test.local', 'hash',
-              timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-              timezone('utc', now()), timezone('utc', now())
+              '{owner_id}', 'role-grant-{owner_id[:8]}@test.local',
+              timezone('utc', now())
             );
             """
         )

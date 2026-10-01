@@ -27,6 +27,7 @@ type CardSession = {
   amount_ngwee: number;
   widget_script_url: string;
   customer: WidgetCustomer;
+  service_job_id?: string | null;
 };
 
 type VerifyResult = {
@@ -71,7 +72,14 @@ declare global {
 }
 
 type ViewState =
-  "loading" | "opening" | "verifying" | "success" | "failed" | "held" | "pending" | "error";
+  | "loading"
+  | "opening"
+  | "verifying"
+  | "success"
+  | "failed"
+  | "held"
+  | "pending"
+  | "error";
 
 function getApiBaseUrl(): string | null {
   return resolveApiBaseUrl();
@@ -104,6 +112,7 @@ export default function CardCheckoutPage() {
   const locale = params.locale;
   const paymentId = params.paymentId;
   const t = useTranslations("checkout.card");
+  const funding = useTranslations("services.funding");
   const { session, loading: sessionLoading } = useSession();
 
   const [viewState, setViewState] = useState<ViewState>("loading");
@@ -130,10 +139,13 @@ export default function CardCheckoutPage() {
         getToken: () => session.access_token,
       });
       try {
-        return await client.request<VerifyResult>(`/payments/card/${paymentId}/verify`, {
-          method: "POST",
-          body: JSON.stringify({ client_status: clientStatus }),
-        });
+        return await client.request<VerifyResult>(
+          `/payments/card/${paymentId}/verify`,
+          {
+            method: "POST",
+            body: JSON.stringify({ client_status: clientStatus }),
+          },
+        );
       } catch {
         setViewState("error");
         return null;
@@ -199,7 +211,9 @@ export default function CardCheckoutPage() {
     const returnStatus = searchParams.get("status");
     if (returnStatus === "success" || returnStatus === "failed") {
       void (async () => {
-        const result = await verifyReturn(returnStatus === "success" ? "success" : "failed");
+        const result = await verifyReturn(
+          returnStatus === "success" ? "success" : "failed",
+        );
         handleVerifyOutcome(result);
       })();
       return;
@@ -311,12 +325,16 @@ export default function CardCheckoutPage() {
 
       {viewState === "success" ? (
         <LinkButton
-          href={ordersPath}
+          href={
+            sessionData?.service_job_id
+              ? `/${locale}/account/jobs/${sessionData.service_job_id}`
+              : ordersPath
+          }
           variant="primary"
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {t("viewOrders")}
+          {sessionData?.service_job_id ? funding("backToJob") : t("viewOrders")}
         </LinkButton>
       ) : null}
 

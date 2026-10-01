@@ -17,6 +17,7 @@ from app.services.orders.state import (
     OrderTransitionError,
     transition_order,
 )
+from app.services.rfq.payment_obligations import ServiceObligationOut, list_service_obligations
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, model_validator
 
@@ -120,6 +121,7 @@ class OrderDetailOut(BaseModel):
     payments: list[PaymentOut]
     ledger: list[LedgerTransactionOut]
     timeline: list[TimelineEventOut]
+    service_obligations: list[ServiceObligationOut] = []
 
 
 class DispatchRequest(BaseModel):
@@ -331,9 +333,7 @@ def _search_orders(
 
     if order_id:
         validated_id = _validate_order_id(order_id)
-        response = (
-            _table(client, "orders").select("*").eq("id", validated_id).limit(1).execute()
-        )
+        response = _table(client, "orders").select("*").eq("id", validated_id).limit(1).execute()
         order_rows = list(response.data or [])
     elif q:
         general = _sanitize_search(q, field="q")
@@ -381,11 +381,7 @@ def _search_orders(
 
 def _search_by_phone(client: ServiceRoleClient, phone: str) -> list[dict[str, Any]]:
     profile_response = (
-        _table(client, "profiles")
-        .select("id")
-        .ilike("phone", f"%{phone}%")
-        .limit(50)
-        .execute()
+        _table(client, "profiles").select("id").ilike("phone", f"%{phone}%").limit(50).execute()
     )
     profile_rows = profile_response.data or []
     if not profile_rows:
@@ -455,9 +451,7 @@ def _build_order_detail(client: ServiceRoleClient, order_row: dict[str, Any]) ->
     vendor = vendor_map.get(str(order_row["vendor_id"]), {})
     profile = profile_map.get(str(order_row["customer_id"]), {})
 
-    items_response = (
-        _table(client, "order_items").select("*").eq("order_id", order_id).execute()
-    )
+    items_response = _table(client, "order_items").select("*").eq("order_id", order_id).execute()
     items = [
         OrderItemOut(
             id=row["id"],
@@ -561,6 +555,11 @@ def _build_order_detail(client: ServiceRoleClient, order_row: dict[str, Any]) ->
         created_at=_parse_timestamp(order_row["created_at"]),
         items=items,
         payments=payments,
+        service_obligations=(
+            list_service_obligations(client.client, order_id=order_id)
+            if any(item.item_kind == "service_deposit" for item in items)
+            else []
+        ),
         ledger=ledger,
         timeline=timeline,
     )

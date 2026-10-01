@@ -1,13 +1,14 @@
 "use client";
 
 import { ApiError, createApiClient } from "@vergeo/config";
-import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { useSession } from "../../../../../../lib/customer-session";
+
+import { ServicePayments } from "./service-payments";
 
 type ConfirmResponse = {
   job_id: string;
@@ -20,8 +21,6 @@ type ConfirmResponse = {
 
 type CompleteConfirmProps = {
   jobId: string;
-  /** Balance (integer ngwee) settled on confirmation — from the accepted quote spine. */
-  balanceNgwee: number;
   /** True once the provider has marked the job complete (confirm is otherwise blocked). */
   providerMarked?: boolean;
   /** Allows the current customer page to attempt confirm; the API still rejects before provider mark. */
@@ -31,7 +30,7 @@ type CompleteConfirmProps = {
 
 export function CompleteConfirm({
   jobId,
-  balanceNgwee,
+
   providerMarked = false,
   allowConfirmAttempt = false,
   onConfirmed,
@@ -39,22 +38,35 @@ export function CompleteConfirm({
   const t = useTranslations("services.completion.customer");
   const { session } = useSession();
   const [submitting, setSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [acknowledged, setAcknowledged] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
 
   const handleConfirm = useCallback(async () => {
     setSubmitting(true);
     setError(null);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
-      await client.request<ConfirmResponse>(`/jobs/${jobId}/confirm`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      setConfirmed(true);
-      onConfirmed?.();
+      const result = await client.request<ConfirmResponse>(
+        `/jobs/${jobId}/confirm`,
+        {
+          method: "POST",
+          body: JSON.stringify({}),
+        },
+      );
+      setAcknowledged(true);
+      setRefreshKey((value) => value + 1);
+      setSubmitting(false);
+      if (result.status === "completed") {
+        setConfirmed(true);
+        onConfirmed?.();
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(t("errors.notOwner"));
@@ -76,16 +88,14 @@ export function CompleteConfirm({
         <p className="text-sm text-text-2">{t("intro")}</p>
       </header>
 
-      <dl className="text-sm">
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-lg font-semibold text-display-ink">
-            {formatK(balanceNgwee)}
-          </dd>
-        </div>
-      </dl>
+      <ServicePayments jobId={jobId} refreshKey={refreshKey} />
+      {acknowledged && !confirmed && (
+        <p role="status">{t("awaitingPayment")}</p>
+      )}
 
-      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
+      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">
+        {t("escrowNote")}
+      </p>
 
       {confirmed ? (
         <div className="space-y-1">
@@ -103,7 +113,7 @@ export function CompleteConfirm({
             disabled={submitting}
             onClick={() => void handleConfirm()}
           >
-            {t("confirmCta", { amount: formatK(balanceNgwee) })}
+            {t("confirmCta")}
           </Button>
         </>
       ) : (
