@@ -1,0 +1,131 @@
+name: Bounded dependency repair preparation
+on:
+  pull_request:
+    branches: [hardening/20260924-converged-implementation]
+    paths: [.github/workflows/dependency-repair-prepare.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dependency-repair-prepare-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: >-
+      github.repository == 'KaluMuso/Convergeo' &&
+      github.event.pull_request.number == 715 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'hardening/20260925-ci-recovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify isolated preparation source and deployment guards
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          root = pathlib.Path.cwd()
+          base = '8bacd9c51fb4edd42838c3089128976026d525f3'
+          assert subprocess.check_output(['git','rev-parse','HEAD^'], text=True).strip() == base
+          changed = subprocess.check_output(['git','diff','--name-only',base,'HEAD'], text=True).splitlines()
+          assert changed == ['.github/workflows/dependency-repair-prepare.yml'], changed
+          for p in ('vercel.json','apps/customer/vercel.json','apps/vendor/vercel.json','apps/admin/vercel.json'):
+              guards = json.loads((root/p).read_text())['git']['deploymentEnabled']
+              assert guards['hardening/20260925-ci-recovery'] is False
+              assert guards['hardening/20260924-converged-implementation'] is False
+          out = root/'dependency-repair-evidence'
+          out.mkdir()
+          paths = ['package.json','pnpm-lock.yaml','services/api/uv.lock']
+          identity = {'base_commit':base,'base_tree':subprocess.check_output(['git','rev-parse',base+'^{tree}'],text=True).strip(),'actual_checkout':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'actual_checkout_tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'source_only':True,'publication_or_release_accepted':False,'baseline_sha256':{p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in paths}}
+          (out/'identity.json').write_text(json.dumps(identity,indent=2)+'\n')
+          PY
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Preserve and resolve only audited dependency pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          (cd services/api && uv sync --dev --frozen)
+          python - <<'PY'
+          import json, pathlib
+          p=pathlib.Path('package.json'); document=json.loads(p.read_text()); overrides=document['pnpm']['overrides']
+          updates={'fast-uri':('3.1.6','3.1.7'),'minimatch@10.2.5>brace-expansion':('5.0.9','5.0.11'),'minimatch@10.2.6>brace-expansion':('5.0.9','5.0.11'),'minimatch@3.1.5>brace-expansion':('1.1.18','1.1.20')}
+          for key,(old,new) in updates.items():
+              assert overrides[key] == old, (key,overrides[key])
+              overrides[key]=new
+          p.write_text(json.dumps(document,indent=2)+'\n')
+          PY
+          pnpm install --lockfile-only --ignore-scripts
+          (cd services/api && uv lock --upgrade-package pyjwt==2.15.0 --upgrade-package urllib3==2.8.0)
+          pnpm install --frozen-lockfile
+          (cd services/api && uv sync --dev --frozen)
+      - name: Verify exact dependency delta and retain source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          services/api/.venv/bin/python - <<'PY'
+          import hashlib, importlib.metadata, json, pathlib, subprocess, tomllib, yaml
+          root=pathlib.Path.cwd(); out=root/'dependency-repair-evidence'
+          expected=['package.json','pnpm-lock.yaml','services/api/uv.lock']
+          observed=subprocess.check_output(['git','diff','--name-only'],text=True).splitlines()
+          assert sorted(observed)==expected,observed
+          old=tomllib.loads(subprocess.check_output(['git','show','HEAD:services/api/uv.lock'],text=True))
+          new=tomllib.loads((root/'services/api/uv.lock').read_text())
+          before={p['name']:p for p in old['package']}; after={p['name']:p for p in new['package']}
+          changed={k for k in before.keys()|after.keys() if before.get(k)!=after.get(k)}
+          assert changed=={'pyjwt','urllib3'},changed
+          for package,version in [('pyjwt','2.15.0'),('urllib3','2.8.0')]:
+              assert after[package]['version']==version
+              assert importlib.metadata.version(package)==version
+          old_js=yaml.safe_load(subprocess.check_output(['git','show','HEAD:pnpm-lock.yaml'],text=True))
+          new_js=yaml.safe_load((root/'pnpm-lock.yaml').read_text())
+          delta={}
+          for section in ('packages','snapshots'):
+              previous=old_js[section]; current=new_js[section]
+              keys={k for k in previous.keys()|current.keys() if previous.get(k)!=current.get(k)}
+              allowed=('fast-uri@','brace-expansion@','minimatch@','ajv@','uri-js@')
+              assert all(k.startswith(allowed) for k in keys),(section,sorted(keys))
+              delta[section]=sorted(keys)
+          patch=subprocess.check_output(['git','diff','--binary','--full-index','--',*expected])
+          (out/'dependency-repair.patch').write_bytes(patch)
+          for p in expected:
+              dest=out/'source'/p;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes((root/p).read_bytes())
+          data=json.loads((out/'identity.json').read_text());data.update(patch_bytes=len(patch),patch_sha256=hashlib.sha256(patch).hexdigest(),changed_paths=expected,python_changed=sorted(changed),javascript_delta=delta,updated_sha256={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in expected})
+          (out/'identity.json').write_text(json.dumps(data,indent=2)+'\n')
+          PY
+          git diff --check
+      - name: Existing complete dependency audit
+        if: ${{ !cancelled() }}
+        run: python scripts/ci/dependency_audit_consumer.py --evidence-dir dependency-repair-evidence/audit
+      - name: Existing JavaScript audit controls and consumer typechecks
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          node --test scripts/ci/pnpm-audit-gate.test.mjs
+          pnpm --filter @vergeo/types --filter customer --filter vendor --filter admin typecheck
+      - name: Pinned API lint, types and affected authorization/payment tests
+        if: ${{ !cancelled() }}
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          uv run --no-sync ruff check app tests scripts
+          uv run --no-sync mypy app tests scripts
+          uv run --no-sync pytest -q -rA tests/test_auth_dep.py tests/test_lenco_client.py tests/test_f2_authority.py tests/test_f2_provider_consumers.py tests/test_payments_card.py tests/test_payment_status.py tests/test_payment_state.py tests/test_payment_retry.py tests/test_payments_gate.py --junitxml=../../dependency-repair-evidence/affected-api.xml
+      - name: Retain preparation evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-repair-prepare-${{ github.sha }}-${{ github.run_attempt }}
+          path: dependency-repair-evidence
+          if-no-files-found: error
