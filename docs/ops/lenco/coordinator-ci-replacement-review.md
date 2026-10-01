@@ -78,3 +78,21 @@ must be read from the exact published SHA's genuine Actions logs/artifacts.
 The correlated merchant journey and all shared-target/provider/operational gates
 remain NOT_RUN until their own evidence exists. Dates remain26Oct target/7Nov
 contingency; handbook R2/G1 is open. No new deployed buyer/business capability.
+
+First diagnostic source 090ba3ad produced real F3 seven-of-seven, zero-skip
+evidence; financial execution stopped at a rate-limited PostgREST pull before
+either phase ran. Neither is acceptance for a successor SHA. Gitleaks identified
+eight generic-api-key false positives in the source-checksum inventory. Each was
+verified against the actual source file. The additive scanner correction exempts
+only those eight exact digest values AND that exact path; AWS/GitHub credentials
+remain tested on the same path. The final review SHA requires fresh CI evidence.
+
+The same first diagnostic run produced qualified 135-input typegen artifact
+11163205579 (archive SHA256 9ab9a44cc4135e2162c5bd2050569ed5f39579ffcc48a287aec7847fdb1df519).
+Its source/tree, all 135 input hashes, genuine runtime/catalog qualification and
+two identical generated outputs were consumed and verified. Output SHA256 is
+30cf81bcf82729a66d5770e4b7767e9a53b9f3fd068671d2310305e04c6a8625.
+The committed-types drift check correctly failed with exit 1. No generated types
+were edited: the typegen owner must supply the independently accepted correction.
+Critical 88 and merchant 26 DB/258 compatibility/six mounted also passed at the
+first diagnostic source; this does not certify a successor or the full journey.

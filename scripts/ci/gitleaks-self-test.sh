@@ -93,3 +93,24 @@ mkdir -p "${WORKDIR}/same_path_github/$(dirname "${fixture_path}")"
 printf '{"GITHUB_TOKEN":"%s"}\n' "${planted_gh_token}" \
   >"${WORKDIR}/same_path_github/${fixture_path}"
 commit_and_scan same_path_github 1
+
+# Only eight independently hashed inventory values are exempt at this exact path.
+# Real-shaped credentials on that path must still trip independent detectors.
+coordinator_path="scripts/ci/coordinator-gate-inputs.json"
+init_case coordinator_inventory
+mkdir -p "${WORKDIR}/coordinator_inventory/$(dirname "${coordinator_path}")"
+cp "${ROOT}/${coordinator_path}" "${WORKDIR}/coordinator_inventory/${coordinator_path}"
+commit_and_scan coordinator_inventory 0
+
+init_case coordinator_same_path_aws
+mkdir -p "${WORKDIR}/coordinator_same_path_aws/$(dirname "${coordinator_path}")"
+printf '{"AWS_ACCESS_KEY_ID":"%s","AWS_SECRET_ACCESS_KEY":"%s"}\n' \
+  "${planted_key_id}" "${planted_secret}" \
+  >"${WORKDIR}/coordinator_same_path_aws/${coordinator_path}"
+commit_and_scan coordinator_same_path_aws 1
+
+init_case coordinator_same_path_github
+mkdir -p "${WORKDIR}/coordinator_same_path_github/$(dirname "${coordinator_path}")"
+printf '{"GITHUB_TOKEN":"%s"}\n' "${planted_gh_token}" \
+  >"${WORKDIR}/coordinator_same_path_github/${coordinator_path}"
+commit_and_scan coordinator_same_path_github 1
