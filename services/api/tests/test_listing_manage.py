@@ -633,10 +633,9 @@ def test_manage_persists_per_measure_fields(
     manage_client: TestClient,
     fake_client: FakeSupabaseClient,
 ) -> None:
-    # A listing already measured in kg can change its minimum order without
-    # reinterpreting its existing physical stock as a different unit.
+    # Resubmitting unchanged measured metadata preserves the purchase contract.
     stored = fake_client.tables["vendor_listings"].rows[0]
-    stored.update(sale_unit="kg", unit_step_milli=250)
+    stored.update(sale_unit="kg", unit_step_milli=250, min_steps=4)
     stock_before = stored["stock_qty"]
     response = manage_client.patch(
         f"/vendor/listings/{LISTING_A_ID}",

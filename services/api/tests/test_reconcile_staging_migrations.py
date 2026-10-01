@@ -56,6 +56,10 @@ PENDING_REPAIR_VERSIONS = {
     "20260930170100",
     "20260930203000",
     "20260930203100",
+    # Additive merchant review corrections remain pending in this historical capture.
+    "20261001120000",
+    "20261001120100",
+    "20261001120200",
 }
 
 

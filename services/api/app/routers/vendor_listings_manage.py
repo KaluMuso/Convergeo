@@ -501,6 +501,7 @@ def _apply_listing_update(
             ("stock_mode", "tracked"),
             ("sale_unit", "each"),
             ("unit_step_milli", 1000),
+            ("min_steps", 1),
             ("fulfilment_mode", "stocked"),
         )
     ):

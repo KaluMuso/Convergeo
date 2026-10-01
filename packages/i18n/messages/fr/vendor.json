@@ -381,7 +381,10 @@
       "titleLabel": "Titre de l'annonce",
       "titlePlaceholder": "ex. Tomates au kg",
       "publish": "Publier l'annonce",
-      "publishing": "Publication…"
+      "publishing": "Publication…",
+      "descriptionLabel": "Description",
+      "descriptionHelp": "Décrivez cette offre en au moins 20 caractères. Incluez les détails nécessaires aux acheteurs.",
+      "draftNotice": "Les offres autonomes sont enregistrées en brouillon. Vérifiez la catégorie, la politique de lancement et les photos obligatoires avant de publier."
     },
     "fields": {
       "priceLabel": "Votre prix (ZMW)",
@@ -439,7 +442,8 @@
     "success": {
       "live": "L'annonce est en ligne !",
       "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp.",
-      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier."
+      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier.",
+      "draft": "Brouillon enregistré. Vérifiez l’annonce avant de la publier."
     },
     "errors": {
       "required": "Ce champ est obligatoire",
@@ -453,7 +457,10 @@
       "authRequired": "Connectez-vous pour gérer les annonces.",
       "permissionDenied": "Vous n'avez pas accès à ce catalogue vendeur.",
       "notFound": "Cette annonce est introuvable pour votre boutique.",
-      "retryHint": "Vérifiez votre connexion, puis réessayez."
+      "retryHint": "Vérifiez votre connexion, puis réessayez.",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Utilisez l’association au catalogue ou la création d’un produit.",
+      "standaloneDetailsRequired": "Sélectionnez une catégorie et ajoutez une description d’au moins 20 caractères pour cette annonce autonome.",
+      "policyBlocked": "Cette annonce ne peut pas être publiée selon la politique de catégorie ou de lancement actuelle. Vérifiez ses champs et contactez l’assistance si nécessaire."
     },
     "import": {
       "meta": {
@@ -500,7 +507,8 @@
         "attached": "Rattaché : {name}",
         "matched": "Correspond : {name}",
         "detach": "Modifier",
-        "standalone": "Aucune correspondance — annoncé séparément"
+        "standalone": "Aucune correspondance — annoncé séparément",
+        "selectionRequired": "Sélectionnez un produit actif du catalogue avant l’importation."
       },
       "apply": {
         "button": "Appliquer l'importation",
@@ -518,7 +526,28 @@
         "unitChange": "Une importation ne peut pas modifier les unités ou le nombre minimal de pas d’un SKU existant.",
         "productChange": "Ce SKU est déjà associé à un autre produit.",
         "wholesaleEligibility": "La vente en gros nécessite une approbation T2 en cours et au moins un palier de prix valide.",
-        "invalidListing": "Ces modifications ne sont pas valides pour cette annonce. Vérifiez ses champs."
+        "invalidListing": "Ces modifications ne sont pas valides pour cette annonce. Vérifiez ses champs.",
+        "invalidTiers": "Les paliers doivent avoir des quantités positives et des prix strictement décroissants.",
+        "invalidBoolean": "Utilisez true ou false pour les champs booléens.",
+        "missingField": "Complétez les champs CSV obligatoires : référence, titre, prix et stock suivi.",
+        "invalidInteger": "Les prix, stocks et quantités doivent être des nombres entiers.",
+        "invalidMinimum": "Les prix et les pas de quantité doivent être positifs ; le stock ne peut pas être négatif.",
+        "invalidProduct": "Sélectionnez un produit actif du catalogue.",
+        "unknownColumns": "Le CSV contient des colonnes non prises en charge ou des cellules en trop. Utilisez le modèle téléchargé.",
+        "invalidStockMode": "Choisissez un stock suivi ou toujours disponible.",
+        "invalidCondition": "Choisissez l’état neuf ou reconditionné.",
+        "invalidStatus": "Choisissez le statut brouillon, actif ou en pause.",
+        "emptyCsv": "Le fichier CSV est vide.",
+        "missingHeaders": "Le CSV doit inclure tous les en-têtes de colonnes obligatoires.",
+        "rowLimit": "Importez au maximum 500 lignes de données à la fois.",
+        "prohibitedListing": "Cet article est interdit. Vérifiez le contenu de l’annonce.",
+        "duplicateSku": "Chaque référence doit apparaître une seule fois dans le fichier.",
+        "listingCap": "Votre limite d’annonces est atteinte. Mettez à jour les références existantes ou vérifiez votre niveau de vérification.",
+        "fileSize": "Le CSV ne doit pas dépasser 512 000 octets.",
+        "invalidEncoding": "Enregistrez le CSV avec l’encodage UTF-8.",
+        "canonicalRequired": "Sélectionnez un produit du catalogue avant d’importer cette nouvelle référence.",
+        "databaseFailure": "Cette ligne n’a pas pu être enregistrée. Réessayez ou contactez l’assistance.",
+        "unknownError": "Cette ligne doit être vérifiée. Contrôlez les champs CSV et réessayez."
       }
     },
     "manage": {
@@ -1619,6 +1648,14 @@
       "listings": "Annonces",
       "orders": "Commandes",
       "profile": "Profil"
+    }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "Produit du catalogue"
+    },
+    "errors": {
+      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
     }
   }
 }

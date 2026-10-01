@@ -132,18 +132,54 @@ class ReconciliationReportStore:
     def versions(
         self, *, account_id: str, currency: str, report_date: date
     ) -> list[dict[str, Any]]:
-        response = (
-            self._service.client.table("reconciliation_report_versions")
-            .select("*")
-            .eq("provider_account_id", account_id)
-            .eq("currency", currency)
-            .eq("report_date", report_date.isoformat())
-            .order("version_number")
-            .execute()
-        )
-        if not isinstance(response.data, list):
+        # Capture the immutable high-water mark once. Concurrent appends do not
+        # change the history being read, and short server-capped pages are not
+        # mistaken for the end of that history.
+        def scoped() -> Any:
+            return (
+                self._service.client.table("reconciliation_report_versions")
+                .select("*")
+                .eq("provider_account_id", account_id)
+                .eq("currency", currency)
+                .eq("report_date", report_date.isoformat())
+            )
+
+        latest = scoped().order("version_number", desc=True).limit(1).execute().data
+        if not isinstance(latest, list):
             raise RuntimeError("invalid version reader response")
-        return [dict(row) for row in response.data]
+        if not latest:
+            return []
+        upper = latest[0].get("version_number")
+        if isinstance(upper, bool) or not isinstance(upper, int) or upper < 1:
+            raise RuntimeError("invalid version reader high-water mark")
+        rows: list[dict[str, Any]] = []
+        last = 0
+        while last < upper:
+            page = (
+                scoped()
+                .gt("version_number", last)
+                .lte("version_number", upper)
+                .order("version_number")
+                .limit(250)
+                .execute()
+                .data
+            )
+            if not isinstance(page, list) or not page:
+                raise RuntimeError("incomplete version history")
+            for row in page:
+                if (
+                    not isinstance(row, dict)
+                    or row.get("provider_account_id") != account_id
+                    or row.get("currency") != currency
+                    or row.get("report_date") != report_date.isoformat()
+                    or isinstance(row.get("version_number"), bool)
+                    or row.get("version_number") != last + 1
+                    or row["version_number"] > upper
+                ):
+                    raise RuntimeError("invalid or incomplete version history")
+                rows.append(dict(row))
+                last += 1
+        return rows
 
     def legacy(self, *, report_date: date) -> list[dict[str, Any]]:
         response = (

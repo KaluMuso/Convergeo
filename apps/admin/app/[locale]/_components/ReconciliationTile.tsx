@@ -50,6 +50,25 @@ export function ReconciliationTile({ reconciliation, locale }: ReconciliationTil
         {display === "unknown" ? (
           <p className="text-xs text-muted">{t("noReportDependency")}</p>
         ) : null}
+        {reconciliation.evidence_state ? (
+          <p className="text-xs text-muted">
+            {t("evidenceState", { state: t(`states.${reconciliation.evidence_state}`) })}
+          </p>
+        ) : null}
+        {reconciliation.provenance ? (
+          <p className="text-xs text-muted">
+            {t(
+              reconciliation.provenance === "VERSIONED_ACCOUNT_BOUND"
+                ? "provenanceBound"
+                : "provenanceLegacy",
+            )}
+          </p>
+        ) : null}
+        {reconciliation.version_number ? (
+          <p className="text-xs text-muted">
+            {t("version", { number: reconciliation.version_number })}
+          </p>
+        ) : null}
         {reconciliation.report_id ? (
           <button
             type="button"
@@ -64,9 +83,24 @@ export function ReconciliationTile({ reconciliation, locale }: ReconciliationTil
             <p className="font-mono text-xs text-muted">{reconciliation.report_id}</p>
             {display === "red" ? (
               <p className="mt-2 text-danger">{t("mismatchAlert")}</p>
-            ) : (
+            ) : display === "green" ? (
               <p className="mt-2 text-success">{t("cleanDay")}</p>
+            ) : (
+              <p className="mt-2 text-warning">{t("noReportDependency")}</p>
             )}
+            {reconciliation.provider_account_id ? (
+              <p className="mt-2 text-xs">
+                {t("accountCurrency", {
+                  account: reconciliation.provider_account_id,
+                  currency: reconciliation.currency ?? "",
+                })}
+              </p>
+            ) : null}
+            {reconciliation.discrepancies ? (
+              <pre className="mt-2 whitespace-pre-wrap break-words text-xs">
+                {JSON.stringify(reconciliation.discrepancies, null, 2)}
+              </pre>
+            ) : null}
           </div>
         ) : null}
       </div>

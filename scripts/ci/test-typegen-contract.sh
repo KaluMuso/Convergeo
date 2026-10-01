@@ -509,6 +509,7 @@ cp "${tmp}/graphql-init-enabled.txt" "${tmp}/graphql-initialization.txt"
 
 run_provenance() {
   local provenance_output="${PROVENANCE_OUTPUT_OVERRIDE:-${tmp}/provenance.txt}"
+  EXPECTED_TYPEGEN_MIGRATION_COUNT="${PROVENANCE_EXPECTED_MIGRATION_COUNT:-2}" \
   SUPABASE_DB_URL=postgresql://fixture \
   TYPEGEN_WORKDIR="${tmp}/prepared" \
   TYPEGEN_OUTPUT="${tmp}/generated.ts" \
@@ -526,6 +527,13 @@ run_provenance() {
     "${PROVENANCE}" >/dev/null
 }
 
+run_provenance
+printf '%s\n' preserve-on-count-failure >"${tmp}/provenance.txt"
+if PROVENANCE_EXPECTED_MIGRATION_COUNT=135 run_provenance >/dev/null 2>&1; then
+  echo "error: unexpected migration count was accepted" >&2
+  exit 1
+fi
+[[ "$(cat "${tmp}/provenance.txt")" == "preserve-on-count-failure" ]]
 run_provenance
 grep -Fx 'supabase_cli_version=2.109.1' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'migration_versions=0001,0002' "${tmp}/provenance.txt" >/dev/null
@@ -629,6 +637,7 @@ for required_hash in \
   "${tmp}/prepared/supabase/.temp/postgres-version" \
   "${tmp}/prepared/supabase/.temp/pgmeta-version" \
   "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh" \
+  "${ROOT_DIR}/scripts/ci/apply_service_adoption.py" \
   "${tmp}/graphql-initialization.txt"; do
   expect_hash_reject_preserves_prior "required input hash failure: ${required_hash}" fail \
     "${required_hash}"

@@ -315,6 +315,7 @@ export function ListingFields({
           <FormField label={labels.minStepsLabel}>
             <Input
               inputMode="numeric"
+              disabled={inventoryReadOnly}
               min={1}
               step={1}
               value={values.minSteps}
@@ -386,7 +387,9 @@ export function ListingFields({
           disabled={inventoryReadOnly}
           value={values.fulfilmentMode}
           onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-            handleChange({ fulfilmentMode: event.target.value as FulfilmentMode })
+            handleChange({
+              fulfilmentMode: event.target.value as FulfilmentMode,
+            })
           }
         >
           <option value="stocked" disabled={values.productClass === "E"}>

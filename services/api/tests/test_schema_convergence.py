@@ -69,6 +69,10 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20260930170100",
     "20260930203000",
     "20260930203100",
+    # Additive merchant review corrections remain pending in this historical capture.
+    "20261001120000",
+    "20261001120100",
+    "20261001120200",
 ]
 
 def _module() -> Any:
@@ -657,9 +661,13 @@ def test_preflight_adapter_forbids_manifest_self_mutation() -> None:
 def test_deploy_staging_runs_preflight_before_db_push() -> None:
     workflow = DEPLOY_STAGING_WORKFLOW.read_text(encoding="utf-8")
     preflight = workflow.index("preflight-staging-schema-convergence.sh")
-    push = workflow.index("supabase db push --include-all")
+    routing = workflow.index(
+        "unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS"
+    )
+    adoption = workflow.index("python3 scripts/ci/guard_shared_service_adoption.py")
+    push = workflow.index('supabase db push --db-url "${SUPABASE_DB_URL}" --include-all')
     reconcile = workflow.index("reconcile-staging-migrations.sh")
-    assert preflight < push < reconcile
+    assert preflight < routing < adoption < push < reconcile
     assert "STAGING_LEDGER_REPAIR_REQUIRED" in workflow
     assert "STAGING_SCHEMA_REPAIR_REQUIRED" in workflow
 

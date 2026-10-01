@@ -4,7 +4,9 @@
     "deploymentEnabled": {
       "hardening/20260924-converged-implementation": false,
       "hardening/20260925-ci-recovery": false,
-      "codex/continuity-gap-repair": false
+      "codex/continuity-gap-repair": false,
+      "codex/coordinator-ci-review-20261001": false,
+      "codex/continuity-review-corrections-20261001": false
     }
   }
 }

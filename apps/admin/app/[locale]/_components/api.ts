@@ -34,6 +34,15 @@ export type ReconciliationTile = {
   report_id: string | null;
   report_date: string | null;
   has_mismatch: boolean;
+  provenance?: string;
+  evidence_state?: string;
+  version_number?: number | null;
+  provider_account_id?: string | null;
+  currency?: string | null;
+  certifiable?: boolean;
+  source_version?: string | null;
+  input_fingerprint?: string | null;
+  discrepancies?: Record<string, unknown>;
 };
 
 export type CatalogCounts = {
