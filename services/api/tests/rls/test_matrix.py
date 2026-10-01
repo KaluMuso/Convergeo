@@ -2198,6 +2198,16 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "rate_counters": client_invisible(),
+    # Append-only F3 reports: authenticated SELECT is filtered to admins;
+    # every client write is revoked, including admin writes.
+    "reconciliation_report_versions": {
+        Persona.ANON: deny_all(),
+        **{persona: select_only() for persona in Persona if persona != Persona.ANON},
+    },
+    # Financial obligations are service-only; stock history is accessed solely
+    # through its reviewed definer RPC. Neither exposes direct client DML.
+    "service_payment_obligations": client_invisible(),
+    "vendor_stock_operations": client_invisible(),
     "reconciliation_reports": {
         # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write,
         # but authenticated also holds effectively-dead insert/update/delete grants with
