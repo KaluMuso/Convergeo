@@ -78,10 +78,42 @@ export function SearchInput({
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
+  const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryContextRef = useRef({ initialQuery, locale });
+
+  const cancelPending = useCallback(() => {
+    // Invalidate immediately, including the interval before the next debounce fires.
+    requestIdRef.current += 1;
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (blurRef.current !== null) {
+      clearTimeout(blurRef.current);
+      blurRef.current = null;
+    }
+  }, []);
+
+  const resetSuggestions = useCallback(() => {
+    cancelPending();
+    setSuggestions([]);
+    setShowRecents(false);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    setIsLoading(false);
+  }, [cancelPending]);
 
   useEffect(() => {
-    setValue(initialQuery);
-  }, [initialQuery]);
+    if (
+      queryContextRef.current.initialQuery !== initialQuery ||
+      queryContextRef.current.locale !== locale
+    ) {
+      resetSuggestions();
+      setValue(initialQuery);
+      queryContextRef.current = { initialQuery, locale };
+    }
+    return cancelPending;
+  }, [initialQuery, locale, resetSuggestions, cancelPending]);
 
   const navigateToSearch = useCallback(
     (query: string) => {
@@ -90,21 +122,19 @@ export function SearchInput({
         return;
       }
       addRecentSearch(trimmed);
-      setIsOpen(false);
-      setShowRecents(false);
+      resetSuggestions();
       router.push(buildSearchHref(locale, trimmed));
     },
-    [locale, router],
+    [locale, router, resetSuggestions],
   );
 
   const navigateToSuggestion = useCallback(
     (item: SuggestItem) => {
       addRecentSearch(item.title);
-      setIsOpen(false);
-      setShowRecents(false);
+      resetSuggestions();
       router.push(searchResultHref(locale, item));
     },
-    [locale, router],
+    [locale, router, resetSuggestions],
   );
 
   const openRecentDropdown = useCallback(() => {
@@ -161,23 +191,17 @@ export function SearchInput({
         clearTimeout(debounceRef.current);
       }
       debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
         void fetchSuggestions(query);
       }, DEBOUNCE_MS);
     },
     [fetchSuggestions],
   );
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
   const optionCount = showRecents ? recentTerms.length : suggestions.length;
 
   const handleChange = (nextValue: string) => {
+    resetSuggestions();
     setValue(nextValue);
     if (!nextValue.trim()) {
       openRecentDropdown();
@@ -202,8 +226,7 @@ export function SearchInput({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || optionCount === 0) {
       if (event.key === "Escape") {
-        setIsOpen(false);
-        setShowRecents(false);
+        resetSuggestions();
       }
       return;
     }
@@ -228,9 +251,7 @@ export function SearchInput({
         break;
       case "Escape":
         event.preventDefault();
-        setIsOpen(false);
-        setShowRecents(false);
-        setActiveIndex(-1);
+        resetSuggestions();
         break;
       default:
         break;
@@ -254,16 +275,26 @@ export function SearchInput({
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
+            if (blurRef.current !== null) {
+              clearTimeout(blurRef.current);
+              blurRef.current = null;
+            }
             if (!value.trim()) {
               openRecentDropdown();
               return;
             }
             if (suggestions.length > 0) {
               setIsOpen(true);
+            } else if (debounceRef.current === null && !isLoading) {
+              // Blur cancels pending work; resume it when the unchanged query regains focus.
+              scheduleSuggest(value);
             }
           }}
           onBlur={() => {
-            window.setTimeout(() => {
+            cancelPending();
+            setIsLoading(false);
+            blurRef.current = setTimeout(() => {
+              blurRef.current = null;
               setIsOpen(false);
               setShowRecents(false);
             }, 120);
