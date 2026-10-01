@@ -146,11 +146,14 @@ class CoordinatorControls(unittest.TestCase):
         with patch.object(runner, "create"), patch.object(runner, "replay"), \
                 patch.object(runner, "roles"), patch.object(runner, "bind"), \
                 patch.object(runner, "direct_rest"), \
+                patch.object(runner, "sql") as sql, \
                 patch.object(runner, "test_gate", side_effect=[False, True]) as test:
             with self.assertRaisesRegex(RuntimeError, "zero skips"):
                 runner.curated()
             self.assertEqual(test.call_count, 2)
             self.assertEqual(test.call_args.args, ("rls", ["tests/rls"]))
+            sql.assert_called_once_with("remove-owned-probe-before-rls",
+                "ci_coordinator_curated", "DROP TABLE public.ci_critical_binding_probe")
 
 
 if __name__ == "__main__":

@@ -296,6 +296,11 @@ class Runner(financial.Runner):
         self.bind(database)
         self.env["SUPABASE_REST_URL"] = "http://127.0.0.1:3006"
         with self.direct_rest(database, 3006):
+            # Readiness already proved this runner-owned row over SQL and HTTP.
+            # Remove instrumentation before the unchanged full-table RLS gate;
+            # do not exempt unknown tables or alter its expected authorities.
+            self.sql("remove-owned-probe-before-rls", database,
+                     "DROP TABLE public.ci_critical_binding_probe")
             # Run both gates even if curated execution fails; retain both failures.
             curated = self.test_gate("curated", self.contract["curated"])
             rls = self.test_gate("rls", ["tests/rls"])
