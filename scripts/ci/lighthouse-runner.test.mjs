@@ -327,6 +327,62 @@ test("real-engine adapter forwards settings and always cleans up Chrome without 
   });
 });
 
+for (const scenario of ["success", "engine failure"]) {
+  test(`async executable path is resolved before launch and Chrome is cleaned up: ${scenario}`, async () => {
+    const events = [];
+    const url = "http://localhost/fixture";
+    const result = { lhr: makeReport(url), report: "<!doctype html><title>fixture</title>" };
+    const engineError = new Error("engine fixture");
+    const deps = [
+      {
+        default: async (requestedUrl, flags) => {
+          events.push("engine");
+          assert.equal(requestedUrl, url);
+          assert.deepEqual(flags, {
+            ...config.ci.collect.settings,
+            port: 9999,
+            output: "html",
+            logLevel: "info",
+          });
+          if (scenario === "engine failure") throw engineError;
+          return result;
+        },
+      },
+      {
+        launch: async (options) => {
+          events.push("launch");
+          assert.equal(typeof options.chromePath, "string");
+          assert.deepEqual(options, {
+            chromePath: "/fixture/official-chrome",
+            chromeFlags: ["--headless=new"],
+          });
+          return {
+            port: 9999,
+            kill: async () => {
+              events.push("kill");
+            },
+          };
+        },
+      },
+      {
+        default: {
+          executablePath: async () => {
+            await Promise.resolve();
+            events.push("path resolved");
+            return "/fixture/official-chrome";
+          },
+        },
+      },
+    ];
+    if (scenario === "engine failure") {
+      await assert.rejects(auditWithChrome(url, config.ci.collect.settings, deps), engineError);
+    } else {
+      assert.equal(await auditWithChrome(url, config.ci.collect.settings, deps), result);
+    }
+    assert.deepEqual(events, ["path resolved", "launch", "engine", "kill"]);
+  });
+}
+
 test("CLI invalid input exits nonzero before browser collection", () => {
   const result = spawnSync(
     process.execPath,

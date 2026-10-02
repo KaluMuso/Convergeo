@@ -196,7 +196,7 @@ export async function auditWithChrome(url, settings, dependencies) {
     (await Promise.all([import("lighthouse"), import("chrome-launcher"), import("puppeteer")]));
   // Official Puppeteer browser revision, installed explicitly in CI. No sandbox/TLS bypass.
   const chrome = await chromeLauncher.launch({
-    chromePath: puppeteer.executablePath(),
+    chromePath: await puppeteer.executablePath(),
     chromeFlags: ["--headless=new"],
   });
   try {
