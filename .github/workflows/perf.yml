@@ -16,7 +16,7 @@ permissions:
 jobs:
   perf:
     name: Bundle, image lint & Lighthouse
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Same auth-hook/OAuth dummy env as CI db/rls — Supabase CLI cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -47,6 +47,8 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true" # Explicit pinned-browser install below.
         run: pnpm i --frozen-lockfile
 
       # Blocking i18n completeness gate (M16-P03). Pure-node + offline, so it
@@ -196,8 +198,20 @@ jobs:
           node scripts/ci/bundle-guard.mjs --self-test
           node scripts/ci/image-lint.mjs --self-test
 
-      - name: Validate Lighthouse config
-        run: node scripts/ci/validate-lighthouserc.mjs
+      - name: Validate Lighthouse config and runner contracts
+        run: |
+          node scripts/ci/validate-lighthouserc.mjs
+          pnpm perf:lighthouse:test
+
+      - name: Install pinned Chrome for Testing
+        # Official Puppeteer revision; no custom archive or sandbox bypass.
+        run: |
+          pnpm exec puppeteer browsers install chrome
+          test -x /opt/google/chrome/chrome
+          chrome_version="$(/opt/google/chrome/chrome --product-version)"
+          test "$chrome_version" = "154.0.8037.57"
+          chrome_package_owner="$(dpkg-query -S /opt/google/chrome/chrome)"
+          test "$chrome_package_owner" = "google-chrome-stable: /opt/google/chrome/chrome"
 
       - name: Start production server
         run: |
@@ -248,13 +262,12 @@ jobs:
             done
           done
 
-      - name: Lighthouse CI (blocking — see lighthouserc.json)
-        # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
-        # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
-        # Bundle-guard + image-lint remain the hard first-load JS/image gates.
-        # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
-        # itself is unavailable (not for score dips) — document in the PR.
-        run: pnpm exec lhci autorun --config=lighthouserc.json
+      - name: Lighthouse performance assertions (blocking — see lighthouserc.json)
+        # Same five URL policies, three runs, median perf/LCP and checkout SEO warning.
+        # Infrastructure and collection failures also fail; reports upload with always().
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /opt/google/chrome/chrome
+        run: pnpm perf:lighthouse --config=lighthouserc.json
 
       - name: Install a11y smoke deps (standalone e2e package)
         working-directory: e2e
@@ -296,6 +309,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: lighthouse-reports
+          name: lighthouse-reports-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .lighthouseci
-          if-no-files-found: ignore
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3

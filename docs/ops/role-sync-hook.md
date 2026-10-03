@@ -22,23 +22,51 @@ On both projects, `public.custom_access_token_hook` exists and
 
 ## The gap this closes
 
-The vendor and admin middleware gate on `user.app_metadata.roles`
-(`packages/auth/src/roles.ts` → `getRolesFromUser`). Signup only ever grants the
-`customer` role (`0010_profile_bootstrap.sql`). KYC approval now inserts
+The vendor and admin middleware gate on the roles carried in the **verified
+access token claims** (`packages/auth/src/middleware.ts` → `updateSession()`
+→ `supabase.auth.getClaims()` → `packages/auth/src/roles.ts` →
+`getRolesFromClaims(claims)`). Signup only ever grants the `customer` role
+(`0010_profile_bootstrap.sql`). KYC approval now inserts
 `public.user_roles.vendor` for `vendors.owner_user_id` (see
-`docs/ops/vendor-role-lifecycle.md`) — **that row does not appear in the JWT
-until this hook is registered**.
+`docs/ops/vendor-role-lifecycle.md`) — **that row does not appear in any
+issued token's claims until this hook is registered**.
 
 The hook in `0051_custom_access_token_role_hook.sql` reads `public.user_roles`
-on every token mint and injects the roles into `app_metadata.roles`. After it's
-enabled, granting a role is a single insert (already performed by
+on every token mint and injects the roles into `claims.app_metadata.roles`.
+After it's enabled, granting a role is a single insert (already performed by
 `ensure_vendor_owner_role`):
 
 ```sql
 insert into public.user_roles (user_id, role) values ('<uid>', 'vendor');
 ```
 
-(The user must re-authenticate or refresh their token for the new claim to land.)
+(The user must re-authenticate or refresh their token for the new claim to
+land.)
+
+**Historical note:** middleware previously read `user.app_metadata.roles`
+from the `User` object `getUser()` returns (`getRolesFromUser`) — a
+DIFFERENT object from the token claims this hook writes into. The hook
+mutates the issued token's claims only, never `auth.users.
+raw_app_meta_data` (which is what `User.app_metadata` reflects), so that
+old read path could never see a role granted this way even with the hook
+correctly enabled and running. `getRolesFromUser` still exists for the one
+other caller that genuinely needs the `User` object shape
+(`apps/customer/.../vendor-portal-hub-card.tsx`, a cosmetic UI decision,
+never a security gate) — middleware itself no longer calls it.
+
+Middleware claims are a routing fast path only. Privileged API mutations still
+require authoritative `public.user_roles` checks server-side; this change does
+not replace them or make a role grant immediately visible in an older token.
+
+**Local SDK verification (2026-10-02):** the original 13 tests in
+`packages/auth/src/session-routing.integration.test.ts` pass with installed
+`@supabase/ssr` 0.12.4 and Supabase JS/Auth 2.112.2. They use locally signed RSA
+tokens and an isolated ephemeral `127.0.0.1` HTTP fixture, with the real SDK's
+signature/expiry verification and cookie handling. Execution is restricted to
+that fixture's exact host/port; external fetch/socket destinations and UDP are
+blocked. This proves the local middleware/SDK contract, including fail-closed
+expired/forged claims and metadata privilege attempts. It does not verify hosted
+login, OTP, provider setup, Dashboard hook registration, or database state.
 
 ## Enable it (staging first — later operator work)
 
