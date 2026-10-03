@@ -1,0 +1,19 @@
+# Eight verified SHA256 source-file digests, not credentials, from PR718 history.
+# Owner report: CI37134546808 attempt1. Values were recomputed from each
+# referenced file at the same immutable commit; future edits remain scanned.
+# 360: SHA256(supabase/migrations/0017_order_pickup_tokens.sql)
+# 394: SHA256(supabase/migrations/0051_custom_access_token_role_hook.sql)
+# 408: SHA256(supabase/migrations/0065_refunds_source_key_uniq.sql)
+# 453: SHA256(supabase/migrations/20260817200000_rate_counter_event_access_unlock_scope.sql)
+# 455: SHA256(supabase/migrations/20260829120000_bump_rate_counter_service_role_auth_role.sql)
+# 456: SHA256(supabase/migrations/20260831050000_guard_rate_counters_mutation_auth_role.sql)
+# 457: SHA256(supabase/migrations/20260831051000_cleanup_expired_rate_counters_auth_role.sql)
+# 509: SHA256(services/api/tests/rls/test_launch_table_access.py)
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:360
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:394
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:408
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:453
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:455
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:456
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:457
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:509

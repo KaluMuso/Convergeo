@@ -1,7 +1,7 @@
 /* global structuredClone */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -14,6 +14,8 @@ import {
   representativeRun,
   validatePolicy,
   auditWithChrome,
+  classifyChromeStderr,
+  sourceIdentity,
 } from "./lighthouse-runner.mjs";
 
 const config = JSON.parse(
@@ -291,48 +293,63 @@ test("malformed category preserves failed-run summary and partial report artifac
   }
 });
 
-test("real-engine adapter forwards settings and always cleans up Chrome without security bypass flags", async () => {
-  let killed = 0,
-    launched;
-  const deps = [
-    {
-      default: async (url, flags) => {
-        assert.equal(url, "http://localhost/fixture");
-        assert.deepEqual(flags.screenEmulation, config.ci.collect.settings.screenEmulation);
-        assert.equal(flags.port, 9999);
-        throw new Error("engine fixture");
-      },
-    },
-    {
-      launch: async (options) => {
-        launched = options;
-        return {
-          port: 9999,
-          kill: async () => {
-            killed++;
-          },
-        };
-      },
-    },
-    { default: { executablePath: () => "/fixture/official-chrome" } },
-  ];
-  await assert.rejects(
-    auditWithChrome("http://localhost/fixture", config.ci.collect.settings, deps),
-    /engine fixture/,
-  );
-  assert.equal(killed, 1);
-  assert.deepEqual(launched, {
-    chromePath: "/fixture/official-chrome",
-    chromeFlags: ["--headless=new"],
-  });
-});
+const safeDefaults = ["--disable-background-networking", "--no-first-run"];
+function fakeChrome({ events, scenario, stderr = "", capture }) {
+  return class {
+    static defaultFlags() {
+      return safeDefaults;
+    }
+    constructor(options) {
+      capture.options = options;
+      this.options = options;
+      this.port = 9999;
+      this.chromeProcess = {
+        exitCode: scenario === "launch failure" ? 17 : null,
+        signalCode: null,
+      };
+    }
+    get flags() {
+      return [...this.options.chromeFlags, "--remote-debugging-port=0"];
+    }
+    async launch() {
+      events.push("launch");
+      await writeFile(join(this.options.userDataDir, "chrome-err.log"), stderr);
+      if (scenario === "launch failure") throw new Error("PRIVATE_ERROR_SENTINEL");
+    }
+    async kill() {
+      events.push("kill");
+      if (scenario === "cleanup failure") throw new Error("PRIVATE_CLEANUP_SENTINEL");
+    }
+  };
+}
 
-for (const scenario of ["success", "engine failure"]) {
-  test(`async executable path is resolved before launch and Chrome is cleaned up: ${scenario}`, async () => {
-    const events = [];
+for (const scenario of ["success", "engine failure", "launch failure", "cleanup failure"]) {
+  test(`owned Chrome lifecycle, projected diagnostics and settings: ${scenario}`, async () => {
+    const dir = await mkdtemp(join(tmpdir(), "chrome-lifecycle-"));
+    const events = [],
+      capture = {};
     const url = "http://localhost/fixture";
-    const result = { lhr: makeReport(url), report: "<!doctype html><title>fixture</title>" };
+    const result = {
+      lhr: makeReport(url),
+      report: "<!doctype html><title>fixture</title>",
+    };
     const engineError = new Error("engine fixture");
+    const diagnosticsPath = join(dir, "diagnostic.json");
+    const context = {
+      diagnosticsPath,
+      urlIndex: 1,
+      run: 1,
+      source: {
+        checkout_sha: "1".repeat(40),
+        checkout_tree: "2".repeat(40),
+        candidate_sha: "3".repeat(40),
+        run_id: "123",
+        run_attempt: "1",
+        config_sha256: "4".repeat(64),
+        Secret: "PRIVATE_IDENTITY_SENTINEL",
+        env: "PRIVATE_ENV_SENTINEL",
+      },
+    };
     const deps = [
       {
         default: async (requestedUrl, flags) => {
@@ -349,20 +366,12 @@ for (const scenario of ["success", "engine failure"]) {
         },
       },
       {
-        launch: async (options) => {
-          events.push("launch");
-          assert.equal(typeof options.chromePath, "string");
-          assert.deepEqual(options, {
-            chromePath: "/fixture/official-chrome",
-            chromeFlags: ["--headless=new"],
-          });
-          return {
-            port: 9999,
-            kill: async () => {
-              events.push("kill");
-            },
-          };
-        },
+        Launcher: fakeChrome({
+          events,
+          scenario,
+          capture,
+          stderr: "PRIVATE_STDERR_SENTINEL No usable sandbox! arbitrary private contents",
+        }),
       },
       {
         default: {
@@ -374,14 +383,219 @@ for (const scenario of ["success", "engine failure"]) {
         },
       },
     ];
-    if (scenario === "engine failure") {
-      await assert.rejects(auditWithChrome(url, config.ci.collect.settings, deps), engineError);
-    } else {
-      assert.equal(await auditWithChrome(url, config.ci.collect.settings, deps), result);
+    try {
+      if (scenario === "success")
+        assert.equal(await auditWithChrome(url, config.ci.collect.settings, deps, context), result);
+      else
+        await assert.rejects(
+          auditWithChrome(url, config.ci.collect.settings, deps, context),
+          scenario === "engine failure" ? engineError : /Chrome (launch|cleanup) failed/,
+        );
+      assert.deepEqual(
+        events,
+        scenario === "launch failure"
+          ? ["path resolved", "launch", "kill"]
+          : ["path resolved", "launch", "engine", "kill"],
+      );
+      assert.deepEqual(capture.options.chromeFlags, [...safeDefaults, "--headless=new"]);
+      assert.equal(capture.options.ignoreDefaultFlags, true);
+      await assert.rejects(stat(capture.options.userDataDir), {
+        code: "ENOENT",
+      });
+      const bytes = await readFile(diagnosticsPath, "utf8"),
+        diagnostic = JSON.parse(bytes);
+      assert.ok(!bytes.includes("PRIVATE_"));
+      assert.deepEqual(diagnostic.stderr_reasons, ["sandbox_unavailable"]);
+      assert.equal(diagnostic.checkout_sha, context.source.checkout_sha);
+      assert.equal(diagnostic.checkout_tree, context.source.checkout_tree);
+      assert.equal(diagnostic.candidate_sha, context.source.candidate_sha);
+      assert.equal(diagnostic.run_id, "123");
+      assert.equal(diagnostic.run_attempt, "1");
+      assert.equal(diagnostic.config_sha256, "4".repeat(64));
+      assert.equal(diagnostic.exit_code, scenario === "launch failure" ? 17 : null);
+      assert.equal(diagnostic.cleanup_failed, scenario === "cleanup failure");
+      assert.equal(diagnostic.collection_completed, scenario === "success");
+      assert.equal(diagnostic.security_flags_rejected, false);
+      assert.equal((await stat(diagnosticsPath)).mode & 0o777, 0o600);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
     }
-    assert.deepEqual(events, ["path resolved", "launch", "engine", "kill"]);
   });
 }
+
+test("effective pinned Linux launcher flags preserve sandbox mechanisms", async () => {
+  const { Launcher } = await import("chrome-launcher");
+  const options = {
+    chromePath: "/fixture/chrome",
+    chromeFlags: [...Launcher.defaultFlags(), "--headless=new"],
+    ignoreDefaultFlags: true,
+    userDataDir: "/fixture/profile",
+  };
+  const launcher = new Launcher(options);
+  launcher.port = 0; // spawnProcess sets the dynamic port immediately before spawn.
+  const flags = launcher.flags;
+  assert.ok(flags.includes("--headless=new"));
+  assert.ok(flags.includes("--remote-debugging-port=0"));
+  assert.ok(
+    !flags.some((flag) =>
+      /^--(?:no-sandbox|disable-(?:setuid|namespace|seccomp-filter|gpu)-sandbox|disable-web-security|ignore-certificate-errors|allow-insecure-localhost)/.test(
+        flag,
+      ),
+    ),
+  );
+  assert.deepEqual(
+    flags.filter(
+      (flag) =>
+        !flag.startsWith("--remote-debugging-port=") &&
+        !flag.startsWith("--user-data-dir=") &&
+        flag !== "about:blank",
+    ),
+    options.chromeFlags,
+  );
+});
+
+for (const forbidden of [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-namespace-sandbox",
+  "--disable-web-security",
+  "--ignore-certificate-errors",
+  "--allow-insecure-localhost",
+]) {
+  test(`security bypass is rejected before browser launch: ${forbidden}`, async () => {
+    const events = [],
+      capture = {};
+    class Unsafe extends fakeChrome({ events, scenario: "success", capture }) {
+      static defaultFlags() {
+        return [forbidden];
+      }
+    }
+    const deps = [
+      {
+        default: async () => {
+          throw new Error("engine must not execute");
+        },
+      },
+      { Launcher: Unsafe },
+      { default: { executablePath: () => "/fixture/chrome" } },
+    ];
+    await assert.rejects(
+      auditWithChrome("http://localhost/fixture", {}, deps),
+      /Chrome validate_flags failed/,
+    );
+    assert.deepEqual(events, []);
+  });
+}
+
+test("launch failure produces no LHR, no retries, safe source-bound diagnostics and exit1", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "chrome-no-collection-"));
+  const events = [],
+    capture = {};
+  const deps = [
+    {
+      default: async () => {
+        throw new Error("engine must not execute");
+      },
+    },
+    {
+      Launcher: fakeChrome({
+        events,
+        scenario: "launch failure",
+        capture,
+        stderr: "missing private data",
+      }),
+    },
+    { default: { executablePath: () => "/fixture/chrome" } },
+  ];
+  try {
+    const result = await runPerformance(config, {
+      cwd: dir,
+      audit: (url, settings, _deps, context) => auditWithChrome(url, settings, deps, context),
+      configSha256: "5".repeat(64),
+    });
+    assert.equal(result.exitCode, 1);
+    assert.deepEqual(result.manifest, []);
+    assert.deepEqual(result.assertions, []);
+    assert.deepEqual(events, ["launch", "kill"]);
+    const diagnostic = JSON.parse(
+      await readFile(join(dir, ".lighthouseci", "chrome-startup-1-1.json")),
+    );
+    assert.deepEqual(diagnostic.stderr_reasons, ["unknown"]);
+    assert.equal(diagnostic.stage, "launch");
+    assert.equal(diagnostic.config_sha256, "5".repeat(64));
+    assert.ok(!JSON.stringify(result).includes("PRIVATE_"));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("stderr projection emits only known categories and never raw contents", () => {
+  assert.deepEqual(classifyChromeStderr("PRIVATE_SECRET unknown"), ["unknown"]);
+  assert.deepEqual(
+    classifyChromeStderr("PRIVATE_SECRET error while loading shared libraries libprivate.so"),
+    ["missing_shared_library"],
+  );
+  assert.deepEqual(classifyChromeStderr("AppArmor user namespace denied PRIVATE_SECRET"), [
+    "user_namespace_policy",
+  ]);
+});
+
+test("hosted identity projects only checkout/head/run fields and fails closed on mismatch", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "identity-control-"));
+  const eventPath = join(dir, "event.json");
+  try {
+    const local = await sourceIdentity(process.cwd(), {});
+    await writeFile(
+      eventPath,
+      JSON.stringify({
+        pull_request: {
+          head: { sha: "1".repeat(40) },
+          body: "PRIVATE_EVENT_SENTINEL",
+        },
+      }),
+    );
+    const env = {
+      GITHUB_ACTIONS: "true",
+      GITHUB_EVENT_NAME: "pull_request",
+      GITHUB_EVENT_PATH: eventPath,
+      GITHUB_SHA: local.checkout_sha,
+      GITHUB_RUN_ID: "123",
+      GITHUB_RUN_ATTEMPT: "1",
+      SECRET: "PRIVATE_ENV_SENTINEL",
+    };
+    const hosted = await sourceIdentity(process.cwd(), env);
+    assert.deepEqual(hosted, {
+      checkout_sha: local.checkout_sha,
+      checkout_tree: local.checkout_tree,
+      candidate_sha: "1".repeat(40),
+      run_id: "123",
+      run_attempt: "1",
+    });
+    await writeFile(eventPath, JSON.stringify({ after: local.checkout_sha }));
+    const push = await sourceIdentity(process.cwd(), {
+      ...env,
+      GITHUB_EVENT_NAME: "push",
+    });
+    assert.equal(push.candidate_sha, local.checkout_sha);
+    await assert.rejects(sourceIdentity(process.cwd(), env), /identity/);
+    await writeFile(
+      eventPath,
+      JSON.stringify({ pull_request: { head: { sha: "private-invalid" } } }),
+    );
+    await assert.rejects(sourceIdentity(process.cwd(), env), /identity/);
+    await writeFile(eventPath, JSON.stringify({ pull_request: { head: { sha: "1".repeat(40) } } }));
+    await assert.rejects(
+      sourceIdentity(process.cwd(), { ...env, GITHUB_SHA: "9".repeat(40) }),
+      /identity/,
+    );
+    await assert.rejects(
+      sourceIdentity(process.cwd(), { ...env, GITHUB_RUN_ID: "private" }),
+      /identity/,
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
 test("CLI invalid input exits nonzero before browser collection", () => {
   const result = spawnSync(
