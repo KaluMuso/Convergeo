@@ -39,6 +39,13 @@ const makeReport = (url) => ({
 });
 const allReports = () =>
   config.ci.collect.url.flatMap((url) => Array.from({ length: 3 }, () => makeReport(url)));
+// Read source identity from the real checkout, including in hosted CI. Only
+// fixture output moves to a private temporary directory; runtime checks stay strict.
+const fixtureConfig = (dir) => {
+  const fixture = structuredClone(config);
+  fixture.ci.upload.outputDir = join(dir, ".lighthouseci");
+  return fixture;
+};
 const metric = (results, url, id) =>
   results.find(
     (r) => r.url === url && (r.auditProperty ? `categories:${r.auditProperty}` : r.auditId) === id,
@@ -208,8 +215,7 @@ for (const scenario of ["pass", "warn", "threshold", "collection", "runtime", "m
     const dir = await mkdtemp(join(tmpdir(), "performance-contract-"));
     let calls = 0;
     try {
-      const result = await runPerformance(config, {
-        cwd: dir,
+      const result = await runPerformance(fixtureConfig(dir), {
         audit: async (url, settings) => {
           calls++;
           assert.deepEqual(settings, config.ci.collect.settings);
@@ -262,8 +268,7 @@ test("malformed category preserves failed-run summary and partial report artifac
   const dir = await mkdtemp(join(tmpdir(), "performance-malformed-category-"));
   let calls = 0;
   try {
-    const result = await runPerformance(config, {
-      cwd: dir,
+    const result = await runPerformance(fixtureConfig(dir), {
       audit: async (url) => {
         calls++;
         const lhr = makeReport(url);
@@ -508,8 +513,7 @@ test("launch failure produces no LHR, no retries, safe source-bound diagnostics 
     { default: { executablePath: () => "/fixture/chrome" } },
   ];
   try {
-    const result = await runPerformance(config, {
-      cwd: dir,
+    const result = await runPerformance(fixtureConfig(dir), {
       audit: (url, settings, _deps, context) => auditWithChrome(url, settings, deps, context),
       configSha256: "5".repeat(64),
     });
@@ -520,6 +524,8 @@ test("launch failure produces no LHR, no retries, safe source-bound diagnostics 
     const diagnostic = JSON.parse(
       await readFile(join(dir, ".lighthouseci", "chrome-startup-1-1.json")),
     );
+    const identity = await sourceIdentity(process.cwd());
+    for (const [key, value] of Object.entries(identity)) assert.equal(diagnostic[key], value);
     assert.deepEqual(diagnostic.stderr_reasons, ["unknown"]);
     assert.equal(diagnostic.stage, "launch");
     assert.equal(diagnostic.config_sha256, "5".repeat(64));
