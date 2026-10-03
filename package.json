@@ -17,7 +17,9 @@
     "release-certify:static": "bash scripts/qa/release-certify.sh --mode ci --layer static --skip-e2e --skip-rls",
     "release-certify:self-test": "node --test scripts/qa/self-test/*.test.mjs",
     "perf:lighthouse": "node scripts/ci/lighthouse-runner.mjs",
-    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-runner.test.mjs"
+    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-runner.test.mjs",
+    "format:staged": "node scripts/format-staged.mjs",
+    "format:staged:test": "node --test scripts/format-staged.test.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -30,16 +32,12 @@
     "eslint-plugin-unused-imports": "^4.1.4",
     "lefthook": "^1.11.3",
     "lighthouse": "13.5.0",
-    "lint-staged": "^15.5.0",
     "prettier": "^3.9.6",
     "puppeteer": "25.12.0",
     "turbo": "^2.10.9",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.66.0",
     "yauzl": "3.4.0"
-  },
-  "lint-staged": {
-    "*": "prettier --config packages/config/prettier.config.mjs --write --ignore-unknown"
   },
   "pnpm": {
     "overrides": {
