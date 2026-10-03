@@ -243,7 +243,90 @@ jobs:
         run: bash scripts/ci/validate-n8n-no-plaintext-secrets.sh
 
       - name: Run gitleaks
-        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          raw_dir="$(mktemp -d "${RUNNER_TEMP}/gitleaks-raw.XXXXXX")"
+          trap 'rm -rf -- "$raw_dir"' EXIT
+          export GITLEAKS_RAW_REPORT="${raw_dir}/raw.json"
+          export GITLEAKS_SAFE_REPORT="${RUNNER_TEMP}/gitleaks-report.json"
+          rm -f -- "$GITLEAKS_SAFE_REPORT"
+          scanner_status=0
+          gitleaks detect --source . --config .gitleaks.toml --verbose --redact=100 \
+            --report-format json --report-path "$GITLEAKS_RAW_REPORT" || scanner_status=$?
+          export GITLEAKS_EXIT_STATUS="$scanner_status"
+          python3 - <<'PYREPORT'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import subprocess
+
+          def require(condition):
+              if not condition:
+                  raise ValueError("Invalid diagnostic metadata")
+
+          def sha(value):
+              require(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value))
+              return value
+
+          try:
+              raw = Path(os.environ["GITLEAKS_RAW_REPORT"])
+              findings = json.loads(raw.read_text())
+              require(isinstance(findings, list))
+              projected = []
+              for finding in findings:
+                  require(isinstance(finding, dict) and finding.get("Secret") == "REDACTED")
+                  rule = finding.get("RuleID")
+                  path = finding.get("File")
+                  start = finding.get("StartLine")
+                  end = finding.get("EndLine")
+                  commit = sha(finding.get("Commit"))
+                  require(isinstance(rule, str) and re.fullmatch(r"[a-z0-9_-]{1,128}", rule))
+                  require(isinstance(path, str) and 0 < len(path) <= 1024)
+                  require(not PurePosixPath(path).is_absolute() and ".." not in PurePosixPath(path).parts)
+                  require(not any(ord(character) < 32 or ord(character) == 127 for character in path))
+                  require(type(start) is int and type(end) is int and 1 <= start <= end)
+                  projected.append({"rule_id": rule, "path": path, "start_line": start,
+                                    "end_line": end, "commit": commit,
+                                    "fingerprint": f"{commit}:{path}:{rule}:{start}"})
+              exit_status = int(os.environ["GITLEAKS_EXIT_STATUS"])
+              require(0 <= exit_status <= 255)
+              run_id = int(os.environ["GITHUB_RUN_ID"])
+              attempt = int(os.environ["GITHUB_RUN_ATTEMPT"])
+              require(run_id > 0 and attempt > 0)
+              payload = {
+                  "schema_version": 1,
+                  "checkout_sha": sha(subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()),
+                  "checkout_tree": sha(subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()),
+                  "candidate_sha": sha(os.environ["CANDIDATE_SHA"]),
+                  "run_id": run_id, "run_attempt": attempt,
+                  "scanner_version": "8.28.0",
+                  "config_sha256": hashlib.sha256(Path(".gitleaks.toml").read_bytes()).hexdigest(),
+                  "scanner_exit_status": exit_status,
+                  "finding_count": len(projected), "findings": projected,
+              }
+              # Only this strict projection is published. Raw source matches, secret
+              # values, commit messages, author/email and other free text stay private.
+              safe = raw.with_name("safe.json")
+              safe.write_text(json.dumps(payload, indent=2) + "\n")
+              safe.replace(Path(os.environ["GITLEAKS_SAFE_REPORT"]))
+          except Exception:
+              raise SystemExit("Gitleaks diagnostic report failed validation") from None
+          PYREPORT
+          exit "$scanner_status"
+
+      - name: Upload projected Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-report-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gitleaks-report.json
+          if-no-files-found: error
+          retention-days: 3
 
   deps-audit:
     name: Dependency audit

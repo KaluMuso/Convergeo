@@ -301,6 +301,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: lighthouse-reports
+          name: lighthouse-reports-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .lighthouseci
-          if-no-files-found: ignore
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
