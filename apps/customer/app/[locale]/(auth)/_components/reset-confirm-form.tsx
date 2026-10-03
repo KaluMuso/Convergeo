@@ -29,19 +29,28 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const establishSession = async () => {
-      const supabase = await getBrowserClient();
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        setReady(exchangeError ? "invalid" : "ready");
-        return;
+      try {
+        const supabase = await getBrowserClient();
+        if (!active) return;
+        const code = new URLSearchParams(window.location.search).get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (active) setReady(exchangeError ? "invalid" : "ready");
+          return;
+        }
+        // No code in the URL — fall back to any recovery session already established.
+        const { data } = await supabase.auth.getSession();
+        if (active) setReady(data.session ? "ready" : "invalid");
+      } catch {
+        if (active) setReady("invalid");
       }
-      // No code in the URL — fall back to any recovery session already established.
-      const { data } = await supabase.auth.getSession();
-      setReady(data.session ? "ready" : "invalid");
     };
     void establishSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
