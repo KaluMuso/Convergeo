@@ -6,6 +6,19 @@ then run `pnpm exec puppeteer browsers install chrome`. `pnpm perf:lighthouse:te
 runs offline contract tests. Node remains 22 (the selected packages require at least
 22.19); CI uses the repository's existing Node setup.
 
+The hosted performance job uses GitHub's Ubuntu 24.04 image and its installed
+Google Chrome at `/opt/google/chrome/chrome`, selected only for the Lighthouse
+step through `PUPPETEER_EXECUTABLE_PATH`. Before collection, the job requires
+that executable to belong to `google-chrome-stable` and report exactly
+`154.0.8037.57`. A mismatch fails the job without selecting another browser.
+The official Puppeteer-pinned Chrome for Testing download remains required;
+local runs continue to select it by default. The hosted selection uses the
+installed Chrome's normal sandbox and stock host policy without moving binaries
+or changing policy. Standard Chrome and Chrome for Testing are distinct browser
+distributions: matching versions do not establish runtime or score equivalence.
+The installed variant requires independent browser and full-route qualification
+with the unchanged budgets; hosted image version drift deliberately fails closed.
+
 `lighthouserc.json` remains the policy source. This migration does not change its
 five URLs, three runs per URL, mobile screen/network/CPU settings, thresholds,
 checkout SEO warning or bundle budgets. Performance/LCP aggregate each metric's

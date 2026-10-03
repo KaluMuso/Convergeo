@@ -16,7 +16,7 @@ permissions:
 jobs:
   perf:
     name: Bundle, image lint & Lighthouse
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Same auth-hook/OAuth dummy env as CI db/rls — Supabase CLI cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -205,7 +205,13 @@ jobs:
 
       - name: Install pinned Chrome for Testing
         # Official Puppeteer revision; no custom archive or sandbox bypass.
-        run: pnpm exec puppeteer browsers install chrome
+        run: |
+          pnpm exec puppeteer browsers install chrome
+          test -x /opt/google/chrome/chrome
+          chrome_version="$(/opt/google/chrome/chrome --product-version)"
+          test "$chrome_version" = "154.0.8037.57"
+          chrome_package_owner="$(dpkg-query -S /opt/google/chrome/chrome)"
+          test "$chrome_package_owner" = "google-chrome-stable: /opt/google/chrome/chrome"
 
       - name: Start production server
         run: |
@@ -259,6 +265,8 @@ jobs:
       - name: Lighthouse performance assertions (blocking — see lighthouserc.json)
         # Same five URL policies, three runs, median perf/LCP and checkout SEO warning.
         # Infrastructure and collection failures also fail; reports upload with always().
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /opt/google/chrome/chrome
         run: pnpm perf:lighthouse --config=lighthouserc.json
 
       - name: Install a11y smoke deps (standalone e2e package)
