@@ -1,3 +1,5 @@
+import { isCiPerfSupabaseOrigin } from "@vergeo/config/ci-perf-server";
+
 import {
   ciPerfPublicEnabled,
   ciPerfPublicEnv,
@@ -26,7 +28,7 @@ export function ciPerfServerEnabled(env: CiPerfServerEnv = process.env): boolean
     env.NODE_ENV === "production" &&
     !env.VERCEL &&
     !env.VERCEL_ENV &&
-    env.SUPABASE_URL === "http://127.0.0.1:54321" &&
+    isCiPerfSupabaseOrigin(env.SUPABASE_URL) &&
     env.CI_PERF_UPSTREAM_ORIGIN === env.NEXT_PUBLIC_API_BASE_URL
   );
 }

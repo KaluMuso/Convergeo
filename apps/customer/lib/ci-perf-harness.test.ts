@@ -45,6 +45,12 @@ describe("disposable CI activation", () => {
     { NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8000" },
     { NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com" },
     { CI_PERF_UPSTREAM_ORIGIN: "http://10.1.2.4:8000" },
+    { SUPABASE_URL: "https://example.supabase.co" },
+    { SUPABASE_URL: "http://localhost:54321" },
+    { SUPABASE_URL: "http://127.0.0.1:54321/" },
+    { SUPABASE_URL: "http://127.0.0.1:54321?alias=1" },
+    { SUPABASE_URL: "http://user@127.0.0.1:54321" },
+    { SUPABASE_URL: "http://127.0.0.1:54322" },
   ]) {
     it(`rejects divergent or deployed context ${JSON.stringify(overrides)}`, () =>
       expect(ciPerfServerEnabled({ ...harness, ...overrides })).toBe(false));
@@ -69,9 +75,14 @@ describe("disposable CI activation", () => {
       expect(isCiPerfUpstream(origin)).toBe(false);
   });
   it("fails a flagged ordinary build and leaves an ordinary unflagged build untouched", () => {
+    vi.stubEnv("CI_PERF_HARNESS", "");
     vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
     expect(() => assertCiPerfBuild()).toThrow(/isolated/);
     vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "");
+    expect(() => assertCiPerfBuild()).not.toThrow();
+  });
+  it("accepts a flagged build only with the explicit complete harness context", () => {
+    for (const [key, value] of Object.entries(harness)) vi.stubEnv(key, value as string);
     expect(() => assertCiPerfBuild()).not.toThrow();
   });
   it("routes only the admitted CI browser through the explicit BFF; SSR retains upstream", () => {

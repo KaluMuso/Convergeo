@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { absoluteApiUrl, getApiBaseUrl, resolveApiBaseUrl } from "./api-base-url";
+
+beforeEach(() => {
+  // Each explicit resolver fixture owns these inputs, including their absence.
+  vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", undefined);
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
+  vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", undefined);
+});
+afterEach(() => vi.unstubAllEnvs());
 
 describe("resolveApiBaseUrl", () => {
   it("returns the configured origin without a trailing slash", () => {

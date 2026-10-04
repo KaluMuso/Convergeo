@@ -244,6 +244,7 @@ for (const scenario of [
           if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
           return {
             lhr,
+            contentReadiness: { passed: true, reason: "explicit_synthetic_fixture" },
             report:
               scenario === "missing-html" ? undefined : "<!doctype html><title>fixture</title>",
           };
@@ -349,8 +350,7 @@ for (const ready of [true, false]) {
     process.env.CI_PERF_HARNESS = "1";
     let calls = 0;
     try {
-      const result = await runPerformance(config, {
-        cwd: dir,
+      const result = await runPerformance(fixtureConfig(dir), {
         audit: async (url, _settings, _dependencies, context) => {
           calls++;
           assert.equal(context.verifyContent, true);

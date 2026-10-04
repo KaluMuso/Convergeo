@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/env.ts",
+    "./ci-perf-server": "./src/ci-perf-server.ts",
     "./security-headers": "./src/security-headers.ts",
     "./api-base-url": "./src/api-base-url.ts"
   },
