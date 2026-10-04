@@ -187,10 +187,11 @@ export function readMeasuredSnapshot() {
 /** Check physical pixels in the resource actually selected by the measured page.
  * Chrome reports srcset naturalWidth in CSS-adjusted pixels on mobile profiles.
  */
-export async function readDecodedFixtureImages() {
-  const decode = async (image) => {
+export async function readDecodedFixtureImages(expectedSources) {
+  const decode = async (image, expectedSrc) => {
     if (!image.complete || image.naturalWidth < 1) return 0;
     const src = image.currentSrc;
+    if (!expectedSrc || src !== expectedSrc) return 0;
     try {
       const url = new URL(src);
       if (
@@ -208,7 +209,9 @@ export async function readDecodedFixtureImages() {
       const bitmap = await createImageBitmap(await response.blob());
       const width = bitmap.width;
       bitmap.close();
-      return width;
+      return image.currentSrc === expectedSrc && image.complete && image.naturalWidth > 0
+        ? width
+        : 0;
     } catch {
       return 0;
     }
@@ -221,14 +224,23 @@ export async function readDecodedFixtureImages() {
             card.querySelector('[data-testid="listing-card-link"]')?.getAttribute("href") ===
             "/en/p/smartphone-x1",
         );
+  const images = Array.from(gallery?.querySelectorAll("img") ?? []);
+  const homeHeroImages = Array.from(
+    document.querySelectorAll(
+      '[data-testid="home-hero-band"] [data-testid="hero-carousel-slide-0"] img',
+    ),
+  );
+  if (
+    images.length !== expectedSources?.images?.length ||
+    homeHeroImages.length !== expectedSources?.homeHeroImages?.length
+  )
+    return { images: [], homeHeroImages: [] };
   return {
-    images: await Promise.all(Array.from(gallery?.querySelectorAll("img") ?? []).map(decode)),
+    images: await Promise.all(
+      images.map((image, index) => decode(image, expectedSources.images[index])),
+    ),
     homeHeroImages: await Promise.all(
-      Array.from(
-        document.querySelectorAll(
-          '[data-testid="home-hero-band"] [data-testid="hero-carousel-slide-0"] img',
-        ),
-      ).map(decode),
+      homeHeroImages.map((image, index) => decode(image, expectedSources.homeHeroImages[index])),
     ),
   };
 }
@@ -283,7 +295,10 @@ export async function inspectMeasuredContent(url, page) {
     const snapshot = await page.evaluate(readMeasuredSnapshot);
     let payload = {};
     if (["/en", "/en/c/electronics", "/en/p/smartphone-x1"].includes(new URL(url).pathname)) {
-      const decoded = await page.evaluate(readDecodedFixtureImages);
+      const decoded = await page.evaluate(readDecodedFixtureImages, {
+        images: snapshot.images?.map((image) => image.src) ?? [],
+        homeHeroImages: snapshot.homeHeroImages?.map((image) => image.src) ?? [],
+      });
       snapshot.images?.forEach((image, index) => {
         image.decodedWidth = decoded.images?.[index] ?? 0;
       });

@@ -267,7 +267,14 @@ test("inspects the exact retained measurement page, with no navigation or replac
   let calls = 0;
   const page = {
     url: () => url,
-    evaluate: async () => [snapshot, { images: [720], homeHeroImages: [1200] }, payload][calls++],
+    evaluate: async (_callback, expectedSources) => {
+      if (calls === 1)
+        assert.deepEqual(expectedSources, {
+          images: [snapshot.images[0].src],
+          homeHeroImages: [snapshot.homeHeroImages[0].src],
+        });
+      return [snapshot, { images: [720], homeHeroImages: [1200] }, payload][calls++];
+    },
   };
   assert.equal((await inspectMeasuredContent(url, page)).passed, true);
   assert.equal(calls, 3);

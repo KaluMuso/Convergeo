@@ -61,7 +61,11 @@ describe("actual measured DOM snapshot", () => {
       "createImageBitmap",
       vi.fn(async () => ({ width: 360, close })),
     );
-    expect(await readDecodedFixtureImages()).toEqual({
+    const expectedSources = {
+      images: ["http://localhost:3000/api/ci-perf-media?width=360"],
+      homeHeroImages: [],
+    };
+    expect(await readDecodedFixtureImages(expectedSources)).toEqual({
       images: [360],
       homeHeroImages: [],
     });
@@ -74,11 +78,92 @@ describe("actual measured DOM snapshot", () => {
       configurable: true,
       value: "https://unowned.example/image.webp",
     });
-    expect(await readDecodedFixtureImages()).toEqual({
+    expect(await readDecodedFixtureImages(expectedSources)).toEqual({
       images: [0],
       homeHeroImages: [],
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a source swap between the measured snapshot and the decoded image", async () => {
+    const image = document.getElementById("fixture-image")!;
+    Object.defineProperty(image, "currentSrc", {
+      configurable: true,
+      value: "http://localhost:3000/api/ci-perf-media?width=24",
+    });
+    const measured = readMeasuredSnapshot();
+    Object.defineProperty(image, "currentSrc", {
+      configurable: true,
+      value: "http://localhost:3000/api/ci-perf-media?width=360",
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(
+      await readDecodedFixtureImages({
+        images: measured.images.map((item) => item.src),
+        homeHeroImages: measured.homeHeroImages.map((item) => item.src),
+      }),
+    ).toEqual({ images: [0], homeHeroImages: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a source change while the captured image is being fetched", async () => {
+    const image = document.getElementById("fixture-image")!;
+    const expectedSources = {
+      images: ["http://localhost:3000/api/ci-perf-media?width=720"],
+      homeHeroImages: [],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        Object.defineProperty(image, "currentSrc", {
+          configurable: true,
+          value: "http://localhost:3000/api/ci-perf-media?width=360",
+        });
+        return new Response(new Blob(["fixture"], { type: "image/webp" }), {
+          status: 200,
+          headers: { "Content-Type": "image/webp" },
+        });
+      }),
+    );
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 720, close: vi.fn() })),
+    );
+    expect(await readDecodedFixtureImages(expectedSources)).toEqual({
+      images: [0],
+      homeHeroImages: [],
+    });
+  });
+
+  it("rejects image count or order changes between snapshot and decode", async () => {
+    const image = document.getElementById("fixture-image")!;
+    const other = document.createElement("img");
+    document.querySelector('[data-testid="gallery-strip"]')!.append(other);
+    Object.defineProperties(other, {
+      naturalWidth: { configurable: true, value: 360 },
+      complete: { configurable: true, value: true },
+      currentSrc: {
+        configurable: true,
+        value: "http://localhost:3000/api/ci-perf-media?width=360",
+      },
+    });
+    const first = "http://localhost:3000/api/ci-perf-media?width=720";
+    const second = "http://localhost:3000/api/ci-perf-media?width=360";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await readDecodedFixtureImages({ images: [first], homeHeroImages: [] })).toEqual({
+      images: [],
+      homeHeroImages: [],
+    });
+    image.before(other);
+    expect(await readDecodedFixtureImages({ images: [first, second], homeHeroImages: [] })).toEqual(
+      {
+        images: [0, 0],
+        homeHeroImages: [],
+      },
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it("rejects visible route error copy and skeletons rather than accepting an existing URL", () => {
     document.body.insertAdjacentHTML(
