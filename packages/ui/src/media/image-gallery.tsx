@@ -1,9 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 import { CloudinaryImage } from "./cloudinary-image";
-import { ImageLightbox, type ImageZoomLabels } from "./image-lightbox";
+import type { ImageZoomLabels } from "./image-lightbox";
+
+const ImageLightbox = lazy(() =>
+  import("./image-lightbox").then((module) => ({
+    default: module.ImageLightbox,
+  })),
+);
 
 const MAX_IMAGES = 8;
 
@@ -223,7 +238,11 @@ export function ImageGallery({
             onClick={goPrevious}
             disabled={currentIndex === 0}
             data-testid="gallery-prev"
-            style={{ pointerEvents: "auto", minHeight: "44px", minWidth: "44px" }}
+            style={{
+              pointerEvents: "auto",
+              minHeight: "44px",
+              minWidth: "44px",
+            }}
           >
             ‹
           </button>
@@ -233,7 +252,11 @@ export function ImageGallery({
             onClick={goNext}
             disabled={currentIndex === cappedImages.length - 1}
             data-testid="gallery-next"
-            style={{ pointerEvents: "auto", minHeight: "44px", minWidth: "44px" }}
+            style={{
+              pointerEvents: "auto",
+              minHeight: "44px",
+              minWidth: "44px",
+            }}
           >
             ›
           </button>
@@ -259,20 +282,28 @@ export function ImageGallery({
         </button>
       ) : null}
       {zoomLabels && zoomOpen ? (
-        <ImageLightbox
-          images={cappedImages}
-          initialIndex={currentIndex}
-          cloudName={cloudName}
-          labels={zoomLabels}
-          previousLabel={previousLabel}
-          nextLabel={nextLabel}
-          indicatorLabel={indicatorLabel}
-          fallbackLabel={imageFallbackLabel}
-          onClose={(index) => {
-            setZoomOpen(false);
-            scrollToIndex(index);
-          }}
-        />
+        <Suspense
+          fallback={
+            <button type="button" onClick={() => setZoomOpen(false)}>
+              {zoomLabels.close}
+            </button>
+          }
+        >
+          <ImageLightbox
+            images={cappedImages}
+            initialIndex={currentIndex}
+            cloudName={cloudName}
+            labels={zoomLabels}
+            previousLabel={previousLabel}
+            nextLabel={nextLabel}
+            indicatorLabel={indicatorLabel}
+            fallbackLabel={imageFallbackLabel}
+            onClose={(index) => {
+              setZoomOpen(false);
+              scrollToIndex(index);
+            }}
+          />
+        </Suspense>
       ) : null}
 
       <p data-testid="gallery-indicator" aria-live="polite">

@@ -21,11 +21,6 @@ import { Suspense } from "react";
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import {
-  PdpInteractiveBody,
-  type ComparisonListing,
-  type ProductListing,
-} from "../../_components/pdp/comparison";
-import {
   fetchProduct,
   productCacheTag,
   type Listing,
@@ -33,6 +28,10 @@ import {
 } from "../../_components/pdp/fetch-product";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
+import {
+  PdpInteractiveBody,
+  type ProductListing,
+} from "../../_components/pdp/pdp-interactive-body";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
@@ -47,6 +46,7 @@ import {
   type ReviewsSectionLabels,
 } from "./_components/reviews-section";
 
+import type { ComparisonListing } from "../../_components/pdp/comparison";
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 

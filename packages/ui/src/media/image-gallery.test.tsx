@@ -79,12 +79,16 @@ describe("ImageGallery zoom", () => {
     const trigger = screen.getByRole("button", { name: "Enlarge image" });
     for (let count = 0; count < 3; count += 1) {
       await user.click(trigger);
-      const dialog = screen.getByRole("dialog", { name: "Product images" });
+      const dialog = await screen.findByRole("dialog", {
+        name: "Product images",
+      });
       expect(within(dialog).getByRole("img")).toHaveAttribute(
         "src",
         expect.stringContaining("img-2.jpg"),
       );
-      const close = within(dialog).getByRole("button", { name: "Close image viewer" });
+      const close = within(dialog).getByRole("button", {
+        name: "Close image viewer",
+      });
       await waitFor(() => expect(close).toHaveFocus());
       await user.tab({ shift: true });
       expect(within(dialog).getByRole("button", { name: "Next image" })).toHaveFocus();
