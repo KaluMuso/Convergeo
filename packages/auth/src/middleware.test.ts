@@ -1,3 +1,4 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,8 @@ import {
   shouldRedirectToLogin,
   updateSession,
 } from "./middleware";
+
+import type { SetAllCookies } from "@supabase/ssr";
 
 const getUser = vi.fn();
 const getClaims = vi.fn();
@@ -66,6 +69,44 @@ describe("updateSession", () => {
     expect(getUser).toHaveBeenCalledOnce();
   });
 
+  it("keeps cache headers and prior cookies across repeated SSR writes", async () => {
+    const cacheHeaders = {
+      "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0",
+      Expires: "0",
+      Pragma: "no-cache",
+    };
+    getUser.mockImplementation(async () => {
+      const options = vi.mocked(createServerClient).mock.calls.at(-1)?.[2];
+      const setAll = (options?.cookies as { setAll: SetAllCookies } | undefined)?.setAll;
+      if (!setAll) throw new Error("missing SSR cookie writer");
+
+      await setAll(
+        [
+          { name: "sb-auth-token", value: "first", options: { path: "/" } },
+          { name: "sb-expiring-token", value: "to-delete", options: { path: "/" } },
+        ],
+        cacheHeaders,
+      );
+      await setAll([{ name: "sb-other-token", value: "other", options: { path: "/" } }], {});
+      await setAll([{ name: "sb-auth-token", value: "second", options: { path: "/" } }], {});
+      await setAll(
+        [{ name: "sb-expiring-token", value: "", options: { path: "/", maxAge: 0 } }],
+        {},
+      );
+      return { data: { user: null } };
+    });
+
+    const result = await updateSession(new NextRequest("http://localhost:3000/en"));
+
+    expect(result.response.cookies.get("sb-auth-token")?.value).toBe("second");
+    expect(result.response.cookies.get("sb-other-token")?.value).toBe("other");
+    expect(result.response.cookies.get("sb-expiring-token")?.value).toBe("");
+    expect(result.response.cookies.get("sb-expiring-token")?.maxAge).toBe(0);
+    for (const [name, value] of Object.entries(cacheHeaders)) {
+      expect(result.response.headers.get(name)).toBe(value);
+    }
+  });
+
   // Scenario A: the returned User object carries NO app_metadata.roles at
   // all (as a real Supabase User looks before/without the token hook
   // touching auth.users), but the VERIFIED access token claims do — proving
@@ -89,7 +130,9 @@ describe("updateSession", () => {
   // Scenario B: claims carry only "customer" — the vendor gate must send
   // this session to onboarding, not through.
   it("B — customer-only claims send the vendor gate to onboarding", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue(claimsResult({ roles: ["customer"] }));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -103,7 +146,9 @@ describe("updateSession", () => {
 
   // Scenario C: authenticated, but claims carry no roles at all.
   it("C — authenticated user with no claim roles is sent to onboarding", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue(claimsResult({ roles: [] }));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -119,7 +164,9 @@ describe("updateSession", () => {
   // throwing out of updateSession() or granting anything — covers both a
   // malformed payload shape and getClaims() itself erroring/rejecting.
   it("D — malformed claims fail closed to no roles, never throwing", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue(claimsResult({ roles: "vendor" }));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -132,7 +179,9 @@ describe("updateSession", () => {
   });
 
   it("D — a getClaims() error also fails closed to no roles", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue({
       data: null,
       error: { message: "jwks unavailable" },
@@ -145,7 +194,9 @@ describe("updateSession", () => {
   });
 
   it("D — a getClaims() rejection also fails closed to no roles", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockRejectedValue(new Error("network error"));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -156,7 +207,9 @@ describe("updateSession", () => {
 
   // Scenario E: admin claims correctly pass the admin gate.
   it("E — admin claims pass the admin gate", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue(claimsResult({ roles: ["admin"] }));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -168,7 +221,9 @@ describe("updateSession", () => {
 
   // Scenario F: unknown role strings are discarded, known ones kept.
   it("F — unknown claim roles are discarded", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue(claimsResult({ roles: ["vendor", "superuser"] }));
 
     const request = new NextRequest("http://localhost:3001/en");
@@ -180,7 +235,9 @@ describe("updateSession", () => {
   // Scenario G: user_metadata must never be trusted as a role source, even
   // if it happens to carry a "roles"-shaped payload.
   it("G — user_metadata on the claims is never trusted for roles", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: {} } },
+    });
     getClaims.mockResolvedValue({
       data: {
         claims: {
@@ -199,14 +256,21 @@ describe("updateSession", () => {
 });
 
 describe("mergeSessionCookies", () => {
-  it("copies cookies from the auth response onto the locale response", () => {
+  it("copies cookies and cache headers from the auth response onto the locale response", () => {
     const source = NextResponse.next();
     source.cookies.set("sb-access-token", "token", { httpOnly: true });
+    source.headers.set("Cache-Control", "private, no-store");
+    source.headers.set("Expires", "0");
+    source.headers.set("Pragma", "no-cache");
 
     const target = NextResponse.next();
+    target.headers.set("Cache-Control", "public, max-age=60");
     mergeSessionCookies(source, target);
 
     expect(target.cookies.get("sb-access-token")?.value).toBe("token");
+    expect(target.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(target.headers.get("Expires")).toBe("0");
+    expect(target.headers.get("Pragma")).toBe("no-cache");
   });
 });
 
@@ -387,6 +451,26 @@ describe("middleware matrix", () => {
     expect(denied.headers.get("location")).toBe("http://localhost:3001/en/permission-denied");
   });
 
+  it("carries refreshed auth cookies and cache headers through a portal redirect", () => {
+    const sessionResponse = NextResponse.next();
+    sessionResponse.cookies.set("sb-auth-token", "refreshed");
+    sessionResponse.headers.set("Cache-Control", "private, no-store");
+    sessionResponse.headers.set("Expires", "0");
+    sessionResponse.headers.set("Pragma", "no-cache");
+
+    const redirect = createPortalRedirect(
+      "login",
+      new NextRequest("http://localhost:3001/en/listings"),
+      "en",
+      sessionResponse,
+    );
+
+    expect(redirect.cookies.get("sb-auth-token")?.value).toBe("refreshed");
+    expect(redirect.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(redirect.headers.get("Expires")).toBe("0");
+    expect(redirect.headers.get("Pragma")).toBe("no-cache");
+  });
+
   it("locale routing helpers preserve locale on redirects", () => {
     expect(getLocaleFromPath("/", locales, "en")).toBe("en");
     expect(getLocaleFromPath("/bem/dashboard", locales, "en")).toBe("bem");
@@ -419,8 +503,10 @@ describe("middleware matrix", () => {
   });
 
   it("admin bypass skips login redirect in non-production", () => {
-    expect(shouldRedirectToLogin("admin", "/en", locales, null, [], { adminBypass: true })).toBe(
-      false,
-    );
+    expect(
+      shouldRedirectToLogin("admin", "/en", locales, null, [], {
+        adminBypass: true,
+      }),
+    ).toBe(false);
   });
 });
