@@ -23,6 +23,7 @@ const snapshot = {
       visible: true,
       complete: true,
       width: 1200,
+      decodedWidth: 1200,
       height: 1600,
       src: "http://localhost:3000/api/ci-perf-media?width=1200",
     },
@@ -35,6 +36,7 @@ const snapshot = {
       visible: true,
       complete: true,
       width: 720,
+      decodedWidth: 720,
       height: 960,
       src: "http://localhost:3000/api/ci-perf-media?width=720",
     },
@@ -121,6 +123,13 @@ for (const [name, change] of [
     },
   ],
   [
+    "undersized decoded image",
+    (s) => {
+      s.images[0].width = 195;
+      s.images[0].decodedWidth = 359;
+    },
+  ],
+  [
     "wrong media origin",
     (s) => {
       s.images[0].src = "https://unowned.example/image.webp";
@@ -135,7 +144,11 @@ for (const [name, change] of [
   [
     "additional cheaper listing",
     (_s, p) => {
-      p.product.listings.unshift({ ...p.product.listings[0], id: "other", price_ngwee: 10000 });
+      p.product.listings.unshift({
+        ...p.product.listings[0],
+        id: "other",
+        price_ngwee: 10000,
+      });
     },
   ],
   [
@@ -199,6 +212,14 @@ test("home requires the exact fixture and hero; other policy pages require their
     );
   }
 });
+test("mobile srcset CSS width can be small when the actual selected fixture has 360 pixels", () => {
+  const mobile = structuredClone(snapshot);
+  mobile.images[0].width = 195;
+  mobile.images[0].decodedWidth = 360;
+  assert.equal(qualifyContent(url, mobile, payload).passed, true);
+  mobile.images[0].decodedWidth = 359;
+  assert.equal(qualifyContent(url, mobile, payload).passed, false);
+});
 for (const flag of ["errorBoundary", "skeleton"]) {
   test(`all five policy pages refuse ${flag}, including otherwise healthy fixture content`, () => {
     for (const path of [
@@ -225,11 +246,15 @@ test("home refuses blank, missing hero, wrong seller and unloaded fixture media"
     { images: [] },
     { homeHeroImages: [] },
     { homeHeroImages: [{ ...snapshot.homeHeroImages[0], width: 0 }] },
+    { homeHeroImages: [{ ...snapshot.homeHeroImages[0], decodedWidth: 359 }] },
     { homeHeroImages: [{ ...snapshot.homeHeroImages[0], complete: false }] },
     { homeHeroImages: [{ ...snapshot.homeHeroImages[0], visible: false }] },
     {
       homeHeroImages: [
-        { ...snapshot.homeHeroImages[0], src: "https://unowned.example/image.webp" },
+        {
+          ...snapshot.homeHeroImages[0],
+          src: "https://unowned.example/image.webp",
+        },
       ],
     },
   ])
@@ -240,9 +265,12 @@ test("home refuses blank, missing hero, wrong seller and unloaded fixture media"
 });
 test("inspects the exact retained measurement page, with no navigation or replacement", async () => {
   let calls = 0;
-  const page = { url: () => url, evaluate: async () => (calls++ ? payload : snapshot) };
+  const page = {
+    url: () => url,
+    evaluate: async () => [snapshot, { images: [720], homeHeroImages: [1200] }, payload][calls++],
+  };
   assert.equal((await inspectMeasuredContent(url, page)).passed, true);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
   calls = 0;
   const observed = await inspectMeasuredContent(url, page);
   assert.equal(observed.observed.title_matches, true);
@@ -261,14 +289,16 @@ test("failed category checks retain bounded exact-field diagnostics without rela
   const page = {
     url: () => category,
     evaluate: async () =>
-      calls++
-        ? payload
-        : {
-            ...snapshot,
-            url: category,
-            seller: "Wrong seller",
-            visibility: { title: null, price: null, seller: "opacity_zero" },
-          },
+      [
+        {
+          ...snapshot,
+          url: category,
+          seller: "Wrong seller",
+          visibility: { title: null, price: null, seller: "opacity_zero" },
+        },
+        { images: [720], homeHeroImages: [1200] },
+        payload,
+      ][calls++],
   };
   const result = await inspectMeasuredContent(category, page);
   assert.equal(result.reason, "visible_fixture_content_mismatch");

@@ -1,5 +1,5 @@
 /** Qualification of the actual browser page left by Lighthouse; metrics stay untouched. */
-/* global getComputedStyle, location, document, fetch */
+/* global getComputedStyle, location, document, fetch, createImageBitmap */
 import { URL } from "node:url";
 
 export const fixtureIdentity = Object.freeze({
@@ -33,7 +33,8 @@ export function qualifyContent(url, snapshot, payload) {
       (image) =>
         image.visible &&
         image.complete &&
-        image.width >= 360 &&
+        image.width > 0 &&
+        image.decodedWidth >= 360 &&
         image.height > 0 &&
         image.src.startsWith(`${new URL(url).origin}/api/ci-perf-media?width=`),
     )
@@ -60,7 +61,10 @@ export function qualifyContent(url, snapshot, payload) {
     item?.price_ngwee !== fixtureIdentity.price ||
     item?.image_public_id !== fixtureIdentity.media
   )
-    return { passed: false, reason: "fixture_identity_or_api_content_mismatch" };
+    return {
+      passed: false,
+      reason: "fixture_identity_or_api_content_mismatch",
+    };
   if (
     !snapshot.title.includes("Smartphone X1") ||
     !snapshot.price.replace(/\s/g, "").includes("K4,500.00") ||
@@ -72,7 +76,8 @@ export function qualifyContent(url, snapshot, payload) {
       (image) =>
         image.visible &&
         image.complete &&
-        image.width >= 360 &&
+        image.width > 0 &&
+        image.decodedWidth >= 360 &&
         image.height > 0 &&
         image.src.startsWith(`${new URL(url).origin}/api/ci-perf-media?width=`),
     )
@@ -179,6 +184,55 @@ export function readMeasuredSnapshot() {
   };
 }
 
+/** Check physical pixels in the resource actually selected by the measured page.
+ * Chrome reports srcset naturalWidth in CSS-adjusted pixels on mobile profiles.
+ */
+export async function readDecodedFixtureImages() {
+  const decode = async (image) => {
+    if (!image.complete || image.naturalWidth < 1) return 0;
+    const src = image.currentSrc;
+    try {
+      const url = new URL(src);
+      if (
+        url.origin !== "http://localhost:3000" ||
+        url.origin !== location.origin ||
+        url.pathname !== "/api/ci-perf-media" ||
+        [...url.searchParams.keys()].some((key) => key !== "width") ||
+        url.searchParams.getAll("width").length !== 1 ||
+        !/^(24|360|720|1080|1200)$/.test(url.searchParams.get("width") ?? "")
+      )
+        return 0;
+      const response = await fetch(src, { cache: "no-store" });
+      if (!response.ok || !(response.headers.get("content-type") ?? "").includes("image/webp"))
+        return 0;
+      const bitmap = await createImageBitmap(await response.blob());
+      const width = bitmap.width;
+      bitmap.close();
+      return width;
+    } catch {
+      return 0;
+    }
+  };
+  const gallery =
+    location.pathname === "/en/p/smartphone-x1"
+      ? document.querySelector('[data-testid="pdp-interactive-body"] [data-testid="gallery-strip"]')
+      : Array.from(document.querySelectorAll('[data-testid="listing-card"]')).find(
+          (card) =>
+            card.querySelector('[data-testid="listing-card-link"]')?.getAttribute("href") ===
+            "/en/p/smartphone-x1",
+        );
+  return {
+    images: await Promise.all(Array.from(gallery?.querySelectorAll("img") ?? []).map(decode)),
+    homeHeroImages: await Promise.all(
+      Array.from(
+        document.querySelectorAll(
+          '[data-testid="home-hero-band"] [data-testid="hero-carousel-slide-0"] img',
+        ),
+      ).map(decode),
+    ),
+  };
+}
+
 /** Only bounded public fixture fields; never DOM/HTML, headers, storage or API bodies. */
 function diagnostics(snapshot) {
   const clipped = (value, max) => (typeof value === "string" ? value.slice(0, max) : "");
@@ -193,6 +247,7 @@ function diagnostics(snapshot) {
       visible: image.visible === true,
       complete: image.complete === true,
       width: Number.isInteger(image.width) ? image.width : 0,
+      decoded_width: Number.isInteger(image.decodedWidth) ? image.decodedWidth : 0,
       height: Number.isInteger(image.height) ? image.height : 0,
       owned_fixture:
         typeof image.src === "string" &&
@@ -228,16 +283,31 @@ export async function inspectMeasuredContent(url, page) {
     const snapshot = await page.evaluate(readMeasuredSnapshot);
     let payload = {};
     if (["/en", "/en/c/electronics", "/en/p/smartphone-x1"].includes(new URL(url).pathname)) {
+      const decoded = await page.evaluate(readDecodedFixtureImages);
+      snapshot.images?.forEach((image, index) => {
+        image.decodedWidth = decoded.images?.[index] ?? 0;
+      });
+      snapshot.homeHeroImages?.forEach((image, index) => {
+        image.decodedWidth = decoded.homeHeroImages?.[index] ?? 0;
+      });
       payload = await page.evaluate(async () => {
         const responses = await Promise.all([
           fetch("/api/ci-perf/products/smartphone-x1", { cache: "no-store" }),
-          fetch("/api/ci-perf/catalog/listings?category_path=electronics", { cache: "no-store" }),
+          fetch("/api/ci-perf/catalog/listings?category_path=electronics", {
+            cache: "no-store",
+          }),
         ]);
         if (responses.some((response) => !response.ok)) return {};
-        return { product: await responses[0].json(), catalog: await responses[1].json() };
+        return {
+          product: await responses[0].json(),
+          catalog: await responses[1].json(),
+        };
       });
     }
-    return { ...qualifyContent(url, snapshot, payload), observed: diagnostics(snapshot) };
+    return {
+      ...qualifyContent(url, snapshot, payload),
+      observed: diagnostics(snapshot),
+    };
   } catch {
     return { passed: false, reason: "content_inspection_failed" };
   }

@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { readMeasuredSnapshot } from "../../../scripts/ci/perf-content-readiness.mjs";
+import {
+  readDecodedFixtureImages,
+  readMeasuredSnapshot,
+} from "../../../scripts/ci/perf-content-readiness.mjs";
 
 beforeEach(() => {
   vi.stubGlobal("location", {
     href: "http://localhost:3000/en/p/smartphone-x1",
     pathname: "/en/p/smartphone-x1",
+    origin: "http://localhost:3000",
   });
   vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
     { width: 100, height: 100 },
@@ -35,6 +39,47 @@ afterEach(() => {
 });
 
 describe("actual measured DOM snapshot", () => {
+  it("decodes the displayed owned image's physical pixels while ignoring unrelated media", async () => {
+    Object.defineProperty(document.getElementById("fixture-image"), "naturalWidth", {
+      configurable: true,
+      value: 195,
+    });
+    Object.defineProperty(document.getElementById("fixture-image"), "currentSrc", {
+      configurable: true,
+      value: "http://localhost:3000/api/ci-perf-media?width=360",
+    });
+    const close = vi.fn();
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(new Blob(["fixture"], { type: "image/webp" }), {
+          status: 200,
+          headers: { "Content-Type": "image/webp" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => ({ width: 360, close })),
+    );
+    expect(await readDecodedFixtureImages()).toEqual({
+      images: [360],
+      homeHeroImages: [],
+    });
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3000/api/ci-perf-media?width=360", {
+      cache: "no-store",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledOnce();
+    Object.defineProperty(document.getElementById("fixture-image"), "currentSrc", {
+      configurable: true,
+      value: "https://unowned.example/image.webp",
+    });
+    expect(await readDecodedFixtureImages()).toEqual({
+      images: [0],
+      homeHeroImages: [],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it("rejects visible route error copy and skeletons rather than accepting an existing URL", () => {
     document.body.insertAdjacentHTML(
       "beforeend",
@@ -95,7 +140,11 @@ describe("actual measured DOM snapshot", () => {
     expect(snapshot.title).toBe("Smartphone X1 — 128GB");
     expect(snapshot.seller).toContain("Lusaka Electronics Hub");
     expect(snapshot.matchingCards).toBe(1);
-    expect(snapshot.visibility).toEqual({ title: null, price: null, seller: null });
+    expect(snapshot.visibility).toEqual({
+      title: null,
+      price: null,
+      seller: null,
+    });
     document.querySelector('[data-testid="listing-card"]')!.setAttribute("style", "opacity:0");
     const hidden = readMeasuredSnapshot();
     expect(hidden.title).toBe("");
@@ -114,7 +163,11 @@ describe("actual measured DOM snapshot", () => {
     expect(snapshot.price).toBe("K4,500.00");
     expect(snapshot.seller).toBe("Lusaka Electronics Hub");
     expect(snapshot.images).toHaveLength(1);
-    expect(snapshot.images[0]).toMatchObject({ visible: true, complete: true, width: 720 });
+    expect(snapshot.images[0]).toMatchObject({
+      visible: true,
+      complete: true,
+      width: 720,
+    });
   });
   for (const css of ["display:none", "visibility:hidden", "opacity:0"]) {
     it(`does not count price or media hidden by ancestors: ${css}`, () => {
