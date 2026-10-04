@@ -186,7 +186,12 @@
       "empty": "Palibe zithunzi",
       "indicator": "Chithunzi {current} cha {total}",
       "next": "Chithunzi chotsatira",
-      "previous": "Chithunzi chapitacho"
+      "previous": "Chithunzi chapitacho",
+      "zoomOpen": "Onani chithunzi chachikulu",
+      "zoomClose": "Tsekani chowonera zithunzi",
+      "zoomTitle": "Zithunzi za product",
+      "zoomIn": "Kulitsani chithunzi",
+      "zoomOut": "Bwezerani chithunzi kuti chikwanire"
     },
     "unavailableTitle": "Chinthu sichipezeka tsopano",
     "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
@@ -202,7 +207,11 @@
     "related": {
       "fromPrice": "Kuyambira {price}",
       "heading": "Zina mu category iyi",
-      "vendorFallback": "Category yomweyo"
+      "vendorFallback": "Category yomweyo",
+      "vendorHeading": "Zina kuchokera kwa {vendor}",
+      "categoryHeading": "Zina mu category iyi",
+      "loading": "Ikutenga zinthu zina…",
+      "unavailable": "Sitinathe kutenga zinthu zina pano."
     },
     "recentlyViewed": {
       "heading": "Zomwe mwaonapo"

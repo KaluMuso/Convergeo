@@ -186,7 +186,12 @@
       "empty": "Takwaba amapictures",
       "indicator": "Picture {current} ya {total}",
       "next": "Picture iyakonka",
-      "previous": "Picture iyapita"
+      "previous": "Picture iyapita",
+      "zoomOpen": "Loleni icithunzi icikulu",
+      "zoomClose": "Isaleni ifithunzi",
+      "zoomTitle": "Ifithunzi fya product",
+      "zoomIn": "Kukusha icithunzi",
+      "zoomOut": "Bwesheni icithunzi kuti cikwane"
     },
     "unavailableTitle": "Icintu tashifikapo",
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
@@ -202,7 +207,11 @@
     "related": {
       "fromPrice": "Ukufuma {price}",
       "heading": "Fimbi mu category iyi",
-      "vendorFallback": "Category imo"
+      "vendorFallback": "Category imo",
+      "vendorHeading": "Fimbi ukufuma ku {vendor}",
+      "categoryHeading": "Fimbi mu category iyi",
+      "loading": "Ilelodisha ifintu fimbi…",
+      "unavailable": "Tatwaishibe ukuleta ifintu fimbi nomba."
     },
     "recentlyViewed": {
       "heading": "Ifyo mwamonapo"

@@ -22,6 +22,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Catalog selection and canonical details (2026-10-01):** `events.filters.subcategoryLabel` and `vendor.listings.newCanonical.details.{about,heading,help,name,value,add,remove,invalid}` in both bem/nya are **English fallback values**, copied from EN for key parity. These 18 entries remain untranslated pending native-speaker review; their presence is not translation approval.
 
+**Product-detail recommendations and image viewer (2026-10-04):** `catalog.pdp.related.{vendorHeading,categoryHeading,loading,unavailable}` and `catalog.pdp.gallery.{zoomOpen,zoomClose,zoomTitle,zoomIn,zoomOut}` now have AI-authored provisional Bemba and Nyanja wording for key and ICU completeness. A second AI reviewer checked source-label alignment and confirmed that both `vendorHeading` values retain `{vendor}` while flagging uncertain wording; this is **not** fluent or native-speaker approval. In particular, the image-viewer controls and Bemba zoom wording remain uncertain. Keep these 18 values pending recorded native-speaker review before production; do not mark the sign-off table complete or change SEO publication based on CI passing.
+
 ## Noindex removal criteria (authoritative)
 
 All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):
