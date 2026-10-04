@@ -33,6 +33,22 @@ export function selectPerfAddress(routes, interfaces) {
   return ip;
 }
 
+export function perfHarnessEnvironmentLines(env, address) {
+  return [
+    "CI_PERF_HARNESS=1",
+    "NEXT_PUBLIC_CI_PERF_HARNESS=1",
+    "NEXT_PUBLIC_DEPLOYMENT_PLANE=preview",
+    // Server-rendered categories use the public Supabase client. Point both
+    // server and browser at the disposable seeded stack, not example.supabase.co.
+    `NEXT_PUBLIC_SUPABASE_URL=${env.SUPABASE_URL}`,
+    `NEXT_PUBLIC_SUPABASE_ANON_KEY=${env.SUPABASE_ANON_KEY}`,
+    `NEXT_PUBLIC_API_BASE_URL=http://${address}:8000`,
+    `CI_PERF_UPSTREAM_ORIGIN=http://${address}:8000`,
+    "NEXT_PUBLIC_SITE_URL=http://localhost:3000",
+    "",
+  ];
+}
+
 export function configurePerfHarness(env = process.env) {
   if (
     env.CI !== "true" ||
@@ -42,27 +58,19 @@ export function configurePerfHarness(env = process.env) {
     env.VERCEL_ENV ||
     env.ENV !== "development" ||
     env.SUPABASE_URL !== "http://127.0.0.1:54321" ||
+    !env.SUPABASE_ANON_KEY ||
     env.SUPABASE_DB_URL !== "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
   ) {
     throw new Error("Performance configuration requires the disposable GitHub CI stack");
   }
   const routes = JSON.parse(
-    execFileSync("ip", ["-j", "route", "show", "default"], { encoding: "utf8" }),
+    execFileSync("ip", ["-j", "route", "show", "default"], {
+      encoding: "utf8",
+    }),
   );
   const interfaces = JSON.parse(execFileSync("ip", ["-j", "addr", "show"], { encoding: "utf8" }));
   const address = selectPerfAddress(routes, interfaces);
-  appendFileSync(
-    env.GITHUB_ENV,
-    [
-      "CI_PERF_HARNESS=1",
-      "NEXT_PUBLIC_CI_PERF_HARNESS=1",
-      "NEXT_PUBLIC_DEPLOYMENT_PLANE=preview",
-      `NEXT_PUBLIC_API_BASE_URL=http://${address}:8000`,
-      `CI_PERF_UPSTREAM_ORIGIN=http://${address}:8000`,
-      "NEXT_PUBLIC_SITE_URL=http://localhost:3000",
-      "",
-    ].join("\n"),
-  );
+  appendFileSync(env.GITHUB_ENV, perfHarnessEnvironmentLines(env, address).join("\n"));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

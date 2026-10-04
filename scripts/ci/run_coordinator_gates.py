@@ -29,7 +29,7 @@ def inputs() -> dict[str, Any]:
     data: dict[str, Any] = json.loads(INPUTS.read_text())
     if data.get("schema") != "convergeo.coordinator.new-proposal.v1":
         raise RuntimeError("Unknown coordinator input contract")
-    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 258)):
+    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 267)):
         if len(data[key]) != count or len(set(data[key])) != count:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -279,7 +279,7 @@ class Runner(financial.Runner):
             raise RuntimeError("Merchant review database regressions incomplete")
         if not self.test_gate("merchant-normal", self.contract["normal_selectors"],
                               self.contract["normal"]):
-            raise RuntimeError("Merchant 258 compatibility identities incomplete")
+            raise RuntimeError("Merchant 267 compatibility identities incomplete")
         _, version = self.command("node-version", ["node", "-p", "process.versions.node"])
         _, pnpm = self.command("pnpm-version", ["pnpm", "--version"])
         if version.split(".")[0] != "22" or pnpm.strip() != "9.15.4":

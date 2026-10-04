@@ -33,7 +33,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(contract["db"]), 26)
         self.assertEqual(len(contract["review_db"]), 18)
         self.assertEqual(len(contract["ui"]), 6)
-        self.assertEqual(len(contract["normal"]), 258)
+        self.assertEqual(len(contract["normal"]), 267)
         self.assertEqual(len(contract["migrations"]), 138)
         self.assertEqual(sum(map(len, financial.financial_identities().values())), 804)
 
