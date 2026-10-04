@@ -13,7 +13,9 @@ describe("cloudinary-url", () => {
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
     expect(cldUrl("ci-perf/smartphone-x1", { width: 720 })).toBe("/api/ci-perf-media?width=720");
     expect(cldUrl("ci-perf/smartphone-x1", { width: 1440 })).toBe("/api/ci-perf-media?width=1200");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 2160 })).toBe("/api/ci-perf-media?width=1200");
     expect(() => cldUrl("ci-perf/smartphone-x1", { width: 999 })).toThrow(/Unsupported/);
+    expect(() => cldUrl("ci-perf/smartphone-x1", { width: 2161 })).toThrow(/Unsupported/);
     expect(cldLqipUrl("ci-perf/smartphone-x1")).toBe("/api/ci-perf-media?width=24");
     expect(cldSrcSet("ci-perf/smartphone-x1")).toBe(
       "/api/ci-perf-media?width=360 360w, /api/ci-perf-media?width=720 720w, /api/ci-perf-media?width=1080 1080w",
@@ -24,6 +26,7 @@ describe("cloudinary-url", () => {
     expect(cldUrl("ci-perf/other", { width: 720, cloudName: CLOUD })).toMatch(
       /^https:\/\/res.cloudinary.com\//,
     );
+    expect(cldUrl("ci-perf/other", { width: 2160, cloudName: CLOUD })).toContain("w_2160/");
   });
   it("never adds a local media path to ordinary production or missing-plane builds", () => {
     vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "");
@@ -31,6 +34,7 @@ describe("cloudinary-url", () => {
     expect(cldUrl("ci-perf/smartphone-x1", { width: 720, cloudName: CLOUD })).toMatch(
       /^https:\/\/res.cloudinary.com\//,
     );
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 2160, cloudName: CLOUD })).toContain("w_2160/");
     vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
     expect(cldUrl("ci-perf/smartphone-x1", { width: 720, cloudName: CLOUD })).toMatch(

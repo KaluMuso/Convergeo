@@ -9,6 +9,7 @@ import { ImageGallery } from "./image-gallery";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
 });
 
 const labels = {
@@ -72,6 +73,23 @@ function zoomGallery(images = makeImages(3), cloudName = "test-cloud") {
 }
 
 describe("ImageGallery zoom", () => {
+  it("opens and zooms the exact admitted CI fixture using its owned media variant", async () => {
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://10.1.2.3:8000");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+    const user = userEvent.setup();
+    render(zoomGallery([{ publicId: "ci-perf/smartphone-x1", alt: "Smartphone X1" }]));
+
+    await user.click(screen.getByRole("button", { name: "Enlarge image" }));
+    const dialog = await screen.findByRole("dialog", { name: "Product images" });
+    expect(within(dialog).getByRole("img")).toHaveAttribute("src", "/api/ci-perf-media?width=1200");
+    await user.click(within(dialog).getByRole("button", { name: "Zoom in" }));
+    expect(within(dialog).getByRole("img")).toHaveStyle({ width: "200%" });
+    await user.click(within(dialog).getByRole("button", { name: "Close image viewer" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("opens the selected image, traps focus, closes with Escape and restores the trigger repeatedly", async () => {
     const user = userEvent.setup();
     render(zoomGallery());

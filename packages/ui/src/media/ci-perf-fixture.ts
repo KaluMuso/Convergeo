@@ -43,9 +43,9 @@ export function ciPerfPublicEnabled(env: CiPerfPublicEnv = ciPerfPublicEnv()): b
 
 export function ciPerfMediaUrl(publicId: string, width: number): string | null {
   if (!ciPerfPublicEnabled() || publicId !== CI_PERF_IMAGE_ID) return null;
-  // The existing home hero requests 1440px; use the largest genuine owned
-  // variant while retaining the normal responsive srcset and intrinsic layout.
-  if (width === 1440) return `${CI_PERF_MEDIA_PATH}?width=1200`;
+  // The home hero and lightbox request 1440px and 2160px respectively. Map
+  // only those known requests to the largest genuine owned fixture variant.
+  if (width === 1440 || width === 2160) return `${CI_PERF_MEDIA_PATH}?width=1200`;
   if (![24, 360, 720, 1080, 1200].includes(width)) throw new Error("Unsupported CI fixture width");
   return `${CI_PERF_MEDIA_PATH}?width=${width}`;
 }
