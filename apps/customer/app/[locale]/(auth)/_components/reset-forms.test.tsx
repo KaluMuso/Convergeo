@@ -11,10 +11,23 @@ const resetPasswordForEmail = vi.fn();
 const exchangeCodeForSession = vi.fn();
 const updateUser = vi.fn();
 const getSession = vi.fn();
+let authCallback:
+  ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null = null;
 
 vi.mock("@vergeo/auth/browser-client", () => ({
   createBrowserClient: () => ({
-    auth: { resetPasswordForEmail, exchangeCodeForSession, updateUser, getSession },
+    auth: {
+      resetPasswordForEmail,
+      exchangeCodeForSession,
+      updateUser,
+      getSession,
+      onAuthStateChange: (
+        callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
+      ) => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
+    },
   }),
 }));
 
@@ -71,9 +84,20 @@ afterEach(() => {
 
 beforeEach(() => {
   resetPasswordForEmail.mockResolvedValue({ error: null });
-  exchangeCodeForSession.mockResolvedValue({ error: null });
+  exchangeCodeForSession.mockImplementation(async () => {
+    authCallback?.("PASSWORD_RECOVERY", {
+      user: { id: "recovery-user" },
+      access_token: "recovery-token",
+    });
+    return {
+      data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+      error: null,
+    };
+  });
   updateUser.mockResolvedValue({ error: null });
-  getSession.mockResolvedValue({ data: { session: null } });
+  getSession.mockResolvedValue({
+    data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+  });
 });
 
 describe("ResetRequestForm", () => {

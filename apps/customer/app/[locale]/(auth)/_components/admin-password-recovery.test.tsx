@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
+  authCallback: null as
+    ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null,
   pathname: "/en/reset-password",
 }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
@@ -48,6 +50,7 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   }));
   vi.resetAllMocks();
+  mocks.authCallback = null;
   mocks.pathname = "/en/reset-password";
   window.history.replaceState({}, "", "/en/reset-password?next=https://evil.example.test");
   mocks.client.mockResolvedValue({
@@ -56,12 +59,29 @@ beforeEach(() => {
       exchangeCodeForSession: mocks.exchange,
       updateUser: mocks.update,
       getSession: mocks.session,
+      onAuthStateChange: (
+        callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
+      ) => {
+        mocks.authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
     },
   });
   mocks.reset.mockResolvedValue({ error: null });
-  mocks.exchange.mockResolvedValue({ error: null });
+  mocks.exchange.mockImplementation(async () => {
+    mocks.authCallback?.("PASSWORD_RECOVERY", {
+      user: { id: "recovery-user" },
+      access_token: "recovery-token",
+    });
+    return {
+      data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+      error: null,
+    };
+  });
   mocks.update.mockResolvedValue({ error: null });
-  mocks.session.mockResolvedValue({ data: { session: null } });
+  mocks.session.mockResolvedValue({
+    data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+  });
 });
 afterEach(() => {
   cleanup();
