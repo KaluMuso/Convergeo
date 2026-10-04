@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, expect, it, vi } from "vitest";
 
+import common from "../../../../../../../packages/i18n/messages/en/common.json";
 import en from "../../../../../../../packages/i18n/messages/en/vendor.json";
 
 import { QuickListForm } from "./quick-list-form";
@@ -28,13 +30,15 @@ const labels = {
 
 function mount() {
   render(
-    <QuickListForm
-      client={client}
-      labels={labels}
-      wholesaleEnabled={false}
-      onSuccess={onSuccess}
-      onError={onError}
-    />,
+    <NextIntlClientProvider locale="en" messages={{ common }}>
+      <QuickListForm
+        client={client}
+        labels={labels}
+        wholesaleEnabled={false}
+        onSuccess={onSuccess}
+        onError={onError}
+      />
+    </NextIntlClientProvider>,
   );
   fireEvent.change(screen.getByRole("textbox", { name: labels.titleLabel }), {
     target: { value: "Furniture offer" },

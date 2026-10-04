@@ -42,11 +42,51 @@ def fixtures() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     return [row], evidence
 
 
+def catalog_fixture() -> dict[str, Any]:
+    source = (adoption.ROOT / "supabase/migrations" / adoption.AUTHORITY).read_text()
+    routine = source.split(
+        "create function public.create_service_payment_obligations(", 1
+    )[1]
+    return {
+        "schema": "public",
+        "name": "create_service_payment_obligations",
+        "arguments": "uuid, uuid, uuid, bigint, bigint",
+        "result": "void",
+        "language": "plpgsql",
+        "prokind": "f",
+        "prosecdef": True,
+        "proisstrict": False,
+        "proleakproof": False,
+        "provolatile": "v",
+        "proparallel": "u",
+        "proretset": False,
+        "pronargdefaults": 0,
+        "proargnames": ["p_order_id", "p_job_id", "p_customer_id", "p_total", "p_deposit"],
+        "proconfig": ['search_path=""'],
+        "prosrc": routine.split("as $$", 1)[1].split("$$;", 1)[0],
+        "acl": [
+            {
+                "owner": True,
+                "grantee": "fixture_owner",
+                "privilege": "EXECUTE",
+                "grantable": False,
+            },
+            {
+                "owner": False,
+                "grantee": "service_role",
+                "privilege": "EXECUTE",
+                "grantable": False,
+            },
+        ],
+    }
+
+
 class SharedAdoptionGuard(unittest.TestCase):
     def verify(self, rows: object, evidence: object) -> None:
         guard.validate(
             rows,
             evidence,
+            catalog=catalog_fixture(),
             source_sha=SOURCE,
             project_ref=PROJECT,
             migrations=adoption.ROOT / "supabase/migrations",
@@ -54,6 +94,117 @@ class SharedAdoptionGuard(unittest.TestCase):
 
     def test_exact_history_and_bound_supplied_review_pass(self) -> None:
         self.verify(*fixtures())
+
+    def test_canonical_ledger_cannot_hide_missing_or_drifted_catalog(self) -> None:
+        rows, evidence = fixtures()
+        canonical = catalog_fixture()
+        mutations: list[Any] = [
+            None,
+            [],
+            {},
+            {**canonical, "prosrc": "begin return; end;"},
+        ]
+        # Each expected catalog fact is required, independently of ledger text.
+        mutations.extend(
+            {k: v for k, v in canonical.items() if k != key} for key in canonical
+        )
+        for key, value in {
+            "schema": "other",
+            "name": "alias",
+            "arguments": "uuid",
+            "result": "boolean",
+            "language": "sql",
+            "prokind": "p",
+            "prosecdef": False,
+            "proisstrict": True,
+            "proleakproof": True,
+            "provolatile": "s",
+            "proparallel": "s",
+            "proretset": True,
+            "pronargdefaults": 1,
+            "proconfig": ["search_path=public"],
+        }.items():
+            mutations.append({**canonical, key: value})
+        for acl in (
+            None,
+            [],
+            canonical["acl"][:1],
+            [
+                *canonical["acl"],
+                {
+                    "owner": False,
+                    "grantee": "PUBLIC",
+                    "privilege": "EXECUTE",
+                    "grantable": False,
+                },
+            ],
+            [
+                *canonical["acl"],
+                {
+                    "owner": False,
+                    "grantee": "authenticated",
+                    "privilege": "EXECUTE",
+                    "grantable": False,
+                },
+            ],
+            [{**canonical["acl"][1], "grantable": True}],
+        ):
+            mutations.append({**canonical, "acl": acl})
+        for catalog in mutations:
+            with self.subTest(catalog=catalog), self.assertRaises(ValueError):
+                guard.validate(
+                    rows,
+                    evidence,
+                    catalog=catalog,
+                    source_sha=SOURCE,
+                    project_ref=PROJECT,
+                    migrations=adoption.ROOT / "supabase/migrations",
+                )
+
+    def test_canonical_ledger_cannot_hide_argument_name_drift(self) -> None:
+        rows, evidence = fixtures()
+        canonical = catalog_fixture()
+        for names in (
+            ["p_job_id", "p_order_id", "p_customer_id", "p_total", "p_deposit"],
+            ["renamed_order_id", "p_job_id", "p_customer_id", "p_total", "p_deposit"],
+            None,
+        ):
+            with self.subTest(names=names), self.assertRaises(ValueError):
+                guard.validate(
+                    rows, evidence, catalog={**canonical, "proargnames": names},
+                    source_sha=SOURCE, project_ref=PROJECT,
+                    migrations=adoption.ROOT / "supabase/migrations",
+                )
+
+    def test_catalog_query_failure_or_absence_blocks_success(self) -> None:
+        rows, evidence = fixtures()
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "SUPABASE_DB_URL": f"postgresql://postgres@db.{PROJECT}.supabase.co/postgres",
+                    "SCHEMA_TARGET_PROJECT_REF": PROJECT,
+                    "EXPECTED_SOURCE_SHA": SOURCE,
+                    "SERVICE_ADOPTION_REVIEW_EVIDENCE_JSON": json.dumps(evidence),
+                },
+            ),
+            patch.object(subprocess, "check_output", return_value=SOURCE),
+            patch.object(subprocess, "run") as run,
+            patch("builtins.print") as output,
+        ):
+            for response in (
+                {"history": rows, "authority": None},
+                {"history": rows},
+                rows,
+            ):
+                run.return_value.returncode = 0
+                run.return_value.stdout = json.dumps(response)
+                with self.assertRaises(ValueError):
+                    guard.main()
+            run.return_value.returncode = 1
+            with self.assertRaisesRegex(ValueError, "query failed"):
+                guard.main()
+            output.assert_not_called()
 
     def test_absent_null_drifted_or_aliased_history_refused(self) -> None:
         rows, evidence = fixtures()
@@ -104,7 +255,9 @@ class SharedAdoptionGuard(unittest.TestCase):
             patch.object(subprocess, "run") as run,
         ):
             run.return_value.returncode = 0
-            run.return_value.stdout = json.dumps(rows)
+            run.return_value.stdout = json.dumps(
+                {"history": rows, "authority": catalog_fixture()}
+            )
             guard.main()
             self.assertEqual(
                 run.call_args.args[0][-2:],
@@ -125,6 +278,18 @@ class SharedAdoptionGuard(unittest.TestCase):
             self.assertIn("BEGIN READ ONLY;", run.call_args.kwargs["input"])
             self.assertNotIn("INSERT", run.call_args.kwargs["input"])
             self.assertNotIn("UPDATE", run.call_args.kwargs["input"])
+            for required in (
+                "pg_catalog.pg_proc",
+                "p.prosrc",
+                "p.proargnames",
+                "p.proconfig",
+                "pg_catalog.aclexplode",
+                "pg_catalog.acldefault",
+                "pg_catalog.to_regprocedure",
+            ):
+                self.assertIn(required, run.call_args.kwargs["input"])
+            self.assertNotIn("DO $", run.call_args.kwargs["input"])
+            self.assertNotIn("CREATE", run.call_args.kwargs["input"])
 
     def test_source_identity_mismatch_refuses_before_database_query(self) -> None:
         _, evidence = fixtures()

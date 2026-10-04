@@ -26,7 +26,8 @@
     "neighbourhoodLabel": "街区",
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "附近",
-    "nearMeDenied": "未开启定位 — 仍可用城市搜索。"
+    "nearMeDenied": "未开启定位 — 仍可用城市搜索。",
+    "subcategoryLabel": "子类别"
   },
   "categories": {
     "all": "全部",

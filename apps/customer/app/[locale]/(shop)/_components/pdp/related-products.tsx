@@ -3,6 +3,8 @@ import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 
 export type RelatedProductItem = {
+  listing_id?: string | null;
+  vendor_name?: string | null;
   slug: string;
   name: string;
   image_public_id: string | null;
@@ -21,6 +23,7 @@ export type RelatedProductsLabels = {
 };
 
 type RelatedProductsProps = {
+  headingId?: string;
   locale: string;
   items: RelatedProductItem[];
   labels: RelatedProductsLabels;
@@ -63,28 +66,33 @@ function RelatedMedia({
  * Related rail using the shared ProductCard when a real from-price exists.
  * Items without a price render a media+title card — never a fabricated K0.00.
  */
-export function RelatedProducts({ locale, items, labels, cloudName }: RelatedProductsProps) {
+export function RelatedProducts({
+  locale,
+  items,
+  labels,
+  cloudName,
+  headingId = "pdp-related-heading",
+}: RelatedProductsProps) {
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <section
-      aria-labelledby="pdp-related-heading"
-      className="flex flex-col gap-3"
-      data-testid="pdp-related"
-    >
-      <h2 id="pdp-related-heading" className="font-display text-lg font-semibold text-text">
+    <section aria-labelledby={headingId} className="flex flex-col gap-3" data-testid="pdp-related">
+      <h2 id={headingId} className="font-display text-lg font-semibold text-text">
         {labels.heading}
       </h2>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
           <li key={item.slug} className="min-w-0">
-            <Link href={`/${locale}/p/${item.slug}`} className="block min-w-0 no-underline">
+            <Link
+              href={`/${locale}/p/${encodeURIComponent(item.slug)}${item.listing_id ? `?listing=${encodeURIComponent(item.listing_id)}` : ""}`}
+              className="block min-w-0 no-underline"
+            >
               {item.from_price_ngwee !== null ? (
                 <ProductCard
                   title={item.name}
-                  vendorLabel={labels.vendorFallback}
+                  vendorLabel={item.vendor_name || labels.vendorFallback}
                   ngwee={item.from_price_ngwee}
                   rating={0}
                   reviewCount={0}
@@ -117,7 +125,9 @@ export function RelatedProducts({ locale, items, labels, cloudName }: RelatedPro
                   </div>
                   <div className="space-y-1 p-3">
                     <p className="truncate text-sm font-medium text-text">{item.name}</p>
-                    <p className="text-xs text-text-2">{labels.vendorFallback}</p>
+                    <p className="text-xs text-text-2">
+                      {item.vendor_name || labels.vendorFallback}
+                    </p>
                   </div>
                 </article>
               )}

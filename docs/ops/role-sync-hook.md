@@ -57,6 +57,20 @@ other caller that genuinely needs the `User` object shape
 (`apps/customer/.../vendor-portal-hub-card.tsx`, a cosmetic UI decision,
 never a security gate) — middleware itself no longer calls it.
 
+Middleware claims are a routing fast path only. Privileged API mutations still
+require authoritative `public.user_roles` checks server-side; this change does
+not replace them or make a role grant immediately visible in an older token.
+
+**Local SDK verification (2026-10-02):** the original 13 tests in
+`packages/auth/src/session-routing.integration.test.ts` pass with installed
+`@supabase/ssr` 0.12.4 and Supabase JS/Auth 2.112.2. They use locally signed RSA
+tokens and an isolated ephemeral `127.0.0.1` HTTP fixture, with the real SDK's
+signature/expiry verification and cookie handling. Execution is restricted to
+that fixture's exact host/port; external fetch/socket destinations and UDP are
+blocked. This proves the local middleware/SDK contract, including fail-closed
+expired/forged claims and metadata privilege attempts. It does not verify hosted
+login, OTP, provider setup, Dashboard hook registration, or database state.
+
 ## Enable it (staging first — later operator work)
 
 The migration only **creates** the function — it is dormant until registered.

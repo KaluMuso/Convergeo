@@ -88,7 +88,7 @@ export function AnalyticsView() {
     return {
       sales: sum(data.sales_ngwee_by_day),
       orders: sum(data.orders_by_day),
-      views: sum(data.views_by_day),
+      views: sum(data.cart_activity_events_by_day),
     };
   }, [data]);
 
@@ -168,7 +168,7 @@ export function AnalyticsView() {
             />
             <StatCard
               label={t("analytics.cards.views")}
-              series={data.views_by_day}
+              series={data.cart_activity_events_by_day}
               sparklineLabel={t("analytics.sparkline.views")}
               value={String(totals.views)}
             />
@@ -178,23 +178,24 @@ export function AnalyticsView() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
               {t("analytics.conversion.heading")}
             </h2>
-            {data.conversion_hint.views_total > 0 ? (
+            {data.order_activity_ratio.orders_per_100_cart_activity_events !== null ? (
               <>
                 <p className="font-mono text-lg font-semibold">
                   {t("analytics.conversion.pct", {
-                    pct: data.conversion_hint.conversion_pct,
+                    pct: data.order_activity_ratio.orders_per_100_cart_activity_events,
                   })}
                 </p>
                 <p className="text-sm text-muted">
                   {t("analytics.conversion.summary", {
-                    orders: data.conversion_hint.orders_total,
-                    views: data.conversion_hint.views_total,
+                    orders: data.order_activity_ratio.orders_total,
+                    views: data.order_activity_ratio.cart_activity_events_total,
                   })}
                 </p>
               </>
             ) : (
               <p className="text-sm text-muted">{t("analytics.conversion.empty")}</p>
             )}
+            <p className="text-sm text-muted">{t("analytics.conversion.definition")}</p>
           </section>
 
           <section className="flex flex-col gap-3">

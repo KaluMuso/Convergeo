@@ -19,11 +19,89 @@ import apply_service_adoption as adoption
 
 VERSION, NAME = Path(adoption.ADOPTION).stem.split("_", 1)
 QUERY = """BEGIN READ ONLY;
-SELECT coalesce(json_agg(to_json(m)), '[]'::json)
-FROM (SELECT version,name,statements FROM supabase_migrations.schema_migrations
-      WHERE version='20260929120003') m;
+SELECT json_build_object(
+ 'history', (SELECT coalesce(json_agg(to_json(m)), '[]'::json)
+   FROM (SELECT version,name,statements FROM supabase_migrations.schema_migrations
+         WHERE version='20260929120003') m),
+ 'authority', (SELECT to_json(r) FROM (
+   SELECT n.nspname AS schema, p.proname AS name,
+     pg_catalog.oidvectortypes(p.proargtypes) AS arguments,
+     pg_catalog.format_type(p.prorettype, NULL) AS result,
+     l.lanname AS language, p.prokind, p.prosecdef, p.proisstrict,
+     p.proleakproof, p.provolatile, p.proparallel, p.proretset,
+     p.pronargdefaults, p.proargnames, p.proconfig, p.prosrc,
+     (SELECT json_agg(json_build_object(
+        'owner', a.grantee=p.proowner,
+        'grantee', CASE WHEN a.grantee=0 THEN 'PUBLIC'
+                       ELSE pg_catalog.pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type, 'grantable', a.is_grantable))
+      FROM pg_catalog.aclexplode(coalesce(p.proacl,
+           pg_catalog.acldefault('f', p.proowner))) a) AS acl
+   FROM pg_catalog.pg_proc p
+   JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+   JOIN pg_catalog.pg_language l ON l.oid=p.prolang
+   WHERE p.oid=pg_catalog.to_regprocedure(
+     'public.create_service_payment_obligations(uuid,uuid,uuid,bigint,bigint)')
+ ) r));
 COMMIT;
 """
+
+
+def validate_authority(catalog: Any, migrations: Path) -> None:
+    """Compare installed catalog facts, never ledger text, to immutable authority.
+
+    ACL rules match the canonical adoption helper: retain the actual owner,
+    allow only non-grantable service_role execution outside that owner.
+    Supplied reference strings remain evidence bindings, not human approval.
+    """
+    source = (migrations / adoption.AUTHORITY).read_bytes()
+    if hashlib.sha256(source).hexdigest() != adoption.AUTHORITY_SHA256:
+        raise ValueError("Immutable service authority differs from reviewed input")
+    routine = (
+        source.decode()
+        .split("create function public.create_service_payment_obligations(", 1)[1]
+        .split("\ncreate function public.record_collection_failure", 1)[0]
+    )
+    body = routine.split("as $$", 1)[1].split("$$;", 1)[0]
+    expected = {
+        "schema": "public",
+        "name": "create_service_payment_obligations",
+        "arguments": "uuid, uuid, uuid, bigint, bigint",
+        "result": "void",
+        "language": "plpgsql",
+        "prokind": "f",
+        "prosecdef": True,
+        "proisstrict": False,
+        "proleakproof": False,
+        "provolatile": "v",
+        "proparallel": "u",
+        "proretset": False,
+        "pronargdefaults": 0,
+        "proargnames": ["p_order_id", "p_job_id", "p_customer_id", "p_total", "p_deposit"],
+        "proconfig": ['search_path=""'],
+        "prosrc": body,
+    }
+    if not isinstance(catalog, dict) or any(
+        catalog.get(key) != value for key, value in expected.items()
+    ):
+        raise ValueError("Installed service authority identity/body/metadata differs")
+    acl = catalog.get("acl")
+    if not isinstance(acl, list) or not acl:
+        raise ValueError("Installed service authority execution privileges are absent")
+    service_execute = False
+    for entry in acl:
+        if not isinstance(entry, dict) or entry.get("privilege") != "EXECUTE":
+            raise ValueError("Installed service authority execution privileges differ")
+        if entry.get("owner") is not True and (
+            entry.get("owner") is not False
+            or entry.get("grantee") != "service_role"
+            or entry.get("grantable") is not False
+        ):
+            raise ValueError("Installed service authority execution privileges differ")
+        if entry.get("grantee") == "service_role":
+            service_execute = True
+    if not service_execute:
+        raise ValueError("Installed service authority lacks service_role execution")
 
 
 def row_digest(row: dict[str, Any]) -> str:
@@ -33,7 +111,7 @@ def row_digest(row: dict[str, Any]) -> str:
 
 
 def validate(
-    rows: Any, evidence: Any, *, source_sha: str, project_ref: str, migrations: Path
+    rows: Any, evidence: Any, *, catalog: Any, source_sha: str, project_ref: str, migrations: Path
 ) -> None:
     original = (migrations / adoption.ADOPTION).read_bytes()
     if hashlib.sha256(original).hexdigest() != adoption.ADOPTION_SHA256:
@@ -43,6 +121,7 @@ def validate(
         raise ValueError(
             "Raw adoption remains pending or canonical installed SQL is unproven"
         )
+    validate_authority(catalog, migrations)
     if not isinstance(evidence, dict) or not re.fullmatch(r"[0-9a-f]{40}", source_sha):
         raise ValueError("Reviewed shared adoption evidence is required")
     required = {
@@ -169,14 +248,18 @@ def main() -> None:
     )
     if result.returncode:
         raise ValueError("Read-only adoption history query failed; CLI push refused")
+    observed = json.loads(result.stdout)
+    if not isinstance(observed, dict):
+        raise ValueError("Read-only adoption catalog response is invalid; CLI push refused")
     validate(
-        json.loads(result.stdout),
+        observed.get("history"),
         evidence,
+        catalog=observed.get("authority"),
         source_sha=actual_source,
         project_ref=os.environ.get("SCHEMA_TARGET_PROJECT_REF", ""),
         migrations=adoption.ROOT / "supabase/migrations",
     )
-    print("SHARED_ADOPTION_HISTORY_AND_SUPPLIED_REVIEW_BINDING_VERIFIED")
+    print("SHARED_ADOPTION_HISTORY_CATALOG_AND_SUPPLIED_REVIEW_BINDING_VERIFIED")
 
 
 if __name__ == "__main__":

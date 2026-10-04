@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { CloudinaryImage } from "./cloudinary-image";
+import { ImageLightbox, type ImageZoomLabels } from "./image-lightbox";
 
 const MAX_IMAGES = 8;
 
@@ -36,6 +37,8 @@ export type ImageGalleryProps = {
   /** Label shown inside a slide when its Cloudinary asset fails to load. */
   imageFallbackLabel?: string;
   className?: string;
+  /** Enable the accessible image viewer with translated labels. */
+  zoomLabels?: ImageZoomLabels;
 };
 
 export function ImageGallery({
@@ -47,10 +50,32 @@ export function ImageGallery({
   nextLabel,
   imageFallbackLabel,
   className,
+  zoomLabels,
 }: ImageGalleryProps) {
+  images = images.filter((image) => image.publicId.trim().length > 0);
   const galleryId = useId();
   const stripRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const zoomTriggerRef = useRef<HTMLButtonElement>(null);
+  const wasZoomOpen = useRef(false);
+  useEffect(() => {
+    // Native dialog makes the trigger inert until the viewer has unmounted.
+    // Restore after that cleanup, including when product images change.
+    if (wasZoomOpen.current && !zoomOpen) zoomTriggerRef.current?.focus();
+    wasZoomOpen.current = zoomOpen;
+  }, [zoomOpen]);
+  const imageIdentity = JSON.stringify([cloudName, images.slice(0, MAX_IMAGES)]);
+  const [previousIdentity, setPreviousIdentity] = useState(imageIdentity);
+  // Close stale media before committing changed product/gallery props.
+  if (previousIdentity !== imageIdentity) {
+    setPreviousIdentity(imageIdentity);
+    setCurrentIndex(0);
+    setZoomOpen(false);
+  }
+  useEffect(() => {
+    if (stripRef.current) stripRef.current.scrollLeft = 0;
+  }, [imageIdentity]);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const cappedImages =
@@ -148,7 +173,7 @@ export function ImageGallery({
       <div style={{ position: "relative" }}>
         <div
           ref={stripRef}
-          onScroll={handleScroll}
+          onScroll={zoomOpen ? undefined : handleScroll}
           data-testid="gallery-strip"
           style={{
             display: "flex",
@@ -214,6 +239,41 @@ export function ImageGallery({
           </button>
         </div>
       </div>
+
+      {zoomLabels ? (
+        <button
+          type="button"
+          ref={zoomTriggerRef}
+          aria-haspopup="dialog"
+          onClick={() => setZoomOpen(true)}
+          style={{
+            minHeight: "44px",
+            padding: "var(--sp-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r)",
+            background: "var(--surface)",
+            color: "var(--text)",
+          }}
+        >
+          {zoomLabels.open}
+        </button>
+      ) : null}
+      {zoomLabels && zoomOpen ? (
+        <ImageLightbox
+          images={cappedImages}
+          initialIndex={currentIndex}
+          cloudName={cloudName}
+          labels={zoomLabels}
+          previousLabel={previousLabel}
+          nextLabel={nextLabel}
+          indicatorLabel={indicatorLabel}
+          fallbackLabel={imageFallbackLabel}
+          onClose={(index) => {
+            setZoomOpen(false);
+            scrollToIndex(index);
+          }}
+        />
+      ) : null}
 
       <p data-testid="gallery-indicator" aria-live="polite">
         {indicatorLabel(currentIndex + 1, cappedImages.length)}

@@ -147,6 +147,8 @@
     "reservationExpired": "Your reservation expired — items were returned to your cart.",
     "stockUnavailable": "An item is no longer available. Check your cart.",
     "emptyCart": "Your cart is empty.",
+    "retry": "Try again",
+    "backToCart": "Back to cart",
     "loading": "Starting checkout…",
     "error": "Something went wrong. Try again.",
     "payment": {

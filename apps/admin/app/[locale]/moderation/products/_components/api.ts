@@ -70,6 +70,8 @@ export function setProductRelations(
 }
 
 export type CanonicalQueueItem = {
+  description?: string | null;
+  spec?: Record<string, unknown>;
   id: string;
   name: string;
   slug: string;

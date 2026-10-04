@@ -40,7 +40,10 @@ vi.mock("@vergeo/config", () => ({
     }
   },
   createApiClient: ({ getToken }: { getToken: () => string }) => ({
-    request: (path: string, options: unknown) => request(getToken(), path, options),
+    request: (path: string, options: unknown) =>
+      path === "/checkout/steps/contact"
+        ? Promise.resolve({ verified: true })
+        : request(getToken(), path, options),
   }),
 }));
 vi.mock("next/navigation", () => ({

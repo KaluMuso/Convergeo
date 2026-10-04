@@ -158,3 +158,56 @@ def test_categories_endpoint_sets_cache_control(categories_client: TestClient) -
 def test_categories_cache_key_and_ttl_constants() -> None:
     assert CATEGORIES_CACHE_KEY == "public:categories:v1"
     assert CATEGORIES_CACHE_TTL_SECONDS == 3600
+
+
+def test_event_taxonomy_exposes_persisted_parent_and_filters_unknown_authoring_slugs() -> None:
+    from types import SimpleNamespace
+
+    class EventClient:
+        def table(self, name: str) -> FakeQuery:
+            assert name == "event_categories"
+            return FakeQuery(
+                [
+                    {
+                        "slug": "music",
+                        "parent_slug": None,
+                        "label_key": "events.categories.music",
+                        "sort": 1,
+                    },
+                    {
+                        "slug": "concerts",
+                        "parent_slug": "music",
+                        "label_key": "events.categories.concerts",
+                        "sort": 2,
+                    },
+                    {
+                        "slug": "not-approved",
+                        "parent_slug": "music",
+                        "label_key": "unknown",
+                        "sort": 3,
+                    },
+                ]
+            )
+
+    app = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: SimpleNamespace(client=EventClient())
+    with TestClient(app) as client:
+        response = client.get("/categories/events")
+    assert response.status_code == 200
+    assert response.json() == [
+        {"slug": "music", "parent_slug": None, "label_key": "events.categories.music"},
+        {"slug": "concerts", "parent_slug": "music", "label_key": "events.categories.concerts"},
+    ]
+
+
+def test_event_taxonomy_read_failure_is_not_an_empty_success() -> None:
+    from types import SimpleNamespace
+
+    class FailedClient:
+        def table(self, name: str) -> None:
+            raise RuntimeError("unavailable")
+
+    app = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: SimpleNamespace(client=FailedClient())
+    with TestClient(app, raise_server_exceptions=False) as client:
+        assert client.get("/categories/events").status_code == 500

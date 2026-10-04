@@ -383,6 +383,11 @@
       "saving": "Enregistrement…",
       "saved": "Sélection enregistrée.",
       "saveError": "Impossible d'enregistrer la sélection."
+    },
+    "canonical": {
+      "dialog": {
+        "details": "Détails du produit"
+      }
     }
   },
   "flags": {

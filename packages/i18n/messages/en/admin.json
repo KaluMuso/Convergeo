@@ -432,7 +432,8 @@
         "cancel": "Cancel",
         "submitting": "Saving…",
         "success": "Decision recorded.",
-        "failure": "Could not save decision."
+        "failure": "Could not save decision.",
+        "details": "Product details"
       }
     },
     "related": {

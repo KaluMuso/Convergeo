@@ -19,6 +19,7 @@ import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
+import { RelatedProductRails, type RelatedRailsLabels } from "./related-product-rails";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
@@ -132,6 +133,7 @@ export type ProductListing = {
 };
 
 export type PdpInteractiveBodyProps = {
+  relatedLabels?: RelatedRailsLabels;
   locale: string;
   productId: string;
   productSlug: string;
@@ -581,6 +583,7 @@ export function PdpInteractiveBody({
   requestQuoteLabels,
   reportListingLabels,
   comparePageLabel,
+  relatedLabels,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
   const logisticsPillLabels = useMemo(() => catalogLogisticsLabels(t), [t]);
@@ -810,6 +813,17 @@ export function PdpInteractiveBody({
           locale={locale}
           onVisibleChange={handleStickyVisibleChange}
         />
+      ) : null}
+      {relatedLabels ? (
+        <div className="min-w-0 lg:col-span-2">
+          <RelatedProductRails
+            locale={locale}
+            slug={productSlug}
+            listingId={selectedListing?.id ?? null}
+            labels={relatedLabels}
+            cloudName={cloudName}
+          />
+        </div>
       ) : null}
     </div>
   );

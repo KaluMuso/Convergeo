@@ -274,6 +274,16 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           }
           onError={setError}
           labels={{
+            details: {
+              about: t("listings.newCanonical.details.about"),
+              heading: t("listings.newCanonical.details.heading"),
+              help: t("listings.newCanonical.details.help"),
+              name: t("listings.newCanonical.details.name"),
+              value: t("listings.newCanonical.details.value"),
+              add: t("listings.newCanonical.details.add"),
+              remove: t("listings.newCanonical.details.remove"),
+              invalid: t("listings.newCanonical.details.invalid"),
+            },
             heading: t("listings.newCanonical.heading"),
             intro: t("listings.newCanonical.intro"),
             nameLabel: t("listings.newCanonical.nameLabel"),

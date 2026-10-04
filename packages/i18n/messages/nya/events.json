@@ -26,7 +26,8 @@
     "neighbourhoodLabel": "Neighbourhood",
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Pafupi ndine",
-    "nearMeDenied": "Location ili off — kufufuza mzinda kukugwirabe ntchito."
+    "nearMeDenied": "Location ili off — kufufuza mzinda kukugwirabe ntchito.",
+    "subcategoryLabel": "Subcategory"
   },
   "categories": {
     "all": "Zonse",

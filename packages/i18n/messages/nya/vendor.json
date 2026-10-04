@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Analytics — Convergeo Vendor",
-      "description": "Onani kugulitsa kwanu, orders, and cart activity over the last 7 or Masiku 30, see your top listings, and gauge cart-to-order conversion."
+      "description": "Track sales, orders and cart/checkout event counts over 7 or 30 days, and compare independent order and activity totals."
     },
     "eyebrow": "Storefront yanu",
     "title": "Analytics",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "⚠ Sales",
       "orders": "Ma-order",
-      "views": "Activity ya cart"
+      "views": "Cart/checkout events"
     },
     "sparkline": {
       "sales": "⚠ Daily sales trend",
       "orders": "Daily orders trend",
-      "views": "Daily cart activity trend"
+      "views": "Daily cart/checkout event count"
     },
     "top": {
       "heading": "Listings zazikulu",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# sold} other {# sold}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# cart action} other {# cart actions}}",
-      "pct": "⚠ {pct}% cart-to-order",
-      "empty": "Not enough activity yet to estimate conversion."
+      "heading": "Order/activity ratio",
+      "summary": "{orders, plural, one {# non-cancelled order} other {# non-cancelled orders}}; {views, plural, one {# cart/checkout event} other {# cart/checkout events}} in this window.",
+      "pct": "{pct} orders per 100 cart/checkout events",
+      "empty": "No cart/checkout events in this window; the ratio is unavailable.",
+      "definition": "Counts cart-add and checkout-start events, not listing views or unique visitors. Orders and events are independent totals, not a conversion cohort; the ratio can exceed 100."
     },
     "errors": {
       "loadFailed": "Sitinathe kulodza your analytics. Yesaninso.",
@@ -387,7 +388,17 @@
       "categoryPlaceholder": "Select category",
       "submit": "Tumizani for review",
       "submitting": "Tumizaniting…",
-      "moderationNotice": "Your listing stays in draft until our team approves the product."
+      "moderationNotice": "Your listing stays in draft until our team approves the product.",
+      "details": {
+        "about": "About this item",
+        "heading": "Product details",
+        "help": "Enter only details you can verify for this category. Include units as stated by the manufacturer. You can add dimensions, weight, measurements, style, features, materials, care or guide instructions. Leave unknown details blank. All details require moderation. Up to 32 details; names: 80 characters; values: 2,000; description: 5,000.",
+        "name": "Detail name",
+        "value": "Detail value",
+        "add": "Add detail",
+        "remove": "Remove detail",
+        "invalid": "Complete each detail with a unique name and value, or remove it. Keep the description and details within the displayed limits."
+      }
     },
     "quickList": {
       "heading": "Quick list",

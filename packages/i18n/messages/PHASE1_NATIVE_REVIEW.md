@@ -20,6 +20,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **CCP-03e verticals (2026-07-20):** `services`, `events`, `directory`, `supplies` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
 
+**Catalog selection and canonical details (2026-10-01):** `events.filters.subcategoryLabel` and `vendor.listings.newCanonical.details.{about,heading,help,name,value,add,remove,invalid}` in both bem/nya are **English fallback values**, copied from EN for key parity. These 18 entries remain untranslated pending native-speaker review; their presence is not translation approval.
+
 ## Noindex removal criteria (authoritative)
 
 All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):

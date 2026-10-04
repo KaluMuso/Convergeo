@@ -139,6 +139,10 @@ async function cartRequest<T>(
   init: RequestInit = {},
   identity?: CartIdentity,
 ): Promise<T> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    throw new ApiError("api_unavailable", "API configuration is unavailable", { status: 0 });
+  }
   const current = identity ?? (await readyCartIdentity());
   assertCartIdentity(current);
   const headers = new Headers(init.headers);
@@ -152,7 +156,7 @@ async function cartRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
+    response = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
       headers,
       credentials: "include",
@@ -189,7 +193,9 @@ async function cartRequest<T>(
 async function fetchRevalidateNotices(identity: CartIdentity): Promise<ChangeNotice[]> {
   try {
     const result = await cartRequest<RevalidateResponse>(
-      "/cart/revalidate", { method: "POST" }, identity,
+      "/cart/revalidate",
+      { method: "POST" },
+      identity,
     );
     return result.notices ?? [];
   } catch (error) {
@@ -201,7 +207,9 @@ async function fetchRevalidateNotices(identity: CartIdentity): Promise<ChangeNot
   }
 }
 
-async function loadCartWithNotices(identity: CartIdentity): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
+async function loadCartWithNotices(
+  identity: CartIdentity,
+): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
   const cart = await cartRequest<CartResponse>("/cart", {}, identity);
   if (cart.notices && cart.notices.length > 0) {
     return { cart, notices: cart.notices };
@@ -238,7 +246,12 @@ customerAuth.subscribe(() => {
       lastAddedMessage: null,
     });
   }
-  if (!state.loading && !state.error && state.session && lastReadyUserId !== state.session.user.id) {
+  if (
+    !state.loading &&
+    !state.error &&
+    state.session &&
+    lastReadyUserId !== state.session.user.id
+  ) {
     lastReadyUserId = state.session.user.id;
     void refreshCart();
   }
@@ -288,11 +301,7 @@ export async function refreshCart(): Promise<CartResponse | null> {
     return cart;
   } catch {
     const state = customerAuth.snapshot();
-    if (
-      requestGeneration === state.generation &&
-      !state.loading &&
-      !state.error
-    ) {
+    if (requestGeneration === state.generation && !state.loading && !state.error) {
       setStoreState({ loading: false, loadError: true });
     }
     return null;
@@ -322,18 +331,22 @@ export async function addCartItem(
   locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
   const identity = await readyCartIdentity();
-  const cart = await cartRequest<CartResponse>("/cart/items", {
-    method: "POST",
-    body: JSON.stringify({
-      listing_id: listingId,
-      qty,
-      ...(clipId ? { clip_id: clipId } : {}),
-      ...(locationOptions?.pickupLocationId
-        ? { pickup_location_id: locationOptions.pickupLocationId }
-        : {}),
-      ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
-    }),
-  }, identity);
+  const cart = await cartRequest<CartResponse>(
+    "/cart/items",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        listing_id: listingId,
+        qty,
+        ...(clipId ? { clip_id: clipId } : {}),
+        ...(locationOptions?.pickupLocationId
+          ? { pickup_location_id: locationOptions.pickupLocationId }
+          : {}),
+        ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
+      }),
+    },
+    identity,
+  );
   const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
   assertCartIdentity(identity);
   setStoreState({ cart, notices });
@@ -342,10 +355,14 @@ export async function addCartItem(
 
 export async function updateCartItemQty(listingId: string, qty: number): Promise<CartResponse> {
   const identity = await readyCartIdentity();
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ qty }),
-  }, identity);
+  const cart = await cartRequest<CartResponse>(
+    `/cart/items/${listingId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ qty }),
+    },
+    identity,
+  );
   const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
   assertCartIdentity(identity);
   setStoreState({ cart, notices });
@@ -354,9 +371,13 @@ export async function updateCartItemQty(listingId: string, qty: number): Promise
 
 export async function removeCartItem(listingId: string): Promise<CartResponse> {
   const identity = await readyCartIdentity();
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
-    method: "DELETE",
-  }, identity);
+  const cart = await cartRequest<CartResponse>(
+    `/cart/items/${listingId}`,
+    {
+      method: "DELETE",
+    },
+    identity,
+  );
   const notices = cart.notices ?? (await fetchRevalidateNotices(identity));
   assertCartIdentity(identity);
   setStoreState({ cart, notices });

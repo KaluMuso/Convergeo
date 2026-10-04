@@ -524,7 +524,7 @@
     "services/api/tests/test_job_completion.py": "9e0a1280b0b671aa46f96ad533aa779b30d7620166dd7105adbd58bad8c0ca75",
     "services/api/tests/test_kyc_state.py": "d21615ea47e9b11b9c5ff9f857462d5e1fda75a806d0d92e5383bebe2f4c83ff",
     "services/api/tests/test_listing_below_median.py": "9f7e814f2c4c58f088f6f41ade21790edeede53b32e928e7801ad48db3d08796",
-    "services/api/tests/test_listing_create.py": "adcde10300a94c9c03e4c0b0435d2964a1952ec63f829ef9203b7856240229c9",
+    "services/api/tests/test_listing_create.py": "fe3b57db60acab9b95862575e8543bfce6346f09fe205de919a74c62d8e2bf3a",
     "services/api/tests/test_listing_manage.py": "c793e4f67b2cb4625daa86050e75c7f4d315eaf6f7f5093fbda1b709ea2be546",
     "services/api/tests/test_listing_pricing.py": "4fd1cff67152052fa9e49f84a69f8011ad058e568affe22cbd03bd87a81bd5ce",
     "services/api/tests/test_location_stock.py": "9695617bfcb9813bd788aaa3b12bf9806895fe5c43ab4cafde8c83332f7d64e8",
@@ -545,8 +545,8 @@
     "services/api/tests/test_vendor_stock_adjustment.py": "fcd24d0e9b5c68e208967620513906eccdc8122d23323b10ebb4c1dd3ab08adb",
     "services/api/tests/test_vendor_stock_adjustment_db.py": "4da1a95be8d73b4feccc64d0a4628ab162292b1d611a6c2f28c47414e3c3f281",
     "services/api/tests/test_merchant_review_boundaries_db.py": "dcffd64920805dca987f3cc3e8df9a327ac67e8fab5b9bbe5faa88f7ae1ac539",
-    "scripts/ci/guard_shared_service_adoption.py": "ed85aed1f12483da58e5e609ac3ecef9f3b6e84702a0811c2dafa9fb42bbef84",
-    "scripts/ci/test_guard_shared_service_adoption.py": "a6c0d13a930bdf746a6fa0e4e4c68f6cea357efb415645f4646304fd9c6f8c4a",
+    "scripts/ci/guard_shared_service_adoption.py": "c346d883bd6c77eea70d1ff69fe87cdc83d2dd2d20e26fef1329b6f03bbd54ae",
+    "scripts/ci/test_guard_shared_service_adoption.py": "534d64e574c478eff65dc7a9e3186ca6aa1cd9ed92cc35a914c56e4b0a8cc7ac",
     ".github/workflows/deploy-staging.yml": "5d17f49cf2a3040af0fd4e3c64e8f40f434c68cf06baeaa4e38f7cc92c86b85b"
   },
   "critical": [

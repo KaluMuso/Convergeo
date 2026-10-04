@@ -1,9 +1,11 @@
 "use client";
 
+import { CategorySelection, categoryPath } from "@vergeo/ui/src/category-selection";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { listingCreateErrorMessage } from "../_lib/listing-errors";
-import { Button, FormField, Input, Select, Textarea } from "../_lib/ui";
+import { Button, FormField, Input, Textarea } from "../_lib/ui";
 
 import {
   DEFAULT_LISTING_FIELDS,
@@ -63,6 +65,7 @@ export function QuickListForm({
   const [title, setTitle] = useState("");
   const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_FIELDS);
   const [submitting, setSubmitting] = useState(false);
+  const taxonomyText = useTranslations("common.categorySelection");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -98,7 +101,17 @@ export function QuickListForm({
       onError(labels.canonicalRequired);
       return;
     }
-    if (!categoryId || description.trim().length < 20) {
+    if (
+      !categoryPath(
+        categories.map((item) => ({
+          id: item.id,
+          parentId: item.parent_id ?? null,
+          label: item.name,
+        })),
+        categoryId,
+      ).length ||
+      description.trim().length < 20
+    ) {
       onError(labels.standaloneDetailsRequired);
       return;
     }
@@ -166,20 +179,23 @@ export function QuickListForm({
 
       {standalone ? (
         <>
-          <FormField label={labels.categoryLabel} required requiredMarker="*">
-            <Select
-              value={categoryId}
-              disabled={loadingCategories}
-              onChange={(event) => setCategoryId(event.target.value)}
-            >
-              <option value="">{labels.categoryPlaceholder}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          <CategorySelection
+            nodes={categories.map((item) => ({
+              id: item.id,
+              parentId: item.parent_id ?? null,
+              label: item.name,
+            }))}
+            value={categoryId}
+            onChange={setCategoryId}
+            disabled={loadingCategories || submitting}
+            labels={{
+              category: labels.categoryLabel,
+              subcategory: taxonomyText("subcategory"),
+              placeholder: labels.categoryPlaceholder,
+              empty: taxonomyText("empty"),
+              unavailable: taxonomyText("unavailable"),
+            }}
+          />
           <FormField
             label={labels.descriptionLabel}
             helpText={labels.descriptionHelp}

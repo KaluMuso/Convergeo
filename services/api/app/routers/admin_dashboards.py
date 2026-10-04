@@ -230,30 +230,42 @@ def _latest_reconciliation(service_client: ServiceRoleClient) -> ReconciliationT
         return ReconciliationTileOut(
             status="unknown", evidence_state="account_unconfigured", expected_report_date=expected
         )
-    row = _single_row(
-        service_client.client.table("reconciliation_report_versions")
-        .select("*")
-        .eq("provider_account_id", account)
-        .eq("currency", "ZMW")
-        .lte("report_date", expected.isoformat())
-        .order("report_date", desc=True)
-        .order("version_number", desc=True)
-        .limit(1)
-        .maybe_single()
-        .execute()
-    )
-    provenance = "VERSIONED_ACCOUNT_BOUND"
-    if row is None:
+    try:
         row = _single_row(
-            service_client.client.table("reconciliation_reports")
-            .select("id, report_date, summary, discrepancies")
+            service_client.client.table("reconciliation_report_versions")
+            .select("*")
+            .eq("provider_account_id", account)
+            .eq("currency", "ZMW")
             .lte("report_date", expected.isoformat())
             .order("report_date", desc=True)
+            .order("version_number", desc=True)
             .limit(1)
             .maybe_single()
             .execute()
         )
-        provenance = "LEGACY_UNVERSIONED_ACCOUNT_UNBOUND"
+        provenance = "VERSIONED_ACCOUNT_BOUND"
+        if row is None:
+            row = _single_row(
+                service_client.client.table("reconciliation_reports")
+                .select("id, report_date, summary, discrepancies")
+                .lte("report_date", expected.isoformat())
+                .order("report_date", desc=True)
+                .limit(1)
+                .maybe_single()
+                .execute()
+            )
+            provenance = "LEGACY_UNVERSIONED_ACCOUNT_UNBOUND"
+    except Exception:
+        # Reconciliation is independently unavailable; keep other aggregates usable.
+        # Do not expose provider/transport exception details in responses or logs.
+        logger.warning("Reconciliation report query failed")
+        return ReconciliationTileOut(
+            status="unknown",
+            evidence_state="error",
+            expected_report_date=expected,
+            provider_account_id=account,
+            currency="ZMW",
+        )
     if row is None:
         return ReconciliationTileOut(
             status="unknown",
@@ -400,8 +412,11 @@ def _get_cached_dashboard(service_client: ServiceRoleClient) -> DashboardOut:
     global _cache_payload, _cache_expires_at
     now = time.monotonic()
     with _cache_lock:
-        if _cache_payload is not None and now < _cache_expires_at:
-            return _cache_payload
+        cached = _cache_payload if now < _cache_expires_at else None
+    if cached is not None:
+        # Evidence can change during the aggregate TTL (append or UTC rollover).
+        # Read outside the lock and leave the shared cached aggregate object intact.
+        return cached.model_copy(update={"reconciliation": _latest_reconciliation(service_client)})
 
     payload = build_dashboard(service_client)
     with _cache_lock:

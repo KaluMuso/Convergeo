@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Statistiques — Vendeur Convergeo",
-      "description": "Suivez vos ventes, commandes et activité du panier sur les 7 ou 30 derniers jours, consultez vos meilleures annonces et évaluez la conversion panier-commande."
+      "description": "Suivez les ventes, commandes et événements panier/passage en caisse sur 7 ou 30 jours, et comparez des totaux indépendants."
     },
     "eyebrow": "Votre boutique",
     "title": "Statistiques",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "Ventes",
       "orders": "Commandes",
-      "views": "Activité du panier"
+      "views": "Événements panier/caisse"
     },
     "sparkline": {
       "sales": "Tendance quotidienne des ventes",
       "orders": "Tendance quotidienne des commandes",
-      "views": "Tendance quotidienne de l'activité du panier"
+      "views": "Nombre quotidien d’événements panier/caisse"
     },
     "top": {
       "heading": "Meilleures annonces",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# vendu} other {# vendus}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# commande} other {# commandes}} sur {views, plural, one {# action panier} other {# actions panier}}",
-      "pct": "{pct}% panier-commande",
-      "empty": "Pas encore assez d'activité pour estimer la conversion."
+      "heading": "Ratio commandes/activité",
+      "summary": "{orders, plural, one {# commande non annulée} other {# commandes non annulées}} ; {views, plural, one {# événement panier/caisse} other {# événements panier/caisse}} sur cette période.",
+      "pct": "{pct} commandes pour 100 événements panier/caisse",
+      "empty": "Aucun événement panier/caisse sur cette période ; le ratio est indisponible.",
+      "definition": "Compte les ajouts au panier et débuts de passage en caisse, pas les vues ni les visiteurs uniques. Les commandes et événements sont des totaux indépendants, pas une cohorte de conversion ; le ratio peut dépasser 100."
     },
     "errors": {
       "loadFailed": "Impossible de charger vos statistiques. Veuillez réessayer.",
@@ -373,7 +374,17 @@
       "categoryPlaceholder": "Sélectionner une catégorie",
       "submit": "Soumettre pour examen",
       "submitting": "Soumission…",
-      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit."
+      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit.",
+      "details": {
+        "about": "À propos de cet article",
+        "heading": "Détails du produit",
+        "help": "Indiquez uniquement des détails vérifiables pour cette catégorie, avec les unités du fabricant : dimensions, poids, mesures, style, caractéristiques, matériaux, entretien ou instructions. Laissez les détails inconnus vides. Tous les détails sont soumis à modération. Jusqu’à 32 détails ; noms : 80 caractères ; valeurs : 2 000 ; description : 5 000.",
+        "name": "Nom du détail",
+        "value": "Valeur du détail",
+        "add": "Ajouter un détail",
+        "remove": "Supprimer le détail",
+        "invalid": "Donnez à chaque détail un nom unique et une valeur, ou supprimez-le. Respectez les limites indiquées."
+      }
     },
     "quickList": {
       "heading": "Annonce rapide",

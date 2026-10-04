@@ -162,6 +162,8 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     loading: t("checkout.loading"),
     error: t("checkout.error"),
     emptyCart: t("checkout.emptyCart"),
+    retry: t("checkout.retry"),
+    backToCart: t("checkout.backToCart"),
   };
 }
 

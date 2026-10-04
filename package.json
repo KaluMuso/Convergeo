@@ -19,13 +19,15 @@
     "audit:dependencies": "node scripts/ci/pnpm-audit-gate.mjs",
     "test:audit-gate": "node --test scripts/ci/pnpm-audit-gate.test.mjs",
     "format:staged": "node scripts/format-staged.mjs",
-    "format:staged:test": "node --test scripts/format-staged.test.mjs"
+    "format:staged:test": "node --test scripts/format-staged.test.mjs",
+    "perf:lighthouse": "node scripts/ci/lighthouse-runner.mjs",
+    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-runner.test.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@eslint/js": "^9.39.5",
-    "chrome-launcher": "1.2.1",
+    "chrome-launcher": "1.2.2",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
@@ -35,17 +37,19 @@
     "prettier": "^3.9.6",
     "turbo": "^2.10.9",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.66.0"
+    "typescript-eslint": "^8.66.0",
+    "yauzl": "3.4.0",
+    "puppeteer": "25.12.0"
   },
   "pnpm": {
     "overrides": {
       "@eslint/config-array>minimatch": "10.2.5",
       "@eslint/eslintrc>minimatch": "10.2.5",
       "eslint>minimatch": "10.2.5",
-      "minimatch@10.2.5>brace-expansion": "5.0.11",
-      "minimatch@10.2.6>brace-expansion": "5.0.11",
-      "minimatch@3.1.5>brace-expansion": "1.1.20",
-      "fast-uri": "3.1.7",
+      "minimatch@10.2.5>brace-expansion": "5.0.12",
+      "minimatch@10.2.6>brace-expansion": "5.0.12",
+      "minimatch@3.1.5>brace-expansion": "1.1.21",
+      "fast-uri": "3.1.8",
       "ip-address": "10.4.0",
       "js-yaml@>=3.0.0 <3.15.2": "3.15.2",
       "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
@@ -54,7 +58,8 @@
       "tmp@0.0.33": "0.2.7",
       "tmp@0.1.0": "0.2.7",
       "nanoid@^3.0.0": "3.3.18",
-      "browserslist": "4.28.8"
+      "browserslist": "4.28.8",
+      "basic-ftp@<6.2.1": "6.2.1"
     }
   }
 }

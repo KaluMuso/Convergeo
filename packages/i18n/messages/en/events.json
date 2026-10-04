@@ -26,7 +26,8 @@
     "neighbourhoodLabel": "Neighbourhood",
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Near me",
-    "nearMeDenied": "Location is off — city search still works."
+    "nearMeDenied": "Location is off — city search still works.",
+    "subcategoryLabel": "Subcategory"
   },
   "categories": {
     "all": "All",

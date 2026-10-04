@@ -259,3 +259,60 @@ def test_digest_does_not_select_other_provider_account(
     assert tile["version_number"] == 2
     assert tile["status"] == "unknown"
     assert tile["has_mismatch"] is False
+
+
+@pytest.mark.parametrize(
+    "failed_table", ["reconciliation_report_versions", "reconciliation_reports"]
+)
+def test_digest_isolates_reconciliation_query_failure(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_table: str,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    if failed_table == "reconciliation_reports":
+        fake_service.table("reconciliation_report_versions").rows.clear()
+    failing = fake_service.table(failed_table)
+    execute = FakeQuery.execute
+
+    def fail_query(query: FakeQuery) -> MagicMock:
+        if query._parent is failing:
+            raise RuntimeError("injected reconciliation query failure")
+        return execute(query)
+
+    monkeypatch.setattr(FakeQuery, "execute", fail_query)
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=72_000):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gmv_ngwee"] == 72_000
+    assert body["orders"]["total"] == 4
+    assert body["payouts_due"]["amount_ngwee"] == 50_000
+    assert body["kyc_queue_depth"] == 2
+    assert body["flags_pending"] == 1
+    tile = body["reconciliation"]
+    assert tile["status"] == "unknown"
+    assert tile["evidence_state"] == "error"
+    assert tile["certifiable"] is False
+    assert tile["report_id"] is None
+    assert tile["provider_account_id"] == "digest-account"
+    assert tile["currency"] == "ZMW"
+
+
+def test_digest_unconfigured_account_is_unknown(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    monkeypatch.delenv("LENCO_ACCOUNT_ID")
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=72_000):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gmv_ngwee"] == 72_000
+    assert body["orders"]["total"] == 4
+    assert body["reconciliation"]["status"] == "unknown"
+    assert body["reconciliation"]["evidence_state"] == "account_unconfigured"
+    assert body["reconciliation"]["certifiable"] is False

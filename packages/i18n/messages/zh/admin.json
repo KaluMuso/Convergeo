@@ -383,6 +383,11 @@
       "saving": "正在保存…",
       "saved": "精选设置已保存。",
       "saveError": "无法保存精选设置。"
+    },
+    "canonical": {
+      "dialog": {
+        "details": "商品详情"
+      }
     }
   },
   "flags": {

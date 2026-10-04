@@ -23,6 +23,7 @@ export type CanonicalPreview = {
 };
 
 export type CategoryOption = {
+  parent_id?: string | null;
   id: string;
   name: string;
   commission_key: string;

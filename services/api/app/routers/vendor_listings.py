@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from typing import Annotated, Any, Literal
@@ -81,6 +82,21 @@ class ListingCreateRequest(StrictModel):
                 raise ValueError("product_name is required for new_canonical mode")
             if not self.category_id:
                 raise ValueError("category_id is required for new_canonical mode")
+            if self.spec is not None:
+                if len(self.spec) > 32 or any(
+                    not key.strip() or len(key) > 80 for key in self.spec
+                ):
+                    raise ValueError(
+                        "Specifications require at most 32 named details (80 characters per name)"
+                    )
+                try:
+                    encoded = json.dumps(
+                        self.spec, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+                    )
+                except (ValueError, TypeError) as exc:
+                    raise ValueError("Specifications must contain valid JSON values") from exc
+                if len(encoded.encode("utf-8")) > 32000:
+                    raise ValueError("Specifications exceed the 32000-byte limit")
         if self.mode == "quick_list":
             if not self.title_override or not self.title_override.strip():
                 raise ValueError("title_override is required for quick_list mode")
@@ -122,6 +138,7 @@ class CommissionPreview(StrictModel):
 
 
 class CategoryOption(StrictModel):
+    parent_id: str | None = None
     id: str
     name: str
     commission_key: str
@@ -349,7 +366,7 @@ async def list_listing_categories(
 ) -> list[CategoryOption]:
     response = (
         service_client.client.table("categories")
-        .select("id, name, commission_key, prohibited, position")
+        .select("id, name, parent_id, commission_key, prohibited, position")
         .eq("prohibited", False)
         .order("position")
         .execute()
@@ -364,6 +381,7 @@ async def list_listing_categories(
         options.append(
             CategoryOption(
                 id=str(row["id"]),
+                parent_id=str(row["parent_id"]) if row.get("parent_id") else None,
                 name=str(row["name"]),
                 commission_key=commission_key,
                 commission=_load_commission(service_client, commission_key),
@@ -554,6 +572,7 @@ def create_listing_for_vendor(
                     "slug": slug,
                     "brand": body.brand.strip() if body.brand else None,
                     "spec": body.spec or {},
+                    "description": (body.description or "").strip() or None,
                     "category_id": body.category_id,
                     "aliases": body.aliases,
                     "status": "pending_moderation",

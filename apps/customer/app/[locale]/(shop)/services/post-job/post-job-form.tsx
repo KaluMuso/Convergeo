@@ -7,7 +7,7 @@ import { Input } from "@vergeo/ui/src/input";
 import { Textarea } from "@vergeo/ui/src/textarea";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
@@ -69,18 +69,61 @@ function readDraft(): Partial<DraftJob> | null {
     if (!raw) {
       return null;
     }
-    return JSON.parse(raw) as Partial<DraftJob>;
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    const fields = value as Record<string, unknown>;
+    // Validate each field independently so one corrupt field cannot discard valid input.
+    return {
+      category:
+        typeof fields.category === "string" ? normalizeServiceCategory(fields.category) : undefined,
+      description: typeof fields.description === "string" ? fields.description : undefined,
+      service_area: typeof fields.service_area === "string" ? fields.service_area : undefined,
+      preferred_date:
+        typeof fields.preferred_date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(fields.preferred_date) &&
+        !Number.isNaN(Date.parse(fields.preferred_date)) &&
+        new Date(fields.preferred_date).toISOString().slice(0, 10) === fields.preferred_date
+          ? fields.preferred_date
+          : undefined,
+      budget_band:
+        typeof fields.budget_band === "string" &&
+        (BUDGET_BANDS as readonly string[]).includes(fields.budget_band)
+          ? (fields.budget_band as BudgetBand)
+          : undefined,
+    };
   } catch {
     return null;
   }
 }
 
-function writeDraft(draft: DraftJob): void {
-  window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+function writeDraft(draft: DraftJob): boolean {
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function clearDraft(): void {
-  window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+function draftSnapshot(): string | null {
+  try {
+    return window.localStorage.getItem(DRAFT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(snapshot: string | null): void {
+  try {
+    // A pending request must not remove a newer draft written after navigation.
+    if (snapshot !== null && window.localStorage.getItem(DRAFT_STORAGE_KEY) === snapshot) {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    }
+  } catch {
+    // Local cleanup cannot turn a confirmed server success into a retryable failure.
+  }
 }
 
 /**
@@ -106,38 +149,49 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
   const draft = useMemo(() => readDraft(), []);
 
   const [category, setCategory] = useState<ServiceCategory>(
-    normalizeServiceCategory(initialCategory) ??
-      (draft?.category as ServiceCategory) ??
-      "home_services",
+    normalizeServiceCategory(initialCategory) ?? draft?.category ?? "home_services",
   );
   const [description, setDescription] = useState(draft?.description ?? "");
   const [serviceArea, setServiceArea] = useState(draft?.service_area ?? "");
   const [preferredDate, setPreferredDate] = useState(draft?.preferred_date ?? "");
-  const [budgetBand, setBudgetBand] = useState<BudgetBand>(
-    (draft?.budget_band as BudgetBand) ?? "flexible",
-  );
+  const [budgetBand, setBudgetBand] = useState<BudgetBand>(draft?.budget_band ?? "flexible");
   const [submitting, setSubmitting] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const submission = useRef<"idle" | "pending" | "succeeded">("idle");
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const persistDraft = useCallback(() => {
-    writeDraft({
-      category,
-      description,
-      service_area: serviceArea,
-      preferred_date: preferredDate,
-      budget_band: budgetBand,
-    });
+    setDraftSaved(
+      writeDraft({
+        category,
+        description,
+        service_area: serviceArea,
+        preferred_date: preferredDate,
+        budget_band: budgetBand,
+      }),
+    );
   }, [budgetBand, category, description, preferredDate, serviceArea]);
 
   useEffect(() => {
-    if (!session?.access_token) {
+    if (!session?.access_token && submission.current === "idle") {
       persistDraft();
     }
   }, [persistDraft, session?.access_token]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submission.current !== "idle") {
+      return;
+    }
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -152,7 +206,9 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
       return;
     }
 
+    submission.current = "pending";
     setSubmitting(true);
+    const snapshot = draftSnapshot();
     try {
       const client = createApiClient({
         baseUrl: getApiBaseUrl(),
@@ -169,7 +225,12 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
           photo_paths: [],
         }),
       });
-      clearDraft();
+      submission.current = "succeeded";
+      clearDraft(snapshot);
+      if (!mounted.current) {
+        return;
+      }
+      setDraftSaved(false);
       const broadcast = response.job.broadcast;
       if (broadcast?.no_match) {
         setSuccessMessage(t("postJob.ack.noMatch"));
@@ -177,9 +238,14 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
         setSuccessMessage(t("postJob.ack.sent"));
       }
     } catch {
-      setErrorMessage(t("postJob.errors.generic"));
+      submission.current = "idle";
+      if (mounted.current) {
+        setErrorMessage(t("postJob.errors.generic"));
+      }
     } finally {
-      setSubmitting(false);
+      if (mounted.current) {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -200,7 +266,9 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
 
       {!session?.access_token ? (
         <div className="rounded-lg border border-border bg-bg-2 p-3">
-          <p className="font-body text-sm text-text-2">{t("postJob.draftSaved")}</p>
+          <p className="font-body text-sm text-text-2">
+            {draftSaved ? t("postJob.draftSaved") : t("postJob.authRequired")}
+          </p>
           <Link
             href={`/${locale}/login?next=/${locale}/services/post-job`}
             className="mt-2 inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline underline-offset-2"
@@ -292,7 +360,7 @@ export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
       <Button
         type="submit"
         className="min-h-11 w-full"
-        disabled={submitting}
+        disabled={submitting || successMessage !== null}
         loading={submitting}
         loadingLabel={t("postJob.submitting")}
       >

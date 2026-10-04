@@ -522,3 +522,115 @@ def test_protected_admin_dashboard_returns_immutable_identity_and_discrepancy(
     assert tile["status"] == "red"
     assert tile["provenance"] == "VERSIONED_ACCOUNT_BOUND"
     assert tile["discrepancies"]["provider_unmatched"][0]["identity"] == "movement-api"
+
+
+@pytest.mark.parametrize("change", ["append", "rollover"])
+def test_cached_dashboard_refreshes_reconciliation(
+    dashboard_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    change: str,
+) -> None:
+    from datetime import timedelta
+
+    from app.routers import admin_dashboards
+
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_dashboard_fixtures(fake_client)
+
+    class Clock(datetime):
+        current: Clock
+
+        @classmethod
+        def now(cls, tz: Any = None) -> Clock:
+            return cls.current
+
+    Clock.current = Clock(2026, 10, 1, 23, 59, tzinfo=UTC)
+    monkeypatch.setattr(admin_dashboards, "datetime", Clock)
+    monkeypatch.setattr("app.routers.admin_dashboards.time.monotonic", lambda: 100.0)
+    table = fake_client.table("reconciliation_report_versions")
+    table.rows.append(_versioned_report(1, report_date="2026-09-30"))
+    with (
+        patch("app.routers.admin_dashboards.platform_escrow_held_ngwee", return_value=0),
+        patch("app.routers.admin_dashboards.platform_released_unpaid_ngwee", return_value=0),
+        patch("app.routers.admin_dashboards.compute_gmv_ngwee", return_value=72_000) as gmv,
+    ):
+        headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
+        first = dashboard_client.get("/admin/dashboard", headers=headers)
+        assert first.status_code == 200
+        original = first.json()
+        assert original["reconciliation"]["evidence_state"] == "noncertifying"
+        assert original["reconciliation"]["status"] == "unknown"
+        if change == "append":
+            table.rows.append(
+                _versioned_report(
+                    2, report_date="2026-09-30", discrepancies={"balance_diff_ngwee": 123}
+                )
+            )
+        else:
+            Clock.current += timedelta(minutes=2)
+        second = dashboard_client.get("/admin/dashboard", headers=headers)
+        assert second.status_code == 200
+        body = second.json()
+        assert gmv.call_count == 1  # Aggregate cache remains effective.
+    assert {k: v for k, v in body.items() if k != "reconciliation"} == {
+        k: v for k, v in original.items() if k != "reconciliation"
+    }
+    tile = body["reconciliation"]
+    assert tile["certifiable"] is False
+    if change == "append":
+        assert tile["report_id"] == "version-2"
+        assert tile["status"] == "red"
+        assert tile["evidence_state"] == "unresolved"
+    else:
+        assert tile["expected_report_date"] == "2026-10-01"
+        assert tile["status"] == "unknown"
+        assert tile["evidence_state"] == "stale"
+
+
+@pytest.mark.parametrize(
+    "failed_table", ["reconciliation_report_versions", "reconciliation_reports"]
+)
+@pytest.mark.parametrize("warm_cache", [False, True])
+def test_dashboard_isolates_reconciliation_query_failure(
+    dashboard_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_table: str,
+    warm_cache: bool,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_dashboard_fixtures(fake_client)
+    failing = fake_client.table(failed_table)
+    execute = FakeQuery.execute
+
+    def fail_query(query: FakeQuery) -> MagicMock:
+        if query._parent is failing:
+            raise RuntimeError("injected reconciliation query failure")
+        return execute(query)
+
+    with (
+        patch("app.routers.admin_dashboards.platform_escrow_held_ngwee", return_value=300),
+        patch("app.routers.admin_dashboards.platform_released_unpaid_ngwee", return_value=125),
+        patch("app.routers.admin_dashboards.compute_gmv_ngwee", return_value=72_000),
+    ):
+        headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
+        if warm_cache:
+            assert dashboard_client.get("/admin/dashboard", headers=headers).status_code == 200
+        monkeypatch.setattr(FakeQuery, "execute", fail_query)
+        response = dashboard_client.get("/admin/dashboard", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gmv_ngwee"] == 72_000
+    assert body["counts"]["vendors"] == 2
+    assert body["orders_by_status"]["placed"] == 1
+    assert body["payout_liabilities"]["total_ngwee"] == 425
+    tile = body["reconciliation"]
+    assert tile["status"] == "unknown"
+    assert tile["evidence_state"] == "error"
+    assert tile["certifiable"] is False
+    assert tile["report_id"] is None
+    assert tile["provider_account_id"] == "configured-account"
+    assert tile["currency"] == "ZMW"

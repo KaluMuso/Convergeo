@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { User } from "@supabase/supabase-js";
-
 import { getRoles, getRolesFromClaims, getRolesFromUser, hasRole } from "./roles";
+
+import type { User } from "@supabase/supabase-js";
 
 function makeUser(roles: string[] | undefined): User {
   return {

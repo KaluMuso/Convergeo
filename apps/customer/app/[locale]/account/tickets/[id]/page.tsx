@@ -10,6 +10,7 @@ import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../../_components/account-server";
 
 import { TicketActions } from "./_components/ticket-actions";
+import { TicketWalletRuntime } from "./_components/ticket-wallet-runtime";
 
 import type { Metadata } from "next";
 
@@ -97,17 +98,40 @@ async function fetchHorizon(
   if (!base) {
     return null;
   }
-  const response = await fetch(`${base}/account/tickets/${ticketId}/horizon`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-  if (!response.ok) {
+  // The horizon is optional; the authorized detail remains usable if it fails.
+  try {
+    const response = await fetch(`${base}/account/tickets/${ticketId}/horizon`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const horizon = (await response.json()) as HorizonResponse;
+    if (
+      !horizon ||
+      horizon.ticket_id !== ticketId ||
+      !Number.isInteger(horizon.from_window) ||
+      !Number.isInteger(horizon.last_window) ||
+      horizon.last_window < horizon.from_window ||
+      !Array.isArray(horizon.entries) ||
+      !horizon.entries.every(
+        (entry) =>
+          entry &&
+          Number.isInteger(entry.window) &&
+          entry.window >= horizon.from_window &&
+          entry.window <= horizon.last_window &&
+          typeof entry.qr_payload === "string" &&
+          entry.qr_payload.length > 0,
+      )
+    ) {
+      return null;
+    }
+    return horizon;
+  } catch {
     return null;
   }
-  return (await response.json()) as HorizonResponse;
 }
 
 function ProgressRing({ progress }: { progress: number }) {
@@ -178,7 +202,8 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
     throw error;
   }
 
-  const horizon = detail.status === "issued" ? await fetchHorizon(accessToken, id) : null;
+  const horizon =
+    detail.status === "issued" && detail.qr ? await fetchHorizon(accessToken, id) : null;
   const remaining = detail.qr?.seconds_remaining ?? 60;
   const progress = (60 - remaining) / 60;
   const livePayload = detail.qr?.qr_payload ?? null;
@@ -203,19 +228,19 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
     timeStyle: "short",
   });
 
-  const walletScript = JSON.stringify({
-    ticketId: id,
-    horizon,
-    labels: {
-      refreshInTemplate: t("refreshIn", { seconds: "__SEC__" }),
-      offlineTitle: t("offlineTitle"),
-      offlineBody: t("offlineBody"),
-      offlineExpired: t("offlineExpired"),
-    },
-  });
+  const labels = {
+    refreshInTemplate: t("refreshIn", { seconds: "__SEC__" }),
+    offlineBody: t("offlineBody"),
+    offlineExpired: t("offlineExpired"),
+  };
 
   return (
-    <section className="space-y-5">
+    <TicketWalletRuntime
+      ticketId={id}
+      active={detail.status === "issued"}
+      horizon={horizon}
+      labels={labels}
+    >
       <Link
         href={`/${locale}/account/tickets`}
         className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
@@ -357,14 +382,6 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
       </section>
 
       <TicketActions ticketId={id} status={detail.status} />
-
-      {detail.status === "issued" ? (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var cfg=${walletScript};var KEY="vergeo5:ticket-horizon:"+cfg.ticketId;var WINDOW=60;var R=46;var C=2*Math.PI*R;function cw(){return Math.floor(Date.now()/1000/WINDOW)}function sr(){return WINDOW-(Math.floor(Date.now()/1000)%WINDOW)}function read(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}function write(h){if(h)localStorage.setItem(KEY,JSON.stringify(h))}function payloadFor(w){var c=read();if(c&&Array.isArray(c.entries)){var e=c.entries.find(function(x){return x.window===w});if(e)return e.qr_payload}if(cfg.horizon&&Array.isArray(cfg.horizon.entries)){var e2=cfg.horizon.entries.find(function(x){return x.window===w});if(e2)return e2.qr_payload}return null}function setOffline(on,expired){var b=document.querySelector("[data-ticket-offline-banner]");var body=document.querySelector("[data-ticket-offline-body]");if(!b||!body)return;b.classList.toggle("hidden",!on);if(on)body.textContent=expired?cfg.labels.offlineExpired:cfg.labels.offlineBody}function tick(){var rem=sr();var prog=(WINDOW-rem)/WINDOW;var cd=document.querySelector("[data-ticket-countdown]");if(cd)cd.textContent=cfg.labels.refreshInTemplate.replace("__SEC__",String(rem));var ring=document.querySelector("[data-ticket-ring=progress]");if(ring)ring.setAttribute("stroke-dashoffset",String(C*(1-prog)));var p=payloadFor(cw());var cur=cw();var qn=document.querySelectorAll("[data-ticket-qr-window]");for(var qi=0;qi<qn.length;qi++){qn[qi].hidden=parseInt(qn[qi].getAttribute("data-ticket-qr-window"),10)!==cur;}var qx=document.querySelector("[data-ticket-qr-expired]");if(qx)qx.hidden=!!p;var offline=!navigator.onLine;var cache=read();var expired=offline&&(!cache||cw()>cache.last_window)&&!p;setOffline(offline,expired);if(rem<=1&&navigator.onLine)location.reload()}if(cfg.horizon)write({ticket_id:cfg.horizon.ticket_id,from_window:cfg.horizon.from_window,last_window:cfg.horizon.last_window,pin:cfg.horizon.pin,entries:cfg.horizon.entries,cached_at:new Date().toISOString()});tick();setInterval(tick,1000);window.addEventListener("online",tick);window.addEventListener("offline",tick)})();`,
-          }}
-        />
-      ) : null}
-    </section>
+    </TicketWalletRuntime>
   );
 }
