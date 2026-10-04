@@ -38,10 +38,40 @@ failure. Every successful collection writes a distinct `lhr-*.json` and HTML pai
 fields (closest to median FCP/TTI, separately from per-metric assertion medians).
 `assertion-results.json` contains failing assertions including warnings, as before.
 `assertion-results-all.json` additionally records successes; `run-summary.json`
-records collection failures, engine versions, settings and the exit status. Only
-reports collected by the current invocation are evaluated; older files never
+records collection failures, engine versions, settings and the exit status.
+The summary also retains each report's `runWarnings` with its URL and run number.
+The pinned engine's page-load timeout warning means results may be incomplete:
+it fails collection and assertion qualification even when all score floors pass.
+The JSON and HTML for that failed measurement are retained; collection stops
+without retrying or changing load timeouts. Informational warnings retain their
+existing nonblocking behavior, and checkout's SEO assertion remains warning-only.
+Only reports collected by the current invocation are evaluated; older files never
 supply missing results. Exit 1 means a collection/configuration failure or an
-error-level assertion failure. Warnings alone keep exit 0.
+error-level assertion failure. Other report notices and warning-only assertions
+alone keep exit 0.
+
+Performance CI additionally enables an isolated fixture harness. It selects the
+actual assigned RFC1918 IPv4 on the default interface, sets the explicit preview
+plane before both builds, and binds FastAPI only to that address. The upstream
+resolver, CSP, TLS checks and browser sandbox remain unchanged. A finite GET-only
+same-origin proxy transports cart, the exact product and Electronics catalog
+requests; redirects, arbitrary paths/queries and ambient authentication headers
+are refused. Ordinary builds leave both proxy and media endpoints unavailable.
+
+The disposable local Supabase database receives exactly two image operations:
+the existing `phone_a` image becomes `ci-perf/smartphone-x1`, and the exact cheaper
+`demo_gadget` gains a demo marker so the existing exclusion policy hides it.
+The script checks the canonical local DSN and all expected preimages atomically;
+listing/product/vendor identities, prices, stock and selection behavior stay
+unchanged. Repository-owned WebP illustration variants are served only by the
+gated fixture endpoint, never uploaded or installed in shared data.
+
+After each complete measurement, the runner inspects the actual remaining browser
+page without navigating or changing metrics. Category/PDP qualification requires
+the exact API identities, one intended seller, visible product/seller/price and
+naturally loaded local fixture media. Fallbacks, substituted listings or broken
+images fail and retain genuine reports plus `content-readiness.json`. An incomplete
+load warning still fails first; it never qualifies content or assertion scores.
 
 Lighthouse 13 is a measurement-engine change. Offline assertion equivalence is
 necessary but does not establish browser compatibility or preserve measured

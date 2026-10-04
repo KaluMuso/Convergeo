@@ -1,5 +1,4 @@
 import withSerwistInit from "@serwist/next";
-import createNextIntlPlugin from "next-intl/plugin";
 import {
   buildConnectSrc,
   buildStaticSecurityHeaders,
@@ -7,12 +6,15 @@ import {
   isDevelopmentEnv,
   PERMISSIONS_POLICY_DEFAULT,
 } from "@vergeo/config/security-headers";
+import createNextIntlPlugin from "next-intl/plugin";
 
 import { resolveApiBaseUrl } from "./lib/api-base-url";
+import { assertCiPerfBuild } from "./lib/ci-perf-harness";
 
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+assertCiPerfBuild();
 
 /**
  * PWA / serwist — M16-P02. Compiles the unified `sw.ts` to `public/sw.js` and
@@ -120,7 +122,7 @@ const nextConfig: NextConfig = {
     // Middleware gates Lenco on `/:locale/checkout/card/:paymentId` via
     // `buildReportOnlyCsp(true)` vs `buildReportOnlyCsp(false)`.
     void CSP_REPORT_ONLY_HEADER;
-    void (true ? buildReportOnlyCsp(true) : buildReportOnlyCsp(false));
+    void buildReportOnlyCsp(true);
     return [
       {
         source: "/:path*",

@@ -127,18 +127,29 @@ jobs:
           uv sync
           uv run python ../../scripts/seed.py --env local
 
+      - name: Configure isolated performance harness
+        run: node scripts/ci/configure-perf-harness.mjs
+
+      - name: Expand exact disposable performance fixture
+        working-directory: services/api
+        run: |
+          uv run pytest tests/test_ci_perf_fixture.py -q
+          uv run python scripts/ci_perf_fixture.py
+
       - name: Start API
         working-directory: services/api
         run: |
           uv sync
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          api_host="${CI_PERF_UPSTREAM_ORIGIN#http://}"
+          api_host="${api_host%:8000}"
+          uv run uvicorn app.main:app --host "$api_host" --port 8000 &
           echo $! > /tmp/api-pid
           for attempt in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
+            if curl -sf "$CI_PERF_UPSTREAM_ORIGIN/healthz" >/dev/null; then
               echo "API ready on :8000"
-              if ! curl -sf http://127.0.0.1:8000/products/smartphone-x1 >/dev/null; then
+              if ! curl -sf "$CI_PERF_UPSTREAM_ORIGIN/products/smartphone-x1" >/dev/null; then
                 echo "API product fixture missing for /products/smartphone-x1" >&2
-                curl -i http://127.0.0.1:8000/products/smartphone-x1 || true
+                curl -i "$CI_PERF_UPSTREAM_ORIGIN/products/smartphone-x1" || true
                 exit 1
               fi
               exit 0
@@ -202,6 +213,9 @@ jobs:
         run: |
           node scripts/ci/validate-lighthouserc.mjs
           pnpm perf:lighthouse:test
+          node --test scripts/ci/configure-perf-harness.test.mjs scripts/ci/perf-content-readiness.test.mjs
+          pnpm --filter customer exec vitest run lib/ci-perf-harness.test.ts lib/ci-perf-proxy.test.ts lib/ci-perf-media.test.ts lib/ci-perf-content-snapshot.test.ts lib/api-base-url.test.ts
+          pnpm --filter @vergeo/ui exec vitest run src/media/cloudinary-url.test.ts
 
       - name: Install pinned Chrome for Testing
         # Official Puppeteer revision; no custom archive or sandbox bypass.

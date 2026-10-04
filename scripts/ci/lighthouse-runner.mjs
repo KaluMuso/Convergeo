@@ -12,8 +12,20 @@ import process from "node:process";
 import { URL, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import { inspectMeasuredContent } from "./perf-content-readiness.mjs";
+
 const execute = promisify(execFile);
 const sha = (value) => (typeof value === "string" && /^[0-9a-f]{40}$/.test(value) ? value : null);
+export const INCOMPLETE_LOAD_WARNING =
+  "The page loaded too slowly to finish within the time limit. Results may be incomplete.";
+
+export function incompleteLoadWarning(lhr) {
+  return (lhr.runWarnings ?? []).some(
+    (warning) =>
+      typeof warning === "string" &&
+      warning.replace(/\s+/g, " ").trim() === INCOMPLETE_LOAD_WARNING,
+  );
+}
 const securityBypass = (flag) =>
   /^--(?:no-sandbox|disable-(?:setuid|namespace|seccomp-filter|gpu)-sandbox|disable-web-security|ignore-certificate-errors(?:-spki-list)?|allow-insecure-localhost)(?:=|$)/.test(
     flag,
@@ -203,7 +215,10 @@ export function evaluateAssertions(config, reports) {
   const results = [];
   for (const requestedUrl of config.ci.collect.url) {
     const runs = reports.filter((lhr) => lhr.requestedUrl === requestedUrl);
-    if (runs.length !== config.ci.collect.numberOfRuns || runs.some((lhr) => lhr.runtimeError))
+    if (
+      runs.length !== config.ci.collect.numberOfRuns ||
+      runs.some((lhr) => lhr.runtimeError || incompleteLoadWarning(lhr))
+    )
       throw new Error(`Incomplete or failed collection for ${requestedUrl}`);
     const finalUrls = new Set(runs.map((lhr) => lhr.finalUrl));
     if (finalUrls.size !== 1 || !runs[0].finalUrl)
@@ -304,6 +319,8 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
   const profile = await mkdtemp(join(tmpdir(), "vergeo-lighthouse-"));
   const started = Date.now();
   let chrome,
+    browser,
+    measuredPage,
     result,
     failure,
     version = null,
@@ -328,13 +345,35 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
     if (unsafeFlags) throw new Error("Unsafe effective Chrome flag");
     stage = "launch";
     await chrome.launch();
+    if (context.verifyContent) {
+      stage = "attach_measurement_page";
+      browser = await puppeteer.connect({
+        browserURL: `http://127.0.0.1:${chrome.port}`,
+        defaultViewport: null,
+      });
+      measuredPage = await browser.newPage();
+    }
     stage = "audit";
-    result = await lighthouse(url, {
+    const flags = {
       ...settings,
       port: chrome.port,
       output: "html",
       logLevel: "info",
-    });
+    };
+    // The supported fourth argument keeps ownership of this exact page here;
+    // Lighthouse otherwise closes its own page before returning the reports.
+    result = measuredPage
+      ? await lighthouse(url, flags, undefined, measuredPage)
+      : await lighthouse(url, flags);
+    if (
+      context.verifyContent &&
+      result?.lhr &&
+      !result.lhr.runtimeError &&
+      !incompleteLoadWarning(result.lhr)
+    ) {
+      stage = "content_readiness";
+      result.contentReadiness = await inspectMeasuredContent(url, measuredPage);
+    }
     stage = "complete";
   } catch (error) {
     failure =
@@ -347,6 +386,16 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
       ? chromeProcess.signalCode
       : null;
     let cleanupFailed = false;
+    try {
+      await measuredPage?.close();
+    } catch {
+      cleanupFailed = true;
+    }
+    try {
+      await browser?.disconnect();
+    } catch {
+      cleanupFailed = true;
+    }
     try {
       await chrome?.kill();
     } catch {
@@ -415,7 +464,9 @@ export async function runPerformance(
   };
   const reports = [],
     manifest = [],
-    errors = [];
+    errors = [],
+    warnings = [],
+    contentReadiness = [];
   let assertions = [];
   const invocation = Date.now();
   await writeFile(join(output, "manifest.json"), "[]\n");
@@ -432,6 +483,7 @@ export async function runPerformance(
             source,
             urlIndex: urlIndex + 1,
             run: run + 1,
+            verifyContent: process.env.CI_PERF_HARNESS === "1",
           },
         );
         if (!result?.lhr || typeof result.report !== "string" || !result.report.length)
@@ -443,6 +495,8 @@ export async function runPerformance(
         await writeFile(jsonPath, JSON.stringify(lhr, null, 2) + "\n");
         await writeFile(htmlPath, result.report);
         reports.push(lhr);
+        if (Array.isArray(lhr.runWarnings) && lhr.runWarnings.length)
+          warnings.push({ url, run: run + 1, messages: lhr.runWarnings });
         manifest.push({
           url,
           isRepresentativeRun: false,
@@ -465,6 +519,13 @@ export async function runPerformance(
           throw new Error(
             `Invalid collection: ${JSON.stringify(lhr.runtimeError ?? lhr.requestedUrl)}`,
           );
+        if (incompleteLoadWarning(lhr))
+          throw new Error("Incomplete collection: Lighthouse page-load timeout warning");
+        if (process.env.CI_PERF_HARNESS === "1") {
+          contentReadiness.push({ url, run: run + 1, ...result.contentReadiness });
+          if (result.contentReadiness?.passed !== true)
+            throw new Error("Measured content readiness failed");
+        }
       } catch (error) {
         errors.push({ url, run: run + 1, message: error.message });
         break collection; // Infrastructure failure: preserve partial evidence, never retry/reroute.
@@ -481,6 +542,10 @@ export async function runPerformance(
     errors.push({ message: error.message });
   }
   await writeFile(join(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  await writeFile(
+    join(output, "content-readiness.json"),
+    JSON.stringify(contentReadiness, null, 2) + "\n",
+  );
   // Keep LHCI's failure/warning-only assertion-results contract; retain full results separately.
   await writeFile(
     join(output, "assertion-results.json"),
@@ -503,6 +568,7 @@ export async function runPerformance(
         exitCode,
         source_identity: source,
         errors,
+        warnings,
         numberOfRuns: config.ci.collect.numberOfRuns,
         urls: config.ci.collect.url,
         settings: config.ci.collect.settings,

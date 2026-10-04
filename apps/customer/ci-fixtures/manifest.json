@@ -1,0 +1,36 @@
+{
+  "public_id": "ci-perf/smartphone-x1",
+  "provenance": "Original repository-owned schematic smartphone illustration generated for this disposable CI fixture; no third-party media or network source. Not a production catalog image.",
+  "assets": {
+    "smartphone-x1-24.webp": {
+      "width": 24,
+      "height": 32,
+      "sha256": "b14801e6ede4b4456c97c7ec3499fc3aad7017ff3ab86b837e8121d2e0e1d2f9",
+      "bytes": 312
+    },
+    "smartphone-x1-360.webp": {
+      "width": 360,
+      "height": 480,
+      "sha256": "03da4b9c262a827353c8418f66fd882f8a8f78802a4c758fb816e432ed35cff9",
+      "bytes": 2602
+    },
+    "smartphone-x1-720.webp": {
+      "width": 720,
+      "height": 960,
+      "sha256": "3d1d334d2be13496bffa7de282eaeda4709b1959cbe456714c7157ddf650ff6a",
+      "bytes": 5708
+    },
+    "smartphone-x1-1080.webp": {
+      "width": 1080,
+      "height": 1440,
+      "sha256": "529b074b423b2ba3709b58a890d009e511c6eb56b880c6d67221fad75e2000a9",
+      "bytes": 9538
+    },
+    "smartphone-x1-1200.webp": {
+      "width": 1200,
+      "height": 1600,
+      "sha256": "ce244d11ef0af9a6d2504740ef3f789817a9fa0635de38c9144808ace0a50f40",
+      "bytes": 11166
+    }
+  }
+}

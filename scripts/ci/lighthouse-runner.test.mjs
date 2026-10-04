@@ -16,6 +16,7 @@ import {
   auditWithChrome,
   classifyChromeStderr,
   sourceIdentity,
+  INCOMPLETE_LOAD_WARNING,
 } from "./lighthouse-runner.mjs";
 
 const config = JSON.parse(
@@ -210,7 +211,22 @@ test("representative report selection follows FCP/TTI proximity, not assertion a
   assert.equal(representativeRun(runs), runs[1]);
 });
 
-for (const scenario of ["pass", "warn", "threshold", "collection", "runtime", "missing-html"]) {
+test("a complete report count with a load-timeout warning cannot qualify assertions", () => {
+  const reports = allReports();
+  reports[8].runWarnings = [INCOMPLETE_LOAD_WARNING];
+  assert.throws(() => evaluateAssertions(config, reports), /failed collection/);
+});
+
+for (const scenario of [
+  "pass",
+  "warn",
+  "notice",
+  "incomplete-load",
+  "threshold",
+  "collection",
+  "runtime",
+  "missing-html",
+]) {
   test(`orchestration / artifacts / failure exit: ${scenario}`, async () => {
     const dir = await mkdtemp(join(tmpdir(), "performance-contract-"));
     let calls = 0;
@@ -224,6 +240,8 @@ for (const scenario of ["pass", "warn", "threshold", "collection", "runtime", "m
           if (scenario === "warn" && url.endsWith("checkout")) lhr.categories.seo.score = 0;
           if (scenario === "threshold") lhr.categories.performance.score = 0.49;
           if (scenario === "runtime") lhr.runtimeError = { code: "FIXTURE_ERROR" };
+          if (scenario === "notice") lhr.runWarnings = ["Informational fixture notice"];
+          if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
           return {
             lhr,
             report:
@@ -231,14 +249,14 @@ for (const scenario of ["pass", "warn", "threshold", "collection", "runtime", "m
           };
         },
       });
-      const failure = !["pass", "warn"].includes(scenario);
+      const failure = !["pass", "warn", "notice"].includes(scenario);
       assert.equal(result.exitCode, failure ? 1 : 0);
       const output = join(dir, ".lighthouseci");
       const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
       const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
       const assertions = JSON.parse(await readFile(join(output, "assertion-results.json")));
       assert.equal(summary.exitCode, result.exitCode);
-      if (["pass", "warn", "threshold"].includes(scenario)) {
+      if (["pass", "warn", "notice", "threshold"].includes(scenario)) {
         assert.equal(calls, 15);
         assert.equal(manifest.length, 15);
         assert.equal(manifest.filter((r) => r.isRepresentativeRun).length, 5);
@@ -258,6 +276,31 @@ for (const scenario of ["pass", "warn", "threshold", "collection", "runtime", "m
         );
       if (scenario === "threshold")
         assert.equal(assertions.filter((a) => a.level === "error").length, 5);
+      if (scenario === "notice") {
+        assert.equal(summary.warnings.length, 15);
+        assert.deepEqual(summary.warnings[0], {
+          url: config.ci.collect.url[0],
+          run: 1,
+          messages: ["Informational fixture notice"],
+        });
+      }
+      if (scenario === "incomplete-load") {
+        assert.equal(manifest.length, 1);
+        assert.equal(manifest[0].url, config.ci.collect.url[0]);
+        assert.deepEqual(summary.warnings, [
+          {
+            url: config.ci.collect.url[0],
+            run: 1,
+            messages: [INCOMPLETE_LOAD_WARNING],
+          },
+        ]);
+        assert.deepEqual(JSON.parse(await readFile(manifest[0].jsonPath)).runWarnings, [
+          INCOMPLETE_LOAD_WARNING,
+        ]);
+        assert.ok((await readFile(manifest[0].htmlPath, "utf8")).startsWith("<!doctype"));
+        assert.match(summary.errors[0].message, /Incomplete collection/);
+        assert.deepEqual(assertions, []);
+      }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -299,6 +342,46 @@ test("malformed category preserves failed-run summary and partial report artifac
 });
 
 const safeDefaults = ["--disable-background-networking", "--no-first-run"];
+for (const ready of [true, false]) {
+  test(`CI content qualification retains genuine reports: ready=${ready}`, async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ci-content-qualification-"));
+    const previous = process.env.CI_PERF_HARNESS;
+    process.env.CI_PERF_HARNESS = "1";
+    let calls = 0;
+    try {
+      const result = await runPerformance(config, {
+        cwd: dir,
+        audit: async (url, _settings, _dependencies, context) => {
+          calls++;
+          assert.equal(context.verifyContent, true);
+          return {
+            lhr: makeReport(url),
+            report: "<!doctype html><title>retained fixture</title>",
+            contentReadiness: {
+              passed: ready,
+              reason: ready
+                ? "exact_fixture_content_and_loaded_media"
+                : "unexpected_page_or_fallback",
+            },
+          };
+        },
+      });
+      assert.equal(result.exitCode, ready ? 0 : 1);
+      assert.equal(calls, ready ? 15 : 1);
+      const output = join(dir, ".lighthouseci");
+      const readiness = JSON.parse(await readFile(join(output, "content-readiness.json")));
+      assert.equal(readiness.length, calls);
+      assert.equal(readiness[0].passed, ready);
+      const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
+      assert.equal(manifest.length, calls);
+      assert.match(await readFile(manifest[0].htmlPath, "utf8"), /retained fixture/);
+    } finally {
+      if (previous === undefined) delete process.env.CI_PERF_HARNESS;
+      else process.env.CI_PERF_HARNESS = previous;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+}
 function fakeChrome({ events, scenario, stderr = "", capture }) {
   return class {
     static defaultFlags() {
@@ -326,6 +409,80 @@ function fakeChrome({ events, scenario, stderr = "", capture }) {
       if (scenario === "cleanup failure") throw new Error("PRIVATE_CLEANUP_SENTINEL");
     }
   };
+}
+
+for (const failure of [false, true]) {
+  test(`CI owns the supplied Lighthouse page and closes it on engine failure=${failure}`, async () => {
+    const events = [],
+      capture = {};
+    const url = "http://localhost:3000/en";
+    const page = {
+      url: () => url,
+      evaluate: async () => {
+        events.push("inspect");
+        return { url, unavailable: false };
+      },
+      close: async () => events.push("page.close"),
+    };
+    const browser = {
+      newPage: async () => {
+        events.push("newPage");
+        return page;
+      },
+      disconnect: async () => events.push("disconnect"),
+    };
+    const deps = [
+      {
+        default: async (requested, flags, engineConfig, suppliedPage) => {
+          events.push("engine");
+          assert.equal(requested, url);
+          assert.equal(suppliedPage, page);
+          assert.equal(engineConfig, undefined);
+          assert.deepEqual(flags, {
+            ...config.ci.collect.settings,
+            port: 9999,
+            output: "html",
+            logLevel: "info",
+          });
+          if (failure) throw new Error("engine fixture");
+          return { lhr: makeReport(url), report: "<!doctype html>" };
+        },
+      },
+      { Launcher: fakeChrome({ events, scenario: "success", capture }) },
+      {
+        default: {
+          executablePath: async () => "/nonexistent-fixture-browser",
+          connect: async (options) => {
+            assert.deepEqual(options, {
+              browserURL: "http://127.0.0.1:9999",
+              defaultViewport: null,
+            });
+            return browser;
+          },
+        },
+      },
+    ];
+    if (failure)
+      await assert.rejects(
+        auditWithChrome(url, config.ci.collect.settings, deps, { verifyContent: true }),
+        /engine fixture/,
+      );
+    else
+      assert.equal(
+        (await auditWithChrome(url, config.ci.collect.settings, deps, { verifyContent: true }))
+          .contentReadiness.passed,
+        true,
+      );
+    assert.deepEqual(events, [
+      "launch",
+      "newPage",
+      "engine",
+      ...(failure ? [] : ["inspect"]),
+      "page.close",
+      "disconnect",
+      "kill",
+    ]);
+  });
 }
 
 for (const scenario of ["success", "engine failure", "launch failure", "cleanup failure"]) {
