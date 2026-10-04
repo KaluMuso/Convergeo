@@ -4,7 +4,7 @@ import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { isGoogleAuthEnabled } from "@vergeo/auth/google-auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { resolvePostAuthPath } from "./auth-utils";
 import { EmailForm } from "./email-form";
@@ -69,6 +69,75 @@ type AuthLoginShellProps = {
   phoneEnabled?: boolean;
 };
 
+function useOAuthCodeCompletion({
+  locale,
+  portal,
+  nextParam,
+  defaultNextPath,
+  genericError,
+  setOauthError,
+}: {
+  locale: string;
+  portal: AuthAppVariant;
+  nextParam?: string | null;
+  defaultNextPath: string;
+  genericError: string;
+  setOauthError: (error: string) => void;
+}) {
+  const router = useRouter();
+  const activeCodeRef = useRef<string | null>(null);
+  const exchangeRef = useRef<{ code: string; result: Promise<boolean> } | null>(null);
+  const completedCodeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const code = new URLSearchParams(window.location.search).get("code");
+    activeCodeRef.current = code;
+
+    if (code && completedCodeRef.current !== code) {
+      if (exchangeRef.current?.code !== code) {
+        const result = (async () => {
+          const supabase = await getBrowserClient();
+          // Do not spend a single-use code after the callback page has left.
+          if (activeCodeRef.current !== code) return false;
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          return true;
+        })();
+        exchangeRef.current = { code, result };
+      }
+
+      void exchangeRef.current.result
+        .then(async (exchanged) => {
+          if (!active || !exchanged || completedCodeRef.current === code) return;
+          completedCodeRef.current = code;
+          try {
+            await navigateAfterPortalAuth({
+              router,
+              locale,
+              portal,
+              nextParam,
+              fallbackPath: defaultNextPath,
+            });
+          } catch {
+            if (active) setOauthError(genericError);
+          }
+        })
+        .catch(() => {
+          if (active && completedCodeRef.current !== code) {
+            completedCodeRef.current = code;
+            setOauthError(genericError);
+          }
+        });
+    }
+
+    return () => {
+      active = false;
+      activeCodeRef.current = null;
+    };
+  }, [defaultNextPath, genericError, locale, nextParam, portal, router, setOauthError]);
+}
+
 export function AuthLoginShell({
   locale,
   variant,
@@ -80,42 +149,19 @@ export function AuthLoginShell({
   showSignupLink = variant === "customer",
   phoneEnabled = true,
 }: AuthLoginShellProps) {
-  const router = useRouter();
   const [method, setMethod] = useState<"phone" | "email">(phoneEnabled ? "phone" : "email");
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   const postAuthPath = resolvePostAuthPath(locale, nextParam, defaultNextPath);
 
-  useEffect(() => {
-    const completeOAuth = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      if (!code) {
-        return;
-      }
-
-      const supabase = await getBrowserClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) {
-        setOauthError(labels.genericError);
-        return;
-      }
-
-      try {
-        await navigateAfterPortalAuth({
-          router,
-          locale,
-          portal: variant,
-          nextParam,
-          fallbackPath: defaultNextPath,
-        });
-      } catch {
-        setOauthError(labels.genericError);
-      }
-    };
-
-    void completeOAuth();
-  }, [defaultNextPath, labels.genericError, locale, nextParam, router, variant]);
+  useOAuthCodeCompletion({
+    locale,
+    portal: variant,
+    nextParam,
+    defaultNextPath,
+    genericError: labels.genericError,
+    setOauthError,
+  });
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -231,42 +277,19 @@ export function AuthSignupShell({
   defaultNextPath,
   nextParam,
 }: AuthSignupShellProps) {
-  const router = useRouter();
   const [method, setMethod] = useState<"phone" | "email">("phone");
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   const postAuthPath = resolvePostAuthPath(locale, nextParam, defaultNextPath);
 
-  useEffect(() => {
-    const completeOAuth = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      if (!code) {
-        return;
-      }
-
-      const supabase = await getBrowserClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) {
-        setOauthError(labels.genericError);
-        return;
-      }
-
-      try {
-        await navigateAfterPortalAuth({
-          router,
-          locale,
-          portal: "customer",
-          nextParam,
-          fallbackPath: defaultNextPath,
-        });
-      } catch {
-        setOauthError(labels.genericError);
-      }
-    };
-
-    void completeOAuth();
-  }, [defaultNextPath, labels.genericError, locale, nextParam, router]);
+  useOAuthCodeCompletion({
+    locale,
+    portal: "customer",
+    nextParam,
+    defaultNextPath,
+    genericError: labels.genericError,
+    setOauthError,
+  });
 
   return (
     <div className="flex w-full flex-col gap-6">
