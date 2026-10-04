@@ -6,7 +6,7 @@ import {
   isCiPerfUpstream,
 } from "../../../packages/ui/src/media/ci-perf-fixture";
 
-import { getApiBaseUrl, resolveApiBaseUrl } from "./api-base-url";
+import { absoluteApiUrl, getApiBaseUrl, resolveApiBaseUrl } from "./api-base-url";
 import { assertCiPerfBuild, ciPerfServerEnabled, type CiPerfServerEnv } from "./ci-perf-harness";
 
 export const harness: CiPerfServerEnv = {
@@ -90,8 +90,12 @@ describe("disposable CI activation", () => {
     vi.stubGlobal("window", { location: { origin: "http://localhost:3000" } });
     expect(resolveApiBaseUrl()).toBe("http://10.1.2.3:8000");
     expect(getApiBaseUrl()).toBe("http://localhost:3000/api/ci-perf");
+    expect(absoluteApiUrl("/telemetry/views")).toBe(
+      "http://localhost:3000/api/ci-perf/telemetry/views",
+    );
     vi.stubGlobal("window", undefined);
     expect(getApiBaseUrl()).toBe("http://10.1.2.3:8000");
+    expect(absoluteApiUrl("/telemetry/views")).toBe("http://10.1.2.3:8000/telemetry/views");
     vi.stubGlobal("window", { location: { origin: "https://customer.example.test" } });
     expect(getApiBaseUrl()).toBe("http://10.1.2.3:8000");
     vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "");
@@ -100,6 +104,7 @@ describe("disposable CI activation", () => {
   it("maps exactly one CI fixture publicId, never demo or arbitrary IDs", () => {
     for (const [key, value] of Object.entries(harness)) vi.stubEnv(key, value as string);
     expect(ciPerfMediaUrl("ci-perf/smartphone-x1", 720)).toBe("/api/ci-perf-media?width=720");
+    expect(ciPerfMediaUrl("ci-perf/smartphone-x1", 1440)).toBe("/api/ci-perf-media?width=1200");
     expect(ciPerfMediaUrl("vergeo5/demo/phone-a", 720)).toBeNull();
     expect(ciPerfMediaUrl("ci-perf/../smartphone-x1", 720)).toBeNull();
     expect(() => ciPerfMediaUrl("ci-perf/smartphone-x1", 999)).toThrow();

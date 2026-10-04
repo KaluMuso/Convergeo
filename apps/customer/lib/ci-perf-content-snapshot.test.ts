@@ -35,6 +35,79 @@ afterEach(() => {
 });
 
 describe("actual measured DOM snapshot", () => {
+  it("rejects visible route error copy and skeletons rather than accepting an existing URL", () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<main><h1>Something went wrong</h1><p>We hit an unexpected problem.</p><div data-testid="skeleton"></div></main>',
+    );
+    const snapshot = readMeasuredSnapshot();
+    expect(snapshot.errorBoundary).toBe(true);
+    expect(snapshot.skeleton).toBe(true);
+    expect(snapshot.homeHero).toBe(false);
+    document.querySelector("main")!.setAttribute("style", "display:none");
+    expect(readMeasuredSnapshot().errorBoundary).toBe(false);
+    expect(readMeasuredSnapshot().skeleton).toBe(false);
+  });
+
+  it("records positive home/actual form markers without changing carousel timers or navigation", () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<main><div data-testid="home-hero-band"><div data-testid="hero-carousel"><div data-testid="hero-carousel-slide-0" aria-hidden="true"><h1 id="home-hero-heading">Shop locally</h1><div aria-hidden="true"><img id="hero-image"></div></div></div></div><input type="search" name="q"><input type="tel"></main>',
+    );
+    Object.defineProperties(document.getElementById("hero-image"), {
+      naturalWidth: { configurable: true, value: 1200 },
+      naturalHeight: { configurable: true, value: 1600 },
+      complete: { configurable: true, value: true },
+      currentSrc: {
+        configurable: true,
+        value: "http://localhost:3000/api/ci-perf-media?width=1200",
+      },
+    });
+    const snapshot = readMeasuredSnapshot();
+    expect(snapshot.homeHero).toBe(true);
+    expect(snapshot.homeHeroImages).toEqual([
+      {
+        visible: true,
+        complete: true,
+        width: 1200,
+        height: 1600,
+        src: "http://localhost:3000/api/ci-perf-media?width=1200",
+      },
+    ]);
+    Object.defineProperty(document.getElementById("hero-image"), "naturalWidth", {
+      configurable: true,
+      value: 0,
+    });
+    expect(readMeasuredSnapshot().homeHeroImages[0]?.width).toBe(0);
+    expect(snapshot.searchReady).toBe(true);
+    expect(snapshot.checkoutReady).toBe(true);
+    expect(snapshot.skeleton).toBe(false);
+  });
+
+  it("records the actual category card and its field visibility without substituting another seller", () => {
+    vi.stubGlobal("location", {
+      href: "http://localhost:3000/en/c/electronics",
+      pathname: "/en/c/electronics",
+    });
+    document.body.innerHTML =
+      '<div data-testid="listing-card"><h3>Smartphone X1 — 128GB</h3><p>Sold by Lusaka Electronics Hub</p><div data-testid="price-block">K4,500.00</div><a data-testid="listing-card-link" href="/en/p/smartphone-x1"></a></div>';
+    const snapshot = readMeasuredSnapshot();
+    expect(snapshot.title).toBe("Smartphone X1 — 128GB");
+    expect(snapshot.seller).toContain("Lusaka Electronics Hub");
+    expect(snapshot.matchingCards).toBe(1);
+    expect(snapshot.visibility).toEqual({ title: null, price: null, seller: null });
+    document.querySelector('[data-testid="listing-card"]')!.setAttribute("style", "opacity:0");
+    const hidden = readMeasuredSnapshot();
+    expect(hidden.title).toBe("");
+    expect(hidden.price).toBe("");
+    expect(hidden.seller).toBe("");
+    expect(hidden.visibility).toEqual({
+      title: "opacity_zero",
+      price: "opacity_zero",
+      seller: "opacity_zero",
+    });
+  });
+
   it("reads visible price rather than sr-only text and only main gallery media", () => {
     const snapshot = readMeasuredSnapshot();
     expect(snapshot.title).toBe("Smartphone X1");

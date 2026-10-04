@@ -415,12 +415,12 @@ for (const failure of [false, true]) {
   test(`CI owns the supplied Lighthouse page and closes it on engine failure=${failure}`, async () => {
     const events = [],
       capture = {};
-    const url = "http://localhost:3000/en";
+    const url = "http://localhost:3000/en/search";
     const page = {
       url: () => url,
       evaluate: async () => {
         events.push("inspect");
-        return { url, unavailable: false };
+        return { url, unavailable: false, heading: "Search", searchReady: true };
       },
       close: async () => events.push("page.close"),
     };

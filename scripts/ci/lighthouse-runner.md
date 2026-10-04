@@ -53,10 +53,16 @@ alone keep exit 0.
 Performance CI additionally enables an isolated fixture harness. It selects the
 actual assigned RFC1918 IPv4 on the default interface, sets the explicit preview
 plane before both builds, and binds FastAPI only to that address. The upstream
-resolver, CSP, TLS checks and browser sandbox remain unchanged. A finite GET-only
-same-origin proxy transports cart, the exact product and Electronics catalog
-requests; redirects, arbitrary paths/queries and ambient authentication headers
-are refused. Ordinary builds leave both proxy and media endpoints unavailable.
+resolver, CSP, TLS checks and browser sandbox remain unchanged. A finite
+same-origin proxy transports GET cart, exact product and Electronics catalog
+requests. It also admits three existing POST endpoints: genuinely empty cart
+revalidation, fixture-only listing views with a valid session UUID, and bounded
+customer error beacons. POST requires the exact frontend Origin and bounded,
+validated payloads; only cart endpoints forward caller cart credentials.
+Redirects, arbitrary paths/queries and ambient authentication headers are refused.
+Ordinary builds leave both proxy and media endpoints unavailable. The home hero's
+1440px source request maps only in this harness to the owned 1200px variant;
+the five asset bytes, normal responsive srcset and ordinary image behavior stay fixed.
 
 The disposable local Supabase database receives exactly two image operations:
 the existing `phone_a` image becomes `ci-perf/smartphone-x1`, and the exact cheaper
@@ -67,10 +73,14 @@ unchanged. Repository-owned WebP illustration variants are served only by the
 gated fixture endpoint, never uploaded or installed in shared data.
 
 After each complete measurement, the runner inspects the actual remaining browser
-page without navigating or changing metrics. Category/PDP qualification requires
+page without navigating or changing metrics. Home/category/PDP qualification requires
 the exact API identities, one intended seller, visible product/seller/price and
 naturally loaded local fixture media. Fallbacks, substituted listings or broken
-images fail and retain genuine reports plus `content-readiness.json`. An incomplete
+images fail and retain genuine reports plus `content-readiness.json`. Home must
+also render its hero; search and checkout must render their actual forms. Visible
+error boundaries or skeletons fail every target. Bounded public field/visibility
+diagnostics identify failed predicates without recording HTML, API bodies, headers
+or storage. An incomplete
 load warning still fails first; it never qualifies content or assertion scores.
 
 Lighthouse 13 is a measurement-engine change. Offline assertion equivalence is

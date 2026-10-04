@@ -12,6 +12,8 @@ describe("cloudinary-url", () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://10.1.2.3:8000");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
     expect(cldUrl("ci-perf/smartphone-x1", { width: 720 })).toBe("/api/ci-perf-media?width=720");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 1440 })).toBe("/api/ci-perf-media?width=1200");
+    expect(() => cldUrl("ci-perf/smartphone-x1", { width: 999 })).toThrow(/Unsupported/);
     expect(cldLqipUrl("ci-perf/smartphone-x1")).toBe("/api/ci-perf-media?width=24");
     expect(cldSrcSet("ci-perf/smartphone-x1")).toBe(
       "/api/ci-perf-media?width=360 360w, /api/ci-perf-media?width=720 720w, /api/ci-perf-media?width=1080 1080w",

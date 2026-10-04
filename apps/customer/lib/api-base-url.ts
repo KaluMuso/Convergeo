@@ -45,7 +45,7 @@ export function getApiBaseUrl(env: EnvBag = {}): string {
  * during production builds without env (relative URLs hang Next.js SSG).
  */
 export function absoluteApiUrl(path: string, env: EnvBag = {}): string | null {
-  const base = resolveApiBaseUrl(env);
+  const base = getApiBaseUrl(env);
   if (!base) {
     return null;
   }

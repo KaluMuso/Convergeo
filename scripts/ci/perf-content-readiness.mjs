@@ -15,8 +15,32 @@ export function qualifyContent(url, snapshot, payload) {
   const pathname = new URL(url).pathname;
   if (snapshot.url !== url || snapshot.unavailable)
     return { passed: false, reason: "unexpected_page_or_fallback" };
-  if (!["/en/c/electronics", "/en/p/smartphone-x1"].includes(pathname))
-    return { passed: true, reason: "requested_page_present" };
+  if (snapshot.errorBoundary || snapshot.skeleton)
+    return { passed: false, reason: "error_or_loading_placeholder" };
+  if (pathname === "/en/search")
+    return snapshot.heading === "Search" && snapshot.searchReady
+      ? { passed: true, reason: "search_form_rendered" }
+      : { passed: false, reason: "search_content_missing" };
+  if (pathname === "/en/checkout")
+    return snapshot.heading === "Checkout" && snapshot.checkoutReady
+      ? { passed: true, reason: "checkout_contact_form_rendered" }
+      : { passed: false, reason: "checkout_content_missing" };
+  if (pathname === "/en" && !snapshot.homeHero)
+    return { passed: false, reason: "home_hero_missing" };
+  if (
+    pathname === "/en" &&
+    !snapshot.homeHeroImages?.some(
+      (image) =>
+        image.visible &&
+        image.complete &&
+        image.width >= 360 &&
+        image.height > 0 &&
+        image.src.startsWith(`${new URL(url).origin}/api/ci-perf-media?width=`),
+    )
+  )
+    return { passed: false, reason: "home_hero_media_not_loaded" };
+  if (!["/en", "/en/c/electronics", "/en/p/smartphone-x1"].includes(pathname))
+    return { passed: false, reason: "unexpected_policy_page" };
   const product = payload.product;
   const listings = product?.listings;
   const listing = Array.isArray(listings)
@@ -75,34 +99,125 @@ export function readMeasuredSnapshot() {
   const text = (element) =>
     isVisible(element) ? (element.innerText ?? element.textContent ?? "") : "";
   const pdp = location.pathname === "/en/p/smartphone-x1";
-  const card = Array.from(document.querySelectorAll('[data-testid="listing-card"]')).find(
+  const matchingCards = Array.from(
+    document.querySelectorAll('[data-testid="listing-card"]'),
+  ).filter(
     (element) =>
       element.querySelector('[data-testid="listing-card-link"]')?.getAttribute("href") ===
       "/en/p/smartphone-x1",
   );
+  const card = matchingCards[0];
   const buyBox = document.querySelector('[data-testid="pdp-buy-box"]');
   const gallery = pdp
     ? document.querySelector('[data-testid="pdp-interactive-body"] [data-testid="gallery-strip"]')
     : card;
+  const heading = text(document.querySelector("main h1"));
+  const errorBoundary = Array.from(document.querySelectorAll("main h1, main p")).some((element) =>
+    ["Something went wrong", "We hit an unexpected problem."].some((copy) =>
+      text(element).includes(copy),
+    ),
+  );
+  const skeleton = Array.from(
+    document.querySelectorAll(
+      'main [data-testid="skeleton"], main [data-testid="product-card-skeleton"]',
+    ),
+  ).some(isVisible);
+  const titleElement = pdp
+    ? document.querySelector('[data-testid="pdp-header"] h1')
+    : card?.querySelector("h3, h2");
+  const priceElement = (pdp ? buyBox : card)?.querySelector('[data-testid="price-block"]');
+  const sellerElement = pdp ? buyBox?.querySelector('[data-testid="pdp-buy-box-seller"]') : card;
+  const hiddenReason = (element) => {
+    if (!element || !element.getClientRects().length) return "missing_or_empty_rects";
+    for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      if (style.display === "none") return "display_none";
+      if (["hidden", "collapse"].includes(style.visibility)) return "visibility_hidden";
+      if (Number(style.opacity || "1") === 0) return "opacity_zero";
+    }
+    return null;
+  };
+  const imageState = (image) => ({
+    src: image.currentSrc,
+    complete: image.complete,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    visible: isVisible(image),
+  });
   return {
     url: location.href,
+    heading,
+    errorBoundary,
+    skeleton,
+    homeHero:
+      isVisible(
+        document.querySelector('[data-testid="home-hero-band"] [data-testid="hero-carousel"]'),
+      ) && !!text(document.querySelector("#home-hero-heading")),
+    homeHeroImages: Array.from(
+      document.querySelectorAll(
+        '[data-testid="home-hero-band"] [data-testid="hero-carousel-slide-0"] img',
+      ),
+    ).map(imageState),
+    searchReady: isVisible(document.querySelector('main input[type="search"][name="q"]')),
+    checkoutReady: isVisible(document.querySelector('main input[type="tel"]')),
     unavailable: !!document.querySelector(
       '[data-testid="plp-unavailable"], [data-testid="pdp-unavailable"], [data-testid="pdp-no-sellers"]',
     ),
-    title: text(
-      pdp ? document.querySelector('[data-testid="pdp-header"] h1') : card?.querySelector("h3, h2"),
-    ),
-    price: text((pdp ? buyBox : card)?.querySelector('[data-testid="price-block"]')),
-    seller: text(pdp ? buyBox?.querySelector('[data-testid="pdp-buy-box-seller"]') : card),
+    title: text(titleElement),
+    price: text(priceElement),
+    seller: text(sellerElement),
+    matchingCards: matchingCards.length,
+    cardVisible: isVisible(card),
+    visibility: {
+      title: hiddenReason(titleElement),
+      price: hiddenReason(priceElement),
+      seller: hiddenReason(sellerElement),
+    },
     images: Array.from((gallery ?? document.createElement("div")).querySelectorAll("img")).map(
-      (image) => ({
-        src: image.currentSrc,
-        complete: image.complete,
-        width: image.naturalWidth,
-        height: image.naturalHeight,
-        visible: isVisible(image),
-      }),
+      imageState,
     ),
+  };
+}
+
+/** Only bounded public fixture fields; never DOM/HTML, headers, storage or API bodies. */
+function diagnostics(snapshot) {
+  const clipped = (value, max) => (typeof value === "string" ? value.slice(0, max) : "");
+  const visibility = (field) =>
+    ["missing_or_empty_rects", "display_none", "visibility_hidden", "opacity_zero"].includes(
+      snapshot.visibility?.[field],
+    )
+      ? snapshot.visibility[field]
+      : null;
+  const images = (rows) =>
+    rows?.slice(0, 6).map((image) => ({
+      visible: image.visible === true,
+      complete: image.complete === true,
+      width: Number.isInteger(image.width) ? image.width : 0,
+      height: Number.isInteger(image.height) ? image.height : 0,
+      owned_fixture:
+        typeof image.src === "string" &&
+        image.src.startsWith("http://localhost:3000/api/ci-perf-media?width="),
+    }));
+  return {
+    heading: clipped(snapshot.heading, 80),
+    title: clipped(snapshot.title, 160),
+    price: clipped(snapshot.price, 80),
+    seller: clipped(snapshot.seller, 240),
+    title_matches: snapshot.title?.includes("Smartphone X1") === true,
+    price_matches: snapshot.price?.replace(/\s/g, "").includes("K4,500.00") === true,
+    seller_matches: snapshot.seller?.includes("Lusaka Electronics Hub") === true,
+    error_boundary: snapshot.errorBoundary === true,
+    skeleton: snapshot.skeleton === true,
+    home_hero: snapshot.homeHero === true,
+    matching_cards: Number.isInteger(snapshot.matchingCards) ? snapshot.matchingCards : 0,
+    card_visible: snapshot.cardVisible === true,
+    visibility: {
+      title: visibility("title"),
+      price: visibility("price"),
+      seller: visibility("seller"),
+    },
+    images: images(snapshot.images),
+    home_hero_images: images(snapshot.homeHeroImages),
   };
 }
 
@@ -112,7 +227,7 @@ export async function inspectMeasuredContent(url, page) {
       return { passed: false, reason: "measured_page_missing_or_changed" };
     const snapshot = await page.evaluate(readMeasuredSnapshot);
     let payload = {};
-    if (["/en/c/electronics", "/en/p/smartphone-x1"].includes(new URL(url).pathname)) {
+    if (["/en", "/en/c/electronics", "/en/p/smartphone-x1"].includes(new URL(url).pathname)) {
       payload = await page.evaluate(async () => {
         const responses = await Promise.all([
           fetch("/api/ci-perf/products/smartphone-x1", { cache: "no-store" }),
@@ -122,7 +237,7 @@ export async function inspectMeasuredContent(url, page) {
         return { product: await responses[0].json(), catalog: await responses[1].json() };
       });
     }
-    return qualifyContent(url, snapshot, payload);
+    return { ...qualifyContent(url, snapshot, payload), observed: diagnostics(snapshot) };
   } catch {
     return { passed: false, reason: "content_inspection_failed" };
   }
