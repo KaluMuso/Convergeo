@@ -86,6 +86,7 @@
     "errors": {
       "loadFailed": "无法加载服务。",
       "saveFailed": "无法保存服务。",
+      "titleInvalid": "请输入至少两个字符的标题。",
       "authRequired": "登录以管理您的服务。"
     }
   },

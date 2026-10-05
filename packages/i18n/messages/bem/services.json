@@ -90,6 +90,7 @@
     "errors": {
       "loadFailed": "Tatwakwanisha ukulodisha services.",
       "saveFailed": "Tatwakwanisha ukusave service.",
+      "titleInvalid": "Lekeni title ya service iyakwata amalembo yabili nangu ukufulapo.",
       "bookablePrice": "Lekeni fixed booking price iyakila zero ukuleka direct booking.",
       "authRequired": "Ingilani ukumanage services shenu."
     }

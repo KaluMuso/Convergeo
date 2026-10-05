@@ -78,7 +78,9 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
   const servicesClient = useMemo(() => createServicesClient(getToken), [getToken]);
 
   async function handleSave(nextStatus?: ServiceStatus) {
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (Array.from(trimmedTitle).length < 2) {
+      setError(ts("vendor.errors.titleInvalid"));
       return;
     }
     if (fromPrice.trim() && !isValidZmwDecimal(fromPrice)) {
@@ -102,7 +104,7 @@ function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: Ser
 
     const payload = {
       category,
-      title: title.trim(),
+      title: trimmedTitle,
       description: description.trim() || null,
       service_area: serviceArea.trim() || null,
       from_price_ngwee: fromPriceNgwee,

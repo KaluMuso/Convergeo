@@ -128,6 +128,45 @@ it("keeps an empty optional from price null on create", async () => {
   });
 });
 
+it.each([
+  ["create", "save"],
+  ["create", "publish"],
+  ["edit", "save"],
+  ["edit", "publish"],
+] as const)("rejects blank and one-character titles before %s %s", (mode, action) => {
+  for (const title of ["", "   ", "A", " A "]) {
+    const view = mount(mode);
+    fireEvent.change(screen.getByLabelText(labels.titleLabel), { target: { value: title } });
+    fireEvent.click(screen.getByRole("button", { name: labels[action] }));
+    expect(screen.getByText(errors.titleInvalid)).toBeVisible();
+    expect(createService).not.toHaveBeenCalled();
+    expect(updateService).not.toHaveBeenCalled();
+    view.unmount();
+  }
+});
+
+it.each(["create", "edit"] as const)(
+  "trims a valid multilingual title before %s publish",
+  async (mode) => {
+    mount(mode);
+    fireEvent.change(screen.getByLabelText(labels.titleLabel), {
+      target: { value: " A " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: labels.publish }));
+    expect(screen.getByText(errors.titleInvalid)).toBeVisible();
+    fireEvent.change(screen.getByLabelText(labels.titleLabel), {
+      target: { value: "  Réparation de tuyaux  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: labels.publish }));
+    const mutation = mode === "create" ? createService : updateService;
+    await waitFor(() => expect(mutation).toHaveBeenCalledOnce());
+    const payload =
+      mode === "create" ? createService.mock.calls[0]?.[0] : updateService.mock.calls[0]?.[1];
+    expect(payload).toMatchObject({ title: "Réparation de tuyaux", status: "active" });
+    expect(screen.queryByText(errors.titleInvalid)).not.toBeInTheDocument();
+  },
+);
+
 it.each(["12abc", "1e3", "1.234", "Infinity", "90071992547409.92", "-1"])(
   "rejects malformed optional from price %s before create or publish",
   (value) => {
