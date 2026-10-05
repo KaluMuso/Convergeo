@@ -171,6 +171,12 @@ class Runner:
             raise RuntimeError(f"{name} failed with exit {status}; see sanitized log")
         return status, text
 
+    def pull_postgrest_image(self) -> None:
+        attempts = self.output / "postgrest-pull-attempts"
+        attempts.mkdir()
+        self.command("postgrest-pull", ["bash", "scripts/ci/pull-critical-postgrest-image.sh",
+                                       REST_IMAGE, str(attempts)])
+
     def sql(self, name: str, database: str, statement: str) -> str:
         return self.command(name, ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-Atq",
                                    "-d", database, "-c", statement])[1].strip()
@@ -431,7 +437,7 @@ class Runner:
         for name in ("anon", "authenticated"):
             if not any(row.startswith(name + "|false|false|") for row in roles.splitlines()):
                 raise RuntimeError("Browser role has unexpected superuser/BYPASSRLS")
-        self.command("postgrest-pull", ["docker", "pull", REST_IMAGE])
+        self.pull_postgrest_image()
         _, version = self.command("postgrest-version", ["docker", "run", "--rm", "--entrypoint",
                                                        "postgrest", REST_IMAGE, "--version"])
         if re.search(r"\b14\.14(?:\b|\.)", version) is None:
