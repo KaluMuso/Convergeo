@@ -14,8 +14,8 @@ const getSession = vi.fn();
 let authCallback:
   ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null = null;
 
-vi.mock("@vergeo/auth/browser-client", () => ({
-  createBrowserClient: () => ({
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({
     auth: {
       resetPasswordForEmail,
       exchangeCodeForSession,
@@ -124,6 +124,38 @@ describe("ResetRequestForm", () => {
     await user.click(screen.getByRole("button", { name: /send reset link/i }));
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
     expect(screen.getByText("Required")).toBeInTheDocument();
+  });
+
+  it("uses this portal and locale as the recovery return and reports rate limiting", async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: { status: 429, retryAfter: 31 } });
+    window.history.replaceState({}, "", "/fr/reset-password");
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="fr" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() =>
+      expect(resetPasswordForEmail).toHaveBeenCalledWith("person@example.test", {
+        redirectTo: `${window.location.origin}/fr/reset-password/confirm`,
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wait 31s");
+    expect(screen.queryByText(/a reset link is on its way/i)).not.toBeInTheDocument();
+  });
+
+  it("reports operational mail errors without exposing their raw details", async () => {
+    resetPasswordForEmail.mockResolvedValue({
+      error: { code: "email_address_not_authorized", message: "Sender is not configured" },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="en" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.queryByText(/Sender is not configured/i)).not.toBeInTheDocument();
   });
 });
 

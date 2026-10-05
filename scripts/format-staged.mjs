@@ -145,7 +145,9 @@ async function cleanupFailure(error, { committed, primaryError, location }) {
 
 export async function formatStaged({ cwd = process.cwd(), env = process.env, onPhase } = {}) {
   const git = (args, options = {}) => command(args, { cwd, env, ...options });
-  const root = text((await git(["rev-parse", "--show-toplevel"])).output).replace(/\n$/, "");
+  const root = path.resolve(
+    text((await git(["rev-parse", "--show-toplevel"])).output).replace(/\n$/, ""),
+  );
   cwd = root;
   // --path-format preserves linked-worktree and GIT_INDEX_FILE semantics.
   const index = text(

@@ -43,7 +43,11 @@ async function repository(t) {
   await fs.writeFile(path.join(root, "package.json"), '{"private":true}\n');
   await fs.writeFile(path.join(root, ".gitignore"), "node_modules\n");
   await fs.writeFile(path.join(root, ".prettierignore"), "ignored.js\n");
-  await fs.symlink(dependencyRoot, path.join(root, "node_modules"), "dir");
+  await fs.symlink(
+    dependencyRoot,
+    path.join(root, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
   git("add", ".");
   git("commit", "-qm", "fixture");
   const write = async (name, content) => {
@@ -96,9 +100,15 @@ test("formats all literal filenames; preserves executable modes and unrelated by
     "tab\tname.js",
     ":(glob)*.js",
     "quotes\"'$().js",
+    "$()literal.js",
     "`literal-command`.js",
     "nested/file.js",
-  ];
+    "app/[locale]/(auth)/email-form.test.tsx",
+  ].filter(
+    (name) =>
+      process.platform !== "win32" ||
+      !Array.from(name).some((char) => char.charCodeAt(0) < 32 || /[<>:"\\|?*]/.test(char)),
+  );
   for (const name of names) await repo.stage(name, "const value=1\n");
   await fs.chmod(path.join(repo.root, "-leading.js"), 0o755);
   repo.git("add", "--", "-leading.js");
@@ -109,8 +119,10 @@ test("formats all literal filenames; preserves executable modes and unrelated by
     assert.equal(repo.blob(name).toString(), "const value = 1;\n");
     assert.equal(await fs.readFile(path.join(repo.root, name), "utf8"), "const value = 1;\n");
   }
-  assert.equal((await fs.stat(path.join(repo.root, "-leading.js"))).mode & 0o777, 0o755);
-  assert.match(repo.git("ls-files", "--stage", "--", "-leading.js").toString(), /^100755 /);
+  if (process.platform !== "win32") {
+    assert.equal((await fs.stat(path.join(repo.root, "-leading.js"))).mode & 0o777, 0o755);
+    assert.match(repo.git("ls-files", "--stage", "--", "-leading.js").toString(), /^100755 /);
+  }
   assert.deepEqual(await fs.readFile(path.join(repo.root, "untracked.bin")), untracked);
   await repo.clean();
 });

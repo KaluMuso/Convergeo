@@ -1,0 +1,11 @@
+{
+  "purpose": "DISPOSABLE_MIGRATION_REHEARSAL_ONLY",
+  "source_commit": null,
+  "source_tree": null,
+  "migration_inventory_sha256": null,
+  "source_database": null,
+  "target_database": null,
+  "source_snapshot_sha256": null,
+  "dump_sha256": null,
+  "ordered_pending_inputs": []
+}
