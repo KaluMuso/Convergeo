@@ -409,7 +409,12 @@ test("a recovered trace still fails the original performance budget", async () =
         } else {
           lhr.categories.performance.score = 0.49;
         }
-        return { lhr, report: "<!doctype html><title>budget fixture</title>" };
+        return {
+          lhr,
+          report: "<!doctype html><title>budget fixture</title>",
+          contentReadiness:
+            calls === 1 ? undefined : { passed: true, reason: "explicit_synthetic_fixture" },
+        };
       },
     });
     assert.equal(result.exitCode, 1);
