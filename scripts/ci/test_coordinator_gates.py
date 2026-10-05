@@ -5,6 +5,9 @@ import http.client
 import json
 import os
 import re
+import shlex
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,7 +17,91 @@ import run_coordinator_gates as gates
 import run_financial_real_stack as financial
 
 
+def bash_path(path: Path) -> str:
+    resolved = path.resolve().as_posix()
+    return f"/{resolved[0].lower()}{resolved[2:]}" if os.name == "nt" else resolved
+
+
+def mocked_postgrest_pull(mode: str) -> tuple[subprocess.CompletedProcess[str], list[str],
+                                               list[str], str]:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        mock_bin = root / "bin"
+        evidence = root / "evidence"
+        mock_bin.mkdir()
+        evidence.mkdir()
+        (mock_bin / "docker").write_text("""#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$MOCK_CALLS"
+attempt=$(wc -l < "$MOCK_CALLS")
+case "$MOCK_MODE" in
+  success) echo 'pull complete'; exit 0 ;;
+  retry_success) if (( attempt == 3 )); then echo 'pull complete'; exit 0; fi ;;
+  timeout) echo 'toomanyrequests: Rate exceeded' >&2; exit 124 ;;
+  unrelated) echo 'unauthorized: denied' >&2; exit 1 ;;
+esac
+echo 'toomanyrequests: Rate exceeded' >&2
+exit 1
+""", encoding="utf-8", newline="\n")
+        (mock_bin / "timeout").write_text(
+            '#!/usr/bin/env bash\nshift 2\n"$@"\n', encoding="utf-8", newline="\n"
+        )
+        (mock_bin / "sleep").write_text(
+            '#!/usr/bin/env bash\nprintf "%s\\n" "$1" >> "$MOCK_SLEEPS"\n',
+            encoding="utf-8", newline="\n"
+        )
+        for command in ("docker", "timeout", "sleep"):
+            (mock_bin / command).chmod(0o755)
+        calls = root / "calls.log"
+        sleeps = root / "sleeps.log"
+        helper = gates.ROOT / "scripts/ci/pull-critical-postgrest-image.sh"
+        command = (f"PATH={shlex.quote(bash_path(mock_bin))}:$PATH "
+                   f"bash {shlex.quote(bash_path(helper))} "
+                   f"{shlex.quote(financial.REST_IMAGE)} {shlex.quote(bash_path(evidence))}")
+        bash = r"C:\Program Files\Git\bin\bash.exe" if os.name == "nt" else shutil.which("bash")
+        assert bash is not None
+        result = subprocess.run([bash, "-c", command], env={**os.environ,
+            "MOCK_MODE": mode, "MOCK_CALLS": bash_path(calls),
+            "MOCK_SLEEPS": bash_path(sleeps)}, capture_output=True, text=True,
+            timeout=20, check=False)
+        return (result, calls.read_text().splitlines(),
+                sleeps.read_text().splitlines() if sleeps.exists() else [],
+                (evidence / "postgrest-pull.log").read_text())
+
+
 class CoordinatorControls(unittest.TestCase):
+    def test_coordinator_uses_pinned_bounded_postgrest_pull(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = object.__new__(gates.Runner)
+            runner.output = Path(tmp)
+            with patch.object(runner, "command") as command:
+                runner.pull_postgrest_image()
+            attempts = Path(tmp) / "postgrest-pull-attempts"
+            self.assertTrue(attempts.is_dir())
+            command.assert_called_once_with("postgrest-pull", ["bash",
+                "scripts/ci/pull-critical-postgrest-image.sh", financial.REST_IMAGE,
+                str(attempts)])
+
+    def test_bounded_postgrest_pull_success_and_recovered_throttle(self) -> None:
+        for mode, attempts, delays in (("success", 1, []),
+                                       ("retry_success", 3, ["5", "10"])):
+            with self.subTest(mode=mode):
+                result, calls, sleeps, summary = mocked_postgrest_pull(mode)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(calls, [f"pull {financial.REST_IMAGE}"] * attempts)
+                self.assertEqual(sleeps, delays)
+                self.assertIn(f"attempt={attempts}/3 result=success", summary)
+
+    def test_bounded_postgrest_pull_exhaustion_and_other_failures(self) -> None:
+        for mode, attempts, delays in (("exhaust", 3, ["5", "10"]),
+                                       ("unrelated", 1, []), ("timeout", 1, [])):
+            with self.subTest(mode=mode):
+                result, calls, sleeps, summary = mocked_postgrest_pull(mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(calls, [f"pull {financial.REST_IMAGE}"] * attempts)
+                self.assertEqual(sleeps, delays)
+                self.assertIn(f"attempt={attempts}/3 result=failed", summary)
+                self.assertNotIn(f"attempt={attempts + 1}/3", summary)
+
     def test_db_only_modules_retain_blocking_owners(self) -> None:
         workflow = (gates.ROOT / ".github/workflows/ci.yml").read_text()
         broad = re.search(r"(?ms)^  python:\n.*?(?=^  [a-z0-9-]+:)", workflow)

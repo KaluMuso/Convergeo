@@ -71,6 +71,12 @@ class Runner(financial.Runner):
                  f'CREATE DATABASE "{database}" TEMPLATE "{template}"')
         self.dbs.append(database)
 
+    def pull_postgrest_image(self) -> None:
+        attempts = self.output / "postgrest-pull-attempts"
+        attempts.mkdir()
+        self.command("postgrest-pull", ["bash", "scripts/ci/pull-critical-postgrest-image.sh",
+                                       financial.REST_IMAGE, str(attempts)])
+
     def qualify(self) -> None:
         _, source = self.command("source", ["git", "rev-parse", "HEAD", "HEAD^{tree}"])
         head, tree = source.splitlines()
@@ -110,7 +116,7 @@ class Runner(financial.Runner):
                                          self.pg_container])
         if self.sql("postgres-version", "postgres", "SHOW server_version_num") != "170006":
             raise RuntimeError("Expected PostgreSQL 17.6")
-        self.command("postgrest-pull", ["docker", "pull", financial.REST_IMAGE])
+        self.pull_postgrest_image()
         _, version = self.command("postgrest-version", ["docker", "run", "--rm", "--entrypoint",
                                   "postgrest", financial.REST_IMAGE, "--version"])
         if re.search(r"\b14\.14(?:\b|\.)", version) is None:
