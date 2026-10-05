@@ -244,7 +244,10 @@ for (const scenario of [
           if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
           return {
             lhr,
-            contentReadiness: { passed: true, reason: "explicit_synthetic_fixture" },
+            contentReadiness: {
+              passed: true,
+              reason: "explicit_synthetic_fixture",
+            },
             report:
               scenario === "missing-html" ? undefined : "<!doctype html><title>fixture</title>",
           };
@@ -302,6 +305,164 @@ for (const scenario of [
         assert.match(summary.errors[0].message, /Incomplete collection/);
         assert.deepEqual(assertions, []);
       }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+}
+
+test("one NO_NAVSTART trace retry retains evidence and all valid budget samples", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "performance-trace-retry-"));
+  const previous = process.env.CI_PERF_HARNESS;
+  process.env.CI_PERF_HARNESS = "1";
+  const contexts = [];
+  let calls = 0;
+  try {
+    const result = await runPerformance(fixtureConfig(dir), {
+      audit: async (url, _settings, _dependencies, context) => {
+        calls++;
+        contexts.push(context);
+        const lhr = makeReport(url);
+        if (calls === 1) {
+          lhr.runtimeError = { code: "NO_NAVSTART" };
+          lhr.categories.performance.score = null;
+          for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        }
+        return {
+          lhr,
+          report: "<!doctype html><title>trace fixture</title>",
+          contentReadiness:
+            calls === 1 ? undefined : { passed: true, reason: "explicit_synthetic_fixture" },
+        };
+      },
+    });
+    assert.equal(result.exitCode, 0);
+    assert.equal(calls, 16);
+    assert.equal(contexts[0].run, contexts[1].run);
+    assert.notEqual(contexts[0].diagnosticsPath, contexts[1].diagnosticsPath);
+    const output = join(dir, ".lighthouseci");
+    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
+    assert.deepEqual(summary.errors, []);
+    assert.equal(summary.collectionRetries.length, 1);
+    assert.equal(summary.collectionRetries[0].code, "NO_NAVSTART");
+    assert.equal(
+      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath)).runtimeError.code,
+      "NO_NAVSTART",
+    );
+    assert.match(await readFile(summary.collectionRetries[0].htmlPath, "utf8"), /trace fixture/);
+    assert.equal(manifest.length, 15);
+    assert.equal(new Set(manifest.map((entry) => entry.jsonPath)).size, 15);
+    assert.ok(manifest.every((entry) => entry.summary.performance !== null));
+    assert.equal(JSON.parse(await readFile(join(output, "content-readiness.json"))).length, 15);
+  } finally {
+    if (previous === undefined) delete process.env.CI_PERF_HARNESS;
+    else process.env.CI_PERF_HARNESS = previous;
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("repeated NO_NAVSTART fails after one retry and retains both invalid reports", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "performance-trace-exhaustion-"));
+  let calls = 0;
+  try {
+    const result = await runPerformance(fixtureConfig(dir), {
+      audit: async (url) => {
+        calls++;
+        const lhr = makeReport(url);
+        lhr.runtimeError = { code: "NO_NAVSTART" };
+        lhr.categories.performance.score = null;
+        for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        return { lhr, report: "<!doctype html><title>invalid trace</title>" };
+      },
+    });
+    assert.equal(result.exitCode, 1);
+    assert.equal(calls, 2);
+    const output = join(dir, ".lighthouseci");
+    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
+    assert.equal(summary.collectionRetries.length, 1);
+    assert.match(summary.errors[0].message, /NO_NAVSTART/);
+    assert.equal(manifest.length, 1);
+    assert.equal(JSON.parse(await readFile(manifest[0].jsonPath)).runtimeError.code, "NO_NAVSTART");
+    assert.equal(
+      JSON.parse(await readFile(summary.collectionRetries[0].jsonPath)).runtimeError.code,
+      "NO_NAVSTART",
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("a recovered trace still fails the original performance budget", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "performance-trace-budget-"));
+  let calls = 0;
+  try {
+    const result = await runPerformance(fixtureConfig(dir), {
+      audit: async (url) => {
+        calls++;
+        const lhr = makeReport(url);
+        if (calls === 1) {
+          lhr.runtimeError = { code: "NO_NAVSTART" };
+          lhr.categories.performance.score = null;
+          for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        } else {
+          lhr.categories.performance.score = 0.49;
+        }
+        return { lhr, report: "<!doctype html><title>budget fixture</title>" };
+      },
+    });
+    assert.equal(result.exitCode, 1);
+    assert.equal(calls, 16);
+    const output = join(dir, ".lighthouseci");
+    const summary = JSON.parse(await readFile(join(output, "run-summary.json")));
+    const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
+    const assertions = JSON.parse(await readFile(join(output, "assertion-results.json")));
+    assert.deepEqual(summary.errors, []);
+    assert.equal(summary.collectionRetries.length, 1);
+    assert.equal(manifest.length, 15);
+    assert.equal(assertions.filter((assertion) => assertion.level === "error").length, 5);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+for (const scenario of [
+  "other-runtime",
+  "usable-metric",
+  "incomplete-load",
+  "failed-readiness",
+  "wrong-url",
+  "missing-html",
+]) {
+  test(`NO_NAVSTART retry excludes ${scenario}`, async () => {
+    const dir = await mkdtemp(join(tmpdir(), "performance-no-trace-retry-"));
+    let calls = 0;
+    try {
+      const result = await runPerformance(fixtureConfig(dir), {
+        audit: async (url) => {
+          calls++;
+          const lhr = makeReport(url);
+          lhr.runtimeError = {
+            code: scenario === "other-runtime" ? "OTHER_ERROR" : "NO_NAVSTART",
+          };
+          lhr.categories.performance.score = null;
+          if (scenario !== "usable-metric")
+            for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+          if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
+          if (scenario === "wrong-url") lhr.requestedUrl = "http://localhost:3000/other";
+          return {
+            lhr,
+            report:
+              scenario === "missing-html" ? undefined : "<!doctype html><title>invalid</title>",
+            contentReadiness: scenario === "failed-readiness" ? { passed: false } : undefined,
+          };
+        },
+      });
+      assert.equal(result.exitCode, 1);
+      assert.equal(calls, 1);
+      const summary = JSON.parse(await readFile(join(dir, ".lighthouseci", "run-summary.json")));
+      assert.deepEqual(summary.collectionRetries, []);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -420,7 +581,12 @@ for (const failure of [false, true]) {
       url: () => url,
       evaluate: async () => {
         events.push("inspect");
-        return { url, unavailable: false, heading: "Search", searchReady: true };
+        return {
+          url,
+          unavailable: false,
+          heading: "Search",
+          searchReady: true,
+        };
       },
       close: async () => events.push("page.close"),
     };
@@ -464,13 +630,18 @@ for (const failure of [false, true]) {
     ];
     if (failure)
       await assert.rejects(
-        auditWithChrome(url, config.ci.collect.settings, deps, { verifyContent: true }),
+        auditWithChrome(url, config.ci.collect.settings, deps, {
+          verifyContent: true,
+        }),
         /engine fixture/,
       );
     else
       assert.equal(
-        (await auditWithChrome(url, config.ci.collect.settings, deps, { verifyContent: true }))
-          .contentReadiness.passed,
+        (
+          await auditWithChrome(url, config.ci.collect.settings, deps, {
+            verifyContent: true,
+          })
+        ).contentReadiness.passed,
         true,
       );
     assert.deepEqual(events, [

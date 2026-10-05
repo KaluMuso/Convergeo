@@ -24,13 +24,18 @@ five URLs, three runs per URL, mobile screen/network/CPU settings, thresholds,
 checkout SEO warning or bundle budgets. Performance/LCP aggregate each metric's
 median. Other assertions retain LHCI's default optimistic aggregation, including
 its finite-value handling. Unsupported policy options fail rather than silently
-being ignored. Missing runs, runtime errors and unmatched final URLs fail.
+being ignored. Missing runs, unrecovered runtime errors and unmatched final URLs fail.
 
 Each run launches a fresh headless Chrome with its normal sandbox and certificate
 validation. Collection exceptions stop further collection and preserve partial
 evidence. No application server is started, URLs rewritten or external report
 upload performed by the runner. The existing workflow still builds, starts and
 warms the same application URLs and retains its other blocking gates.
+An unusable `NO_NAVSTART` trace with no performance metrics, timeout warning or
+completed content check gets one fresh Chrome retry for the same URL and run.
+The rejected JSON/HTML pair is retained separately and recorded in
+`run-summary.json`; it never counts toward the required three valid runs.
+Exhaustion and all other collection errors remain blocking.
 
 Artifacts remain under `.lighthouseci`, uploaded as `lighthouse-reports` even on
 failure. Every successful collection writes a distinct `lhr-*.json` and HTML pair.

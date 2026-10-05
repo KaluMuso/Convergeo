@@ -26,6 +26,16 @@ export function incompleteLoadWarning(lhr) {
       warning.replace(/\s+/g, " ").trim() === INCOMPLETE_LOAD_WARNING,
   );
 }
+const performanceMetricIds = [
+  "largest-contentful-paint",
+  "first-contentful-paint",
+  "interactive",
+  "speed-index",
+  "total-blocking-time",
+  "cumulative-layout-shift",
+];
+const hasUsablePerformanceMetric = (lhr) =>
+  performanceMetricIds.some((id) => Number.isFinite(lhr.audits?.[id]?.numericValue));
 const securityBypass = (flag) =>
   /^--(?:no-sandbox|disable-(?:setuid|namespace|seccomp-filter|gpu)-sandbox|disable-web-security|ignore-certificate-errors(?:-spki-list)?|allow-insecure-localhost)(?:=|$)/.test(
     flag,
@@ -466,7 +476,8 @@ export async function runPerformance(
     manifest = [],
     errors = [],
     warnings = [],
-    contentReadiness = [];
+    contentReadiness = [],
+    collectionRetries = [];
   let assertions = [];
   const invocation = Date.now();
   await writeFile(join(output, "manifest.json"), "[]\n");
@@ -474,18 +485,46 @@ export async function runPerformance(
   collection: for (const [urlIndex, url] of config.ci.collect.url.entries()) {
     for (let run = 0; run < config.ci.collect.numberOfRuns; run++) {
       try {
-        const result = await audit(
-          url,
-          structuredClone(config.ci.collect.settings ?? {}),
-          undefined,
-          {
-            diagnosticsPath: join(output, `chrome-startup-${urlIndex + 1}-${run + 1}.json`),
+        let result;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          result = await audit(url, structuredClone(config.ci.collect.settings ?? {}), undefined, {
+            diagnosticsPath: join(
+              output,
+              `chrome-startup-${urlIndex + 1}-${run + 1}${attempt === 2 ? "-retry" : ""}.json`,
+            ),
             source,
             urlIndex: urlIndex + 1,
             run: run + 1,
             verifyContent: process.env.CI_PERF_HARNESS === "1",
-          },
-        );
+          });
+          const lhr = result?.lhr;
+          if (
+            attempt !== 1 ||
+            lhr?.runtimeError?.code !== "NO_NAVSTART" ||
+            lhr.requestedUrl !== url ||
+            lhr.categories?.performance?.score != null ||
+            hasUsablePerformanceMetric(lhr) ||
+            incompleteLoadWarning(lhr) ||
+            result.contentReadiness != null ||
+            typeof result.report !== "string" ||
+            !result.report.length
+          )
+            break;
+          // Keep the rejected trace outside the valid sample manifest and retry once
+          // with a fresh Chrome session. Other failures remain blocking.
+          const stem = `rejected-lhr-${urlIndex + 1}-${run + 1}-attempt-1`;
+          const jsonPath = join(output, `${stem}.json`),
+            htmlPath = join(output, `${stem}.html`);
+          await writeFile(jsonPath, JSON.stringify(lhr, null, 2) + "\n");
+          await writeFile(htmlPath, result.report);
+          collectionRetries.push({
+            url,
+            run: run + 1,
+            code: "NO_NAVSTART",
+            jsonPath,
+            htmlPath,
+          });
+        }
         if (!result?.lhr || typeof result.report !== "string" || !result.report.length)
           throw new Error("Lighthouse did not produce both JSON and HTML reports");
         const lhr = result.lhr;
@@ -522,7 +561,11 @@ export async function runPerformance(
         if (incompleteLoadWarning(lhr))
           throw new Error("Incomplete collection: Lighthouse page-load timeout warning");
         if (process.env.CI_PERF_HARNESS === "1") {
-          contentReadiness.push({ url, run: run + 1, ...result.contentReadiness });
+          contentReadiness.push({
+            url,
+            run: run + 1,
+            ...result.contentReadiness,
+          });
           if (result.contentReadiness?.passed !== true)
             throw new Error("Measured content readiness failed");
         }
@@ -569,6 +612,7 @@ export async function runPerformance(
         source_identity: source,
         errors,
         warnings,
+        collectionRetries,
         numberOfRuns: config.ci.collect.numberOfRuns,
         urls: config.ci.collect.url,
         settings: config.ci.collect.settings,
