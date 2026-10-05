@@ -174,6 +174,76 @@ def _evidence() -> tuple[LencoReconciliationEvidence, LocalReconciliationEvidenc
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("runtime", "explicit", "expected"),
+    [
+        ({"GIT_SHA": "a" * 40, "API_IMAGE_TAG": "a" * 40}, None, "a" * 40),
+        ({"GIT_SHA": "a" * 40, "API_IMAGE_TAG": "b" * 64}, None, "a" * 40),
+        ({"GITHUB_SHA": "a" * 40}, None, "a" * 40),
+        ({"API_IMAGE_TAG": "a" * 40}, None, "a" * 40),
+        ({"GIT_SHA": "b" * 40}, "a" * 40, "a" * 40),
+    ],
+)
+async def test_daily_report_binds_documented_runtime_source(
+    monkeypatch: pytest.MonkeyPatch,
+    runtime: dict[str, str],
+    explicit: str | None,
+    expected: str,
+) -> None:
+    for name in ("GIT_SHA", "GITHUB_SHA", "API_IMAGE_TAG"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in runtime.items():
+        monkeypatch.setenv(name, value)
+    provider, local = _evidence()
+    reports = _Reports()
+    result = await run_daily_reconciliation_report(
+        SimpleNamespace(client=reports),
+        report_date=date(2026, 9, 29),
+        provider_adapter=_Provider(provider),  # type: ignore[arg-type]
+        local_reader=_Reader(local),  # type: ignore[arg-type]
+        source_version=explicit,
+    )
+    assert result.summary["source_version"] == expected
+    assert reports.rows[0]["source_version"] == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("runtime", "explicit", "reason"),
+    [
+        ({}, None, "full lowercase"),
+        ({"GIT_SHA": "unknown", "API_IMAGE_TAG": "a" * 40}, None, "full lowercase"),
+        ({"GIT_SHA": "A" * 40}, None, "full lowercase"),
+        ({"GIT_SHA": "a" * 7}, None, "full lowercase"),
+        ({"GIT_SHA": "a" * 40, "API_IMAGE_TAG": "b" * 40}, None, "conflicting"),
+        ({"GIT_SHA": "a" * 40, "GITHUB_SHA": "b" * 40}, None, "conflicting"),
+        ({"GIT_SHA": "a" * 40}, "bad", "full lowercase"),
+    ],
+)
+async def test_daily_report_rejects_missing_invalid_or_conflicting_source_before_write(
+    monkeypatch: pytest.MonkeyPatch,
+    runtime: dict[str, str],
+    explicit: str | None,
+    reason: str,
+) -> None:
+    for name in ("GIT_SHA", "GITHUB_SHA", "API_IMAGE_TAG"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in runtime.items():
+        monkeypatch.setenv(name, value)
+    provider, local = _evidence()
+    reports = _Reports()
+    with pytest.raises(ValueError, match=reason):
+        await run_daily_reconciliation_report(
+            SimpleNamespace(client=reports),
+            report_date=date(2026, 9, 29),
+            provider_adapter=_Provider(provider),  # type: ignore[arg-type]
+            local_reader=_Reader(local),  # type: ignore[arg-type]
+            source_version=explicit,
+        )
+    assert reports.rows == []
+
+
+@pytest.mark.asyncio
 async def test_daily_report_is_source_bound_noncertifying_and_immutable() -> None:
     provider, local = _evidence()
     reports = _Reports()

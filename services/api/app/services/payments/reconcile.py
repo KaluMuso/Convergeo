@@ -634,6 +634,37 @@ def _persist_report(
     return str(inserted["id"]), True
 
 
+def _resolve_source_version(explicit: str | None) -> str:
+    """Bind a report to one full commit SHA from the runtime image or caller."""
+    if explicit is not None:
+        source = explicit.strip()
+        if not re.fullmatch(r"[0-9a-f]{40}", source):
+            raise ValueError("full lowercase source commit SHA required")
+        return source
+    identities = {
+        name: value.strip()
+        for name, value in (
+            ("GIT_SHA", os.environ.get("GIT_SHA")),
+            ("GITHUB_SHA", os.environ.get("GITHUB_SHA")),
+        )
+        if value is not None and value.strip()
+    }
+    # A deployment tag can also be a digest, short SHA or "latest". It only
+    # corroborates the source identity when it is itself a full commit SHA.
+    image_tag = os.environ.get("API_IMAGE_TAG", "").strip()
+    if re.fullmatch(r"[0-9a-f]{40}", image_tag):
+        identities["API_IMAGE_TAG"] = image_tag
+    elif not identities and image_tag:
+        raise ValueError("full lowercase source commit SHA required")
+    if not identities or any(
+        not re.fullmatch(r"[0-9a-f]{40}", value) for value in identities.values()
+    ):
+        raise ValueError("full lowercase source commit SHA required")
+    if len(set(identities.values())) != 1:
+        raise ValueError("conflicting source commit SHAs")
+    return next(iter(identities.values()))
+
+
 async def run_daily_reconciliation_report(
     service_client: ServiceRoleClient,
     *,
@@ -677,6 +708,7 @@ async def run_daily_reconciliation_report(
         )
 
     if fetch_account is None and fetch_transactions is None:
+        source = _resolve_source_version(source_version)
         configured_account_id = os.environ.get("LENCO_ACCOUNT_ID", "").strip()
         adapter = provider_adapter or LencoReconciliationAdapter(
             configured_account_id=configured_account_id,
@@ -718,18 +750,11 @@ async def run_daily_reconciliation_report(
         provider_origins = sorted(
             {row.evidence_origin.value for row in provider_collection.movements}
         )
-        source = source_version or os.environ.get("GITHUB_SHA", "").strip() or "unbound"
-        source_binding_issues = (
-            ()
-            if re.fullmatch(r"[0-9a-f]{40}", source)
-            else ("source commit is missing or not a full lowercase SHA",)
-        )
         issues = tuple(
             [
                 *provider_collection.issues,
                 *local_evidence.unresolved,
                 *provider_fact_gaps,
-                *source_binding_issues,
             ]
         )
         raw_inputs = {
