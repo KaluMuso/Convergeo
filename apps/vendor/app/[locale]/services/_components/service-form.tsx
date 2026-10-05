@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
+import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
+import { isValidZmwDecimal, zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
   createServicesClient,
   SERVICE_VERTICALS,
@@ -25,6 +27,7 @@ type ServiceFormProps = {
 
 export function ServiceForm({ locale, mode, serviceId, initialService }: ServiceFormProps) {
   const ts = useTranslations("services");
+  const tv = useTranslations("vendor");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
 
@@ -36,11 +39,11 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
   const [includes, setIncludes] = useState((initialService?.includes ?? []).join("\n"));
   const [serviceArea, setServiceArea] = useState(initialService?.service_area ?? "");
   const [fromPrice, setFromPrice] = useState(
-    initialService?.from_price_ngwee ? String(initialService.from_price_ngwee / 100) : "",
+    initialService?.from_price_ngwee ? ngweeToZmwInput(initialService.from_price_ngwee) : "",
   );
   const [bookable, setBookable] = useState(initialService?.bookable ?? false);
   const [bookingPrice, setBookingPrice] = useState(
-    initialService?.booking_price_ngwee ? String(initialService.booking_price_ngwee / 100) : "",
+    initialService?.booking_price_ngwee ? ngweeToZmwInput(initialService.booking_price_ngwee) : "",
   );
   const [status, setStatus] = useState<ServiceStatus>(initialService?.status ?? "draft");
   const [saving, setSaving] = useState(false);
@@ -53,15 +56,18 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
     if (!title.trim()) {
       return;
     }
-    const fromPriceNgwee = fromPrice.trim() ? Math.round(Number.parseFloat(fromPrice) * 100) : null;
-    const bookingPriceNgwee = bookingPrice.trim()
-      ? Math.round(Number.parseFloat(bookingPrice) * 100)
-      : null;
-
-    if (bookable && (bookingPriceNgwee === null || bookingPriceNgwee <= 0)) {
+    if (fromPrice.trim() && !isValidZmwDecimal(fromPrice)) {
+      setError(tv("listings.fields.priceInvalid"));
+      return;
+    }
+    if (bookable && !isValidZmwDecimal(bookingPrice)) {
       setError(ts("vendor.errors.bookablePrice"));
       return;
     }
+    const fromPriceNgwee = fromPrice.trim() ? zmwDecimalToNgwee(fromPrice) : null;
+    const bookingPriceNgwee = isValidZmwDecimal(bookingPrice)
+      ? zmwDecimalToNgwee(bookingPrice)
+      : null;
 
     setSaving(true);
     setError(null);
