@@ -502,7 +502,7 @@
     "scripts/ci/apply_service_adoption.py": "2ac01a2976982888928f437cfaa1024b041cb4011641a19e88daafbf63e18e6a",
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
-    "scripts/ci/run-critical-real-stack.sh": "e68d9f4163f1b5abec85481412a764dafb3d4bcece66da83dcb132efcc87310f",
+    "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
     "scripts/ci/run_financial_real_stack.py": "9140ff217fce064e662e5e4f22fd8f4e1c9696934522398e65d7f20be3eb00ae",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
