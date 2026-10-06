@@ -209,6 +209,7 @@
       "retryError": "Tatwaishibe ukuwesha payment. Checkeni connection no wesheni limbi.",
       "retrying": "Tulemituma prompt yambi…",
       "successRedirect": "Tulemitwala ku order yenu…",
+      "ticketUnavailableBody": "Payment ya iyi ticket teti mweshe limbi pa iyi order. Loleni ifya order yenu.",
       "timeoutBody": "USSD prompt yafwile pantu yasuminishwa. Checkeni phone yenu ili na network, elyo wesheni — tutuma prompt yambi ku order imo.",
       "timeoutTitle": "Payment yafwile time",
       "viewOrder": "Loleni order"

@@ -209,6 +209,7 @@
       "retryError": "Sitinathe kuyesanso payment. Onani connection ndi yesaninso.",
       "retrying": "Ikutumiza prompt yatsopano…",
       "successRedirect": "Tikukupitani ku order yanu…",
+      "ticketUnavailableBody": "Payment ya ticket iyi singayesedwenso pa order iyi. Onani order yanu kuti mudziwe zambiri.",
       "timeoutBody": "USSD prompt yatha nthawi isanatsimikizidwe. Onani kuti phone yanu ili ndi network, kenako yesaninso — titumiza prompt yatsopano pa order yomweyo.",
       "timeoutTitle": "Payment yatha nthawi",
       "viewOrder": "Onani order"
