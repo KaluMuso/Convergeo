@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
+import os
 import re
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,12 +21,20 @@ from explicit_transaction_boundary import (
     verify_disposable_prefix,
 )
 from rehearse_explicit_transaction_profile import (
+    CONTAINER,
+    IMAGE,
     RehearsalError,
+    StageTracker,
+    WindowState,
     check_cli_reference,
+    checked,
+    failure_marker,
     mark_owned,
     owned_window,
+    run,
     source_inventory,
     sql,
+    target_container,
     visible_prefix,
 )
 
@@ -124,6 +134,18 @@ COMMIT;
             with self.subTest(case=str(case)[:40]), self.assertRaises(BoundaryError):
                 verify_disposable_prefix(case)
 
+    def test_missing_or_malformed_profile_is_source_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workdir = Path(directory)
+            with self.assertRaises(RehearsalError) as missing_profile:
+                source_inventory(workdir)
+            self.assertEqual(missing_profile.exception.code, "SOURCE_MISMATCH")
+            (workdir / "supabase").mkdir()
+            (workdir / "supabase/config.toml").write_text("bad[", encoding="utf-8")
+            with self.assertRaises(RehearsalError) as malformed_profile:
+                source_inventory(workdir)
+            self.assertEqual(malformed_profile.exception.code, "SOURCE_MISMATCH")
+
     def test_disposable_prefix_copy_is_restored_after_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workdir = Path(directory)
@@ -145,8 +167,9 @@ COMMIT;
             )
             copied = workdir / "supabase/migrations" / next(iter(BOUND_FILES))
             copied.write_bytes(copied.read_bytes() + b"\n")
-            with self.assertRaises(RehearsalError):
+            with self.assertRaises(RehearsalError) as changed_copy:
                 source_inventory(workdir)
+            self.assertEqual(changed_copy.exception.code, "SOURCE_MISMATCH")
 
     def test_fault_must_reach_fixture_history_trigger(self) -> None:
         wrong = subprocess.CompletedProcess([], 3, b"", b"earlier SQL error")
@@ -248,9 +271,260 @@ COMMIT;
                         mark_owned(workdir, state, "abcdef123456")
                         raise RuntimeError("injected")
                 cli.assert_called_once_with(workdir, "reset", "--no-seed")
+            self.assertEqual(
+                (workdir / ".owned-typegen-stack").read_text(), "abcdef123456\n"
+            )
+
+    def test_failure_marker_only_uses_allowlisted_stage_and_code(self) -> None:
+        tracker = StageTracker()
+        with redirect_stderr(io.StringIO()) as output:
+            tracker.enter("container_identity")
+            marker = failure_marker(
+                tracker,
+                RehearsalError("secret SQL and database URL", code="IMAGE_MISMATCH"),
+            )
+        self.assertEqual(output.getvalue(), "proof_stage|container_identity|BEGIN\n")
+        self.assertEqual(
+            marker,
+            "error: bounded disposable proof failed: "
+            "stage=container_identity code=IMAGE_MISMATCH",
+        )
+        self.assertNotIn("secret", marker + output.getvalue())
+        with self.assertRaises(ValueError):
+            tracker.enter("hosted_db_url")
+        with self.assertRaises(ValueError):
+            RehearsalError("secret", code="SECRET")
+        tracker.current = "private stage"
+        altered = RehearsalError("private message")
+        altered.code = "private code"
+        self.assertEqual(
+            failure_marker(tracker, altered),
+            "error: bounded disposable proof failed: "
+            "stage=entry code=UNEXPECTED_EXCEPTION",
+        )
+
+    def test_source_failure_reports_first_stage_without_exception_text(self) -> None:
+        tracker = StageTracker()
+        with (
+            patch(
+                "rehearse_explicit_transaction_profile.source_inventory",
+                side_effect=RehearsalError("private source", code="SOURCE_MISMATCH"),
+            ),
+            redirect_stderr(io.StringIO()) as output,
+            self.assertRaises(RehearsalError) as caught,
+        ):
+            run(Path("/tmp/disposable"), tracker)
+        self.assertEqual(caught.exception.code, "SOURCE_MISMATCH")
+        self.assertEqual(output.getvalue(), "proof_stage|source_inventory|BEGIN\n")
+        self.assertNotIn("private", failure_marker(tracker, caught.exception))
+
+    def test_container_guard_distinguishes_image_and_missing_container(self) -> None:
+        container_id = "abcdef123456"
+        details = {
+            "Name": f"/{CONTAINER}",
+            "Config": {"Image": "unreviewed-image"},
+            "State": {"Running": True},
+            "NetworkSettings": {
+                "Ports": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": "54322"}]}
+            },
+        }
+        with patch("rehearse_explicit_transaction_profile.checked", return_value=b""):
+            with self.assertRaises(RehearsalError) as missing:
+                target_container()
+        self.assertEqual(missing.exception.code, "CONTAINER_MISSING")
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[container_id.encode(), json.dumps(details).encode()],
+        ):
+            with self.assertRaises(RehearsalError) as wrong_image:
+                target_container()
+        self.assertEqual(wrong_image.exception.code, "IMAGE_MISMATCH")
+        details["Config"]["Image"] = IMAGE
+        with (
+            patch(
+                "rehearse_explicit_transaction_profile.checked",
+                side_effect=[container_id.encode(), json.dumps(details).encode()],
+            ),
+            patch("rehearse_explicit_transaction_profile.sql", return_value=b"150000"),
+        ):
+            with self.assertRaises(RehearsalError) as wrong_version:
+                target_container()
+        self.assertEqual(wrong_version.exception.code, "VERSION_MISMATCH")
+
+    def test_failed_command_does_not_expose_subprocess_stderr(self) -> None:
+        result = subprocess.CompletedProcess([], 17, b"", b"private command stderr")
+        with patch(
+            "rehearse_explicit_transaction_profile.subprocess.run", return_value=result
+        ):
+            with self.assertRaises(RehearsalError) as caught:
+                checked(["supabase", "--version"])
+        self.assertEqual(caught.exception.code, "COMMAND_FAILED")
+        self.assertNotIn("private", failure_marker(StageTracker(), caught.exception))
+        for failure in (
+            OSError("private executable path"),
+            subprocess.TimeoutExpired(["private-command"], 1),
+        ):
+            with (
+                self.subTest(failure=type(failure).__name__),
+                patch(
+                    "rehearse_explicit_transaction_profile.subprocess.run",
+                    side_effect=failure,
+                ),
+                self.assertRaises(RehearsalError) as unavailable,
+            ):
+                checked(["supabase", "--version"])
+            self.assertEqual(unavailable.exception.code, "COMMAND_UNAVAILABLE")
+            self.assertNotIn(
+                "private", failure_marker(StageTracker(), unavailable.exception)
+            )
+
+    def test_pre_start_guards_keep_specific_stage_and_code(self) -> None:
+        source_files = sorted(
+            (Path(__file__).resolve().parents[2] / "supabase/migrations").glob("*.sql")
+        )
+        cases = (
+            ("checkout_identity", "SOURCE_MISMATCH"),
+            ("suffix_order", "SOURCE_MISMATCH"),
+            ("cli_version", "CLI_VERSION_MISMATCH"),
+            ("scratch_directory", "WORKDIR_UNAVAILABLE"),
+            ("stack_ownership", "CONTAINER_MISMATCH"),
+            ("prefix_copy", "WORKDIR_UNAVAILABLE"),
+        )
+        for failed_stage, expected_code in cases:
+            with (
+                self.subTest(stage=failed_stage),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                files = source_files.copy()
+                if failed_stage == "suffix_order":
+                    files[-2] = files[0]
+
+                def fake_checked(args, **_kwargs):
+                    if args[0] == "supabase":
+                        return b"2.0.0" if failed_stage == "cli_version" else b"2.109.1"
+                    if failed_stage == "checkout_identity" and args[-1] == "HEAD":
+                        return b"invalid-source"
+                    return b"a" * 40
+
+                tracker = StageTracker()
+                with (
+                    patch.dict(os.environ, {"QUALIFICATION_SHA": "a" * 40}),
+                    patch(
+                        "rehearse_explicit_transaction_profile.source_inventory",
+                        return_value=(files, 131),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.checked",
+                        side_effect=fake_checked,
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.TemporaryDirectory",
+                        side_effect=(
+                            OSError("private scratch path")
+                            if failed_stage == "scratch_directory"
+                            else None
+                        ),
+                        return_value=nullcontext(directory),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.owned_window",
+                        side_effect=(
+                            RehearsalError(
+                                "private preexisting container",
+                                code="CONTAINER_MISMATCH",
+                            )
+                            if failed_stage == "stack_ownership"
+                            else None
+                        ),
+                        return_value=nullcontext(WindowState()),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.visible_prefix",
+                        side_effect=(
+                            OSError("private migration path")
+                            if failed_stage == "prefix_copy"
+                            else None
+                        ),
+                        return_value=nullcontext(),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.cli",
+                        side_effect=RehearsalError(
+                            "private CLI output", code="COMMAND_FAILED"
+                        ),
+                    ),
+                    redirect_stderr(io.StringIO()) as output,
+                    self.assertRaises(Exception) as caught,
+                ):
+                    run(Path(directory), tracker)
+                self.assertEqual(tracker.current, failed_stage)
+                marker = failure_marker(tracker, caught.exception)
                 self.assertEqual(
-                    (workdir / ".owned-typegen-stack").read_text(), "abcdef123456\n"
+                    marker,
+                    "error: bounded disposable proof failed: "
+                    f"stage={failed_stage} code={expected_code}",
                 )
+                self.assertNotIn("private", marker + output.getvalue())
+
+    def test_first_runtime_boundary_identifies_start_or_container_guard(self) -> None:
+        files = sorted(
+            (Path(__file__).resolve().parents[2] / "supabase/migrations").glob("*.sql")
+        )
+
+        def fake_checked(args, **_kwargs):
+            if args[0] == "supabase":
+                return b"2.109.1"
+            return b"a" * 40
+
+        for failure, expected_stage in (
+            ("start", "cli_start"),
+            ("container", "container_identity"),
+        ):
+            with (
+                self.subTest(failure=failure),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                tracker = StageTracker()
+                with (
+                    patch.dict(os.environ, {"QUALIFICATION_SHA": "a" * 40}),
+                    patch(
+                        "rehearse_explicit_transaction_profile.source_inventory",
+                        return_value=(files, 131),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.checked",
+                        side_effect=fake_checked,
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.owned_window",
+                        return_value=nullcontext(WindowState()),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.visible_prefix",
+                        return_value=nullcontext(),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.cli",
+                        side_effect=(
+                            RehearsalError("private CLI stderr", code="COMMAND_FAILED")
+                            if failure == "start"
+                            else None
+                        ),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.target_container",
+                        side_effect=RehearsalError(
+                            "private Docker inspect", code="IMAGE_MISMATCH"
+                        ),
+                    ),
+                    redirect_stderr(io.StringIO()) as output,
+                    self.assertRaises(RehearsalError) as caught,
+                ):
+                    run(Path(directory), tracker)
+                self.assertEqual(tracker.current, expected_stage)
+                marker = failure_marker(tracker, caught.exception)
+                self.assertIn(f"stage={expected_stage}", marker)
+                self.assertNotIn("private", marker + output.getvalue())
 
 
 if __name__ == "__main__":

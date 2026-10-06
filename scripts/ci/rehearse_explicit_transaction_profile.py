@@ -29,6 +29,7 @@ from typing import Iterator
 from explicit_transaction_boundary import (
     BOUND_FILES,
     Boundary,
+    BoundaryError,
     parse_bound_file,
     verify_disposable_prefix,
 )
@@ -44,10 +45,91 @@ LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
 OWNERSHIP_MARKER = ".owned-typegen-stack"
 ADOPTION = "20260929120003"
 LEDGER_COLUMNS = "version,name,statements,created_by,idempotency_key,rollback"
+STAGES = frozenset(
+    {
+        "entry",
+        "source_inventory",
+        "checkout_identity",
+        "suffix_order",
+        "cli_version",
+        "scratch_directory",
+        "stack_ownership",
+        "prefix_copy",
+        "cli_start",
+        "container_identity",
+        "prefix_reset",
+        "prefix_ledger",
+        "cli_reference_push",
+        "cli_reference_check",
+        "predecessor_reset",
+        "predecessor_ledger",
+        "suffix_replay",
+        "final_ledger",
+        "full_reset",
+        "full_ledger",
+    }
+)
+ERROR_CODES = frozenset(
+    {
+        "BOUNDARY_REJECTED",
+        "CLI_REFERENCE_MISMATCH",
+        "CLI_VERSION_MISMATCH",
+        "COMMAND_FAILED",
+        "COMMAND_UNAVAILABLE",
+        "CONTAINER_MISMATCH",
+        "CONTAINER_MISSING",
+        "GUARD_REJECTED",
+        "HISTORY_MISMATCH",
+        "IMAGE_MISMATCH",
+        "SOURCE_MISMATCH",
+        "SQL_FAILED",
+        "SQL_UNAVAILABLE",
+        "UNEXPECTED_EXCEPTION",
+        "VERSION_MISMATCH",
+        "WORKDIR_UNAVAILABLE",
+    }
+)
 
 
 class RehearsalError(RuntimeError):
     """A bounded disposable proof failed without exposing database contents."""
+
+    def __init__(self, message: str, *, code: str = "GUARD_REJECTED") -> None:
+        if code not in ERROR_CODES:
+            raise ValueError("unreviewed disposable proof error code")
+        super().__init__(message)
+        self.code = code
+
+
+@dataclass
+class StageTracker:
+    current: str = "entry"
+
+    def enter(self, stage: str) -> None:
+        if stage not in STAGES:
+            raise ValueError("unreviewed disposable proof stage")
+        self.current = stage
+        print(f"proof_stage|{stage}|BEGIN", file=sys.stderr, flush=True)
+
+
+def failure_marker(tracker: StageTracker, exc: Exception) -> str:
+    """Emit only fixed labels; exception messages may contain database output."""
+    stage = tracker.current if tracker.current in STAGES else "entry"
+    if isinstance(exc, RehearsalError):
+        code = exc.code
+    elif isinstance(exc, BoundaryError):
+        code = "BOUNDARY_REJECTED"
+    elif isinstance(exc, OSError) and tracker.current in {
+        "scratch_directory",
+        "stack_ownership",
+        "prefix_copy",
+    }:
+        code = "WORKDIR_UNAVAILABLE"
+    else:
+        code = "UNEXPECTED_EXCEPTION"
+    if code not in ERROR_CODES:
+        code = "UNEXPECTED_EXCEPTION"
+    return f"error: bounded disposable proof failed: stage={stage} code={code}"
 
 
 def checked(args: list[str], *, data: bytes | None = None, timeout: int = 600) -> bytes:
@@ -57,11 +139,13 @@ def checked(args: list[str], *, data: bytes | None = None, timeout: int = 600) -
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise RehearsalError(
-            f"disposable command unavailable: {Path(args[0]).name}"
+            f"disposable command unavailable: {Path(args[0]).name}",
+            code="COMMAND_UNAVAILABLE",
         ) from exc
     if result.returncode:
         raise RehearsalError(
-            f"disposable command failed: {Path(args[0]).name} ({result.returncode})"
+            f"disposable command failed: {Path(args[0]).name} ({result.returncode})",
+            code="COMMAND_FAILED",
         )
     return result.stdout.strip()
 
@@ -89,14 +173,18 @@ def sql(container: str, query: str, *, expected_failure: bool = False) -> bytes:
             args, input=query.encode(), capture_output=True, timeout=300, check=False
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise RehearsalError("disposable SQL command unavailable") from exc
+        raise RehearsalError(
+            "disposable SQL command unavailable", code="SQL_UNAVAILABLE"
+        ) from exc
     if expected_failure:
         if result.returncode == 0 or b"disposable history refusal" not in result.stderr:
             raise RehearsalError(
                 "injected history refusal was not the observed failure"
             )
     elif result.returncode:
-        raise RehearsalError(f"disposable SQL failed ({result.returncode})")
+        raise RehearsalError(
+            f"disposable SQL failed ({result.returncode})", code="SQL_FAILED"
+        )
     return result.stdout.strip()
 
 
@@ -165,15 +253,18 @@ def target_container() -> str:
         .splitlines()
     )
     if len(matches) != 1 or not re.fullmatch(r"[0-9a-f]{12,64}", matches[0]):
-        raise RehearsalError("unique marked typegen container is missing")
+        raise RehearsalError(
+            "unique marked typegen container is missing", code="CONTAINER_MISSING"
+        )
     container = matches[0]
     details = json.loads(
         checked(["docker", "inspect", container, "--format", "{{json .}}"])
     )
     ports = details["NetworkSettings"]["Ports"].get("5432/tcp")
+    if details["Config"]["Image"] != IMAGE:
+        raise RehearsalError("typegen image changed", code="IMAGE_MISMATCH")
     if (
         details["Name"] != f"/{CONTAINER}"
-        or details["Config"]["Image"] != IMAGE
         or not details["State"]["Running"]
         or not isinstance(ports, list)
         or not any(
@@ -182,35 +273,67 @@ def target_container() -> str:
         )
     ):
         raise RehearsalError(
-            "typegen container identity, image, or loopback binding changed"
+            "typegen container identity or loopback binding changed",
+            code="CONTAINER_MISMATCH",
         )
     if sql(container, "SHOW server_version_num;") != b"170006":
-        raise RehearsalError("qualified PostgreSQL patch changed")
+        raise RehearsalError(
+            "qualified PostgreSQL patch changed", code="VERSION_MISMATCH"
+        )
     return container
 
 
 def source_inventory(workdir: Path) -> tuple[list[Path], int]:
     config = workdir / "supabase/config.toml"
-    with config.open("rb") as handle:
-        parsed = tomllib.load(handle)
+    try:
+        with config.open("rb") as handle:
+            parsed = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RehearsalError(
+            "disposable profile config is unavailable or malformed",
+            code="SOURCE_MISMATCH",
+        ) from exc
+    db = parsed.get("db")
+    seed = db.get("seed") if isinstance(db, dict) else None
     if (
         parsed.get("project_id") != PROJECT
-        or parsed.get("db", {}).get("major_version") != 17
-        or parsed.get("db", {}).get("seed", {}).get("enabled") is not False
-        or parsed.get("db", {}).get("port") != 54322
+        or not isinstance(db, dict)
+        or db.get("major_version") != 17
+        or not isinstance(seed, dict)
+        or seed.get("enabled") is not False
+        or db.get("port") != 54322
     ):
-        raise RehearsalError("workdir is not the reviewed disposable profile")
+        raise RehearsalError(
+            "workdir is not the reviewed disposable profile", code="SOURCE_MISMATCH"
+        )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
     if len(files) != 139 or [p.name for p in files] != [p.name for p in committed]:
-        raise RehearsalError("disposable copy does not match 139 source migrations")
+        raise RehearsalError(
+            "disposable copy does not match 139 source migrations",
+            code="SOURCE_MISMATCH",
+        )
     for source, copy in zip(committed, files, strict=True):
-        if digest(source.read_bytes()) != digest(copy.read_bytes()):
-            raise RehearsalError("disposable migration copy changed")
+        try:
+            matches = digest(source.read_bytes()) == digest(copy.read_bytes())
+        except OSError as exc:
+            raise RehearsalError(
+                "disposable migration source is unreadable", code="SOURCE_MISMATCH"
+            ) from exc
+        if not matches:
+            raise RehearsalError(
+                "disposable migration copy changed", code="SOURCE_MISMATCH"
+            )
     if not any(p.name.startswith(ADOPTION + "_") for p in files):
-        raise RehearsalError("service adoption predecessor is missing")
+        raise RehearsalError(
+            "service adoption predecessor is missing", code="SOURCE_MISMATCH"
+        )
     for name in BOUND_FILES:
         parse_bound_file(name)
+    if FIRST not in [p.name for p in files]:
+        raise RehearsalError(
+            "reviewed migration boundary is missing", code="SOURCE_MISMATCH"
+        )
     return files, [p.name for p in files].index(FIRST)
 
 
@@ -249,7 +372,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
         if checked(
             ["docker", "ps", "--filter", f"name=^/{CONTAINER}$", "--format", "{{.ID}}"]
         ).strip():
-            raise RehearsalError("typegen stack must be newly created by this proof")
+            raise RehearsalError(
+                "typegen stack must be newly created by this proof",
+                code="CONTAINER_MISMATCH",
+            )
         state = WindowState()
         try:
             yield state
@@ -278,7 +404,9 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
 def assert_prefix(container: str, expected: list[list[object]], count: int) -> None:
     current = ledger(container)
     if len(current) < count or current[:count] != expected[:count]:
-        raise RehearsalError("predecessor migration history changed")
+        raise RehearsalError(
+            "predecessor migration history changed", code="HISTORY_MISMATCH"
+        )
 
 
 def rejection_trigger(container: str, version: str, *, create: bool) -> None:
@@ -367,13 +495,17 @@ def check_cli_reference(
     rows = ledger(container)
     expected_versions = [path.stem.split("_", 1)[0] for path in files]
     if [row[0] for row in rows] != expected_versions:
-        raise RehearsalError("pinned CLI did not apply the complete source suffix")
+        raise RehearsalError(
+            "pinned CLI did not apply the complete source suffix",
+            code="CLI_REFERENCE_MISMATCH",
+        )
     for filename in BOUND_FILES:
         boundary = parse_bound_file(filename)
         matches = [row for row in rows if row[0] == boundary.version]
         if matches != [expected_history_row(boundary)]:
             raise RehearsalError(
-                f"pinned CLI six-column history differs for {filename}"
+                f"pinned CLI six-column history differs for {filename}",
+                code="CLI_REFERENCE_MISMATCH",
             )
     print(f"cli_statement_serialization|PASS|{len(BOUND_FILES)}")
     return rows[:first_index]
@@ -385,8 +517,11 @@ def expected_history_row(boundary: Boundary) -> list[object]:
     return row
 
 
-def run(workdir: Path) -> None:
+def run(workdir: Path, tracker: StageTracker | None = None) -> None:
+    tracker = tracker or StageTracker()
+    tracker.enter("source_inventory")
     files, first_index = source_inventory(workdir)
+    tracker.enter("checkout_identity")
     source = checked(["git", "-C", str(ROOT), "rev-parse", "HEAD"]).decode()
     tree = checked(["git", "-C", str(ROOT), "rev-parse", "HEAD^{tree}"]).decode()
     if (
@@ -397,24 +532,36 @@ def run(workdir: Path) -> None:
             and os.environ["QUALIFICATION_SHA"] != source
         )
     ):
-        raise RehearsalError("qualified checkout identity changed")
+        raise RehearsalError(
+            "qualified checkout identity changed", code="SOURCE_MISMATCH"
+        )
+    tracker.enter("suffix_order")
     if (
         files[-1].name != "20261006160000_service_table_acl_hardening.sql"
         or files[-2].name != LAST
     ):
-        raise RehearsalError("reviewed suffix order changed")
+        raise RehearsalError("reviewed suffix order changed", code="SOURCE_MISMATCH")
+    tracker.enter("cli_version")
     if checked(["supabase", "--version"]).decode().splitlines()[0] != "2.109.1":
-        raise RehearsalError("pinned Supabase CLI changed")
+        raise RehearsalError("pinned Supabase CLI changed", code="CLI_VERSION_MISMATCH")
+    tracker.enter("scratch_directory")
     with TemporaryDirectory(prefix="typegen-explicit-", dir=workdir) as scratch:
         holding = Path(scratch)
+        tracker.enter("stack_ownership")
         with owned_window(workdir, files) as window:
+            tracker.enter("prefix_copy")
             with visible_prefix(files, first_index - 1, holding):
+                tracker.enter("cli_start")
                 cli(workdir, "start")
+                tracker.enter("container_identity")
                 container = target_container()
                 mark_owned(workdir, window, container)
+                tracker.enter("prefix_reset")
                 cli(workdir, "reset", "--no-seed")
+                tracker.enter("container_identity")
                 container = target_container()
                 mark_owned(workdir, window, container)
+                tracker.enter("prefix_ledger")
                 prefix = ledger(container)
                 expected_prefix = [
                     path.stem.split("_", 1)[0] for path in files[:first_index]
@@ -422,31 +569,47 @@ def run(workdir: Path) -> None:
                 if [
                     row[0] for row in prefix
                 ] != expected_prefix or ADOPTION not in expected_prefix:
-                    raise RehearsalError("predecessor ledger is incomplete")
+                    raise RehearsalError(
+                        "predecessor ledger is incomplete", code="HISTORY_MISMATCH"
+                    )
             # Native pinned CLI execution establishes the statement arrays.
+            tracker.enter("cli_reference_push")
             cli(workdir, "push", "--db-url", URL, "--include-all", "--yes")
+            tracker.enter("cli_reference_check")
             baseline = check_cli_reference(container, files, first_index)
             # Recreate the exact predecessor state. Never test on the final schema.
+            tracker.enter("predecessor_reset")
             with visible_prefix(files, first_index - 1, holding):
                 cli(workdir, "reset", "--no-seed")
+                tracker.enter("container_identity")
                 container = target_container()
                 mark_owned(workdir, window, container)
+                tracker.enter("predecessor_ledger")
                 assert_prefix(container, baseline, first_index)
                 if len(ledger(container)) != first_index:
-                    raise RehearsalError("predecessor reset retained suffix history")
+                    raise RehearsalError(
+                        "predecessor reset retained suffix history",
+                        code="HISTORY_MISMATCH",
+                    )
             completed: list[list[object]] = []
             for index in range(first_index, len(files)):
+                tracker.enter("suffix_replay")
                 path = files[index]
                 before = ledger(container)
                 if [row[0] for row in before] != [
                     prior.stem.split("_", 1)[0] for prior in files[:index]
                 ]:
-                    raise RehearsalError("unexpected migration history before body")
+                    raise RehearsalError(
+                        "unexpected migration history before body",
+                        code="HISTORY_MISMATCH",
+                    )
                 assert_prefix(container, baseline, first_index)
                 if path.name in BOUND_FILES:
                     boundary = parse_bound_file(path.name)
                     if path.read_bytes() != boundary.raw:
-                        raise RehearsalError("original body copy changed")
+                        raise RehearsalError(
+                            "original body copy changed", code="SOURCE_MISMATCH"
+                        )
                     rejection_trigger(container, boundary.version, create=True)
                     before_catalog = catalog_hash(container)
                     sql(
@@ -498,15 +661,19 @@ def run(workdir: Path) -> None:
                         p.stem.split("_", 1)[0] for p in files[: index + 1]
                     ]:
                         raise RehearsalError("intervening CLI migration order changed")
+            tracker.enter("final_ledger")
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
                     "original-body rehearsal did not finish the source suffix"
                 )
             assert_prefix(container, baseline, first_index)
             # Restore the job's ordinary qualified profile for typegen and ACLs.
+            tracker.enter("full_reset")
             cli(workdir, "reset", "--no-seed")
+            tracker.enter("container_identity")
             container = target_container()
             mark_owned(workdir, window, container)
+            tracker.enter("full_ledger")
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
                     "normal full replay did not restore 139 migrations"
@@ -521,11 +688,9 @@ if __name__ == "__main__":
             "usage: rehearse_explicit_transaction_profile.py DISPOSABLE_WORKDIR"
         )
     workdir = Path(sys.argv[1]).resolve()
+    tracker = StageTracker()
     try:
-        run(workdir)
+        run(workdir, tracker)
     except Exception as exc:
-        print(
-            f"error: bounded disposable proof failed: {type(exc).__name__}",
-            file=sys.stderr,
-        )
+        print(failure_marker(tracker, exc), file=sys.stderr)
         raise SystemExit(1) from exc
