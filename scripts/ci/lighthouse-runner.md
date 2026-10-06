@@ -36,6 +36,11 @@ completed content check gets one fresh Chrome retry for the same URL and run.
 The rejected JSON/HTML pair is retained separately and recorded in
 `run-summary.json`; it never counts toward the required three valid runs.
 Exhaustion and all other collection errors remain blocking.
+Each Chrome startup summary now includes fixed trace-event counts, relative
+navigation timings and main-frame association for that attempt when Lighthouse
+returns a trace. It records neither raw trace events nor frame IDs, document
+URLs, request contents or browser headers. An unavailable trace is marked as
+such; it is not inferred from the report.
 
 Artifacts remain under `.lighthouseci`, uploaded as `lighthouse-reports` even on
 failure. Every successful collection writes a distinct `lhr-*.json` and HTML pair.

@@ -137,6 +137,142 @@ async function browserVersion(chromePath) {
 }
 
 const finite = (n) => typeof n === "number" && Number.isFinite(n);
+const traceEventNames = [
+  "navigationStart",
+  "clock_sync",
+  "TracingStartedInBrowser",
+  "TracingStartedInPage",
+  "FrameCommittedInBrowser",
+  "ResourceSendRequest",
+];
+
+/** Project only fixed counts and relative timings from Lighthouse's Trace artifact. */
+export function traceDiagnostics(traceEvents) {
+  if (!Array.isArray(traceEvents)) return { status: "unavailable" };
+  // Match Lighthouse 13.5.0 TraceProcessor's key-event category filter.
+  const keyEvents = traceEvents
+    .filter((event) => {
+      const category = event?.cat;
+      return (
+        typeof category === "string" &&
+        (category.includes("blink.user_timing") ||
+          category.includes("loading") ||
+          category.includes("devtools.timeline") ||
+          category === "__metadata")
+      );
+    })
+    .sort((left, right) => (left.ts ?? Infinity) - (right.ts ?? Infinity));
+  const counts = Object.fromEntries(traceEventNames.map((name) => [name, 0]));
+  const first = Object.fromEntries(traceEventNames.map((name) => [name, null]));
+  let firstTimestamp = Infinity;
+  let lastTimestamp = -Infinity;
+  let navigationStartsAnyCategory = 0;
+  for (const event of traceEvents) {
+    if (finite(event?.ts)) {
+      firstTimestamp = Math.min(firstTimestamp, event.ts);
+      lastTimestamp = Math.max(lastTimestamp, event.ts + (finite(event.dur) ? event.dur : 0));
+    }
+    if (event?.name === "navigationStart") navigationStartsAnyCategory++;
+  }
+  for (const event of keyEvents) {
+    if (Object.hasOwn(counts, event?.name)) {
+      counts[event.name]++;
+      if (finite(event.ts)) first[event.name] = Math.min(first[event.name] ?? Infinity, event.ts);
+    }
+  }
+  const browserStart = keyEvents.find((event) => event?.name === "TracingStartedInBrowser");
+  const firstRootFrame = Array.isArray(browserStart?.args?.data?.frames)
+    ? browserStart.args.data.frames.find((frame) => !frame?.parent)
+    : null;
+  const browserFrame = firstRootFrame?.frame && firstRootFrame?.processId ? firstRootFrame : null;
+  const pageStart = keyEvents.find((event) => event?.name === "TracingStartedInPage");
+  const firstResource = keyEvents.find((event) => event?.name === "ResourceSendRequest");
+  const firstFallbackNav = keyEvents.find(
+    (event) =>
+      event?.name === "navigationStart" &&
+      acceptableDocument(event) &&
+      event.args?.data?.isLoadingMainFrame,
+  );
+  const fallbackNav =
+    firstResource &&
+    firstFallbackNav?.pid === firstResource.pid &&
+    firstFallbackNav?.tid === firstResource.tid &&
+    firstFallbackNav?.args?.frame
+      ? firstFallbackNav
+      : null;
+  const mainFrame = browserFrame?.frame || pageStart?.args?.data?.page || fallbackNav?.args?.frame;
+  const mainFrameSource = browserFrame?.frame
+    ? "browser"
+    : pageStart?.args?.data?.page
+      ? "page"
+      : fallbackNav?.args?.frame
+        ? "navigation_fallback"
+        : "unknown";
+  const frameOf = (event) =>
+    event?.args?.data?.frame || event?.args?.data?.frameID || event?.args?.frame;
+  function acceptableDocument(event) {
+    const url = event?.args?.data?.documentLoaderURL;
+    return url === undefined || (typeof url === "string" && /^(chrome|https?):/.test(url));
+  }
+  const navigationStarts = keyEvents.filter((event) => event?.name === "navigationStart");
+  const documentNavigations = navigationStarts.filter(acceptableDocument);
+  const mainNavigations = mainFrame
+    ? navigationStarts.filter((event) => frameOf(event) === mainFrame)
+    : [];
+  const mainDocumentNavigations = mainNavigations.filter(acceptableDocument);
+  const mainCommits = mainFrame
+    ? keyEvents.filter(
+        (event) => event?.name === "FrameCommittedInBrowser" && frameOf(event) === mainFrame,
+      )
+    : [];
+  const mainRequests = mainFrame
+    ? keyEvents.filter(
+        (event) => event?.name === "ResourceSendRequest" && frameOf(event) === mainFrame,
+      )
+    : [];
+  const offset = (timestamp) =>
+    finite(timestamp) && finite(firstTimestamp)
+      ? Math.round((timestamp - firstTimestamp) / 1000)
+      : null;
+  const firstTs = (events) => {
+    const timestamp = events.reduce(
+      (minimum, event) => (finite(event.ts) ? Math.min(minimum, event.ts) : minimum),
+      Infinity,
+    );
+    return finite(timestamp) ? timestamp : null;
+  };
+  return {
+    status: "available",
+    event_count: traceEvents.length,
+    key_event_count: keyEvents.length,
+    duration_ms: finite(firstTimestamp) ? offset(lastTimestamp) : null,
+    counts: {
+      navigation_start: counts.navigationStart,
+      navigation_start_any_category: navigationStartsAnyCategory,
+      acceptable_document_navigation: documentNavigations.length,
+      main_frame_navigation: mainNavigations.length,
+      main_frame_document_navigation: mainDocumentNavigations.length,
+      clock_sync: counts.clock_sync,
+      tracing_started_in_browser: counts.TracingStartedInBrowser,
+      tracing_started_in_page: counts.TracingStartedInPage,
+      frame_committed_in_browser: counts.FrameCommittedInBrowser,
+      main_frame_commit: mainCommits.length,
+      resource_send_request: counts.ResourceSendRequest,
+      main_frame_resource_request: mainRequests.length,
+    },
+    main_frame_source: mainFrameSource,
+    first_offset_ms: {
+      clock_sync: offset(first.clock_sync),
+      tracing_started_in_browser: offset(first.TracingStartedInBrowser),
+      tracing_started_in_page: offset(first.TracingStartedInPage),
+      navigation_start: offset(first.navigationStart),
+      document_navigation: offset(firstTs(documentNavigations)),
+      main_frame_navigation: offset(firstTs(mainNavigations)),
+      main_frame_document_navigation: offset(firstTs(mainDocumentNavigations)),
+      main_frame_commit: offset(firstTs(mainCommits)),
+    },
+  };
+}
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
@@ -445,6 +581,7 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
               signal,
               security_flags_rejected: unsafeFlags,
               stderr_reasons: reasons,
+              trace: traceDiagnostics(result?.artifacts?.Trace?.traceEvents),
             },
             null,
             2,

@@ -16,6 +16,7 @@ import {
   auditWithChrome,
   classifyChromeStderr,
   sourceIdentity,
+  traceDiagnostics,
   INCOMPLETE_LOAD_WARNING,
 } from "./lighthouse-runner.mjs";
 
@@ -40,6 +41,156 @@ const makeReport = (url) => ({
 });
 const allReports = () =>
   config.ci.collect.url.flatMap((url) => Array.from({ length: 3 }, () => makeReport(url)));
+
+test("trace diagnostics retain only allowlisted counts and relative frame timings", () => {
+  const privateUrl = "https://private.example/path?token=PRIVATE_TRACE_SENTINEL";
+  const traceEvents = [
+    {
+      name: "TracingStartedInBrowser",
+      cat: "__metadata",
+      ts: 100000,
+      args: { data: { frames: [{ frame: "private-main", processId: 9, url: privateUrl }] } },
+    },
+    {
+      name: "clock_sync",
+      cat: "__metadata",
+      ts: 101000,
+      args: { sync_id: "PRIVATE_TRACE_SENTINEL" },
+    },
+    {
+      name: "navigationStart",
+      cat: "devtools.timeline",
+      ts: 104000,
+      args: { frame: "private-other", data: { documentLoaderURL: privateUrl } },
+    },
+    {
+      name: "navigationStart",
+      cat: "devtools.timeline",
+      ts: 105000,
+      args: { frame: "private-main", data: { documentLoaderURL: privateUrl } },
+    },
+    {
+      name: "FrameCommittedInBrowser",
+      cat: "loading",
+      ts: 108000,
+      args: { data: { frame: "private-main", url: privateUrl } },
+    },
+    {
+      name: "ResourceSendRequest",
+      cat: "devtools.timeline",
+      ts: 109000,
+      args: { data: { frame: "private-main", url: privateUrl } },
+    },
+  ];
+  const summary = traceDiagnostics(traceEvents);
+  assert.equal(summary.status, "available");
+  assert.equal(summary.event_count, 6);
+  assert.equal(summary.key_event_count, 6);
+  assert.equal(summary.duration_ms, 9);
+  assert.equal(summary.main_frame_source, "browser");
+  assert.equal(summary.counts.navigation_start, 2);
+  assert.equal(summary.counts.navigation_start_any_category, 2);
+  assert.equal(summary.counts.acceptable_document_navigation, 2);
+  assert.equal(summary.counts.main_frame_document_navigation, 1);
+  assert.equal(summary.counts.main_frame_commit, 1);
+  assert.equal(summary.first_offset_ms.clock_sync, 1);
+  assert.equal(summary.first_offset_ms.navigation_start, 4);
+  assert.equal(summary.first_offset_ms.main_frame_document_navigation, 5);
+  assert.equal(summary.first_offset_ms.main_frame_commit, 8);
+  assert.ok(!JSON.stringify(summary).includes("PRIVATE_"));
+  assert.deepEqual(traceDiagnostics(undefined), { status: "unavailable" });
+  const noNav = traceDiagnostics(traceEvents.filter((event) => event.name !== "navigationStart"));
+  assert.equal(noNav.counts.navigation_start, 0);
+  assert.equal(noNav.counts.main_frame_document_navigation, 0);
+  assert.equal(noNav.first_offset_ms.document_navigation, null);
+  const wrongCategory = traceDiagnostics(
+    traceEvents.map((event) =>
+      event.name === "navigationStart" ? { ...event, cat: "unrelated" } : event,
+    ),
+  );
+  assert.equal(wrongCategory.counts.navigation_start_any_category, 2);
+  assert.equal(wrongCategory.counts.navigation_start, 0);
+});
+
+test("trace frame selection follows sorted first-event and first-root rules", () => {
+  const events = [
+    {
+      name: "TracingStartedInBrowser",
+      cat: "__metadata",
+      ts: 200000,
+      args: { data: { frames: [{ frame: "late-frame", processId: 2 }] } },
+    },
+    {
+      name: "TracingStartedInBrowser",
+      cat: "__metadata",
+      ts: 100000,
+      args: { data: { frames: [{ frame: "early-frame", processId: 1 }] } },
+    },
+    {
+      name: "navigationStart",
+      cat: "devtools.timeline",
+      ts: 120000,
+      args: { frame: "early-frame", data: { documentLoaderURL: "https://example.test/" } },
+    },
+  ];
+  const sorted = traceDiagnostics(events);
+  assert.equal(sorted.main_frame_source, "browser");
+  assert.equal(sorted.counts.main_frame_document_navigation, 1);
+  assert.equal(sorted.first_offset_ms.tracing_started_in_browser, 0);
+
+  const incompleteFirstRoot = traceDiagnostics([
+    {
+      name: "TracingStartedInBrowser",
+      cat: "__metadata",
+      ts: 100000,
+      args: {
+        data: {
+          frames: [{ frame: "incomplete-root" }, { frame: "later-root", processId: 2 }],
+        },
+      },
+    },
+    {
+      name: "TracingStartedInPage",
+      cat: "__metadata",
+      ts: 110000,
+      pid: 3,
+      args: { data: { page: "page-fallback" } },
+    },
+  ]);
+  assert.equal(incompleteFirstRoot.main_frame_source, "page");
+});
+
+test("trace navigation fallback does not skip a mismatching first candidate", () => {
+  const events = [
+    { name: "ResourceSendRequest", cat: "devtools.timeline", ts: 100000, pid: 1, tid: 1, args: {} },
+    {
+      name: "navigationStart",
+      cat: "devtools.timeline",
+      ts: 110000,
+      pid: 2,
+      tid: 2,
+      args: {
+        frame: "unmatched-first",
+        data: { isLoadingMainFrame: true, documentLoaderURL: "https://example.test/" },
+      },
+    },
+    {
+      name: "navigationStart",
+      cat: "devtools.timeline",
+      ts: 120000,
+      pid: 1,
+      tid: 1,
+      args: {
+        frame: "matched-second",
+        data: { isLoadingMainFrame: true, documentLoaderURL: "https://example.test/" },
+      },
+    },
+  ];
+  const summary = traceDiagnostics(events);
+  assert.equal(summary.main_frame_source, "unknown");
+  assert.equal(summary.counts.navigation_start, 2);
+  assert.equal(summary.counts.main_frame_navigation, 0);
+});
 // Read source identity from the real checkout, including in hosted CI. Only
 // fixture output moves to a private temporary directory; runtime checks stay strict.
 const fixtureConfig = (dir) => {
@@ -670,6 +821,34 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
     const result = {
       lhr: makeReport(url),
       report: "<!doctype html><title>fixture</title>",
+      artifacts: {
+        Trace: {
+          traceEvents: [
+            {
+              name: "TracingStartedInBrowser",
+              cat: "__metadata",
+              ts: 100000,
+              args: {
+                data: {
+                  frames: [
+                    {
+                      frame: "PRIVATE_FRAME_SENTINEL",
+                      processId: 7,
+                      url: "https://private.example/?token=PRIVATE_TRACE_SENTINEL",
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              name: "clock_sync",
+              cat: "__metadata",
+              ts: 101000,
+              args: { sync_id: "PRIVATE_TRACE_SENTINEL" },
+            },
+          ],
+        },
+      },
     };
     const engineError = new Error("engine fixture");
     const diagnosticsPath = join(dir, "diagnostic.json");
@@ -754,12 +933,90 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
       assert.equal(diagnostic.cleanup_failed, scenario === "cleanup failure");
       assert.equal(diagnostic.collection_completed, scenario === "success");
       assert.equal(diagnostic.security_flags_rejected, false);
+      assert.deepEqual(
+        diagnostic.trace,
+        scenario === "success" || scenario === "cleanup failure"
+          ? traceDiagnostics(result.artifacts.Trace.traceEvents)
+          : { status: "unavailable" },
+      );
       assert.equal((await stat(diagnosticsPath)).mode & 0o777, 0o600);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 }
+
+test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "chrome-trace-projection-"));
+  const events = [];
+  const capture = {};
+  let calls = 0;
+  const traceEvents = [
+    {
+      name: "TracingStartedInBrowser",
+      cat: "__metadata",
+      ts: 100000,
+      args: {
+        data: {
+          frames: [
+            {
+              frame: "PRIVATE_FRAME_SENTINEL",
+              processId: 7,
+              url: "https://private.example/?token=PRIVATE_TRACE_SENTINEL",
+            },
+          ],
+        },
+      },
+    },
+    {
+      name: "clock_sync",
+      cat: "__metadata",
+      ts: 101000,
+      args: { sync_id: "PRIVATE_TRACE_SENTINEL" },
+    },
+  ];
+  const deps = [
+    {
+      default: async (url) => {
+        calls++;
+        const lhr = makeReport(url);
+        lhr.runtimeError = { code: "NO_NAVSTART" };
+        lhr.categories.performance.score = null;
+        for (const audit of Object.values(lhr.audits)) audit.numericValue = null;
+        return {
+          lhr,
+          report: "<!doctype html><title>fixture</title>",
+          artifacts: { Trace: { traceEvents } },
+        };
+      },
+    },
+    { Launcher: fakeChrome({ events, scenario: "success", capture }) },
+    { default: { executablePath: async () => "/fixture/chrome" } },
+  ];
+  try {
+    const result = await runPerformance(fixtureConfig(dir), {
+      audit: (url, settings, _dependencies, context) =>
+        auditWithChrome(url, settings, deps, context),
+    });
+    assert.equal(result.exitCode, 1);
+    assert.equal(calls, 2);
+    assert.deepEqual(events, ["launch", "kill", "launch", "kill"]);
+    const output = join(dir, ".lighthouseci");
+    for (const suffix of ["", "-retry"]) {
+      const bytes = await readFile(join(output, `chrome-startup-1-1${suffix}.json`), "utf8");
+      const diagnostic = JSON.parse(bytes);
+      assert.equal(diagnostic.trace.counts.navigation_start, 0);
+      assert.equal(diagnostic.trace.counts.clock_sync, 1);
+      assert.equal(diagnostic.trace.main_frame_source, "browser");
+      assert.ok(!bytes.includes("PRIVATE_"));
+    }
+    const summary = JSON.parse(await readFile(join(output, "run-summary.json"), "utf8"));
+    assert.equal(summary.collectionRetries.length, 1);
+    assert.match(summary.errors[0].message, /NO_NAVSTART/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
 test("effective pinned Linux launcher flags preserve sandbox mechanisms", async () => {
   const { Launcher } = await import("chrome-launcher");
