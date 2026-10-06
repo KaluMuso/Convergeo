@@ -29,9 +29,11 @@ from rehearse_explicit_transaction_profile import (
     StageTracker,
     WindowState,
     bind_disposable_network,
+    assert_native_ledger_schema,
     check_cli_reference,
     checked,
     failure_marker,
+    ledger,
     mark_owned,
     owned_window,
     run,
@@ -117,10 +119,9 @@ COMMIT;
             with self.subTest(case=raw[:40]), self.assertRaises(BoundaryError):
                 self.parse_fixture(raw)
 
-    def test_resume_requires_exact_six_column_prefix(self) -> None:
+    def test_resume_requires_exact_native_cli_prefix(self) -> None:
         rows = [
-            parse_bound_file(filename).disposable_history_row()
-            for filename in BOUND_FILES
+            parse_bound_file(filename).native_history_row() for filename in BOUND_FILES
         ]
         for count in range(len(rows) + 1):
             with self.subTest(prefix=count):
@@ -131,7 +132,7 @@ COMMIT;
             [rows[1]],  # Gap or out-of-order history.
             [tuple(tampered)],  # The same version with different SQL.
             [rows[0], rows[0]],  # Duplicate history.
-            [(*rows[0][:3], "unexpected", *rows[0][4:])],
+            [(*rows[0], "unexpected hosted metadata")],
             [*rows, rows[-1]],
         )
         for case in invalid:
@@ -188,6 +189,25 @@ COMMIT;
         ):
             sql("fixture", "BEGIN; COMMIT;", expected_failure=True)
 
+    def test_native_ledger_shape_rejects_hosted_metadata(self) -> None:
+        native = b'[["version","text",true],["statements","text[]",false],["name","text",false]]'
+        with patch("rehearse_explicit_transaction_profile.sql", return_value=native):
+            assert_native_ledger_schema("fixture")
+        hosted = b'[["version","text",true],["statements","text[]",false],["name","text",false],["created_by","text",false],["idempotency_key","text",false],["rollback","text[]",false]]'
+        with patch("rehearse_explicit_transaction_profile.sql", return_value=hosted):
+            with self.assertRaises(RehearsalError) as changed:
+                assert_native_ledger_schema("fixture")
+            self.assertEqual(changed.exception.code, "HISTORY_MISMATCH")
+        with patch(
+            "rehearse_explicit_transaction_profile.sql",
+            return_value=b'[["1","fixture",null]]',
+        ) as query:
+            self.assertEqual(ledger("fixture"), [["1", "fixture", None]])
+            self.assertIn(
+                "jsonb_build_array(version,name,statements)", query.call_args.args[1]
+            )
+            self.assertNotIn("created_by", query.call_args.args[1])
+
     def test_cli_reference_rejects_statement_serialization_difference(self) -> None:
         files = sorted(
             (Path(__file__).resolve().parents[2] / "supabase/migrations").glob("*.sql")
@@ -197,9 +217,6 @@ COMMIT;
                 path.stem.split("_", 1)[0],
                 path.stem.split("_", 1)[1],
                 [],
-                None,
-                None,
-                None,
             ]
             for path in files
         ]
@@ -222,7 +239,7 @@ COMMIT;
             with self.assertRaises(RehearsalError):
                 check_cli_reference("fixture", files, 131)
         row[2] = list(parse_bound_file(next(iter(BOUND_FILES))).statements)
-        row[3] = "unexpected creator"
+        row.append("unexpected hosted metadata")
         with patch("rehearse_explicit_transaction_profile.ledger", return_value=rows):
             with self.assertRaises(RehearsalError):
                 check_cli_reference("fixture", files, 131)

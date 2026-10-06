@@ -47,7 +47,14 @@ URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
 OWNERSHIP_MARKER = ".owned-typegen-stack"
 ADOPTION = "20260929120003"
-LEDGER_COLUMNS = "version,name,statements,created_by,idempotency_key,rollback"
+# The pinned CLI creates only these three columns. The six-column staging
+# history is preserved and checked by the separate staging fixture workflow.
+LEDGER_COLUMNS = "version,name,statements"
+NATIVE_LEDGER_SCHEMA = [
+    ["version", "text", True],
+    ["statements", "text[]", False],
+    ["name", "text", False],
+]
 STAGES = frozenset(
     {
         "entry",
@@ -220,6 +227,33 @@ def catalog_hash(container: str) -> str:
     )
 
 
+def assert_native_ledger_schema(container: str) -> None:
+    """Require CLI columns without assuming defaults on an existing table.
+
+    CLI 2.109.1 uses IF NOT EXISTS; our fixture INSERT explicitly sets all
+    three native fields. No staging-only metadata is synthesized here.
+    """
+    raw = sql(
+        container,
+        """
+SELECT coalesce(jsonb_agg(jsonb_build_array(
+    attname, format_type(atttypid, atttypmod), attnotnull
+) ORDER BY attnum), '[]'::jsonb)
+FROM pg_attribute
+WHERE attrelid = 'supabase_migrations.schema_migrations'::regclass
+  AND attnum > 0 AND NOT attisdropped;
+""",
+    )
+    try:
+        actual = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise RehearsalError("malformed native ledger schema") from exc
+    if actual != NATIVE_LEDGER_SCHEMA:
+        raise RehearsalError(
+            "pinned CLI migration table schema changed", code="HISTORY_MISMATCH"
+        )
+
+
 def ledger(container: str, versions: list[str] | None = None) -> list[list[object]]:
     predicate = (
         "true"
@@ -242,7 +276,7 @@ FROM supabase_migrations.schema_migrations WHERE {predicate};
     except (ValueError, TypeError) as exc:
         raise RehearsalError("malformed disposable history") from exc
     if not isinstance(rows, list) or any(
-        not isinstance(row, list) or len(row) != 6 for row in rows
+        not isinstance(row, list) or len(row) != 3 for row in rows
     ):
         raise RehearsalError("unexpected disposable history shape")
     return rows
@@ -641,7 +675,7 @@ def check_cli_reference(
         matches = [row for row in rows if row[0] == boundary.version]
         if matches != [expected_history_row(boundary)]:
             raise RehearsalError(
-                f"pinned CLI six-column history differs for {filename}",
+                f"pinned CLI native history differs for {filename}",
                 code="CLI_REFERENCE_MISMATCH",
             )
     print(f"cli_statement_serialization|PASS|{len(BOUND_FILES)}")
@@ -649,7 +683,7 @@ def check_cli_reference(
 
 
 def expected_history_row(boundary: Boundary) -> list[object]:
-    row = list(boundary.disposable_history_row())
+    row = list(boundary.native_history_row())
     row[2] = list(row[2])
     return row
 
@@ -709,6 +743,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                 container = target_container()
                 mark_owned(workdir, window, container)
                 tracker.enter("prefix_ledger")
+                assert_native_ledger_schema(container)
                 prefix = ledger(container)
                 expected_prefix = [
                     path.stem.split("_", 1)[0] for path in files[:first_index]
@@ -732,6 +767,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                 container = target_container()
                 mark_owned(workdir, window, container)
                 tracker.enter("predecessor_ledger")
+                assert_native_ledger_schema(container)
                 assert_prefix(container, baseline, first_index)
                 if len(ledger(container)) != first_index:
                     raise RehearsalError(
@@ -781,7 +817,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                     expected_row = expected_history_row(boundary)
                     if current != [expected_row]:
                         raise RehearsalError(
-                            "successful body has an untruthful six-column ledger"
+                            "successful body has an untruthful native CLI ledger"
                         )
                     completed.append(current[0])
                     verify_disposable_prefix(completed)
@@ -821,6 +857,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             container = target_container()
             mark_owned(workdir, window, container)
             tracker.enter("full_ledger")
+            assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
                     "normal full replay did not restore 139 migrations"

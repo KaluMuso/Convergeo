@@ -92,18 +92,9 @@ class Boundary:
             + self.raw[self.commit_offset :]
         )
 
-    def disposable_history_row(
-        self,
-    ) -> tuple[str, str, tuple[str, ...], None, None, None]:
-        """Expected six-column row, including the CLI insert's default NULLs."""
-        return (
-            self.version,
-            self.name,
-            self.statements,
-            None,
-            None,
-            None,
-        )
+    def native_history_row(self) -> tuple[str, str, tuple[str, ...]]:
+        """Expected row in the pinned CLI's version/name/statements table."""
+        return self.version, self.name, self.statements
 
 
 def verify_disposable_prefix(rows: Sequence[Sequence[object]]) -> int:
@@ -117,13 +108,12 @@ def verify_disposable_prefix(rows: Sequence[Sequence[object]]) -> int:
     if len(rows) > len(files):
         raise BoundaryError("fixture ledger contains more rows than the bound window")
     for index, row in enumerate(rows):
-        expected = parse_bound_file(files[index]).disposable_history_row()
+        expected = parse_bound_file(files[index]).native_history_row()
         if len(row) != len(expected):
             raise BoundaryError("fixture ledger is not an exact bound prefix")
         normalized = (
             *row[:2],
             tuple(row[2]) if isinstance(row[2], (tuple, list)) else row[2],
-            *row[3:],
         )
         if normalized != expected:
             raise BoundaryError("fixture ledger is not an exact bound prefix")
