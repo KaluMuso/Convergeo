@@ -84,7 +84,7 @@ def financial_identities() -> dict[str, list[str]]:
     """Bind this NEW proposal's concrete inventory, without an approval claim."""
     manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
     identities: dict[str, list[str]] = manifest["financial"]
-    for group, count in (("f1", 6), ("f2", 43), ("related", 755)):
+    for group, count in (("f1", 6), ("f2", 43), ("related", 760)):
         if len(identities[group]) != count or len(set(identities[group])) != count:
             raise RuntimeError("Financial concrete identity binding differs: " + group)
     require_collection(F1_NODES, identities["f1"], 0)
@@ -356,11 +356,11 @@ class Runner:
         ET.ElementTree(xml_root).write(merged, encoding="unicode")
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
-        # Reviewer bound 755 identities. Do not silently accept a reduced collection.
-        if related.get("expected") != 755:
+        # Reviewer bound 760 identities. Do not silently accept a reduced collection.
+        if related.get("expected") != 760:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 755 related identities"
+                "Expected the independently reviewed 760 related identities"
             )
         results["related"] = related
         self.write_result()
