@@ -109,7 +109,8 @@ export function missingOutboundApproval(
   if (
     value(env, "E2E_STAGING_SETUP") !== "true" ||
     value(env, "E2E_STRICT_SHA") !== "true" ||
-    !/^[a-f0-9]{40}$/.test(value(env, "E2E_EXPECT_SHA"))
+    !/^[a-f0-9]{40}$/.test(value(env, "E2E_EXPECT_SHA")) ||
+    value(env, "GITHUB_SHA") !== value(env, "E2E_EXPECT_SHA")
   )
     missing.push("verified staging handoff");
   if (value(env, "STAGING_SUPABASE_PROJECT_ID") !== SANDBOX_PROJECT)

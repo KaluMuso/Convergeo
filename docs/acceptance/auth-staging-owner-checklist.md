@@ -9,6 +9,36 @@ sheet supplies the Auth configuration delta and cases to attach to them.
 Supabase's [redirect URL guidance](https://supabase.com/docs/guides/auth/redirect-urls)
 defines Site URL defaults, allowlist matching, and `RedirectTo` email-template behavior.
 
+## Owner first look
+
+For an ordinary first view, the current public production domains are
+`www.vergeo5.com` (customer), `vendor.vergeo5.com`, and `admin.vergeo5.com`.
+The observed customer `/en` and vendor `/en/login?next=%2F` pages serve older
+master `287d6885a806514b7ddbb73f7b779f8be2d53f14`, not the draft PR #718
+candidate. The older hosted vendor recovery path still loops; its source fix in
+the candidate does not prove deployment. The admin domain redirects toward
+Cloudflare Access; its login page has not been confirmed reachable. Viewing
+these pages is a product first look, not candidate acceptance.
+
+For candidate acceptance, ask Ops for the exact customer, vendor, and admin
+HTTPS deployment URLs and each build SHA. The older `2b067ae` staging
+frontends do not qualify this candidate. On each verified origin, open
+`/en/login`:
+
+| Portal   | Login surface in this source                                   | Access needed for a real sign-in                                             |
+| -------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Customer | Phone OTP by default, with an email option and signup link.    | An approved customer account and recipient/test-OTP path.                    |
+| Vendor   | Phone OTP by default, with an email option and no signup link. | An approved vendor account and vendor role.                                  |
+| Admin    | Email login only; phone entry is disabled.                     | Cloudflare Access membership, an approved admin account, and the admin role. |
+
+The owner may use an existing account and its normal sign-in channel where they
+already have access; no automated E2E approval flag is needed for that ordinary
+manual action. Do not infer credentials from synthetic fixture names. Admin
+sign-in additionally needs the owner's Cloudflare Access membership. Automated
+fixture OTP sends, provider charges, and certification runs require separate,
+target-bound authorization. Record the URL, build SHA, visible result, and any
+role denial separately for each portal.
+
 ## Owner review: target configuration delta
 
 Fill in the **actual deployed staging origins** before applying settings. The

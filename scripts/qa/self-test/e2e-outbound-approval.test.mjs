@@ -19,6 +19,7 @@ const sandbox = {
   E2E_STAGING_SETUP: "true",
   E2E_STRICT_SHA: "true",
   E2E_EXPECT_SHA: "a".repeat(40),
+  GITHUB_SHA: "a".repeat(40),
   STAGING_SUPABASE_PROJECT_ID: "iyasmrmbcrvlfxpzescb",
   STAGING_SUPABASE_URL: "https://iyasmrmbcrvlfxpzescb.supabase.co",
   STAGING_API_HOST: "api.staging.vergeo5.com",
@@ -105,6 +106,22 @@ test("unapproved credentials cannot install a checkout or OTP route", async () =
     /E2E_OTP_RECIPIENT_APPROVED/,
   );
   assert.equal(otp.state.registrations, 0);
+});
+
+test("approval for this run cannot authorize a different checked-out SHA", async () => {
+  for (const intent of ["otp", "momo", "paid-ticket"]) {
+    const mismatched = { ...sandbox, GITHUB_SHA: "b".repeat(40) };
+    assert.ok(missingOutboundApproval(intent, mismatched).includes("verified staging handoff"));
+  }
+  const money = fakePage();
+  await assert.rejects(
+    guardApprovedPaymentRequests(money.page, "momo", {
+      ...sandbox,
+      GITHUB_SHA: "b".repeat(40),
+    }),
+    /verified staging handoff/,
+  );
+  assert.equal(money.state.registrations, 0);
 });
 
 test("approved sandbox scope rejects production project, API, and customer origins", async () => {
