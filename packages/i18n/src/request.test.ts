@@ -1,7 +1,11 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it, beforeEach } from "vitest";
 
+import { LOCALES } from "./locales";
 import {
+  NAMESPACES,
   clearMessageCache,
+  expandDottedKeys,
   getLoadedNamespaceKeys,
   loadNamespace,
   resolveMessage,
@@ -47,6 +51,50 @@ describe("loadNamespace", () => {
     expect(auth.login.title).toBe("Sign in");
     expect(getLoadedNamespaceKeys()).toEqual(["en:auth"]);
     expect(getLoadedNamespaceKeys()).not.toContain("en:catalog");
+  });
+
+  it("expands legacy dotted keys before handing messages to next-intl", async () => {
+    const catalog = await loadNamespace("en", "catalog");
+    const checkout = await loadNamespace("en", "checkout");
+    const bemCheckout = await loadNamespace("bem", "checkout");
+
+    expect(catalog).toMatchObject({ catalog: { title: "Browse products" } });
+    expect(checkout).toMatchObject({ checkout: { title: "Checkout", pageTitle: "Checkout" } });
+    expect(bemCheckout).toMatchObject({ checkout: { title: "Ukushita" } });
+    expect(Object.keys(catalog).some((key) => key.includes("."))).toBe(false);
+    expect(Object.keys(checkout).some((key) => key.includes("."))).toBe(false);
+    expect(await resolveMessage("bem", "checkout.title")).toBe("Ukushita");
+    const tCatalog = createTranslator({
+      locale: "en",
+      messages: { catalog: catalog as { catalog: { title: string } } },
+      namespace: "catalog",
+    });
+    expect(tCatalog("catalog.title")).toBe("Browse products");
+  });
+
+  it("passes no literal dotted key from any locale namespace to next-intl", async () => {
+    const assertNestedKeys = (messages: Record<string, unknown>) => {
+      for (const [key, value] of Object.entries(messages)) {
+        expect(key).not.toContain(".");
+        if (value !== null && typeof value === "object") {
+          assertNestedKeys(value as Record<string, unknown>);
+        }
+      }
+    };
+    for (const locale of LOCALES) {
+      for (const namespace of NAMESPACES) {
+        assertNestedKeys(await loadNamespace(locale, namespace));
+      }
+    }
+  });
+
+  it("rejects colliding and unsafe message paths", () => {
+    expect(() => expandDottedKeys({ title: "A", "title.text": "B" })).toThrow(
+      "Message key collision: title.text",
+    );
+    expect(() => expandDottedKeys({ "__proto__.polluted": "B" })).toThrow(
+      "Unsafe message key: __proto__.polluted",
+    );
   });
 
   it("loads bem auth overlay with translated login title", async () => {

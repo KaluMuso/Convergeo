@@ -31,6 +31,37 @@ type Messages = { [key: string]: string | Messages };
 
 const namespaceCache = new Map<string, Messages>();
 
+/** Legacy namespace JSON has literal dotted keys; next-intl requires nested objects. */
+export function expandDottedKeys(source: Messages): Messages {
+  const expanded: Messages = Object.create(null) as Messages;
+
+  // Copy object branches first so dotted leaves can join an existing branch.
+  for (const [key, value] of Object.entries(source)) {
+    if (key.split(".").some((part) => ["__proto__", "prototype", "constructor"].includes(part))) {
+      throw new Error(`Unsafe message key: ${key}`);
+    }
+    if (!key.includes(".")) {
+      expanded[key] = typeof value === "string" ? value : expandDottedKeys(value);
+    }
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (!key.includes(".")) continue;
+    const parts = key.split(".");
+    let branch = expanded;
+    for (const part of parts.slice(0, -1)) {
+      const existing = branch[part];
+      if (typeof existing === "string") throw new Error(`Message key collision: ${key}`);
+      if (existing === undefined) branch[part] = Object.create(null) as Messages;
+      branch = branch[part] as Messages;
+    }
+    const leaf = parts.at(-1)!;
+    if (branch[leaf] !== undefined) throw new Error(`Message key collision: ${key}`);
+    branch[leaf] = typeof value === "string" ? value : expandDottedKeys(value);
+  }
+
+  return expanded;
+}
+
 function cacheKey(locale: Locale, namespace: Namespace): string {
   return `${locale}:${namespace}`;
 }
@@ -73,17 +104,9 @@ export async function loadNamespace(locale: Locale, namespace: Namespace): Promi
     return cached;
   }
 
+  let raw: Messages;
   try {
-    const messages = await namespaceLoaders[namespace](locale);
-    if (locale === DEFAULT_LOCALE) {
-      namespaceCache.set(key, messages);
-      return messages;
-    }
-    // Partial locale files overlay English so missing keys never surface as raw key paths.
-    const english = await loadNamespace(DEFAULT_LOCALE, namespace);
-    const merged = deepMergeMessages(english, messages);
-    namespaceCache.set(key, merged);
-    return merged;
+    raw = await namespaceLoaders[namespace](locale);
   } catch {
     if (locale !== DEFAULT_LOCALE) {
       return loadNamespace(DEFAULT_LOCALE, namespace);
@@ -91,6 +114,18 @@ export async function loadNamespace(locale: Locale, namespace: Namespace): Promi
     namespaceCache.set(key, {});
     return {};
   }
+
+  // A malformed catalog must fail visibly; only missing locale files fall back.
+  const messages = expandDottedKeys(raw);
+  if (locale === DEFAULT_LOCALE) {
+    namespaceCache.set(key, messages);
+    return messages;
+  }
+  // Partial locale files overlay English so missing keys never surface as raw key paths.
+  const english = await loadNamespace(DEFAULT_LOCALE, namespace);
+  const merged = deepMergeMessages(english, messages);
+  namespaceCache.set(key, merged);
+  return merged;
 }
 
 export async function loadMessages(

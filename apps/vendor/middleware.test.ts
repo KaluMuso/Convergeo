@@ -130,12 +130,19 @@ describe("vendor password recovery gate", () => {
         },
         roles: [role],
       });
-      const response = await middleware(new NextRequest("https://vendor.example.test/en/listings"));
-      expect(response.status).toBe(role === "vendor" ? 200 : 307);
-      expect(response.headers.get("location")).toBe(
-        role === "vendor" ? null : "https://vendor.example.test/en/onboarding",
-      );
-      expectNonceReportOnlyCsp(response);
+      for (const path of [
+        "/en/listings",
+        "/en/services",
+        "/en/orders",
+        "/en/events/synthetic/scan",
+      ]) {
+        const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+        expect(response.status, path).toBe(role === "vendor" ? 200 : 307);
+        expect(response.headers.get("location"), path).toBe(
+          role === "vendor" ? null : "https://vendor.example.test/en/onboarding",
+        );
+        expectNonceReportOnlyCsp(response);
+      }
     },
   );
 

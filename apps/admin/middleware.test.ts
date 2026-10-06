@@ -182,6 +182,46 @@ describe("recovery composition with current verified-claims authorization", () =
     expect(authMocks.getSession).not.toHaveBeenCalled();
   });
 
+  it.each(["/en/kyc", "/en/config/commissions", "/en/intake", "/en/events"])(
+    "allows a verified admin through Cloudflare Access on %s",
+    async (path) => {
+      authMocks.getClaims.mockResolvedValue({
+        data: { claims: { app_metadata: { roles: ["admin"] } } },
+        error: null,
+      });
+      const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+      expect(verifyCfAccessAssertionMock).toHaveBeenCalledOnce();
+      expect(authMocks.getClaims).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["customer", "vendor"] as const)(
+    "denies a verified %s role on privileged admin routes after Cloudflare Access",
+    async (role) => {
+      authMocks.getClaims.mockResolvedValue({
+        data: { claims: { app_metadata: { roles: [role] } } },
+        error: null,
+      });
+      for (const path of [
+        "/en/kyc",
+        "/en/config/commissions",
+        "/en/intake",
+        "/en/events",
+        "/en/moderation/products",
+      ]) {
+        const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+        expect(response.status, path).toBe(307);
+        expect(response.headers.get("location"), path).toBe(
+          "https://admin.example.test/en/permission-denied",
+        );
+        expect(verifyCfAccessAssertionMock).toHaveBeenCalled();
+      }
+      expect(authMocks.getSession).not.toHaveBeenCalled();
+    },
+  );
+
   it("ignores raw session cookies and hostile next redirects on a protected lookalike route", async () => {
     authMocks.getUser.mockResolvedValue({ data: { user: null } });
     authMocks.getClaims.mockResolvedValue({ data: null, error: null });
@@ -443,16 +483,19 @@ describe("admin middleware — CF Access enforcement", () => {
     expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith("tampered.jwt.value");
   });
 
-  it("returns 403 in production when the assertion header is absent", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+  it.each(["/en", "/en/kyc", "/en/config/commissions", "/en/events"])(
+    "returns 403 without Cloudflare Access on %s",
+    async (path) => {
+      vi.stubEnv("NODE_ENV", "production");
+      verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
 
-    const request = new NextRequest("https://admin.vergeo5.com/en");
-    const response = await middleware(request);
+      const request = new NextRequest(`https://admin.vergeo5.com${path}`);
+      const response = await middleware(request);
 
-    expect(response.status).toBe(403);
-    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
-  });
+      expect(response.status).toBe(403);
+      expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+    },
+  );
 
   it("proceeds past the CF Access gate in production when verification succeeds", async () => {
     vi.stubEnv("NODE_ENV", "production");
