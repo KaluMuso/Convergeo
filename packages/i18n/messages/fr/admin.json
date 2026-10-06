@@ -931,7 +931,9 @@
       "submitting": "Envoi…",
       "success": "Mis en file d'attente sur {channel}.",
       "successDeduped": "Déjà en file d'attente sur {channel} (dédupliqué).",
-      "failure": "Impossible d'envoyer le message."
+      "failure": "Impossible d'envoyer le message.",
+      "conflict": "Cet identifiant d'envoi correspond à un autre destinataire ou message. Vérifiez le client et le brouillon avant de commencer un nouvel envoi.",
+      "startNew": "Commencer un nouvel envoi"
     },
     "log": {
       "title": "Journal des interactions",

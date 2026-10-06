@@ -1071,7 +1071,9 @@
       "submitting": "Sending…",
       "success": "Queued on {channel}.",
       "successDeduped": "Already queued on {channel} (deduped).",
-      "failure": "Could not send message."
+      "failure": "Could not send message.",
+      "conflict": "This send ID belongs to an earlier recipient or message. Review the customer and draft before starting a new send.",
+      "startNew": "Start a new send"
     },
     "log": {
       "title": "Interaction log",

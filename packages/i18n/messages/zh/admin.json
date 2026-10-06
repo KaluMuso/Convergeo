@@ -931,7 +931,9 @@
       "submitting": "发送中…",
       "success": "已加入 {channel} 队列。",
       "successDeduped": "已在 {channel} 队列中（去重跳过）。",
-      "failure": "无法发送消息。"
+      "failure": "无法发送消息。",
+      "conflict": "此发送 ID 已关联到先前的收件人或消息。请检查客户和草稿后再开始新的发送。",
+      "startNew": "开始新的发送"
     },
     "log": {
       "title": "互动记录",

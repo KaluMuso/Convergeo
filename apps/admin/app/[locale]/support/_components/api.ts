@@ -12,6 +12,10 @@ export const supportApi = createApiClient({
   getToken: getBrowserAccessToken,
 });
 
+export function supportApiForToken(token: string) {
+  return createApiClient({ baseUrl: API_BASE, getToken: () => token });
+}
+
 export type CustomerSummary = {
   id: string;
   phone: string | null;
@@ -57,6 +61,12 @@ export type SendResponse = {
   outbox_id: string | null;
   deduped: boolean;
 };
+
+export type SendRequest = {
+  message_id: string;
+  customer_id: string;
+  order_id: string | null;
+} & ({ template_key: string } | { free_text: string });
 
 export const CANNED_TEMPLATE_KEYS = [
   "order_status_update",
