@@ -488,7 +488,7 @@
     "20261001120000_merchant_protected_listing_admission.sql": "301466ad39d1bb0655943bf86fc7ef8366660d35c0a1455b537719114ef66d46",
     "20261001120100_stock_claim_replay_authority.sql": "b5e415a00ee2f41030c634e926b1611575433c8bb6aa59493835386fcf0743a0",
     "20261001120200_stock_claim_parent_lock_compatibility.sql": "97b6b3e67549b973c5ca5dff4247b2585f24bce96418324c0cc1f17c299636a7",
-    "20261006160000_service_table_acl_hardening.sql": "32afb0a4732b4b925b4b2f046d1236d84479c48b349316392ef12bdfaf646a12"
+    "20261006160000_service_table_acl_hardening.sql": "aacdd71df6b3382e0cfacf8795727efe9264799f0f1e7a00607046504277b4f1"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
