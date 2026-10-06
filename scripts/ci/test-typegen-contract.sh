@@ -30,6 +30,10 @@ mkdir -p "${tmp}/bin" "${tmp}/migrations"
 printf '%s\n' '-- one' >"${tmp}/migrations/0001_one.sql"
 printf '%s\n' '-- two' >"${tmp}/migrations/0002_two.sql"
 printf '%s\n' '0001' '0002' >"${tmp}/migration-versions"
+good_hash="$(printf '%064d' 0)"
+for group in direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture; do
+  printf '%s|%s|%s\n' "${group}" "${good_hash}" "${good_hash}"
+done >"${tmp}/synthetic-good"
 
 cat >"${tmp}/catalog-good" <<'EOF'
 server_version_num|170006
@@ -57,6 +61,9 @@ elif [[ "${sql}" == *typegen_catalog_contract* ]]; then
 elif [[ "${sql}" == *typegen_migration_versions* ]]; then
   cat "${FAKE_MIGRATION_OUTPUT}"
   [[ "${FAKE_MIGRATION_EXIT_AFTER_OUTPUT:-0}" != "1" ]] || exit 23
+elif [[ "${sql}" == *typegen_synthetic_catalog_contract* ]]; then
+  cat "${FAKE_SYNTHETIC_OUTPUT}"
+  [[ "${FAKE_SYNTHETIC_EXIT_AFTER_OUTPUT:-0}" != "1" ]] || exit 23
 else
   echo "unexpected query" >&2
   exit 24
@@ -67,6 +74,7 @@ chmod +x "${tmp}/bin/psql"
 run_qualifier() {
   FAKE_CATALOG_OUTPUT="${1}" \
   FAKE_MIGRATION_OUTPUT="${tmp}/migration-versions" \
+  FAKE_SYNTHETIC_OUTPUT="${FAKE_SYNTHETIC_OUTPUT_OVERRIDE:-${tmp}/synthetic-good}" \
   PSQL_BIN="${tmp}/bin/psql" \
   FIND_BIN="${QUALIFIER_FIND_BIN:-find}" \
   SORT_BIN="${QUALIFIER_SORT_BIN:-sort}" \
@@ -84,6 +92,26 @@ expect_reject() {
 }
 
 run_qualifier "${tmp}/catalog-good"
+
+for group in direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture; do
+  sed "s/^${group}|\([0-9a-f]*\)|\1$/${group}|\1|$(printf '%064d' 1)/" \
+    "${tmp}/synthetic-good" >"${tmp}/synthetic-${group}-bad"
+  if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-${group}-bad" \
+    run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+    echo "error: synthetic ${group} drift was accepted" >&2
+    exit 1
+  fi
+done
+head -n 5 "${tmp}/synthetic-good" >"${tmp}/synthetic-missing"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-missing" \
+  run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: missing synthetic comparison was accepted" >&2
+  exit 1
+fi
+if FAKE_SYNTHETIC_EXIT_AFTER_OUTPUT=1 run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: failed synthetic collection was accepted" >&2
+  exit 1
+fi
 
 for fixture in missing-schema missing-function wrong-placement wrong-server-version \
   wrong-vector-version wrong-graphql-version wrong-pgcrypto-version missing-vector \
@@ -228,7 +256,7 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
         'pg_graphql|<missing>' \
         'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
         'wrapper_owner|supabase_admin' \
-        'wrapper_definition|CREATE FUNCTION graphql_public.graphql placeholder' \
+        'wrapper_calls_resolver|false' \
         'wrapper_extension_member|0' \
         'resolver_identity|<missing>' \
         'resolver_identity_matches|false' \
@@ -248,17 +276,17 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
   esac
   if [[ "${state}" != "absent" ]]; then
     if [[ "${state}" == "broken-wrapper" ]]; then
-      definition='CREATE FUNCTION graphql_public.graphql placeholder'
+      definition='false'
       membership=0
     else
-      definition='CREATE FUNCTION graphql_public.graphql AS select graphql.resolve'
+      definition='true'
       membership=1
     fi
     printf '%s\n' \
       "pg_graphql|${extension}" \
       'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
       'wrapper_owner|supabase_admin' \
-      "wrapper_definition|${definition}" \
+      "wrapper_calls_resolver|${definition}" \
       "wrapper_extension_member|${membership}" \
       "resolver_identity|${FAKE_RESOLVER_RENDERING:-graphql.resolve(text,jsonb,text,jsonb)}" \
       "resolver_identity_matches|${FAKE_RESOLVER_IDENTITY_MATCHES:-true}" \
@@ -546,6 +574,7 @@ grep -Fx 'expected_profile.pg_graphql=1.6.1@graphql' "${tmp}/provenance.txt" >/d
 grep -Fx 'expected_profile.pgcrypto=1.3@extensions' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'graphql_initialization_action=enabled' "${tmp}/provenance.txt" >/dev/null
 grep -E '^graphql_initializer_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
+grep -E '^synthetic_contract_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -E '^graphql_initialization_evidence_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'database_shape.graphql_public.graphql=real extension-owned wrapper' "${tmp}/provenance.txt" >/dev/null
 
@@ -637,6 +666,7 @@ for required_hash in \
   "${tmp}/prepared/supabase/.temp/postgres-version" \
   "${tmp}/prepared/supabase/.temp/pgmeta-version" \
   "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh" \
+  "${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql" \
   "${ROOT_DIR}/scripts/ci/apply_service_adoption.py" \
   "${tmp}/graphql-initialization.txt"; do
   expect_hash_reject_preserves_prior "required input hash failure: ${required_hash}" fail \

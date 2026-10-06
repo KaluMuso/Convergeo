@@ -805,6 +805,7 @@ jobs:
           name: generated-database-types-${{ env.QUALIFICATION_SHA }}
           path: generated-types
           if-no-files-found: error
+          retention-days: 3
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts

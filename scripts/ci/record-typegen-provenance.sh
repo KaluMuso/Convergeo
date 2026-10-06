@@ -206,6 +206,7 @@ if ! disposable_config_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/config
 if ! postgres_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/postgres-version")"; then exit 1; fi
 if ! postgres_meta_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/pgmeta-version")"; then exit 1; fi
 if ! graphql_initializer_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh")"; then exit 1; fi
+if ! synthetic_contract_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql")"; then exit 1; fi
 if ! graphql_initialization_evidence_sha256="$(sha256_file "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")"; then exit 1; fi
 if ! adoption_helper_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/apply_service_adoption.py")"; then exit 1; fi
 graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_action" {print $2}' \
@@ -245,6 +246,7 @@ graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_actio
   printf 'postgres_meta_selection_sha256=%s\n' "${postgres_meta_selection_sha256}"
   printf 'graphql_initialization_action=%s\n' "${graphql_initialization_action}"
   printf 'graphql_initializer_sha256=%s\n' "${graphql_initializer_sha256}"
+  printf 'synthetic_contract_sha256=%s\n' "${synthetic_contract_sha256}"
   printf 'graphql_initialization_evidence_sha256=%s\n' "${graphql_initialization_evidence_sha256}"
   printf 'postgres_image_ref=%s\n' "${container_image_ref}"
   printf 'postgres_image_id=%s\n' "${container_image_id}"

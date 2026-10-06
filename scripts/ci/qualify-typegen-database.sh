@@ -126,6 +126,33 @@ pgcrypto_members="$(value pgcrypto_extension_members)"
   exit 1
 }
 
+# Compare reviewed source expectations with the fresh replay. The SQL emits
+# hashes only; even a failing run must not write configuration or fixture values
+# into the generated-types artifact.
+synthetic_contract="${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql"
+[[ -f "${synthetic_contract}" ]] || { echo "error: missing synthetic contract" >&2; exit 1; }
+if ! synthetic_hashes="$("${PSQL_BIN}" "${SUPABASE_DB_URL}" -X -v ON_ERROR_STOP=1 -At <"${synthetic_contract}")"; then
+  echo "error: failed to collect synthetic catalog hashes" >&2
+  exit 1
+fi
+expected_groups=(direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture)
+actual_groups=()
+while IFS='|' read -r group expected_hash actual_hash extra; do
+  [[ -n "${group}" && -z "${extra}" && "${expected_hash}" =~ ^[0-9a-f]{64}$ && "${actual_hash}" =~ ^[0-9a-f]{64}$ ]] || {
+    echo "error: malformed synthetic catalog hash evidence" >&2
+    exit 1
+  }
+  actual_groups+=("${group}")
+  [[ "${expected_hash}" == "${actual_hash}" ]] || {
+    echo "error: synthetic ${group} differs from reviewed source expectations (expected ${expected_hash}, actual ${actual_hash})" >&2
+    exit 1
+  }
+done <<<"${synthetic_hashes}"
+[[ "${actual_groups[*]}" == "${expected_groups[*]}" ]] || {
+  echo "error: incomplete synthetic catalog hash groups" >&2
+  exit 1
+}
+
 source_paths_tmp="$(mktemp)"
 sorted_paths_tmp="$(mktemp)"
 actual_migrations_tmp="$(mktemp)"
@@ -184,5 +211,6 @@ if ! diff -u \
 fi
 
 printf '%s\n' "${catalog}"
+printf '%s\n' "${synthetic_hashes}"
 printf 'migration_count|%s\n' "${#expected_migrations[@]}"
 printf 'generation_schema_scope|public,graphql_public\n'
