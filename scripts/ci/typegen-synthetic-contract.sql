@@ -1,6 +1,6 @@
 -- typegen_synthetic_catalog_contract
--- Reviewed source expectations for the 138-input disposable replay. Output only
--- hashes: no catalog definitions, configuration values, or fixture rows leave CI.
+-- Reviewed source expectations for the 138-input disposable replay. Output
+-- hashes and bounded direct ACL deltas; no definitions or fixture rows leave CI.
 -- This is a synthetic fresh-install check, not a hosted staging comparison.
 WITH
 expected_schemas(name, owner, public_usage, public_create, anon_usage, anon_create,
@@ -149,6 +149,15 @@ actual_fixtures AS (
     END AS fixture_value
   FROM expected_fixtures e
 ),
+direct_acl_differences AS (
+  SELECT 'missing'::text AS direction, d.* FROM (
+    SELECT * FROM expected_direct_acl EXCEPT ALL SELECT * FROM actual_direct_acl
+  ) d
+  UNION ALL
+  SELECT 'unexpected'::text AS direction, d.* FROM (
+    SELECT * FROM actual_direct_acl EXCEPT ALL SELECT * FROM expected_direct_acl
+  ) d
+),
 comparisons AS (
   SELECT 'direct_role_acl' AS group_name,
     (SELECT jsonb_agg(to_jsonb(e) ORDER BY schema_name, relation_name, grantee, privilege) FROM expected_direct_acl e) AS expected,
@@ -169,6 +178,22 @@ comparisons AS (
     (SELECT jsonb_agg(to_jsonb(e) ORDER BY relation_name) FROM expected_service_reads e),
     (SELECT jsonb_agg(to_jsonb(a) ORDER BY relation_name) FROM actual_service_reads a)
 )
-SELECT group_name || '|' || encode(extensions.digest(expected::text, 'sha256'), 'hex') || '|'
-       || encode(extensions.digest(actual::text, 'sha256'), 'hex')
-FROM comparisons ORDER BY group_name;
+SELECT line FROM (
+  SELECT 0 AS phase, group_name AS sort_key,
+    group_name || '|' || encode(extensions.digest(expected::text, 'sha256'), 'hex') || '|'
+      || encode(extensions.digest(actual::text, 'sha256'), 'hex') AS line
+  FROM comparisons
+  UNION ALL
+  SELECT 1, direction || '|' || schema_name || '|' || relation_name || '|' ||
+    grantee || '|' || privilege || '|' || grantor || '|' || grantable::text,
+    'direct_acl_delta|' || direction || '|' || schema_name || '|' || relation_name || '|' ||
+    grantee || '|' || privilege || '|' ||
+    CASE WHEN grantor IN ('postgres', 'supabase_admin') THEN grantor ELSE '<other>' END ||
+    '|' || grantable::text
+  FROM (SELECT * FROM direct_acl_differences
+        ORDER BY direction, schema_name, relation_name, grantee, privilege, grantor, grantable
+        LIMIT 64) d
+  UNION ALL
+  SELECT 2, 'truncated', 'direct_acl_delta|truncated'
+  WHERE (SELECT count(*) FROM direct_acl_differences) > 64
+) output ORDER BY phase, sort_key;
