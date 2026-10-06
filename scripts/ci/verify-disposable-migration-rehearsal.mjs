@@ -271,11 +271,25 @@ export function verify(
     fail("bound ordered migration file/version/SHA-256 tuples missing or divergent");
   }
   const expected = inputs.map((input) => input.version);
+  const committedVersions = new Set(identity.entries.map((entry) => entry.version));
+  const installedVersions = new Set(source.history.map((row) => row.version));
+  if (source.history.some((row) => !committedVersions.has(row.version))) {
+    fail("source history contains a version outside the bound committed inventory");
+  }
+  const missingVersions = identity.entries
+    .filter((entry) => !installedVersions.has(entry.version))
+    .map((entry) => entry.version);
   if (
     new Set(expected).size !== expected.length ||
     expected.some((version) => source.history.some((row) => row.version === version))
   ) {
     fail("bound pending versions duplicate or already present in baseline");
+  }
+  if (
+    expected.length !== missingVersions.length ||
+    expected.some((version) => !missingVersions.includes(version))
+  ) {
+    fail("bound plan omits or adds a committed migration absent from source history");
   }
   if (checkpoints.length > expected.length) fail("more checkpoints than bound migrations");
   const result = {
@@ -330,7 +344,9 @@ export function main(argv) {
     if (!values[key]) fail(`missing --${key}`);
   const root = values["repo-root"];
   const git = (ref) =>
-    execFileSync("git", ["-C", root, "rev-parse", ref], { encoding: "utf8" }).trim();
+    execFileSync("git", ["-C", root, "rev-parse", ref], {
+      encoding: "utf8",
+    }).trim();
   const binding = readJson(values.binding);
   const entries = committedMigrationInventory(root, binding.source_commit);
   const identity = {

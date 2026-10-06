@@ -49,6 +49,10 @@ The file hashes are from Git blobs. A Windows checkout's CRLF conversion is
 accepted; any other byte change or untracked SQL file is rejected.
 Each `ordered_pending_inputs` entry must provide the version, filename, and
 SHA-256 of a file in that inventory, in the reviewed application order.
+The gate requires this list to contain every committed migration version absent
+from the source snapshot, exactly once, and rejects installed versions outside
+the bound inventory. Membership does not prove the proposed order is safe;
+review dependencies and physical state before executing any input.
 It intentionally rejects the example's null fields. A source snapshot or dump
 that cannot be lawfully obtained and verified is a blocker; **never synthesize
 canonical history rows or fill them from migration filenames**.

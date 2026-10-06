@@ -48,7 +48,15 @@ function snapshot(database, history) {
     catalog: {
       database: { owner: "postgres", acl: null },
       schemas: [{ name: "public", owner: "postgres", acl: "{postgres=UC/postgres}" }],
-      relations: [{ schema: "public", name: "t", kind: "r", owner: "postgres", acl: null }],
+      relations: [
+        {
+          schema: "public",
+          name: "t",
+          kind: "r",
+          owner: "postgres",
+          acl: null,
+        },
+      ],
       column_privileges: [],
       functions: [],
       types: [],
@@ -71,10 +79,11 @@ function fixture() {
     ),
   ]);
   const restored = snapshot(target, clone(source.history));
-  const entries = [
-    { version: "0002", filename: "0002_fixture.sql", sha256: "2".repeat(64) },
-    { version: "0004", filename: "0004_fixture.sql", sha256: "4".repeat(64) },
-  ];
+  const entries = ["0001", "0002", "0003", "0004", "0005"].map((version) => ({
+    version,
+    filename: `${version}_fixture.sql`,
+    sha256: version.slice(-1).repeat(64),
+  }));
   const binding = {
     purpose: "DISPOSABLE_MIGRATION_REHEARSAL_ONLY",
     source_commit: "a".repeat(40),
@@ -84,7 +93,9 @@ function fixture() {
     migration_inventory_sha256: "e".repeat(64),
     source_snapshot_sha256: "c".repeat(64),
     dump_sha256: "d".repeat(64),
-    ordered_pending_inputs: clone(entries),
+    ordered_pending_inputs: clone(
+      entries.filter((entry) => ["0002", "0004"].includes(entry.version)),
+    ),
   };
   const identity = {
     commit: binding.source_commit,
@@ -199,8 +210,19 @@ test("rejects unknown file, swapped SQL hash and already recorded migration", ()
   const h = fixture();
   h.binding.ordered_pending_inputs[0].version = "0001";
   h.binding.ordered_pending_inputs[0].filename = "0001_fixture.sql";
-  h.identity.entries[0] = clone(h.binding.ordered_pending_inputs[0]);
+  h.binding.ordered_pending_inputs[0].sha256 = "1".repeat(64);
   assert.throws(() => check(h), /already present in baseline/);
+});
+
+test("rejects a partial pending plan and an unbound installed-history version", () => {
+  const omitted = fixture();
+  omitted.binding.ordered_pending_inputs.pop();
+  assert.throws(() => check(omitted), /omits or adds a committed migration/);
+
+  const foreign = fixture();
+  foreign.source.history.push(row("0006"));
+  foreign.restored.history.push(row("0006"));
+  assert.throws(() => check(foreign), /outside the bound committed inventory/);
 });
 
 test("accepts reviewed tuple independent of JSON property order", () => {
@@ -222,8 +244,6 @@ test("CLI binds physical source snapshot and dump bytes", () => {
       join(dir, x + (x === "dump" ? ".dump" : ".json")),
     ]),
   );
-  writeFileSync(paths.source, JSON.stringify(f.source));
-  writeFileSync(paths.restored, JSON.stringify(f.restored));
   writeFileSync(paths.dump, "synthetic dump bytes");
   f.binding.source_commit = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], {
     encoding: "utf8",
@@ -233,9 +253,20 @@ test("CLI binds physical source snapshot and dump bytes", () => {
   }).trim();
   f.binding.migration_inventory_sha256 = committedInventoryDigest(root, f.binding.source_commit);
   const realInputs = committedMigrationInventory(root, f.binding.source_commit);
-  f.binding.ordered_pending_inputs = ["0002", "0004"].map((version) =>
-    realInputs.find((input) => input.version === version),
-  );
+  assert.equal(realInputs.length, 138);
+  f.source.history = realInputs.slice(0, 114).map((input) => row(input.version));
+  f.source.history[0].rollback = null;
+  f.source.history[1].statements = [];
+  f.source.history[2].statements = ["synthetic SQL"];
+  f.source.history[2].statements_shape = "[0:0]";
+  f.source.history[2].rollback = ["synthetic rollback"];
+  f.source.history[2].rollback_shape = "[-2:-2]";
+  f.source.history[2].created_by = null;
+  f.source.history[2].idempotency_key = null;
+  f.restored.history = clone(f.source.history);
+  f.binding.ordered_pending_inputs = realInputs.slice(114);
+  writeFileSync(paths.source, JSON.stringify(f.source));
+  writeFileSync(paths.restored, JSON.stringify(f.restored));
   f.binding.source_snapshot_sha256 = digest(Buffer.from(JSON.stringify(f.source)));
   f.binding.dump_sha256 = digest(Buffer.from("synthetic dump bytes"));
   writeFileSync(paths.binding, JSON.stringify(f.binding));
@@ -251,7 +282,23 @@ test("CLI binds physical source snapshot and dump bytes", () => {
     "--restored",
     paths.restored,
   ];
-  assert.equal(main(args).restored_exact, true);
+  assert.deepEqual(main(args), {
+    baseline_rows: 114,
+    restored_exact: true,
+    applied_versions: [],
+    next_expected_version: realInputs[114].version,
+  });
+  const checkpoint = clone(f.restored);
+  checkpoint.history.push(row(realInputs[114].version));
+  checkpoint.history.sort((a, b) => a.version.localeCompare(b.version));
+  const checkpointPath = join(dir, "checkpoint.json");
+  writeFileSync(checkpointPath, JSON.stringify(checkpoint));
+  assert.deepEqual(main([...args, "--checkpoint", checkpointPath]), {
+    baseline_rows: 114,
+    restored_exact: true,
+    applied_versions: [realInputs[114].version],
+    next_expected_version: realInputs[115].version,
+  });
   writeFileSync(paths.dump, "tampered");
   assert.throws(() => main(args), /dump_sha256/);
 });
