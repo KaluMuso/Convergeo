@@ -2,8 +2,8 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
-import { TicketCheckout } from "./_components/ticket-checkout";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
@@ -195,7 +195,7 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
       {isTicketCheckout ? (
-        <TicketCheckout
+        <LazyTicketCheckout
           locale={locale}
           groupId={typeof query.group === "string" ? query.group : null}
           retry={query.retry === "1"}

@@ -23,7 +23,7 @@ vi.mock("next-intl", () => ({
 }));
 vi.mock("next-intl/server", () => ({ getMessages: async () => ({}), setRequestLocale: () => {} }));
 vi.mock("./_components/step-fulfilment", () => ({ CheckoutShell: () => null }));
-vi.mock("./_components/ticket-checkout", () => ({ TicketCheckout: () => null }));
+vi.mock("./_components/lazy-ticket-checkout", () => ({ LazyTicketCheckout: () => null }));
 
 import CheckoutPage from "./page";
 
@@ -39,7 +39,7 @@ describe("checkout route", () => {
     });
     expect(
       (ticket as React.ReactElement<{ children: React.ReactElement }>).props.children.type,
-    ).toHaveProperty("name", "TicketCheckout");
+    ).toHaveProperty("name", "LazyTicketCheckout");
     expect(
       (
         ticket as React.ReactElement<{
@@ -59,6 +59,16 @@ describe("checkout route", () => {
     });
     expect(
       (page as React.ReactElement<{ children: React.ReactElement }>).props.children.type,
-    ).toHaveProperty("name", "TicketCheckout");
+    ).toHaveProperty("name", "LazyTicketCheckout");
+  });
+
+  it("keeps repeated group parameters in the ticket flow and forwards explicit retry", async () => {
+    const page = await CheckoutPage({
+      params: Promise.resolve({ locale: "en" }),
+      searchParams: Promise.resolve({ group: ["first", "second"], retry: "1" }),
+    });
+    expect(
+      (page as React.ReactElement<{ children: React.ReactElement }>).props.children.props,
+    ).toMatchObject({ groupId: null, retry: true });
   });
 });
