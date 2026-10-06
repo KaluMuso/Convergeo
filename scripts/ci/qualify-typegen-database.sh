@@ -126,6 +126,90 @@ pgcrypto_members="$(value pgcrypto_extension_members)"
   exit 1
 }
 
+# Compare reviewed source expectations with the fresh replay. The SQL emits
+# hashes plus bounded, sanitized direct ACL differences on mismatch. Even a
+# failing run must not write configuration or fixture values to the artifact.
+synthetic_contract="${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql"
+[[ -f "${synthetic_contract}" ]] || { echo "error: missing synthetic contract" >&2; exit 1; }
+if ! synthetic_evidence="$("${PSQL_BIN}" "${SUPABASE_DB_URL}" -X -v ON_ERROR_STOP=1 -At <"${synthetic_contract}")"; then
+  echo "error: failed to collect synthetic catalog hashes" >&2
+  exit 1
+fi
+[[ "${#synthetic_evidence}" -le 16384 ]] || {
+  echo "error: unbounded synthetic catalog evidence" >&2
+  exit 1
+}
+expected_groups=(direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture)
+actual_groups=()
+synthetic_hash_lines=()
+synthetic_mismatches=()
+direct_acl_diagnostics=()
+direct_acl_truncated=false
+while IFS= read -r line; do
+  [[ "${#line}" -le 180 ]] || {
+    echo "error: unbounded synthetic catalog evidence line" >&2
+    exit 1
+  }
+  if [[ "${line}" == direct_acl_delta\|* ]]; then
+    IFS='|' read -r marker direction schema_name relation_name grantee privilege grantor grantable extra <<<"${line}"
+    if [[ "${line}" == 'direct_acl_delta|truncated' ]]; then
+      [[ "${direct_acl_truncated}" == false && "${#direct_acl_diagnostics[@]}" -eq 64 ]] || {
+        echo "error: malformed or unbounded direct ACL diagnostic" >&2
+        exit 1
+      }
+      direct_acl_truncated=true
+      direct_acl_diagnostics+=("${line}")
+      continue
+    fi
+    case "${schema_name}.${relation_name}" in
+      public.cart_merge_receipts|public.payment_collection_exceptions|\
+      public.payment_collection_receipts|public.service_payment_obligations|\
+      public.reconciliation_report_versions|public.vendor_stock_operations|\
+      public.stock_claim_identities|reconciliation_private.report_streams) ;;
+      *) echo "error: non-allowlisted direct ACL relation" >&2; exit 1 ;;
+    esac
+    [[ "${marker}" == direct_acl_delta && "${direction}" =~ ^(missing|unexpected)$ &&
+       "${grantee}" =~ ^(PUBLIC|anon|authenticated|service_role)$ &&
+       "${privilege}" =~ ^(SELECT|INSERT|UPDATE|DELETE|TRUNCATE|REFERENCES|TRIGGER|MAINTAIN)$ &&
+       ( "${grantor}" == postgres || "${grantor}" == supabase_admin || "${grantor}" == '<other>' ) &&
+       "${grantable}" =~ ^(true|false)$ && -z "${extra}" &&
+       "${direct_acl_truncated}" == false && "${#direct_acl_diagnostics[@]}" -lt 64 ]] || {
+      echo "error: malformed or unbounded direct ACL diagnostic" >&2
+      exit 1
+    }
+    direct_acl_diagnostics+=("${line}")
+    continue
+  fi
+  IFS='|' read -r group expected_hash actual_hash extra <<<"${line}"
+  [[ -n "${group}" && -z "${extra}" && "${expected_hash}" =~ ^[0-9a-f]{64}$ && "${actual_hash}" =~ ^[0-9a-f]{64}$ ]] || {
+    echo "error: malformed synthetic catalog hash evidence" >&2
+    exit 1
+  }
+  actual_groups+=("${group}")
+  synthetic_hash_lines+=("${line}")
+  if [[ "${expected_hash}" != "${actual_hash}" ]]; then
+    synthetic_mismatches+=("${line}")
+  fi
+done <<<"${synthetic_evidence}"
+[[ "${actual_groups[*]}" == "${expected_groups[*]}" ]] || {
+  echo "error: incomplete synthetic catalog hash groups" >&2
+  exit 1
+}
+if [[ "${#synthetic_mismatches[@]}" -gt 0 ]]; then
+  for line in "${synthetic_mismatches[@]}"; do
+    IFS='|' read -r group expected_hash actual_hash <<<"${line}"
+    echo "error: synthetic ${group} differs from reviewed source expectations (expected ${expected_hash}, actual ${actual_hash})" >&2
+  done
+  if [[ "${#direct_acl_diagnostics[@]}" -gt 0 ]]; then
+    printf 'error: %s\n' "${direct_acl_diagnostics[@]}" >&2
+  fi
+  exit 1
+fi
+[[ "${#direct_acl_diagnostics[@]}" -eq 0 ]] || {
+  echo "error: direct ACL deltas accompanied matching hashes" >&2
+  exit 1
+}
+
 source_paths_tmp="$(mktemp)"
 sorted_paths_tmp="$(mktemp)"
 actual_migrations_tmp="$(mktemp)"
@@ -184,5 +268,6 @@ if ! diff -u \
 fi
 
 printf '%s\n' "${catalog}"
+printf '%s\n' "${synthetic_hash_lines[@]}"
 printf 'migration_count|%s\n' "${#expected_migrations[@]}"
 printf 'generation_schema_scope|public,graphql_public\n'

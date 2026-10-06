@@ -2208,6 +2208,7 @@ EXPECTATIONS: TableExpectations = {
     # through its reviewed definer RPC. Neither exposes direct client DML.
     "service_payment_obligations": client_invisible(),
     "vendor_stock_operations": client_invisible(),
+    "stock_claim_identities": client_invisible(),
     "reconciliation_reports": {
         # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write,
         # but authenticated also holds effectively-dead insert/update/delete grants with
@@ -2992,44 +2993,9 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
-    "vendor_listings": {
-        Persona.ANON: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    # Protected creation/edit/delete use the authenticated API/service authority;
+    # client roles retain filtered availability reads but no direct writes.
+    "vendor_listings": {persona: select_only() for persona in Persona},
     "vendor_listing_variants": {
         Persona.ANON: select_only(),
         Persona.CUSTOMER: select_only(),
@@ -3501,7 +3467,7 @@ def test_cross_vendor_cannot_update_rival_listing(
     result = as_other_vendor.execute(
         f"UPDATE public.vendor_listings SET price_ngwee = 1 WHERE id = '{listing_a}'"
     )
-    assert result.ok
+    assert _is_permission_denied(result), result.error
     after = db.run(f"SELECT price_ngwee::text FROM public.vendor_listings WHERE id = '{listing_a}'")
     assert after.rows == before.rows
     assert after.rows[0] != "1"

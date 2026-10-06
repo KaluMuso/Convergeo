@@ -7,39 +7,43 @@ so it never perturbs app builds.
 
 ## Specs (critical paths)
 
-| Spec                     | Path                                                                                     | Founder/staging-gated legs                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `checkout-false-success` | pending/failed/unknown/COD/card honesty — **never** render unpaid as paid (S6/G4)        | default **payment-mock** (CI); live pay not required                         |
-| `critical-path`          | locale home → browse/search → PDP/cart → checkout branch matching env (G16)              | sandbox MoMo settle (`E2E_DEPLOYED_TARGET` + `LENCO_SANDBOX`)                |
-| `shop-checkout-momo`     | browse → search → PDP → cart → checkout → **MoMo pay** → confirmation → WhatsApp receipt | Lenco sandbox charge (`LENCO_SANDBOX`), WhatsApp assertion (`WHATSAPP_MOCK`) |
-| `shop-cod`               | PDP → cart → checkout → **Cash-on-Delivery** → confirmation                              | none (runs on any live target)                                               |
-| `vendor-sell`            | approved vendor → list → receive order → **ship**                                        | vendor OTP session (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                         |
-| `event-ticket`           | buy ticket → wallet → **scan verify → duplicate rejected**                               | purchase (`LENCO_SANDBOX`), scan (vendor OTP + `E2E_TICKET_QR`)              |
-| `auth-otp`               | phone → request OTP → **verify → signed in**                                             | verify leg (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                 |
+| Spec                     | Path                                                                                                | Founder/staging-gated legs                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `checkout-false-success` | pending/failed/unknown/COD/card honesty — **never** render unpaid as paid (S6/G4)                   | default **payment-mock** (CI); live pay not required                                                 |
+| `critical-path`          | locale home → browse/search → PDP/cart → checkout branch matching env (G16)                         | sandbox MoMo settle (`E2E_DEPLOYED_TARGET` + `LENCO_SANDBOX`)                                        |
+| `shop-checkout-momo`     | browse → search → PDP → cart → checkout → **MoMo pay** → confirmation → WhatsApp receipt            | Lenco sandbox charge (`LENCO_SANDBOX`), WhatsApp assertion (`WHATSAPP_MOCK`)                         |
+| `shop-cod`               | PDP → cart → checkout → **Cash-on-Delivery** → confirmation                                         | approved customer OTP and staging origins; unexpected provider branch is blocked                     |
+| `vendor-sell`            | approved vendor → list → receive order → **ship**                                                   | vendor OTP session (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                                 |
+| `event-ticket`           | paid order → issued wallet ticket → **admission + duplicate rejection**; independent free RSVP scan | paid path (sandbox, buyer/vendor OTP, RLS read keys); free RSVP scan (vendor OTP + `E2E_TICKET_PIN`) |
+| `auth-otp`               | phone → request OTP → **verify → signed in**                                                        | verify leg (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                                         |
 
-Every gated leg **skips with an annotation** when its env is absent — it asserts
-up to a safe boundary (e.g. pay-initiation, "code sent") and never hammers a real
-payment/SMS endpoint. No credentials are committed; all come from env/secrets.
+A missing paid-ticket prerequisite **fails** integrated-staging and production-readiness certification. Local runs skip with an annotation. MoMo checkout is gated before checkout navigation, order placement, and `/payments/retry`; COD checkout gates its customer OTP and blocks an unexpected payment request. The browse-safe mock branch blocks checkout writes when an existing session mounts. OTP is gated before `/auth/v1/otp`. Approved sensitive POSTs reject HTTP redirects before the browser can follow them. Approval must bind the current GitHub run/attempt, exact SHA-verified staging handoff, canonical sandbox Supabase project, approved synthetic recipients or payer, and staging customer/API origins. Sandbox keys and test OTP codes never imply approval. The hosted workflow maps none of the approval variables, so its routine runs cannot initiate these outbound legs. No credentials are committed.
 
 ## Environment variables
 
-| Var                                                                           | Purpose                                                                                                                                                                |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `E2E_BASE_URL`                                                                | Customer app origin (staging deploy or `http://localhost:3000`).                                                                                                       |
-| `VERCEL_AUTOMATION_BYPASS_SECRET`                                             | Vercel Deployment Protection bypass header for SSO-gated Preview URLs (CI secret; never commit).                                                                       |
-| `E2E_EXPECT_SHA` / `E2E_STRICT_SHA`                                           | Optional release-candidate SHA proof against `/health` `buildId` (strict in pre-release / integrated-staging).                                                         |
-| `E2E_VENDOR_BASE_URL` / `E2E_ADMIN_BASE_URL`                                  | Separate app origins. Default to customer for convenience — but in a strict certification run an unset/collapsed `E2E_VENDOR_BASE_URL` **fails**, it never falls back. |
-| `E2E_LOCALE`                                                                  | Locale segment for `[locale]/` routing (default `en`).                                                                                                                 |
-| `E2E_THROTTLE`                                                                | `0` disables Fast-3G throttling (default on).                                                                                                                          |
-| `E2E_PAYMENT_MOCK`                                                            | Force deterministic `/payments/status` + card-verify mocks (default on when sandbox creds absent).                                                                     |
-| `E2E_DEPLOYED_TARGET`                                                         | Prefer live target behaviour for critical-path settle (still requires sandbox creds for pay).                                                                          |
-| `NEXT_PUBLIC_E2E_MOCK_SESSION`                                                | Customer app flag (`1`) enabling Playwright-injected buyer session for payment-mock specs. **Dev/CI only.**                                                            |
-| `E2E_SEED_RESET_URL` / `E2E_SEED_TOKEN`                                       | Deterministic, idempotent seed reset (staging-only, token-guarded).                                                                                                    |
-| `LENCO_SANDBOX` + `LENCO_SANDBOX_SECRET_KEY` / `_PUBLIC_KEY` / `_MOMO_NUMBER` | Enables the live Lenco sandbox pay leg (**founder gate F9b**).                                                                                                         |
-| `WHATSAPP_MOCK` + `WHATSAPP_MOCK_OUTBOX_URL`                                  | Enables WhatsApp receipt assertions via the mock outbox.                                                                                                               |
-| `E2E_TEST_PHONE` + `E2E_TEST_OTP`                                             | Deterministic OTP for the verify + vendor/organiser legs.                                                                                                              |
-| `E2E_TICKET_QR`                                                               | A seeded single-use ticket token for the scanner duplicate-reject test.                                                                                                |
-| `PW_CHROMIUM_PATH`                                                            | Path to a pre-installed Chromium (skips download).                                                                                                                     |
+| Var                                                                                                                | Purpose                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `E2E_BASE_URL`                                                                                                     | Customer app origin (staging deploy or `http://localhost:3000`).                                                                                                       |
+| `VERCEL_AUTOMATION_BYPASS_SECRET`                                                                                  | Vercel Deployment Protection bypass header for SSO-gated Preview URLs (CI secret; never commit).                                                                       |
+| `E2E_EXPECT_SHA` / `E2E_STRICT_SHA`                                                                                | Optional release-candidate SHA proof against `/health` `buildId` (strict in pre-release / integrated-staging).                                                         |
+| `E2E_VENDOR_BASE_URL` / `E2E_ADMIN_BASE_URL`                                                                       | Separate app origins. Default to customer for convenience — but in a strict certification run an unset/collapsed `E2E_VENDOR_BASE_URL` **fails**, it never falls back. |
+| `E2E_LOCALE`                                                                                                       | Locale segment for `[locale]/` routing (default `en`).                                                                                                                 |
+| `E2E_THROTTLE`                                                                                                     | `0` disables Fast-3G throttling (default on).                                                                                                                          |
+| `E2E_PAYMENT_MOCK`                                                                                                 | Force deterministic `/payments/status` + card-verify mocks (default on when sandbox creds absent).                                                                     |
+| `E2E_DEPLOYED_TARGET`                                                                                              | Prefer live target behaviour for critical-path settle (still requires sandbox creds for pay).                                                                          |
+| `NEXT_PUBLIC_E2E_MOCK_SESSION`                                                                                     | Customer app flag (`1`) enabling Playwright-injected buyer session for payment-mock specs. **Dev/CI only.**                                                            |
+| `E2E_SEED_RESET_URL` / `E2E_SEED_TOKEN`                                                                            | Deterministic, idempotent seed reset (staging-only, token-guarded).                                                                                                    |
+| `LENCO_SANDBOX` + `LENCO_SANDBOX_SECRET_KEY` / `_PUBLIC_KEY` / `_MOMO_NUMBER`                                      | Enables the live Lenco sandbox pay leg (**founder gate F9b**).                                                                                                         |
+| `WHATSAPP_MOCK` + `WHATSAPP_MOCK_OUTBOX_URL`                                                                       | Enables WhatsApp receipt assertions via the mock outbox.                                                                                                               |
+| `E2E_TEST_PHONE` + `E2E_TEST_OTP`                                                                                  | Deterministic OTP for the verify + vendor/organiser legs.                                                                                                              |
+| `E2E_TICKET_PIN`                                                                                                   | Private run-issued free RSVP scanner PIN. The paid test reads its own purchased ticket PIN from the buyer wallet.                                                      |
+| `STAGING_SUPABASE_URL` + `STAGING_SUPABASE_ANON_KEY`                                                               | Authenticated, buyer-scoped, read-only RLS proof of paid order item → ticket linkage.                                                                                  |
+| `E2E_PAID_TICKET_PROVIDER_APPROVED`                                                                                | Explicit, ticket-specific provider approval for a separately authorized run; absent from hosted workflow by default.                                                   |
+| `E2E_MOMO_PROVIDER_APPROVED` / `E2E_OTP_RECIPIENT_APPROVED`                                                        | Explicit provider and synthetic-recipient approval. Both are absent from the hosted workflow.                                                                          |
+| `E2E_APPROVED_RUN_ID` / `E2E_APPROVED_RUN_ATTEMPT`                                                                 | Must exactly match the current GitHub run and attempt; approval cannot silently carry into another run.                                                                |
+| `E2E_APPROVED_CUSTOMER_PHONE` / `E2E_APPROVED_VENDOR_PHONE`                                                        | Must exactly match the canonical synthetic recipients before Auth may send an OTP.                                                                                     |
+| `E2E_APPROVED_MOMO_NUMBER` / `E2E_APPROVED_MOMO_RAIL` / `E2E_APPROVED_CUSTOMER_ORIGIN` / `E2E_APPROVED_API_ORIGIN` | Bind a separately approved sandbox payer, MTN rail, and exact deployed customer/API origins. Production Supabase, API and customer origins are rejected.               |
+| `PW_CHROMIUM_PATH`                                                                                                 | Path to a pre-installed Chromium (skips download).                                                                                                                     |
 
 ## Run locally
 
@@ -61,9 +65,7 @@ PW_CHROMIUM_PATH=/opt/pw-browsers/chromium \
 npx playwright test --list
 ```
 
-The non-payment flows (`shop-cod`, and the un-gated boundaries of the others) run
-against a local dev server with seed data. The gated legs require staging + the
-secrets above.
+Browse and mock-payment flows run against a local dev server with seed data. Authenticated COD placement requires the approved customer OTP recipient and staging customer/API origins. The gated provider legs require staging + the secrets above.
 
 ## Run on staging (CI)
 
@@ -100,8 +102,13 @@ failure. It is **not** a required per-PR gate (staging-dependent).
 
 ## Founder / staging gate (F9b)
 
+The paid ticket acceptance test selects the canonical paid event type, captures its minted order and item, charges that exact group through the existing MoMo retry API, and requires a successful payment, issued ticket, matching event/instance/type, buyer wallet entry, and organiser admission of that same ticket. The free RSVP scanner test remains independent. The ticket picker redirects to `/checkout?group=…`; the companion checkout UI patch handles that group, while the acceptance helper charges the captured order through the existing payment API.
+
 The **full-green run against deployed staging with a real Lenco sandbox charge**
-requires: (1) a reachable staging deploy, and (2) Lenco sandbox credentials —
-both are the **F9b founder gate**, not available in the build env. Until then the
-suite validates structure (`--list`, typecheck) and the non-payment flows; the
-staging-green + Lenco-pay acceptance criterion is founder/staging-gated.
+requires a reachable staging deploy, Lenco sandbox credentials, and explicit
+ticket-specific provider approval (`E2E_PAID_TICKET_PROVIDER_APPROVED=1`). The
+deploy and credentials are the **F9b founder gate**, not available in the build
+env; the hosted workflow does not inject approval. Until separately authorized,
+source-only checks validate structure (`--list`, typecheck, and mocked contracts);
+provider-backed paid admission remains unrun and strict certification fails
+closed when its prerequisites are absent.

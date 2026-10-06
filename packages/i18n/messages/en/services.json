@@ -113,6 +113,7 @@
     "errors": {
       "loadFailed": "Could not load services.",
       "saveFailed": "Could not save service.",
+      "titleInvalid": "Enter a title with at least two characters.",
       "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
       "authRequired": "Sign in to manage your services."
     }

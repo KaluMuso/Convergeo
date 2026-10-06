@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@vergeo/ui/src/button";
+import { CategorySelection, type CategoryNode } from "@vergeo/ui/src/category-selection";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 
@@ -13,6 +14,7 @@ type DateFilterLabels = {
   nextMonth: string;
   allDates: string;
   categoryLabel: string;
+  subcategoryLabel?: string;
   calendarLabel: string;
   cityLabel: string;
   cityPlaceholder: string;
@@ -29,6 +31,7 @@ type DateFilterChipsProps = {
   labels: DateFilterLabels;
   calendarDates: string[];
   categories: string[];
+  taxonomy?: CategoryNode[];
   activeDateWindow: EventDateWindow;
   activeOnDate: string | null;
   activeCategory: EventCategory | null;
@@ -61,6 +64,7 @@ export function DateFilterChips({
   labels,
   calendarDates,
   categories,
+  taxonomy = [],
   activeDateWindow,
   activeOnDate,
   activeCategory,
@@ -249,36 +253,54 @@ export function DateFilterChips({
       </div>
       {geoDenied ? <p className="text-xs text-danger">{labels.nearMeDenied}</p> : null}
 
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-semibold text-text-2">{labels.categoryLabel}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={activeCategory === null ? "primary" : "ghost"}
-            size="sm"
-            disabled={isPending}
-            loading={isPending}
-            loadingLabel={labels.categories.all}
-            onClick={() => updateParams({ category: null })}
-          >
-            {labels.categories.all}
-          </Button>
-          {categoryChips.map((category) => (
-            <Button
-              key={category}
-              type="button"
-              variant={activeCategory === category ? "primary" : "ghost"}
-              size="sm"
-              disabled={isPending}
-              loading={isPending}
-              loadingLabel={labels.categories[category] ?? category}
-              onClick={() => updateParams({ category })}
-            >
-              {labels.categories[category] ?? category}
-            </Button>
-          ))}
-        </div>
-      </div>
+      {taxonomy.length > 0 ? (
+        <CategorySelection
+          nodes={taxonomy}
+          value={activeCategory ?? ""}
+          onChange={(id) => updateParams({ category: id || null })}
+          disabled={isPending}
+          labels={{
+            category: labels.categoryLabel,
+            subcategory: labels.subcategoryLabel ?? labels.categoryLabel,
+            placeholder: labels.categories.all,
+            empty: labels.categories.all,
+            unavailable: labels.categoryLabel,
+          }}
+        />
+      ) : (
+        <>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-text-2">{labels.categoryLabel}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={activeCategory === null ? "primary" : "ghost"}
+                size="sm"
+                disabled={isPending}
+                loading={isPending}
+                loadingLabel={labels.categories.all}
+                onClick={() => updateParams({ category: null })}
+              >
+                {labels.categories.all}
+              </Button>
+              {categoryChips.map((category) => (
+                <Button
+                  key={category}
+                  type="button"
+                  variant={activeCategory === category ? "primary" : "ghost"}
+                  size="sm"
+                  disabled={isPending}
+                  loading={isPending}
+                  loadingLabel={labels.categories[category] ?? category}
+                  onClick={() => updateParams({ category })}
+                >
+                  {labels.categories[category] ?? category}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="rounded-lg border border-border bg-surface p-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-3">

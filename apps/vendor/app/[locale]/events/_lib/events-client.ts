@@ -3,6 +3,7 @@ import { createApiClient } from "@vergeo/config";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 export type EventCategory = string;
+export type EventCategoryOption = { slug: string; parent_slug: string | null; label_key: string };
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type EventType = "standard" | "single" | "multi_day" | "recurring" | "free_rsvp" | "private";
@@ -98,6 +99,9 @@ export function createEventsClient(getToken: () => string | null | Promise<strin
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
+    listCategories(): Promise<EventCategoryOption[]> {
+      return client.request<EventCategoryOption[]>("/categories/events");
+    },
     listEvents(): Promise<{ items: EventSummary[] }> {
       return client.request<{ items: EventSummary[] }>("/organiser/events");
     },

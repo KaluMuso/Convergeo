@@ -4088,6 +4088,86 @@ export type Database = {
         }
         Relationships: []
       }
+      reconciliation_report_versions: {
+        Row: {
+          created_at: string
+          currency: string
+          cutoff_utc: string
+          discrepancies: Json
+          id: string
+          input_fingerprint: string
+          input_hashes: Json
+          matcher_version: string
+          parent_id: string | null
+          parent_version_number: number | null
+          policy_version: string
+          provider_account_id: string
+          report_date: string
+          schema_version: string
+          source_version: string
+          summary: Json
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          cutoff_utc: string
+          discrepancies: Json
+          id?: string
+          input_fingerprint: string
+          input_hashes: Json
+          matcher_version: string
+          parent_id?: string | null
+          parent_version_number?: number | null
+          policy_version: string
+          provider_account_id: string
+          report_date: string
+          schema_version: string
+          source_version: string
+          summary: Json
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          cutoff_utc?: string
+          discrepancies?: Json
+          id?: string
+          input_fingerprint?: string
+          input_hashes?: Json
+          matcher_version?: string
+          parent_id?: string | null
+          parent_version_number?: number | null
+          policy_version?: string
+          provider_account_id?: string
+          report_date?: string
+          schema_version?: string
+          source_version?: string
+          summary?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconciliation_version_parent"
+            columns: [
+              "parent_id",
+              "provider_account_id",
+              "currency",
+              "report_date",
+              "parent_version_number",
+            ]
+            isOneToOne: false
+            referencedRelation: "reconciliation_report_versions"
+            referencedColumns: [
+              "id",
+              "provider_account_id",
+              "currency",
+              "report_date",
+              "version_number",
+            ]
+          },
+        ]
+      }
       reconciliation_reports: {
         Row: {
           created_at: string
@@ -4724,6 +4804,51 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_claim_identities: {
+        Row: {
+          checkout_group_id: string
+          created_at: string
+          listing_id: string
+          location_id: string | null
+          qty: number
+          remaining_stock_qty: number | null
+          state: string
+        }
+        Insert: {
+          checkout_group_id: string
+          created_at?: string
+          listing_id: string
+          location_id?: string | null
+          qty: number
+          remaining_stock_qty?: number | null
+          state: string
+        }
+        Update: {
+          checkout_group_id?: string
+          created_at?: string
+          listing_id?: string
+          location_id?: string | null
+          qty?: number
+          remaining_stock_qty?: number | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_claim_identities_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_claim_identities_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
             referencedColumns: ["id"]
           },
         ]
@@ -5599,6 +5724,48 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_stock_operations: {
+        Row: {
+          actor_id: string
+          created_at: string
+          input: Json
+          operation_id: string
+          outcome: Json | null
+          vendor_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          input: Json
+          operation_id: string
+          outcome?: Json | null
+          vendor_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          input?: Json
+          operation_id?: string
+          outcome?: Json | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_stock_operations_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_stock_operations_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_storefront_collection_items: {
         Row: {
           collection_id: string
@@ -5947,6 +6114,24 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_vendor_stock: {
+        Args: {
+          p_actor_id: string
+          p_delta: number
+          p_listing_id: string
+          p_location_id: string
+          p_operation_id: string
+          p_reason: string
+          p_sale_unit: string
+          p_unit_step_milli: number
+          p_vendor_id: string
+        }
+        Returns: Json
+      }
+      append_reconciliation_report_version: {
+        Args: { p_report: Json }
+        Returns: Json
+      }
       apply_login_cart_merge: {
         Args: {
           p_expected_authority: Json
@@ -6034,6 +6219,16 @@ export type Database = {
           p_resume?: boolean
         }
         Returns: Json
+      }
+      claim_stock_reservation: {
+        Args: {
+          p_checkout_group_id: string
+          p_expires_at: string
+          p_listing_id: string
+          p_location_id: string
+          p_qty: number
+        }
+        Returns: number
       }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
       clip_bump_counter: {

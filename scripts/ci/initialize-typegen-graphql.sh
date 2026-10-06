@@ -124,8 +124,8 @@ union all select 'wrapper_owner|' || coalesce((
   select r.rolname from pg_proc p join pg_roles r on r.oid = p.proowner
    where p.oid = to_regprocedure('graphql_public.graphql(text,text,jsonb,jsonb)')
 ), '<missing>')
-union all select 'wrapper_definition|' || coalesce((
-  select regexp_replace(pg_get_functiondef(p.oid), E'[\\n\\r\\t ]+', ' ', 'g')
+union all select 'wrapper_calls_resolver|' || coalesce((
+  select (position('graphql.resolve' in lower(pg_get_functiondef(p.oid))) > 0)::text
     from pg_proc p where p.oid = to_regprocedure('graphql_public.graphql(text,text,jsonb,jsonb)')
 ), '<missing>')
 union all select 'wrapper_extension_member|' || count(*)::text
@@ -186,17 +186,13 @@ validate_common_profile() {
 }
 
 validate_installed_graphql() {
-  local catalog="$1" definition
+  local catalog="$1"
   assert_catalog "${catalog}" pg_graphql "${expected_graphql}|graphql"
   [[ "$(catalog_value "${catalog}" wrapper_signature)" != "<missing>" ]] || {
     echo "error: genuine graphql_public.graphql wrapper is missing" >&2
     return 1
   }
-  definition="$(catalog_value "${catalog}" wrapper_definition)"
-  [[ "${definition}" == *"graphql.resolve"* ]] || {
-    echo "error: graphql_public.graphql is not the genuine resolver wrapper" >&2
-    return 1
-  }
+  assert_catalog "${catalog}" wrapper_calls_resolver true
   assert_catalog "${catalog}" wrapper_extension_member 1
   assert_catalog "${catalog}" resolver_identity_matches true
   assert_catalog "${catalog}" resolver_extension_member 1

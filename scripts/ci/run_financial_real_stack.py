@@ -38,6 +38,10 @@ FORWARD = [
     "20260930170100_vendor_stock_adjustment_authority.sql",
     "20260930203000_service_completion_variable_disambiguation.sql",
     "20260930203100_service_adoption_ambiguity_holds.sql",
+    "20261001120000_merchant_protected_listing_admission.sql",
+    "20261001120100_stock_claim_replay_authority.sql",
+    "20261001120200_stock_claim_parent_lock_compatibility.sql",
+    "20261006160000_service_table_acl_hardening.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -77,6 +81,19 @@ def require_collection(expected: list[str], observed: list[str], status: int) ->
         raise RuntimeError("Complete collection differs from reviewed required identities")
 
 
+def financial_identities() -> dict[str, list[str]]:
+    """Bind this NEW proposal's concrete inventory, without an approval claim."""
+    manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
+    identities: dict[str, list[str]] = manifest["financial"]
+    for group, count in (("f1", 6), ("f2", 43), ("related", 760)):
+        if len(identities[group]) != count or len(set(identities[group])) != count:
+            raise RuntimeError("Financial concrete identity binding differs: " + group)
+    require_collection(F1_NODES, identities["f1"], 0)
+    require_collection((ROOT / "docs/ops/lenco/f2-required-nodes.txt")
+                       .read_text().splitlines(), identities["f2"], 0)
+    return identities
+
+
 def load_reporter() -> ModuleType:
     """Load the checked-in CLI helper by file, not an ambient module search path."""
     path = ROOT / "scripts/drills/f2_real_stack_report.py"
@@ -89,8 +106,10 @@ def load_reporter() -> ModuleType:
 
 
 class Runner:
-    def __init__(self) -> None:
-        self.output = ROOT / "financial-real-stack-evidence"
+    def __init__(self, output_name: str = "financial-real-stack-evidence") -> None:
+        if output_name not in {"financial-real-stack-evidence", "coordinator-gate-evidence"}:
+            raise RuntimeError("Unknown runner-owned evidence directory")
+        self.output = ROOT / output_name
         if self.output.exists():
             raise RuntimeError("Refusing to reuse an existing financial evidence directory")
         self.output.mkdir()
@@ -152,6 +171,12 @@ class Runner:
         if checked and status:
             raise RuntimeError(f"{name} failed with exit {status}; see sanitized log")
         return status, text
+
+    def pull_postgrest_image(self) -> None:
+        attempts = self.output / "postgrest-pull-attempts"
+        attempts.mkdir()
+        self.command("postgrest-pull", ["bash", "scripts/ci/pull-critical-postgrest-image.sh",
+                                       REST_IMAGE, str(attempts)])
 
     def sql(self, name: str, database: str, statement: str) -> str:
         return self.command(name, ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-Atq",
@@ -277,6 +302,7 @@ class Runner:
 
     def phase(self, phase: str, template: str, f2db: str) -> None:
         report = load_reporter()
+        identities = financial_identities()
         results: dict[str, object] = {}
         phases = self.results["phases"]
         assert isinstance(phases, dict)
@@ -309,6 +335,8 @@ class Runner:
         rc, _ = self.pytest(phase + "-related-collection", RELATED, collect=True,
                             plugin="f2_collection_manifest")
         collection_rc = rc
+        collected = json.loads(Path(self.env["F2_COLLECTION_OUTPUT"]).read_text())
+        require_collection(identities["related"], collected["nodeids"], collection_rc)
         xml_root = ET.Element("testsuites")
         exits: list[int] = []
         related_groups = ("checkout", "kyc", "tickets", "creation")
@@ -329,11 +357,11 @@ class Runner:
         ET.ElementTree(xml_root).write(merged, encoding="unicode")
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
-        # Reviewer bound 755 identities. Do not silently accept a reduced collection.
-        if related.get("expected") != 755:
+        # Reviewer bound 760 identities. Do not silently accept a reduced collection.
+        if related.get("expected") != 760:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 755 related identities"
+                "Expected the independently reviewed 760 related identities"
             )
         results["related"] = related
         self.write_result()
@@ -359,6 +387,11 @@ class Runner:
         if self.sql("postgres-version", "postgres", "SHOW server_version_num") != "170006":
             raise RuntimeError("The disposable database is not PostgreSQL 17.6")
         self.command("source", ["git", "rev-parse", "HEAD", "HEAD^{tree}"])
+        expected_sha = self.env.get("QUALIFICATION_SHA")
+        if expected_sha:
+            _, actual_sha = self.command("exact-review-sha", ["git", "rev-parse", "HEAD"])
+            if actual_sha.strip() != expected_sha:
+                raise RuntimeError("Financial checkout differs from the exact review SHA")
         self.command("clean-worktree", ["git", "diff", "--exit-code"])
         self.command("clean-index", ["git", "diff", "--cached", "--exit-code"])
         self.command("baseline-present", ["git", "cat-file", "-e", BASE + "^{commit}"])
@@ -380,7 +413,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 135 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 139 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")
@@ -405,7 +438,7 @@ class Runner:
         for name in ("anon", "authenticated"):
             if not any(row.startswith(name + "|false|false|") for row in roles.splitlines()):
                 raise RuntimeError("Browser role has unexpected superuser/BYPASSRLS")
-        self.command("postgrest-pull", ["docker", "pull", REST_IMAGE])
+        self.pull_postgrest_image()
         _, version = self.command("postgrest-version", ["docker", "run", "--rm", "--entrypoint",
                                                        "postgrest", REST_IMAGE, "--version"])
         if re.search(r"\b14\.14(?:\b|\.)", version) is None:

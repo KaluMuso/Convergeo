@@ -1,17 +1,18 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import frCatalog from "../../../../../../../packages/i18n/messages/fr/catalog.json";
 import zhCatalog from "../../../../../../../packages/i18n/messages/zh/catalog.json";
+import { addCartItem } from "../cart/mini-cart-drawer";
 
-import { PdpInteractiveBody, type ProductListing } from "./comparison";
 import { type ContactVendorLabels } from "./contact-vendor-button";
 import { assertRscSafeGalleryLabels } from "./gallery-labels";
+import { PdpInteractiveBody, type ProductListing } from "./pdp-interactive-body";
 
 vi.mock("../cart/mini-cart-drawer", () => ({
   addCartItem: vi.fn().mockResolvedValue({ items: [] }),
@@ -77,6 +78,7 @@ function renderBody(
     productImages?: Array<{ publicId: string; alt: string }>;
     listingImages?: Array<{ publicId: string; alt: string }>;
     contactVendorEnabled?: boolean;
+    additionalListings?: ProductListing[];
   } = {},
 ) {
   const locale = options.locale ?? "en";
@@ -92,6 +94,7 @@ function renderBody(
     ...listing,
     images: options.listingImages ?? listing.images,
   };
+  const listings = [activeListing, ...(options.additionalListings ?? [])];
 
   return render(
     <NextIntlClientProvider locale={locale} messages={{ catalog }} onError={() => {}}>
@@ -100,10 +103,21 @@ function renderBody(
         productId="product-1"
         productSlug="tecno-spark-20"
         productImages={options.productImages ?? []}
-        listings={[activeListing]}
-        comparisonListings={[]}
+        listings={listings}
+        comparisonListings={
+          options.additionalListings
+            ? listings.map((offer) => ({
+                id: offer.id,
+                priceNgwee: offer.priceNgwee,
+                condition: offer.condition,
+                vendor: { ...offer.vendor, id: offer.vendor.slug, lat: null, lng: null },
+                deliveryAvailable: true,
+                pickupAvailable: false,
+              }))
+            : []
+        }
         initialListingId={activeListing.id}
-        singleVendor
+        singleVendor={listings.length === 1}
         cloudName="test-cloud"
         galleryLabels={galleryLabels}
         buyBoxLabels={{
@@ -266,6 +280,30 @@ describe("PdpInteractiveBody gallery (digest 1378788464 regression)", () => {
   it("keeps honest escrow trust copy on the buy box panel", () => {
     renderBody();
     expect(screen.getByText("Held in escrow until you confirm")).toBeInTheDocument();
+  });
+
+  it("loads comparison and carries a selected seller's image and minimum quantity into purchase", async () => {
+    vi.mocked(addCartItem).mockClear();
+    renderBody({
+      additionalListings: [
+        {
+          ...listing,
+          id: "listing-2",
+          priceNgwee: listing.priceNgwee + 100,
+          moq: 2,
+          images: [{ publicId: "demo/second-offer", alt: "Second seller's image" }],
+          vendor: { ...listing.vendor, slug: "second-vendor", displayName: "Second Vendor" },
+        },
+      ],
+    });
+    fireEvent.click(await screen.findByTestId("comparison-card-listing-2"));
+    expect(screen.getByRole("img", { name: "Second seller's image" })).toBeInTheDocument();
+    const addButton = screen.getByRole("button", { name: "Add to cart" });
+    await waitFor(() => expect(addButton).toBeEnabled());
+    fireEvent.click(addButton);
+    await waitFor(() =>
+      expect(addCartItem).toHaveBeenLastCalledWith("listing-2", 2, undefined, undefined),
+    );
   });
 });
 

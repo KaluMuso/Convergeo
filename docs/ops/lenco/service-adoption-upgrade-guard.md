@@ -67,3 +67,38 @@ remain required. The older nine-path workflow draft has not been installed as
 a substitute. Dedicated hosted F3 wiring, qualified 135-input generated types,
 independent financial/merchant review, and hosted candidate acceptance remain
 separate requirements.
+
+## Read-only shared push prerequisite
+
+The staging push now runs `scripts/ci/guard_shared_service_adoption.py` immediately
+before `supabase db push --include-all`, binding both operations to the same
+explicit `SUPABASE_DB_URL`. It refuses pending `120003`, missing/null/aliased or
+changed history, and absent review evidence. The canonical installed row must
+contain the exact original filename name, version and one original SQL input in
+`statements`; null history or guessed segmentation is not accepted. No SQL
+migration is executed and no migration ledger is repaired by this prerequisite.
+Production's existing workflow has no database push and remains unchanged.
+
+The protected staging variable `STAGING_SERVICE_ADOPTION_REVIEW_EVIDENCE_JSON`
+must supply a real application/review record with these fields: `purpose`
+(`SHARED_ADOPTION_APPLICATION_REVIEW`), current `source_sha`, `project_ref`,
+`adoption_sha256`, `canonical_row_sha256` (SHA256 of sorted-key compact JSON of
+that exact ledger row), `review_verdict` (`APPROVED_FOR_TARGET_APPLICATION`),
+named `reviewer`, `review_record_sha256`, and HTTPS `application_record_url` /
+`review_record_url`. These are supplied attestations, not inferred or generated
+approval: the guard checks their binding and referenced basis, not an external
+reviewer's identity or signature. Release reviewers must inspect those real
+records and approve the target independently; do not populate the variable with
+synthetic rehearsal evidence. Missing target application evidence keeps shared
+push blocked even after local rehearsals pass. Administrative concurrent ledger
+changes still require the operator's stopped/drained migration window; this
+read-only prerequisite does not install a shared transaction or authorize it.
+
+The shared prerequisite additionally restricts the DSN to the established staging
+project's standard direct hostname or session-pooler hostname/`postgres.<ref>`
+username, database `postgres`, and native port 5432. Production, custom/loopback
+hosts and connection-routing query parameters are rejected. `PGHOSTADDR`,
+`PGSERVICE`, `PGSERVICEFILE` and `PGOPTIONS` are cleared for the read-only query so
+libpq environment indirection cannot redirect its target. The local SQL control
+uses the same read-only query and pure validator on an explicitly owned fixture;
+it does not relax this shared endpoint restriction or manufacture release proof.

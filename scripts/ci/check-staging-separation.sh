@@ -41,13 +41,22 @@ normalize_host() {
   printf '%s' "$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
 }
 
+extract_api_base_host() {
+  local raw="${1,,}"
+  # An API base is an HTTPS origin, not a URL with credentials, another port,
+  # a path, or an authority that only starts with the expected hostname.
+  if [[ "$raw" =~ ^https://([a-z0-9][a-z0-9.-]*[a-z0-9])(:443)?/?$ ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+  fi
+}
+
 extract_supabase_ref() {
   local raw="${1:-}"
-  raw="${raw#https://}"
-  raw="${raw#http://}"
-  raw="${raw%%/*}"
-  raw="${raw%%.*}"
-  printf '%s' "$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  # The staging API client must use this project's standard HTTPS endpoint.
+  # A string prefix such as <ref>.supabase.co@another-host is not a binding.
+  if [[ "$raw" =~ ^https://([a-z0-9]{20})\.supabase\.co/?$ ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+  fi
 }
 
 # --- Required staging identifiers (names only; values compared to prod) -------
@@ -65,7 +74,7 @@ if [[ -z "$STAGING_SUPABASE_PROJECT_ID" && -n "$STAGING_SUPABASE_URL" ]]; then
   STAGING_SUPABASE_PROJECT_ID="$(extract_supabase_ref "$STAGING_SUPABASE_URL")"
 fi
 if [[ -z "$STAGING_API_HOST" && -n "$STAGING_API_BASE_URL" ]]; then
-  STAGING_API_HOST="$(normalize_host "$STAGING_API_BASE_URL")"
+  STAGING_API_HOST="$(extract_api_base_host "$STAGING_API_BASE_URL")"
 fi
 
 echo "==> Staging separation check"
@@ -82,14 +91,34 @@ else
   fi
 fi
 
+if [[ -n "$STAGING_SUPABASE_URL" && -n "$STAGING_SUPABASE_PROJECT_ID" ]]; then
+  url_ref="$(extract_supabase_ref "$STAGING_SUPABASE_URL")"
+  if [[ -z "$url_ref" || "$url_ref" != "$STAGING_SUPABASE_PROJECT_ID" ]]; then
+    fail "STAGING_SUPABASE_URL must bind to STAGING_SUPABASE_PROJECT_ID at its HTTPS project endpoint"
+  else
+    ok "Supabase URL and project ref agree"
+  fi
+fi
+
 if [[ -z "$STAGING_API_HOST" ]]; then
   fail "STAGING_API_HOST (or STAGING_API_BASE_URL) is required"
+elif [[ ! "$STAGING_API_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*[a-zA-Z0-9]$ ]]; then
+  fail "STAGING_API_HOST must be a bare hostname"
 else
   host="$(normalize_host "$STAGING_API_HOST")"
   if [[ "$host" == "$PROD_API_HOST" ]]; then
     fail "STAGING_API_HOST equals production API host (${PROD_API_HOST})"
   else
     ok "API host differs from production (${host})"
+  fi
+fi
+
+if [[ -n "$STAGING_API_BASE_URL" && -n "$STAGING_API_HOST" ]]; then
+  api_base_host="$(extract_api_base_host "$STAGING_API_BASE_URL")"
+  if [[ -z "$api_base_host" || "$api_base_host" != "${STAGING_API_HOST,,}" ]]; then
+    fail "STAGING_API_BASE_URL must be the HTTPS origin for STAGING_API_HOST"
+  else
+    ok "API base URL and host agree"
   fi
 fi
 

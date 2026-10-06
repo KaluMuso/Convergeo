@@ -144,6 +144,8 @@
     "reservationExpired": "Votre réservation a expiré — les articles ont été remis dans votre panier.",
     "stockUnavailable": "Un article n'est plus disponible. Vérifiez votre panier.",
     "emptyCart": "Votre panier est vide.",
+    "retry": "Réessayer",
+    "backToCart": "Retour au panier",
     "loading": "Démarrage du paiement…",
     "error": "Une erreur s'est produite. Réessayez.",
     "payment": {

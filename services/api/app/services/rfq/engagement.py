@@ -41,6 +41,7 @@ DEFAULT_SERVICE_COMMISSION_BPS = 1200
 ACCEPTABLE_JOB_STATUSES = frozenset({"open", "quoted"})
 ACCEPT_OUTBOX_EVENT = "service_quote_accepted"
 OUTBOX_CHANNEL = "whatsapp"
+QUOTE_EXPIRED_AT_ACCEPT_ERROR = "rfq_quote_expired_at_accept"
 
 # Services are provider-delivered; orders.fulfilment check allows delivery|pickup.
 SERVICE_FULFILMENT = "pickup"
@@ -370,13 +371,18 @@ def accept_quote(
     script = f"""
 BEGIN;
 DO $accept$
+DECLARE
+ v_quote_expires_at timestamptz;
 BEGIN
  PERFORM 1 FROM public.jobs WHERE id={job_sql} AND customer_id={customer_sql}
    AND status IN ('open','quoted') FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'job no longer available for acceptance'; END IF;
- PERFORM 1 FROM public.job_quotes WHERE id={quote_sql} AND job_id={job_sql}
-   AND status='submitted' FOR UPDATE;
+ SELECT expires_at INTO v_quote_expires_at FROM public.job_quotes
+   WHERE id={quote_sql} AND job_id={job_sql} AND status='submitted' FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'quote no longer available for acceptance'; END IF;
+ IF v_quote_expires_at IS NOT NULL AND v_quote_expires_at <= clock_timestamp() THEN
+   RAISE EXCEPTION '{QUOTE_EXPIRED_AT_ACCEPT_ERROR}';
+ END IF;
 END $accept$;
 INSERT INTO public.checkout_groups (
   id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee, status
@@ -418,6 +424,13 @@ COMMIT;
         replay = _load_existing_accept(quote_id)
         if replay is not None and replay.job_id == job_id:
             return replay
+        if result.error and result.error.splitlines()[0].strip() == QUOTE_EXPIRED_AT_ACCEPT_ERROR:
+            raise AppError(
+                code="invalid_transition",
+                message="Quote has expired",
+                http_status=409,
+                details={"status": "expired"},
+            )
         raise AppError(
             code="internal_error",
             message="Failed to accept quote",

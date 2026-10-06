@@ -147,8 +147,9 @@ meta_repo_digests="${meta_identity#*|}"
 
 source_sha="$(${GIT_BIN} -C "${ROOT_DIR}" rev-parse HEAD)"
 source_tree="$(${GIT_BIN} -C "${ROOT_DIR}" rev-parse 'HEAD^{tree}')"
-if [[ -n "${GITHUB_SHA:-}" && "${source_sha}" != "${GITHUB_SHA}" ]]; then
-  echo "error: checkout HEAD ${source_sha} differs from GITHUB_SHA ${GITHUB_SHA}" >&2
+expected_source_sha="${QUALIFICATION_SHA:-${GITHUB_SHA:-}}"
+if [[ -n "${expected_source_sha}" && "${source_sha}" != "${expected_source_sha}" ]]; then
+  echo "error: checkout HEAD ${source_sha} differs from qualification source ${expected_source_sha}" >&2
   exit 1
 fi
 
@@ -190,6 +191,10 @@ done <"${sorted_paths_tmp}"
 
 migration_count="${#migration_names[@]}"
 [[ "${migration_count}" -gt 0 ]] || { echo "error: migration provenance is empty" >&2; exit 1; }
+if [[ -n "${EXPECTED_TYPEGEN_MIGRATION_COUNT:-}" && "${migration_count}" != "${EXPECTED_TYPEGEN_MIGRATION_COUNT}" ]]; then
+  echo "error: unexpected qualified source migration count ${migration_count}" >&2
+  exit 1
+fi
 if ! migration_manifest="$(sha256_file "${migration_manifest_tmp}")"; then
   exit 1
 fi
@@ -201,7 +206,9 @@ if ! disposable_config_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/config
 if ! postgres_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/postgres-version")"; then exit 1; fi
 if ! postgres_meta_selection_sha256="$(sha256_file "${TYPEGEN_WORKDIR}/supabase/.temp/pgmeta-version")"; then exit 1; fi
 if ! graphql_initializer_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh")"; then exit 1; fi
+if ! synthetic_contract_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql")"; then exit 1; fi
 if ! graphql_initialization_evidence_sha256="$(sha256_file "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")"; then exit 1; fi
+if ! adoption_helper_sha256="$(sha256_file "${ROOT_DIR}/scripts/ci/apply_service_adoption.py")"; then exit 1; fi
 graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_action" {print $2}' \
   "${TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE}")"
 [[ "${graphql_initialization_action}" == "enabled" || "${graphql_initialization_action}" == "retained" ]] || {
@@ -215,6 +222,10 @@ graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_actio
 
 {
   printf 'source_sha=%s\n' "${source_sha}"
+  printf 'github_event_sha=%s\n' "${GITHUB_SHA:-local}"
+  printf 'adoption_helper_sha256=%s\n' "${adoption_helper_sha256}"
+  printf 'typegen_migration_application=supabase_cli_fresh_no_seed\n'
+  printf 'typegen_adoption_helper_invocation=not_invoked_by_cli\n'
   printf 'source_tree=%s\n' "${source_tree}"
   printf 'source_ref=%s\n' "${GITHUB_REF:-local}"
   printf 'migration_count=%s\n' "${migration_count}"
@@ -235,6 +246,7 @@ graphql_initialization_action="$(awk -F '|' '$1 == "graphql_initialization_actio
   printf 'postgres_meta_selection_sha256=%s\n' "${postgres_meta_selection_sha256}"
   printf 'graphql_initialization_action=%s\n' "${graphql_initialization_action}"
   printf 'graphql_initializer_sha256=%s\n' "${graphql_initializer_sha256}"
+  printf 'synthetic_contract_sha256=%s\n' "${synthetic_contract_sha256}"
   printf 'graphql_initialization_evidence_sha256=%s\n' "${graphql_initialization_evidence_sha256}"
   printf 'postgres_image_ref=%s\n' "${container_image_ref}"
   printf 'postgres_image_id=%s\n' "${container_image_id}"

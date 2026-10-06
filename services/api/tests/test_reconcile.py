@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Generator
 from datetime import UTC, date, datetime, timedelta
@@ -10,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from app.logging import JsonFormatter
 from app.services.payments import reconcile as reconcile_module
 from app.services.payments.base import ProviderOutcome, QueryStatusResult
 from app.services.payments.lenco.client import LencoClient, LencoStrategy
@@ -716,6 +718,14 @@ async def test_daily_report_flags_injected_mismatch(fake_service: FakeServiceCli
     assert len(result.discrepancies["ledger_only"]) == 1
 
 
+def test_daily_report_zero_row_postgrest_response_is_absent() -> None:
+    service = MagicMock()
+    query = service.client.table.return_value.select.return_value.eq.return_value.maybe_single
+    query.return_value.execute.return_value = None
+
+    assert reconcile_module._load_existing_report(service, date(2026, 10, 5)) is None
+
+
 class TestInternalReconciliationRouter:
     def test_poll_tick_requires_internal_token(self, client: Any) -> None:
         denied = client.post("/internal/reconciliation/poll-tick")
@@ -741,6 +751,58 @@ class TestInternalReconciliationRouter:
     def test_daily_report_requires_internal_token(self, client: Any) -> None:
         denied = client.post("/internal/reconciliation/daily-report")
         assert denied.status_code == 401
+
+    def test_daily_report_failure_correlates_safe_response_and_exception_log(
+        self, client: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        with (
+            patch("app.deps.get_supabase_client", return_value=iter([object()])),
+            patch(
+                "app.routers.internal_reconciliation.run_daily_reconciliation_report",
+                new=AsyncMock(side_effect=RuntimeError("SQL credential business payload")),
+            ),
+            caplog.at_level("WARNING"),
+        ):
+            response = client.post(
+                "/internal/reconciliation/daily-report",
+                headers={
+                    "X-Internal-Token": "dev-internal-reconciliation",
+                    "X-Request-ID": request_id,
+                },
+            )
+
+        assert response.status_code == 500
+        assert response.headers["X-Request-ID"] == request_id
+        assert response.json() == {
+            "error": {
+                "code": "internal_error",
+                "message": "An unexpected error occurred",
+                "details": {},
+                "request_id": request_id,
+            }
+        }
+        assert "SQL credential business payload" not in response.text
+        errors = [
+            record
+            for record in caplog.records
+            if record.name == "app.errors" and record.getMessage() == "Unhandled exception"
+        ]
+        assert len(errors) == 1
+        fields = vars(errors[0])
+        assert fields["request_id"] == request_id
+        assert fields["path"] == "/internal/reconciliation/daily-report"
+        assert errors[0].exc_info is None
+        assert fields["exception_type"] == "RuntimeError"
+        assert fields["exception_frames"]
+        assert any("internal_reconciliation.py" in frame for frame in fields["exception_frames"])
+        log = json.loads(JsonFormatter().format(errors[0]))
+        assert log["request_id"] == request_id
+        assert log["path"] == "/internal/reconciliation/daily-report"
+        assert log["exception_type"] == "RuntimeError"
+        assert log["exception_frames"] == fields["exception_frames"]
+        assert "SQL credential business payload" not in json.dumps(log)
+        assert "SQL credential business payload" not in caplog.text
 
 
 @pytest.fixture(scope="module")

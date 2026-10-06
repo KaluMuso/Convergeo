@@ -90,6 +90,7 @@
     "errors": {
       "loadFailed": "Situnathe kuloda services.",
       "saveFailed": "Situnathe kusave service.",
+      "titleInvalid": "Ikani title ya service yokhala ndi zilembo ziwiri kapena kuposa.",
       "bookablePrice": "Ikani fixed booking price yoposa zero kuti mulole direct booking.",
       "authRequired": "Lowani kuti mumange services zanu."
     }

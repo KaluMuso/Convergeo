@@ -1,10 +1,50 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cldLqipUrl, cldSrcSet, cldUrl, sanitizePublicId } from "./cloudinary-url";
 
 const CLOUD = "vergeo5-dev";
+afterEach(() => vi.unstubAllEnvs());
 
 describe("cloudinary-url", () => {
+  it("uses local variants only for the exact admitted CI image", () => {
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "http://10.1.2.3:8000");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 720 })).toBe("/api/ci-perf-media?width=720");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 1440 })).toBe("/api/ci-perf-media?width=1200");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 2160 })).toBe("/api/ci-perf-media?width=1200");
+    expect(() => cldUrl("ci-perf/smartphone-x1", { width: 999 })).toThrow(/Unsupported/);
+    expect(() => cldUrl("ci-perf/smartphone-x1", { width: 2161 })).toThrow(/Unsupported/);
+    expect(cldLqipUrl("ci-perf/smartphone-x1")).toBe("/api/ci-perf-media?width=24");
+    expect(cldSrcSet("ci-perf/smartphone-x1")).toBe(
+      "/api/ci-perf-media?width=360 360w, /api/ci-perf-media?width=720 720w, /api/ci-perf-media?width=1080 1080w",
+    );
+    expect(cldUrl("vergeo5/demo/phone-a", { width: 720, cloudName: CLOUD })).toMatch(
+      /^https:\/\/res.cloudinary.com\//,
+    );
+    expect(cldUrl("ci-perf/other", { width: 720, cloudName: CLOUD })).toMatch(
+      /^https:\/\/res.cloudinary.com\//,
+    );
+    expect(cldUrl("ci-perf/other", { width: 2160, cloudName: CLOUD })).toContain("w_2160/");
+  });
+  it("never adds a local media path to ordinary production or missing-plane builds", () => {
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 720, cloudName: CLOUD })).toMatch(
+      /^https:\/\/res.cloudinary.com\//,
+    );
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 2160, cloudName: CLOUD })).toContain("w_2160/");
+    vi.stubEnv("NEXT_PUBLIC_CI_PERF_HARNESS", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 720, cloudName: CLOUD })).toMatch(
+      /^https:\/\/res.cloudinary.com\//,
+    );
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "");
+    expect(cldUrl("ci-perf/smartphone-x1", { width: 720, cloudName: CLOUD })).toMatch(
+      /^https:\/\/res.cloudinary.com\//,
+    );
+  });
   it("builds exact URL shape with f_auto and q_auto", () => {
     const url = cldUrl("products/phone.jpg", { width: 720, cloudName: CLOUD });
     expect(url).toBe(

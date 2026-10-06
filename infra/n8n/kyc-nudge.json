@@ -48,6 +48,18 @@
           "name": "Vergeo5 Internal N8N"
         }
       }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.all();\nif (input.length !== 1 || !input[0] || !input[0].json) {\n  throw new Error('Operational tick returned unexpected item count');\n}\nconst src = input[0].json;\nconst validCount = (value) => Number.isSafeInteger(value) && value >= 0;\nif (!Array.isArray(src.items) || !validCount(src.count) ||\n    !validCount(src.enqueued) || !validCount(src.skipped) ||\n    src.items.length !== src.count || src.enqueued + src.skipped !== src.count) {\n  throw new Error('Operational tick returned invalid enqueue outcome');\n}\nreturn [{ json: { count: src.count, enqueued: src.enqueued, skipped: src.skipped } }];"
+      },
+      "id": "assert-enqueue-outcome",
+      "name": "Assert Enqueue Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
     }
   ],
   "connections": {
@@ -56,6 +68,17 @@
         [
           {
             "node": "Enqueue KYC Nudges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enqueue KYC Nudges": {
+      "main": [
+        [
+          {
+            "node": "Assert Enqueue Outcome",
             "type": "main",
             "index": 0
           }

@@ -30,6 +30,10 @@ mkdir -p "${tmp}/bin" "${tmp}/migrations"
 printf '%s\n' '-- one' >"${tmp}/migrations/0001_one.sql"
 printf '%s\n' '-- two' >"${tmp}/migrations/0002_two.sql"
 printf '%s\n' '0001' '0002' >"${tmp}/migration-versions"
+good_hash="$(printf '%064d' 0)"
+for group in direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture; do
+  printf '%s|%s|%s\n' "${group}" "${good_hash}" "${good_hash}"
+done >"${tmp}/synthetic-good"
 
 cat >"${tmp}/catalog-good" <<'EOF'
 server_version_num|170006
@@ -57,6 +61,9 @@ elif [[ "${sql}" == *typegen_catalog_contract* ]]; then
 elif [[ "${sql}" == *typegen_migration_versions* ]]; then
   cat "${FAKE_MIGRATION_OUTPUT}"
   [[ "${FAKE_MIGRATION_EXIT_AFTER_OUTPUT:-0}" != "1" ]] || exit 23
+elif [[ "${sql}" == *typegen_synthetic_catalog_contract* ]]; then
+  cat "${FAKE_SYNTHETIC_OUTPUT}"
+  [[ "${FAKE_SYNTHETIC_EXIT_AFTER_OUTPUT:-0}" != "1" ]] || exit 23
 else
   echo "unexpected query" >&2
   exit 24
@@ -67,12 +74,13 @@ chmod +x "${tmp}/bin/psql"
 run_qualifier() {
   FAKE_CATALOG_OUTPUT="${1}" \
   FAKE_MIGRATION_OUTPUT="${tmp}/migration-versions" \
+  FAKE_SYNTHETIC_OUTPUT="${FAKE_SYNTHETIC_OUTPUT_OVERRIDE:-${tmp}/synthetic-good}" \
   PSQL_BIN="${tmp}/bin/psql" \
   FIND_BIN="${QUALIFIER_FIND_BIN:-find}" \
   SORT_BIN="${QUALIFIER_SORT_BIN:-sort}" \
   SUPABASE_DB_URL=postgresql://fixture \
   TYPEGEN_MIGRATIONS_DIR="${tmp}/migrations" \
-    "${QUALIFIER}" >/dev/null
+    "${QUALIFIER}"
 }
 
 expect_reject() {
@@ -83,7 +91,108 @@ expect_reject() {
   fi
 }
 
-run_qualifier "${tmp}/catalog-good"
+run_qualifier "${tmp}/catalog-good" >/dev/null
+
+for group in direct_role_acl function_owner_acl_config relation_owner_acl_rls schema_owner_acl service_read_grants source_fixture; do
+  sed "s/^${group}|\([0-9a-f]*\)|\1$/${group}|\1|$(printf '%064d' 1)/" \
+    "${tmp}/synthetic-good" >"${tmp}/synthetic-${group}-bad"
+  if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-${group}-bad" \
+    run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+    echo "error: synthetic ${group} drift was accepted" >&2
+    exit 1
+  fi
+done
+cp "${tmp}/synthetic-direct_role_acl-bad" "${tmp}/synthetic-acl-delta"
+printf '%s\n' 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
+  >>"${tmp}/synthetic-acl-delta"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-delta" \
+  run_qualifier "${tmp}/catalog-good" >"${tmp}/acl-delta-stdout" 2>"${tmp}/acl-delta-stderr"; then
+  echo "error: direct ACL delta was accepted" >&2
+  exit 1
+fi
+[[ ! -s "${tmp}/acl-delta-stdout" ]]
+grep -Fx 'error: direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
+  "${tmp}/acl-delta-stderr" >/dev/null
+cat "${tmp}/synthetic-acl-delta" >"${tmp}/synthetic-acl-repeated-truncation"
+for ((index = 0; index < 63; index++)); do
+  printf '%s\n' 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
+    >>"${tmp}/synthetic-acl-repeated-truncation"
+done
+printf '%s\n' 'direct_acl_delta|truncated' 'direct_acl_delta|truncated' \
+  >>"${tmp}/synthetic-acl-repeated-truncation"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-repeated-truncation" \
+  run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: repeated ACL truncation marker was accepted" >&2
+  exit 1
+fi
+head -n -1 "${tmp}/synthetic-acl-repeated-truncation" >"${tmp}/synthetic-acl-truncated"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-truncated" \
+  run_qualifier "${tmp}/catalog-good" >"${tmp}/acl-truncated-stdout" 2>"${tmp}/acl-truncated-stderr"; then
+  echo "error: truncated ACL delta was accepted as matching" >&2
+  exit 1
+fi
+[[ ! -s "${tmp}/acl-truncated-stdout" ]]
+grep -Fx 'error: direct_acl_delta|truncated' "${tmp}/acl-truncated-stderr" >/dev/null
+if grep -F 'malformed or unbounded' "${tmp}/acl-truncated-stderr" >/dev/null; then
+  echo "error: valid bounded ACL truncation was rejected as malformed" >&2
+  exit 1
+fi
+sed 's/|service_role|DELETE|/|unapproved_role|DELETE|/' \
+  "${tmp}/synthetic-acl-delta" >"${tmp}/synthetic-acl-invalid"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-invalid" \
+  run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: unbounded ACL diagnostic was accepted" >&2
+  exit 1
+fi
+for replacement in 'unknown_relation|service_role|DELETE' 'cart_merge_receipts|service_role|UNKNOWN'; do
+  sed "s/cart_merge_receipts|service_role|DELETE/${replacement}/" \
+    "${tmp}/synthetic-acl-delta" >"${tmp}/synthetic-acl-nonallowlisted"
+  if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-nonallowlisted" \
+    run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+    echo "error: non-allowlisted ACL diagnostic was accepted" >&2
+    exit 1
+  fi
+done
+cp "${tmp}/synthetic-direct_role_acl-bad" "${tmp}/synthetic-acl-long-line"
+printf 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false%0200d\n' 0 \
+  >>"${tmp}/synthetic-acl-long-line"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-long-line" \
+  run_qualifier "${tmp}/catalog-good" >"${tmp}/acl-long-stdout" 2>"${tmp}/acl-long-stderr"; then
+  echo "error: oversized ACL line was accepted" >&2
+  exit 1
+fi
+[[ ! -s "${tmp}/acl-long-stdout" ]]
+grep -Fx 'error: unbounded synthetic catalog evidence line' "${tmp}/acl-long-stderr" >/dev/null
+cp "${tmp}/synthetic-direct_role_acl-bad" "${tmp}/synthetic-acl-long-output"
+for ((index = 0; index < 200; index++)); do
+  printf '%s\n' 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
+    >>"${tmp}/synthetic-acl-long-output"
+done
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-long-output" \
+  run_qualifier "${tmp}/catalog-good" >"${tmp}/acl-long-output-stdout" 2>"${tmp}/acl-long-output-stderr"; then
+  echo "error: oversized ACL output was accepted" >&2
+  exit 1
+fi
+[[ ! -s "${tmp}/acl-long-output-stdout" ]]
+grep -Fx 'error: unbounded synthetic catalog evidence' "${tmp}/acl-long-output-stderr" >/dev/null
+cat "${tmp}/synthetic-good" >"${tmp}/synthetic-acl-orphan"
+printf '%s\n' 'direct_acl_delta|unexpected|public|cart_merge_receipts|service_role|DELETE|postgres|false' \
+  >>"${tmp}/synthetic-acl-orphan"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-acl-orphan" \
+  run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: ACL delta with matching hashes was accepted" >&2
+  exit 1
+fi
+head -n 5 "${tmp}/synthetic-good" >"${tmp}/synthetic-missing"
+if FAKE_SYNTHETIC_OUTPUT_OVERRIDE="${tmp}/synthetic-missing" \
+  run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: missing synthetic comparison was accepted" >&2
+  exit 1
+fi
+if FAKE_SYNTHETIC_EXIT_AFTER_OUTPUT=1 run_qualifier "${tmp}/catalog-good" >/dev/null 2>&1; then
+  echo "error: failed synthetic collection was accepted" >&2
+  exit 1
+fi
 
 for fixture in missing-schema missing-function wrong-placement wrong-server-version \
   wrong-vector-version wrong-graphql-version wrong-pgcrypto-version missing-vector \
@@ -228,7 +337,7 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
         'pg_graphql|<missing>' \
         'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
         'wrapper_owner|supabase_admin' \
-        'wrapper_definition|CREATE FUNCTION graphql_public.graphql placeholder' \
+        'wrapper_calls_resolver|false' \
         'wrapper_extension_member|0' \
         'resolver_identity|<missing>' \
         'resolver_identity_matches|false' \
@@ -248,17 +357,17 @@ if [[ "${sql}" == *typegen_graphql_catalog* ]]; then
   esac
   if [[ "${state}" != "absent" ]]; then
     if [[ "${state}" == "broken-wrapper" ]]; then
-      definition='CREATE FUNCTION graphql_public.graphql placeholder'
+      definition='false'
       membership=0
     else
-      definition='CREATE FUNCTION graphql_public.graphql AS select graphql.resolve'
+      definition='true'
       membership=1
     fi
     printf '%s\n' \
       "pg_graphql|${extension}" \
       'wrapper_signature|graphql_public.graphql(text,text,jsonb,jsonb)' \
       'wrapper_owner|supabase_admin' \
-      "wrapper_definition|${definition}" \
+      "wrapper_calls_resolver|${definition}" \
       "wrapper_extension_member|${membership}" \
       "resolver_identity|${FAKE_RESOLVER_RENDERING:-graphql.resolve(text,jsonb,text,jsonb)}" \
       "resolver_identity_matches|${FAKE_RESOLVER_IDENTITY_MATCHES:-true}" \
@@ -509,6 +618,7 @@ cp "${tmp}/graphql-init-enabled.txt" "${tmp}/graphql-initialization.txt"
 
 run_provenance() {
   local provenance_output="${PROVENANCE_OUTPUT_OVERRIDE:-${tmp}/provenance.txt}"
+  EXPECTED_TYPEGEN_MIGRATION_COUNT="${PROVENANCE_EXPECTED_MIGRATION_COUNT:-2}" \
   SUPABASE_DB_URL=postgresql://fixture \
   TYPEGEN_WORKDIR="${tmp}/prepared" \
   TYPEGEN_OUTPUT="${tmp}/generated.ts" \
@@ -527,6 +637,13 @@ run_provenance() {
 }
 
 run_provenance
+printf '%s\n' preserve-on-count-failure >"${tmp}/provenance.txt"
+if PROVENANCE_EXPECTED_MIGRATION_COUNT=135 run_provenance >/dev/null 2>&1; then
+  echo "error: unexpected migration count was accepted" >&2
+  exit 1
+fi
+[[ "$(cat "${tmp}/provenance.txt")" == "preserve-on-count-failure" ]]
+run_provenance
 grep -Fx 'supabase_cli_version=2.109.1' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'migration_versions=0001,0002' "${tmp}/provenance.txt" >/dev/null
 grep -Fx "$(printf 'postgres_image_id=sha256:%064d' 1)" "${tmp}/provenance.txt" >/dev/null
@@ -538,6 +655,7 @@ grep -Fx 'expected_profile.pg_graphql=1.6.1@graphql' "${tmp}/provenance.txt" >/d
 grep -Fx 'expected_profile.pgcrypto=1.3@extensions' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'graphql_initialization_action=enabled' "${tmp}/provenance.txt" >/dev/null
 grep -E '^graphql_initializer_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
+grep -E '^synthetic_contract_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -E '^graphql_initialization_evidence_sha256=[0-9a-f]{64}$' "${tmp}/provenance.txt" >/dev/null
 grep -Fx 'database_shape.graphql_public.graphql=real extension-owned wrapper' "${tmp}/provenance.txt" >/dev/null
 
@@ -629,6 +747,8 @@ for required_hash in \
   "${tmp}/prepared/supabase/.temp/postgres-version" \
   "${tmp}/prepared/supabase/.temp/pgmeta-version" \
   "${ROOT_DIR}/scripts/ci/initialize-typegen-graphql.sh" \
+  "${ROOT_DIR}/scripts/ci/typegen-synthetic-contract.sql" \
+  "${ROOT_DIR}/scripts/ci/apply_service_adoption.py" \
   "${tmp}/graphql-initialization.txt"; do
   expect_hash_reject_preserves_prior "required input hash failure: ${required_hash}" fail \
     "${required_hash}"
@@ -771,6 +891,12 @@ if provenance.count(
 cleanup = step("Stop disposable Supabase database")
 if cleanup.count("        if: always()") != 1:
     raise SystemExit("error: only disposable cleanup may run after qualification failure")
+cleanup_text = "\n".join(cleanup)
+if (
+    cleanup_text.count('${TYPEGEN_WORKDIR}/.owned-typegen-stack') != 2
+    or '"${current_id}" == "${owned_id}"' not in cleanup_text
+):
+    raise SystemExit("error: typegen cleanup must stop only its recorded disposable container")
 PY
 
 mkdir -p "${tmp}/init-caller-bin" "${tmp}/init-caller-work"

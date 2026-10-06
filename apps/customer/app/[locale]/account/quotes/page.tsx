@@ -5,7 +5,8 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
-import { getAccountAccessToken } from "../_components/account-server";
+import { AccountListBoundary } from "../_components/account-list-boundary";
+import { getAccountListSession } from "../_components/account-list-server";
 
 import type { RfqThread } from "../../../../lib/rfq-api";
 import type { Metadata } from "next";
@@ -46,74 +47,84 @@ export default async function AccountListingQuotesPage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const accessToken = await getAccountAccessToken(locale);
+  const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const accountMessages = await loadNamespace(locale as Locale, "account");
-  const messages = { ...baseMessages, account: accountMessages } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "account.listingQuotes" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const messages = {
+    ...baseMessages,
+    account: accountMessages,
+  } as AbstractIntlMessages;
+  const t = createTranslator({
+    locale,
+    messages,
+    namespace: "account.listingQuotes",
+  }) as (key: string, values?: Record<string, string | number>) => string;
 
   const threads = await fetchListingQuotes(accessToken);
 
   if (threads.length === 0) {
     return (
-      <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
-        <h2 className="font-display text-h2 text-display-ink">{t("list.emptyTitle")}</h2>
-        <p className="text-sm text-text-2">{t("list.emptyBody")}</p>
-        <LinkButton
-          href={`/${locale}/search`}
-          variant="primary"
-          className="px-5 text-sm"
-          LinkComponent={Link}
-        >
-          {t("list.browseCta")}
-        </LinkButton>
-      </section>
+      <AccountListBoundary accountId={accountId}>
+        <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
+          <h2 className="font-display text-h2 text-display-ink">{t("list.emptyTitle")}</h2>
+          <p className="text-sm text-text-2">{t("list.emptyBody")}</p>
+          <LinkButton
+            href={`/${locale}/search`}
+            variant="primary"
+            className="px-5 text-sm"
+            LinkComponent={Link}
+          >
+            {t("list.browseCta")}
+          </LinkButton>
+        </section>
+      </AccountListBoundary>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <header className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{t("list.title")}</h2>
-        <p className="text-sm text-text-2">{t("list.intro")}</p>
-      </header>
+    <AccountListBoundary accountId={accountId}>
+      <section className="space-y-6">
+        <header className="space-y-1">
+          <h2 className="font-display text-h2 text-display-ink">{t("list.title")}</h2>
+          <p className="text-sm text-text-2">{t("list.intro")}</p>
+        </header>
 
-      <ul className="space-y-3">
-        {threads.map((thread) => (
-          <li key={thread.id}>
-            <article className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-display-ink line-clamp-2">
-                  {thread.requested_details}
-                </p>
-                <p className="text-xs text-text-2">
-                  {t("list.posted", {
-                    date: new Date(thread.created_at).toLocaleDateString(locale),
-                  })}
-                  {" · "}
-                  {t("list.status", { status: t(`status.${thread.status}`) })}
-                </p>
-                {thread.quote_price_ngwee !== null ? (
-                  <p className="text-sm font-mono text-text">
-                    {t("list.quotedPrice", { amount: formatK(thread.quote_price_ngwee) })}
+        <ul className="space-y-3">
+          {threads.map((thread) => (
+            <li key={thread.id}>
+              <article className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-display-ink line-clamp-2">
+                    {thread.requested_details}
                   </p>
-                ) : null}
-              </div>
-              <LinkButton
-                href={`/${locale}/account/quotes/${thread.id}`}
-                variant="secondary"
-                className="shrink-0 self-end border-primary px-4 text-sm text-primary"
-                LinkComponent={Link}
-              >
-                {t("list.viewCta")}
-              </LinkButton>
-            </article>
-          </li>
-        ))}
-      </ul>
-    </section>
+                  <p className="text-xs text-text-2">
+                    {t("list.posted", {
+                      date: new Date(thread.created_at).toLocaleDateString(locale),
+                    })}
+                    {" · "}
+                    {t("list.status", { status: t(`status.${thread.status}`) })}
+                  </p>
+                  {thread.quote_price_ngwee !== null ? (
+                    <p className="text-sm font-mono text-text">
+                      {t("list.quotedPrice", {
+                        amount: formatK(thread.quote_price_ngwee),
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+                <LinkButton
+                  href={`/${locale}/account/quotes/${thread.id}`}
+                  variant="secondary"
+                  className="shrink-0 self-end border-primary px-4 text-sm text-primary"
+                  LinkComponent={Link}
+                >
+                  {t("list.viewCta")}
+                </LinkButton>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </AccountListBoundary>
   );
 }

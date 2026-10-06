@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -150,4 +150,25 @@ describe("StepContact authenticated OTP ordering", () => {
     );
     expect(contactRequest).toHaveBeenCalledOnce();
   });
+});
+
+it("does not resume accepted OTP work after the contact surface unmounts", async () => {
+  let finish!: (value: unknown) => void;
+  verifyOtp.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  const onComplete = vi.fn();
+  const user = userEvent.setup();
+  const view = render(<StepContact labels={labels} onComplete={onComplete} />);
+  await submitOtp(user);
+  expect(verifyOtp).toHaveBeenCalledOnce();
+  view.unmount();
+  await act(async () =>
+    finish({ data: { session: { access_token: "old-session-token" } }, error: null }),
+  );
+  expect(reconcileCustomerSession).not.toHaveBeenCalled();
+  expect(contactRequest).not.toHaveBeenCalled();
+  expect(onComplete).not.toHaveBeenCalled();
 });

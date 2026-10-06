@@ -86,6 +86,7 @@
     "errors": {
       "loadFailed": "Impossible de charger les services.",
       "saveFailed": "Impossible d'enregistrer le service.",
+      "titleInvalid": "Saisissez un titre d'au moins deux caractères.",
       "authRequired": "Connectez-vous pour gérer vos services."
     }
   },

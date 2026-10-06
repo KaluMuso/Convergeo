@@ -1,4 +1,9 @@
-import { CSP_NONCE_PLACEHOLDER, CSP_REPORT_ONLY_HEADER } from "@vergeo/auth/middleware";
+import {
+  CSP_NONCE_PLACEHOLDER,
+  CSP_REPORT_ONLY_HEADER,
+  updateSession,
+} from "@vergeo/auth/middleware";
+import { LOCALES } from "@vergeo/i18n";
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -36,6 +41,7 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   };
 });
 
+import { isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
 import middleware, { config } from "./middleware";
 
 describe("vendor middleware matcher", () => {
@@ -55,6 +61,103 @@ describe("vendor middleware matcher", () => {
     expect(pattern.test("/api/csp-report")).toBe(false);
     expect(pattern.test("/_next/static/chunk.js")).toBe(false);
     expect(pattern.test("/favicon.ico")).toBe(false);
+  });
+});
+
+describe("vendor password recovery gate", () => {
+  beforeEach(async () => {
+    const actual =
+      await vi.importActual<typeof import("@vergeo/auth/middleware")>("@vergeo/auth/middleware");
+    resolveGatedRedirectMock.mockReset();
+    resolveGatedRedirectMock.mockImplementation(actual.resolveGatedRedirect);
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      user: null,
+      roles: [],
+    });
+  });
+
+  it.each(
+    LOCALES.flatMap((locale) => [
+      `/${locale}/reset-password`,
+      `/${locale}/reset-password/confirm`,
+      `/${locale}/reset-password/`,
+      `/${locale}/reset-password/confirm/`,
+    ]),
+  )("allows exact recovery without a session: %s", async (path) => {
+    const response = await middleware(
+      new NextRequest(`https://vendor.example.test${path}?next=https://evil.example.test`),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+    expectNonceReportOnlyCsp(response);
+  });
+
+  it.each([
+    "/en/listings",
+    "/en/orders",
+    "/en/reset-password/admin",
+    "/en/reset-password/confirm/admin",
+    "/en/reset-password-other",
+  ])("keeps unauthenticated non-recovery paths gated: %s", async (path) => {
+    const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://vendor.example.test/en/login");
+    expect(resolveGatedRedirectMock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    "/xx/reset-password",
+    "/reset-password",
+    "/en/reset-password//",
+    "/en/reset-password/confirm-extra",
+  ])("rejects lookalike/unsupported recovery paths: %s", (path) =>
+    expect(isVendorPasswordRecoveryPath(path)).toBe(false),
+  );
+
+  it.each(["customer", "vendor"] as const)(
+    "preserves the real shared role gate for %s",
+    async (role) => {
+      vi.mocked(updateSession).mockResolvedValue({
+        response: NextResponse.next(),
+        user: {
+          id: "synthetic",
+          app_metadata: {},
+          user_metadata: {},
+          aud: "authenticated",
+          created_at: "2026-01-01",
+        },
+        roles: [role],
+      });
+      for (const path of [
+        "/en/listings",
+        "/en/services",
+        "/en/orders",
+        "/en/events/synthetic/scan",
+      ]) {
+        const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+        expect(response.status, path).toBe(role === "vendor" ? 200 : 307);
+        expect(response.headers.get("location"), path).toBe(
+          role === "vendor" ? null : "https://vendor.example.test/en/onboarding",
+        );
+        expectNonceReportOnlyCsp(response);
+      }
+    },
+  );
+
+  it("preserves refreshed session cookies on recovery responses", async () => {
+    const sessionResponse = NextResponse.next();
+    sessionResponse.cookies.set("synthetic-refresh", "fixture", { httpOnly: true });
+    vi.mocked(updateSession).mockResolvedValue({
+      response: sessionResponse,
+      user: null,
+      roles: [],
+    });
+    const response = await middleware(
+      new NextRequest("https://vendor.example.test/en/reset-password/confirm"),
+    );
+    expect(response.cookies.get("synthetic-refresh")?.value).toBe("fixture");
   });
 });
 

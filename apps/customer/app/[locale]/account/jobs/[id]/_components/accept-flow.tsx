@@ -5,10 +5,10 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
-import { useSession } from "../../../../../../lib/customer-session";
+import { customerAuth, useSession } from "../../../../../../lib/customer-session";
 
 export const DEFAULT_DEPOSIT_PCT = 50;
 
@@ -29,6 +29,7 @@ type AcceptFlowProps = {
   /** Admin-tunable server default; used only for the pre-accept preview. */
   depositPct?: number;
   onCancel?: () => void;
+  onPendingChange?: (pending: boolean) => void;
 };
 
 /** Half-up integer ngwee — mirrors the server deposit math for a consistent preview. */
@@ -36,7 +37,25 @@ export function previewDepositNgwee(totalNgwee: number, depositPct: number): num
   return Math.floor((totalNgwee * depositPct + 50) / 100);
 }
 
-export function AcceptFlow({
+export function AcceptFlow({ locale, jobId, quoteId, ...props }: AcceptFlowProps) {
+  const { session, generation } = useSession();
+  if (!session) return null;
+
+  return (
+    <ActiveAcceptFlow
+      key={`${generation}:${session.user.id}:${locale}:${jobId}:${quoteId}`}
+      locale={locale}
+      jobId={jobId}
+      quoteId={quoteId}
+      accessToken={session.access_token}
+      authGeneration={generation}
+      userId={session.user.id}
+      {...props}
+    />
+  );
+}
+
+function ActiveAcceptFlow({
   locale,
   jobId,
   quoteId,
@@ -44,12 +63,33 @@ export function AcceptFlow({
   totalNgwee,
   depositPct = DEFAULT_DEPOSIT_PCT,
   onCancel,
-}: AcceptFlowProps) {
+  onPendingChange,
+  accessToken,
+  authGeneration,
+  userId,
+}: AcceptFlowProps & {
+  accessToken: string;
+  authGeneration: number;
+  userId: string;
+}) {
   const t = useTranslations("services.accept");
-  const { session } = useSession();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const active = useRef(false);
+  const acceptInFlight = useRef(false);
+
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+
+  const isCurrent = useCallback(() => {
+    const auth = customerAuth.snapshot();
+    return active.current && auth.generation === authGeneration && auth.session?.user.id === userId;
+  }, [authGeneration, userId]);
 
   const depositNgwee = useMemo(
     () => previewDepositNgwee(totalNgwee, depositPct),
@@ -57,20 +97,25 @@ export function AcceptFlow({
   );
   const balanceNgwee = totalNgwee - depositNgwee;
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(() => accessToken, [accessToken]);
 
   const handleAccept = useCallback(async () => {
+    if (!isCurrent() || acceptInFlight.current) return;
+    acceptInFlight.current = true;
     setSubmitting(true);
     setError(null);
+    onPendingChange?.(true);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
       const result = await client.request<AcceptResponse>(
         `/jobs/${jobId}/quotes/${quoteId}/accept`,
         { method: "POST", body: JSON.stringify({}) },
       );
-      // Hand off to the standard deposit checkout for the created checkout group.
+      // The server may have accepted the quote even if this view has gone away.
+      if (!isCurrent()) return;
       router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
     } catch (err) {
+      if (!isCurrent()) return;
       if (err instanceof ApiError && err.status === 403) {
         setError(t("errors.notOwner"));
       } else if (err instanceof ApiError && (err.status === 409 || err.status === 422)) {
@@ -81,8 +126,10 @@ export function AcceptFlow({
         setError(t("errors.generic"));
       }
       setSubmitting(false);
+      acceptInFlight.current = false;
+      onPendingChange?.(false);
     }
-  }, [getToken, jobId, quoteId, locale, router, t]);
+  }, [getToken, isCurrent, jobId, quoteId, locale, onPendingChange, router, t]);
 
   return (
     <section className="space-y-4 rounded border border-border bg-surface p-4">

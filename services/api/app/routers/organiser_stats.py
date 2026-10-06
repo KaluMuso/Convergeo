@@ -151,20 +151,21 @@ LIMIT 1;
 def _load_sales_by_type(event_id: str) -> list[TicketTypeSales]:
     event_sql = _sql_uuid(event_id)
     script = f"""
-SELECT
-  tt.id::text,
-  tt.kind,
-  tt.name,
-  tt.price_ngwee::text,
-  count(t.id) FILTER (
+SELECT json_build_object(
+  'ticket_type_id', tt.id,
+  'kind', tt.kind,
+  'name', tt.name,
+  'price_ngwee', tt.price_ngwee,
+  'sold', count(t.id) FILTER (
     WHERE t.status IN ('issued', 'checked_in') AND t.order_item_id IS NOT NULL
-  )::text AS sold,
-  count(t.id) FILTER (
+  ),
+  'checked_in', count(t.id) FILTER (
     WHERE t.status = 'checked_in' AND t.order_item_id IS NOT NULL
-  )::text AS checked_in,
-  coalesce(sum(oi.unit_price_ngwee) FILTER (
+  ),
+  'revenue_ngwee', coalesce(sum(oi.unit_price_ngwee) FILTER (
     WHERE t.status IN ('issued', 'checked_in') AND t.order_item_id IS NOT NULL
-  ), 0)::text AS revenue
+  ), 0)
+)::text
 FROM public.ticket_types tt
 LEFT JOIN public.tickets t ON t.ticket_type_id = tt.id
 LEFT JOIN public.order_items oi ON oi.id = t.order_item_id
@@ -183,25 +184,15 @@ ORDER BY tt.created_at ASC;
 
     rows: list[TicketTypeSales] = []
     for raw in result.rows:
-        parts = raw.split("|", 6)
-        if len(parts) != 7:
-            continue
-        ticket_type_id, kind, name, price_raw, sold_raw, checked_in_raw, revenue_raw = parts
+        # Tier names are free text. A single JSON column preserves pipes and
+        # newlines rather than treating them as database output delimiters.
+        row = json.loads(raw)
         # order_items.unit_price_ngwee is forced to a nominal 1 ngwee for free_rsvp
         # (schema requires unit_price_ngwee > 0) — that is a storage workaround, not
         # real money, so free_rsvp revenue is always reported as 0.
-        revenue = 0 if kind == "free_rsvp" else int(revenue_raw)
-        rows.append(
-            TicketTypeSales(
-                ticket_type_id=ticket_type_id,
-                kind=kind,
-                name=name,
-                price_ngwee=int(price_raw),
-                sold=int(sold_raw),
-                checked_in=int(checked_in_raw),
-                revenue_ngwee=revenue,
-            )
-        )
+        if row["kind"] == "free_rsvp":
+            row["revenue_ngwee"] = 0
+        rows.append(TicketTypeSales.model_validate(row))
     return rows
 
 

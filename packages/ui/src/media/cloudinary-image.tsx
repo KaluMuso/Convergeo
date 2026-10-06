@@ -112,11 +112,11 @@ export function CloudinaryImage({
     borderRadius: "var(--r)",
     width: "100%",
     ...(aspectRatio ? { aspectRatio } : {}),
-    backgroundImage: !loaded && lqip ? `url(${lqip})` : undefined,
+    backgroundImage: !priority && !loaded && lqip ? `url(${lqip})` : undefined,
     backgroundColor: showFallback ? "var(--bg-2)" : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    filter: loaded || showFallback ? undefined : "blur(8px)",
+    filter: priority || loaded || showFallback ? undefined : "blur(8px)",
     transition: "filter var(--dur) var(--ease-std)",
   };
 
@@ -146,7 +146,7 @@ export function CloudinaryImage({
 
   return (
     <div className={className} style={containerStyle} data-testid="cloudinary-image-box">
-      {!loaded ? (
+      {!priority && !loaded ? (
         <div aria-hidden="true" style={shimmerStyle} data-testid="cloudinary-shimmer" />
       ) : null}
       <img
@@ -158,6 +158,7 @@ export function CloudinaryImage({
         height={intrinsicHeight}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         decoding="async"
         onLoad={markLoaded}
         onError={handleError}
@@ -166,7 +167,7 @@ export function CloudinaryImage({
           width: "100%",
           height: aspectRatio ? "100%" : "auto",
           objectFit: "cover",
-          opacity: loaded ? 1 : 0,
+          opacity: priority || loaded ? 1 : 0,
           transition: "opacity var(--dur) var(--ease-std)",
         }}
       />

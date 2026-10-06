@@ -2,6 +2,12 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
+import {
+  CategorySelection,
+  categoryPath,
+  eventCategoryNodes,
+  type CategoryNode,
+} from "@vergeo/ui/src/category-selection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -27,32 +33,6 @@ import {
   validateInstanceDrafts,
 } from "./instance-editor";
 
-const CATEGORIES: EventCategory[] = [
-  "music",
-  "comedy-theatre-parent",
-  "sports",
-  "conferences-workshops",
-  "family",
-  "religious",
-  "markets",
-  "exhibitions",
-  "nightlife",
-  "community",
-  "private-events",
-  "workshops",
-  "comedy-theatre",
-  "pop-up-dinners",
-  "cultural-arts",
-  "lifestyle-community",
-  "free-rsvp",
-  "concerts",
-  "festivals",
-  "gospel",
-  "stand-up",
-  "football",
-  "church",
-];
-
 const EVENT_TYPE_VALUES: EventType[] = ["single", "multi_day", "recurring", "free_rsvp", "private"];
 
 type EventFormProps = {
@@ -65,6 +45,10 @@ type EventFormProps = {
 export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProps) {
   const t = useTranslations("vendor");
   const te = useTranslations("events");
+  const taxonomyText = useTranslations("common.categorySelection");
+  const [categoryNodes, setCategoryNodes] = useState<CategoryNode[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesFailed, setCategoriesFailed] = useState(false);
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
 
@@ -112,6 +96,26 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCategoriesLoading(true);
+    setCategoriesFailed(false);
+    void eventsClient
+      .listCategories()
+      .then((rows) => {
+        if (!cancelled) setCategoryNodes(eventCategoryNodes(rows, te));
+      })
+      .catch(() => {
+        if (!cancelled) setCategoriesFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setCategoriesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventsClient, te]);
 
   useEffect(() => {
     if (!initialEvent) {
@@ -180,6 +184,11 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     }
     if (eventType === "recurring" && instances.length !== 1) {
       setError("A recurring series needs one seed date; future dates are generated automatically.");
+      return;
+    }
+
+    if (categoriesLoading || categoriesFailed || !categoryPath(categoryNodes, category).length) {
+      setError(taxonomyText("unavailable"));
       return;
     }
 
@@ -289,19 +298,21 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         />
       </FormField>
 
-      <FormField label={te("filters.categoryLabel")} required requiredMarker="*">
-        <Select
-          value={category}
-          onChange={(event) => setCategory(event.target.value as EventCategory)}
-          disabled={readOnly || saving}
-        >
-          {CATEGORIES.map((value) => (
-            <option key={value} value={value}>
-              {te(`categories.${value}`)}
-            </option>
-          ))}
-        </Select>
-      </FormField>
+      <CategorySelection
+        nodes={categoryNodes}
+        value={category}
+        onChange={setCategory}
+        disabled={readOnly || saving || categoriesLoading || categoriesFailed}
+        labels={{
+          category: te("filters.categoryLabel"),
+          subcategory: taxonomyText("subcategory"),
+          placeholder: taxonomyText("placeholder"),
+          empty: taxonomyText("empty"),
+          unavailable: taxonomyText("unavailable"),
+        }}
+      />
+      {categoriesLoading ? <p role="status">{taxonomyText("loading")}</p> : null}
+      {categoriesFailed ? <p role="alert">{taxonomyText("error")}</p> : null}
 
       <FormField label={t("events.form.eventFormat")} required requiredMarker="*">
         <Select

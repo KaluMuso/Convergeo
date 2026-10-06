@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from app.services.search import SearchHit
 from app.services.search.search_facets import (
     SearchFacetBucket,
@@ -119,3 +120,99 @@ def test_call_search_query_facets_parses_rpc_payload() -> None:
         SearchFacetBucket(value="electronics/phones", count=2),
     ]
     assert facets.price[0].value == "under_50k"
+
+
+@pytest.mark.parametrize("entity_kind", ["product", "listing"])
+@pytest.mark.parametrize("omit_price", [False, True])
+def test_unknown_min_price_is_not_a_numeric_price_facet(entity_kind: str, omit_price: bool) -> None:
+    payload: dict[str, object] = {
+        "id": "unknown",
+        "entity_id": "unknown",
+        "entity_kind": entity_kind,
+        "title": "Rice",
+        "category_path": "food/rice",
+        "rrf_score": 1.0,
+        "price_max_ngwee": 80_000,
+    }
+    if not omit_price:
+        payload["price_min_ngwee"] = None
+    unknown = SearchHit.model_validate(payload)
+    assert unknown.price_min_ngwee is None
+    facets = compute_search_facets([unknown])
+    assert all(bucket.count == 0 for bucket in facets.price)
+    assert facets.categories == [SearchFacetBucket(value="food/rice", count=1)]
+
+
+@pytest.mark.parametrize("entity_kind", ["product", "listing"])
+@pytest.mark.parametrize(
+    ("price", "expected_bucket"),
+    [
+        (0, "under_50k"),
+        (49_999, "under_50k"),
+        (50_000, "50k_200k"),
+        (199_999, "50k_200k"),
+        (200_000, "200k_500k"),
+        (499_999, "200k_500k"),
+        (500_000, "over_500k"),
+    ],
+)
+def test_known_prices_keep_zero_and_existing_bucket_boundaries(
+    entity_kind: str, price: int, expected_bucket: str
+) -> None:
+    hit = SearchHit(
+        id="known",
+        entity_id="known",
+        entity_kind=entity_kind,
+        title="Rice",
+        category_path="food/rice",
+        price_min_ngwee=price,
+        price_max_ngwee=price,
+        rrf_score=1.0,
+    )
+    facets = compute_search_facets([hit])
+    assert {bucket.value: bucket.count for bucket in facets.price if bucket.count} == {
+        expected_bucket: 1
+    }
+
+
+def test_mixed_unknown_and_free_prices_preserve_disjunctive_facets() -> None:
+    unknown = SearchHit(
+        id="unknown",
+        entity_id="unknown",
+        entity_kind="product",
+        title="Rice",
+        category_path="food/rice",
+        rrf_score=1.0,
+    )
+    free = unknown.model_copy(
+        update={
+            "id": "free",
+            "entity_id": "free",
+            "price_min_ngwee": 0,
+            "price_max_ngwee": 0,
+        }
+    )
+    other = free.model_copy(
+        update={
+            "id": "other",
+            "entity_id": "other",
+            "category_path": "other",
+        }
+    )
+    service = free.model_copy(
+        update={
+            "id": "service",
+            "entity_id": "service",
+            "entity_kind": "service",
+        }
+    )
+    facets = compute_search_facets(
+        [unknown, free, other, service],
+        category_path="food/rice",
+        price_min_ngwee=1,
+    )
+    # Price facet removes its own price filter but still applies category/kind.
+    assert {b.value: b.count for b in facets.price if b.count} == {"under_50k": 1}
+    # Category and unknown-price budget admission are deliberately unchanged.
+    assert facets.categories == [SearchFacetBucket(value="food/rice", count=2)]
+    assert filter_search_hits([unknown], price_min_ngwee=1) == [unknown]

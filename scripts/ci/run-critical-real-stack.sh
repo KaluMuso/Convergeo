@@ -160,7 +160,7 @@ SUPABASE_SERVICE_ROLE_KEY="$(sign_jwt service_role)"
 SUPABASE_ANON_KEY="$(sign_jwt anon)"
 export SUPABASE_SERVICE_ROLE_KEY SUPABASE_ANON_KEY
 
-docker pull "$rest_image" > "$evidence/logs/postgrest-pull.log" 2>&1
+bash scripts/ci/pull-critical-postgrest-image.sh "$rest_image" "$evidence/logs"
 echo "postgrest_image=$(docker image inspect --format '{{.Id}}' "$rest_image")" >> "$evidence/runtime.txt"
 if rest_version="$(docker run --rm --entrypoint postgrest "$rest_image" --version 2> "$evidence/logs/postgrest-version.log")"; then
   printf 'postgrest_binary_version=%s\n' "$rest_version" >> "$evidence/runtime.txt"

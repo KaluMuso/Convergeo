@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -20,7 +21,7 @@ class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
         self._filters = filters
-        self._order: tuple[str, bool] | None = None
+        self._order: list[tuple[str, bool]] = []
         self._limit: int | None = None
         self._maybe_single = False
         self._count: str | None = None
@@ -33,8 +34,12 @@ class FakeQuery:
         self._filters.append(("eq", column, value))
         return self
 
+    def lte(self, column: str, value: Any) -> FakeQuery:
+        self._filters.append(("lte", column, value))
+        return self
+
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
-        self._order = (column, desc)
+        self._order.append((column, desc))
         return self
 
     def limit(self, count: int) -> FakeQuery:
@@ -47,9 +52,8 @@ class FakeQuery:
 
     def execute(self) -> MagicMock:
         rows = [row for row in self._parent.rows if self._row_matches(row)]
-        if self._order is not None:
-            column, desc = self._order
-            rows = sorted(rows, key=lambda row: str(row.get(column, "")), reverse=desc)
+        for column, desc in reversed(self._order):
+            rows = sorted(rows, key=lambda row: row.get(column, ""), reverse=desc)
         total = len(rows)
         if self._limit is not None:
             rows = rows[: self._limit]
@@ -60,6 +64,8 @@ class FakeQuery:
     def _row_matches(self, row: dict[str, Any]) -> bool:
         for op, column, value in self._filters:
             if op == "eq" and row.get(column) != value:
+                return False
+            if op == "lte" and row.get(column, "") > value:
                 return False
         return True
 
@@ -111,6 +117,17 @@ def _seed_digest_fixtures(fake: FakeSupabaseClient) -> None:
             {"id": "f2", "status": "actioned"},
         ]
     )
+    fake.table("reconciliation_report_versions").rows.append(
+        {
+            "id": REPORT_ID,
+            "provider_account_id": "digest-account",
+            "currency": "ZMW",
+            "version_number": 2,
+            "report_date": (datetime.now(UTC).date() - timedelta(days=1)).isoformat(),
+            "summary": {"clean": True, "certifiable": False},
+            "discrepancies": {},
+        }
+    )
     fake.table("reconciliation_reports").rows.append(
         {
             "id": REPORT_ID,
@@ -130,6 +147,7 @@ def digest_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None
 
 @pytest.fixture
 def fake_service(monkeypatch: pytest.MonkeyPatch) -> FakeSupabaseClient:
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "digest-account")
     fake = FakeSupabaseClient()
     wrapper = MagicMock()
     wrapper.client = fake
@@ -168,7 +186,11 @@ def test_digest_aggregates_match_fixtures(
     assert body["orders"]["by_status"]["cancelled"] == 1
     assert body["payouts_due"]["count"] == 2
     assert body["payouts_due"]["amount_ngwee"] == 50_000
-    assert body["reconciliation"]["status"] == "green"
+    assert body["reconciliation"]["status"] == "unknown"
+    assert body["reconciliation"]["evidence_state"] == "noncertifying"
+    assert body["reconciliation"]["provenance"] == "VERSIONED_ACCOUNT_BOUND"
+    assert body["reconciliation"]["version_number"] == 2
+    assert body["reconciliation"]["certifiable"] is False
     assert body["reconciliation"]["has_mismatch"] is False
     assert body["reconciliation"]["report_id"] == REPORT_ID
     assert body["kyc_queue_depth"] == 2
@@ -177,7 +199,7 @@ def test_digest_aggregates_match_fixtures(
 
 def test_build_digest_flags_reconciliation_mismatch(fake_service: FakeSupabaseClient) -> None:
     _seed_digest_fixtures(fake_service)
-    fake_service.table("reconciliation_reports").rows[0]["discrepancies"] = {
+    fake_service.table("reconciliation_report_versions").rows[0]["discrepancies"] = {
         "balance_diff_ngwee": 5_000,
         "orphaned_lenco": [{"reference": "ord-bad"}],
         "ledger_only": [],
@@ -189,4 +211,108 @@ def test_build_digest_flags_reconciliation_mismatch(fake_service: FakeSupabaseCl
 
     assert digest.reconciliation.status == "red"
     assert digest.reconciliation.has_mismatch is True
+    assert digest.reconciliation.provenance == "VERSIONED_ACCOUNT_BOUND"
+    assert digest.reconciliation.evidence_state == "unresolved"
+    assert digest.reconciliation.version_number == 2
+    assert digest.reconciliation.certifiable is False
     assert digest.payouts_due.amount_ngwee == 50_000
+
+
+def test_digest_legacy_unbound_clean_report_remains_unknown(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    fake_service.table("reconciliation_report_versions").rows.clear()
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=0):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    tile = response.json()["reconciliation"]
+    assert tile["status"] == "unknown"
+    assert tile["provenance"] == "LEGACY_UNVERSIONED_ACCOUNT_UNBOUND"
+    assert tile["evidence_state"] == "legacy_unbound"
+    assert tile["version_number"] is None
+    assert tile["certifiable"] is False
+
+
+def test_digest_does_not_select_other_provider_account(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    fake_service.table("reconciliation_report_versions").rows.append(
+        {
+            "id": "foreign-version",
+            "provider_account_id": "foreign-account",
+            "currency": "ZMW",
+            "version_number": 999,
+            "report_date": (datetime.now(UTC).date() - timedelta(days=1)).isoformat(),
+            "summary": {"certifiable": False},
+            "discrepancies": {"provider_unmatched": [{"identity": "foreign-movement"}]},
+        }
+    )
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=0):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    tile = response.json()["reconciliation"]
+    assert tile["report_id"] == REPORT_ID
+    assert tile["version_number"] == 2
+    assert tile["status"] == "unknown"
+    assert tile["has_mismatch"] is False
+
+
+@pytest.mark.parametrize(
+    "failed_table", ["reconciliation_report_versions", "reconciliation_reports"]
+)
+def test_digest_isolates_reconciliation_query_failure(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_table: str,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    if failed_table == "reconciliation_reports":
+        fake_service.table("reconciliation_report_versions").rows.clear()
+    failing = fake_service.table(failed_table)
+    execute = FakeQuery.execute
+
+    def fail_query(query: FakeQuery) -> MagicMock:
+        if query._parent is failing:
+            raise RuntimeError("injected reconciliation query failure")
+        return execute(query)
+
+    monkeypatch.setattr(FakeQuery, "execute", fail_query)
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=72_000):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gmv_ngwee"] == 72_000
+    assert body["orders"]["total"] == 4
+    assert body["payouts_due"]["amount_ngwee"] == 50_000
+    assert body["kyc_queue_depth"] == 2
+    assert body["flags_pending"] == 1
+    tile = body["reconciliation"]
+    assert tile["status"] == "unknown"
+    assert tile["evidence_state"] == "error"
+    assert tile["certifiable"] is False
+    assert tile["report_id"] is None
+    assert tile["provider_account_id"] == "digest-account"
+    assert tile["currency"] == "ZMW"
+
+
+def test_digest_unconfigured_account_is_unknown(
+    digest_client: TestClient,
+    fake_service: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_digest_fixtures(fake_service)
+    monkeypatch.delenv("LENCO_ACCOUNT_ID")
+    with patch("app.routers.internal_digest.compute_gmv_ngwee", return_value=72_000):
+        response = digest_client.post(DIGEST_PATH, headers=_auth_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["gmv_ngwee"] == 72_000
+    assert body["orders"]["total"] == 4
+    assert body["reconciliation"]["status"] == "unknown"
+    assert body["reconciliation"]["evidence_state"] == "account_unconfigured"
+    assert body["reconciliation"]["certifiable"] is False

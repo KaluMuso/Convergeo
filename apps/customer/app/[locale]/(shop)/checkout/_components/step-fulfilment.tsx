@@ -439,6 +439,8 @@ export type CheckoutShellLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -462,6 +464,8 @@ type ResolvedCheckoutLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -591,6 +595,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
     loading: messages.loading,
     error: messages.error,
     emptyCart: messages.emptyCart,
+    retry: messages.retry,
+    backToCart: messages.backToCart,
   };
 }
 
@@ -620,7 +626,8 @@ function IdentityCheckoutShell({
 }: CheckoutShellProps & { identity: ReturnType<typeof useSession> }) {
   const labels = resolveLabels(messageLabels);
   const router = useRouter();
-  const { session, loading: sessionLoading, generation } = identity;
+  const { session, loading: sessionLoading, generation, error: authError } = identity;
+  const retrying = useRef(false);
   const mounted = useRef(false);
   const started = useRef(false);
   useEffect(() => {
@@ -665,14 +672,30 @@ function IdentityCheckoutShell({
           baseUrl: getApiBaseUrl(),
           getToken: () => accessToken,
         });
+        // Auth may remount this shell before the OTP component resumes. Persist
+        // the accepted account phone before asking the server for its snapshot.
+        const contact = await client.request<{ verified: boolean }>("/checkout/steps/contact", {
+          method: "POST",
+          body: JSON.stringify(session?.user.phone ? { phone: session.user.phone } : {}),
+        });
+        if (!isCurrent()) return;
+        if (contact.verified !== true) throw new Error("checkout.contact_unverified");
         const response = await client.request<CheckoutSession>("/checkout/session", {
           method: "POST",
         });
         if (!isCurrent()) return;
+        if (!response.vendor_groups.length) {
+          setErrorMessage(labels.error);
+          started.current = false;
+          return;
+        }
         setCheckoutSession(response);
-        setStep(response.contact_skipped ? 1 : 0);
+        // Contact was explicitly verified above; contact_skipped is a profile
+        // snapshot hint, not a reason to hide a completed Contact step.
+        setStep(1);
       } catch (error) {
         if (!isCurrent()) return;
+        started.current = false;
         if (error instanceof ApiError) {
           if (error.code === "checkout.cart_empty") {
             router.push(cartPath);
@@ -688,18 +711,34 @@ function IdentityCheckoutShell({
         if (isCurrent()) setInitializing(false);
       }
     },
-    [cartPath, labels.error, router, isCurrent],
+    [cartPath, labels.error, router, isCurrent, session?.user.phone],
   );
 
   useEffect(() => {
-    if (sessionLoading || !session?.access_token || checkoutSession || initializing) {
+    if (
+      sessionLoading ||
+      authError ||
+      errorMessage ||
+      !session?.access_token ||
+      checkoutSession ||
+      initializing
+    ) {
       return;
     }
     if (step === 0 && !session.user?.phone) {
       return;
     }
     void initSession(session.access_token);
-  }, [session, sessionLoading, checkoutSession, initializing, initSession, step]);
+  }, [
+    session,
+    sessionLoading,
+    authError,
+    errorMessage,
+    checkoutSession,
+    initializing,
+    initSession,
+    step,
+  ]);
 
   const handleContactComplete = async () => {
     let nextToken: string | undefined;
@@ -795,13 +834,35 @@ function IdentityCheckoutShell({
         LinkComponent={Link}
       />
 
-      {errorMessage ? (
-        <p role="alert" className="font-body text-sm text-danger">
-          {errorMessage}
-        </p>
+      {authError || errorMessage ? (
+        <div className="space-y-3">
+          <p role="alert" className="font-body text-sm text-danger">
+            {authError ? labels.error : errorMessage}
+          </p>
+          <Button
+            loadingLabel={labels.loading}
+            onClick={() => {
+              if (retrying.current) return;
+              retrying.current = true;
+              void (async () => {
+                try {
+                  if (authError) await getReadyCustomerSession(true);
+                  else if (session?.access_token) await initSession(session.access_token);
+                } catch {
+                  if (mounted.current) setErrorMessage(labels.error);
+                } finally {
+                  retrying.current = false;
+                }
+              })();
+            }}
+          >
+            {labels.retry}
+          </Button>
+          <Link href={cartPath}>{labels.backToCart}</Link>
+        </div>
       ) : null}
 
-      {step === 0 && !checkoutSession ? (
+      {step === 0 && !checkoutSession && !authError && !errorMessage && !session?.user.phone ? (
         <StepContact labels={labels.contact} onComplete={() => void handleContactComplete()} />
       ) : null}
 

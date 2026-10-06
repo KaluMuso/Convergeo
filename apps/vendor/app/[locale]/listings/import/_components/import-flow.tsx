@@ -7,12 +7,32 @@ import { useCallback, useMemo, useState } from "react";
 import { applyRawRows, downloadTemplateCsv, previewCsv } from "../_lib/import-client";
 import { Button, Spinner } from "../_lib/ui";
 
-import type { CanonicalSuggestion, ImportPreview, ImportSummary } from "../_lib/import-client";
+import type {
+  CanonicalSuggestion,
+  ImportPreview,
+  ImportSummary,
+  RowPreview,
+} from "../_lib/import-client";
+
+const CANONICAL_REQUIRED = "listings.import.errors.canonicalRequired";
+
+function rowReady(row: RowPreview, chosen?: CanonicalSuggestion): boolean {
+  return (
+    Object.keys(row.raw).length > 0 &&
+    (row.ok ||
+      (Boolean(chosen) &&
+        row.errors.length > 0 &&
+        row.errors.every((error) => error === CANONICAL_REQUIRED)))
+  );
+}
 
 export function ImportFlow() {
   const t = useTranslations("vendor");
   const { session, loading: sessionLoading } = useSession();
-  const translateRowError = (error: string) => (t.has(error) ? t(error) : error);
+  const translateRowError = (error: string) =>
+    error.startsWith("listings.import.errors.") && t.has(error)
+      ? t(error)
+      : t("listings.import.errors.unknownError");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -84,7 +104,7 @@ export function ImportFlow() {
     }
     // Rebuild each parsed row, injecting the vendor's confirmed product_id.
     const rawRows = preview.rows
-      .filter((row) => Object.keys(row.raw).length > 0)
+      .filter((row) => rowReady(row, attached[row.row]))
       .map((row) => {
         const chosen = attached[row.row]?.product_id ?? row.raw.product_id ?? "";
         return { ...row.raw, product_id: chosen };
@@ -105,8 +125,8 @@ export function ImportFlow() {
   }, [attached, getToken, preview, session, t]);
 
   const attachableCount = useMemo(
-    () => (preview ? preview.rows.filter((row) => Object.keys(row.raw).length > 0).length : 0),
-    [preview],
+    () => (preview ? preview.rows.filter((row) => rowReady(row, attached[row.row])).length : 0),
+    [attached, preview],
   );
 
   if (sessionLoading) {
@@ -195,7 +215,7 @@ export function ImportFlow() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-[var(--color-text)]">
               {t("listings.import.preview.summary", {
-                valid: preview.valid,
+                valid: attachableCount,
                 total: preview.total,
               })}
             </p>
@@ -227,19 +247,23 @@ export function ImportFlow() {
               <tbody>
                 {preview.rows.map((row) => {
                   const chosen = attached[row.row];
+                  const ready = rowReady(row, chosen);
+                  const visibleErrors = chosen
+                    ? row.errors.filter((error) => error !== CANONICAL_REQUIRED)
+                    : row.errors;
                   return (
                     <tr key={row.row} className="border-t border-[var(--color-border)] align-top">
                       <td className="px-3 py-2 font-mono">{row.row}</td>
                       <td className="px-3 py-2">
-                        {row.ok
+                        {ready
                           ? t("listings.import.results.ok")
                           : t("listings.import.results.failed")}
                       </td>
                       <td className="px-3 py-2">
                         <span className="text-[var(--color-text)]">{row.title ?? "—"}</span>
-                        {row.errors.length > 0 ? (
+                        {visibleErrors.length > 0 ? (
                           <span className="mt-1 block text-xs text-[var(--color-danger)]">
-                            {row.errors.map(translateRowError).join("; ")}
+                            {visibleErrors.map(translateRowError).join("; ")}
                           </span>
                         ) : null}
                       </td>
@@ -253,7 +277,9 @@ export function ImportFlow() {
                         ) : chosen ? (
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-medium text-[var(--color-success)]">
-                              {t("listings.import.preview.attached", { name: chosen.name })}
+                              {t("listings.import.preview.attached", {
+                                name: chosen.name,
+                              })}
                             </span>
                             <button
                               type="button"
@@ -280,7 +306,10 @@ export function ImportFlow() {
                                 type="button"
                                 className="min-h-9 rounded-md border border-[var(--color-border)] px-2 py-1 text-start text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
                                 onClick={() =>
-                                  setAttached((prev) => ({ ...prev, [row.row]: suggestion }))
+                                  setAttached((prev) => ({
+                                    ...prev,
+                                    [row.row]: suggestion,
+                                  }))
                                 }
                               >
                                 {t("listings.import.preview.attachAction", {
@@ -291,7 +320,7 @@ export function ImportFlow() {
                           </span>
                         ) : (
                           <span className="text-xs text-[var(--color-text-muted)]">
-                            {t("listings.import.preview.standalone")}
+                            {t("listings.import.preview.selectionRequired")}
                           </span>
                         )}
                       </td>
@@ -308,10 +337,14 @@ export function ImportFlow() {
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-4 text-sm">
             <p className="font-medium text-[var(--color-success)]">
-              {t("listings.import.results.accepted", { count: summary.accepted })}
+              {t("listings.import.results.accepted", {
+                count: summary.accepted,
+              })}
             </p>
             <p className="font-medium text-[var(--color-danger)]">
-              {t("listings.import.results.rejected", { count: summary.rejected })}
+              {t("listings.import.results.rejected", {
+                count: summary.rejected,
+              })}
             </p>
           </div>
 

@@ -34,6 +34,15 @@ class JsonFormatter(logging.Formatter):
             if isinstance(value, (str, int, float)):
                 payload[field] = value
 
+        exception_type = getattr(record, "exception_type", None)
+        if isinstance(exception_type, str):
+            payload["exception_type"] = exception_type
+        exception_frames = getattr(record, "exception_frames", None)
+        if isinstance(exception_frames, list) and all(
+            isinstance(frame, str) for frame in exception_frames
+        ):
+            payload["exception_frames"] = exception_frames
+
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
 

@@ -11,7 +11,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
-from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.notifications.dedupe import build_dedupe_key, enqueue_outbox_row
 from app.services.notifications.dispatcher import resolve_channel
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field, model_validator
@@ -24,6 +24,10 @@ _MAX_QUERY_LEN = 120
 _MAX_FREE_TEXT_LEN = 2000
 _SUPPORT_EVENT_TYPE = "admin-support-reply"
 _SUPPORT_OUTBOX_TEMPLATE = "admin-support-reply"
+# The dispatcher resolves this requested channel against current recipient prefs.
+# A fixed primary channel makes the outbox UNIQUE(dedupe_key) an operation-wide
+# reservation, including when prefs change between concurrent HTTP retries.
+_SUPPORT_PRIMARY_CHANNEL = "whatsapp"
 
 CANNED_TEMPLATE_KEYS = frozenset(
     {
@@ -38,8 +42,7 @@ CANNED_TEMPLATE_KEYS = frozenset(
 # English fallback bodies — mirrored by `admin.support.templates.*.body` in i18n.
 CANNED_TEMPLATE_BODIES: dict[str, str] = {
     "order_status_update": (
-        "Hi from Vergeo5 support — we're checking on your order "
-        "and will update you shortly."
+        "Hi from Vergeo5 support — we're checking on your order and will update you shortly."
     ),
     "delivery_eta": (
         "Hi from Vergeo5 — your delivery is on the way. "
@@ -93,6 +96,7 @@ class LookupResponse(BaseModel):
 
 
 class SendRequest(BaseModel):
+    message_id: UUID
     customer_id: UUID
     order_id: UUID | None = None
     template_key: str | None = Field(default=None, max_length=64)
@@ -245,9 +249,7 @@ def _find_customer_via_order(client: ServiceRoleClient, order_id: str) -> dict[s
     return None
 
 
-def _load_orders_for_customer(
-    client: ServiceRoleClient, customer_id: str
-) -> list[dict[str, Any]]:
+def _load_orders_for_customer(client: ServiceRoleClient, customer_id: str) -> list[dict[str, Any]]:
     response = (
         _table(client, "orders")
         .select("id, status, vendor_id, created_at")
@@ -383,6 +385,32 @@ def _resolve_customer_channel(profile: dict[str, Any]) -> str:
     return resolve_channel("whatsapp", prefs)
 
 
+def _load_support_operation(client: ServiceRoleClient, message_id: UUID) -> dict[str, Any] | None:
+    dedupe_key = build_dedupe_key(_SUPPORT_EVENT_TYPE, str(message_id), _SUPPORT_PRIMARY_CHANNEL)
+    response = (
+        _table(client, "notification_outbox")
+        .select("id, payload")
+        .eq("dedupe_key", dedupe_key)
+        .maybe_single()
+        .execute()
+    )
+    row = response.data
+    return cast(dict[str, Any], row) if isinstance(row, dict) else None
+
+
+def _verify_support_operation(row: dict[str, Any], expected: dict[str, Any]) -> None:
+    stored = row.get("payload")
+    bound_fields = ("customer_id", "phone", "body", "template_key", "order_id", "actor_id", "kind")
+    if not isinstance(stored, dict) or any(
+        stored.get(field) != expected[field] for field in bound_fields
+    ):
+        raise AppError(
+            code="idempotency_conflict",
+            message="message_id already belongs to a different support reply",
+            http_status=409,
+        )
+
+
 @support_router.get("/lookup", response_model=LookupResponse)
 async def support_lookup(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -425,7 +453,9 @@ async def support_send(
         kind = "free_text"
 
     payload: dict[str, Any] = {
+        "message_id": str(body.message_id),
         "customer_id": customer_key,
+        "recipient_id": customer_key,
         "phone": phone.strip(),
         "locale": _profile_to_customer(profile).locale,
         "body": message_body,
@@ -433,18 +463,35 @@ async def support_send(
         "order_id": str(body.order_id) if body.order_id else None,
         "actor_id": current_user.id,
         "kind": kind,
+        "selected_channel": channel,
     }
 
+    # The outbox row's channel is a requested channel. Dispatch resolves it to
+    # SMS/email when WhatsApp is disabled, and normal terminal fallback still runs.
     row = enqueue_outbox_row(
         service_client.client,
         event_type=_SUPPORT_EVENT_TYPE,
-        entity_id=customer_key,
-        channel=channel,
+        entity_id=str(body.message_id),
+        channel=_SUPPORT_PRIMARY_CHANNEL,
         template=_SUPPORT_OUTBOX_TEMPLATE,
         payload=payload,
     )
+    if row is None:
+        existing = _load_support_operation(service_client, body.message_id)
+        if existing is None:
+            raise AppError(
+                code="outbox_write_failed",
+                message="Support reply could not be verified after deduplication",
+                http_status=500,
+            )
+        _verify_support_operation(existing, payload)
+        original_channel = existing["payload"].get("selected_channel")
+        if isinstance(original_channel, str):
+            channel = original_channel
 
     after: dict[str, Any] = {
+        "message_id": str(body.message_id),
+        "deduped": row is None,
         "channel": channel,
         "template_key": template_key,
         "order_id": payload["order_id"],
@@ -453,9 +500,12 @@ async def support_send(
     if kind == "free_text":
         after["body"] = message_body
 
-    audit_action = (
-        "admin.support.send_free_text" if kind == "free_text" else "admin.support.send_canned"
-    )
+    if row is None:
+        audit_action = "admin.support.retry"
+    elif kind == "free_text":
+        audit_action = "admin.support.send_free_text"
+    else:
+        audit_action = "admin.support.send_canned"
     recorder.record(
         action=audit_action,
         entity_type="customer",
@@ -489,13 +539,11 @@ def _audit_log_entries(
     entries: list[InteractionLogEntry] = []
     for row in response.data or []:
         action = str(row.get("action", ""))
-        if not action.startswith("admin.support."):
+        if not action.startswith("admin.support.") or action == "admin.support.retry":
             continue
         after_raw = row.get("after")
         after = after_raw if isinstance(after_raw, dict) else {}
-        kind: InteractionKind = (
-            "free_text" if action.endswith("send_free_text") else "canned"
-        )
+        kind: InteractionKind = "free_text" if action.endswith("send_free_text") else "canned"
         body = after.get("body")
         preview = _message_preview(str(body)) if isinstance(body, str) else None
         entries.append(
@@ -523,7 +571,8 @@ def _outbox_log_entries(
     response = (
         _table(client, "notification_outbox")
         .select("id, channel, template, payload, created_at, dedupe_key")
-        .like("dedupe_key", f"{_SUPPORT_EVENT_TYPE}:{customer_id}:%")
+        .like("dedupe_key", f"{_SUPPORT_EVENT_TYPE}:%")
+        .contains("payload", {"customer_id": customer_id})
         .order("created_at", desc=True)
         .limit(50)
         .execute()
@@ -532,6 +581,14 @@ def _outbox_log_entries(
     for row in response.data or []:
         payload_raw = row.get("payload")
         payload = payload_raw if isinstance(payload_raw, dict) else {}
+        primary_key = build_dedupe_key(
+            _SUPPORT_EVENT_TYPE, str(payload.get("message_id")), _SUPPORT_PRIMARY_CHANNEL
+        )
+        display_channel = (
+            payload.get("selected_channel")
+            if row.get("dedupe_key") == primary_key
+            else row.get("channel")
+        )
         kind_raw = payload.get("kind")
         kind: InteractionKind = "free_text" if kind_raw == "free_text" else "canned"
         body = payload.get("body")
@@ -540,7 +597,7 @@ def _outbox_log_entries(
             InteractionLogEntry(
                 id=str(row["id"]),
                 kind=kind,
-                channel=str(row.get("channel")) if row.get("channel") else None,
+                channel=str(display_channel) if display_channel else None,
                 template_key=(
                     str(payload.get("template_key")) if payload.get("template_key") else None
                 ),

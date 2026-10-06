@@ -191,11 +191,11 @@ class FakeSupabaseStore:
 
     @staticmethod
     def _match_eq(row: dict[str, Any], column: str, value: Any) -> bool:
-        if "." in column:
-            return True
         if column == "vendors.status":
             vendor = row.get("vendors")
             return isinstance(vendor, dict) and vendor.get("status") == value
+        if "." in column:
+            return True
         row_value = row.get(column)
         return bool(row_value == value)
 
@@ -763,3 +763,110 @@ class TestProductHelpers:
         )
         assert len(images) == 8
         assert images[0].public_id == "img-1"
+
+
+class TestRelatedProductRails:
+    def test_separate_scopes_bind_vendor_price_and_exclude_overlap(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        other = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+        store.products = [
+            _product_row(),
+            _product_row(slug="vendor-item", product_id=SIBLING_A_ID),
+            _product_row(slug="category-item", product_id=SIBLING_B_ID),
+        ]
+
+        def offer(lid: str, pid: str, vid: str, price: int) -> dict[str, Any]:
+            row = _listing_row(listing_id=lid, product_id=pid, price_ngwee=price)
+            row["vendor_id"] = vid
+            row["vendors"] = {**_vendor_row(), "id": vid, "display_name": vid}
+            return row
+
+        store.vendor_listings = [
+            offer(LISTING_IN_STOCK, PRODUCT_ID, VENDOR_ID, 100),
+            offer(SIBLING_A_LISTING, SIBLING_A_ID, VENDOR_ID, 400),
+            offer("cheaper-other", SIBLING_A_ID, other, 200),
+            offer(SIBLING_B_LISTING, SIBLING_B_ID, other, 300),
+        ]
+        response = client.get(f"/products/itel-a70/related-rails?listing_id={LISTING_IN_STOCK}")
+        assert response.status_code == 200
+        data = response.json()
+        assert [
+            (i["slug"], i["listing_id"], i["from_price_ngwee"]) for i in data["same_vendor"]
+        ] == [("vendor-item", SIBLING_A_LISTING, 400)]
+        assert [i["slug"] for i in data["same_category"]] == ["category-item"]
+        switched = client.get("/products/itel-a70/related-rails?listing_id=not-this-product").json()
+        assert switched["same_vendor"] == []
+        assert switched["listing_id"] is None
+        assert [i["slug"] for i in switched["same_category"]] == ["vendor-item", "category-item"]
+
+    @pytest.mark.parametrize(
+        "case", ["zero", "minimum", "capacity", "draft", "suspended", "wholesale", "unpublished"]
+    )
+    def test_excludes_unavailable_or_nonpublic(
+        self, client: TestClient, store: FakeSupabaseStore, case: str
+    ) -> None:
+        sibling = _product_row(slug="candidate", product_id=SIBLING_A_ID)
+        offer = _listing_row(listing_id=SIBLING_A_LISTING, product_id=SIBLING_A_ID)
+        if case == "zero":
+            offer["stock_qty"] = 0
+        if case == "minimum":
+            offer.update(stock_qty=2, min_steps=3)
+        if case == "capacity":
+            offer.update(product_class="E", vendor_capacity_per_week=0)
+        if case == "draft":
+            offer["status"] = "draft"
+        if case == "suspended":
+            offer["vendors"]["status"] = "suspended"
+        if case == "wholesale":
+            offer["wholesale"] = True
+        if case == "unpublished":
+            sibling["status"] = "pending_moderation"
+        store.products = [_product_row(), sibling]
+        store.vendor_listings = [offer]
+        response = client.get("/products/itel-a70/related-rails")
+        assert response.status_code == 200
+        assert response.json()["same_category"] == []
+        assert response.json()["same_vendor"] == []
+
+    def test_vendor_cross_category_and_category_never_curated_cross_category(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        other_category = _product_row(slug="other-category", product_id=SIBLING_A_ID)
+        other_category["category_id"] = "different"
+        store.products = [_product_row(), other_category]
+        source = _listing_row(listing_id=LISTING_IN_STOCK)
+        sibling = _listing_row(listing_id=SIBLING_A_LISTING, product_id=SIBLING_A_ID)
+        source["vendor_id"] = sibling["vendor_id"] = VENDOR_ID
+        store.vendor_listings = [source, sibling]
+        store.product_relations = [
+            {"product_id": PRODUCT_ID, "related_product_id": SIBLING_A_ID, "position": 0}
+        ]
+        data = client.get(f"/products/itel-a70/related-rails?listing_id={LISTING_IN_STOCK}").json()
+        assert [i["slug"] for i in data["same_vendor"]] == ["other-category"]
+        assert data["same_category"] == []
+        assert client.get("/products/itel-a70/related-rails").json()["same_category"] == []
+
+    def test_unknown_product_returns_404(self, client: TestClient) -> None:
+        assert client.get("/products/missing/related-rails").status_code == 404
+
+
+@pytest.mark.parametrize("hidden", ["wholesale", "demo"])
+def test_related_rails_preserves_source_pdp_visibility(
+    client: TestClient, store: FakeSupabaseStore, hidden: str
+) -> None:
+    store.products = [_product_row()]
+    source = _listing_row(listing_id=LISTING_IN_STOCK, wholesale=hidden == "wholesale")
+    source["vendor_id"] = VENDOR_ID
+    store.vendor_listings = [source]
+    with patch.object(
+        products_router,
+        "fetch_demo_listing_ids",
+        return_value={LISTING_IN_STOCK} if hidden == "demo" else set(),
+    ):
+        assert (
+            client.get(
+                f"/products/itel-a70/related-rails?listing_id={LISTING_IN_STOCK}"
+            ).status_code
+            == 404
+        )

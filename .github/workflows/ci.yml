@@ -18,6 +18,10 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  # Only this isolated review lane selects the immutable head; regular PRs retain merge evidence.
+  QUALIFICATION_SHA: ${{ startsWith(github.head_ref, 'codex/coordinator-ci-review-') && github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   js:
     name: JavaScript / TypeScript
@@ -26,6 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -40,10 +45,15 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Next font loader regression
+        run: pnpm test:next-font
+
       - name: Resolve Turbo filter
         id: turbo
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [[ "${{ github.head_ref }}" == codex/coordinator-ci-review-* ]]; then
+            echo "filter=*" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "filter=...[${{ github.event.pull_request.base.sha }}]" >> "$GITHUB_OUTPUT"
           else
             echo "filter=...[HEAD^1]" >> "$GITHUB_OUTPUT"
@@ -76,6 +86,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -88,7 +101,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Ruff
         run: uv run ruff check .
@@ -100,8 +113,10 @@ jobs:
         # Blocking broad suite (testpaths=tests). The route x role authorization
         # matrix has one mandatory owner below in `security-gates`; excluding that
         # exact file here removes duplicate execution without excluding any other
-        # security, integration or deny-path test.
-        run: uv run pytest --ignore=tests/test_authz_matrix.py
+        # security, integration or deny-path test. F1 real-stack has its dedicated
+        # fresh/upgrade owner and fails (rather than skips) without that stack.
+        # Merchant stock SQL has the separate 26-identity mandatory owner below.
+        run: uv run pytest --ignore=tests/test_authz_matrix.py --ignore=tests/test_f1_payout_real_stack.py --ignore=tests/test_vendor_stock_adjustment_db.py --ignore=tests/test_merchant_review_boundaries_db.py
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
@@ -117,6 +132,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           # Full history so the path filter can diff against the PR base sha.
           fetch-depth: 0
 
@@ -156,7 +172,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Grounding evals (deterministic — no live API key)
         if: steps.changes.outputs.run == 'true'
@@ -168,6 +184,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -184,6 +203,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       # test-staging-guards.sh invokes scripts/seed_staging.py, which imports
       # `supabase` (Auth Admin API client for canonical persona provisioning)
@@ -200,7 +222,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Self-test separation + seed + config syntax
         run: bash scripts/ci/test-staging-guards.sh
@@ -268,6 +290,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Self-test release-control contract
         run: bash scripts/ci/test-release-control-contract.sh
@@ -283,6 +308,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Detect whether merge evidence is required
@@ -318,6 +344,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Install gitleaks
@@ -334,7 +361,90 @@ jobs:
         run: bash scripts/ci/validate-n8n-no-plaintext-secrets.sh
 
       - name: Run gitleaks
-        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          raw_dir="$(mktemp -d "${RUNNER_TEMP}/gitleaks-raw.XXXXXX")"
+          trap 'rm -rf -- "$raw_dir"' EXIT
+          export GITLEAKS_RAW_REPORT="${raw_dir}/raw.json"
+          export GITLEAKS_SAFE_REPORT="${RUNNER_TEMP}/gitleaks-report.json"
+          rm -f -- "$GITLEAKS_SAFE_REPORT"
+          scanner_status=0
+          gitleaks detect --source . --config .gitleaks.toml --verbose --redact=100 \
+            --report-format json --report-path "$GITLEAKS_RAW_REPORT" || scanner_status=$?
+          export GITLEAKS_EXIT_STATUS="$scanner_status"
+          python3 - <<'PYREPORT'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import subprocess
+
+          def require(condition):
+              if not condition:
+                  raise ValueError("Invalid diagnostic metadata")
+
+          def sha(value):
+              require(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value))
+              return value
+
+          try:
+              raw = Path(os.environ["GITLEAKS_RAW_REPORT"])
+              findings = json.loads(raw.read_text())
+              require(isinstance(findings, list))
+              projected = []
+              for finding in findings:
+                  require(isinstance(finding, dict) and finding.get("Secret") == "REDACTED")
+                  rule = finding.get("RuleID")
+                  path = finding.get("File")
+                  start = finding.get("StartLine")
+                  end = finding.get("EndLine")
+                  commit = sha(finding.get("Commit"))
+                  require(isinstance(rule, str) and re.fullmatch(r"[a-z0-9_-]{1,128}", rule))
+                  require(isinstance(path, str) and 0 < len(path) <= 1024)
+                  require(not PurePosixPath(path).is_absolute() and ".." not in PurePosixPath(path).parts)
+                  require(not any(ord(character) < 32 or ord(character) == 127 for character in path))
+                  require(type(start) is int and type(end) is int and 1 <= start <= end)
+                  projected.append({"rule_id": rule, "path": path, "start_line": start,
+                                    "end_line": end, "commit": commit,
+                                    "fingerprint": f"{commit}:{path}:{rule}:{start}"})
+              exit_status = int(os.environ["GITLEAKS_EXIT_STATUS"])
+              require(0 <= exit_status <= 255)
+              run_id = int(os.environ["GITHUB_RUN_ID"])
+              attempt = int(os.environ["GITHUB_RUN_ATTEMPT"])
+              require(run_id > 0 and attempt > 0)
+              payload = {
+                  "schema_version": 1,
+                  "checkout_sha": sha(subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()),
+                  "checkout_tree": sha(subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()),
+                  "candidate_sha": sha(os.environ["CANDIDATE_SHA"]),
+                  "run_id": run_id, "run_attempt": attempt,
+                  "scanner_version": "8.28.0",
+                  "config_sha256": hashlib.sha256(Path(".gitleaks.toml").read_bytes()).hexdigest(),
+                  "scanner_exit_status": exit_status,
+                  "finding_count": len(projected), "findings": projected,
+              }
+              # Only this strict projection is published. Raw source matches, secret
+              # values, commit messages, author/email and other free text stay private.
+              safe = raw.with_name("safe.json")
+              safe.write_text(json.dumps(payload, indent=2) + "\n")
+              safe.replace(Path(os.environ["GITLEAKS_SAFE_REPORT"]))
+          except Exception:
+              raise SystemExit("Gitleaks diagnostic report failed validation") from None
+          PYREPORT
+          exit "$scanner_status"
+
+      - name: Upload projected Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-report-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gitleaks-report.json
+          if-no-files-found: error
+          retention-days: 3
 
   deps-audit:
     name: Dependency audit
@@ -342,6 +452,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -390,6 +503,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -412,7 +528,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Collect trusted authorization matrix inventory
         # Independent collection prevents the execution report from defining its
@@ -422,7 +538,7 @@ jobs:
           uv run python3 ../../scripts/ci/assert_authz_matrix_ran.py collect
           --inventory authz-matrix-expected.json
           --repo-root ../..
-          --checkout-sha "${GITHUB_SHA}"
+          --checkout-sha "${QUALIFICATION_SHA}"
 
       - name: Route x role authz matrix (sole owner, no DB)
         # Isolation-clean: dependency overrides and guards short-circuit before DB
@@ -441,7 +557,7 @@ jobs:
           python3 ../../scripts/ci/assert_authz_matrix_ran.py validate authz-matrix.xml
           --inventory authz-matrix-expected.json
           --repo-root ../..
-          --checkout-sha "${GITHUB_SHA}"
+          --checkout-sha "${QUALIFICATION_SHA}"
 
       - name: Upload authorization matrix report
         if: always()
@@ -459,6 +575,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -525,6 +644,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -556,7 +678,7 @@ jobs:
 
       - name: Install API deps (canonical migration re-entrant replay)
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Canonical migration re-entrant replay (STG-DRIFT-03)
         working-directory: services/api
@@ -597,9 +719,13 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "139"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
@@ -613,15 +739,16 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Typegen helper negative controls
-        run: bash scripts/ci/test-typegen-contract.sh
+        run: |
+          bash scripts/ci/test-typegen-contract.sh
+          PYTHONPATH=scripts/ci python3 -m unittest scripts/ci/test_explicit_transaction_boundary.py
 
       - name: Prepare pinned Supabase-compatible database
         run: |
           TYPEGEN_WORKDIR="$(mktemp -d)"
           echo "TYPEGEN_WORKDIR=${TYPEGEN_WORKDIR}" >> "${GITHUB_ENV}"
           bash scripts/ci/prepare-typegen-workdir.sh "${TYPEGEN_WORKDIR}"
-          supabase --workdir "${TYPEGEN_WORKDIR}" db start
-          supabase --workdir "${TYPEGEN_WORKDIR}" db reset --no-seed
+          python3 scripts/ci/rehearse_explicit_transaction_profile.py "${TYPEGEN_WORKDIR}"
 
           TYPEGEN_DB_CONTAINER_ID="$(docker ps \
             --filter 'name=^/supabase_db_vergeo5-typegen$' \
@@ -650,6 +777,12 @@ jobs:
           bash scripts/ci/qualify-typegen-database.sh \
             | tee generated-types/database-shape.txt
 
+      - name: Verify service table ACL hardening in disposable database
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: bash scripts/ci/test-service-table-acl-hardening.sh
+
       - name: Prefetch pinned postgres-meta generator
         run: bash scripts/ci/prefetch-postgres-meta.sh
 
@@ -676,9 +809,10 @@ jobs:
       - name: Upload generated database types
         uses: actions/upload-artifact@v7
         with:
-          name: generated-database-types-${{ github.sha }}
+          name: generated-database-types-${{ env.QUALIFICATION_SHA }}
           path: generated-types
           if-no-files-found: error
+          retention-days: 3
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
@@ -686,8 +820,12 @@ jobs:
       - name: Stop disposable Supabase database
         if: always()
         run: |
-          if [[ -n "${TYPEGEN_WORKDIR:-}" ]]; then
-            supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+          if [[ -n "${TYPEGEN_WORKDIR:-}" && -f "${TYPEGEN_WORKDIR}/.owned-typegen-stack" ]]; then
+            owned_id="$(cat "${TYPEGEN_WORKDIR}/.owned-typegen-stack")"
+            current_id="$(docker ps --filter 'name=^/supabase_db_vergeo5-typegen$' --format '{{.ID}}')"
+            if [[ "${owned_id}" =~ ^[0-9a-f]{12,64}$ && "${current_id}" == "${owned_id}" ]]; then
+              supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+            fi
           fi
 
   rls:
@@ -722,6 +860,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -766,7 +907,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: DB-backed integration (curated, isolation-clean)
         run: uv run pytest tests/test_db_adapter.py tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py tests/test_kyc_state.py -q
@@ -802,6 +943,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -818,7 +962,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
         shell: bash
@@ -828,7 +972,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: critical-real-stack-${{ github.sha }}-${{ github.run_attempt }}
+          name: critical-real-stack-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
           path: critical-real-stack-evidence
           if-no-files-found: warn
 
@@ -855,6 +999,7 @@ jobs:
       - name: Checkout full accepted-baseline history
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -869,17 +1014,99 @@ jobs:
       - name: Frozen API dependency install
         working-directory: services/api
         run: uv sync --dev --frozen
-      - name: Financial orchestration controls
-        run: python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+      - name: Financial orchestration and synthetic history unit controls
+        run: |
+          python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+          python -m unittest discover -s scripts/ci -p test_synthetic_migration_history.py -v
+      - name: Shared adoption prerequisite negative controls
+        run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
       - name: Execute real financial database gates
         shell: bash
         run: python scripts/ci/run_financial_real_stack.py
+      - name: Rehearse guarded adoption catalog and atomic history
+        env:
+          ADOPTION_REHEARSAL_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        working-directory: services/api
+        run: uv run --no-sync python ../../scripts/ci/rehearse_service_adoption.py --evidence-dir ../../adoption-rehearsal-evidence
       - name: Retain sanitized financial evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: financial-real-stack-${{ github.sha }}-${{ github.run_attempt }}
-          path: financial-real-stack-evidence
+          name: financial-real-stack-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
+          path: |
+            financial-real-stack-evidence
+            adoption-rehearsal-evidence
+          if-no-files-found: error
+
+  coordinator-acceptance:
+    name: Coordinator acceptance (${{ matrix.gate }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [f3, merchant, curated]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout exact qualification source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup pinned Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Frozen API install
+        working-directory: services/api
+        run: uv sync --dev --frozen
+      - name: Setup pnpm
+        if: matrix.gate == 'merchant'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+      - name: Setup Node
+        if: matrix.gate == 'merchant'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Frozen workspace install
+        if: matrix.gate == 'merchant'
+        run: pnpm i --frozen-lockfile
+      - name: Pinned coordinator Ruff/mypy
+        working-directory: services/api
+        run: |
+          uv run --no-sync ruff check ../../scripts/ci/run_coordinator_gates.py ../../scripts/ci/test_coordinator_gates.py ../../scripts/ci/run_financial_real_stack.py
+          uv run --no-sync mypy --follow-imports=silent ../../scripts/ci/run_coordinator_gates.py ../../scripts/ci/test_coordinator_gates.py ../../scripts/ci/run_financial_real_stack.py
+      - name: Coordinator orchestration controls
+        run: python -m unittest discover -s scripts/ci -p test_coordinator_gates.py -v
+      - name: Execute retained acceptance contracts
+        run: python scripts/ci/run_coordinator_gates.py ${{ matrix.gate }}
+      - name: Retain sanitized gate evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coordinator-${{ matrix.gate }}-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
+          path: coordinator-gate-evidence
           if-no-files-found: error
 
   money-db-triggers:
@@ -917,6 +1144,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -932,7 +1162,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Provision Supabase-managed roles
         # AUTH_BOOTSTRAP_SQL (tests/rls/conftest.py) creates anon/authenticated/service_role
@@ -956,7 +1186,7 @@ jobs:
           for f in test_release test_release_accounting test_reconcile; do
             echo "::group::$f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
+              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP SCHEMA IF EXISTS reconciliation_private CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
             uv run pytest "tests/$f.py" -q
             echo "::endgroup::"
           done
@@ -971,7 +1201,7 @@ jobs:
         # the rls job (whose curated set depends on retained fixture state).
         run: |
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-            -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
+            -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP SCHEMA IF EXISTS reconciliation_private CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
           uv run pytest tests/test_seed_staging.py -q \
             --junit-xml=staging-cleanup-regression.xml
 
@@ -1020,6 +1250,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           # Full history so the path filter can diff against the PR base sha.
           fetch-depth: 0
 
@@ -1065,7 +1296,7 @@ jobs:
       - name: Install API dependencies
         if: steps.changes.outputs.run == 'true'
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Set up Buildx
         if: steps.changes.outputs.run == 'true'

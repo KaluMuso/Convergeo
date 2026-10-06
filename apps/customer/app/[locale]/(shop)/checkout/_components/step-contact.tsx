@@ -65,6 +65,13 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const skippedRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   /** Single-flight lock for OTP verification — see handleVerifyOtp. */
   const verifyingRef = useRef(false);
   /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
@@ -201,10 +208,14 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
           return;
         }
 
+        // An auth event can already have remounted checkout for this identity.
+        // Let that shell own contact/session requests; never resume stale work.
+        if (!mountedRef.current) return;
         acceptedSessionRef.current = acceptedSession;
       }
 
       const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
+      if (!mountedRef.current) return;
       if (!readySession?.access_token) throw new Error("auth.session_required");
       await completeContactStep(readySession.access_token, phone);
     } catch {

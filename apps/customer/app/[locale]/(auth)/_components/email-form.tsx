@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { parseAuthError } from "./auth-utils";
+import { isPasswordLengthAllowed } from "./email-password-policy";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
 import type { AuthPortal } from "@vergeo/auth/portal";
@@ -26,6 +27,7 @@ type EmailFormLabels = {
   invalidCredentials: string;
   emailNotConfirmed: string;
   alreadyRegistered: string;
+  signupConfirmation?: string;
   forgotPassword?: string;
 };
 
@@ -70,6 +72,7 @@ export function EmailForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -88,7 +91,7 @@ export function EmailForm({
       return;
     }
 
-    if (password.length < 8) {
+    if (!isPasswordLengthAllowed(password, mode)) {
       setErrorMessage(labels.invalidPassword);
       return;
     }
@@ -99,9 +102,14 @@ export function EmailForm({
       const supabase = await getBrowserClient();
 
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
           setErrorMessage(messageForAuthError(parseAuthError(error), labels, "signup"));
+          return;
+        }
+        if (!data.session) {
+          setPassword("");
+          setConfirmationPending(true);
           return;
         }
       } else {
@@ -125,6 +133,14 @@ export function EmailForm({
       setLoading(false);
     }
   };
+
+  if (confirmationPending) {
+    return (
+      <p role="status" className="font-body text-sm text-text-2">
+        {labels.signupConfirmation ?? labels.emailNotConfirmed}
+      </p>
+    );
+  }
 
   return (
     <form className="flex w-full flex-col gap-4" onSubmit={(event) => void handleSubmit(event)}>

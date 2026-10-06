@@ -45,7 +45,7 @@ def test_authorization_matrix_has_one_unconditional_owner() -> None:
     assert collect < execute < prove
     assert "assert_authz_matrix_ran.py collect" in security
     assert "--inventory authz-matrix-expected.json" in security
-    assert '--checkout-sha "${GITHUB_SHA}"' in security
+    assert '--checkout-sha "${QUALIFICATION_SHA}"' in security
     assert "--junitxml=authz-matrix.xml" in security
     assert "if: always()" in security
     assert "assert_authz_matrix_ran.py validate authz-matrix.xml" in security

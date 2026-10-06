@@ -644,6 +644,8 @@ async def set_product_relations(
 
 
 class CanonicalQueueItem(BaseModel):
+    description: str | None = None
+    spec: dict[str, Any] = Field(default_factory=dict)
     id: UUID
     name: str
     slug: str
@@ -863,7 +865,7 @@ async def list_pending_canonical_products(
         )
     response = (
         _table(service_client, "products")
-        .select("id, name, slug, brand, category_id, status, updated_at")
+        .select("id, name, slug, brand, description, spec, category_id, status, updated_at")
         .eq("status", "pending_moderation")
         .order("updated_at", desc=False)
         .execute()
@@ -881,8 +883,11 @@ async def list_pending_canonical_products(
         if updated_at.tzinfo is None:
             updated_at = updated_at.replace(tzinfo=UTC)
         brand = row.get("brand")
+        raw_spec = row.get("spec")
         items.append(
             CanonicalQueueItem(
+                description=row.get("description"),
+                spec=raw_spec if isinstance(raw_spec, dict) else {},
                 id=UUID(product_id),
                 name=str(row["name"]),
                 slug=str(row["slug"]),

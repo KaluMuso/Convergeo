@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SetAllCookies } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { mergeSecureCookieOptions } from "./cookie-security";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
+
+import type { SetAllCookies } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 
 export type AuthGate = "none" | "vendor" | "admin";
 export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
@@ -138,6 +139,15 @@ function copyMiddlewareRequestHeaders(source: NextResponse, target: NextResponse
 
   if (overrideKeys.size > 0) {
     target.headers.set(MIDDLEWARE_OVERRIDE_HEADER, [...overrideKeys].join(","));
+  }
+}
+
+function copySessionCacheHeaders(source: NextResponse, target: NextResponse): void {
+  for (const header of ["cache-control", "expires", "pragma"]) {
+    const value = source.headers.get(header);
+    if (value !== null) {
+      target.headers.set(header, value);
+    }
   }
 }
 
@@ -342,6 +352,8 @@ export function createPortalRedirect(
     redirect.cookies.set(cookie);
   });
 
+  copySessionCacheHeaders(sessionResponse, redirect);
+
   return redirect;
 }
 
@@ -349,6 +361,7 @@ export function mergeSessionCookies(source: NextResponse, target: NextResponse):
   source.cookies.getAll().forEach((cookie) => {
     target.cookies.set(cookie);
   });
+  copySessionCacheHeaders(source, target);
   return target;
 }
 
@@ -366,15 +379,27 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
+      setAll(
+        cookiesToSet: Parameters<SetAllCookies>[0],
+        headersToSet: Parameters<SetAllCookies>[1],
+      ) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
+        const previousResponse = response;
         response = NextResponse.next({
           request,
         });
+        previousResponse.cookies.getAll().forEach((cookie) => {
+          response.cookies.set(cookie);
+        });
+        // @supabase/ssr sends cache headers only on the first write per client.
+        copySessionCacheHeaders(previousResponse, response);
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, mergeSecureCookieOptions(options));
+        });
+        Object.entries(headersToSet).forEach(([name, value]) => {
+          response.headers.set(name, value);
         });
       },
     },

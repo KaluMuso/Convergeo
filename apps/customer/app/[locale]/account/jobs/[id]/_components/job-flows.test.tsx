@@ -21,9 +21,16 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../../../../lib/customer-session", () => ({
+  customerAuth: {
+    snapshot: () => ({
+      session: { user: { id: "account-1" }, access_token: "token-1" },
+      generation: 1,
+    }),
+  },
   useSession: () => ({
     loading: false,
-    session: { access_token: "token-1" },
+    session: { user: { id: "account-1" }, access_token: "token-1" },
+    generation: 1,
   }),
 }));
 
@@ -36,11 +43,7 @@ vi.mock("@vergeo/config", () => {
     code: string;
     status: number;
 
-    constructor(
-      code: string,
-      message: string,
-      options: { status?: number } = {},
-    ) {
+    constructor(code: string, message: string, options: { status?: number } = {}) {
       super(message);
       this.code = code;
       this.status = options.status ?? 503;
@@ -107,17 +110,12 @@ describe("job quote flow helpers", () => {
     await user.click(screen.getByRole("button", { name: /pay deposit/i }));
 
     await waitFor(() => {
-      expect(mocks.request).toHaveBeenCalledWith(
-        "/jobs/job-1/quotes/quote-1/accept",
-        {
-          method: "POST",
-          body: JSON.stringify({}),
-        },
-      );
+      expect(mocks.request).toHaveBeenCalledWith("/jobs/job-1/quotes/quote-1/accept", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     });
-    expect(mocks.push).toHaveBeenCalledWith(
-      "/en/checkout?session=checkout-1&kind=service_deposit",
-    );
+    expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-1&kind=service_deposit");
   });
 
   it("lets the API block customer confirmation until the provider marks complete", async () => {
@@ -131,9 +129,7 @@ describe("job quote flow helpers", () => {
 
     await user.click(screen.getByRole("button", { name: /confirm work/i }));
 
-    expect(
-      await screen.findByText(/provider has not marked/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/provider has not marked/i)).toBeInTheDocument();
     expect(mocks.request).toHaveBeenCalledWith("/jobs/job-1/confirm", {
       method: "POST",
       body: JSON.stringify({}),
@@ -171,24 +167,12 @@ describe("mounted service balance funding", () => {
       throw new Error("Unexpected API path");
     });
     renderWithServices(<ServicePayments jobId="job-1" />);
-    expect(
-      await screen.findByText(/remaining balance.*700/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/remaining balance.*700/i)).toBeInTheDocument();
     expect(screen.getByText(/deposit.*300/i)).toBeInTheDocument();
-    await user.type(
-      screen.getByLabelText(/mobile money number/i),
-      "0971111111",
-    );
-    await user.selectOptions(
-      screen.getByLabelText(/payment method/i),
-      "airtel",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Pay outstanding amount" }),
-    );
-    await waitFor(() =>
-      expect(screen.getByText("Payment pending")).toBeInTheDocument(),
-    );
+    await user.type(screen.getByLabelText(/mobile money number/i), "0971111111");
+    await user.selectOptions(screen.getByLabelText(/payment method/i), "airtel");
+    await user.click(screen.getByRole("button", { name: "Pay outstanding amount" }));
+    await waitFor(() => expect(screen.getByText("Payment pending")).toBeInTheDocument());
     expect(
       screen.queryByRole("button", { name: "Pay outstanding amount" }),
     ).not.toBeInTheDocument();
@@ -201,22 +185,12 @@ describe("mounted service balance funding", () => {
       }),
     });
     state = "failed";
-    await user.click(
-      screen.getByRole("button", { name: "Refresh payment status" }),
-    );
-    expect(
-      await screen.findByRole("button", { name: "Retry payment" }),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Refresh payment status" }));
+    expect(await screen.findByRole("button", { name: "Retry payment" })).toBeInTheDocument();
     state = "paid";
-    await user.click(
-      screen.getByRole("button", { name: "Refresh payment status" }),
-    );
-    await waitFor(() =>
-      expect(screen.getAllByText("Paid and verified")).toHaveLength(2),
-    );
-    expect(
-      screen.queryByRole("button", { name: "Retry payment" }),
-    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Refresh payment status" }));
+    await waitFor(() => expect(screen.getAllByText("Paid and verified")).toHaveLength(2));
+    expect(screen.queryByRole("button", { name: "Retry payment" })).not.toBeInTheDocument();
   });
 
   it("acknowledgement does not display paid or unlock a review", async () => {
@@ -231,13 +205,7 @@ describe("mounted service balance funding", () => {
             released: false,
           },
     );
-    renderWithServices(
-      <CompleteConfirm
-        jobId="job-1"
-        providerMarked
-        onConfirmed={onConfirmed}
-      />,
-    );
+    renderWithServices(<CompleteConfirm jobId="job-1" providerMarked onConfirmed={onConfirmed} />);
     await user.click(screen.getByRole("button", { name: /confirm work/i }));
     expect(await screen.findByText(/work acknowledged/i)).toBeInTheDocument();
     expect(onConfirmed).not.toHaveBeenCalled();

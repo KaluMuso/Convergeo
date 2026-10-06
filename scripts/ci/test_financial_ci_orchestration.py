@@ -18,6 +18,18 @@ HERE = Path(__file__).resolve().parent
 
 
 class FinancialOrchestrationControls(unittest.TestCase):
+    def test_financial_uses_pinned_bounded_postgrest_pull(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            instance = object.__new__(runner.Runner)
+            instance.output = Path(tmp)
+            with patch.object(instance, "command") as command:
+                instance.pull_postgrest_image()
+            attempts = Path(tmp) / "postgrest-pull-attempts"
+            self.assertTrue(attempts.is_dir())
+            command.assert_called_once_with("postgrest-pull", [
+                "bash", "scripts/ci/pull-critical-postgrest-image.sh",
+                runner.REST_IMAGE, str(attempts)])
+
     def test_local_execution_is_rejected_before_tools(self) -> None:
         with patch.dict(os.environ, {}, clear=True), patch.object(shutil, "which") as tool:
             with self.assertRaisesRegex(RuntimeError, "disposable GitHub"):
@@ -49,7 +61,7 @@ class FinancialOrchestrationControls(unittest.TestCase):
     def test_reviewed_inventories_preserved(self) -> None:
         self.assertEqual(len(runner.F1_NODES), 6)
         self.assertEqual(len(set(runner.F1_NODES)), 6)
-        self.assertEqual(len(runner.FORWARD), 8)
+        self.assertEqual(len(runner.FORWARD), 12)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

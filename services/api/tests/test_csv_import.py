@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 USER_ID = "11111111-1111-1111-1111-111111111111"
 OTHER_VENDOR_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+DEFAULT_PRODUCT_ID = "90000000-0000-0000-0000-000000000001"
 COD_CAP_NGWEE = 50_000
 VALID_TOKEN = "valid.jwt.token"
 
@@ -150,6 +151,9 @@ def _mock_response(data: Any, *, count: int | None = None) -> Any:
 
 
 def _seed_base(fake: FakeSupabaseClient, *, listing_count: int = 0, kyc_tier: int = 1) -> None:
+    fake.tables["products"].rows.append(
+        {"id": DEFAULT_PRODUCT_ID, "name": "Test catalogue item", "status": "active", "aliases": []}
+    )
     fake.tables["vendors"].rows.append(
         {
             "id": VENDOR_ID,
@@ -251,6 +255,7 @@ def _valid_row(sku: str, *, price_ngwee: int = 2500, title: str | None = None) -
     return {
         "sku": sku,
         "title": title or f"Item {sku}",
+        "product_id": DEFAULT_PRODUCT_ID,
         "price_ngwee": str(price_ngwee),
         "stock_mode": "tracked",
         "stock_qty": "10",
@@ -270,6 +275,7 @@ def _valid_json_row(
     return {
         "sku": sku,
         "title": title or f"Item {sku}",
+        "product_id": DEFAULT_PRODUCT_ID,
         "price_ngwee": price_ngwee,
         "stock_mode": "tracked",
         "stock_qty": 10,
@@ -334,10 +340,10 @@ def test_mixed_hundred_row_import(
         source_index = result["row"] - 1
         if source_index % 10 == 0:
             assert result["ok"] is False
-            assert any("price_ngwee" in error for error in result["errors"])
+            assert "listings.import.errors.invalidMinimum" in result["errors"]
         elif source_index % 7 == 0:
             assert result["ok"] is False
-            assert any("stock_qty" in error for error in result["errors"])
+            assert "listings.import.errors.missingField" in result["errors"]
         else:
             assert result["ok"] is True
             assert result["listing_id"] is not None
@@ -443,6 +449,7 @@ def test_reimport_does_not_detach_canonical_product_when_column_omitted(
     assert first.status_code == 200
     stored = fake_client.tables["vendor_listings"].rows[0]
     stored["product_id"] = "b0000000-0000-0000-0000-000000000001"
+    row.pop("product_id")
     response = import_client.post("/listings/import", headers=_auth_headers(), json={"rows": [row]})
     assert response.json()["accepted"] == 1
     assert stored["product_id"] == "b0000000-0000-0000-0000-000000000001"
@@ -477,7 +484,7 @@ def test_cap_overflow_rejected_at_boundary_in_file_order(
     assert body["rows"][0]["ok"] is True
     assert body["rows"][1]["ok"] is True
     assert body["rows"][2]["ok"] is False
-    assert "listing cap exceeded" in body["rows"][2]["errors"][0]
+    assert body["rows"][2]["errors"] == ["listings.import.errors.listingCap"]
     assert body["rows"][3]["ok"] is False
     assert body["rows"][4]["ok"] is False
     assert len(fake_client.tables["vendor_listings"].rows) == 30
@@ -623,7 +630,7 @@ def test_import_rejects_unknown_product_id(
     body = response.json()
     assert body["accepted"] == 0
     assert body["rejected"] == 1
-    assert "active canonical product" in body["rows"][0]["errors"][0]
+    assert body["rows"][0]["errors"] == ["listings.import.errors.invalidProduct"]
     assert len(fake_client.tables["vendor_listings"].rows) == 0
 
 
@@ -651,6 +658,7 @@ def test_preview_suggests_canonical_for_unmatched_title(
 ) -> None:
     _seed_product(fake_client, product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone")
     row = _valid_json_row("PRV-001", title="Itel A70 Smartphone")
+    row.pop("product_id")
     response = import_client.post(
         "/listings/import/preview",
         headers={**_auth_headers(), "Content-Type": "application/json"},
@@ -659,9 +667,11 @@ def test_preview_suggests_canonical_for_unmatched_title(
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 1
-    assert body["valid"] == 1
+    assert body["valid"] == 0
     preview_row = body["rows"][0]
-    assert preview_row["ok"] is True
+    assert preview_row["ok"] is False
+    assert preview_row["errors"] == ["listings.import.errors.canonicalRequired"]
+    assert body["valid"] == 0
     assert preview_row["product_id"] is None
     assert preview_row["suggestions"]
     assert preview_row["suggestions"][0]["product_id"] == PHONE_PRODUCT_ID
@@ -891,7 +901,7 @@ def test_every_import_transport_screens_each_row_before_persisting(
     assert response.status_code == 200
     result = response.json()
     assert (result["accepted"], result["rejected"]) == (2, 1)
-    assert "prohibited listing blocked" in result["rows"][1]["errors"][0]
+    assert result["rows"][1]["errors"] == ["listings.import.errors.prohibitedListing"]
     assert [row["sku"] for row in fake_client.tables["vendor_listings"].rows] == [
         "GOOD-1",
         "GOOD-2",

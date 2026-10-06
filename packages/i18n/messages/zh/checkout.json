@@ -144,6 +144,8 @@
     "reservationExpired": "您的预留已过期——商品已退回您的购物车。",
     "stockUnavailable": "某件商品已不可用。请检查您的购物车。",
     "emptyCart": "您的购物车是空的。",
+    "retry": "重试",
+    "backToCart": "返回购物车",
     "loading": "正在开始结账…",
     "error": "出了点问题。请重试。",
     "payment": {

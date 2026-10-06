@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getAccountAccessToken } from "../../_components/account-server";
+import { AccountListBoundary } from "../../_components/account-list-boundary";
+import { getAccountListSession } from "../../_components/account-list-server";
 import { InvoiceLinkBlock } from "../_components/invoice-link";
 import { OrderTimeline } from "../_components/order-timeline";
 import {
@@ -52,7 +53,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const accessToken = await getAccountAccessToken(locale);
+  const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
   const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
@@ -104,7 +105,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     (order as OrderDetail & { dispatch_events?: DispatchOrderEvent[] }).dispatch_events ?? [];
   const dispatchDetails = extractDispatchFromEvents(dispatchEvents);
 
-  return (
+  const content = (
     <section className="space-y-6">
       <header className="space-y-2">
         <Link
@@ -303,4 +304,5 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       ) : null}
     </section>
   );
+  return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;
 }

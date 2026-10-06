@@ -59,5 +59,14 @@
     "instagramAria": "Convergeo 的 Instagram",
     "emailAria": "发送邮件给 Convergeo",
     "countryCode": "ZM"
+  },
+  "categorySelection": {
+    "category": "类别",
+    "subcategory": "子类别",
+    "placeholder": "选择类别",
+    "empty": "暂无可用类别。",
+    "unavailable": "此类别不可用。请选择可用类别。",
+    "loading": "正在加载类别…",
+    "error": "无法加载类别。请刷新后重试。"
   }
 }

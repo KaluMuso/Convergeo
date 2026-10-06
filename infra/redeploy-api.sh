@@ -48,8 +48,21 @@ _resolve_fingerprint_tag() {
 echo "→ Pulling ${IMAGE}:${TAG} ..."
 docker pull "${IMAGE}:${TAG}"
 
+CANDIDATE_SOURCE_SHA="$(docker image inspect "${IMAGE}:${TAG}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)"
+if [[ ! "${CANDIDATE_SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "✗ candidate image source SHA is missing or invalid" >&2
+  exit 1
+fi
+if [[ "${TAG}" =~ ^[0-9a-f]{40}$ && "${CANDIDATE_SOURCE_SHA}" != "${TAG}" ]]; then
+  echo "✗ candidate image source SHA differs from requested tag" >&2
+  exit 1
+fi
 FINGERPRINT_TAG="$(_resolve_fingerprint_tag "$TAG")"
-PREV_IMAGE="$(docker inspect --format '{{.Config.Image}}' "${NAME}" 2>/dev/null || echo none)"
+PREV_IMAGE="$(docker inspect --format '{{.Image}}' "${NAME}" 2>/dev/null || echo none)"
+PREV_SOURCE_SHA=""
+if [[ "${PREV_IMAGE}" != "none" ]]; then
+  PREV_SOURCE_SHA="$(docker image inspect "${PREV_IMAGE}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)"
+fi
 echo "→ Current image: ${PREV_IMAGE}"
 echo "→ Fingerprint tag: ${FINGERPRINT_TAG}"
 
@@ -57,7 +70,7 @@ echo "→ Recreating ${NAME} (bind ${BIND}) ..."
 docker rm -f "${NAME}" >/dev/null 2>&1 || true
 docker run -d --name "${NAME}" \
   --env-file "${ENV_FILE}" \
-  -e "GIT_SHA=${FINGERPRINT_TAG}" \
+  -e "GIT_SHA=${CANDIDATE_SOURCE_SHA}" \
   -e "API_IMAGE_TAG=${FINGERPRINT_TAG}" \
   -e "SENTRY_RELEASE=${FINGERPRINT_TAG}" \
   --restart unless-stopped \
@@ -82,7 +95,11 @@ done
 
 echo "✗ ${NAME} did not become healthy within 30s." >&2
 echo "  logs:     docker logs --tail 50 ${NAME}" >&2
-if [[ "${PREV_IMAGE}" != "none" ]]; then
-  echo "  rollback: docker rm -f ${NAME} && docker run -d --name ${NAME} --env-file ${ENV_FILE} -e GIT_SHA=${FINGERPRINT_TAG} -e API_IMAGE_TAG=${FINGERPRINT_TAG} --restart unless-stopped -p ${BIND} ${PREV_IMAGE}" >&2
+if [[ "${PREV_SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+  printf -v rollback_command 'docker rm -f %q && docker run -d --name %q --env-file %q -e GIT_SHA=%q -e API_IMAGE_TAG=%q -e SENTRY_RELEASE=%q --restart unless-stopped -p %q %q' \
+    "${NAME}" "${NAME}" "${ENV_FILE}" "${PREV_SOURCE_SHA}" "${PREV_SOURCE_SHA}" "${PREV_SOURCE_SHA}" "${BIND}" "${PREV_IMAGE}"
+  echo "  rollback: ${rollback_command}" >&2
+elif [[ "${PREV_IMAGE}" != "none" ]]; then
+  echo "  rollback: previous image source SHA unavailable; verify its identity before redeploying it" >&2
 fi
 exit 1
