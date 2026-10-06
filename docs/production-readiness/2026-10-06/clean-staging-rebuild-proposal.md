@@ -1,8 +1,12 @@
 # Clean staging rebuild proposal — decision only
 
-Source reviewed: PR 718 `b38bffc67ab7317cfec0ccb4753fff47b46b226c`, tree
-`273f29776793f18a226400fdd069998b64cb2af3`; the proposed additive ACL
-correction brings the source inventory to 139. This document authorizes no
+Qualified source: draft PR 718 branch `codex/coordinator-ci-review-20261001`,
+commit `6918e4530fabee6a4a6eea25c8e04cb4e88a34ca`, tree
+`3207aa8a784539d7cc17448f999d6fbdb8be4876`, with 139 migration files.
+Automatic CI run `37515050196` passed. Its original-body proof used the pinned
+CLI's native three-column ledger; it did not prove preservation of the hosted
+six-column history. A focused synthetic six-column suffix test is being prepared
+locally and still needs independent review and automatic CI. This document authorizes no
 database change. The qualified disposable profile uses PostgreSQL 17.6 and
 vector 0.8.2 / pgcrypto 1.3 / pg_graphql 1.6.1. Hosted staging has PostgreSQL
 17 with a different patch image and pg_trgm 1.6; local success does not prove
@@ -67,6 +71,64 @@ preservation plan before execution.
    plan for API/app Auth URLs, function bindings, writer pause, rollback and
    observation. Do not switch traffic or retire old staging until that plan is
    separately approved.
+
+## Preservation upgrade and recovery decision
+
+The clean candidate above replaces mock identities and transaction rows. If the
+goal is instead to **retain the current 114-row six-column ledger and mock data**,
+the next operation must be a rehearsal on a separately isolated, restore-tested
+copy of staging `iyasmrmbcrvlfxpzescb`. No such no-cost recovery destination or
+restore proof has been verified. This is a blocking resource and operator decision,
+not a reason to use the shared Hetzner 4 GB production/n8n host or reset staging.
+The restricted 114-row evidence remains with the parent; the application plan
+uses version identifiers and custody-held digests, never a new export of stored SQL.
+
+After a destination, scoped access, and restore proof are approved, the operator
+freezes the exact source commit/tree and 25-file SHA-256 inventory. On the
+**isolated copy only**, verify the 114-version ordered prefix and all six ledger
+columns against the parent-held receipt; verify catalog and mock-data counts,
+owners, ACLs, extension versions, and source compatibility. Inventory every
+staging-only writer, including API/background jobs, schedules, n8n integrations,
+Auth hooks, and the active `send-sms-otp` function. Pause those writers and
+confirm in-flight work has settled before taking the copy/restore checkpoint.
+Do not pause production writers or invoke notifications or providers.
+Before applying a file, verify the six-column ledger's nullability, defaults,
+keys, and insertion behavior against the chosen migration executor on the copy.
+The pinned CLI's native three-column insert alone is not evidence that an
+arbitrary hosted six-column row will be recorded correctly. Stop if the added
+columns require an unreviewed value or if the executor would normalize earlier
+statement arrays; do not fill fields with invented metadata or use migration
+repair to make a failed application appear complete.
+
+Apply the 25 reviewed files in three explicit phases on that isolated copy:
+
+1. Apply source indexes **114–129** (16 prerequisites), from
+   `20260921155234_atomic_cart_merge.sql` through
+   `20260929120002_funded_service_completion.sql`. After each file, require one
+   new truthful history version and exact preservation of the preceding six-column
+   rows, including array bytes and bounds. Stop on any mismatch or unexpected
+   data/catalog change; never mark a failed file applied.
+2. Apply index **130**,
+   `20260929120003_adopt_existing_service_obligations.sql`, through the existing
+   guarded adoption helper. Its transaction must restore authority metadata,
+   record the original immutable body once, and preserve prior history and mock
+   economic rows. Ambiguous rows stay held for review; no synthetic ledger repair.
+3. Apply indexes **131–138** (eight remaining), from
+   `20260930170000_reconciliation_report_versions.sql` through
+   `20261006160000_service_table_acl_hardening.sql`. Check exact 139-version
+   order, unchanged 114-row prefix and intervening six-column rows, relevant
+   data invariants, and the reviewed catalog, owners, ACLs, RLS, and configuration.
+
+Only after that rehearsal passes may the parent propose a separately authorized
+staging change window. At that window, pause the same staging writers, verify
+the live 114-row receipt and recovery checkpoint under restricted custody, then
+run the reviewed phases one at a time with stop gates. Resume staging writers
+only after final 139-row and application checks pass. If a phase fails, keep
+writers paused, retain the failed database for diagnosis, and restore the
+approved recovery copy to a separate destination before any route switch.
+Never reset the current staging database, overwrite its ledger, replay a file
+whose committed state is uncertain, or permit simultaneous writers on old and
+recovery destinations. A cutover or rollback route switch needs its own approval.
 
 ## Remaining decisions and permissions
 

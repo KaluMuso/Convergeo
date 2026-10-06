@@ -30,10 +30,14 @@ from rehearse_explicit_transaction_profile import (
     WindowState,
     bind_disposable_network,
     assert_native_ledger_schema,
+    assert_native_reference_rows,
+    assert_six_fixture_preserved,
+    assert_six_fixture_schema,
     check_cli_reference,
     checked,
     failure_marker,
     ledger,
+    six_fixture_rows,
     mark_owned,
     owned_window,
     run,
@@ -207,6 +211,74 @@ COMMIT;
                 "jsonb_build_array(version,name,statements)", query.call_args.args[1]
             )
             self.assertNotIn("created_by", query.call_args.args[1])
+
+    def test_synthetic_six_column_suffix_preserves_all_old_fields(self) -> None:
+        versions = ["1", "2", "3", "4", "5"]
+        before = [
+            ["1", "first", "aa", "[1:1]", None, "synthetic-1", None, None],
+            ["2", "second", "bb", "[1:1]", "synthetic-ci", "synthetic-2", "00", None],
+            ["3", "third", "cc", "[1:1]", None, "synthetic-3", "01", "[-2:-2]"],
+        ]
+        after = [
+            *before,
+            ["4", "fourth", "dd", "[1:1]", None, None, None, None],
+            ["5", "fifth", "ee", "[1:1]", None, None, None, None],
+        ]
+        assert_six_fixture_preserved(before, after, versions, 3)
+        for column in range(1, 8):
+            changed = [row.copy() for row in after]
+            changed[0][column] = "tampered"
+            with self.subTest(column=column), self.assertRaises(RehearsalError):
+                assert_six_fixture_preserved(before, changed, versions, 3)
+        changed = [row.copy() for row in after]
+        changed[3][4] = "unexpected default"
+        with self.assertRaises(RehearsalError):
+            assert_six_fixture_preserved(before, changed, versions, 3)
+        with patch(
+            "rehearse_explicit_transaction_profile.sql",
+            return_value=json.dumps(after).encode(),
+        ):
+            self.assertEqual(six_fixture_rows("fixture"), after)
+
+    def test_six_column_suffix_must_match_native_cli_statement_rows(self) -> None:
+        reference = [["1", "first", ["SELECT 1"]], ["2", "second", ["SELECT 2"]]]
+        assert_native_reference_rows(reference, reference)
+        changed = [["1", "first", ["SELECT 1"]], ["2", "second", None]]
+        with self.assertRaises(RehearsalError) as mismatch:
+            assert_native_reference_rows(changed, reference)
+        self.assertEqual(mismatch.exception.code, "CLI_REFERENCE_MISMATCH")
+
+    def test_synthetic_six_column_schema_rejects_extra_columns(self) -> None:
+        native = [
+            ["version", "text", True],
+            ["statements", "text[]", False],
+            ["name", "text", False],
+        ]
+        six = [
+            *native,
+            ["created_by", "text", False],
+            ["idempotency_key", "text", False],
+            ["rollback", "text[]", False],
+        ]
+        with patch(
+            "rehearse_explicit_transaction_profile.sql",
+            side_effect=[json.dumps(six).encode(), b"[true, true]"],
+        ):
+            assert_six_fixture_schema("fixture")
+        with patch(
+            "rehearse_explicit_transaction_profile.sql",
+            side_effect=[json.dumps(six).encode(), b"[true, false]"],
+        ):
+            with self.assertRaises(RehearsalError) as changed:
+                assert_six_fixture_schema("fixture")
+            self.assertEqual(changed.exception.code, "HISTORY_MISMATCH")
+        with patch(
+            "rehearse_explicit_transaction_profile.sql",
+            return_value=json.dumps([*six, ["extra", "text", False]]).encode(),
+        ):
+            with self.assertRaises(RehearsalError) as changed:
+                assert_six_fixture_schema("fixture")
+            self.assertEqual(changed.exception.code, "HISTORY_MISMATCH")
 
     def test_cli_reference_rejects_statement_serialization_difference(self) -> None:
         files = sorted(

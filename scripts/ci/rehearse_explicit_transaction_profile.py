@@ -55,6 +55,12 @@ NATIVE_LEDGER_SCHEMA = [
     ["statements", "text[]", False],
     ["name", "text", False],
 ]
+SIX_COLUMN_FIXTURE_SCHEMA = [
+    *NATIVE_LEDGER_SCHEMA,
+    ["created_by", "text", False],
+    ["idempotency_key", "text", False],
+    ["rollback", "text[]", False],
+]
 STAGES = frozenset(
     {
         "entry",
@@ -76,6 +82,10 @@ STAGES = frozenset(
         "predecessor_ledger",
         "suffix_replay",
         "final_ledger",
+        "six_fixture_reset",
+        "six_fixture_schema",
+        "six_fixture_suffix",
+        "six_fixture_ledger",
         "full_reset",
         "full_ledger",
     }
@@ -280,6 +290,139 @@ FROM supabase_migrations.schema_migrations WHERE {predicate};
     ):
         raise RehearsalError("unexpected disposable history shape")
     return rows
+
+
+def install_six_column_fixture(container: str) -> None:
+    """Add synthetic metadata only to this runner-owned CLI history table."""
+    assert_native_ledger_schema(container)
+    sql(
+        container,
+        """
+ALTER TABLE supabase_migrations.schema_migrations
+  ADD COLUMN created_by text,
+  ADD COLUMN idempotency_key text UNIQUE,
+  ADD COLUMN rollback text[];
+WITH numbered AS (
+  SELECT version, row_number() OVER (ORDER BY version) AS ordinal
+  FROM supabase_migrations.schema_migrations
+)
+UPDATE supabase_migrations.schema_migrations AS m
+SET created_by = CASE WHEN numbered.ordinal % 2 = 0 THEN 'synthetic-ci' ELSE NULL END,
+    idempotency_key = 'synthetic-' || m.version,
+    rollback = CASE numbered.ordinal
+      WHEN 1 THEN NULL::text[]
+      WHEN 2 THEN ARRAY[]::text[]
+      WHEN 3 THEN '[-2:-2]={synthetic}'::text[]
+      ELSE ARRAY['synthetic']::text[] END
+FROM numbered WHERE m.version = numbered.version;
+""",
+    )
+
+
+def six_fixture_rows(container: str) -> list[list[object]]:
+    """Keep exact synthetic array bytes and bounds in memory, never in logs."""
+    raw = sql(
+        container,
+        """
+SELECT coalesce(jsonb_agg(jsonb_build_array(
+  version, name, encode(array_send(statements), 'hex'), array_dims(statements),
+  created_by, idempotency_key, encode(array_send(rollback), 'hex'), array_dims(rollback)
+) ORDER BY version), '[]'::jsonb)
+FROM supabase_migrations.schema_migrations;
+""",
+    )
+    try:
+        rows = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise RehearsalError("malformed synthetic six-column history") from exc
+    if not isinstance(rows, list) or any(
+        not isinstance(row, list) or len(row) != 8 for row in rows
+    ):
+        raise RehearsalError("unexpected synthetic six-column history shape")
+    return rows
+
+
+def assert_six_fixture_schema(container: str) -> None:
+    raw = sql(
+        container,
+        """
+SELECT coalesce(jsonb_agg(jsonb_build_array(
+  attname, format_type(atttypid, atttypmod), attnotnull
+) ORDER BY attnum), '[]'::jsonb)
+FROM pg_attribute
+WHERE attrelid = 'supabase_migrations.schema_migrations'::regclass
+  AND attnum > 0 AND NOT attisdropped;
+""",
+    )
+    try:
+        actual = json.loads(raw)
+    except (ValueError, TypeError) as exc:
+        raise RehearsalError("malformed synthetic ledger schema") from exc
+    if actual != SIX_COLUMN_FIXTURE_SCHEMA:
+        raise RehearsalError("synthetic ledger schema changed", code="HISTORY_MISMATCH")
+    keys = sql(
+        container,
+        """
+SELECT jsonb_build_array(
+  EXISTS (
+    SELECT 1 FROM pg_constraint c JOIN pg_attribute a
+      ON a.attrelid = c.conrelid AND a.attname = 'version'
+    WHERE c.conrelid = 'supabase_migrations.schema_migrations'::regclass
+      AND c.contype = 'p' AND c.conkey = ARRAY[a.attnum]::smallint[]
+  ),
+  EXISTS (
+    SELECT 1 FROM pg_constraint c JOIN pg_attribute a
+      ON a.attrelid = c.conrelid AND a.attname = 'idempotency_key'
+    WHERE c.conrelid = 'supabase_migrations.schema_migrations'::regclass
+      AND c.contype = 'u' AND c.conkey = ARRAY[a.attnum]::smallint[]
+  )
+);
+""",
+    )
+    try:
+        expected_keys = json.loads(keys)
+    except (ValueError, TypeError) as exc:
+        raise RehearsalError("malformed synthetic ledger keys") from exc
+    if expected_keys != [True, True]:
+        raise RehearsalError("synthetic ledger keys changed", code="HISTORY_MISMATCH")
+
+
+def assert_six_fixture_preserved(
+    before: list[list[object]],
+    after: list[list[object]],
+    versions: list[str],
+    prefix: int,
+) -> None:
+    """Check old six-column rows exactly and new rows against fixture defaults."""
+    if (
+        prefix < 3
+        or len(before) != prefix
+        or len(after) != len(versions)
+        or [row[0] for row in before] != versions[:prefix]
+        or [row[0] for row in after] != versions
+        or after[:prefix] != before
+        or len({row[5] for row in before}) != prefix
+        or any(row[5] != "synthetic-" + row[0] for row in before)
+        or before[0][6] is not None
+        or before[1][6] is None
+        or before[1][7] is not None
+        or before[2][7] != "[-2:-2]"
+        or any(row[4:8] != [None, None, None, None] for row in after[prefix:])
+    ):
+        raise RehearsalError(
+            "synthetic six-column history was not preserved", code="HISTORY_MISMATCH"
+        )
+
+
+def assert_native_reference_rows(
+    actual: list[list[object]], expected: list[list[object]]
+) -> None:
+    """New six-column rows must also retain the CLI's truthful source SQL."""
+    if actual != expected:
+        raise RehearsalError(
+            "six-column suffix differs from native CLI history",
+            code="CLI_REFERENCE_MISMATCH",
+        )
 
 
 def target_container() -> str:
@@ -850,6 +993,36 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                     "original-body rehearsal did not finish the source suffix"
                 )
             assert_prefix(container, baseline, first_index)
+            native_reference = ledger(container)
+            # The native CLI proof above does not exercise the six-column
+            # staging history shape. Replay only the eight-file suffix again
+            # against synthetic metadata; no hosted history values enter CI.
+            tracker.enter("six_fixture_reset")
+            with visible_prefix(files, first_index - 1, holding):
+                cli(workdir, "reset", "--no-seed")
+                tracker.enter("container_identity")
+                container = target_container()
+                mark_owned(workdir, window, container)
+                assert_native_ledger_schema(container)
+                assert_prefix(container, baseline, first_index)
+            tracker.enter("six_fixture_schema")
+            install_six_column_fixture(container)
+            assert_six_fixture_schema(container)
+            six_before = six_fixture_rows(container)
+            tracker.enter("six_fixture_suffix")
+            cli(workdir, "push", "--db-url", URL, "--include-all", "--yes")
+            tracker.enter("six_fixture_ledger")
+            assert_six_fixture_schema(container)
+            assert_native_reference_rows(ledger(container), native_reference)
+            assert_six_fixture_preserved(
+                six_before,
+                six_fixture_rows(container),
+                [path.stem.split("_", 1)[0] for path in files],
+                first_index,
+            )
+            print(
+                f"synthetic_six_column_suffix|PASS|{first_index}|{len(files) - first_index}"
+            )
             # Restore the job's ordinary qualified profile for typegen and ACLs.
             tracker.enter("full_reset")
             cli(workdir, "reset", "--no-seed")
