@@ -487,7 +487,8 @@
     "20260930203100_service_adoption_ambiguity_holds.sql": "bffb8217f2ab6425b1cb17855e7dabb2ac7c83baac451886fcf04f13e4daa486",
     "20261001120000_merchant_protected_listing_admission.sql": "301466ad39d1bb0655943bf86fc7ef8366660d35c0a1455b537719114ef66d46",
     "20261001120100_stock_claim_replay_authority.sql": "b5e415a00ee2f41030c634e926b1611575433c8bb6aa59493835386fcf0743a0",
-    "20261001120200_stock_claim_parent_lock_compatibility.sql": "97b6b3e67549b973c5ca5dff4247b2585f24bce96418324c0cc1f17c299636a7"
+    "20261001120200_stock_claim_parent_lock_compatibility.sql": "97b6b3e67549b973c5ca5dff4247b2585f24bce96418324c0cc1f17c299636a7",
+    "20261006160000_service_table_acl_hardening.sql": "32afb0a4732b4b925b4b2f046d1236d84479c48b349316392ef12bdfaf646a12"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -503,7 +504,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
-    "scripts/ci/run_financial_real_stack.py": "be16b038c304f0ff8aee84615cbb6c58a6aef108a05d13ba86058d87c77d57dd",
+    "scripts/ci/run_financial_real_stack.py": "1200f4582c2aa103c0c1e92b89277a7fa652c79815d56ed0c4adff658e7b543d",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "5558c87a1f11661e7dbb4c7071092f36cfa028eaf0e7a6b3ba9999b9079edead",

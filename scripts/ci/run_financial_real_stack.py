@@ -41,6 +41,7 @@ FORWARD = [
     "20261001120000_merchant_protected_listing_admission.sql",
     "20261001120100_stock_claim_replay_authority.sql",
     "20261001120200_stock_claim_parent_lock_compatibility.sql",
+    "20261006160000_service_table_acl_hardening.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -412,7 +413,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 138 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 139 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

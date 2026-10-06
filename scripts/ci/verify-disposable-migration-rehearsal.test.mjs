@@ -253,7 +253,7 @@ test("CLI binds physical source snapshot and dump bytes", () => {
   }).trim();
   f.binding.migration_inventory_sha256 = committedInventoryDigest(root, f.binding.source_commit);
   const realInputs = committedMigrationInventory(root, f.binding.source_commit);
-  assert.equal(realInputs.length, 138);
+  assert.equal(realInputs.length, 139);
   f.source.history = realInputs.slice(0, 114).map((input) => row(input.version));
   f.source.history[0].rollback = null;
   f.source.history[1].statements = [];

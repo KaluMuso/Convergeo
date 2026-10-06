@@ -1,5 +1,5 @@
 -- typegen_synthetic_catalog_contract
--- Reviewed source expectations for the 138-input disposable replay. Output
+-- Reviewed source expectations for the 139-input disposable replay. Output
 -- hashes and bounded direct ACL deltas; no definitions or fixture rows leave CI.
 -- This is a synthetic fresh-install check, not a hosted staging comparison.
 WITH

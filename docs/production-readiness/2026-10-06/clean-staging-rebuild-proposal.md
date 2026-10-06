@@ -1,8 +1,9 @@
 # Clean staging rebuild proposal — decision only
 
 Source reviewed: PR 718 `b38bffc67ab7317cfec0ccb4753fff47b46b226c`, tree
-`273f29776793f18a226400fdd069998b64cb2af3`. This document authorizes no
-database change. The 138-input local disposable replay uses PostgreSQL 17.6 and
+`273f29776793f18a226400fdd069998b64cb2af3`; the proposed additive ACL
+correction brings the source inventory to 139. This document authorizes no
+database change. The qualified disposable profile uses PostgreSQL 17.6 and
 vector 0.8.2 / pgcrypto 1.3 / pg_graphql 1.6.1. Hosted staging has PostgreSQL
 17 with a different patch image and pg_trgm 1.6; local success does not prove
 hosted parity. The bounded hosted survey described below is read-only evidence,
@@ -18,7 +19,7 @@ no-cost target exists, stop: the Hetzner 4 GB host also runs production and n8n
 and is not a disposable target. Do not reset, delete, or replace the existing
 staging database as a shortcut.
 
-The candidate starts empty and receives the reviewed 138 migrations exactly
+The candidate starts empty and receives the 139 source migrations exactly
 once in order. Preserve the old staging plane as the rollback reference until
 separate cutover approval. This is a clean synthetic rebuild: transactional,
 mock account, and rate-counter rows are **not imported**. Anyone needing stable
@@ -28,7 +29,7 @@ preservation plan before execution.
 | Surface in current staging                             | Candidate action and boundary                                                                                                                                                                                                                                                                           |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 124 `public` tables and 1 private table                | Recreate structure from pinned migrations; compare names, columns, constraints, 133 valid/ready indexes, 51 enabled triggers, RLS, owners, ACLs, and policies. Do not bulk-copy the rows. Reconcile any source-versus-hosted objects before candidate acceptance.                                       |
-| 114-row migration history                              | Preserve a restricted, read-only evidence snapshot under parent custody. Candidate ledger is produced by its own 138-file replay; never copy, synthesize, or repair old `statements`/rollback fields. The 24 pending files are applied only on the new candidate.                                       |
+| 114-row migration history                              | Preserve a restricted, read-only evidence snapshot under parent custody. Candidate ledger is produced by its own 139-file replay; never copy, synthesize, or repair old `statements`/rollback fields. The 25 pending files are applied only on the new candidate.                                       |
 | 9 Auth accounts / 18 identities                        | Replace with new synthetic personas using candidate-only Auth configuration and fresh IDs, after the schema replay. Do not copy identities, OTP secrets, sessions, or credentials. Recreate only the role/profile links required for synthetic journeys.                                                |
 | Private `vendor-intake-media` bucket / 0 objects       | Recreate bucket configuration and access policies on the candidate; no objects to copy. Verify private access and an empty object inventory.                                                                                                                                                            |
 | 26 `platform_config`, 12 flags, 9 commissions, 3 zones | Start from source migration fixtures. Compare key inventories and values privately to old staging; stage any intentional staging-only overrides as a reviewed, explicit allowlist. Never publish values in CI artifacts. Keep sending/provider flags off until separately approved.                     |
@@ -43,15 +44,17 @@ preservation plan before execution.
    recovery proof before any destructive action or cutover. Keep the existing
    114-row history snapshot restricted; never put stored SQL, user records,
    function bodies, or secrets in CI artifacts.
-2. Pin source commit/tree and the 138 migration SHA-256 inventory. Capture
+2. Pin source commit/tree and the 139 migration SHA-256 inventory. Capture
    candidate PostgreSQL image/extension inventory and compare with actual hosted
    staging, including `pg_trgm` and the patch-image difference. Stop on an
    unreviewed compatibility gap.
-3. Replay all 138 files on the candidate without demo seed. Run the existing
+3. Replay all 139 files on the candidate without demo seed. Run the existing
    qualified disposable profile and its synthetic owner/ACL/config/fixture
    comparisons; record only group hashes and assertion status. Then separately
-   compare the candidate catalog with the restricted old-staging survey: the
-   76 source-qualified identifiers in 24 pending files, the 37 existing
+   compare the candidate catalog with the restricted old-staging survey. That
+   earlier survey counted 76 source-qualified identifiers in 24 pending files;
+   the additive ACL migration is the 25th pending input and requires a fresh
+   candidate comparison. The earlier survey found 37 existing
    relations plus 4 functions, 35 absent identifiers, 214 constraints, 133 indexes,
    51 triggers, and 99 relevant policies. A lexical scan cannot cover dynamic
    SQL or data upgrades, so inspect those paths and run targeted synthetic
