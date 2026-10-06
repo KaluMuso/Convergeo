@@ -1002,8 +1002,10 @@ jobs:
       - name: Frozen API dependency install
         working-directory: services/api
         run: uv sync --dev --frozen
-      - name: Financial orchestration controls
-        run: python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+      - name: Financial orchestration and synthetic history unit controls
+        run: |
+          python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+          python -m unittest discover -s scripts/ci -p test_synthetic_migration_history.py -v
       - name: Shared adoption prerequisite negative controls
         run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
       - name: Execute real financial database gates

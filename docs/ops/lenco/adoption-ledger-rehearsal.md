@@ -46,11 +46,11 @@ One psql connection uses `-X`, `--single-transaction` and `ON_ERROR_STOP=1`.
 Within that transaction it:
 
 1. Verifies the target database marker, server binding and reviewed migration
-   ledger schema. The **synthetic** fixture has `version text NOT NULL PRIMARY
-KEY`, `statements text[]`, `name text`, `created_by text`, `idempotency_key
-text UNIQUE`, and `rollback text[]`. Missing history, unknown columns/types,
-   a missing key constraint, aliases, holes, changed row fields, changed array
-   bounds or unexpected future versions fail closed.
+   ledger schema. The **synthetic** fixture has six columns: `version` (`text`,
+   primary key), `statements` (`text[]`), `name` (`text`), `created_by` (`text`),
+   `idempotency_key` (`text`, unique), and `rollback` (`text[]`). Missing history,
+   unknown columns/types, a missing key constraint, aliases, holes, changed row
+   fields, changed array bounds or unexpected future versions fail closed.
 2. Takes a transaction advisory lock and an exclusive lock on the history table,
    then compares the installed history to an exact prefix of the reviewed
    executed inputs. This ordering is repeated by competing wrapper connections.
