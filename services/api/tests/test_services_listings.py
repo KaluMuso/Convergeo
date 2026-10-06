@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock
@@ -443,15 +444,181 @@ def test_draft_detail_not_found(services_client: TestClient) -> None:
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("title", ["Hijacked", "Bottle of whisky", "  "])
 def test_vendor_b_cannot_update_vendor_a_service(
     services_client: TestClient,
+    title: str,
 ) -> None:
     response = services_client.patch(
         f"/vendor/services/{SERVICE_ACTIVE_ID}",
         headers=_auth_headers(TOKEN_B),
-        json={"title": "Hijacked"},
+        json={"title": title},
     )
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("service_id", "change"),
+    [
+        (SERVICE_ACTIVE_ID, {"title": "Bottle of whisky"}),
+        (SERVICE_ACTIVE_ID, {"description": "We deliver beer"}),
+        (SERVICE_DRAFT_ID, {"status": "active"}),
+    ],
+)
+def test_update_rejects_prohibited_effective_listing_without_mutation(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    service_id: str,
+    change: dict[str, Any],
+) -> None:
+    service = next(row for row in fake_client.tables["services"].rows if row["id"] == service_id)
+    if service_id == SERVICE_DRAFT_ID:
+        service["description"] = "Beer delivery"
+    before_service = deepcopy(service)
+    before_search = deepcopy(fake_client.tables["search_documents"].rows)
+
+    response = services_client.patch(
+        f"/vendor/services/{service_id}", headers=_auth_headers(), json=change
+    )
+
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "prohibited_listing"
+    assert error["details"]["message_key"] == "vendor.listings.errors.submitFailed"
+    assert error["details"]["reason"] == "keyword"
+    assert service == before_service
+    assert fake_client.tables["search_documents"].rows == before_search
+
+
+def test_update_can_correct_prohibited_draft_before_activation(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    draft = next(
+        row for row in fake_client.tables["services"].rows if row["id"] == SERVICE_DRAFT_ID
+    )
+    draft["title"] = "Whisky delivery"
+    draft["description"] = "Beer delivery"
+
+    corrected = services_client.patch(
+        f"/vendor/services/{SERVICE_DRAFT_ID}",
+        headers=_auth_headers(),
+        json={"title": "Hair styling", "description": None},
+    )
+    assert corrected.status_code == 200
+    assert corrected.json()["service"]["status"] == "draft"
+    assert draft["title"] == "Hair styling"
+    assert draft["description"] is None
+
+    activated = services_client.patch(
+        f"/vendor/services/{SERVICE_DRAFT_ID}",
+        headers=_auth_headers(),
+        json={"status": "active"},
+    )
+    assert activated.status_code == 200
+    assert activated.json()["service"]["status"] == "active"
+
+
+def test_update_allows_benign_partial_edit(services_client: TestClient) -> None:
+    response = services_client.patch(
+        f"/vendor/services/{SERVICE_ACTIVE_ID}",
+        headers=_auth_headers(),
+        json={"description": "  Reliable plumbing and repairs  "},
+    )
+    assert response.status_code == 200
+    assert response.json()["service"]["title"] == "Pipe Repair"
+    assert response.json()["service"]["description"] == "  Reliable plumbing and repairs  "
+
+
+@pytest.mark.parametrize("title", ["  ", " \t\n "])
+def test_create_rejects_blank_title_without_mutation(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    title: str,
+) -> None:
+    before_services = deepcopy(fake_client.tables["services"].rows)
+    before_search = deepcopy(fake_client.tables["search_documents"].rows)
+
+    response = services_client.post(
+        "/vendor/services",
+        headers=_auth_headers(),
+        json={"category": "cleaning", "title": title, "status": "draft"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+    assert fake_client.tables["services"].rows == before_services
+    assert fake_client.tables["search_documents"].rows == before_search
+
+
+@pytest.mark.parametrize("title", ["  ", None])
+def test_update_rejects_empty_title_without_mutation(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    title: str | None,
+) -> None:
+    before_services = deepcopy(fake_client.tables["services"].rows)
+    before_search = deepcopy(fake_client.tables["search_documents"].rows)
+
+    response = services_client.patch(
+        f"/vendor/services/{SERVICE_ACTIVE_ID}",
+        headers=_auth_headers(),
+        json={"title": title},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+    assert fake_client.tables["services"].rows == before_services
+    assert fake_client.tables["search_documents"].rows == before_search
+
+
+def test_update_requires_correction_of_legacy_blank_title(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    draft = next(
+        row for row in fake_client.tables["services"].rows if row["id"] == SERVICE_DRAFT_ID
+    )
+    draft["title"] = " "
+    before_service = deepcopy(draft)
+    before_search = deepcopy(fake_client.tables["search_documents"].rows)
+
+    rejected = services_client.patch(
+        f"/vendor/services/{SERVICE_DRAFT_ID}",
+        headers=_auth_headers(),
+        json={"status": "active"},
+    )
+    assert rejected.status_code == 422
+    assert rejected.json()["error"]["code"] == "validation_error"
+    assert draft == before_service
+    assert fake_client.tables["search_documents"].rows == before_search
+
+    corrected = services_client.patch(
+        f"/vendor/services/{SERVICE_DRAFT_ID}",
+        headers=_auth_headers(),
+        json={"title": "Hair styling"},
+    )
+    assert corrected.status_code == 200
+    assert draft["title"] == "Hair styling"
+
+
+def test_create_and_update_trim_valid_multilingual_titles(services_client: TestClient) -> None:
+    create = services_client.post(
+        "/vendor/services",
+        headers=_auth_headers(),
+        json={"category": "home-services", "title": "  Kukonza mapaipi  ", "status": "draft"},
+    )
+    assert create.status_code == 200
+    service = create.json()["service"]
+    assert service["title"] == "Kukonza mapaipi"
+
+    update = services_client.patch(
+        f"/vendor/services/{service['id']}",
+        headers=_auth_headers(),
+        json={"title": "  Réparation des tuyaux  "},
+    )
+    assert update.status_code == 200
+    assert update.json()["service"]["title"] == "Réparation des tuyaux"
 
 
 def test_vendor_create_and_list(services_client: TestClient) -> None:
