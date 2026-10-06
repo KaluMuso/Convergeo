@@ -221,15 +221,18 @@ jobs:
           pnpm --filter customer exec vitest run lib/ci-perf-harness.test.ts lib/ci-perf-proxy.test.ts lib/ci-perf-media.test.ts lib/ci-perf-content-snapshot.test.ts lib/api-base-url.test.ts
           pnpm --filter @vergeo/ui exec vitest run src/media/cloudinary-url.test.ts
 
-      - name: Install pinned Chrome for Testing
-        # Official Puppeteer revision; no custom archive or sandbox bypass.
+      - name: Acquire Chrome for Testing and verify installed Chrome
+        # Puppeteer's download remains pinned; hosted Lighthouse uses the
+        # preinstalled Google package from the Ubuntu 24.04 runner image.
         run: |
           pnpm exec puppeteer browsers install chrome
           test -x /opt/google/chrome/chrome
-          chrome_version="$(/opt/google/chrome/chrome --product-version)"
-          test "$chrome_version" = "154.0.8037.57"
           chrome_package_owner="$(dpkg-query -S /opt/google/chrome/chrome)"
           test "$chrome_package_owner" = "google-chrome-stable: /opt/google/chrome/chrome"
+          chrome_version="$(/opt/google/chrome/chrome --product-version)"
+          test "$chrome_version" = "154.0.8037.97"
+          chrome_package_version="$(dpkg-query -W -f='${Version}' google-chrome-stable)"
+          test "$chrome_package_version" = "154.0.8037.97-1"
 
       - name: Start production server
         run: |

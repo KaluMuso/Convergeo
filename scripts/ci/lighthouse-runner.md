@@ -9,15 +9,22 @@ runs offline contract tests. Node remains 22 (the selected packages require at l
 The hosted performance job uses GitHub's Ubuntu 24.04 image and its installed
 Google Chrome at `/opt/google/chrome/chrome`, selected only for the Lighthouse
 step through `PUPPETEER_EXECUTABLE_PATH`. Before collection, the job requires
-that executable to belong to `google-chrome-stable` and report exactly
-`154.0.8037.57`. A mismatch fails the job without selecting another browser.
+that executable to belong to `google-chrome-stable`, report exactly
+`154.0.8037.97`, and have installed package version `154.0.8037.97-1`.
+A mismatch fails the job without installing a package or selecting another browser.
+This pin follows [Google's Linux Stable release](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop.html),
+[GitHub's Ubuntu 24.04 image update](https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327),
+and [Google's Debian package index](https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz).
 The official Puppeteer-pinned Chrome for Testing download remains required;
 local runs continue to select it by default. The hosted selection uses the
 installed Chrome's normal sandbox and stock host policy without moving binaries
-or changing policy. Standard Chrome and Chrome for Testing are distinct browser
-distributions: matching versions do not establish runtime or score equivalence.
-The installed variant requires independent browser and full-route qualification
-with the unchanged budgets; hosted image version drift deliberately fails closed.
+or changing policy. Puppeteer's Chrome for Testing revision is `154.0.8037.57`;
+hosted Lighthouse uses the distinct installed `154.0.8037.97` package.
+Browser launch and all five routes must pass the unchanged budgets. The workflow
+collects Lighthouse only for the candidate and applies absolute assertions;
+its base-build comparison covers bundles only. Earlier `154.0.8037.57` scores
+are not a relative baseline for this browser. Any future Lighthouse comparison
+must measure base and candidate with the same `154.0.8037.97` runtime and settings.
 
 `lighthouserc.json` remains the policy source. This migration does not change its
 five URLs, three runs per URL, mobile screen/network/CPU settings, thresholds,
