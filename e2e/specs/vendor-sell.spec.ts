@@ -1,8 +1,11 @@
-import { requireVendorBaseUrl, urlOn, vendorOtpReady } from "../fixtures/env";
+import { requireVendorBaseUrl, urlOn, vendorOtp, vendorOtpReady } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
+import { missingOutboundApproval } from "../fixtures/outbound-approval";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+
+test.use({ serviceWorkers: "block" });
 
 /**
  * Critical path (vendor app, separate origin): approved-vendor fixture →
@@ -28,14 +31,18 @@ test.describe("vendor · sell", () => {
     // letting the customer origin stand in for the vendor app.
     const vendorOrigin = requireVendorBaseUrl();
 
-    if (!vendorOtpReady()) {
+    const missingApproval = missingOutboundApproval("otp", process.env, {
+      persona: "vendor",
+      recipientPhone: vendorOtp.testPhone,
+    });
+    if (!vendorOtpReady() || missingApproval.length) {
       // Vendor app login surface (separate origin) — asserted reachable even
       // when the authenticated leg is gated off.
       await page.goto(urlOn(vendorOrigin, "/login"));
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "vendor authenticated sell flow (list -> receive order -> ship)",
-        fixtures: ["E2E_VENDOR_TEST_OTP"],
+        fixtures: ["E2E_VENDOR_TEST_OTP", ...missingApproval],
       });
       // Without this the order state machine is never exercised end to end, so
       // a certification run must not report success.

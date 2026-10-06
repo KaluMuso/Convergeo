@@ -169,6 +169,10 @@ jobs:
       # reset is a guarded, once-per-run CLI step below — not a remotely
       # callable mutation endpoint. E2E_TICKET_PIN is minted by that step and
       # injected via GITHUB_ENV after masking; it is never a stored secret.
+      # Provider credentials are not approval. Run-scoped provider and recipient
+      # approval variables are deliberately NOT mapped into this workflow.
+      # The outbound preflight keeps checkout and OTP closed until a separate,
+      # exact target/recipient authorization is wired by an owner.
       # Lenco sandbox pay leg — founder gate F9b. Absent secrets => leg skips.
       LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
       LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
@@ -441,6 +445,7 @@ jobs:
         if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         env:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
           E2E_CUSTOMER_TEST_OTP: ${{ secrets.E2E_CUSTOMER_TEST_OTP }}
           E2E_VENDOR_TEST_OTP: ${{ secrets.E2E_VENDOR_TEST_OTP }}
@@ -527,7 +532,9 @@ jobs:
           FOCUS_SPECS: ${{ steps.focus.outputs.specs }}
           # Buyer-scoped, read-only paid-ticket linkage proof; never job-wide.
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
         # Playwright has a 12-minute global timeout (matrix bound to 66
         # project-test instances — see fixtures/spec-classification.ts), but
         # retain an independent process deadline so a stuck runner cannot

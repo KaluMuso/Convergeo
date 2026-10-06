@@ -3,10 +3,17 @@ import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
 import { customerOtp, customerOtpReady, lenco, path, whatsappMockReady } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
+import {
+  guardApprovedOtpRequests,
+  guardApprovedPaymentRequests,
+  missingOutboundApproval,
+} from "../fixtures/outbound-approval";
 import { captureSearchStateOnFailure } from "../fixtures/search-diagnostics";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 import { expectWhatsAppMessage } from "../fixtures/whatsapp";
+
+test.use({ serviceWorkers: "block" });
 
 /**
  * Critical path: browse → PDP → cart → the REAL four-step checkout → MoMo pay
@@ -26,11 +33,9 @@ import { expectWhatsAppMessage } from "../fixtures/whatsapp";
  * unchanged and still enforced in critical-path.spec.ts and
  * browse-journey.spec.ts.
  *
- * The live Lenco sandbox charge (and the confirmation/WhatsApp legs that
- * depend on a settled payment) remain ENV-GATED behind `LENCO_SANDBOX` + creds
- * (founder gate F9b). Without them the spec asserts up to the real
- * pay-initiation boundary — which is now an actually-placed order sitting on
- * the USSD wait — and skips the charge with an annotation.
+ * Order placement can already initiate a MoMo push. It is gated before the
+ * wizard by run-scoped sandbox, target and payer approvals; missing approval
+ * skips this optional journey before an order or provider call is made.
  */
 test.describe("shop · checkout · momo", () => {
   test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
@@ -47,6 +52,30 @@ test.describe("shop · checkout · momo", () => {
       test.skip(true, gate.reason);
       return;
     }
+
+    // completeCheckout places an order and can POST /payments/retry. Sandbox
+    // credentials alone are not approval to contact a provider or recipient.
+    const missingApproval = [
+      ...new Set([
+        ...missingOutboundApproval("momo"),
+        ...missingOutboundApproval("otp", process.env, {
+          persona: "customer",
+          recipientPhone: customerOtp.testPhone,
+        }),
+      ]),
+    ];
+    if (missingApproval.length) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "approved sandbox MoMo checkout",
+        fixtures: missingApproval,
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+    await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
+    await guardApprovedPaymentRequests(page, "momo");
 
     // 1. Browse home.
     await page.goto(path("/"));
@@ -106,7 +135,7 @@ test.describe("shop · checkout · momo", () => {
     // MoMo is not COD: the COD surface must never appear on this journey.
     await expect(page.getByTestId("payment-cod")).toHaveCount(0);
 
-    // ── ENV-GATED: live Lenco sandbox charge (F9b) ───────────────────────────
+    // ── Provider settlement assertion (approval already checked before placement) ──
     if (!sandboxEnabled()) {
       const gate = resolveGate({
         kind: "OPTIONAL_GATE",

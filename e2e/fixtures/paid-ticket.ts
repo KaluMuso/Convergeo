@@ -1,7 +1,13 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./scanner-artifact-test";
-import { customerOtp, flag, lenco, path, str } from "./env";
+import { customerOtp, flag, lenco, path, str, vendorOtp } from "./env";
 import { assertNoAccidentalRealMoney } from "./payment-fixtures";
+import {
+  assertOutboundApproval,
+  guardApprovedOtpRequests,
+  guardApprovedPaymentRequests,
+  missingOutboundApproval,
+} from "./outbound-approval";
 import { nationalNumberFromE164 } from "./phone";
 import { assertFixtureVersion, SEED } from "./seed";
 import { assertPaidTicketSpine, type PaidTicketSpine } from "./paid-ticket-contract";
@@ -11,14 +17,25 @@ export const PAID_TICKET_TYPE_ID = "e3000000-0000-4000-8000-000000000001";
 
 export function missingPaidPrerequisites(): string[] {
   return [
-    ...(!flag("E2E_PAID_TICKET_PROVIDER_APPROVED") ? ["E2E_PAID_TICKET_PROVIDER_APPROVED"] : []),
-    ...(!lenco.enabled ? ["LENCO_SANDBOX"] : []),
-    ...(!lenco.secretKey ? ["LENCO_SANDBOX_SECRET_KEY"] : []),
-    ...(!lenco.testMomoNumber ? ["LENCO_SANDBOX_MOMO_NUMBER"] : []),
-    ...(!str("E2E_CUSTOMER_TEST_OTP") ? ["E2E_CUSTOMER_TEST_OTP"] : []),
-    ...(!str("E2E_VENDOR_TEST_OTP") ? ["E2E_VENDOR_TEST_OTP"] : []),
-    ...(!str("STAGING_SUPABASE_URL") ? ["STAGING_SUPABASE_URL"] : []),
-    ...(!str("STAGING_SUPABASE_ANON_KEY") ? ["STAGING_SUPABASE_ANON_KEY"] : []),
+    ...new Set([
+      ...missingOutboundApproval("paid-ticket"),
+      ...missingOutboundApproval("otp", process.env, {
+        persona: "customer",
+        recipientPhone: customerOtp.testPhone,
+      }),
+      ...missingOutboundApproval("otp", process.env, {
+        persona: "vendor",
+        recipientPhone: vendorOtp.testPhone,
+      }),
+      ...(!flag("E2E_PAID_TICKET_PROVIDER_APPROVED") ? ["E2E_PAID_TICKET_PROVIDER_APPROVED"] : []),
+      ...(!lenco.enabled ? ["LENCO_SANDBOX"] : []),
+      ...(!lenco.secretKey ? ["LENCO_SANDBOX_SECRET_KEY"] : []),
+      ...(!lenco.testMomoNumber ? ["LENCO_SANDBOX_MOMO_NUMBER"] : []),
+      ...(!str("E2E_CUSTOMER_TEST_OTP") ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+      ...(!str("E2E_VENDOR_TEST_OTP") ? ["E2E_VENDOR_TEST_OTP"] : []),
+      ...(!str("STAGING_SUPABASE_URL") ? ["STAGING_SUPABASE_URL"] : []),
+      ...(!str("STAGING_SUPABASE_ANON_KEY") ? ["STAGING_SUPABASE_ANON_KEY"] : []),
+    ]),
   ];
 }
 
@@ -32,6 +49,7 @@ function payerE164(value: string): string {
 
 /** Choose the real paid type in the public event picker and capture its minted order. */
 export async function loginPaidBuyer(page: Page): Promise<void> {
+  await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
   assertFixtureVersion();
   const destination = path(`/e/${SEED.event.slug}`);
   await page.goto(path(`/login?next=${encodeURIComponent(destination)}`));
@@ -51,6 +69,8 @@ export async function loginPaidBuyer(page: Page): Promise<void> {
 export async function buyPaidTicket(
   page: Page,
 ): Promise<{ purchase: Purchase; bearer: string; apiOrigin: string }> {
+  assertOutboundApproval("paid-ticket");
+  await guardApprovedPaymentRequests(page, "paid-ticket");
   await page.goto(path(`/e/${SEED.event.slug}`));
   const picker = page.locator('section[aria-labelledby^="ticket-picker-"]');
   await expect(picker).toBeVisible();
@@ -103,6 +123,7 @@ export async function settleSandboxTicket(
 ): Promise<PaidTicketSpine["payment"]> {
   if (!flag("E2E_PAID_TICKET_PROVIDER_APPROVED"))
     throw new Error("paid-ticket: explicit provider approval required");
+  assertOutboundApproval("paid-ticket", { apiOrigin });
   assertNoAccidentalRealMoney();
   await json(`${apiOrigin}/payments/retry`, bearer, undefined, {
     method: "POST",

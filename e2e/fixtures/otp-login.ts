@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 import { path, requireVendorBaseUrl, urlOn, vendorOtp } from "./env";
 import { nationalNumberFromE164 } from "./phone";
+import { guardApprovedOtpRequests } from "./outbound-approval";
 
 export type LoginVendorViaOtpOptions = {
   /**
@@ -37,6 +38,7 @@ export async function loginVendorViaOtp(
   page: Page,
   options: LoginVendorViaOtpOptions = {},
 ): Promise<void> {
+  await guardApprovedOtpRequests(page, "vendor", vendorOtp.testPhone);
   const vendorOrigin = requireVendorBaseUrl();
   const destination = options.next ?? path("/services");
 

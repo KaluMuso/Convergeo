@@ -1,6 +1,14 @@
-import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
+import {
+  path,
+  requireVendorBaseUrl,
+  ticketPin,
+  urlOn,
+  vendorOtp,
+  vendorOtpReady,
+} from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
+import { missingOutboundApproval } from "../fixtures/outbound-approval";
 import {
   buyPaidTicket,
   loginPaidBuyer,
@@ -17,6 +25,7 @@ import {
 import { SEED } from "../fixtures/seed";
 
 test.use(SCANNER_ARTIFACT_POLICY);
+test.use({ serviceWorkers: "block" });
 
 /** Both paths use the same real organiser admission surface, with different tickets. */
 async function scanTicket(
@@ -149,10 +158,15 @@ test.describe("event · ticket lifecycle", () => {
     await expect(page).toHaveURL(new RegExp(`/e/${SEED.event.slug}`));
     const scannerPin = ticketPin();
     const scanRoute = path(`/events/${SEED.event.id}/scan`);
-    if (!vendorOtpReady() || !scannerPin) {
+    const missingApproval = missingOutboundApproval("otp", process.env, {
+      persona: "vendor",
+      recipientPhone: vendorOtp.testPhone,
+    });
+    if (!vendorOtpReady() || !scannerPin || missingApproval.length) {
       const missing: string[] = [];
       if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
       if (!scannerPin) missing.push("E2E_TICKET_PIN");
+      missing.push(...missingApproval);
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "free RSVP scanner verify + duplicate-reject",

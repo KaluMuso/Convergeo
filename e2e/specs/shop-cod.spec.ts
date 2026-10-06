@@ -1,9 +1,16 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
-import { customerOtpReady, path } from "../fixtures/env";
+import { customerOtp, customerOtpReady, path } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
+import {
+  guardApprovedOtpRequests,
+  guardCodWithoutProvider,
+  missingCodApproval,
+} from "../fixtures/outbound-approval";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+
+test.use({ serviceWorkers: "block" });
 
 /**
  * Critical path: browse → PDP → cart → the REAL four-step checkout →
@@ -38,12 +45,17 @@ test.describe("shop · cash on delivery", () => {
     const checkoutFailures: string[] = [];
     page.on("response", (response) => {
       if (response.status() < 400 || !response.url().includes("/checkout/steps/fulfilment")) return;
-      void response.json().then((body: unknown) => {
-        const record = body && typeof body === "object" ? body as Record<string, unknown> : {};
-        const error = record.error && typeof record.error === "object"
-          ? record.error as Record<string, unknown> : record;
-        checkoutFailures.push(`${response.status()}:${String(error.code ?? "unknown")}`);
-      }).catch(() => checkoutFailures.push(`${response.status()}:unreadable`));
+      void response
+        .json()
+        .then((body: unknown) => {
+          const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+          const error =
+            record.error && typeof record.error === "object"
+              ? (record.error as Record<string, unknown>)
+              : record;
+          checkoutFailures.push(`${response.status()}:${String(error.code ?? "unknown")}`);
+        })
+        .catch(() => checkoutFailures.push(`${response.status()}:unreadable`));
     });
     // Checkout is authenticated. The same fixture is already REQUIRED_STRICT at
     // auth-otp.spec.ts, so a certification run cannot silently lose customer-OTP
@@ -61,6 +73,20 @@ test.describe("shop · cash on delivery", () => {
       return;
     }
 
+    const missingApproval = missingCodApproval(customerOtp.testPhone);
+    if (missingApproval.length) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "approved customer OTP for COD checkout",
+        fixtures: missingApproval,
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+    await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
+    await guardCodWithoutProvider(page, customerOtp.testPhone);
+
     // Open the seeded PDP and add to cart.
     await page.goto(path(`/p/${SEED.product.slug}`));
     await expect(page.getByTestId("pdp-buy-box")).toBeVisible();
@@ -76,7 +102,9 @@ test.describe("shop · cash on delivery", () => {
 
     // The real wizard, end to end.
     const run = await completeCheckout(page, { payment: "cod" }).catch((error: unknown) => {
-      throw new Error(`COD checkout failed; fulfilment API=${checkoutFailures.join(",")}; ${String(error)}`);
+      throw new Error(
+        `COD checkout failed; fulfilment API=${checkoutFailures.join(",")}; ${String(error)}`,
+      );
     });
     expect(run.payment).toBe("cod");
     expect(run.fulfilment.length).toBeGreaterThan(0);

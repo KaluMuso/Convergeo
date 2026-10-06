@@ -9,6 +9,7 @@
  */
 
 import { SEED } from "../../e2e/fixtures/seed.generated.ts";
+import { missingOutboundApproval } from "../../e2e/fixtures/outbound-approval.ts";
 
 const STRICT_CERT_MODES = new Set(["integrated-staging", "production-readiness"]);
 
@@ -98,6 +99,7 @@ async function verifyTestOtpPersona({
   const authPhone = toAuthPhone(phone);
   const sendRes = await fetchImpl(`${supabaseUrl}/auth/v1/otp`, {
     method: "POST",
+    redirect: "error",
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
@@ -119,6 +121,7 @@ async function verifyTestOtpPersona({
 
   const verifyRes = await fetchImpl(`${supabaseUrl}/auth/v1/verify`, {
     method: "POST",
+    redirect: "error",
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
@@ -162,6 +165,26 @@ export async function runPreflight(env = process.env, options = {}) {
       verdict: "FAIL",
       detail:
         "SUPABASE_URL and SUPABASE_ANON_KEY (or STAGING_* equivalents) are required for test-OTP preflight",
+    };
+  }
+
+  // Validate the complete approved recipient set and sandbox target before
+  // the first /auth/v1/otp POST. Test-OTP credentials do not imply consent.
+  const missingApproval = [
+    ...new Set(
+      personas.flatMap((persona) =>
+        missingOutboundApproval("otp", env, {
+          persona: persona.label,
+          recipientPhone: persona.phone,
+          authOrigin: supabaseUrl,
+        }),
+      ),
+    ),
+  ];
+  if (missingApproval.length) {
+    return {
+      verdict: "FAIL",
+      detail: `outbound OTP approval required: ${missingApproval.join(", ")}`,
     };
   }
 

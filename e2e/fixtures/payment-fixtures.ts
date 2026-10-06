@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 import { BASE_URL, customerOtp, customerOtpReady, flag, lencoSandboxReady, path, str } from "./env";
 import { nationalNumberFromE164 } from "./phone";
+import { guardApprovedOtpRequests } from "./outbound-approval";
 
 import type { Page, Route } from "@playwright/test";
 
@@ -101,11 +102,15 @@ export async function installMockBuyerSession(page: Page): Promise<void> {
     // The private HTTPS acceptance fixture has real local GoTrue. Use its
     // supported UI and OTP session; only payment status remains mocked below.
     if (!customerOtpReady()) throw new Error("private payment fixture requires customer OTP");
+    await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
     await page.goto(path("/login"));
     const phoneInput = page.getByRole("textbox", { name: /phone|mobile/i });
     await expect(phoneInput).toBeVisible();
     await phoneInput.fill(nationalNumberFromE164(customerOtp.testPhone));
-    await page.getByRole("button", { name: /continue|send|next|get code/i }).first().click();
+    await page
+      .getByRole("button", { name: /continue|send|next|get code/i })
+      .first()
+      .click();
     await page.waitForURL(/\/otp(\?|$)/, { timeout: 20_000 });
     await page.getByRole("textbox", { name: "Digit 1 of 6" }).click();
     for (const digit of customerOtp.staticCode.slice(0, 6).split("")) {

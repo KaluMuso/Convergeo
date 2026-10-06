@@ -71,6 +71,13 @@ Verify with:
 node scripts/ci/preflight-e2e-test-otp.mjs
 ```
 
+This command POSTs `/auth/v1/otp`, so it now fails before network access unless
+the exact synthetic customer/vendor recipients, sandbox Auth project, and current
+run/attempt have explicit outbound approval. Test-OTP secrets alone are not
+consent. The hosted E2E workflow does not inject approval variables; an owner
+must authorize and wire a bounded run separately before using this command
+against hosted Auth.
+
 Real SMS integration belongs in a separate focused staging smoke against a
 designated non-synthetic number — never in the strict E2E certification path.
 
