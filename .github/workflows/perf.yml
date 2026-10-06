@@ -37,6 +37,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify hosted Chrome before setup
+        run: |
+          bash scripts/ci/check_hosted_chrome.test.sh
+          bash scripts/ci/check_hosted_chrome.sh
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
@@ -226,13 +231,7 @@ jobs:
         # preinstalled Google package from the Ubuntu 24.04 runner image.
         run: |
           pnpm exec puppeteer browsers install chrome
-          test -x /opt/google/chrome/chrome
-          chrome_package_owner="$(dpkg-query -S /opt/google/chrome/chrome)"
-          test "$chrome_package_owner" = "google-chrome-stable: /opt/google/chrome/chrome"
-          chrome_version="$(/opt/google/chrome/chrome --product-version)"
-          test "$chrome_version" = "154.0.8037.97"
-          chrome_package_version="$(dpkg-query -W -f='${Version}' google-chrome-stable)"
-          test "$chrome_package_version" = "154.0.8037.97-1"
+          bash scripts/ci/check_hosted_chrome.sh
 
       - name: Start production server
         run: |

@@ -10,8 +10,12 @@ The hosted performance job uses GitHub's Ubuntu 24.04 image and its installed
 Google Chrome at `/opt/google/chrome/chrome`, selected only for the Lighthouse
 step through `PUPPETEER_EXECUTABLE_PATH`. Before collection, the job requires
 that executable to belong to `google-chrome-stable`, report exactly
-`154.0.8037.97`, and have installed package version `154.0.8037.97-1`.
-A mismatch fails the job without installing a package or selecting another browser.
+`154.0.8037.97`, and have installed package version `154.0.8037.97-1` on
+image `ubuntu24/20261004.327.1`. This check runs immediately after checkout
+and again after Chrome for Testing acquisition, recording only fixed identity
+labels. The older `20260927.320.1` image with Chrome `154.0.8037.57` and all
+unknown combinations fail before database setup or app build. A mismatch fails
+without installing a package or selecting another browser.
 This pin follows [Google's Linux Stable release](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop.html),
 [GitHub's Ubuntu 24.04 image update](https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327),
 and [Google's Debian package index](https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz).
