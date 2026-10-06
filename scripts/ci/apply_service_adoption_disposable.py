@@ -22,8 +22,10 @@ ROOT = adoption.ROOT
 PURPOSE = "LOCAL_DISPOSABLE_ADOPTION_REHEARSAL_ONLY"
 DATABASE_RE = re.compile(r"ci_adoption_[a-f0-9]{12}_[a-z0-9_]{1,32}\Z")
 MARKER_PREFIX = "CONVERGEO_DISPOSABLE_ADOPTION_REHEARSAL:"
+LOCAL_CONTAINER_RE = re.compile(r"convergeo-synthetic-history-[a-f0-9]{12}\Z")
 VERSION = adoption.ADOPTION.split("_", 1)[0]
 SIGNATURE = "public.create_service_payment_obligations(uuid,uuid,uuid,bigint,bigint)"
+SYNTHETIC_BASELINE_COUNT = 114
 
 
 def digest(data: bytes) -> str:
@@ -33,7 +35,10 @@ def digest(data: bytes) -> str:
 def fixture_binding() -> dict[str, str]:
     """Bind the local fixture or the exact repository job's explicit service CID."""
     container = os.environ.get("ADOPTION_REHEARSAL_POSTGRES_CONTAINER", "convergeo-continuity-pg")
-    hosted_disposable = container != "convergeo-continuity-pg"
+    hosted_disposable = (
+        container != "convergeo-continuity-pg"
+        and LOCAL_CONTAINER_RE.fullmatch(container) is None
+    )
     if hosted_disposable:
         # No generic container/DSN escape hatch: alternate IDs are allowed only
         # in the existing exact-source repository disposable GitHub job.
@@ -113,17 +118,80 @@ def inventory(migrations: Path) -> list[dict[str, str]]:
 
 
 def history_rows(migrations: Path) -> list[dict[str, Any]]:
-    """The fixture ledger records SQL actually applied, never fabricated aliases.
+    """SYNTHETIC ONLY six-column ledger, never an installed-history receipt.
 
-    The adoption file is one original DO statement. Keeping its original bytes
-    in statements[1] preserves truthful authority input, not the guarded wrapper.
-    Other fixture entries keep their entire executed original file as one array
-    element; this is not a claim about the segmentation of historical CLI rows.
+    The first 114 files are the unchanged b6947e00 repository baseline. Their
+    made-up metadata and array cases model preservation risk, not historical
+    Supabase CLI statement segmentation. Later rows retain each executed file.
     """
-    return [
-        {"version": row["version"], "name": row["name"], "statements": [path.read_text()]}
-        for row, path in zip(inventory(migrations), sorted(migrations.glob("*.sql")), strict=True)
-    ]
+    files = sorted(migrations.glob("*.sql"))
+    rows = inventory(migrations)
+    if len(files) < SYNTHETIC_BASELINE_COUNT:
+        raise ValueError("Synthetic baseline requires 114 repository SQL files")
+    result: list[dict[str, Any]] = []
+    for index, (row, path) in enumerate(zip(rows, files, strict=True)):
+        statements: list[str] | None = [path.read_text()]
+        statements_lower: int | None = 1
+        rollback: list[str] | None = None
+        rollback_lower: int | None = None
+        if index < SYNTHETIC_BASELINE_COUNT:
+            if index == 0:
+                statements, statements_lower = None, None
+            elif index == 1:
+                statements, statements_lower = [], None
+            elif index == 2:
+                statements_lower = 0
+            if index % 4 == 0:
+                rollback, rollback_lower = None, None
+            elif index % 3 == 0:
+                rollback, rollback_lower = [], None
+            elif index % 3 == 1:
+                rollback, rollback_lower = ["-- synthetic rollback marker"], 1
+            else:
+                rollback, rollback_lower = ["-- synthetic rollback marker"], -2
+        result.append({
+            "version": row["version"], "name": row["name"],
+            "statements": statements, "created_by": None if index % 4 == 0 else "synthetic-fixture",
+            "idempotency_key": None if index % 5 == 0 else "synthetic-" + row["version"],
+            "rollback": rollback,
+            "statements_bounds": (
+                f"[{statements_lower}:{statements_lower + len(statements) - 1}]"
+                if statements and statements_lower is not None else None
+            ),
+            "rollback_bounds": (
+                f"[{rollback_lower}:{rollback_lower + len(rollback) - 1}]"
+                if rollback and rollback_lower is not None else None
+            ),
+        })
+    return result
+
+
+def text_array_literal(values: list[str] | None, bounds: str | None) -> str:
+    """Render fixture text[] without discarding null, empty, or lower bounds."""
+    if values is None:
+        return "NULL::text[]"
+    if not values:
+        return "ARRAY[]::text[]"
+    body = ",".join('"' + item.replace("\\", "\\\\").replace('"', '\\"') + '"' for item in values)
+    return literal((bounds + "=" if bounds else "") + "{" + body + "}") + "::text[]"
+
+
+def history_insert(row: dict[str, Any]) -> str:
+    """Insert the full fixture shape, including exact array bounds."""
+    def scalar(value: str | None) -> str:
+        return "NULL::text" if value is None else literal(value)
+
+    return (
+        "INSERT INTO supabase_migrations.schema_migrations"
+        "(version,statements,name,created_by,idempotency_key,rollback) VALUES ("
+        + ",".join((
+            literal(row["version"]),
+            text_array_literal(row["statements"], row["statements_bounds"]),
+            scalar(row["name"]), scalar(row["created_by"]),
+            scalar(row["idempotency_key"]),
+            text_array_literal(row["rollback"], row["rollback_bounds"]),
+        )) + ");\n"
+    )
 
 
 def plan(database: str, marker: str, migrations: Path) -> dict[str, Any]:
@@ -209,7 +277,8 @@ BEGIN
        ORDER BY attnum) FROM pg_attribute
      WHERE attrelid='supabase_migrations.schema_migrations'::regclass
        AND attnum>0 AND NOT attisdropped) IS DISTINCT FROM
-     '[ ["version","text"], ["statements","text[]"], ["name","text"] ]'::jsonb
+     '[ ["version","text"], ["statements","text[]"], ["name","text"],
+        ["created_by","text"], ["idempotency_key","text"], ["rollback","text[]"] ]'::jsonb
     OR NOT EXISTS(SELECT 1 FROM pg_attribute
         WHERE attrelid='supabase_migrations.schema_migrations'::regclass
           AND attname='version' AND attnotnull)
@@ -217,10 +286,17 @@ BEGIN
         WHERE conrelid='supabase_migrations.schema_migrations'::regclass
           AND contype='p' AND conkey=ARRAY[(SELECT attnum FROM pg_attribute
             WHERE attrelid='supabase_migrations.schema_migrations'::regclass
-              AND attname='version')]::smallint[]) THEN
+              AND attname='version')]::smallint[])
+    OR NOT EXISTS(SELECT 1 FROM pg_constraint
+        WHERE conrelid='supabase_migrations.schema_migrations'::regclass
+          AND contype='u' AND conkey=ARRAY[(SELECT attnum FROM pg_attribute
+            WHERE attrelid='supabase_migrations.schema_migrations'::regclass
+              AND attname='idempotency_key')]::smallint[]) THEN
    RAISE EXCEPTION 'Unreviewed migration ledger schema';
  END IF;
- SELECT coalesce(jsonb_agg(to_jsonb(m) ORDER BY version),'[]'::jsonb)
+ SELECT coalesce(jsonb_agg(to_jsonb(m) || jsonb_build_object(
+   'statements_bounds',array_dims(m.statements),
+   'rollback_bounds',array_dims(m.rollback)) ORDER BY version),'[]'::jsonb)
    INTO actual FROM supabase_migrations.schema_migrations m;
  SELECT coalesce(jsonb_agg(value ORDER BY ordinal),'[]'::jsonb) INTO prefix
    FROM jsonb_array_elements(expected) WITH ORDINALITY e(value,ordinal)
@@ -248,15 +324,7 @@ DO $restoration_check$ DECLARE actual jsonb; BEGIN
  END IF;
 END; $restoration_check$;
 """
-    record = (
-        "INSERT INTO supabase_migrations.schema_migrations(version,statements,name) VALUES ("
-        + literal(row["version"])
-        + ",ARRAY["
-        + literal(row["statements"][0])
-        + "],"
-        + literal(row["name"])
-        + ");\n"
-    )
+    record = history_insert(row)
     return (
         preflight
         + guarded_adoption

@@ -22,6 +22,9 @@ whose database comment identifies this rehearsal. It also verifies the existing
 owned `convergeo-continuity-pg` container, its pinned image identity and exclusive
 `127.0.0.1:54322` binding. No production DSN or hosted target option exists.
 Connection-indirection environment variables are rejected.
+For a fresh local run, a `convergeo-synthetic-history-<12 hex>` container with
+the same pinned image and loopback port is also accepted. This is a disposable
+fixture container, never a shared Supabase target.
 
 The repository's disposable GitHub financial job may instead supply its actual
 `${{ job.services.postgres.id }}` as `ADOPTION_REHEARSAL_POSTGRES_CONTAINER`.
@@ -43,10 +46,11 @@ One psql connection uses `-X`, `--single-transaction` and `ON_ERROR_STOP=1`.
 Within that transaction it:
 
 1. Verifies the target database marker, server binding and reviewed migration
-   ledger schema. The fixture uses the Supabase-compatible `version text NOT
-NULL PRIMARY KEY`, `statements text[]`, `name text` shape. Missing history,
-   unknown columns/types/primary key, aliases, holes, changed SQL or unexpected
-   future versions fail closed.
+   ledger schema. The **synthetic** fixture has `version text NOT NULL PRIMARY
+KEY`, `statements text[]`, `name text`, `created_by text`, `idempotency_key
+text UNIQUE`, and `rollback text[]`. Missing history, unknown columns/types,
+   a missing key constraint, aliases, holes, changed row fields, changed array
+   bounds or unexpected future versions fail closed.
 2. Takes a transaction advisory lock and an exclusive lock on the history table,
    then compares the installed history to an exact prefix of the reviewed
    executed inputs. This ordering is repeated by competing wrapper connections.
@@ -69,9 +73,12 @@ The adoption file is a single original DO statement. Its `statements` array
 contains that exact original file text, and `name` is
 `adopt_existing_service_obligations`. The ledger does not claim that the temporary
 guard is the published migration, and is never inserted for failed adoption.
-All other local fixture rows record original SQL that this rehearsal actually
-executed; their whole-file array representation is **not evidence about physical
-equivalence or CLI statement segmentation of existing hosted ledger rows**.
+The first 114 source files match commit `b6947e0014d4e8171ff0bcf699f7146760dd656c`
+byte for byte. Their six-column ledger entries are **SYNTHETIC ONLY**: they
+include made-up metadata, null and empty arrays, and nondefault array bounds.
+The later fixture rows record original SQL executed by this rehearsal as one
+array element. Neither set is evidence about actual installed history, physical
+equivalence or CLI statement segmentation on any hosted target.
 
 ## Failure and concurrency behavior
 
@@ -107,7 +114,7 @@ obligation collision fixture. It clones only its own template, tests each
 challenge on separate databases, and drops only databases it created. It never
 starts a provider, changes a hosted database or runs a payment dispatch.
 
-The retained correction rehearsal has **23 passing runtime controls** on
+The earlier retained three-column correction rehearsal had **23 passing runtime controls** on
 PostgreSQL **17.6**, pgvector **0.8.0**:
 
 | Control                               | Native assertion                                                                                                                                                                                                                         |

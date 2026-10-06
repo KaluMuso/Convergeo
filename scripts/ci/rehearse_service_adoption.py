@@ -1,4 +1,4 @@
-"""Execute catalog, rollback, crash/retry and ledger controls on owned local PG.
+"""SYNTHETIC ONLY catalog, rollback, crash/retry and ledger controls on owned PG.
 
 Creates uniquely named databases, replays the real 127-input baseline and three
 F2 prerequisites, then exercises the immutable adoption boundary. Never contacts
@@ -48,6 +48,8 @@ class Rehearsal:
         evidence.mkdir(parents=True)
         self.evidence = evidence
         self.namespace = uuid4().hex[:12]
+        self.history = installer.history_rows(MIGRATIONS)
+        self.history_by_version = {row["version"]: row for row in self.history}
         self.created: list[str] = []
         self.fixtures: list[dict[str, Any]] = []
         self.checks: list[dict[str, Any]] = []
@@ -139,12 +141,26 @@ class Rehearsal:
         data = {}
         for table in (*TABLES, "supabase_migrations.schema_migrations"):
             qualified = table if "." in table else "public." + table
+            value = (
+                "to_jsonb(t) || jsonb_build_object("
+                "'statements_bounds',array_dims(t.statements),"
+                "'rollback_bounds',array_dims(t.rollback))"
+                if table == "supabase_migrations.schema_migrations" else "to_jsonb(t)"
+            )
+            ordering = "t.version" if table == "supabase_migrations.schema_migrations" else "to_jsonb(t)::text"
             data[qualified] = self.query(
                 database,
-                f"SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb) "
+                f"SELECT coalesce(jsonb_agg({value} ORDER BY {ordering}),'[]'::jsonb) "
                 f"FROM {qualified} t;",
             )
-        return {"catalog": catalog, "data": data}
+        ledger_bytes = self.query(
+            database,
+            "SELECT coalesce(jsonb_agg(jsonb_build_object("
+            "'version',version,'statements',encode(array_send(statements),'hex'),"
+            "'rollback',encode(array_send(rollback),'hex')) ORDER BY version),"
+            "'[]'::jsonb) FROM supabase_migrations.schema_migrations;",
+        )
+        return {"catalog": catalog, "data": data, "ledger_bytes": ledger_bytes}
 
     def bind(self, database: str) -> dict[str, Any]:
         bound = installer.plan(database, installer.MARKER_PREFIX + database, MIGRATIONS)
@@ -164,13 +180,9 @@ class Rehearsal:
         print(name + " PASS", flush=True)
 
     def apply_recorded(self, database: str, path: Path) -> None:
-        version, name = path.stem.split("_", 1)
+        version, _name = path.stem.split("_", 1)
         original = path.read_text()
-        record = (
-            "INSERT INTO supabase_migrations.schema_migrations(version,statements,name) VALUES ("
-        )
-        record += installer.literal(version) + ",ARRAY[" + installer.literal(original) + "],"
-        record += installer.literal(name) + ");"
+        record = installer.history_insert(self.history_by_version[version])
         # Historical inputs without their own BEGIN are recorded atomically by
         # --single-transaction. Files with BEGIN/COMMIT retain their exact bytes;
         # prefix preparation is disposable only, not a proposed shared installer.
@@ -274,7 +286,8 @@ class Rehearsal:
             database,
             """CREATE SCHEMA supabase_migrations;
           CREATE TABLE supabase_migrations.schema_migrations (
-            version text NOT NULL PRIMARY KEY, statements text[], name text);
+            version text NOT NULL PRIMARY KEY, statements text[], name text,
+            created_by text, idempotency_key text UNIQUE, rollback text[]);
           REVOKE ALL ON SCHEMA supabase_migrations FROM PUBLIC,anon,authenticated;
           REVOKE ALL ON supabase_migrations.schema_migrations FROM PUBLIC,anon,authenticated;
         """,
@@ -370,6 +383,14 @@ class Rehearsal:
 
     def verify_success(self, before: dict[str, Any], after: dict[str, Any]) -> None:
         assert before["catalog"] == after["catalog"], "Authority catalog changed"
+        assert after["ledger_bytes"][:len(before["ledger_bytes"])] == before["ledger_bytes"], (
+            "Previously installed array bytes changed"
+        )
+        assert after["data"]["supabase_migrations.schema_migrations"][
+            :len(before["data"]["supabase_migrations.schema_migrations"])
+        ] == before["data"]["supabase_migrations.schema_migrations"], (
+            "Previously installed six-column history changed"
+        )
         for table in TABLES:
             key = "public." + table
             if table not in {"checkout_groups", "service_payment_obligations", "audit_log"}:
@@ -414,9 +435,7 @@ class Rehearsal:
         ledger = after["data"]["supabase_migrations.schema_migrations"]
         adoption_rows = [row for row in ledger if row["version"] == installer.VERSION]
         assert len(adoption_rows) == 1
-        assert adoption_rows[0] == next(
-            row for row in installer.history_rows(MIGRATIONS) if row["version"] == installer.VERSION
-        )
+        assert adoption_rows[0] == self.history_by_version[installer.VERSION]
         assert len(ledger) == len(before["data"]["supabase_migrations.schema_migrations"]) + 1
 
     def success_and_resume(self, template: str, *, owner: bool = False) -> None:
@@ -625,6 +644,52 @@ class Rehearsal:
             ],
         )
 
+    def six_column_history_rejections(self, template: str) -> None:
+        """Challenge each new metadata field, array bounds, and unique constraint."""
+        challenges = (
+            ("statement_bounds", "UPDATE supabase_migrations.schema_migrations "
+             "SET statements=ARRAY[statements[0]] WHERE version='0003';", "Installed history differs"),
+            ("rollback_bounds", "UPDATE supabase_migrations.schema_migrations "
+             "SET rollback=ARRAY[rollback[-2]] WHERE version='0003';", "Installed history differs"),
+            ("rollback_value", "UPDATE supabase_migrations.schema_migrations "
+             "SET rollback=NULL WHERE version='0002';", "Installed history differs"),
+            ("created_by", "UPDATE supabase_migrations.schema_migrations "
+             "SET created_by='synthetic-drift' WHERE version='0002';", "Installed history differs"),
+            ("idempotency_key", "UPDATE supabase_migrations.schema_migrations "
+             "SET idempotency_key='synthetic-drift' WHERE version='0002';", "Installed history differs"),
+            ("unique_constraint", "ALTER TABLE supabase_migrations.schema_migrations "
+             "DROP CONSTRAINT schema_migrations_idempotency_key_key;", "Unreviewed migration ledger schema"),
+        )
+        for label, alteration, expected in challenges:
+            database = self.create("history_" + label, template=template)
+            bound = self.bind(database)
+            self.run(database, alteration, label + "-alter")
+            before = self.snapshot(database)
+            output = self.run(database, installer.render(bound, MIGRATIONS),
+                              label + "-reject", atomic=True, expected=1)
+            assert expected in output
+            after = self.snapshot(database)
+            assert before == after, label + " changed history or catalog on rejection"
+            self.save("history_" + label, before, after, assertions=[
+                "six-column history or array shape drift fails before adoption",
+                "atomic failure preserves exact metadata and array_send bytes",
+            ])
+        database = self.create("history_duplicate_key", template=template)
+        before = self.snapshot(database)
+        output = self.run(database,
+            "INSERT INTO supabase_migrations.schema_migrations "
+            "(version,statements,name,created_by,idempotency_key,rollback) "
+            "SELECT '99999999999999',statements,name,created_by,idempotency_key,rollback "
+            "FROM supabase_migrations.schema_migrations WHERE version='0002';",
+            "duplicate-idempotency-reject", atomic=True, expected=1)
+        assert "23505" in output
+        after = self.snapshot(database)
+        assert before == after
+        self.save("history_duplicate_key", before, after, assertions=[
+            "unique idempotency_key rejects duplicate synthetic history",
+            "failed insert leaves all six columns and array bytes unchanged",
+        ])
+
     def raw_collision(self, template: str) -> None:
         database = self.create("raw_collision", template=template)
         before = self.snapshot(database)
@@ -709,7 +774,7 @@ class Rehearsal:
         resumed = self.snapshot(database)
         assert completed == resumed
         actual = completed["data"]["supabase_migrations.schema_migrations"]
-        assert sorted(actual, key=lambda row: row["version"]) == installer.history_rows(MIGRATIONS)
+        assert sorted(actual, key=lambda row: row["version"]) == self.history
         self.save(
             "full_history_resume",
             completed,
@@ -743,6 +808,7 @@ class Rehearsal:
             self.concurrent_resume(template)
             self.history_rejection(template)
             self.history_rejection(template, marker=True)
+            self.six_column_history_rejections(template)
             self.raw_collision(template)
             self.resume_metadata_rejection(template)
             self.full_history_resume(template)
