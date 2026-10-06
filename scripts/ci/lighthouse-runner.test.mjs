@@ -948,8 +948,11 @@ for (const scenario of ["success", "engine failure", "launch failure", "cleanup 
 
 test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () => {
   const dir = await mkdtemp(join(tmpdir(), "chrome-trace-projection-"));
+  const previous = process.env.CI_PERF_HARNESS;
+  process.env.CI_PERF_HARNESS = "1";
   const events = [];
   const capture = {};
+  const pages = [];
   let calls = 0;
   const traceEvents = [
     {
@@ -977,7 +980,9 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
   ];
   const deps = [
     {
-      default: async (url) => {
+      default: async (url, _flags, _engineConfig, measuredPage) => {
+        events.push("engine");
+        assert.equal(measuredPage, pages.at(-1));
         calls++;
         const lhr = makeReport(url);
         lhr.runtimeError = { code: "NO_NAVSTART" };
@@ -991,7 +996,32 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
       },
     },
     { Launcher: fakeChrome({ events, scenario: "success", capture }) },
-    { default: { executablePath: async () => "/fixture/chrome" } },
+    {
+      default: {
+        executablePath: async () => "/fixture/chrome",
+        connect: async (options) => {
+          events.push("connect");
+          assert.deepEqual(options, {
+            browserURL: "http://127.0.0.1:9999",
+            defaultViewport: null,
+          });
+          return {
+            newPage: async () => {
+              events.push("newPage");
+              const page = {
+                evaluate: async () => {
+                  throw new Error("Failed NO_NAVSTART reports must not be inspected for readiness");
+                },
+                close: async () => events.push("page.close"),
+              };
+              pages.push(page);
+              return page;
+            },
+            disconnect: async () => events.push("disconnect"),
+          };
+        },
+      },
+    },
   ];
   try {
     const result = await runPerformance(fixtureConfig(dir), {
@@ -1000,7 +1030,24 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
     });
     assert.equal(result.exitCode, 1);
     assert.equal(calls, 2);
-    assert.deepEqual(events, ["launch", "kill", "launch", "kill"]);
+    assert.equal(pages.length, 2);
+    assert.notEqual(pages[0], pages[1]);
+    assert.deepEqual(events, [
+      "launch",
+      "connect",
+      "newPage",
+      "engine",
+      "page.close",
+      "disconnect",
+      "kill",
+      "launch",
+      "connect",
+      "newPage",
+      "engine",
+      "page.close",
+      "disconnect",
+      "kill",
+    ]);
     const output = join(dir, ".lighthouseci");
     for (const suffix of ["", "-retry"]) {
       const bytes = await readFile(join(output, `chrome-startup-1-1${suffix}.json`), "utf8");
@@ -1014,6 +1061,8 @@ test("both bounded NO_NAVSTART attempts retain safe trace summaries", async () =
     assert.equal(summary.collectionRetries.length, 1);
     assert.match(summary.errors[0].message, /NO_NAVSTART/);
   } finally {
+    if (previous === undefined) delete process.env.CI_PERF_HARNESS;
+    else process.env.CI_PERF_HARNESS = previous;
     await rm(dir, { recursive: true, force: true });
   }
 });
