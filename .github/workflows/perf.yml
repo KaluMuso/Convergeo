@@ -37,10 +37,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify hosted Chrome before setup
+      - name: Install verified Chrome Stable before setup
         run: |
           bash scripts/ci/check_hosted_chrome.test.sh
-          bash scripts/ci/check_hosted_chrome.sh
+          bash scripts/ci/check_hosted_chrome.sh --install-verified
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -226,9 +226,9 @@ jobs:
           pnpm --filter customer exec vitest run lib/ci-perf-harness.test.ts lib/ci-perf-proxy.test.ts lib/ci-perf-media.test.ts lib/ci-perf-content-snapshot.test.ts lib/api-base-url.test.ts
           pnpm --filter @vergeo/ui exec vitest run src/media/cloudinary-url.test.ts
 
-      - name: Acquire Chrome for Testing and verify installed Chrome
+      - name: Acquire Chrome for Testing and reverify installed Chrome
         # Puppeteer's download remains pinned; hosted Lighthouse uses the
-        # preinstalled Google package from the Ubuntu 24.04 runner image.
+        # verified Google package installed on this disposable runner.
         run: |
           pnpm exec puppeteer browsers install chrome
           bash scripts/ci/check_hosted_chrome.sh

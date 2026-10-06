@@ -6,29 +6,44 @@ then run `pnpm exec puppeteer browsers install chrome`. `pnpm perf:lighthouse:te
 runs offline contract tests. Node remains 22 (the selected packages require at least
 22.19); CI uses the repository's existing Node setup.
 
-The hosted performance job uses GitHub's Ubuntu 24.04 image and its installed
-Google Chrome at `/opt/google/chrome/chrome`, selected only for the Lighthouse
-step through `PUPPETEER_EXECUTABLE_PATH`. Before collection, the job requires
-that executable to belong to `google-chrome-stable`, report exactly
-`154.0.8037.97`, and have installed package version `154.0.8037.97-1` on
-image `ubuntu24/20261004.327.1`. This check runs immediately after checkout
-and again after Chrome for Testing acquisition, recording only fixed identity
-labels. The older `20260927.320.1` image with Chrome `154.0.8037.57` and all
-unknown combinations fail before database setup or app build. A mismatch fails
-without installing a package or selecting another browser.
-This pin follows [Google's Linux Stable release](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop.html),
-[GitHub's Ubuntu 24.04 image update](https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327),
+The hosted performance job uses GitHub's Ubuntu 24.04 image. Immediately after
+checkout, it installs the official `google-chrome-stable=155.0.8059.39-1`
+package on that disposable runner, before database setup or app build. Only
+image versions `20260927.320.1` and `20261004.327.1` are eligible. The
+installer checks Google's public key against its published active fingerprint
+`EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796`, verifies the signed
+`InRelease` and its `Packages.gz` SHA-256 entry, and verifies that the indexed
+package is the expected amd64 version and has SHA-256
+`c58aa0f2cd66179c9f050e062c882d27aa9b9f8c2b7c73fee3498560b5ed0b38`.
+It verifies the downloaded package bytes and Debian fields before installing
+that package alone. Verification uses a temporary keyring. The package's
+post-install script refreshes its scoped `/usr/share/keyrings/google-chrome.gpg`;
+the installer requires the runner's existing `repo_add_once="false"` setting
+and rejects any Google Chrome APT source before or after installation, so that
+keyring is not activated as an APT source. It also rejects the package option
+that would create a setgid Chrome management service and device-trust signing
+key. The official package may refresh Chrome's AppArmor profile on a runner
+where that profile is enabled. Any signature, metadata, package, or image
+mismatch stops the job.
+
+The job requires `/opt/google/chrome/chrome` to belong to
+`google-chrome-stable`, report exactly `155.0.8059.39`, and have installed
+package version `155.0.8059.39-1`. It repeats that check after Chrome for
+Testing acquisition, recording only fixed identity labels. The installed
+Chrome is selected for Lighthouse through `PUPPETEER_EXECUTABLE_PATH`.
+This version follows [Google's October 6 Linux Stable security release](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop_086471744.html),
+[Google's signing-key documentation](https://www.google.com/linuxrepositories/),
 and [Google's Debian package index](https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz).
 The official Puppeteer-pinned Chrome for Testing download remains required;
 local runs continue to select it by default. The hosted selection uses the
-installed Chrome's normal sandbox and stock host policy without moving binaries
-or changing policy. Puppeteer's Chrome for Testing revision is `154.0.8037.57`;
-hosted Lighthouse uses the distinct installed `154.0.8037.97` package.
+installed Chrome's normal sandbox and certificate checks, with no sandbox-bypass
+flags or manual host-policy edits. Puppeteer's Chrome for Testing revision is `154.0.8037.57`;
+hosted Lighthouse uses the distinct installed `155.0.8059.39` package.
 Browser launch and all five routes must pass the unchanged budgets. The workflow
 collects Lighthouse only for the candidate and applies absolute assertions;
-its base-build comparison covers bundles only. Earlier `154.0.8037.57` scores
-are not a relative baseline for this browser. Any future Lighthouse comparison
-must measure base and candidate with the same `154.0.8037.97` runtime and settings.
+its base-build comparison covers bundles only. Earlier Chrome 154 scores are
+not a relative baseline for this browser. Any future Lighthouse comparison
+must measure base and candidate with the same `155.0.8059.39` runtime and settings.
 
 `lighthouserc.json` remains the policy source. This migration does not change its
 five URLs, three runs per URL, mobile screen/network/CPU settings, thresholds,
