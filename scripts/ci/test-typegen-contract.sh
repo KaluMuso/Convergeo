@@ -891,6 +891,12 @@ if provenance.count(
 cleanup = step("Stop disposable Supabase database")
 if cleanup.count("        if: always()") != 1:
     raise SystemExit("error: only disposable cleanup may run after qualification failure")
+cleanup_text = "\n".join(cleanup)
+if (
+    cleanup_text.count('${TYPEGEN_WORKDIR}/.owned-typegen-stack') != 2
+    or '"${current_id}" == "${owned_id}"' not in cleanup_text
+):
+    raise SystemExit("error: typegen cleanup must stop only its recorded disposable container")
 PY
 
 mkdir -p "${tmp}/init-caller-bin" "${tmp}/init-caller-work"

@@ -739,15 +739,16 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Typegen helper negative controls
-        run: bash scripts/ci/test-typegen-contract.sh
+        run: |
+          bash scripts/ci/test-typegen-contract.sh
+          PYTHONPATH=scripts/ci python3 -m unittest scripts/ci/test_explicit_transaction_boundary.py
 
       - name: Prepare pinned Supabase-compatible database
         run: |
           TYPEGEN_WORKDIR="$(mktemp -d)"
           echo "TYPEGEN_WORKDIR=${TYPEGEN_WORKDIR}" >> "${GITHUB_ENV}"
           bash scripts/ci/prepare-typegen-workdir.sh "${TYPEGEN_WORKDIR}"
-          supabase --workdir "${TYPEGEN_WORKDIR}" db start
-          supabase --workdir "${TYPEGEN_WORKDIR}" db reset --no-seed
+          python3 scripts/ci/rehearse_explicit_transaction_profile.py "${TYPEGEN_WORKDIR}"
 
           TYPEGEN_DB_CONTAINER_ID="$(docker ps \
             --filter 'name=^/supabase_db_vergeo5-typegen$' \
@@ -819,8 +820,12 @@ jobs:
       - name: Stop disposable Supabase database
         if: always()
         run: |
-          if [[ -n "${TYPEGEN_WORKDIR:-}" ]]; then
-            supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+          if [[ -n "${TYPEGEN_WORKDIR:-}" && -f "${TYPEGEN_WORKDIR}/.owned-typegen-stack" ]]; then
+            owned_id="$(cat "${TYPEGEN_WORKDIR}/.owned-typegen-stack")"
+            current_id="$(docker ps --filter 'name=^/supabase_db_vergeo5-typegen$' --format '{{.ID}}')"
+            if [[ "${owned_id}" =~ ^[0-9a-f]{12,64}$ && "${current_id}" == "${owned_id}" ]]; then
+              supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+            fi
           fi
 
   rls:
