@@ -5,7 +5,8 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
-import { getAccountAccessToken } from "../_components/account-server";
+import { AccountListBoundary } from "../_components/account-list-boundary";
+import { getAccountListSession } from "../_components/account-list-server";
 
 import type { Metadata } from "next";
 
@@ -55,10 +56,13 @@ export default async function AccountJobsPage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const accessToken = await getAccountAccessToken(locale);
+  const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const servicesMessages = await loadNamespace(locale as Locale, "services");
-  const messages = { ...baseMessages, services: servicesMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    services: servicesMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "services" }) as (
     key: string,
     values?: Record<string, string | number>,
@@ -68,73 +72,81 @@ export default async function AccountJobsPage({ params }: PageProps) {
 
   if (jobs.length === 0) {
     return (
-      <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
-        <h2 className="font-display text-h2 text-display-ink">{t("quotes.list.emptyTitle")}</h2>
-        <p className="text-sm text-text-2">{t("quotes.list.emptyBody")}</p>
-        <LinkButton
-          href={`/${locale}/services/post-job`}
-          variant="primary"
-          className="px-5 text-sm"
-          LinkComponent={Link}
-        >
-          {t("quotes.list.postJobCta")}
-        </LinkButton>
-      </section>
+      <AccountListBoundary accountId={accountId}>
+        <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
+          <h2 className="font-display text-h2 text-display-ink">{t("quotes.list.emptyTitle")}</h2>
+          <p className="text-sm text-text-2">{t("quotes.list.emptyBody")}</p>
+          <LinkButton
+            href={`/${locale}/services/post-job`}
+            variant="primary"
+            className="px-5 text-sm"
+            LinkComponent={Link}
+          >
+            {t("quotes.list.postJobCta")}
+          </LinkButton>
+        </section>
+      </AccountListBoundary>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <header className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{t("quotes.list.title")}</h2>
-        <p className="text-sm text-text-2">{t("quotes.list.intro")}</p>
-      </header>
+    <AccountListBoundary accountId={accountId}>
+      <section className="space-y-6">
+        <header className="space-y-1">
+          <h2 className="font-display text-h2 text-display-ink">{t("quotes.list.title")}</h2>
+          <p className="text-sm text-text-2">{t("quotes.list.intro")}</p>
+        </header>
 
-      <ul className="space-y-3">
-        {jobs.map((job) => (
-          <li key={job.id}>
-            <article className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-text-2">
-                  {t(`postJob.category.${job.category}`, { default: job.category })}
-                </p>
-                <p className="text-sm font-medium text-display-ink">{job.description}</p>
-                <p className="text-xs text-text-2">
-                  {t("quotes.list.posted", {
-                    date: new Date(job.created_at).toLocaleDateString(locale),
-                  })}
-                  {" · "}
-                  {t("quotes.list.status", { status: t(`quotes.status.${job.status}`) })}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-text-2">
-                  {job.budget_band_min_ngwee != null || job.budget_band_max_ngwee != null
-                    ? t("quotes.list.budget", {
-                        min:
-                          job.budget_band_min_ngwee != null
-                            ? formatK(job.budget_band_min_ngwee)
-                            : "—",
-                        max:
-                          job.budget_band_max_ngwee != null
-                            ? formatK(job.budget_band_max_ngwee)
-                            : "—",
-                      })
-                    : t("quotes.list.budgetFlexible")}
-                </p>
-                <LinkButton
-                  href={`/${locale}/account/jobs/${job.id}`}
-                  variant="secondary"
-                  className="shrink-0 border-primary px-4 text-sm text-primary"
-                  LinkComponent={Link}
-                >
-                  {t("quotes.list.compareCta")}
-                </LinkButton>
-              </div>
-            </article>
-          </li>
-        ))}
-      </ul>
-    </section>
+        <ul className="space-y-3">
+          {jobs.map((job) => (
+            <li key={job.id}>
+              <article className="flex flex-col gap-3 rounded border border-border bg-surface p-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-text-2">
+                    {t(`postJob.category.${job.category}`, {
+                      default: job.category,
+                    })}
+                  </p>
+                  <p className="text-sm font-medium text-display-ink">{job.description}</p>
+                  <p className="text-xs text-text-2">
+                    {t("quotes.list.posted", {
+                      date: new Date(job.created_at).toLocaleDateString(locale),
+                    })}
+                    {" · "}
+                    {t("quotes.list.status", {
+                      status: t(`quotes.status.${job.status}`),
+                    })}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-text-2">
+                    {job.budget_band_min_ngwee != null || job.budget_band_max_ngwee != null
+                      ? t("quotes.list.budget", {
+                          min:
+                            job.budget_band_min_ngwee != null
+                              ? formatK(job.budget_band_min_ngwee)
+                              : "—",
+                          max:
+                            job.budget_band_max_ngwee != null
+                              ? formatK(job.budget_band_max_ngwee)
+                              : "—",
+                        })
+                      : t("quotes.list.budgetFlexible")}
+                  </p>
+                  <LinkButton
+                    href={`/${locale}/account/jobs/${job.id}`}
+                    variant="secondary"
+                    className="shrink-0 border-primary px-4 text-sm text-primary"
+                    LinkComponent={Link}
+                  >
+                    {t("quotes.list.compareCta")}
+                  </LinkButton>
+                </div>
+              </article>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </AccountListBoundary>
   );
 }

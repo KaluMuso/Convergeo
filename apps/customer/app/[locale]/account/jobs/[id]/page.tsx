@@ -9,7 +9,7 @@ import { Input } from "@vergeo/ui/src/input";
 import { Spinner } from "@vergeo/ui/src/spinner";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
@@ -44,18 +44,14 @@ type QuoteItem = {
   provider: QuoteProvider | null;
 };
 
-function createQuotesClient(
-  getToken: () => string | null | Promise<string | null>,
-) {
+function createQuotesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
   return {
     getJob(jobId: string): Promise<JobDetail> {
       return client.request<JobDetail>(`/jobs/${jobId}`);
     },
     listQuotes(jobId: string): Promise<{ items: QuoteItem[]; view: string }> {
-      return client.request<{ items: QuoteItem[]; view: string }>(
-        `/jobs/${jobId}/quotes`,
-      );
+      return client.request<{ items: QuoteItem[]; view: string }>(`/jobs/${jobId}/quotes`);
     },
     declineQuote(quoteId: string, reason?: string): Promise<void> {
       return client.request(`/quotes/${quoteId}/decline`, {
@@ -71,88 +67,11 @@ type PageProps = {
 };
 
 export default function JobComparePage({ params }: PageProps) {
-  const [locale, setLocale] = useState("en");
-  const [jobId, setJobId] = useState("");
+  const { locale, id: jobId } = use(params);
   const t = useTranslations("services.quotes");
-  const tb = useTranslations("services.badges");
-  const { session, loading: sessionLoading } = useSession();
-  const [job, setJob] = useState<JobDetail | null>(null);
-  const [quotes, setQuotes] = useState<QuoteItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [declineQuoteId, setDeclineQuoteId] = useState<string | null>(null);
-  const [declineReason, setDeclineReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const { session, loading: sessionLoading, generation } = useSession();
 
-  useEffect(() => {
-    void params.then(({ locale: nextLocale, id }) => {
-      setLocale(nextLocale);
-      setJobId(id);
-    });
-  }, [params]);
-
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
-  const quotesClient = useMemo(() => createQuotesClient(getToken), [getToken]);
-
-  const loadJobAndQuotes = useCallback(async () => {
-    if (!jobId) {
-      return;
-    }
-    setLoading(true);
-    try {
-      const [jobResponse, response] = await Promise.all([
-        quotesClient.getJob(jobId),
-        quotesClient.listQuotes(jobId),
-      ]);
-      setJob(jobResponse);
-      setQuotes(response.items);
-      setError(null);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        setError(t("errors.forbidden"));
-      } else {
-        setError(t("errors.loadFailed"));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [jobId, quotesClient, t]);
-
-  useEffect(() => {
-    if (sessionLoading || !jobId) {
-      return;
-    }
-    if (!session) {
-      setLoading(false);
-      return;
-    }
-    void loadJobAndQuotes();
-  }, [jobId, loadJobAndQuotes, session, sessionLoading]);
-
-  const handleDecline = async (quoteId: string) => {
-    setSubmitting(true);
-    try {
-      await quotesClient.declineQuote(
-        quoteId,
-        declineReason.trim() || undefined,
-      );
-      setDeclineQuoteId(null);
-      setDeclineReason("");
-      await loadJobAndQuotes();
-    } catch {
-      setError(t("errors.declineFailed"));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const acceptedQuote =
-    quotes.find((quote) => quote.status === "accepted") ?? null;
-
-  if (sessionLoading || loading) {
+  if (sessionLoading) {
     return (
       <section className="flex min-h-[40vh] items-center justify-center">
         <Spinner label={t("loading")} />
@@ -165,17 +84,140 @@ export default function JobComparePage({ params }: PageProps) {
   }
 
   return (
+    <JobCompareContent
+      key={`${generation}:${session.user.id}:${jobId}`}
+      locale={locale}
+      jobId={jobId}
+      accessToken={session.access_token}
+    />
+  );
+}
+
+function JobCompareContent({
+  locale,
+  jobId,
+  accessToken,
+}: {
+  locale: string;
+  jobId: string;
+  accessToken: string;
+}) {
+  const t = useTranslations("services.quotes");
+  const tb = useTranslations("services.badges");
+  const [job, setJob] = useState<JobDetail | null>(null);
+  const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [declineQuoteId, setDeclineQuoteId] = useState<string | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const requestId = useRef(0);
+  const mounted = useRef(true);
+  const hasLoaded = useRef(false);
+  const pendingAccepts = useRef(new Set<string>());
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      requestId.current += 1;
+    };
+  }, []);
+
+  const getToken = useCallback(() => accessToken, [accessToken]);
+  const quotesClient = useMemo(() => createQuotesClient(getToken), [getToken]);
+
+  const loadJobAndQuotes = useCallback(async () => {
+    if (!mounted.current || pendingAccepts.current.size > 0) return;
+    const currentRequest = ++requestId.current;
+    if (!hasLoaded.current) setLoading(true);
+    try {
+      const [jobResponse, response] = await Promise.all([
+        quotesClient.getJob(jobId),
+        quotesClient.listQuotes(jobId),
+      ]);
+      if (!mounted.current || currentRequest !== requestId.current) return;
+      // Keep any accepting quote mounted until its POST settles.
+      if (pendingAccepts.current.size > 0) return;
+      setJob(jobResponse);
+      setQuotes(response.items);
+      setError(null);
+      hasLoaded.current = true;
+    } catch (err) {
+      if (!mounted.current || currentRequest !== requestId.current) return;
+      const accessDenied = err instanceof ApiError && (err.status === 401 || err.status === 403);
+      // A transient refresh failure must not discard an accepting flow. A
+      // permission failure still clears private data immediately.
+      if (pendingAccepts.current.size > 0 && !accessDenied) return;
+      pendingAccepts.current.clear();
+      setJob(null);
+      setQuotes([]);
+      setDeclineQuoteId(null);
+      setDeclineReason("");
+      setSubmitting(false);
+      if (err instanceof ApiError && err.status === 403) {
+        setError(t("errors.forbidden"));
+      } else {
+        setError(t("errors.loadFailed"));
+      }
+    } finally {
+      if (mounted.current && currentRequest === requestId.current) {
+        setLoading(false);
+      }
+    }
+  }, [jobId, quotesClient, t]);
+  const latestLoad = useRef(loadJobAndQuotes);
+  latestLoad.current = loadJobAndQuotes;
+
+  const handleAcceptPendingChange = (quoteId: string, pending: boolean) => {
+    if (pending) {
+      pendingAccepts.current.add(quoteId);
+    } else {
+      pendingAccepts.current.delete(quoteId);
+      if (pendingAccepts.current.size === 0) void latestLoad.current();
+    }
+  };
+
+  useEffect(() => {
+    void loadJobAndQuotes();
+  }, [loadJobAndQuotes]);
+
+  const handleDecline = async (quoteId: string) => {
+    setSubmitting(true);
+    try {
+      await quotesClient.declineQuote(quoteId, declineReason.trim() || undefined);
+      if (!mounted.current) return;
+      setDeclineQuoteId(null);
+      setDeclineReason("");
+      await latestLoad.current();
+    } catch {
+      if (mounted.current) {
+        setError(t("errors.declineFailed"));
+      }
+    } finally {
+      if (mounted.current) {
+        setSubmitting(false);
+      }
+    }
+  };
+
+  const acceptedQuote = quotes.find((quote) => quote.status === "accepted") ?? null;
+
+  if (loading) {
+    return (
+      <section className="flex min-h-[40vh] items-center justify-center">
+        <Spinner label={t("loading")} />
+      </section>
+    );
+  }
+
+  return (
     <section className="space-y-6">
       <header className="space-y-2">
-        <Link
-          href={`/${locale}/account/jobs`}
-          className="text-sm font-medium text-primary"
-        >
+        <Link href={`/${locale}/account/jobs`} className="text-sm font-medium text-primary">
           {t("back")}
         </Link>
-        <h2 className="font-display text-h2 text-display-ink">
-          {t("compareTitle")}
-        </h2>
+        <h2 className="font-display text-h2 text-display-ink">{t("compareTitle")}</h2>
         <p className="text-sm text-text-2">{t("compareIntro")}</p>
         {job ? (
           <p className="text-xs text-text-2">
@@ -201,9 +243,7 @@ export default function JobComparePage({ params }: PageProps) {
                 <p className="text-sm font-medium text-display-ink">
                   {quote.provider?.display_name ?? t("unknownProvider")}
                 </p>
-                <p className="font-mono text-lg text-display-ink">
-                  {formatK(quote.amount_ngwee)}
-                </p>
+                <p className="font-mono text-lg text-display-ink">{formatK(quote.amount_ngwee)}</p>
               </header>
 
               <div className="flex flex-wrap gap-2">
@@ -211,10 +251,7 @@ export default function JobComparePage({ params }: PageProps) {
                   <Badge variant="free" label={t("preferredBadge")} />
                 ) : null}
                 {quote.provider?.response_time_tier ? (
-                  <Badge
-                    variant="public"
-                    label={tb(quote.provider.response_time_tier)}
-                  />
+                  <Badge variant="public" label={tb(quote.provider.response_time_tier)} />
                 ) : null}
                 {quote.provider?.rating_avg != null ? (
                   <Badge
@@ -227,9 +264,7 @@ export default function JobComparePage({ params }: PageProps) {
                 ) : null}
               </div>
 
-              {quote.message ? (
-                <p className="text-sm text-text-2">{quote.message}</p>
-              ) : null}
+              {quote.message ? <p className="text-sm text-text-2">{quote.message}</p> : null}
 
               {quote.expires_at ? (
                 <p className="text-xs text-text-2">
@@ -244,20 +279,15 @@ export default function JobComparePage({ params }: PageProps) {
                   locale={locale}
                   jobId={jobId}
                   quoteId={quote.id}
-                  vendorName={
-                    quote.provider?.display_name ?? t("unknownProvider")
-                  }
+                  vendorName={quote.provider?.display_name ?? t("unknownProvider")}
                   totalNgwee={quote.amount_ngwee}
+                  onPendingChange={(pending) => handleAcceptPendingChange(quote.id, pending)}
                 />
               ) : null}
 
-              {declineQuoteId === quote.id &&
-              canAcceptQuote(job?.status, quote.status) ? (
+              {declineQuoteId === quote.id && canAcceptQuote(job?.status, quote.status) ? (
                 <div className="mt-auto space-y-2 border-t border-border pt-3">
-                  <FormField
-                    id={`decline-${quote.id}`}
-                    label={t("decline.reasonLabel")}
-                  >
+                  <FormField id={`decline-${quote.id}`} label={t("decline.reasonLabel")}>
                     <Input
                       value={declineReason}
                       onChange={(event) => setDeclineReason(event.target.value)}
@@ -307,8 +337,7 @@ export default function JobComparePage({ params }: PageProps) {
         </div>
       )}
 
-      {shouldShowCompletion(job?.status, acceptedQuote?.status) &&
-      acceptedQuote ? (
+      {shouldShowCompletion(job?.status, acceptedQuote?.status) && acceptedQuote ? (
         <CompleteConfirm
           jobId={jobId}
           allowConfirmAttempt
@@ -316,7 +345,7 @@ export default function JobComparePage({ params }: PageProps) {
         />
       ) : null}
 
-      {jobId ? <ServiceReviewForm jobId={jobId} /> : null}
+      {job ? <ServiceReviewForm jobId={jobId} /> : null}
     </section>
   );
 }
