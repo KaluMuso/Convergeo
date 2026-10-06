@@ -7,6 +7,7 @@ import {
   clearMessageCache,
   expandDottedKeys,
   getLoadedNamespaceKeys,
+  loadMessages,
   loadNamespace,
   resolveMessage,
 } from "./request";
@@ -88,13 +89,42 @@ describe("loadNamespace", () => {
     }
   });
 
+  it("passes plain message objects across the server-to-client boundary", async () => {
+    const assertSerializableMessages = (value: unknown): void => {
+      if (typeof value === "string") return;
+      expect(value).not.toBeNull();
+      expect(Array.isArray(value)).toBe(false);
+      expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+      for (const child of Object.values(value as Record<string, unknown>)) {
+        assertSerializableMessages(child);
+      }
+    };
+
+    // The admin layout passes this same namespace bundle to a Client Component.
+    assertSerializableMessages(await loadMessages("en", ["common", "admin", "services"]));
+    for (const locale of LOCALES) {
+      for (const namespace of NAMESPACES) {
+        assertSerializableMessages(await loadNamespace(locale, namespace));
+      }
+    }
+  });
+
   it("rejects colliding and unsafe message paths", () => {
-    expect(() => expandDottedKeys({ title: "A", "title.text": "B" })).toThrow(
-      "Message key collision: title.text",
-    );
-    expect(() => expandDottedKeys({ "__proto__.polluted": "B" })).toThrow(
-      "Unsafe message key: __proto__.polluted",
-    );
+    for (const messages of [
+      { title: "A", "title.text": "B" },
+      { title: { text: "A" }, "title.text": "B" },
+      { "title.text": "B", title: { text: "A" } },
+    ]) {
+      expect(() => expandDottedKeys(messages)).toThrow("Message key collision: title.text");
+    }
+    for (const segment of ["__proto__", "constructor", "prototype"]) {
+      expect(() => expandDottedKeys({ [`${segment}.polluted`]: "B" })).toThrow(
+        `Unsafe message key: ${segment}.polluted`,
+      );
+    }
+    expect(expandDottedKeys({ "toString.value": "A" })).toMatchObject({
+      toString: { value: "A" },
+    });
   });
 
   it("loads bem auth overlay with translated login title", async () => {

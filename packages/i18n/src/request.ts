@@ -33,7 +33,8 @@ const namespaceCache = new Map<string, Messages>();
 
 /** Legacy namespace JSON has literal dotted keys; next-intl requires nested objects. */
 export function expandDottedKeys(source: Messages): Messages {
-  const expanded: Messages = Object.create(null) as Messages;
+  // React Server Components only serialize ordinary objects into Client Components.
+  const expanded: Messages = {};
 
   // Copy object branches first so dotted leaves can join an existing branch.
   for (const [key, value] of Object.entries(source)) {
@@ -49,13 +50,13 @@ export function expandDottedKeys(source: Messages): Messages {
     const parts = key.split(".");
     let branch = expanded;
     for (const part of parts.slice(0, -1)) {
-      const existing = branch[part];
+      const existing = Object.hasOwn(branch, part) ? branch[part] : undefined;
       if (typeof existing === "string") throw new Error(`Message key collision: ${key}`);
-      if (existing === undefined) branch[part] = Object.create(null) as Messages;
+      if (existing === undefined) branch[part] = {};
       branch = branch[part] as Messages;
     }
     const leaf = parts.at(-1)!;
-    if (branch[leaf] !== undefined) throw new Error(`Message key collision: ${key}`);
+    if (Object.hasOwn(branch, leaf)) throw new Error(`Message key collision: ${key}`);
     branch[leaf] = typeof value === "string" ? value : expandDottedKeys(value);
   }
 
