@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from collections import deque
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -86,9 +88,22 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
 
 def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = get_request_id(request)
-    logger.exception(
+    # A registered handler need not have an active exception context. Use the
+    # supplied traceback and omit exception text, which may contain data.
+    frames: deque[str] = deque(maxlen=16)
+    traceback = exc.__traceback__
+    while traceback is not None:
+        code = traceback.tb_frame.f_code
+        frames.append(f"{Path(code.co_filename).name}:{traceback.tb_lineno}:{code.co_name}")
+        traceback = traceback.tb_next
+    logger.error(
         "Unhandled exception",
-        extra={"request_id": request_id, "path": request.url.path},
+        extra={
+            "request_id": request_id,
+            "path": request.url.path,
+            "exception_type": type(exc).__name__,
+            "exception_frames": list(frames),
+        },
     )
 
     return JSONResponse(
