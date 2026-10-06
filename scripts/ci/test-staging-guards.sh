@@ -61,7 +61,9 @@ fi
 # 5) Separation script accepts distinct staging identifiers
 set +e
 STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co/ \
 STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com \
 STAGING_CUSTOMER_URL=https://staging-customer.example.vercel.app \
 STAGING_VENDOR_URL=https://staging-vendor.example.vercel.app \
 STAGING_ADMIN_URL=https://staging-admin.example.vercel.app \
@@ -74,6 +76,59 @@ if [[ "$rc" -eq 0 ]]; then
 else
   bad "separation should pass for distinct identifiers (rc=$rc)"
   cat /tmp/sep-ok.txt || true
+fi
+
+# The two names for each target must resolve to the same staging plane.
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://otherstaging12345678.supabase.co \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-ref.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-mismatched-ref.txt; then
+  ok "separation rejects mismatched Supabase project names"
+else
+  bad "separation should reject mismatched Supabase project names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co@another-host.example \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-url.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-deceptive-url.txt; then
+  ok "separation rejects deceptive Supabase URL host"
+else
+  bad "separation should reject deceptive Supabase URL host (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://other.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-mismatched-api.txt; then
+  ok "separation rejects mismatched API host names"
+else
+  bad "separation should reject mismatched API host names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com:443@another-host.example \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-deceptive-api.txt; then
+  ok "separation rejects deceptive API URL authority"
+else
+  bad "separation should reject deceptive API URL authority (rc=$rc)"
 fi
 
 # 6) Synthetic seed dry-run + no production markers in fixtures

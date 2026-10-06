@@ -79,12 +79,15 @@ def validate_api_fingerprint(
         )
 
     image_tag = fingerprint.get("image_tag") or ""
-    if image_tag and image_tag not in {"unknown", ""}:
-        want_tag = expected_image_tag or candidate_sha
-        if image_tag != want_tag:
+    if expected_image_tag is not None:
+        if image_tag != expected_image_tag:
             raise ProofValidationError(
                 "fingerprint image_tag does not match expected candidate"
             )
+    elif image_tag and image_tag != "unknown" and image_tag != candidate_sha:
+        raise ProofValidationError(
+            "fingerprint image_tag does not match expected candidate"
+        )
 
 
 def _valid_deployment_url(url: str) -> bool:
