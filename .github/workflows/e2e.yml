@@ -516,7 +516,7 @@ jobs:
           mkdir -p results
           # The expected matrix must be listed with the SAME selection the run
           # uses, so EXPECTED == DISCOVERED stays a real completeness contract
-          # for a focused run instead of comparing a subset against all 65.
+          # for a focused run instead of comparing a subset against all 66.
           # shellcheck disable=SC2086
           npx playwright test ${FOCUS_SPECS} --list --reporter=json > results/list.json
 
@@ -525,7 +525,10 @@ jobs:
         working-directory: e2e
         env:
           FOCUS_SPECS: ${{ steps.focus.outputs.specs }}
-        # Playwright has a 12-minute global timeout (matrix bound to 65
+          # Buyer-scoped, read-only paid-ticket linkage proof; never job-wide.
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        # Playwright has a 12-minute global timeout (matrix bound to 66
         # project-test instances — see fixtures/spec-classification.ts), but
         # retain an independent process deadline so a stuck runner cannot
         # consume a staging gate indefinitely if the test runner watchdog

@@ -3,6 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { CheckoutShell } from "./_components/step-fulfilment";
+import { TicketCheckout } from "./_components/ticket-checkout";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ group?: string | string[]; retry?: string }>;
 };
 
 export function generateStaticParams() {
@@ -167,7 +169,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
   };
 }
 
-export default async function CheckoutPage({ params }: PageProps) {
+export default async function CheckoutPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -179,10 +181,43 @@ export default async function CheckoutPage({ params }: PageProps) {
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const labels = buildCheckoutLabels(locale, messages);
+  const query = await searchParams;
+  const isTicketCheckout = query && Object.hasOwn(query, "group");
+  const ticketMessages = isTicketCheckout ? await loadNamespace(locale as Locale, "events") : null;
+  const ticketT = ticketMessages
+    ? createTranslator({
+        locale,
+        messages: { events: ticketMessages } as AbstractIntlMessages,
+        namespace: "events",
+      })
+    : null;
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <CheckoutShell locale={locale} labels={labels} />
+      {isTicketCheckout ? (
+        <TicketCheckout
+          locale={locale}
+          groupId={typeof query.group === "string" ? query.group : null}
+          retry={query.retry === "1"}
+          labels={labels}
+          loginLabel={ticketT!("ticketPurchase.loginRequired")}
+          payLabel={ticketT!("ticketPurchase.payCta")}
+          retryLabel={createTranslator({ locale, messages, namespace: "checkout" })(
+            "checkout.pending.retry",
+          )}
+          cancelledLabel={createTranslator({ locale, messages, namespace: "checkout" })(
+            "checkout.pending.cancelledTitle",
+          )}
+          expiredLabel={createTranslator({ locale, messages, namespace: "checkout" })(
+            "checkout.pending.timeoutTitle",
+          )}
+          ordersLabel={createTranslator({ locale, messages, namespace: "checkout" })(
+            "checkout.pending.viewOrder",
+          )}
+        />
+      ) : (
+        <CheckoutShell locale={locale} labels={labels} />
+      )}
     </div>
   );
 }

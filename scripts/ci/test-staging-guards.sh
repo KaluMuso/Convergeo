@@ -1256,7 +1256,8 @@ strict_sites_ok=1
 for site in \
   "e2e/specs/auth-otp.spec.ts:customer OTP verification" \
   "e2e/specs/vendor-sell.spec.ts:vendor authenticated sell flow" \
-  "e2e/specs/event-ticket.spec.ts:event scanner verify + duplicate-reject" \
+  "e2e/specs/event-ticket.spec.ts:free RSVP scanner verify + duplicate-reject" \
+  "e2e/specs/event-ticket.spec.ts:paid ticket order through admission" \
   "e2e/specs/critical-path.spec.ts:checkout place-order -> payment surface"; do
   spec_file="${site%%:*}"
   spec_journey="${site#*:}"
@@ -1274,7 +1275,7 @@ for site in \
   fi
 done
 if [ "${strict_sites_ok}" = "1" ]; then
-  ok "all four release-critical journeys declare AND enforce REQUIRED_STRICT"
+  ok "all five release-critical journeys declare AND enforce REQUIRED_STRICT"
 fi
 
 # Optional gates must stay classified and must never escalate.

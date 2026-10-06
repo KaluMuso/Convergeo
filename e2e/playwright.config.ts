@@ -102,10 +102,10 @@ function fast3gProject() {
 
 export default defineConfig({
   testDir: "./specs",
-  // Whole-suite budget. The matrix shrank from 325 to 65 project-test
+  // Whole-suite budget. The matrix shrank from 325 to 66 project-test
   // instances (PR B — removed the unscoped 5x spec×project fan-out and
   // mobile-layout's internal viewport loop); 720s is derived from run #47's
-  // measured PASSING-test durations (p90 ≈17.3s/test × 65 tests / 2 CI
+  // measured PASSING-test durations (p90 ≈17.3s/test × 66 tests / 2 CI
   // workers ≈562s, + the ≈64s observed pre-suite setup, + ~15% margin) —
   // see scripts/qa/self-test/e2e-matrix.test.mjs and the PR description.
   globalTimeout: 720 * 1000,

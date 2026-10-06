@@ -51,8 +51,8 @@ function specSource(file) {
  * free of the 325-vs-65 double-multiplication that caused run #47's
  * globalTimeout. These per-file counts are the LOGICAL (source-level) test
  * counts, verified once against a real `npx playwright test --list
- * --reporter=json` run against this exact matrix (65 project-test instances,
- * 49 distinct logical tests — see the PR description for the full
+ * --reporter=json` run against this exact matrix (66 project-test instances,
+ * 50 distinct logical tests — see the PR description for the full
  * breakdown). They are a deliberate, minimal duplication of a fact that only
  * Playwright's own parser truly owns; `scripts/ci/verify-e2e-matrix.mjs`'s
  * EXPECTED_TESTS check (driven by a live `--list` in CI) is the authoritative,
@@ -68,7 +68,7 @@ const LOGICAL_TEST_COUNTS = {
   "clips-feed.spec.ts": 4,
   "critical-path.spec.ts": 2,
   "data-quality.spec.ts": 4,
-  "event-ticket.spec.ts": 1,
+  "event-ticket.spec.ts": 2,
   "mobile-layout.spec.ts": 4,
   "performance-smoke.spec.ts": 3,
   "shop-checkout-momo.spec.ts": 1,
@@ -177,7 +177,7 @@ describe("Fast-3G coverage", () => {
 });
 
 describe("expected project-test count is deterministic", () => {
-  it("computes to exactly 65 total project-test instances (down from OLD_PROJECT_TESTS=325)", () => {
+  it("computes to exactly 66 total project-test instances (down from OLD_PROJECT_TESTS=325)", () => {
     let total = 0;
     const perProject = {};
     for (const project of allProjectNames()) {
@@ -190,18 +190,18 @@ describe("expected project-test count is deterministic", () => {
     }
     assert.deepEqual(perProject, {
       "mobile-360": 4,
-      "mobile-390": 42,
+      "mobile-390": 43,
       "mobile-430": 4,
       "tablet-768": 4,
       "desktop-1440": 4,
       "fast-3g": 7,
     });
-    assert.equal(total, 65);
+    assert.equal(total, 66);
   });
 
-  it("computes to exactly 49 distinct logical tests (source-level identities)", () => {
+  it("computes to exactly 50 distinct logical tests (source-level identities)", () => {
     const total = Object.values(LOGICAL_TEST_COUNTS).reduce((a, b) => a + b, 0);
-    assert.equal(total, 49);
+    assert.equal(total, 50);
   });
 });
 
@@ -215,7 +215,8 @@ describe("REQUIRED_STRICT journeys are present and matrix-covered", () => {
   const REQUIRED_SITES = [
     ["auth-otp.spec.ts", "customer OTP verification"],
     ["vendor-sell.spec.ts", "vendor authenticated sell flow"],
-    ["event-ticket.spec.ts", "event scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "free RSVP scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "paid ticket order through admission"],
     ["critical-path.spec.ts", "checkout place-order -> payment surface"],
   ];
 

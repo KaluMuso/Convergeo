@@ -6,22 +6,21 @@ const read = (path) => readFileSync(new URL(`../../../${path}`, import.meta.url)
 
 test("ordinary Playwright tests retain the standard diagnostic policy", () => {
   const config = read("e2e/playwright.config.ts");
-  assert.match(config, /trace:\s*"on-first-retry"/);
-  assert.match(config, /video:\s*"retain-on-failure"/);
-  assert.match(config, /screenshot:\s*"only-on-failure"/);
+  assert.match(config, /trace:\s*privateCredentialRun \? "off" : "on-first-retry"/);
+  assert.match(config, /video:\s*privateCredentialRun \? "off" : "retain-on-failure"/);
+  assert.match(config, /screenshot:\s*privateCredentialRun \? "off" : "only-on-failure"/);
 });
 
 test("only the scanner journey opts into the secret-safe policy", () => {
   const scanner = read("e2e/specs/event-ticket.spec.ts");
   assert.match(scanner, /fixtures\/scanner-artifact-test/);
   assert.match(scanner, /test\.use\(SCANNER_ARTIFACT_POLICY\)/);
+  assert.match(scanner, /paid order → issued wallet ticket/);
+  assert.match(scanner, /independent free RSVP scanner verify/);
 
   for (const file of readdirSync(new URL("../../../e2e/specs", import.meta.url))) {
     if (!file.endsWith(".spec.ts") || file === "event-ticket.spec.ts") continue;
-    assert.doesNotMatch(
-      read(`e2e/specs/${file}`),
-      /SCANNER_ARTIFACT_POLICY|scanner-artifact-test/,
-    );
+    assert.doesNotMatch(read(`e2e/specs/${file}`), /SCANNER_ARTIFACT_POLICY|scanner-artifact-test/);
   }
 });
 
@@ -39,8 +38,31 @@ test("scanner fixture suppresses prompt snapshots and restores the environment",
   assert.match(fixture, /setter\.call\(element, value\)/);
 });
 
+test("paid wallet credential stays outside Playwright diagnostics", () => {
+  const paid = read("e2e/fixtures/paid-ticket.ts");
+  assert.match(paid, /const response = await fetch\(/);
+  assert.match(paid, /redirect: "error"/);
+  assert.doesNotMatch(paid, /page\.request|console\.|test\.info|\.attach\(/);
+  assert.doesNotMatch(paid, /\.fill\([^)]*pin/i);
+  assert.match(paid, /flag\("E2E_PAID_TICKET_PROVIDER_APPROVED"\)/);
+  assert.match(paid, /assertNoAccidentalRealMoney\(\)/);
+});
+
+test("paid provider consent is not auto-injected and RLS reads stay step-scoped", () => {
+  const workflow = read(".github/workflows/e2e.yml");
+  const jobEnv = workflow.split(/\n    env:\n/)[1]?.split(/\n    steps:\n/)[0] ?? "";
+  const browserStep = workflow.match(/- name: Run E2E suite[\s\S]*?(?=\n      - name:)/)?.[0] ?? "";
+  assert.doesNotMatch(jobEnv, /STAGING_SUPABASE_URL:|STAGING_SUPABASE_ANON_KEY:/);
+  assert.match(browserStep, /STAGING_SUPABASE_URL:/);
+  assert.match(browserStep, /STAGING_SUPABASE_ANON_KEY:/);
+  assert.doesNotMatch(workflow, /E2E_PAID_TICKET_PROVIDER_APPROVED:/);
+});
+
 test("scanner secrets never use Playwright's value-bearing fill step", () => {
-  for (const file of ["e2e/specs/event-ticket.spec.ts", "e2e/artifact-regression/scanner-secret.spec.ts"]) {
+  for (const file of [
+    "e2e/specs/event-ticket.spec.ts",
+    "e2e/artifact-regression/scanner-secret.spec.ts",
+  ]) {
     const source = read(file);
     assert.match(source, /fillScannerCredential/);
     assert.doesNotMatch(source, /\.fill\((?:scannerPin|sentinel!?)/);

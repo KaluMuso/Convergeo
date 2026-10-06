@@ -226,6 +226,7 @@
       "cancelledTitle": "Payment cancelled",
       "cancelledBody": "You declined the mobile money prompt. You can try again or choose a different payment method at checkout.",
       "cancelledCta": "Back to checkout",
+      "ticketUnavailableBody": "This ticket payment cannot be retried for this order. View your order for details.",
       "timeoutTitle": "Payment timed out",
       "timeoutBody": "The USSD prompt expired before approval. Check your phone has network signal, then retry — we will send a fresh prompt for the same order.",
       "retry": "Retry payment",

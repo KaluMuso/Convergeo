@@ -72,14 +72,7 @@ declare global {
 }
 
 type ViewState =
-  | "loading"
-  | "opening"
-  | "verifying"
-  | "success"
-  | "failed"
-  | "held"
-  | "pending"
-  | "error";
+  "loading" | "opening" | "verifying" | "success" | "failed" | "held" | "pending" | "error";
 
 function getApiBaseUrl(): string | null {
   return resolveApiBaseUrl();
@@ -119,7 +112,13 @@ export default function CardCheckoutPage() {
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
   const widgetOpened = useRef(false);
 
-  const checkoutPaymentPath = useMemo(() => `/${locale}/checkout`, [locale]);
+  const checkoutPaymentPath = useMemo(() => {
+    const group = searchParams.get("group");
+    return group &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
+      ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
+      : `/${locale}/checkout`;
+  }, [locale, searchParams]);
   const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
 
   const verifyReturn = useCallback(
@@ -139,13 +138,10 @@ export default function CardCheckoutPage() {
         getToken: () => session.access_token,
       });
       try {
-        return await client.request<VerifyResult>(
-          `/payments/card/${paymentId}/verify`,
-          {
-            method: "POST",
-            body: JSON.stringify({ client_status: clientStatus }),
-          },
-        );
+        return await client.request<VerifyResult>(`/payments/card/${paymentId}/verify`, {
+          method: "POST",
+          body: JSON.stringify({ client_status: clientStatus }),
+        });
       } catch {
         setViewState("error");
         return null;
@@ -211,9 +207,7 @@ export default function CardCheckoutPage() {
     const returnStatus = searchParams.get("status");
     if (returnStatus === "success" || returnStatus === "failed") {
       void (async () => {
-        const result = await verifyReturn(
-          returnStatus === "success" ? "success" : "failed",
-        );
+        const result = await verifyReturn(returnStatus === "success" ? "success" : "failed");
         handleVerifyOutcome(result);
       })();
       return;

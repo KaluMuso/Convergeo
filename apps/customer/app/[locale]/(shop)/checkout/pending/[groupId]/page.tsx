@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string; groupId: string }>;
+  searchParams?: Promise<{ ticket?: string }>;
 };
 
 export function generateStaticParams() {
@@ -39,6 +40,7 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
     codBody: t("checkout.pending.codBody"),
     codCta: t("checkout.pending.codCta"),
     viewOrder: t("checkout.pending.viewOrder"),
+    ticketUnavailableBody: t("checkout.pending.ticketUnavailableBody"),
     ussd: {
       title: t("checkout.ussd.title"),
       subtitle: t("checkout.ussd.subtitle"),
@@ -63,7 +65,7 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
   };
 }
 
-export default async function PendingCheckoutPage({ params }: PageProps) {
+export default async function PendingCheckoutPage({ params, searchParams }: PageProps) {
   const { locale, groupId } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -75,10 +77,16 @@ export default async function PendingCheckoutPage({ params }: PageProps) {
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const labels = buildPendingLabels(locale, messages);
+  const ticketCheckout = (await searchParams)?.ticket === "1";
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <PendingPaymentShell locale={locale} groupId={groupId} labels={labels} />
+      <PendingPaymentShell
+        locale={locale}
+        groupId={groupId}
+        labels={labels}
+        ticketCheckout={ticketCheckout}
+      />
     </div>
   );
 }

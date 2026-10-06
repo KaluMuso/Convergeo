@@ -38,6 +38,7 @@ export type PendingLabels = {
   codBody: string;
   codCta: string;
   viewOrder: string;
+  ticketUnavailableBody: string;
   ussd: UssdWaitLabels;
   failed: PaymentFailedLabels;
 };
@@ -122,9 +123,15 @@ type PendingPaymentShellProps = {
   locale: string;
   groupId: string;
   labels: PendingLabels;
+  ticketCheckout?: boolean;
 };
 
-export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentShellProps) {
+export function PendingPaymentShell({
+  locale,
+  groupId,
+  labels,
+  ticketCheckout = false,
+}: PendingPaymentShellProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [statusPayload, setStatusPayload] = useState<PaymentStatusPayload | null>(null);
@@ -367,6 +374,35 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
         <h1 className="font-display text-h1 text-display-ink">{labels.confirmingTitle}</h1>
         <p className="font-body text-sm text-text-2">{labels.confirmingBody}</p>
         <Spinner label={labels.confirmingBody} />
+      </div>
+    );
+  }
+
+  if (
+    ticketCheckout &&
+    (statusPayload.status === "cancelled" || statusPayload.status === "expired")
+  ) {
+    return (
+      <div
+        className="space-y-4 rounded-card border border-danger/30 bg-surface p-5"
+        role="alert"
+        data-testid="ticket-payment-unavailable"
+      >
+        <h1 className="font-display text-h1 text-display-ink">
+          {statusPayload.status === "cancelled"
+            ? labels.failed.cancelledTitle
+            : labels.failed.timeoutTitle}
+        </h1>
+        <p className="font-body text-sm text-text-2">{labels.ticketUnavailableBody}</p>
+        <LinkButton
+          href={orderPath}
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          LinkComponent={Link}
+        >
+          {labels.viewOrder}
+        </LinkButton>
       </div>
     );
   }
