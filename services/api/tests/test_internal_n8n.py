@@ -80,7 +80,7 @@ class FakeQuery:
         self._payload = payload
         return self
 
-    def execute(self) -> MagicMock:
+    def execute(self) -> MagicMock | None:
         if self._pending_op == "insert":
             assert isinstance(self._payload, dict)
             dedupe = self._payload.get("dedupe_key")
@@ -101,7 +101,7 @@ class FakeQuery:
         if self._limit is not None:
             rows = rows[: self._limit]
         if self._maybe_single:
-            return MagicMock(data=rows[0] if rows else None)
+            return MagicMock(data=rows[0]) if rows else None
         return MagicMock(data=rows)
 
     def _apply_filters(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -322,6 +322,69 @@ class TestPayoutFailuresEndpoint:
 
 
 class TestLowStockEndpoint:
+    @pytest.mark.parametrize("value,expected", [(3, 3), ("7", 7)])
+    def test_configured_threshold_overrides_default(
+        self, fake_client: FakeSupabaseClient, value: int | str, expected: int
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        fake_client.tables["platform_config"].rows.append(
+            {"key": "low_stock_threshold", "value": value}
+        )
+        assert _read_platform_config_int(
+            MagicMock(client=fake_client), "low_stock_threshold", 5
+        ) == expected
+
+    @pytest.mark.parametrize("row", [{}, {"value": None}, {"value": "invalid"}])
+    def test_invalid_threshold_uses_configured_default(
+        self, fake_client: FakeSupabaseClient, row: dict[str, Any]
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        fake_client.tables["platform_config"].rows.append(
+            {"key": "low_stock_threshold", **row}
+        )
+        assert _read_platform_config_int(
+            MagicMock(client=fake_client), "low_stock_threshold", 5
+        ) == 5
+
+    def test_threshold_query_error_propagates(
+        self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        def fail_query(_query: FakeQuery) -> None:
+            raise APIError({"code": "42501", "message": "mock permission failure"})
+
+        monkeypatch.setattr(FakeQuery, "execute", fail_query)
+        with pytest.raises(APIError):
+            _read_platform_config_int(
+                MagicMock(client=fake_client), "low_stock_threshold", 5
+            )
+
+    def test_missing_threshold_uses_configured_default(
+        self, n8n_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_common(fake_client)
+        fake_client.tables["platform_config"].rows.clear()
+        fake_client.tables["vendor_listings"].rows.append(
+            {
+                "id": LISTING_ID,
+                "vendor_id": VENDOR_ID,
+                "title_override": "Low Widget",
+                "stock_mode": "tracked",
+                "stock_qty": 5,
+                "status": "active",
+            }
+        )
+
+        response = n8n_client.get(
+            "/internal/n8n/low-stock",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        assert response.json()["items"][0]["threshold"] == 5
+
     def test_returns_listings_under_threshold(
         self, n8n_client: TestClient, fake_client: FakeSupabaseClient
     ) -> None:
@@ -421,6 +484,39 @@ class TestReviewRequestsEndpoint:
 
 
 class TestAbandonedCartFlagGating:
+    def test_feature_flag_query_error_propagates(
+        self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.routers.internal_n8n import _is_feature_flag_enabled
+
+        def fail_query(_query: FakeQuery) -> None:
+            raise APIError({"code": "42501", "message": "mock permission failure"})
+
+        monkeypatch.setattr(FakeQuery, "execute", fail_query)
+        with pytest.raises(APIError):
+            _is_feature_flag_enabled(MagicMock(client=fake_client), "abandoned_cart")
+
+    def test_missing_flag_keeps_abandoned_carts_disabled(
+        self, n8n_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_common(fake_client)
+        fake_client.tables["feature_flags"].rows.clear()
+        fake_client.tables["carts"].rows.append(
+            {
+                "id": CART_ID,
+                "user_id": USER_ID,
+                "status": "abandoned",
+                "updated_at": _stale_iso(30),
+            }
+        )
+
+        response = n8n_client.get(
+            "/internal/n8n/abandoned-carts",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        assert response.json() == {"items": [], "count": 0}
+
     def test_returns_empty_while_flag_off(
         self, n8n_client: TestClient, fake_client: FakeSupabaseClient
     ) -> None:

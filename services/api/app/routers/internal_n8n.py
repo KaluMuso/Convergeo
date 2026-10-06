@@ -90,7 +90,7 @@ def _read_platform_config_int(client: Any, key: str, default: int) -> int:
     response = (
         _table(client, "platform_config").select("value").eq("key", key).maybe_single().execute()
     )
-    data = response.data
+    data = response.data if response is not None else None
     if not isinstance(data, dict):
         return default
     value = data.get("value")
@@ -105,7 +105,7 @@ def _is_feature_flag_enabled(client: Any, flag: str) -> bool:
     response = (
         _table(client, "feature_flags").select("enabled").eq("flag", flag).maybe_single().execute()
     )
-    data = response.data
+    data = response.data if response is not None else None
     if isinstance(data, dict):
         return bool(data.get("enabled"))
     return False
