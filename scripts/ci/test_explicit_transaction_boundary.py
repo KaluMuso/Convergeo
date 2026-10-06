@@ -23,9 +23,12 @@ from explicit_transaction_boundary import (
 from rehearse_explicit_transaction_profile import (
     CONTAINER,
     IMAGE,
+    NETWORK,
+    NETWORK_BIND_OPTION,
     RehearsalError,
     StageTracker,
     WindowState,
+    bind_disposable_network,
     check_cli_reference,
     checked,
     failure_marker,
@@ -33,6 +36,7 @@ from rehearse_explicit_transaction_profile import (
     owned_window,
     run,
     source_inventory,
+    started_container_on_network,
     sql,
     target_container,
     visible_prefix,
@@ -303,6 +307,50 @@ COMMIT;
             "stage=entry code=UNEXPECTED_EXCEPTION",
         )
 
+    def test_failure_cleanup_removes_only_empty_owned_network(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workdir = Path(directory)
+            network_id = "a" * 64
+            with (
+                patch("rehearse_explicit_transaction_profile.LOCK", workdir / "lock"),
+                patch(
+                    "rehearse_explicit_transaction_profile.checked",
+                    side_effect=[b"", b"a" * 12, network_id.encode()],
+                ) as checked_command,
+                patch(
+                    "rehearse_explicit_transaction_profile.network_details",
+                    return_value={"Containers": {}},
+                ),
+                self.assertRaisesRegex(RuntimeError, "injected"),
+            ):
+                with owned_window(workdir, []) as state:
+                    state.owned_network = network_id
+                    raise RuntimeError("injected")
+            self.assertEqual(
+                checked_command.call_args_list[-1].args[0],
+                ["docker", "network", "rm", network_id],
+            )
+            with (
+                patch("rehearse_explicit_transaction_profile.LOCK", workdir / "lock"),
+                patch(
+                    "rehearse_explicit_transaction_profile.checked",
+                    side_effect=[b"", b"a" * 12],
+                ) as checked_command,
+                patch(
+                    "rehearse_explicit_transaction_profile.network_details",
+                    return_value={"Containers": {"foreign": {}}},
+                ),
+                redirect_stderr(io.StringIO()) as output,
+                self.assertRaisesRegex(RuntimeError, "injected"),
+            ):
+                with owned_window(workdir, []) as state:
+                    state.owned_network = network_id
+                    raise RuntimeError("injected")
+            self.assertEqual(checked_command.call_count, 2)
+            self.assertIn(
+                "owned disposable network could not be removed", output.getvalue()
+            )
+
     def test_source_failure_reports_first_stage_without_exception_text(self) -> None:
         tracker = StageTracker()
         with (
@@ -350,6 +398,85 @@ COMMIT;
             with self.assertRaises(RehearsalError) as wrong_version:
                 target_container()
         self.assertEqual(wrong_version.exception.code, "VERSION_MISMATCH")
+        details["NetworkSettings"]["Ports"]["5432/tcp"].append(
+            {"HostIp": "0.0.0.0", "HostPort": "54322"}
+        )
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[container_id.encode(), json.dumps(details).encode()],
+        ):
+            with self.assertRaises(RehearsalError) as extra_public_binding:
+                target_container()
+        self.assertEqual(extra_public_binding.exception.code, "CONTAINER_MISMATCH")
+
+    def test_disposable_network_requires_new_exact_loopback_bridge(self) -> None:
+        network_id = "a" * 64
+        details = {
+            "Id": network_id,
+            "Name": NETWORK,
+            "Driver": "bridge",
+            "Labels": {
+                "com.supabase.cli.project": "vergeo5-typegen",
+                "org.convergeo.typegen.disposable": "1",
+            },
+            "Options": {NETWORK_BIND_OPTION: "127.0.0.1"},
+            "Containers": {},
+        }
+        with patch(
+            "rehearse_explicit_transaction_profile.checked", return_value=b"foreign"
+        ) as checked_command:
+            with self.assertRaises(RehearsalError) as existing:
+                bind_disposable_network(WindowState())
+            self.assertEqual(checked_command.call_count, 1)
+        self.assertEqual(existing.exception.code, "CONTAINER_MISMATCH")
+        state = WindowState()
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[b"", network_id.encode(), json.dumps(details).encode()],
+        ) as checked_command:
+            bind_disposable_network(state)
+        self.assertEqual(state.owned_network, network_id)
+        self.assertIn(
+            f"{NETWORK_BIND_OPTION}=127.0.0.1",
+            checked_command.call_args_list[1].args[0],
+        )
+        details["Options"][NETWORK_BIND_OPTION] = "0.0.0.0"
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[b"", network_id.encode(), json.dumps(details).encode()],
+        ):
+            with self.assertRaises(RehearsalError) as public_network:
+                bind_disposable_network(WindowState())
+        self.assertEqual(public_network.exception.code, "CONTAINER_MISMATCH")
+
+    def test_started_container_must_join_owned_network_before_marking(self) -> None:
+        network_id = "a" * 64
+        container_id = "b" * 64
+        details = {
+            "Id": container_id,
+            "Name": f"/{CONTAINER}",
+            "Config": {
+                "Image": IMAGE,
+                "Labels": {"com.supabase.cli.project": "vergeo5-typegen"},
+            },
+            "State": {"Running": True},
+            "NetworkSettings": {"Networks": {NETWORK: {"NetworkID": network_id}}},
+        }
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[container_id[:12].encode(), json.dumps(details).encode()],
+        ):
+            self.assertEqual(
+                started_container_on_network(network_id), container_id[:12]
+            )
+        details["NetworkSettings"]["Networks"][NETWORK]["NetworkID"] = "c" * 64
+        with patch(
+            "rehearse_explicit_transaction_profile.checked",
+            side_effect=[container_id[:12].encode(), json.dumps(details).encode()],
+        ):
+            with self.assertRaises(RehearsalError) as foreign_network:
+                started_container_on_network(network_id)
+        self.assertEqual(foreign_network.exception.code, "CONTAINER_MISMATCH")
 
     def test_failed_command_does_not_expose_subprocess_stderr(self) -> None:
         result = subprocess.CompletedProcess([], 17, b"", b"private command stderr")
@@ -388,6 +515,7 @@ COMMIT;
             ("cli_version", "CLI_VERSION_MISMATCH"),
             ("scratch_directory", "WORKDIR_UNAVAILABLE"),
             ("stack_ownership", "CONTAINER_MISMATCH"),
+            ("network_binding", "CONTAINER_MISMATCH"),
             ("prefix_copy", "WORKDIR_UNAVAILABLE"),
         )
         for failed_stage, expected_code in cases:
@@ -405,6 +533,13 @@ COMMIT;
                     if failed_stage == "checkout_identity" and args[-1] == "HEAD":
                         return b"invalid-source"
                     return b"a" * 40
+
+                def fake_bind(state):
+                    if failed_stage == "network_binding":
+                        raise RehearsalError(
+                            "private network state", code="CONTAINER_MISMATCH"
+                        )
+                    state.owned_network = "a" * 64
 
                 tracker = StageTracker()
                 with (
@@ -437,6 +572,10 @@ COMMIT;
                             else None
                         ),
                         return_value=nullcontext(WindowState()),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.bind_disposable_network",
+                        side_effect=fake_bind,
                     ),
                     patch(
                         "rehearse_explicit_transaction_profile.visible_prefix",
@@ -476,6 +615,9 @@ COMMIT;
                 return b"2.109.1"
             return b"a" * 40
 
+        def fake_bind(state):
+            state.owned_network = "a" * 64
+
         for failure, expected_stage in (
             ("start", "cli_start"),
             ("container", "container_identity"),
@@ -500,6 +642,10 @@ COMMIT;
                         return_value=nullcontext(WindowState()),
                     ),
                     patch(
+                        "rehearse_explicit_transaction_profile.bind_disposable_network",
+                        side_effect=fake_bind,
+                    ),
+                    patch(
                         "rehearse_explicit_transaction_profile.visible_prefix",
                         return_value=nullcontext(),
                     ),
@@ -516,6 +662,10 @@ COMMIT;
                         side_effect=RehearsalError(
                             "private Docker inspect", code="IMAGE_MISMATCH"
                         ),
+                    ),
+                    patch(
+                        "rehearse_explicit_transaction_profile.started_container_on_network",
+                        return_value="abcdef123456",
                     ),
                     redirect_stderr(io.StringIO()) as output,
                     self.assertRaises(RehearsalError) as caught,

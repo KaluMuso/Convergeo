@@ -39,6 +39,9 @@ FIRST = next(iter(BOUND_FILES))
 LAST = next(reversed(BOUND_FILES))
 PROJECT = "vergeo5-typegen"
 CONTAINER = "supabase_db_vergeo5-typegen"
+NETWORK = "supabase_network_vergeo5-typegen"
+NETWORK_BIND_OPTION = "com.docker.network.bridge.host_binding_ipv4"
+NETWORK_OWNER_LABEL = "org.convergeo.typegen.disposable"
 IMAGE = "public.ecr.aws/supabase/postgres:17.6.1.143"
 URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 LOCK = Path("/tmp/convergeo-typegen-explicit-window.lock")
@@ -54,6 +57,7 @@ STAGES = frozenset(
         "cli_version",
         "scratch_directory",
         "stack_ownership",
+        "network_binding",
         "prefix_copy",
         "cli_start",
         "container_identity",
@@ -266,11 +270,7 @@ def target_container() -> str:
     if (
         details["Name"] != f"/{CONTAINER}"
         or not details["State"]["Running"]
-        or not isinstance(ports, list)
-        or not any(
-            p.get("HostIp") == "127.0.0.1" and p.get("HostPort") == "54322"
-            for p in ports
-        )
+        or ports != [{"HostIp": "127.0.0.1", "HostPort": "54322"}]
     ):
         raise RehearsalError(
             "typegen container identity or loopback binding changed",
@@ -281,6 +281,111 @@ def target_container() -> str:
             "qualified PostgreSQL patch changed", code="VERSION_MISMATCH"
         )
     return container
+
+
+def network_details(network_id: str) -> dict:
+    if re.fullmatch(r"[0-9a-f]{64}", network_id) is None:
+        raise RehearsalError("invalid disposable network ID", code="CONTAINER_MISMATCH")
+    details = json.loads(
+        checked(["docker", "network", "inspect", network_id, "--format", "{{json .}}"])
+    )
+    if (
+        details.get("Id") != network_id
+        or details.get("Name") != NETWORK
+        or details.get("Driver") != "bridge"
+        or details.get("Labels", {}).get("com.supabase.cli.project") != PROJECT
+        or details.get("Labels", {}).get(NETWORK_OWNER_LABEL) != "1"
+    ):
+        raise RehearsalError(
+            "disposable network identity changed", code="CONTAINER_MISMATCH"
+        )
+    return details
+
+
+def bind_disposable_network(state: WindowState) -> None:
+    """Set the pinned CLI's otherwise unspecified host binding to loopback.
+
+    CLI 2.109.1 publishes DB with HostPort only and reuses an existing named
+    network. The bridge option affects its default host IP without changing
+    the CLI image, database URL, or the strict post-start container guard.
+    """
+    if checked(
+        [
+            "docker",
+            "network",
+            "ls",
+            "--filter",
+            f"name=^{NETWORK}$",
+            "--format",
+            "{{.ID}}",
+        ]
+    ).strip():
+        raise RehearsalError(
+            "disposable network already exists", code="CONTAINER_MISMATCH"
+        )
+    network_id = checked(
+        [
+            "docker",
+            "network",
+            "create",
+            "--driver",
+            "bridge",
+            "--opt",
+            f"{NETWORK_BIND_OPTION}=127.0.0.1",
+            "--label",
+            f"com.supabase.cli.project={PROJECT}",
+            "--label",
+            f"{NETWORK_OWNER_LABEL}=1",
+            NETWORK,
+        ]
+    ).decode()
+    if re.fullmatch(r"[0-9a-f]{64}", network_id) is None:
+        raise RehearsalError(
+            "disposable network ID is invalid", code="CONTAINER_MISMATCH"
+        )
+    state.owned_network = network_id
+    details = network_details(network_id)
+    if (
+        details.get("Options", {}).get(NETWORK_BIND_OPTION) != "127.0.0.1"
+        or details.get("Containers") != {}
+    ):
+        raise RehearsalError(
+            "disposable network is not loopback-only and empty",
+            code="CONTAINER_MISMATCH",
+        )
+
+
+def started_container_on_network(network_id: str) -> str:
+    """Identify the just-created CLI container before checking its port mapping."""
+    matches = (
+        checked(
+            ["docker", "ps", "--filter", f"name=^/{CONTAINER}$", "--format", "{{.ID}}"]
+        )
+        .decode()
+        .splitlines()
+    )
+    if len(matches) != 1 or re.fullmatch(r"[0-9a-f]{12,64}", matches[0]) is None:
+        raise RehearsalError(
+            "new disposable database is missing", code="CONTAINER_MISSING"
+        )
+    details = json.loads(
+        checked(["docker", "inspect", matches[0], "--format", "{{json .}}"])
+    )
+    network = details.get("NetworkSettings", {}).get("Networks", {}).get(NETWORK, {})
+    if details.get("Config", {}).get("Image") != IMAGE:
+        raise RehearsalError("new disposable image changed", code="IMAGE_MISMATCH")
+    if (
+        not details.get("Id", "").startswith(matches[0])
+        or details.get("Name") != f"/{CONTAINER}"
+        or details.get("Config", {}).get("Labels", {}).get("com.supabase.cli.project")
+        != PROJECT
+        or not details.get("State", {}).get("Running")
+        or network.get("NetworkID") != network_id
+    ):
+        raise RehearsalError(
+            "new disposable database ownership changed", code="CONTAINER_MISMATCH"
+        )
+    return matches[0]
 
 
 def source_inventory(workdir: Path) -> tuple[list[Path], int]:
@@ -354,6 +459,7 @@ def visible_prefix(files: list[Path], through: int, holding: Path) -> Iterator[N
 
 @dataclass
 class WindowState:
+    owned_network: str | None = None
     owned_container: str | None = None
 
 
@@ -396,6 +502,37 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                 except Exception:
                     print(
                         "error: disposable failure cleanup could not restore 139 migrations",
+                        file=sys.stderr,
+                    )
+            elif state.owned_network is not None:
+                try:
+                    matches = (
+                        checked(
+                            [
+                                "docker",
+                                "network",
+                                "ls",
+                                "--filter",
+                                f"name=^{NETWORK}$",
+                                "--format",
+                                "{{.ID}}",
+                            ]
+                        )
+                        .decode()
+                        .splitlines()
+                    )
+                    if matches:
+                        if len(matches) != 1 or not state.owned_network.startswith(
+                            matches[0]
+                        ):
+                            raise RehearsalError("owned network ID changed")
+                        details = network_details(state.owned_network)
+                        if details.get("Containers") != {}:
+                            raise RehearsalError("owned network is not empty")
+                        checked(["docker", "network", "rm", state.owned_network])
+                except Exception:
+                    print(
+                        "error: owned disposable network could not be removed",
                         file=sys.stderr,
                     )
             raise
@@ -549,13 +686,23 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
         holding = Path(scratch)
         tracker.enter("stack_ownership")
         with owned_window(workdir, files) as window:
+            tracker.enter("network_binding")
+            bind_disposable_network(window)
             tracker.enter("prefix_copy")
             with visible_prefix(files, first_index - 1, holding):
                 tracker.enter("cli_start")
                 cli(workdir, "start")
                 tracker.enter("container_identity")
+                if window.owned_network is None:
+                    raise RehearsalError("disposable network ownership is missing")
+                mark_owned(
+                    workdir,
+                    window,
+                    started_container_on_network(window.owned_network),
+                )
                 container = target_container()
-                mark_owned(workdir, window, container)
+                if container != window.owned_container:
+                    raise RehearsalError("new disposable database ID changed")
                 tracker.enter("prefix_reset")
                 cli(workdir, "reset", "--no-seed")
                 tracker.enter("container_identity")
