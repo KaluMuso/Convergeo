@@ -21,7 +21,8 @@
     "format:staged": "node scripts/format-staged.mjs",
     "format:staged:test": "node --test scripts/format-staged.test.mjs",
     "perf:lighthouse": "node scripts/ci/lighthouse-runner.mjs",
-    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-runner.test.mjs"
+    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-runner.test.mjs",
+    "test:next-font": "node --test scripts/ci/test_next_font_extensionless.cjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -59,7 +60,11 @@
       "tmp@0.1.0": "0.2.7",
       "nanoid@^3.0.0": "3.3.18",
       "browserslist": "4.28.8",
-      "basic-ftp@<6.2.1": "6.2.1"
+      "basic-ftp@<6.2.1": "6.2.1",
+      "source-map-js": "1.2.2"
+    },
+    "patchedDependencies": {
+      "next@15.5.25": "patches/next.patch"
     }
   }
 }
