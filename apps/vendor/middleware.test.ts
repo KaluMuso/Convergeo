@@ -16,7 +16,8 @@ const { resolveGatedRedirectMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@vergeo/auth/middleware")>();
+  const actual =
+    await importOriginal<typeof import("@vergeo/auth/middleware")>();
   return {
     ...actual,
     createPortalRedirect: vi.fn(
@@ -26,7 +27,8 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
         locale: string,
         sessionResponse: NextResponse,
       ) => {
-        const path = kind === "login" ? `/${locale}/login` : `/${locale}/${kind}`;
+        const path =
+          kind === "login" ? `/${locale}/login` : `/${locale}/${kind}`;
         const redirect = NextResponse.redirect(new URL(path, request.url));
         return actual.mergeSessionCookies(sessionResponse, redirect);
       },
@@ -41,13 +43,17 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   };
 });
 
-import { isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
+import {
+  isVendorAuthSetupPath,
+  isVendorPasswordRecoveryPath,
+} from "./lib/password-recovery-path";
 import middleware from "./middleware";
 
 describe("vendor password recovery gate", () => {
   beforeEach(async () => {
-    const actual =
-      await vi.importActual<typeof import("@vergeo/auth/middleware")>("@vergeo/auth/middleware");
+    const actual = await vi.importActual<
+      typeof import("@vergeo/auth/middleware")
+    >("@vergeo/auth/middleware");
     resolveGatedRedirectMock.mockReset();
     resolveGatedRedirectMock.mockImplementation(actual.resolveGatedRedirect);
     vi.mocked(updateSession).mockResolvedValue({
@@ -66,10 +72,26 @@ describe("vendor password recovery gate", () => {
     ]),
   )("allows exact recovery without a session: %s", async (path) => {
     const response = await middleware(
-      new NextRequest(`https://vendor.example.test${path}?next=https://evil.example.test`),
+      new NextRequest(
+        `https://vendor.example.test${path}?next=https://evil.example.test`,
+      ),
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+    expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+    expectNonceReportOnlyCsp(response);
+  });
+
+  it.each(
+    LOCALES.flatMap((locale) => [
+      `/${locale}/accept-invite`,
+      `/${locale}/accept-invite/`,
+    ]),
+  )("allows exact invite acceptance without a session: %s", async (path) => {
+    const response = await middleware(
+      new NextRequest(`https://vendor.example.test${path}`),
+    );
+    expect(response.status).toBe(200);
     expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
     expectNonceReportOnlyCsp(response);
   });
@@ -80,10 +102,16 @@ describe("vendor password recovery gate", () => {
     "/en/reset-password/admin",
     "/en/reset-password/confirm/admin",
     "/en/reset-password-other",
+    "/en/accept-invite/admin",
+    "/en/accept-invite-other",
   ])("keeps unauthenticated non-recovery paths gated: %s", async (path) => {
-    const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+    const response = await middleware(
+      new NextRequest(`https://vendor.example.test${path}`),
+    );
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://vendor.example.test/en/login");
+    expect(response.headers.get("location")).toBe(
+      "https://vendor.example.test/en/login",
+    );
     expect(resolveGatedRedirectMock).toHaveBeenCalledOnce();
   });
 
@@ -94,6 +122,11 @@ describe("vendor password recovery gate", () => {
     "/en/reset-password/confirm-extra",
   ])("rejects lookalike/unsupported recovery paths: %s", (path) =>
     expect(isVendorPasswordRecoveryPath(path)).toBe(false),
+  );
+
+  it.each(["/xx/accept-invite", "/accept-invite", "/en/accept-invite//"])(
+    "rejects lookalike invite paths: %s",
+    (path) => expect(isVendorAuthSetupPath(path)).toBe(false),
   );
 
   it.each(["customer", "vendor"] as const)(
@@ -116,10 +149,14 @@ describe("vendor password recovery gate", () => {
         "/en/orders",
         "/en/events/synthetic/scan",
       ]) {
-        const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+        const response = await middleware(
+          new NextRequest(`https://vendor.example.test${path}`),
+        );
         expect(response.status, path).toBe(role === "vendor" ? 200 : 307);
         expect(response.headers.get("location"), path).toBe(
-          role === "vendor" ? null : "https://vendor.example.test/en/onboarding",
+          role === "vendor"
+            ? null
+            : "https://vendor.example.test/en/onboarding",
         );
         expectNonceReportOnlyCsp(response);
       }
@@ -128,7 +165,9 @@ describe("vendor password recovery gate", () => {
 
   it("preserves refreshed session cookies on recovery responses", async () => {
     const sessionResponse = NextResponse.next();
-    sessionResponse.cookies.set("synthetic-refresh", "fixture", { httpOnly: true });
+    sessionResponse.cookies.set("synthetic-refresh", "fixture", {
+      httpOnly: true,
+    });
     vi.mocked(updateSession).mockResolvedValue({
       response: sessionResponse,
       user: null,
@@ -142,7 +181,9 @@ describe("vendor password recovery gate", () => {
 });
 
 function getScriptSrc(csp: string | null): string | undefined {
-  return csp?.split("; ").find((directive) => directive.startsWith("script-src"));
+  return csp
+    ?.split("; ")
+    .find((directive) => directive.startsWith("script-src"));
 }
 
 function expectNonceReportOnlyCsp(response: NextResponse): void {
@@ -165,7 +206,9 @@ describe("vendor middleware CSP nonce", () => {
   });
 
   it("adds a nonce-bearing report-only CSP to pass-through responses", async () => {
-    const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en"));
+    const response = await middleware(
+      new NextRequest("https://vendor.vergeo5.com/en"),
+    );
 
     expect(response.status).toBe(200);
     expectNonceReportOnlyCsp(response);
@@ -174,7 +217,9 @@ describe("vendor middleware CSP nonce", () => {
   it("adds a nonce-bearing report-only CSP to login redirects", async () => {
     resolveGatedRedirectMock.mockReturnValue("login");
 
-    const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en/listings"));
+    const response = await middleware(
+      new NextRequest("https://vendor.vergeo5.com/en/listings"),
+    );
 
     expect(response.status).toBe(307);
     expectNonceReportOnlyCsp(response);
@@ -183,10 +228,14 @@ describe("vendor middleware CSP nonce", () => {
   it("sends authenticated non-vendors to onboarding instead of granting access", async () => {
     resolveGatedRedirectMock.mockReturnValue("onboarding");
 
-    const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en/listings"));
+    const response = await middleware(
+      new NextRequest("https://vendor.vergeo5.com/en/listings"),
+    );
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://vendor.vergeo5.com/en/onboarding");
+    expect(response.headers.get("location")).toBe(
+      "https://vendor.vergeo5.com/en/onboarding",
+    );
     expectNonceReportOnlyCsp(response);
   });
 });

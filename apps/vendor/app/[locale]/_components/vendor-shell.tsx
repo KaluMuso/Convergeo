@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { isVendorPasswordRecoveryPath } from "../../../lib/password-recovery-path";
+import { isVendorAuthSetupPath } from "../../../lib/password-recovery-path";
 
 import { VendorNav } from "./vendor-nav";
 
@@ -18,19 +18,28 @@ type VendorShellProps = {
 };
 
 /**
- * Authenticated vendor chrome. Login and recovery routes render bare children;
+ * Authenticated vendor chrome. Login and Auth setup routes render bare children;
  * all other routes get a responsive shell (desktop sidebar + mobile bottom nav).
  */
-export function VendorShell({ locale, capabilities, children }: VendorShellProps) {
+export function VendorShell({
+  locale,
+  capabilities,
+  children,
+}: VendorShellProps) {
   const pathname = usePathname();
   const tCommon = useTranslations("common");
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/") || isVendorPasswordRecoveryPath(pathname)) {
+  if (
+    rest === "/login" ||
+    rest.startsWith("/login/") ||
+    isVendorAuthSetupPath(pathname)
+  ) {
     return <>{children}</>;
   }
 
-  const isOnboarding = rest === "/onboarding" || rest.startsWith("/onboarding/");
+  const isOnboarding =
+    rest === "/onboarding" || rest.startsWith("/onboarding/");
 
   if (isOnboarding) {
     return (
@@ -57,7 +66,10 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
-        <Link href={`/${locale}`} className="font-display text-base font-semibold text-display-ink">
+        <Link
+          href={`/${locale}`}
+          className="font-display text-base font-semibold text-display-ink"
+        >
           {tCommon("app.name")}
         </Link>
         <ThemeToggle

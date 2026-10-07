@@ -15,7 +15,7 @@ import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
-import { isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
+import { isVendorAuthSetupPath } from "./lib/password-recovery-path";
 
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
@@ -56,8 +56,12 @@ export default async function middleware(request: NextRequest) {
   }
 
   const session = await updateSession(request);
-  const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
-  const gate = isVendorPasswordRecoveryPath(request.nextUrl.pathname)
+  const locale = getLocaleFromPath(
+    request.nextUrl.pathname,
+    LOCALES,
+    DEFAULT_LOCALE,
+  );
+  const gate = isVendorAuthSetupPath(request.nextUrl.pathname)
     ? null
     : resolveGatedRedirect(
         "vendor",
