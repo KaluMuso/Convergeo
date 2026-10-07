@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-type InviteSession = { userId: string; accessToken: string };
+type InviteSession = { userId: string; sessionId: string };
 type Ready = "checking" | "ready" | "invalid";
 
 export function InviteAcceptForm({ locale }: { locale: string }) {
@@ -52,9 +52,17 @@ export function InviteAcceptForm({ locale }: { locale: string }) {
             !data.session.access_token
           )
             return null;
+          const { data: verified, error: claimsError } =
+            await supabase.auth.getClaims(data.session.access_token);
+          if (
+            claimsError ||
+            verified?.claims.sub !== data.session.user.id ||
+            !verified.claims.session_id
+          )
+            return null;
           return {
             userId: data.session.user.id,
-            accessToken: data.session.access_token,
+            sessionId: verified.claims.session_id,
           };
         } catch {
           return null;
@@ -89,18 +97,35 @@ export function InviteAcceptForm({ locale }: { locale: string }) {
       const supabase = await getBrowserClient();
       const { data } = await supabase.auth.getSession();
       const expected = inviteSession.current;
+      const accessToken = data.session?.access_token;
+      const { data: current, error: claimsError } = accessToken
+        ? await supabase.auth.getClaims(accessToken)
+        : { data: null, error: null };
       if (
         !expected ||
-        data.session?.user.id !== expected.userId ||
-        data.session.access_token !== expected.accessToken
+        claimsError ||
+        current?.claims.sub !== expected.userId ||
+        current.claims.session_id !== expected.sessionId ||
+        !accessToken
       ) {
         setReady("invalid");
         return;
       }
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
+      // updateUser reads the shared session again; another tab can replace it
+      // between our check and its request. Send the verified token explicitly.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) throw new Error("Missing Supabase config");
+      const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password }),
       });
-      if (updateError) {
+      if (!response.ok) {
         setError(t("errors.generic"));
         return;
       }

@@ -20,7 +20,8 @@ const mocks = vi.hoisted(() => ({
   client: vi.fn(),
   verify: vi.fn(),
   session: vi.fn(),
-  update: vi.fn(),
+  claims: vi.fn(),
+  fetch: vi.fn(),
 }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: mocks.client,
@@ -46,7 +47,7 @@ beforeEach(() => {
     auth: {
       verifyOtp: mocks.verify,
       getSession: mocks.session,
-      updateUser: mocks.update,
+      getClaims: mocks.claims,
     },
   });
   mocks.verify.mockResolvedValue({
@@ -54,9 +55,25 @@ beforeEach(() => {
     error: null,
   });
   mocks.session.mockResolvedValue({ data: { session: inviteSession } });
-  mocks.update.mockResolvedValue({ error: null });
+  mocks.claims.mockImplementation(async (token: string) => ({
+    data: {
+      claims: {
+        sub: token === "other-user-token" ? "other-user" : "invited-user",
+        session_id: token === "other-session-token" ? "other-session" : "invite-session",
+      },
+    },
+    error: null,
+  }));
+  mocks.fetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", mocks.fetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("vendor invite acceptance", () => {
   it.each([
@@ -74,7 +91,7 @@ describe("vendor invite acceptance", () => {
         "invalid or expired",
       );
       expect(mocks.client).not.toHaveBeenCalled();
-      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
       expect(window.location.hash).toBe("");
     },
   );
@@ -106,9 +123,17 @@ describe("vendor invite acceptance", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Your password is set",
     );
-    expect(mocks.update).toHaveBeenCalledExactlyOnceWith({
-      password: "a-long-fixture-password",
-    });
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+      "https://staging.example.supabase.co/auth/v1/user",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          apikey: "public-fixture-key",
+          Authorization: "Bearer invite-session-token",
+        }),
+        body: JSON.stringify({ password: "a-long-fixture-password" }),
+      }),
+    );
     expect(screen.getByRole("link", { name: "Go to sign in" })).toHaveAttribute(
       "href",
       "/en/login",
@@ -129,12 +154,80 @@ describe("vendor invite acceptance", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "invalid or expired",
     );
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("accepts a refreshed token from the same invite session", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/en/accept-invite#token_hash=invite-token&type=invite",
+    );
+    show();
+    await screen.findByRole("button", { name: "Set password" });
+    mocks.session.mockResolvedValue({
+      data: {
+        session: { user: { id: "invited-user" }, access_token: "refreshed-token" },
+      },
+    });
+    fireEvent.change(screen.getByLabelText(/^New password/), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Your password is set",
+    );
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer refreshed-token" }),
+      }),
+    );
+  });
+
+  it("pins the password request to the verified account if the shared session switches", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/en/accept-invite#token_hash=invite-token&type=invite",
+    );
+    show();
+    await screen.findByRole("button", { name: "Set password" });
+    mocks.fetch.mockImplementation(async () => {
+      mocks.session.mockResolvedValue({
+        data: {
+          session: { user: { id: "other-user" }, access_token: "other-user-token" },
+        },
+      });
+      return { ok: true };
+    });
+    fireEvent.change(screen.getByLabelText(/^New password/), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Your password is set",
+    );
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer invite-session-token",
+        }),
+      }),
+    );
+    expect(mocks.session).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    ["different user", "other-user", "invite-session-token"],
-    ["different token", "invited-user", "other-token"],
+    ["different user", "other-user", "other-user-token"],
+    ["different session", "invited-user", "other-session-token"],
   ])(
     "fails closed with a %s before password setup",
     async (_, userId, accessToken) => {
@@ -160,7 +253,7 @@ describe("vendor invite acceptance", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "invalid or expired",
       );
-      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
     },
   );
 
@@ -180,7 +273,7 @@ describe("vendor invite acceptance", () => {
     view.unmount();
     await act(async () => resolve({ auth: { verifyOtp: mocks.verify } }));
     expect(mocks.verify).not.toHaveBeenCalled();
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("ignores verification that finishes after leaving the page", async () => {
@@ -201,7 +294,7 @@ describe("vendor invite acceptance", () => {
     await act(async () =>
       resolve({ data: { session: inviteSession }, error: null }),
     );
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("does not reuse a consumed invitation after an interrupted setup", async () => {
@@ -218,7 +311,7 @@ describe("vendor invite acceptance", () => {
       "invalid or expired",
     );
     expect(mocks.verify).toHaveBeenCalledOnce();
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
     expect(
       screen.getByRole("link", { name: "Try password recovery" }),
     ).toHaveAttribute("href", "/en/reset-password");
