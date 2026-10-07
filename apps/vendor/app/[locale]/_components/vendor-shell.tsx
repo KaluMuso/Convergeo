@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+import { isVendorPasswordRecoveryPath } from "../../../lib/password-recovery-path";
+
 import { VendorNav } from "./vendor-nav";
 
 import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
@@ -16,7 +18,7 @@ type VendorShellProps = {
 };
 
 /**
- * Authenticated vendor chrome. Login and onboarding routes render bare children;
+ * Authenticated vendor chrome. Login and recovery routes render bare children;
  * all other routes get a responsive shell (desktop sidebar + mobile bottom nav).
  */
 export function VendorShell({ locale, capabilities, children }: VendorShellProps) {
@@ -24,7 +26,7 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
   const tCommon = useTranslations("common");
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
+  if (rest === "/login" || rest.startsWith("/login/") || isVendorPasswordRecoveryPath(pathname)) {
     return <>{children}</>;
   }
 
