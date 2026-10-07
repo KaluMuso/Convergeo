@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { User } from "@supabase/supabase-js";
 
-import { getRoles, getRolesFromUser, hasRole } from "./roles";
+import { getRoles, getRolesFromClaims, getRolesFromUser, hasRole } from "./roles";
 
 function makeUser(roles: string[] | undefined): User {
   return {
@@ -35,6 +35,24 @@ describe("getRolesFromUser", () => {
   it("returns an empty list for missing users", () => {
     expect(getRolesFromUser(null)).toEqual([]);
   });
+});
+
+describe("getRolesFromClaims", () => {
+  it("accepts only known roles in app_metadata", () => {
+    expect(
+      getRolesFromClaims({ app_metadata: { roles: ["vendor", "admin", "superuser"] } }),
+    ).toEqual(["vendor", "admin"]);
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { app_metadata: { roles: "vendor" } },
+    { user_metadata: { roles: ["vendor"] } },
+  ])("rejects missing or malformed claims: %j", (claims) =>
+    expect(getRolesFromClaims(claims)).toEqual([]),
+  );
 });
 
 describe("getRoles", () => {
