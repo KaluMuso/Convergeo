@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.kyc.document_evidence import validate_kyc_document_evidence
 from app.services.kyc.name_match import MomoOperator, resolve_and_score_momo_name
 from app.services.kyc.state_machine import (
     KycApplicationStatus,
@@ -540,6 +541,12 @@ async def submit_kyc(
     vendor: Annotated[dict[str, Any], Depends(require_vendor_owner)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> KycSubmitResponse:
+    validate_kyc_document_evidence(
+        service_client,
+        vendor_id=str(vendor["id"]),
+        tier=body.tier,
+        paths=body.doc_storage_paths,
+    )
     momo_result = await resolve_and_score_momo_name(
         phone=body.momo_phone,
         legal_name=body.legal_name,
@@ -595,6 +602,12 @@ async def resubmit_kyc(
             },
         )
 
+    validate_kyc_document_evidence(
+        service_client,
+        vendor_id=str(vendor["id"]),
+        tier=body.tier,
+        paths=body.doc_storage_paths,
+    )
     momo_result = await resolve_and_score_momo_name(
         phone=body.momo_phone,
         legal_name=body.legal_name,

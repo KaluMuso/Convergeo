@@ -44,6 +44,8 @@ OTHER_VENDOR_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 KYC_RECORD_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 VALID_TOKEN = "valid.jwt.token"
 COD_CAP_NGWEE = 50_000
+NRC_PATH = f"kyc/{VENDOR_ID}/nrc-1700000000"
+SELFIE_PATH = f"kyc/{VENDOR_ID}/selfie-1700000001"
 
 
 class FakeQuery:
@@ -194,6 +196,28 @@ class FakeTable:
         return FakeQuery(self, []).update(payload)
 
 
+class FakeKycBucket:
+    def __init__(self) -> None:
+        self.objects: set[str] = set()
+        self.failure: Exception | None = None
+        self.calls: list[str] = []
+
+    def exists(self, path: str) -> bool:
+        self.calls.append(path)
+        if self.failure is not None:
+            raise self.failure
+        return path in self.objects
+
+
+class FakeKycStorage:
+    def __init__(self) -> None:
+        self.bucket = FakeKycBucket()
+
+    def from_(self, bucket: str) -> FakeKycBucket:
+        assert bucket == "kyc-docs"
+        return self.bucket
+
+
 class FakeSupabaseClient:
     def __init__(self) -> None:
         self.tables: dict[str, FakeTable] = {
@@ -210,6 +234,7 @@ class FakeSupabaseClient:
             "order_items": FakeTable(),
             "user_roles": FakeTable(),
         }
+        self.storage = FakeKycStorage()
         self._block_vendor_role_grant = False
 
     def table(self, name: str) -> FakeTable:
@@ -572,6 +597,7 @@ async def test_name_match_recorded_not_auto_approved(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _seed_t1_vendor(fake_client)
+    fake_client.storage.bucket.objects.update({NRC_PATH, SELFIE_PATH})
     monkeypatch.setenv("LENCO_API_TOKEN", "test-token")
     monkeypatch.setattr(
         "app.routers.kyc.resolve_and_score_momo_name",
@@ -594,7 +620,7 @@ async def test_name_match_recorded_not_auto_approved(
         headers={"Authorization": f"Bearer {VALID_TOKEN}"},
         json={
             "tier": 1,
-            "doc_storage_paths": ["private/kyc/nrc.jpg"],
+            "doc_storage_paths": [NRC_PATH, SELFIE_PATH],
             "momo_phone": "0961111111",
             "legal_name": "Jane Phiri",
         },
@@ -819,7 +845,8 @@ def test_kyc_resubmit_after_rejection_creates_one_owned_pending_application(
 ) -> None:
     _seed_rejected_kyc(fake_client)
     resolver = _mock_momo_resolution(monkeypatch)
-    new_paths = [f"kyc/{VENDOR_ID}/nrc-new.jpg", f"kyc/{VENDOR_ID}/selfie-new.jpg"]
+    new_paths = [NRC_PATH, SELFIE_PATH]
+    fake_client.storage.bucket.objects.update(new_paths)
     payload = {
         "tier": 1,
         "doc_storage_paths": new_paths,
@@ -938,6 +965,101 @@ def test_kyc_resubmit_requires_nonblank_documents(
     assert fake_client.tables["kyc_records"].rows[0]["status"] == "rejected"
     assert fake_client.tables["audit_log"].rows == []
     resolver.assert_not_awaited()
+
+
+@pytest.mark.parametrize("endpoint", ["submit", "resubmit"])
+@pytest.mark.parametrize(
+    ("paths", "stored", "failure", "expected_status", "expected_code"),
+    [
+        (
+            [f"kyc/{OTHER_VENDOR_ID}/nrc-1700000000", SELFIE_PATH],
+            {SELFIE_PATH},
+            None,
+            422,
+            "kyc_documents_invalid",
+        ),
+        (
+            [f"kyc/{VENDOR_ID}/nrc.jpg", SELFIE_PATH],
+            {SELFIE_PATH},
+            None,
+            422,
+            "kyc_documents_invalid",
+        ),
+        ([NRC_PATH], {NRC_PATH}, None, 422, "kyc_documents_required"),
+        (
+            [NRC_PATH, SELFIE_PATH],
+            {NRC_PATH},
+            None,
+            422,
+            "kyc_document_missing",
+        ),
+        (
+            [NRC_PATH, SELFIE_PATH],
+            {NRC_PATH, SELFIE_PATH},
+            RuntimeError("storage unavailable"),
+            503,
+            "kyc_storage_unavailable",
+        ),
+        (
+            [NRC_PATH, SELFIE_PATH]
+            + [f"kyc/{VENDOR_ID}/nrc-{1700000000 + index}" for index in range(2, 9)],
+            {NRC_PATH, SELFIE_PATH},
+            None,
+            422,
+            "kyc_documents_invalid",
+        ),
+        (
+            [f"kyc/{VENDOR_ID}/nrc-{'1' * 121}", SELFIE_PATH],
+            {SELFIE_PATH},
+            None,
+            422,
+            "kyc_documents_invalid",
+        ),
+    ],
+    ids=[
+        "foreign", "malformed", "missing-type", "missing-object",
+        "storage-failure", "too-many-paths", "long-path",
+    ],
+)
+def test_kyc_submission_rejects_bad_document_evidence_before_provider_or_write(
+    endpoint: str,
+    paths: list[str],
+    stored: set[str],
+    failure: Exception | None,
+    expected_status: int,
+    expected_code: str,
+    kyc_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if endpoint == "submit":
+        _seed_t1_vendor(fake_client)
+    else:
+        _seed_rejected_kyc(fake_client)
+    fake_client.storage.bucket.objects.update(stored)
+    fake_client.storage.bucket.failure = failure
+    resolver = _mock_momo_resolution(monkeypatch)
+    original_status = fake_client.tables["vendors"].rows[0]["status"]
+    original_records = [dict(row) for row in fake_client.tables["kyc_records"].rows]
+
+    response = kyc_client.post(
+        f"/kyc/{endpoint}",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "tier": 1,
+            "doc_storage_paths": paths,
+            "momo_phone": "0961111111",
+            "legal_name": "Jane Phiri",
+        },
+    )
+    assert response.status_code == expected_status, response.text
+    assert response.json()["error"]["code"] == expected_code
+    assert fake_client.tables["vendors"].rows[0]["status"] == original_status
+    assert fake_client.tables["kyc_records"].rows == original_records
+    assert fake_client.tables["audit_log"].rows == []
+    resolver.assert_not_awaited()
+    if expected_code in {"kyc_documents_invalid", "kyc_documents_required"}:
+        assert fake_client.storage.bucket.calls == []
 
 
 def test_require_listing_cap_dependency(
