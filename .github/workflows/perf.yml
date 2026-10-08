@@ -252,9 +252,11 @@ jobs:
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
         # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
         # Bundle-guard + image-lint remain the hard first-load JS/image gates.
-        # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
+        # Rollback: temporarily pin this step to continue-on-error ONLY if Lighthouse/Chrome
         # itself is unavailable (not for score dips) — document in the PR.
-        run: pnpm exec lhci autorun --config=lighthouserc.json
+        run: |
+          node --test scripts/ci/lighthouse-budget.test.mjs
+          node scripts/ci/lighthouse-budget.mjs
 
       - name: Install a11y smoke deps (standalone e2e package)
         working-directory: e2e
@@ -298,4 +300,5 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
+          include-hidden-files: true
           if-no-files-found: ignore
