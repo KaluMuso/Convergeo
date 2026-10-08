@@ -24,11 +24,29 @@ import {
 } from "./middleware";
 
 const getUser = vi.fn();
+const getClaims = vi.fn();
+
+function verifiedClaims(roles: unknown, overrides: Record<string, unknown> = {}) {
+  return {
+    data: {
+      claims: {
+        sub: "user-1",
+        iss: "https://example.supabase.co/auth/v1",
+        aud: "authenticated",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        app_metadata: { roles },
+        ...overrides,
+      },
+    },
+    error: null,
+  };
+}
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(() => ({
     auth: {
       getUser,
+      getClaims,
     },
   })),
 }));
@@ -38,6 +56,8 @@ describe("updateSession", () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     getUser.mockReset();
+    getClaims.mockReset();
+    getClaims.mockResolvedValue({ data: null, error: null });
   });
 
   afterEach(() => {
@@ -54,23 +74,82 @@ describe("updateSession", () => {
     expect(result.user).toBeNull();
     expect(result.roles).toEqual([]);
     expect(getUser).toHaveBeenCalledOnce();
+    expect(getClaims).not.toHaveBeenCalled();
   });
 
-  it("extracts roles from the authenticated user", async () => {
+  it("reads verified claim roles when the User object has none", async () => {
     getUser.mockResolvedValue({
       data: {
         user: {
           id: "user-1",
-          app_metadata: { roles: ["vendor"] },
+          app_metadata: {},
         },
       },
     });
+    getClaims.mockResolvedValue(verifiedClaims(["customer", "vendor", "admin"]));
 
     const request = new NextRequest("http://localhost:3001/en");
     const result = await updateSession(request);
 
     expect(result.user?.id).toBe("user-1");
-    expect(result.roles).toEqual(["vendor"]);
+    expect(result.roles).toEqual(["customer", "vendor", "admin"]);
+    expect(getClaims).toHaveBeenCalledOnce();
+    expect(
+      resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles),
+    ).toBeNull();
+    expect(resolveGatedRedirect("admin", "/en", ["en"], result.user, result.roles)).toBeNull();
+  });
+
+  it.each([
+    ["customer", "onboarding", "permission-denied"],
+    ["vendor", null, "permission-denied"],
+    ["admin", "onboarding", null],
+  ] as const)("preserves %s routing gates", async (role, vendorRedirect, adminRedirect) => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(verifiedClaims([role]));
+    const result = await updateSession(new NextRequest("http://localhost:3001/en"));
+    expect(resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles)).toBe(
+      vendorRedirect,
+    );
+    expect(resolveGatedRedirect("admin", "/en", ["en"], result.user, result.roles)).toBe(
+      adminRedirect,
+    );
+  });
+
+  it.each([
+    ["wrong issuer", { iss: "https://other.supabase.co/auth/v1" }],
+    ["wrong audience", { aud: "anon" }],
+    ["missing audience", { aud: undefined }],
+    ["expired", { exp: Math.floor(Date.now() / 1000) - 1 }],
+    ["missing expiration", { exp: undefined }],
+    ["wrong subject", { sub: "other-user" }],
+    ["malformed roles", { app_metadata: { roles: "vendor" } }],
+    ["user metadata spoof", { app_metadata: {}, user_metadata: { roles: ["vendor"] } }],
+  ])("fails closed for %s", async (_case, overrides) => {
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", app_metadata: { roles: ["vendor"] } } },
+    });
+    getClaims.mockResolvedValue(verifiedClaims(["vendor"], overrides));
+    const result = await updateSession(new NextRequest("http://localhost:3001/en"));
+    expect(result.roles).toEqual([]);
+    expect(resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles)).toBe(
+      "onboarding",
+    );
+  });
+
+  it("fails closed when claim verification returns no claims or an error", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    for (const response of [
+      { data: null, error: null },
+      { data: null, error: { message: "verification failed" } },
+    ]) {
+      getClaims.mockResolvedValueOnce(response);
+      const result = await updateSession(new NextRequest("http://localhost:3001/en"));
+      expect(result.roles).toEqual([]);
+    }
+    getClaims.mockRejectedValueOnce(new Error("JWKS unavailable"));
+    const result = await updateSession(new NextRequest("http://localhost:3001/en"));
+    expect(result.roles).toEqual([]);
   });
 });
 

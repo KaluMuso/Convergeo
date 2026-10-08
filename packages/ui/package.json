@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@vergeo/i18n": "workspace:*",
-    "next": "^15.5.23",
+    "next": "^15.5.27",
     "qrcode-generator": "^1.4.4"
   },
   "devDependencies": {
@@ -40,7 +40,7 @@
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.8.2",
-    "vitest": "^3.0.9"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "react": "^19.2.8",

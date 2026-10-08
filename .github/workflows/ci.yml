@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Staged formatter regression tests
+        run: pnpm format:staged:test
+
       - name: Resolve Turbo filter
         id: turbo
         run: |
@@ -264,43 +267,11 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
-      - name: pnpm audit (fail on high)
-        # Blocking (M15-P05): any high/critical advisory fails the pipeline, EXCEPT a
-        # written allowlist of accepted advisories. Accepted:
-        #   GHSA-ph9p-34f9-6g65 — tmp<0.2.6 path traversal, transitive via @lhci/cli
-        #     (Lighthouse CI). Dev/CI-only, never bundled into a shipped app or the API
-        #     runtime => no production exposure. See docs/ops/owasp-audit.md (A06/F1).
-        #     Remove this entry once @lhci/cli ships a tmp>=0.2.6.
-        #   GHSA-mh99-v99m-4gvg — brace-expansion<5.0.8, only in the legacy
-        #     chrome-launcher/glob/minimatch chain of @lhci/cli. The current
-        #     @lhci/cli release still ships this chain; it is CI-only and never
-        #     bundled into a shipped app or the API runtime. See A06/F3.
-        #     Remove this entry once @lhci/cli removes the legacy chain.
-        #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
-        #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
-        #     CI/dev-only; no production exposure. See A06/F7.
-        run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv"
-          pnpm audit --audit-level=high --json > audit.json || true
-          ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
-          import json, os, sys
-          allow = set(os.environ["ALLOWLIST"].split())
-          data = json.load(open("audit.json"))
-          blocking = []
-          for adv in data.get("advisories", {}).values():
-              if adv.get("severity") in ("high", "critical"):
-                  ghsa = adv.get("github_advisory_id", "")
-                  if ghsa in allow:
-                      print(f"::notice::allowlisted {ghsa} ({adv.get('module_name')}) — see owasp-audit.md")
-                      continue
-                  blocking.append(f"{adv.get('severity')} {ghsa} {adv.get('module_name')}")
-          if blocking:
-              print("::error::blocking high/critical advisories:")
-              for b in blocking:
-                  print(f"  - {b}")
-              sys.exit(1)
-          print("pnpm audit: no blocking high/critical advisories")
-          PY
+      - name: pnpm production audit (fail on high)
+        run: pnpm audit --prod --audit-level high
+
+      - name: pnpm full dependency audit (fail on high)
+        run: pnpm audit --audit-level high
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5

@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { mergeSecureCookieOptions } from "./cookie-security";
-import { getRolesFromUser, hasRole, type AppRole } from "./roles";
+import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
 
 export type AuthGate = "none" | "vendor" | "admin";
 export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
@@ -333,7 +333,8 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
     request,
   });
 
-  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  const supabaseUrl = getSupabaseUrl();
+  const supabase = createServerClient(supabaseUrl, getSupabaseAnonKey(), {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -359,6 +360,34 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
   return {
     response,
     user,
-    roles: getRolesFromUser(user),
+    roles: await resolveVerifiedRoles(supabase, user, `${supabaseUrl.replace(/\/+$/, "")}/auth/v1`),
   };
+}
+
+/** A failed or mismatched JWT verification must never grant a routing role. */
+async function resolveVerifiedRoles(
+  supabase: ReturnType<typeof createServerClient>,
+  user: User | null,
+  expectedIssuer: string,
+): Promise<AppRole[]> {
+  if (!user) return [];
+  try {
+    // getClaims verifies the token signature (or asks Auth for symmetric keys).
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return [];
+    const claims = data.claims as Record<string, unknown>;
+    if (
+      claims.sub !== user.id ||
+      claims.iss !== expectedIssuer ||
+      claims.aud !== "authenticated" ||
+      typeof claims.exp !== "number" ||
+      !Number.isFinite(claims.exp) ||
+      claims.exp <= Date.now() / 1000
+    ) {
+      return [];
+    }
+    return getRolesFromClaims(claims);
+  } catch {
+    return [];
+  }
 }
