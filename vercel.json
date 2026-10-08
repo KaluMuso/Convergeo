@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "cursor/low-stock-empty-threshold-fac35f-20261008": false
+    }
+  }
+}
