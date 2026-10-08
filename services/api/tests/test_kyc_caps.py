@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -37,7 +38,9 @@ from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
+OTHER_USER_ID = "22222222-2222-2222-2222-222222222222"
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+OTHER_VENDOR_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 KYC_RECORD_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 VALID_TOKEN = "valid.jwt.token"
 COD_CAP_NGWEE = 50_000
@@ -111,6 +114,9 @@ class FakeQuery:
             row = dict(self._payload)
             if "id" not in row:
                 row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
+            if self._parent.default_created_at:
+                # Mirror the DB default so the newest KYC application is selected on retry.
+                row.setdefault("created_at", datetime.now(UTC).isoformat())
             self._parent.rows.append(row)
             return MagicMock(data=[row], count=None)
 
@@ -167,8 +173,9 @@ class FakeQuery:
 
 
 class FakeTable:
-    def __init__(self) -> None:
+    def __init__(self, *, default_created_at: bool = False) -> None:
         self.rows: list[dict[str, Any]] = []
+        self.default_created_at = default_created_at
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         return FakeQuery(self, []).select(columns, count=count)
@@ -191,7 +198,7 @@ class FakeSupabaseClient:
     def __init__(self) -> None:
         self.tables: dict[str, FakeTable] = {
             "vendors": FakeTable(),
-            "kyc_records": FakeTable(),
+            "kyc_records": FakeTable(default_created_at=True),
             "audit_log": FakeTable(),
             "vendor_quotas": FakeTable(),
             "platform_config": FakeTable(),
@@ -771,6 +778,166 @@ def test_kyc_resubmit_only_after_rejection(
         },
     )
     assert response.status_code == 409
+
+
+def _seed_rejected_kyc(fake_client: FakeSupabaseClient) -> None:
+    _seed_t1_vendor(fake_client, status="pending_kyc")
+    fake_client.tables["kyc_records"].rows.append(
+        {
+            "id": KYC_RECORD_ID,
+            "vendor_id": VENDOR_ID,
+            "tier": 1,
+            "status": "rejected",
+            "doc_storage_paths": [f"kyc/{VENDOR_ID}/nrc-old.jpg"],
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
+
+
+def _mock_momo_resolution(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    monkeypatch.setenv("LENCO_API_TOKEN", "test-token")
+    resolver = AsyncMock(
+        return_value=MomoNameMatchResult(
+            phone="0961111111",
+            operator="mtn",
+            resolved_name="Jane Phiri",
+            legal_name="Jane Phiri",
+            match_score=1.0,
+            matched=True,
+            recorded_at="2026-07-08T00:00:00+00:00",
+            raw={"accountName": "Jane Phiri"},
+        )
+    )
+    monkeypatch.setattr("app.routers.kyc.resolve_and_score_momo_name", resolver)
+    return resolver
+
+
+def test_kyc_resubmit_after_rejection_creates_one_owned_pending_application(
+    kyc_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_rejected_kyc(fake_client)
+    resolver = _mock_momo_resolution(monkeypatch)
+    new_paths = [f"kyc/{VENDOR_ID}/nrc-new.jpg", f"kyc/{VENDOR_ID}/selfie-new.jpg"]
+    payload = {
+        "tier": 1,
+        "doc_storage_paths": new_paths,
+        "momo_phone": "0961111111",
+        "legal_name": "Jane Phiri",
+    }
+
+    response = kyc_client.post(
+        "/kyc/resubmit",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json=payload,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["application_status"] == "submitted"
+    records = fake_client.tables["kyc_records"].rows
+    assert len(records) == 2
+    assert records[0]["id"] == KYC_RECORD_ID
+    assert records[0]["status"] == "rejected"
+    assert records[0]["doc_storage_paths"] == [f"kyc/{VENDOR_ID}/nrc-old.jpg"]
+    assert records[1]["id"] == response.json()["kyc_record_id"]
+    assert records[1]["vendor_id"] == VENDOR_ID
+    assert records[1]["status"] == "submitted"
+    assert records[1]["doc_storage_paths"] == new_paths
+    assert fake_client.tables["vendors"].rows[0]["status"] == "pending_kyc"
+    audit = fake_client.tables["audit_log"].rows
+    assert len(audit) == 1
+    assert audit[0]["actor"] == USER_ID
+    assert audit[0]["before"]["kyc_record"]["status"] == "rejected"
+    assert audit[0]["after"]["kyc_record"]["status"] == "submitted"
+
+    status = kyc_client.get(
+        "/kyc/status", headers={"Authorization": f"Bearer {VALID_TOKEN}"}
+    )
+    assert status.status_code == 200, status.text
+    assert status.json()["application_status"] == "submitted"
+    assert status.json()["kyc_record_id"] == records[1]["id"]
+
+    repeated = kyc_client.post(
+        "/kyc/resubmit",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json=payload,
+    )
+    assert repeated.status_code == 409
+    assert repeated.json()["error"]["code"] == "kyc_invalid_transition"
+    assert len(records) == 2
+    assert len([row for row in records if row["status"] == "submitted"]) == 1
+    assert len(audit) == 1
+    resolver.assert_awaited_once()
+
+
+def test_kyc_resubmit_rejects_vendor_not_owned_by_caller(
+    kyc_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_client.tables["vendors"].rows.append(
+        {
+            "id": OTHER_VENDOR_ID,
+            "owner_user_id": OTHER_USER_ID,
+            "status": "pending_kyc",
+            "kyc_tier": None,
+        }
+    )
+    fake_client.tables["kyc_records"].rows.append(
+        {
+            "id": KYC_RECORD_ID,
+            "vendor_id": OTHER_VENDOR_ID,
+            "tier": 1,
+            "status": "rejected",
+            "doc_storage_paths": [f"kyc/{OTHER_VENDOR_ID}/nrc-old.jpg"],
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
+    resolver = _mock_momo_resolution(monkeypatch)
+
+    response = kyc_client.post(
+        "/kyc/resubmit",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "tier": 1,
+            "doc_storage_paths": [f"kyc/{OTHER_VENDOR_ID}/nrc-new.jpg"],
+            "momo_phone": "0961111111",
+            "legal_name": "Jane Phiri",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "forbidden"
+    assert len(fake_client.tables["kyc_records"].rows) == 1
+    assert fake_client.tables["kyc_records"].rows[0]["status"] == "rejected"
+    assert fake_client.tables["audit_log"].rows == []
+    resolver.assert_not_awaited()
+
+
+@pytest.mark.parametrize("paths", [[], [" ", ""]])
+def test_kyc_resubmit_requires_nonblank_documents(
+    paths: list[str],
+    kyc_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_rejected_kyc(fake_client)
+    resolver = _mock_momo_resolution(monkeypatch)
+
+    response = kyc_client.post(
+        "/kyc/resubmit",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "tier": 1,
+            "doc_storage_paths": paths,
+            "momo_phone": "0961111111",
+            "legal_name": "Jane Phiri",
+        },
+    )
+    assert response.status_code == 422
+    assert len(fake_client.tables["kyc_records"].rows) == 1
+    assert fake_client.tables["kyc_records"].rows[0]["status"] == "rejected"
+    assert fake_client.tables["audit_log"].rows == []
+    resolver.assert_not_awaited()
 
 
 def test_require_listing_cap_dependency(
