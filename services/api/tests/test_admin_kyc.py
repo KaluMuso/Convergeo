@@ -8,11 +8,11 @@ from unittest.mock import MagicMock
 import pytest
 from app.main import create_app
 from app.routers.admin_kyc import (
-    KYC_DOCS_BUCKET,
     SIGNED_URL_TTL_SECONDS,
     compute_sla_badge,
     sign_kyc_documents,
 )
+from app.services.kyc.document_evidence import KYC_DOCS_BUCKET
 from fastapi.testclient import TestClient
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
