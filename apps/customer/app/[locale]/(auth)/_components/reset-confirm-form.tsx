@@ -9,15 +9,16 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { parseAuthError } from "./auth-utils";
+import { parseAuthError, parseRetryAfterFromResponse } from "./auth-utils";
 
 type Ready = "checking" | "ready" | "invalid";
 type Status = "idle" | "saving" | "done" | "error";
+type RecoverySession = { userId: string; sessionId: string };
 
 /**
  * Completes a Supabase password recovery. The emailed link redirects here with a
  * PKCE `?code=`; we exchange it for a recovery session (mirroring the OAuth flow
- * in login-shell), then let the user set a new password via `updateUser`.
+ * in login-shell), then bind password setup to the verified recovery session.
  */
 export function ResetConfirmForm({ locale }: { locale: string }) {
   const t = useTranslations("auth");
@@ -27,7 +28,7 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
-  const recoveryUserId = useRef<string | null>(null);
+  const recoverySession = useRef<RecoverySession | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -54,17 +55,30 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
         });
         try {
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          const userId =
+          const matchingSession =
             !exchangeError &&
             recoveryEventAccessToken &&
             data.session &&
             data.session.access_token === recoveryEventAccessToken &&
             data.session.user.id === recoveryEventUserId
-              ? data.session.user.id
+              ? data.session
+              : null;
+          const { data: verified, error: claimsError } = matchingSession
+            ? await supabase.auth.getClaims(matchingSession.access_token)
+            : { data: null, error: null };
+          const session =
+            !claimsError &&
+            matchingSession &&
+            verified?.claims.sub === matchingSession.user.id &&
+            verified.claims.session_id
+              ? {
+                  userId: matchingSession.user.id,
+                  sessionId: verified.claims.session_id,
+                }
               : null;
           if (active) {
-            recoveryUserId.current = userId ?? null;
-            setReady(userId ? "ready" : "invalid");
+            recoverySession.current = session;
+            setReady(session ? "ready" : "invalid");
           }
         } finally {
           subscription.unsubscribe();
@@ -96,13 +110,40 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
     try {
       const supabase = await getBrowserClient();
       const { data } = await supabase.auth.getSession();
-      if (!recoveryUserId.current || data.session?.user.id !== recoveryUserId.current) {
+      const expected = recoverySession.current;
+      const accessToken = data.session?.access_token;
+      const { data: current, error: claimsError } = accessToken
+        ? await supabase.auth.getClaims(accessToken)
+        : { data: null, error: null };
+      if (
+        !expected ||
+        claimsError ||
+        current?.claims.sub !== expected.userId ||
+        current.claims.session_id !== expected.sessionId ||
+        !accessToken
+      ) {
         setReady("invalid");
         return;
       }
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        const parsed = parseAuthError(updateError);
+      // updateUser rereads shared storage; another tab may switch accounts after
+      // the check. The explicit bearer fixes the target of this request.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) throw new Error("Missing Supabase config");
+      const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const parsed = parseAuthError({
+          status: response.status,
+          retryAfter: parseRetryAfterFromResponse(response),
+        });
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
           setError(t("errors.throttled", { seconds: parsed.retryAfterSeconds }));
         } else {

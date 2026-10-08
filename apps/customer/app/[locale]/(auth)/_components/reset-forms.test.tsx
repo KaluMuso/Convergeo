@@ -9,8 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const resetPasswordForEmail = vi.fn();
 const exchangeCodeForSession = vi.fn();
-const updateUser = vi.fn();
+const getClaims = vi.fn();
 const getSession = vi.fn();
+const passwordFetch = vi.fn();
 let authCallback:
   ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null = null;
 
@@ -19,7 +20,7 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
     auth: {
       resetPasswordForEmail,
       exchangeCodeForSession,
-      updateUser,
+      getClaims,
       getSession,
       onAuthStateChange: (
         callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
@@ -79,6 +80,8 @@ function renderWithIntl(node: React.ReactNode) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   window.history.replaceState({}, "", "/");
 });
 
@@ -94,7 +97,14 @@ beforeEach(() => {
       error: null,
     };
   });
-  updateUser.mockResolvedValue({ error: null });
+  getClaims.mockResolvedValue({
+    data: { claims: { sub: "recovery-user", session_id: "recovery-session" } },
+    error: null,
+  });
+  passwordFetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", passwordFetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
   getSession.mockResolvedValue({
     data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
   });
@@ -174,14 +184,22 @@ describe("ResetConfirmForm", () => {
     await user.type(newPw, "supersecret1");
     await user.type(confirmPw, "different1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    expect(updateUser).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
     expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
 
     // Matching passwords update and show success.
     await user.clear(confirmPw);
     await user.type(confirmPw, "supersecret1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ password: "supersecret1" }));
+    await waitFor(() =>
+      expect(passwordFetch).toHaveBeenCalledExactlyOnceWith(
+        "https://staging.example.supabase.co/auth/v1/user",
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+          body: JSON.stringify({ password: "supersecret1" }),
+        }),
+      ),
+    );
     expect(screen.getByText(/password updated/i)).toBeInTheDocument();
   });
 
