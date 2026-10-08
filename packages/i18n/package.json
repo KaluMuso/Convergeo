@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "next": "^15.5.23",
-    "vitest": "^3.0.9"
+    "vitest": "^4.1.11",
+    "@types/node": "^22.20.4"
   }
 }
