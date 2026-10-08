@@ -282,8 +282,10 @@ jobs:
         #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
         #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
         #     CI/dev-only; no production exposure. See A06/F7.
+        #   GHSA-7pqw-9j4j-h8q3 — second extract-zip symlink archive write
+        #     advisory for the same unpatched LHCI-only dependency. See A06/F7.
         run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv"
+          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv GHSA-7pqw-9j4j-h8q3"
           pnpm audit --audit-level=high --json > audit.json || true
           ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
           import json, os, sys
