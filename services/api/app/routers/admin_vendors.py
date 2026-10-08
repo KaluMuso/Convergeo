@@ -20,6 +20,10 @@ from app.routers.admin_kyc import (
     compute_sla_badge,
     sign_kyc_documents,
 )
+from app.services.kyc.document_evidence import (
+    validate_kyc_document_evidence,
+    validate_kyc_document_paths,
+)
 from app.services.kyc.state_machine import (
     ServiceRoleClient,
     transition_approve,
@@ -192,6 +196,12 @@ async def get_vendor_kyc_detail(
     record = _load_kyc_record_row(service_client, str(kyc_row["id"]))
     paths_raw = record.get("doc_storage_paths")
     paths = [str(path) for path in paths_raw] if isinstance(paths_raw, list) else []
+    validate_kyc_document_paths(
+        vendor_id=str(vendor_id),
+        tier=int(record["tier"]),
+        paths=paths,
+        require_complete=False,
+    )
     documents, docs_available = sign_kyc_documents(service_client, paths)
     momo_raw = record.get("momo_name_match")
     updated_at = _parse_timestamp(record["updated_at"])
@@ -236,6 +246,14 @@ async def patch_vendor_kyc_status(
     before = _snapshot_before_decision(service_client, vendor_id=vendor_id_str, kyc_row=row)
 
     if body.action == "approve":
+        paths_raw = row.get("doc_storage_paths")
+        paths = [str(path) for path in paths_raw] if isinstance(paths_raw, list) else []
+        validate_kyc_document_evidence(
+            service_client,
+            vendor_id=vendor_id_str,
+            tier=tier,
+            paths=paths,
+        )
         result = transition_approve(
             actor_id=current_user.id,
             vendor_id=vendor_id_str,

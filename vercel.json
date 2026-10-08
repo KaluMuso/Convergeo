@@ -2,7 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "cursor/kyc-bootstrap-empty-20261008": false
+      "cursor/kyc-bootstrap-empty-20261008": false,
+      "cursor/kyc-resubmit-mock-regression-20261008": false,
+      "cursor/kyc-toolchain-audit-20261008": false
     }
   }
 }
