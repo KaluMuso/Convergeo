@@ -8,11 +8,11 @@ from unittest.mock import MagicMock
 import pytest
 from app.main import create_app
 from app.routers.admin_kyc import (
-    KYC_DOCS_BUCKET,
     SIGNED_URL_TTL_SECONDS,
     compute_sla_badge,
     sign_kyc_documents,
 )
+from app.services.kyc.document_evidence import KYC_DOCS_BUCKET
 from fastapi.testclient import TestClient
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
@@ -159,6 +159,13 @@ class FakeTable:
 class FakeStorageBucket:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
+        self.objects: set[str] = set()
+        self.failure: Exception | None = None
+
+    def exists(self, path: str) -> bool:
+        if self.failure is not None:
+            raise self.failure
+        return path in self.objects
 
     def create_signed_url(self, path: str, expires_in: int) -> dict[str, Any]:
         self.calls.append((path, expires_in))
@@ -201,12 +208,14 @@ class FakeSupabaseClient:
             "user_roles": FakeTable(),
         }
         self.storage = FakeStorage()
+        self.rpc_calls: list[str] = []
         self._block_vendor_role_grant = False
 
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
 
     def rpc(self, fn: str, params: dict[str, Any]) -> FakeRpc:
+        self.rpc_calls.append(fn)
         return FakeRpc(self, fn, params)
 
 
@@ -306,8 +315,8 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                 "tier": 1,
                 "status": "submitted",
                 "doc_storage_paths": [
-                    "kyc/vendor-a/nrc.jpg",
-                    "kyc/vendor-a/selfie.jpg",
+                    f"kyc/{VENDOR_ID}/nrc-1700000000",
+                    f"kyc/{VENDOR_ID}/selfie-1700000001",
                 ],
                 "momo_name_match": {
                     "phone": "+260971234567",
@@ -330,7 +339,10 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                 "vendor_id": VENDOR_B_ID,
                 "tier": 1,
                 "status": "submitted",
-                "doc_storage_paths": ["kyc/vendor-b/nrc.jpg", "kyc/vendor-b/selfie.jpg"],
+                "doc_storage_paths": [
+                    f"kyc/{VENDOR_B_ID}/nrc-1700000000",
+                    f"kyc/{VENDOR_B_ID}/selfie-1700000001",
+                ],
                 "momo_name_match": {
                     "phone": "+260971234568",
                     "operator": "airtel",
@@ -353,6 +365,8 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
 
 def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) -> None:
     now = datetime.now(UTC)
+    paths = [f"kyc/{VENDOR_B_ID}/nrc-1700000000", f"kyc/{VENDOR_B_ID}/selfie-1700000001"]
+    fake.storage.bucket.objects.update(paths)
     fake.tables["vendors"].rows.append(
         {
             "id": VENDOR_B_ID,
@@ -369,7 +383,7 @@ def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) 
             "vendor_id": VENDOR_B_ID,
             "tier": 1,
             "status": "submitted",
-            "doc_storage_paths": ["kyc/vendor-b/nrc.jpg", "kyc/vendor-b/selfie.jpg"],
+            "doc_storage_paths": paths,
             "momo_name_match": {
                 "phone": "+260971234568",
                 "operator": "airtel",
@@ -492,6 +506,37 @@ def test_approve_transitions_vendor_active_and_enqueues_notification(
     assert "kyc.approve" in audit_actions
 
 
+@pytest.mark.parametrize("failure", [False, True], ids=["missing-object", "storage-failure"])
+def test_approve_fails_closed_when_document_evidence_is_unavailable(
+    failure: bool,
+    admin_kyc_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_single_pending(fake_client)
+    if failure:
+        fake_client.storage.bucket.failure = RuntimeError("storage unavailable")
+    else:
+        fake_client.storage.bucket.objects.remove(f"kyc/{VENDOR_B_ID}/selfie-1700000001")
+
+    response = admin_kyc_client.post(
+        f"/admin/kyc/{KYC_NEW_ID}/approve",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"reviewer_notes": "Looks good"},
+    )
+    assert response.status_code == (503 if failure else 422), response.text
+    assert response.json()["error"]["code"] == (
+        "kyc_storage_unavailable" if failure else "kyc_document_missing"
+    )
+    assert fake_client.rpc_calls == []
+    assert fake_client.tables["vendors"].rows[0]["status"] == "pending_kyc"
+    assert fake_client.tables["kyc_records"].rows[0]["status"] == "submitted"
+    assert fake_client.tables["audit_log"].rows == []
+    assert fake_client.tables["notification_outbox"].rows == []
+
+
 def test_reject_enqueues_notification(
     admin_kyc_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -563,6 +608,46 @@ def test_kyc_detail_returns_signed_documents(
     assert doc_types == {"nrc", "selfie"}
     assert all(doc["signed_url"] for doc in body["documents"])
     assert all(doc["ttl_seconds"] <= 300 for doc in body["documents"])
+
+
+def test_kyc_detail_refuses_to_sign_foreign_document_path(
+    admin_kyc_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_single_pending(fake_client)
+    fake_client.tables["kyc_records"].rows[0]["doc_storage_paths"][0] = (
+        f"kyc/{VENDOR_ID}/nrc-1700000000"
+    )
+
+    response = admin_kyc_client.get(
+        f"/admin/kyc/{KYC_NEW_ID}",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "kyc_documents_invalid"
+    assert fake_client.storage.bucket.calls == []
+
+
+def test_kyc_detail_shows_incomplete_record_without_documents(
+    admin_kyc_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _seed_single_pending(fake_client)
+    fake_client.tables["kyc_records"].rows[0]["doc_storage_paths"] = []
+
+    response = admin_kyc_client.get(
+        f"/admin/kyc/{KYC_NEW_ID}",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["documents"] == []
+    assert response.json()["docs_available"] is False
 
 
 def test_non_admin_gets_403(
