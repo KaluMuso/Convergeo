@@ -7,17 +7,18 @@ import { Input } from "@vergeo/ui/src/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { parseAuthError } from "./auth-utils";
+import { parseAuthError, parseRetryAfterFromResponse } from "./auth-utils";
 
 type Ready = "checking" | "ready" | "invalid";
 type Status = "idle" | "saving" | "done" | "error";
+type RecoverySession = { userId: string; sessionId: string };
 
 /**
  * Completes a Supabase password recovery. The emailed link redirects here with a
  * PKCE `?code=`; we exchange it for a recovery session (mirroring the OAuth flow
- * in login-shell), then let the user set a new password via `updateUser`.
+ * in login-shell), then bind password setup to the verified recovery session.
  */
 export function ResetConfirmForm({ locale }: { locale: string }) {
   const t = useTranslations("auth");
@@ -27,21 +28,69 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const recoverySession = useRef<RecoverySession | null>(null);
 
   useEffect(() => {
+    let active = true;
     const establishSession = async () => {
-      const supabase = await getBrowserClient();
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        setReady(exchangeError ? "invalid" : "ready");
-        return;
+      try {
+        const code = new URLSearchParams(window.location.search).get("code");
+        if (!code) {
+          if (active) setReady("invalid");
+          return;
+        }
+        const supabase = await getBrowserClient();
+        if (!active) return;
+        // A valid OAuth/sign-in code also creates a session. Only a recovery
+        // exchange may open this form; Supabase marks it with this auth event.
+        let recoveryEventUserId: string | null = null;
+        let recoveryEventAccessToken: string | null = null;
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "PASSWORD_RECOVERY") {
+            recoveryEventUserId = session?.user.id ?? null;
+            recoveryEventAccessToken = session?.access_token ?? null;
+          }
+        });
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const matchingSession =
+            !exchangeError &&
+            recoveryEventAccessToken &&
+            data.session &&
+            data.session.access_token === recoveryEventAccessToken &&
+            data.session.user.id === recoveryEventUserId
+              ? data.session
+              : null;
+          const { data: verified, error: claimsError } = matchingSession
+            ? await supabase.auth.getClaims(matchingSession.access_token)
+            : { data: null, error: null };
+          const session =
+            !claimsError &&
+            matchingSession &&
+            verified?.claims.sub === matchingSession.user.id &&
+            verified.claims.session_id
+              ? {
+                  userId: matchingSession.user.id,
+                  sessionId: verified.claims.session_id,
+                }
+              : null;
+          if (active) {
+            recoverySession.current = session;
+            setReady(session ? "ready" : "invalid");
+          }
+        } finally {
+          subscription.unsubscribe();
+        }
+      } catch {
+        if (active) setReady("invalid");
       }
-      // No code in the URL — fall back to any recovery session already established.
-      const { data } = await supabase.auth.getSession();
-      setReady(data.session ? "ready" : "invalid");
     };
     void establishSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -60,9 +109,41 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
     setStatus("saving");
     try {
       const supabase = await getBrowserClient();
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) {
-        const parsed = parseAuthError(updateError);
+      const { data } = await supabase.auth.getSession();
+      const expected = recoverySession.current;
+      const accessToken = data.session?.access_token;
+      const { data: current, error: claimsError } = accessToken
+        ? await supabase.auth.getClaims(accessToken)
+        : { data: null, error: null };
+      if (
+        !expected ||
+        claimsError ||
+        current?.claims.sub !== expected.userId ||
+        current.claims.session_id !== expected.sessionId ||
+        !accessToken
+      ) {
+        setReady("invalid");
+        return;
+      }
+      // updateUser rereads shared storage; another tab may switch accounts after
+      // the check. The explicit bearer fixes the target of this request.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !anonKey) throw new Error("Missing Supabase config");
+      const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) {
+        const parsed = parseAuthError({
+          status: response.status,
+          retryAfter: parseRetryAfterFromResponse(response),
+        });
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
           setError(t("errors.throttled", { seconds: parsed.retryAfterSeconds }));
         } else {

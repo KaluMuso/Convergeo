@@ -1,16 +1,34 @@
 import { createBrowserClient as createSupabaseBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 let browserClient: SupabaseClient | undefined;
+
+/** These routes exchange their own PKCE code after the client is created. */
+function hasExplicitCodeExchange(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  return (
+    (segments.length === 2 && (segments[1] === "login" || segments[1] === "signup")) ||
+    (segments.length === 3 && segments[1] === "reset-password" && segments[2] === "confirm")
+  );
+}
 
 export function createBrowserClient(): SupabaseClient {
   if (browserClient) {
     return browserClient;
   }
 
-  browserClient = createSupabaseBrowserClient(getSupabaseUrl(), getSupabaseAnonKey());
+  // Supabase SSR otherwise exchanges ?code= during client initialization.
+  // A second exchange in the route then fails because the code and PKCE
+  // verifier are single-use. Other callbacks (such as email confirmation at
+  // the configured Site URL) retain Supabase's automatic handling.
+  const detectSessionInUrl =
+    typeof window === "undefined" || !hasExplicitCodeExchange(window.location.pathname);
+  browserClient = createSupabaseBrowserClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    auth: { detectSessionInUrl },
+  });
   return browserClient;
 }
 

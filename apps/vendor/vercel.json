@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "cursor/vendor-recovery-staging-20261007": false,
+      "codex/phone-input-layout-20261008": false,
+      "cursor/release-kyc-auth-integration-20261008": false
+    }
+  }
+}
