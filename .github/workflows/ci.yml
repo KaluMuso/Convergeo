@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Staged formatter regression tests
+        run: pnpm format:staged:test
+
       - name: Resolve Turbo filter
         id: turbo
         run: |
