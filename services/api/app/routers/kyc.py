@@ -236,12 +236,7 @@ def _find_vendor_for_owner(
         .maybe_single()
         .execute()
     )
-    if response is None:
-        raise AppError(
-            code="internal_error",
-            message="Vendor lookup failed",
-            http_status=500,
-        )
+    # A successful empty maybe_single() lookup returns None in postgrest-py.
     return _row_from_response(response)
 
 
