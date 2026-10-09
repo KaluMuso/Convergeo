@@ -111,7 +111,13 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ session: \"default\", chatId: $json.phone.slice(1) + \"@c.us\", text: \"Your Vergeo5 code is \" + $json.otp }) }}",
         "options": {
-          "timeout": 1500
+          "timeout": 1500,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "sendCredentialsOnCrossOriginRedirect": false
         }
       },
       "position": [1580, 300],

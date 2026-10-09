@@ -32,7 +32,7 @@ const run = (
   },
 ) => new Function("$input", "$", "Date", code)({ first: () => ({ json: value }) }, lookup, clock);
 
-test("generated source and JSON match and remain inert with no execution retention", () => {
+test("generated source and JSON match and remain inert with completed-execution saving off", () => {
   const saved = JSON.parse(
     readFileSync(fileURLToPath(new URL("./waha-otp-handoff.json", import.meta.url)), "utf8"),
   );
@@ -50,6 +50,11 @@ test("generated source and JSON match and remain inert with no execution retenti
     false,
   );
   assert.equal(saved.nodes.find((n) => n.id === "send-waha").retryOnFail, false);
+  assert.deepEqual(saved.nodes.find((n) => n.id === "send-waha").parameters.options, {
+    timeout: 1500,
+    redirect: { redirect: { followRedirects: false } },
+    sendCredentialsOnCrossOriginRedirect: false,
+  });
   assert.equal(
     saved.nodes.find((n) => n.id === "otp-webhook").parameters.authentication,
     "headerAuth",
@@ -167,5 +172,16 @@ test("only a provider acceptance with an ID can produce the small receipt", () =
   ]);
   for (const result of [{}, { id: "" }, { error: "offline" }, { id: 1 }]) {
     assert.throws(() => run(receiptCode, result, lookup), /otp provider not confirmed/);
+  }
+  for (const statusCode of [307, 308]) {
+    assert.throws(
+      () =>
+        run(
+          receiptCode,
+          { statusCode, headers: { location: "https://other.example/api/sendText" } },
+          lookup,
+        ),
+      /otp provider not confirmed/,
+    );
   }
 });

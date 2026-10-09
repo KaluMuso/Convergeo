@@ -168,7 +168,11 @@ export const workflow = {
         specifyBody: "json",
         jsonBody:
           '={{ JSON.stringify({ session: "default", chatId: $json.phone.slice(1) + "@c.us", text: "Your Vergeo5 code is " + $json.otp }) }}',
-        options: { timeout: 1500 },
+        options: {
+          timeout: 1500,
+          redirect: { redirect: { followRedirects: false } },
+          sendCredentialsOnCrossOriginRedirect: false,
+        },
       },
       [1580, 300],
       {
