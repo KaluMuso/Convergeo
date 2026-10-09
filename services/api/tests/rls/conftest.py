@@ -368,6 +368,12 @@ def reset_public_schema_for_migrations(conn: PgConn) -> None:
 
 
 def apply_migrations(conn: PgConn) -> None:
+    # Many module fixtures reset public/auth themselves before calling this
+    # shared replay entry point. Clear the private test schema here too, so
+    # every replay starts from the same disposable database state.
+    private_reset = conn.run("DROP SCHEMA IF EXISTS otp_replay CASCADE")
+    if not private_reset.ok:
+        raise PgError(f"OTP replay test schema reset failed: {private_reset.error}")
     # Roles FIRST, and inside this function rather than only at its call sites.
     #
     # `apply_migrations` is a public entry point with 35+ direct callers across
