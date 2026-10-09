@@ -17,9 +17,11 @@ so it never perturbs app builds.
 | `event-ticket`           | buy ticket → wallet → **scan verify → duplicate rejected**                               | purchase (`LENCO_SANDBOX`), scan (vendor OTP + `E2E_TICKET_QR`)              |
 | `auth-otp`               | phone → request OTP → **verify → signed in**                                             | verify leg (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                 |
 
-Every gated leg **skips with an annotation** when its env is absent — it asserts
-up to a safe boundary (e.g. pay-initiation, "code sent") and never hammers a real
-payment/SMS endpoint. No credentials are committed; all come from env/secrets.
+MoMo checkout requires an explicit `LENCO_ENV=sandbox`, the sandbox flag and
+keys, a designated test number, and a buyer OTP before navigation or order
+placement. Missing evidence skips locally and fails strict hosted
+certification. Other gated legs follow their own policies. No credentials are
+committed; all come from env/secrets.
 
 ## Environment variables
 
@@ -36,6 +38,7 @@ payment/SMS endpoint. No credentials are committed; all come from env/secrets.
 | `NEXT_PUBLIC_E2E_MOCK_SESSION`                                                | Customer app flag (`1`) enabling Playwright-injected buyer session for payment-mock specs. **Dev/CI only.**                                                            |
 | `E2E_SEED_RESET_URL` / `E2E_SEED_TOKEN`                                       | Deterministic, idempotent seed reset (staging-only, token-guarded).                                                                                                    |
 | `LENCO_SANDBOX` + `LENCO_SANDBOX_SECRET_KEY` / `_PUBLIC_KEY` / `_MOMO_NUMBER` | Enables the live Lenco sandbox pay leg (**founder gate F9b**).                                                                                                         |
+| `LENCO_ENV`                                                                   | Must be explicitly `sandbox` for MoMo E2E checkout, including strict hosted certification.                                                                             |
 | `WHATSAPP_MOCK` + `WHATSAPP_MOCK_OUTBOX_URL`                                  | Enables WhatsApp receipt assertions via the mock outbox.                                                                                                               |
 | `E2E_TEST_PHONE` + `E2E_TEST_OTP`                                             | Deterministic OTP for the verify + vendor/organiser legs.                                                                                                              |
 | `E2E_TICKET_QR`                                                               | A seeded single-use ticket token for the scanner duplicate-reject test.                                                                                                |

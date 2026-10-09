@@ -51,15 +51,14 @@ test.describe("shop · checkout · momo", () => {
       return;
     }
 
-    // Checkout is authenticated. As in shop-cod, the identical fixture is
-    // already REQUIRED_STRICT at auth-otp.spec.ts, so certification coverage
-    // cannot be lost silently by classifying it OPTIONAL_GATE here.
+    // A missing buyer session must also fail strict MoMo certification.
     if (!customerOtpReady()) {
       const gate = resolveGate({
-        kind: "OPTIONAL_GATE",
+        kind: "REQUIRED_STRICT",
         journey: "MoMo checkout placement (authenticated buyer)",
         fixtures: ["E2E_CUSTOMER_TEST_OTP"],
       });
+      enforceGate(gate);
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;

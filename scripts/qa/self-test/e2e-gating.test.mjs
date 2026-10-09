@@ -207,6 +207,7 @@ describe("MoMo checkout preflight", () => {
     publicKey: "synthetic-public-key",
     secretKey: "synthetic-secret-key",
     testMomoNumber: "0961111111",
+    environment: "sandbox",
   };
 
   it("rejects absent and invalid sandbox evidence before any checkout action", async () => {
@@ -214,6 +215,9 @@ describe("MoMo checkout preflight", () => {
       { ...ready, enabled: false },
       { ...ready, publicKey: "" },
       { ...ready, secretKey: "" },
+      { ...ready, environment: "" },
+      { ...ready, environment: "preview" },
+      { ...ready, environment: "production" },
       { ...ready, testMomoNumber: "" },
       { ...ready, testMomoNumber: "not-a-phone" },
     ];
@@ -257,6 +261,23 @@ describe("MoMo checkout preflight", () => {
     );
     assert.ok(source.includes("runSandboxMomoCheckout(lenco, () =>\n      completeCheckout(page"));
     assert.ok(!source.includes("lenco.testMomoNumber || SEED.address.phone"));
+    const buyerGate = source.indexOf('journey: "MoMo checkout placement (authenticated buyer)"');
+    assert.ok(buyerGate >= 0);
+    assert.ok(
+      source
+        .slice(buyerGate, source.indexOf("await page.goto(", buyerGate))
+        .includes("enforceGate(gate)"),
+    );
+    assert.match(source.slice(buyerGate - 80, buyerGate), /kind: "REQUIRED_STRICT"/);
+  });
+
+  it("passes the sandbox label into hosted E2E and requires the deployed provider leg", () => {
+    assert.match(readFileSync(E2E_WORKFLOW, "utf8"), /LENCO_ENV: \$\{\{ secrets\.LENCO_ENV \}\}/);
+    const critical = readFileSync(path.join(SPEC_DIR, "critical-path.spec.ts"), "utf8");
+    const settle = critical.indexOf('journey: "deployed sandbox MoMo settle (F9b)"');
+    assert.ok(settle >= 0);
+    assert.match(critical.slice(settle - 80, settle), /kind: "REQUIRED_STRICT"/);
+    assert.ok(critical.slice(settle, settle + 300).includes("enforceGate(gate)"));
   });
 });
 
