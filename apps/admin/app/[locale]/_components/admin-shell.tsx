@@ -194,7 +194,8 @@ export function AdminShell({ locale, children }: AdminShellProps) {
           ) : (
             (() => {
               const requested = resolveAdminActiveItem(rest);
-              return requested && !capabilities[requested] ? (
+              return (requested && !capabilities[requested]) ||
+                (rest.startsWith("/moderation/flags") && !grants.unrestricted) ? (
                 <p role="alert">{t("shell.permissionDenied")}</p>
               ) : (
                 children
