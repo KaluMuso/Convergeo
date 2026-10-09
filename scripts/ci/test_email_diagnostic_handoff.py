@@ -139,6 +139,9 @@ class EmailDiagnosticHandoffTests(unittest.TestCase):
         self.assertIn("needs: authorize", operation)
         self.assertIn("environment: staging", diagnostic)
         self.assertIn("owner_provisioned_readiness", diagnostic)
+        job_header = diagnostic.split("  diagnostic:", 1)[1].split("    steps:", 1)[0]
+        self.assertNotIn("E2E_CUSTOMER_EMAIL_PASSWORD", job_header)
+        self.assertNotIn("VERCEL_AUTOMATION_BYPASS_SECRET", job_header)
         self.assertNotIn("seed_staging.py", diagnostic)
         self.assertNotIn("staging-certification-evidence", diagnostic)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", diagnostic)
