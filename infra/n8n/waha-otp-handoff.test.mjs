@@ -23,14 +23,17 @@ const body = {
 const signature = createHmac("sha256", "b".repeat(32))
   .update(["v1", body.timestamp, body.requestId, body.deadline, body.phone, body.otp].join("\n"))
   .digest("hex");
-const clock = { now: () => now };
 const run = (
   code,
   value,
   lookup = () => {
     throw Error("unexpected lookup");
   },
-) => new Function("$input", "$", "Date", code)({ first: () => ({ json: value }) }, lookup, clock);
+  at = now,
+) =>
+  new Function("$input", "$", "Date", code)({ first: () => ({ json: value }) }, lookup, {
+    now: () => at,
+  });
 
 test("generated source and JSON match and remain inert with completed-execution saving off", () => {
   const saved = JSON.parse(
@@ -170,6 +173,10 @@ test("only a provider acceptance with an ID can produce the small receipt", () =
   assert.deepEqual(run(receiptCode, { id: "message-id-123" }, lookup), [
     { json: { accepted: true, requestId: body.requestId } },
   ]);
+  assert.throws(
+    () => run(receiptCode, { id: "message-id-123" }, lookup, body.deadline),
+    /otp provider not confirmed/,
+  );
   for (const result of [{}, { id: "" }, { error: "offline" }, { id: 1 }]) {
     assert.throws(() => run(receiptCode, result, lookup), /otp provider not confirmed/);
   }

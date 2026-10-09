@@ -244,14 +244,35 @@ test("offline, provider error, timeout and uncertain receipt fail closed without
   assert.equal(count, outcomes.length);
 });
 
-test("a hung handoff is aborted once and never retried", async () => {
+test("provider acceptance without an n8n receipt remains uncertain and is never resent", async () => {
+  let acceptedByProvider = false;
   let count = 0;
+  const result = await sendWahaOtp(
+    payload,
+    headers,
+    env,
+    async () => {
+      count++;
+      acceptedByProvider = true;
+      return new Response("provider accepted but n8n could not confirm receipt", { status: 503 });
+    },
+    now,
+  );
+  assert.equal(acceptedByProvider, true);
+  assert.deepEqual(result, { ok: false, status: 503 });
+  assert.equal(count, 1);
+});
+
+test("a delivered handoff with a lost response is aborted once and never retried", async () => {
+  let count = 0;
+  let delivered = false;
   const result = await sendWahaOtp(
     payload,
     headers,
     env,
     async (_url, init) => {
       count++;
+      delivered = true;
       return await new Promise((_resolve, reject) => {
         init.signal.addEventListener(
           "abort",
@@ -262,6 +283,7 @@ test("a hung handoff is aborted once and never retried", async () => {
     },
     now,
   );
+  assert.equal(delivered, true);
   assert.deepEqual(result, { ok: false, status: 503 });
   assert.equal(count, 1);
 });
