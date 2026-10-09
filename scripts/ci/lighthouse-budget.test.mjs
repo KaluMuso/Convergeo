@@ -379,6 +379,20 @@ test("navigation diagnostic bounds marker output and tolerates malformed frames"
   assert.doesNotMatch(JSON.stringify(result), /private-/);
 });
 
+test("document response statuses stay bounded without losing their total", () => {
+  const messages = Array.from({ length: 12 }, (_, index) => ({
+    method: "Network.responseReceived",
+    params: { type: "Document", response: { status: 200 + index } },
+  }));
+  const result = summarizeNavigationDiagnostic(undefined, messages);
+  assert.equal(result.documentResponseStatusCount, 12);
+  assert.deepEqual(
+    result.documentResponseStatuses,
+    [204, 205, 206, 207, 208, 209, 210, 211],
+  );
+  assert.equal(result.documentResponseStatusesTruncated, true);
+});
+
 test("Chrome is killed when Lighthouse throws before a report is produced", async () => {
   const directory = await mkdtemp(join(tmpdir(), "lighthouse-budget-"));
   let killed = false;

@@ -260,7 +260,9 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
     mainFrameNavigationStartCount: mainFrameNavStarts.length,
     acceptableMainFrameNavigationStartCount:
       acceptableMainFrameNavStarts.length,
-    documentResponseStatuses: documentStatuses,
+    documentResponseStatusCount: documentStatuses.length,
+    documentResponseStatuses: documentStatuses.slice(-markerLimit),
+    documentResponseStatusesTruncated: documentStatuses.length > markerLimit,
     devtoolsMessageCount: messages.length,
     diagnosis: !events.length
       ? "trace-unavailable"
