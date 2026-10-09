@@ -70,7 +70,6 @@ export async function generateMetadata({
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
-        { url: "/Vergeo5.ico", sizes: "any" },
         { url: "/icon.svg", type: "image/svg+xml" },
         { url: "/icon-192.webp", sizes: "192x192", type: "image/webp" },
         { url: "/icon-512.webp", sizes: "512x512", type: "image/webp" },
