@@ -232,17 +232,20 @@ def load_admin_permissions(
     """Read current grants from the same user_roles snapshot used for identity."""
     if "superadmin" in user.roles or "admin" in user.roles:
         return ADMIN_PERMISSIONS
-    if "moderator" in user.roles:
-        return frozenset({"products.manage", "vendors.manage"})
+    base_permissions = (
+        frozenset({"products.manage", "vendors.manage"})
+        if "moderator" in user.roles
+        else frozenset()
+    )
     keys = sorted(role for role in user.roles if role.startswith("rbac_"))
     if not keys:
-        return frozenset()
+        return base_permissions
     response = (
         service_client.client.table("admin_roles").select("permissions").in_("key", keys).execute()
     )
     if not isinstance(response.data, list):
-        return frozenset()
-    return frozenset(
+        return base_permissions
+    return base_permissions | frozenset(
         permission
         for row in response.data
         if isinstance(row, dict)
@@ -279,7 +282,10 @@ def require_role(*required_roles: str) -> Callable[..., Awaitable[CurrentUser]]:
         request: Request,
         current_user: Annotated[CurrentUser, Depends(get_current_user)],
     ) -> CurrentUser:
-        allowed = bool(current_user.roles.intersection(required))
+        allowed = bool(current_user.roles.intersection(required)) or (
+            "superadmin" in current_user.roles
+            and bool(required.intersection({"admin", "moderator"}))
+        )
         if (
             not allowed
             and required.intersection({"admin", "moderator"})

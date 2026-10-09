@@ -306,6 +306,8 @@ def expected_outcome(entry: RouteEntry, persona: Persona) -> Outcome:
     # ROLE
     if persona is Persona.ANON:
         return "deny"
+    if persona is Persona.SUPERADMIN and entry.required_roles.intersection({"admin", "moderator"}):
+        return "allow"
     return "allow" if PERSONA_ROLES[persona] & entry.required_roles else "deny"
 
 

@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from app.core.admin_audit import get_admin_audit_recorder
 from app.core.auth import CurrentUser, admin_permission_for_request, get_current_user
+from app.deps import get_supabase_client
 from app.main import create_app
 from app.supabase_client import get_supabase_service_client
 from fastapi.testclient import TestClient
@@ -29,6 +31,18 @@ class FakeQuery:
     def limit(self, *_args: Any) -> FakeQuery:
         return self
 
+    def eq(self, *_args: Any) -> FakeQuery:
+        return self
+
+    def neq(self, *_args: Any) -> FakeQuery:
+        return self
+
+    def or_(self, *_args: Any) -> FakeQuery:
+        return self
+
+    def maybe_single(self) -> FakeQuery:
+        return self
+
     def execute(self) -> SimpleNamespace:
         return SimpleNamespace(data=self.rows)
 
@@ -44,6 +58,8 @@ class FakeService:
             return FakeQuery([{"permissions": self.permissions}])
         if name == "services":
             return FakeQuery([{"id": "service-1", "title": "Test service"}])
+        if name in {"products", "orders"}:
+            return FakeQuery([])
         raise AssertionError(f"Unexpected table access: {name}")
 
     def rpc(self, name: str, params: dict[str, Any]) -> Any:
@@ -136,6 +152,67 @@ def test_service_role_can_view_services_but_not_inventory(
     assert visible.status_code == 200, visible.text
     assert visible.json()["items"][0]["title"] == "Test service"
     assert client.get("/admin/inventory").status_code == 403
+
+
+def test_moderator_and_custom_role_permissions_are_combined(
+    role_client: tuple[TestClient, FakeService, Any],
+) -> None:
+    client, service, app = role_client
+    app.dependency_overrides[get_supabase_client] = lambda: service
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        id="00000000-0000-0000-0000-000000000002",
+        roles=frozenset({"moderator", "rbac_finance"}),
+        token="test",
+    )
+    response = client.get("/admin/me/permissions")
+    assert response.status_code == 200, response.text
+    assert response.json()["permissions"] == [
+        "finance.read",
+        "products.manage",
+        "vendors.manage",
+    ]
+    orders = client.get(
+        "/admin/orders/search",
+        params={"order_id": "00000000-0000-0000-0000-000000000003"},
+    )
+    assert orders.status_code == 200, orders.text
+    assert orders.json() == []
+
+
+def test_standalone_superadmin_inherits_admin_routes_and_finance_cannot_mutate(
+    role_client: tuple[TestClient, FakeService, Any],
+) -> None:
+    client, service, app = role_client
+    app.dependency_overrides[get_supabase_client] = lambda: service
+    app.dependency_overrides[get_admin_audit_recorder] = lambda: object()
+    superadmin = CurrentUser(
+        id="00000000-0000-0000-0000-000000000001",
+        roles=frozenset({"superadmin"}),
+        token="test",
+    )
+    finance = CurrentUser(
+        id="00000000-0000-0000-0000-000000000002",
+        roles=frozenset({"rbac_finance"}),
+        token="test",
+    )
+    app.dependency_overrides[get_current_user] = lambda: superadmin
+    product = client.get("/admin/products/search", params={"q": "test"})
+    assert product.status_code == 200, product.text
+    assert product.json() == []
+    # A missing order stops before the escrow operation; this proves the role
+    # guard passed without performing any money mutation in the test.
+    escrow_url = "/admin/orders/00000000-0000-0000-0000-000000000003/escrow"
+    escrow_body = {
+        "operation": "hold",
+        "amount_ngwee": 100,
+        "reason": "Authorization regression",
+        "confirmation_phrase": "MANUAL ESCROW",
+    }
+    escrow = client.post(escrow_url, json=escrow_body)
+    assert escrow.status_code == 404, escrow.text
+    app.dependency_overrides[get_current_user] = lambda: finance
+    assert client.get("/admin/products/search", params={"q": "test"}).status_code == 403
+    assert client.post(escrow_url, json=escrow_body).status_code == 403
 
 
 def test_superadmin_can_create_and_assign_only_known_permissions(
