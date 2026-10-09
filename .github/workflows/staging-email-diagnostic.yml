@@ -1,0 +1,194 @@
+name: Staging email login diagnostic
+
+# Called only by the manually dispatched protected staging operation. This
+# operational leg never resets fixtures, provisions credentials, certifies a
+# release, or promotes production.
+on:
+  workflow_call:
+    inputs:
+      internal_operation_id:
+        description: "Repository/run/attempt/SHA identity assigned by staging-operation.yml"
+        required: true
+        type: string
+      candidate_sha:
+        description: "Full SHA currently at the staging ref"
+        required: true
+        type: string
+      source_run_id:
+        description: "Successful manual Deploy staging run ID for this SHA"
+        required: true
+        type: number
+      source_run_attempt:
+        description: "Exact successful deployment run attempt"
+        required: true
+        type: number
+      owner_provisioned_readiness:
+        description: "Owner has verified canonical synthetic customer/vendor accounts and password secrets are ready"
+        required: true
+        type: string
+      phone_transport_readiness:
+        description: "Owner has verified hosted staging phone/SMS transport cannot send live messages"
+        required: true
+        type: string
+      payment_outbound_readiness:
+        description: "Owner has verified staging sandbox payment target and disabled payout/dispatch"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+# The trusted caller owns the staging-operation lock. A second lock here would
+# deadlock this reusable leg against its parent run.
+
+jobs:
+  authorize:
+    name: Bind diagnostic scope and owner readiness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require trusted staging ref and explicit readiness
+        env:
+          REPOSITORY_ID: ${{ github.repository_id }}
+          INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
+          OWNER_PROVISIONED_READINESS: ${{ inputs.owner_provisioned_readiness }}
+          PHONE_TRANSPORT_READINESS: ${{ inputs.phone_transport_readiness }}
+          PAYMENT_OUTBOUND_READINESS: ${{ inputs.payment_outbound_readiness }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REPOSITORY}" != 'KaluMuso/Convergeo' ] || [ "${REPOSITORY_ID}" != '1290591718' ] || [ "${GITHUB_REF}" != 'refs/heads/staging' ]; then
+            echo '::error::email diagnostic requires the protected staging repository and ref'
+            exit 1
+          fi
+          expected="${REPOSITORY_ID}:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_SHA}"
+          if [ "${INTERNAL_OPERATION_ID}" != "${expected}" ] || [ "${CALLER_WORKFLOW_REF}" != 'KaluMuso/Convergeo/.github/workflows/staging-operation.yml@refs/heads/staging' ]; then
+            echo '::error::untrusted email diagnostic caller'
+            exit 1
+          fi
+          if ! printf '%s' "${CANDIDATE_SHA}" | grep -Eq '^[0-9a-f]{40}$' || [ "${CANDIDATE_SHA}" != "${GITHUB_SHA}" ]; then
+            echo '::error::email diagnostic requires the exact current staging candidate SHA'
+            exit 1
+          fi
+          if ! printf '%s' "${SOURCE_RUN_ID}" | grep -Eq '^[1-9][0-9]*$' || ! printf '%s' "${SOURCE_RUN_ATTEMPT}" | grep -Eq '^[1-9][0-9]*$'; then
+            echo '::error::a concrete deployment run and attempt are required'
+            exit 1
+          fi
+          if [ "${OWNER_PROVISIONED_READINESS}" != 'ready' ] || [ "${PHONE_TRANSPORT_READINESS}" != 'disabled' ] || [ "${PAYMENT_OUTBOUND_READINESS}" != 'verified-safe' ]; then
+            echo '::error::owner-provisioned synthetic access, disabled live phone transport, and safe payment/outbound settings must be attested'
+            exit 1
+          fi
+
+  diagnostic:
+    name: Exact-SHA synthetic email login
+    needs: authorize
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 25
+    env:
+      E2E_CUSTOMER_EMAIL_PASSWORD: ${{ secrets.E2E_CUSTOMER_EMAIL_PASSWORD }}
+      E2E_VENDOR_EMAIL_PASSWORD: ${{ secrets.E2E_VENDOR_EMAIL_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Refuse missing owner-provisioned synthetic credentials
+        run: |
+          set -euo pipefail
+          if [ "${#E2E_CUSTOMER_EMAIL_PASSWORD}" -lt 8 ] || [ "${#E2E_VENDOR_EMAIL_PASSWORD}" -lt 8 ]; then
+            echo '::error::both owner-provisioned synthetic email password secrets are required'
+            exit 1
+          fi
+
+      - name: Read authenticated deployment attempt, proof, and current staging ref
+        uses: actions/github-script@v8
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
+        with:
+          script: |
+            const path = require('path');
+            const adapter = require(path.join(process.env.GITHUB_WORKSPACE, 'scripts', 'ci', 'github_handoff_metadata.cjs'));
+            const result = await adapter.collectHandoffMetadata({
+              github,
+              context,
+              runId: Number(process.env.SOURCE_RUN_ID),
+              attempt: Number(process.env.SOURCE_RUN_ATTEMPT),
+            });
+            adapter.writeHandoffMetadata(path.join(process.env.RUNNER_TEMP, 'email-diagnostic-source'), result);
+
+      - name: Validate exact deployment provenance and allowlisted portals
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/email_diagnostic_handoff.py \
+            --metadata-dir "${RUNNER_TEMP}/email-diagnostic-source" \
+            --candidate-sha "${CANDIDATE_SHA}" \
+            --run-id "${SOURCE_RUN_ID}" \
+            --attempt "${SOURCE_RUN_ATTEMPT}" \
+            --customer-project-id "${VERCEL_PROJECT_ID_CUSTOMER}" \
+            --vendor-project-id "${VERCEL_PROJECT_ID_VENDOR}" \
+            --admin-project-id "${VERCEL_PROJECT_ID_ADMIN}" \
+            --github-env "${GITHUB_ENV}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install isolated E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Recheck staging ref before browser access
+        uses: actions/github-script@v8
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        with:
+          script: |
+            const { data } = await github.rest.git.getRef({ ...context.repo, ref: 'heads/staging' });
+            if (data.object.sha !== process.env.CANDIDATE_SHA) core.setFailed('staging ref moved before email diagnostic');
+
+      - name: Probe exact portals and run isolated email diagnostic
+        run: node --experimental-strip-types scripts/ci/run-email-acceptance.mjs
+
+      - name: Recheck staging ref after browser access
+        uses: actions/github-script@v8
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        with:
+          script: |
+            const { data } = await github.rest.git.getRef({ ...context.repo, ref: 'heads/staging' });
+            if (data.object.sha !== process.env.CANDIDATE_SHA) core.setFailed('staging ref moved during email diagnostic');
+
+      - name: Record diagnostic scope
+        if: ${{ always() }}
+        env:
+          DIAGNOSTIC_OUTCOME: ${{ job.status }}
+        run: |
+          {
+            echo '## Staging email diagnostic'
+            echo
+            echo "- Candidate SHA: \`${GITHUB_SHA}\`"
+            echo "- Outcome: \`${DIAGNOSTIC_OUTCOME}\`"
+            echo '- Scope: synthetic customer/vendor email login only'
+            echo '- Release certification: NO'
+            echo '- Fixture reset and credential writes: NONE'
+          } >> "${GITHUB_STEP_SUMMARY}"
