@@ -220,6 +220,9 @@ jobs:
       - name: Email-only staging diagnostic safety tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-email-acceptance.test.mjs
 
+      - name: Email diagnostic deployment handoff tests
+        run: python3 -m unittest discover -s scripts/ci -p test_email_diagnostic_handoff.py
+
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the
       # pure TypeScript policy directly (Node type-stripping) — no browser, no
