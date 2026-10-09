@@ -1,6 +1,12 @@
 import { expect, type Page } from "@playwright/test";
 
-import { path, requireVendorBaseUrl, urlOn, vendorOtp } from "./env";
+import {
+  path,
+  requireVendorBaseUrl,
+  urlOn,
+  vendorOtp,
+  vendorOtpReady,
+} from "./env";
 import { nationalNumberFromE164 } from "./phone";
 
 export type LoginVendorViaOtpOptions = {
@@ -37,10 +43,17 @@ export async function loginVendorViaOtp(
   page: Page,
   options: LoginVendorViaOtpOptions = {},
 ): Promise<void> {
+  if (!vendorOtpReady()) {
+    throw new Error(
+      "vendor phone OTP requires the test code and both provider attestations",
+    );
+  }
   const vendorOrigin = requireVendorBaseUrl();
   const destination = options.next ?? path("/services");
 
-  await page.goto(urlOn(vendorOrigin, `/login?next=${encodeURIComponent(destination)}`));
+  await page.goto(
+    urlOn(vendorOrigin, `/login?next=${encodeURIComponent(destination)}`),
+  );
 
   // Same ambiguity note as auth-otp.spec.ts: PhoneForm's FormField renders in
   // `asGroup` mode, so a single semantic textbox query (not getByLabel) is
@@ -86,7 +99,9 @@ export async function loginVendorViaOtp(
   // arrival here proof: an anonymous or non-vendor session is bounced to
   // /login or /onboarding instead, so this assertion fails loudly rather than
   // treating "no error thrown" as success.
-  const destinationPattern = new RegExp(`${destination.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+  const destinationPattern = new RegExp(
+    `${destination.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+  );
   await page.waitForURL(destinationPattern, { timeout: 20_000 });
   await expect(page).toHaveURL(destinationPattern);
   await expect(page).not.toHaveURL(/\/(login|otp)(\?|$)/);

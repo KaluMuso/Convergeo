@@ -31,7 +31,9 @@ import { expect, test } from "../fixtures/test-base";
  * env are present. Never enables production real-money rails.
  */
 test.describe("critical-path", () => {
-  test("browse → cart → checkout honesty matches backend mode", async ({ page }) => {
+  test("browse → cart → checkout honesty matches backend mode", async ({
+    page,
+  }) => {
     assertNoAccidentalRealMoney();
     test.info().annotations.push({
       type: "mode",
@@ -62,7 +64,11 @@ test.describe("critical-path", () => {
       .or(page.getByTestId("plp-empty"))
       .or(page.getByTestId("plp-unavailable"))
       .or(page.getByTestId("plp-results-count"))
-      .or(page.getByRole("heading", { name: /electronics|categor|browse|results/i }));
+      .or(
+        page.getByRole("heading", {
+          name: /electronics|categor|browse|results/i,
+        }),
+      );
     const plpReady = await browseSurface
       .first()
       .waitFor({ state: "visible", timeout: 20_000 })
@@ -114,7 +120,9 @@ test.describe("critical-path", () => {
       await expect(page.getByTestId("pdp-price")).toBeVisible();
 
       // 4. Add to cart.
-      await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 20_000 });
+      await clickAddToCartAndAwaitOutcome(page, test.info(), {
+        timeout: 20_000,
+      });
 
       // 5. Reach cart + checkout.
       await page.goto(path("/cart"));
@@ -149,7 +157,10 @@ test.describe("critical-path", () => {
       // Browse-safe / payments-disabled / invite beta: prove confirmation UI tracks
       // the mock status API (COD placed ≠ MoMo paid).
       await installMockBuyerSession(page);
-      await mockPaymentStatus(page, statusFixture({ status: "cod", cod: true, payment_id: null }));
+      await mockPaymentStatus(
+        page,
+        statusFixture({ status: "cod", cod: true, payment_id: null }),
+      );
       await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
       await expect(page.getByTestId("payment-cod")).toBeVisible();
       await expect(page.getByText(/pay on delivery/i)).toBeVisible();
@@ -165,9 +176,16 @@ test.describe("critical-path", () => {
       const gate = resolveGate({
         kind: "OPTIONAL_GATE",
         journey: "deployed sandbox MoMo settle (F9b)",
-        fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP"],
+        fixtures: [
+          "LENCO_SANDBOX",
+          "E2E_CUSTOMER_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;
     }
@@ -244,7 +262,9 @@ test.describe("critical-path", () => {
     // Meta-guard: the suite itself must not be pointed at live Lenco.
     expect(() => assertNoAccidentalRealMoney()).not.toThrow();
     expect(flag("LENCO_LIVE")).toBe(false);
-    expect(String(process.env.LENCO_ENV ?? "").toLowerCase()).not.toMatch(/^(live|production)$/);
+    expect(String(process.env.LENCO_ENV ?? "").toLowerCase()).not.toMatch(
+      /^(live|production)$/,
+    );
     // Document the target for artifacts without printing secrets.
     test.info().annotations.push({
       type: "target",

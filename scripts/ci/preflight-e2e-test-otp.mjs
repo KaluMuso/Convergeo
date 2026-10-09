@@ -10,11 +10,22 @@
 
 import { SEED } from "../../e2e/fixtures/seed.generated.ts";
 
-const STRICT_CERT_MODES = new Set(["integrated-staging", "production-readiness"]);
+const STRICT_CERT_MODES = new Set([
+  "integrated-staging",
+  "production-readiness",
+]);
 
 const CANONICAL_PERSONAS = [
-  { label: "customer", phone: SEED.personas.customer.phone, otpEnv: "E2E_CUSTOMER_TEST_OTP" },
-  { label: "vendor", phone: SEED.personas.vendor.phone, otpEnv: "E2E_VENDOR_TEST_OTP" },
+  {
+    label: "customer",
+    phone: SEED.personas.customer.phone,
+    otpEnv: "E2E_CUSTOMER_TEST_OTP",
+  },
+  {
+    label: "vendor",
+    phone: SEED.personas.vendor.phone,
+    otpEnv: "E2E_VENDOR_TEST_OTP",
+  },
 ];
 
 function str(name, env = process.env) {
@@ -54,7 +65,9 @@ function resolvePersonas(env = process.env) {
 }
 
 export function evaluatePreflightConfig(personas, { strict }) {
-  const missingOtps = personas.filter((persona) => !persona.otp).map((persona) => persona.otpEnv);
+  const missingOtps = personas
+    .filter((persona) => !persona.otp)
+    .map((persona) => persona.otpEnv);
   const configured = personas.filter((persona) => persona.otp);
 
   if (strict) {
@@ -85,6 +98,19 @@ export function evaluatePreflightConfig(personas, { strict }) {
   }
 
   return { verdict: "READY", configured };
+}
+
+export function evaluatePhoneOtpSafety(env = process.env) {
+  const missing = [
+    "STAGING_SMS_SANDBOX_ATTESTED",
+    "STAGING_TEST_OTP_MAP_ATTESTED",
+  ].filter((name) => str(name, env).toLowerCase() !== "true");
+  return missing.length === 0
+    ? { verdict: "READY" }
+    : {
+        verdict: "FAIL",
+        detail: `phone OTP may reach the SMS hook: owner attestations required: ${missing.join(", ")}`,
+      };
 }
 
 async function verifyTestOtpPersona({
@@ -136,7 +162,8 @@ async function verifyTestOtpPersona({
     return {
       ok: false,
       label,
-      reason: "test-OTP verify failed — hosted Auth test_otp mapping likely missing or wrong",
+      reason:
+        "test-OTP verify failed — hosted Auth test_otp mapping likely missing or wrong",
       detail: body.slice(0, 200),
       phoneTail: maskPhoneTail(authPhone),
     };
@@ -147,14 +174,21 @@ async function verifyTestOtpPersona({
 
 export async function runPreflight(env = process.env, options = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const supabaseUrl = str("SUPABASE_URL", env) || str("STAGING_SUPABASE_URL", env);
-  const anonKey = str("SUPABASE_ANON_KEY", env) || str("STAGING_SUPABASE_ANON_KEY", env);
+  const supabaseUrl =
+    str("SUPABASE_URL", env) || str("STAGING_SUPABASE_URL", env);
+  const anonKey =
+    str("SUPABASE_ANON_KEY", env) || str("STAGING_SUPABASE_ANON_KEY", env);
   const personas = resolvePersonas(env);
   const strict = options.strict ?? strictRequired(env);
   const config = evaluatePreflightConfig(personas, { strict });
 
   if (config.verdict === "FAIL" || config.verdict === "SKIPPED") {
     return config;
+  }
+
+  const safety = evaluatePhoneOtpSafety(env);
+  if (safety.verdict === "FAIL") {
+    return safety;
   }
 
   if (!supabaseUrl || !anonKey) {
@@ -183,7 +217,9 @@ export async function runPreflight(env = process.env, options = {}) {
   if (failed.length > 0) {
     return {
       verdict: "FAIL",
-      detail: failed.map((result) => `${result.label}: ${result.reason}`).join("; "),
+      detail: failed
+        .map((result) => `${result.label}: ${result.reason}`)
+        .join("; "),
       results,
     };
   }
@@ -213,11 +249,15 @@ async function main() {
     process.exit(1);
   }
   if (result.verdict === "SKIPPED") {
-    console.warn(`::warning::E2E test-OTP preflight SKIPPED — ${result.detail}`);
+    console.warn(
+      `::warning::E2E test-OTP preflight SKIPPED — ${result.detail}`,
+    );
   }
 }
 
-const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"));
+const isMain =
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"));
 if (isMain) {
   main().catch((err) => {
     console.error(

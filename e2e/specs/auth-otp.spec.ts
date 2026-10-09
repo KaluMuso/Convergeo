@@ -6,14 +6,34 @@ import { expect, test } from "../fixtures/test-base";
 /**
  * Critical path: phone OTP login.
  *
- * The "code sent" boundary (entering a phone and requesting an OTP) runs against
- * any live target. The VERIFY leg needs a deterministic test OTP for a fixed
- * test phone (Supabase test-OTP map) → ENV-GATED behind `E2E_TEST_PHONE` +
- * `E2E_TEST_OTP`. Without them the spec asserts the OTP step is reached and
- * skips verification with an annotation (never sends real SMS spam in a loop).
+ * Request and verification both require a deterministic hosted test-OTP map
+ * and an attested sandbox SMS fallback. A code alone is insufficient: a map
+ * miss can invoke the hosted Send SMS hook. The gate runs before navigation.
  */
 test.describe("auth · phone OTP", () => {
-  test("request an OTP and (gated) verify to a signed-in session", async ({ page }) => {
+  test("request an OTP and (gated) verify to a signed-in session", async ({
+    page,
+  }) => {
+    // A configured code alone does not prove the hosted test-OTP map is active.
+    // Gate before signInWithOtp: a map miss can invoke the live SMS hook.
+    if (!customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "customer OTP verification",
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
+      });
+      enforceGate(gate);
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+
     await page.goto(path("/login"));
 
     // Enter the phone number and request a code.
@@ -41,23 +61,13 @@ test.describe("auth · phone OTP", () => {
       .click();
 
     // We should reach the OTP entry surface (6-digit code group).
-    await page.waitForURL(/otp|verify|code/i, { timeout: 20_000 }).catch(() => {});
-    const otpGroup = page.getByRole("group").or(page.getByRole("textbox").first());
+    await page
+      .waitForURL(/otp|verify|code/i, { timeout: 20_000 })
+      .catch(() => {});
+    const otpGroup = page
+      .getByRole("group")
+      .or(page.getByRole("textbox").first());
     await expect(otpGroup.first()).toBeVisible();
-
-    // ── ENV-GATED: verify with the deterministic test OTP ────────────────────
-    if (!customerOtpReady()) {
-      const gate = resolveGate({
-        kind: "REQUIRED_STRICT",
-        journey: "customer OTP verification",
-        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
-      });
-      // Certification runs fail here; local/nightly runs keep the old skip.
-      enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      test.skip(true, gate.reason);
-      return;
-    }
 
     // Type the 6-digit static test code into the OTP field.
     //

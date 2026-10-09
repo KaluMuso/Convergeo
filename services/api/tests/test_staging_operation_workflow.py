@@ -33,6 +33,20 @@ def test_outer_workflow_holds_one_lock_across_ordered_reusable_jobs() -> None:
     assert isinstance(triggers, dict) and "push" in triggers and "workflow_dispatch" in triggers
 
 
+def test_sms_attestation_blocks_protected_graph_before_deploy() -> None:
+    outer = load_workflow("staging-operation.yml")
+    steps = outer["jobs"]["authorize"]["steps"]
+    guard = next(step for step in steps if step.get("name", "").startswith("Require SMS sandbox"))
+    assert guard["env"]["STAGING_SMS_SANDBOX_ATTESTED"] == (
+        "${{ vars.STAGING_SMS_SANDBOX_ATTESTED }}"
+    )
+    assert guard["env"]["STAGING_TEST_OTP_MAP_ATTESTED"] == (
+        "${{ vars.STAGING_TEST_OTP_MAP_ATTESTED }}"
+    )
+    assert "exit 1" in guard["run"]
+    assert outer["jobs"]["deploy"]["needs"] == "authorize"
+
+
 def test_failure_edges_block_handoff_and_e2e() -> None:
     outer = load_workflow("staging-operation.yml")
     deploy = load_workflow("deploy-staging.yml")

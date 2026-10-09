@@ -6,7 +6,10 @@ import { describe, it } from "node:test";
 
 import { nationalNumberFromE164 } from "../../../e2e/fixtures/phone.ts";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
 
 /**
  * RC-2 regression coverage (staging E2E run #52): auth-otp.spec.ts filled the
@@ -52,14 +55,38 @@ describe("nationalNumberFromE164", () => {
 
   it("never silently returns a wrong-length string", () => {
     for (const bad of ["", "+260", "+2609", "not-a-phone", "+260abcdefghi"]) {
-      assert.throws(() => nationalNumberFromE164(bad), `expected "${bad}" to throw`);
+      assert.throws(
+        () => nationalNumberFromE164(bad),
+        `expected "${bad}" to throw`,
+      );
     }
   });
 });
 
 describe("OTP specs use the shared helper, not duplicated slice logic", () => {
+  it("customer and vendor OTP gates run before browser navigation or send", () => {
+    const customer = readFileSync(
+      path.join(REPO_ROOT, "e2e/specs/auth-otp.spec.ts"),
+      "utf8",
+    );
+    const vendor = readFileSync(
+      path.join(REPO_ROOT, "e2e/fixtures/otp-login.ts"),
+      "utf8",
+    );
+    assert.ok(
+      customer.indexOf("if (!customerOtpReady())") <
+        customer.indexOf('page.goto(path("/login"))'),
+    );
+    assert.ok(
+      vendor.indexOf("if (!vendorOtpReady())") < vendor.indexOf("page.goto("),
+    );
+  });
+
   it("auth-otp.spec.ts fills the normalized national number, not the raw E.164 fixture", () => {
-    const source = readFileSync(path.join(REPO_ROOT, "e2e/specs/auth-otp.spec.ts"), "utf8");
+    const source = readFileSync(
+      path.join(REPO_ROOT, "e2e/specs/auth-otp.spec.ts"),
+      "utf8",
+    );
     assert.ok(
       source.includes("nationalNumberFromE164(customerOtp.testPhone)"),
       "auth-otp.spec.ts must fill nationalNumberFromE164(customerOtp.testPhone), not the raw E.164 phone",
@@ -71,7 +98,10 @@ describe("OTP specs use the shared helper, not duplicated slice logic", () => {
   });
 
   it("otp-login.ts (vendor helper) uses the same helper instead of a magic slice(-9)", () => {
-    const source = readFileSync(path.join(REPO_ROOT, "e2e/fixtures/otp-login.ts"), "utf8");
+    const source = readFileSync(
+      path.join(REPO_ROOT, "e2e/fixtures/otp-login.ts"),
+      "utf8",
+    );
     assert.ok(
       source.includes("nationalNumberFromE164(vendorOtp.testPhone)"),
       "otp-login.ts must fill nationalNumberFromE164(vendorOtp.testPhone)",

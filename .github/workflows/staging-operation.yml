@@ -49,6 +49,17 @@ jobs:
             exit 1
           fi
 
+      - name: Require SMS sandbox and hosted test-OTP attestations before deployment
+        env:
+          STAGING_SMS_SANDBOX_ATTESTED: ${{ vars.STAGING_SMS_SANDBOX_ATTESTED }}
+          STAGING_TEST_OTP_MAP_ATTESTED: ${{ vars.STAGING_TEST_OTP_MAP_ATTESTED }}
+        run: |
+          set -euo pipefail
+          if [ "${STAGING_SMS_SANDBOX_ATTESTED}" != "true" ] || [ "${STAGING_TEST_OTP_MAP_ATTESTED}" != "true" ]; then
+            echo "::error::protected staging operation blocked before deployment: owner must attest sandbox SMS credentials and the hosted test-OTP map"
+            exit 1
+          fi
+
   deploy:
     name: Deploy and prove candidate
     needs: authorize

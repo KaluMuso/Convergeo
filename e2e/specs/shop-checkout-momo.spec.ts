@@ -1,6 +1,12 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
-import { customerOtp, customerOtpReady, lenco, path, whatsappMockReady } from "../fixtures/env";
+import {
+  customerOtp,
+  customerOtpReady,
+  lenco,
+  path,
+  whatsappMockReady,
+} from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush } from "../fixtures/lenco";
 import { assertNoAccidentalRealMoney } from "../fixtures/payment-fixtures";
@@ -36,7 +42,9 @@ import { expectWhatsAppMessage } from "../fixtures/whatsapp";
  * navigation or order placement. Missing evidence fails strict certification.
  */
 test.describe("shop · checkout · momo", () => {
-  test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
+  test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({
+    page,
+  }) => {
     assertNoAccidentalRealMoney();
     const missingSandbox = missingSandboxMomoEvidence(lenco);
     if (missingSandbox.length > 0) {
@@ -46,7 +54,9 @@ test.describe("shop · checkout · momo", () => {
         fixtures: missingSandbox,
       });
       enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;
     }
@@ -58,9 +68,15 @@ test.describe("shop · checkout · momo", () => {
       const gate = resolveGate({
         kind: "OPTIONAL_GATE",
         journey: "MoMo checkout placement (authenticated buyer)",
-        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;
     }
@@ -118,7 +134,10 @@ test.describe("shop · checkout · momo", () => {
 
     // 7. Pay-initiation boundary — a REAL placed order awaiting USSD approval.
     await expect(
-      page.getByTestId("ussd-wait").or(page.getByTestId("payment-confirming")).first(),
+      page
+        .getByTestId("ussd-wait")
+        .or(page.getByTestId("payment-confirming"))
+        .first(),
     ).toBeVisible({ timeout: 30_000 });
     // MoMo is not COD: the COD surface must never appear on this journey.
     await expect(page.getByTestId("payment-cod")).toHaveCount(0);

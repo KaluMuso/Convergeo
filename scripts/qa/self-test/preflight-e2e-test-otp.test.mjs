@@ -2,10 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { SEED } from "../../../e2e/fixtures/seed.generated.ts";
-import { evaluatePreflightConfig, runPreflight } from "../../ci/preflight-e2e-test-otp.mjs";
+import {
+  evaluatePhoneOtpSafety,
+  evaluatePreflightConfig,
+  runPreflight,
+} from "../../ci/preflight-e2e-test-otp.mjs";
 
 const CUSTOMER_OTP = "111111";
 const VENDOR_OTP = "222222";
+const ATTESTED = {
+  STAGING_SMS_SANDBOX_ATTESTED: "true",
+  STAGING_TEST_OTP_MAP_ATTESTED: "true",
+};
 
 function personasFromEnv(env) {
   return [
@@ -27,7 +35,10 @@ function personasFromEnv(env) {
 describe("preflight config — strict both personas required", () => {
   it("both configured → READY", () => {
     const verdict = evaluatePreflightConfig(
-      personasFromEnv({ E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP, E2E_VENDOR_TEST_OTP: VENDOR_OTP }),
+      personasFromEnv({
+        E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP,
+        E2E_VENDOR_TEST_OTP: VENDOR_OTP,
+      }),
       { strict: true },
     );
     assert.equal(verdict.verdict, "READY");
@@ -35,7 +46,9 @@ describe("preflight config — strict both personas required", () => {
   });
 
   it("neither configured → FAIL in strict mode", () => {
-    const verdict = evaluatePreflightConfig(personasFromEnv({}), { strict: true });
+    const verdict = evaluatePreflightConfig(personasFromEnv({}), {
+      strict: true,
+    });
     assert.equal(verdict.verdict, "FAIL");
     assert.match(verdict.detail, /both OTP secrets/);
   });
@@ -50,9 +63,12 @@ describe("preflight config — strict both personas required", () => {
   });
 
   it("vendor only → FAIL", () => {
-    const verdict = evaluatePreflightConfig(personasFromEnv({ E2E_VENDOR_TEST_OTP: VENDOR_OTP }), {
-      strict: true,
-    });
+    const verdict = evaluatePreflightConfig(
+      personasFromEnv({ E2E_VENDOR_TEST_OTP: VENDOR_OTP }),
+      {
+        strict: true,
+      },
+    );
     assert.equal(verdict.verdict, "FAIL");
     assert.match(verdict.detail, /E2E_CUSTOMER_TEST_OTP/);
   });
@@ -68,6 +84,37 @@ describe("preflight config — strict both personas required", () => {
 });
 
 describe("preflight verify — mocked Supabase Auth", () => {
+  it("rejects missing or partial attestations before any OTP request", async () => {
+    for (const attestations of [
+      {},
+      { STAGING_SMS_SANDBOX_ATTESTED: "true" },
+      { STAGING_TEST_OTP_MAP_ATTESTED: "true" },
+      { ...ATTESTED, STAGING_SMS_SANDBOX_ATTESTED: "yes" },
+    ]) {
+      let requests = 0;
+      const result = await runPreflight(
+        {
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_ANON_KEY: "anon-key",
+          E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP,
+          E2E_VENDOR_TEST_OTP: VENDOR_OTP,
+          CERTIFICATION_MODE: "integrated-staging",
+          ...attestations,
+        },
+        {
+          fetchImpl: async () => {
+            requests += 1;
+            throw new Error("OTP request must not occur");
+          },
+        },
+      );
+      assert.equal(result.verdict, "FAIL");
+      assert.match(result.detail, /owner attestations required/);
+      assert.equal(requests, 0);
+    }
+    assert.equal(evaluatePhoneOtpSafety(ATTESTED).verdict, "READY");
+  });
+
   it("both valid → PASS", async () => {
     const fetchImpl = async (url, init) => {
       const target = String(url);
@@ -76,7 +123,10 @@ describe("preflight verify — mocked Supabase Auth", () => {
       }
       if (target.endsWith("/auth/v1/verify")) {
         const body = JSON.parse(String(init?.body ?? "{}"));
-        const expected = body.phone === SEED.personas.customer.phone ? CUSTOMER_OTP : VENDOR_OTP;
+        const expected =
+          body.phone === SEED.personas.customer.phone
+            ? CUSTOMER_OTP
+            : VENDOR_OTP;
         if (body.token === expected) {
           return new Response("{}", { status: 200 });
         }
@@ -92,6 +142,7 @@ describe("preflight verify — mocked Supabase Auth", () => {
         E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP,
         E2E_VENDOR_TEST_OTP: VENDOR_OTP,
         CERTIFICATION_MODE: "integrated-staging",
+        ...ATTESTED,
       },
       { fetchImpl, strict: true },
     );
@@ -116,6 +167,7 @@ describe("preflight verify — mocked Supabase Auth", () => {
         E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP,
         E2E_VENDOR_TEST_OTP: VENDOR_OTP,
         CERTIFICATION_MODE: "integrated-staging",
+        ...ATTESTED,
       },
       { fetchImpl, strict: true },
     );
@@ -147,6 +199,7 @@ describe("preflight verify — mocked Supabase Auth", () => {
           E2E_CUSTOMER_TEST_OTP: CUSTOMER_OTP,
           E2E_VENDOR_TEST_OTP: VENDOR_OTP,
           CERTIFICATION_MODE: "integrated-staging",
+          ...ATTESTED,
         },
         { fetchImpl, strict: true },
       );
