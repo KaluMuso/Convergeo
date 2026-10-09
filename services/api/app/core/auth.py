@@ -138,6 +138,130 @@ async def get_current_user(
 
 
 MODERATOR_ROLES = frozenset({"superadmin", "moderator", "admin"})
+ADMIN_PERMISSIONS = frozenset(
+    {
+        "finance.read",
+        "events.manage",
+        "products.manage",
+        "services.read",
+        "vendors.manage",
+        "ads.manage",
+        "analytics.read",
+        "inventory.read",
+    }
+)
+
+
+_ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
+    ("GET", "/admin/orders/search"): "finance.read",
+    ("GET", "/admin/orders/{order_id}"): "finance.read",
+    ("GET", "/admin/disputes"): "finance.read",
+    ("GET", "/admin/disputes/{dispute_id}"): "finance.read",
+    ("GET", "/admin/events/high-value-queue"): "events.manage",
+    ("POST", "/admin/events/{event_id}/high-value-verify"): "events.manage",
+    ("GET", "/admin/products/duplicates"): "products.manage",
+    ("GET", "/admin/products/search"): "products.manage",
+    ("GET", "/admin/products/canonical"): "products.manage",
+    ("GET", "/admin/products/{product_id}/relations"): "products.manage",
+    ("POST", "/admin/products/merge"): "products.manage",
+    ("PUT", "/admin/products/{product_id}/relations"): "products.manage",
+    ("PATCH", "/admin/products/canonical/{product_id}/status"): "products.manage",
+    ("GET", "/admin/services"): "services.read",
+    ("GET", "/admin/inventory"): "inventory.read",
+    ("GET", "/admin/vendors"): "vendors.manage",
+    ("GET", "/admin/vendors/{vendor_id}/kyc"): "vendors.manage",
+    ("PATCH", "/admin/vendors/{vendor_id}/status"): "vendors.manage",
+    ("GET", "/admin/business"): "vendors.manage",
+    ("POST", "/admin/business/{buyer_id}/verify"): "vendors.manage",
+    ("POST", "/admin/business/{buyer_id}/reject"): "vendors.manage",
+    ("GET", "/admin/kyc"): "vendors.manage",
+    ("GET", "/admin/kyc/{kyc_record_id}"): "vendors.manage",
+    ("GET", "/admin/kyc/orphaned-tiers"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/start-review"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/approve"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/reject"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/request-resubmit"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/suspend"): "vendors.manage",
+    ("POST", "/admin/kyc/{kyc_record_id}/revoke"): "vendors.manage",
+    ("GET", "/admin/licences"): "vendors.manage",
+    ("GET", "/admin/licences/expiring"): "vendors.manage",
+    ("POST", "/admin/licences/{licence_id}/verify"): "vendors.manage",
+    ("POST", "/admin/licences/{licence_id}/reject"): "vendors.manage",
+    ("POST", "/admin/licences/{licence_id}/revoke"): "vendors.manage",
+    ("GET", "/admin/intake"): "vendors.manage",
+    ("GET", "/admin/intake/{session_id}"): "vendors.manage",
+    ("POST", "/admin/intake/{session_id}/request-changes"): "vendors.manage",
+    ("POST", "/admin/intake/{session_id}/reject"): "vendors.manage",
+    ("POST", "/admin/intake/{session_id}/attach-canonical"): "vendors.manage",
+    ("POST", "/admin/intake/{session_id}/approve"): "vendors.manage",
+    ("GET", "/admin/merch/hero-variants"): "ads.manage",
+    ("GET", "/admin/merch/slots"): "ads.manage",
+    ("GET", "/admin/merch/preview-url"): "ads.manage",
+    ("POST", "/admin/merch/slots"): "ads.manage",
+    ("PATCH", "/admin/merch/slots/{slot_id}"): "ads.manage",
+    ("DELETE", "/admin/merch/slots/{slot_id}"): "ads.manage",
+    ("POST", "/admin/merch/slots/{slot_id}/draft"): "ads.manage",
+    ("POST", "/admin/merch/slots/{slot_id}/publish"): "ads.manage",
+    ("GET", "/admin/dashboard"): "analytics.read",
+    ("GET", "/admin/search-insights/top-terms"): "analytics.read",
+    ("GET", "/admin/search-insights/zero-results"): "analytics.read",
+    ("GET", "/admin/search-insights/ask-cost"): "analytics.read",
+    ("GET", "/admin/clip-analytics"): "analytics.read",
+    ("GET", "/admin/governance/vendors"): "analytics.read",
+}
+
+
+def admin_permission_for_request(path_template: str, method: str) -> str | None:
+    """Explicit route inventory. Unknown and payment mutation routes deny."""
+    return _ADMIN_ROUTE_PERMISSIONS.get((method, path_template))
+
+
+def _admin_route_template(request: Request) -> str:
+    if not request.url.path.startswith("/admin/"):
+        return ""
+    route = request.scope.get("route")
+    template = str(getattr(route, "path", ""))
+    # FastAPI's nested _IncludedRouter sets the matched route path relative to
+    # its /admin parent. Standalone admin routers already include the prefix.
+    return template if template.startswith("/admin/") else "/admin" + template
+
+
+def load_admin_permissions(
+    user: CurrentUser, service_client: SupabaseServiceClient
+) -> frozenset[str]:
+    """Read current grants from the same user_roles snapshot used for identity."""
+    if "superadmin" in user.roles or "admin" in user.roles:
+        return ADMIN_PERMISSIONS
+    if "moderator" in user.roles:
+        return frozenset({"products.manage", "vendors.manage"})
+    keys = sorted(role for role in user.roles if role.startswith("rbac_"))
+    if not keys:
+        return frozenset()
+    response = (
+        service_client.client.table("admin_roles").select("permissions").in_("key", keys).execute()
+    )
+    if not isinstance(response.data, list):
+        return frozenset()
+    return frozenset(
+        permission
+        for row in response.data
+        if isinstance(row, dict)
+        for permission in row.get("permissions", [])
+        if isinstance(permission, str) and permission in ADMIN_PERMISSIONS
+    )
+
+
+async def require_admin_scope(
+    request: Request,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> CurrentUser:
+    """Gate every route mounted on the shared admin router, including new ones."""
+    if user.roles.intersection({"superadmin", "admin"}):
+        return user
+    permission = admin_permission_for_request(_admin_route_template(request), request.method)
+    if permission and permission in load_admin_permissions(user, get_supabase_service_client()):
+        return user
+    raise AppError(code="forbidden", message="Insufficient admin permissions", http_status=403)
 
 
 def require_moderator() -> Callable[..., Awaitable[CurrentUser]]:
@@ -152,9 +276,23 @@ def require_role(*required_roles: str) -> Callable[..., Awaitable[CurrentUser]]:
     required = frozenset(required_roles)
 
     async def _require_role(
+        request: Request,
         current_user: Annotated[CurrentUser, Depends(get_current_user)],
     ) -> CurrentUser:
-        if not current_user.roles.intersection(required):
+        allowed = bool(current_user.roles.intersection(required))
+        if (
+            not allowed
+            and required.intersection({"admin", "moderator"})
+            and any(role.startswith("rbac_") for role in current_user.roles)
+        ):
+            permission = admin_permission_for_request(
+                _admin_route_template(request), request.method
+            )
+            if permission:
+                allowed = permission in load_admin_permissions(
+                    current_user, get_supabase_service_client()
+                )
+        if not allowed:
             raise AppError(
                 code="forbidden",
                 message="Insufficient permissions for this action",

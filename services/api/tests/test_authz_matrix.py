@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 import pytest
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_admin_scope
 from app.main import create_app
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -232,6 +232,8 @@ def _detect_dependency_guard(route: APIRoute) -> tuple[bool, frozenset[str]]:
         call = dep.call
         if call is get_current_user:
             has_current_user = True
+        if call is require_admin_scope:
+            roles |= {"admin", "moderator", "superadmin"}
         # require_role(...) returns a closure named `_require_role` closing over the
         # required-role frozenset.
         if call is not None and getattr(call, "__name__", "") == "_require_role":
@@ -377,9 +379,7 @@ def test_matrix_summary(capsys: pytest.CaptureFixture[str]) -> None:
 
     by_class = Counter(e.auth_class.value for e in ROUTES)
     id_routes = [e for e in ROUTES if e.has_id_param and e.auth_class in PROTECTED_CLASSES]
-    allow = sum(
-        1 for e in ROUTES for p in ALL_PERSONAS if expected_outcome(e, p) == "allow"
-    )
+    allow = sum(1 for e in ROUTES for p in ALL_PERSONAS if expected_outcome(e, p) == "allow")
     deny = len(ROUTES) * len(ALL_PERSONAS) - allow
     with capsys.disabled():
         print("\n[authz-matrix] route x method =", len(ROUTES))
@@ -505,6 +505,6 @@ def test_role_routes_expose_expected_role_guard() -> None:
         unknown = entry.required_roles - known
         assert not unknown, f"{entry.key} requires unmodeled role(s) {sorted(unknown)}"
         # At least one persona must be able to satisfy each role route (no dead route).
-        assert any(
-            expected_outcome(entry, p) == "allow" for p in ALL_PERSONAS
-        ), f"{entry.key} is unreachable by any modeled persona"
+        assert any(expected_outcome(entry, p) == "allow" for p in ALL_PERSONAS), (
+            f"{entry.key} is unreachable by any modeled persona"
+        )

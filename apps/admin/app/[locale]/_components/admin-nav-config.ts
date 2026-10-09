@@ -14,7 +14,10 @@ export type AdminNavItemKey =
   | "events"
   | "config"
   | "translations"
-  | "theme";
+  | "theme"
+  | "roles"
+  | "services"
+  | "inventory";
 
 export type AdminNavGroupKey = "overview" | "trust" | "commerce" | "platform";
 
@@ -50,6 +53,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "orders", href: "orders" },
       { key: "business", href: "business" },
       { key: "merch", href: "merch" },
+      { key: "services", href: "services" },
+      { key: "inventory", href: "inventory" },
       { key: "clips", href: "clips" },
     ],
   },
@@ -59,6 +64,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "config", href: "config" },
       { key: "translations", href: "translations" },
       { key: "theme", href: "theme" },
+      { key: "roles", href: "roles" },
     ],
   },
 ];
