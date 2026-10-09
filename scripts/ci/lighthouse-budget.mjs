@@ -147,11 +147,142 @@ export function sanitizeDiagnostic(value, key = "") {
   return "[redacted]";
 }
 
+// A failed navigation can still have trace and DevTools data. Emit only counts,
+// numeric timings/processes and per-trace aliases, never raw frame IDs or URLs.
+export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
+  const events = Array.isArray(trace?.traceEvents) ? trace.traceEvents : [];
+  const messages = Array.isArray(devtoolsLog) ? devtoolsLog : [];
+  const frameAliases = new Map();
+  const frameAlias = (id) => {
+    if (typeof id !== "string" || !id) return null;
+    if (!frameAliases.has(id))
+      frameAliases.set(id, `frame-${frameAliases.size + 1}`);
+    return frameAliases.get(id);
+  };
+  const finiteNumber = (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  const markerLimit = 8;
+  const isKeyEvent = (event) =>
+    typeof event?.cat === "string" &&
+    (event.cat.includes("blink.user_timing") ||
+      event.cat.includes("loading") ||
+      event.cat.includes("devtools.timeline") ||
+      event.cat === "__metadata");
+  const frameId = (event) =>
+    event.args?.data?.frame ?? event.args?.data?.frameID ?? event.args?.frame;
+  const keyEvents = events.filter(isKeyEvent);
+  const browserStart = keyEvents.find(
+    (event) => event.name === "TracingStartedInBrowser",
+  );
+  const browserFrames = Array.isArray(browserStart?.args?.data?.frames)
+    ? browserStart.args.data.frames
+    : [];
+  const browserMainFrame = browserFrames.find(
+    (frame) => frame && !frame.parent,
+  );
+  const pageStart = keyEvents.find(
+    (event) => event.name === "TracingStartedInPage",
+  );
+  const mainFrame =
+    browserMainFrame?.processId && browserMainFrame?.frame
+      ? browserMainFrame.frame
+      : pageStart?.args?.data?.page;
+  const mainFrameSource =
+    browserMainFrame?.processId && browserMainFrame?.frame
+      ? "browser"
+      : mainFrame
+        ? "page"
+        : "unresolved";
+  const selectedMainFrameAlias = frameAlias(mainFrame);
+  const selectedMainFramePid = finiteNumber(
+    mainFrameSource === "browser" ? browserMainFrame.processId : pageStart?.pid,
+  );
+  const browserFrameMarkers = browserFrames
+    .slice(0, markerLimit)
+    .map((frame) => ({
+      alias: frameAlias(frame?.frame),
+      processId: finiteNumber(frame?.processId),
+      isRoot: !frame?.parent,
+    }));
+  const navStarts = keyEvents.filter(
+    (event) => event.name === "navigationStart",
+  );
+  const navigationMarkers = navStarts.slice(-markerLimit).map((event) => ({
+    alias: frameAlias(frameId(event)),
+    pid: finiteNumber(event.pid),
+    tid: finiteNumber(event.tid),
+    ts: finiteNumber(event.ts),
+    isLoadingMainFrame: event.args?.data?.isLoadingMainFrame === true,
+  }));
+  const frameProcessEvents = keyEvents.filter(
+    (event) =>
+      event.name === "FrameCommittedInBrowser" ||
+      event.name === "ProcessReadyInBrowser",
+  );
+  const frameProcessMarkers = frameProcessEvents
+    .slice(-markerLimit)
+    .map((event) => ({
+      kind: event.name,
+      alias: frameAlias(frameId(event)),
+      processId: finiteNumber(event.args?.data?.processId),
+      pid: finiteNumber(event.pid),
+      ts: finiteNumber(event.ts),
+    }));
+  const mainFrameNavStarts = mainFrame
+    ? navStarts.filter((event) => frameId(event) === mainFrame)
+    : [];
+  const acceptableMainFrameNavStarts = mainFrameNavStarts.filter((event) => {
+    const url = event.args?.data?.documentLoaderURL;
+    return url === undefined || /^https?:|^chrome:/.test(url);
+  });
+  const documentStatuses = messages
+    .filter(
+      (message) =>
+        message?.method === "Network.responseReceived" &&
+        message.params?.type === "Document",
+    )
+    .map((message) => message.params?.response?.status)
+    .filter((status) => Number.isInteger(status));
+  return {
+    traceEventCount: events.length,
+    keyEventCount: keyEvents.length,
+    mainFrameSource,
+    selectedMainFrameAlias,
+    selectedMainFramePid,
+    browserFrameMarkers,
+    browserFrameMarkersTruncated: browserFrames.length > markerLimit,
+    navigationStartCount: navStarts.length,
+    navigationMarkers,
+    navigationMarkersTruncated: navStarts.length > markerLimit,
+    frameProcessEventCount: frameProcessEvents.length,
+    frameProcessMarkers,
+    frameProcessMarkersTruncated: frameProcessEvents.length > markerLimit,
+    mainFrameNavigationStartCount: mainFrameNavStarts.length,
+    acceptableMainFrameNavigationStartCount:
+      acceptableMainFrameNavStarts.length,
+    documentResponseStatusCount: documentStatuses.length,
+    documentResponseStatuses: documentStatuses.slice(-markerLimit),
+    documentResponseStatusesTruncated: documentStatuses.length > markerLimit,
+    devtoolsMessageCount: messages.length,
+    diagnosis: !events.length
+      ? "trace-unavailable"
+      : !mainFrame
+        ? "main-frame-unresolved"
+        : !navStarts.length
+          ? "navigation-start-absent"
+          : !mainFrameNavStarts.length
+            ? "navigation-start-other-frame"
+            : !acceptableMainFrameNavStarts.length
+              ? "navigation-start-url-rejected"
+              : "navigation-start-present-check-trace-processing",
+  };
+}
+
 // Every required measurement gets a fresh Chrome process. Failed runs stay in
 // the report set, so the budget check cannot pass on a replacement sample.
 export async function collectReports(
   config,
-  { lighthouse, launch },
+  { lighthouse, launch, logDiagnostic = console.error },
   directory,
 ) {
   const reports = [];
@@ -202,6 +333,18 @@ export async function collectReports(
       await fs.writeFile(jsonPath, JSON.stringify(result.lhr, null, 2));
       await fs.writeFile(htmlPath, result.report[1]);
       if (runtimeError) {
+        if (runtimeError.code === "NO_NAVSTART") {
+          logDiagnostic(
+            "Lighthouse NO_NAVSTART diagnostic:",
+            JSON.stringify(
+              summarizeNavigationDiagnostic(
+                result.artifacts?.TraceError ?? result.artifacts?.Trace,
+                result.artifacts?.DevtoolsLogError ??
+                  result.artifacts?.DevtoolsLog,
+              ),
+            ),
+          );
+        }
         for (const [name, artifact] of [
           ["trace", result.artifacts?.TraceError ?? result.artifacts?.Trace],
           [
