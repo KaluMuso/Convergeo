@@ -6,7 +6,7 @@ const env = {
   SUPABASE_URL: "https://iyasmrmbcrvlfxpzescb.supabase.co",
   SMS_OTP_TRANSPORT: "waha",
   WAHA_OTP_ENABLED: "true",
-  WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.staging.vergeo5.com/webhook/convergeo-auth-otp-draft",
+  WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.vergeo5.com/webhook/convergeo-auth-otp-draft",
   WAHA_OTP_N8N_AUTH_TOKEN: "a".repeat(32),
   WAHA_OTP_N8N_HMAC_SECRET: "b".repeat(32),
 };
@@ -167,7 +167,8 @@ test("missing authentication or insecure URL fails closed", async () => {
       headers,
       {
         ...env,
-        WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.vergeo5.com/webhook/convergeo-auth-otp-draft",
+        WAHA_OTP_N8N_WEBHOOK_URL:
+          "https://n8n.staging.vergeo5.com/webhook/convergeo-auth-otp-draft",
       },
       fetchMock,
       now,
@@ -180,7 +181,21 @@ test("missing authentication or insecure URL fails closed", async () => {
       headers,
       {
         ...env,
-        WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.staging.vergeo5.com/webhook/other",
+        WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.vergeo5.com/webhook/other",
+      },
+      fetchMock,
+      now,
+    ),
+    { ok: false, status: 500 },
+  );
+  assert.deepEqual(
+    await sendWahaOtp(
+      payload,
+      headers,
+      {
+        ...env,
+        WAHA_OTP_N8N_WEBHOOK_URL:
+          "https://n8n.vergeo5.com.evil.example/webhook/convergeo-auth-otp-draft",
       },
       fetchMock,
       now,

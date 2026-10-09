@@ -6,7 +6,7 @@ const MAX_HOOK_MS = 5_000;
 const HANDOFF_MS = 4_000;
 const FETCH_MS = 2_800;
 const STAGING_SUPABASE_URL = "https://iyasmrmbcrvlfxpzescb.supabase.co";
-const STAGING_N8N_OTP_URL = "https://n8n.staging.vergeo5.com/webhook/convergeo-auth-otp-draft";
+const STAGING_N8N_OTP_URL = "https://n8n.vergeo5.com/webhook/convergeo-auth-otp-draft";
 
 export function selectOtpTransport(
   env: Record<string, string | undefined>,
