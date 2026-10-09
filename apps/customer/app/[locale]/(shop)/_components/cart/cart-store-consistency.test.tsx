@@ -206,6 +206,65 @@ describe("cart response ordering", () => {
     ).toBe(true);
   });
 
+  it("keeps the later reconciliation when an earlier read finishes last", async () => {
+    const firstPatch = deferred<Response>();
+    const secondPatch = deferred<Response>();
+    const oldRead = deferred<Response>();
+    const finalRead = deferred<Response>();
+    let patchCount = 0;
+    let readCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const path = new URL(String(input)).pathname;
+        if (path === "/cart/items/listing-1" && init?.method === "PATCH") {
+          patchCount += 1;
+          return patchCount === 1 ? firstPatch.promise : secondPatch.promise;
+        }
+        if (path === "/cart") {
+          readCount += 1;
+          return readCount === 1 ? oldRead.promise : finalRead.promise;
+        }
+        if (path === "/cart/revalidate")
+          return Promise.resolve(json({ notices: [] }));
+        throw new Error(`Unexpected request ${path}`);
+      }),
+    );
+    const state = renderHook(() => useCartStore());
+    let first!: Promise<CartResponse>;
+    let second!: Promise<CartResponse>;
+    await act(async () => {
+      first = updateCartItemQty("listing-1", 3);
+      second = updateCartItemQty("listing-1", 4);
+    });
+    await act(async () => {
+      secondPatch.resolve(json(cart(4)));
+      await second;
+    });
+    let pendingOldRead!: Promise<CartResponse | null>;
+    await act(async () => {
+      pendingOldRead = refreshCart();
+    });
+
+    await act(async () => {
+      firstPatch.resolve(json(cart(3)));
+      await first;
+    });
+    expect(readCount).toBe(2);
+    await act(async () => {
+      finalRead.resolve(json(cart(3)));
+    });
+    await waitFor(() =>
+      expect(state.result.current.cart?.items[0]?.qty).toBe(3),
+    );
+    await act(async () => {
+      oldRead.resolve(json(cart(4)));
+      await pendingOldRead;
+    });
+    expect(state.result.current.cart?.items[0]?.qty).toBe(3);
+    expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
+  });
+
   it("re-reads the server cart when a quantity response is interrupted", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const path = new URL(String(input)).pathname;

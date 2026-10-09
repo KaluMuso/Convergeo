@@ -188,6 +188,7 @@ let storeState: CartStoreState = {
 
 const storeListeners = new Set<CartStoreListener>();
 let cartMutationVersion = 0;
+let cartReadVersion = 0;
 
 function emitStore() {
   storeListeners.forEach((listener) => listener());
@@ -223,15 +224,16 @@ export function getCartItemCount(cart: CartResponse | null): number {
 
 export async function refreshCart(): Promise<CartResponse | null> {
   const version = cartMutationVersion;
+  const readVersion = ++cartReadVersion;
   setStoreState({ loading: true, loadError: false });
   try {
     const { cart, notices } = await loadCartWithNotices();
-    if (version === cartMutationVersion) {
+    if (version === cartMutationVersion && readVersion === cartReadVersion) {
       setStoreState({ cart, notices, loading: false, loadError: false });
     }
     return cart;
   } catch {
-    if (version === cartMutationVersion) {
+    if (version === cartMutationVersion && readVersion === cartReadVersion) {
       setStoreState({ loading: false, loadError: true });
     }
     return null;

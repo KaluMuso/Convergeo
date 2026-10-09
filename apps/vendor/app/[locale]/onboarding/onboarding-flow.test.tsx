@@ -179,6 +179,33 @@ describe("mounted onboarding session boundaries", () => {
     ).not.toContain("kyc/A/nrc.jpg");
   });
 
+  it("does not revive an old A upload after switching A to B to A", async () => {
+    const upload = deferred<string>();
+    mock.upload.mockImplementation(() => upload.promise);
+    const view = render(<OnboardingFlow locale="en" />);
+    await screen.findByTestId("docs-step");
+    fireEvent.click(screen.getByRole("button", { name: "Upload" }));
+    await waitFor(() => expect(mock.upload).toHaveBeenCalledWith("A"));
+
+    mock.userId = "B";
+    view.rerender(<OnboardingFlow locale="en" />);
+    await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledWith("B"));
+    await screen.findByTestId("docs-step");
+    mock.userId = "A";
+    view.rerender(<OnboardingFlow locale="en" />);
+    await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledTimes(3));
+    await screen.findByTestId("docs-step");
+
+    await act(async () => {
+      upload.resolve("kyc/A/old-session-nrc.jpg");
+      await upload.promise;
+    });
+    expect(screen.getByTestId("docs-path")).toHaveTextContent("none");
+    expect(
+      window.localStorage.getItem("vergeo5-vendor-onboarding:A"),
+    ).not.toContain("old-session-nrc.jpg");
+  });
+
   it("ignores A's delayed basics save after B starts onboarding", async () => {
     const save = deferred<ReturnType<typeof application>>();
     mock.bootstrap.mockImplementation(async (userId: string) => ({
@@ -228,8 +255,23 @@ describe("mounted onboarding session boundaries", () => {
 
   it("rejects invalid phone details before a resubmission call", async () => {
     mock.bootstrap.mockResolvedValue(application("A", "rejected"));
+    window.localStorage.setItem(
+      "vergeo5-vendor-onboarding:A",
+      JSON.stringify({
+        ...DEFAULT_DRAFT,
+        step: 1,
+        businessName: "A Shop",
+        businessCategory: "electronics",
+        businessArchetype: "registered_retailer",
+        legalName: "A Shop Ltd",
+        momoPhone: "0123456789",
+        nrcPath: "kyc/A/nrc.jpg",
+        selfiePath: "kyc/A/selfie.jpg",
+      }),
+    );
     render(<OnboardingFlow locale="en" />);
     await screen.findByTestId("docs-step");
+    expect(screen.getByTestId("docs-path")).toHaveTextContent("kyc/A/nrc.jpg");
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(mock.resubmit).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(
