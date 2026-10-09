@@ -11,6 +11,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
+from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -74,7 +75,7 @@ def _call(
     key: str,
     qty: int = 2,
     expected_qty: int | None = None,
-    body: dict | None = None,
+    body: dict[str, Any] | None = None,
 ) -> str:
     body = body or {"listing_id": listing_id, "qty": qty}
     with conn.cursor() as cur:

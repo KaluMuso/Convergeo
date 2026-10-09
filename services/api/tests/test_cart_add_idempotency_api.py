@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,7 +9,7 @@ from app.errors import AppError
 from app.routers import cart
 
 
-def _client(rows: list[list[dict]]) -> MagicMock:
+def _client(rows: list[list[dict[str, object]]]) -> MagicMock:
     client = MagicMock()
     query = _query(client)
     query.execute.side_effect = [SimpleNamespace(data=value) for value in rows]
@@ -17,7 +18,7 @@ def _client(rows: list[list[dict]]) -> MagicMock:
 
 def _query(client: MagicMock) -> MagicMock:
     query = client.table.return_value.select.return_value
-    return query.eq.return_value.eq.return_value.limit.return_value
+    return cast(MagicMock, query.eq.return_value.eq.return_value.limit.return_value)
 
 
 def test_keyed_add_revalidates_after_stale_quantity(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -32,7 +33,9 @@ def test_keyed_add_revalidates_after_stale_quantity(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(cart, "_resolve_line_location_id", lambda *args, **kwargs: None)
     validated: list[int] = []
 
-    def validate(*, listing: dict, qty: int, business_eligible: bool) -> tuple[int, bool]:
+    def validate(
+        *, listing: dict[str, object], qty: int, business_eligible: bool
+    ) -> tuple[int, bool]:
         validated.append(qty)
         return (1000 if qty == 2 else 900), False
 
