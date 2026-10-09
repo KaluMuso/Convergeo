@@ -48,7 +48,12 @@ export async function handleSendSmsOtp(req: Request, deps: HandlerDeps = {}): Pr
   const transport = selectOtpTransport(env);
   if (transport === "waha") {
     const result = await sendWahaOtp(hookPayload, req.headers, env, deps.fetchImpl ?? fetch);
-    if (result.ok) return new Response(null, { status: 200 });
+    if (result.ok) {
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(
       JSON.stringify({
         error: {

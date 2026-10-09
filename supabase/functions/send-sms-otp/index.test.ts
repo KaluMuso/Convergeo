@@ -164,6 +164,55 @@ Deno.test("handleSendSmsOtp sends OTP via Africa's Talking on valid hook", async
   assertEquals(form.get("message"), "Your Vergeo5 code is 654321");
 });
 
+Deno.test("WAHA acceptance returns a JSON 200 hook response only after an exact receipt", async () => {
+  const wahaEnv = {
+    SEND_SMS_HOOK_SECRET: HOOK_SECRET,
+    SUPABASE_URL: "https://iyasmrmbcrvlfxpzescb.supabase.co",
+    SMS_OTP_TRANSPORT: "waha",
+    WAHA_OTP_ENABLED: "true",
+    WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.vergeo5.com/webhook/convergeo-auth-otp-draft",
+    WAHA_OTP_N8N_AUTH_TOKEN: "a".repeat(32),
+    WAHA_OTP_N8N_HMAC_SECRET: "b".repeat(32),
+  };
+  const hookBody = { user: { phone: "+260971000099" }, sms: { otp: "654321" } };
+  let sends = 0;
+  const accepted = await makeHookRequest(
+    hookBody,
+    {},
+    async (_input, init) => {
+      sends++;
+      const request = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ accepted: true, requestId: request.requestId }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    wahaEnv,
+  );
+  assertEquals(accepted.status, 200);
+  assertEquals(accepted.headers.get("content-type"), "application/json");
+  assertEquals(await accepted.text(), "{}");
+  assertEquals(sends, 1);
+
+  const rejected = await makeHookRequest(
+    hookBody,
+    {},
+    async () => {
+      sends++;
+      return new Response(JSON.stringify({ accepted: true, requestId: "wrong" }), {
+        status: 200,
+      });
+    },
+    wahaEnv,
+  );
+  assertEquals(rejected.status, 503);
+  assertEquals(rejected.headers.get("content-type"), "application/json");
+  assertEquals(JSON.parse(await rejected.text()), {
+    error: { http_code: 503, message: "OTP delivery unavailable" },
+  });
+  assertEquals(sends, 2);
+});
+
 Deno.test("handleSendSmsOtp uses live endpoint when AT_ENVIRONMENT=live", async () => {
   const calls: Array<{ url: string }> = [];
   const fetchImpl: typeof fetch = async (input) => {
