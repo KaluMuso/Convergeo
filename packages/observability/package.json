@@ -21,7 +21,7 @@
     "@types/react": "^19.2.8",
     "react": "^19.2.8",
     "typescript": "^5.8.2",
-    "vitest": "^3.0.9"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "@sentry/nextjs": "^10.69.0",

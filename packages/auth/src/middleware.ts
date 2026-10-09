@@ -361,7 +361,8 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
     request,
   });
 
-  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  const supabaseUrl = getSupabaseUrl();
+  const supabase = createServerClient(supabaseUrl, getSupabaseAnonKey(), {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -387,34 +388,33 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
   return {
     response,
     user,
-    roles: await resolveVerifiedRoles(supabase),
+    roles: await resolveVerifiedRoles(supabase, user, `${supabaseUrl.replace(/\/+$/, "")}/auth/v1`),
   };
 }
 
-/**
- * Roles for middleware gating come from the VERIFIED access token claims
- * (`getClaims()`), never from the `User` object `getUser()` returns: the
- * Custom Access Token Hook writes granted roles into the issued token's
- * `app_metadata.roles`, not into `auth.users.raw_app_meta_data` (which is
- * what `User.app_metadata` reflects) — see `getRolesFromClaims()`'s
- * docstring. Authoritative privileged API mutations must continue to check
- * `public.user_roles` server-side (`getRoles()`); this is a routing/gating
- * fast path only.
- *
- * Fails closed on any `getClaims()` error, a null/missing claims payload,
- * or a thrown exception (e.g. no session, or a JWKS fetch failure) —
- * `roles=[]`, never a fallback to `user.app_metadata` or any other
- * untrusted source.
- */
+/** A failed or mismatched JWT verification must never grant a routing role. */
 async function resolveVerifiedRoles(
   supabase: ReturnType<typeof createServerClient>,
+  user: User | null,
+  expectedIssuer: string,
 ): Promise<AppRole[]> {
+  if (!user) return [];
   try {
+    // getClaims verifies the token signature (or asks Auth for symmetric keys).
     const { data, error } = await supabase.auth.getClaims();
-    if (error || !data) {
+    if (error || !data?.claims) return [];
+    const claims = data.claims as Record<string, unknown>;
+    if (
+      claims.sub !== user.id ||
+      claims.iss !== expectedIssuer ||
+      claims.aud !== "authenticated" ||
+      typeof claims.exp !== "number" ||
+      !Number.isFinite(claims.exp) ||
+      claims.exp <= Date.now() / 1000
+    ) {
       return [];
     }
-    return getRolesFromClaims(data.claims);
+    return getRolesFromClaims(claims);
   } catch {
     return [];
   }

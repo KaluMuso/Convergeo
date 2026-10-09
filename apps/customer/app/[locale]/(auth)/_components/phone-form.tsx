@@ -126,13 +126,15 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login", nextParam }
         asGroup
       >
         <div className="flex gap-2">
-          <Input
-            size="lg"
-            className="w-24 shrink-0 text-center font-mono"
-            value={countryCode}
-            readOnly
-            aria-label={labels.countryCode}
-          />
+          <div className="w-24 shrink-0">
+            <Input
+              size="lg"
+              className="text-center font-mono"
+              value={countryCode}
+              readOnly
+              aria-label={labels.countryCode}
+            />
+          </div>
           <Input
             size="lg"
             className="min-w-0 flex-1 font-mono"

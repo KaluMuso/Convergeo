@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from enum import StrEnum
 
+from app.core.env_guards import DEFAULT_STAGING_LENCO_BASE_URL, require_sandbox_payments
+
 LENCO_API_TOKEN_ENV = "LENCO_API_TOKEN"
 LENCO_ENV_ENV = "LENCO_ENV"
 LENCO_SANDBOX_BASE_URL_ENV = "LENCO_SANDBOX_BASE_URL"
@@ -12,7 +14,7 @@ LENCO_ENABLE_ZAMTEL_COLLECTIONS_ENV = "LENCO_ENABLE_ZAMTEL_COLLECTIONS"
 
 PROD_BASE_URL = "https://api.lenco.co/access/v2"
 # Sandbox REST base is not in the public PDFs (F9b); override via LENCO_SANDBOX_BASE_URL.
-DEFAULT_SANDBOX_BASE_URL = "https://api.sandbox.lenco.co/access/v2"
+DEFAULT_SANDBOX_BASE_URL = DEFAULT_STAGING_LENCO_BASE_URL
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
 MAX_IDEMPOTENT_RETRIES = 3
@@ -32,6 +34,7 @@ def get_lenco_environment() -> LencoEnvironment:
 
 
 def get_base_url() -> str:
+    require_sandbox_payments(env=os.environ.get("ENV", "").strip().lower())
     if get_lenco_environment() == LencoEnvironment.SANDBOX:
         return os.environ.get(LENCO_SANDBOX_BASE_URL_ENV, DEFAULT_SANDBOX_BASE_URL)
     return PROD_BASE_URL

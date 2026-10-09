@@ -1,0 +1,49 @@
+name: KYC bootstrap regression
+
+on:
+  push:
+    branches:
+      - cursor/release-kyc-auth-integration-20261008
+    paths:
+      - services/api/app/routers/kyc.py
+      - services/api/tests/test_vendor_onboarding_beta.py
+      - services/api/pyproject.toml
+      - services/api/uv.lock
+      - .github/workflows/kyc-bootstrap-regression.yml
+
+permissions:
+  contents: read
+
+jobs:
+  kyc-bootstrap:
+    name: KYC bootstrap pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Verify source identity
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --dev
+
+      - name: Run KYC bootstrap regression
+        run: uv run --frozen pytest -q tests/test_vendor_onboarding_beta.py
+        env:
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_ANON_KEY: test-anon-key
