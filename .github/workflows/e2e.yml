@@ -172,6 +172,7 @@ jobs:
       # Lenco sandbox pay leg — founder gate F9b. Missing evidence fails the
       # strict MoMo certification spec before any checkout/provider initiation.
       LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
+      LENCO_ENV: ${{ secrets.LENCO_ENV }}
       LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
       LENCO_SANDBOX_SECRET_KEY: ${{ secrets.LENCO_SANDBOX_SECRET_KEY }}
       LENCO_SANDBOX_MOMO_NUMBER: ${{ secrets.LENCO_SANDBOX_MOMO_NUMBER }}

@@ -6,7 +6,8 @@
       "codex/phone-input-layout-20261008": false,
       "cursor/release-kyc-auth-integration-20261008": false,
       "cursor/staging-release-compat-20261009": false,
-      "cursor/staging-payment-fail-closed-20261009": false
+      "cursor/staging-payment-fail-closed-20261009": false,
+      "cursor/staging-payment-preflight-followup-20261009": false
     }
   }
 }

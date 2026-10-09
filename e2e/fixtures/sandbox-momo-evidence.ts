@@ -4,11 +4,15 @@ export function missingSandboxMomoEvidence(config: {
   publicKey: string;
   secretKey: string;
   testMomoNumber: string;
+  environment: string;
 }): string[] {
   const missing: string[] = [];
   if (!config.enabled) missing.push("LENCO_SANDBOX");
   if (!config.publicKey.trim()) missing.push("LENCO_SANDBOX_PUBLIC_KEY");
   if (!config.secretKey.trim()) missing.push("LENCO_SANDBOX_SECRET_KEY");
+  if (config.environment.trim().toLowerCase() !== "sandbox") {
+    missing.push("LENCO_ENV=sandbox");
+  }
   if (!/^(?:\+260|0)?[79]\d{8}$/.test(config.testMomoNumber.trim())) {
     missing.push("LENCO_SANDBOX_MOMO_NUMBER");
   }

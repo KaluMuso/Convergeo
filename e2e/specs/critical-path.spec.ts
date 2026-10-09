@@ -5,6 +5,7 @@ import {
   LOCALE,
   customerOtpReady,
   flag,
+  lenco,
   lencoSandboxReady,
   path,
   strictSyntheticRequired,
@@ -19,6 +20,7 @@ import {
   paymentMockMode,
   statusFixture,
 } from "../fixtures/payment-fixtures";
+import { missingSandboxMomoEvidence } from "../fixtures/sandbox-momo-evidence";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -160,13 +162,16 @@ test.describe("critical-path", () => {
 
     // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
     if (!sandboxEnabled() || !customerOtpReady()) {
-      // OPTIONAL: real sandbox money is a founder gate (F9b). Never escalated,
-      // even in certification — browse/cart were asserted above.
+      // The deployed provider branch is required in strict certification.
       const gate = resolveGate({
-        kind: "OPTIONAL_GATE",
+        kind: "REQUIRED_STRICT",
         journey: "deployed sandbox MoMo settle (F9b)",
-        fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP"],
+        fixtures: [
+          ...missingSandboxMomoEvidence(lenco),
+          ...(!customerOtpReady() ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+        ],
       });
+      enforceGate(gate);
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;
