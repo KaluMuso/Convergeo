@@ -8,7 +8,8 @@
       "cursor/staging-release-compat-20261009": false,
       "cursor/staging-payment-fail-closed-20261009": false,
       "cursor/staging-email-first-safety-20261009": false,
-      "cursor/staging-waha-otp-handoff-20261009": false
+      "cursor/staging-waha-otp-handoff-20261009": false,
+      "cursor/staging-waha-replay-db-20261009": false
     }
   }
 }
