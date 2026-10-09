@@ -190,6 +190,43 @@ const storeListeners = new Set<CartStoreListener>();
 let cartMutationVersion = 0;
 let cartReadVersion = 0;
 
+const pendingAddKeys = new Map<string, string>();
+const inFlightAddKeys = new Map<string, number>();
+
+async function cartAddKey(
+  body: string,
+): Promise<{ key: string; slot: string }> {
+  const supabase = await getBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  const slot = `vergeo-cart-add:${data.session?.user?.id ?? "guest"}:${body}`;
+  let key: string | null = null;
+  if (!inFlightAddKeys.has(slot)) {
+    try {
+      key = sessionStorage.getItem(slot);
+    } catch {
+      key = pendingAddKeys.get(slot) ?? null;
+    }
+  }
+  key ??= crypto.randomUUID();
+  pendingAddKeys.set(slot, key);
+  try {
+    sessionStorage.setItem(slot, key);
+  } catch {
+    // Storage may be disabled; keep retry state for this page lifetime.
+  }
+  inFlightAddKeys.set(slot, (inFlightAddKeys.get(slot) ?? 0) + 1);
+  return { key, slot };
+}
+
+function forgetCartAddKey(slot: string, key: string) {
+  if (pendingAddKeys.get(slot) === key) pendingAddKeys.delete(slot);
+  try {
+    if (sessionStorage.getItem(slot) === key) sessionStorage.removeItem(slot);
+  } catch {
+    // A disabled storage API does not block cart mutations.
+  }
+}
+
 function emitStore() {
   storeListeners.forEach((listener) => listener());
 }
@@ -286,18 +323,42 @@ export async function addCartItem(
   locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
   const version = ++cartMutationVersion;
-  const cart = await cartMutationRequest<CartResponse>("/cart/items", {
-    method: "POST",
-    body: JSON.stringify({
-      listing_id: listingId,
-      qty,
-      ...(clipId ? { clip_id: clipId } : {}),
-      ...(locationOptions?.pickupLocationId
-        ? { pickup_location_id: locationOptions.pickupLocationId }
-        : {}),
-      ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
-    }),
+  const body = JSON.stringify({
+    listing_id: listingId,
+    qty,
+    ...(clipId ? { clip_id: clipId } : {}),
+    ...(locationOptions?.pickupLocationId
+      ? { pickup_location_id: locationOptions.pickupLocationId }
+      : {}),
+    ...(locationOptions?.fulfilment
+      ? { fulfilment: locationOptions.fulfilment }
+      : {}),
   });
+  const { key, slot } = await cartAddKey(body);
+  let cart: CartResponse;
+  try {
+    cart = await cartMutationRequest<CartResponse>("/cart/items", {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body,
+    });
+    forgetCartAddKey(slot, key);
+  } catch (error) {
+    // A transport failure or server error may follow a committed add. Keep
+    // its key across a retry or page navigation until the outcome is known.
+    if (
+      error instanceof ApiError &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
+      forgetCartAddKey(slot, key);
+    }
+    throw error;
+  } finally {
+    const remaining = (inFlightAddKeys.get(slot) ?? 1) - 1;
+    if (remaining) inFlightAddKeys.set(slot, remaining);
+    else inFlightAddKeys.delete(slot);
+  }
   const notices = cart.notices ?? (await fetchRevalidateNotices());
   publishCartMutation(version, cart, notices);
   return cart;
