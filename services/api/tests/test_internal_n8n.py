@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from app.main import create_app
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 VALID_TOKEN = "dev-internal-n8n"
 USER_ID = "11111111-1111-1111-1111-111111111111"
@@ -320,6 +321,49 @@ class TestPayoutFailuresEndpoint:
 
 
 class TestLowStockEndpoint:
+    def test_tick_uses_default_when_threshold_query_returns_none(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Pinned postgrest maybe_single().execute() returns None for zero rows."""
+        _seed_common(fake_client)
+        fake_client.tables["platform_config"].rows.clear()
+        original_execute = FakeQuery.execute
+
+        def execute_with_real_empty_result(query: FakeQuery) -> MagicMock | None:
+            if query._parent is fake_client.tables["platform_config"] and query._maybe_single:
+                return None
+            return original_execute(query)
+
+        monkeypatch.setattr(FakeQuery, "execute", execute_with_real_empty_result)
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        assert _read_platform_config_int(
+            MagicMock(client=fake_client), "low_stock_threshold", 5
+        ) == 5
+        response = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json() == {"items": [], "count": 0, "enqueued": 0, "skipped": 0}
+
+    def test_threshold_database_error_propagates(
+        self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        def fail_query(_query: FakeQuery) -> None:
+            raise APIError({"code": "42501", "message": "mock permission failure"})
+
+        monkeypatch.setattr(FakeQuery, "execute", fail_query)
+        with pytest.raises(APIError):
+            _read_platform_config_int(
+                MagicMock(client=fake_client), "low_stock_threshold", 5
+            )
+
     def test_returns_listings_under_threshold(
         self, n8n_client: TestClient, fake_client: FakeSupabaseClient
     ) -> None:
