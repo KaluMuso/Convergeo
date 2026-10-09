@@ -43,7 +43,17 @@ select current_database() as database_name,
            and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'
            and exists (select 1 from aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) s
                         where s.grantee = 0 and s.privilege_type = 'USAGE'))
-         as public_reachable_definer_count
+         as public_reachable_definer_count,
+       (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where c.relkind in ('r', 'p', 'v', 'm', 'f')
+           and n.nspname not like 'pg_%'
+           and n.nspname not in ('information_schema', 'extensions', 'otp_replay')
+           and (has_any_column_privilege('public', c.oid, 'SELECT')
+             or has_any_column_privilege('public', c.oid, 'INSERT')
+             or has_any_column_privilege('public', c.oid, 'UPDATE')
+             or has_table_privilege('public', c.oid, 'DELETE')
+             or has_table_privilege('public', c.oid, 'TRUNCATE')))
+         as public_business_data_privilege_count
 """
 POSTCHECK = """
 select exists(select 1 from pg_roles where rolname = 'n8n_otp_replay'
@@ -77,11 +87,12 @@ select exists(select 1 from pg_roles where rolname = 'n8n_otp_replay'
          where c.relkind in ('r', 'p', 'v', 'm', 'f')
            and n.nspname not like 'pg_%'
            and n.nspname not in ('information_schema', 'extensions', 'otp_replay')
-           and (has_table_privilege('n8n_otp_replay', c.oid, 'SELECT')
-             or has_table_privilege('n8n_otp_replay', c.oid, 'INSERT')
-             or has_table_privilege('n8n_otp_replay', c.oid, 'UPDATE')
-             or has_table_privilege('n8n_otp_replay', c.oid, 'DELETE')))
-         as business_table_dml_count,
+           and (has_any_column_privilege('n8n_otp_replay', c.oid, 'SELECT')
+             or has_any_column_privilege('n8n_otp_replay', c.oid, 'INSERT')
+             or has_any_column_privilege('n8n_otp_replay', c.oid, 'UPDATE')
+             or has_table_privilege('n8n_otp_replay', c.oid, 'DELETE')
+             or has_table_privilege('n8n_otp_replay', c.oid, 'TRUNCATE')))
+         as business_data_privilege_count,
        (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
          where p.prosecdef and n.nspname not like 'pg_%'
            and n.nspname <> 'information_schema'
@@ -146,6 +157,7 @@ def apply(token: str, sql: str) -> None:
         "login_exists": False,
         "public_schema_create_count": 0,
         "public_reachable_definer_count": 0,
+        "public_business_data_privilege_count": 0,
     }:
         raise ValueError("replay table or login preflight differs from reviewed state")
 
@@ -164,10 +176,12 @@ def apply(token: str, sql: str) -> None:
         "replay_delete": False,
         "role_membership_count": 0,
         "schema_create_count": 0,
-        "business_table_dml_count": 0,
+        "business_data_privilege_count": 0,
         "reachable_definer_count": 0,
     }:
-        raise ValueError("staging login postcheck failed; inspect before further action")
+        raise ValueError(
+            "staging login postcheck failed after commit; inspect state, do not rerun automatically"
+        )
     print(f"Passwordless replay login provisioned on {PROJECT_REF}; password remains unset")
 
 

@@ -25,6 +25,7 @@ class ReplayLoginRunnerTests(TestCase):
             "login_exists": False,
             "public_schema_create_count": 0,
             "public_reachable_definer_count": 0,
+            "public_business_data_privilege_count": 0,
         }
         self.postcheck = {
             "restricted_login_exists": True,
@@ -38,7 +39,7 @@ class ReplayLoginRunnerTests(TestCase):
             "replay_delete": False,
             "role_membership_count": 0,
             "schema_create_count": 0,
-            "business_table_dml_count": 0,
+            "business_data_privilege_count": 0,
             "reachable_definer_count": 0,
         }
 
@@ -56,7 +57,8 @@ class ReplayLoginRunnerTests(TestCase):
 
     def test_missing_table_and_broad_public_privilege_stop_before_write(self):
         for changed in ({"table_exists": False}, {"public_schema_create_count": 1},
-                        {"public_reachable_definer_count": 1}):
+                        {"public_reachable_definer_count": 1},
+                        {"public_business_data_privilege_count": 1}):
             with self.subTest(changed=changed):
                 before = {**self.preflight, **changed}
                 with mock.patch.object(runner, "api_json", side_effect=[self.project, [before]]) as api:
@@ -68,7 +70,7 @@ class ReplayLoginRunnerTests(TestCase):
     def test_only_reviewed_project_and_preflight_reach_write(self):
         with mock.patch.object(runner, "api_json", side_effect=[
             self.project, [self.preflight], [], [self.postcheck]
-        ]) as api:
+        ]) as api, mock.patch("builtins.print"):
             runner.apply("synthetic-token", runner.checked_sql())
         self.assertEqual(api.call_count, 4)
         self.assertEqual(api.call_args_list[2].args[1], f"{runner.API_ROOT}/database/query")
@@ -83,6 +85,21 @@ class ReplayLoginRunnerTests(TestCase):
             with self.assertRaisesRegex(ValueError, "postcheck"):
                 runner.apply("synthetic-token", runner.checked_sql())
         self.assertEqual(api.call_count, 4)
+
+    def test_postcheck_denies_business_data_privilege(self):
+        after = {**self.postcheck, "business_data_privilege_count": 1}
+        with mock.patch.object(runner, "api_json", side_effect=[
+            self.project, [self.preflight], [], [after]
+        ]):
+            with self.assertRaisesRegex(ValueError, "postcheck"):
+                runner.apply("synthetic-token", runner.checked_sql())
+
+    def test_metadata_queries_cover_column_only_grants_and_truncate(self):
+        for query in (runner.PREFLIGHT, runner.POSTCHECK):
+            self.assertEqual(query.count("has_any_column_privilege("), 3)
+            for privilege in ("SELECT", "INSERT", "UPDATE"):
+                self.assertIn(f"'{privilege}')", query)
+            self.assertIn("'TRUNCATE')", query)
 
 
 if __name__ == "__main__":
