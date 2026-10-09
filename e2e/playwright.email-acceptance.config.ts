@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     ...devices["Pixel 7"],
+    serviceWorkers: "block",
     trace: "off",
     screenshot: "off",
     video: "off",
