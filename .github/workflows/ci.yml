@@ -220,6 +220,11 @@ jobs:
       - name: Email-only staging diagnostic safety tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-email-acceptance.test.mjs
 
+      - name: WAHA OTP handoff safety tests
+        run: |
+          node --test infra/n8n/waha-otp-handoff.test.mjs
+          node --experimental-strip-types --test supabase/functions/send-sms-otp/waha_transport.test.mjs
+
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the
       # pure TypeScript policy directly (Node type-stripping) — no browser, no

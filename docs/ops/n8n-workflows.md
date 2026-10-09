@@ -15,8 +15,10 @@ and delivers directly to the founder's WhatsApp.
 
 ## Security
 
-- Every workflow uses `X-Internal-Token` from n8n credentials / `$env` — **never**
-  inline secrets in JSON exports.
+- Internal API ticks use `X-Internal-Token` from n8n credentials / `$env` —
+  **never** inline secrets in JSON exports. The inactive WAHA OTP handoff instead
+  uses a dedicated authenticated webhook, HMAC credential, and send-only WAHA
+  credential; see `infra/n8n/waha-otp-handoff.README.md`.
 - Internal tokens are per-concern: `INTERNAL_N8N_TOKEN` (M14 operational nudges),
   `INTERNAL_DIGEST_TOKEN` (founder digest), plus the per-job tokens used by earlier
   ticks (e.g. `INTERNAL_ORDER_JOBS_TOKEN`, `INTERNAL_TICKETS_ISSUE_TOKEN`,
@@ -40,8 +42,9 @@ and delivers directly to the founder's WhatsApp.
 
 ## Registry
 
-Every `infra/n8n/*.json` (schedule = `scheduleTrigger`; all default **inactive** —
-activate per environment after credentials + F5 WhatsApp are live):
+Every `infra/n8n/*.json` is listed below. Scheduled ticks use `scheduleTrigger`;
+the WAHA OTP draft uses an authenticated webhook. All default **inactive** and
+need their own documented activation gates.
 
 | Workflow file                     | Trigger                                                      | API endpoint                                                         | Purpose                                                                                                                                                                                                                                                                 | Owner             |
 | --------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -64,6 +67,7 @@ activate per environment after credentials + F5 WhatsApp are live):
 | `funnel-abandon.json`             | Every 5m                                                     | `POST /internal/funnel/abandon-tick`                                 | Sweep abandoned checkout funnels for analytics                                                                                                                                                                                                                          | M07-P08           |
 | `waha-intake-sweeps.json`         | Every 1h                                                     | `POST /internal/intake/{expire-sessions,purge-messages,purge-links}` | D35 intake ops: expire stale sessions via the guarded transition · null `raw_excerpt` past `purge_after` (§12 retention, IDs/dispositions kept) · delete expired **unredeemed** review links                                                                            | M18-P07           |
 | `waha-intake-digest.json`         | Daily 07:00 UTC                                              | `GET /internal/intake/metrics`                                       | Reviewer-queue digest: sessions awaiting admin review, completion mix, listings created, drop dispositions → founder WhatsApp (Lane 1)                                                                                                                                  | M18-P07           |
+| `waha-otp-handoff.json`           | Authenticated webhook (inactive; WAHA send disabled)         | Private WAHA `POST /api/sendText`                                    | Temporary staging-only Supabase Auth OTP transport draft; owner review of n8n retention, backups, access, credential binding, and inactive import is pending. See `infra/n8n/waha-otp-handoff.README.md`                                                                | Staging OTP draft |
 | `analytics-retention.json`        | Daily 03:00 UTC                                              | `POST /internal/analytics/retention-tick`                            | DPA retention sweep: NULL person-links >30d (search_query_log / funnel_events / analytics_events)                                                                                                                                                                       | M16-P07           |
 | `export-purge.json`               | Daily 04:00 UTC                                              | `POST /internal/privacy/export-purge-tick`                           | DPA sweep: delete data-export bundles older than `DATA_EXPORT_TTL_HOURS` (24h) from `private-artifacts/data-exports/`                                                                                                                                                   | FIX-L             |
 | `embeddings-cron.json`            | Every 5m                                                     | `POST /internal/embeddings/tick`                                     | Generate embeddings for pending catalog rows                                                                                                                                                                                                                            | M06-P01           |

@@ -38,7 +38,14 @@ function atSuccessBody(statusCode: number, status = "Success") {
   return JSON.stringify({
     SMSMessageData: {
       Message: "Sent to 1/1 Total Cost: KES 0.8000",
-      Recipients: [{ statusCode, status, number: "+260971000099", messageId: "ATXid_test" }],
+      Recipients: [
+        {
+          statusCode,
+          status,
+          number: "+260971000099",
+          messageId: "ATXid_test",
+        },
+      ],
     },
   });
 }
@@ -121,7 +128,10 @@ Deno.test("classifyRecipientStatus accepts 100/101/102", () => {
 
 Deno.test("classifyRecipientStatus rejects permanent provider failures", () => {
   for (const code of [401, 402, 403, 405, 502]) {
-    assertEquals(classifyRecipientStatus(code), { ok: false, retryable: false });
+    assertEquals(classifyRecipientStatus(code), {
+      ok: false,
+      retryable: false,
+    });
   }
 });
 
@@ -154,6 +164,55 @@ Deno.test("handleSendSmsOtp sends OTP via Africa's Talking on valid hook", async
   assertEquals(form.get("message"), "Your Vergeo5 code is 654321");
 });
 
+Deno.test("WAHA acceptance returns a JSON 200 hook response only after an exact receipt", async () => {
+  const wahaEnv = {
+    SEND_SMS_HOOK_SECRET: HOOK_SECRET,
+    SUPABASE_URL: "https://iyasmrmbcrvlfxpzescb.supabase.co",
+    SMS_OTP_TRANSPORT: "waha",
+    WAHA_OTP_ENABLED: "true",
+    WAHA_OTP_N8N_WEBHOOK_URL: "https://n8n.vergeo5.com/webhook/convergeo-auth-otp-draft",
+    WAHA_OTP_N8N_AUTH_TOKEN: "a".repeat(32),
+    WAHA_OTP_N8N_HMAC_SECRET: "b".repeat(32),
+  };
+  const hookBody = { user: { phone: "+260971000099" }, sms: { otp: "654321" } };
+  let sends = 0;
+  const accepted = await makeHookRequest(
+    hookBody,
+    {},
+    async (_input, init) => {
+      sends++;
+      const request = JSON.parse(String(init?.body));
+      return new Response(JSON.stringify({ accepted: true, requestId: request.requestId }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    wahaEnv,
+  );
+  assertEquals(accepted.status, 200);
+  assertEquals(accepted.headers.get("content-type"), "application/json");
+  assertEquals(await accepted.text(), "{}");
+  assertEquals(sends, 1);
+
+  const rejected = await makeHookRequest(
+    hookBody,
+    {},
+    async () => {
+      sends++;
+      return new Response(JSON.stringify({ accepted: true, requestId: "wrong" }), {
+        status: 200,
+      });
+    },
+    wahaEnv,
+  );
+  assertEquals(rejected.status, 503);
+  assertEquals(rejected.headers.get("content-type"), "application/json");
+  assertEquals(JSON.parse(await rejected.text()), {
+    error: { http_code: 503, message: "OTP delivery unavailable" },
+  });
+  assertEquals(sends, 2);
+});
+
 Deno.test("handleSendSmsOtp uses live endpoint when AT_ENVIRONMENT=live", async () => {
   const calls: Array<{ url: string }> = [];
   const fetchImpl: typeof fetch = async (input) => {
@@ -171,6 +230,31 @@ Deno.test("handleSendSmsOtp uses live endpoint when AT_ENVIRONMENT=live", async 
   assertEquals(response.status, 200);
   assertEquals(calls[0]?.url, "https://api.africastalking.com/version1/messaging");
 });
+
+Deno.test(
+  "staging OTP defaults to disabled and refuses live AT before provider fetch",
+  async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls++;
+      throw new Error("provider must not be called");
+    };
+    const staging = {
+      ...testEnv,
+      SUPABASE_URL: "https://iyasmrmbcrvlfxpzescb.supabase.co",
+    };
+    for (const env of [staging, { ...staging, SMS_OTP_TRANSPORT: "at", AT_ENVIRONMENT: "live" }]) {
+      const response = await makeHookRequest(
+        { user: { phone: "+260971000099" }, sms: { otp: "654321" } },
+        {},
+        fetchImpl,
+        env,
+      );
+      assertEquals(response.status, 503);
+    }
+    assertEquals(calls, 0);
+  },
+);
 
 Deno.test("handleSendSmsOtp rejects invalid hook signature", async () => {
   const body = {
@@ -347,7 +431,10 @@ Deno.test("sendAtSms rejects HTTP 2xx recipient failures", async () => {
         apiKey: "key",
         environment: "sandbox",
       },
-      async () => new Response(atSuccessBody(testCase.code, testCase.status), { status: 201 }),
+      async () =>
+        new Response(atSuccessBody(testCase.code, testCase.status), {
+          status: 201,
+        }),
     );
     assertEquals(result.ok, false);
     if (!result.ok) {
@@ -368,7 +455,9 @@ Deno.test("sendAtSms rejects empty Recipients array", async () => {
       environment: "sandbox",
     },
     async () =>
-      new Response(JSON.stringify({ SMSMessageData: { Recipients: [] } }), { status: 201 }),
+      new Response(JSON.stringify({ SMSMessageData: { Recipients: [] } }), {
+        status: 201,
+      }),
   );
 
   assertEquals(result.ok, false);

@@ -3,6 +3,7 @@ import { buildPermanentHookFailure, buildRetryableHookFailure } from "./hook_res
 import { buildOtpMessage, verifySendSmsHook } from "./hook.ts";
 import { logSmsOtpEvent } from "./logging.ts";
 import { formatPhoneForAt } from "./phone.ts";
+import { selectOtpTransport, sendWahaOtp } from "./waha_transport.ts";
 
 type HandlerDeps = {
   fetchImpl?: typeof fetch;
@@ -33,15 +34,59 @@ export async function handleSendSmsOtp(req: Request, deps: HandlerDeps = {}): Pr
     }
     hookPayload = verifySendSmsHook(payload, headers, hookSecret);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
     logSmsOtpEvent("hook_signature_rejected", {
       provider_outcome: "invalid_signature",
     });
     return new Response(
       JSON.stringify({
-        error: { http_code: 401, message: `Invalid hook signature: ${message}` },
+        error: { http_code: 401, message: "Invalid hook signature" },
       }),
       { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const transport = selectOtpTransport(env);
+  if (transport === "waha") {
+    const result = await sendWahaOtp(hookPayload, req.headers, env, deps.fetchImpl ?? fetch);
+    if (result.ok) {
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(
+      JSON.stringify({
+        error: {
+          http_code: result.status,
+          message: "OTP delivery unavailable",
+        },
+      }),
+      {
+        status: result.status,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+  if (transport === "disabled") {
+    return new Response(
+      JSON.stringify({
+        error: { http_code: 503, message: "OTP transport disabled" },
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+  if (transport !== "at") {
+    return new Response(
+      JSON.stringify({
+        error: { http_code: 500, message: "Invalid OTP transport" },
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 
