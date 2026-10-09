@@ -167,6 +167,7 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "admin_roles": client_invisible(),
     "analytics_events": {
         # M16-P05: admin-read / service-role-write superset analytics sink. Same
         # shape as funnel_events / search_query_log — authenticated gets a SELECT
@@ -3554,7 +3555,7 @@ def test_cross_customer_cannot_read_addresses(
 
 
 def test_service_role_only_tables_invisible(as_customer: RoleSession) -> None:
-    for table in ("notification_outbox", "audit_log"):
+    for table in ("notification_outbox", "audit_log", "admin_roles"):
         result = as_customer.execute(f"SELECT 1 FROM public.{table} LIMIT 1")
         assert _is_permission_denied(result), table
     for table in ("user_roles", "stock_reservations"):
