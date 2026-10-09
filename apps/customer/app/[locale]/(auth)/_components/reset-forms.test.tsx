@@ -9,12 +9,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const resetPasswordForEmail = vi.fn();
 const exchangeCodeForSession = vi.fn();
-const updateUser = vi.fn();
+const getClaims = vi.fn();
 const getSession = vi.fn();
+const passwordFetch = vi.fn();
+let authCallback:
+  ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null = null;
 
-vi.mock("@vergeo/auth/browser-client", () => ({
-  createBrowserClient: () => ({
-    auth: { resetPasswordForEmail, exchangeCodeForSession, updateUser, getSession },
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({
+    auth: {
+      resetPasswordForEmail,
+      exchangeCodeForSession,
+      getClaims,
+      getSession,
+      onAuthStateChange: (
+        callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
+      ) => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
+    },
   }),
 }));
 
@@ -66,14 +80,34 @@ function renderWithIntl(node: React.ReactNode) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   window.history.replaceState({}, "", "/");
 });
 
 beforeEach(() => {
   resetPasswordForEmail.mockResolvedValue({ error: null });
-  exchangeCodeForSession.mockResolvedValue({ error: null });
-  updateUser.mockResolvedValue({ error: null });
-  getSession.mockResolvedValue({ data: { session: null } });
+  exchangeCodeForSession.mockImplementation(async () => {
+    authCallback?.("PASSWORD_RECOVERY", {
+      user: { id: "recovery-user" },
+      access_token: "recovery-token",
+    });
+    return {
+      data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+      error: null,
+    };
+  });
+  getClaims.mockResolvedValue({
+    data: { claims: { sub: "recovery-user", session_id: "recovery-session" } },
+    error: null,
+  });
+  passwordFetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", passwordFetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
+  getSession.mockResolvedValue({
+    data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+  });
 });
 
 describe("ResetRequestForm", () => {
@@ -101,6 +135,38 @@ describe("ResetRequestForm", () => {
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
     expect(screen.getByText("Required")).toBeInTheDocument();
   });
+
+  it("uses this portal and locale as the recovery return and reports rate limiting", async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: { status: 429, retryAfter: 31 } });
+    window.history.replaceState({}, "", "/fr/reset-password");
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="fr" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() =>
+      expect(resetPasswordForEmail).toHaveBeenCalledWith("person@example.test", {
+        redirectTo: `${window.location.origin}/fr/reset-password/confirm`,
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wait 31s");
+    expect(screen.queryByText(/a reset link is on its way/i)).not.toBeInTheDocument();
+  });
+
+  it("reports operational mail errors without exposing their raw details", async () => {
+    resetPasswordForEmail.mockResolvedValue({
+      error: { code: "email_address_not_authorized", message: "Sender is not configured" },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="en" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.queryByText(/Sender is not configured/i)).not.toBeInTheDocument();
+  });
 });
 
 describe("ResetConfirmForm", () => {
@@ -118,14 +184,22 @@ describe("ResetConfirmForm", () => {
     await user.type(newPw, "supersecret1");
     await user.type(confirmPw, "different1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    expect(updateUser).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
     expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
 
     // Matching passwords update and show success.
     await user.clear(confirmPw);
     await user.type(confirmPw, "supersecret1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ password: "supersecret1" }));
+    await waitFor(() =>
+      expect(passwordFetch).toHaveBeenCalledExactlyOnceWith(
+        "https://staging.example.supabase.co/auth/v1/user",
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+          body: JSON.stringify({ password: "supersecret1" }),
+        }),
+      ),
+    );
     expect(screen.getByText(/password updated/i)).toBeInTheDocument();
   });
 

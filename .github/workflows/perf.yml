@@ -195,7 +195,6 @@ jobs:
         run: |
           node scripts/ci/bundle-guard.mjs --self-test
           node scripts/ci/image-lint.mjs --self-test
-          node --test scripts/ci/perf-reporting.test.mjs
 
       - name: Validate Lighthouse config
         run: node scripts/ci/validate-lighthouserc.mjs
@@ -253,9 +252,11 @@ jobs:
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
         # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
         # Bundle-guard + image-lint remain the hard first-load JS/image gates.
-        # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
+        # Rollback: temporarily pin this step to continue-on-error ONLY if Lighthouse/Chrome
         # itself is unavailable (not for score dips) — document in the PR.
-        run: pnpm exec lhci autorun --config=lighthouserc.json
+        run: |
+          node --test scripts/ci/lighthouse-budget.test.mjs
+          node scripts/ci/lighthouse-budget.mjs
 
       - name: Install a11y smoke deps (standalone e2e package)
         working-directory: e2e
@@ -281,7 +282,7 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_THROTTLE: "0"
-        run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-390
+        run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-fast-3g-360
 
       - name: Stop servers
         if: always()
@@ -299,6 +300,5 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
-          # LHCI writes into a dot-directory; upload-artifact excludes it by default.
           include-hidden-files: true
           if-no-files-found: ignore

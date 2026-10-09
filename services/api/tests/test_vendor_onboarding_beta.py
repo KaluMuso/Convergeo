@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from app.main import create_app
+from app.routers.kyc import _find_vendor_for_owner
 from fastapi.testclient import TestClient
 
 CUSTOMER_ID = "22222222-2222-2222-2222-222222222222"
@@ -62,7 +63,7 @@ class FakeQuery:
         self._payload = payload
         return self
 
-    def execute(self) -> MagicMock:
+    def execute(self) -> MagicMock | None:
         if self._pending_op == "insert":
             assert isinstance(self._payload, dict)
             row = dict(self._payload)
@@ -97,7 +98,7 @@ class FakeQuery:
         if self._limit is not None:
             rows = rows[: self._limit]
         if self._maybe_single:
-            return MagicMock(data=rows[0] if rows else None)
+            return MagicMock(data=rows[0]) if rows else None
         return MagicMock(data=rows)
 
     def _apply_filters(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -187,6 +188,14 @@ def test_customer_can_bootstrap_and_resume_own_draft(
 ) -> None:
     _mock_verify(monkeypatch, CUSTOMER_ID)
     _mock_roles(monkeypatch, {CUSTOMER_ID: frozenset({"customer"})})
+    assert (
+        fake_client.table("vendors")
+        .select("id")
+        .eq("owner_user_id", CUSTOMER_ID)
+        .maybe_single()
+        .execute()
+        is None
+    )
 
     first = api_client.post(
         "/kyc/bootstrap",
@@ -224,6 +233,21 @@ def test_customer_can_bootstrap_and_resume_own_draft(
     assert resumed["vendor_id"] == vendor_id
     assert len(fake_client.tables["vendors"].rows) == 1
     assert resumed["business_name"] == "Lusaka Spares"
+    assert fake_client.tables["user_roles"].rows == []
+
+
+def test_vendor_lookup_query_error_is_not_treated_as_no_vendor(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    def fail_lookup(query: FakeQuery) -> MagicMock | None:
+        _ = query
+        raise RuntimeError("lookup failed")
+
+    monkeypatch.setattr(FakeQuery, "execute", fail_lookup)
+    with pytest.raises(RuntimeError, match="lookup failed"):
+        _find_vendor_for_owner(MagicMock(client=fake_client), CUSTOMER_ID)
+    assert fake_client.tables["vendors"].rows == []
 
 
 def test_duplicate_bootstrap_is_safe_and_patch_persists_basics(
