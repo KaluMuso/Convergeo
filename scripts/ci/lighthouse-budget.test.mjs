@@ -8,6 +8,7 @@ import {
   assertReports,
   collectReports,
   sanitizeDiagnostic,
+  summarizeNavigationDiagnostic,
 } from "./lighthouse-budget.mjs";
 
 const config = JSON.parse(
@@ -74,6 +75,7 @@ async function withMockCollection(makeReport, check) {
   const calls = new Map();
   const launchedPorts = [];
   const killedPorts = [];
+  const diagnostics = [];
   const launch = async () => {
     const port = 9000 + launchedPorts.length;
     launchedPorts.push(port);
@@ -123,7 +125,11 @@ async function withMockCollection(makeReport, check) {
   try {
     const reports = await collectReports(
       config,
-      { lighthouse, launch },
+      {
+        lighthouse,
+        launch,
+        logDiagnostic: (...parts) => diagnostics.push(parts.join(" ")),
+      },
       directory,
     );
     const manifest = JSON.parse(
@@ -136,6 +142,7 @@ async function withMockCollection(makeReport, check) {
       calls,
       launchedPorts,
       killedPorts,
+      diagnostics,
     });
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -149,7 +156,14 @@ test("each required sample gets a fresh browser; all runtime errors remain block
       (url.endsWith("/checkout") && call === 1)
         ? { runtimeError: { code: "NO_NAVSTART" } }
         : {},
-    async ({ reports, manifest, directory, launchedPorts, killedPorts }) => {
+    async ({
+      reports,
+      manifest,
+      directory,
+      launchedPorts,
+      killedPorts,
+      diagnostics,
+    }) => {
       assert.equal(reports.length, 15);
       assert.equal(manifest.length, 15);
       assert.deepEqual(
@@ -164,6 +178,9 @@ test("each required sample gets a fresh browser; all runtime errors remain block
       );
       assert.equal(launchedPorts.length, 15);
       assert.deepEqual(killedPorts, launchedPorts);
+      assert.equal(diagnostics.length, 2);
+      assert(diagnostics.every((line) => line.includes("NO_NAVSTART")));
+      assert(diagnostics.every((line) => !line.includes("secret-local-token")));
       const filenames = await readdir(directory);
       assert(filenames.includes("2-2-trace.json"));
       assert(filenames.includes("4-0-devtools-log.json"));
@@ -185,6 +202,58 @@ test("each required sample gets a fresh browser; all runtime errors remain block
           /NO_NAVSTART/.test(error.message),
       );
     },
+  );
+});
+
+test("navigation diagnostic distinguishes absent, other-frame, and rejected URL", () => {
+  const browserStart = {
+    name: "TracingStartedInBrowser",
+    cat: "devtools.timeline",
+    args: { data: { frames: [{ frame: "main-secret", processId: 1 }] } },
+  };
+  const navStart = (frame, documentLoaderURL) => ({
+    name: "navigationStart",
+    cat: "loading",
+    args: { data: { frame, documentLoaderURL } },
+  });
+  const messages = [
+    {
+      method: "Network.responseReceived",
+      params: {
+        type: "Document",
+        response: { status: 200, url: "https://secret.example.com" },
+      },
+    },
+  ];
+  const summarize = (...events) =>
+    summarizeNavigationDiagnostic(
+      { traceEvents: [browserStart, ...events] },
+      messages,
+    );
+  assert.equal(summarize().diagnosis, "navigation-start-absent");
+  assert.equal(
+    summarize(navStart("other-secret", "http://localhost:3000/en")).diagnosis,
+    "navigation-start-other-frame",
+  );
+  assert.equal(
+    summarize(navStart("main-secret", "about:blank")).diagnosis,
+    "navigation-start-url-rejected",
+  );
+  const accepted = summarize(
+    navStart("main-secret", "http://localhost:3000/en?token=secret"),
+  );
+  assert.equal(
+    accepted.diagnosis,
+    "navigation-start-present-check-trace-processing",
+  );
+  assert.deepEqual(accepted.documentResponseStatuses, [200]);
+  assert.doesNotMatch(
+    JSON.stringify(accepted),
+    /main-secret|other-secret|secret\.example|token=secret/,
+  );
+  assert.equal(
+    summarizeNavigationDiagnostic(undefined, undefined).diagnosis,
+    "trace-unavailable",
   );
 });
 

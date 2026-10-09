@@ -147,11 +147,86 @@ export function sanitizeDiagnostic(value, key = "") {
   return "[redacted]";
 }
 
+// A failed navigation can still have trace and DevTools data. Emit only counts
+// and fixed labels so CI logs remain useful when artifact downloads are blocked.
+export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
+  const events = Array.isArray(trace?.traceEvents) ? trace.traceEvents : [];
+  const messages = Array.isArray(devtoolsLog) ? devtoolsLog : [];
+  const isKeyEvent = (event) =>
+    typeof event?.cat === "string" &&
+    (event.cat.includes("blink.user_timing") ||
+      event.cat.includes("loading") ||
+      event.cat.includes("devtools.timeline") ||
+      event.cat === "__metadata");
+  const frameId = (event) =>
+    event.args?.data?.frame ?? event.args?.data?.frameID ?? event.args?.frame;
+  const keyEvents = events.filter(isKeyEvent);
+  const browserStart = keyEvents.find(
+    (event) => event.name === "TracingStartedInBrowser",
+  );
+  const browserMainFrame = browserStart?.args?.data?.frames?.find(
+    (frame) => !frame.parent,
+  );
+  const pageStart = keyEvents.find(
+    (event) => event.name === "TracingStartedInPage",
+  );
+  const mainFrame =
+    browserMainFrame?.processId && browserMainFrame?.frame
+      ? browserMainFrame.frame
+      : pageStart?.args?.data?.page;
+  const mainFrameSource =
+    browserMainFrame?.processId && browserMainFrame?.frame
+      ? "browser"
+      : mainFrame
+        ? "page"
+        : "unresolved";
+  const navStarts = keyEvents.filter(
+    (event) => event.name === "navigationStart",
+  );
+  const mainFrameNavStarts = mainFrame
+    ? navStarts.filter((event) => frameId(event) === mainFrame)
+    : [];
+  const acceptableMainFrameNavStarts = mainFrameNavStarts.filter((event) => {
+    const url = event.args?.data?.documentLoaderURL;
+    return url === undefined || /^https?:|^chrome:/.test(url);
+  });
+  const documentStatuses = messages
+    .filter(
+      (message) =>
+        message.method === "Network.responseReceived" &&
+        message.params?.type === "Document",
+    )
+    .map((message) => message.params?.response?.status)
+    .filter((status) => Number.isInteger(status));
+  return {
+    traceEventCount: events.length,
+    keyEventCount: keyEvents.length,
+    mainFrameSource,
+    navigationStartCount: navStarts.length,
+    mainFrameNavigationStartCount: mainFrameNavStarts.length,
+    acceptableMainFrameNavigationStartCount:
+      acceptableMainFrameNavStarts.length,
+    documentResponseStatuses: documentStatuses,
+    devtoolsMessageCount: messages.length,
+    diagnosis: !events.length
+      ? "trace-unavailable"
+      : !mainFrame
+        ? "main-frame-unresolved"
+        : !navStarts.length
+          ? "navigation-start-absent"
+          : !mainFrameNavStarts.length
+            ? "navigation-start-other-frame"
+            : !acceptableMainFrameNavStarts.length
+              ? "navigation-start-url-rejected"
+              : "navigation-start-present-check-trace-processing",
+  };
+}
+
 // Every required measurement gets a fresh Chrome process. Failed runs stay in
 // the report set, so the budget check cannot pass on a replacement sample.
 export async function collectReports(
   config,
-  { lighthouse, launch },
+  { lighthouse, launch, logDiagnostic = console.error },
   directory,
 ) {
   const reports = [];
@@ -202,6 +277,18 @@ export async function collectReports(
       await fs.writeFile(jsonPath, JSON.stringify(result.lhr, null, 2));
       await fs.writeFile(htmlPath, result.report[1]);
       if (runtimeError) {
+        if (runtimeError.code === "NO_NAVSTART") {
+          logDiagnostic(
+            "Lighthouse NO_NAVSTART diagnostic:",
+            JSON.stringify(
+              summarizeNavigationDiagnostic(
+                result.artifacts?.TraceError ?? result.artifacts?.Trace,
+                result.artifacts?.DevtoolsLogError ??
+                  result.artifacts?.DevtoolsLog,
+              ),
+            ),
+          );
+        }
         for (const [name, artifact] of [
           ["trace", result.artifacts?.TraceError ?? result.artifacts?.Trace],
           [
