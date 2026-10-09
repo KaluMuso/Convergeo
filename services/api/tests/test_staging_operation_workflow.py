@@ -88,7 +88,8 @@ def test_completion_record_runs_after_both_terminal_paths_without_masking_them()
     workflow = load_workflow("staging-operation.yml")
     completion = workflow["jobs"]["completion"]
     assert set(completion["needs"]) == {"authorize", "deploy", "e2e"}
-    assert completion["if"] == "${{ always() }}"
+    assert completion["if"] == "${{ always() && inputs.focus_group != 'email-diagnostic' }}"
+    assert "email_diagnostic" not in completion["needs"]
     source = (REPO_ROOT / ".github" / "workflows" / "staging-operation.yml").read_text(
         encoding="utf-8"
     )

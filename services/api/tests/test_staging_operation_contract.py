@@ -132,6 +132,6 @@ def test_outer_always_invokes_one_summary_without_external_messaging_credentials
         encoding="utf-8"
     )
     assert text.count("name: One sanitized operation completion") == 1
-    assert "if: ${{ always() }}" in text
+    assert "if: ${{ always() && inputs.focus_group != 'email-diagnostic' }}" in text
     assert "staging_operation_contract.py" in text
     assert "SLACK_" not in text and "WHATSAPP_TOKEN" not in text
