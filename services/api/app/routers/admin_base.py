@@ -8,7 +8,7 @@ from app.core.admin_audit import (
     AdminAuditRecorder,
     get_admin_audit_recorder,
 )
-from app.core.auth import CurrentUser, require_role
+from app.core.auth import CurrentUser, require_admin_scope, require_role
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ router = APIRouter(
     prefix="/admin",
     tags=["admin"],
     route_class=AdminAuditedRoute,
-    dependencies=[Depends(require_role("admin", "superadmin", "moderator"))],
+    dependencies=[Depends(require_admin_scope)],
 )
 
 

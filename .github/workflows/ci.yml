@@ -569,6 +569,13 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
 
+      - name: Concurrent last-superadmin protection (disposable replay DB)
+        working-directory: services/api
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          CONVERGEO_DISPOSABLE_DB: "1"
+        run: uv run python ../../scripts/ci/check-last-superadmin-concurrency.py
+
   db:
     name: Database / typegen drift
     needs: migrations

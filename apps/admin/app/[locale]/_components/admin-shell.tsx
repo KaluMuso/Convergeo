@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
+import { loadAdminPermissions, type AdminPermissions } from "../../../lib/roles-api";
+
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
@@ -16,11 +19,8 @@ import {
 } from "./admin-nav-config";
 import { SignOutButton } from "./sign-out-button";
 
-import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
-
 type AdminShellProps = {
   locale: string;
-  capabilities: AdminNavCapabilities;
   children: React.ReactNode;
 };
 
@@ -34,19 +34,38 @@ function navLinkClass(active: boolean, compact = false): string {
   ].join(" ");
 }
 
-export function AdminShell({ locale, capabilities, children }: AdminShellProps) {
+export function AdminShell({ locale, children }: AdminShellProps) {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-
+  const [grants, setGrants] = useState<AdminPermissions | null>(null);
+  const [grantError, setGrantError] = useState(false);
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
-    return <>{children}</>;
-  }
 
+  useEffect(() => {
+    if (rest === "/login" || rest.startsWith("/login/")) return;
+    let active = true;
+    void loadAdminPermissions().then(
+      (result) => {
+        if (active) setGrants(result);
+      },
+      () => {
+        if (active) setGrantError(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [rest]);
+
+  const capabilities = resolveAdminNavCapabilities(
+    grants?.permissions ?? [],
+    grants?.unrestricted ?? false,
+    grants?.can_manage_roles ?? false,
+  );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
 
@@ -70,6 +89,10 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
+
+  if (rest === "/login" || rest.startsWith("/login/")) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -144,23 +167,41 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
                   : t("nav.home")}
               </span>
             </button>
-            <Link
-              href={adminItemHref(locale, "orders")}
-              className={navLinkClass(activeKey === "orders", true)}
-            >
-              {t("nav.orders")}
-            </Link>
-            <Link
-              href={adminItemHref(locale, "kyc")}
-              className={navLinkClass(activeKey === "kyc", true)}
-            >
-              {t("nav.kyc")}
-            </Link>
+            {capabilities.orders ? (
+              <Link
+                href={adminItemHref(locale, "orders")}
+                className={navLinkClass(activeKey === "orders", true)}
+              >
+                {t("nav.orders")}
+              </Link>
+            ) : null}
+            {capabilities.kyc ? (
+              <Link
+                href={adminItemHref(locale, "kyc")}
+                className={navLinkClass(activeKey === "kyc", true)}
+              >
+                {t("nav.kyc")}
+              </Link>
+            ) : null}
           </div>
         </div>
 
         <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
-          {children}
+          {grantError ? (
+            <p role="alert">{t("shell.permissionError")}</p>
+          ) : !grants ? (
+            <p>{t("shell.permissionChecking")}</p>
+          ) : (
+            (() => {
+              const requested = resolveAdminActiveItem(rest);
+              return (requested && !capabilities[requested]) ||
+                (rest.startsWith("/moderation/flags") && !grants.unrestricted) ? (
+                <p role="alert">{t("shell.permissionDenied")}</p>
+              ) : (
+                children
+              );
+            })()
+          )}
         </main>
       </div>
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { User } from "@supabase/supabase-js";
-
 import { getRoles, getRolesFromClaims, getRolesFromUser, hasRole } from "./roles";
+
+import type { User } from "@supabase/supabase-js";
 
 function makeUser(roles: string[] | undefined): User {
   return {
@@ -49,6 +49,13 @@ describe("getRolesFromClaims", () => {
     expect(getRolesFromClaims({ app_metadata: { roles: ["vendor", "superuser"] } })).toEqual([
       "vendor",
     ]);
+  });
+
+  it("accepts bounded restricted role keys only from verified claims", () => {
+    expect(
+      getRolesFromClaims({ app_metadata: { roles: ["rbac_finance", "superadmin", "rbac_!bad"] } }),
+    ).toEqual(["rbac_finance", "superadmin"]);
+    expect(getRolesFromClaims({ user_metadata: { roles: ["rbac_finance"] } })).toEqual([]);
   });
 
   it("filters non-string entries", () => {

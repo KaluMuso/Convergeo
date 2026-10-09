@@ -7,7 +7,10 @@
     "navAriaLabel": "Admin navigation",
     "mobileNavLabel": "Admin menu",
     "mobileMenuTitle": "All admin tools",
-    "mobileMenuClose": "Close"
+    "mobileMenuClose": "Close",
+    "permissionError": "Unable to verify admin permissions.",
+    "permissionChecking": "Checking permissions…",
+    "permissionDenied": "You do not have access to this admin section."
   },
   "nav": {
     "groups": {
@@ -29,7 +32,45 @@
     "support": "Support",
     "intake": "WhatsApp intake",
     "clips": "Clips moderation",
-    "events": "High-value events"
+    "events": "High-value events",
+    "roles": "Admin roles",
+    "services": "Services",
+    "inventory": "Inventory"
+  },
+  "rolesUi": {
+    "title": "Admin roles",
+    "subtitle": "Create restricted roles, then assign them to existing account IDs. Changes take effect at the API immediately.",
+    "createHeading": "Create a role",
+    "editHeading": "Edit {key}",
+    "key": "Key (letters, digits, underscore)",
+    "keyPrefix": "rbac_",
+    "name": "Name",
+    "permissions": "Permissions",
+    "create": "Create role",
+    "save": "Save role",
+    "cancel": "Cancel edit",
+    "current": "Current roles",
+    "edit": "Edit",
+    "delete": "Delete",
+    "assignHeading": "Assign an account",
+    "accountUuid": "Account UUID",
+    "role": "Role",
+    "choose": "Choose a role",
+    "superadmin": "Superadmin",
+    "assign": "Assign",
+    "assignments": "Assignments",
+    "revoke": "Revoke",
+    "confirmDelete": "Delete {name}? Assigned roles cannot be deleted.",
+    "confirmSuperadmin": "Grant full superadmin access to account {userId}?",
+    "confirmRevoke": "Revoke {role} from {userId}?"
+  },
+  "oversightUi": {
+    "services": "Services",
+    "inventory": "Inventory",
+    "subtitle": "Read only oversight · latest 100 records",
+    "empty": "No records found.",
+    "vendor": "Vendor {vendorId} · {status}",
+    "stock": "Stock {quantity}"
   },
   "hubs": {
     "moderation": {

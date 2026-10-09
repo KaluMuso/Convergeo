@@ -70,6 +70,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_roles: {
+        Row: {
+          created_at: string
+          key: string
+          name: string
+          permissions: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          name: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          name?: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -5839,6 +5863,17 @@ export type Database = {
       listing_line_total_ngwee: {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
         Returns: number
+      }
+      manage_admin_role: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_key: string
+          p_name?: string
+          p_permissions?: string[]
+          p_target?: string
+        }
+        Returns: Json
       }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       product_class_customer_released: {
