@@ -34,7 +34,9 @@ import { expect, test } from "../fixtures/test-base";
  * is the app's contract, not a test convenience.
  */
 test.describe("shop · cash on delivery", () => {
-  test("buyer places a COD order and reaches confirmation", async ({ page }) => {
+  test("buyer places a COD order and reaches confirmation", async ({
+    page,
+  }) => {
     // Checkout is authenticated. The same fixture is already REQUIRED_STRICT at
     // auth-otp.spec.ts, so a certification run cannot silently lose customer-OTP
     // coverage; escalating the identical missing fixture a second time here
@@ -44,9 +46,15 @@ test.describe("shop · cash on delivery", () => {
       const gate = resolveGate({
         kind: "OPTIONAL_GATE",
         journey: "COD checkout placement (authenticated buyer)",
-        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       test.skip(true, gate.reason);
       return;
     }
@@ -76,7 +84,9 @@ test.describe("shop · cash on delivery", () => {
     // COD needs no gateway: the honest terminal state is "order placed, pay the
     // courier" — never a local payment-success claim (payment-outcome honesty),
     // and never an empty cart, which an abandoned checkout also produces.
-    await expect(page.getByTestId("payment-cod")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("payment-cod")).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(page.getByTestId("payment-confirming")).toHaveCount(0);
     await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
   });

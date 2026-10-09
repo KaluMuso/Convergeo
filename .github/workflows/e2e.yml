@@ -165,6 +165,10 @@ jobs:
       # canonical fixture contract (e2e/fixtures/seed.generated.ts).
       E2E_CUSTOMER_TEST_OTP: ${{ secrets.E2E_CUSTOMER_TEST_OTP }}
       E2E_VENDOR_TEST_OTP: ${{ secrets.E2E_VENDOR_TEST_OTP }}
+      # Non-secret owner attestations. A test code alone cannot prove a hosted
+      # test-OTP map or prevent a map miss from reaching the SMS hook.
+      STAGING_SMS_SANDBOX_ATTESTED: ${{ vars.STAGING_SMS_SANDBOX_ATTESTED }}
+      STAGING_TEST_OTP_MAP_ATTESTED: ${{ vars.STAGING_TEST_OTP_MAP_ATTESTED }}
       # NOTE: there is deliberately no E2E_SEED_RESET_URL/E2E_SEED_TOKEN. The
       # reset is a guarded, once-per-run CLI step below — not a remotely
       # callable mutation endpoint. E2E_TICKET_PIN is minted by that step and

@@ -9,7 +9,11 @@
  * payment evidence fails the MoMo checkout spec in strict certification.
  */
 
-import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
+import {
+  originOf,
+  resolveBypassSecret,
+  type PortalBypassConfig,
+} from "./portal-bypass";
 import { missingSandboxMomoEvidence } from "./sandbox-momo-evidence";
 import { SEED } from "./seed.generated";
 
@@ -138,7 +142,10 @@ export const lenco = {
 /** True only when the sandbox flag, keys, number and label are safe. */
 export function lencoSandboxReady(): boolean {
   const label = str("LENCO_ENV").toLowerCase();
-  return (!label || label === "sandbox") && missingSandboxMomoEvidence(lenco).length === 0;
+  return (
+    (!label || label === "sandbox") &&
+    missingSandboxMomoEvidence(lenco).length === 0
+  );
 }
 
 /**
@@ -187,11 +194,19 @@ export const vendorOtp = {
 };
 
 export function customerOtpReady(): boolean {
-  return customerOtp.staticCode.length > 0;
+  return customerOtp.staticCode.length > 0 && phoneOtpSafetyReady();
 }
 
 export function vendorOtpReady(): boolean {
-  return vendorOtp.staticCode.length > 0;
+  return vendorOtp.staticCode.length > 0 && phoneOtpSafetyReady();
+}
+
+/** Non-secret owner attestations; these never inspect hosted provider secrets. */
+export function phoneOtpSafetyReady(): boolean {
+  return (
+    str("STAGING_SMS_SANDBOX_ATTESTED").toLowerCase() === "true" &&
+    str("STAGING_TEST_OTP_MAP_ATTESTED").toLowerCase() === "true"
+  );
 }
 
 /**

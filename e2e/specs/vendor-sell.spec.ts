@@ -23,7 +23,9 @@ import { expect, test } from "../fixtures/test-base";
  * login surface loads and skips the authenticated flow with an annotation.
  */
 test.describe("vendor · sell", () => {
-  test("approved vendor lists, receives and ships an order", async ({ page }) => {
+  test("approved vendor lists, receives and ships an order", async ({
+    page,
+  }) => {
     // Resolved once: in a strict certification run this throws rather than
     // letting the customer origin stand in for the vendor app.
     const vendorOrigin = requireVendorBaseUrl();
@@ -34,13 +36,20 @@ test.describe("vendor · sell", () => {
       await page.goto(urlOn(vendorOrigin, "/login"));
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
-        journey: "vendor authenticated sell flow (list -> receive order -> ship)",
-        fixtures: ["E2E_VENDOR_TEST_OTP"],
+        journey:
+          "vendor authenticated sell flow (list -> receive order -> ship)",
+        fixtures: [
+          "E2E_VENDOR_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
       // Without this the order state machine is never exercised end to end, so
       // a certification run must not report success.
       enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       await expect(
         page.getByRole("heading").first().or(page.locator("form").first()),
       ).toBeVisible();
@@ -65,7 +74,9 @@ test.describe("vendor · sell", () => {
     // navigation chrome and "clicking the first order" silently reloads the
     // same queue. Product title, price and status are equally unusable — none
     // of them identify an order row.
-    await page.goto(urlOn(vendorOrigin, `/orders?status=${SEED.codOrder.initialStatus}`));
+    await page.goto(
+      urlOn(vendorOrigin, `/orders?status=${SEED.codOrder.initialStatus}`),
+    );
     const orderCards = page.getByTestId("vendor-order-card-link");
     await expect(orderCards).toHaveCount(1);
 
@@ -73,7 +84,10 @@ test.describe("vendor · sell", () => {
     await expect(firstOrder).toBeVisible();
     // The fixture is recreated by the per-run cleanup + seed, so a stale order
     // left in a later state must fail loudly here rather than skip transitions.
-    await expect(firstOrder).toHaveAttribute("data-order-status", SEED.codOrder.initialStatus);
+    await expect(firstOrder).toHaveAttribute(
+      "data-order-status",
+      SEED.codOrder.initialStatus,
+    );
     const orderId = await firstOrder.getAttribute("data-order-id");
     expect(orderId).toBeTruthy();
 

@@ -1,4 +1,10 @@
-import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
+import {
+  path,
+  requireVendorBaseUrl,
+  ticketPin,
+  urlOn,
+  vendorOtpReady,
+} from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
@@ -33,7 +39,9 @@ test.describe("event · ticket lifecycle", () => {
 
     // ── Purchase leg (Lenco-gated) ───────────────────────────────────────────
     if (sandboxEnabled()) {
-      const buy = page.getByRole("button", { name: /buy|get ticket|book/i }).first();
+      const buy = page
+        .getByRole("button", { name: /buy|get ticket|book/i })
+        .first();
       await expect(buy).toBeVisible();
       await buy.click();
       // Purchase drives the shared checkout → confirmation.
@@ -42,7 +50,9 @@ test.describe("event · ticket lifecycle", () => {
       });
       // Wallet shows the purchased ticket.
       await page.goto(path("/account/tickets"));
-      await expect(page.getByRole("heading", { name: /ticket/i }).first()).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /ticket/i }).first(),
+      ).toBeVisible();
     } else {
       test.info().annotations.push({
         type: "founder-gated",
@@ -65,7 +75,13 @@ test.describe("event · ticket lifecycle", () => {
       // verify AND the second check-in of the same ticket must be rejected.
       // #657 Events ships in this release, so neither may vanish into a skip.
       const missing: string[] = [];
-      if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
+      if (!vendorOtpReady()) {
+        missing.push(
+          "E2E_VENDOR_TEST_OTP",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        );
+      }
       if (!scannerPin) missing.push("E2E_TICKET_PIN");
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
@@ -73,7 +89,9 @@ test.describe("event · ticket lifecycle", () => {
         fixtures: missing,
       });
       enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test
+        .info()
+        .annotations.push({ type: "founder-gated", description: gate.reason });
       await page.goto(urlOn(vendorOrigin, scanRoute));
       await expect(
         page
@@ -108,7 +126,9 @@ test.describe("event · ticket lifecycle", () => {
     const switchToManual = page.getByTestId("event-scan-switch-manual");
 
     await expect(scannerRoot).toBeVisible({ timeout: 20_000 });
-    await expect(manualForm.or(switchToManual)).toBeVisible({ timeout: 20_000 });
+    await expect(manualForm.or(switchToManual)).toBeVisible({
+      timeout: 20_000,
+    });
     // Evaluated only after the state settled, so it reflects a real state
     // rather than a still-loading screen. The two states are mutually
     // exclusive in ScannerView, so this cannot double-match.
@@ -127,7 +147,10 @@ test.describe("event · ticket lifecycle", () => {
     if (await instancePicker.isVisible()) {
       await instancePicker.selectOption(SEED.event.instanceId);
     }
-    await expect(scannerRoot).toHaveAttribute("data-instance-id", SEED.event.instanceId);
+    await expect(scannerRoot).toHaveAttribute(
+      "data-instance-id",
+      SEED.event.instanceId,
+    );
     await expect(scannerRoot).toHaveAttribute("data-event-id", SEED.event.id);
 
     const ticketIdInput = manualForm.getByTestId("event-scan-manual-ticket-id");
@@ -155,10 +178,15 @@ test.describe("event · ticket lifecycle", () => {
     await submit.click();
     const rejection = page.getByTestId("event-scan-flash-error");
     await expect(rejection).toBeVisible({ timeout: 20_000 });
-    await expect(rejection).toHaveAttribute("data-scan-result-kind", "conflict");
+    await expect(rejection).toHaveAttribute(
+      "data-scan-result-kind",
+      "conflict",
+    );
     // `conflict` is not overridable from the flash: no override form may be
     // offered on a spent ticket.
-    await expect(rejection.getByRole("button", { name: /override/i })).toHaveCount(0);
+    await expect(
+      rejection.getByRole("button", { name: /override/i }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("event-scan-flash-success")).toBeHidden();
   });
 });
