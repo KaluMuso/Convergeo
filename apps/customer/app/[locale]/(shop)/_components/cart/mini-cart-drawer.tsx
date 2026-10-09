@@ -187,6 +187,7 @@ let storeState: CartStoreState = {
 };
 
 const storeListeners = new Set<CartStoreListener>();
+let cartMutationVersion = 0;
 
 function emitStore() {
   storeListeners.forEach((listener) => listener());
@@ -221,14 +222,39 @@ export function getCartItemCount(cart: CartResponse | null): number {
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
+  const version = cartMutationVersion;
   setStoreState({ loading: true, loadError: false });
   try {
     const { cart, notices } = await loadCartWithNotices();
-    setStoreState({ cart, notices, loading: false, loadError: false });
+    if (version === cartMutationVersion) {
+      setStoreState({ cart, notices, loading: false, loadError: false });
+    }
     return cart;
   } catch {
-    setStoreState({ loading: false, loadError: true });
+    if (version === cartMutationVersion) {
+      setStoreState({ loading: false, loadError: true });
+    }
     return null;
+  }
+}
+
+function publishCartMutation(version: number, cart: CartResponse, notices: ChangeNotice[]) {
+  if (version !== cartMutationVersion) {
+    // Overlapping mutations can complete out of order. Read the server's final
+    // cart instead of publishing an older response over the latest one.
+    void refreshCart();
+    return;
+  }
+  setStoreState({ cart, notices, loading: false, loadError: false });
+}
+
+async function cartMutationRequest<T>(path: string, init: RequestInit): Promise<T> {
+  try {
+    return await cartRequest<T>(path, init);
+  } catch (error) {
+    // A failed or interrupted mutation may still have reached the server.
+    void refreshCart();
+    throw error;
   }
 }
 
@@ -254,7 +280,8 @@ export async function addCartItem(
   clipId?: string,
   locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>("/cart/items", {
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>("/cart/items", {
     method: "POST",
     body: JSON.stringify({
       listing_id: listingId,
@@ -267,26 +294,28 @@ export async function addCartItem(
     }),
   });
   const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  publishCartMutation(version, cart, notices);
   return cart;
 }
 
 export async function updateCartItemQty(listingId: string, qty: number): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(`/cart/items/${listingId}`, {
     method: "PATCH",
     body: JSON.stringify({ qty }),
   });
   const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  publishCartMutation(version, cart, notices);
   return cart;
 }
 
 export async function removeCartItem(listingId: string): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(`/cart/items/${listingId}`, {
     method: "DELETE",
   });
   const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  publishCartMutation(version, cart, notices);
   return cart;
 }
 
@@ -297,13 +326,14 @@ export type SaveForLaterResult = {
 };
 
 export async function saveCartItemForLater(listingId: string): Promise<SaveForLaterResult> {
-  const result = await cartRequest<{
+  const version = ++cartMutationVersion;
+  const result = await cartMutationRequest<{
     cart: CartResponse;
     product_id: string | null;
     product_slug: string | null;
   }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" });
   const notices = result.cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart: result.cart, notices });
+  publishCartMutation(version, result.cart, notices);
 
   if (result.product_slug) {
     const { upsertWishlistLocal } = await import("../../../../../lib/wishlist-local");

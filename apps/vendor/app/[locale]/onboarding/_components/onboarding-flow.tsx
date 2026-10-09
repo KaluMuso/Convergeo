@@ -107,6 +107,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       return;
     }
 
+    const userId = session.user.id;
     let cancelled = false;
 
     async function bootstrap() {
@@ -129,7 +130,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         setResubmitMode(resubmit);
         setApplication(app);
 
-        const local = readLocalDraft();
+        const local = readLocalDraft(userId);
         const merged = mergeDraftWithServer(local, app);
         const step = resolveResumeStep(merged, {
           resubmitMode: resubmit,
@@ -139,7 +140,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         merged.step = step;
         setDraft(merged);
         setCurrentStep(step);
-        writeLocalDraft(merged);
+        writeLocalDraft(userId, merged);
       } catch (caught) {
         if (cancelled) {
           return;
@@ -152,7 +153,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           setDraft(null);
           return;
         }
-        const local = readLocalDraft();
+        const local = readLocalDraft(userId);
         if (local) {
           setDraft(local);
           setCurrentStep(local.step);
@@ -188,10 +189,12 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         return prev;
       }
       const next = { ...prev, ...patch };
-      writeLocalDraft(next);
+      if (session?.user.id) {
+        writeLocalDraft(session.user.id, next);
+      }
       return next;
     });
-  }, []);
+  }, [session?.user.id]);
 
   const goToStep = useCallback(
     (step: number) => {
@@ -255,7 +258,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!draft) {
+    if (!draft || !session) {
       return;
     }
     const docPaths = [draft.nrcPath, draft.selfiePath].filter((path): path is string =>
@@ -285,14 +288,14 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         await kycClient.submit(payload);
       }
 
-      clearLocalDraft();
+      clearLocalDraft(session.user.id);
       router.push(`/${locale}/onboarding/status`);
     } catch {
       setError(t("onboarding.errors.submitFailed"));
     } finally {
       setSubmitting(false);
     }
-  }, [draft, kycClient, locale, resubmitMode, router, t]);
+  }, [draft, kycClient, locale, resubmitMode, router, session?.user.id, t]);
 
   if (sessionLoading || loading) {
     return (
