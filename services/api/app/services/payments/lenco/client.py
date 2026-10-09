@@ -186,7 +186,8 @@ class LencoClient:
         json_body: dict[str, Any] | None = None,
         allow_retry: bool = False,
     ) -> dict[str, Any]:
-        if os.environ.get("ENV", "").strip().lower() == "staging":
+        staging = os.environ.get("ENV", "").strip().lower() == "staging"
+        if staging:
             require_sandbox_payments(env="staging")
             destination = (
                 str(self._http.base_url)
@@ -202,7 +203,17 @@ class LencoClient:
         last_exc: Exception | None = None
         for attempt in range(attempts):
             try:
-                response = await client.request(method, path, headers=headers, content=content)
+                if staging:
+                    # An injected AsyncClient may default to following redirects.
+                    # Never forward the bearer token or payment body off the
+                    # approved staging destination after a 307/308 response.
+                    response = await client.request(
+                        method, path, headers=headers, content=content, follow_redirects=False
+                    )
+                else:
+                    response = await client.request(
+                        method, path, headers=headers, content=content
+                    )
             except httpx.TimeoutException as exc:
                 last_exc = exc
                 if allow_retry and attempt < attempts - 1:
