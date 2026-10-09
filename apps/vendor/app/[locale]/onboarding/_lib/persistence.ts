@@ -1,3 +1,4 @@
+import { isValidZmMobile } from "./kyc-client";
 import {
   LOCAL_STORAGE_KEY,
   ONBOARDING_STEPS,
@@ -26,13 +27,19 @@ export function stepIndexFromKey(key: OnboardingStepKey): number {
   return index >= 0 ? index : 0;
 }
 
-export function readLocalDraft(): OnboardingDraft | null {
-  if (typeof window === "undefined") {
+function draftKey(userId: string): string {
+  return `${LOCAL_STORAGE_KEY}:${userId}`;
+}
+
+export function readLocalDraft(userId: string): OnboardingDraft | null {
+  if (typeof window === "undefined" || !userId) {
     return null;
   }
 
   try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+    // The former unscoped key may belong to a different account on this device.
+    window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+    const raw = window.localStorage.getItem(draftKey(userId));
     if (!raw) {
       return null;
     }
@@ -47,18 +54,18 @@ export function readLocalDraft(): OnboardingDraft | null {
   }
 }
 
-export function writeLocalDraft(draft: OnboardingDraft): void {
-  if (typeof window === "undefined") {
+export function writeLocalDraft(userId: string, draft: OnboardingDraft): void {
+  if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(draft));
+  window.localStorage.setItem(draftKey(userId), JSON.stringify(draft));
 }
 
-export function clearLocalDraft(): void {
-  if (typeof window === "undefined") {
+export function clearLocalDraft(userId: string): void {
+  if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+  window.localStorage.removeItem(draftKey(userId));
 }
 
 export function mergeDraftWithServer(
@@ -77,7 +84,8 @@ export function mergeDraftWithServer(
     step: base.step,
     businessName: base.businessName || server.business_name || "",
     businessCategory: base.businessCategory || server.business_category || "",
-    businessArchetype: base.businessArchetype || server.business_archetype || "",
+    businessArchetype:
+      base.businessArchetype || server.business_archetype || "",
     // legal_name is collected + persisted client-side only (no server field).
     legalName: base.legalName || "",
     momoPhone: base.momoPhone || server.momo_phone || "",
@@ -102,7 +110,12 @@ export function resolveResumeStep(
     return stepIndexFromKey("business");
   }
 
-  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim() || !draft.legalName.trim()) {
+  if (
+    !draft.nrcPath ||
+    !draft.selfiePath ||
+    !isValidZmMobile(draft.momoPhone) ||
+    draft.legalName.trim().length < 2
+  ) {
     return stepIndexFromKey("kyc");
   }
 
