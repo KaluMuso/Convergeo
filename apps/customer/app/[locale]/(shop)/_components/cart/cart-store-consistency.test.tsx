@@ -125,6 +125,87 @@ describe("cart response ordering", () => {
     expect(requests).toContain("PATCH /cart/items/listing-1");
   });
 
+  it("ignores an old refresh started while a quantity update is pending", async () => {
+    const pendingPatch = deferred<Response>();
+    const oldGet = deferred<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const path = new URL(String(input)).pathname;
+        if (path === "/cart/items/listing-1" && init?.method === "PATCH")
+          return pendingPatch.promise;
+        if (path === "/cart" && !init?.method) return oldGet.promise;
+        if (path === "/cart/revalidate")
+          return Promise.resolve(json({ notices: [] }));
+        throw new Error(`Unexpected request ${path}`);
+      }),
+    );
+
+    const state = renderHook(() => useCartStore());
+    let pendingUpdate!: Promise<CartResponse>;
+    let pendingRefresh!: Promise<CartResponse | null>;
+    await act(async () => {
+      pendingUpdate = updateCartItemQty("listing-1", 3);
+      pendingRefresh = refreshCart();
+    });
+    await act(async () => {
+      pendingPatch.resolve(json(cart(3)));
+      await pendingUpdate;
+    });
+    expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
+
+    await act(async () => {
+      oldGet.resolve(json(cart(2)));
+      await pendingRefresh;
+    });
+    expect(state.result.current.cart?.items[0]?.qty).toBe(3);
+    expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
+  });
+
+  it("reconciles server truth when overlapping updates finish out of order", async () => {
+    const firstPatch = deferred<Response>();
+    const secondPatch = deferred<Response>();
+    let patchCount = 0;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/cart/items/listing-1" && init?.method === "PATCH") {
+        patchCount += 1;
+        return patchCount === 1 ? firstPatch.promise : secondPatch.promise;
+      }
+      if (path === "/cart") return Promise.resolve(json(cart(3)));
+      if (path === "/cart/revalidate")
+        return Promise.resolve(json({ notices: [] }));
+      throw new Error(`Unexpected request ${path}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const state = renderHook(() => useCartStore());
+    let first!: Promise<CartResponse>;
+    let second!: Promise<CartResponse>;
+    await act(async () => {
+      first = updateCartItemQty("listing-1", 3);
+      second = updateCartItemQty("listing-1", 4);
+    });
+    await act(async () => {
+      secondPatch.resolve(json(cart(4)));
+      await second;
+    });
+    expect(state.result.current.cart?.items[0]?.qty).toBe(4);
+
+    await act(async () => {
+      firstPatch.resolve(json(cart(3)));
+      await first;
+    });
+    await waitFor(() =>
+      expect(state.result.current.cart?.items[0]?.qty).toBe(3),
+    );
+    expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
+    expect(
+      fetchMock.mock.calls.some(
+        ([input]) => new URL(String(input)).pathname === "/cart",
+      ),
+    ).toBe(true);
+  });
+
   it("re-reads the server cart when a quantity response is interrupted", async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const path = new URL(String(input)).pathname;

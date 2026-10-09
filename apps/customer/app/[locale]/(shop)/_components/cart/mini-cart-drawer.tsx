@@ -245,6 +245,8 @@ function publishCartMutation(version: number, cart: CartResponse, notices: Chang
     void refreshCart();
     return;
   }
+  // Invalidate reads that started while this mutation was still pending.
+  ++cartMutationVersion;
   setStoreState({ cart, notices, loading: false, loadError: false });
 }
 
@@ -253,6 +255,7 @@ async function cartMutationRequest<T>(path: string, init: RequestInit): Promise<
     return await cartRequest<T>(path, init);
   } catch (error) {
     // A failed or interrupted mutation may still have reached the server.
+    ++cartMutationVersion;
     void refreshCart();
     throw error;
   }
