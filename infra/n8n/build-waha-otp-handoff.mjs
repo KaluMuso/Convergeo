@@ -42,7 +42,16 @@ return [{ json: verified }];
 export const receiptCode = `
 const response = $input.first().json;
 const verified = $('Verify Signature').first().json;
-if (verified.deadline <= Date.now() || !response || typeof response.id !== 'string' || response.id.length < 8 || response.id.length > 256) throw new Error('otp provider not confirmed');
+const validId = id => typeof id === 'string' && id.length >= 8 && id.length <= 256;
+const nested = response?.key;
+const accepted = nested === undefined
+  ? validId(response?.id)
+  : nested && typeof nested === 'object' && !Array.isArray(nested)
+    && validId(nested.id) && nested.fromMe === true
+    && nested.remoteJid === verified.phone.slice(1) + '@c.us'
+    && response.status === 'PENDING'
+    && (response.id === undefined || response.id === nested.id);
+if (verified.deadline <= Date.now() || !accepted) throw new Error('otp provider not confirmed');
 return [{ json: { accepted: true, requestId: verified.requestId } }];
 `.trim();
 

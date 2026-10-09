@@ -170,22 +170,66 @@ test("reservation contract blocks a repeated request ID and checks deadline agai
 
 test("only a provider acceptance with an ID can produce the small receipt", () => {
   const lookup = () => ({ first: () => ({ json: body }) });
+  const nestedAcceptance = {
+    key: {
+      remoteJid: "260971000099@c.us",
+      fromMe: true,
+      id: "nested-message-id-123",
+    },
+    message: { extendedTextMessage: { text: "synthetic message" } },
+    messageTimestamp: "1800000000",
+    status: "PENDING",
+  };
   assert.deepEqual(run(receiptCode, { id: "message-id-123" }, lookup), [
+    { json: { accepted: true, requestId: body.requestId } },
+  ]);
+  assert.deepEqual(run(receiptCode, nestedAcceptance, lookup), [
     { json: { accepted: true, requestId: body.requestId } },
   ]);
   assert.throws(
     () => run(receiptCode, { id: "message-id-123" }, lookup, body.deadline),
     /otp provider not confirmed/,
   );
+  assert.throws(
+    () => run(receiptCode, nestedAcceptance, lookup, body.deadline),
+    /otp provider not confirmed/,
+  );
   for (const result of [{}, { id: "" }, { error: "offline" }, { id: 1 }]) {
-    assert.throws(() => run(receiptCode, result, lookup), /otp provider not confirmed/);
+    assert.throws(
+      () => run(receiptCode, result, lookup),
+      /otp provider not confirmed/,
+    );
+  }
+  for (const result of [
+    { status: "PENDING" },
+    { ...nestedAcceptance, key: { ...nestedAcceptance.key, id: "" } },
+    { ...nestedAcceptance, key: { ...nestedAcceptance.key, id: "short" } },
+    {
+      ...nestedAcceptance,
+      key: { ...nestedAcceptance.key, id: "x".repeat(257) },
+    },
+    { ...nestedAcceptance, key: { ...nestedAcceptance.key, fromMe: false } },
+    {
+      ...nestedAcceptance,
+      key: { ...nestedAcceptance.key, remoteJid: "260971000098@c.us" },
+    },
+    { ...nestedAcceptance, status: "FAILED" },
+    { ...nestedAcceptance, id: "different-message-id" },
+  ]) {
+    assert.throws(
+      () => run(receiptCode, result, lookup),
+      /otp provider not confirmed/,
+    );
   }
   for (const statusCode of [307, 308]) {
     assert.throws(
       () =>
         run(
           receiptCode,
-          { statusCode, headers: { location: "https://other.example/api/sendText" } },
+          {
+            statusCode,
+            headers: { location: "https://other.example/api/sendText" },
+          },
           lookup,
         ),
       /otp provider not confirmed/,
