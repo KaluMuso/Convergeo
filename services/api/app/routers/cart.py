@@ -603,8 +603,9 @@ def _keyed_add_result(
         .limit(1)
         .execute()
     )
-    if prior.data:
-        if prior.data[0]["request_body"] != request_body:
+    prior_rows = prior.data if isinstance(prior.data, list) else []
+    if prior_rows and isinstance(prior_rows[0], dict):
+        if prior_rows[0].get("request_body") != request_body:
             raise AppError(
                 code="cart.idempotency_mismatch",
                 message="Idempotency key was already used for a different cart add",
@@ -712,16 +713,16 @@ async def add_cart_item(
             business_eligible=business_eligible,
         )
         if applied:
-            line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+            keyed_line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
             attributed_clip = validate_clip_attribution(
                 service_client, clip_id=body.clip_id, listing_id=body.listing_id
             )
             if attributed_clip:
-                line["clip_id"] = attributed_clip
+                keyed_line["clip_id"] = attributed_clip
             emit_cart_add(
                 checkout_group_id=None,
                 customer_id=owner.user_id,
-                snapshot={"lines": [line]},
+                snapshot={"lines": [keyed_line]},
             )
         cart_id = owner.cart_id or ""
         items = _fetch_cart_items(client, cart_id)

@@ -95,7 +95,9 @@ def _call(
                 None,
             ),
         )
-        return cur.fetchone()[0]
+        row = cur.fetchone()
+        assert row is not None
+        return str(row[0])
 
 
 def _new_cart(*, guest: bool = False) -> tuple[str, str | None, str | None]:
@@ -124,18 +126,39 @@ def test_same_key_replay_mismatch_and_cart_scope() -> None:
     other_cart, other_user, _ = _new_cart()
     listing_id = str(uuid4())
     with _connection() as conn:
-        args = dict(
-            cart_id=cart_id,
-            user_id=user_id,
-            guest_token=guest_token,
-            listing_id=listing_id,
-            key="retry-1",
+        assert (
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="retry-1",
+            )
+            == "applied"
         )
-        assert _call(conn, **args) == "applied"
-        assert _call(conn, **args) == "replayed"
+        assert (
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="retry-1",
+            )
+            == "replayed"
+        )
     with _connection() as conn:
         with pytest.raises(psycopg.Error, match="cart.idempotency_mismatch"):
-            _call(conn, **{**args, "qty": 3})
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="retry-1",
+                qty=3,
+            )
     assert _qty(cart_id, listing_id) == 2
     with _connection() as conn:
         assert (
