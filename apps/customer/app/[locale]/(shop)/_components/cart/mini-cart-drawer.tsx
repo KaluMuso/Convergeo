@@ -247,10 +247,10 @@ async function cartAddKey(
 
 function settleCartAddKey(slot: string, key: string, definitive: boolean) {
   const pending = pendingCartAdds(slot);
-  const index = pending.findIndex((operation) => operation.key === key);
-  if (index < 0) return;
-  if (definitive) pending.splice(index, 1);
-  else pending[index].inFlight = false;
+  const operation = pending.find((item) => item.key === key);
+  if (!operation) return;
+  if (definitive) pending.splice(pending.indexOf(operation), 1);
+  else operation.inFlight = false;
   persistCartAdds(slot, pending);
 }
 
