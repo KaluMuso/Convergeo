@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -36,6 +37,7 @@ from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
 from jwt.exceptions import InvalidTokenError
+from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from supabase import Client
 
@@ -43,6 +45,7 @@ router = APIRouter(prefix="/cart", tags=["cart"])
 
 GUEST_CART_COOKIE = "vergeo_guest_cart"
 GUEST_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+_CART_ADD_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,9 +406,7 @@ def _build_cart_response(
                     else None
                 ),
                 defect_notes=(
-                    str(listing["defect_notes"])
-                    if listing.get("defect_notes")
-                    else None
+                    str(listing["defect_notes"]) if listing.get("defect_notes") else None
                 ),
                 is_rfq_quote=is_rfq_quote,
             )
@@ -540,11 +541,7 @@ def _enforce_listing_cart_rules(
             .maybe_single()
             .execute()
         )
-        row = (
-            response.data
-            if response is not None and isinstance(response.data, dict)
-            else None
-        )
+        row = response.data if response is not None and isinstance(response.data, dict) else None
         # A missing flag must not make a pre-release product class purchasable.
         if row is None or row.get("enabled") is not True:
             customer_released = False
@@ -584,6 +581,127 @@ async def get_cart(
     )
 
 
+def _committed_cart_add_replay(
+    writer: Any, cart_id: str, key: str, request_body: dict[str, Any]
+) -> bool:
+    """Check a committed claim, including after validation or a stale snapshot."""
+    prior = (
+        writer.table("cart_add_requests")
+        .select("request_body")
+        .eq("cart_id", cart_id)
+        .eq("idempotency_key", key)
+        .limit(1)
+        .execute()
+    )
+    prior_rows = prior.data if isinstance(prior.data, list) else []
+    if prior_rows and isinstance(prior_rows[0], dict):
+        if prior_rows[0].get("request_body") != request_body:
+            raise AppError(
+                code="cart.idempotency_mismatch",
+                message="Idempotency key was already used for a different cart add",
+                http_status=409,
+            )
+        return True
+    return False
+
+
+def _keyed_add_result(
+    *,
+    body: CartItemInput,
+    key: str,
+    owner: CartOwner,
+    client: Client,
+    business_eligible: bool,
+) -> bool:
+    """Apply a keyed add atomically. Return whether this call committed the add."""
+    cart_id = owner.cart_id or ""
+    request_body = body.model_dump(mode="json")
+    writer = service_db_client()
+    # A completed retry must still succeed if the listing or stock changed in
+    # the meantime. The RPC repeats this check under a cart row lock for races.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
+        return False
+
+    for _ in range(5):
+        if _committed_cart_add_replay(writer, cart_id, key, request_body):
+            return False
+        try:
+            # A stale line may coincide with a price or availability change.
+            listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+            existing = (
+                client.table("cart_items")
+                .select("qty, pickup_location_id")
+                .eq("cart_id", cart_id)
+                .eq("listing_id", body.listing_id)
+                .limit(1)
+                .execute()
+            )
+            rows = existing.data if isinstance(existing.data, list) else []
+            previous = rows[0] if rows and isinstance(rows[0], dict) else None
+            expected_qty = int(previous["qty"]) if previous else None
+            previous_location = previous.get("pickup_location_id") if previous else None
+            expected_location = str(previous_location) if previous_location else None
+            new_qty = (expected_qty or 0) + body.qty
+            location_id = _resolve_line_location_id(
+                body.listing_id,
+                pickup_location_id=body.pickup_location_id,
+                fulfilment=body.fulfilment,
+                delivery_lat=body.delivery_lat,
+                delivery_lng=body.delivery_lng,
+                existing_location_id=expected_location,
+            )
+            unit_price, wholesale = validate_item_qty_for_listing(
+                listing=listing, qty=new_qty, business_eligible=business_eligible
+            )
+            _enforce_listing_cart_rules(listing, new_qty, location_id=location_id)
+        except AppError:
+            # Another HTTP request may have committed this same key since the
+            # first read. Its replay wins over a now-invalid increment.
+            if _committed_cart_add_replay(writer, cart_id, key, request_body):
+                return False
+            raise
+        try:
+            result = writer.rpc(
+                "apply_cart_add_idempotent",
+                {
+                    "p_cart_id": cart_id,
+                    "p_user_id": owner.user_id,
+                    "p_guest_token": owner.guest_token if owner.is_guest else None,
+                    "p_key": key,
+                    "p_body": request_body,
+                    "p_listing_id": body.listing_id,
+                    "p_qty": body.qty,
+                    "p_expected_qty": expected_qty,
+                    "p_expected_location_id": expected_location,
+                    "p_unit_price_ngwee": unit_price,
+                    "p_wholesale": wholesale,
+                    "p_location_id": location_id,
+                },
+            ).execute()
+        except APIError as exc:
+            if exc.code == "P0001" and exc.message == "cart.idempotency_mismatch":
+                raise AppError(
+                    code="cart.idempotency_mismatch",
+                    message="Idempotency key was already used for a different cart add",
+                    http_status=409,
+                ) from exc
+            raise
+        if result.data == "applied":
+            return True
+        if result.data == "replayed":
+            return False
+        if result.data != "stale":
+            raise RuntimeError(f"Unexpected cart add RPC result: {result.data!r}")
+        # Another add moved the line since validation. Re-read and revalidate.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
+        return False
+    raise AppError(
+        code="cart.concurrent_add_retry",
+        message="Cart changed during add; retry the same request",
+        http_status=409,
+    )
+
+
 @router.post("/items", response_model=CartResponse)
 async def add_cart_item(
     body: CartItemInput,
@@ -595,6 +713,48 @@ async def add_cart_item(
     service_client: Annotated[Any, Depends(get_supabase_client)],
     request: Request,
 ) -> CartResponse:
+    key = request.headers.get("Idempotency-Key")
+    if key is not None:
+        if not _CART_ADD_KEY.fullmatch(key):
+            raise AppError(
+                code="cart.idempotency_key_invalid",
+                message="Idempotency-Key must be 1–128 safe ASCII characters",
+                http_status=422,
+            )
+        client = _db_client_for_owner(
+            owner, settings=settings, user_token=_extract_bearer_token(request)
+        )
+        business_eligible = _business_eligible_for_user(owner.user_id)
+        applied = _keyed_add_result(
+            body=body,
+            key=key,
+            owner=owner,
+            client=client,
+            business_eligible=business_eligible,
+        )
+        if applied:
+            keyed_line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+            attributed_clip = validate_clip_attribution(
+                service_client, clip_id=body.clip_id, listing_id=body.listing_id
+            )
+            if attributed_clip:
+                keyed_line["clip_id"] = attributed_clip
+            emit_cart_add(
+                checkout_group_id=None,
+                customer_id=owner.user_id,
+                snapshot={"lines": [keyed_line]},
+            )
+        cart_id = owner.cart_id or ""
+        items = _fetch_cart_items(client, cart_id)
+        listings = fetch_listings_for_items(items)
+        return _cart_response(
+            cart_id=cart_id,
+            items=items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=owner.user_id,
+        )
+
     # Eligibility is resolved BEFORE the fetch: under D36 it decides whether the
     # listing is visible at all, not merely how it is priced.
     business_eligible = _business_eligible_for_user(owner.user_id)
@@ -1113,9 +1273,9 @@ async def accept_rfq_into_cart(
     }
 
     if rows and isinstance(rows[0], dict):
-        line_writer.table("cart_items").update(line_payload).eq(
-            "id", str(rows[0]["id"])
-        ).eq("cart_id", cart_id).execute()
+        line_writer.table("cart_items").update(line_payload).eq("id", str(rows[0]["id"])).eq(
+            "cart_id", cart_id
+        ).execute()
     else:
         line_writer.table("cart_items").insert(
             {

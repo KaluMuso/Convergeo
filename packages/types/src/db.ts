@@ -315,6 +315,35 @@ export type Database = {
           },
         ]
       }
+      cart_add_requests: {
+        Row: {
+          cart_id: string
+          created_at: string
+          idempotency_key: string
+          request_body: Json
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          idempotency_key: string
+          request_body: Json
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          idempotency_key?: string
+          request_body?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_add_requests_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           cart_id: string
@@ -5756,6 +5785,23 @@ export type Database = {
       }
     }
     Functions: {
+      apply_cart_add_idempotent: {
+        Args: {
+          p_body: Json
+          p_cart_id: string
+          p_expected_location_id: string
+          p_expected_qty: number
+          p_guest_token: string
+          p_key: string
+          p_listing_id: string
+          p_location_id: string
+          p_qty: number
+          p_unit_price_ngwee: number
+          p_user_id: string
+          p_wholesale: boolean
+        }
+        Returns: string
+      }
       approve_kyc_vendor: {
         Args: {
           p_actor_id: string

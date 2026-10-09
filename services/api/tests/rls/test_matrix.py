@@ -281,6 +281,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: all_permit(),
     },
+    "cart_add_requests": client_invisible(),
     "cart_items": {
         # 0086 (B0-P02a) revoked client INSERT and UPDATE outright: cart line
         # prices are server-derived and service-role-writable only, so every

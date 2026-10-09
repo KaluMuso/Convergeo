@@ -190,6 +190,70 @@ const storeListeners = new Set<CartStoreListener>();
 let cartMutationVersion = 0;
 let cartReadVersion = 0;
 
+type PendingCartAdd = { key: string; inFlight: boolean };
+const pendingAddKeys = new Map<string, PendingCartAdd[]>();
+
+function pendingCartAdds(slot: string): PendingCartAdd[] {
+  const current = pendingAddKeys.get(slot);
+  if (current) return current;
+  let keys: string[] = [];
+  try {
+    const saved = sessionStorage.getItem(slot);
+    if (saved) {
+      try {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed)) keys = parsed.filter((key): key is string => typeof key === "string");
+      } catch {
+        // Accept one key written by the earlier single-key client version.
+        if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(saved)) keys = [saved];
+      }
+    }
+  } catch {
+    // Storage may be disabled; the in-memory queue still covers this page.
+  }
+  const pending = keys.map((key) => ({ key, inFlight: false }));
+  pendingAddKeys.set(slot, pending);
+  return pending;
+}
+
+function persistCartAdds(slot: string, pending: PendingCartAdd[]) {
+  if (pending.length === 0) pendingAddKeys.delete(slot);
+  try {
+    if (pending.length === 0) sessionStorage.removeItem(slot);
+    else sessionStorage.setItem(slot, JSON.stringify(pending.map(({ key }) => key)));
+  } catch {
+    // The in-memory queue remains available if storage is disabled.
+  }
+}
+
+async function cartAddKey(
+  body: string,
+): Promise<{ key: string; slot: string }> {
+  const supabase = await getBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  // The server scopes claims by cart. A newly issued guest cookie or a
+  // guest-to-user merge can change that scope, even if this tab keeps its key.
+  const slot = `vergeo-cart-add:${data.session?.user?.id ?? "guest"}:${body}`;
+  const pending = pendingCartAdds(slot);
+  let operation = pending.find(({ inFlight }) => !inFlight);
+  if (!operation) {
+    operation = { key: crypto.randomUUID(), inFlight: false };
+    pending.push(operation);
+  }
+  operation.inFlight = true;
+  persistCartAdds(slot, pending);
+  return { key: operation.key, slot };
+}
+
+function settleCartAddKey(slot: string, key: string, definitive: boolean) {
+  const pending = pendingCartAdds(slot);
+  const operation = pending.find((item) => item.key === key);
+  if (!operation) return;
+  if (definitive) pending.splice(pending.indexOf(operation), 1);
+  else operation.inFlight = false;
+  persistCartAdds(slot, pending);
+}
+
 function emitStore() {
   storeListeners.forEach((listener) => listener());
 }
@@ -286,18 +350,32 @@ export async function addCartItem(
   locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
   const version = ++cartMutationVersion;
-  const cart = await cartMutationRequest<CartResponse>("/cart/items", {
-    method: "POST",
-    body: JSON.stringify({
-      listing_id: listingId,
-      qty,
-      ...(clipId ? { clip_id: clipId } : {}),
-      ...(locationOptions?.pickupLocationId
-        ? { pickup_location_id: locationOptions.pickupLocationId }
-        : {}),
-      ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
-    }),
+  const body = JSON.stringify({
+    listing_id: listingId,
+    qty,
+    ...(clipId ? { clip_id: clipId } : {}),
+    ...(locationOptions?.pickupLocationId
+      ? { pickup_location_id: locationOptions.pickupLocationId }
+      : {}),
+    ...(locationOptions?.fulfilment
+      ? { fulfilment: locationOptions.fulfilment }
+      : {}),
   });
+  const { key, slot } = await cartAddKey(body);
+  let cart: CartResponse;
+  try {
+    cart = await cartMutationRequest<CartResponse>("/cart/items", {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body,
+    });
+    settleCartAddKey(slot, key, true);
+  } catch (error) {
+    // Even a validation response can race a same-key request that committed.
+    // Reuse the key until a successful replay confirms this operation's state.
+    settleCartAddKey(slot, key, error instanceof ApiError && error.code === "cart.idempotency_mismatch");
+    throw error;
+  }
   const notices = cart.notices ?? (await fetchRevalidateNotices());
   publishCartMutation(version, cart, notices);
   return cart;
