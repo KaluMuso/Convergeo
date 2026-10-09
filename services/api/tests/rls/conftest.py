@@ -357,7 +357,8 @@ def assert_tester_is_rls_bound(conn: PgConn) -> None:
 
 
 def reset_public_schema_for_migrations(conn: PgConn) -> None:
-    """Drop public/auth and extension objects so migrations replay from 0001."""
+    """Drop migrated test schemas and extension objects before replay from 0001."""
+    conn.run("DROP SCHEMA IF EXISTS otp_replay CASCADE")
     conn.run("DROP SCHEMA IF EXISTS public CASCADE")
     conn.run("CREATE SCHEMA public")
     conn.run("DROP SCHEMA IF EXISTS auth CASCADE")

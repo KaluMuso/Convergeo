@@ -224,6 +224,7 @@ jobs:
         run: |
           node --test infra/n8n/waha-otp-handoff.test.mjs
           node --experimental-strip-types --test supabase/functions/send-sms-otp/waha_transport.test.mjs
+          python3 -m unittest scripts/ops/test_apply_otp_replay_login_staging.py
 
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the
