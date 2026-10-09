@@ -9,6 +9,7 @@ from app.core.env_guards import (
     STAGING_SUPABASE_PROJECT_REF,
     StagingIsolationError,
     assert_staging_api_host_isolated,
+    assert_staging_lenco_destination,
     assert_staging_project_target,
     assert_staging_supabase_isolated,
     extract_supabase_project_ref,
@@ -146,6 +147,54 @@ def test_require_sandbox_payments(monkeypatch: pytest.MonkeyPatch) -> None:
         require_sandbox_payments(env="staging")
     monkeypatch.setenv("LENCO_ENV", "sandbox")
     require_sandbox_payments(env="staging")
+
+
+@pytest.mark.parametrize("label", ["", "production", "prod", "live", "preview", "mock", "dev"])
+def test_staging_rejects_non_sandbox_lenco_labels(
+    monkeypatch: pytest.MonkeyPatch, label: str
+) -> None:
+    monkeypatch.setenv("LENCO_ENV", label)
+    with pytest.raises(StagingIsolationError, match="LENCO_ENV=sandbox"):
+        require_sandbox_payments(env="staging")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://api.lenco.co/access/v2",
+        "https://api.lenco.co.evil.test/access/v2",
+        "https://sandbox.lenco.co.evil.test/access/v2",
+        "http://api.sandbox.lenco.co/access/v2",
+        "https://api.sandbox.lenco.co:8443/access/v2",
+        "https://user:pass@api.sandbox.lenco.co/access/v2",
+        "https://api.sandbox.lenco.co/access/v2?target=production",
+        "https://api.sandbox.lenco.co/access/v1",
+        "",
+    ],
+)
+def test_staging_rejects_non_sandbox_lenco_destinations(url: str) -> None:
+    with pytest.raises(StagingIsolationError, match="sandbox /access/v2"):
+        assert_staging_lenco_destination(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["https://api.sandbox.lenco.co/access/v2", "https://sandbox.lenco.co/access/v2"],
+)
+def test_staging_accepts_known_lenco_sandbox_destinations(url: str) -> None:
+    assert_staging_lenco_destination(url)
+
+
+def test_settings_staging_rejects_production_lenco_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENV", "staging")
+    monkeypatch.setenv("LENCO_ENV", "sandbox")
+    monkeypatch.setenv("LENCO_SANDBOX_BASE_URL", "https://api.lenco.co/access/v2")
+    monkeypatch.setenv("SUPABASE_URL", "https://abcdefghij1234567890.supabase.co")
+    get_settings.cache_clear()
+    with pytest.raises(ValueError, match="sandbox /access/v2"):
+        get_settings()
 
 
 def test_fingerprint_endpoint(

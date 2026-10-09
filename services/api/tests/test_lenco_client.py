@@ -10,6 +10,7 @@ from typing import Any, cast
 
 import httpx
 import pytest
+from app.core.env_guards import StagingIsolationError
 from app.services.payments.base import (
     InitiateCollectionRequest,
     QueryStatusRequest,
@@ -180,6 +181,103 @@ def lenco_strategy(lenco_client: LencoClient) -> LencoStrategy:
 async def test_registry_registers_lenco_strategy() -> None:
     strategy = get("lenco")
     assert isinstance(strategy, LencoStrategy)
+
+
+@pytest.mark.parametrize(
+    ("label", "base_url"),
+    [
+        ("", "https://api.sandbox.lenco.co/access/v2"),
+        ("preview", "https://api.sandbox.lenco.co/access/v2"),
+        ("production", "https://api.sandbox.lenco.co/access/v2"),
+        ("sandbox", "https://api.lenco.co/access/v2"),
+        ("sandbox", "https://sandbox.lenco.co.evil.test/access/v2"),
+    ],
+)
+async def test_staging_bad_provider_config_sends_no_request(
+    monkeypatch: pytest.MonkeyPatch, label: str, base_url: str
+) -> None:
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json=COLLECTION_FIXTURE)
+
+    monkeypatch.setenv("ENV", "staging")
+    monkeypatch.setenv("LENCO_ENV", label)
+    http = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url=base_url)
+    client = LencoClient(http_client=http, token=TOKEN, base_url=base_url)
+    with pytest.raises(StagingIsolationError):
+        await client.initiate_collection(
+            LencoCollectionRequest(
+                amount_major="13.00", reference="ord-test", phone="0961111111", operator="mtn"
+            )
+        )
+    assert calls == []
+    await http.aclose()
+
+
+@pytest.mark.parametrize("redirect_status", [307, 308])
+async def test_staging_does_not_follow_provider_redirect_with_injected_client(
+    monkeypatch: pytest.MonkeyPatch, redirect_status: int
+) -> None:
+    seen: list[httpx.Request] = []
+    sandbox_url = "https://api.sandbox.lenco.co/access/v2"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.host == "api.sandbox.lenco.co":
+            return httpx.Response(
+                redirect_status,
+                headers={"Location": "https://api.lenco.co/access/v2/collections/mobile-money"},
+            )
+        return httpx.Response(200, json=COLLECTION_FIXTURE)
+
+    monkeypatch.setenv("ENV", "staging")
+    monkeypatch.setenv("LENCO_ENV", "sandbox")
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url=sandbox_url, follow_redirects=True
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=sandbox_url)
+    with pytest.raises(LencoClientError):
+        await client.initiate_collection(
+            LencoCollectionRequest(
+                amount_major="13.00", reference="ord-test", phone="0961111111", operator="mtn"
+            )
+        )
+    assert len(seen) == 1
+    assert seen[0].url.host == "api.sandbox.lenco.co"
+    assert seen[0].headers["Authorization"] == f"Bearer {TOKEN}"
+    await http.aclose()
+
+
+async def test_production_keeps_injected_client_redirect_behavior(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.url.path.endswith("/collections/mobile-money"):
+            return httpx.Response(
+                307, headers={"Location": "https://api.lenco.co/access/v2/redirected-collection"}
+            )
+        return httpx.Response(200, json=COLLECTION_FIXTURE)
+
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("LENCO_ENV", "production")
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url=BASE_URL, follow_redirects=True
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
+    result = await client.initiate_collection(
+        LencoCollectionRequest(
+            amount_major="13.00", reference="ord-test", phone="0961111111", operator="mtn"
+        )
+    )
+    assert result.data is not None
+    assert result.data.reference == "ord-order-1-attempt-1"
+    assert len(seen) == 2
+    await http.aclose()
 
 
 async def test_collection_contract_request_and_response(lenco_strategy: LencoStrategy) -> None:

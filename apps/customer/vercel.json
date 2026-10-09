@@ -5,7 +5,8 @@
       "cursor/vendor-recovery-staging-20261007": false,
       "codex/phone-input-layout-20261008": false,
       "cursor/release-kyc-auth-integration-20261008": false,
-      "cursor/staging-release-compat-20261009": false
+      "cursor/staging-release-compat-20261009": false,
+      "cursor/staging-payment-fail-closed-20261009": false
     }
   }
 }

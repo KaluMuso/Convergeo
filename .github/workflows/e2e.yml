@@ -169,7 +169,8 @@ jobs:
       # reset is a guarded, once-per-run CLI step below — not a remotely
       # callable mutation endpoint. E2E_TICKET_PIN is minted by that step and
       # injected via GITHUB_ENV after masking; it is never a stored secret.
-      # Lenco sandbox pay leg — founder gate F9b. Absent secrets => leg skips.
+      # Lenco sandbox pay leg — founder gate F9b. Missing evidence fails the
+      # strict MoMo certification spec before any checkout/provider initiation.
       LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
       LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
       LENCO_SANDBOX_SECRET_KEY: ${{ secrets.LENCO_SANDBOX_SECRET_KEY }}

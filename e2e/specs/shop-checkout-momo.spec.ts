@@ -1,8 +1,13 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
 import { customerOtp, customerOtpReady, lenco, path, whatsappMockReady } from "../fixtures/env";
-import { resolveGate } from "../fixtures/gating";
-import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
+import { enforceGate, resolveGate } from "../fixtures/gating";
+import { completeSandboxMomoPush } from "../fixtures/lenco";
+import { assertNoAccidentalRealMoney } from "../fixtures/payment-fixtures";
+import {
+  missingSandboxMomoEvidence,
+  runSandboxMomoCheckout,
+} from "../fixtures/sandbox-momo-evidence";
 import { captureSearchStateOnFailure } from "../fixtures/search-diagnostics";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -27,13 +32,25 @@ import { expectWhatsAppMessage } from "../fixtures/whatsapp";
  * browse-journey.spec.ts.
  *
  * The live Lenco sandbox charge (and the confirmation/WhatsApp legs that
- * depend on a settled payment) remain ENV-GATED behind `LENCO_SANDBOX` + creds
- * (founder gate F9b). Without them the spec asserts up to the real
- * pay-initiation boundary — which is now an actually-placed order sitting on
- * the USSD wait — and skips the charge with an annotation.
+ * depend on a settled payment) require sandbox evidence before browser
+ * navigation or order placement. Missing evidence fails strict certification.
  */
 test.describe("shop · checkout · momo", () => {
   test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
+    assertNoAccidentalRealMoney();
+    const missingSandbox = missingSandboxMomoEvidence(lenco);
+    if (missingSandbox.length > 0) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "MoMo checkout and Lenco sandbox charge (F9b)",
+        fixtures: missingSandbox,
+      });
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+
     // Checkout is authenticated. As in shop-cod, the identical fixture is
     // already REQUIRED_STRICT at auth-otp.spec.ts, so certification coverage
     // cannot be lost silently by classifying it OPTIONAL_GATE here.
@@ -84,14 +101,14 @@ test.describe("shop · checkout · momo", () => {
     await page.goto(path("/checkout"));
     await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
 
-    const run = await completeCheckout(page, {
-      payment: "momo",
-      rail: "mtn",
-      // The sandbox MSISDN Lenco auto-approves when the F9b gate is open;
-      // otherwise the canonical synthetic buyer number. Both are normalised to
-      // the 9-digit national form the payer field accepts.
-      payerPhone: lenco.testMomoNumber || SEED.address.phone,
-    });
+    const run = await runSandboxMomoCheckout(lenco, () =>
+      completeCheckout(page, {
+        payment: "momo",
+        rail: "mtn",
+        // Only the configured sandbox MSISDN may initiate this provider leg.
+        payerPhone: lenco.testMomoNumber,
+      }),
+    );
     expect(run.payment).toBe("momo");
     expect(run.payerNationalNumber).not.toBeNull();
     test.info().annotations.push({
@@ -105,18 +122,6 @@ test.describe("shop · checkout · momo", () => {
     ).toBeVisible({ timeout: 30_000 });
     // MoMo is not COD: the COD surface must never appear on this journey.
     await expect(page.getByTestId("payment-cod")).toHaveCount(0);
-
-    // ── ENV-GATED: live Lenco sandbox charge (F9b) ───────────────────────────
-    if (!sandboxEnabled()) {
-      const gate = resolveGate({
-        kind: "OPTIONAL_GATE",
-        journey: "Lenco sandbox charge (F9b)",
-        fixtures: ["LENCO_SANDBOX"],
-      });
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      test.skip(true, gate.reason);
-      return;
-    }
 
     // Drive the sandbox MoMo push to auto-approval → confirming surface
     // (payment-outcome honesty: never infer a local payment-success).
