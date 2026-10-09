@@ -12,8 +12,8 @@ from app.core.auth import (
     load_admin_permissions,
     require_role,
 )
+from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
-from app.supabase_client import SupabaseServiceClient, get_supabase_service_client
 from fastapi import APIRouter, Depends
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
@@ -86,7 +86,7 @@ def _mutate(
 @router.get("/me/permissions")
 def my_permissions(
     user: Annotated[CurrentUser, Depends(get_current_user)],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     permissions = load_admin_permissions(user, service)
     if not permissions and not user.roles.intersection({"moderator", "admin", "superadmin"}):
@@ -101,7 +101,7 @@ def my_permissions(
 @router.get("/roles")
 def list_roles(
     _actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     definitions = (
         service.client.table("admin_roles")
@@ -144,7 +144,7 @@ def list_roles(
 def create_role(
     body: RoleInput,
     actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _mutate(
         service,
@@ -161,7 +161,7 @@ def update_role(
     key: str,
     body: RoleUpdate,
     actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _mutate(
         service,
@@ -177,7 +177,7 @@ def update_role(
 def delete_role(
     key: str,
     actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _mutate(service, actor, "delete", key)
 
@@ -187,7 +187,7 @@ def assign_role(
     key: str,
     user_id: UUID,
     actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _mutate(service, actor, "assign", key, target=user_id)
 
@@ -197,6 +197,6 @@ def revoke_role(
     key: str,
     user_id: UUID,
     actor: Annotated[CurrentUser, Depends(require_role("superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     return _mutate(service, actor, "revoke", key, target=user_id)

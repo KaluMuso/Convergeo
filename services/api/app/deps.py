@@ -5,7 +5,8 @@ from collections.abc import Generator
 from fastapi import Request
 
 from app.settings import Settings, get_settings
-from app.supabase_client import SupabaseServiceClient, get_supabase_service_client
+from app.supabase_client import SupabaseServiceClient as SupabaseServiceClient
+from app.supabase_client import get_supabase_service_client
 
 
 def get_settings_dep() -> Settings:

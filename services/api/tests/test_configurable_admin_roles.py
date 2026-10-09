@@ -78,6 +78,7 @@ def role_client(
         id="00000000-0000-0000-0000-000000000002", roles=frozenset({"rbac_finance"}), token="test"
     )
     app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_supabase_client] = lambda: service
     app.dependency_overrides[get_supabase_service_client] = lambda: service
     monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service)
     with TestClient(app, raise_server_exceptions=False) as client:

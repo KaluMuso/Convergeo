@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, require_role
-from app.supabase_client import SupabaseServiceClient, get_supabase_service_client
+from app.deps import SupabaseServiceClient, get_supabase_client
 from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/admin", tags=["admin-catalog-oversight"])
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/admin", tags=["admin-catalog-oversight"])
 @router.get("/services")
 def list_services(
     _actor: Annotated[CurrentUser, Depends(require_role("admin", "superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     response = (
         service.client.table("services")
@@ -29,7 +29,7 @@ def list_services(
 @router.get("/inventory")
 def list_inventory(
     _actor: Annotated[CurrentUser, Depends(require_role("admin", "superadmin"))],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     response = (
         service.client.table("vendor_listings")
