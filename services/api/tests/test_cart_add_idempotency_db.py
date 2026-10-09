@@ -49,6 +49,7 @@ def disposable_schema() -> None:
             if not cur.fetchone():
                 cur.execute(f"create role {role} nologin {suffix}")
         cur.execute("grant usage on schema public to service_role")
+        cur.execute("grant usage on schema public to anon, authenticated")
         cur.execute(
             "create table public.carts (id uuid primary key, user_id uuid, guest_token text, "
             "status text not null default 'active')"
@@ -120,6 +121,14 @@ def _qty(cart_id: str, listing_id: str) -> int:
         )
         row = cur.fetchone()
         return row[0] if row else 0
+
+
+def _claims(cart_id: str) -> int:
+    with _connection() as conn, conn.cursor() as cur:
+        cur.execute("select count(*) from public.cart_add_requests where cart_id=%s", (cart_id,))
+        row = cur.fetchone()
+        assert row is not None
+        return int(row[0])
 
 
 def test_same_key_replay_mismatch_and_cart_scope() -> None:
@@ -220,6 +229,8 @@ def test_distinct_keys_revalidate_stale_snapshot() -> None:
     with ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = dict(pool.map(attempt, ("first", "second")))
     assert sorted(outcomes.values()) == ["applied", "stale"]
+    assert _qty(cart_id, listing_id) == 2
+    assert _claims(cart_id) == 1
     stale_key = next(key for key, result in outcomes.items() if result == "stale")
     with _connection() as conn:
         assert (
@@ -235,6 +246,7 @@ def test_distinct_keys_revalidate_stale_snapshot() -> None:
             == "applied"
         )
     assert _qty(cart_id, listing_id) == 4
+    assert _claims(cart_id) == 2
 
 
 def test_rollback_does_not_strand_key_or_increment() -> None:
@@ -309,3 +321,81 @@ def test_owner_and_client_grants() -> None:
             )
             == "applied"
         )
+
+
+@pytest.mark.parametrize(
+    ("guest", "owner_kind", "error"),
+    [
+        (True, "wrong_guest", "cart.owner_mismatch"),
+        (False, "guest_on_user_cart", "cart.owner_mismatch"),
+        (False, "both", "cart.owner_invalid"),
+        (False, "neither", "cart.owner_invalid"),
+        (False, "inactive", "cart.owner_mismatch"),
+    ],
+)
+def test_rejects_wrong_or_inactive_owner(
+    guest: bool,
+    owner_kind: str,
+    error: str,
+) -> None:
+    cart_id, user_id, guest_token = _new_cart(guest=guest)
+    listing_id = str(uuid4())
+    if owner_kind == "wrong_guest":
+        guest_token = "another-guest"
+    elif owner_kind == "guest_on_user_cart":
+        user_id, guest_token = None, "guest-test"
+    elif owner_kind == "both":
+        guest_token = "guest-test"
+    elif owner_kind == "neither":
+        user_id = None
+    elif owner_kind == "inactive":
+        with _connection() as conn, conn.cursor() as cur:
+            cur.execute("update public.carts set status='converted' where id=%s", (cart_id,))
+    with _connection() as conn:
+        with pytest.raises(psycopg.Error, match=error):
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="owner-check",
+            )
+    assert _qty(cart_id, listing_id) == 0
+    assert _claims(cart_id) == 0
+
+
+@pytest.mark.parametrize("key", ["", "unsafe key", "x" * 129])
+def test_rejects_malformed_keys_without_writing(key: str) -> None:
+    cart_id, user_id, guest_token = _new_cart()
+    listing_id = str(uuid4())
+    with _connection() as conn:
+        with pytest.raises(psycopg.Error, match="cart.idempotency_key_invalid"):
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key=key,
+            )
+    assert _qty(cart_id, listing_id) == 0
+    assert _claims(cart_id) == 0
+
+
+def test_authenticated_role_cannot_execute_rpc() -> None:
+    cart_id, user_id, guest_token = _new_cart()
+    listing_id = str(uuid4())
+    with _connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("set local role authenticated")
+        with pytest.raises(psycopg.Error, match="permission denied for function"):
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="client-blocked",
+            )
+    assert _claims(cart_id) == 0

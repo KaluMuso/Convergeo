@@ -55,8 +55,9 @@ begin
     raise exception 'cart.add_parameters_invalid' using errcode = '22023';
   end if;
 
-  -- Serialize all keyed adds for this cart, including distinct keys. The API
-  -- revalidates price and stock if its expected line snapshot went stale.
+  -- Serialize keyed adds for this cart, including distinct keys. The API
+  -- revalidates after a stale line snapshot. This lock does not serialize
+  -- inventory across carts or writes from callers using the unkeyed path.
   select * into v_cart from public.carts where id = p_cart_id for update;
   if not found or v_cart.status <> 'active'
     or (p_user_id is not null and v_cart.user_id is distinct from p_user_id)

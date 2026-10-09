@@ -581,20 +581,10 @@ async def get_cart(
     )
 
 
-def _keyed_add_result(
-    *,
-    body: CartItemInput,
-    key: str,
-    owner: CartOwner,
-    client: Client,
-    business_eligible: bool,
+def _committed_cart_add_replay(
+    writer: Any, cart_id: str, key: str, request_body: dict[str, Any]
 ) -> bool:
-    """Apply a keyed add atomically. Return whether this call committed the add."""
-    cart_id = owner.cart_id or ""
-    request_body = body.model_dump(mode="json")
-    writer = service_db_client()
-    # A completed retry must still succeed if the listing or stock changed in
-    # the meantime. The RPC repeats this check under a cart row lock for races.
+    """Check a committed claim, including after validation or a stale snapshot."""
     prior = (
         writer.table("cart_add_requests")
         .select("request_body")
@@ -611,37 +601,65 @@ def _keyed_add_result(
                 message="Idempotency key was already used for a different cart add",
                 http_status=409,
             )
+        return True
+    return False
+
+
+def _keyed_add_result(
+    *,
+    body: CartItemInput,
+    key: str,
+    owner: CartOwner,
+    client: Client,
+    business_eligible: bool,
+) -> bool:
+    """Apply a keyed add atomically. Return whether this call committed the add."""
+    cart_id = owner.cart_id or ""
+    request_body = body.model_dump(mode="json")
+    writer = service_db_client()
+    # A completed retry must still succeed if the listing or stock changed in
+    # the meantime. The RPC repeats this check under a cart row lock for races.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
         return False
 
     for _ in range(5):
-        # A stale line may coincide with a price or availability change.
-        listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
-        existing = (
-            client.table("cart_items")
-            .select("qty, pickup_location_id")
-            .eq("cart_id", cart_id)
-            .eq("listing_id", body.listing_id)
-            .limit(1)
-            .execute()
-        )
-        rows = existing.data if isinstance(existing.data, list) else []
-        previous = rows[0] if rows and isinstance(rows[0], dict) else None
-        expected_qty = int(previous["qty"]) if previous else None
-        previous_location = previous.get("pickup_location_id") if previous else None
-        expected_location = str(previous_location) if previous_location else None
-        new_qty = (expected_qty or 0) + body.qty
-        location_id = _resolve_line_location_id(
-            body.listing_id,
-            pickup_location_id=body.pickup_location_id,
-            fulfilment=body.fulfilment,
-            delivery_lat=body.delivery_lat,
-            delivery_lng=body.delivery_lng,
-            existing_location_id=expected_location,
-        )
-        unit_price, wholesale = validate_item_qty_for_listing(
-            listing=listing, qty=new_qty, business_eligible=business_eligible
-        )
-        _enforce_listing_cart_rules(listing, new_qty, location_id=location_id)
+        if _committed_cart_add_replay(writer, cart_id, key, request_body):
+            return False
+        try:
+            # A stale line may coincide with a price or availability change.
+            listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+            existing = (
+                client.table("cart_items")
+                .select("qty, pickup_location_id")
+                .eq("cart_id", cart_id)
+                .eq("listing_id", body.listing_id)
+                .limit(1)
+                .execute()
+            )
+            rows = existing.data if isinstance(existing.data, list) else []
+            previous = rows[0] if rows and isinstance(rows[0], dict) else None
+            expected_qty = int(previous["qty"]) if previous else None
+            previous_location = previous.get("pickup_location_id") if previous else None
+            expected_location = str(previous_location) if previous_location else None
+            new_qty = (expected_qty or 0) + body.qty
+            location_id = _resolve_line_location_id(
+                body.listing_id,
+                pickup_location_id=body.pickup_location_id,
+                fulfilment=body.fulfilment,
+                delivery_lat=body.delivery_lat,
+                delivery_lng=body.delivery_lng,
+                existing_location_id=expected_location,
+            )
+            unit_price, wholesale = validate_item_qty_for_listing(
+                listing=listing, qty=new_qty, business_eligible=business_eligible
+            )
+            _enforce_listing_cart_rules(listing, new_qty, location_id=location_id)
+        except AppError:
+            # Another HTTP request may have committed this same key since the
+            # first read. Its replay wins over a now-invalid increment.
+            if _committed_cart_add_replay(writer, cart_id, key, request_body):
+                return False
+            raise
         try:
             result = writer.rpc(
                 "apply_cart_add_idempotent",
@@ -675,6 +693,8 @@ def _keyed_add_result(
         if result.data != "stale":
             raise RuntimeError(f"Unexpected cart add RPC result: {result.data!r}")
         # Another add moved the line since validation. Re-read and revalidate.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
+        return False
     raise AppError(
         code="cart.concurrent_add_retry",
         message="Cart changed during add; retry the same request",

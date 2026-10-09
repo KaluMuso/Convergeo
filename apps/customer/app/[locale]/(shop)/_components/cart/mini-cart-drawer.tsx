@@ -190,41 +190,68 @@ const storeListeners = new Set<CartStoreListener>();
 let cartMutationVersion = 0;
 let cartReadVersion = 0;
 
-const pendingAddKeys = new Map<string, string>();
-const inFlightAddKeys = new Map<string, number>();
+type PendingCartAdd = { key: string; inFlight: boolean };
+const pendingAddKeys = new Map<string, PendingCartAdd[]>();
+
+function pendingCartAdds(slot: string): PendingCartAdd[] {
+  const current = pendingAddKeys.get(slot);
+  if (current) return current;
+  let keys: string[] = [];
+  try {
+    const saved = sessionStorage.getItem(slot);
+    if (saved) {
+      try {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed)) keys = parsed.filter((key): key is string => typeof key === "string");
+      } catch {
+        // Accept one key written by the earlier single-key client version.
+        if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(saved)) keys = [saved];
+      }
+    }
+  } catch {
+    // Storage may be disabled; the in-memory queue still covers this page.
+  }
+  const pending = keys.map((key) => ({ key, inFlight: false }));
+  pendingAddKeys.set(slot, pending);
+  return pending;
+}
+
+function persistCartAdds(slot: string, pending: PendingCartAdd[]) {
+  if (pending.length === 0) pendingAddKeys.delete(slot);
+  try {
+    if (pending.length === 0) sessionStorage.removeItem(slot);
+    else sessionStorage.setItem(slot, JSON.stringify(pending.map(({ key }) => key)));
+  } catch {
+    // The in-memory queue remains available if storage is disabled.
+  }
+}
 
 async function cartAddKey(
   body: string,
 ): Promise<{ key: string; slot: string }> {
   const supabase = await getBrowserClient();
   const { data } = await supabase.auth.getSession();
+  // The server scopes claims by cart. A newly issued guest cookie or a
+  // guest-to-user merge can change that scope, even if this tab keeps its key.
   const slot = `vergeo-cart-add:${data.session?.user?.id ?? "guest"}:${body}`;
-  let key: string | null = null;
-  if (!inFlightAddKeys.has(slot)) {
-    try {
-      key = sessionStorage.getItem(slot);
-    } catch {
-      key = pendingAddKeys.get(slot) ?? null;
-    }
+  const pending = pendingCartAdds(slot);
+  let operation = pending.find(({ inFlight }) => !inFlight);
+  if (!operation) {
+    operation = { key: crypto.randomUUID(), inFlight: false };
+    pending.push(operation);
   }
-  key ??= crypto.randomUUID();
-  pendingAddKeys.set(slot, key);
-  try {
-    sessionStorage.setItem(slot, key);
-  } catch {
-    // Storage may be disabled; keep retry state for this page lifetime.
-  }
-  inFlightAddKeys.set(slot, (inFlightAddKeys.get(slot) ?? 0) + 1);
-  return { key, slot };
+  operation.inFlight = true;
+  persistCartAdds(slot, pending);
+  return { key: operation.key, slot };
 }
 
-function forgetCartAddKey(slot: string, key: string) {
-  if (pendingAddKeys.get(slot) === key) pendingAddKeys.delete(slot);
-  try {
-    if (sessionStorage.getItem(slot) === key) sessionStorage.removeItem(slot);
-  } catch {
-    // A disabled storage API does not block cart mutations.
-  }
+function settleCartAddKey(slot: string, key: string, definitive: boolean) {
+  const pending = pendingCartAdds(slot);
+  const index = pending.findIndex((operation) => operation.key === key);
+  if (index < 0) return;
+  if (definitive) pending.splice(index, 1);
+  else pending[index].inFlight = false;
+  persistCartAdds(slot, pending);
 }
 
 function emitStore() {
@@ -342,22 +369,12 @@ export async function addCartItem(
       headers: { "Idempotency-Key": key },
       body,
     });
-    forgetCartAddKey(slot, key);
+    settleCartAddKey(slot, key, true);
   } catch (error) {
-    // A transport failure or server error may follow a committed add. Keep
-    // its key across a retry or page navigation until the outcome is known.
-    if (
-      error instanceof ApiError &&
-      error.status >= 400 &&
-      error.status < 500
-    ) {
-      forgetCartAddKey(slot, key);
-    }
+    // Even a validation response can race a same-key request that committed.
+    // Reuse the key until a successful replay confirms this operation's state.
+    settleCartAddKey(slot, key, error instanceof ApiError && error.code === "cart.idempotency_mismatch");
     throw error;
-  } finally {
-    const remaining = (inFlightAddKeys.get(slot) ?? 1) - 1;
-    if (remaining) inFlightAddKeys.set(slot, remaining);
-    else inFlightAddKeys.delete(slot);
   }
   const notices = cart.notices ?? (await fetchRevalidateNotices());
   publishCartMutation(version, cart, notices);
