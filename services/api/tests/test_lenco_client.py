@@ -274,6 +274,7 @@ async def test_production_keeps_injected_client_redirect_behavior(
             amount_major="13.00", reference="ord-test", phone="0961111111", operator="mtn"
         )
     )
+    assert result.data is not None
     assert result.data.reference == "ord-order-1-attempt-1"
     assert len(seen) == 2
     await http.aclose()
