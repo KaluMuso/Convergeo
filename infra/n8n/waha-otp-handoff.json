@@ -137,7 +137,7 @@
       "typeVersion": 2,
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const response = $input.first().json;\nconst verified = $('Verify Signature').first().json;\nconst validId = id => typeof id === 'string' && id.length >= 8 && id.length <= 256;\nconst nested = response?.key;\nconst accepted = nested === undefined\n  ? validId(response?.id)\n  : nested && typeof nested === 'object' && !Array.isArray(nested)\n    && validId(nested.id) && nested.fromMe === true\n    && nested.remoteJid === verified.phone.slice(1) + '@c.us'\n    && response.status === 'PENDING'\n    && (response.id === undefined || response.id === nested.id);\nif (verified.deadline <= Date.now() || !accepted) throw new Error('otp provider not confirmed');\nreturn [{ json: { accepted: true, requestId: verified.requestId } }];"
+        "jsCode": "const response = $input.first().json;\nconst verified = $('Verify Signature').first().json;\nconst validId = id => typeof id === 'string' && id.length >= 8 && id.length <= 256;\nconst nested = response?.key;\nconst recipient = verified.phone.slice(1);\nconst individualChat = nested?.remoteJid === recipient + '@c.us'\n  || nested?.remoteJid === recipient + '@s.whatsapp.net';\nconst accepted = nested === undefined\n  ? validId(response?.id)\n  : nested && typeof nested === 'object' && !Array.isArray(nested)\n    && validId(nested.id) && nested.fromMe === true\n    && individualChat\n    && response.status === 'PENDING'\n    && (response.id === undefined || response.id === nested.id);\nif (verified.deadline <= Date.now() || !accepted) throw new Error('otp provider not confirmed');\nreturn [{ json: { accepted: true, requestId: verified.requestId } }];"
       },
       "position": [1810, 300]
     },

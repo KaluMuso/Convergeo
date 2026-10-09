@@ -180,10 +180,20 @@ test("only a provider acceptance with an ID can produce the small receipt", () =
     messageTimestamp: "1800000000",
     status: "PENDING",
   };
+  const observedAcceptance = {
+    ...nestedAcceptance,
+    key: {
+      ...nestedAcceptance.key,
+      remoteJid: "260971000099@s.whatsapp.net",
+    },
+  };
   assert.deepEqual(run(receiptCode, { id: "message-id-123" }, lookup), [
     { json: { accepted: true, requestId: body.requestId } },
   ]);
   assert.deepEqual(run(receiptCode, nestedAcceptance, lookup), [
+    { json: { accepted: true, requestId: body.requestId } },
+  ]);
+  assert.deepEqual(run(receiptCode, observedAcceptance, lookup), [
     { json: { accepted: true, requestId: body.requestId } },
   ]);
   assert.throws(
@@ -212,6 +222,22 @@ test("only a provider acceptance with an ID can produce the small receipt", () =
     {
       ...nestedAcceptance,
       key: { ...nestedAcceptance.key, remoteJid: "260971000098@c.us" },
+    },
+    {
+      ...observedAcceptance,
+      key: { ...observedAcceptance.key, remoteJid: "260971000098@s.whatsapp.net" },
+    },
+    {
+      ...observedAcceptance,
+      key: { ...observedAcceptance.key, remoteJid: "260971000099@g.us" },
+    },
+    {
+      ...observedAcceptance,
+      key: { ...observedAcceptance.key, remoteJid: "260971000099@broadcast" },
+    },
+    {
+      ...observedAcceptance,
+      key: { ...observedAcceptance.key, remoteJid: "260971000099@other.example" },
     },
     { ...nestedAcceptance, status: "FAILED" },
     { ...nestedAcceptance, id: "different-message-id" },
