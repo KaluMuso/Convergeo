@@ -53,7 +53,7 @@ export function deployedTargetReady(): boolean {
  */
 export function assertNoAccidentalRealMoney(): void {
   const lencoEnv = str("LENCO_ENV").toLowerCase();
-  if (lencoEnv === "live" || lencoEnv === "production") {
+  if (lencoEnv && lencoEnv !== "sandbox") {
     throw new Error(
       `Refusing E2E pay against LENCO_ENV=${lencoEnv}. Use sandbox credentials only.`,
     );

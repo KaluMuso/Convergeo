@@ -7,10 +7,12 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import re
 from typing import Any, cast
 
 import httpx
+from app.core.env_guards import assert_staging_lenco_destination, require_sandbox_payments
 from app.services.payments.base import (
     CollectionStatus,
     InitiateCollectionRequest,
@@ -184,6 +186,14 @@ class LencoClient:
         json_body: dict[str, Any] | None = None,
         allow_retry: bool = False,
     ) -> dict[str, Any]:
+        if os.environ.get("ENV", "").strip().lower() == "staging":
+            require_sandbox_payments(env="staging")
+            destination = (
+                str(self._http.base_url)
+                if self._http is not None
+                else self._base_url or get_base_url()
+            )
+            assert_staging_lenco_destination(destination)
         client = await self._client()
         headers = _auth_headers(self._token_value())
         content = _build_json_body(json_body) if json_body is not None else None
