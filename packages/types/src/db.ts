@@ -5869,9 +5869,9 @@ export type Database = {
           p_action: string
           p_actor: string
           p_key: string
-          p_name?: string | null
-          p_permissions?: string[] | null
-          p_target?: string | null
+          p_name?: string
+          p_permissions?: string[]
+          p_target?: string
         }
         Returns: Json
       }
