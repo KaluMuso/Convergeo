@@ -212,7 +212,14 @@ export function RolesBoard() {
         <button
           disabled={busy || !target || !assignedRole}
           className="min-h-11 rounded bg-primary px-4 text-white disabled:opacity-50"
-          onClick={() => void mutate(`/admin/roles/${assignedRole}/users/${target}`, "PUT")}
+          onClick={() => {
+            if (
+              assignedRole === "superadmin" &&
+              !window.confirm(t("confirmSuperadmin", { userId: target }))
+            )
+              return;
+            void mutate(`/admin/roles/${assignedRole}/users/${target}`, "PUT");
+          }}
         >
           {t("assign")}
         </button>

@@ -14,7 +14,7 @@ The admin app (`admin.vergeo5.com`) is a **separate hardened origin** (D20). Acc
 
 ## Configurable roles (source only until approved activation)
 
-`superadmin` has the full admin plane and is the only role that can create, edit, delete, assign, or revoke admin roles. `admin` remains broad legacy access for compatibility but cannot manage roles. `moderator` retains product/vendor moderation. Custom roles have keys beginning `rbac_`; assignments live in the existing `public.user_roles`, and their named permission sets live in `public.admin_roles`. The API uses an explicit route/method allowlist and denies unlisted admin work.
+`superadmin` has the full admin plane and is the only role that can create, edit, delete, assign, or revoke admin roles. `admin` remains broad legacy access for compatibility but cannot manage roles; a superadmin can revoke existing legacy `admin` grants but cannot create new ones through this API. `moderator` retains product/vendor moderation. Custom roles have keys beginning `rbac_`; assignments live in the existing `public.user_roles`, and their named permission sets live in `public.admin_roles`. The API uses an explicit route/method allowlist and denies unlisted admin work.
 
 | Grant             | Current access                                                                                                   |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |

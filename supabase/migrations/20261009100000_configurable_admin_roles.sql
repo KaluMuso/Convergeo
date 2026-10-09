@@ -112,7 +112,8 @@ begin
     end if;
     select to_jsonb(r) into v_after from public.admin_roles r where key = p_key;
   elsif p_action in ('assign', 'revoke') then
-    if p_target is null or (p_key <> 'superadmin' and not exists (
+    if p_target is null or (p_key <> 'superadmin'
+      and not (p_action = 'revoke' and p_key = 'admin') and not exists (
       select 1 from public.admin_roles where key = p_key
     )) then
       raise exception 'Invalid role assignment' using errcode = '22023';

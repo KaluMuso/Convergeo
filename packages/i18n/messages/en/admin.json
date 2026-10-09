@@ -61,6 +61,7 @@
     "assignments": "Assignments",
     "revoke": "Revoke",
     "confirmDelete": "Delete {name}? Assigned roles cannot be deleted.",
+    "confirmSuperadmin": "Grant full superadmin access to account {userId}?",
     "confirmRevoke": "Revoke {role} from {userId}?"
   },
   "oversightUi": {

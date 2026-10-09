@@ -171,3 +171,7 @@ def test_superadmin_can_create_and_assign_only_known_permissions(
     assigned = client.put("/admin/roles/rbac_finance/users/00000000-0000-0000-0000-000000000002")
     assert assigned.status_code == 200, assigned.text
     assert service.calls[1]["p_action"] == "assign"
+    revoked_legacy = client.delete("/admin/roles/admin/users/00000000-0000-0000-0000-000000000002")
+    assert revoked_legacy.status_code == 200, revoked_legacy.text
+    assert service.calls[2]["p_action"] == "revoke"
+    assert service.calls[2]["p_key"] == "admin"

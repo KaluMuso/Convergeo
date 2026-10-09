@@ -110,7 +110,7 @@ def list_roles(
         .execute()
         .data
     )
-    role_keys = ["superadmin"]
+    role_keys = ["superadmin", "admin"]
     if isinstance(definitions, list):
         role_keys += [
             row["key"]
@@ -130,7 +130,10 @@ def list_roles(
             row
             for row in assignments
             if isinstance(row, dict)
-            and (str(row.get("role", "")).startswith("rbac_") or row.get("role") == "superadmin")
+            and (
+                str(row.get("role", "")).startswith("rbac_")
+                or row.get("role") in {"superadmin", "admin"}
+            )
         ]
         if isinstance(assignments, list)
         else [],

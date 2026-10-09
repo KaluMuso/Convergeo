@@ -1,7 +1,7 @@
 -- Local pgTAP role-management contract. All fixture accounts roll back.
 begin;
 set local search_path to public, extensions, auth;
-select extensions.plan(12);
+select extensions.plan(13);
 
 select extensions.has_table('public', 'admin_roles', 'restricted role definitions exist');
 select extensions.has_function('public', 'manage_admin_role',
@@ -55,9 +55,16 @@ select extensions.throws_ok(
   $$select public.manage_admin_role('a00a0000-0000-0000-0000-000000000001',
     'delete','rbac_finance_test',null,null,null)$$,
   '23503', 'assigned role cannot be deleted');
+insert into public.user_roles(user_id,role)
+values ('a00a0000-0000-0000-0000-000000000002','admin');
+select public.manage_admin_role('a00a0000-0000-0000-0000-000000000001',
+  'revoke','admin',null,null,'a00a0000-0000-0000-0000-000000000002');
+select extensions.ok(not exists(select 1 from public.user_roles
+  where user_id='a00a0000-0000-0000-0000-000000000002' and role='admin'),
+  'superadmin may revoke a legacy admin assignment');
 select extensions.is((select count(*)::integer from public.audit_log
   where actor='a00a0000-0000-0000-0000-000000000001' and action like 'admin.role.%'),
-  2, 'only successful changes are audited');
+  3, 'only successful changes are audited');
 
 select * from extensions.finish();
 rollback;
