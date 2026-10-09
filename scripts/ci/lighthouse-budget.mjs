@@ -147,11 +147,21 @@ export function sanitizeDiagnostic(value, key = "") {
   return "[redacted]";
 }
 
-// A failed navigation can still have trace and DevTools data. Emit only counts
-// and fixed labels so CI logs remain useful when artifact downloads are blocked.
+// A failed navigation can still have trace and DevTools data. Emit only counts,
+// numeric timings/processes and per-trace aliases, never raw frame IDs or URLs.
 export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const events = Array.isArray(trace?.traceEvents) ? trace.traceEvents : [];
   const messages = Array.isArray(devtoolsLog) ? devtoolsLog : [];
+  const frameAliases = new Map();
+  const frameAlias = (id) => {
+    if (typeof id !== "string" || !id) return null;
+    if (!frameAliases.has(id))
+      frameAliases.set(id, `frame-${frameAliases.size + 1}`);
+    return frameAliases.get(id);
+  };
+  const finiteNumber = (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  const markerLimit = 8;
   const isKeyEvent = (event) =>
     typeof event?.cat === "string" &&
     (event.cat.includes("blink.user_timing") ||
@@ -164,8 +174,11 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const browserStart = keyEvents.find(
     (event) => event.name === "TracingStartedInBrowser",
   );
-  const browserMainFrame = browserStart?.args?.data?.frames?.find(
-    (frame) => !frame.parent,
+  const browserFrames = Array.isArray(browserStart?.args?.data?.frames)
+    ? browserStart.args.data.frames
+    : [];
+  const browserMainFrame = browserFrames.find(
+    (frame) => frame && !frame.parent,
   );
   const pageStart = keyEvents.find(
     (event) => event.name === "TracingStartedInPage",
@@ -180,9 +193,41 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
       : mainFrame
         ? "page"
         : "unresolved";
+  const selectedMainFrameAlias = frameAlias(mainFrame);
+  const selectedMainFramePid = finiteNumber(
+    mainFrameSource === "browser" ? browserMainFrame.processId : pageStart?.pid,
+  );
+  const browserFrameMarkers = browserFrames
+    .slice(0, markerLimit)
+    .map((frame) => ({
+      alias: frameAlias(frame?.frame),
+      processId: finiteNumber(frame?.processId),
+      isRoot: !frame?.parent,
+    }));
   const navStarts = keyEvents.filter(
     (event) => event.name === "navigationStart",
   );
+  const navigationMarkers = navStarts.slice(-markerLimit).map((event) => ({
+    alias: frameAlias(frameId(event)),
+    pid: finiteNumber(event.pid),
+    tid: finiteNumber(event.tid),
+    ts: finiteNumber(event.ts),
+    isLoadingMainFrame: event.args?.data?.isLoadingMainFrame === true,
+  }));
+  const frameProcessEvents = keyEvents.filter(
+    (event) =>
+      event.name === "FrameCommittedInBrowser" ||
+      event.name === "ProcessReadyInBrowser",
+  );
+  const frameProcessMarkers = frameProcessEvents
+    .slice(-markerLimit)
+    .map((event) => ({
+      kind: event.name,
+      alias: frameAlias(frameId(event)),
+      processId: finiteNumber(event.args?.data?.processId),
+      pid: finiteNumber(event.pid),
+      ts: finiteNumber(event.ts),
+    }));
   const mainFrameNavStarts = mainFrame
     ? navStarts.filter((event) => frameId(event) === mainFrame)
     : [];
@@ -193,7 +238,7 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const documentStatuses = messages
     .filter(
       (message) =>
-        message.method === "Network.responseReceived" &&
+        message?.method === "Network.responseReceived" &&
         message.params?.type === "Document",
     )
     .map((message) => message.params?.response?.status)
@@ -202,7 +247,16 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
     traceEventCount: events.length,
     keyEventCount: keyEvents.length,
     mainFrameSource,
+    selectedMainFrameAlias,
+    selectedMainFramePid,
+    browserFrameMarkers,
+    browserFrameMarkersTruncated: browserFrames.length > markerLimit,
     navigationStartCount: navStarts.length,
+    navigationMarkers,
+    navigationMarkersTruncated: navStarts.length > markerLimit,
+    frameProcessEventCount: frameProcessEvents.length,
+    frameProcessMarkers,
+    frameProcessMarkersTruncated: frameProcessEvents.length > markerLimit,
     mainFrameNavigationStartCount: mainFrameNavStarts.length,
     acceptableMainFrameNavigationStartCount:
       acceptableMainFrameNavStarts.length,

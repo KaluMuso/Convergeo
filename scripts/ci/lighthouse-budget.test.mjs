@@ -257,6 +257,128 @@ test("navigation diagnostic distinguishes absent, other-frame, and rejected URL"
   );
 });
 
+test("navigation aliases preserve frame equality without exposing identifiers", () => {
+  const trace = {
+    traceEvents: [
+      {
+        name: "TracingStartedInBrowser",
+        cat: "devtools.timeline",
+        args: {
+          data: {
+            frames: [
+              { frame: "private-root-id", processId: 41 },
+              {
+                frame: "private-child-id",
+                parent: "private-root-id",
+                processId: 42,
+              },
+            ],
+          },
+        },
+      },
+      {
+        name: "FrameCommittedInBrowser",
+        cat: "devtools.timeline",
+        pid: 41,
+        ts: 180,
+        args: {
+          data: {
+            frame: "private-child-id",
+            processId: 42,
+            url: "https://private.example.com/secret",
+            headers: { authorization: "Bearer private-token" },
+          },
+        },
+      },
+      {
+        name: "navigationStart",
+        cat: "loading",
+        pid: 42,
+        tid: 7,
+        ts: 200,
+        args: {
+          data: {
+            frame: "private-child-id",
+            documentLoaderURL:
+              "http://localhost:3000/en/search?token=private-token",
+            isLoadingMainFrame: true,
+          },
+        },
+      },
+    ],
+  };
+  const result = summarizeNavigationDiagnostic(trace, []);
+  assert.equal(result.selectedMainFrameAlias, "frame-1");
+  assert.equal(result.selectedMainFramePid, 41);
+  assert.deepEqual(result.browserFrameMarkers, [
+    { alias: "frame-1", processId: 41, isRoot: true },
+    { alias: "frame-2", processId: 42, isRoot: false },
+  ]);
+  assert.deepEqual(result.navigationMarkers, [
+    {
+      alias: "frame-2",
+      pid: 42,
+      tid: 7,
+      ts: 200,
+      isLoadingMainFrame: true,
+    },
+  ]);
+  assert.equal(result.frameProcessMarkers[0].alias, "frame-2");
+  assert.equal(result.frameProcessMarkers[0].processId, 42);
+  assert.equal(result.diagnosis, "navigation-start-other-frame");
+  assert.equal(
+    summarizeNavigationDiagnostic(trace, []).selectedMainFrameAlias,
+    "frame-1",
+  );
+  assert.equal(
+    summarizeNavigationDiagnostic(
+      {
+        traceEvents: [
+          {
+            name: "TracingStartedInBrowser",
+            cat: "devtools.timeline",
+            args: {
+              data: { frames: [{ frame: "another-private-id", processId: 9 }] },
+            },
+          },
+        ],
+      },
+      [],
+    ).selectedMainFrameAlias,
+    "frame-1",
+  );
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /private-root-id|private-child-id|private-token|private\.example\.com/,
+  );
+});
+
+test("navigation diagnostic bounds marker output and tolerates malformed frames", () => {
+  const trace = {
+    traceEvents: [
+      {
+        name: "TracingStartedInBrowser",
+        cat: "devtools.timeline",
+        args: { data: { frames: "invalid" } },
+      },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        name: "navigationStart",
+        cat: "loading",
+        pid: index,
+        ts: index,
+        args: { data: { frame: `private-${index}` } },
+      })),
+    ],
+  };
+  const result = summarizeNavigationDiagnostic(trace, []);
+  assert.equal(result.mainFrameSource, "unresolved");
+  assert.equal(result.navigationStartCount, 10);
+  assert.equal(result.navigationMarkers.length, 8);
+  assert.equal(result.navigationMarkersTruncated, true);
+  assert.equal(result.navigationMarkers[0].pid, 2);
+  assert.doesNotMatch(JSON.stringify(result), /private-/);
+});
+
 test("Chrome is killed when Lighthouse throws before a report is produced", async () => {
   const directory = await mkdtemp(join(tmpdir(), "lighthouse-budget-"));
   let killed = false;
