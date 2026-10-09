@@ -28,24 +28,6 @@ export function getRolesFromUser(user: User | null | undefined): AppRole[] {
   });
 }
 
-/** Parse only known roles from claims that the caller has already verified. */
-export function getRolesFromClaims(claims: unknown): AppRole[] {
-  if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
-    return [];
-  }
-  const metadata = (claims as { app_metadata?: unknown }).app_metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return [];
-  }
-  const roles = (metadata as { roles?: unknown }).roles;
-  if (!Array.isArray(roles)) {
-    return [];
-  }
-  return roles.filter(
-    (role): role is AppRole => typeof role === "string" && APP_ROLES.has(role as AppRole),
-  );
-}
-
 export function hasRole(roles: readonly string[], required: AppRole): boolean {
   return roles.includes(required);
 }
