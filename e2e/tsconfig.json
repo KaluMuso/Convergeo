@@ -11,7 +11,14 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "isolatedModules": true
   },
-  "include": ["playwright.config.ts", "specs/**/*.ts", "fixtures/**/*.ts"]
+  "include": [
+    "playwright.config.ts",
+    "playwright.email-acceptance.config.ts",
+    "specs/**/*.ts",
+    "email-acceptance/**/*.ts",
+    "fixtures/**/*.ts"
+  ]
 }

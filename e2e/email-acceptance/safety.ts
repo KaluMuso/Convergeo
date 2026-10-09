@@ -6,6 +6,13 @@ const PROD_HOSTS = new Set([
   "vendor.vergeo5.com",
   "admin.vergeo5.com",
 ]);
+export const STAGING_AUTH_ORIGIN = "https://iyasmrmbcrvlfxpzescb.supabase.co";
+const STAGING_API_ORIGIN = "https://api.staging.vergeo5.com";
+const STATIC_ORIGINS = new Set([
+  "https://res.cloudinary.com",
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+]);
 
 export function stagingOrigin(raw: string | undefined, name: string): string {
   if (!raw) throw new Error(`${name} is required for email acceptance`);
@@ -39,10 +46,18 @@ export function stagingOrigin(raw: string | undefined, name: string): string {
   return url.origin;
 }
 
-export function emailAcceptanceConfig(env: Record<string, string | undefined>) {
+export function emailAcceptanceConfig(
+  env: Record<string, string | undefined>,
+  { requireProbe = true }: { requireProbe?: boolean } = {},
+) {
   if (!/^[0-9a-f]{40}$/.test(env.E2E_EXPECT_SHA ?? "")) {
     throw new Error(
       "E2E_EXPECT_SHA must bind the diagnostic to a full candidate SHA",
+    );
+  }
+  if (requireProbe && env.E2E_EMAIL_PROBE_SHA !== env.E2E_EXPECT_SHA) {
+    throw new Error(
+      "strict customer and vendor SHA probes must pass before email acceptance",
     );
   }
   const customerOrigin = stagingOrigin(env.E2E_BASE_URL, "E2E_BASE_URL");
@@ -74,24 +89,67 @@ export function emailAcceptanceConfig(env: Record<string, string | undefined>) {
   };
 }
 
-/** Refuse provider, order, and outbound calls in the email-only diagnostic. */
-export function forbiddenEmailAcceptanceRequest(url: URL): boolean {
+/** Only the exact portal, staging Auth/API, and non-sensitive static assets may load. */
+export function allowedEmailAcceptanceRequest(
+  url: URL,
+  method: string,
+  resourceType: string,
+  portalOrigin: string,
+  allowStatic = true,
+): boolean {
   const path = url.pathname.toLowerCase();
-  const host = url.hostname.toLowerCase();
+  if (url.protocol !== "https:") return false;
+  if (url.origin === portalOrigin) return method === "GET" || method === "HEAD";
+  if (url.origin === STAGING_AUTH_ORIGIN) {
+    if (method === "POST") {
+      return (
+        path === "/auth/v1/token" &&
+        url.searchParams.get("grant_type") === "password"
+      );
+    }
+    return (
+      (method === "GET" || method === "HEAD") &&
+      (path.startsWith("/auth/v1/") || path.startsWith("/rest/v1/"))
+    );
+  }
+  if (url.origin === STAGING_API_ORIGIN) {
+    return (
+      (method === "GET" || method === "HEAD") &&
+      !/\/(?:payments|payouts|orders|checkout|internal|webhooks)(?:\/|$)/.test(
+        path,
+      )
+    );
+  }
   return (
-    host === "api.lenco.co" ||
-    host.endsWith(".lenco.co") ||
-    host === "api.africastalking.com" ||
-    host.endsWith(".africastalking.com") ||
-    host.includes("waha") ||
-    host.endsWith(".whatsapp.com") ||
-    path === "/auth/v1/otp" ||
-    path.includes("/functions/v1/send-sms-otp") ||
-    path.includes("/payments/") ||
-    path.includes("/payouts/") ||
-    path.includes("/orders") ||
-    path.includes("/checkout/") ||
-    path.includes("/internal/dispatch") ||
-    path.includes("/webhooks/")
+    allowStatic &&
+    STATIC_ORIGINS.has(url.origin) &&
+    method === "GET" &&
+    ["image", "font", "stylesheet"].includes(resourceType)
+  );
+}
+
+/** Check after navigation and immediately before filling a password. */
+export function assertExpectedLoginLocation(
+  actual: string,
+  expectedOrigin: string,
+): void {
+  let url: URL;
+  try {
+    url = new URL(actual);
+  } catch {
+    throw new Error("email login did not land on the approved portal");
+  }
+  if (url.origin !== expectedOrigin || url.pathname !== "/en/login") {
+    throw new Error(
+      "email login redirected away from the approved portal login",
+    );
+  }
+}
+
+export function isPasswordTokenRequest(url: URL, method: string): boolean {
+  return (
+    method === "POST" &&
+    url.pathname.toLowerCase() === "/auth/v1/token" &&
+    url.searchParams.get("grant_type") === "password"
   );
 }
