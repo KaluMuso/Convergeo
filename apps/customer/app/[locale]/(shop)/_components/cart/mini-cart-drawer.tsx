@@ -109,6 +109,10 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) {
+    throw new ApiError("network_error", "API unavailable", { status: 0 });
+  }
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -121,7 +125,7 @@ async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
 
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
+    response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
       headers,
       credentials: "include",

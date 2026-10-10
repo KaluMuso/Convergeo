@@ -26,6 +26,7 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from jwt.algorithms import RSAAlgorithm
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jwt.types import Options
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
 VALID_TOKEN = "valid.jwt.token"
@@ -370,3 +371,19 @@ def test_rs256_jwks_token_yields_current_user_with_roles(
     body = response.json()
     assert body["id"] == USER_ID
     assert body["roles"] == ["customer"]
+
+
+def test_pyjwt_unverified_decode_does_not_disable_later_claim_checks() -> None:
+    """Protect against reusing mutated options after an unverified decode."""
+    secret = "x" * 48
+    token = jwt.encode(
+        {"exp": int(time.time()) - 60, "aud": "expected"}, secret, algorithm="HS256"
+    )
+    options: Options = {"verify_signature": False}
+
+    jwt.decode(token, options=options, algorithms=["HS256"])
+    assert options == {"verify_signature": False}
+
+    options["verify_signature"] = True
+    with pytest.raises(ExpiredSignatureError):
+        jwt.decode(token, secret, options=options, algorithms=["HS256"], audience="expected")
