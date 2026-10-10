@@ -7,6 +7,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 import {
   CartNavTrigger,
@@ -24,7 +25,7 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
 }));
 
 vi.mock("../../../../../lib/api-base-url", () => ({
-  getApiBaseUrl: () => "http://localhost:8000",
+  getApiBaseUrl: vi.fn(() => "http://localhost:8000"),
 }));
 
 vi.mock("next/link", () => ({
@@ -69,6 +70,7 @@ const labels = {
 };
 
 beforeEach(() => {
+  vi.mocked(getApiBaseUrl).mockReturnValue("http://localhost:8000");
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
@@ -127,6 +129,15 @@ describe("MiniCartDrawer a11y", () => {
 
     expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
     expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
+  });
+
+  it("does not fetch a relative cart URL when the API origin is unavailable", async () => {
+    vi.mocked(getApiBaseUrl).mockReturnValue("");
+    openMiniCart();
+    render(<MiniCartDrawer locale="en" labels={labels} />);
+
+    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("CartNavTrigger opens the drawer with a 44px target", async () => {
