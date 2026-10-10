@@ -65,3 +65,32 @@ paths = [
   '''(?i)infra/merge-release-evidence\.json$''',
   '''(?i)infra/merge-release-evidence\.example\.json$''',
 ]
+
+[[allowlists]]
+description = "Google's published Linux signing-key fingerprint in the Chrome verifier"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^scripts/ci/check_hosted_chrome\.sh$''',
+]
+regexes = [
+  '''^EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796$''',
+]
+
+[[allowlists]]
+description = "Coordinator source inventory — eight verified nonsecret SHA-256 false positives from run 36862119439"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^scripts/ci/coordinator-gate-inputs\.json$''',
+]
+regexes = [
+  '''^eacfdbafdd8e7e6b7bdd4e7ceee40343bd5aeeecbbe3d436210555cbcfbc7623$''',
+  '''^aba99aeb7004a936e45f2776988939390e7bebb5556c67c52ff4927e6b42fb3c$''',
+  '''^d4bb97335de4ca133fb2e7074810c31f1b785c317bb806215602c4a78526eb57$''',
+  '''^f15d4dd28acff535709899d66187c4eb472dd2124c7321d4c666ff0bc04d093d$''',
+  '''^715f85f00c5dc17b1038f2a069f07df5165698124d9481b1df11b1c7fe0d6f76$''',
+  '''^e7df832a081eaf85a50401c53f5a7ff482c16e7cbeb137eb084c12c505b968b0$''',
+  '''^38be40533f59c15676525ee938bc879fc5cd15794168536740854b6a687d6242$''',
+  '''^67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f$''',
+]
