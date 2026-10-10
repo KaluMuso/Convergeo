@@ -15,6 +15,16 @@ from uuid import uuid4
 import psycopg
 
 
+def connect(url: str, *, autocommit: bool = False) -> psycopg.Connection:
+    # Bound connection setup and server-side SQL execution during the probe.
+    return psycopg.connect(
+        url,
+        autocommit=autocommit,
+        connect_timeout=5,
+        options="-c statement_timeout=15000",
+    )
+
+
 def main() -> None:
     url = os.environ.get("SUPABASE_DB_URL", "")
     parsed = urlparse(url)
@@ -26,7 +36,7 @@ def main() -> None:
         raise RuntimeError("A disposable local postgres database is required")
 
     first_id, second_id = str(uuid4()), str(uuid4())
-    with psycopg.connect(url, autocommit=True) as setup:
+    with connect(url, autocommit=True) as setup:
         count = setup.execute(
             "select count(*) from public.user_roles where role = 'superadmin'"
         ).fetchone()
@@ -46,7 +56,7 @@ def main() -> None:
     result: dict[str, str | int] = {}
 
     def remove_second() -> None:
-        with psycopg.connect(url) as connection:
+        with connect(url) as connection:
             result["second_pid"] = connection.info.backend_pid
             second_started.set()
             try:
@@ -60,7 +70,7 @@ def main() -> None:
                 result["second"] = exc.sqlstate or "unknown"
                 connection.rollback()
 
-    with psycopg.connect(url) as first, psycopg.connect(url, autocommit=True) as observer:
+    with connect(url) as first, connect(url, autocommit=True) as observer:
         first.execute(
             "delete from public.user_roles where user_id = %s and role = 'superadmin'",
             (first_id,),
@@ -117,7 +127,7 @@ def main() -> None:
             thread.join(5)
         assert not thread.is_alive(), "Second removal did not finish after first committed"
 
-    with psycopg.connect(url, autocommit=True) as check:
+    with connect(url, autocommit=True) as check:
         remaining = check.execute(
             "select count(*) from public.user_roles where role = 'superadmin'"
         ).fetchone()
