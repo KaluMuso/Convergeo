@@ -93,6 +93,18 @@ def test_live_drill_rejects_an_unsupported_collection_rail(
             "success",
             False,
         ),
+        (
+            [{"status": "ussd_pushed"}, {"status": "success", "amount_ngwee": 25000}],
+            "PASS",
+            "success",
+            False,
+        ),
+        (
+            [{"status": "pay_offline"}, {"status": "success", "amount_ngwee": 25000}],
+            "PASS",
+            "success",
+            False,
+        ),
         ([{"status": "success", "amount_ngwee": 25000}], "PASS", "success", False),
         ([{"status": "failed"}], "FAIL", "failed", False),
         ([{"status": "expired"}], "FAIL", "expired", False),
@@ -105,6 +117,8 @@ def test_live_drill_rejects_an_unsupported_collection_rail(
     ],
     ids=[
         "pending-then-authoritative-success",
+        "ussd-pushed-then-success",
+        "pay-offline-then-success",
         "immediate-success",
         "terminal-failure",
         "terminal-expired",
@@ -187,3 +201,55 @@ def test_momo_collection_uses_authoritative_settlement(
         assert next(item for item in result.assertions if item.name == "escrow_leg").passed
     if times_out and expected_observed == "pending":
         assert next(item for item in result.assertions if item.name == "platform_cash_leg").passed
+
+
+@pytest.mark.parametrize(
+    ("charge_count", "global_sum", "failed_assertion"),
+    [
+        (2, 0, "charge_received_count"),
+        (1, 1, "global_ledger_balanced"),
+    ],
+    ids=["duplicate-charge", "ledger-imbalance"],
+)
+def test_success_status_does_not_override_ledger_failure(
+    drill_module: Any,
+    charge_count: int,
+    global_sum: int,
+    failed_assertion: str,
+) -> None:
+    class FakeApi:
+        def payment_retry(self, _checkout_group_id: str) -> dict[str, str]:
+            return {"payment_id": "payment-1"}
+
+        def webhook_drain(self) -> None:
+            pass
+
+        def poll_tick(self) -> None:
+            pass
+
+        def payment_status(self, _checkout_group_id: str) -> dict[str, Any]:
+            return {"status": "success", "amount_ngwee": 25000}
+
+    class FakeLedger:
+        def count_charge_received(self, _checkout_group_id: str) -> int:
+            return charge_count
+
+        def charge_received_postings(self, _checkout_group_id: str) -> dict[str, int]:
+            return {"platform_cash": 25000, "escrow": -25000}
+
+        def global_sum_ngwee(self) -> int:
+            return global_sum
+
+    config = Namespace(checkout_group_id="checkout-1", payment_id="")
+    result = drill_module.run_momo_collection_live(config, FakeApi(), FakeLedger())
+
+    assertions = {item.name: item for item in result.assertions}
+    assert assertions["payment_status_success"].passed
+    assert assertions["platform_cash_leg"].passed
+    assert assertions["escrow_leg"].passed
+    assert not assertions[failed_assertion].passed
+    assert result.status == drill_module.StepStatus.FAIL
+    assert drill_module._map_gates([result])["S1"] == "FAIL"
+    assert (
+        drill_module._final_verdict([result], mode=drill_module.RunMode.LIVE, blockers=[]) == "FAIL"
+    )
