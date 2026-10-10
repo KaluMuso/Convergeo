@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import traceback
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -86,9 +88,19 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
 
 def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = get_request_id(request)
-    logger.exception(
+    # FastAPI can call this after the active except block has ended. Log only
+    # code locations and type; exception messages may contain payment data.
+    logger.error(
         "Unhandled exception",
-        extra={"request_id": request_id, "path": request.url.path},
+        extra={
+            "request_id": request_id,
+            "path": request.url.path,
+            "exception_type": f"{type(exc).__module__}.{type(exc).__qualname__}",
+            "exception_frames": [
+                f"{Path(frame.f_code.co_filename).name}:{line}:{frame.f_code.co_name}"
+                for frame, line in traceback.walk_tb(exc.__traceback__)
+            ],
+        },
     )
 
     return JSONResponse(
