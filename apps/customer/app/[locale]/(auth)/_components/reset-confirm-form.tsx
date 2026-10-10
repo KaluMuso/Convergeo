@@ -7,7 +7,7 @@ import { Input } from "@vergeo/ui/src/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { parseAuthError } from "./auth-utils";
 
@@ -27,19 +27,33 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const exchangeStarted = useRef(false);
 
   useEffect(() => {
+    if (exchangeStarted.current) return;
+    exchangeStarted.current = true;
     const establishSession = async () => {
-      const supabase = await getBrowserClient();
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        setReady(exchangeError ? "invalid" : "ready");
-        return;
+      try {
+        const params = new URLSearchParams(window.location.search);
+        // Supabase can return an expired/invalid-link error without a code.
+        // An unrelated existing session must not make that link appear valid.
+        if (params.has("error") || params.has("error_code")) {
+          setReady("invalid");
+          return;
+        }
+        const supabase = await getBrowserClient();
+        const code = params.get("code");
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          setReady(exchangeError ? "invalid" : "ready");
+          return;
+        }
+        // No code in the URL — fall back to any recovery session already established.
+        const { data } = await supabase.auth.getSession();
+        setReady(data.session ? "ready" : "invalid");
+      } catch {
+        setReady("invalid");
       }
-      // No code in the URL — fall back to any recovery session already established.
-      const { data } = await supabase.auth.getSession();
-      setReady(data.session ? "ready" : "invalid");
     };
     void establishSession();
   }, []);

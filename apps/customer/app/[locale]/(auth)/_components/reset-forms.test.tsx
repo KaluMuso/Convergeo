@@ -90,7 +90,7 @@ describe("ResetRequestForm", () => {
       { redirectTo: string },
     ];
     expect(emailArg).toBe("founder@example.com");
-    expect(opts.redirectTo).toContain("/en/reset-password/confirm");
+    expect(opts.redirectTo).toBe(`${window.location.origin}/en/reset-password/confirm`);
     expect(screen.getByText(/a reset link is on its way/i)).toBeInTheDocument();
   });
 
@@ -135,5 +135,48 @@ describe("ResetConfirmForm", () => {
       expect(screen.getByText(/reset link is invalid or has expired/i)).toBeInTheDocument(),
     );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expired code and never offers the password form", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=expired");
+    exchangeCodeForSession.mockResolvedValue({ error: { message: "expired" } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects an error redirect even when another session exists", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?error=access_denied");
+    getSession.mockResolvedValue({ data: { session: { access_token: "other-session" } } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+    expect(getSession).not.toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("ends checking when code exchange rejects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=bad");
+    exchangeCodeForSession.mockRejectedValue(new Error("network unavailable"));
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+  });
+
+  it("exchanges a single-use code once under React strict effects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=single-use");
+    renderWithIntl(
+      <React.StrictMode>
+        <ResetConfirmForm locale="en" />
+      </React.StrictMode>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+    );
+    expect(exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 });

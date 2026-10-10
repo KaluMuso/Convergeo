@@ -65,6 +65,10 @@ describe("vendor login page", () => {
 
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute(
+      "href",
+      "/en/reset-password",
+    );
   });
 
   it("renders no signup link", async () => {

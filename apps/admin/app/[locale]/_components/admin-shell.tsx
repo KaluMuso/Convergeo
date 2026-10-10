@@ -43,7 +43,7 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
+  if (rest === "/login" || rest.startsWith("/login/") || rest.startsWith("/reset-password")) {
     return <>{children}</>;
   }
 

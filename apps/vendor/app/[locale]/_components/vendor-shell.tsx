@@ -16,7 +16,7 @@ type VendorShellProps = {
 };
 
 /**
- * Authenticated vendor chrome. Login and onboarding routes render bare children;
+ * Authenticated vendor chrome. Auth and onboarding routes render bare children;
  * all other routes get a responsive shell (desktop sidebar + mobile bottom nav).
  */
 export function VendorShell({ locale, capabilities, children }: VendorShellProps) {
@@ -24,7 +24,7 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
   const tCommon = useTranslations("common");
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
+  if (rest === "/login" || rest.startsWith("/login/") || rest.startsWith("/reset-password")) {
     return <>{children}</>;
   }
 

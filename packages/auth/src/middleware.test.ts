@@ -311,6 +311,18 @@ describe("middleware matrix", () => {
     expect(isAuthExemptPath("/en/otpish", locales)).toBe(false);
   });
 
+  it("allows only the password recovery pages through vendor and admin role gates", () => {
+    for (const gate of ["vendor", "admin"] as const) {
+      for (const path of ["/en/reset-password", "/fr/reset-password/confirm"]) {
+        expect(resolveGatedRedirect(gate, path, locales, null, [])).toBeNull();
+        expect(resolveGatedRedirect(gate, path, locales, { id: "u" } as never, [])).toBeNull();
+      }
+      for (const path of ["/en/reset-password/other", "/en/reset-password/confirm/extra"]) {
+        expect(resolveGatedRedirect(gate, path, locales, null, [])).toBe("login");
+      }
+    }
+  });
+
   it("authenticated customers can reach vendor onboarding without vendor role", () => {
     expect(isVendorOnboardingPath("/en/onboarding", locales)).toBe(true);
     expect(isVendorOnboardingPath("/fr/onboarding/status", locales)).toBe(true);
