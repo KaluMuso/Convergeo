@@ -35,7 +35,7 @@
     "typescript-eslint": "^8.66.0",
     "chrome-launcher": "1.2.2",
     "lighthouse": "13.5.0",
-    "puppeteer": "25.12.0",
+    "puppeteer": "25.13.0",
     "yauzl": "3.4.0"
   },
   "lint-staged": {
@@ -58,11 +58,9 @@
       "sharp@<0.35.5": "0.35.5",
       "browserslist": "4.28.8",
       "next": "15.5.27",
-      "basic-ftp": "6.2.1",
       "source-map-js": "1.2.2",
       "proxy-addr": "2.0.8",
-      "compression": "1.8.2",
-      "tinypool": "2.1.2"
+      "compression": "1.8.2"
     }
   }
 }

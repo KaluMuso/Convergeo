@@ -208,10 +208,8 @@ jobs:
           node scripts/ci/validate-lighthouserc.mjs
           pnpm perf:lighthouse:test
 
-      - name: Acquire pinned Chrome for Testing and reverify installed Chrome
-        run: |
-          pnpm exec puppeteer browsers install chrome
-          bash scripts/ci/check_hosted_chrome.sh
+      - name: Reverify measured Chrome
+        run: bash scripts/ci/check_hosted_chrome.sh
 
       - name: Start production server
         run: |

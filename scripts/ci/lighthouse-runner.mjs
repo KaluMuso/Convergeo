@@ -594,6 +594,7 @@ export async function auditWithChrome(url, settings, dependencies, context = {})
     }
   }
   if (failure) throw failure;
+  result.browserVersion = version;
   return result;
 }
 
@@ -610,6 +611,7 @@ export async function runPerformance(
     config_sha256: /^[0-9a-f]{64}$/.test(configSha256 ?? "") ? configSha256 : null,
   };
   const reports = [],
+    browserVersions = [],
     manifest = [],
     errors = [],
     warnings = [],
@@ -665,6 +667,11 @@ export async function runPerformance(
         if (!result?.lhr || typeof result.report !== "string" || !result.report.length)
           throw new Error("Lighthouse did not produce both JSON and HTML reports");
         const lhr = result.lhr;
+        if (
+          typeof result.browserVersion === "string" &&
+          /^\d+(?:\.\d+){3}$/.test(result.browserVersion)
+        )
+          browserVersions.push(result.browserVersion);
         const stem = `lhr-${invocation + urlIndex * config.ci.collect.numberOfRuns + run}`;
         const jsonPath = join(output, `${stem}.json`),
           htmlPath = join(output, `${stem}.html`);
@@ -741,6 +748,9 @@ export async function runPerformance(
   );
   const exitCode =
     errors.length || assertions.some((a) => !a.passed && a.level === "error") ? 1 : 0;
+  const puppeteerPackage = JSON.parse(
+    await readFile(new URL(import.meta.resolve("puppeteer/package.json")), "utf8"),
+  );
   await writeFile(
     join(output, "run-summary.json"),
     JSON.stringify(
@@ -753,6 +763,9 @@ export async function runPerformance(
         numberOfRuns: config.ci.collect.numberOfRuns,
         urls: config.ci.collect.url,
         settings: config.ci.collect.settings,
+        nodeVersion: process.version,
+        puppeteerVersion: puppeteerPackage.version,
+        browserVersions: [...new Set(browserVersions)],
         lighthouseVersions: [...new Set(reports.map((lhr) => lhr.lighthouseVersion))],
       },
       null,

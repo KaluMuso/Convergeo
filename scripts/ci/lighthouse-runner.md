@@ -1,9 +1,11 @@
 # Performance runner
 
 `pnpm perf:lighthouse` replaces LHCI autorun with the official Lighthouse Node API,
-chrome-launcher and Puppeteer's pinned Chrome for Testing. Install dependencies,
-then run `pnpm exec puppeteer browsers install chrome`. `pnpm perf:lighthouse:test`
-runs offline contract tests. Node remains 22 (the selected packages require at least
+chrome-launcher and Puppeteer 25.13.0. Its pinned Chrome for Testing revision is
+`155.0.8059.39`, matching the hosted Chrome version selected for measurement.
+For a local run without installed Chrome, install dependencies and run
+`pnpm exec puppeteer browsers install chrome`. `pnpm perf:lighthouse:test` runs
+offline contract tests. Node remains 22 (the selected packages require at least
 22.19); CI uses the repository's existing Node setup.
 
 The hosted performance job uses GitHub's Ubuntu 24.04 image. Immediately after
@@ -28,17 +30,17 @@ mismatch stops the job.
 
 The job requires `/opt/google/chrome/chrome` to belong to
 `google-chrome-stable`, report exactly `155.0.8059.39`, and have installed
-package version `155.0.8059.39-1`. It repeats that check after Chrome for
-Testing acquisition, recording only fixed identity labels. The installed
-Chrome is selected for Lighthouse through `PUPPETEER_EXECUTABLE_PATH`.
+package version `155.0.8059.39-1`. It repeats that check before starting the
+production server, recording only fixed identity labels. The installed Chrome
+is selected for Lighthouse through `PUPPETEER_EXECUTABLE_PATH`.
 This version follows [Google's October 6 Linux Stable security release](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop_086471744.html),
 [Google's signing-key documentation](https://www.google.com/linuxrepositories/),
 and [Google's Debian package index](https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz).
-The official Puppeteer-pinned Chrome for Testing download remains required;
-local runs continue to select it by default. The hosted selection uses the
+The hosted job does not download a second, unused Chrome binary. Local runs
+continue to select Puppeteer's matching Chrome for Testing by default. The hosted selection uses the
 installed Chrome's normal sandbox and certificate checks, with no sandbox-bypass
-flags or manual host-policy edits. Puppeteer's Chrome for Testing revision is `154.0.8037.57`;
-hosted Lighthouse uses the distinct installed `155.0.8059.39` package.
+flags or manual host-policy edits. Puppeteer's Chrome for Testing revision and
+the hosted installed package report the same `155.0.8059.39` browser version.
 Browser launch and all five routes must pass the unchanged budgets. The workflow
 collects Lighthouse only for the candidate and applies absolute assertions;
 its base-build comparison covers bundles only. Earlier Chrome 154 scores are
@@ -74,7 +76,8 @@ failure. Every successful collection writes a distinct `lhr-*.json` and HTML pai
 fields (closest to median FCP/TTI, separately from per-metric assertion medians).
 `assertion-results.json` contains failing assertions including warnings, as before.
 `assertion-results-all.json` additionally records successes; `run-summary.json`
-records collection failures, engine versions, settings and the exit status.
+records collection failures, Node, Puppeteer, measured Chrome and Lighthouse
+versions, settings and the exit status.
 The summary also retains each report's `runWarnings` with its URL and run number.
 The pinned engine's page-load timeout warning means results may be incomplete:
 it fails collection and assertion qualification even when all score floors pass.

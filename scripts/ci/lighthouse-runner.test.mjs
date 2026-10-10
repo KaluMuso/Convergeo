@@ -395,6 +395,7 @@ for (const scenario of [
           if (scenario === "incomplete-load") lhr.runWarnings = [INCOMPLETE_LOAD_WARNING];
           return {
             lhr,
+            browserVersion: "155.0.8059.39",
             contentReadiness: {
               passed: true,
               reason: "explicit_synthetic_fixture",
@@ -411,7 +412,10 @@ for (const scenario of [
       const manifest = JSON.parse(await readFile(join(output, "manifest.json")));
       const assertions = JSON.parse(await readFile(join(output, "assertion-results.json")));
       assert.equal(summary.exitCode, result.exitCode);
+      assert.equal(summary.puppeteerVersion, "25.13.0");
+      assert.match(summary.nodeVersion, /^v\d+\./);
       if (["pass", "warn", "notice", "threshold"].includes(scenario)) {
+        assert.deepEqual(summary.browserVersions, ["155.0.8059.39"]);
         assert.equal(calls, 15);
         assert.equal(manifest.length, 15);
         assert.equal(manifest.filter((r) => r.isRepresentativeRun).length, 5);
