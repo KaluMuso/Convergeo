@@ -134,3 +134,68 @@ jobs:
           push: true
           tags: ghcr.io/kalumuso/convergeo-api:${{ github.sha }}
           cache-from: type=gha
+
+  build-staging-log-sha:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/cursor/staging-api-log-image-build-20261010' &&
+      github.repository == 'KaluMuso/Convergeo'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SOURCE_SHA: cfe11ba8e5bb1893427ff256f4266a616230832f
+      SOURCE_TREE: d590407578f7c32d18ab83ff6e3988ea02a676ab
+      IMAGE: ghcr.io/kalumuso/convergeo-api
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
+    steps:
+      - name: Checkout exact API candidate
+        uses: actions/checkout@v7
+        with:
+          ref: cfe11ba8e5bb1893427ff256f4266a616230832f
+          persist-credentials: false
+
+      - name: Bind source and require clean checkout
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "${EXPECTED_SHA}" = "${SOURCE_SHA}"
+          test "$(git rev-parse HEAD)" = "${SOURCE_SHA}"
+          test "$(git rev-parse HEAD^{tree})" = "${SOURCE_TREE}"
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and publish candidate SHA only
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          build-args: |
+            GIT_SHA=cfe11ba8e5bb1893427ff256f4266a616230832f
+            API_IMAGE_TAG=cfe11ba8e5bb1893427ff256f4266a616230832f
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/kalumuso/convergeo-api:cfe11ba8e5bb1893427ff256f4266a616230832f
+
+      - name: Record immutable image digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf '%s@%s\n' "${IMAGE}" "${DIGEST}" >> "${GITHUB_STEP_SUMMARY}"
