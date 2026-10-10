@@ -16,6 +16,7 @@ CASES = (
         40,
     ),
     ("Coordinator source inventory", "scripts/ci/coordinator-gate-inputs.json", 8, 64),
+    ("Published staging API image tag", ".github/workflows/api-image.yml", 1, 40),
 )
 
 
@@ -46,3 +47,11 @@ def test_historical_false_positive_allowlists_are_exact() -> None:
             changed = ("0" if value[0] != "0" else "1") + value[1:]
             assert not re.fullmatch(pattern, changed)
             assert not re.fullmatch(pattern, value + "0")
+
+
+def test_image_tag_allowlist_matches_only_the_public_source_commit() -> None:
+    block = _allowlist("Published staging API image tag")
+    public_source_commit = "cfe11ba8e5bb1893427f" + "f256f4266a616230832f"
+    assert block["regexes"] == [f"^{public_source_commit}$"]
+    assert re.fullmatch(block["paths"][0], ".github/workflows/api-image.yml")
+    assert not re.fullmatch(block["paths"][0], ".github/workflows/other-image.yml")

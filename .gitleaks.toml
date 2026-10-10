@@ -94,3 +94,14 @@ regexes = [
   '''^38be40533f59c15676525ee938bc879fc5cd15794168536740854b6a687d6242$''',
   '''^67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f$''',
 ]
+
+[[allowlists]]
+description = "Published staging API image tag — exact public source commit"
+condition = "AND"
+regexTarget = "secret"
+paths = [
+  '''^\.github/workflows/api-image\.yml$''',
+]
+regexes = [
+  '''^cfe11ba8e5bb1893427ff256f4266a616230832f$''',
+]
