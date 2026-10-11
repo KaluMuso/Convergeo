@@ -35,9 +35,15 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
     const establishSession = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
+        const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         // Supabase can return an expired/invalid-link error without a code.
         // An unrelated existing session must not make that link appear valid.
-        if (params.has("error") || params.has("error_code")) {
+        if (
+          params.has("error") ||
+          params.has("error_code") ||
+          fragment.has("error") ||
+          fragment.has("error_code")
+        ) {
           setReady("invalid");
           return;
         }

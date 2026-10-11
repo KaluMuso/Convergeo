@@ -147,15 +147,26 @@ describe("ResetConfirmForm", () => {
     expect(updateUser).not.toHaveBeenCalled();
   });
 
-  it("rejects an error redirect even when another session exists", async () => {
-    window.history.replaceState({}, "", "/en/reset-password/confirm?error=access_denied");
-    getSession.mockResolvedValue({ data: { session: { access_token: "other-session" } } });
-    renderWithIntl(<ResetConfirmForm locale="en" />);
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
-    );
-    expect(getSession).not.toHaveBeenCalled();
-    expect(updateUser).not.toHaveBeenCalled();
+  it.each([
+    ["query error", "?error=access_denied"],
+    ["query error_code", "?error_code=otp_expired"],
+    ["fragment error", "#error=access_denied"],
+    ["fragment error_code", "#error_code=otp_expired"],
+    ["code with fragment error", "?code=valid#state=x&error=access_denied"],
+  ])("rejects %s with and without an unrelated session", async (_name, suffix) => {
+    for (const session of [null, { access_token: "other-session" }]) {
+      window.history.replaceState({}, "", `/en/reset-password/confirm${suffix}`);
+      getSession.mockResolvedValue({ data: { session } });
+      const view = renderWithIntl(<ResetConfirmForm locale="en" />);
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+      );
+      expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
+      expect(exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(getSession).not.toHaveBeenCalled();
+      expect(updateUser).not.toHaveBeenCalled();
+      view.unmount();
+    }
   });
 
   it("ends checking when code exchange rejects", async () => {

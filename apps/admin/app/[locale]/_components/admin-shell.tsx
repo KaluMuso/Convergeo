@@ -43,22 +43,15 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/") || rest.startsWith("/reset-password")) {
-    return <>{children}</>;
-  }
-
-  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
-  const visibleItems = flattenAdminNavItems(navGroups);
-
-  const activeKey = resolveAdminActiveItem(rest, visibleItems);
-  const activeGroup = resolveAdminActiveGroup(rest, navGroups);
+  const isBareAuthRoute =
+    rest === "/login" || rest.startsWith("/login/") || rest.startsWith("/reset-password");
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!menuOpen) {
+    if (!menuOpen || isBareAuthRoute) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -69,7 +62,17 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen]);
+  }, [menuOpen, isBareAuthRoute]);
+
+  if (isBareAuthRoute) {
+    return <>{children}</>;
+  }
+
+  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
+  const visibleItems = flattenAdminNavItems(navGroups);
+
+  const activeKey = resolveAdminActiveItem(rest, visibleItems);
+  const activeGroup = resolveAdminActiveGroup(rest, navGroups);
 
   return (
     <div className="min-h-dvh bg-bg text-text">
