@@ -41,6 +41,7 @@ class ListingCreateRequest(StrictModel):
     brand: str | None = None
     spec: dict[str, Any] | None = None
     category_id: str | None = None
+    description: str | None = None
     aliases: list[str] = Field(default_factory=list)
     title_override: str | None = None
     price_ngwee: NgweeInt
@@ -87,10 +88,21 @@ class ListingCreateRequest(StrictModel):
             raise ValueError("return_window_hours is required when returnable is true")
         if self.compare_at_ngwee is not None and self.compare_at_ngwee <= self.price_ngwee:
             raise ValueError("compare_at_ngwee must be greater than price_ngwee")
-        # Classes D/E are standalone offers and are rejected with a stable
-        # AppError in create_listing_for_vendor before any product row is written.
-        if self.product_class in {"D", "E"} and self.mode != "quick_list":
+        # Invalid canonical/standalone pairings get a stable AppError at the
+        # shared create seam, before any product or listing row is written.
+        if self.product_class in {"D", "E"} and (
+            self.mode != "quick_list" or self.product_id is not None
+        ):
             return self
+        if self.mode == "quick_list" and self.product_class in {"A", "B", "C"}:
+            return self
+        if self.product_class in {"D", "E"}:
+            if not self.category_id or not self.category_id.strip():
+                raise ValueError("category_id is required for standalone Class D/E listings")
+            if self.description is None or len(self.description.strip()) < 20:
+                raise ValueError("Class D/E listings require description of at least 20 characters")
+            self.category_id = self.category_id.strip()
+            self.description = self.description.strip()
         status: ListingStatus = (
             "draft" if self.mode == "new_canonical" or not self.publish else "active"
         )
@@ -445,7 +457,20 @@ def create_listing_for_vendor(
     """
     vendor_id = str(vendor["id"])
 
-    if body.product_class in {"D", "E"} and body.mode != "quick_list":
+    if body.mode == "quick_list" and body.product_class in {"A", "B", "C"}:
+        raise AppError(
+            code="canonical_product_required",
+            message="Class A, B and C listings require a canonical product",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "product_class": body.product_class,
+            },
+        )
+
+    if body.product_class in {"D", "E"} and (
+        body.mode != "quick_list" or body.product_id is not None
+    ):
         raise AppError(
             code="standalone_product_class_required",
             message="Class D and E listings must be standalone offers",
@@ -462,7 +487,7 @@ def create_listing_for_vendor(
     # (D8) before anything is written.
     category_name: str | None = None
     resolved_commission_key: str | None = None
-    if body.mode == "new_canonical" and body.category_id:
+    if body.mode in {"new_canonical", "quick_list"} and body.category_id:
         category_name, resolved_commission_key = _load_category_commission_key(
             service_client,
             body.category_id,
@@ -470,7 +495,7 @@ def create_listing_for_vendor(
 
     guard = screen_listing(
         title=body.title_override or body.product_name,
-        description=body.brand,
+        description=" ".join(part for part in (body.brand, body.description) if part),
         category=category_name,
     )
     if not guard.allowed:
@@ -578,6 +603,9 @@ def create_listing_for_vendor(
 
     if body.mode == "quick_list":
         listing_payload["product_id"] = None
+        listing_payload["category_id"] = body.category_id
+    if body.description is not None:
+        listing_payload["description"] = body.description.strip()
 
     listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
     created_listing = _single_row(listing_insert)
