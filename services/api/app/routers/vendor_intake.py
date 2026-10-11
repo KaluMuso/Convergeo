@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Final, Literal
+from uuid import UUID
 
 from app.core.auth import CurrentUser, require_role
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
@@ -40,7 +41,7 @@ from app.services.intake.config import require_lane_open_for
 from app.services.kyc.caps import enforce_listing_cap, load_vendor_cap_limits_by_id
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
-from pydantic import Field
+from pydantic import Field, field_validator
 
 router = APIRouter(prefix="/vendor/intake", tags=["vendor-intake"])
 
@@ -157,6 +158,59 @@ class SubmitResponse(StrictModel):
     listing_status: str
     session_status: str
     already_submitted: bool
+
+
+class SubmitRequest(StrictModel):
+    """An explicit human choice, separate from extracted draft fields."""
+
+    product_id: str
+
+    @field_validator("product_id")
+    @classmethod
+    def valid_product_id(cls, value: str) -> str:
+        return str(UUID(value))
+
+
+def _validate_canonical(
+    service_client: ServiceRoleClient, *, product_id: str, draft: dict[str, Any]
+) -> None:
+    product = _rows(
+        service_client.client.table("products")
+        .select(
+            "id, status, product_class, category_id, sale_unit, base_unit, "
+            "base_units_per_sale_unit_milli"
+        )
+        .eq("id", product_id)
+        .maybe_single()
+        .execute()
+    )
+    if not product or product[0].get("status") != "active":
+        raise handoff.DraftNotSubmittable("canonicalUnavailable")
+    canonical = product[0]
+    if canonical.get("product_class") != "A":
+        raise handoff.DraftNotSubmittable("unsupportedClass")
+    if (
+        canonical.get("sale_unit") != "each"
+        or canonical.get("base_unit") != "each"
+        or canonical.get("base_units_per_sale_unit_milli") != 1000
+    ):
+        raise handoff.DraftNotSubmittable("unsupported_mapping")
+    category_id = canonical.get("category_id")
+    category = (
+        _rows(
+            service_client.client.table("categories")
+            .select("id, prohibited")
+            .eq("id", category_id)
+            .maybe_single()
+            .execute()
+        )
+        if category_id
+        else []
+    )
+    if not category or category[0].get("prohibited") is not False:
+        raise handoff.DraftNotSubmittable("canonicalCategory")
+    if draft.get("category_id") and str(draft["category_id"]) != str(category_id):
+        raise handoff.DraftNotSubmittable("canonicalCategory")
 
 
 # --- Helpers ----------------------------------------------------------------
@@ -541,6 +595,7 @@ async def submit_intake_session(
     session_id: str,
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    body: SubmitRequest | None = None,
 ) -> SubmitResponse:
     """The vendor's explicit act: turn a reviewed draft into a draft listing.
 
@@ -552,20 +607,25 @@ async def submit_intake_session(
     vendor = _load_vendor(service_client, current_user.id)
     vendor_id = str(vendor["id"])
     require_lane_open_for(service_client, vendor_id)
-    session = _load_owned_session(
-        service_client, session_id=session_id, vendor_id=vendor_id
-    )
+    session = _load_owned_session(service_client, session_id=session_id, vendor_id=vendor_id)
 
     # Idempotent: a repeated submit returns the listing the first one produced.
     if session.get("listing_id"):
         listing_id = str(session["listing_id"])
         listing = _rows(
             service_client.client.table("vendor_listings")
-            .select("id, status")
+            .select("id, status, product_id")
             .eq("id", listing_id)
             .maybe_single()
             .execute()
         )
+        if body and (not listing or str(listing[0].get("product_id")) != body.product_id):
+            raise AppError(
+                code="intake_canonical_conflict",
+                message="This intake session was submitted with another canonical product",
+                http_status=409,
+                details={"message_key": "vendor.intake.errors.canonicalConflict"},
+            )
         return SubmitResponse(
             session_id=session_id,
             listing_id=listing_id,
@@ -584,16 +644,16 @@ async def submit_intake_session(
         )
 
     draft = _load_draft(service_client, session_id)
-    listing_request = handoff.build_listing_request(draft)
+    listing_request = handoff.build_listing_request(
+        draft, product_id=body.product_id if body else None
+    )
+    assert body is not None
+    _validate_canonical(service_client, product_id=body.product_id, draft=draft)
 
     # Same tier quota as a hand-typed listing. Checked before anything is written.
-    enforce_listing_cap(
-        load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor)
-    )
+    enforce_listing_cap(load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor))
 
-    created = create_listing_for_vendor(
-        service_client, vendor=vendor, body=listing_request
-    )
+    created = create_listing_for_vendor(service_client, vendor=vendor, body=listing_request)
     if created.status != "draft":
         # Defensive: the intake path must never mint an active listing. If the
         # shared seam ever changed, fail loudly rather than publish silently.

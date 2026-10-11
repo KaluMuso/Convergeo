@@ -1,12 +1,15 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
+import { CanonicalSearch } from "../../listings/new/_components/canonical-search";
+import { createListingClient } from "../../listings/new/_lib/listing-client";
 import { zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
   createIntakeClient,
@@ -14,6 +17,8 @@ import {
   type IntakeSessionDetail,
 } from "../_lib/intake-client";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
+
+import type { CanonicalPreview, SuggestItem } from "../../listings/new/_lib/types";
 
 type IntakeReviewProps = {
   locale: string;
@@ -47,9 +52,12 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
   const [submitting, setSubmitting] = useState(false);
   const [actionErrorKey, setActionErrorKey] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<SuggestItem | null>(null);
+  const [canonical, setCanonical] = useState<CanonicalPreview | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const intakeClient = useMemo(() => createIntakeClient(getToken), [getToken]);
+  const listingClient = useMemo(() => createListingClient(getToken), [getToken]);
 
   const hydrate = useCallback((next: IntakeSessionDetail) => {
     setDetail(next);
@@ -57,7 +65,26 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
     setPrice(ngweeToDecimal(next.draft.price_ngwee));
     setCondition(next.draft.condition ?? "");
     setDescription(next.draft.description ?? "");
+    setSelectedProduct(null);
+    setCanonical(null);
   }, []);
+
+  useEffect(() => {
+    setCanonical(null);
+    if (!selectedProduct) return;
+    let cancelled = false;
+    listingClient
+      .getCanonicalPreview(selectedProduct.entity_id)
+      .then((next) => {
+        if (!cancelled) setCanonical(next);
+      })
+      .catch(() => {
+        if (!cancelled) setActionErrorKey("intake.errors.canonicalUnavailable");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listingClient, selectedProduct]);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -114,18 +141,39 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
   };
 
   const handleSubmit = async () => {
+    if (!canonical || hasUnsavedChanges) return;
     setSubmitting(true);
     setActionErrorKey(null);
     try {
-      await intakeClient.submit(sessionId);
+      await intakeClient.submit(sessionId, canonical.product_id);
       setSubmitted(true);
       setReloadKey((key) => key + 1);
-    } catch {
-      setActionErrorKey("intake.errors.submitFailed");
+    } catch (error) {
+      const key = error instanceof ApiError ? error.details.message_key : null;
+      const knownKeys = [
+        "canonicalRequired",
+        "canonicalUnavailable",
+        "unsupportedClass",
+        "canonicalCategory",
+        "canonicalConflict",
+        "unsupported_mapping",
+      ];
+      setActionErrorKey(
+        typeof key === "string" && knownKeys.some((name) => key === `vendor.intake.errors.${name}`)
+          ? key.slice("vendor.".length)
+          : "intake.errors.submitFailed",
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
+  const hasUnsavedChanges =
+    detail !== null &&
+    (title !== (detail.draft.title ?? "") ||
+      price !== ngweeToDecimal(detail.draft.price_ngwee) ||
+      condition !== (detail.draft.condition ?? "") ||
+      description !== (detail.draft.description ?? ""));
 
   if (loading || sessionLoading) {
     return (
@@ -147,7 +195,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
   }
 
   return (
-    <section className="flex flex-col gap-5 p-4" data-testid="intake-review">
+    <section className="flex min-w-0 flex-col gap-5 break-words p-4" data-testid="intake-review">
       <header className="flex flex-col gap-1">
         <Link href={`/${locale}/intake`} className="text-sm underline">
           {t("intake.detail.back")}
@@ -199,7 +247,13 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
         }}
       >
         <FormField id="intake-title" label={t("intake.fields.title")}>
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+          <Input
+            value={title}
+            onChange={(event) => {
+              setTitle(event.target.value);
+              setSelectedProduct(null);
+            }}
+          />
         </FormField>
         <p className="text-xs text-muted-foreground">
           {t("intake.source.label")}:{" "}
@@ -220,7 +274,13 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
         </p>
 
         <FormField id="intake-condition" label={t("intake.fields.condition")}>
-          <Select value={condition} onChange={(event) => setCondition(event.target.value)}>
+          <Select
+            value={condition}
+            onChange={(event) => {
+              setCondition(event.target.value);
+              setSelectedProduct(null);
+            }}
+          >
             <option value="">—</option>
             <option value="new">{t("listings.fields.conditionNew")}</option>
             <option value="refurbished">{t("listings.fields.conditionRefurbished")}</option>
@@ -258,21 +318,61 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
         </p>
       ) : null}
 
-      {submitted ? (
+      {submitted || detail.listing_id ? (
         <p role="status" className="text-sm">
           {t("intake.detail.submitted")}
         </p>
       ) : (
-        <Button
-          type="button"
-          onClick={() => void handleSubmit()}
-          disabled={!detail.submittable || submitting}
-          loading={submitting}
-          loadingLabel={t("intake.detail.submitting")}
-          data-testid="intake-submit"
+        <section
+          className="flex min-w-0 flex-col gap-3"
+          aria-label={t("intake.detail.canonicalTitle")}
         >
-          {t("intake.detail.submit")}
-        </Button>
+          <h2 className="text-base font-medium">{t("intake.detail.canonicalTitle")}</h2>
+          <p className="text-sm">{t("intake.detail.canonicalIntro")}</p>
+          <CanonicalSearch
+            client={listingClient}
+            onSelect={(item) => {
+              setSelectedProduct(item);
+              setActionErrorKey(null);
+            }}
+            selectedId={selectedProduct?.entity_id ?? null}
+            labels={{
+              placeholder: t("listings.attach.searchPlaceholder"),
+              searching: t("listings.attach.searching"),
+              empty: t("listings.attach.empty"),
+              hint: t("listings.attach.hint"),
+            }}
+          />
+          {canonical ? (
+            <div
+              className="min-w-0 rounded-lg border border-border p-3"
+              data-testid="intake-canonical-preview"
+            >
+              <p className="font-medium">{canonical.name}</p>
+              <p className="text-sm">
+                {canonical.brand} · {canonical.category_name}
+              </p>
+              <p className="break-all text-xs">{JSON.stringify(canonical.spec)}</p>
+            </div>
+          ) : null}
+          {hasUnsavedChanges ? (
+            <p role="status" className="text-sm">
+              {t("intake.detail.saveBeforeSubmit")}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={
+              !detail.submittable || !canonical || hasUnsavedChanges || saving || submitting
+            }
+            loading={submitting}
+            loadingLabel={t("intake.detail.submitting")}
+            data-testid="intake-submit"
+          >
+            {t("intake.detail.submit")}
+          </Button>
+        </section>
       )}
     </section>
   );

@@ -65,7 +65,9 @@ def missing_fields(draft: dict[str, Any]) -> list[str]:
     return [name for name in REQUIRED_DRAFT_FIELDS if draft.get(name) in (None, "")]
 
 
-def build_listing_request(draft: dict[str, Any]) -> ListingCreateRequest:
+def build_listing_request(
+    draft: dict[str, Any], *, product_id: str | None = None
+) -> ListingCreateRequest:
     """Translate one ``intake_draft_fields`` row into a listing create request.
 
     Raises :class:`DraftNotSubmittable` — never returns a half-valid request.
@@ -91,6 +93,13 @@ def build_listing_request(draft: dict[str, Any]) -> ListingCreateRequest:
             "unsupported_condition", details={"condition": str(draft["condition"])}
         )
 
+    if (
+        draft.get("sale_unit") not in (None, "each")
+        or draft.get("pricing_mode") not in (None, "fixed")
+        or draft.get("stock_mode") == "made_to_order"
+    ):
+        raise DraftNotSubmittable("unsupported_mapping")
+
     stock_mode = _STOCK_MODE_MAP.get(str(draft.get("stock_mode") or "always"))
     if stock_mode is None:
         raise DraftNotSubmittable(
@@ -106,11 +115,23 @@ def build_listing_request(draft: dict[str, Any]) -> ListingCreateRequest:
             raise DraftNotSubmittable("missing_quantity")
         stock_qty = quantity
 
-    # quick_list: an intake draft has no canonical product yet. Admin attaches or
-    # promotes one in M18-P06 through the normal catalog moderation path.
+    if product_id is None:
+        raise AppError(
+            code="canonical_product_required",
+            message="Select an existing Class A canonical product before submitting",
+            http_status=422,
+            details={"message_key": "vendor.intake.errors.canonicalRequired"},
+        )
+
+    # The vendor explicitly selects a canonical at submission. The caller
+    # validates its active Class-A identity/category/unit; no model or name
+    # matching may invent this choice, and this handoff never creates products.
     return ListingCreateRequest(
-        mode="quick_list",
+        mode="attach",
+        product_id=product_id,
+        product_class="A",
         title_override=title,
+        description=draft.get("description"),
         price_ngwee=price_raw,
         condition=condition,  # type: ignore[arg-type]
         stock_mode=stock_mode,  # type: ignore[arg-type]
