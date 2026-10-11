@@ -34,6 +34,7 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -44,6 +45,7 @@ from app.main import create_app
 from app.services.intake import config as intake_config
 from app.services.intake import orchestrator, state_machine
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 SECRET = "test-waha-secret"
 SESSION_NAME = "vergeo-intake"
@@ -59,6 +61,8 @@ GROUP_JID = "120363000000000000@g.us"
 STRANGER_JID = "260979999999@c.us"
 
 WEBHOOK_URL = "/webhooks/waha-intake"
+PRODUCT_ID = "12345678-1234-4234-8234-123456789abc"
+CATEGORY_ID = "22345678-1234-4234-8234-123456789abc"
 JWT = "valid.jwt.token"
 
 
@@ -262,6 +266,46 @@ class FakeSupabase:
     def table(self, name: str) -> FakeTable:
         return self.tables.setdefault(name, FakeTable(name))
 
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        # An explicit RPC double keeps the real router/shared creation seam in
+        # this pilot. Database locking is exercised separately with two sessions.
+        assert name == "insert_intake_class_a_listing"
+
+        def execute() -> MagicMock:
+            products = [p for p in self.table("products").rows if p["id"] == params["p_product_id"]]
+            reason = None
+            if not products or products[0].get("status") != "active":
+                reason = "intake_canonical_unavailable"
+            elif products[0].get("product_class") != "A":
+                reason = "intake_canonical_class"
+            elif any(
+                products[0].get(k) != v
+                for k, v in {
+                    "sale_unit": "each",
+                    "base_unit": "each",
+                    "base_units_per_sale_unit_milli": 1000,
+                }.items()
+            ):
+                reason = "intake_canonical_units"
+            else:
+                category_id = products[0].get("category_id")
+                categories = [c for c in self.table("categories").rows if c["id"] == category_id]
+                if (
+                    category_id != params["p_expected_category_id"]
+                    or not categories
+                    or categories[0].get("prohibited") is not False
+                ):
+                    reason = "intake_canonical_category"
+            if reason:
+                raise APIError({"code": "23514", "message": reason, "details": None, "hint": None})
+            row = dict(params["p_listing_payload"], id=str(uuid.uuid4()))
+            self.table("vendor_listings").rows.append(row)
+            return MagicMock(
+                data=[{"id": row["id"], "status": row["status"], "product_id": row["product_id"]}]
+            )
+
+        return MagicMock(execute=execute)
+
 
 class Store:
     """Service-role wrapper, matching what the routers depend on."""
@@ -330,6 +374,28 @@ def store() -> Store:
             "payout_velocity": {},
         }
     )
+    st.rows("categories").append(
+        {
+            "id": CATEGORY_ID,
+            "name": "Appliances",
+            "commission_key": "default",
+            "prohibited": False,
+        }
+    )
+    st.rows("products").append(
+        {
+            "id": PRODUCT_ID,
+            "name": "Samsung RT38 Fridge",
+            "status": "active",
+            "product_class": "A",
+            "category_id": CATEGORY_ID,
+            "sale_unit": "each",
+            "base_unit": "each",
+            "base_units_per_sale_unit_milli": 1000,
+            "categories": {"name": "Appliances", "commission_key": "default"},
+        }
+    )
+    st.rows("commission_rates").append({"category_key": "default", "rate_bps": 500})
     # Tables the chain touches but never seeds itself.
     for name in (
         "intake_sessions",
@@ -438,6 +504,189 @@ def assert_nothing_published(store: Store) -> None:
 # ===========================================================================
 # Positive chain
 # ===========================================================================
+def _ready_pilot(api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch) -> str:
+    assert deliver(api, inbound()).status_code == 200
+    session_id = str(store.rows("intake_sessions")[0]["id"])
+    orchestrator.progress_session(
+        store,
+        session_id=session_id,
+        vendor_id=VENDOR_ID,
+        text="Samsung fridge, brand new, K3500",
+    )
+    _as(monkeypatch, VENDOR_USER_ID, frozenset({"vendor"}))
+    response = api.patch(
+        f"/vendor/intake/sessions/{session_id}/draft",
+        headers=_auth(),
+        json={"title": "Samsung RT38 Fridge", "condition": "new"},
+    )
+    assert response.status_code == 200
+    store.rows("intake_sessions")[0]["status"] = state_machine.READY_FOR_VENDOR_REVIEW
+    return session_id
+
+
+def test_exact_name_candidate_does_not_replace_explicit_vendor_selection(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session_id = _ready_pilot(api, store, monkeypatch)
+    assert store.rows("products")[0]["name"] == store.rows("intake_draft_fields")[0]["title"]
+    before = json.dumps(store.client.tables["intake_sessions"].rows, sort_keys=True)
+    response = api.post(f"/vendor/intake/sessions/{session_id}/submit", headers=_auth())
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "canonical_product_required"
+    assert_nothing_published(store)
+    assert len(store.rows("products")) == 1
+    assert json.dumps(store.rows("intake_sessions"), sort_keys=True) == before
+
+
+@pytest.mark.parametrize(
+    "target,field,value,reason",
+    [
+        ("products", "id", CATEGORY_ID, "canonicalUnavailable"),
+        ("products", "status", "pending_moderation", "canonicalUnavailable"),
+        ("products", "status", "archived", "canonicalUnavailable"),
+        ("products", "product_class", "B", "unsupportedClass"),
+        ("products", "product_class", "C", "unsupportedClass"),
+        ("products", "product_class", "D", "unsupportedClass"),
+        ("products", "product_class", "E", "unsupportedClass"),
+        ("products", "product_class", None, "unsupportedClass"),
+        ("products", "category_id", None, "canonicalCategory"),
+        ("products", "sale_unit", "kg", "unsupported_mapping"),
+        ("products", "base_unit", "kg", "unsupported_mapping"),
+        ("products", "base_units_per_sale_unit_milli", 500, "unsupported_mapping"),
+        ("categories", "prohibited", True, "canonicalCategory"),
+        ("categories", "id", PRODUCT_ID, "canonicalCategory"),
+        ("intake_draft_fields", "category_id", PRODUCT_ID, "canonicalCategory"),
+        ("intake_draft_fields", "sale_unit", "metre", "unsupported_mapping"),
+        ("intake_draft_fields", "stock_mode", "made_to_order", "unsupported_mapping"),
+        ("intake_draft_fields", "pricing_mode", "negotiable", "unsupported_mapping"),
+        ("intake_draft_fields", "pricing_mode", "tiered", "unsupported_mapping"),
+    ],
+)
+def test_canonical_intake_rejects_incompatible_mapping_before_write(
+    api: TestClient,
+    store: Store,
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+    field: str,
+    value: Any,
+    reason: str,
+) -> None:
+    session_id = _ready_pilot(api, store, monkeypatch)
+    store.rows(target)[0][field] = value
+    before = json.dumps(store.rows("intake_sessions"), sort_keys=True)
+    products = json.dumps(store.rows("products"), sort_keys=True)
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["details"]["reason"] == reason
+    assert_nothing_published(store)
+    assert json.dumps(store.rows("products"), sort_keys=True) == products
+    assert json.dumps(store.rows("intake_sessions"), sort_keys=True) == before
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"product_id": "not-a-uuid"},
+        {"product_id": None},
+        {"product_id": PRODUCT_ID, "product_class": "D"},
+        {"product_id": PRODUCT_ID, "product_class": "E"},
+        {"product_id": PRODUCT_ID, "product_variant_id": PRODUCT_ID},
+        {"product_id": PRODUCT_ID, "commodity_key": "fridge"},
+        {"product_id": PRODUCT_ID, "publish": True},
+        {},
+    ],
+)
+def test_intake_selection_rejects_invalid_or_extra_request_fields(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]
+) -> None:
+    session_id = _ready_pilot(api, store, monkeypatch)
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit", headers=_auth(), json=payload
+    )
+    assert response.status_code == 422
+    assert_nothing_published(store)
+    assert store.rows("intake_sessions")[0]["listing_id"] is None
+
+
+def test_canonical_intake_still_enforces_owner_and_quota_before_create(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    session_id = _ready_pilot(api, store, monkeypatch)
+    store.rows("vendors").append(
+        {"id": CATEGORY_ID, "owner_user_id": ADMIN_USER_ID, "status": "active", "kyc_tier": 2}
+    )
+    for row in store.rows("platform_config"):
+        if row["key"] == intake_config.INTAKE_ALLOWLIST_KEY:
+            row["value"] = [VENDOR_ID, CATEGORY_ID]
+    _as(monkeypatch, ADMIN_USER_ID, frozenset({"vendor"}))
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 403
+    assert_nothing_published(store)
+    _as(monkeypatch, VENDOR_USER_ID, frozenset({"vendor"}))
+    store.rows("vendors")[0]["kyc_tier"] = 1
+    store.rows("vendor_quotas")[0]["max_listings"] = 1
+    store.rows("vendor_listings").append(
+        {"id": "existing", "vendor_id": VENDOR_ID, "status": "active", "product_id": PRODUCT_ID}
+    )
+    before = json.dumps(store.rows("intake_sessions"), sort_keys=True)
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 403, response.text
+    assert len(store.rows("vendor_listings")) == 1
+    assert json.dumps(store.rows("intake_sessions"), sort_keys=True) == before
+
+
+@pytest.mark.parametrize(
+    "target,field,value,reason",
+    [
+        ("products", "product_class", "B", "unsupportedClass"),
+        ("products", "sale_unit", "kg", "unsupported_mapping"),
+        ("products", "category_id", PRODUCT_ID, "canonicalCategory"),
+        ("categories", "prohibited", True, "canonicalCategory"),
+    ],
+)
+def test_canonical_changed_after_preflight_is_rejected_before_insert(
+    api: TestClient,
+    store: Store,
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+    field: str,
+    value: Any,
+    reason: str,
+) -> None:
+    from app.routers import vendor_intake
+
+    session_id = _ready_pilot(api, store, monkeypatch)
+    original = vendor_intake._validate_canonical
+
+    def mutate_after_preflight(*args: Any, **kwargs: Any) -> str:
+        category_id = original(*args, **kwargs)
+        store.rows(target)[0][field] = value
+        return category_id
+
+    monkeypatch.setattr(vendor_intake, "_validate_canonical", mutate_after_preflight)
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["details"]["reason"] == reason
+    assert_nothing_published(store)
+    assert store.rows("intake_sessions")[0]["listing_id"] is None
+
+
 def test_inbound_creates_a_private_record_and_never_a_listing(
     api: TestClient, store: Store
 ) -> None:
@@ -500,14 +749,51 @@ def test_full_chain_ends_active_only_after_a_human_approves(
 
     # 4. Vendor submits — explicitly.
     submit_response = api.post(
-        f"/vendor/intake/sessions/{session_id}/submit", headers=_auth()
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
     )
     assert submit_response.status_code == 200, submit_response.text
     submitted = submit_response.json()
     assert submitted["listing_status"] == "draft", "submission must never publish"
     assert submitted["session_status"] == state_machine.PENDING_ADMIN_REVIEW
     listing_id = submitted["listing_id"]
-    assert store.rows("vendor_listings")[0]["status"] == "draft"
+    listing = store.rows("vendor_listings")[0]
+    assert listing["status"] == "draft"
+    assert listing["product_id"] == PRODUCT_ID
+    assert listing["product_class"] == "A"
+    assert listing["price_ngwee"] == 350_000
+    assert len(store.rows("products")) == 1
+    # A retry preserves the explicitly selected identity; a change conflicts.
+    retry = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert retry.status_code == 200 and retry.json()["already_submitted"]
+    legacy_retry = api.post(f"/vendor/intake/sessions/{session_id}/submit", headers=_auth())
+    assert legacy_retry.status_code == 200 and legacy_retry.json()["already_submitted"]
+    conflict = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": CATEGORY_ID},
+    )
+    assert conflict.status_code == 409
+    assert len(store.rows("vendor_listings")) == 1
+    store.rows("vendors").append(
+        {"id": CATEGORY_ID, "owner_user_id": ADMIN_USER_ID, "status": "active", "kyc_tier": 2}
+    )
+    for row in store.rows("platform_config"):
+        if row["key"] == intake_config.INTAKE_ALLOWLIST_KEY:
+            row["value"] = [VENDOR_ID, CATEGORY_ID]
+    _as(monkeypatch, ADMIN_USER_ID, frozenset({"vendor"}))
+    wrong_owner_retry = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert wrong_owner_retry.status_code == 403
+    assert len(store.rows("vendor_listings")) == 1
 
     # 5. Admin approves — the only step that can make it buyable.
     _as(monkeypatch, ADMIN_USER_ID, frozenset({"admin"}))

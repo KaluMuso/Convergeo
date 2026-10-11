@@ -73,6 +73,7 @@ describe("admin login page", () => {
 
     expect(html).toContain(authMessages.email.emailLabel);
     expect(html).toContain(authMessages.email.passwordLabel);
+    expect(html).toContain('href="/en/reset-password"');
     expect(html).not.toContain('type="tel"');
     expect(html).not.toContain(authMessages.login.phoneLabel);
     expect(html).not.toContain(authMessages.login.emailToggle);

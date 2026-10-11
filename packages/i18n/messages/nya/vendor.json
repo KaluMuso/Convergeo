@@ -1756,7 +1756,10 @@
       "submit": "Submit for review",
       "submitting": "Submitting…",
       "submitted": "Submitted for review. Convergeo will check it shortly.",
-      "back": "Back to drafts"
+      "back": "Back to drafts",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
     },
     "fields": {
       "title": "Product name",
@@ -1798,7 +1801,13 @@
       "invalid_price": "The price is not valid.",
       "missing_quantity": "Add how many you have in stock.",
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
-      "unsupported_stock_mode": "That stock option is not supported."
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
   },
   "clips": {

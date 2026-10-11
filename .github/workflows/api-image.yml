@@ -17,6 +17,10 @@ on:
         description: Full source commit SHA for a branch-only image
         required: false
         type: string
+      expected_control_sha:
+        description: Reviewed workflow commit SHA for the RC744 candidate image job
+        required: false
+        type: string
 
 concurrency:
   group: api-image-${{ github.ref }}
@@ -134,3 +138,125 @@ jobs:
           push: true
           tags: ghcr.io/kalumuso/convergeo-api:${{ github.sha }}
           cache-from: type=gha
+  build-rc744-candidate:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/wp/integrate-auth-catalog-wave1' &&
+      github.repository == 'KaluMuso/Convergeo'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      CANDIDATE_SHA: ef8dae53a2d7512aea353380b90f8563f9be1082
+      CANDIDATE_TREE: ed63b38b5c84c62adf0916ea543e896a86f9425b
+    steps:
+      - name: Checkout frozen application candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          path: candidate
+          persist-credentials: false
+
+      - name: Bind candidate source and unique tag
+        id: source
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_CONTROL_SHA: ${{ inputs.expected_control_sha }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY}" = 'KaluMuso/Convergeo'
+          test "${GITHUB_REF}" = 'refs/heads/wp/integrate-auth-catalog-wave1'
+          test "${GITHUB_EVENT_NAME}" = 'workflow_dispatch'
+          [[ "${EXPECTED_CONTROL_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          test "${GITHUB_SHA}" = "${EXPECTED_CONTROL_SHA}"
+          test "${EXPECTED_SHA}" = "${CANDIDATE_SHA}"
+          test "$(git -C candidate rev-parse HEAD)" = "${CANDIDATE_SHA}"
+          test "$(git -C candidate rev-parse 'HEAD^{tree}')" = "${CANDIDATE_TREE}"
+          [[ "${GITHUB_RUN_ID}" =~ ^[1-9][0-9]*$ ]]
+          [[ "${GITHUB_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
+          printf 'tag=ghcr.io/kalumuso/convergeo-api:rc744-%s-%s-%s\n' \
+            "${CANDIDATE_SHA}" "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Log in to GHCR with the job token
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Refuse existing tags and ambiguous registry failures
+        env:
+          IMAGE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          set -euo pipefail
+          probe_error="$(mktemp)"
+          trap 'rm -f "${probe_error}"' EXIT
+          if docker buildx imagetools inspect "${IMAGE_TAG}" >/dev/null 2>"${probe_error}"; then
+            echo '::error::candidate image tag already exists; refusing overwrite'
+            exit 1
+          fi
+          if [[ "$(cat "${probe_error}")" != "ERROR: ${IMAGE_TAG}: not found" ]]; then
+            echo '::error::registry did not report exact tag absence; refusing publish'
+            exit 1
+          fi
+
+      - name: Publish only the frozen candidate under its unique RC tag
+        id: image
+        uses: docker/build-push-action@v7
+        with:
+          context: candidate
+          file: candidate/infra/api.Dockerfile
+          build-args: |
+            GIT_SHA=${{ env.CANDIDATE_SHA }}
+            API_IMAGE_TAG=${{ env.CANDIDATE_SHA }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.CANDIDATE_SHA }}
+            org.opencontainers.image.source=https://github.com/KaluMuso/Convergeo
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.source.outputs.tag }}
+
+      - name: Record public candidate image receipt
+        env:
+          IMAGE_TAG: ${{ steps.source.outputs.tag }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          digest = os.environ["IMAGE_DIGEST"]
+          if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+              raise SystemExit("missing or invalid published image digest")
+          receipt = {
+              "source_sha": os.environ["CANDIDATE_SHA"],
+              "source_tree": os.environ["CANDIDATE_TREE"],
+              "workflow_sha": os.environ["WORKFLOW_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "tag": os.environ["IMAGE_TAG"],
+              "digest": digest,
+              "image": "ghcr.io/kalumuso/convergeo-api@" + digest,
+          }
+          Path("candidate-image-receipt.json").write_text(
+              json.dumps(receipt, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+
+      - name: Upload candidate image receipt
+        uses: actions/upload-artifact@v7
+        with:
+          name: rc744-image-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: candidate-image-receipt.json
+          if-no-files-found: error

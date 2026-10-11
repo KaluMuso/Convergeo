@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SetAllCookies } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { mergeSecureCookieOptions } from "./cookie-security";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
+
+import type { SetAllCookies } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 
 export type AuthGate = "none" | "vendor" | "admin";
 export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
@@ -184,11 +185,9 @@ export function getLocaleFromPath(
 }
 
 /**
- * `/login` AND `/otp` stay exempt from a portal's role gate: a phone-OTP
- * login is a two-request flow (request code, then verify it) and there is no
- * authenticated session yet on either request — gating `/otp` the same as any
- * other route would bounce an anonymous, mid-login user straight back to
- * `/login` before they ever get to enter the code.
+ * Login, OTP, and password recovery stay reachable before a portal role is
+ * established. Recovery is limited to the request and confirm pages; the
+ * recovery session can exist before the user's portal role is available.
  */
 export function isAuthExemptPath(pathname: string, locales: readonly string[]): boolean {
   const segments = pathname.split("/").filter(Boolean);
@@ -201,6 +200,9 @@ export function isAuthExemptPath(pathname: string, locales: readonly string[]): 
     return false;
   }
 
+  if (segments[1] === "reset-password") {
+    return segments.length === 2 || (segments.length === 3 && segments[2] === "confirm");
+  }
   return segments[1] === "login" || segments[1] === "otp";
 }
 

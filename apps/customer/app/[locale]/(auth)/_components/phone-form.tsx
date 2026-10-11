@@ -126,28 +126,32 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login", nextParam }
         asGroup
       >
         <div className="flex gap-2">
-          <Input
-            size="lg"
-            className="w-24 shrink-0 text-center font-mono"
-            value={countryCode}
-            readOnly
-            aria-label={labels.countryCode}
-          />
-          <Input
-            size="lg"
-            className="min-w-0 flex-1 font-mono"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            placeholder={labels.phonePlaceholder}
-            aria-label={labels.nationalNumber}
-            aria-required
-            value={nationalNumber}
-            error={Boolean(errorMessage)}
-            onChange={(event) => {
-              setNationalNumber(normalizeNationalNumber(event.target.value));
-            }}
-          />
+          <div className="w-24 shrink-0">
+            <Input
+              size="lg"
+              className="text-center font-mono"
+              value={countryCode}
+              readOnly
+              aria-label={labels.countryCode}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <Input
+              size="lg"
+              className="font-mono"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder={labels.phonePlaceholder}
+              aria-label={labels.nationalNumber}
+              aria-required
+              value={nationalNumber}
+              error={Boolean(errorMessage)}
+              onChange={(event) => {
+                setNationalNumber(normalizeNationalNumber(event.target.value));
+              }}
+            />
+          </div>
         </div>
       </FormField>
 

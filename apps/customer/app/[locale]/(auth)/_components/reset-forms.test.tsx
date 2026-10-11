@@ -90,7 +90,7 @@ describe("ResetRequestForm", () => {
       { redirectTo: string },
     ];
     expect(emailArg).toBe("founder@example.com");
-    expect(opts.redirectTo).toContain("/en/reset-password/confirm");
+    expect(opts.redirectTo).toBe(`${window.location.origin}/en/reset-password/confirm`);
     expect(screen.getByText(/a reset link is on its way/i)).toBeInTheDocument();
   });
 
@@ -135,5 +135,74 @@ describe("ResetConfirmForm", () => {
       expect(screen.getByText(/reset link is invalid or has expired/i)).toBeInTheDocument(),
     );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("shows the password form for an established session without a code or URL errors", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm");
+    getSession.mockResolvedValue({ data: { session: { access_token: "recovery-session" } } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+    );
+    expect(screen.getAllByLabelText(/password/i)).toHaveLength(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expired code and never offers the password form", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=expired");
+    exchangeCodeForSession.mockResolvedValue({ error: { message: "expired" } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["query error", "?error=access_denied"],
+    ["query error_code", "?error_code=otp_expired"],
+    ["fragment error", "#error=access_denied"],
+    ["fragment error_code", "#error_code=otp_expired"],
+    ["code with fragment error", "?code=valid#state=x&error=access_denied"],
+  ])("rejects %s with and without an unrelated session", async (_name, suffix) => {
+    for (const session of [null, { access_token: "other-session" }]) {
+      window.history.replaceState({}, "", `/en/reset-password/confirm${suffix}`);
+      getSession.mockResolvedValue({ data: { session } });
+      const view = renderWithIntl(<ResetConfirmForm locale="en" />);
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+      );
+      expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
+      expect(exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(getSession).not.toHaveBeenCalled();
+      expect(updateUser).not.toHaveBeenCalled();
+      view.unmount();
+    }
+  });
+
+  it("ends checking when code exchange rejects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=bad");
+    exchangeCodeForSession.mockRejectedValue(new Error("network unavailable"));
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+  });
+
+  it("exchanges a single-use code once under React strict effects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=single-use");
+    renderWithIntl(
+      <React.StrictMode>
+        <ResetConfirmForm locale="en" />
+      </React.StrictMode>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+    );
+    expect(exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 });
