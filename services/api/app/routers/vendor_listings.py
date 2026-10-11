@@ -601,6 +601,12 @@ def create_listing_for_vendor(
         "status": _resolve_listing_status(body.mode, body.publish),
     }
 
+    # The SQL parent-condition constraint and its backfill require these exact
+    # mirrors. Both come from the explicit validated condition; used grading
+    # carries additional information and must not be guessed here.
+    if body.condition in {"new", "refurbished"}:
+        listing_payload["condition_detail"] = body.condition
+
     if body.mode == "quick_list":
         listing_payload["product_id"] = None
         listing_payload["category_id"] = body.category_id

@@ -316,6 +316,55 @@ def test_attach_creation_path(listing_client: TestClient) -> None:
     assert body["commission"]["rate_percent"] == 5.0
 
 
+@pytest.mark.parametrize("condition", ["new", "refurbished"])
+@pytest.mark.parametrize("mode", ["attach", "new_canonical"])
+def test_condition_detail_mirrors_explicit_validated_condition(
+    listing_client: TestClient, fake_client: FakeSupabaseClient,
+    condition: str, mode: str,
+) -> None:
+    payload = _base_payload(condition=condition, publish=False)
+    if mode == "new_canonical":
+        payload.update(mode=mode, product_id=None, product_name="New Gadget Pro",
+                       category_id=CATEGORY_ID)
+    response = listing_client.post("/vendor/listings", headers=_auth_headers(), json=payload)
+    assert response.status_code == 200, response.text
+    created = fake_client.tables["vendor_listings"].rows[-1]
+    assert created["condition"] == condition
+    assert created["condition_detail"] == condition
+    assert created["status"] == "draft"
+
+
+@pytest.mark.parametrize("condition", [None, "", "open_box", "used_good", "invalid", True])
+def test_condition_detail_is_not_invented_for_invalid_condition(
+    listing_client: TestClient, fake_client: FakeSupabaseClient, condition: Any,
+) -> None:
+    payload = _base_payload(condition=condition)
+    response = listing_client.post("/vendor/listings", headers=_auth_headers(), json=payload)
+    assert response.status_code == 422
+    _assert_no_offer_writes(fake_client)
+
+
+def test_missing_explicit_condition_is_rejected_instead_of_defaulting_new(
+    listing_client: TestClient, fake_client: FakeSupabaseClient,
+) -> None:
+    payload = _base_payload()
+    del payload["condition"]
+    response = listing_client.post("/vendor/listings", headers=_auth_headers(), json=payload)
+    assert response.status_code == 422
+    _assert_no_offer_writes(fake_client)
+
+
+def test_caller_cannot_override_validated_condition_mirror(
+    listing_client: TestClient, fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings", headers=_auth_headers(),
+        json=_base_payload(condition="new", condition_detail="refurbished"),
+    )
+    assert response.status_code == 422
+    _assert_no_offer_writes(fake_client)
+
+
 def test_new_canonical_creation_path(
     listing_client: TestClient,
     fake_client: FakeSupabaseClient,
