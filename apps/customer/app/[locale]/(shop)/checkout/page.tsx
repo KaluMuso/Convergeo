@@ -2,7 +2,7 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { CheckoutShell } from "./_components/step-fulfilment";
+import { CheckoutShell, ExistingCheckoutStatus } from "./_components/step-fulfilment";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export function generateStaticParams() {
@@ -165,7 +166,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
   };
 }
 
-export default async function CheckoutPage({ params }: PageProps) {
+export default async function CheckoutPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -176,6 +177,54 @@ export default async function CheckoutPage({ params }: PageProps) {
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const query = (await searchParams) ?? {};
+  const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
+  const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
+
+  // Supplied handoffs never fall through to product-cart creation, even invalid ones.
+  if (hasSession || hasGroup) {
+    const suppliedId = hasSession ? query.session : query.group;
+    const groupId =
+      hasSession !== hasGroup &&
+      typeof suppliedId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
+        ? suppliedId
+        : null;
+    const t = createTranslator({ locale, messages, namespace: "checkout" });
+    const ordersMessages = await loadNamespace(locale as Locale, "orders");
+    const orders = createTranslator({
+      locale,
+      messages: { orders: ordersMessages } as AbstractIntlMessages,
+      namespace: "orders",
+    });
+    const adminMessages = await loadNamespace(locale as Locale, "admin");
+    const admin = createTranslator({
+      locale,
+      messages: { admin: adminMessages } as AbstractIntlMessages,
+      namespace: "admin",
+    });
+
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <ExistingCheckoutStatus
+          key={`${locale}:${groupId ?? "invalid"}`}
+          groupId={groupId}
+          labels={{
+            title: t("checkout.pageTitle"),
+            loading: t("checkout.contact.loading"),
+            error: t("checkout.error"),
+            expired: t("checkout.countdown.expired"),
+            statusTemplate: orders.raw("list.status"),
+            // These existing labels are neutral states, not payment outcomes.
+            pending: admin("business.queue.filter.pending"),
+            completed: orders("status.completed"),
+            payment: t("checkout.steps.payment"),
+            unavailable: t("checkout.payment.unavailable"),
+          }}
+        />
+      </div>
+    );
+  }
   const labels = buildCheckoutLabels(locale, messages);
 
   return (
