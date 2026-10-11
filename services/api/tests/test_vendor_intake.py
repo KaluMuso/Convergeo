@@ -322,7 +322,10 @@ def _stub_listing_creation(
 
     from app.routers.vendor_listings import ListingCreateResponse
 
-    def fake_create(service_client: Any, *, vendor: dict[str, Any], body: Any) -> Any:
+    def fake_create(
+        service_client: Any, *, vendor: dict[str, Any], body: Any, insert_listing: Any = None
+    ) -> Any:
+        assert insert_listing is not None
         captured["vendor_id"] = vendor["id"]
         captured["body"] = body
         service_client.client.table("vendor_listings").insert(

@@ -37,6 +37,7 @@ from app.errors import AppError
 from app.routers.vendor_listings import create_listing_for_vendor
 from app.schemas.base import StrictModel
 from app.services.intake import deeplink, handoff, state_machine
+from app.services.intake.canonical_insert import insert_intake_class_a_listing
 from app.services.intake.config import require_lane_open_for
 from app.services.kyc.caps import enforce_listing_cap, load_vendor_cap_limits_by_id
 from app.services.kyc.state_machine import ServiceRoleClient
@@ -173,7 +174,7 @@ class SubmitRequest(StrictModel):
 
 def _validate_canonical(
     service_client: ServiceRoleClient, *, product_id: str, draft: dict[str, Any]
-) -> None:
+) -> str:
     product = _rows(
         service_client.client.table("products")
         .select(
@@ -211,6 +212,7 @@ def _validate_canonical(
         raise handoff.DraftNotSubmittable("canonicalCategory")
     if draft.get("category_id") and str(draft["category_id"]) != str(category_id):
         raise handoff.DraftNotSubmittable("canonicalCategory")
+    return str(category_id)
 
 
 # --- Helpers ----------------------------------------------------------------
@@ -648,12 +650,23 @@ async def submit_intake_session(
         draft, product_id=body.product_id if body else None
     )
     assert body is not None
-    _validate_canonical(service_client, product_id=body.product_id, draft=draft)
+    category_id = _validate_canonical(service_client, product_id=body.product_id, draft=draft)
 
     # Same tier quota as a hand-typed listing. Checked before anything is written.
     enforce_listing_cap(load_vendor_cap_limits_by_id(service_client, vendor_id, vendor_row=vendor))
 
-    created = create_listing_for_vendor(service_client, vendor=vendor, body=listing_request)
+    created = create_listing_for_vendor(
+        service_client,
+        vendor=vendor,
+        body=listing_request,
+        insert_listing=lambda payload: insert_intake_class_a_listing(
+            service_client,
+            vendor_id=vendor_id,
+            product_id=body.product_id,
+            expected_category_id=category_id,
+            payload=payload,
+        ),
+    )
     if created.status != "draft":
         # Defensive: the intake path must never mint an active listing. If the
         # shared seam ever changed, fail loudly rather than publish silently.

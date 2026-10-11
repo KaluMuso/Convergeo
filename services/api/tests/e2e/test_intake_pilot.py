@@ -34,6 +34,7 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -44,6 +45,7 @@ from app.main import create_app
 from app.services.intake import config as intake_config
 from app.services.intake import orchestrator, state_machine
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 SECRET = "test-waha-secret"
 SESSION_NAME = "vergeo-intake"
@@ -263,6 +265,46 @@ class FakeSupabase:
 
     def table(self, name: str) -> FakeTable:
         return self.tables.setdefault(name, FakeTable(name))
+
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        # An explicit RPC double keeps the real router/shared creation seam in
+        # this pilot. Database locking is exercised separately with two sessions.
+        assert name == "insert_intake_class_a_listing"
+
+        def execute() -> MagicMock:
+            products = [p for p in self.table("products").rows if p["id"] == params["p_product_id"]]
+            reason = None
+            if not products or products[0].get("status") != "active":
+                reason = "intake_canonical_unavailable"
+            elif products[0].get("product_class") != "A":
+                reason = "intake_canonical_class"
+            elif any(
+                products[0].get(k) != v
+                for k, v in {
+                    "sale_unit": "each",
+                    "base_unit": "each",
+                    "base_units_per_sale_unit_milli": 1000,
+                }.items()
+            ):
+                reason = "intake_canonical_units"
+            else:
+                category_id = products[0].get("category_id")
+                categories = [c for c in self.table("categories").rows if c["id"] == category_id]
+                if (
+                    category_id != params["p_expected_category_id"]
+                    or not categories
+                    or categories[0].get("prohibited") is not False
+                ):
+                    reason = "intake_canonical_category"
+            if reason:
+                raise APIError({"code": "23514", "message": reason, "details": None, "hint": None})
+            row = dict(params["p_listing_payload"], id=str(uuid.uuid4()))
+            self.table("vendor_listings").rows.append(row)
+            return MagicMock(
+                data=[{"id": row["id"], "status": row["status"], "product_id": row["product_id"]}]
+            )
+
+        return MagicMock(execute=execute)
 
 
 class Store:
@@ -603,6 +645,46 @@ def test_canonical_intake_still_enforces_owner_and_quota_before_create(
     assert response.status_code == 403, response.text
     assert len(store.rows("vendor_listings")) == 1
     assert json.dumps(store.rows("intake_sessions"), sort_keys=True) == before
+
+
+@pytest.mark.parametrize(
+    "target,field,value,reason",
+    [
+        ("products", "product_class", "B", "unsupportedClass"),
+        ("products", "sale_unit", "kg", "unsupported_mapping"),
+        ("products", "category_id", PRODUCT_ID, "canonicalCategory"),
+        ("categories", "prohibited", True, "canonicalCategory"),
+    ],
+)
+def test_canonical_changed_after_preflight_is_rejected_before_insert(
+    api: TestClient,
+    store: Store,
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+    field: str,
+    value: Any,
+    reason: str,
+) -> None:
+    from app.routers import vendor_intake
+
+    session_id = _ready_pilot(api, store, monkeypatch)
+    original = vendor_intake._validate_canonical
+
+    def mutate_after_preflight(*args: Any, **kwargs: Any) -> str:
+        category_id = original(*args, **kwargs)
+        store.rows(target)[0][field] = value
+        return category_id
+
+    monkeypatch.setattr(vendor_intake, "_validate_canonical", mutate_after_preflight)
+    response = api.post(
+        f"/vendor/intake/sessions/{session_id}/submit",
+        headers=_auth(),
+        json={"product_id": PRODUCT_ID},
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["details"]["reason"] == reason
+    assert_nothing_published(store)
+    assert store.rows("intake_sessions")[0]["listing_id"] is None
 
 
 def test_inbound_creates_a_private_record_and_never_a_listing(

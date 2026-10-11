@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
@@ -443,6 +444,7 @@ def create_listing_for_vendor(
     *,
     vendor: dict[str, Any],
     body: ListingCreateRequest,
+    insert_listing: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> ListingCreateResponse:
     """The listing-creation seam, callable without an HTTP request.
 
@@ -454,6 +456,8 @@ def create_listing_for_vendor(
 
     Callers are responsible for the KYC listing cap (the route does it via
     ``require_listing_cap``; M18-P05 calls ``enforce_listing_cap`` explicitly).
+    ``insert_listing`` is an internal intake hook, never a request field; it
+    replaces only insertion after all shared validation and payload construction.
     """
     vendor_id = str(vendor["id"])
 
@@ -613,8 +617,13 @@ def create_listing_for_vendor(
     if body.description is not None:
         listing_payload["description"] = body.description.strip()
 
-    listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
-    created_listing = _single_row(listing_insert)
+    if insert_listing is None:
+        listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
+        created_listing = _single_row(listing_insert)
+    else:
+        # Intake retains every shared validation and uses its same-client RPC
+        # solely for the canonical-locked insert. Never fall back on RPC failure.
+        created_listing = insert_listing(listing_payload)
     if created_listing is None:
         raise AppError(
             code="internal_error",
