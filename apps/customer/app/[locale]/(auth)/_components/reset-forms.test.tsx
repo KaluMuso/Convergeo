@@ -137,6 +137,21 @@ describe("ResetConfirmForm", () => {
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
+  it("shows the password form for an established session without a code or URL errors", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm");
+    getSession.mockResolvedValue({ data: { session: { access_token: "recovery-session" } } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+    );
+    expect(screen.getAllByLabelText(/password/i)).toHaveLength(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
   it("rejects an expired code and never offers the password form", async () => {
     window.history.replaceState({}, "", "/en/reset-password/confirm?code=expired");
     exchangeCodeForSession.mockResolvedValue({ error: { message: "expired" } });
