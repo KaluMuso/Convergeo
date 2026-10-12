@@ -88,7 +88,7 @@ def _read_platform_config_int(client: Any, key: str, default: int) -> int:
     response = (
         _table(client, "platform_config").select("value").eq("key", key).maybe_single().execute()
     )
-    data = response.data
+    data = response.data if response is not None else None
     if not isinstance(data, dict):
         return default
     value = data.get("value")
