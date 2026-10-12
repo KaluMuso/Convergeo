@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   checkpoints,
   ipv4Rules,
@@ -9,6 +12,53 @@ import {
 } from "./assert-cart-response-drill.mjs";
 
 const sha = "a".repeat(40);
+for (const health of [
+  "",
+  "broken JSON",
+  JSON.stringify([
+    { name: "api", ok: false, secret: "SENTINEL_PRIVATE_VALUE" },
+    { name: "customer", ok: true },
+  ]),
+])
+  test("startup diagnostics survive incomplete health and omit unapproved fields", () => {
+    const shell = readFileSync(
+      new URL("../qa/run-cart-response-drill.sh", import.meta.url),
+      "utf8",
+    );
+    const code = shell
+      .split('python3 - "$drill_output" "$drill_phase"')[1]
+      .split("<<'PY'\n")[1]
+      .split("\nPY")[0];
+    const directory = mkdtempSync(join(tmpdir(), "cart-drill-diagnostic-"));
+    try {
+      writeFileSync(join(directory, "private-health-probe.json"), health);
+      writeFileSync(
+        join(directory, "private-api.log"),
+        "libpython Permission denied SENTINEL_PRIVATE_VALUE",
+      );
+      const result = spawnSync(
+        "python3",
+        ["-c", code, directory, "server_startup", "1", "1", "running"],
+        { encoding: "utf8" },
+      );
+      assert.equal(result.status, 0, result.stderr);
+      const output = readFileSync(join(directory, "diagnostics.json"), "utf8");
+      assert.ok(!output.includes("SENTINEL_PRIVATE_VALUE"));
+      const receipt = JSON.parse(output);
+      assert.deepEqual(receipt.api_log_categories, [
+        "Permission denied",
+        "libpython",
+      ]);
+      if (health.startsWith("["))
+        assert.deepEqual(receipt.latest_health, [
+          { name: "api", ok: false },
+          { name: "customer", ok: true },
+        ]);
+      else assert.equal(receipt.health_evidence, "unavailable_or_malformed");
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 function fixture() {
   return {
     outcome: {
@@ -141,4 +191,6 @@ test("workflow owns one bounded fail-closed drill with existing dependencies", (
   assert.match(shell, /--ctorigdst 127\.0\.0\.1 --ctorigdstport/);
   assert.match(shell, /ip6tables -w -A CARTDRILL6 -j REJECT/);
   assert.doesNotMatch(shell, /npm install|pnpm i|supabase db|docker run/);
+  assert.match(shell, /LD_LIBRARY_PATH="\$drill_python_library"/);
+  assert.match(shell, /drill_python_library="\$\{pythonLocation:\?\}\/lib"/);
 });

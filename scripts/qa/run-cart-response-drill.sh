@@ -10,14 +10,33 @@ set -euo pipefail
 drill_root=$(pwd)
 drill_output="$drill_root/e2e/results/cart-response-drill"
 drill_node=$(command -v node)
+drill_python_library="${pythonLocation:?}/lib"
+[[ "$drill_python_library" = /opt/hostedtoolcache/Python/*/lib && -d "$drill_python_library" ]]
+drill_python_real=$(readlink -f "$drill_root/services/api/.venv/bin/python")
+[[ "$drill_python_real" = "${pythonLocation}/bin/python"* ]]
 drill_browser_path=$(cd e2e && node --input-type=module -e 'import {chromium} from "@playwright/test"; import {dirname} from "node:path"; console.log(dirname(dirname(dirname(chromium.executablePath()))))')
 drill_created=false
 drill_v4=false
 drill_v6=false
 drill_uid=
+drill_phase=guard_setup
+drill_api_launcher=
+drill_customer_launcher=
+drill_launcher_status() {
+  drill_last_launcher_status=not_started
+  if [ -n "$1" ]; then
+    if kill -0 "$1" 2>/dev/null; then drill_last_launcher_status=running
+    elif wait "$1"; then drill_last_launcher_status=0
+    else drill_last_launcher_status=$?; fi
+  fi
+}
 drill_cleanup() {
   drill_status=$?
   trap - EXIT
+  drill_launcher_status "$drill_api_launcher"
+  drill_api_exit="$drill_last_launcher_status"
+  drill_launcher_status "$drill_customer_launcher"
+  drill_customer_exit="$drill_last_launcher_status"
   drill_cleanup_ok=true
   if [ "$drill_created" = true ]; then
     if sudo test -f "$drill_output/private-state.json"; then
@@ -47,15 +66,39 @@ drill_cleanup() {
   if sudo test -d "$drill_output"; then
     sudo chown -R "$(id -u):$(id -g)" "$drill_output" || drill_cleanup_ok=false
     sudo chmod 700 "$drill_output" || drill_cleanup_ok=false
+    if ! python3 - "$drill_output" "$drill_phase" "$drill_status" "$drill_api_exit" "$drill_customer_exit" <<'PY'
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+def categories(name):
+    text = (p / name).read_text(errors='replace') if (p / name).exists() else ''
+    markers = ['Permission denied', 'libpython', 'ModuleNotFoundError', 'EACCES', 'Address already in use', 'ERR_MODULE_NOT_FOUND', 'Pydantic', 'ValidationError']
+    return [marker for marker in markers if marker in text]
+d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categories('private-api.log'),
+     'api_launcher_status': sys.argv[4], 'customer_launcher_status': sys.argv[5],
+     'python_probe_categories': categories('private-python-probe.log'),
+     'customer_log_categories': categories('private-customer.log'), 'raw_logs_retained_privately_only': True}
+try:
+    health = json.loads((p / 'private-health-probe.json').read_text())
+    assert isinstance(health, list) and len(health) == 2
+    assert {row['name'] for row in health} == {'api', 'customer'}
+    assert all(type(row['ok']) is bool for row in health)
+    d['latest_health'] = [{'name': row['name'], 'ok': row['ok']} for row in health]
+except (OSError, ValueError, TypeError, KeyError, AssertionError):
+    d['health_evidence'] = 'unavailable_or_malformed'
+(p / 'diagnostics.json').write_text(json.dumps(d, indent=2) + '\n')
+PY
+    then drill_cleanup_ok=false; fi
   fi
   if [ "$drill_created" = true ] && [ "$drill_cleanup_ok" = true ]; then sudo userdel cartdrill || drill_cleanup_ok=false; fi
   if [ -f "$drill_output/guard.json" ]; then
-    python3 - "$drill_output/guard.json" "$drill_cleanup_ok" <<'PY'
+    if ! python3 - "$drill_output/guard.json" "$drill_cleanup_ok" <<'PY'
 import json, sys
 from pathlib import Path
 p = Path(sys.argv[1]); d = json.loads(p.read_text()); d['process_and_firewall_cleanup'] = sys.argv[2] == 'true'
 p.write_text(json.dumps(d, indent=2) + '\n')
 PY
+    then drill_cleanup_ok=false; fi
   fi
   if [ "$drill_cleanup_ok" != true ] && [ "$drill_status" -eq 0 ]; then drill_status=1; fi
   exit "$drill_status"
@@ -63,6 +106,7 @@ PY
 trap drill_cleanup EXIT
 drill_as_user() {
   sudo -u cartdrill env -i PATH=/usr/bin:/bin CART_DRILL_LOCAL=1 CART_DRILL_UID="$drill_uid" \
+    LD_LIBRARY_PATH="$drill_python_library" \
     PLAYWRIGHT_BROWSERS_PATH="$drill_browser_path" \
     SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
     SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
@@ -99,14 +143,19 @@ sudo ip6tables -w -C OUTPUT -m owner --uid-owner "$drill_uid" -j CARTDRILL6
 mkdir -p "$drill_output"
 sudo chown "$(id -u):cartdrill" "$drill_output"
 sudo chmod 770 "$drill_output"
+drill_phase=python_preflight
+drill_as_user "$drill_root/services/api/.venv/bin/python" -c 'import ssl, psycopg, uvicorn; print("isolated Python imports ready")' > "$drill_output/private-python-probe.log" 2>&1
+drill_phase=server_startup
 # Production clients intentionally reject loopback. Preserve that guard and all
 # preceding production checks; exercise the same source in local development mode.
 sudo fuser -k 3000/tcp 8000/tcp || true
 sudo chown -R cartdrill:cartdrill "$drill_root/apps/customer/.next"
 drill_as_user "$drill_root/services/api/.venv/bin/python" -m uvicorn app.main:app --app-dir "$drill_root/services/api" --host 127.0.0.1 --port 8000 > "$drill_output/private-api.log" 2>&1 &
+drill_api_launcher=$!
 drill_as_user "$drill_node" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
+drill_customer_launcher=$!
 for drill_attempt in $(seq 1 10); do
-  if drill_as_user "$drill_node" --input-type=module -e 'for (const u of ["http://127.0.0.1:8000/healthz","http://127.0.0.1:3000/en/health"]) {if (!(await fetch(u, {signal: AbortSignal.timeout(5000)})).ok) process.exit(1)}' >/dev/null 2>&1; then break; fi
+  if drill_as_user "$drill_node" --input-type=module -e 'const results=await Promise.all([["api","http://127.0.0.1:8000/healthz"],["customer","http://127.0.0.1:3000/en/health"]].map(async ([name,url])=>{try{return {name,ok:(await fetch(url,{signal:AbortSignal.timeout(5000)})).ok}}catch{return {name,ok:false}}}));console.log(JSON.stringify(results));process.exit(results.every(r=>r.ok)?0:1)' > "$drill_output/private-health-probe.json"; then break; fi
   if [ "$drill_attempt" -eq 10 ]; then exit 1; fi
   sleep 1
 done
@@ -123,10 +172,12 @@ for row in rows:
         status = Path('/proc/' + pid + '/status').read_text()
         uid = re.search(r'^Uid:\s+(\d+)', status, re.M); assert uid and uid[1] == sys.argv[2]
 PY
+drill_phase=browser_contract
 set +e
 drill_as_user "$drill_node" "$drill_root/e2e/scripts/cart-response-drill.mjs"
 drill_result=$?
 set -e
+drill_phase=evidence_and_cleanup
 sudo iptables -w -nvx -L CARTDRILL4 > "$drill_output/private-ipv4.txt"
 sudo ip6tables -w -nvx -L CARTDRILL6 > "$drill_output/private-ipv6.txt"
 sudo iptables -w -S CARTDRILL4 > "$drill_output/private-ipv4-rules.txt"
