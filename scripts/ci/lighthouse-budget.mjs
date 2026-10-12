@@ -13,10 +13,7 @@ export function assertReports(config, reports) {
   const failedCollections = [];
   for (const url of collect.url) {
     const runs = reports.filter((report) => report.requestedUrl === url);
-    if (
-      runs.length !== collect.numberOfRuns ||
-      runs.some((r) => r.runtimeError)
-    ) {
+    if (runs.length !== collect.numberOfRuns || runs.some((r) => r.runtimeError)) {
       const errors = runs.flatMap((report, run) =>
         report.runtimeError
           ? [`run ${run + 1}: ${report.runtimeError.code ?? "runtime error"}`]
@@ -28,44 +25,28 @@ export function assertReports(config, reports) {
     }
   }
   if (failedCollections.length) {
-    throw new Error(
-      `Incomplete or failed collection: ${failedCollections.join("; ")}`,
-    );
+    throw new Error(`Incomplete or failed collection: ${failedCollections.join("; ")}`);
   }
   for (const url of collect.url) {
     const runs = reports.filter((report) => report.requestedUrl === url);
     const matches = assertions.assertMatrix.filter((entry) =>
       new RegExp(entry.matchingUrlPattern).test(url),
     );
-    if (matches.length !== 1)
-      throw new Error(`Expected one assertion matrix entry: ${url}`);
-    for (const [metric, [level, options]] of Object.entries(
-      matches[0].assertions,
-    )) {
+    if (matches.length !== 1) throw new Error(`Expected one assertion matrix entry: ${url}`);
+    for (const [metric, [level, options]] of Object.entries(matches[0].assertions)) {
       if (!["error", "warn"].includes(level))
         throw new Error(`Unsupported assertion level: ${level}`);
-      const keys = Object.keys(options).filter(
-        (key) => key !== "aggregationMethod",
-      );
-      if (
-        keys.length !== 1 ||
-        !["minScore", "maxNumericValue"].includes(keys[0])
-      ) {
+      const keys = Object.keys(options).filter((key) => key !== "aggregationMethod");
+      if (keys.length !== 1 || !["minScore", "maxNumericValue"].includes(keys[0])) {
         throw new Error(`Unsupported budget: ${metric}`);
       }
       const kind = keys[0];
       const values = runs.map((run) =>
         metric.startsWith("categories:")
           ? run.categories?.[metric.slice(11)]?.score
-          : run.audits?.[metric]?.[
-              kind === "minScore" ? "score" : "numericValue"
-            ],
+          : run.audits?.[metric]?.[kind === "minScore" ? "score" : "numericValue"],
       );
-      if (
-        values.some(
-          (value) => typeof value !== "number" || !Number.isFinite(value),
-        )
-      ) {
+      if (values.some((value) => typeof value !== "number" || !Number.isFinite(value))) {
         throw new Error(`Missing metric: ${url} ${metric}`);
       }
       const method = options.aggregationMethod ?? "optimistic";
@@ -82,8 +63,7 @@ export function assertReports(config, reports) {
             ? Math.max(...values)
             : Math.min(...values);
       const expected = options[kind];
-      if (!Number.isFinite(expected))
-        throw new Error(`Invalid threshold: ${metric}`);
+      if (!Number.isFinite(expected)) throw new Error(`Invalid threshold: ${metric}`);
       results.push({
         url,
         metric,
@@ -116,8 +96,7 @@ const DIAGNOSTIC_TRACE_NAMES = new Set([
 ]);
 
 export function sanitizeDiagnostic(value, key = "") {
-  if (Array.isArray(value))
-    return value.map((item) => sanitizeDiagnostic(item));
+  if (Array.isArray(value)) return value.map((item) => sanitizeDiagnostic(item));
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([childKey, childValue]) => [
@@ -138,10 +117,7 @@ export function sanitizeDiagnostic(value, key = "") {
     }
   }
   if (key === "name" && DIAGNOSTIC_TRACE_NAMES.has(value)) return value;
-  if (
-    key === "method" &&
-    /^(Network|Page|Runtime|Tracing|Target)\.[A-Za-z0-9]+$/.test(value)
-  )
+  if (key === "method" && /^(Network|Page|Runtime|Tracing|Target)\.[A-Za-z0-9]+$/.test(value))
     return value;
   if (key === "ph" && /^[A-Z]$/.test(value)) return value;
   return "[redacted]";
@@ -149,19 +125,38 @@ export function sanitizeDiagnostic(value, key = "") {
 
 // A failed navigation can still have trace and DevTools data. Emit only counts,
 // numeric timings/processes and per-trace aliases, never raw frame IDs or URLs.
-export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
+export function summarizeNavigationDiagnostic(trace, devtoolsLog, requestedUrl) {
   const events = Array.isArray(trace?.traceEvents) ? trace.traceEvents : [];
   const messages = Array.isArray(devtoolsLog) ? devtoolsLog : [];
   const frameAliases = new Map();
   const frameAlias = (id) => {
     if (typeof id !== "string" || !id) return null;
-    if (!frameAliases.has(id))
-      frameAliases.set(id, `frame-${frameAliases.size + 1}`);
+    if (!frameAliases.has(id)) frameAliases.set(id, `frame-${frameAliases.size + 1}`);
     return frameAliases.get(id);
   };
   const finiteNumber = (value) =>
     typeof value === "number" && Number.isFinite(value) ? value : null;
   const markerLimit = 8;
+  let targetUrl;
+  try {
+    if (typeof requestedUrl === "string") targetUrl = new URL(requestedUrl).href;
+  } catch {
+    targetUrl = undefined;
+  }
+  const urlClass = (value) => {
+    if (value === undefined) return "missing";
+    if (value === "") return "empty";
+    if (typeof value !== "string") return "invalid";
+    try {
+      const url = new URL(value);
+      if (url.protocol === "about:" && url.pathname === "blank") return "about-blank";
+      if (url.protocol === "chrome:") return "chrome";
+      if (!["http:", "https:"].includes(url.protocol)) return "other-scheme";
+      return url.href === targetUrl ? "target" : "other-http";
+    } catch {
+      return "invalid";
+    }
+  };
   const isKeyEvent = (event) =>
     typeof event?.cat === "string" &&
     (event.cat.includes("blink.user_timing") ||
@@ -171,18 +166,12 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const frameId = (event) =>
     event.args?.data?.frame ?? event.args?.data?.frameID ?? event.args?.frame;
   const keyEvents = events.filter(isKeyEvent);
-  const browserStart = keyEvents.find(
-    (event) => event.name === "TracingStartedInBrowser",
-  );
+  const browserStart = keyEvents.find((event) => event.name === "TracingStartedInBrowser");
   const browserFrames = Array.isArray(browserStart?.args?.data?.frames)
     ? browserStart.args.data.frames
     : [];
-  const browserMainFrame = browserFrames.find(
-    (frame) => frame && !frame.parent,
-  );
-  const pageStart = keyEvents.find(
-    (event) => event.name === "TracingStartedInPage",
-  );
+  const browserMainFrame = browserFrames.find((frame) => frame && !frame.parent);
+  const pageStart = keyEvents.find((event) => event.name === "TracingStartedInPage");
   const mainFrame =
     browserMainFrame?.processId && browserMainFrame?.frame
       ? browserMainFrame.frame
@@ -197,37 +186,40 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const selectedMainFramePid = finiteNumber(
     mainFrameSource === "browser" ? browserMainFrame.processId : pageStart?.pid,
   );
-  const browserFrameMarkers = browserFrames
-    .slice(0, markerLimit)
-    .map((frame) => ({
-      alias: frameAlias(frame?.frame),
-      processId: finiteNumber(frame?.processId),
-      isRoot: !frame?.parent,
-    }));
-  const navStarts = keyEvents.filter(
-    (event) => event.name === "navigationStart",
-  );
+  const browserFrameMarkers = browserFrames.slice(0, markerLimit).map((frame) => ({
+    alias: frameAlias(frame?.frame),
+    processId: finiteNumber(frame?.processId),
+    isRoot: !frame?.parent,
+    urlClass: urlClass(frame?.url),
+  }));
+  const navStarts = keyEvents.filter((event) => event.name === "navigationStart");
   const navigationMarkers = navStarts.slice(-markerLimit).map((event) => ({
     alias: frameAlias(frameId(event)),
     pid: finiteNumber(event.pid),
     tid: finiteNumber(event.tid),
     ts: finiteNumber(event.ts),
     isLoadingMainFrame: event.args?.data?.isLoadingMainFrame === true,
+    urlClass: urlClass(event.args?.data?.documentLoaderURL),
   }));
   const frameProcessEvents = keyEvents.filter(
-    (event) =>
-      event.name === "FrameCommittedInBrowser" ||
-      event.name === "ProcessReadyInBrowser",
+    (event) => event.name === "FrameCommittedInBrowser" || event.name === "ProcessReadyInBrowser",
   );
-  const frameProcessMarkers = frameProcessEvents
-    .slice(-markerLimit)
-    .map((event) => ({
-      kind: event.name,
-      alias: frameAlias(frameId(event)),
-      processId: finiteNumber(event.args?.data?.processId),
-      pid: finiteNumber(event.pid),
-      ts: finiteNumber(event.ts),
-    }));
+  const frameProcessMarkers = frameProcessEvents.slice(-markerLimit).map((event) => ({
+    kind: event.name,
+    alias: frameAlias(frameId(event)),
+    processId: finiteNumber(event.args?.data?.processId),
+    pid: finiteNumber(event.pid),
+    ts: finiteNumber(event.ts),
+    urlClass: urlClass(event.args?.data?.url),
+  }));
+  const resourceSendEvents = keyEvents.filter((event) => event.name === "ResourceSendRequest");
+  const resourceSendMarkers = resourceSendEvents.slice(0, markerLimit).map((event) => ({
+    alias: frameAlias(frameId(event)),
+    pid: finiteNumber(event.pid),
+    tid: finiteNumber(event.tid),
+    ts: finiteNumber(event.ts),
+    urlClass: urlClass(event.args?.data?.url),
+  }));
   const mainFrameNavStarts = mainFrame
     ? navStarts.filter((event) => frameId(event) === mainFrame)
     : [];
@@ -238,8 +230,7 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
   const documentStatuses = messages
     .filter(
       (message) =>
-        message?.method === "Network.responseReceived" &&
-        message.params?.type === "Document",
+        message?.method === "Network.responseReceived" && message.params?.type === "Document",
     )
     .map((message) => message.params?.response?.status)
     .filter((status) => Number.isInteger(status));
@@ -257,9 +248,11 @@ export function summarizeNavigationDiagnostic(trace, devtoolsLog) {
     frameProcessEventCount: frameProcessEvents.length,
     frameProcessMarkers,
     frameProcessMarkersTruncated: frameProcessEvents.length > markerLimit,
+    resourceSendEventCount: resourceSendEvents.length,
+    resourceSendMarkers,
+    resourceSendMarkersTruncated: resourceSendEvents.length > markerLimit,
     mainFrameNavigationStartCount: mainFrameNavStarts.length,
-    acceptableMainFrameNavigationStartCount:
-      acceptableMainFrameNavStarts.length,
+    acceptableMainFrameNavigationStartCount: acceptableMainFrameNavStarts.length,
     documentResponseStatusCount: documentStatuses.length,
     documentResponseStatuses: documentStatuses.slice(-markerLimit),
     documentResponseStatusesTruncated: documentStatuses.length > markerLimit,
@@ -291,11 +284,7 @@ export async function collectReports(
     for (let run = 0; run < config.ci.collect.numberOfRuns; run++) {
       const browser = await launch({
         chromePath: process.env.CHROME_PATH,
-        chromeFlags: [
-          "--headless",
-          "--disable-gpu",
-          ...(process.env.CI ? ["--no-sandbox"] : []),
-        ],
+        chromeFlags: ["--headless", "--disable-gpu", ...(process.env.CI ? ["--no-sandbox"] : [])],
       });
       let result;
       let collectionError;
@@ -334,23 +323,20 @@ export async function collectReports(
       await fs.writeFile(htmlPath, result.report[1]);
       if (runtimeError) {
         if (runtimeError.code === "NO_NAVSTART") {
-          logDiagnostic(
-            "Lighthouse NO_NAVSTART diagnostic:",
-            JSON.stringify(
-              summarizeNavigationDiagnostic(
-                result.artifacts?.TraceError ?? result.artifacts?.Trace,
-                result.artifacts?.DevtoolsLogError ??
-                  result.artifacts?.DevtoolsLog,
-              ),
-            ),
+          const diagnostic = summarizeNavigationDiagnostic(
+            result.artifacts?.TraceError ?? result.artifacts?.Trace,
+            result.artifacts?.DevtoolsLogError ?? result.artifacts?.DevtoolsLog,
+            url,
+          );
+          logDiagnostic("Lighthouse NO_NAVSTART diagnostic:", JSON.stringify(diagnostic));
+          await fs.writeFile(
+            path.join(directory, `${index}-${run}-navigation-diagnostic.json`),
+            JSON.stringify(diagnostic, null, 2),
           );
         }
         for (const [name, artifact] of [
           ["trace", result.artifacts?.TraceError ?? result.artifacts?.Trace],
-          [
-            "devtools-log",
-            result.artifacts?.DevtoolsLogError ?? result.artifacts?.DevtoolsLog,
-          ],
+          ["devtools-log", result.artifacts?.DevtoolsLogError ?? result.artifacts?.DevtoolsLog],
         ]) {
           if (artifact) {
             await fs.writeFile(
@@ -369,10 +355,7 @@ export async function collectReports(
         lighthouseVersion: result.lhr.lighthouseVersion,
         userAgent: result.lhr.userAgent,
       });
-      await fs.writeFile(
-        path.join(directory, "manifest.json"),
-        JSON.stringify(manifest, null, 2),
-      );
+      await fs.writeFile(path.join(directory, "manifest.json"), JSON.stringify(manifest, null, 2));
       reports.push(result.lhr);
     }
   }
@@ -385,16 +368,9 @@ export async function collect(config) {
   const root = config.ci.upload.outputDir;
   if (config.ci.upload.target !== "filesystem")
     throw new Error("Only filesystem report retention is supported");
-  const directory = path.join(
-    root,
-    new Date().toISOString().replaceAll(":", "-"),
-  );
+  const directory = path.join(root, new Date().toISOString().replaceAll(":", "-"));
   await fs.mkdir(directory, { recursive: true });
-  const reports = await collectReports(
-    config,
-    { lighthouse, launch },
-    directory,
-  );
+  const reports = await collectReports(config, { lighthouse, launch }, directory);
   const assertions = assertReports(config, reports);
   await fs.writeFile(
     path.join(directory, "assertion-results.json"),
@@ -404,10 +380,7 @@ export async function collect(config) {
   return assertions.passed;
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const config = JSON.parse(await fs.readFile("lighthouserc.json", "utf8"));
     process.exitCode = (await collect(config)) ? 0 : 1;
