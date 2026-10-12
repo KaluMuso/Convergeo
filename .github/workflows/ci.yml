@@ -609,6 +609,9 @@ jobs:
       - name: Reset local database
         run: supabase db reset --no-seed
 
+      - name: Preload qualified postgres-meta from official GHCR
+        run: bash scripts/ci/preload-typegen-meta.sh
+
       - name: Regenerate types
         run: bash scripts/gen-types.sh
 
