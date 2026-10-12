@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from app.main import create_app
 from fastapi.testclient import TestClient
+from postgrest.exceptions import APIError
 
 VALID_TOKEN = "dev-internal-n8n"
 USER_ID = "11111111-1111-1111-1111-111111111111"
@@ -111,24 +112,19 @@ class FakeQuery:
                 allowed = set(value)
                 filtered = [row for row in filtered if row.get(column) in allowed]
             elif op == "gte":
-                filtered = [
-                    row for row in filtered if str(row.get(column, "")) >= str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) >= str(value)]
             elif op == "lt":
-                filtered = [
-                    row for row in filtered if str(row.get(column, "")) < str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) < str(value)]
             elif op == "lte":
                 filtered = [
-                    row for row in filtered if str(row.get(column, "")) <= str(value)
+                    row for row in filtered if row.get(column) is not None and row[column] <= value
                 ]
             elif op == "like":
                 prefix = value.rstrip("%")
                 filtered = [
                     row
                     for row in filtered
-                    if isinstance(row.get(column), str)
-                    and str(row[column]).startswith(prefix)
+                    if isinstance(row.get(column), str) and str(row[column]).startswith(prefix)
                 ]
         return filtered
 
@@ -192,12 +188,8 @@ def _seed_common(fake: FakeSupabaseClient) -> None:
             "status": "pending_kyc",
         }
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "low_stock_threshold", "value": 5}
-    )
-    fake.tables["feature_flags"].rows.append(
-        {"flag": "abandoned_cart", "enabled": False}
-    )
+    fake.tables["platform_config"].rows.append({"key": "low_stock_threshold", "value": 5})
+    fake.tables["feature_flags"].rows.append({"flag": "abandoned_cart", "enabled": False})
 
 
 def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) -> None:
@@ -216,9 +208,7 @@ def fake_client() -> FakeSupabaseClient:
 
 
 @pytest.fixture
-def n8n_client(
-    monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient
-) -> TestClient:
+def n8n_client(monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient) -> TestClient:
     os.environ["INTERNAL_N8N_TOKEN"] = VALID_TOKEN
     os.environ["FOUNDER_WHATSAPP_E164"] = FOUNDER_PHONE
     _mock_supabase(monkeypatch, fake_client)
@@ -320,6 +310,222 @@ class TestPayoutFailuresEndpoint:
 
 
 class TestLowStockEndpoint:
+    @staticmethod
+    def _add_listing(fake_client: FakeSupabaseClient, listing_id: str, qty: int) -> None:
+        fake_client.tables["vendor_listings"].rows.append(
+            {
+                "id": listing_id,
+                "vendor_id": VENDOR_ID,
+                "title_override": "Low Widget",
+                "stock_mode": "tracked",
+                "stock_qty": qty,
+                "status": "active",
+            }
+        )
+
+    @pytest.mark.parametrize("response_kind", ["whole_none", "data_none"])
+    def test_tick_uses_default_when_threshold_query_returns_none(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+        response_kind: str,
+    ) -> None:
+        """Both absent-response shapes retain the existing threshold default."""
+        _seed_common(fake_client)
+        fake_client.tables["platform_config"].rows.clear()
+        self._add_listing(fake_client, LISTING_ID, 4)
+        original_execute = FakeQuery.execute
+
+        def execute_with_real_empty_result(query: FakeQuery) -> MagicMock | None:
+            if query._parent is fake_client.tables["platform_config"] and query._maybe_single:
+                return None if response_kind == "whole_none" else MagicMock(data=None)
+            return original_execute(query)
+
+        monkeypatch.setattr(FakeQuery, "execute", execute_with_real_empty_result)
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5) == 5
+        )
+        fetched = n8n_client.get(
+            "/internal/n8n/low-stock",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert fetched.status_code == 200
+        assert fetched.json()["count"] == 1
+        assert fetched.json()["items"][0]["threshold"] == 5
+        assert fake_client.tables["notification_outbox"].rows == []
+        response = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["enqueued"] == 1
+        assert response.json()["items"][0]["threshold"] == 5
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, 5),
+            (3, 3),
+            ("7", 7),
+            (0, 0),
+            ("0", 0),
+            ("invalid", 5),
+            ({"ignored": True}, 5),
+            (2.5, 5),
+        ],
+    )
+    def test_threshold_default_and_valid_config_behavior(
+        self, fake_client: FakeSupabaseClient, value: Any, expected: int
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        fake_client.tables["platform_config"].rows.append(
+            {"key": "low_stock_threshold", "value": value}
+        )
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
+            == expected
+        )
+
+    def test_threshold_database_error_propagates(
+        self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        def fail_query(_query: FakeQuery) -> None:
+            raise APIError({"code": "42501", "message": "mock permission failure"})
+
+        monkeypatch.setattr(FakeQuery, "execute", fail_query)
+        with pytest.raises(APIError):
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
+
+    def test_missing_config_table_fails_without_enqueuing(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _seed_common(fake_client)
+        self._add_listing(fake_client, LISTING_ID, 2)
+        original_execute = FakeQuery.execute
+
+        def execute_with_missing_table(query: FakeQuery) -> MagicMock:
+            if query._parent is fake_client.tables["platform_config"]:
+                raise APIError({"code": "42P01", "message": "relation does not exist"})
+            return original_execute(query)
+
+        monkeypatch.setattr(FakeQuery, "execute", execute_with_missing_table)
+        response = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 500
+        assert fake_client.tables["notification_outbox"].rows == []
+
+    def test_empty_inventory_enqueues_nothing(
+        self, n8n_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_common(fake_client)
+        response = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        assert response.json() == {"items": [], "count": 0, "enqueued": 0, "skipped": 0}
+        assert fake_client.tables["notification_outbox"].rows == []
+
+    def test_only_quantities_at_or_below_threshold_enqueue_once(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _seed_common(fake_client)
+        self._add_listing(fake_client, LISTING_ID, 0)
+        self._add_listing(fake_client, "11111111-2222-3333-4444-555555555555", 5)
+        self._add_listing(fake_client, "66666666-7777-8888-9999-000000000000", 10)
+
+        first = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert first.status_code == 200
+        assert first.json()["count"] == 2
+        assert first.json()["enqueued"] == 2
+        assert first.json()["skipped"] == 0
+        assert {row["dedupe_key"] for row in fake_client.tables["notification_outbox"].rows} == {
+            f"low_stock_alert:{LISTING_ID}:whatsapp",
+            "low_stock_alert:11111111-2222-3333-4444-555555555555:whatsapp",
+        }
+
+        original_execute = FakeQuery.execute
+
+        def execute_with_unique_index(query: FakeQuery) -> MagicMock:
+            if (
+                query._parent is fake_client.tables["notification_outbox"]
+                and query._pending_op == "insert"
+                and query._payload is not None
+                and query._payload.get("dedupe_key") in fake_client.inserted_dedupe
+            ):
+                raise APIError({"code": "23505", "message": "duplicate key"})
+            return original_execute(query)
+
+        monkeypatch.setattr(FakeQuery, "execute", execute_with_unique_index)
+        again = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert again.status_code == 200
+        assert again.json()["enqueued"] == 0
+        assert again.json()["skipped"] == 2
+        assert len(fake_client.tables["notification_outbox"].rows) == 2
+
+    def test_partial_enqueue_failure_recovers_on_retry(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _seed_common(fake_client)
+        self._add_listing(fake_client, LISTING_ID, 1)
+        second_id = "11111111-2222-3333-4444-555555555555"
+        self._add_listing(fake_client, second_id, 2)
+        original_execute = FakeQuery.execute
+        fail_once = True
+
+        def execute_with_one_insert_failure(query: FakeQuery) -> MagicMock:
+            nonlocal fail_once
+            if (
+                fail_once
+                and query._parent is fake_client.tables["notification_outbox"]
+                and query._pending_op == "insert"
+                and query._payload is not None
+                and query._payload.get("dedupe_key") == f"low_stock_alert:{second_id}:whatsapp"
+            ):
+                fail_once = False
+                raise APIError({"code": "42501", "message": "mock write failure"})
+            return original_execute(query)
+
+        monkeypatch.setattr(FakeQuery, "execute", execute_with_one_insert_failure)
+        first = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert first.status_code == 500
+        assert len(fake_client.tables["notification_outbox"].rows) == 1
+
+        retry = n8n_client.post(
+            "/internal/n8n/low-stock/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert retry.status_code == 200
+        assert retry.json()["enqueued"] == 1
+        assert retry.json()["skipped"] == 1
+        assert len(fake_client.tables["notification_outbox"].rows) == 2
+
     def test_returns_listings_under_threshold(
         self, n8n_client: TestClient, fake_client: FakeSupabaseClient
     ) -> None:
@@ -650,4 +856,3 @@ class TestPreferredBadgeTick:
         assert again.status_code == 200
         assert again.json()["changed"] == 0
         assert again.json()["granted"] == 0
-
