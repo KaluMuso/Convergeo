@@ -1,0 +1,144 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import {
+  checkpoints,
+  ipv4Rules,
+  ipv6Rules,
+  qualify,
+} from "./assert-cart-response-drill.mjs";
+
+const sha = "a".repeat(40);
+function fixture() {
+  return {
+    outcome: {
+      version: 1,
+      qualified: true,
+      blockedImages: 3,
+      checkpoints: Object.fromEntries(checkpoints.map((p) => [p, true])),
+      stages: [
+        {
+          name: "committed_before_discard",
+          qty: 1,
+          claims: 1,
+          events: 1,
+          price: 1000,
+        },
+        { name: "replayed", qty: 1, claims: 1, events: 1, price: 1000 },
+        { name: "fresh", qty: 2, claims: 2, events: 2, price: 1100 },
+        {
+          name: "stock_revalidated",
+          qty: 2,
+          claims: 2,
+          events: 2,
+          price: 1100,
+        },
+      ],
+    },
+    guard: {
+      version: 1,
+      source_sha: sha,
+      customer_execution_mode:
+        "development; production loopback guard preserved",
+      uid: 998,
+      ipv4_owner_hook_verified: true,
+      ipv6_owner_hook_verified: true,
+      all_other_ipv4_and_ipv6_rejected: true,
+      api_and_customer_listener_uid_verified: true,
+      process_and_firewall_cleanup: true,
+      allowed_loopback_tcp_ports: [3000, 8000, 54321, 54322],
+      dnat_original_tcp_ports: [54321, 54322],
+      dnat_original_destination: "127.0.0.1",
+      loopback_server_reply_original_tcp_ports: [3000, 8000],
+      ipv4_rules: [...ipv4Rules],
+      ipv6_rules: [...ipv6Rules],
+      rejected_packets: 0,
+    },
+  };
+}
+test("complete evidence qualifies", () => {
+  const { outcome, guard } = fixture();
+  assert.equal(qualify(outcome, guard, sha).qualified, true);
+});
+for (const [name, change] of [
+  [
+    "missing commit checkpoint",
+    ({ outcome }) => delete outcome.checkpoints.committed_before_discard,
+  ],
+  [
+    "unchecked browser UID",
+    ({ outcome }) =>
+      (outcome.checkpoints.browser_subprocess_uid_covered = false),
+  ],
+  ["skipped scenario", ({ outcome }) => (outcome.qualified = false)],
+  ["raw rule missing", ({ guard }) => guard.ipv4_rules.splice(1, 1)],
+  [
+    "raw rule broadens destination",
+    ({ guard }) =>
+      (guard.ipv4_rules[1] = guard.ipv4_rules[1].replace(
+        "127.0.0.1/32",
+        "0.0.0.0/0",
+      )),
+  ],
+  ["extra checkpoint", ({ outcome }) => (outcome.checkpoints.other = true)],
+  ["missing replay", ({ outcome }) => outcome.stages.splice(1, 1)],
+  ["duplicate increment", ({ outcome }) => (outcome.stages[1].qty = 2)],
+  ["duplicate claim", ({ outcome }) => (outcome.stages[1].claims = 2)],
+  ["missing initial event", ({ outcome }) => (outcome.stages[0].events = 0)],
+  ["replay event", ({ outcome }) => (outcome.stages[1].events = 2)],
+  ["fresh increment missing", ({ outcome }) => (outcome.stages[2].qty = 1)],
+  ["fresh price stale", ({ outcome }) => (outcome.stages[2].price = 1000)],
+  ["wrong source", ({ guard }) => (guard.source_sha = "b".repeat(40))],
+  ["root UID", ({ guard }) => (guard.uid = 0)],
+  [
+    "missing IPv6 guard",
+    ({ guard }) => (guard.ipv6_owner_hook_verified = false),
+  ],
+  [
+    "broad DNS permission",
+    ({ guard }) => guard.allowed_loopback_tcp_ports.push(53),
+  ],
+  ["broad DNAT", ({ guard }) => guard.dnat_original_tcp_ports.push(443)],
+  [
+    "wrong database host",
+    ({ guard }) => (guard.dnat_original_destination = "10.0.0.1"),
+  ],
+  [
+    "stale unguarded server",
+    ({ guard }) => (guard.api_and_customer_listener_uid_verified = false),
+  ],
+  [
+    "cleanup failure",
+    ({ guard }) => (guard.process_and_firewall_cleanup = false),
+  ],
+])
+  test(`rejects ${name}`, () => {
+    const f = fixture();
+    change(f);
+    assert.throws(() => qualify(f.outcome, f.guard, sha));
+  });
+test("workflow owns one bounded fail-closed drill with existing dependencies", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/perf.yml", import.meta.url),
+    "utf8",
+  );
+  assert.equal(
+    (workflow.match(/name: Cart interrupted-response synthetic drill/g) || [])
+      .length,
+    1,
+  );
+  assert.match(
+    workflow,
+    /timeout-minutes: 5\n\s+env:\n\s+CART_DRILL_LOCAL: "1"/,
+  );
+  assert.match(workflow, /node scripts\/ci\/assert-cart-response-drill\.mjs/);
+  assert.match(workflow, /if-no-files-found: error/);
+  const shell = readFileSync(
+    new URL("../qa/run-cart-response-drill.sh", import.meta.url),
+    "utf8",
+  );
+  assert.match(shell, /--dports 3000,8000,54321,54322/);
+  assert.match(shell, /--ctorigdst 127\.0\.0\.1 --ctorigdstport/);
+  assert.match(shell, /ip6tables -w -A CARTDRILL6 -j REJECT/);
+  assert.doesNotMatch(shell, /npm install|pnpm i|supabase db|docker run/);
+});
