@@ -8,11 +8,10 @@ import {
   assertReports,
   collectReports,
   sanitizeDiagnostic,
+  summarizeNavigationDiagnostic,
 } from "./lighthouse-budget.mjs";
 
-const config = JSON.parse(
-  fs.readFileSync(new URL("../../lighthouserc.json", import.meta.url)),
-);
+const config = JSON.parse(fs.readFileSync(new URL("../../lighthouserc.json", import.meta.url)));
 function fixture() {
   return config.ci.collect.url.flatMap((url) =>
     Array.from({ length: 3 }, () => ({
@@ -64,8 +63,7 @@ test("default optimistic score and checkout SEO warning retain LHCI semantics", 
   for (const run of reports.filter((r) => r.requestedUrl.endsWith("/checkout")))
     run.categories.seo.score = 0;
   assert.equal(assertReports(config, reports).passed, true);
-  for (const run of reports.slice(0, 3))
-    run.categories.accessibility.score = 0.89;
+  for (const run of reports.slice(0, 3)) run.categories.accessibility.score = 0.89;
   assert.equal(assertReports(config, reports).passed, false);
 });
 
@@ -74,6 +72,7 @@ async function withMockCollection(makeReport, check) {
   const calls = new Map();
   const launchedPorts = [];
   const killedPorts = [];
+  const diagnostics = [];
   const launch = async () => {
     const port = 9000 + launchedPorts.length;
     launchedPorts.push(port);
@@ -96,6 +95,7 @@ async function withMockCollection(makeReport, check) {
           traceEvents: [
             {
               name: "navigationStart",
+              cat: "loading",
               ts: 123,
               args: {
                 data: {
@@ -123,12 +123,14 @@ async function withMockCollection(makeReport, check) {
   try {
     const reports = await collectReports(
       config,
-      { lighthouse, launch },
+      {
+        lighthouse,
+        launch,
+        logDiagnostic: (...parts) => diagnostics.push(parts.join(" ")),
+      },
       directory,
     );
-    const manifest = JSON.parse(
-      await readFile(join(directory, "manifest.json"), "utf8"),
-    );
+    const manifest = JSON.parse(await readFile(join(directory, "manifest.json"), "utf8"));
     await check({
       reports,
       manifest,
@@ -136,6 +138,7 @@ async function withMockCollection(makeReport, check) {
       calls,
       launchedPorts,
       killedPorts,
+      diagnostics,
     });
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -145,38 +148,32 @@ async function withMockCollection(makeReport, check) {
 test("each required sample gets a fresh browser; all runtime errors remain blocking", async () => {
   await withMockCollection(
     (url, call) =>
-      (url.endsWith("/p/smartphone-x1") && call === 3) ||
-      (url.endsWith("/checkout") && call === 1)
+      (url.endsWith("/p/smartphone-x1") && call === 3) || (url.endsWith("/checkout") && call === 1)
         ? { runtimeError: { code: "NO_NAVSTART" } }
         : {},
-    async ({ reports, manifest, directory, launchedPorts, killedPorts }) => {
+    async ({ reports, manifest, directory, launchedPorts, killedPorts, diagnostics }) => {
       assert.equal(reports.length, 15);
       assert.equal(manifest.length, 15);
       assert.deepEqual(
         manifest.map(({ url, run }) => [url, run]),
-        config.ci.collect.url.flatMap((url) =>
-          [0, 1, 2].map((run) => [url, run]),
-        ),
+        config.ci.collect.url.flatMap((url) => [0, 1, 2].map((run) => [url, run])),
       );
-      assert.equal(
-        manifest.filter((entry) => entry.runtimeError === "NO_NAVSTART").length,
-        2,
-      );
+      assert.equal(manifest.filter((entry) => entry.runtimeError === "NO_NAVSTART").length, 2);
       assert.equal(launchedPorts.length, 15);
       assert.deepEqual(killedPorts, launchedPorts);
+      assert.equal(diagnostics.length, 2);
+      assert(diagnostics.every((line) => line.includes("NO_NAVSTART")));
+      assert(diagnostics.every((line) => !line.includes("secret-local-token")));
       const filenames = await readdir(directory);
       assert(filenames.includes("2-2-trace.json"));
       assert(filenames.includes("4-0-devtools-log.json"));
-      const diagnostic = await readFile(
-        join(directory, "2-2-trace.json"),
-        "utf8",
-      );
+      const summary = await readFile(join(directory, "2-2-navigation-diagnostic.json"), "utf8");
+      assert.equal(JSON.parse(summary).navigationStartCount, 1);
+      assert.doesNotMatch(summary, /secret-local-token|private\.example\.com/);
+      const diagnostic = await readFile(join(directory, "2-2-trace.json"), "utf8");
       assert.match(diagnostic, /navigationStart/);
       assert.match(diagnostic, /http:\/\/localhost:3000\/en/);
-      assert.doesNotMatch(
-        diagnostic,
-        /secret-local-token|private\.example\.com/,
-      );
+      assert.doesNotMatch(diagnostic, /secret-local-token|private\.example\.com/);
       assert.throws(
         () => assertReports(config, reports),
         (error) =>
@@ -186,6 +183,260 @@ test("each required sample gets a fresh browser; all runtime errors remain block
       );
     },
   );
+});
+
+test("navigation diagnostic distinguishes absent, other-frame, and rejected URL", () => {
+  const browserStart = {
+    name: "TracingStartedInBrowser",
+    cat: "devtools.timeline",
+    args: { data: { frames: [{ frame: "main-secret", processId: 1 }] } },
+  };
+  const navStart = (frame, documentLoaderURL) => ({
+    name: "navigationStart",
+    cat: "loading",
+    args: { data: { frame, documentLoaderURL } },
+  });
+  const messages = [
+    {
+      method: "Network.responseReceived",
+      params: {
+        type: "Document",
+        response: { status: 200, url: "https://secret.example.com" },
+      },
+    },
+  ];
+  const summarize = (...events) =>
+    summarizeNavigationDiagnostic({ traceEvents: [browserStart, ...events] }, messages);
+  assert.equal(summarize().diagnosis, "navigation-start-absent");
+  assert.equal(
+    summarize(navStart("other-secret", "http://localhost:3000/en")).diagnosis,
+    "navigation-start-other-frame",
+  );
+  assert.equal(
+    summarize(navStart("main-secret", "about:blank")).diagnosis,
+    "navigation-start-url-rejected",
+  );
+  const accepted = summarize(navStart("main-secret", "http://localhost:3000/en?token=secret"));
+  assert.equal(accepted.diagnosis, "navigation-start-present-check-trace-processing");
+  assert.deepEqual(accepted.documentResponseStatuses, [200]);
+  assert.doesNotMatch(
+    JSON.stringify(accepted),
+    /main-secret|other-secret|secret\.example|token=secret/,
+  );
+  assert.equal(summarizeNavigationDiagnostic(undefined, undefined).diagnosis, "trace-unavailable");
+});
+
+test("navigation aliases preserve frame equality without exposing identifiers", () => {
+  const trace = {
+    traceEvents: [
+      {
+        name: "TracingStartedInBrowser",
+        cat: "devtools.timeline",
+        args: {
+          data: {
+            frames: [
+              { frame: "private-root-id", processId: 41 },
+              {
+                frame: "private-child-id",
+                parent: "private-root-id",
+                processId: 42,
+              },
+            ],
+          },
+        },
+      },
+      {
+        name: "FrameCommittedInBrowser",
+        cat: "devtools.timeline",
+        pid: 41,
+        ts: 180,
+        args: {
+          data: {
+            frame: "private-child-id",
+            processId: 42,
+            url: "https://private.example.com/secret",
+            headers: { authorization: "Bearer private-token" },
+          },
+        },
+      },
+      {
+        name: "navigationStart",
+        cat: "loading",
+        pid: 42,
+        tid: 7,
+        ts: 200,
+        args: {
+          data: {
+            frame: "private-child-id",
+            documentLoaderURL: "http://localhost:3000/en/search?token=private-token",
+            isLoadingMainFrame: true,
+          },
+        },
+      },
+    ],
+  };
+  const result = summarizeNavigationDiagnostic(trace, []);
+  assert.equal(result.selectedMainFrameAlias, "frame-1");
+  assert.equal(result.selectedMainFramePid, 41);
+  assert.deepEqual(result.browserFrameMarkers, [
+    { alias: "frame-1", processId: 41, isRoot: true, urlClass: "missing" },
+    { alias: "frame-2", processId: 42, isRoot: false, urlClass: "missing" },
+  ]);
+  assert.deepEqual(result.navigationMarkers, [
+    {
+      alias: "frame-2",
+      pid: 42,
+      tid: 7,
+      ts: 200,
+      isLoadingMainFrame: true,
+      urlClass: "other-http",
+    },
+  ]);
+  assert.equal(result.frameProcessMarkers[0].alias, "frame-2");
+  assert.equal(result.frameProcessMarkers[0].processId, 42);
+  assert.equal(result.diagnosis, "navigation-start-other-frame");
+  assert.equal(summarizeNavigationDiagnostic(trace, []).selectedMainFrameAlias, "frame-1");
+  assert.equal(
+    summarizeNavigationDiagnostic(
+      {
+        traceEvents: [
+          {
+            name: "TracingStartedInBrowser",
+            cat: "devtools.timeline",
+            args: {
+              data: { frames: [{ frame: "another-private-id", processId: 9 }] },
+            },
+          },
+        ],
+      },
+      [],
+    ).selectedMainFrameAlias,
+    "frame-1",
+  );
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /private-root-id|private-child-id|private-token|private\.example\.com/,
+  );
+});
+
+test("navigation diagnostic bounds marker output and tolerates malformed frames", () => {
+  const trace = {
+    traceEvents: [
+      {
+        name: "TracingStartedInBrowser",
+        cat: "devtools.timeline",
+        args: { data: { frames: "invalid" } },
+      },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        name: "navigationStart",
+        cat: "loading",
+        pid: index,
+        ts: index,
+        args: { data: { frame: `private-${index}` } },
+      })),
+    ],
+  };
+  const result = summarizeNavigationDiagnostic(trace, []);
+  assert.equal(result.mainFrameSource, "unresolved");
+  assert.equal(result.navigationStartCount, 10);
+  assert.equal(result.navigationMarkers.length, 8);
+  assert.equal(result.navigationMarkersTruncated, true);
+  assert.equal(result.navigationMarkers[0].pid, 2);
+  assert.doesNotMatch(JSON.stringify(result), /private-/);
+});
+
+test("document response statuses stay bounded without losing their total", () => {
+  const messages = Array.from({ length: 12 }, (_, index) => ({
+    method: "Network.responseReceived",
+    params: { type: "Document", response: { status: 200 + index } },
+  }));
+  const result = summarizeNavigationDiagnostic(undefined, messages);
+  assert.equal(result.documentResponseStatusCount, 12);
+  assert.deepEqual(result.documentResponseStatuses, [204, 205, 206, 207, 208, 209, 210, 211]);
+  assert.equal(result.documentResponseStatusesTruncated, true);
+});
+
+test("navigation URL classes retain evidence without exposing URLs or credentials", () => {
+  const target = "http://localhost:3000/en/search?private=synthetic-token";
+  const values = [
+    [target, "target"],
+    ["about:blank", "about-blank"],
+    ["chrome://newtab", "chrome"],
+    ["https://synthetic-user:synthetic-password@private.example/account", "other-http"],
+    ["data:text/plain,synthetic-token", "other-scheme"],
+    [undefined, "missing"],
+    ["", "empty"],
+    [{ url: target }, "invalid"],
+  ];
+  const trace = {
+    traceEvents: values.map(([documentLoaderURL], index) => ({
+      name: "navigationStart",
+      cat: "loading",
+      args: { data: { frame: `private-frame-${index}`, documentLoaderURL } },
+    })),
+  };
+  const result = summarizeNavigationDiagnostic(trace, [], target);
+  assert.deepEqual(
+    result.navigationMarkers.map((m) => m.urlClass),
+    values.map((v) => v[1]),
+  );
+  assert.doesNotMatch(JSON.stringify(result), /localhost|private|synthetic|https?:|data:/);
+  assert.deepEqual(
+    trace.traceEvents.map((e) => e.args.data.documentLoaderURL),
+    values.map((v) => v[0]),
+  );
+  assert.equal(
+    summarizeNavigationDiagnostic(trace, [], "not-a-url").navigationMarkers[0].urlClass,
+    "other-http",
+  );
+});
+
+test("resource markers join frame aliases, classify targets and remain bounded", () => {
+  const target = "http://localhost:3000/en/search";
+  const trace = {
+    traceEvents: [
+      {
+        name: "TracingStartedInBrowser",
+        cat: "devtools.timeline",
+        args: {
+          data: {
+            frames: [{ frame: "private-frame", processId: 41, url: "about:blank" }],
+          },
+        },
+      },
+      ...Array.from({ length: 12 }, (_, index) => ({
+        name: "ResourceSendRequest",
+        cat: "loading",
+        pid: 42,
+        tid: 7,
+        ts: index,
+        args: {
+          data: {
+            frame: "private-frame",
+            url: target,
+            headers: { cookie: "synthetic-cookie" },
+          },
+        },
+      })),
+      {
+        name: "FrameCommittedInBrowser",
+        cat: "devtools.timeline",
+        args: { data: { frame: "private-frame", processId: 42, url: target } },
+      },
+    ],
+  };
+  const result = summarizeNavigationDiagnostic(trace, [], target);
+  assert.equal(result.browserFrameMarkers[0].urlClass, "about-blank");
+  assert.equal(result.frameProcessMarkers[0].urlClass, "target");
+  assert.equal(result.resourceSendEventCount, 12);
+  assert.equal(result.resourceSendMarkers.length, 8);
+  assert.equal(result.resourceSendMarkersTruncated, true);
+  assert(
+    result.resourceSendMarkers.every(
+      (marker) => marker.alias === result.selectedMainFrameAlias && marker.urlClass === "target",
+    ),
+  );
+  assert.doesNotMatch(JSON.stringify(result), /private-frame|synthetic-cookie|localhost/);
 });
 
 test("Chrome is killed when Lighthouse throws before a report is produced", async () => {
@@ -209,16 +460,13 @@ test("Chrome is killed when Lighthouse throws before a report is produced", asyn
       /trace capture failed/,
     );
     assert.equal(killed, true);
-    assert.deepEqual(
-      JSON.parse(await readFile(join(directory, "manifest.json"), "utf8")),
-      [
-        {
-          url: config.ci.collect.url[0],
-          run: 0,
-          error: "LIGHTHOUSE_EXCEPTION",
-        },
-      ],
-    );
+    assert.deepEqual(JSON.parse(await readFile(join(directory, "manifest.json"), "utf8")), [
+      {
+        url: config.ci.collect.url[0],
+        run: 0,
+        error: "LIGHTHOUSE_EXCEPTION",
+      },
+    ]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
