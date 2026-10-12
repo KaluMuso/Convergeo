@@ -274,11 +274,18 @@ jobs:
           npm install --no-package-lock
           npx playwright install --with-deps chromium
 
+      - name: Verify 360px and 390px accessibility smoke coverage (no browser)
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_THROTTLE: "0"
+        run: node --test scripts/ci/perf-a11y-coverage.test.mjs
+
       - name: a11y smoke (axe critical/serious — blocking, H10)
         # Full axe wcag2a/wcag2aa critical+serious sweep over /, /cart, /checkout
         # against the already-running production server — the stricter engine
         # behind LHCI's a11y score (audit H10 / §10.1). Portable spec (also runs
         # nightly against staging).
+        # Performance runs the same three routes at both 360px and 390px.
         #
         # BLOCKING. All introduction-era violations are now fixed on master:
         #   - FormField `asGroup` keeps aria-required off the phone/OTP group divs
@@ -292,7 +299,15 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_THROTTLE: "0"
-        run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-390
+        run: npx playwright test specs/a11y-smoke.spec.ts --config=playwright.a11y.config.ts
+
+      - name: Prove 360px and 390px accessibility smoke ran
+        if: always()
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_THROTTLE: "0"
+          PERF_A11Y_RESULTS: e2e/results/results.json
+        run: node --test scripts/ci/perf-a11y-coverage.test.mjs
 
       - name: Stop servers
         if: always()
