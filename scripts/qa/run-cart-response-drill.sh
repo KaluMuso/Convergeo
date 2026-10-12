@@ -14,6 +14,26 @@ drill_python_library="${pythonLocation:?}/lib"
 [[ "$drill_python_library" = /opt/hostedtoolcache/Python/*/lib && -d "$drill_python_library" ]]
 drill_python_real=$(readlink -f "$drill_root/services/api/.venv/bin/python")
 [[ "$drill_python_real" = "${pythonLocation}/bin/python"* ]]
+if [ ! -s "$drill_root/apps/customer/.next/BUILD_ID" ]; then
+  echo "Cart drill preflight failed: completed head build missing" >&2
+  exit 1
+fi
+drill_next="$drill_root/apps/customer/node_modules/next/dist/bin/next"
+if [ ! -x "$drill_node" ] || [ ! -x "$drill_python_real" ] || [ ! -r "$drill_next" ]; then
+  echo "Cart drill preflight failed: Node/Python/Next executable path unavailable" >&2
+  exit 1
+fi
+drill_browser_executable=$(cd e2e && node --input-type=module -e 'import {createRequire} from "node:module"; const req=createRequire(import.meta.url); const testReq=createRequire(req.resolve("@playwright/test/package.json")); const pwReq=createRequire(testReq.resolve("playwright/package.json")); const {registry}=pwReq("playwright-core/lib/server/registry/index"); console.log(registry.findExecutable("chromium-headless-shell").executablePath())')
+if [ ! -x "$drill_browser_executable" ]; then
+  echo "Cart drill preflight failed: installed Chromium executable unavailable" >&2
+  exit 1
+fi
+for drill_tool in sudo iptables ip6tables ss fuser useradd userdel pgrep pkill; do
+  if ! command -v "$drill_tool" >/dev/null; then
+    echo "Cart drill preflight failed: required tool $drill_tool unavailable" >&2
+    exit 1
+  fi
+done
 drill_browser_path=$(cd e2e && node --input-type=module -e 'import {chromium} from "@playwright/test"; import {dirname} from "node:path"; console.log(dirname(dirname(dirname(chromium.executablePath()))))')
 drill_created=false
 drill_v4=false

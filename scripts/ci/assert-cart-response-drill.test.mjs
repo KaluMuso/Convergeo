@@ -181,6 +181,17 @@ test("workflow owns one bounded fail-closed drill with existing dependencies", (
     workflow,
     /timeout-minutes: 5\n\s+env:\n\s+CART_DRILL_LOCAL: "1"/,
   );
+  const gate =
+    "if: ${{ !cancelled() && steps.cart_local_stack.outcome == 'success' && steps.cart_head_build.outcome == 'success' }}";
+  assert.equal(workflow.split(gate).length - 1, 2);
+  assert.match(
+    workflow,
+    /name: Start local Supabase stack\n\s+id: cart_local_stack/,
+  );
+  assert.match(
+    workflow,
+    /name: Build customer app \(head\)\n\s+id: cart_head_build/,
+  );
   assert.match(workflow, /node scripts\/ci\/assert-cart-response-drill\.mjs/);
   assert.match(workflow, /if-no-files-found: error/);
   const shell = readFileSync(
@@ -193,4 +204,20 @@ test("workflow owns one bounded fail-closed drill with existing dependencies", (
   assert.doesNotMatch(shell, /npm install|pnpm i|supabase db|docker run/);
   assert.match(shell, /LD_LIBRARY_PATH="\$drill_python_library"/);
   assert.match(shell, /drill_python_library="\$\{pythonLocation:\?\}\/lib"/);
+  const setup = shell.indexOf("sudo useradd --system");
+  assert.match(
+    shell,
+    /registry\.findExecutable\("chromium-headless-shell"\)\.executablePath\(\)/,
+  );
+  for (const preflight of [
+    ".next/BUILD_ID",
+    '[ ! -x "$drill_node" ]',
+    '[ ! -x "$drill_python_real" ]',
+    '[ ! -r "$drill_next" ]',
+    '[ ! -x "$drill_browser_executable" ]',
+  ]) {
+    assert.ok(
+      shell.indexOf(preflight) >= 0 && shell.indexOf(preflight) < setup,
+    );
+  }
 });
