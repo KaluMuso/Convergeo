@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "cursor/kyc-bootstrap-empty-20261008": false,
-      "wp/integrate-auth-catalog-wave1": false
+      "wp/integrate-auth-catalog-wave1": false,
+      "cursor/typegen-meta-preload-20261012": false
     }
   }
 }
