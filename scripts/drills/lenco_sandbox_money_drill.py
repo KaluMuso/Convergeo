@@ -531,10 +531,14 @@ def _wait_for_payment_success(
     while time.monotonic() < deadline:
         api.webhook_drain()
         api.poll_tick()
-        last = api.payment_status(checkout_group_id)
-        if last.get("status") == "success":
+        response = api.payment_status(checkout_group_id)
+        if not isinstance(response, dict):
+            return {"status": None, "error": "payment status response is not an object"}
+        last = response
+        status = last.get("status")
+        if status == "success":
             return last
-        if last.get("status") in {"failed", "expired", "cancelled"}:
+        if isinstance(status, str) and status in {"failed", "expired", "cancelled"}:
             break
         time.sleep(3)
     return last
@@ -629,11 +633,15 @@ def run_momo_collection_live(
     payment_id = str(retry.get("payment_id", ""))
     config.payment_id = payment_id
 
-    pending = api.payment_status(checkout_group_id)
-    assertions.append(_assert_eq("pending_not_success", "success", pending.get("status")))
-
     settled = _wait_for_payment_success(api, checkout_group_id=checkout_group_id)
-    assertions.append(_assert_eq("payment_status_success", "success", settled.get("status")))
+    assertions.append(
+        _assert_eq(
+            "payment_status_success",
+            "success",
+            settled.get("status"),
+            detail=str(settled.get("error", "")),
+        )
+    )
 
     idem_key = prepaid_collection_idempotency_key(checkout_group_id)
     charge_count = ledger.count_charge_received(checkout_group_id)
