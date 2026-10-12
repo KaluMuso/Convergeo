@@ -453,9 +453,7 @@ def _enqueue_items(
     marketing = event_type in _MARKETING_EVENT_TYPES
     profiles_by_id: dict[str, dict[str, Any]] = {}
     if marketing and items:
-        recipient_ids = {
-            str(item["recipient_id"]) for item in items if item.get("recipient_id")
-        }
+        recipient_ids = {str(item["recipient_id"]) for item in items if item.get("recipient_id")}
         profiles_by_id = _load_profiles(client, recipient_ids)
 
     for item in items:
@@ -638,9 +636,7 @@ async def preferred_badge_tick(
     """
     from app.services.kyc.badge import PreferredBadgeJob
 
-    active_rows = _rows(
-        _table(supabase, "vendors").select("id").eq("status", "active").execute()
-    )
+    active_rows = _rows(_table(supabase, "vendors").select("id").eq("status", "active").execute())
     changes = PreferredBadgeJob(supabase).run()
     granted = sum(1 for change in changes if change.current and not change.previous)
     revoked = sum(1 for change in changes if not change.current and change.previous)
@@ -651,4 +647,3 @@ async def preferred_badge_tick(
         "granted": granted,
         "revoked": revoked,
     }
-

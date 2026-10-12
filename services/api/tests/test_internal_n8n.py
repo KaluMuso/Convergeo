@@ -112,26 +112,19 @@ class FakeQuery:
                 allowed = set(value)
                 filtered = [row for row in filtered if row.get(column) in allowed]
             elif op == "gte":
-                filtered = [
-                    row for row in filtered if str(row.get(column, "")) >= str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) >= str(value)]
             elif op == "lt":
-                filtered = [
-                    row for row in filtered if str(row.get(column, "")) < str(value)
-                ]
+                filtered = [row for row in filtered if str(row.get(column, "")) < str(value)]
             elif op == "lte":
                 filtered = [
-                    row
-                    for row in filtered
-                    if row.get(column) is not None and row[column] <= value
+                    row for row in filtered if row.get(column) is not None and row[column] <= value
                 ]
             elif op == "like":
                 prefix = value.rstrip("%")
                 filtered = [
                     row
                     for row in filtered
-                    if isinstance(row.get(column), str)
-                    and str(row[column]).startswith(prefix)
+                    if isinstance(row.get(column), str) and str(row[column]).startswith(prefix)
                 ]
         return filtered
 
@@ -195,12 +188,8 @@ def _seed_common(fake: FakeSupabaseClient) -> None:
             "status": "pending_kyc",
         }
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "low_stock_threshold", "value": 5}
-    )
-    fake.tables["feature_flags"].rows.append(
-        {"flag": "abandoned_cart", "enabled": False}
-    )
+    fake.tables["platform_config"].rows.append({"key": "low_stock_threshold", "value": 5})
+    fake.tables["feature_flags"].rows.append({"flag": "abandoned_cart", "enabled": False})
 
 
 def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) -> None:
@@ -219,9 +208,7 @@ def fake_client() -> FakeSupabaseClient:
 
 
 @pytest.fixture
-def n8n_client(
-    monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient
-) -> TestClient:
+def n8n_client(monkeypatch: pytest.MonkeyPatch, fake_client: FakeSupabaseClient) -> TestClient:
     os.environ["INTERNAL_N8N_TOKEN"] = VALID_TOKEN
     os.environ["FOUNDER_WHATSAPP_E164"] = FOUNDER_PHONE
     _mock_supabase(monkeypatch, fake_client)
@@ -336,13 +323,15 @@ class TestLowStockEndpoint:
             }
         )
 
+    @pytest.mark.parametrize("response_kind", ["whole_none", "data_none"])
     def test_tick_uses_default_when_threshold_query_returns_none(
         self,
         n8n_client: TestClient,
         fake_client: FakeSupabaseClient,
         monkeypatch: pytest.MonkeyPatch,
+        response_kind: str,
     ) -> None:
-        """Pinned postgrest maybe_single().execute() returns None for zero rows."""
+        """Both absent-response shapes retain the existing threshold default."""
         _seed_common(fake_client)
         fake_client.tables["platform_config"].rows.clear()
         self._add_listing(fake_client, LISTING_ID, 4)
@@ -350,15 +339,23 @@ class TestLowStockEndpoint:
 
         def execute_with_real_empty_result(query: FakeQuery) -> MagicMock | None:
             if query._parent is fake_client.tables["platform_config"] and query._maybe_single:
-                return None
+                return None if response_kind == "whole_none" else MagicMock(data=None)
             return original_execute(query)
 
         monkeypatch.setattr(FakeQuery, "execute", execute_with_real_empty_result)
         from app.routers.internal_n8n import _read_platform_config_int
 
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == 5
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5) == 5
+        )
+        fetched = n8n_client.get(
+            "/internal/n8n/low-stock",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert fetched.status_code == 200
+        assert fetched.json()["count"] == 1
+        assert fetched.json()["items"][0]["threshold"] == 5
+        assert fake_client.tables["notification_outbox"].rows == []
         response = n8n_client.post(
             "/internal/n8n/low-stock/tick",
             headers={"X-Internal-Token": VALID_TOKEN},
@@ -366,6 +363,32 @@ class TestLowStockEndpoint:
         assert response.status_code == 200, response.text
         assert response.json()["enqueued"] == 1
         assert response.json()["items"][0]["threshold"] == 5
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (None, 5),
+            (3, 3),
+            ("7", 7),
+            (0, 0),
+            ("0", 0),
+            ("invalid", 5),
+            ({"ignored": True}, 5),
+            (2.5, 5),
+        ],
+    )
+    def test_threshold_default_and_valid_config_behavior(
+        self, fake_client: FakeSupabaseClient, value: Any, expected: int
+    ) -> None:
+        from app.routers.internal_n8n import _read_platform_config_int
+
+        fake_client.tables["platform_config"].rows.append(
+            {"key": "low_stock_threshold", "value": value}
+        )
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
+            == expected
+        )
 
     def test_threshold_database_error_propagates(
         self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
@@ -377,9 +400,7 @@ class TestLowStockEndpoint:
 
         monkeypatch.setattr(FakeQuery, "execute", fail_query)
         with pytest.raises(APIError):
-            _read_platform_config_int(
-                MagicMock(client=fake_client), "low_stock_threshold", 5
-            )
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
 
     def test_missing_config_table_fails_without_enqueuing(
         self,
@@ -482,8 +503,7 @@ class TestLowStockEndpoint:
                 and query._parent is fake_client.tables["notification_outbox"]
                 and query._pending_op == "insert"
                 and query._payload is not None
-                and query._payload.get("dedupe_key")
-                == f"low_stock_alert:{second_id}:whatsapp"
+                and query._payload.get("dedupe_key") == f"low_stock_alert:{second_id}:whatsapp"
             ):
                 fail_once = False
                 raise APIError({"code": "42501", "message": "mock write failure"})
@@ -836,4 +856,3 @@ class TestPreferredBadgeTick:
         assert again.status_code == 200
         assert again.json()["changed"] == 0
         assert again.json()["granted"] == 0
-
