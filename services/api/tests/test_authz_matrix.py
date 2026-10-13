@@ -11,8 +11,8 @@ Design — isolation-clean / no-DB (runs under the plain ``python`` CI job):
     exactly that auth class / role), so no request handler ever executes.
   * DENY cells are asserted with live requests that short-circuit *inside* the auth
     guard (missing bearer -> 401; wrong role -> 403; missing internal token -> 401;
-    unsigned webhook -> >=400) *before* any DB / service-client call, so the suite
-    needs no Postgres.
+    unsigned webhook -> >=400). WAHA's deliberate rejection audit uses a scoped
+    service-client test double; the suite needs no Postgres or outbound network.
   * Any route that is dependency-public but not in the explicit PUBLIC/SIGNED
     registry fails the coverage test — this is the trip-wire that catches a new
     business route accidentally shipped without an authz guard (OWASP A01).
@@ -30,9 +30,12 @@ import re
 from collections.abc import Generator
 from dataclasses import dataclass
 from enum import StrEnum
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from app.core.auth import CurrentUser, get_current_user, require_admin_scope
+from app.deps import get_supabase_client
 from app.main import create_app
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -448,12 +451,44 @@ _WEBHOOK_ROUTES = [e for e in ROUTES if e.auth_class is AuthClass.WEBHOOK_SIGNED
 
 
 @pytest.mark.parametrize("entry", _WEBHOOK_ROUTES, ids=lambda e: f"{e.method} {e.path}")
-def test_webhook_endpoints_reject_unsigned(client: TestClient, entry: RouteEntry) -> None:
+def test_webhook_endpoints_reject_unsigned(
+    client: TestClient, app_instance: FastAPI, entry: RouteEntry
+) -> None:
     """Webhook endpoints never process an unsigned/unverified request (status >= 400)."""
-    status = _request(client, entry)
+    # WAHA deliberately audits rejection; isolate that write without replacing
+    # signature verification or weakening the no-network boundary for other routes.
+    audit_table = MagicMock(spec=["insert"])
+    audit_query = MagicMock(spec=["execute"])
+    audit_query.execute.return_value = SimpleNamespace(data=[])
+    audit_table.insert.return_value = audit_query
+    audit_client = SimpleNamespace(client=MagicMock(spec=["table"]))
+    audit_client.client.table.return_value = audit_table
+    is_waha_intake = entry.key == ("POST", "/webhooks/waha-intake")
+    if is_waha_intake:
+        app_instance.dependency_overrides[get_supabase_client] = lambda: audit_client
+    try:
+        status = _request(client, entry)
+    finally:
+        if is_waha_intake:
+            app_instance.dependency_overrides.pop(get_supabase_client, None)
     assert status >= 400, (
         f"{entry.method} {entry.path}: unsigned webhook must not be accepted, got {status}"
     )
+    if is_waha_intake:
+        assert status == 403
+        audit_client.client.table.assert_called_once_with("intake_events")
+        audit_table.insert.assert_called_once_with(
+            {
+                "kind": "ingestion",
+                "disposition": "rejected_auth",
+                "vendor_id": None,
+                "session_id": None,
+                "provider_event_id": None,
+                "message_kind": None,
+                "detail": {},
+            }
+        )
+        audit_query.execute.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------

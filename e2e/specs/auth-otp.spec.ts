@@ -1,4 +1,4 @@
-import { customerOtp, customerOtpReady, path } from "../fixtures/env";
+import { BASE_URL, customerOtp, customerOtpReady, path } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { nationalNumberFromE164 } from "../fixtures/phone";
 import { expect, test } from "../fixtures/test-base";
@@ -6,15 +6,58 @@ import { expect, test } from "../fixtures/test-base";
 /**
  * Critical path: phone OTP login.
  *
- * The "code sent" boundary (entering a phone and requesting an OTP) runs against
- * any live target. The VERIFY leg needs a deterministic test OTP for a fixed
- * test phone (Supabase test-OTP map) → ENV-GATED behind `E2E_TEST_PHONE` +
- * `E2E_TEST_OTP`. Without them the spec asserts the OTP step is reached and
- * skips verification with an annotation (never sends real SMS spam in a loop).
+ * Both request and verification require the accepted U4a declarations.
+ * The gate runs before navigation; static code presence alone is insufficient.
+ * An exact protected account destination proves the existing session contract
+ * when the deployed target and AccountLayout binding are separately verified.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("auth · phone OTP", () => {
+  test.describe.configure({ retries: 0 });
   test("request an OTP and (gated) verify to a signed-in session", async ({ page }) => {
-    await page.goto(path("/login"));
+    // Guard the request as well as verification, before any navigation.
+    if (!customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "customer OTP verification",
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
+      });
+      // Certification runs fail here; local/nightly runs keep the old skip.
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+
+    let national: string;
+    let origin: string;
+    try {
+      national = nationalNumberFromE164(customerOtp.testPhone);
+      const configured = new URL(BASE_URL);
+      if (
+        configured.username ||
+        configured.password ||
+        !(
+          configured.protocol === "https:" ||
+          (configured.protocol === "http:" &&
+            ["localhost", "127.0.0.1", "[::1]"].includes(configured.hostname))
+        )
+      ) {
+        throw new Error("invalid origin");
+      }
+      origin = configured.origin;
+    } catch {
+      throw new Error("customer OTP requires a valid fixture and portal origin");
+    }
+    const account = new URL(path("/account"), origin).href;
+    await page.goto(`${path("/login")}?next=${encodeURIComponent(path("/account"))}`);
 
     // Enter the phone number and request a code.
     //
@@ -33,7 +76,7 @@ test.describe("auth · phone OTP", () => {
     // fixed, read-only prefix rendered separately by PhoneForm. Filling the
     // raw E.164 fixture phone here (E2E run #52, RC-2) made the app's own
     // normalizer reject a well-formed number before any OTP was requested.
-    await phoneInput.fill(nationalNumberFromE164(customerOtp.testPhone));
+    await phoneInput.fill(national);
 
     await page
       .getByRole("button", { name: /continue|send|next|get code/i })
@@ -41,23 +84,15 @@ test.describe("auth · phone OTP", () => {
       .click();
 
     // We should reach the OTP entry surface (6-digit code group).
-    await page.waitForURL(/otp|verify|code/i, { timeout: 20_000 }).catch(() => {});
+    await page.waitForURL(
+      (url) =>
+        url.origin === origin &&
+        url.pathname === path("/otp") &&
+        url.searchParams.get("phone") === customerOtp.testPhone,
+      { timeout: 20_000 },
+    );
     const otpGroup = page.getByRole("group").or(page.getByRole("textbox").first());
     await expect(otpGroup.first()).toBeVisible();
-
-    // ── ENV-GATED: verify with the deterministic test OTP ────────────────────
-    if (!customerOtpReady()) {
-      const gate = resolveGate({
-        kind: "REQUIRED_STRICT",
-        journey: "customer OTP verification",
-        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
-      });
-      // Certification runs fail here; local/nightly runs keep the old skip.
-      enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      test.skip(true, gate.reason);
-      return;
-    }
 
     // Type the 6-digit static test code into the OTP field.
     //
@@ -68,7 +103,7 @@ test.describe("auth · phone OTP", () => {
     // document.body after render; explicitly focusing the first digit box
     // ("Digit 1 of 6") made it the target.
     await page.getByRole("textbox", { name: "Digit 1 of 6" }).click();
-    for (const digit of customerOtp.staticCode.slice(0, 6).split("")) {
+    for (const digit of customerOtp.staticCode.split("")) {
       await page.keyboard.type(digit);
     }
 
@@ -78,7 +113,11 @@ test.describe("auth · phone OTP", () => {
     // flight here. Clicking on top of it drove a duplicate verifyOtp for one
     // single-use code (Run #68). The bounded assertion below is unchanged.
 
-    // A signed-in session lands off the auth routes (home/account).
-    await expect(page).not.toHaveURL(/login|otp|verify/i, { timeout: 20_000 });
+    // AccountLayout calls getUser() and redirects anonymous users to login.
+    // This exact protected-origin destination is required; send acceptance,
+    // onboarding/recovery routes or an arbitrary off-auth URL cannot confirm it.
+    await page.waitForURL((url) => url.href === account, { timeout: 20_000 });
+    await expect(page.getByTestId("account-nav")).toBeVisible({ timeout: 20_000 });
+    await expect(page).toHaveURL(account, { timeout: 20_000 });
   });
 });

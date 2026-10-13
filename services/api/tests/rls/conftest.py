@@ -357,7 +357,12 @@ def assert_tester_is_rls_bound(conn: PgConn) -> None:
 
 
 def reset_public_schema_for_migrations(conn: PgConn) -> None:
-    """Drop public/auth and extension objects so migrations replay from 0001."""
+    """Drop migrated schemas and extension objects so migrations replay from 0001."""
+    private_reset = conn.run("DROP SCHEMA IF EXISTS otp_replay CASCADE")
+    if not private_reset.ok:
+        raise PgError(
+            f"OTP replay test schema reset failed: {private_reset.error}", private_reset.sqlstate
+        )
     conn.run("DROP SCHEMA IF EXISTS public CASCADE")
     conn.run("CREATE SCHEMA public")
     conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
@@ -367,6 +372,12 @@ def reset_public_schema_for_migrations(conn: PgConn) -> None:
 
 
 def apply_migrations(conn: PgConn) -> None:
+    # Direct callers often reset only public/auth; also reset the private test schema.
+    private_reset = conn.run("DROP SCHEMA IF EXISTS otp_replay CASCADE")
+    if not private_reset.ok:
+        raise PgError(
+            f"OTP replay test schema reset failed: {private_reset.error}", private_reset.sqlstate
+        )
     # Roles FIRST, and inside this function rather than only at its call sites.
     #
     # `apply_migrations` is a public entry point with 35+ direct callers across

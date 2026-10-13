@@ -60,12 +60,12 @@ export function hasRole(roles: readonly string[], required: AppRole): boolean {
  * able to confer a role.
  */
 export function getRolesFromClaims(claims: unknown): AppRole[] {
-  if (!claims || typeof claims !== "object") {
+  if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
     return [];
   }
 
   const appMetadata = (claims as { app_metadata?: unknown }).app_metadata;
-  if (!appMetadata || typeof appMetadata !== "object") {
+  if (!appMetadata || typeof appMetadata !== "object" || Array.isArray(appMetadata)) {
     return [];
   }
 

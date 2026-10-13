@@ -76,6 +76,23 @@ describe("getRolesFromClaims", () => {
     expect(getRolesFromClaims({ app_metadata: "vendor" })).toEqual([]);
   });
 
+  it.each([
+    ["empty", []],
+    [
+      "embellished",
+      Object.assign([], { app_metadata: { roles: ["vendor", "superadmin", "rbac_finance"] } }),
+    ],
+  ])("fails closed on %s array-shaped claims", (_, claims) => {
+    expect(getRolesFromClaims(claims)).toEqual([]);
+  });
+
+  it.each([
+    ["empty", []],
+    ["embellished", Object.assign([], { roles: ["vendor", "superadmin", "rbac_finance"] })],
+  ])("fails closed on %s array-shaped app_metadata", (_, app_metadata) => {
+    expect(getRolesFromClaims({ app_metadata })).toEqual([]);
+  });
+
   it("fails closed on non-object claims", () => {
     expect(getRolesFromClaims(null)).toEqual([]);
     expect(getRolesFromClaims(undefined)).toEqual([]);

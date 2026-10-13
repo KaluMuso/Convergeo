@@ -58,6 +58,11 @@ jobs:
       - name: Test
         run: pnpm turbo run test --filter="${{ steps.turbo.outputs.filter }}"
 
+      # RC-2: the shared Zambian national-number helper OTP specs fill their
+      # phone inputs with, proven independently of any live OTP send.
+      - name: E2E phone national-number helper tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
+
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
 
@@ -214,6 +219,43 @@ jobs:
       - name: E2E test-OTP preflight unit tests
         run: node --experimental-strip-types --test scripts/qa/self-test/preflight-e2e-test-otp.test.mjs
 
+      - name: Isolated email/password diagnostic unit tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-email-acceptance.test.mjs
+
+      - name: Inactive signed WAHA handoff contract tests
+        run: |
+          node --test infra/n8n/waha-otp-handoff.test.mjs
+          node --experimental-strip-types --test supabase/functions/send-sms-otp/waha_transport.test.mjs
+
+      - name: Email deployment provenance and passwordless replay bootstrap unit tests
+        working-directory: services/api
+        run: |
+          uv run python ../../scripts/ci/test_email_diagnostic_handoff.py
+          uv run python ../../scripts/ops/test_apply_otp_replay_login_staging.py
+
+      - name: OTP branch suppression and bounded RLS setup regression
+        working-directory: services/api
+        run: |
+          uv run python - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+          root = Path('../..')
+          workflow = yaml.load((root / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+          steps = workflow['jobs']['rls']['steps']
+          setup = [step for step in steps if step.get('uses') == 'supabase/setup-cli@v2']
+          assert len(setup) == 1
+          assert setup[0]['with']['version'] == '2.109.1'
+          assert setup[0]['timeout-minutes'] == '5'
+          assert setup[0].get('continue-on-error', 'false') == 'false'
+          assert next(step for step in steps if step.get('name') == 'RLS isolation matrix')['run'] == 'uv run pytest tests/rls -q'
+          expected = {'cursor/auth-diagnostics-otp-744-20261012', 'wp/integrate-auth-catalog-wave1', 'cursor/staging-payment-fail-closed-20261009', 'cursor/staging-email-first-safety-20261009', 'cursor/vendor-recovery-staging-20261007', 'cursor/staging-waha-replay-db-20261009', 'cursor/kyc-bootstrap-empty-20261008', 'cursor/staging-release-compat-20261009', 'cursor/staging-email-diagnostic-leg-20261009', 'cursor/staging-waha-otp-handoff-20261009', 'codex/phone-input-layout-20261008', 'cursor/release-kyc-auth-integration-20261008', 'cursor/typegen-meta-preload-20261012'}
+          for name in ('vercel.json', 'apps/admin/vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json'):
+              guards = json.loads((root / name).read_text())['git']['deploymentEnabled']
+              assert set(guards) == expected and all(value is False for value in guards.values())
+          print('PASS: four append-only disabled branch maps; pinned blocking RLS setup bounded at five minutes')
+          PY
+
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the
       # pure TypeScript policy directly (Node type-stripping) — no browser, no
@@ -226,11 +268,6 @@ jobs:
       # data-testid production never renders.
       - name: E2E bottom-nav locator contract tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-nav-contract.test.mjs
-
-      # RC-2: the shared Zambian national-number helper OTP specs fill their
-      # phone inputs with, proven independently of any live OTP send.
-      - name: E2E phone national-number helper tests
-        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
 
       # RC-5: required-synthetic-surface checks (PDP buy box, cart terminal
       # state, vendor storefront) must genuinely wait in strict mode instead
@@ -717,6 +754,8 @@ jobs:
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
+        # Bound the observed setup stall; timeout fails this blocking job.
+        timeout-minutes: 5
         with:
           # Pinned (not `latest`) so setup-cli skips the unauthenticated
           # GitHub "resolve latest release" API call, which intermittently

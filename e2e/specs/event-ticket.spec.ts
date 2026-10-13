@@ -21,12 +21,50 @@ import { expect, test } from "../fixtures/test-base";
  * `{ticketId, pin}` and checks it in through `POST /tickets/verify`, which is a
  * different endpoint, payload and authorization path from order pickup.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("event · ticket lifecycle", () => {
+  test.describe.configure({ retries: 0 });
   test("buy → wallet → scan verify → duplicate rejected", async ({ page }) => {
     // The scanner legs below navigate the vendor origin directly; in a strict
     // certification run an unset/collapsed vendor target fails here rather
     // than silently scanning on the customer app.
     const vendorOrigin = requireVendorBaseUrl();
+
+    // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
+    // Stable PIN fallback, minted per run by the canonical seed step — not the
+    // rotating 60-second QR window code, which no stored secret could outlive.
+    const scannerPin = ticketPin();
+    // The organiser scanner route and the verify API are both keyed on the
+    // event's primary key, never its public slug.
+    const scanRoute = path(`/events/${SEED.event.id}/scan`);
+
+    if (!vendorOtpReady() || !scannerPin) {
+      // One gate, two release-critical assertions: the first check-in must
+      // verify AND the second check-in of the same ticket must be rejected.
+      // #657 Events ships in this release, so neither may vanish into a skip.
+      const missing: string[] = [];
+      if (!vendorOtpReady())
+        missing.push(
+          ...[
+            "E2E_VENDOR_TEST_OTP",
+            "SMS_OTP_TRANSPORT",
+            "WAHA_OTP_ENABLED",
+            "STAGING_SMS_SANDBOX_ATTESTED",
+            "STAGING_TEST_OTP_MAP_ATTESTED",
+          ],
+        );
+      if (!scannerPin) missing.push("E2E_TICKET_PIN");
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "event scanner verify + duplicate-reject",
+        fixtures: missing,
+      });
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
 
     // Event PDP (customer app, public slug).
     await page.goto(path(`/e/${SEED.event.slug}`));
@@ -50,39 +88,6 @@ test.describe("event · ticket lifecycle", () => {
           "Ticket purchase + wallet skipped — needs LENCO_SANDBOX (F9b). Asserted event PDP renders only.",
       });
       await expect(page).toHaveURL(new RegExp(`/e/${SEED.event.slug}`));
-    }
-
-    // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
-    // Stable PIN fallback, minted per run by the canonical seed step — not the
-    // rotating 60-second QR window code, which no stored secret could outlive.
-    const scannerPin = ticketPin();
-    // The organiser scanner route and the verify API are both keyed on the
-    // event's primary key, never its public slug.
-    const scanRoute = path(`/events/${SEED.event.id}/scan`);
-
-    if (!vendorOtpReady() || !scannerPin) {
-      // One gate, two release-critical assertions: the first check-in must
-      // verify AND the second check-in of the same ticket must be rejected.
-      // #657 Events ships in this release, so neither may vanish into a skip.
-      const missing: string[] = [];
-      if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
-      if (!scannerPin) missing.push("E2E_TICKET_PIN");
-      const gate = resolveGate({
-        kind: "REQUIRED_STRICT",
-        journey: "event scanner verify + duplicate-reject",
-        fixtures: missing,
-      });
-      enforceGate(gate);
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      await page.goto(urlOn(vendorOrigin, scanRoute));
-      await expect(
-        page
-          .getByTestId("event-scan-manual-fallback")
-          .or(page.getByTestId("event-scan-camera-loading"))
-          .or(page.getByTestId("event-scan-count")),
-      ).toBeVisible();
-      test.skip(true, gate.reason);
-      return;
     }
 
     // Authenticate as the seeded organiser vendor via the REAL phone-OTP login

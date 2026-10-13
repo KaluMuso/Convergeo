@@ -31,6 +31,7 @@ PENDING_REPAIR_VERSIONS = {
     "20260831050000",
     "20260831051000",
     "20261009100000",
+    "20261009124801",
     "20261011120000",
 }
 
@@ -125,4 +126,5 @@ def test_cli_post_repair_prefix_reports_missing_pending() -> None:
     )
     assert result.returncode == 1
     assert "missing repository migrations" in result.stderr
+    assert "20261009124801" in result.stderr
     assert "20261011120000" in result.stderr

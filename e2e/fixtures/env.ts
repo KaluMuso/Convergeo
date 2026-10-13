@@ -184,11 +184,21 @@ export const vendorOtp = {
 };
 
 export function customerOtpReady(): boolean {
-  return customerOtp.staticCode.length > 0;
+  return /^\d{6}$/.test(customerOtp.staticCode) && phoneOtpSafetyReady();
 }
 
 export function vendorOtpReady(): boolean {
-  return vendorOtp.staticCode.length > 0;
+  return /^\d{6}$/.test(vendorOtp.staticCode) && phoneOtpSafetyReady();
+}
+
+/** Declarations gate test sends; they do not inspect or activate hosted flags. */
+export function phoneOtpSafetyReady(): boolean {
+  return (
+    str("SMS_OTP_TRANSPORT").toLowerCase() === "waha" &&
+    str("WAHA_OTP_ENABLED").toLowerCase() === "true" &&
+    str("STAGING_SMS_SANDBOX_ATTESTED").toLowerCase() === "true" &&
+    str("STAGING_TEST_OTP_MAP_ATTESTED").toLowerCase() === "true"
+  );
 }
 
 /**
