@@ -22,7 +22,73 @@ const report = {
 let browser;
 let bound = false;
 let phase = "guard";
+let failureStage = "outside_discard";
 const deadline = setTimeout(() => process.exit(124), 180_000);
+
+function cartFailureDiagnostic(stage, state, checkpoints) {
+  const read = (input, key) => {
+    try {
+      return Object.getOwnPropertyDescriptor(input, key)?.value;
+    } catch {
+      return undefined;
+    }
+  };
+  const flag = (value) => (typeof value === "boolean" ? value : null);
+  const integer = (value, min, max) =>
+    Number.isSafeInteger(value) && value >= min && value <= max ? value : null;
+  const label = (value, allowed) => (allowed.includes(value) ? value : "unclassified");
+  const routeFailure = flag(read(state, "routeFailureObserved"));
+  return {
+    format: "cart_browser_failure_v1",
+    failure_stage: label(stage, [
+      "outside_discard",
+      "discard_click",
+      "discard_error_visibility",
+      "discard_route_integrity",
+      "fixture_cleanup",
+    ]),
+    intercepted_posts: integer(read(state, "posts"), 0, 1000),
+    first_response_status: integer(read(state, "firstResponseStatus"), 100, 599),
+    first_click_completed: flag(read(state, "firstClickCompleted")),
+    error_visibility_assertion_passed: flag(read(state, "errorVisibilityPassed")),
+    route_failure_observed: routeFailure,
+    route_failure_stage:
+      routeFailure === true
+        ? label(read(state, "routeFailureStage"), [
+            "request_guard",
+            "image_fulfil",
+            "cart_request_guard",
+            "cart_response_fetch",
+            "cart_response_status",
+            "cart_response_body",
+            "native_commit_check",
+            "response_abort",
+            "cart_response_fulfil",
+            "cart_response_dispose",
+            "other_response_fetch",
+            "other_redirect_guard",
+            "other_response_fulfil",
+            "other_response_dispose",
+          ])
+        : "none",
+    route_failure_post:
+      routeFailure === true ? integer(read(state, "routeFailurePost"), 0, 1000) : null,
+    first_response_disposed: flag(read(state, "firstResponseDisposed")),
+    db_commit_recorded: read(checkpoints, "committed_before_discard") === true,
+    response_discard_recorded: read(checkpoints, "one_response_discarded") === true,
+    fixture_cleanup_recorded: read(checkpoints, "synthetic_fixture_cleanup") === true,
+  };
+}
+const browserDiagnostic = {
+  posts: 0,
+  firstResponseStatus: null,
+  firstClickCompleted: false,
+  errorVisibilityPassed: false,
+  routeFailureObserved: false,
+  routeFailureStage: null,
+  routeFailurePost: null,
+  firstResponseDisposed: false,
+};
 
 function db(action, payload = {}) {
   return JSON.parse(
@@ -91,11 +157,14 @@ try {
   await context.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    let routeStage = "request_guard";
+    let postOrdinal = 0;
     try {
       // Images are unrelated to the mutation contract. Fulfil before any local
       // image proxy or remote image host is contacted; this is counted explicitly.
       if (request.resourceType() === "image") {
         report.blockedImages += 1;
+        routeStage = "image_fulfil";
         await route.fulfill({
           status: 200,
           contentType: "image/svg+xml",
@@ -107,6 +176,9 @@ try {
       assert.ok(!url.pathname.startsWith("/auth/"));
       if (url.origin === api && url.pathname === "/cart/items" && request.method() === "POST") {
         posts += 1;
+        postOrdinal = posts;
+        browserDiagnostic.posts = posts;
+        routeStage = "cart_request_guard";
         const headers = await request.allHeaders();
         const key = headers["idempotency-key"];
         assert.ok(key && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key));
@@ -133,12 +205,16 @@ try {
           assert.equal(body, firstBody);
           point("fresh_key_same_intent_body");
         }
+        routeStage = "cart_response_fetch";
         const response = await route.fetch({
           maxRedirects: 0,
           maxRetries: 0,
           timeout: 15_000,
         });
+        routeStage = "cart_response_status";
+        if (postOrdinal === 1) browserDiagnostic.firstResponseStatus = response.status();
         assert.equal(response.status(), 200);
+        routeStage = "cart_response_body";
         const result = await response.json();
         assert.equal(result.cart_id, cartId);
         const line = result.items.find((item) => item.listing_id === listingId);
@@ -148,11 +224,14 @@ try {
         assert.equal(result.subtotal_ngwee, line.qty * line.unit_price_ngwee);
         if (posts === 1) {
           // Confirm native commit before withholding the response from the UI.
+          routeStage = "native_commit_check";
           state("committed_before_discard", 1, 1, 1, price, key);
           point("committed_before_discard");
+          routeStage = "response_abort";
           await route.abort("connectionreset");
           point("one_response_discarded");
         } else {
+          routeStage = "native_commit_check";
           state(
             posts === 2 ? "replayed" : "fresh",
             posts === 2 ? 1 : 2,
@@ -161,24 +240,36 @@ try {
             posts === 2 ? price : price + 100,
             key,
           );
+          routeStage = "cart_response_fulfil";
           await route.fulfill({ response });
         }
+        routeStage = "cart_response_dispose";
         await response.dispose();
+        if (postOrdinal === 1) browserDiagnostic.firstResponseDisposed = true;
         return;
       }
       // Keep redirects inside this interception boundary; never auto-follow.
+      routeStage = "other_response_fetch";
       const response = await route.fetch({
         maxRedirects: 0,
         maxRetries: 0,
         timeout: 15_000,
       });
+      routeStage = "other_redirect_guard";
       const location = response.headers().location;
       if (location) assert.ok([origin, api].includes(new URL(location, url).origin));
+      routeStage = "other_response_fulfil";
       await route.fulfill({ response });
+      routeStage = "other_response_dispose";
       await response.dispose();
     } catch {
       if (![origin, api].includes(url.origin)) externalRequests += 1;
       routeFailure = true;
+      if (!browserDiagnostic.routeFailureObserved) {
+        browserDiagnostic.routeFailureStage = routeStage;
+        browserDiagnostic.routeFailurePost = postOrdinal;
+      }
+      browserDiagnostic.routeFailureObserved = true;
       await route.abort("blockedbyclient");
     }
   });
@@ -209,10 +300,16 @@ try {
   await choosePickup();
   await expect(add).toBeEnabled();
   phase = "discard_after_commit";
+  failureStage = "discard_click";
   await add.click();
+  browserDiagnostic.firstClickCompleted = true;
+  failureStage = "discard_error_visibility";
   await expect(page.getByTestId("pdp-add-to-cart-error")).toBeVisible();
+  browserDiagnostic.errorVisibilityPassed = true;
+  failureStage = "discard_route_integrity";
   assert.equal(routeFailure, undefined);
   point("actual_ui_uncertain_error");
+  failureStage = "outside_discard";
   phase = "actual_browser_retry";
   await add.click();
   await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible();
@@ -281,6 +378,11 @@ try {
   delete report.lastNativeObservation;
 } catch {
   report.failedPhase = phase;
+  report.failureDiagnostic = cartFailureDiagnostic(
+    failureStage,
+    browserDiagnostic,
+    report.checkpoints,
+  );
   process.exitCode = 1;
 } finally {
   if (bound) {
@@ -288,10 +390,20 @@ try {
       assert.equal(db("cleanup").cleaned, true);
       point("synthetic_fixture_cleanup");
     } catch {
+      report.failureDiagnostic ??= cartFailureDiagnostic(
+        "fixture_cleanup",
+        browserDiagnostic,
+        report.checkpoints,
+      );
       report.qualified = false;
       report.failedPhase = "fixture_cleanup";
       process.exitCode = 1;
     }
+  }
+  if (report.failureDiagnostic) {
+    report.failureDiagnostic.fixture_cleanup_recorded =
+      report.checkpoints.synthetic_fixture_cleanup === true;
+    console.log(`cart-drill-browser-failure-summary: ${JSON.stringify(report.failureDiagnostic)}`);
   }
   if (browser) await browser.close();
   clearTimeout(deadline);
