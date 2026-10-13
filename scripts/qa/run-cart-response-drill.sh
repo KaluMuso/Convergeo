@@ -92,17 +92,37 @@ drill_cleanup() {
     sudo chown -R "$(id -u):$(id -g)" "$drill_output" || drill_cleanup_ok=false
     sudo chmod 700 "$drill_output" || drill_cleanup_ok=false
     if ! python3 - "$drill_output" "$drill_phase" "$drill_status" "$drill_api_exit" "$drill_customer_exit" <<'PY'
-import json, sys
+import json, re, sys
 from pathlib import Path
 p = Path(sys.argv[1])
+def log_text(name):
+    return (p / name).read_text(errors='replace') if (p / name).exists() else ''
 def categories(name):
-    text = (p / name).read_text(errors='replace') if (p / name).exists() else ''
+    text = log_text(name)
     markers = ['Permission denied', 'libpython', 'ModuleNotFoundError', 'EACCES', 'Address already in use', 'ERR_MODULE_NOT_FOUND', 'Pydantic', 'ValidationError']
+    markers += ['MODULE_NOT_FOUND', 'Cannot find module', 'Cannot find package',
+                'ERR_PACKAGE_PATH_NOT_EXPORTED', 'ERR_REQUIRE_ESM', 'ERR_UNKNOWN_FILE_EXTENSION',
+                'ERR_DLOPEN_FAILED', 'EPERM', 'ENOENT', 'EADDRINUSE',
+                'Failed to load next.config', 'Failed to load SWC binary']
     return [marker for marker in markers if marker in text]
+def missing_customer_module():
+    match = re.search(r"Cannot find (?:module|package) ['\"]([^'\"]+)['\"]", log_text('private-customer.log'))
+    if match is None:
+        return None
+    name = match.group(1)
+    public_modules = {'next', 'react', 'react-dom', 'styled-jsx', 'styled-jsx/style',
+                      'typescript', '@next/env', '@swc/helpers', '@serwist/next',
+                      'next-intl/plugin', '@vergeo/config', '@vergeo/config/security-headers'}
+    if name in public_modules:
+        return name
+    if name.startswith('next/dist/'):
+        return 'next_internal'
+    return 'unclassified'
 d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categories('private-api.log'),
      'api_launcher_status': sys.argv[4], 'customer_launcher_status': sys.argv[5],
      'python_probe_categories': categories('private-python-probe.log'),
-     'customer_log_categories': categories('private-customer.log'), 'raw_logs_retained_privately_only': True}
+     'customer_log_categories': categories('private-customer.log'),
+     'customer_missing_module': missing_customer_module(), 'raw_logs_retained_privately_only': True}
 try:
     health = json.loads((p / 'private-health-probe.json').read_text())
     assert isinstance(health, list) and len(health) == 2
