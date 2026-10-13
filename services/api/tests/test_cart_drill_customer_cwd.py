@@ -23,6 +23,8 @@ def launch(tmp_path: Path, *, customer_context: bool) -> tuple[int, dict[str, ob
     if not customer_context:
         line = line.replace(" --customer-project", "")
     stage = tmp_path / "stage"
+    native_cache = tmp_path / "native-cache"
+    native_cache.mkdir(mode=0o700)
     customer = stage / "apps/customer"
     (customer / "lib").mkdir(parents=True)
     (customer / "lib/api-base-url.js").write_text('module.exports = "fixture-origin";')
@@ -39,6 +41,7 @@ def launch(tmp_path: Path, *, customer_context: bool) -> tuple[int, dict[str, ob
         "config.paths = Module._nodeModulePaths(customer);\n"
         "const result = {cwd: process.cwd() === customer ? 'customer' : 'stage_root',\n"
         "private_env_present: process.env.PRIVATE_TEST_ENV !== undefined,\n"
+        "native_cache: process.env.SWC_NATIVE_BINDING_CACHE,\n"
         "test_uid: process.env.CART_DRILL_UID};\n"
         "try { config._compile(\"module.exports = require('./lib/api-base-url');\", filename);\n"
         "result.origin = config.exports; } catch (error) {\n"
@@ -55,6 +58,7 @@ def launch(tmp_path: Path, *, customer_context: bool) -> tuple[int, dict[str, ob
             "set -euo pipefail",
             f"drill_root={shlex.quote(str(stage))}",
             f"drill_package_root={shlex.quote(str(stage))}",
+            f"drill_swc_cache_root={shlex.quote(str(native_cache))}",
             f"drill_output={shlex.quote(str(output))}",
             f"drill_node={shlex.quote(node)}",
             "drill_uid=999",
@@ -92,6 +96,7 @@ def test_customer_launcher_resolves_relative_next_config_import_from_project(
     assert data == {
         "cwd": "customer",
         "private_env_present": False,
+        "native_cache": str(tmp_path / "native-cache"),
         "test_uid": "999",
         "origin": "fixture-origin",
     }
@@ -105,6 +110,7 @@ def test_default_drill_context_stays_at_root_and_exposes_the_original_failure(
     assert data == {
         "cwd": "stage_root",
         "private_env_present": False,
+        "native_cache": str(tmp_path / "native-cache"),
         "test_uid": "999",
         "error_code": "MODULE_NOT_FOUND",
     }
