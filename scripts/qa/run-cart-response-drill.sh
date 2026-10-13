@@ -91,12 +91,24 @@ drill_cleanup() {
   if sudo test -d "$drill_output"; then
     sudo chown -R "$(id -u):$(id -g)" "$drill_output" || drill_cleanup_ok=false
     sudo chmod 700 "$drill_output" || drill_cleanup_ok=false
-    if ! python3 - "$drill_output" "$drill_phase" "$drill_status" "$drill_api_exit" "$drill_customer_exit" <<'PY'
+    if ! python3 - "$drill_output" "$drill_phase" "$drill_status" "$drill_api_exit" "$drill_customer_exit" "$drill_root" <<'PY'
 import json, re, sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 p = Path(sys.argv[1])
+log_cache = {}
+log_truncated = {}
 def log_text(name):
-    return (p / name).read_text(errors='replace') if (p / name).exists() else ''
+    if name not in log_cache:
+        log_cache[name] = ''
+        log_truncated[name] = False
+        path = p / name
+        if path.is_file() and not path.is_symlink():
+            with path.open('rb') as handle:
+                size = handle.seek(0, 2)
+                handle.seek(max(0, size - 65536))
+                log_cache[name] = handle.read(65536).decode(errors='replace')
+                log_truncated[name] = size > 65536
+    return log_cache[name]
 def categories(name):
     text = log_text(name)
     markers = ['Permission denied', 'libpython', 'ModuleNotFoundError', 'EACCES', 'Address already in use', 'ERR_MODULE_NOT_FOUND', 'Pydantic', 'ValidationError']
@@ -105,24 +117,91 @@ def categories(name):
                 'ERR_DLOPEN_FAILED', 'EPERM', 'ENOENT', 'EADDRINUSE',
                 'Failed to load next.config', 'Failed to load SWC binary']
     return [marker for marker in markers if marker in text]
-def missing_customer_module():
+public_modules = {'next', 'react', 'react-dom', 'styled-jsx', 'styled-jsx/style',
+                  'typescript', '@next/env', '@swc/helpers', '@serwist/next',
+                  'next-intl/plugin', '@vergeo/config', '@vergeo/config/security-headers',
+                  '@swc/core', '@swc/core-linux-x64-gnu', '@swc/core-linux-x64-musl',
+                  '@vergeo/config/api-base-url', 'next-intl', 'webpack'}
+# Output values are literals, never arbitrary source/package filenames or prefixes.
+public_chain_paths = {
+    'apps/customer/next.config.ts', 'apps/customer/next.config.compiled.js',
+    'apps/customer/lib/api-base-url.ts', 'packages/config/src/index.ts',
+    'packages/config/src/env.ts', 'packages/config/src/api-base-url.ts',
+    'packages/config/src/security-headers.ts',
+    'node_modules/next/dist/build/next-config-ts/transpile-config.js',
+    'node_modules/next/dist/build/next-config-ts/require-hook.js',
+    'node_modules/next/dist/build/swc/index.js', 'node_modules/next/dist/server/config.js',
+    'node_modules/next/dist/server/require-hook.js', 'node_modules/next/dist/bin/next',
+    'node_modules/@swc/core/index.js', 'node_modules/@swc/core/binding.js',
+    'node_modules/next-intl/dist/esm/development/plugin.js',
+    'node_modules/next-intl/dist/esm/development/plugin/getNextConfig.js',
+    'node_modules/next-intl/dist/esm/production/plugin.js',
+    'node_modules/next-intl/dist/esm/production/plugin/getNextConfig.js',
+}
+def public_relative_path(value):
+    if len(sys.argv) <= 6:
+        return None
+    root = sys.argv[6].rstrip('/')
+    if not root.startswith('/') or not value.startswith(root + '/'):
+        return None
+    alias = value[len(root) + 1:]
+    if '\\' in alias or '..' in alias.split('/') or PurePosixPath(alias).as_posix() != alias:
+        return None
+    if alias in public_chain_paths:
+        return alias
+    if alias.startswith('node_modules/.pnpm/'):
+        for public in sorted(public_chain_paths):
+            if public.startswith('node_modules/') and alias.endswith('/' + public):
+                return public
+    return None
+def customer_module_diagnostic():
     match = re.search(r"Cannot find (?:module|package) ['\"]([^'\"]+)['\"]", log_text('private-customer.log'))
     if match is None:
-        return None
+        return None, None, None
     name = match.group(1)
-    public_modules = {'next', 'react', 'react-dom', 'styled-jsx', 'styled-jsx/style',
-                      'typescript', '@next/env', '@swc/helpers', '@serwist/next',
-                      'next-intl/plugin', '@vergeo/config', '@vergeo/config/security-headers'}
     if name in public_modules:
-        return name
+        return name, 'public_module', None
     if name.startswith('next/dist/'):
-        return 'next_internal'
-    return 'unclassified'
+        return 'next_internal', 'next_internal', None
+    path = public_relative_path(name)
+    if path:
+        return 'unclassified', 'public_runtime_file', path
+    category = 'absolute_request' if name.startswith('/') else 'relative_request' if name.startswith(('./', '../')) else 'unclassified'
+    return 'unclassified', category, None
+def customer_require_chain():
+    paths = []
+    stack = False
+    for line in log_text('private-customer.log').splitlines():
+        line = line.strip()
+        if line == 'Require stack:' or line == 'requireStack: [':
+            stack = True
+            continue
+        if not stack:
+            continue
+        if line.startswith('- '):
+            value = line[2:]
+        else:
+            match = re.fullmatch(r"['\"]([^'\"]+)['\"],?", line)
+            if match is None:
+                stack = False
+                continue
+            value = match.group(1)
+        path = public_relative_path(value)
+        if path and path not in paths:
+            paths.append(path)
+        if len(paths) == 8:
+            break
+    return paths
+module, module_category, module_path = customer_module_diagnostic()
 d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categories('private-api.log'),
      'api_launcher_status': sys.argv[4], 'customer_launcher_status': sys.argv[5],
      'python_probe_categories': categories('private-python-probe.log'),
      'customer_log_categories': categories('private-customer.log'),
-     'customer_missing_module': missing_customer_module(), 'raw_logs_retained_privately_only': True}
+     'customer_missing_module': module, 'customer_missing_module_category': module_category,
+     'customer_missing_relative_path': module_path, 'customer_require_chain': customer_require_chain(),
+     'customer_require_chain_format': 'allowlisted_public_module_relative_v1',
+     'customer_log_tail_truncated': log_truncated.get('private-customer.log', False),
+     'raw_logs_retained_privately_only': True}
 try:
     health = json.loads((p / 'private-health-probe.json').read_text())
     assert isinstance(health, list) and len(health) == 2
