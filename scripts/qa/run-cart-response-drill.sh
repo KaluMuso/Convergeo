@@ -192,7 +192,44 @@ def customer_require_chain():
         if len(paths) == 8:
             break
     return paths
+def customer_native_error_summary():
+    text = log_text('private-customer.log')
+    # Node's inspected Error.cause arrays can contain both a caught relative
+    # addon miss and the fatal platform-loader error. Flatten exact code fields;
+    # never treat the first MODULE_NOT_FOUND as the final cause or export text.
+    native_codes = ('ERR_SWC_NATIVE_FORMAT', 'ERR_SWC_NATIVE_INTEGRITY',
+                    'ERR_SWC_NATIVE_COMPRESSION', 'ERR_SWC_NATIVE_CACHE',
+                    'ERR_SWC_NATIVE_CONFIGURATION', 'ERR_SWC_NATIVE_LOAD')
+    allowed_codes = ('MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND', 'ERR_DLOPEN_FAILED',
+                     'EACCES', 'EPERM', 'ENOENT') + native_codes
+    observed = set()
+    for match in re.finditer(r'''(?<![\w])(?:code|"code"|'code')\s*:\s*(['"])([A-Z][A-Z0-9_]{0,63})\1''', text):
+        if match.group(2) in allowed_codes:
+            observed.add(match.group(2))
+    requests = []
+    native_requests = (('./swc.linux-x64-gnu.node', 'swc_linux_x64_gnu_relative'),
+                       ('./swc.linux-x64-musl.node', 'swc_linux_x64_musl_relative'))
+    for request, category in native_requests:
+        pattern = r'''Cannot find (?:module|package) (['"])''' + re.escape(request) + r'''\1'''
+        if re.search(pattern, text):
+            requests.append(category)
+    # Recognize the Node header separately from launcher exit. An Error.cause
+    # may be caught by a successful fallback; neither codes nor header alone
+    # prove terminal failure or associate a specific code with the final cause.
+    binding_error_header = re.search(r'(?m)^[ \t]*(?:[⨯×][ \t]*)?(?:\[cause\]:[ \t]*)?Error: Failed to load native binding(?:[ \t]*\{)?[ \t]*$', text) is not None
+    state = ('native_binding_error_header' if binding_error_header else
+             'relative_native_missing_attempt' if requests else
+             'native_code_without_binding_error_header' if observed.intersection(native_codes) else
+             'no_classified_native_evidence')
+    return {'format': 'allowlisted_native_error_v1', 'scope': 'bounded_launcher_tail',
+            'state': state, 'native_binding_error_header_observed': binding_error_header,
+            'customer_launcher_failed': sys.argv[5] in {str(code) for code in range(1, 256)},
+            'relative_native_missing_attempts': requests,
+            'observed_error_codes': [code for code in allowed_codes if code in observed],
+            'observed_native_carrier_codes': [code for code in native_codes if code in observed],
+            'tail_truncated': log_truncated.get('private-customer.log', False)}
 module, module_category, module_path = customer_module_diagnostic()
+native_summary = customer_native_error_summary()
 d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categories('private-api.log'),
      'api_launcher_status': sys.argv[4], 'customer_launcher_status': sys.argv[5],
      'python_probe_categories': categories('private-python-probe.log'),
@@ -200,6 +237,7 @@ d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categ
      'customer_missing_module': module, 'customer_missing_module_category': module_category,
      'customer_missing_relative_path': module_path, 'customer_require_chain': customer_require_chain(),
      'customer_require_chain_format': 'allowlisted_public_module_relative_v1',
+     'customer_native_error_summary': native_summary,
      'customer_log_tail_truncated': log_truncated.get('private-customer.log', False),
      'raw_logs_retained_privately_only': True}
 try:
@@ -211,6 +249,9 @@ try:
 except (OSError, ValueError, TypeError, KeyError, AssertionError):
     d['health_evidence'] = 'unavailable_or_malformed'
 (p / 'diagnostics.json').write_text(json.dumps(d, indent=2) + '\n')
+# Only this finite literal schema goes to the ordinary job log. Raw launcher
+# logs, messages, paths, env and cause arrays remain private.
+print('cart-drill-native-error-summary: ' + json.dumps(native_summary, separators=(',', ':')))
 PY
     then drill_cleanup_ok=false; fi
   fi
