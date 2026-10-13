@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
+import { AdminPermissionsContext, useAdminPermissionCheck } from "../../../lib/roles-api";
+
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
@@ -16,11 +19,8 @@ import {
 } from "./admin-nav-config";
 import { SignOutButton } from "./sign-out-button";
 
-import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
-
 type AdminShellProps = {
   locale: string;
-  capabilities: AdminNavCapabilities;
   children: React.ReactNode;
 };
 
@@ -34,7 +34,7 @@ function navLinkClass(active: boolean, compact = false): string {
   ].join(" ");
 }
 
-export function AdminShell({ locale, capabilities, children }: AdminShellProps) {
+export function AdminShell({ locale, children }: AdminShellProps) {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
@@ -44,7 +44,11 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
   const isBareAuthRoute =
-    rest === "/login" || rest.startsWith("/login/") || rest.startsWith("/reset-password");
+    rest === "/login" ||
+    rest.startsWith("/login/") ||
+    rest.startsWith("/reset-password") ||
+    rest === "/permission-denied";
+  const { grants, error: grantError } = useAdminPermissionCheck(isBareAuthRoute ? null : pathname);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -68,11 +72,19 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
     return <>{children}</>;
   }
 
+  const capabilities = resolveAdminNavCapabilities(
+    grants?.permissions ?? [],
+    grants?.unrestricted ?? false,
+  );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
 
   const activeKey = resolveAdminActiveItem(rest, visibleItems);
   const activeGroup = resolveAdminActiveGroup(rest, navGroups);
+  const requested = resolveAdminActiveItem(rest);
+  const denied =
+    !grants?.unrestricted &&
+    (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"));
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -147,23 +159,37 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
                   : t("nav.home")}
               </span>
             </button>
-            <Link
-              href={adminItemHref(locale, "orders")}
-              className={navLinkClass(activeKey === "orders", true)}
-            >
-              {t("nav.orders")}
-            </Link>
-            <Link
-              href={adminItemHref(locale, "kyc")}
-              className={navLinkClass(activeKey === "kyc", true)}
-            >
-              {t("nav.kyc")}
-            </Link>
+            {capabilities.orders ? (
+              <Link
+                href={adminItemHref(locale, "orders")}
+                className={navLinkClass(activeKey === "orders", true)}
+              >
+                {t("nav.orders")}
+              </Link>
+            ) : null}
+            {capabilities.kyc ? (
+              <Link
+                href={adminItemHref(locale, "kyc")}
+                className={navLinkClass(activeKey === "kyc", true)}
+              >
+                {t("nav.kyc")}
+              </Link>
+            ) : null}
           </div>
         </div>
 
         <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
-          {children}
+          {grantError ? (
+            <p role="alert">{t("shell.permissionError")}</p>
+          ) : !grants ? (
+            <p role="status">{t("shell.permissionChecking")}</p>
+          ) : denied ? (
+            <p role="alert">{t("shell.permissionDenied")}</p>
+          ) : (
+            <AdminPermissionsContext.Provider value={grants}>
+              {children}
+            </AdminPermissionsContext.Provider>
+          )}
         </main>
       </div>
 

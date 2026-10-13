@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { User } from "@supabase/supabase-js";
-
 import { getRoles, getRolesFromClaims, getRolesFromUser, hasRole } from "./roles";
+
+import type { User } from "@supabase/supabase-js";
 
 function makeUser(roles: string[] | undefined): User {
   return {
@@ -49,6 +49,13 @@ describe("getRolesFromClaims", () => {
     expect(getRolesFromClaims({ app_metadata: { roles: ["vendor", "superuser"] } })).toEqual([
       "vendor",
     ]);
+  });
+
+  it("accepts bounded restricted role keys only from verified claims", () => {
+    expect(
+      getRolesFromClaims({ app_metadata: { roles: ["rbac_finance", "superadmin", "rbac_!bad"] } }),
+    ).toEqual(["rbac_finance", "superadmin"]);
+    expect(getRolesFromClaims({ user_metadata: { roles: ["rbac_finance"] } })).toEqual([]);
   });
 
   it("filters non-string entries", () => {
@@ -102,5 +109,37 @@ describe("getRoles", () => {
 
     await expect(getRoles(supabase as never, "user-1")).resolves.toEqual(["vendor", "customer"]);
     expect(supabase.from).toHaveBeenCalledWith("user_roles");
+  });
+});
+
+describe("bounded platform role claims", () => {
+  it("accepts existing role union without trusting user metadata", () => {
+    expect(
+      getRolesFromClaims({
+        app_metadata: {
+          roles: ["customer", "vendor", "superadmin", "moderator", "rbac_finance", "rbac_services"],
+        },
+        user_metadata: { roles: ["admin"] },
+      }),
+    ).toEqual(["customer", "vendor", "superadmin", "moderator", "rbac_finance", "rbac_services"]);
+  });
+
+  it("matches bounded database role keys and rejects malformed keys", () => {
+    expect(
+      getRolesFromClaims({
+        app_metadata: {
+          roles: [
+            "rbac_abc",
+            `rbac_${"a".repeat(40)}`,
+            `rbac_${"a".repeat(41)}`,
+            "rbac_a",
+            "rbac_ab",
+            "rbac_ABC",
+            "rbac_!abc",
+            "vendor_staff",
+          ],
+        },
+      }),
+    ).toEqual(["rbac_abc", `rbac_${"a".repeat(40)}`]);
   });
 });

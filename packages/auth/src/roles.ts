@@ -1,13 +1,23 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type AppRole = "customer" | "vendor" | "admin";
+export type AppRole =
+  "customer" | "vendor" | "admin" | "superadmin" | "moderator" | `rbac_${string}`;
 
-const APP_ROLES = new Set<AppRole>(["customer", "vendor", "admin"]);
+const APP_ROLES = new Set<AppRole>(["customer", "vendor", "admin", "superadmin", "moderator"]);
+
+function isAppRole(role: unknown): role is AppRole {
+  return (
+    typeof role === "string" &&
+    (APP_ROLES.has(role as AppRole) || /^rbac_[a-z][a-z0-9_]{2,39}$/.test(role))
+  );
+}
 
 /**
  * Fast-path role read for middleware gating.
- * Reads `app_metadata.roles` from the Supabase user object (JWT-backed).
+ * Reads `app_metadata.roles` from the Supabase user object. The custom access
+ * token hook does not write these roles back to the user object, so middleware
+ * must use verified token claims instead.
  * Authoritative role checks for mutations belong in the API (M04-P02), which
  * reads `public.user_roles` — never trust JWT claims alone for admin actions.
  */
@@ -22,7 +32,7 @@ export function getRolesFromUser(user: User | null | undefined): AppRole[] {
   }
 
   return metadataRoles.filter((role): role is AppRole => {
-    return typeof role === "string" && APP_ROLES.has(role as AppRole);
+    return isAppRole(role);
   });
 }
 
@@ -65,7 +75,7 @@ export function getRolesFromClaims(claims: unknown): AppRole[] {
   }
 
   return roles.filter((role): role is AppRole => {
-    return typeof role === "string" && APP_ROLES.has(role as AppRole);
+    return isAppRole(role);
   });
 }
 
@@ -80,7 +90,5 @@ export async function getRoles(supabase: SupabaseClient, userId: string): Promis
     throw error;
   }
 
-  return (data ?? [])
-    .map((row) => row.role)
-    .filter((role): role is AppRole => typeof role === "string" && APP_ROLES.has(role as AppRole));
+  return (data ?? []).map((row) => row.role).filter(isAppRole);
 }

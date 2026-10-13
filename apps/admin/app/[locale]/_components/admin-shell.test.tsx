@@ -1,15 +1,41 @@
 // @vitest-environment jsdom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminShell } from "./admin-shell";
 
 import type { Root } from "react-dom/client";
 
 let pathname = "/en";
+
+vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => "local-only-token" }));
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({
+    auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    },
+  }),
+}));
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string) => {
+      if (input !== "/admin/me/permissions") {
+        throw new Error("Unexpected request in isolated shell fixture");
+      }
+      return new Response(
+        JSON.stringify({
+          permissions: [],
+          unrestricted: true,
+          can_manage_roles: true,
+        }),
+        { headers: { "content-type": "application/json" } },
+      );
+    }),
+  );
+});
 
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
@@ -26,7 +52,7 @@ async function renderRoute(path: string) {
   pathname = path;
   await act(async () => {
     root?.render(
-      <AdminShell locale="en" capabilities={resolveAdminNavCapabilities()}>
+      <AdminShell locale="en">
         <p data-route={path}>Route content</p>
       </AdminShell>,
     );
@@ -38,6 +64,7 @@ afterEach(async () => {
   container?.remove();
   root = undefined;
   container = undefined;
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -59,11 +86,13 @@ describe("AdminShell auth route transitions", () => {
       "/en/reset-password",
       "/en",
     ]) {
+      const permissionRequests = vi.mocked(fetch).mock.calls.length;
       await renderRoute(path);
       expect(container.querySelector(`[data-route="${path}"]`)).not.toBeNull();
       const isAuth = path !== "/en";
       expect(container.querySelector("nav") === null).toBe(isAuth);
       expect(container.querySelector("[aria-controls]") === null).toBe(isAuth);
+      expect(vi.mocked(fetch).mock.calls.length).toBe(permissionRequests + (isAuth ? 0 : 1));
     }
 
     expect(errors).not.toHaveBeenCalled();
