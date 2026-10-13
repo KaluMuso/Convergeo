@@ -15,6 +15,7 @@ import {
   MiniCartDrawer,
   closeMiniCart,
   openMiniCart,
+  resetCartClientForTests,
   setLastAddedMessage,
   setStoreStateForTests,
 } from "./mini-cart-drawer";
@@ -83,6 +84,7 @@ function renderInIntl(ui: React.ReactElement) {
 }
 
 beforeEach(() => {
+  resetCartClientForTests();
   vi.mocked(getApiBaseUrl).mockReturnValue("http://localhost:8000");
   vi.stubGlobal(
     "fetch",

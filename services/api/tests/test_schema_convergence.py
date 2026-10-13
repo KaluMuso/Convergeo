@@ -68,6 +68,15 @@ def test_v1_profile_is_d33_d34_exact_and_blocks_future_activation() -> None:
 def test_repository_migrations_have_unique_versions_and_manifest_is_deterministic() -> None:
     migrations = schema.repository_migrations(REPO_ROOT / "supabase" / "migrations")
     assert len(migrations) == len({migration.version for migration in migrations})
+    # Bind the expected repair union to actual canonical SQL files.
+    sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
+    actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
+    assert len(sql_files) == len(migrations) == 118
+    assert [migration.version for migration in migrations] == actual_versions
+    repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
+    assert actual_versions[-4:] == repairs
+    assert all(path.stat().st_size > 0 for path in sql_files)
+
     assert schema.manifest_digest(migrations, _manifest()) == schema.manifest_digest(
         migrations, _manifest()
     )
@@ -261,6 +270,7 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
         "20260831050000",
         "20260831051000",
         "20261009100000",
+        "20261009110000",
         "20261009124801",
         "20261011120000",
     ]
@@ -297,6 +307,7 @@ def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> N
         "20260831050000",
         "20260831051000",
         "20261009100000",
+        "20261009110000",
         "20261009124801",
         "20261011120000",
     ]

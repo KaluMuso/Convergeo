@@ -82,6 +82,7 @@ jobs:
           version: 2.109.1
 
       - name: Start local Supabase stack
+        id: cart_local_stack
         run: supabase start -x edge-runtime
 
       - name: Reset local database (with seed)
@@ -154,6 +155,7 @@ jobs:
           exit 1
 
       - name: Build customer app (head)
+        id: cart_head_build
         run: pnpm --filter customer build
 
       - name: Build customer app (base) for delta comparison
@@ -269,6 +271,7 @@ jobs:
         run: pnpm perf:lighthouse --config=lighthouserc.json
 
       - name: Install a11y smoke deps (standalone e2e package)
+        if: ${{ !cancelled() && steps.cart_local_stack.outcome == 'success' && steps.cart_head_build.outcome == 'success' }}
         working-directory: e2e
         run: |
           npm install --no-package-lock
@@ -308,6 +311,40 @@ jobs:
           E2E_THROTTLE: "0"
           PERF_A11Y_RESULTS: e2e/results/results.json
         run: node --test scripts/ci/perf-a11y-coverage.test.mjs
+
+      - name: Cart interrupted-response synthetic drill
+        if: ${{ !cancelled() && steps.cart_local_stack.outcome == 'success' && steps.cart_head_build.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          CART_DRILL_LOCAL: "1"
+          CART_DRILL_SOURCE_SHA: ${{ github.sha }}
+        run: bash scripts/qa/run-cart-response-drill.sh
+
+      - name: Prove cart response drill completeness
+        if: always()
+        run: >-
+          node scripts/ci/assert-cart-response-drill.mjs
+          e2e/results/cart-response-drill/outcome.json
+          e2e/results/cart-response-drill/guard.json
+          e2e/results/cart-response-drill/validation.json
+          ${{ github.sha }}
+          e2e/results/cart-response-drill/input-manifest.json
+          e2e/results/cart-response-drill/runtime-package.json
+
+      - name: Upload cart response drill evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-response-drill-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/results/cart-response-drill/outcome.json
+            e2e/results/cart-response-drill/guard.json
+            e2e/results/cart-response-drill/validation.json
+            e2e/results/cart-response-drill/diagnostics.json
+            e2e/results/cart-response-drill/python-path-diagnostics.json
+            e2e/results/cart-response-drill/input-manifest.json
+            e2e/results/cart-response-drill/runtime-package.json
+          if-no-files-found: error
 
       - name: Stop servers
         if: always()

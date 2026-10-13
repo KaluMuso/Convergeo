@@ -63,6 +63,9 @@ jobs:
       - name: E2E phone national-number helper tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
 
+      - name: Cart response drill evidence contract tests
+        run: node --test scripts/ci/assert-cart-response-drill.test.mjs
+
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
 
@@ -680,16 +683,48 @@ jobs:
         run: supabase db start
 
       - name: Reset local database
+        id: cart_typegen_reset
         run: supabase db reset --no-seed
 
       - name: Preload qualified postgres-meta from official GHCR
+        id: cart_typegen_meta
         run: bash scripts/ci/preload-typegen-meta.sh
 
       - name: Regenerate types
+        id: cart_typegen_generate
         run: bash scripts/gen-types.sh
+
+      - name: Capture genuine generated types provenance
+        id: cart_typegen_manifest
+        if: ${{ !cancelled() && steps.cart_typegen_generate.outcome == 'success' }}
+        env:
+          TYPEGEN_GENERATION_OUTCOME: ${{ steps.cart_typegen_generate.outcome }}
+          TYPEGEN_RESET_OUTCOME: ${{ steps.cart_typegen_reset.outcome }}
+          TYPEGEN_META_OUTCOME: ${{ steps.cart_typegen_meta.outcome }}
+        run: python3 scripts/ci/typegen_artifact.py capture
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
+
+      - name: Prove genuine generated types artifact is complete
+        id: cart_typegen_proof
+        if: always()
+        env:
+          TYPEGEN_GENERATION_OUTCOME: ${{ steps.cart_typegen_generate.outcome }}
+          TYPEGEN_RESET_OUTCOME: ${{ steps.cart_typegen_reset.outcome }}
+          TYPEGEN_META_OUTCOME: ${{ steps.cart_typegen_meta.outcome }}
+        run: python3 scripts/ci/typegen_artifact.py verify
+
+      - name: Upload genuine generated database types
+        if: ${{ !cancelled() && steps.cart_typegen_generate.outcome == 'success' && steps.cart_typegen_manifest.outcome == 'success' && steps.cart_typegen_proof.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-generated-types-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            packages/types/src/db.ts
+            typegen-artifact-manifest.json
+          if-no-files-found: error
+          retention-days: 3
 
   rls:
     name: RLS isolation matrix
@@ -877,6 +912,151 @@ jobs:
         with:
           name: staging-cleanup-regression
           path: services/api/staging-cleanup-regression.xml
+          if-no-files-found: error
+
+      - name: Cart idempotency DB contract (16 PostgreSQL cases and 4 URI guards)
+        timeout-minutes: 5
+        env:
+          PGCONNECT_TIMEOUT: "5"
+          PAYMENTS_ENABLED: "false"
+          PAYMENTS_ALLOW_PRODUCTION: "false"
+          LENCO_ENV: sandbox
+        run: |
+          set -euo pipefail
+          unset PGHOST PGHOSTADDR PGSERVICE PGSERVICEFILE PGPORT PGDATABASE PGUSER PGPASSWORD PGOPTIONS
+          cart_db_nonce=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
+          [[ "$cart_db_nonce" =~ ^[a-f0-9]{32}$ ]]
+          cart_db_name="cart-idem-$cart_db_nonce"
+          cart_db_cluster="cart_idem_test-$cart_db_nonce"
+          cart_db_cid=
+          cart_db_start_attempted=false
+          cart_db_root=
+          cart_db_verified=false
+          cart_db_server_verified=false
+          cart_db_pytest_status=not_run
+          cart_db_source=$(git rev-parse HEAD)
+          [[ "$cart_db_source" =~ ^[a-f0-9]{40}$ && "$cart_db_source" = "${GITHUB_SHA:?}" ]]
+          rm -f cart-idempotency-db.xml cart-idempotency-db-sanitized.xml cart-idempotency-db-validation.json cart-idempotency-db-lifecycle.json
+          cart_db_owned() {
+            [[ "$cart_db_cid" =~ ^[a-f0-9]{64}$ ]] &&
+              [[ "$(timeout 10 docker inspect --format '{{ index .Config.Labels "convergeo.cart-native" }}' "$cart_db_cid")" = "$cart_db_nonce" ]]
+          }
+          cleanup_cart_db() {
+            cart_db_status=$?
+            trap - EXIT
+            cart_db_cleanup_ok=true
+            # Recover only this nonce-labelled name after a partially failed Docker start.
+            if [ -z "$cart_db_cid" ] && [ "$cart_db_start_attempted" = true ]; then
+              if cart_db_partial=$(timeout 10 docker inspect --format '{{.Id}}' "$cart_db_name" 2>/dev/null); then
+                cart_db_cid="$cart_db_partial"
+              else
+                # An inspection failure cannot prove absence after an attempted start.
+                cart_db_cleanup_ok=false
+              fi
+            fi
+            if [ -n "$cart_db_cid" ]; then
+              if ! cart_db_owned; then
+                cart_db_cleanup_ok=false
+              elif ! timeout 10 docker rm --force "$cart_db_cid" >/dev/null; then
+                cart_db_cleanup_ok=false
+              elif ! cart_db_remaining=$(timeout 10 docker container ls --all --filter "id=$cart_db_cid" --format '{{.ID}}'); then
+                cart_db_cleanup_ok=false
+              elif [ -n "$cart_db_remaining" ]; then
+                cart_db_cleanup_ok=false
+              fi
+            fi
+            if [ -n "$cart_db_root" ] && [ "$cart_db_cleanup_ok" = true ]; then
+              if ! rm -rf -- "$cart_db_root"; then cart_db_cleanup_ok=false; fi
+            fi
+            if ! python3 - "$cart_db_source" "$cart_db_verified" "$cart_db_server_verified" "$cart_db_pytest_status" "$cart_db_cleanup_ok" <<'PY'
+          import json, sys
+          from pathlib import Path
+          source, container, server, status, cleanup = sys.argv[1:]
+          Path('cart-idempotency-db-lifecycle.json').write_text(json.dumps({
+              'source_sha': source,
+              'owned_container_verified': container == 'true',
+              'postgres16_database_cluster_verified': server == 'true',
+              'pytest_exit_code': None if status == 'not_run' else int(status),
+              'owned_container_and_directory_cleanup': cleanup == 'true',
+          }, indent=2) + '\n')
+          PY
+            then cart_db_cleanup_ok=false; fi
+            if [ "$cart_db_cleanup_ok" != true ] && [ "$cart_db_status" -eq 0 ]; then cart_db_status=1; fi
+            exit "$cart_db_status"
+          }
+          trap cleanup_cart_db EXIT
+          trap 'exit 143' TERM
+          trap 'exit 130' INT
+          # Reuse immutable bytes from the already-provisioned job service; never pull an image.
+          cart_db_image=$(timeout 10 docker inspect --format '{{.Image}}' '${{ job.services.postgres.id }}')
+          [[ "$cart_db_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$(timeout 10 docker image inspect --format '{{.Id}}' "$cart_db_image")" = "$cart_db_image" ]]
+          [[ "${RUNNER_TEMP:?}" = /* && -d "$RUNNER_TEMP" ]]
+          cart_db_root=$(mktemp -d "$RUNNER_TEMP/cart-idem.XXXXXXXX")
+          cart_db_socket="$cart_db_root/socket"
+          mkdir "$cart_db_socket"
+          cart_db_start_attempted=true
+          cart_db_cid=$(timeout 10 docker run --detach --pull=never --name "$cart_db_name" \
+            --label "convergeo.cart-native=$cart_db_nonce" --network none \
+            --tmpfs /var/lib/postgresql/data:rw \
+            --mount "type=bind,src=$cart_db_socket,dst=/var/run/postgresql" \
+            --env POSTGRES_HOST_AUTH_METHOD=trust --env POSTGRES_DB=cart_idem_test \
+            "$cart_db_image" -c listen_addresses= -c "cluster_name=$cart_db_cluster")
+          cart_db_owned
+          # Check actual resource isolation before any fixture connection or DDL.
+          timeout 10 docker inspect "$cart_db_cid" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d)==1; d=d[0]; assert d["Id"]==sys.argv[1]; assert d["Image"]==sys.argv[2]; assert d["Config"]["Labels"]["convergeo.cart-native"]==sys.argv[3]; h=d["HostConfig"]; assert h["NetworkMode"]=="none" and not h.get("PortBindings") and not h.get("Privileged"); assert set(h.get("Tmpfs",{}))=={"/var/lib/postgresql/data"}; m=d["Mounts"]; assert len(m)==1 and m[0]["Type"]=="bind" and m[0]["Source"]==sys.argv[4] and m[0]["Destination"]=="/var/run/postgresql"' "$cart_db_cid" "$cart_db_image" "$cart_db_nonce" "$cart_db_socket"
+          cart_db_verified=true
+          cart_db_ready=false
+          for cart_db_attempt in $(seq 1 20); do
+            if timeout 5 docker exec --user postgres "$cart_db_cid" pg_isready -q -t 3 -h /var/run/postgresql -U postgres -d cart_idem_test; then
+              cart_db_ready=true
+              break
+            fi
+            sleep 1
+           done
+          [[ "$cart_db_ready" = true ]]
+          # Only the newly owned socket directory changes mode; its parent stays private0700.
+          timeout 10 docker exec --user postgres "$cart_db_cid" chmod 0777 /var/run/postgresql
+          cart_db_identity=$(timeout 10 docker exec --user postgres "$cart_db_cid" \
+            psql -U postgres -d cart_idem_test -Atc "select current_setting('server_version_num') || '|' || current_database() || '|' || current_setting('cluster_name')")
+          [[ "$cart_db_identity" =~ ^16[0-9]{4}\|cart_idem_test\|cart_idem_test-[a-f0-9]{32}$ ]]
+          [[ "$cart_db_identity" = *"|cart_idem_test|$cart_db_cluster" ]]
+          cart_db_server_verified=true
+          export CART_IDEMPOTENCY_TEST_CLUSTER_NAME="$cart_db_cluster"
+          export CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY="$cart_db_socket"
+          export CART_IDEMPOTENCY_TEST_DATABASE_URL=$(python3 -c 'import os; from urllib.parse import quote; print("postgresql://postgres@" + quote(os.environ["CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY"], safe="") + "/cart_idem_test")')
+          # Preserve native failures; cleanup failure also prevents a green execution.
+          set +e
+          timeout 120 uv run --frozen --no-sync pytest tests/test_cart_add_idempotency_db.py -q --junitxml=cart-idempotency-db.xml
+          cart_db_pytest_status=$?
+          set -e
+          exit "$cart_db_pytest_status"
+
+      - name: Prove every cart idempotency case and owned cleanup passed
+        if: always()
+        run: |
+          python3 ../../scripts/ci/assert_cart_idempotency_ran.py \
+            cart-idempotency-db.xml cart-idempotency-db-sanitized.xml cart-idempotency-db-validation.json
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          d = json.loads(Path('cart-idempotency-db-lifecycle.json').read_text())
+          assert d['source_sha'] == os.environ['GITHUB_SHA']
+          assert d['owned_container_verified'] is True
+          assert d['postgres16_database_cluster_verified'] is True
+          assert d['pytest_exit_code'] == 0
+          assert d['owned_container_and_directory_cleanup'] is True
+          PY
+
+      - name: Upload cart idempotency DB evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-idempotency-db-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            services/api/cart-idempotency-db-sanitized.xml
+            services/api/cart-idempotency-db-validation.json
+            services/api/cart-idempotency-db-lifecycle.json
           if-no-files-found: error
 
   cod-container-smoke:
