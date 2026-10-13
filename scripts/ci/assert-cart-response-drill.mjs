@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -84,8 +85,11 @@ export function qualify(outcome, guard, sha) {
     "all_other_ipv4_and_ipv6_rejected",
     "api_and_customer_listener_uid_verified",
     "process_and_firewall_cleanup",
+    "runtime_package_verified",
+    "runtime_package_no_private_links",
   ])
     assert.equal(guard[key], true, key);
+  assert.match(guard.runtime_manifest_sha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(
     guard.allowed_loopback_tcp_ports,
     [3000, 8000, 54321, 54322],
@@ -104,6 +108,7 @@ export function qualify(outcome, guard, sha) {
   return {
     qualified: true,
     source_sha: sha,
+    runtime_manifest_sha256: guard.runtime_manifest_sha256,
     customer_execution_mode: guard.customer_execution_mode,
     required_checkpoints: checkpoints,
     stages: outcome.stages,
@@ -118,16 +123,36 @@ export function qualify(outcome, guard, sha) {
   };
 }
 
+export function qualifyPackage(bytes, receipt, guard, sha) {
+  const manifest = JSON.parse(bytes);
+  assert.equal(manifest.version, 1);
+  assert.equal(manifest.source_sha, sha);
+  assert.match(manifest.source_tree, /^[a-f0-9]{40}$/);
+  assert.equal(receipt.verified, true);
+  assert.equal(receipt.source_sha, sha);
+  assert.equal(receipt.manifest_sha256, guard.runtime_manifest_sha256);
+  assert.equal(
+    createHash("sha256").update(bytes).digest("hex"),
+    guard.runtime_manifest_sha256,
+  );
+  assert.ok(Number.isInteger(receipt.entries) && receipt.entries > 0);
+  assert.equal(receipt.entries, Object.keys(manifest.entries).length);
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  const [outcomePath, guardPath, outputPath, sha] = process.argv.slice(2);
+  const [outcomePath, guardPath, outputPath, sha, manifestPath, packagePath] =
+    process.argv.slice(2);
   let proof;
   try {
-    proof = qualify(
-      JSON.parse(readFileSync(outcomePath)),
-      JSON.parse(readFileSync(guardPath)),
+    const guard = JSON.parse(readFileSync(guardPath));
+    proof = qualify(JSON.parse(readFileSync(outcomePath)), guard, sha);
+    qualifyPackage(
+      readFileSync(manifestPath),
+      JSON.parse(readFileSync(packagePath)),
+      guard,
       sha,
     );
   } catch {

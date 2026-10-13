@@ -8,7 +8,12 @@ set -euo pipefail
 [[ "${SUPABASE_DB_URL:-}" = postgresql://postgres:postgres@127.0.0.1:54322/postgres ]]
 [[ "${CART_DRILL_SOURCE_SHA:-}" = "$(git rev-parse HEAD)" ]]
 drill_root=$(pwd)
+drill_source_root="$drill_root"
 drill_output="$drill_root/e2e/results/cart-response-drill"
+drill_artifact_output="$drill_output"
+drill_package_root=
+drill_package_verified=false
+drill_manifest_sha=
 drill_node=$(command -v node)
 drill_python_library="${pythonLocation:?}/lib"
 [[ "$drill_python_library" = /opt/hostedtoolcache/Python/*/lib && -d "$drill_python_library" ]]
@@ -120,12 +125,33 @@ p.write_text(json.dumps(d, indent=2) + '\n')
 PY
     then drill_cleanup_ok=false; fi
   fi
+  if [ -n "$drill_package_root" ]; then
+    mkdir -p "$drill_artifact_output" || drill_cleanup_ok=false
+    chmod 700 "$drill_artifact_output" || drill_cleanup_ok=false
+    for drill_evidence in outcome.json guard.json diagnostics.json python-path-diagnostics.json; do
+      if [ "$drill_output" = "$drill_artifact_output" ]; then break; fi
+      if [ -f "$drill_output/$drill_evidence" ] && [ ! -L "$drill_output/$drill_evidence" ]; then
+        cp -- "$drill_output/$drill_evidence" "$drill_artifact_output/$drill_evidence" || drill_cleanup_ok=false
+      fi
+    done
+    if [ -f "$drill_package_root/input-manifest.json" ] && [ ! -L "$drill_package_root/input-manifest.json" ]; then
+      cp -- "$drill_package_root/input-manifest.json" "$drill_artifact_output/input-manifest.json" || drill_cleanup_ok=false
+    fi
+    [[ "$drill_package_root" = /tmp/cartdrill.* && "${drill_package_root#/tmp/}" != */* ]] || drill_cleanup_ok=false
+    if [ "$drill_cleanup_ok" = true ]; then
+      sudo rm -rf -- "$drill_package_root" || drill_cleanup_ok=false
+    fi
+  fi
   if [ "$drill_cleanup_ok" != true ] && [ "$drill_status" -eq 0 ]; then drill_status=1; fi
   exit "$drill_status"
 }
 trap drill_cleanup EXIT
 drill_as_user() {
+  (
+  cd "$drill_root"
   sudo -u cartdrill env -i PATH=/usr/bin:/bin CART_DRILL_LOCAL=1 CART_DRILL_UID="$drill_uid" \
+    PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
+    TMPDIR="$drill_package_root/tmp" XDG_CACHE_HOME="$drill_package_root/cache" XDG_CONFIG_HOME="$drill_package_root/config" \
     LD_LIBRARY_PATH="$drill_python_library" \
     PLAYWRIGHT_BROWSERS_PATH="$drill_browser_path" \
     SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
@@ -134,6 +160,7 @@ drill_as_user() {
     NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
     NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
     ENV=development CORS_ORIGINS=http://127.0.0.1:3000 NEXT_TELEMETRY_DISABLED=1 CI=1 "$@"
+  )
 }
 # No new package, image, database or provider is provisioned.
 sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin cartdrill
@@ -160,9 +187,36 @@ sudo ip6tables -w -I OUTPUT 1 -m owner --uid-owner "$drill_uid" -j CARTDRILL6
 # Verify installed owner hooks before any guarded process starts.
 sudo iptables -w -C OUTPUT -m owner --uid-owner "$drill_uid" -j CARTDRILL4
 sudo ip6tables -w -C OUTPUT -m owner --uid-owner "$drill_uid" -j CARTDRILL6
+drill_phase=runtime_packaging
+mkdir -p "$drill_artifact_output"
+chmod 700 "$drill_artifact_output"
+drill_package_root=$(mktemp -d /tmp/cartdrill.XXXXXXXXXX)
+drill_manifest_sha=$("$drill_source_root/services/api/.venv/bin/python" \
+  "$drill_source_root/scripts/qa/cart-response-drill-package.py" package \
+  "$drill_source_root" "$pythonLocation" "$drill_node" "$drill_browser_executable" \
+  "$drill_package_root" "$CART_DRILL_SOURCE_SHA")
+[[ "$drill_manifest_sha" =~ ^[a-f0-9]{64}$ ]]
+# Only independent copies in this new directory receive the existing test group.
+# Its relative links were checked against the manifest before this ownership step.
+sudo chown -hR "$(id -u):cartdrill" "$drill_package_root"
+drill_root="$drill_package_root"
+drill_output="$drill_root/e2e/results/cart-response-drill"
+drill_node="$drill_root/.runtime/bin/node"
+drill_browser_path="$drill_root/.runtime/browsers"
+for drill_sdk_dir in "$pythonLocation" "${pythonLocation}/bin" "${pythonLocation}/lib" "${pythonLocation}/lib/python3.12"; do
+  sudo -u cartdrill test -r "$drill_sdk_dir"
+  sudo -u cartdrill test -x "$drill_sdk_dir"
+done
+drill_as_user "$drill_root/services/api/.venv/bin/python" \
+  "$drill_root/scripts/qa/cart-response-drill-package.py" verify \
+  "$drill_root" "$drill_manifest_sha" "$pythonLocation" > "$drill_artifact_output/runtime-package.json"
+drill_package_verified=true
 mkdir -p "$drill_output"
 sudo chown "$(id -u):cartdrill" "$drill_output"
 sudo chmod 770 "$drill_output"
+for drill_writable in tmp cache config; do
+  sudo install -d -o "$drill_uid" -g cartdrill -m 700 "$drill_package_root/$drill_writable"
+done
 drill_phase=python_preflight
 if drill_as_user "$drill_root/services/api/.venv/bin/python" -c 'import ssl, psycopg, uvicorn; print("isolated Python imports ready")' > "$drill_output/private-python-probe.log" 2>&1; then
   :
@@ -179,6 +233,7 @@ drill_phase=server_startup
 # preceding production checks; exercise the same source in local development mode.
 sudo fuser -k 3000/tcp 8000/tcp || true
 sudo chown -R cartdrill:cartdrill "$drill_root/apps/customer/.next"
+sudo chmod -R u+rwX "$drill_root/apps/customer/.next"
 drill_as_user "$drill_root/services/api/.venv/bin/python" -m uvicorn app.main:app --app-dir "$drill_root/services/api" --host 127.0.0.1 --port 8000 > "$drill_output/private-api.log" 2>&1 &
 drill_api_launcher=$!
 drill_as_user "$drill_node" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
@@ -213,13 +268,15 @@ sudo iptables -w -S CARTDRILL4 > "$drill_output/private-ipv4-rules.txt"
 sudo ip6tables -w -S CARTDRILL6 > "$drill_output/private-ipv6-rules.txt"
 sudo chown -R "$(id -u):cartdrill" "$drill_output"
 sudo chmod 770 "$drill_output"
-python3 - "$drill_output" "$drill_uid" "$CART_DRILL_SOURCE_SHA" <<'PY'
+python3 - "$drill_output" "$drill_uid" "$CART_DRILL_SOURCE_SHA" "$drill_manifest_sha" "$drill_package_verified" <<'PY'
 import json, sys
 from pathlib import Path
 p = Path(sys.argv[1])
 def rejected(name):
     return sum(int(row.split()[0]) for row in (p / name).read_text().splitlines() if ' REJECT ' in row)
 d = {'version': 1, 'uid': int(sys.argv[2]), 'source_sha': sys.argv[3], 'ipv4_owner_hook_verified': True,
+     'runtime_package_verified': sys.argv[5] == 'true', 'runtime_manifest_sha256': sys.argv[4],
+     'runtime_package_no_private_links': True,
      'customer_execution_mode': 'development; production loopback guard preserved',
      'ipv6_owner_hook_verified': True, 'allowed_loopback_tcp_ports': [3000, 8000, 54321, 54322],
      'dnat_original_destination': '127.0.0.1', 'dnat_original_tcp_ports': [54321, 54322],

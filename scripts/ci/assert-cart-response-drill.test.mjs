@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -9,9 +10,35 @@ import {
   ipv4Rules,
   ipv6Rules,
   qualify,
+  qualifyPackage,
 } from "./assert-cart-response-drill.mjs";
 
 const sha = "a".repeat(40);
+for (const fault of ["none", "source", "bytes", "receipt", "entries"]) {
+  test(`runtime package custody rejects ${fault}`, () => {
+    const bytes = Buffer.from(JSON.stringify({
+      version: 1,
+      source_sha: sha,
+      source_tree: sha,
+      entries: { "runtime-input": { type: "file" } },
+    }));
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    const receipt = {
+      verified: true,
+      source_sha: sha,
+      manifest_sha256: digest,
+      entries: 1,
+    };
+    const guard = { runtime_manifest_sha256: digest };
+    let payload = bytes;
+    if (fault === "source") receipt.source_sha = "b".repeat(40);
+    if (fault === "bytes") payload = Buffer.concat([bytes, Buffer.from(" ")]);
+    if (fault === "receipt") receipt.verified = false;
+    if (fault === "entries") receipt.entries = 2;
+    if (fault === "none") qualifyPackage(payload, receipt, guard, sha);
+    else assert.throws(() => qualifyPackage(payload, receipt, guard, sha));
+  });
+}
 for (const health of [
   "",
   "broken JSON",
@@ -96,6 +123,9 @@ function fixture() {
       all_other_ipv4_and_ipv6_rejected: true,
       api_and_customer_listener_uid_verified: true,
       process_and_firewall_cleanup: true,
+      runtime_package_verified: true,
+      runtime_package_no_private_links: true,
+      runtime_manifest_sha256: "a".repeat(64),
       allowed_loopback_tcp_ports: [3000, 8000, 54321, 54322],
       dnat_original_tcp_ports: [54321, 54322],
       dnat_original_destination: "127.0.0.1",
@@ -140,6 +170,18 @@ for (const [name, change] of [
   ["fresh price stale", ({ outcome }) => (outcome.stages[2].price = 1000)],
   ["wrong source", ({ guard }) => (guard.source_sha = "b".repeat(40))],
   ["root UID", ({ guard }) => (guard.uid = 0)],
+  [
+    "unverified runtime inputs",
+    ({ guard }) => (guard.runtime_package_verified = false),
+  ],
+  [
+    "private runtime links",
+    ({ guard }) => (guard.runtime_package_no_private_links = false),
+  ],
+  [
+    "missing runtime manifest",
+    ({ guard }) => delete guard.runtime_manifest_sha256,
+  ],
   [
     "missing IPv6 guard",
     ({ guard }) => (guard.ipv6_owner_hook_verified = false),
