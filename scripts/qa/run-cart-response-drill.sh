@@ -167,8 +167,13 @@ PY
 }
 trap drill_cleanup EXIT
 drill_as_user() {
+  local drill_workdir="$drill_root"
+  if [ "${1:-}" = --customer-project ]; then
+    drill_workdir="$drill_root/apps/customer"
+    shift
+  fi
   (
-  cd "$drill_root"
+  cd "$drill_workdir"
   sudo -u cartdrill env -i PATH=/usr/bin:/bin CART_DRILL_LOCAL=1 CART_DRILL_UID="$drill_uid" \
     PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
     TMPDIR="$drill_package_root/tmp" XDG_CACHE_HOME="$drill_package_root/cache" XDG_CONFIG_HOME="$drill_package_root/config" \
@@ -256,7 +261,7 @@ sudo chown -R cartdrill:cartdrill "$drill_root/apps/customer/.next"
 sudo chmod -R u+rwX "$drill_root/apps/customer/.next"
 drill_as_user "$drill_root/services/api/.venv/bin/python" -m uvicorn app.main:app --app-dir "$drill_root/services/api" --host 127.0.0.1 --port 8000 > "$drill_output/private-api.log" 2>&1 &
 drill_api_launcher=$!
-drill_as_user "$drill_node" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
+drill_as_user --customer-project "$drill_node" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
 drill_customer_launcher=$!
 for drill_attempt in $(seq 1 10); do
   if drill_as_user "$drill_node" --input-type=module -e 'const results=await Promise.all([["api","http://127.0.0.1:8000/healthz"],["customer","http://127.0.0.1:3000/en/health"]].map(async ([name,url])=>{try{return {name,ok:(await fetch(url,{signal:AbortSignal.timeout(5000)})).ok}}catch{return {name,ok:false}}}));console.log(JSON.stringify(results));process.exit(results.every(r=>r.ok)?0:1)' > "$drill_output/private-health-probe.json"; then break; fi
