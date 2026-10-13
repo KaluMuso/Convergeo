@@ -601,6 +601,9 @@ jobs:
       - name: Reset local database
         run: supabase db reset --no-seed
 
+      - name: Preload qualified postgres-meta from official GHCR
+        run: bash scripts/ci/preload-typegen-meta.sh
+
       - name: Regenerate types
         run: bash scripts/gen-types.sh
 
@@ -791,6 +794,47 @@ jobs:
         with:
           name: staging-cleanup-regression
           path: services/api/staging-cleanup-regression.xml
+          if-no-files-found: error
+
+      - name: Cart idempotency DB contract (14 required cases)
+        timeout-minutes: 5
+        env:
+          CART_IDEMPOTENCY_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/cart_idem_test
+          PGCONNECT_TIMEOUT: "5"
+        run: |
+          set -euo pipefail
+          cart_db_created=false
+          cleanup_cart_db() {
+            cart_db_status=$?
+            trap - EXIT
+            if [ "$cart_db_created" = true ]; then
+              if ! dropdb --host=127.0.0.1 --port=54322 --username=postgres --no-password cart_idem_test; then
+                if [ "$cart_db_status" -eq 0 ]; then cart_db_status=1; fi
+              fi
+            fi
+            exit "$cart_db_status"
+          }
+          trap cleanup_cart_db EXIT
+          cart_db_version=$(psql --host=127.0.0.1 --port=54322 --username=postgres --dbname=postgres --no-password -Atc 'SHOW server_version_num')
+          [[ "$cart_db_version" =~ ^16[0-9]{4}$ ]]
+          createdb --host=127.0.0.1 --port=54322 --username=postgres --no-password cart_idem_test
+          cart_db_created=true
+          uv run pytest tests/test_cart_add_idempotency_db.py -q --junitxml=cart-idempotency-db.xml
+
+      - name: Prove every cart idempotency DB case passed and sanitize JUnit
+        if: always()
+        run: >-
+          python3 ../../scripts/ci/assert_cart_idempotency_ran.py
+          cart-idempotency-db.xml cart-idempotency-db-sanitized.xml cart-idempotency-db-validation.json
+
+      - name: Upload cart idempotency DB evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-idempotency-db-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            services/api/cart-idempotency-db-sanitized.xml
+            services/api/cart-idempotency-db-validation.json
           if-no-files-found: error
 
   cod-container-smoke:
