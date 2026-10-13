@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { hydrateRoot, type Root } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
@@ -14,6 +16,7 @@ vi.mock("../../../../../lib/api-base-url", () => ({
   getApiBaseUrl: () => "https://api.example.test",
 }));
 
+import * as lightweightCart from "./cart-store";
 import {
   refreshCart,
   resetCartClientForTests,
@@ -360,4 +363,94 @@ it("retains new price and stock notices when an older cart snapshot arrives", as
   expect(state.result.current.cart?.items[0]?.qty).toBe(1);
   expect(state.result.current.cart?.subtotal_ngwee).toBe(60_000);
   expect(state.result.current.notices).toEqual(final.notices);
+});
+
+describe("lightweight and compatibility cart consumers", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("publishes mutations, trigger state and announcements through one shared store", async () => {
+    const legacy = await import("./mini-cart-drawer");
+    expect(legacy.useCartStore).toBe(lightweightCart.useCartStore);
+    expect(legacy.openMiniCart).toBe(lightweightCart.openMiniCart);
+    expect(legacy.CartNavTrigger).toBe(lightweightCart.CartNavTrigger);
+    const light = renderHook(() => lightweightCart.useCartStore());
+    const compatibility = renderHook(() => legacy.useCartStore());
+    render(
+      <lightweightCart.CartNavTrigger
+        labels={{ openCart: "Open cart" }}
+        cartIcon={<span>Cart</span>}
+      />,
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(cart(3))),
+    );
+    await act(async () => {
+      await legacy.updateCartItemQty("listing-1", 3);
+    });
+    expect(light.result.current).toBe(compatibility.result.current);
+    expect(light.result.current.cart?.subtotal_ngwee).toBe(150_000);
+    expect(screen.getByTestId("cart-nav-trigger")).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: "Open cart" })).toHaveClass("min-h-11", "min-w-11");
+    await userEvent.click(screen.getByRole("button", { name: "Open cart" }));
+    expect(compatibility.result.current.drawerOpen).toBe(true);
+    act(() => {
+      legacy.setLastAddedMessage("Added to cart");
+      lightweightCart.closeMiniCart();
+    });
+    expect(light.result.current.lastAddedMessage).toBe("Added to cart");
+    expect(compatibility.result.current.drawerOpen).toBe(false);
+    const listener = vi.fn();
+    const unsubscribe = lightweightCart.subscribeStore(listener);
+    act(() => legacy.openMiniCart());
+    expect(listener).toHaveBeenCalledOnce();
+    unsubscribe();
+    act(() => legacy.closeMiniCart());
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("preserves SSR hydration and pre-import state when the cart runtime loads later", async () => {
+    vi.resetModules();
+    const light = await import("./cart-store");
+    const untouchedFetch = vi.fn();
+    vi.stubGlobal("fetch", untouchedFetch);
+    const state = renderHook(() => light.useCartStore());
+    expect(state.result.current.loading).toBe(true);
+    expect(state.result.current.cart).toBeNull();
+    const trigger = (
+      <light.CartNavTrigger labels={{ openCart: "Open cart" }} cartIcon={<span>Cart</span>} />
+    );
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(trigger);
+    document.body.append(container);
+    const recoverable = vi.fn();
+    let root: Root | undefined;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, trigger, { onRecoverableError: recoverable });
+      });
+      expect(recoverable).not.toHaveBeenCalled();
+      expect(container.querySelector("button")).toHaveAttribute("aria-label", "Open cart");
+      act(() => {
+        light.setStoreStateForTests({ cart: cart(2), loading: false });
+        light.openMiniCart();
+        light.setLastAddedMessage("Added before runtime import");
+      });
+      const snapshot = state.result.current;
+      const runtime = await import("./mini-cart-drawer");
+      expect(runtime.useCartStore).toBe(light.useCartStore);
+      expect(untouchedFetch).not.toHaveBeenCalled();
+      expect(state.result.current).toBe(snapshot);
+      expect(state.result.current.cart?.items[0]?.qty).toBe(2);
+      expect(state.result.current.drawerOpen).toBe(true);
+      expect(state.result.current.lastAddedMessage).toBe("Added before runtime import");
+      expect(container.querySelector("button")).toHaveTextContent("1");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      vi.resetModules();
+    }
+  });
 });

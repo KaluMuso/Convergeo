@@ -7,15 +7,7 @@ import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
@@ -26,6 +18,26 @@ import {
   type SaleUnit,
   type SaleUnitLabels,
 } from "../sale-quantity";
+
+import {
+  closeMiniCart,
+  getCartItemCount,
+  openMiniCart,
+  setStoreState,
+  subscribeStore,
+  useCartStore,
+} from "./cart-store";
+
+export {
+  CartNavTrigger,
+  closeMiniCart,
+  getCartItemCount,
+  openMiniCart,
+  setLastAddedMessage,
+  setStoreStateForTests,
+  useCartStore,
+  type CartNavTriggerProps,
+} from "./cart-store";
 
 export const FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000;
 
@@ -90,18 +102,6 @@ type RevalidateResponse = {
   notices: ChangeNotice[];
   has_changes: boolean;
 };
-
-type CartStoreState = {
-  cart: CartResponse | null;
-  notices: ChangeNotice[];
-  loading: boolean;
-  /** True when the last cart refresh failed (distinct from an empty cart). */
-  loadError: boolean;
-  drawerOpen: boolean;
-  lastAddedMessage: string | null;
-};
-
-type CartStoreListener = () => void;
 
 type CartAuth = { scope: string; token: string | null };
 type CartRequestContext = CartAuth & {
@@ -440,18 +440,6 @@ async function loadCartWithNotices(
   return { cart, notices };
 }
 
-let storeState: CartStoreState = {
-  cart: null,
-  notices: [],
-  // Start loading so the cart page does not flash an empty state before the
-  // first refresh completes (empty vs load-error must stay distinct).
-  loading: true,
-  loadError: false,
-  drawerOpen: false,
-  lastAddedMessage: null,
-};
-
-const storeListeners = new Set<CartStoreListener>();
 let cartMutationVersion = 0;
 let cartReadVersion = 0;
 
@@ -519,20 +507,6 @@ function settleCartAddKey(slot: string, key: string, definitive: boolean) {
   persistCartAdds(slot, pending);
 }
 
-function emitStore() {
-  storeListeners.forEach((listener) => listener());
-}
-
-function setStoreState(patch: Partial<CartStoreState>) {
-  storeState = { ...storeState, ...patch };
-  emitStore();
-}
-
-/** Test-only store reset/patch — not for production UI. */
-export function setStoreStateForTests(patch: Partial<CartStoreState>) {
-  setStoreState(patch);
-}
-
 export function resetCartClientForTests() {
   observedAuthReadSequence = ++authReadSequence;
   ++cartSessionVersion;
@@ -541,24 +515,6 @@ export function resetCartClientForTests() {
   activeCartScope = null;
   memoryGuestGeneration = null;
   pendingAddKeys.clear();
-}
-
-function subscribeStore(listener: CartStoreListener): () => void {
-  storeListeners.add(listener);
-  return () => storeListeners.delete(listener);
-}
-
-function getStoreSnapshot(): CartStoreState {
-  return storeState;
-}
-
-export function getCartItemCount(cart: CartResponse | null): number {
-  if (!cart) {
-    return 0;
-  }
-  // Quantities can represent incompatible measures (for example kg and metres),
-  // so the cart badge counts distinct lines instead of adding unlike units.
-  return cart.items.length;
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
@@ -760,23 +716,6 @@ export async function saveCartItemForLater(listingId: string): Promise<SaveForLa
   };
 }
 
-export function openMiniCart() {
-  setStoreState({ drawerOpen: true });
-}
-
-export function closeMiniCart() {
-  setStoreState({ drawerOpen: false });
-}
-
-export function setLastAddedMessage(message: string | null) {
-  setStoreState({ lastAddedMessage: message });
-}
-
-export function useCartStore() {
-  const state = useSyncExternalStore(subscribeStore, getStoreSnapshot, getStoreSnapshot);
-  return state;
-}
-
 type CartContextValue = {
   refresh: () => Promise<CartResponse | null>;
   addItem: (listingId: string, qty: number) => Promise<CartResponse>;
@@ -933,38 +872,6 @@ export function MiniCartEmptyState({
       </LinkButton>
       <CartEmptyTrustList labels={labels.emptyTrust} compact />
     </div>
-  );
-}
-
-export type CartNavTriggerProps = {
-  labels: Pick<MiniCartLabels, "openCart">;
-  cartIcon: ReactNode;
-  className?: string;
-};
-
-export function CartNavTrigger({ labels, cartIcon, className }: CartNavTriggerProps) {
-  const { cart } = useCartStore();
-  const { openDrawer } = useCartActions();
-  const count = getCartItemCount(cart);
-
-  return (
-    <button
-      type="button"
-      className={
-        className ??
-        "relative inline-flex min-h-11 min-w-11 items-center justify-center rounded text-primary"
-      }
-      aria-label={labels.openCart}
-      data-testid="cart-nav-trigger"
-      onClick={openDrawer}
-    >
-      <span aria-hidden>{cartIcon}</span>
-      {count > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface">
-          {count > 99 ? "99+" : String(count)}
-        </span>
-      ) : null}
-    </button>
   );
 }
 
