@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-import { setImmediate } from "node:timers/promises";
-
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ApiError } from "@vergeo/config";
@@ -122,18 +120,51 @@ function nrcCaptureElement() {
 function nrcCapture() {
   return within(nrcCaptureElement());
 }
-async function selectPhoto() {
+async function startPhoto() {
   await act(async () => {
-    fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
+    const button = nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
   });
+}
+async function takeReadyPhoto() {
   await waitFor(() =>
     expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "false"),
   );
   fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
 }
+async function confirmPhoto() {
+  fireEvent.click(await nrcCapture().findByRole("button", { name: "onboarding.kyc.usePhoto" }));
+}
+async function selectPhoto() {
+  await startPhoto();
+  await takeReadyPhoto();
+}
 async function capture() {
   await selectPhoto();
-  fireEvent.click(await nrcCapture().findByRole("button", { name: "onboarding.kyc.usePhoto" }));
+  await confirmPhoto();
+}
+function cameraReadiness(stage: "acquisition" | "playback") {
+  const ready = deferred<void>();
+  if (stage === "acquisition") {
+    mock.camera.mockImplementationOnce(async () => {
+      await ready.promise;
+      return { getTracks: () => [{ stop: mock.stopCamera }] };
+    });
+  } else {
+    vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(ready.promise);
+  }
+  return ready;
+}
+async function renderOfflineDocs() {
+  const bootstrap = deferred<KycApplication>();
+  mock.bootstrap.mockReturnValueOnce(bootstrap.promise);
+  render(<OnboardingFlow locale="en" />);
+  await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledOnce());
+  // Commit the failed bootstrap and mounted camera effects before interacting.
+  await settle(bootstrap, application("A"), true);
+  await docs();
+  expect(screen.getByText("onboarding.errors.loadFailed")).toBeInTheDocument();
 }
 async function switchAccount(view: ReturnType<typeof render>, userId: string | null) {
   mock.userId = userId;
@@ -575,37 +606,36 @@ describe("repeat actions, retry and navigation", () => {
     expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
   });
 
-  it.each(["acquisition", "playback"] as const)(
-    "retrying bootstrap rejects a pending upload after delayed camera %s",
-    async (stage) => {
-      mock.bootstrap.mockRejectedValueOnce(new Error("offline"));
+  it.each([
+    ["delayed", "acquisition"],
+    ["delayed", "playback"],
+    ["immediate", "acquisition"],
+    ["immediate", "playback"],
+  ] as const)(
+    "retrying bootstrap rejects a pending upload after %s camera %s",
+    async (timing, stage) => {
       writeLocalDraft("A", { ...completedDraft(), nrcPath: null });
       const pending = deferred<string>();
       mock.upload.mockImplementation(() => pending.promise);
-      const ready = deferred<void>();
-      if (stage === "acquisition") {
-        mock.camera.mockImplementationOnce(async () => {
-          await ready.promise;
-          return { getTracks: () => [{ stop: mock.stopCamera }] };
-        });
-      } else {
-        vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(ready.promise);
+      const ready = cameraReadiness(stage);
+      if (timing === "immediate") ready.resolve(undefined);
+      await renderOfflineDocs();
+      // Await the dispatch itself; no background capture task or overlapping wait.
+      await startPhoto();
+      expect(mock.camera).toHaveBeenCalledOnce();
+      if (timing === "delayed") {
+        expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "true");
+        expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(stage === "playback" ? 1 : 0);
       }
-      render(<OnboardingFlow locale="en" />);
-      await docs();
-      const captured = capture().then(
-        () => null,
-        (error: unknown) => error,
-      );
-      await waitFor(() => expect(mock.camera).toHaveBeenCalled());
-      // Let the interaction's queued work run while media readiness stays held.
-      // This is an event-loop checkpoint, not a timed media delay or retry.
-      await setImmediate();
       expect(mock.sign).not.toHaveBeenCalled();
       expect(mock.upload).not.toHaveBeenCalled();
       await settle(ready, undefined);
-      expect(await captured).toBeNull();
+      await takeReadyPhoto();
+      expect(mock.sign).not.toHaveBeenCalled();
+      expect(mock.upload).not.toHaveBeenCalled();
+      await confirmPhoto();
       expect(mock.camera).toHaveBeenCalledOnce();
+      expect(mock.sign).toHaveBeenCalledOnce();
       await waitFor(() => expect(mock.upload).toHaveBeenCalledOnce());
       fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
       await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledTimes(2));
@@ -615,6 +645,59 @@ describe("repeat actions, retry and navigation", () => {
       expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
     },
   );
+
+  it.each([
+    ["delayed", "acquisition"],
+    ["delayed", "playback"],
+    ["immediate", "acquisition"],
+    ["immediate", "playback"],
+  ] as const)(
+    "preserves %s camera %s rejection before retry and stale-upload rejection",
+    async (timing, stage) => {
+      writeLocalDraft("A", { ...completedDraft(), nrcPath: null });
+      const pending = deferred<string>();
+      mock.upload.mockImplementation(() => pending.promise);
+      const ready = timing === "delayed" ? cameraReadiness(stage) : null;
+      if (timing === "immediate" && stage === "acquisition") {
+        mock.camera.mockRejectedValueOnce(new Error("offline"));
+      } else if (timing === "immediate") {
+        vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(new Error("offline"));
+      }
+      await renderOfflineDocs();
+      await startPhoto();
+      expect(mock.camera).toHaveBeenCalledOnce();
+      expect(mock.sign).not.toHaveBeenCalled();
+      expect(mock.upload).not.toHaveBeenCalled();
+      if (ready) await settle(ready, undefined, true);
+      expect(
+        await screen.findByText("Could not access camera. Check permissions."),
+      ).toBeInTheDocument();
+      expect(mock.stopCamera).toHaveBeenCalledTimes(stage === "playback" ? 1 : 0);
+      expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
+      await capture();
+      expect(mock.camera).toHaveBeenCalledTimes(2);
+      expect(
+        screen.queryByText("Could not access camera. Check permissions."),
+      ).not.toBeInTheDocument();
+      await waitFor(() => expect(mock.upload).toHaveBeenCalledOnce());
+      fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+      await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledTimes(2));
+      await docs();
+      await settle(pending, "kyc/vendor-A/stale.jpg");
+      expect(readLocalDraft("A")?.nrcPath).toBeNull();
+      expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
+    },
+  );
+
+  it("propagates a missing kickoff control before any media or upload action", async () => {
+    writeLocalDraft("A", completedDraft());
+    render(<OnboardingFlow locale="en" />);
+    await review();
+    await expect(startPhoto()).rejects.toThrow(nrcLabel);
+    expect(mock.camera).not.toHaveBeenCalled();
+    expect(mock.sign).not.toHaveBeenCalled();
+    expect(mock.upload).not.toHaveBeenCalled();
+  });
 
   it("rejects an old submit after a token refresh starts a new generation", async () => {
     writeLocalDraft("A", completedDraft());
