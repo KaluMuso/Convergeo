@@ -4,9 +4,12 @@ import os
 import re
 import shlex
 import subprocess
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 
 ROOT = Path(__file__).resolve().parents[3]
 PRELOAD = ROOT / "scripts/ci/preload-typegen-meta.sh"
@@ -16,6 +19,14 @@ IMAGE = (
 )
 TAG = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
 IMAGE_ID = "sha256:" + "1" * 64
+QUALIFYING_STEPS = [
+    "Setup Supabase CLI",
+    "Start local database",
+    "Reset local database",
+    "Preload qualified postgres-meta from official GHCR",
+    "Regenerate types",
+    "Fail on stale committed types",
+]
 
 DOCKER_STUB = r"""#!/usr/bin/env bash
 set -euo pipefail
@@ -175,32 +186,58 @@ printf 'git %s\n' "$*" >> "$TRACE"
         assert "git diff --exit-code packages/types/src/db.ts" in calls
 
 
+def assert_qualifying_steps_blocking(job: dict[str, Any]) -> None:
+    assert "if" not in job
+    assert "continue-on-error" not in job
+    steps = job["steps"]
+    positions = []
+    for name in QUALIFYING_STEPS:
+        matches = [step for step in steps if step.get("name") == name]
+        assert len(matches) == 1
+        step = matches[0]
+        assert "if" not in step
+        assert "continue-on-error" not in step
+        positions.append(steps.index(step))
+    assert positions == sorted(positions)
+
+
 def test_workflow_keeps_the_qualified_stack_and_comparison_blocking() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     match = re.search(r"(?ms)^  db:\n.*?(?=^  [a-z0-9-]+:\n|\Z)", workflow)
     assert match is not None
     db = match.group(0)
-    positions = [
-        db.index(name)
-        for name in [
-            "Setup Supabase CLI",
-            "Start local database",
-            "Reset local database",
-            "Preload qualified postgres-meta from official GHCR",
-            "Regenerate types",
-            "Fail on stale committed types",
-        ]
-    ]
+    positions = [db.index(name) for name in QUALIFYING_STEPS]
     assert positions == sorted(positions)
     assert "version: 2.109.1" in db
     assert "run: bash scripts/ci/preload-typegen-meta.sh" in db
     assert "run: bash scripts/gen-types.sh" in db
     assert "run: git diff --exit-code packages/types/src/db.ts" in db
     assert "continue-on-error:" not in db
-    assert "if:" not in db
+    # Artifact steps legitimately run conditionally after a drift failure;
+    # each authoritative setup/reset/generation/comparison step stays blocking.
+    assert_qualifying_steps_blocking(yaml.safe_load(workflow)["jobs"]["db"])
     assert "|| true" not in db
     assert "SUPABASE_INTERNAL_IMAGE_REGISTRY" not in db
     assert "permissions:" not in db
     permissions = re.search(r"(?ms)^permissions:\n.*?(?=^\S|\Z)", workflow)
     assert permissions is not None
     assert permissions.group(0).strip() == "permissions:\n  contents: read\n  pull-requests: read"
+
+
+@pytest.mark.parametrize("name", QUALIFYING_STEPS)
+@pytest.mark.parametrize("field,value", [("if", "success()"), ("continue-on-error", True)])
+def test_conditional_or_waived_qualifying_step_is_rejected(
+    name: str, field: str, value: str | bool
+) -> None:
+    job = deepcopy(yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]["db"])
+    next(step for step in job["steps"] if step.get("name") == name)[field] = value
+    with pytest.raises(AssertionError):
+        assert_qualifying_steps_blocking(job)
+
+
+@pytest.mark.parametrize("field,value", [("if", "success()"), ("continue-on-error", True)])
+def test_conditional_or_waived_typegen_job_is_rejected(field: str, value: str | bool) -> None:
+    job = deepcopy(yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]["db"])
+    job[field] = value
+    with pytest.raises(AssertionError):
+        assert_qualifying_steps_blocking(job)
