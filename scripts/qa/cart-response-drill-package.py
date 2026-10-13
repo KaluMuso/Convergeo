@@ -474,9 +474,49 @@ def verify(root: Path, expected_hash: str, sdk: Path | None = None) -> dict[str,
         ".runtime/bin/node",
     }
     for alias, entry in non_dirs.items():
+        if alias == "node_modules/typescript":
+            target = entry.get("target")
+            require(
+                entry.get("type") == "symlink"
+                and isinstance(target, str)
+                and bool(
+                    re.fullmatch(
+                        r"\.pnpm/typescript@[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?/node_modules/typescript",
+                        target,
+                    )
+                ),
+                "invalid root TypeScript alias",
+            )
+            target_alias = f"node_modules/{target}"
+            target_path = root / target_alias
+            package_alias = f"{target_alias}/package.json"
+            package_entry = non_dirs.get(package_alias, {})
+            require(
+                manifest["entries"].get(target_alias) == {"type": "directory", "mode": "0750"}
+                and not target_path.is_symlink()
+                and target_path.is_dir()
+                and target_path.resolve() == root.resolve() / target_alias
+                and package_entry.get("type") == "file"
+                and not (root / package_alias).is_symlink(),
+                "missing or linked root TypeScript target",
+            )
+            content = (root / package_alias).read_bytes()
+            require(
+                hashlib.sha256(content).hexdigest() == package_entry.get("sha256")
+                and len(content) == package_entry.get("size"),
+                "root TypeScript target byte identity differs",
+            )
+            data = json.loads(content)
+            require(
+                isinstance(data, dict)
+                and data.get("name") == "typescript"
+                and target == f".pnpm/typescript@{data.get('version')}/node_modules/typescript",
+                "root TypeScript target identity differs",
+            )
         allowed = (
             alias in manifest["git_blobs"]
             or alias in generated
+            or alias == "node_modules/typescript"
             or alias.startswith(allowed_roots)
             or bool(re.match(r"^\.runtime/browsers/chromium_headless_shell-[0-9]+/", alias))
         )

@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import stat
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,7 +21,7 @@ package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
 
 
-def fixture(tmp_path: Path) -> tuple[Path, Path, str]:
+def fixture(tmp_path: Path, *, typescript_alias: bool = False) -> tuple[Path, Path, str]:
     source = tmp_path / "source"
     source.mkdir()
     python = source / "python"
@@ -33,6 +34,13 @@ def fixture(tmp_path: Path) -> tuple[Path, Path, str]:
     code.write_bytes(b"verified source bytes")
     plan.file(code, "services/api/app/main.py")
     plan.link("apps/customer/node_modules/example", "services/api/app")
+    if typescript_alias:
+        target = "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript"
+        plan.file(
+            json.dumps({"name": "typescript", "version": "5.9.3"}).encode(),
+            f"{target}/package.json",
+        )
+        plan.link("node_modules/typescript", target)
     destination = tmp_path / "stage"
     destination.mkdir()
     blob = hashlib.sha1(b"blob 21\0verified source bytes").hexdigest()
@@ -40,6 +48,76 @@ def fixture(tmp_path: Path) -> tuple[Path, Path, str]:
         plan, destination, "a" * 40, "3.12.15", {"services/api/app/main.py": blob}, "b" * 40
     )
     return source, destination, digest
+
+
+def test_root_typescript_alias_verifies_its_manifest_bound_internal_target(tmp_path: Path) -> None:
+    _, destination, digest = fixture(tmp_path, typescript_alias=True)
+    manifest = package.verify(destination, digest)
+    target = "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript"
+    link = destination / "node_modules/typescript"
+    assert link.resolve() == destination / target
+    assert manifest["entries"]["node_modules/typescript"] == {
+        "type": "symlink",
+        "target": ".pnpm/typescript@5.9.3/node_modules/typescript",
+    }
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "escape_relative",
+        "escape_absolute",
+        "missing_target",
+        "missing_manifest_target",
+        "target_version",
+        "target_bytes",
+        "target_private_link",
+        "actual_link_target",
+        "different_root_alias",
+    ],
+)
+def test_root_typescript_alias_refuses_escaping_missing_or_mismatched_targets(
+    tmp_path: Path, change: str
+) -> None:
+    _, destination, digest = fixture(tmp_path, typescript_alias=True)
+    manifest_path = destination / "input-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    alias = "node_modules/typescript"
+    target = "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript"
+    target_path = destination / target
+    metadata = target_path / "package.json"
+    if change in {"escape_relative", "escape_absolute"}:
+        manifest["entries"][alias]["target"] = (
+            "../../PRIVATE_HOME/typescript"
+            if change == "escape_relative"
+            else "/PRIVATE_HOME/typescript"
+        )
+    elif change == "missing_target":
+        shutil.rmtree(target_path)
+    elif change == "missing_manifest_target":
+        del manifest["entries"][target]
+    elif change in {"target_version", "target_bytes"}:
+        metadata.write_text(json.dumps({"name": "typescript", "version": "5.9.4"}))
+        if change == "target_version":
+            manifest["entries"][f"{target}/package.json"]["sha256"] = package.digest(metadata)
+            manifest["entries"][f"{target}/package.json"]["size"] = metadata.stat().st_size
+    elif change == "target_private_link":
+        shutil.rmtree(target_path)
+        private = tmp_path / "PRIVATE_HOME"
+        private.mkdir()
+        (private / "package.json").write_text("must not read or copy")
+        target_path.symlink_to(private, target_is_directory=True)
+    elif change == "actual_link_target":
+        link = destination / alias
+        link.unlink()
+        link.symlink_to("../services/api/app", target_is_directory=True)
+    else:
+        link = destination / alias
+        link.rename(destination / "node_modules/other")
+        manifest["entries"]["node_modules/other"] = manifest["entries"].pop(alias)
+    manifest_path.write_bytes(package.canonical(manifest))
+    with pytest.raises(package.PackageInputError):
+        package.verify(destination, package.digest(manifest_path))
 
 
 def test_independent_copies_and_deterministic_manifest(tmp_path: Path) -> None:
