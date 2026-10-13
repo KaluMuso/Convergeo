@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { setImmediate } from "node:timers/promises";
+
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ApiError } from "@vergeo/config";
@@ -114,18 +116,24 @@ async function docs() {
 async function review() {
   await screen.findByRole("heading", { name: reviewHeading });
 }
+function nrcCaptureElement() {
+  return screen.getByText(nrcLabel).parentElement!.parentElement!;
+}
 function nrcCapture() {
-  return within(screen.getByText(nrcLabel).parentElement!.parentElement!);
+  return within(nrcCaptureElement());
 }
 async function selectPhoto() {
   await act(async () => {
     fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
   });
+  await waitFor(() =>
+    expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "false"),
+  );
   fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
 }
 async function capture() {
   await selectPhoto();
-  fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.usePhoto" }));
+  fireEvent.click(await nrcCapture().findByRole("button", { name: "onboarding.kyc.usePhoto" }));
 }
 async function switchAccount(view: ReturnType<typeof render>, userId: string | null) {
   mock.userId = userId;
@@ -566,6 +574,47 @@ describe("repeat actions, retry and navigation", () => {
     expect(readLocalDraft("A")?.nrcPath).toBeNull();
     expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
   });
+
+  it.each(["acquisition", "playback"] as const)(
+    "retrying bootstrap rejects a pending upload after delayed camera %s",
+    async (stage) => {
+      mock.bootstrap.mockRejectedValueOnce(new Error("offline"));
+      writeLocalDraft("A", { ...completedDraft(), nrcPath: null });
+      const pending = deferred<string>();
+      mock.upload.mockImplementation(() => pending.promise);
+      const ready = deferred<void>();
+      if (stage === "acquisition") {
+        mock.camera.mockImplementationOnce(async () => {
+          await ready.promise;
+          return { getTracks: () => [{ stop: mock.stopCamera }] };
+        });
+      } else {
+        vi.mocked(HTMLMediaElement.prototype.play).mockReturnValueOnce(ready.promise);
+      }
+      render(<OnboardingFlow locale="en" />);
+      await docs();
+      const captured = capture().then(
+        () => null,
+        (error: unknown) => error,
+      );
+      await waitFor(() => expect(mock.camera).toHaveBeenCalled());
+      // Let the interaction's queued work run while media readiness stays held.
+      // This is an event-loop checkpoint, not a timed media delay or retry.
+      await setImmediate();
+      expect(mock.sign).not.toHaveBeenCalled();
+      expect(mock.upload).not.toHaveBeenCalled();
+      await settle(ready, undefined);
+      expect(await captured).toBeNull();
+      expect(mock.camera).toHaveBeenCalledOnce();
+      await waitFor(() => expect(mock.upload).toHaveBeenCalledOnce());
+      fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+      await waitFor(() => expect(mock.bootstrap).toHaveBeenCalledTimes(2));
+      await docs();
+      await settle(pending, "kyc/vendor-A/stale.jpg");
+      expect(readLocalDraft("A")?.nrcPath).toBeNull();
+      expect(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" })).toBeEnabled();
+    },
+  );
 
   it("rejects an old submit after a token refresh starts a new generation", async () => {
     writeLocalDraft("A", completedDraft());
