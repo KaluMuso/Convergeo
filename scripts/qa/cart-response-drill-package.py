@@ -211,6 +211,22 @@ def node_inputs(plan: Plan, root: Path) -> None:
             slot = locate(folder, name)
             require(slot is not None, "required workspace Node input missing")
             visit(slot)
+    # Next dev checks these declarations from the customer project, whereas
+    # next start uses the completed build. Reuse config's verified installed
+    # distribution when the customer has no direct or ancestor Node type alias.
+    customer = root / "apps/customer"
+    node_types = locate(customer, "@types/node") or locate(root / "packages/config", "@types/node")
+    require(node_types is not None, "installed customer Node types input missing")
+    visit(node_types)
+    canonical_types = node_types.resolve(strict=True)
+    require(
+        json.loads((canonical_types / "package.json").read_text()).get("name") == "@types/node"
+        and (canonical_types / "index.d.ts").is_file(),
+        "installed customer Node types declaration missing",
+    )
+    plan.link(
+        "apps/customer/node_modules/@types/node", canonical_types.relative_to(root).as_posix()
+    )
     playwright = locate(root / "e2e", "@playwright/test")
     require(playwright is not None, "installed Playwright input missing")
     require(

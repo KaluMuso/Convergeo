@@ -247,6 +247,7 @@ def test_node_closure_keeps_peers_and_installed_optional_native_inputs(tmp_path:
 
     for name in package.CONFIG_DEPS:
         installed(name)
+    (installed("@types/node") / "index.d.ts").write_text("verified Node declarations")
     installed("peer")
     installed("native")
     installed("core", optional={"native": "1", "absent-platform": "1"}, peers={"peer": "1"})
