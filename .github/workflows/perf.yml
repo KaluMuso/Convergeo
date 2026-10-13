@@ -316,6 +316,7 @@ jobs:
             e2e/results/cart-response-drill/guard.json
             e2e/results/cart-response-drill/validation.json
             e2e/results/cart-response-drill/diagnostics.json
+            e2e/results/cart-response-drill/python-path-diagnostics.json
           if-no-files-found: error
 
       - name: Stop servers

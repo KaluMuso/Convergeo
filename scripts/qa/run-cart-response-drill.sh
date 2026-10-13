@@ -164,7 +164,16 @@ mkdir -p "$drill_output"
 sudo chown "$(id -u):cartdrill" "$drill_output"
 sudo chmod 770 "$drill_output"
 drill_phase=python_preflight
-drill_as_user "$drill_root/services/api/.venv/bin/python" -c 'import ssl, psycopg, uvicorn; print("isolated Python imports ready")' > "$drill_output/private-python-probe.log" 2>&1
+if drill_as_user "$drill_root/services/api/.venv/bin/python" -c 'import ssl, psycopg, uvicorn; print("isolated Python imports ready")' > "$drill_output/private-python-probe.log" 2>&1; then
+  :
+else
+  drill_python_probe_exit=$?
+  # Read metadata only after failure; preserve its exit and every isolation rule.
+  python3 "$drill_root/scripts/qa/cart-response-drill-path-diagnostics.py" \
+    "$drill_root" "$pythonLocation" "$drill_uid" "$(id -g cartdrill)" \
+    > "$drill_output/python-path-diagnostics.json" 2>/dev/null || true
+  exit "$drill_python_probe_exit"
+fi
 drill_phase=server_startup
 # Production clients intentionally reject loopback. Preserve that guard and all
 # preceding production checks; exercise the same source in local development mode.
