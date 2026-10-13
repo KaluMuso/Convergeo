@@ -32,7 +32,10 @@
     "support": "Support",
     "intake": "WhatsApp intake",
     "clips": "Clips moderation",
-    "events": "High-value events"
+    "events": "High-value events",
+    "roles": "Admin roles",
+    "services": "Services",
+    "inventory": "Inventory"
   },
   "hubs": {
     "moderation": {
@@ -1277,5 +1280,53 @@
       "permissionDenied": "You do not have permission to view clip analytics.",
       "error": "Clip analytics could not be loaded."
     }
+  },
+  "rolesUi": {
+    "title": "Admin roles",
+    "subtitle": "Create restricted roles, then assign them to existing account IDs. Changes take effect at the API immediately.",
+    "createHeading": "Create a role",
+    "editHeading": "Edit {key}",
+    "key": "Key (letters, digits, underscore)",
+    "keyPrefix": "rbac_",
+    "name": "Name",
+    "permissions": "Permissions",
+    "create": "Create role",
+    "save": "Save role",
+    "cancel": "Cancel edit",
+    "current": "Current roles",
+    "edit": "Edit",
+    "delete": "Delete",
+    "assignHeading": "Assign an account",
+    "accountUuid": "Account UUID",
+    "role": "Role",
+    "choose": "Choose a role",
+    "superadmin": "Superadmin",
+    "assign": "Assign",
+    "assignments": "Assignments",
+    "revoke": "Revoke",
+    "confirmDelete": "Delete {name}? Assigned roles cannot be deleted.",
+    "confirmSuperadmin": "Grant full superadmin access to account {userId}?",
+    "confirmRevoke": "Revoke {role} from {userId}?",
+    "loading": "Loading roles…",
+    "loadFailed": "Could not load roles.",
+    "mutationFailed": "The role change did not complete.",
+    "permissionDenied": "You do not have permission to manage admin roles.",
+    "emptyRoles": "No custom roles found.",
+    "emptyAssignments": "No role assignments found.",
+    "retry": "Try again",
+    "invalid": "Check the role key, name, permissions, and account UUID."
+  },
+  "oversightUi": {
+    "services": "Services",
+    "inventory": "Inventory",
+    "subtitle": "Read only oversight · latest 100 records",
+    "empty": "No records found.",
+    "vendor": "Vendor {vendorId} · {status}",
+    "stock": "Stock {quantity}",
+    "loading": "Loading records…",
+    "loadFailed": "Could not load records.",
+    "permissionDenied": "You do not have access to this overview.",
+    "unknownStock": "Unknown",
+    "retry": "Try again"
   }
 }

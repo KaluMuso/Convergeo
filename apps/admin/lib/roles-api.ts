@@ -3,7 +3,7 @@
 import { getBrowserAccessToken } from "@vergeo/auth";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "./api-base-url";
 
@@ -52,9 +52,14 @@ export async function loadAdminPermissions(): Promise<AdminPermissions> {
 
 // Presentation only. The API remains authoritative for every privileged request.
 export const AdminPermissionsContext = createContext<AdminPermissions | null>(null);
+export const AdminPermissionRefreshContext = createContext<(() => void) | null>(null);
 
 export function useAdminPermissions(): AdminPermissions | null {
   return useContext(AdminPermissionsContext);
+}
+
+export function useRefreshAdminPermissions() {
+  return useContext(AdminPermissionRefreshContext);
 }
 
 type PermissionCheck = {
@@ -64,7 +69,13 @@ type PermissionCheck = {
 };
 
 export function useAdminPermissionCheck(route: string | null) {
-  const [check, setCheck] = useState<PermissionCheck>({ route: null, grants: null, error: false });
+  const [check, setCheck] = useState<PermissionCheck>({
+    route: null,
+    grants: null,
+    error: false,
+  });
+  const refreshRef = useRef<() => void>(() => {});
+  const refresh = useCallback(() => refreshRef.current(), []);
 
   useEffect(() => {
     if (route === null) {
@@ -94,6 +105,7 @@ export function useAdminPermissionCheck(route: string | null) {
       if (document.visibilityState === "visible") reload();
     }
 
+    refreshRef.current = reload;
     reload();
     window.addEventListener("focus", reload);
     document.addEventListener("visibilitychange", onVisibility);
@@ -123,6 +135,7 @@ export function useAdminPermissionCheck(route: string | null) {
 
     return () => {
       active = false;
+      refreshRef.current = () => {};
       window.clearTimeout(authTimer);
       unsubscribe?.();
       window.removeEventListener("focus", reload);
@@ -131,5 +144,8 @@ export function useAdminPermissionCheck(route: string | null) {
   }, [route]);
 
   // Reject a previous route's snapshot before effects run on navigation.
-  return check.route === route ? check : { route, grants: null, error: false };
+  return {
+    ...(check.route === route ? check : { route, grants: null, error: false }),
+    refresh,
+  };
 }

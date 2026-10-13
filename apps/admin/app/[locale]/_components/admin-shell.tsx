@@ -7,7 +7,11 @@ import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
-import { AdminPermissionsContext, useAdminPermissionCheck } from "../../../lib/roles-api";
+import {
+  AdminPermissionRefreshContext,
+  AdminPermissionsContext,
+  useAdminPermissionCheck,
+} from "../../../lib/roles-api";
 
 import {
   ADMIN_NAV_GROUPS,
@@ -48,7 +52,11 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     rest.startsWith("/login/") ||
     rest.startsWith("/reset-password") ||
     rest === "/permission-denied";
-  const { grants, error: grantError } = useAdminPermissionCheck(isBareAuthRoute ? null : pathname);
+  const {
+    grants,
+    refresh,
+    error: grantError,
+  } = useAdminPermissionCheck(isBareAuthRoute ? null : pathname);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -75,6 +83,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const capabilities = resolveAdminNavCapabilities(
     grants?.permissions ?? [],
     grants?.unrestricted ?? false,
+    grants?.can_manage_roles ?? false,
   );
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
@@ -83,8 +92,9 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const activeGroup = resolveAdminActiveGroup(rest, navGroups);
   const requested = resolveAdminActiveItem(rest);
   const denied =
-    !grants?.unrestricted &&
-    (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"));
+    (requested === "roles" && !capabilities.roles) ||
+    (!grants?.unrestricted &&
+      (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags")));
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -187,7 +197,9 @@ export function AdminShell({ locale, children }: AdminShellProps) {
             <p role="alert">{t("shell.permissionDenied")}</p>
           ) : (
             <AdminPermissionsContext.Provider value={grants}>
-              {children}
+              <AdminPermissionRefreshContext.Provider value={refresh}>
+                {children}
+              </AdminPermissionRefreshContext.Provider>
             </AdminPermissionsContext.Provider>
           )}
         </main>

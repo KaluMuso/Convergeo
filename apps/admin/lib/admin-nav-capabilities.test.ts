@@ -22,7 +22,9 @@ const fixture = vi.hoisted(() => ({
   claims: {} as unknown,
   signedIn: true,
 }));
-vi.mock("next-intl/middleware", () => ({ default: () => () => NextResponse.next() }));
+vi.mock("next-intl/middleware", () => ({
+  default: () => () => NextResponse.next(),
+}));
 vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@vergeo/auth/middleware")>();
   return {
@@ -38,7 +40,9 @@ vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => fixture.translate }));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("@vergeo/ui/src/theme-toggle", () => ({ ThemeToggle: () => null }));
-vi.mock("../app/[locale]/_components/sign-out-button", () => ({ SignOutButton: () => null }));
+vi.mock("../app/[locale]/_components/sign-out-button", () => ({
+  SignOutButton: () => null,
+}));
 vi.mock("@vergeo/auth", () => ({ getBrowserAccessToken: () => fixture.token }));
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -53,10 +57,14 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-function visible(permissions: readonly string[] = [], unrestricted = false) {
-  return filterAdminNavGroups(resolveAdminNavCapabilities(permissions, unrestricted)).flatMap(
-    (group) => group.items.map((item) => item.key),
-  );
+function visible(
+  permissions: readonly string[] = [],
+  unrestricted = false,
+  canManageRoles = false,
+) {
+  return filterAdminNavGroups(
+    resolveAdminNavCapabilities(permissions, unrestricted, canManageRoles),
+  ).flatMap((group) => group.items.map((item) => item.key));
 }
 
 describe("admin navigation from current API permissions", () => {
@@ -72,8 +80,8 @@ describe("admin navigation from current API permissions", () => {
     ["vendors.manage", ["kyc", "intake", "business"]],
     ["ads.manage", ["merch"]],
     ["analytics.read", ["home"]],
-    ["services.read", []],
-    ["inventory.read", []],
+    ["services.read", ["services"]],
+    ["inventory.read", ["inventory"]],
   ])("bounds %s to its current destinations", (permission, expected) => {
     expect(visible([permission as string])).toEqual(expected);
   });
@@ -99,7 +107,9 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("intake");
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
-    expect(keys).toHaveLength(14);
+    expect(keys).toHaveLength(16);
+    expect(keys).not.toContain("roles");
+    expect(visible([], true, true)).toContain("roles");
   });
 
   it("removes previously visible items on role update and revocation", () => {
@@ -108,10 +118,18 @@ describe("admin navigation from current API permissions", () => {
     expect(visible([])).toEqual([]);
   });
 
-  it("omits empty groups without inventing deferred services, inventory or roles links", () => {
+  it("exposes read-only oversight while omitting empty groups and unauthorized role management", () => {
     expect(
       filterAdminNavGroups(resolveAdminNavCapabilities(["services.read", "inventory.read"])),
-    ).toEqual([]);
+    ).toEqual([
+      {
+        key: "commerce",
+        items: [
+          { key: "services", href: "services" },
+          { key: "inventory", href: "inventory" },
+        ],
+      },
+    ]);
     const caps = resolveAdminNavCapabilities([], true);
     const groups = filterAdminNavGroups({ ...caps, home: false });
     expect(groups.some((group) => group.key === "overview")).toBe(false);
@@ -209,7 +227,10 @@ async function renderRoute(path: string, order = false) {
       React.createElement(AdminShell, {
         locale: "en",
         children: order
-          ? React.createElement(OrderDetailView, { locale: "en", orderId: "local-order" })
+          ? React.createElement(OrderDetailView, {
+              locale: "en",
+              orderId: "local-order",
+            })
           : React.createElement("p", { "data-protected-route": path }, "Route content"),
       }),
     );
@@ -442,9 +463,21 @@ describe("mounted current-permission shell", () => {
 describe("permission response contract", () => {
   it.each([
     null,
-    { permissions: "finance.read", unrestricted: false, can_manage_roles: false },
-    { permissions: ["payments.transfer"], unrestricted: true, can_manage_roles: true },
-    { permissions: ["finance.read"], unrestricted: "true", can_manage_roles: false },
+    {
+      permissions: "finance.read",
+      unrestricted: false,
+      can_manage_roles: false,
+    },
+    {
+      permissions: ["payments.transfer"],
+      unrestricted: true,
+      can_manage_roles: true,
+    },
+    {
+      permissions: ["finance.read"],
+      unrestricted: "true",
+      can_manage_roles: false,
+    },
     { permissions: ["finance.read"], unrestricted: false },
   ])("rejects malformed or unknown grants %#", async (value) => {
     nextReply = Promise.resolve(reply(value));

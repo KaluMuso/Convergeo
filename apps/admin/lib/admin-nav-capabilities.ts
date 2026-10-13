@@ -13,6 +13,7 @@ export type AdminNavCapabilities = Record<AdminNavItemKey, boolean>;
 export function resolveAdminNavCapabilities(
   permissions: readonly string[] = [],
   unrestricted = false,
+  canManageRoles = false,
 ): AdminNavCapabilities {
   const has = (permission: string) => unrestricted || permissions.includes(permission);
   return {
@@ -30,5 +31,8 @@ export function resolveAdminNavCapabilities(
     config: unrestricted,
     translations: unrestricted,
     theme: unrestricted,
+    roles: canManageRoles,
+    services: has("services.read"),
+    inventory: has("inventory.read"),
   };
 }
