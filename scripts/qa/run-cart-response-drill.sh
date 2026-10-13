@@ -44,9 +44,134 @@ drill_created=false
 drill_v4=false
 drill_v6=false
 drill_uid=
+drill_gid=
+drill_swc_cache_record=
+drill_swc_cache_root=
+drill_swc_cache_requested=false
 drill_phase=guard_setup
 drill_api_launcher=
 drill_customer_launcher=
+drill_native_cache() {
+  local -a cache_python=(python3)
+  if [ "$1" = allocate ] || [ "$1" = verify ]; then
+    cache_python=(sudo -u cartdrill env -i PATH=/usr/bin:/bin python3)
+  elif [ "$1" = remove ]; then
+    cache_python=(sudo env -i PATH=/usr/bin:/bin python3)
+  fi
+  # Native cache guard (stdlib only). Never import or execute an addon here.
+  "${cache_python[@]}" - "$1" "$drill_uid" "$drill_gid" "$drill_swc_cache_record" <<'PY'
+import json, os, re, shutil, stat, sys, tempfile
+from contextlib import contextmanager
+
+def require(condition):
+    if not condition:
+        raise ValueError('private native cache guard failed')
+
+def trusted_parent():
+    for path in ('/', '/tmp'):
+        metadata = os.lstat(path)
+        require(stat.S_ISDIR(metadata.st_mode) and metadata.st_uid == 0)
+        require(stat.S_IMODE(metadata.st_mode) == 0o1777 if path == '/tmp'
+                else metadata.st_mode & 0o022 == 0)
+
+def parse_record(value):
+    require(len(value) <= 512)
+    record = json.loads(value)
+    require(type(record) is dict and set(record) == {'path', 'device', 'inode'})
+    require(type(record['path']) is str and
+            re.fullmatch(r'/tmp/cartdrill-swc\.[a-z0-9_]{8}', record['path']) is not None)
+    require(all(type(record[k]) is int and record[k] >= 0 for k in ('device', 'inode')))
+    require(record['inode'] > 0)
+    return record
+
+def validate_metadata(metadata, record, uid, gid):
+    require(stat.S_ISDIR(metadata.st_mode) and stat.S_IMODE(metadata.st_mode) == 0o700)
+    require(metadata.st_uid == uid and metadata.st_gid == gid)
+    require((metadata.st_dev, metadata.st_ino) == (record['device'], record['inode']))
+
+@contextmanager
+def checked_cache(record, uid, gid):
+    trusted_parent()
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    parent = os.open('/tmp', flags)
+    cache = None
+    try:
+        parent_metadata = os.fstat(parent)
+        require(parent_metadata.st_uid == 0 and
+                stat.S_IMODE(parent_metadata.st_mode) == 0o1777)
+        name = record['path'].rsplit('/', 1)[1]
+        validate_metadata(os.stat(name, dir_fd=parent, follow_symlinks=False), record, uid, gid)
+        cache = os.open(name, flags, dir_fd=parent)
+        validate_metadata(os.fstat(cache), record, uid, gid)
+        yield parent, cache, name
+    finally:
+        if cache is not None:
+            os.close(cache)
+        os.close(parent)
+
+def allocate(uid, gid):
+    require(uid > 0 and os.geteuid() == uid and os.getegid() == gid)
+    trusted_parent()
+    path = tempfile.mkdtemp(prefix='cartdrill-swc.', dir='/tmp')
+    metadata = os.lstat(path)
+    record = {'path': path, 'device': metadata.st_dev, 'inode': metadata.st_ino}
+    # Capture allocation even if later validation fails, so EXIT cleanup can
+    # refuse a substituted path instead of forgetting a partially set-up root.
+    print(json.dumps(record, separators=(',', ':')), flush=True)
+    with checked_cache(parse_record(json.dumps(record)), uid, gid):
+        pass
+
+def verify(record, uid, gid):
+    with checked_cache(record, uid, gid):
+        pass
+    return record['path']
+
+def mount_paths():
+    with open('/proc/self/mountinfo') as mounts:
+        for line in mounts:
+            fields = line.split(' - ', 1)[0].split()
+            require(len(fields) >= 6 and ' - ' in line)
+            yield fields[4].replace('\\040', ' ').replace('\\011', '\t').replace('\\012', '\n').replace('\\134', '\\')
+
+def remove(record, uid, gid):
+    require(shutil.rmtree.avoids_symlink_attacks)
+    require(all(path != record['path'] and not path.startswith(record['path'] + '/')
+                for path in mount_paths()))
+    with checked_cache(record, uid, gid) as (parent, cache, name):
+        # Delete only inside the opened, identity-checked allocation. Symlinks
+        # are unlinked, never followed. Recheck top-level identity before rmdir.
+        for child in os.listdir(cache):
+            metadata = os.stat(child, dir_fd=cache, follow_symlinks=False)
+            if stat.S_ISDIR(metadata.st_mode):
+                shutil.rmtree(child, dir_fd=cache)
+            else:
+                os.unlink(child, dir_fd=cache)
+        validate_metadata(os.stat(name, dir_fd=parent, follow_symlinks=False), record, uid, gid)
+        os.rmdir(name, dir_fd=parent)
+
+def main():
+    try:
+        action, uid, gid, value = sys.argv[1:]
+        uid, gid = int(uid), int(gid)
+        require(uid > 0 and gid >= 0)
+        if action == 'allocate':
+            require(value == '')
+            allocate(uid, gid)
+        elif action == 'verify':
+            print(verify(parse_record(value), uid, gid))
+        elif action == 'remove':
+            remove(parse_record(value), uid, gid)
+        else:
+            require(False)
+    except (OSError, ValueError, TypeError, KeyError, RecursionError):
+        print('Private native cache guard failed', file=sys.stderr)
+        return 1
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
+PY
+}
 drill_launcher_status() {
   drill_last_launcher_status=not_started
   if [ -n "$1" ]; then
@@ -255,6 +380,18 @@ print('cart-drill-native-error-summary: ' + json.dumps(native_summary, separator
 PY
     then drill_cleanup_ok=false; fi
   fi
+  if [ "$drill_swc_cache_requested" = true ]; then
+    if [ "$drill_cleanup_ok" = true ] && [ -n "$drill_swc_cache_record" ]; then
+      # Only pgrep's explicit no-process status permits cache deletion. Errors
+      # and live processes retain the account/resources and fail cleanup.
+      if sudo pgrep -u "$drill_uid" >/dev/null; then drill_cleanup_ok=false
+      else
+        if [ "$?" -eq 1 ]; then
+          if ! drill_native_cache remove; then drill_cleanup_ok=false; fi
+        else drill_cleanup_ok=false; fi
+      fi
+    else drill_cleanup_ok=false; fi
+  fi
   if [ "$drill_created" = true ] && [ "$drill_cleanup_ok" = true ]; then sudo userdel cartdrill || drill_cleanup_ok=false; fi
   if [ -f "$drill_output/guard.json" ]; then
     if ! python3 - "$drill_output/guard.json" "$drill_cleanup_ok" <<'PY'
@@ -297,6 +434,7 @@ drill_as_user() {
   sudo -u cartdrill env -i PATH=/usr/bin:/bin CART_DRILL_LOCAL=1 CART_DRILL_UID="$drill_uid" \
     PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
     TMPDIR="$drill_package_root/tmp" XDG_CACHE_HOME="$drill_package_root/cache" XDG_CONFIG_HOME="$drill_package_root/config" \
+    SWC_NATIVE_BINDING_CACHE="$drill_swc_cache_root" \
     LD_LIBRARY_PATH="$drill_python_library" \
     PLAYWRIGHT_BROWSERS_PATH="$drill_browser_path" \
     SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
@@ -311,6 +449,7 @@ drill_as_user() {
 sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin cartdrill
 drill_created=true
 drill_uid=$(id -u cartdrill)
+drill_gid=$(id -g cartdrill)
 [[ "$drill_uid" -gt 0 ]]
 [[ "$(id -Gn cartdrill)" = cartdrill ]]
 sudo iptables -w -N CARTDRILL4
@@ -362,6 +501,10 @@ sudo chmod 770 "$drill_output"
 for drill_writable in tmp cache config; do
   sudo install -d -o "$drill_uid" -g cartdrill -m 700 "$drill_package_root/$drill_writable"
 done
+drill_phase=native_cache_preflight
+drill_swc_cache_requested=true
+drill_swc_cache_record=$(drill_native_cache allocate)
+drill_swc_cache_root=$(drill_native_cache verify)
 drill_phase=python_preflight
 if drill_as_user "$drill_root/services/api/.venv/bin/python" -c 'import ssl, psycopg, uvicorn; print("isolated Python imports ready")' > "$drill_output/private-python-probe.log" 2>&1; then
   :
