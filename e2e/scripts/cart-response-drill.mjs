@@ -43,6 +43,7 @@ function cartFailureDiagnostic(stage, state, checkpoints) {
     failure_stage: label(stage, [
       "outside_discard",
       "discard_click",
+      "discard_completion",
       "discard_error_visibility",
       "discard_route_integrity",
       "fixture_cleanup",
@@ -89,6 +90,23 @@ const browserDiagnostic = {
   routeFailurePost: null,
   firstResponseDisposed: false,
 };
+
+async function waitForFirstDiscard(completion) {
+  let timer;
+  try {
+    assert.equal(
+      await Promise.race([
+        completion,
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve(false), 15_000);
+        }),
+      ]),
+      true,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function db(action, payload = {}) {
   return JSON.parse(
@@ -144,6 +162,10 @@ try {
   let cartId, listingId, price, firstKey, firstBody;
   let posts = 0;
   let routeFailure;
+  let finishFirstDiscard;
+  const firstDiscardPromise = new Promise((resolve) => {
+    finishFirstDiscard = resolve;
+  });
   let externalRequests = 0;
   await context.routeWebSocket("**/*", (socket) => {
     const url = new URL(socket.url());
@@ -271,6 +293,14 @@ try {
       }
       browserDiagnostic.routeFailureObserved = true;
       await route.abort("blockedbyclient");
+    } finally {
+      if (postOrdinal === 1)
+        finishFirstDiscard(
+          browserDiagnostic.firstResponseDisposed &&
+            report.checkpoints.committed_before_discard === true &&
+            report.checkpoints.one_response_discarded === true &&
+            !routeFailure,
+        );
     }
   });
   phase = "establish_guest";
@@ -303,6 +333,8 @@ try {
   failureStage = "discard_click";
   await add.click();
   browserDiagnostic.firstClickCompleted = true;
+  failureStage = "discard_completion";
+  await waitForFirstDiscard(firstDiscardPromise);
   failureStage = "discard_error_visibility";
   await expect(page.getByTestId("pdp-add-to-cart-error")).toBeVisible();
   browserDiagnostic.errorVisibilityPassed = true;

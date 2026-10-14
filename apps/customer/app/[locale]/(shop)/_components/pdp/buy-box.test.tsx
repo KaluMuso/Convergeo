@@ -5,6 +5,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
+
 const cartMocks = vi.hoisted(() => ({
   addCartItem: vi.fn().mockResolvedValue({ items: [{ qty: 2 }] }),
   openMiniCart: vi.fn(),
@@ -56,6 +58,7 @@ import {
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
+import { useListingPurchase } from "./use-listing-purchase";
 
 import type { PickupLocationPickerLabels } from "./pickup-location-picker";
 
@@ -416,6 +419,60 @@ describe("standalone purchase while cart actions load", () => {
     expect(openMiniCart).toHaveBeenCalledOnce();
     expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
     expect(button).toBeEnabled();
+  });
+
+  it("renders one localized shared-purchase error only after a delayed request rejects", async () => {
+    const localizedLabels = {
+      ...labels,
+      addToCartErrorLabel: catalogMessages.pdp.buyBox.addToCartError,
+    };
+    expect(localizedLabels.addToCartErrorLabel).toEqual(expect.any(String));
+    expect(localizedLabels.addToCartErrorLabel.trim()).not.toBe("");
+    let reject!: (error: Error) => void;
+    cartMocks.addCartItem.mockReturnValueOnce(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    function SharedPurchase() {
+      const purchase = useListingPurchase(inStockListing, localizedLabels);
+      return purchase ? (
+        <BuyBox
+          listing={inStockListing}
+          labels={localizedLabels}
+          pickupLabels={pickupLabels}
+          singleVendor={false}
+          purchase={purchase}
+        />
+      ) : null;
+    }
+    render(<SharedPurchase />);
+    const button = screen.getByTestId("pdp-add-to-cart");
+    await userEvent.click(button);
+    await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(screen.queryAllByTestId("pdp-add-to-cart-error")).toHaveLength(0);
+      expect(button).toBeDisabled();
+      await act(async () => {
+        reject(new Error("Synthetic connection reset after commit"));
+      });
+      const alerts = screen.getAllByTestId("pdp-add-to-cart-error");
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]).toBeVisible();
+      expect(alerts[0]).toHaveAttribute("role", "alert");
+      expect(alerts[0]).toHaveTextContent(localizedLabels.addToCartErrorLabel);
+      expect(button).toBeEnabled();
+      expect(screen.queryByTestId("pdp-add-to-cart-success")).not.toBeInTheDocument();
+      expect(openMiniCart).not.toHaveBeenCalled();
+      expect(cartMocks.setLastAddedMessage).not.toHaveBeenCalled();
+      expect(addCartItem).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows existing errors on import and request failure, then permits a successful retry", async () => {

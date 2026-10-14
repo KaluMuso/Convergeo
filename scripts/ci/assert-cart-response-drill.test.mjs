@@ -150,6 +150,72 @@ const diagnosticSource = browserSource.slice(
   browserSource.indexOf("\nconst browserDiagnostic ="),
 );
 const diagnostic = runInNewContext(`(${diagnosticSource})`);
+const discardWaitSource = browserSource.slice(
+  browserSource.indexOf("async function waitForFirstDiscard("),
+  browserSource.indexOf("\nfunction db("),
+);
+const waitForFirstDiscard = runInNewContext(`(${discardWaitSource})`, {
+  assert,
+  setTimeout,
+  clearTimeout,
+});
+for (const value of [true, false, undefined, "true"]) {
+  test(`discard completion accepts only true and clears its bound for ${String(value)}`, async () => {
+    const timer = Symbol("discard-deadline");
+    let cleared = 0;
+    const wait = runInNewContext(`(${discardWaitSource})`, {
+      assert,
+      setTimeout(_callback, milliseconds) {
+        assert.equal(milliseconds, 15_000);
+        return timer;
+      },
+      clearTimeout(handle) {
+        assert.equal(handle, timer);
+        cleared += 1;
+      },
+    });
+    if (value === true) await wait(Promise.resolve(value));
+    else await assert.rejects(wait(Promise.resolve(value)), { name: "AssertionError" });
+    assert.equal(cleared, 1);
+  });
+}
+test("missing first interception fails at the existing action bound without retries", async () => {
+  let deadline;
+  let cleared = 0;
+  let scheduled = 0;
+  const wait = runInNewContext(`(${discardWaitSource})`, {
+    assert,
+    setTimeout(callback, milliseconds) {
+      assert.equal(milliseconds, 15_000);
+      scheduled += 1;
+      deadline = callback;
+      return 1;
+    },
+    clearTimeout(handle) {
+      assert.equal(handle, 1);
+      cleared += 1;
+    },
+  });
+  const rejected = assert.rejects(wait(new Promise(() => {})), { name: "AssertionError" });
+  deadline();
+  await rejected;
+  assert.equal(scheduled, 1);
+  assert.equal(cleared, 1);
+});
+test("discard completion promise rejection stays failed and clears its bound", async () => {
+  const privateError = new Error("SYNTHETIC_PRIVATE_VALUE");
+  let cleared = 0;
+  const wait = runInNewContext(`(${discardWaitSource})`, {
+    assert,
+    setTimeout: () => 1,
+    clearTimeout(handle) {
+      assert.equal(handle, 1);
+      cleared += 1;
+    },
+  });
+  await assert.rejects(wait(Promise.reject(privateError)), (error) => error === privateError);
+  assert.equal(cleared, 1);
+});
 const scalarState = {
   posts: 1,
   firstResponseStatus: 200,
@@ -309,6 +375,8 @@ for (const [fault, code] of [
         committed,
         fault,
         cartFailureDiagnostic: diagnostic,
+        firstDiscardPromise: Promise.resolve(true),
+        waitForFirstDiscard,
         add: {
           async click() {
             if (fault === "click") throw new Error("PRIVATE_COOKIE_BODY");
@@ -359,6 +427,42 @@ test("diagnostic scalar observations cannot substitute for any of the fifteen ch
   assert.equal(checkpoints.length, 15);
 });
 
+test("failed discard completion stops before UI and retains a bounded failure stage", async () => {
+  let visibilityChecks = 0;
+  const result = await runInNewContext(
+    `(async () => {
+    let phase, failureStage;
+    const report = {checkpoints: {...committed}}, process = {exitCode: 0};
+    const browserDiagnostic = {...scalarState, firstClickCompleted: false, errorVisibilityPassed: false};
+    const routeFailure = true;
+    const point = name => report.checkpoints[name] = true;
+    try { ${firstPhase} } catch { ${catchBody} }
+    return {exit: process.exitCode, report};
+  })()`,
+    {
+      assert,
+      committed,
+      scalarState,
+      cartFailureDiagnostic: diagnostic,
+      firstDiscardPromise: Promise.resolve(false),
+      waitForFirstDiscard,
+      add: { async click() {} },
+      page: { getByTestId: () => "pdp-add-to-cart-error" },
+      expect: () => ({
+        async toBeVisible() {
+          visibilityChecks += 1;
+        },
+      }),
+    },
+  );
+  assert.equal(visibilityChecks, 0);
+  assert.equal(result.exit, 1);
+  assert.equal(result.report.failedPhase, "discard_after_commit");
+  assert.equal(result.report.failureDiagnostic.failure_stage, "discard_completion");
+  assert.equal(result.report.failureDiagnostic.error_visibility_assertion_passed, false);
+  assert.equal(result.report.checkpoints.actual_ui_uncertain_error, undefined);
+});
+
 const routeSource = browserSource.slice(
   browserSource.indexOf('  await context.route("**/*", async (route) => {'),
   browserSource.indexOf('  phase = "establish_guest";'),
@@ -372,6 +476,7 @@ for (const [fault, code] of [
 ]) {
   test(`actual interception records bounded ${fault} stage without changing commit/discard gates`, async () => {
     let handler;
+    const completionOutcomes = [];
     const response = {
       status: () => (fault === "status" ? 503 : 200),
       async json() {
@@ -438,6 +543,9 @@ for (const [fault, code] of [
           },
         },
         invoke: async (request) => handler(request),
+        finishFirstDiscard(value) {
+          completionOutcomes.push(value);
+        },
         db(action) {
           assert.equal(action, "bind");
           return { price: 10000, guest: true, empty: true };
@@ -455,9 +563,140 @@ for (const [fault, code] of [
     assert.equal(result.summary.db_commit_recorded, !["status", "commit"].includes(fault));
     assert.equal(result.summary.response_discard_recorded, ["dispose", "none"].includes(fault));
     assert.equal(result.summary.first_response_disposed, fault === "none");
+    assert.deepEqual(completionOutcomes, [fault === "none"]);
     assert.ok(!JSON.stringify(result.summary).includes("PRIVATE"));
   });
 }
+test("first visibility assertion waits for actual commit, abort and response disposal", async () => {
+  let handler, releaseResponse, routeRun;
+  let visibilityChecks = 0;
+  let aborted = false,
+    disposed = false;
+  const fetchResponse = new Promise((resolve) => {
+    releaseResponse = resolve;
+  });
+  let finishFirstDiscard;
+  const completion = new Promise((resolve) => {
+    finishFirstDiscard = resolve;
+  });
+  const response = {
+    status: () => 200,
+    async json() {
+      return {
+        cart_id: "synthetic-cart",
+        items: [{ listing_id: "synthetic-listing", qty: 1, unit_price_ngwee: 10000 }],
+        subtotal_ngwee: 10000,
+      };
+    },
+    async dispose() {
+      disposed = true;
+    },
+  };
+  const route = {
+    request: () => ({
+      url: () => "http://127.0.0.1:8000/cart/items",
+      resourceType: () => "fetch",
+      method: () => "POST",
+      async allHeaders() {
+        return { "idempotency-key": "synthetic-key", cookie: "synthetic-cookie" };
+      },
+      postData: () => JSON.stringify({ listing_id: "synthetic-listing", qty: 1 }),
+    }),
+    fetch: () => fetchResponse,
+    async abort(reason) {
+      assert.equal(reason, "connectionreset");
+      aborted = true;
+    },
+  };
+  const execution = runInNewContext(
+    `(async () => {
+    let phase, failureStage, posts = 0, routeFailure, externalRequests = 0;
+    let firstKey, firstBody, listingId, price, bound = false;
+    const cartId = "synthetic-cart", origin = "http://127.0.0.1:3000", api = "http://127.0.0.1:8000";
+    const report = {blockedImages: 0, checkpoints: {}};
+    const browserDiagnostic = {...scalarState, posts: 0, routeFailureObserved: false, firstResponseDisposed: false};
+    const point = name => report.checkpoints[name] = true;
+    ${routeSource}
+    ${firstPhase}
+    return report;
+  })()`,
+    {
+      assert,
+      URL,
+      scalarState,
+      firstDiscardPromise: completion,
+      finishFirstDiscard,
+      waitForFirstDiscard,
+      context: {
+        async route(_pattern, callback) {
+          handler = callback;
+        },
+      },
+      add: {
+        async click() {
+          routeRun = handler(route);
+        },
+      },
+      page: {
+        getByTestId(id) {
+          assert.equal(id, "pdp-add-to-cart-error");
+          return id;
+        },
+      },
+      expect() {
+        return {
+          async toBeVisible(...options) {
+            visibilityChecks += 1;
+            assert.deepEqual(options, []);
+            assert.equal(
+              aborted && disposed,
+              true,
+              "UI wait began before real response loss completed",
+            );
+          },
+        };
+      },
+      db(action) {
+        assert.equal(action, "bind");
+        return { price: 10000, guest: true, empty: true };
+      },
+      state(...args) {
+        assert.deepEqual(args, ["committed_before_discard", 1, 1, 1, 10000, "synthetic-key"]);
+      },
+    },
+  );
+  const settled = execution.then(
+    (value) => ({ value }),
+    (error) => ({ error }),
+  );
+  try {
+    for (let i = 0; i < 12; i += 1) await Promise.resolve();
+    assert.equal(
+      visibilityChecks,
+      0,
+      "pending interception must not consume the visible-error wait",
+    );
+    assert.equal(aborted, false);
+    assert.equal(disposed, false);
+    releaseResponse(response);
+    const result = await settled;
+    assert.equal(result.error, undefined);
+    assert.equal(visibilityChecks, 1);
+    assert.deepEqual(
+      { ...result.value.checkpoints },
+      {
+        committed_before_discard: true,
+        one_response_discarded: true,
+        actual_ui_uncertain_error: true,
+      },
+    );
+  } finally {
+    releaseResponse(response);
+    await routeRun;
+    await settled;
+  }
+});
+
 const finalStart = browserSource.indexOf("} finally {", catchStart) + "} finally {".length;
 const finalBlock = browserSource.slice(
   finalStart,
