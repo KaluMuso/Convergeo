@@ -141,6 +141,56 @@ function deferred<T>() {
 }
 
 describe("shared purchase while cart actions load", () => {
+  it("publishes retry success only after replay delivery and client completion", async () => {
+    vi.mocked(fetchPickupLocations).mockResolvedValue({ branchTracked: false, locations: [] });
+    cartMocks.addCartItem.mockRejectedValueOnce(new Error("Response lost after commit"));
+    const { result } = renderHook(() => useListingPurchase(listing, labels));
+    await waitFor(() => expect(result.current?.pickupBranchTracked).toBe(false));
+    act(() => result.current?.handleAddToCart());
+    await waitFor(() => expect(result.current?.addError).toBe(labels.addToCartErrorLabel));
+    expect(result.current?.adding).toBe(false);
+
+    const delivery = deferred<void>();
+    const clientCompletion = deferred<void>();
+    cartMocks.addCartItem.mockImplementationOnce(async () => {
+      await delivery.promise;
+      await clientCompletion.promise;
+      return { items: [{ qty: 1 }] };
+    });
+    vi.useFakeTimers();
+    try {
+      act(() => result.current?.handleAddToCart());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(addCartItem).toHaveBeenCalledTimes(2);
+      expect(result.current?.adding).toBe(true);
+      expect(result.current?.addedMessage).toBeNull();
+      expect(openMiniCart).not.toHaveBeenCalled();
+      await act(async () => {
+        delivery.resolve();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current?.adding).toBe(true);
+      expect(result.current?.addedMessage).toBeNull();
+      expect(openMiniCart).not.toHaveBeenCalled();
+      await act(async () => {
+        clientCompletion.resolve();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current?.adding).toBe(false);
+      expect(result.current?.addError).toBeNull();
+      expect(result.current?.addedMessage).toBe(labels.addToCartLabel);
+      expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
+      expect(openMiniCart).toHaveBeenCalledOnce();
+      expect(addCartItem).toHaveBeenNthCalledWith(2, "listing-1", 1, undefined, undefined);
+    } finally {
+      delivery.resolve();
+      clientCompletion.resolve();
+      vi.useRealTimers();
+    }
+  });
+
   it("holds concurrent controls through loading and the request while preserving pickup arguments", async () => {
     const module = deferred<typeof cartMocks>();
     const response = deferred<{ items: Array<{ qty: number }> }>();

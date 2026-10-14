@@ -32,7 +32,9 @@ def write_rows(tmp_path: Path, role: str, rows: list[dict[str, object]], ordinal
     return path
 
 
-def capture(tmp_path: Path, *, recursive_json_decoder: bool = False) -> dict[str, Any]:
+def capture(
+    tmp_path: Path, *, recursive_json_decoder: bool = False, customer_files_first: bool = False
+) -> dict[str, Any]:
     shell = (ROOT / "scripts/qa/run-cart-response-drill.sh").read_text()
     script = shell.split('if ! python3 - "$drill_output" "$drill_phase"', 1)[1]
     script = script.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
@@ -44,6 +46,18 @@ def capture(tmp_path: Path, *, recursive_json_decoder: bool = False) -> dict[str
             "import json\nfrom json.scanner import py_make_scanner\n"
             "decoder = json.JSONDecoder()\ndecoder.scan_once = py_make_scanner(decoder)\n"
             "json.loads = decoder.decode\n" + script
+        )
+    if customer_files_first:
+        # Directory enumeration order is unspecified. Model a valid order that
+        # lists inherited customer workers before the main SDK process.
+        script = (
+            "import os\nfrom contextlib import contextmanager\n"
+            "original_scandir = os.scandir\n@contextmanager\n"
+            "def ordered_scandir(path):\n"
+            "    with original_scandir(path) as entries:\n"
+            "        yield iter(sorted(entries, key=lambda entry: "
+            "(not entry.name.startswith('private-lifecycle-customer-'), entry.name)))\n"
+            "os.scandir = ordered_scandir\n" + script
         )
     result = subprocess.run(
         [sys.executable, "-", str(tmp_path), "evidence_and_cleanup", "1", "running", "running"],
@@ -317,3 +331,65 @@ def test_lifecycle_directory_enumeration_is_bounded_and_marks_excess(tmp_path: P
     value = capture(tmp_path)
     assert value["coverage"] == "incomplete"
     assert value["invalid_records"] is True
+
+
+def test_lifecycle_sdk_window_survives_customer_worker_file_overflow(tmp_path: Path) -> None:
+    for ordinal in range(1, 9):
+        write_rows(
+            tmp_path,
+            "customer",
+            [
+                record("customer", "observer", "ready", 1),
+                record("customer", "compiler", "compile_ready", 2),
+            ],
+            ordinal,
+        )
+    write_rows(
+        tmp_path,
+        "sdk",
+        [
+            record("sdk", "observer", "ready", 1),
+            record("sdk", "pdp", "begin", 1_000_000),
+            record("sdk", "pdp", "settle", 16_002_000),
+        ],
+    )
+    value = capture(tmp_path, customer_files_first=True)
+    assert value["coverage"] == "incomplete"  # Excess files remain fail-closed.
+    assert value["invalid_records"] is True
+    assert value["sdk"]["observer_ready"] is True
+    assert value["window_ms"] == 15_002
+    assert value["customer"]["observer_ready"] is True
+    assert value["compiler"]["observer_ready"] is True
+
+
+def test_lifecycle_sdk_outside_discovery_bound_remains_unknown(tmp_path: Path) -> None:
+    for ordinal in range(1, 66):
+        write_rows(tmp_path, "customer", [record("customer", "observer", "ready", 1)], ordinal)
+    write_rows(
+        tmp_path,
+        "sdk",
+        [
+            record("sdk", "observer", "ready", 1),
+            record("sdk", "pdp", "begin", 1_000_000),
+            record("sdk", "pdp", "settle", 16_002_000),
+        ],
+    )
+    value = capture(tmp_path, customer_files_first=True)
+    assert value["coverage"] == "incomplete"
+    assert value["invalid_records"] is True
+    assert value["sdk"]["observer_ready"] is False
+    assert value["window_ms"] is None
+
+
+def test_lifecycle_prioritized_duplicate_sdk_windows_remain_unqualified(tmp_path: Path) -> None:
+    rows = [
+        record("sdk", "observer", "ready", 1),
+        record("sdk", "pdp", "begin", 1_000_000),
+        record("sdk", "pdp", "settle", 16_002_000),
+    ]
+    write_rows(tmp_path, "sdk", rows, 1)
+    write_rows(tmp_path, "sdk", rows, 2)
+    value = capture(tmp_path)
+    assert value["sdk"]["observer_ready"] is True
+    assert value["window_ms"] is None
+    assert value["coverage"] == "incomplete"

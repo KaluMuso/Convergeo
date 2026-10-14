@@ -765,6 +765,154 @@ test("first visibility assertion waits for actual commit, abort and response dis
   }
 });
 
+test("retry visibility waits for buffered replay fulfilment and response disposal", async () => {
+  let handler, routeRun, releaseFulfil, releaseDisposal, finishFirstReplay;
+  const fulfilGate = new Promise((resolve) => {
+    releaseFulfil = resolve;
+  });
+  const disposalGate = new Promise((resolve) => {
+    releaseDisposal = resolve;
+  });
+  const completion = new Promise((resolve) => {
+    finishFirstReplay = resolve;
+  });
+  let visibilityChecks = 0,
+    fulfilled = false,
+    disposed = false,
+    nativeChecks = 0;
+  let virtualTime = 0,
+    visibilityTime = null;
+  const retryPhase = browserSource.slice(
+    browserSource.indexOf('  phase = "actual_browser_retry";'),
+    browserSource.indexOf('  phase = "price_notice";'),
+  );
+  const response = {
+    status: () => 200,
+    json: async () => ({
+      cart_id: "synthetic-cart",
+      items: [{ listing_id: "synthetic-listing", qty: 1, unit_price_ngwee: 10000 }],
+      subtotal_ngwee: 10000,
+    }),
+    async dispose() {
+      await disposalGate;
+      disposed = true;
+    },
+  };
+  const route = {
+    request: () => ({
+      url: () => "http://127.0.0.1:8000/cart/items",
+      method: () => "POST",
+      resourceType: () => "fetch",
+      allHeaders: async () => ({ "idempotency-key": "synthetic-key", cookie: "PRIVATE_COOKIE" }),
+      postData: () => JSON.stringify({ listing_id: "synthetic-listing", qty: 1 }),
+    }),
+    fetch: async () => response,
+    async fulfill({ response: actual }) {
+      assert.equal(actual, response);
+      await fulfilGate;
+      fulfilled = true;
+    },
+    abort: async () => {},
+  };
+  const execution = runInNewContext(
+    `(async () => {
+    let phase, failureStage="outside_discard", posts=1, routeFailure, externalRequests=0;
+    const firstKey="synthetic-key", firstBody=JSON.stringify({listing_id:"synthetic-listing",qty:1}), listingId="synthetic-listing", price=10000;
+    const cartId="synthetic-cart",origin="http://127.0.0.1:3000",api="http://127.0.0.1:8000";
+    const report={checkpoints:{},blockedImages:0};
+    const browserDiagnostic={...scalarState,routeFailureObserved:false};
+    const point=name=>report.checkpoints[name]=true;
+    ${navigationSource}
+    ${routeSource}
+    ${retryPhase}
+    return {report,routeFailure};
+  })()`,
+    {
+      assert,
+      URL,
+      scalarState,
+      context: {
+        async route(_pattern, callback) {
+          handler = callback;
+        },
+      },
+      add: {
+        async click() {
+          routeRun = handler(route);
+        },
+      },
+      firstReplayPromise: completion,
+      finishFirstReplay,
+      waitForFirstDiscard,
+      page: {
+        getByTestId(id) {
+          return { id, click: async () => {} };
+        },
+      },
+      expect(locator) {
+        return {
+          async toBeVisible() {
+            visibilityChecks++;
+            visibilityTime = virtualTime;
+            assert.equal(
+              fulfilled && disposed,
+              true,
+              "success wait began before replay delivery/disposal",
+            );
+          },
+          async toHaveText() {
+            assert.equal(fulfilled && disposed, true);
+          },
+          async toContainText() {
+            assert.equal(fulfilled && disposed, true);
+          },
+        };
+      },
+      money: () => "K100.00",
+      state(...args) {
+        assert.deepEqual(args, ["replayed", 1, 1, 1, 10000, "synthetic-key"]);
+        nativeChecks++;
+      },
+    },
+  );
+  const settled = execution.then(
+    (value) => ({ value }),
+    (error) => ({ error }),
+  );
+  try {
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(
+      nativeChecks,
+      1,
+      "HTTP200/native replay must be established while fulfilment is still pending",
+    );
+    assert.equal(
+      visibilityChecks,
+      0,
+      "pending replay must not consume the original five-second success wait",
+    );
+    virtualTime = 6000;
+    releaseFulfil();
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    assert.equal(fulfilled, true);
+    assert.equal(disposed, false);
+    assert.equal(visibilityChecks, 0);
+    releaseDisposal();
+    const result = await settled;
+    assert.equal(result.error, undefined);
+    assert.equal(visibilityChecks, 1);
+    assert.equal(visibilityTime, 6000);
+    assert.equal(result.value.report.checkpoints.retry_same_key_and_body, true);
+    assert.equal(result.value.report.checkpoints.replay_quantity_price_ui, true);
+    assert.equal(result.value.routeFailure, undefined);
+  } finally {
+    releaseFulfil();
+    releaseDisposal();
+    await routeRun;
+    await settled;
+  }
+});
+
 const finalStart = browserSource.indexOf("} finally {", catchStart) + "} finally {".length;
 const finalBlock = browserSource.slice(
   finalStart,
@@ -1138,6 +1286,7 @@ const journeyFaults = [
   "discard_error_visibility",
   "discard_route_integrity",
   "retry_click",
+  "retry_completion",
   "retry_success_visibility",
   "retry_subtotal",
   "retry_quantity",
@@ -1397,7 +1546,8 @@ test("native diagnostic cannot echo unknown stages, IDs or arbitrary serializers
 async function routeFailureCase(config) {
   let handler;
   const aborts = [],
-    completions = [];
+    completions = [],
+    replayCompletions = [];
   const ordinal = config.ordinal || 1;
   const body = JSON.stringify({
     listing_id: "synthetic-listing",
@@ -1498,6 +1648,7 @@ async function routeFailureCase(config) {
       },
       invoke: (request) => handler(request),
       finishFirstDiscard: (value) => completions.push(value),
+      finishFirstReplay: (value) => replayCompletions.push(value),
       db(action) {
         if (action === "bind") {
           if (config.bind) throw privateError;
@@ -1522,7 +1673,7 @@ async function routeFailureCase(config) {
   assert.equal(result.routeFailure, true);
   assert.ok(!JSON.stringify(result.summary).includes("PRIVATE"));
   assert.ok(Buffer.byteLength(JSON.stringify(result.summary)) < 2048);
-  return { summary: plain(result.summary), aborts, completions };
+  return { summary: plain(result.summary), aborts, completions, replayCompletions };
 }
 for (const [code, config] of [
   ["request_origin", { url: "https://private.invalid/PRIVATE" }],
@@ -1570,7 +1721,23 @@ for (const [code, config] of [
     assert.equal(result.aborts.at(-1), "blockedbyclient");
     assert.equal(result.summary.external_requests_observed, code === "request_origin" ? 1 : 0);
     if (result.summary.route_failure_post === 1) assert.deepEqual(result.completions, [false]);
+    if (result.summary.route_failure_post === 2)
+      assert.deepEqual(result.replayCompletions, [false]);
     if (config.status) assert.equal(result.summary.latest_add_response_status, 503);
+  });
+}
+
+for (const [fault, config] of [
+  ["HTTP status", { status: 503 }],
+  ["native key", { native: "key" }],
+  ["response disposal", { dispose: true }],
+]) {
+  test(`replay ${fault} failure resolves completion false instead of accepting success`, async () => {
+    const result = await routeFailureCase({ ordinal: 2, ...config });
+    assert.deepEqual(result.replayCompletions, [false]);
+    assert.equal(result.summary.route_failure_observed, true);
+    assert.equal(result.summary.route_failure_post, 2);
+    assert.equal(result.aborts.at(-1), "blockedbyclient");
   });
 }
 

@@ -380,13 +380,15 @@ def request_lifecycle():
                 if entry.name.endswith('.failed'):
                     sink_failed = True
                 elif entry.name.endswith('.jsonl'):
-                    if len(files) < 8:
-                        files.append(Path(entry.path))
-                    else:
-                        invalid = True
+                    files.append(Path(entry.path))
     except OSError:
         read_failed = True
-    for filename in files:
+    # Discovery remains capped at64 entries and reading at8 files. Inherited
+    # customer workers must not crowd out the sole SDK navigation window.
+    if len(files) > 8:
+        invalid = True
+    files.sort(key=lambda filename: (not re.fullmatch(r'private-lifecycle-sdk-[0-9]{1,10}-[0-9]{1,10}\.jsonl', filename.name), filename.name))
+    for filename in files[:8]:
         descriptor = None
         try:
             match = re.fullmatch(r'private-lifecycle-(sdk|customer)-[0-9]{1,10}-[0-9]{1,10}\.jsonl', filename.name)

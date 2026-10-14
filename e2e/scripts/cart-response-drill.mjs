@@ -100,6 +100,7 @@ function cartFailureDiagnostic(stage, state, checkpoints) {
       "discard_error_visibility",
       "discard_route_integrity",
       "retry_click",
+      "retry_completion",
       "retry_success_visibility",
       "retry_subtotal",
       "retry_quantity",
@@ -696,6 +697,10 @@ try {
   const firstDiscardPromise = new Promise((resolve) => {
     finishFirstDiscard = resolve;
   });
+  let finishFirstReplay;
+  const firstReplayPromise = new Promise((resolve) => {
+    finishFirstReplay = resolve;
+  });
   let externalRequests = 0;
   failureStage = "websocket_route_setup";
   await context.routeWebSocket("**/*", (socket) => {
@@ -715,6 +720,8 @@ try {
     navigationRequest(request);
     let routeStage = "request_guard";
     let postOrdinal = 0;
+    let replayFulfilled = false;
+    let replayDisposed = false;
     try {
       // Images are unrelated to the mutation contract. Fulfil before any local
       // image proxy or remote image host is contacted; this is counted explicitly.
@@ -825,9 +832,11 @@ try {
           );
           routeStage = "cart_response_fulfil";
           await route.fulfill({ response });
+          replayFulfilled = true;
         }
         routeStage = "cart_response_dispose";
         await response.dispose();
+        replayDisposed = true;
         if (postOrdinal === 1) browserDiagnostic.firstResponseDisposed = true;
         return;
       }
@@ -873,6 +882,7 @@ try {
       browserDiagnostic.routeFailureObserved = true;
       await route.abort("blockedbyclient");
     } finally {
+      if (postOrdinal === 2) finishFirstReplay(replayFulfilled && replayDisposed && !routeFailure);
       if (postOrdinal === 1)
         finishFirstDiscard(
           browserDiagnostic.firstResponseDisposed &&
@@ -953,6 +963,8 @@ try {
   phase = "actual_browser_retry";
   failureStage = "retry_click";
   await add.click();
+  failureStage = "retry_completion";
+  await waitForFirstDiscard(firstReplayPromise);
   failureStage = "retry_success_visibility";
   await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible();
   failureStage = "retry_subtotal";
