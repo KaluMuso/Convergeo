@@ -378,6 +378,17 @@ function navigationClock() {
     return null;
   }
 }
+function captureInitialLifecycle(event) {
+  try {
+    if (browserDiagnostic.navAttempt !== 1) return;
+    const observer = Object.getOwnPropertyDescriptor(
+      globalThis,
+      Symbol.for("cart-drill-request-lifecycle-v1"),
+    )?.value;
+    const capture = Object.getOwnPropertyDescriptor(observer, "capture")?.value;
+    if (typeof capture === "function") capture(event);
+  } catch {}
+}
 function beginNavigation(page, browser, target) {
   try {
     navigationAttempt = {
@@ -411,6 +422,7 @@ function beginNavigation(page, browser, target) {
     ])
       browserDiagnostic[key] = false;
     installNavigationObservers(page, browser, navigationAttempt);
+    captureInitialLifecycle("begin");
     navigationAttempt.start = navigationClock();
   } catch {}
 }
@@ -419,6 +431,7 @@ function settleNavigation(error, failed) {
     const attempt = navigationAttempt;
     if (!attempt?.active) return;
     attempt.active = false; // Freeze observations before root/fixture/browser cleanup.
+    captureInitialLifecycle("settle");
     const end = navigationClock();
     if (attempt.start !== null && end !== null && end >= attempt.start)
       browserDiagnostic.navMs = Math.floor(end - attempt.start);

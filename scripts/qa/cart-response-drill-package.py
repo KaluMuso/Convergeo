@@ -37,6 +37,7 @@ FIXED = (
     "scripts/qa/cart-response-drill-db.py",
     "scripts/qa/cart-response-drill-package.py",
     "scripts/qa/cart-response-drill-path-diagnostics.py",
+    "scripts/qa/cart-response-drill-lifecycle.cjs",
 )
 
 

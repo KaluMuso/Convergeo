@@ -359,6 +359,7 @@ drill_as_user --customer-project /synthetic-node next dev --hostname 127.0.0.1
         "PATH=/usr/bin:/bin",
         "CART_DRILL_LOCAL=1",
         "CART_DRILL_UID=123",
+        "CART_DRILL_LIFECYCLE_ROLE=customer",
         "PYTHONNOUSERSITE=1",
         "PYTHONDONTWRITEBYTECODE=1",
         f"TMPDIR={tmp_path}/runtime/tmp",

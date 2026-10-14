@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 
+import "./cart-response-drill-lifecycle.test.mjs";
+
 import {
   checkpoints,
   ipv4Rules,

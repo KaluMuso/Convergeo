@@ -23,6 +23,9 @@ def launch(tmp_path: Path, *, customer_context: bool) -> tuple[int, dict[str, ob
     if not customer_context:
         line = line.replace(" --customer-project", "")
     stage = tmp_path / "stage"
+    lifecycle = stage / "scripts/qa/cart-response-drill-lifecycle.cjs"
+    lifecycle.parent.mkdir(parents=True)
+    lifecycle.write_bytes((ROOT / "scripts/qa/cart-response-drill-lifecycle.cjs").read_bytes())
     native_cache = tmp_path / "native-cache"
     native_cache.mkdir(mode=0o700)
     customer = stage / "apps/customer"

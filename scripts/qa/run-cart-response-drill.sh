@@ -217,7 +217,7 @@ drill_cleanup() {
     sudo chown -R "$(id -u):$(id -g)" "$drill_output" || drill_cleanup_ok=false
     sudo chmod 700 "$drill_output" || drill_cleanup_ok=false
     if ! python3 - "$drill_output" "$drill_phase" "$drill_status" "$drill_api_exit" "$drill_customer_exit" "$drill_root" <<'PY'
-import json, re, sys
+import json, os, re, stat, sys
 from pathlib import Path, PurePosixPath
 p = Path(sys.argv[1])
 log_cache = {}
@@ -355,6 +355,135 @@ def customer_native_error_summary():
             'tail_truncated': log_truncated.get('private-customer.log', False)}
 module, module_category, module_path = customer_module_diagnostic()
 native_summary = customer_native_error_summary()
+def request_lifecycle():
+    # Consume only fixed metadata records after the original owned processes stop.
+    # Raw clocks/PIDs/filenames never enter the exported initial-navigation vector.
+    roles = {'sdk', 'customer'}
+    operations = {'observer', 'pdp', 'compiler', 'product', 'comparison', 'related', 'reviews', 'enquiries'}
+    events = {'ready', 'begin', 'settle', 'created', 'sent', 'received', 'headers', 'end', 'finish',
+              'error', 'compile_ready', 'compile_begin', 'compile_settled', 'compile_error',
+              'observer_error', 'limit'}
+    errors = {'none', 'timeout', 'refused', 'reset', 'name_unresolved', 'aborted', 'other'}
+    records = []
+    invalid = False
+    read_failed = False
+    sink_failed = False
+    files = []
+    try:
+        with os.scandir(p) as entries:
+            for ordinal, entry in enumerate(entries):
+                if ordinal >= 64:
+                    invalid = True
+                    break
+                if not entry.name.startswith('private-lifecycle-'):
+                    continue
+                if entry.name.endswith('.failed'):
+                    sink_failed = True
+                elif entry.name.endswith('.jsonl'):
+                    if len(files) < 8:
+                        files.append(Path(entry.path))
+                    else:
+                        invalid = True
+    except OSError:
+        read_failed = True
+    for filename in files:
+        descriptor = None
+        try:
+            match = re.fullmatch(r'private-lifecycle-(sdk|customer)-[0-9]{1,10}-[0-9]{1,10}\.jsonl', filename.name)
+            if match is None:
+                invalid = True
+                continue
+            before = filename.lstat()
+            if (not stat.S_ISREG(before.st_mode) or stat.S_IMODE(before.st_mode) != 0o600 or
+                    before.st_uid != os.getuid() or before.st_nlink != 1 or before.st_size > 8192):
+                invalid = True
+                continue
+            descriptor = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            current = os.fstat(descriptor)
+            if (not stat.S_ISREG(current.st_mode) or stat.S_IMODE(current.st_mode) != 0o600 or
+                    current.st_uid != os.getuid() or current.st_nlink != 1 or
+                    (current.st_dev, current.st_ino, current.st_size) != (before.st_dev, before.st_ino, before.st_size)):
+                invalid = True
+                continue
+            content = os.read(descriptor, 8193)
+            if len(content) > 8192:
+                invalid = True
+                continue
+            rows = content.decode('utf-8').splitlines()
+            if len(rows) > 32:
+                invalid = True
+            previous = -1
+            for line in rows[:32]:
+                item = json.loads(line)
+                if (type(item) is not dict or set(item) != {'version', 'role', 'operation', 'event', 'error', 'time'} or
+                        type(item['version']) is not int or item['version'] != 1 or
+                        type(item['role']) is not str or item['role'] not in roles or item['role'] != match[1] or
+                        type(item['operation']) is not str or item['operation'] not in operations or
+                        type(item['event']) is not str or item['event'] not in events or
+                        type(item['error']) is not str or item['error'] not in errors or
+                        type(item['time']) is not int or not 0 <= item['time'] <= 9007199254740991 or
+                        item['time'] < previous):
+                    invalid = True
+                    continue
+                previous = item['time']
+                records.append(item)
+        except (OSError, ValueError, UnicodeError, TypeError, KeyError, RecursionError):
+            read_failed = True
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+    starts = [r['time'] for r in records if (r['role'], r['operation'], r['event']) == ('sdk', 'pdp', 'begin')]
+    ends = [r['time'] for r in records if (r['role'], r['operation'], r['event']) == ('sdk', 'pdp', 'settle')]
+    window = len(starts) == len(ends) == 1 and 0 <= ends[0] - starts[0] <= 180000000
+    selected = [r for r in records if window and starts[0] <= r['time'] <= ends[0]]
+    def count(role, operation, event):
+        return sum((r['role'], r['operation'], r['event']) == (role, operation, event) for r in selected)
+    def first(role, operation, event):
+        values = [r['time'] for r in selected if (r['role'], r['operation'], r['event']) == (role, operation, event)]
+        return (min(values) - starts[0]) // 1000 if values else None
+    ready = {role: any(r['role'] == role and r['operation'] == 'observer' and r['event'] == 'ready' for r in records) for role in roles}
+    compiler_ready = any(r['role'] == 'customer' and r['operation'] == 'compiler' and r['event'] == 'compile_ready' for r in records)
+    limited = any(r['event'] == 'limit' for r in records)
+    observer_error = any(r['event'] == 'observer_error' for r in selected)
+    coverage = ('unavailable' if not records and not (invalid or read_failed or sink_failed) else 'bounded' if window and all(ready.values()) and compiler_ready and not (invalid or read_failed or sink_failed or limited or observer_error) else 'incomplete')
+    if not records and not (invalid or read_failed or sink_failed):
+        return {'format': 'cart_request_lifecycle_v1', 'scope': 'initial_seeded_pdp_only', 'coverage': 'unavailable'}
+    sdk_error = next((r['error'] for r in selected if r['role'] == 'sdk' and r['operation'] == 'pdp' and r['event'] == 'error'), 'none')
+    data = {}
+    for operation in ('product', 'comparison', 'related', 'reviews', 'enquiries'):
+        started = count('customer', operation, 'created')
+        ended = count('customer', operation, 'end')
+        failed = count('customer', operation, 'error')
+        data[operation] = {'started': started, 'headers': count('customer', operation, 'headers'),
+                           'body_end': ended, 'errors': failed, 'pending': max(0, started - ended - failed),
+                           'first_start_ms': first('customer', operation, 'created'),
+                           'first_headers_ms': first('customer', operation, 'headers'),
+                           'first_body_end_ms': first('customer', operation, 'end')}
+    compile_started = count('customer', 'compiler', 'compile_begin')
+    compile_settled = count('customer', 'compiler', 'compile_settled')
+    compile_failed = count('customer', 'compiler', 'compile_error')
+    return {'format': 'cart_request_lifecycle_v1', 'scope': 'initial_seeded_pdp_only',
+            'coverage': coverage, 'invalid_records': invalid, 'read_failed': read_failed, 'sink_failed': sink_failed,
+            'record_limit': limited, 'observer_error': observer_error,
+            'window_ms': (ends[0] - starts[0]) // 1000 if window else None,
+            'sdk': {'observer_ready': ready['sdk'], 'created': count('sdk', 'pdp', 'created'),
+                    'body_scope': 'http_incoming_message_end',
+                    'sent': count('sdk', 'pdp', 'sent'), 'headers': count('sdk', 'pdp', 'headers'),
+                    'body_end': count('sdk', 'pdp', 'end'), 'error': sdk_error,
+                    'first_headers_ms': first('sdk', 'pdp', 'headers'),
+                    'first_body_end_ms': first('sdk', 'pdp', 'end')},
+            'customer': {'observer_ready': ready['customer'], 'received': count('customer', 'pdp', 'received'),
+                         'finished': count('customer', 'pdp', 'finish'),
+                         'first_received_ms': first('customer', 'pdp', 'received'),
+                         'first_finish_ms': first('customer', 'pdp', 'finish')},
+            'compiler': {'observer_ready': compiler_ready, 'started': compile_started,
+                         'scope': 'ensure_page_entry_and_settlement_including_rejections_and_cache_hits',
+                         'settled': compile_settled, 'synchronous_errors': compile_failed,
+                         'pending': max(0, compile_started - compile_settled - compile_failed),
+                         'first_start_ms': first('customer', 'compiler', 'compile_begin'),
+                         'first_settled_ms': first('customer', 'compiler', 'compile_settled')},
+            'ssr_data': data}
+
 d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categories('private-api.log'),
      'api_launcher_status': sys.argv[4], 'customer_launcher_status': sys.argv[5],
      'python_probe_categories': categories('private-python-probe.log'),
@@ -365,6 +494,7 @@ d = {'phase': sys.argv[2], 'exit': int(sys.argv[3]), 'api_log_categories': categ
      'customer_native_error_summary': native_summary,
      'customer_log_tail_truncated': log_truncated.get('private-customer.log', False),
      'raw_logs_retained_privately_only': True}
+d['request_lifecycle'] = request_lifecycle()
 try:
     health = json.loads((p / 'private-health-probe.json').read_text())
     assert isinstance(health, list) and len(health) == 2
@@ -425,13 +555,20 @@ PY
 trap drill_cleanup EXIT
 drill_as_user() {
   local drill_workdir="$drill_root"
+  local drill_lifecycle_role=none
   if [ "${1:-}" = --customer-project ]; then
     drill_workdir="$drill_root/apps/customer"
+    drill_lifecycle_role=customer
     shift
+  elif [ "${1:-}" = "$drill_node" ] && [ "${2:-}" = --require ] && \
+       [ "${3:-}" = "$drill_root/scripts/qa/cart-response-drill-lifecycle.cjs" ] && \
+       [ "${4:-}" = "$drill_root/e2e/scripts/cart-response-drill.mjs" ]; then
+    drill_lifecycle_role=sdk
   fi
   (
   cd "$drill_workdir"
   sudo -u cartdrill env -i PATH=/usr/bin:/bin CART_DRILL_LOCAL=1 CART_DRILL_UID="$drill_uid" \
+    CART_DRILL_LIFECYCLE_ROLE="$drill_lifecycle_role" \
     PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 \
     TMPDIR="$drill_package_root/tmp" XDG_CACHE_HOME="$drill_package_root/cache" XDG_CONFIG_HOME="$drill_package_root/config" \
     SWC_NATIVE_BINDING_CACHE="$drill_swc_cache_root" \
@@ -524,7 +661,7 @@ sudo chown -R cartdrill:cartdrill "$drill_root/apps/customer/.next"
 sudo chmod -R u+rwX "$drill_root/apps/customer/.next"
 drill_as_user "$drill_root/services/api/.venv/bin/python" -m uvicorn app.main:app --app-dir "$drill_root/services/api" --host 127.0.0.1 --port 8000 > "$drill_output/private-api.log" 2>&1 &
 drill_api_launcher=$!
-drill_as_user --customer-project "$drill_node" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
+drill_as_user --customer-project "$drill_node" --require "$drill_root/scripts/qa/cart-response-drill-lifecycle.cjs" "$drill_root/apps/customer/node_modules/next/dist/bin/next" dev "$drill_root/apps/customer" --hostname 127.0.0.1 --port 3000 > "$drill_output/private-customer.log" 2>&1 &
 drill_customer_launcher=$!
 for drill_attempt in $(seq 1 10); do
   if drill_as_user "$drill_node" --input-type=module -e 'const results=await Promise.all([["api","http://127.0.0.1:8000/healthz"],["customer","http://127.0.0.1:3000/en/health"]].map(async ([name,url])=>{try{return {name,ok:(await fetch(url,{signal:AbortSignal.timeout(5000)})).ok}}catch{return {name,ok:false}}}));console.log(JSON.stringify(results));process.exit(results.every(r=>r.ok)?0:1)' > "$drill_output/private-health-probe.json"; then break; fi
@@ -546,7 +683,7 @@ for row in rows:
 PY
 drill_phase=browser_contract
 set +e
-drill_as_user "$drill_node" "$drill_root/e2e/scripts/cart-response-drill.mjs"
+drill_as_user "$drill_node" --require "$drill_root/scripts/qa/cart-response-drill-lifecycle.cjs" "$drill_root/e2e/scripts/cart-response-drill.mjs"
 drill_result=$?
 set -e
 drill_phase=evidence_and_cleanup
