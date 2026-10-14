@@ -150,6 +150,10 @@ const diagnosticSource = browserSource.slice(
   browserSource.indexOf("\nconst browserDiagnostic ="),
 );
 const diagnostic = runInNewContext(`(${diagnosticSource})`);
+const navigationSource = browserSource.slice(
+  browserSource.indexOf("let navigationAttempt = null;"),
+  browserSource.indexOf("\nfunction observeBrowserDiagnostic("),
+);
 const discardWaitSource = browserSource.slice(
   browserSource.indexOf("async function waitForFirstDiscard("),
   browserSource.indexOf("\nfunction db("),
@@ -240,7 +244,7 @@ const plain = (value) => JSON.parse(JSON.stringify(value));
 test("browser failure projection has fixed bounded scalar fields only", () => {
   const projected = plain(diagnostic("discard_route_integrity", scalarState, committed));
   assert.deepEqual(projected, {
-    format: "cart_browser_failure_v2",
+    format: "cart_browser_failure_v3",
     failure_stage: "discard_route_integrity",
     intercepted_posts: 1,
     first_response_status: 200,
@@ -261,8 +265,31 @@ test("browser failure projection has fixed bounded scalar fields only", () => {
     external_requests_observed: null,
     blocked_images_observed: null,
     native_check_reached: "unclassified",
+    nav_error: "unclassified",
+    nav_ms: null,
+    nav_status_seen: null,
+    nav_attempt: null,
+    nav_done: null,
+    nav_request: null,
+    nav_response: null,
+    nav_main_frame_event: null,
+    nav_page_dom_event: null,
+    nav_page_load_event: null,
+    nav_closed: null,
+    nav_context_closed: null,
+    nav_crash: null,
+    nav_detached: null,
+    nav_disconnected: null,
+    nav_fetch: "unclassified",
+    nav_request_error: "unclassified",
+    nav_route_error: "unclassified",
+    nav_observers: null,
   });
-  assert.ok(Buffer.byteLength(JSON.stringify(projected)) < 1024);
+  assert.ok(
+    Buffer.byteLength(JSON.stringify(Object.fromEntries(Object.entries(projected).slice(0, 21)))) <
+      1024,
+  );
+  assert.ok(Buffer.byteLength(JSON.stringify(projected)) < 2048);
 });
 for (const value of [-1, 1001, 1.5, Infinity, NaN, 3n, Symbol("PRIVATE"), "PRIVATE", {}]) {
   test("browser projection rejects invalid counters without coercion", () => {
@@ -431,7 +458,12 @@ for (const [fault, code] of [
         `cart-drill-browser-failure-summary: ${JSON.stringify(result.summary)}`,
       );
       assert.ok(!logs[0].includes("PRIVATE"));
-      assert.ok(Buffer.byteLength(logs[0]) < 1024);
+      assert.ok(
+        Buffer.byteLength(
+          `cart-drill-browser-failure-summary: ${JSON.stringify(Object.fromEntries(Object.entries(result.summary).slice(0, 21)))}`,
+        ) < 1024,
+      );
+      assert.ok(Buffer.byteLength(logs[0]) < 2048);
     }
   });
 }
@@ -542,7 +574,8 @@ for (const [fault, code] of [
       const report = {blockedImages: 0, checkpoints: {}};
       const browserDiagnostic = {...scalarState, posts: 0, routeFailureObserved: false, firstResponseDisposed: false};
       const point = name => report.checkpoints[name] = true;
-      ${routeSource}
+      ${navigationSource}
+    ${routeSource}
       await invoke(route);
       if (fault === "dispose") await invoke(lateRoute);
       return {summary: cartFailureDiagnostic("discard_route_integrity", browserDiagnostic, report.checkpoints), routeFailure, bound};
@@ -648,6 +681,7 @@ test("first visibility assertion waits for actual commit, abort and response dis
     const report = {blockedImages: 0, checkpoints: {}};
     const browserDiagnostic = {...scalarState, posts: 0, routeFailureObserved: false, firstResponseDisposed: false};
     const point = name => report.checkpoints[name] = true;
+    ${navigationSource}
     ${routeSource}
     ${firstPhase}
     return report;
@@ -894,10 +928,12 @@ async function offlineJourney(fault = null, scenario = {}) {
   });
   const page = {
     on(event, callback) {
-      trip();
-      assert.equal(event, "console");
-      consoleHandler = callback;
+      if (event === "console") {
+        trip();
+        consoleHandler = callback;
+      }
     },
+    off() {},
     setDefaultTimeout(value) {
       assert.equal(value, 15000);
     },
@@ -1347,7 +1383,7 @@ test("native diagnostic cannot echo unknown stages, IDs or arbitrary serializers
     const result = diagnostic("stock_native_state", { nativeCheck: value, key: "PRIVATE" }, {});
     assert.equal(result.failure_stage, "stock_native_state");
     assert.equal(result.native_check_reached, "unclassified");
-    assert.equal(Object.keys(result).length, 21);
+    assert.equal(Object.keys(result).length, 40);
     assert.ok(!JSON.stringify(result).includes("PRIVATE"));
   }
   for (const native of ["observe", "quantity", "claims", "events", "price", "key"]) {
@@ -1441,6 +1477,7 @@ async function routeFailureCase(config) {
     const browserDiagnostic = {posts: 0, routeFailureObserved: false, firstResponseDisposed: false, nativeCheck: "none"};
     const point = name => report.checkpoints[name] = true;
     ${nativeStateSource}
+    ${navigationSource}
     ${routeSource}
     await invoke(route);
     return {summary: cartFailureDiagnostic("discard_route_integrity", browserDiagnostic, report.checkpoints), bound, routeFailure};
@@ -1551,6 +1588,664 @@ for (const [url, method] of [
     assert.equal(result.summary.stock_response_status, null);
   });
 }
+
+function navigationFixture(options = {}) {
+  let clock = options.start ?? 10,
+    closed = false,
+    connected = true;
+  const pageEvents = new Map(),
+    browserEvents = new Map(),
+    contextEvents = new Map();
+  const target =
+    options.callSite === 1
+      ? "http://127.0.0.1:3000/en/cart"
+      : "http://127.0.0.1:3000/en/p/smartphone-x1";
+  const frame = {};
+  const subscribe = (map) => (event, handler) => {
+    const list = map.get(event) ?? [];
+    list.push(handler);
+    map.set(event, list);
+  };
+  const remove = (map) => (event, handler) =>
+    map.set(
+      event,
+      (map.get(event) ?? []).filter((item) => item !== handler),
+    );
+  const page = {
+    on: options.onError
+      ? () => {
+          throw new Error("PRIVATE_OBSERVER_ERROR");
+        }
+      : subscribe(pageEvents),
+    off: remove(pageEvents),
+    context: () => ({ on: subscribe(contextEvents), off: remove(contextEvents) }),
+    mainFrame: () => frame,
+    isClosed: () => closed,
+    async goto(...args) {
+      assert.equal(args.length, 1);
+      const [url] = args;
+      assert.equal(url, target);
+      if (options.goto) return options.goto(api);
+    },
+  };
+  const browser = {
+    on: subscribe(browserEvents),
+    off: remove(browserEvents),
+    isConnected: () => connected,
+  };
+  const snippets = [
+    ...browserSource.matchAll(
+      /^  beginNavigation\(page, browser, `[^`]+`\);\n  try \{\n    await page\.goto\(`[^`]+`\);\n    settleNavigation\(undefined, false\);\n  \} catch \(error\) \{\n    settleNavigation\(error, true\);\n    throw error;\n  \}/gm,
+    ),
+  ].map((match) => match[0]);
+  assert.equal(snippets.length, 3);
+  const code = snippets[options.callSite ?? 0];
+  let api;
+  const actual = runInNewContext(
+    `(() => {
+    let failureStage = "guest_navigation";
+    const origin = "http://127.0.0.1:3000";
+    ${journeySetup}
+    return {
+      begin: target => beginNavigation(page, browser, target),
+      settle: (error, failed) => settleNavigation(error, failed),
+      route: noteNavigationRoute,
+      classify: navigationErrorClass,
+      makeClosedTarget: reason => new (class TargetClosedError extends Error { constructor(cause) {super(cause || "Target page, context or browser has been closed");} })(reason),
+      snapshot: () => cartFailureDiagnostic(failureStage, browserDiagnostic, {}),
+      async originalGoto() {try { ${code} return {resolved: true}; } catch(error) {return {resolved: false, error};}},
+    };
+  })()`,
+    {
+      page,
+      browser,
+      performance: {
+        now: () => {
+          if (options.clockError) throw new Error("PRIVATE_CLOCK_ERROR");
+          return clock;
+        },
+      },
+      cartFailureDiagnostic: diagnostic,
+    },
+  );
+  api = {
+    ...actual,
+    target,
+    frame,
+    clock: (value) => (clock = value),
+    closed: (value) => (closed = value),
+    connected: (value) => (connected = value),
+    emit(event, ...args) {
+      for (const fn of [...(pageEvents.get(event) ?? [])]) fn(...args);
+    },
+    closeContext() {
+      for (const fn of [...(contextEvents.get("close") ?? [])]) fn();
+    },
+    disconnect() {
+      connected = false;
+      for (const fn of [...(browserEvents.get("disconnected") ?? [])]) fn();
+    },
+    handlers: (event) => [...(pageEvents.get(event) ?? [])],
+    request(url = target, overrides = {}) {
+      return {
+        url: () => url,
+        isNavigationRequest: () => true,
+        frame: () => frame,
+        redirectedFrom: () => null,
+        failure: () => ({ errorText: "net::ERR_CONNECTION_REFUSED PRIVATE_URL_COOKIE" }),
+        ...overrides,
+      };
+    },
+  };
+  return api;
+}
+for (const [input, expected] of [
+  [{ name: "TimeoutError", message: "PRIVATE" }, "timeout"],
+  ...[
+    ["ERR_CONNECTION_REFUSED", "connection_refused"],
+    ["ERR_CONNECTION_RESET", "connection_reset"],
+    ["ERR_NAME_NOT_RESOLVED", "name_unresolved"],
+    ["ERR_TIMED_OUT", "network_timeout"],
+    ["ERR_ADDRESS_UNREACHABLE", "network_unreachable"],
+    ["ERR_ABORTED", "aborted"],
+    ["ERR_FAILED", "network_failed"],
+  ].map(([code, expected]) => [
+    { message: `page.goto: net::${code} at http://PRIVATE.invalid/PRIVATE?token=PRIVATE` },
+    expected,
+  ]),
+  ...[
+    ["ECONNREFUSED", "connection_refused"],
+    ["ECONNRESET", "connection_reset"],
+    ["ETIMEDOUT", "network_timeout"],
+    ["ENOTFOUND", "name_unresolved"],
+    ["EHOSTUNREACH", "network_unreachable"],
+    ["ENETUNREACH", "network_unreachable"],
+  ].map(([code, expected]) => [{ code, message: "PRIVATE" }, expected]),
+  [{ message: "route.fetch: connect ECONNREFUSED PRIVATE_ADDRESS" }, "connection_refused"],
+  [{ message: "apiRequestContext.fetch: getaddrinfo ENOTFOUND PRIVATE_HOST" }, "name_unresolved"],
+  [{ name: "TargetClosedError", message: "PRIVATE_REASON" }, "target_closed"],
+  [
+    { message: "page.goto: Target page, context or browser has been closed\nPRIVATE_CALL_LOG" },
+    "target_closed",
+  ],
+  [{ message: "page.goto: Page crashed\nPRIVATE" }, "page_crashed"],
+  [{ message: "page.goto: Frame was detached\nPRIVATE" }, "frame_detached"],
+  [{ message: "PRIVATE http://PRIVATE/?net::ERR_CONNECTION_REFUSED" }, "other_error"],
+  [{ message: "page.goto: net::ERR_CONNECTION_REFUSED_EXTRA at PRIVATE" }, "network_other"],
+  [{ message: "PRIVATE".repeat(2000) }, "unclassified"],
+  [null, "unclassified"],
+  [Symbol("PRIVATE"), "unclassified"],
+]) {
+  test(`navigation error classification supports ${expected} without echoing input`, () => {
+    const f = navigationFixture();
+    assert.equal(f.classify(input), expected);
+    assert.ok(!f.classify(input).includes("PRIVATE"));
+  });
+}
+test("pinned client closed-target with ordinary Error name and custom reason is distinguished by lifecycle", () => {
+  const f = navigationFixture();
+  const error = new Error("PRIVATE_CUSTOM_REASON");
+  assert.equal(Object.getOwnPropertyDescriptor(error, "name"), undefined);
+  assert.equal(f.classify(error, { closed: true }), "target_closed");
+  assert.equal(f.classify(error, { disconnected: true }), "target_closed");
+  assert.equal(f.classify(error, { crashed: true }), "page_crashed");
+  assert.equal(f.classify(error, { detached: true }), "frame_detached");
+  assert.equal(f.classify(error), "other_error");
+});
+test("original timeout class stays separate from network text and closed lifecycle", () => {
+  const f = navigationFixture();
+  assert.equal(
+    f.classify(
+      { name: "TimeoutError", message: "page.goto: net::ERR_CONNECTION_REFUSED at PRIVATE" },
+      { closed: true },
+    ),
+    "timeout",
+  );
+});
+test("navigation error projection never invokes getters, prototypes, serializers or coercion", () => {
+  const f = navigationFixture();
+  let calls = 0;
+  const error = {
+    toString() {
+      calls++;
+      throw new Error("PRIVATE");
+    },
+    toJSON() {
+      calls++;
+      throw new Error("PRIVATE");
+    },
+  };
+  for (const key of ["name", "code", "message"])
+    Object.defineProperty(error, key, {
+      get() {
+        calls++;
+        throw new Error("PRIVATE");
+      },
+    });
+  const flags = Object.defineProperty({}, "closed", {
+    get() {
+      calls++;
+      throw new Error("PRIVATE");
+    },
+  });
+  assert.equal(f.classify(error, flags), "unclassified");
+  assert.equal(
+    f.classify(Object.create({ name: "TimeoutError", code: "ECONNREFUSED", message: "PRIVATE" })),
+    "unclassified",
+  );
+  assert.equal(
+    f.classify(
+      new Proxy(
+        {},
+        {
+          getOwnPropertyDescriptor() {
+            throw new Error("PRIVATE");
+          },
+        },
+      ),
+    ),
+    "unclassified",
+  );
+  assert.equal(calls, 0);
+});
+for (const [name, error, flags] of [
+  ["timeout", Object.assign(new Error("PRIVATE"), { name: "TimeoutError" }), {}],
+  [
+    "network refusal",
+    new Error("page.goto: net::ERR_CONNECTION_REFUSED at http://PRIVATE/PRIVATE"),
+    {},
+  ],
+  [
+    "default closed target",
+    new Error("page.goto: Target page, context or browser has been closed"),
+    {},
+  ],
+  ["custom closed page", new Error("PRIVATE_REASON"), { closed: true }],
+  ["custom closed browser", new Error("PRIVATE_REASON"), { disconnected: true }],
+  ["page crash", new Error("PRIVATE_REASON"), { crashed: true }],
+  ["frame detached", new Error("PRIVATE_REASON"), { detached: true }],
+]) {
+  test(`actual goto wrapper preserves the same ${name} error, time and snapshot before cleanup`, async () => {
+    const f = navigationFixture({
+      goto(api) {
+        const request = api.request();
+        api.emit("request", request);
+        api.clock(15010);
+        if (flags.closed) {
+          api.closed(true);
+          api.emit("close");
+        }
+        if (flags.disconnected) api.disconnect();
+        if (flags.crashed) api.emit("crash");
+        if (flags.detached) api.emit("framedetached", api.frame);
+        throw error;
+      },
+    });
+    const result = await f.originalGoto();
+    assert.equal(result.resolved, false);
+    assert.equal(result.error, error);
+    const d = plain(f.snapshot());
+    assert.equal(d.nav_ms, 15000);
+    assert.equal(d.nav_done, false);
+    assert.equal(d.nav_attempt, 1);
+    assert.equal(d.nav_request, true);
+    assert.equal(d.nav_observers, true);
+    const expected = name.includes("closed")
+      ? "target_closed"
+      : name === "page crash"
+        ? "page_crashed"
+        : name === "frame detached"
+          ? "frame_detached"
+          : name === "network refusal"
+            ? "connection_refused"
+            : "timeout";
+    assert.equal(d.nav_error, expected);
+    assert.equal(d.nav_status_seen, false);
+    f.emit("close");
+    f.disconnect();
+    f.emit("load");
+    assert.deepEqual(plain(f.snapshot()), d);
+    assert.equal(f.handlers("load").length, 0);
+    assert.ok(!JSON.stringify(d).includes("PRIVATE"));
+    assert.ok(Buffer.byteLength(JSON.stringify(d)) < 2048);
+  });
+}
+test("navigation success keeps returned resolution and records request, route and main lifecycle", async () => {
+  const f = navigationFixture({
+    goto(api) {
+      const request = api.request();
+      api.emit("request", request);
+      api.route(request, "started");
+      api.route(request, "completed", { status: () => 200 });
+      api.emit("response", { request: () => request });
+      api.route(request, "fulfilled");
+      api.emit("framenavigated", api.frame);
+      api.emit("domcontentloaded");
+      api.emit("load");
+      api.clock(25.9);
+    },
+  });
+  assert.equal((await f.originalGoto()).resolved, true);
+  const d = plain(f.snapshot());
+  assert.equal(d.nav_error, "none");
+  assert.equal(d.nav_ms, 15);
+  assert.equal(d.nav_done, true);
+  for (const key of [
+    "nav_status_seen",
+    "nav_request",
+    "nav_response",
+    "nav_main_frame_event",
+    "nav_page_dom_event",
+    "nav_page_load_event",
+  ])
+    assert.equal(d[key], true);
+  assert.equal(d.navigation_response_status, 200);
+  assert.equal(d.nav_fetch, "fulfilled");
+});
+test("main timeout, request failure and underlying route refusal remain separate observations", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  const request = f.request();
+  f.emit("request", request);
+  f.route(request, "started");
+  f.route(
+    request,
+    "error",
+    undefined,
+    new Error("route.fetch: connect ECONNREFUSED PRIVATE_ADDRESS"),
+  );
+  f.emit("requestfailed", { ...request });
+  assert.equal(f.snapshot().nav_request_error, "none");
+  request.failure = () => ({ errorText: "net::ERR_FAILED" });
+  f.emit("requestfailed", request);
+  f.clock(15010);
+  f.settle({ name: "TimeoutError", message: "PRIVATE" }, true);
+  const d = f.snapshot();
+  assert.equal(d.nav_error, "timeout");
+  assert.equal(d.nav_request_error, "network_failed");
+  assert.equal(d.nav_route_error, "connection_refused");
+  assert.equal(d.nav_fetch, "started");
+});
+test("same-URL first and third attempts reject old Request identities and stale listener closures", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  const old = f.request();
+  f.emit("request", old);
+  f.route(old, "completed", { status: () => 201 });
+  const oldHandlers = f.handlers("load"),
+    oldFrame = f.handlers("framenavigated");
+  f.settle(undefined, false);
+  f.begin("http://127.0.0.1:3000/en/cart");
+  f.settle(undefined, false);
+  f.begin(f.target);
+  const before = plain(f.snapshot());
+  f.emit("request", old);
+  f.emit("response", { request: () => old });
+  f.emit("requestfailed", old);
+  f.route(old, "completed", { status: () => 503 });
+  for (const fn of oldHandlers) fn();
+  for (const fn of oldFrame) fn(f.frame);
+  assert.deepEqual(plain(f.snapshot()), before);
+  assert.equal(f.snapshot().navigation_response_status, null);
+  assert.equal(f.snapshot().nav_attempt, 3);
+  const fresh = f.request();
+  f.emit("request", fresh);
+  f.route(fresh, "completed", { status: () => 200 });
+  assert.equal(f.snapshot().navigation_response_status, 200);
+});
+test("only current main-frame navigation and its redirect chain affect navigation observations", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  for (const request of [
+    f.request(f.target, { isNavigationRequest: () => false }),
+    f.request(f.target, { frame: () => ({}) }),
+    f.request("http://PRIVATE.invalid/PRIVATE"),
+    f.request(f.target, { redirectedFrom: () => ({}) }),
+  ]) {
+    f.emit("request", request);
+    f.route(request, "completed", { status: () => 503 });
+  }
+  assert.equal(f.snapshot().nav_request, false);
+  assert.equal(f.snapshot().navigation_response_status, null);
+  const request = f.request();
+  f.emit("request", request);
+  const redirect = f.request("http://127.0.0.1:3000/en/redirected", {
+    redirectedFrom: () => request,
+  });
+  f.emit("request", redirect);
+  f.route(redirect, "completed", { status: () => 200 });
+  f.emit("response", { request: () => redirect });
+  assert.equal(f.snapshot().nav_response, true);
+  assert.equal(f.snapshot().navigation_response_status, 200);
+  f.emit("framenavigated", {});
+  f.emit("framedetached", {});
+  assert.equal(f.snapshot().nav_main_frame_event, false);
+  assert.equal(f.snapshot().nav_detached, false);
+});
+for (const end of [NaN, Infinity, -1, "PRIVATE", Symbol("PRIVATE"), 200010]) {
+  test("invalid or out-of-bound navigation clocks emit null without changing failure", () => {
+    const f = navigationFixture();
+    f.begin(f.target);
+    f.clock(end);
+    f.settle({ name: "TimeoutError" }, true);
+    assert.equal(f.snapshot().nav_ms, null);
+    assert.equal(f.snapshot().nav_error, "timeout");
+  });
+}
+test("navigation classifier tolerates incomplete diagnostic SDK methods and oversized/private fields", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  const request = f.request();
+  f.emit("request", request);
+  request.failure = () => ({
+    get errorText() {
+      throw new Error("PRIVATE");
+    },
+  });
+  f.emit("requestfailed", request);
+  assert.equal(f.snapshot().nav_request_error, "unclassified");
+  const d = diagnostic(
+    "guest_navigation",
+    {
+      navError: "PRIVATE",
+      navRequestError: "PRIVATE",
+      navRouteError: "PRIVATE",
+      navFetch: "PRIVATE",
+      navAttempt: 4,
+      navMs: 180001,
+      navClosed: "PRIVATE",
+    },
+    {},
+  );
+  assert.equal(d.nav_error, "unclassified");
+  assert.equal(d.nav_request_error, "unclassified");
+  assert.equal(d.nav_route_error, "unclassified");
+  assert.equal(d.nav_fetch, "unclassified");
+  assert.equal(d.nav_attempt, null);
+  assert.equal(d.nav_ms, null);
+  assert.equal(d.nav_closed, null);
+  assert.ok(!JSON.stringify(d).includes("PRIVATE"));
+  for (const ms of [0, 180000])
+    assert.equal(diagnostic("guest_navigation", { navMs: ms }, {}).nav_ms, ms);
+});
+
+test("new lifecycle listener records only an observed page event, never correlated response/readiness", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  f.settle(undefined, false);
+  f.begin(f.target);
+  // DOM/load events have no Request identity in the public SDK. Preserve that limitation.
+  f.emit("domcontentloaded");
+  f.emit("load");
+  f.emit("framenavigated", f.frame);
+  const d = f.snapshot();
+  assert.equal(d.nav_page_dom_event, true);
+  assert.equal(d.nav_page_load_event, true);
+  assert.equal(d.nav_main_frame_event, true);
+  assert.equal(d.nav_request, false);
+  assert.equal(d.nav_response, false);
+  assert.equal(d.nav_status_seen, false);
+  assert.equal(d.nav_done, false);
+});
+for (const options of [{ onError: true }, { clockError: true }]) {
+  test("observer or monotonic clock failure cannot replace the original goto error", async () => {
+    const error = Object.assign(new Error("PRIVATE_ORIGINAL_TIMEOUT"), { name: "TimeoutError" });
+    const f = navigationFixture({
+      ...options,
+      goto() {
+        throw error;
+      },
+    });
+    const result = await f.originalGoto();
+    assert.equal(result.error, error);
+    assert.equal(result.resolved, false);
+    assert.equal(f.snapshot().nav_error, "timeout");
+    if (options.onError) assert.equal(f.snapshot().nav_observers, false);
+    if (options.clockError) assert.equal(f.snapshot().nav_ms, null);
+  });
+}
+for (const key of [
+  "navDone",
+  "navRequest",
+  "navResponse",
+  "navCommit",
+  "navDom",
+  "navLoad",
+  "navClosed",
+  "navContextClosed",
+  "navCrash",
+  "navDetached",
+  "navDisconnected",
+  "navObservers",
+]) {
+  test(`navigation ${key} rejects arbitrary values and never invokes a getter`, () => {
+    let reads = 0;
+    const input = Object.defineProperty({}, key, {
+      get() {
+        reads++;
+        throw new Error("PRIVATE");
+      },
+    });
+    const d = diagnostic("guest_navigation", input, {});
+    assert.equal(reads, 0);
+    assert.ok(!JSON.stringify(d).includes("PRIVATE"));
+    const field = {
+      navDone: "nav_done",
+      navRequest: "nav_request",
+      navResponse: "nav_response",
+      navCommit: "nav_main_frame_event",
+      navDom: "nav_page_dom_event",
+      navLoad: "nav_page_load_event",
+      navClosed: "nav_closed",
+      navContextClosed: "nav_context_closed",
+      navCrash: "nav_crash",
+      navDetached: "nav_detached",
+      navDisconnected: "nav_disconnected",
+      navObservers: "nav_observers",
+    }[key];
+    assert.equal(d[field], null);
+    assert.equal(diagnostic("guest_navigation", { [key]: "PRIVATE" }, {})[field], null);
+    for (const value of [true, false])
+      assert.equal(diagnostic("guest_navigation", { [key]: value }, {})[field], value);
+  });
+}
+test("status presence is bounded own numeric observation, not HTTP or page success", () => {
+  for (const status of [100, 503, 599])
+    assert.equal(
+      diagnostic("guest_navigation", { navAttempt: 1, navigationStatus: status }, {})
+        .nav_status_seen,
+      true,
+    );
+  for (const status of [null, 99, 600, "PRIVATE", Symbol("PRIVATE")])
+    assert.equal(
+      diagnostic("guest_navigation", { navAttempt: 1, navigationStatus: status }, {})
+        .nav_status_seen,
+      false,
+    );
+  assert.equal(
+    diagnostic("guest_navigation", { navAttempt: 0, navigationStatus: 200 }, {}).nav_status_seen,
+    null,
+  );
+  assert.equal(
+    diagnostic("guest_navigation", { navAttempt: 1, navigationStatus: 503, navDone: false }, {})
+      .nav_done,
+    false,
+  );
+});
+
+test("pinned client TargetClosedError is classified even with private custom reason and no lifecycle event", () => {
+  const f = navigationFixture();
+  const error = f.makeClosedTarget("PRIVATE_OWNER_REASON");
+  assert.equal(Object.getOwnPropertyDescriptor(error, "name"), undefined);
+  assert.equal(f.classify(error), "target_closed");
+  assert.equal(
+    f.classify(f.makeClosedTarget("page.goto: net::ERR_CONNECTION_REFUSED at PRIVATE")),
+    "target_closed",
+  );
+  let reads = 0;
+  const errorLike = Object.create(
+    Object.defineProperty({}, "constructor", {
+      get() {
+        reads++;
+        throw new Error("PRIVATE");
+      },
+    }),
+  );
+  assert.equal(f.classify(errorLike), "unclassified");
+  assert.equal(reads, 0);
+});
+test("context close is distinct from page close and browser disconnection in navigation snapshot", () => {
+  const f = navigationFixture();
+  f.begin(f.target);
+  f.closeContext();
+  f.settle(new Error("PRIVATE_REASON"), true);
+  const d = f.snapshot();
+  assert.equal(d.nav_error, "target_closed");
+  assert.equal(d.nav_context_closed, true);
+  assert.equal(d.nav_closed, false);
+  assert.equal(d.nav_disconnected, false);
+});
+for (const [code, expected] of [
+  ["ERR_BLOCKED_BY_CLIENT", "client_blocked"],
+  ["ERR_EMPTY_RESPONSE", "empty_response"],
+  ["ERR_UNKNOWN_PRIVATE", "network_other"],
+]) {
+  test(`bounded Chromium ${expected} observation never prints arbitrary code or URL`, () => {
+    const f = navigationFixture();
+    assert.equal(
+      f.classify({ message: `page.goto: net::${code} at http://PRIVATE/PRIVATE` }),
+      expected,
+    );
+  });
+}
+
+for (const callSite of [0, 1, 2]) {
+  test(`original navigation site ${callSite + 1} retains one argument and the identical error`, async () => {
+    const error = Object.assign(new Error("PRIVATE_TIMEOUT"), { name: "TimeoutError" });
+    const f = navigationFixture({
+      callSite,
+      goto() {
+        throw error;
+      },
+    });
+    const result = await f.originalGoto();
+    assert.equal(result.error, error);
+    assert.equal(result.resolved, false);
+    assert.equal(f.snapshot().nav_error, "timeout");
+  });
+}
+test("closed-target type observation does not invoke an Error prototype constructor getter", () => {
+  const f = navigationFixture();
+  let reads = 0;
+  class CustomError extends Error {}
+  Object.defineProperty(CustomError.prototype, "constructor", {
+    get() {
+      reads++;
+      throw new Error("PRIVATE");
+    },
+  });
+  assert.equal(f.classify(new CustomError("PRIVATE")), "other_error");
+  assert.equal(reads, 0);
+});
+
+test("full v3 projection is exactly forty bounded scalars with the original twenty-one-field budget", () => {
+  const input = {
+    ...scalarState,
+    navAttempt: 3,
+    navMs: 180000,
+    navError: "connection_refused",
+    navRequestError: "network_unreachable",
+    navRouteError: "connection_refused",
+    navFetch: "fulfilled",
+    navigationStatus: 599,
+  };
+  for (const key of [
+    "navDone",
+    "navRequest",
+    "navResponse",
+    "navCommit",
+    "navDom",
+    "navLoad",
+    "navClosed",
+    "navContextClosed",
+    "navCrash",
+    "navDetached",
+    "navDisconnected",
+    "navObservers",
+  ])
+    input[key] = true;
+  const d = diagnostic("guest_navigation", input, committed);
+  assert.equal(Object.keys(d).length, 40);
+  assert.ok(
+    Object.values(d).every(
+      (value) => value === null || ["boolean", "number", "string"].includes(typeof value),
+    ),
+  );
+  assert.ok(Buffer.byteLength(JSON.stringify(d)) < 2048);
+  assert.ok(
+    Buffer.byteLength(JSON.stringify(Object.fromEntries(Object.entries(d).slice(0, 21)))) < 1024,
+  );
+});
 
 for (const [name, change] of [
   [

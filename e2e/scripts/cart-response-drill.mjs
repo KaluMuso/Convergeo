@@ -37,6 +37,25 @@ function cartFailureDiagnostic(stage, state, checkpoints) {
   const integer = (value, min, max) =>
     Number.isSafeInteger(value) && value >= min && value <= max ? value : null;
   const label = (value, allowed) => (allowed.includes(value) ? value : "unclassified");
+  const navigationErrorLabels = [
+    "none",
+    "timeout",
+    "connection_refused",
+    "connection_reset",
+    "name_unresolved",
+    "network_timeout",
+    "network_unreachable",
+    "aborted",
+    "network_failed",
+    "network_other",
+    "client_blocked",
+    "empty_response",
+    "target_closed",
+    "page_crashed",
+    "frame_detached",
+    "other_error",
+    "unclassified",
+  ];
   const routeFailure = flag(read(state, "routeFailureObserved"));
   const nativeStages = [
     "native_observe",
@@ -52,7 +71,7 @@ function cartFailureDiagnostic(stage, state, checkpoints) {
       ? `stock_${nativeStage}`
       : stage;
   return {
-    format: "cart_browser_failure_v2",
+    format: "cart_browser_failure_v3",
     failure_stage: label(reportedStage, [
       "outside_discard",
       "local_flag_guard",
@@ -200,6 +219,28 @@ function cartFailureDiagnostic(stage, state, checkpoints) {
       "native_price",
       "native_key",
     ]),
+    nav_error: label(read(state, "navError"), navigationErrorLabels),
+    nav_ms: integer(read(state, "navMs"), 0, 180_000),
+    nav_status_seen:
+      integer(read(state, "navAttempt"), 1, 3) === null
+        ? null
+        : integer(read(state, "navigationStatus"), 100, 599) !== null,
+    nav_attempt: integer(read(state, "navAttempt"), 0, 3),
+    nav_done: flag(read(state, "navDone")),
+    nav_request: flag(read(state, "navRequest")),
+    nav_response: flag(read(state, "navResponse")),
+    nav_main_frame_event: flag(read(state, "navCommit")),
+    nav_page_dom_event: flag(read(state, "navDom")),
+    nav_page_load_event: flag(read(state, "navLoad")),
+    nav_closed: flag(read(state, "navClosed")),
+    nav_context_closed: flag(read(state, "navContextClosed")),
+    nav_crash: flag(read(state, "navCrash")),
+    nav_detached: flag(read(state, "navDetached")),
+    nav_disconnected: flag(read(state, "navDisconnected")),
+    nav_fetch: label(read(state, "navFetch"), ["none", "started", "completed", "fulfilled"]),
+    nav_request_error: label(read(state, "navRequestError"), navigationErrorLabels),
+    nav_route_error: label(read(state, "navRouteError"), navigationErrorLabels),
+    nav_observers: flag(read(state, "navObservers")),
   };
 }
 const browserDiagnostic = {
@@ -219,7 +260,297 @@ const browserDiagnostic = {
   externalRequests: 0,
   blockedImages: 0,
   nativeCheck: "none",
+  navError: "none",
+  navMs: null,
+  navAttempt: 0,
+  navDone: null,
+  navRequest: null,
+  navResponse: null,
+  navCommit: null,
+  navDom: null,
+  navLoad: null,
+  navClosed: null,
+  navContextClosed: null,
+  navCrash: null,
+  navDetached: null,
+  navDisconnected: null,
+  navFetch: "none",
+  navRequestError: "none",
+  navRouteError: "none",
+  navObservers: false,
 };
+
+let navigationAttempt = null;
+let navigationSerial = 0;
+const navigationRequests = new WeakMap();
+
+function navigationErrorClass(error, flags = {}) {
+  // Pinned Playwright 1.56.1 client TargetClosedError may have ordinary Error name.
+  // Inspect bounded data descriptors and fixed prefixes; never emit messages.
+  const read = (key) => {
+    try {
+      return Object.getOwnPropertyDescriptor(error, key)?.value;
+    } catch {
+      return undefined;
+    }
+  };
+  const name = read("name"),
+    code = read("code"),
+    value = read("message");
+  const observed = (key) => {
+    try {
+      return Object.getOwnPropertyDescriptor(flags, key)?.value === true;
+    } catch {
+      return false;
+    }
+  };
+  if (name === "TimeoutError") return "timeout";
+  if (name === "TargetClosedError") return "target_closed";
+  // The pinned client class leaves Error.name inherited. Inspect only a direct
+  // Error subclass's own constructor/name descriptors, never invoke a constructor.
+  try {
+    const prototype = Object.getPrototypeOf(error);
+    if (Object.getPrototypeOf(prototype) === Error.prototype) {
+      const constructor = Object.getOwnPropertyDescriptor(prototype, "constructor")?.value;
+      if (
+        typeof constructor === "function" &&
+        Object.getOwnPropertyDescriptor(constructor, "name")?.value === "TargetClosedError"
+      )
+        return "target_closed";
+    }
+  } catch {}
+  const codes = {
+    ERR_CONNECTION_REFUSED: "connection_refused",
+    ECONNREFUSED: "connection_refused",
+    ERR_CONNECTION_RESET: "connection_reset",
+    ECONNRESET: "connection_reset",
+    ERR_NAME_NOT_RESOLVED: "name_unresolved",
+    ENOTFOUND: "name_unresolved",
+    ERR_TIMED_OUT: "network_timeout",
+    ETIMEDOUT: "network_timeout",
+    ERR_ADDRESS_UNREACHABLE: "network_unreachable",
+    ERR_NETWORK_CHANGED: "network_unreachable",
+    EHOSTUNREACH: "network_unreachable",
+    ENETUNREACH: "network_unreachable",
+    ERR_ABORTED: "aborted",
+    ERR_FAILED: "network_failed",
+    ERR_BLOCKED_BY_CLIENT: "client_blocked",
+    ERR_EMPTY_RESPONSE: "empty_response",
+  };
+  if (typeof code === "string" && Object.hasOwn(codes, code)) return codes[code];
+  const message = typeof value === "string" && value.length <= 8192 ? value : "";
+  const network =
+    /^(?:(?:page\.goto|route\.fetch|apiRequestContext\.fetch): )?(?:net::(ERR_[A-Z_]+)|(?:(?:connect|getaddrinfo) )?(ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENOTFOUND|EHOSTUNREACH|ENETUNREACH))(?= at | |$|\r?\n)/.exec(
+      message,
+    );
+  const token = network?.[1] ?? network?.[2];
+  if (token && Object.hasOwn(codes, token)) return codes[token];
+  if (network?.[1]) return "network_other";
+  if (
+    name === "TargetClosedError" ||
+    /^(?:page\.goto: )?Target page, context or browser has been closed(?=$|\r?\n)/.test(message) ||
+    observed("closed") ||
+    observed("disconnected")
+  )
+    return "target_closed";
+  if (
+    /^(?:page\.goto: )?(?:Page crashed|Navigation failed because page crashed!)(?=$|\r?\n)/.test(
+      message,
+    ) ||
+    observed("crashed")
+  )
+    return "page_crashed";
+  if (
+    /^(?:page\.goto: )?(?:Frame was detached|Navigating frame was detached!)(?=$|\r?\n)/.test(
+      message,
+    ) ||
+    observed("detached")
+  )
+    return "frame_detached";
+  return typeof value === "string" && value.length <= 8192 ? "other_error" : "unclassified";
+}
+
+function navigationClock() {
+  try {
+    const value = performance.now();
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+function beginNavigation(page, browser, target) {
+  try {
+    navigationAttempt = {
+      active: true,
+      page,
+      browser,
+      target,
+      request: null,
+      start: null,
+      observers: [],
+    };
+    browserDiagnostic.navAttempt = ++navigationSerial;
+    browserDiagnostic.navigationStatus = null;
+    browserDiagnostic.navError = "none";
+    browserDiagnostic.navMs = null;
+    browserDiagnostic.navFetch = "none";
+    browserDiagnostic.navRequestError = "none";
+    browserDiagnostic.navRouteError = "none";
+    for (const key of [
+      "navDone",
+      "navRequest",
+      "navResponse",
+      "navCommit",
+      "navDom",
+      "navLoad",
+      "navClosed",
+      "navContextClosed",
+      "navCrash",
+      "navDetached",
+      "navDisconnected",
+    ])
+      browserDiagnostic[key] = false;
+    installNavigationObservers(page, browser, navigationAttempt);
+    navigationAttempt.start = navigationClock();
+  } catch {}
+}
+function settleNavigation(error, failed) {
+  try {
+    const attempt = navigationAttempt;
+    if (!attempt?.active) return;
+    attempt.active = false; // Freeze observations before root/fixture/browser cleanup.
+    const end = navigationClock();
+    if (attempt.start !== null && end !== null && end >= attempt.start)
+      browserDiagnostic.navMs = Math.floor(end - attempt.start);
+    try {
+      if (attempt.page.isClosed() === true) browserDiagnostic.navClosed = true;
+    } catch {}
+    try {
+      if (attempt.browser.isConnected() === false) browserDiagnostic.navDisconnected = true;
+    } catch {}
+    browserDiagnostic.navDone = !failed;
+    if (failed)
+      browserDiagnostic.navError = navigationErrorClass(error, {
+        closed: browserDiagnostic.navClosed || browserDiagnostic.navContextClosed,
+        crashed: browserDiagnostic.navCrash,
+        detached: browserDiagnostic.navDetached,
+        disconnected: browserDiagnostic.navDisconnected,
+      });
+    for (const { emitter, event, listener } of attempt.observers) {
+      try {
+        emitter.off(event, listener);
+      } catch {}
+    }
+    attempt.observers = [];
+    attempt.page = null;
+    attempt.browser = null;
+    attempt.target = null;
+    attempt.request = null;
+  } catch {}
+}
+function navigationRequest(request) {
+  try {
+    const attempt = navigationAttempt;
+    if (navigationRequests.has(request))
+      return attempt?.active && navigationRequests.get(request) === attempt ? attempt : null;
+    navigationRequests.set(request, null); // First-seen identity is never reassigned to a later attempt.
+    if (
+      !attempt?.active ||
+      request.isNavigationRequest() !== true ||
+      request.frame() !== attempt.page.mainFrame()
+    )
+      return null;
+    const from = request.redirectedFrom();
+    if (
+      from
+        ? navigationRequests.get(from) !== attempt
+        : attempt.request !== null || request.url() !== attempt.target
+    )
+      return null;
+    navigationRequests.set(request, attempt);
+    attempt.request = request;
+    browserDiagnostic.navRequest = true;
+    return attempt;
+  } catch {
+    return null;
+  }
+}
+function noteNavigationRoute(request, step, response, error) {
+  try {
+    if (!navigationRequest(request)) return;
+    if (step === "error") browserDiagnostic.navRouteError = navigationErrorClass(error);
+    else {
+      browserDiagnostic.navFetch = step;
+      if (step === "completed") {
+        const status = response.status();
+        if (Number.isSafeInteger(status) && status >= 100 && status <= 599)
+          browserDiagnostic.navigationStatus = status;
+      }
+    }
+  } catch {}
+}
+function installNavigationObservers(page, browser, attempt) {
+  let complete = true;
+  const active = () => attempt?.active === true && navigationAttempt === attempt;
+  const watch = (emitter, event, callback) => {
+    try {
+      const listener = (...args) => {
+        if (!active()) return;
+        try {
+          callback(...args);
+        } catch {}
+      };
+      emitter.on(event, listener);
+      attempt.observers.push({ emitter, event, listener });
+    } catch {
+      complete = false;
+    }
+  };
+  watch(page, "request", (request) => {
+    navigationRequest(request);
+  });
+  watch(page, "response", (response) => {
+    if (!active() || navigationRequests.get(response.request()) !== navigationAttempt) return;
+    browserDiagnostic.navResponse = true;
+  });
+  watch(page, "requestfailed", (request) => {
+    if (!active() || navigationRequests.get(request) !== navigationAttempt) return;
+    browserDiagnostic.navRequestError = "unclassified";
+    const failure = request.failure();
+    const value = Object.getOwnPropertyDescriptor(failure, "errorText")?.value;
+    browserDiagnostic.navRequestError = navigationErrorClass({ message: value });
+  });
+  // Page/main-frame events observed while active; these are not request-correlated load proof.
+  watch(page, "framenavigated", (frame) => {
+    if (active() && frame === page.mainFrame()) browserDiagnostic.navCommit = true;
+  });
+  watch(page, "domcontentloaded", () => {
+    if (active()) browserDiagnostic.navDom = true;
+  });
+  watch(page, "load", () => {
+    if (active()) browserDiagnostic.navLoad = true;
+  });
+  watch(page, "close", () => {
+    if (active()) browserDiagnostic.navClosed = true;
+  });
+  watch(page, "crash", () => {
+    if (active()) browserDiagnostic.navCrash = true;
+  });
+  watch(page, "framedetached", (frame) => {
+    if (active() && frame === page.mainFrame()) browserDiagnostic.navDetached = true;
+  });
+  try {
+    watch(page.context(), "close", () => {
+      if (active()) browserDiagnostic.navContextClosed = true;
+    });
+  } catch {
+    complete = false;
+  }
+  watch(browser, "disconnected", () => {
+    if (active()) browserDiagnostic.navDisconnected = true;
+  });
+  browserDiagnostic.navObservers = complete;
+}
 
 function observeBrowserDiagnostic(message) {
   try {
@@ -368,6 +699,7 @@ try {
   await context.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    navigationRequest(request);
     let routeStage = "request_guard";
     let postOrdinal = 0;
     try {
@@ -488,24 +820,24 @@ try {
       }
       // Keep redirects inside this interception boundary; never auto-follow.
       routeStage = "other_response_fetch";
+      noteNavigationRoute(request, "started");
       const response = await route.fetch({
         maxRedirects: 0,
         maxRetries: 0,
         timeout: 15_000,
       });
-      try {
-        if (url.origin === origin && request.resourceType() === "document")
-          browserDiagnostic.navigationStatus = response.status();
-      } catch {}
+      noteNavigationRoute(request, "completed", response);
       routeStage = "other_redirect_guard";
       const location = response.headers().location;
       if (location) routeStage = "other_redirect_origin";
       if (location) assert.ok([origin, api].includes(new URL(location, url).origin));
       routeStage = "other_response_fulfil";
       await route.fulfill({ response });
+      noteNavigationRoute(request, "fulfilled");
       routeStage = "other_response_dispose";
       await response.dispose();
-    } catch {
+    } catch (error) {
+      noteNavigationRoute(request, "error", undefined, error);
       if (![origin, api].includes(url.origin)) externalRequests += 1;
       browserDiagnostic.externalRequests = externalRequests;
       routeFailure = true;
@@ -539,7 +871,14 @@ try {
   });
   phase = "establish_guest";
   failureStage = "guest_navigation";
-  await page.goto(`${origin}/en/p/smartphone-x1`);
+  beginNavigation(page, browser, `${origin}/en/p/smartphone-x1`);
+  try {
+    await page.goto(`${origin}/en/p/smartphone-x1`);
+    settleNavigation(undefined, false);
+  } catch (error) {
+    settleNavigation(error, true);
+    throw error;
+  }
   failureStage = "guest_bootstrap_dispatch";
   const initial = await page.evaluate(async (url) => {
     const mark = (token) => {
@@ -614,7 +953,14 @@ try {
   failureStage = "price_fixture";
   db("price");
   failureStage = "price_navigation";
-  await page.goto(`${origin}/en/cart`);
+  beginNavigation(page, browser, `${origin}/en/cart`);
+  try {
+    await page.goto(`${origin}/en/cart`);
+    settleNavigation(undefined, false);
+  } catch (error) {
+    settleNavigation(error, true);
+    throw error;
+  }
   const notice = page.getByTestId(`cart-notice-price_changed-${listingId}`);
   failureStage = "price_notice_visibility";
   await expect(notice).toBeVisible();
@@ -629,7 +975,14 @@ try {
   point("authoritative_price_notice_ui");
   phase = "fresh_intent";
   failureStage = "fresh_navigation";
-  await page.goto(`${origin}/en/p/smartphone-x1`);
+  beginNavigation(page, browser, `${origin}/en/p/smartphone-x1`);
+  try {
+    await page.goto(`${origin}/en/p/smartphone-x1`);
+    settleNavigation(undefined, false);
+  } catch (error) {
+    settleNavigation(error, true);
+    throw error;
+  }
   await choosePickup();
   failureStage = "fresh_add_enabled";
   await expect(page.getByTestId("pdp-add-to-cart")).toBeEnabled();
