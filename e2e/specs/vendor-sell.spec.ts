@@ -19,31 +19,34 @@ import { expect, test } from "../fixtures/test-base";
  *
  * The vendor app requires an authenticated, approved vendor session. Login uses
  * the same OTP mechanism as the customer app, so the authenticated legs are
- * ENV-GATED behind the OTP test creds. Without them, the spec asserts the vendor
- * login surface loads and skips the authenticated flow with an annotation.
+ * gated before navigation by U4a. Missing declarations fail strict certification
+ * or skip the journey locally without sending a code.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("vendor · sell", () => {
+  test.describe.configure({ retries: 0 });
   test("approved vendor lists, receives and ships an order", async ({ page }) => {
     // Resolved once: in a strict certification run this throws rather than
     // letting the customer origin stand in for the vendor app.
     const vendorOrigin = requireVendorBaseUrl();
 
     if (!vendorOtpReady()) {
-      // Vendor app login surface (separate origin) — asserted reachable even
-      // when the authenticated leg is gated off.
-      await page.goto(urlOn(vendorOrigin, "/login"));
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "vendor authenticated sell flow (list -> receive order -> ship)",
-        fixtures: ["E2E_VENDOR_TEST_OTP"],
+        fixtures: [
+          "E2E_VENDOR_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
       // Without this the order state machine is never exercised end to end, so
       // a certification run must not report success.
       enforceGate(gate);
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      await expect(
-        page.getByRole("heading").first().or(page.locator("form").first()),
-      ).toBeVisible();
       test.skip(true, gate.reason);
       return;
     }

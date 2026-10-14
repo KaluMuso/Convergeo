@@ -1,93 +1,141 @@
 import { expect, type Page } from "@playwright/test";
 
-import { path, requireVendorBaseUrl, urlOn, vendorOtp } from "./env";
+import { BASE_URL, path, requireVendorBaseUrl, urlOn, vendorOtp, vendorOtpReady } from "./env";
 import { nationalNumberFromE164 } from "./phone";
 
 export type LoginVendorViaOtpOptions = {
-  /**
-   * Locale-prefixed path (e.g. "/en/events/{slug}/scan") to land on after a
-   * successful verify — passed through the real login flow's `next` param
-   * (PhoneForm -> OtpForm -> navigateAfterPortalAuth), so the same
-   * destination that proves the session is the one the caller actually
-   * needs next. Defaults to "/services": a real, vendor-role-gated route
-   * (packages/auth/src/middleware.ts `resolveGatedRedirect`) an anonymous
-   * visitor is bounced away from, so simply arriving there IS the
-   * authentication proof — no separate assertion needed.
-   */
+  /** Locale-prefixed, vendor-role-gated destination; defaults to the locale's /services. */
   next?: string;
 };
 
+type Attempt = {
+  destination: string;
+  phase: "new" | "request-started" | "code-pending" | "verification-started" | "confirmed";
+  pending?: Promise<void>;
+};
+const attempts = new WeakMap<Page, Attempt>();
+
 /**
- * Drive the REAL Vendor phone-OTP login UI end to end and land on a
- * protected Vendor route:
- *
- *   anonymous -> Vendor /login (PhoneForm) -> real staging signInWithOtp
- *   -> Vendor /otp (OtpForm) -> real staging verifyOtp -> Supabase session
- *   -> protected Vendor route an anonymous visitor cannot reach.
- *
- * Every step is a real DOM interaction against the deployed Vendor app —
- * no localStorage/cookie fabrication, no service_role in the browser, no
- * direct DB session insertion, no `window.__VERGEO_E2E_SESSION__`, no mock
- * session, no hidden route. Callers MUST gate on `vendorOtpReady()` first
- * (see vendor-sell.spec.ts / event-ticket.spec.ts) — this helper assumes the
- * OTP fixture is present and throws loudly if the flow does not reach the
- * expected destination.
+ * Drive the existing phone UI with a synthetic fixture only. Callers also gate
+ * before navigation. No session fabrication, direct Auth request, resend or
+ * explicit Verify click: the sixth digit drives the existing auto-submit.
+ * An interrupted attempt stays associated with this Page; resume can await
+ * navigation but cannot re-send or re-verify an accepted/uncertain request.
  */
 export async function loginVendorViaOtp(
   page: Page,
   options: LoginVendorViaOtpOptions = {},
 ): Promise<void> {
-  const vendorOrigin = requireVendorBaseUrl();
-  const destination = options.next ?? path("/services");
-
-  await page.goto(urlOn(vendorOrigin, `/login?next=${encodeURIComponent(destination)}`));
-
-  // Same ambiguity note as auth-otp.spec.ts: PhoneForm's FormField renders in
-  // `asGroup` mode, so a single semantic textbox query (not getByLabel) is
-  // required to resolve to exactly the national-number input.
-  const phoneInput = page.getByRole("textbox", { name: /phone|mobile/i });
-  await expect(phoneInput).toBeVisible();
-  // The field takes only the national number — the country code (+260) is a
-  // fixed, read-only prefix rendered separately by PhoneForm. The canonical
-  // Vendor phone is already a Zambian E.164 number; nationalNumberFromE164
-  // extracts exactly that national number (shared with auth-otp.spec.ts —
-  // see fixtures/phone.ts — instead of duplicating the slice logic here).
-  await phoneInput.fill(nationalNumberFromE164(vendorOtp.testPhone));
-
-  await page
-    .getByRole("button", { name: /continue|send|next|get code/i })
-    .first()
-    .click();
-
-  // Real staging signInWithOtp dispatch lands on Vendor /otp with ?phone=...
-  await page.waitForURL(/\/otp(\?|$)/, { timeout: 20_000 });
-
-  // OtpField (packages/ui/src/otp-field.tsx) has no autofocus — the exact PR
-  // #680 lesson: page.keyboard.type() sends keystrokes to whatever currently
-  // has DOM focus, which is nothing until a digit box is explicitly focused.
-  await page.getByRole("textbox", { name: "Digit 1 of 6" }).click();
-  for (const digit of vendorOtp.staticCode.slice(0, 6).split("")) {
-    await page.keyboard.type(digit);
+  if (!vendorOtpReady()) {
+    throw new Error(
+      "vendor phone OTP requires a six-digit fixture and explicit attested transport",
+    );
   }
-
-  // No explicit Verify click. OtpField fires `onComplete` the moment the sixth
-  // digit lands, so OtpForm has ALREADY started verifying by the time the last
-  // keystroke returns — clicking Verify on top of that was driving a second
-  // submission at a speed no human produces, and Run #68's traces show the
-  // resulting duplicate POST to /auth/v1/verify racing itself for one
-  // single-use code. The app now holds a synchronous single-flight lock
-  // (apps/customer/.../otp-form.tsx), so the click is harmless; it is dropped
-  // because asserting the real auto-submit UX is the honest contract, not
-  // because the guard makes it survivable. The bounded URL wait below is
-  // unchanged and remains the authentication proof.
-
-  // Real OtpForm -> supabase.auth.verifyOtp -> navigateAfterPortalAuth(portal:
-  // "vendor") -> the destination. Middleware's vendor-role gate is what makes
-  // arrival here proof: an anonymous or non-vendor session is bounced to
-  // /login or /onboarding instead, so this assertion fails loudly rather than
-  // treating "no error thrown" as success.
-  const destinationPattern = new RegExp(`${destination.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
-  await page.waitForURL(destinationPattern, { timeout: 20_000 });
-  await expect(page).toHaveURL(destinationPattern);
-  await expect(page).not.toHaveURL(/\/(login|otp)(\?|$)/);
+  let national: string;
+  try {
+    national = nationalNumberFromE164(vendorOtp.testPhone);
+  } catch {
+    throw new Error("vendor phone OTP fixture is invalid");
+  }
+  let vendorOrigin: string;
+  try {
+    const vendor = new URL(requireVendorBaseUrl());
+    if (
+      vendor.username ||
+      vendor.password ||
+      vendor.origin === new URL(BASE_URL).origin ||
+      !(
+        vendor.protocol === "https:" ||
+        (vendor.protocol === "http:" &&
+          ["localhost", "127.0.0.1", "[::1]"].includes(vendor.hostname))
+      )
+    ) {
+      throw new Error("invalid origin");
+    }
+    vendorOrigin = vendor.origin;
+  } catch {
+    throw new Error("vendor OTP requires a valid distinct portal origin");
+  }
+  const destination = options.next ?? path("/services");
+  let target: URL;
+  try {
+    if (typeof destination !== "string") throw new Error("invalid destination");
+    target = new URL(destination, vendorOrigin);
+  } catch {
+    throw new Error("vendor OTP destination must be a local protected route");
+  }
+  if (
+    !destination.startsWith("/") ||
+    destination.startsWith("//") ||
+    /[\\\x00-\x20]/.test(destination) ||
+    /%(?:2f|5c|00|0a|0d)/i.test(destination) ||
+    target.origin !== vendorOrigin ||
+    target.pathname !== destination.split(/[?#]/)[0] ||
+    !target.pathname.startsWith(`${path("/")}/`) ||
+    /\/(?:login|otp|onboarding|reset-password|health|api|_next|_vercel)(?:\/|$)/.test(
+      target.pathname,
+    ) ||
+    /[.%]/.test(target.pathname)
+  ) {
+    throw new Error("vendor OTP destination must be a local protected route");
+  }
+  let attempt = attempts.get(page);
+  if (attempt && attempt.destination !== target.href) {
+    throw new Error("vendor OTP Page already belongs to another destination");
+  }
+  if (!attempt) {
+    attempt = { destination: target.href, phase: "new" };
+    attempts.set(page, attempt);
+  }
+  if (attempt.pending) return attempt.pending;
+  const active = attempt;
+  const otpRoute = (url: URL) =>
+    url.origin === vendorOrigin &&
+    url.pathname === path("/otp") &&
+    url.searchParams.get("phone") === vendorOtp.testPhone;
+  const confirmedRoute = (url: URL) => url.href === target.href;
+  const pending = Promise.resolve().then(async () => {
+    try {
+      if (active.phase === "new") {
+        await page.goto(urlOn(vendorOrigin, `/login?next=${encodeURIComponent(destination)}`));
+        const phoneInput = page.getByRole("textbox", { name: /phone|mobile/i });
+        await expect(phoneInput).toBeVisible();
+        await phoneInput.fill(national);
+        active.phase = "request-started"; // Set before click: interruption may hide acceptance.
+        await page
+          .getByRole("button", { name: /continue|send|next|get code/i })
+          .first()
+          .click();
+      }
+      if (active.phase === "request-started") {
+        await page.waitForURL(otpRoute, { timeout: 20_000 });
+        active.phase = "code-pending";
+      }
+      if (active.phase === "code-pending") {
+        await page.waitForURL(otpRoute, { timeout: 20_000 });
+        // Restart incomplete digit entry without requesting a second code.
+        for (let digit = 1; digit <= 6; digit++) {
+          await page.getByRole("textbox", { name: `Digit ${digit} of 6` }).fill("");
+        }
+        await page.getByRole("textbox", { name: "Digit 1 of 6" }).click();
+        for (let index = 0; index < 6; index++) {
+          if (index === 5) active.phase = "verification-started";
+          await page.keyboard.type(vendorOtp.staticCode[index]!);
+        }
+      }
+      await page.waitForURL(confirmedRoute, { timeout: 20_000 });
+      await expect(page).toHaveURL(target.href);
+      active.phase = "confirmed";
+    } catch {
+      throw new Error(
+        `vendor OTP ${active.phase} incomplete; inspect before starting another request`,
+      );
+    }
+  });
+  active.pending = pending;
+  try {
+    await pending;
+  } finally {
+    active.pending = undefined;
+  }
 }

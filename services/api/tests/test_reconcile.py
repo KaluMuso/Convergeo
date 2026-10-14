@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 from collections.abc import Generator
+from copy import deepcopy
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from app.errors import AppError
+from app.logging import JsonFormatter
+from app.services.db import SqlResult
+from app.services.ledger.engine import LedgerAccountNotFoundError, LedgerError
 from app.services.payments.base import QueryStatusResult
 from app.services.payments.reconcile import (
     DailyReportResult,
@@ -24,6 +32,8 @@ from app.services.payments.reconcile import (
     run_daily_reconciliation_report,
 )
 from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -452,6 +462,14 @@ async def test_daily_report_idempotent_rerun(fake_service: FakeServiceClient) ->
             "app.services.payments.reconcile.fetch_ledger_day_rows",
             return_value=[],
         ),
+        patch(
+            "app.services.payments.reconcile.build_release_accounting_day_totals",
+            return_value={
+                "gross_collected_ngwee": 0,
+                "commission_captured_ngwee": 0,
+                "vendor_released_ngwee": 0,
+            },
+        ),
     ):
         first: DailyReportResult = await run_daily_reconciliation_report(
             fake_service,
@@ -514,6 +532,14 @@ async def test_daily_report_flags_injected_mismatch(fake_service: FakeServiceCli
                 )
             ],
         ),
+        patch(
+            "app.services.payments.reconcile.build_release_accounting_day_totals",
+            return_value={
+                "gross_collected_ngwee": 0,
+                "commission_captured_ngwee": 0,
+                "vendor_released_ngwee": 0,
+            },
+        ),
     ):
         result = await run_daily_reconciliation_report(
             fake_service,
@@ -526,6 +552,286 @@ async def test_daily_report_flags_injected_mismatch(fake_service: FakeServiceCli
     assert result.discrepancies["balance_diff_ngwee"] == 100_000
     assert len(result.discrepancies["orphaned_lenco"]) == 1
     assert len(result.discrepancies["ledger_only"]) == 1
+
+
+@dataclass(frozen=True)
+class DailyReportHarness:
+    client: TestClient
+    service: FakeServiceClient
+    sql: MagicMock
+    ledger_rows: MagicMock
+    release_totals: MagicMock
+    persist: MagicMock
+    fetch_account: AsyncMock
+    fetch_transactions: AsyncMock
+
+
+@pytest.fixture
+def daily_report_harness(
+    client: TestClient,
+    fake_service: FakeServiceClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> DailyReportHarness:
+    from app.routers import internal_reconciliation
+    from app.services.payments import reconcile
+
+    sql = MagicMock(return_value=SqlResult(ok=True, rows=[]))
+    ledger_rows = MagicMock(return_value=[])
+    release_totals = MagicMock(
+        return_value={
+            "gross_collected_ngwee": 0,
+            "commission_captured_ngwee": 0,
+            "vendor_released_ngwee": 0,
+        }
+    )
+    persist = MagicMock(wraps=reconcile._persist_report)
+    fetch_account = AsyncMock(
+        return_value=LencoAccountSnapshot(
+            account_id="mock-account",
+            available_balance_ngwee=0,
+            ledger_balance_ngwee=0,
+        )
+    )
+    fetch_transactions = AsyncMock(return_value=[])
+
+    def get_service() -> Generator[FakeServiceClient, None, None]:
+        yield fake_service
+
+    async def run_report(service: FakeServiceClient) -> DailyReportResult:
+        return await run_daily_reconciliation_report(
+            service,
+            report_date=date(2026, 10, 10),
+            fetch_account=fetch_account,
+            fetch_transactions=fetch_transactions,
+        )
+
+    monkeypatch.setenv("INTERNAL_RECONCILIATION_TOKEN", "dev-internal-reconciliation")
+    monkeypatch.setattr("app.deps.get_supabase_client", get_service)
+    monkeypatch.setattr("app.services.ledger.engine.run_sql_script", sql)
+    monkeypatch.setattr(reconcile, "fetch_ledger_day_rows", ledger_rows)
+    monkeypatch.setattr(reconcile, "build_release_accounting_day_totals", release_totals)
+    monkeypatch.setattr(reconcile, "_persist_report", persist)
+    monkeypatch.setattr(internal_reconciliation, "run_daily_reconciliation_report", run_report)
+    return DailyReportHarness(
+        client=client,
+        service=fake_service,
+        sql=sql,
+        ledger_rows=ledger_rows,
+        release_totals=release_totals,
+        persist=persist,
+        fetch_account=fetch_account,
+        fetch_transactions=fetch_transactions,
+    )
+
+
+class TestDailyReportLedgerAvailability:
+    def test_missing_account_logs_one_sanitized_correlated_error(
+        self,
+        daily_report_harness: DailyReportHarness,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        sentinel = "SENTINEL_SECRET_account_SQL_credential"
+        monkeypatch.setattr(
+            "app.routers.internal_reconciliation.run_daily_reconciliation_report",
+            AsyncMock(side_effect=LedgerAccountNotFoundError(sentinel)),
+        )
+        request_id = str(uuid.uuid4())
+        with caplog.at_level(logging.ERROR):
+            response = daily_report_harness.client.post(
+                "/internal/reconciliation/daily-report",
+                headers={
+                    "X-Internal-Token": "dev-internal-reconciliation",
+                    "X-Request-ID": request_id,
+                },
+            )
+
+        assert response.status_code == 503
+        assert response.json()["error"]["code"] == "ledger_account_unavailable"
+        assert response.json()["error"]["request_id"] == request_id
+        assert response.headers["X-Request-ID"] == request_id
+        assert sentinel not in response.text
+        errors = [record for record in caplog.records if record.levelno >= logging.ERROR]
+        assert len(errors) == 1
+        record = errors[0]
+        assert record.name == "app.routers.internal_reconciliation"
+        assert record.exc_info is None
+        formatted = [JsonFormatter().format(record) for record in caplog.records]
+        assert all(sentinel not in line for line in formatted)
+        event = json.loads(JsonFormatter().format(record))
+        assert event["message"] == "reconciliation_daily_report_failed"
+        assert event["request_id"] == request_id
+        assert event["path"] == "/internal/reconciliation/daily-report"
+        assert event["failure_kind"] == "ledger_account_unavailable"
+        assert event["status_code"] == 503
+        assert "exc_info" not in event
+        daily_report_harness.persist.assert_not_called()
+
+    def test_openapi_documents_sanitized_503_contract(self) -> None:
+        from app.routers.internal_reconciliation import router
+
+        app = FastAPI()
+        app.include_router(router)
+        operation = app.openapi()["paths"]["/internal/reconciliation/daily-report"]["post"]
+        response = operation["responses"]["503"]
+        assert "without repairing the account or creating a report" in response["description"]
+        assert response["headers"]["X-Request-ID"]["schema"]["type"] == "string"
+        content = response["content"]["application/json"]
+        schema = content["schema"]
+        assert schema["type"] == "object"
+        assert schema["required"] == ["error"]
+        error = schema["properties"]["error"]
+        assert error["type"] == "object"
+        assert set(error["required"]) == {"code", "message", "details", "request_id"}
+        assert error["properties"] == {
+            "code": {"type": "string"},
+            "message": {"type": "string"},
+            "details": {"type": "object"},
+            "request_id": {"type": "string"},
+        }
+        assert content["example"] == {
+            "error": {
+                "code": "ledger_account_unavailable",
+                "message": "Ledger account required for reconciliation is unavailable",
+                "details": {},
+                "request_id": "00000000-0000-0000-0000-000000000001",
+            }
+        }
+
+    def test_missing_account_returns_sanitized_503_without_writes(
+        self, daily_report_harness: DailyReportHarness
+    ) -> None:
+        harness = daily_report_harness
+        before = {
+            name: deepcopy(table.rows) for name, table in harness.service.client.tables.items()
+        }
+        request_id = str(uuid.uuid4())
+        response = harness.client.post(
+            "/internal/reconciliation/daily-report",
+            headers={
+                "X-Internal-Token": "dev-internal-reconciliation",
+                "X-Request-ID": request_id,
+            },
+        )
+
+        assert response.status_code == 503
+        assert response.headers["X-Request-ID"] == request_id
+        assert response.json() == {
+            "error": {
+                "code": "ledger_account_unavailable",
+                "message": "Ledger account required for reconciliation is unavailable",
+                "details": {},
+                "request_id": request_id,
+            }
+        }
+        harness.sql.assert_called_once()
+        lookup_sql = harness.sql.call_args.args[0]
+        assert lookup_sql.lstrip().startswith("SELECT id::text")
+        assert "kind = 'platform_cash'" in lookup_sql
+        assert "vendor_id IS NULL" in lookup_sql
+        harness.ledger_rows.assert_not_called()
+        harness.release_totals.assert_not_called()
+        harness.persist.assert_not_called()
+        assert {name: table.rows for name, table in harness.service.client.tables.items()} == before
+
+    @pytest.mark.asyncio
+    async def test_missing_account_retains_exception_cause(
+        self, daily_report_harness: DailyReportHarness
+    ) -> None:
+        from app.routers.internal_reconciliation import reconciliation_daily_report
+
+        request = Request(
+            {"type": "http", "path": "/internal/reconciliation/daily-report", "headers": []}
+        )
+        request.state.request_id = str(uuid.uuid4())
+        with pytest.raises(AppError) as raised:
+            await reconciliation_daily_report(request)
+
+        assert raised.value.code == "ledger_account_unavailable"
+        assert raised.value.http_status == 503
+        assert isinstance(raised.value.__cause__, LedgerAccountNotFoundError)
+        daily_report_harness.persist.assert_not_called()
+
+    @pytest.mark.parametrize("failure_stage", ["lookup", "balance"])
+    def test_unsuccessful_sql_is_not_reported_as_missing_account(
+        self, daily_report_harness: DailyReportHarness, failure_stage: str
+    ) -> None:
+        harness = daily_report_harness
+        failed = SqlResult(ok=False, rows=[], error="synthetic SQL failure")
+        harness.sql.side_effect = (
+            [failed]
+            if failure_stage == "lookup"
+            else [SqlResult(ok=True, rows=[CUSTOMER_ID]), failed]
+        )
+        before = {
+            name: deepcopy(table.rows) for name, table in harness.service.client.tables.items()
+        }
+        response = harness.client.post(
+            "/internal/reconciliation/daily-report",
+            headers={"X-Internal-Token": "dev-internal-reconciliation"},
+        )
+
+        assert response.status_code == 500
+        assert response.json()["error"]["code"] == "internal_error"
+        assert "synthetic SQL failure" not in response.text
+        harness.ledger_rows.assert_not_called()
+        harness.release_totals.assert_not_called()
+        harness.persist.assert_not_called()
+        assert {name: table.rows for name, table in harness.service.client.tables.items()} == before
+
+    def test_existing_account_zero_balance_succeeds_and_rerun_is_idempotent(
+        self, daily_report_harness: DailyReportHarness
+    ) -> None:
+        harness = daily_report_harness
+        harness.sql.side_effect = [
+            SqlResult(ok=True, rows=[CUSTOMER_ID]),
+            SqlResult(ok=True, rows=["0"]),
+        ]
+        headers = {"X-Internal-Token": "dev-internal-reconciliation"}
+        first = harness.client.post("/internal/reconciliation/daily-report", headers=headers)
+        second = harness.client.post("/internal/reconciliation/daily-report", headers=headers)
+
+        assert first.status_code == second.status_code == 200
+        first_body = first.json()
+        second_body = second.json()
+        assert first_body["created"] is True
+        assert second_body["created"] is False
+        assert first_body["report_id"] == second_body["report_id"]
+        assert first_body["clean"] is True
+        assert first_body["summary"]["ledger_platform_cash_ngwee"] == 0
+        assert first_body["discrepancies"]["balance_diff_ngwee"] == 0
+        assert len(harness.service.client.tables["reconciliation_reports"].rows) == 1
+        assert harness.service.client.tables["payments"].rows == []
+        assert harness.service.client.tables["audit_log"].rows == []
+        assert harness.sql.call_count == 2
+        assert all(
+            call.args[0].lstrip().startswith("SELECT") for call in harness.sql.call_args_list
+        )
+        harness.fetch_account.assert_awaited_once()
+        harness.fetch_transactions.assert_awaited_once()
+        harness.persist.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "failure", [LedgerError("synthetic ledger error"), ValueError("bad data")]
+    )
+    def test_other_service_errors_are_not_caught(
+        self,
+        daily_report_harness: DailyReportHarness,
+        monkeypatch: pytest.MonkeyPatch,
+        failure: Exception,
+    ) -> None:
+        monkeypatch.setattr(
+            "app.routers.internal_reconciliation.run_daily_reconciliation_report",
+            AsyncMock(side_effect=failure),
+        )
+        response = daily_report_harness.client.post(
+            "/internal/reconciliation/daily-report",
+            headers={"X-Internal-Token": "dev-internal-reconciliation"},
+        )
+
+        assert response.status_code == 500
+        assert response.json()["error"]["code"] == "internal_error"
+        daily_report_harness.persist.assert_not_called()
 
 
 class TestInternalReconciliationRouter:

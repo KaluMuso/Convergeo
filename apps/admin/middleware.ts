@@ -142,7 +142,16 @@ export default async function middleware(request: NextRequest) {
         request.nextUrl.pathname,
         LOCALES,
         session.user,
-        session.roles,
+        // Verified claims admit the shell; every privileged API request
+        // independently reloads current database roles and permissions.
+        session.roles.some(
+          (role) =>
+            role === "superadmin" ||
+            role === "moderator" ||
+            /^rbac_[a-z][a-z0-9_]{2,39}$/.test(role),
+        )
+          ? [...session.roles, "admin"]
+          : session.roles,
         {
           adminBypass,
         },

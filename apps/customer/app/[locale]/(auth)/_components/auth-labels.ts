@@ -47,6 +47,8 @@ export function createLoginLabels(
       invalidEmail: t("errors.invalidEmail"),
       invalidPassword: t("errors.invalidPassword"),
       generic: t("errors.generic"),
+      network: t("errors.network"),
+      unavailable: t("errors.unavailable"),
       throttled,
       invalidCredentials: t("errors.invalidCredentials"),
       emailNotConfirmed: t("errors.emailNotConfirmed"),

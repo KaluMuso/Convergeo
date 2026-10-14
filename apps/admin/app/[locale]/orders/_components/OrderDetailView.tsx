@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAdminPermissions } from "../../../../lib/roles-api";
+
 import { type OrderDetail, ordersApi } from "./api";
 import { DispatchPanel } from "./DispatchPanel";
 import { EscrowPanel } from "./EscrowPanel";
@@ -17,6 +19,7 @@ type OrderDetailViewProps = {
 };
 
 export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
+  const canMutate = useAdminPermissions()?.unrestricted === true;
   const t = useTranslations("admin.orders.detail");
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,12 +146,15 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
         <OrderTimeline events={order.timeline} locale={locale} />
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DispatchPanel order={order} onSuccess={() => void load()} />
-        <InterventionPanel order={order} onSuccess={() => void load()} />
-      </div>
-
-      <EscrowPanel order={order} onSuccess={() => void load()} />
+      {canMutate ? (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DispatchPanel order={order} onSuccess={() => void load()} />
+            <InterventionPanel order={order} onSuccess={() => void load()} />
+          </div>
+          <EscrowPanel order={order} onSuccess={() => void load()} />
+        </>
+      ) : null}
     </div>
   );
 }

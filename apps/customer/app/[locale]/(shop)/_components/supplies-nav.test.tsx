@@ -21,9 +21,9 @@ vi.mock("./desktop-header-search", () => ({
   DesktopHeaderSearch: () => <div role="search">Search</div>,
 }));
 
-vi.mock("./cart/mini-cart-drawer", () => ({
+vi.mock("./cart/cart-store", () => ({
   useCartStore: () => ({ cart: null }),
-  useCartActions: () => ({ refresh: vi.fn(), openDrawer: vi.fn() }),
+  setStoreState: vi.fn(),
   getCartItemCount: () => 0,
   CartNavTrigger: ({
     labels,
@@ -44,6 +44,7 @@ vi.mock("./cart/mini-cart-drawer", () => ({
     </button>
   ),
 }));
+vi.mock("./cart/mini-cart-drawer", () => ({ refreshCart: vi.fn().mockResolvedValue(null) }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/en/search",

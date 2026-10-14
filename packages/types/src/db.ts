@@ -70,6 +70,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_roles: {
+        Row: {
+          created_at: string
+          key: string
+          name: string
+          permissions: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          name: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          name?: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -311,6 +335,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cart_add_requests: {
+        Row: {
+          cart_id: string
+          created_at: string
+          idempotency_key: string
+          request_body: Json
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          idempotency_key: string
+          request_body: Json
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          idempotency_key?: string
+          request_body?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_add_requests_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
             referencedColumns: ["id"]
           },
         ]
@@ -5756,6 +5809,23 @@ export type Database = {
       }
     }
     Functions: {
+      apply_cart_add_idempotent: {
+        Args: {
+          p_body: Json
+          p_cart_id: string
+          p_expected_location_id: string
+          p_expected_qty: number
+          p_guest_token: string
+          p_key: string
+          p_listing_id: string
+          p_location_id: string
+          p_qty: number
+          p_unit_price_ngwee: number
+          p_user_id: string
+          p_wholesale: boolean
+        }
+        Returns: string
+      }
       approve_kyc_vendor: {
         Args: {
           p_actor_id: string
@@ -5852,6 +5922,17 @@ export type Database = {
       listing_line_total_ngwee: {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
         Returns: number
+      }
+      manage_admin_role: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_key: string
+          p_name?: string
+          p_permissions?: string[]
+          p_target?: string
+        }
+        Returns: Json
       }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       product_class_customer_released: {

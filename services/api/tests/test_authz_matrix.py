@@ -11,8 +11,8 @@ Design — isolation-clean / no-DB (runs under the plain ``python`` CI job):
     exactly that auth class / role), so no request handler ever executes.
   * DENY cells are asserted with live requests that short-circuit *inside* the auth
     guard (missing bearer -> 401; wrong role -> 403; missing internal token -> 401;
-    unsigned webhook -> >=400) *before* any DB / service-client call, so the suite
-    needs no Postgres.
+    unsigned webhook -> >=400). WAHA's deliberate rejection audit uses a scoped
+    service-client test double; the suite needs no Postgres or outbound network.
   * Any route that is dependency-public but not in the explicit PUBLIC/SIGNED
     registry fails the coverage test — this is the trip-wire that catches a new
     business route accidentally shipped without an authz guard (OWASP A01).
@@ -30,9 +30,12 @@ import re
 from collections.abc import Generator
 from dataclasses import dataclass
 from enum import StrEnum
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_admin_scope
+from app.deps import get_supabase_client
 from app.main import create_app
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -232,6 +235,8 @@ def _detect_dependency_guard(route: APIRoute) -> tuple[bool, frozenset[str]]:
         call = dep.call
         if call is get_current_user:
             has_current_user = True
+        if call is require_admin_scope:
+            roles |= {"admin", "moderator", "superadmin"}
         # require_role(...) returns a closure named `_require_role` closing over the
         # required-role frozenset.
         if call is not None and getattr(call, "__name__", "") == "_require_role":
@@ -304,6 +309,8 @@ def expected_outcome(entry: RouteEntry, persona: Persona) -> Outcome:
     # ROLE
     if persona is Persona.ANON:
         return "deny"
+    if persona is Persona.SUPERADMIN and entry.required_roles.intersection({"admin", "moderator"}):
+        return "allow"
     return "allow" if PERSONA_ROLES[persona] & entry.required_roles else "deny"
 
 
@@ -377,9 +384,7 @@ def test_matrix_summary(capsys: pytest.CaptureFixture[str]) -> None:
 
     by_class = Counter(e.auth_class.value for e in ROUTES)
     id_routes = [e for e in ROUTES if e.has_id_param and e.auth_class in PROTECTED_CLASSES]
-    allow = sum(
-        1 for e in ROUTES for p in ALL_PERSONAS if expected_outcome(e, p) == "allow"
-    )
+    allow = sum(1 for e in ROUTES for p in ALL_PERSONAS if expected_outcome(e, p) == "allow")
     deny = len(ROUTES) * len(ALL_PERSONAS) - allow
     with capsys.disabled():
         print("\n[authz-matrix] route x method =", len(ROUTES))
@@ -446,12 +451,44 @@ _WEBHOOK_ROUTES = [e for e in ROUTES if e.auth_class is AuthClass.WEBHOOK_SIGNED
 
 
 @pytest.mark.parametrize("entry", _WEBHOOK_ROUTES, ids=lambda e: f"{e.method} {e.path}")
-def test_webhook_endpoints_reject_unsigned(client: TestClient, entry: RouteEntry) -> None:
+def test_webhook_endpoints_reject_unsigned(
+    client: TestClient, app_instance: FastAPI, entry: RouteEntry
+) -> None:
     """Webhook endpoints never process an unsigned/unverified request (status >= 400)."""
-    status = _request(client, entry)
+    # WAHA deliberately audits rejection; isolate that write without replacing
+    # signature verification or weakening the no-network boundary for other routes.
+    audit_table = MagicMock(spec=["insert"])
+    audit_query = MagicMock(spec=["execute"])
+    audit_query.execute.return_value = SimpleNamespace(data=[])
+    audit_table.insert.return_value = audit_query
+    audit_client = SimpleNamespace(client=MagicMock(spec=["table"]))
+    audit_client.client.table.return_value = audit_table
+    is_waha_intake = entry.key == ("POST", "/webhooks/waha-intake")
+    if is_waha_intake:
+        app_instance.dependency_overrides[get_supabase_client] = lambda: audit_client
+    try:
+        status = _request(client, entry)
+    finally:
+        if is_waha_intake:
+            app_instance.dependency_overrides.pop(get_supabase_client, None)
     assert status >= 400, (
         f"{entry.method} {entry.path}: unsigned webhook must not be accepted, got {status}"
     )
+    if is_waha_intake:
+        assert status == 403
+        audit_client.client.table.assert_called_once_with("intake_events")
+        audit_table.insert.assert_called_once_with(
+            {
+                "kind": "ingestion",
+                "disposition": "rejected_auth",
+                "vendor_id": None,
+                "session_id": None,
+                "provider_event_id": None,
+                "message_kind": None,
+                "detail": {},
+            }
+        )
+        audit_query.execute.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------
@@ -505,6 +542,6 @@ def test_role_routes_expose_expected_role_guard() -> None:
         unknown = entry.required_roles - known
         assert not unknown, f"{entry.key} requires unmodeled role(s) {sorted(unknown)}"
         # At least one persona must be able to satisfy each role route (no dead route).
-        assert any(
-            expected_outcome(entry, p) == "allow" for p in ALL_PERSONAS
-        ), f"{entry.key} is unreachable by any modeled persona"
+        assert any(expected_outcome(entry, p) == "allow" for p in ALL_PERSONAS), (
+            f"{entry.key} is unreachable by any modeled persona"
+        )
