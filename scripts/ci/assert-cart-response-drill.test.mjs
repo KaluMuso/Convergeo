@@ -175,7 +175,10 @@ for (const value of [true, false, undefined, "true"]) {
       },
     });
     if (value === true) await wait(Promise.resolve(value));
-    else await assert.rejects(wait(Promise.resolve(value)), { name: "AssertionError" });
+    else
+      await assert.rejects(wait(Promise.resolve(value)), {
+        name: "AssertionError",
+      });
     assert.equal(cleared, 1);
   });
 }
@@ -196,7 +199,9 @@ test("missing first interception fails at the existing action bound without retr
       cleared += 1;
     },
   });
-  const rejected = assert.rejects(wait(new Promise(() => {})), { name: "AssertionError" });
+  const rejected = assert.rejects(wait(new Promise(() => {})), {
+    name: "AssertionError",
+  });
   deadline();
   await rejected;
   assert.equal(scheduled, 1);
@@ -226,13 +231,16 @@ const scalarState = {
   routeFailurePost: 1,
   firstResponseDisposed: false,
 };
-const committed = { committed_before_discard: true, one_response_discarded: true };
+const committed = {
+  committed_before_discard: true,
+  one_response_discarded: true,
+};
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
 test("browser failure projection has fixed bounded scalar fields only", () => {
   const projected = plain(diagnostic("discard_route_integrity", scalarState, committed));
   assert.deepEqual(projected, {
-    format: "cart_browser_failure_v1",
+    format: "cart_browser_failure_v2",
     failure_stage: "discard_route_integrity",
     intercepted_posts: 1,
     first_response_status: 200,
@@ -245,6 +253,14 @@ test("browser failure projection has fixed bounded scalar fields only", () => {
     db_commit_recorded: true,
     response_discard_recorded: true,
     fixture_cleanup_recorded: false,
+    navigation_response_status: null,
+    guest_response_status: null,
+    stock_response_status: null,
+    latest_add_response_status: null,
+    latest_add_response_post: null,
+    external_requests_observed: null,
+    blocked_images_observed: null,
+    native_check_reached: "unclassified",
   });
   assert.ok(Buffer.byteLength(JSON.stringify(projected)) < 1024);
 });
@@ -482,7 +498,13 @@ for (const [fault, code] of [
       async json() {
         return {
           cart_id: "synthetic-cart",
-          items: [{ listing_id: "synthetic-listing", qty: 1, unit_price_ngwee: 10000 }],
+          items: [
+            {
+              listing_id: "synthetic-listing",
+              qty: 1,
+              unit_price_ngwee: 10000,
+            },
+          ],
           subtotal_ngwee: 10000,
         };
       },
@@ -496,10 +518,17 @@ for (const [fault, code] of [
         resourceType: () => "fetch",
         method: () => "POST",
         async allHeaders() {
-          return { "idempotency-key": "synthetic-key", cookie: "PRIVATE_COOKIE" };
+          return {
+            "idempotency-key": "synthetic-key",
+            cookie: "PRIVATE_COOKIE",
+          };
         },
         postData: () =>
-          JSON.stringify({ listing_id: "synthetic-listing", qty: 1, customer: "PRIVATE_BODY" }),
+          JSON.stringify({
+            listing_id: "synthetic-listing",
+            qty: 1,
+            customer: "PRIVATE_BODY",
+          }),
       }),
       fetch: async () => response,
       async abort(reason) {
@@ -598,7 +627,10 @@ test("first visibility assertion waits for actual commit, abort and response dis
       resourceType: () => "fetch",
       method: () => "POST",
       async allHeaders() {
-        return { "idempotency-key": "synthetic-key", cookie: "synthetic-cookie" };
+        return {
+          "idempotency-key": "synthetic-key",
+          cookie: "synthetic-cookie",
+        };
       },
       postData: () => JSON.stringify({ listing_id: "synthetic-listing", qty: 1 }),
     }),
@@ -745,6 +777,781 @@ for (const [name, primary, cleaned, raised] of [
     assert.ok(!logs[0].includes("PRIVATE"));
   });
 }
+const journeySetup = browserSource.slice(
+  browserSource.indexOf("const browserDiagnostic ="),
+  browserSource.indexOf("\nasync function waitForFirstDiscard("),
+);
+const journeyBody = browserSource.slice(
+  browserSource.indexOf('\ntry {\n  failureStage = "local_flag_guard";') + "\ntry {\n".length,
+  catchStart,
+);
+const nativeStateSource = browserSource.slice(
+  browserSource.indexOf("function state("),
+  browserSource.indexOf("\nconst money ="),
+);
+const moneySource = browserSource.slice(
+  browserSource.indexOf("const money ="),
+  browserSource.indexOf('\n\ntry {\n  failureStage = "local_flag_guard";'),
+);
+const completeFinally = browserSource.slice(finalStart, browserSource.lastIndexOf("\n}"));
+
+async function offlineJourney(fault = null, scenario = {}) {
+  const control = {},
+    logs = [],
+    calls = [];
+  const privateError = new Error("PRIVATE_COOKIE_TOKEN_BODY_URL");
+  let routeHandler,
+    consoleHandler,
+    clicks = 0,
+    injected = false;
+  const ledger = {
+    qty: 0,
+    claims: 0,
+    events: 0,
+    stored_price: 10000,
+    key_committed: true,
+  };
+  const trip = () => {
+    let code = control.stage();
+    if (code === "stock_native_state") code = `stock_${control.native()}`;
+    calls.push(code);
+    if (code === fault && !injected) {
+      injected = true;
+      throw privateError;
+    }
+  };
+  const checkedAssert = new Proxy(assert, {
+    get(target, key) {
+      const value = target[key];
+      return typeof value === "function"
+        ? (...args) => {
+            trip();
+            // Host fixtures cross the VM realm; compare their JSON values as the driver does in one realm.
+            return value(...(key === "deepEqual" ? args.map(plain) : args));
+          }
+        : value;
+    },
+  });
+  const response = (payload = {}) => ({
+    status: () => 200,
+    headers: () => ({}),
+    json: async () => payload,
+    dispose: async () => {},
+  });
+  function requestRoute(url, method = "GET", type = "fetch", ordinal = 0) {
+    return {
+      request: () => ({
+        url: () => url,
+        method: () => method,
+        resourceType: () => type,
+        allHeaders: async () => ({
+          "idempotency-key": ordinal === 3 ? "fresh-key" : "first-key",
+          cookie: "PRIVATE_COOKIE",
+        }),
+        postData: () => JSON.stringify({ listing_id: "synthetic-listing", qty: 1 }),
+      }),
+      async fetch() {
+        if (!ordinal) return response();
+        Object.assign(ledger, {
+          qty: ordinal === 3 ? 2 : 1,
+          claims: ordinal === 3 ? 2 : 1,
+          events: ordinal === 3 ? 2 : 1,
+          stored_price: ordinal === 3 ? 10100 : 10000,
+        });
+        return response({
+          cart_id: "synthetic-cart",
+          items: [
+            {
+              listing_id: "synthetic-listing",
+              qty: ledger.qty,
+              unit_price_ngwee: ledger.stored_price,
+            },
+          ],
+          subtotal_ngwee: ledger.qty * ledger.stored_price,
+        });
+      },
+      abort: async () => {},
+      fulfill: async () => {},
+    };
+  }
+  const locator = (id) => ({
+    id,
+    async click() {
+      trip();
+      if (id === "pdp-add-to-cart") {
+        clicks += 1;
+        await routeHandler(
+          requestRoute("http://127.0.0.1:8000/cart/items", "POST", "fetch", clicks),
+        );
+      }
+    },
+    async waitFor() {
+      trip();
+    },
+    async selectOption() {
+      trip();
+    },
+  });
+  const page = {
+    on(event, callback) {
+      trip();
+      assert.equal(event, "console");
+      consoleHandler = callback;
+    },
+    setDefaultTimeout(value) {
+      assert.equal(value, 15000);
+    },
+    async goto(url) {
+      trip();
+      await routeHandler(requestRoute(url, "GET", "document"));
+    },
+    async evaluate(fn, url) {
+      trip();
+      return fn(url);
+    },
+    getByTestId: locator,
+  };
+  const context = {
+    async newPage() {
+      trip();
+      return page;
+    },
+    async routeWebSocket() {
+      trip();
+    },
+    async route(_pattern, callback) {
+      trip();
+      routeHandler = callback;
+    },
+    async cookies() {
+      trip();
+      return [{ name: "vergeo_guest_cart", value: "PRIVATE_COOKIE" }];
+    },
+  };
+  const browser = {
+    async newContext() {
+      trip();
+      return context;
+    },
+    async close() {},
+  };
+  let written;
+  const result = await runInNewContext(
+    `(async () => {
+    const origin = "http://127.0.0.1:3000", api = "http://127.0.0.1:8000";
+    const report = {version: 1, qualified: false, checkpoints: {}, stages: [], blockedImages: 0};
+    let browser, bound = false, phase = "guard", failureStage = "outside_discard";
+    const deadline = undefined, output = "synthetic-outcome";
+    const point = name => report.checkpoints[name] = true;
+    ${journeySetup}
+    control.stage = () => failureStage;
+    control.native = () => browserDiagnostic.nativeCheck;
+    ${nativeStateSource}
+    ${moneySource}
+    try { ${journeyBody} } catch { ${catchBody} } finally { ${completeFinally} }
+    return {report, exit: process.exitCode || 0};
+  })()`,
+    {
+      assert: checkedAssert,
+      URL,
+      control,
+      cartFailureDiagnostic: diagnostic,
+      waitForFirstDiscard: async (completion) => {
+        trip();
+        return waitForFirstDiscard(completion);
+      },
+      process: {
+        env: {
+          CART_DRILL_LOCAL: "1",
+          CART_DRILL_UID: "123",
+          SUPABASE_URL: "http://127.0.0.1:54321",
+          SUPABASE_DB_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+        },
+        getuid: () => 123,
+        pid: 10,
+        exitCode: 0,
+      },
+      chromium: {
+        async launch() {
+          trip();
+          return browser;
+        },
+      },
+      expect(value) {
+        return {
+          async toBeEnabled() {
+            trip();
+          },
+          async toBeVisible() {
+            trip();
+          },
+          async toHaveText(text) {
+            trip();
+            assert.ok(typeof text === "string");
+          },
+          async toContainText(text) {
+            trip();
+            assert.ok(typeof text === "string");
+          },
+        };
+      },
+      async fetch(url, options = {}) {
+        trip();
+        await routeHandler(requestRoute(url, options.method || "GET"));
+        const active = !scenario.stockOnly || url.endsWith("/revalidate");
+        return {
+          status: active ? (scenario.httpStatus ?? 200) : 200,
+          get ok() {
+            trip();
+            return active && scenario.httpStatus ? scenario.httpStatus < 400 : true;
+          },
+          async json() {
+            trip();
+            if (active && scenario.invalidJson) throw privateError;
+            if (active && scenario.invalidShape) return null;
+            return url.endsWith("/revalidate")
+              ? {
+                  notices: [
+                    {
+                      listing_id: "synthetic-listing",
+                      kind: "qty_reduced",
+                      requested_qty: 2,
+                      available_qty: 1,
+                    },
+                  ],
+                }
+              : { cart_id: "synthetic-cart", items: [] };
+          },
+        };
+      },
+      db(action) {
+        if (action === "observe") {
+          trip();
+          return { ...ledger };
+        }
+        if (action === "bind") return { price: 10000, guest: true, empty: true };
+        if (action === "cleanup") {
+          if (fault === "fixture_cleanup") throw privateError;
+          return { cleaned: true };
+        }
+        trip();
+        return {};
+      },
+      execFileSync(command) {
+        trip();
+        assert.equal(command, "ps");
+        return "123 10 1 node\n123 11 10 chrome";
+      },
+      writeFileSync(_path, bytes) {
+        written = JSON.parse(bytes);
+      },
+      clearTimeout,
+      console: {
+        debug(token) {
+          if (scenario.consoleUnavailable) throw privateError;
+          consoleHandler({ type: () => "debug", text: () => token });
+        },
+        log(line) {
+          logs.push(line);
+        },
+      },
+    },
+  );
+  assert.deepEqual(plain(result.report), written);
+  assert.ok(!JSON.stringify(written).includes("PRIVATE"));
+  return { ...result, report: plain(result.report), logs, calls, clicks };
+}
+
+test("actual entire offline journey still qualifies every original checkpoint", async () => {
+  const result = await offlineJourney();
+  assert.equal(result.exit, 0, JSON.stringify(result.report.failureDiagnostic));
+  assert.equal(result.clicks, 3);
+  const { guard } = fixture();
+  assert.equal(qualify(result.report, guard, sha).qualified, true);
+  assert.equal(result.report.failureDiagnostic, undefined);
+  assert.equal(
+    result.logs.filter((line) => line.startsWith("cart-drill-browser-failure-summary:")).length,
+    0,
+  );
+});
+const journeyFaults = [
+  "local_flag_guard",
+  "uid_guard",
+  "api_origin_guard",
+  "database_origin_guard",
+  "browser_launch",
+  "browser_context",
+  "browser_page",
+  "browser_console_setup",
+  "websocket_route_setup",
+  "http_route_setup",
+  "guest_navigation",
+  "guest_bootstrap_dispatch",
+  "guest_bootstrap_fetch",
+  "guest_bootstrap_http",
+  "guest_bootstrap_json",
+  "guest_cart_identity",
+  "guest_empty_cart",
+  "guest_cookie_presence",
+  "guest_pickup_selection",
+  "guest_add_enabled",
+  "discard_click",
+  "discard_completion",
+  "discard_error_visibility",
+  "discard_route_integrity",
+  "retry_click",
+  "retry_success_visibility",
+  "retry_subtotal",
+  "retry_quantity",
+  "retry_drawer_close",
+  "price_fixture",
+  "price_navigation",
+  "price_notice_visibility",
+  "price_notice_previous",
+  "price_notice_current",
+  "price_subtotal",
+  "price_quantity",
+  "fresh_navigation",
+  "fresh_pickup_selection",
+  "fresh_add_enabled",
+  "fresh_click",
+  "fresh_success_visibility",
+  "fresh_subtotal",
+  "fresh_quantity",
+  "stock_fixture",
+  "stock_revalidation_dispatch",
+  "stock_revalidation_fetch",
+  "stock_revalidation_http",
+  "stock_revalidation_json",
+  "stock_notice_presence",
+  "stock_requested_quantity",
+  "stock_available_quantity",
+  "stock_native_observe",
+  "stock_native_quantity",
+  "stock_native_claims",
+  "stock_native_events",
+  "stock_native_price",
+  "stock_restore",
+  "final_add_count",
+  "final_external_count",
+  "final_route_integrity",
+  "process_snapshot",
+  "browser_child_presence",
+  "browser_child_uid",
+  "fixture_cleanup",
+];
+for (const fault of journeyFaults) {
+  test(`actual journey diagnoses ${fault} and stays failed with original cleanup`, async () => {
+    const result = await offlineJourney(fault);
+    assert.equal(result.exit, 1);
+    assert.equal(result.report.failureDiagnostic.failure_stage, fault);
+    assert.equal(
+      result.logs.filter((line) => line.startsWith("cart-drill-browser-failure-summary:")).length,
+      1,
+    );
+    assert.ok(Buffer.byteLength(JSON.stringify(result.report.failureDiagnostic)) < 2048);
+    const { guard } = fixture();
+    assert.throws(() => qualify(result.report, guard, sha));
+    if (
+      fault.startsWith("guest_") ||
+      fault.endsWith("_guard") ||
+      (fault.startsWith("browser_") && !fault.startsWith("browser_child"))
+    )
+      assert.equal(result.clicks, 0);
+    if (result.report.checkpoints.committed_before_discard)
+      assert.equal(
+        result.report.checkpoints.synthetic_fixture_cleanup,
+        fault === "fixture_cleanup" ? undefined : true,
+      );
+  });
+}
+for (const fault of ["guest_pickup_probe", "fresh_pickup_probe"]) {
+  test(`original optional ${fault} rejection remains nonfatal`, async () => {
+    const result = await offlineJourney(fault);
+    assert.equal(result.exit, 0);
+    assert.equal(result.report.qualified, true);
+    assert.ok(result.calls.includes(fault));
+  });
+}
+
+for (const [name, scenario, code] of [
+  ["guest HTTP rejection", { httpStatus: 503 }, "guest_bootstrap_http"],
+  ["guest invalid JSON", { invalidJson: true }, "guest_bootstrap_json"],
+  ["guest null JSON", { invalidShape: true }, "guest_cart_identity"],
+  ["stock HTTP rejection", { stockOnly: true, httpStatus: 503 }, "stock_revalidation_http"],
+  ["stock invalid JSON", { stockOnly: true, invalidJson: true }, "stock_revalidation_json"],
+  ["stock null JSON", { stockOnly: true, invalidShape: true }, "stock_notice_find"],
+]) {
+  test(`original ${name} fails with its fixed stage and no private error text`, async () => {
+    const result = await offlineJourney(null, scenario);
+    assert.equal(result.exit, 1);
+    assert.equal(result.report.failureDiagnostic.failure_stage, code);
+    assert.ok(!JSON.stringify(result).includes("PRIVATE"));
+    if (scenario.httpStatus)
+      assert.equal(
+        result.report.failureDiagnostic[
+          scenario.stockOnly ? "stock_response_status" : "guest_response_status"
+        ],
+        503,
+      );
+    if (scenario.stockOnly) assert.equal(result.report.checkpoints.synthetic_fixture_cleanup, true);
+  });
+}
+test("unavailable console diagnostics leave the entire original success journey intact", async () => {
+  const result = await offlineJourney(null, { consoleUnavailable: true });
+  const { guard } = fixture();
+  assert.equal(qualify(result.report, guard, sha).qualified, true);
+  assert.equal(result.report.failureDiagnostic, undefined);
+});
+test("unavailable console diagnostics use the fixed dispatch fallback on browser JSON failure", async () => {
+  const result = await offlineJourney(null, {
+    consoleUnavailable: true,
+    invalidJson: true,
+  });
+  assert.equal(result.report.failureDiagnostic.failure_stage, "guest_bootstrap_dispatch");
+  assert.equal(result.exit, 1);
+});
+
+function observerFixture(stage) {
+  return runInNewContext(
+    `(() => {
+    let failureStage = stage;
+    ${journeySetup}
+    return {emit: observeBrowserDiagnostic, result: () => ({stage: failureStage, state: browserDiagnostic})};
+  })()`,
+    { stage },
+  );
+}
+for (const group of ["guest", "stock"]) {
+  const prefix = group === "guest" ? "guest_bootstrap" : "stock_revalidation";
+  test(`browser ${group} observer accepts only exact active fixed stages and HTTP bounds`, () => {
+    const observed = observerFixture(`${prefix}_dispatch`);
+    for (const step of ["fetch", "http", "json"]) {
+      observed.emit({
+        type: () => "debug",
+        text: () => `cart-drill-step:${prefix}_${step}`,
+      });
+      assert.equal(observed.result().stage, `${prefix}_${step}`);
+    }
+    for (const status of [100, 200, 503, 599]) {
+      observed.emit({
+        type: () => "debug",
+        text: () => `cart-drill-status:${group}:${status}`,
+      });
+      assert.equal(observed.result().state[`${group}Status`], status);
+    }
+  });
+  test(`browser ${group} observer ignores malformed, late, private and cross-operation input`, () => {
+    const observed = observerFixture(`${prefix}_dispatch`);
+    const original = plain(observed.result());
+    const otherPrefix = group === "guest" ? "stock_revalidation" : "guest_bootstrap";
+    for (const text of [
+      "PRIVATE_COOKIE_BODY_URL",
+      "PRIVATE".repeat(1000),
+      null,
+      503,
+      {},
+      Symbol("PRIVATE"),
+      `cart-drill-step:${prefix}_json PRIVATE`,
+      `cart-drill-step:${otherPrefix}_json`,
+      `cart-drill-status:${group}:99`,
+      `cart-drill-status:${group}:600`,
+      `cart-drill-status:${group}:200.5`,
+      `cart-drill-status:${group}:0200`,
+      `cart-drill-status:${group}:200 PRIVATE`,
+      `cart-drill-status:${group === "guest" ? "stock" : "guest"}:503`,
+    ])
+      observed.emit({ type: () => "debug", text: () => text });
+    observed.emit({
+      type: () => "log",
+      text: () => `cart-drill-step:${prefix}_json`,
+    });
+    observed.emit({
+      type() {
+        throw new Error("PRIVATE");
+      },
+    });
+    observed.emit({
+      type: () => "debug",
+      text() {
+        throw new Error("PRIVATE");
+      },
+    });
+    observed.emit(null);
+    assert.deepEqual(plain(observed.result()), original);
+    for (const stage of [
+      "guest_cart_identity",
+      "retry_click",
+      "stock_notice_find",
+      "outside_discard",
+    ]) {
+      const late = observerFixture(stage),
+        before = plain(late.result());
+      late.emit({
+        type: () => "debug",
+        text: () => `cart-drill-step:${prefix}_json`,
+      });
+      late.emit({
+        type: () => "debug",
+        text: () => `cart-drill-status:${group}:503`,
+      });
+      assert.deepEqual(plain(late.result()), before);
+    }
+  });
+}
+for (const [source, field, low, high] of [
+  ["navigationStatus", "navigation_response_status", 100, 599],
+  ["guestStatus", "guest_response_status", 100, 599],
+  ["stockStatus", "stock_response_status", 100, 599],
+  ["latestAddStatus", "latest_add_response_status", 100, 599],
+  ["latestAddPost", "latest_add_response_post", 0, 1000],
+  ["externalRequests", "external_requests_observed", 0, 1000],
+  ["blockedImages", "blocked_images_observed", 0, 1000],
+]) {
+  test(`expanded diagnostic ${field} is bounded, own-data-only and never coerces private input`, () => {
+    for (const value of [low, high])
+      assert.equal(diagnostic("guest_navigation", { [source]: value }, {})[field], value);
+    for (const value of [
+      low - 1,
+      high + 1,
+      1.5,
+      Infinity,
+      NaN,
+      "PRIVATE",
+      3n,
+      Symbol("PRIVATE"),
+      {
+        toJSON() {
+          throw new Error("PRIVATE");
+        },
+      },
+    ])
+      assert.equal(diagnostic("guest_navigation", { [source]: value }, {})[field], null);
+    let accessed = false;
+    const input = Object.defineProperty({}, source, {
+      get() {
+        accessed = true;
+        throw new Error("PRIVATE");
+      },
+    });
+    assert.equal(diagnostic("guest_navigation", input, {})[field], null);
+    assert.equal(accessed, false);
+    assert.equal(
+      diagnostic("guest_navigation", Object.create({ [source]: high }), {})[field],
+      null,
+    );
+  });
+}
+test("native diagnostic cannot echo unknown stages, IDs or arbitrary serializers", () => {
+  for (const value of ["PRIVATE_COOKIE_BODY_URL", {}, Symbol("PRIVATE"), null]) {
+    const result = diagnostic("stock_native_state", { nativeCheck: value, key: "PRIVATE" }, {});
+    assert.equal(result.failure_stage, "stock_native_state");
+    assert.equal(result.native_check_reached, "unclassified");
+    assert.equal(Object.keys(result).length, 21);
+    assert.ok(!JSON.stringify(result).includes("PRIVATE"));
+  }
+  for (const native of ["observe", "quantity", "claims", "events", "price", "key"]) {
+    const result = diagnostic("stock_native_state", { nativeCheck: `native_${native}` }, {});
+    assert.equal(result.failure_stage, `stock_native_${native}`);
+  }
+});
+
+async function routeFailureCase(config) {
+  let handler;
+  const aborts = [],
+    completions = [];
+  const ordinal = config.ordinal || 1;
+  const body = JSON.stringify({
+    listing_id: "synthetic-listing",
+    qty: config.qty ?? 1,
+  });
+  const resultBody = {
+    cart_id: "synthetic-cart",
+    items: [
+      {
+        listing_id: "synthetic-listing",
+        qty: ordinal === 3 ? 2 : 1,
+        unit_price_ngwee: ordinal === 3 ? 10100 : 10000,
+      },
+    ],
+    subtotal_ngwee: ordinal === 3 ? 20200 : 10000,
+  };
+  if (config.cartId) resultBody.cart_id = "PRIVATE_WRONG_ID";
+  if (config.itemsMalformed) resultBody.items = null;
+  if (config.lineMissing) resultBody.items = [];
+  if (config.lineQuantity) resultBody.items[0].qty = 99;
+  if (config.linePrice) resultBody.items[0].unit_price_ngwee = 99;
+  if (config.subtotal) resultBody.subtotal_ngwee = 99;
+  const privateError = new Error("PRIVATE_COOKIE_BODY_URL_ERROR");
+  const response = {
+    status: () => config.status || 200,
+    headers: () => ({
+      location: config.redirect ? "https://private.invalid/PRIVATE" : undefined,
+    }),
+    async json() {
+      if (config.json) throw privateError;
+      return resultBody;
+    },
+    async dispose() {
+      if (config.dispose) throw privateError;
+    },
+  };
+  const route = {
+    request: () => ({
+      url: () => config.url || "http://127.0.0.1:8000/cart/items",
+      resourceType: () => config.type || "fetch",
+      method: () => config.method || "POST",
+      async allHeaders() {
+        if (config.headers) throw privateError;
+        return {
+          "idempotency-key":
+            config.key === null
+              ? undefined
+              : config.key || (ordinal === 3 ? "fresh-key" : "first-key"),
+          cookie: config.cookie === false ? undefined : "PRIVATE_COOKIE",
+        };
+      },
+      postData() {
+        if (config.body) throw privateError;
+        return config.invalidJson
+          ? "PRIVATE_INVALID_JSON"
+          : config.changedBody
+            ? body.replace("synthetic-listing", "synthetic-other")
+            : body;
+      },
+    }),
+    async fetch() {
+      if (config.fetch) throw privateError;
+      return response;
+    },
+    async abort(reason) {
+      aborts.push(reason);
+      if (config.abort && reason === "connectionreset") throw privateError;
+    },
+    async fulfill() {
+      if (config.fulfill) throw privateError;
+    },
+  };
+  const result = await runInNewContext(
+    `(async () => {
+    let posts = ordinal - 1, routeFailure, externalRequests = 0, bound = false;
+    let firstKey = "first-key", firstBody = originalBody, listingId = "synthetic-listing", price = 10000;
+    const cartId = "synthetic-cart", origin = "http://127.0.0.1:3000", api = "http://127.0.0.1:8000";
+    const report = {blockedImages: 0, checkpoints: {}, stages: []};
+    const browserDiagnostic = {posts: 0, routeFailureObserved: false, firstResponseDisposed: false, nativeCheck: "none"};
+    const point = name => report.checkpoints[name] = true;
+    ${nativeStateSource}
+    ${routeSource}
+    await invoke(route);
+    return {summary: cartFailureDiagnostic("discard_route_integrity", browserDiagnostic, report.checkpoints), bound, routeFailure};
+  })()`,
+    {
+      ordinal,
+      originalBody: JSON.stringify({ listing_id: "synthetic-listing", qty: 1 }),
+      assert,
+      URL,
+      route,
+      cartFailureDiagnostic: diagnostic,
+      context: {
+        async route(_pattern, callback) {
+          handler = callback;
+        },
+      },
+      invoke: (request) => handler(request),
+      finishFirstDiscard: (value) => completions.push(value),
+      db(action) {
+        if (action === "bind") {
+          if (config.bind) throw privateError;
+          return {
+            price: 10000,
+            guest: config.guest !== false,
+            empty: config.empty !== false,
+          };
+        }
+        assert.equal(action, "observe");
+        if (config.native === "observe") throw privateError;
+        return {
+          qty: config.native === "quantity" ? 99 : ordinal === 3 ? 2 : 1,
+          claims: config.native === "claims" ? 99 : ordinal === 3 ? 2 : 1,
+          events: config.native === "events" ? 99 : ordinal === 3 ? 2 : 1,
+          stored_price: config.native === "price" ? 99 : ordinal === 3 ? 10100 : 10000,
+          key_committed: config.native !== "key",
+        };
+      },
+    },
+  );
+  assert.equal(result.routeFailure, true);
+  assert.ok(!JSON.stringify(result.summary).includes("PRIVATE"));
+  assert.ok(Buffer.byteLength(JSON.stringify(result.summary)) < 2048);
+  return { summary: plain(result.summary), aborts, completions };
+}
+for (const [code, config] of [
+  ["request_origin", { url: "https://private.invalid/PRIVATE" }],
+  ["request_auth_path", { url: "http://127.0.0.1:8000/auth/PRIVATE" }],
+  ["image_fulfil", { type: "image", fulfill: true }],
+  ["cart_request_headers", { headers: true }],
+  ["cart_key_presence", { key: null }],
+  ["cart_cookie_presence", { cookie: false }],
+  ["cart_request_body", { body: true }],
+  ["cart_request_json", { invalidJson: true }],
+  ["cart_request_quantity", { qty: 99 }],
+  ["fixture_bind", { bind: true }],
+  ["fixture_guest", { guest: false }],
+  ["fixture_empty", { empty: false }],
+  ["retry_key", { ordinal: 2, key: "wrong-key" }],
+  ["retry_body", { ordinal: 2, changedBody: true }],
+  ["fresh_add_count", { ordinal: 4 }],
+  ["fresh_key", { ordinal: 3, key: "first-key" }],
+  ["fresh_body", { ordinal: 3, changedBody: true }],
+  ["cart_response_fetch", { fetch: true }],
+  ["cart_response_status", { status: 503 }],
+  ["cart_response_body", { json: true }],
+  ["cart_identity", { cartId: true }],
+  ["cart_line_find", { itemsMalformed: true }],
+  ["cart_line_presence", { lineMissing: true }],
+  ["cart_line_quantity", { lineQuantity: true }],
+  ["cart_line_price", { linePrice: true }],
+  ["cart_subtotal", { subtotal: true }],
+  ...["observe", "quantity", "claims", "events", "price", "key"].map((native) => [
+    `native_${native}`,
+    { native },
+  ]),
+  ["response_abort", { abort: true }],
+  ["cart_response_fulfil", { ordinal: 2, fulfill: true }],
+  ["cart_response_dispose", { dispose: true }],
+  ["other_response_fetch", { url: "http://127.0.0.1:3000/en", method: "GET", fetch: true }],
+  ["other_redirect_origin", { url: "http://127.0.0.1:3000/en", method: "GET", redirect: true }],
+  ["other_response_fulfil", { url: "http://127.0.0.1:3000/en", method: "GET", fulfill: true }],
+  ["other_response_dispose", { url: "http://127.0.0.1:3000/en", method: "GET", dispose: true }],
+]) {
+  test(`actual route failure ${code} retains the original fail-closed boundary`, async () => {
+    const result = await routeFailureCase(config);
+    assert.equal(result.summary.route_failure_stage, code);
+    assert.equal(result.summary.route_failure_observed, true);
+    assert.equal(result.aborts.at(-1), "blockedbyclient");
+    assert.equal(result.summary.external_requests_observed, code === "request_origin" ? 1 : 0);
+    if (result.summary.route_failure_post === 1) assert.deepEqual(result.completions, [false]);
+    if (config.status) assert.equal(result.summary.latest_add_response_status, 503);
+  });
+}
+
+for (const [url, method] of [
+  ["http://127.0.0.1:8000/cart", "GET"],
+  ["http://127.0.0.1:8000/cart/revalidate", "POST"],
+]) {
+  test(`background route ${method} cannot overwrite explicit operation status`, async () => {
+    const result = await routeFailureCase({
+      url,
+      method,
+      status: 503,
+      fulfill: true,
+    });
+    assert.equal(result.summary.route_failure_stage, "other_response_fulfil");
+    assert.equal(result.summary.guest_response_status, null);
+    assert.equal(result.summary.stock_response_status, null);
+  });
+}
+
 for (const [name, change] of [
   [
     "missing commit checkpoint",
