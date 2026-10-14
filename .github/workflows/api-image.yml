@@ -18,7 +18,7 @@ on:
         required: false
         type: string
       expected_control_sha:
-        description: Reviewed workflow commit SHA for the RC744 candidate image job
+        description: Reviewed workflow commit SHA for the API hotfix candidate image job
         required: false
         type: string
 
@@ -138,18 +138,19 @@ jobs:
           push: true
           tags: ghcr.io/kalumuso/convergeo-api:${{ github.sha }}
           cache-from: type=gha
-  build-rc744-candidate:
+  build-api-hotfix-candidate:
     if: >-
       github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/wp/integrate-auth-catalog-wave1' &&
+      github.ref == 'refs/heads/cursor/api-hotfix-image-build-bdf3a977-20261014' &&
       github.repository == 'KaluMuso/Convergeo'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
-      CANDIDATE_SHA: ef8dae53a2d7512aea353380b90f8563f9be1082
-      CANDIDATE_TREE: ed63b38b5c84c62adf0916ea543e896a86f9425b
+      CANDIDATE_SHA: bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c
+      CANDIDATE_TREE: eeffd1044b6e4058e49e940f1de48b1512792e30
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - name: Checkout frozen application candidate
         uses: actions/checkout@v7
@@ -166,16 +167,17 @@ jobs:
         run: |
           set -euo pipefail
           test "${GITHUB_REPOSITORY}" = 'KaluMuso/Convergeo'
-          test "${GITHUB_REF}" = 'refs/heads/wp/integrate-auth-catalog-wave1'
+          test "${GITHUB_REF}" = 'refs/heads/cursor/api-hotfix-image-build-bdf3a977-20261014'
           test "${GITHUB_EVENT_NAME}" = 'workflow_dispatch'
           [[ "${EXPECTED_CONTROL_SHA}" =~ ^[0-9a-f]{40}$ ]]
           test "${GITHUB_SHA}" = "${EXPECTED_CONTROL_SHA}"
           test "${EXPECTED_SHA}" = "${CANDIDATE_SHA}"
           test "$(git -C candidate rev-parse HEAD)" = "${CANDIDATE_SHA}"
           test "$(git -C candidate rev-parse 'HEAD^{tree}')" = "${CANDIDATE_TREE}"
+          test -z "$(git -C candidate status --porcelain=v1 --ignored)"
           [[ "${GITHUB_RUN_ID}" =~ ^[1-9][0-9]*$ ]]
           [[ "${GITHUB_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]
-          printf 'tag=ghcr.io/kalumuso/convergeo-api:rc744-%s-%s-%s\n' \
+          printf 'tag=ghcr.io/kalumuso/convergeo-api:hotfix-%s-%s-%s\n' \
             "${CANDIDATE_SHA}" "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
 
       - name: Log in to GHCR with the job token
@@ -207,7 +209,7 @@ jobs:
             exit 1
           fi
 
-      - name: Publish only the frozen candidate under its unique RC tag
+      - name: Publish only the frozen candidate under its unique hotfix tag
         id: image
         uses: docker/build-push-action@v7
         with:
@@ -257,6 +259,6 @@ jobs:
       - name: Upload candidate image receipt
         uses: actions/upload-artifact@v7
         with:
-          name: rc744-image-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: hotfix-image-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: candidate-image-receipt.json
           if-no-files-found: error
