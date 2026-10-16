@@ -511,6 +511,10 @@ jobs:
         run: supabase db reset --no-seed
 
       - name: Regenerate types
+        env:
+          # CLI 2.109.1 runs this image directly; use its source registry
+          # when the ECR mirror's data quota is exhausted.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
         run: bash scripts/gen-types.sh
 
       - name: Fail on stale committed types
