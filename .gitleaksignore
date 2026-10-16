@@ -1,0 +1,32 @@
+# Exact historical non-secret findings verified against source objects.
+# Each exception is commit:path:rule:line; new commits and adjacent credentials
+# remain scanned. Never replace these with path, whole-commit, or hex exclusions.
+
+# public Google Linux signing-key fingerprint.
+# Matches the official Google Linux public signing key (GPG fingerprint).
+e44d99041327c53a40e2ae2845d364d4916d62ae:scripts/ci/check_hosted_chrome.sh:generic-api-key:8
+ba93fa14e81d0d6b55bf3a39ce352d482f559f43:scripts/ci/check_hosted_chrome.sh:generic-api-key:8
+d65e03b2bd818aed1ac45656d167333b0ba1b5ed:scripts/ci/check_hosted_chrome.sh:generic-api-key:8
+# immutable image source commit identifier.
+# Both tags equal adjacent GIT_SHA and resolve to that Git commit object.
+fda8e708a0a288268af5fe9f9c767529316ed5e3:.github/workflows/api-image.yml:generic-api-key:190
+fda8e708a0a288268af5fe9f9c767529316ed5e3:.github/workflows/api-image.yml:generic-api-key:193
+# source-file SHA256 checksum.
+# Each SHA256 matches its Git source blob at this commit; run_coordinator_gates.py
+# recomputes the migrations and source_sha256 mappings before use.
+# supabase/migrations/0017_order_pickup_tokens.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:360
+# supabase/migrations/0051_custom_access_token_role_hook.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:394
+# supabase/migrations/0065_refunds_source_key_uniq.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:408
+# supabase/migrations/20260817200000_rate_counter_event_access_unlock_scope.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:453
+# supabase/migrations/20260829120000_bump_rate_counter_service_role_auth_role.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:455
+# supabase/migrations/20260831050000_guard_rate_counters_mutation_auth_role.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:456
+# supabase/migrations/20260831051000_cleanup_expired_rate_counters_auth_role.sql
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:457
+# services/api/tests/rls/test_launch_table_access.py
+090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:509
