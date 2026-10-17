@@ -1,3 +1,5 @@
+rc: ./scripts/ci/hook-rc.sh
+
 commit-msg:
   commands:
     commitlint:
