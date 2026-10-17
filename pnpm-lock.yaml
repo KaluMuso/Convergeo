@@ -29,6 +29,11 @@ overrides:
   express@4.22.3>proxy-addr: 2.0.8
 
 
+patchedDependencies:
+  basic-ftp@5.3.1:
+    hash: ytle2xgakdnjukyfqdyoz6swey
+    path: patches/basic-ftp@5.3.1.patch
+
 importers:
   .:
     devDependencies:
@@ -6916,7 +6921,7 @@ snapshots:
 
   baseline-browser-mapping@2.11.13: {}
 
-  basic-ftp@5.3.1: {}
+  basic-ftp@5.3.1(patch_hash=ytle2xgakdnjukyfqdyoz6swey): {}
 
   body-parser@1.20.8:
     dependencies:
@@ -7791,7 +7796,7 @@ snapshots:
 
   get-uri@6.0.5:
     dependencies:
-      basic-ftp: 5.3.1
+      basic-ftp: 5.3.1(patch_hash=ytle2xgakdnjukyfqdyoz6swey)
       data-uri-to-buffer: 6.0.2
       debug: 4.4.3
     transitivePeerDependencies:

@@ -60,6 +60,9 @@
       "express@4.22.3>qs": "6.16.0",
       "body-parser@1.20.8>qs": "6.16.0",
       "express@4.22.3>proxy-addr": "2.0.8"
+    },
+    "patchedDependencies": {
+      "basic-ftp@5.3.1": "patches/basic-ftp@5.3.1.patch"
     }
   }
 }
