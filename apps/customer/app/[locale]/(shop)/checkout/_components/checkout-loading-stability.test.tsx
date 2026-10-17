@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
@@ -24,10 +25,18 @@ import type { CheckoutShellLabels } from "./step-fulfilment";
  */
 
 const sessionState = { session: null as { access_token: string } | null, loading: true };
+const effects = vi.hoisted(() => ({ api: vi.fn(), browser: vi.fn(), session: vi.fn() }));
 
 vi.mock("@vergeo/auth/use-session", () => ({
-  useSession: () => ({ session: sessionState.session, loading: sessionState.loading }),
+  useSession: effects.session,
 }));
+effects.session.mockImplementation(() => sessionState);
+
+vi.mock("@vergeo/config", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@vergeo/config")>()),
+  createApiClient: effects.api,
+}));
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({ getBrowserClient: effects.browser }));
 
 const push = vi.fn();
 const replace = vi.fn();
@@ -63,6 +72,7 @@ afterEach(() => {
   vi.clearAllMocks();
   sessionState.session = null;
   sessionState.loading = true;
+  effects.session.mockReset().mockImplementation(() => sessionState);
 });
 
 describe("checkout loading layout stability", () => {
@@ -84,6 +94,57 @@ describe("checkout loading layout stability", () => {
     render(<CheckoutShell locale="en" labels={labels} />);
 
     expect(screen.getByTestId("checkout-loading-skeleton")).toBeInTheDocument();
+  });
+
+  it("server-renders localized public contact copy before session resolution", () => {
+    const localizedLabels = {
+      ...labels,
+      contact: { ...labels.contact, title: "Coordonnées", subtitle: "Recevez des nouvelles." },
+    };
+    const markup = renderToString(<CheckoutShell locale="fr" labels={localizedLabels} />);
+    const serverDocument = new DOMParser().parseFromString(markup, "text/html");
+
+    expect(serverDocument.querySelector("h2")?.textContent).toBe("Coordonnées");
+    expect(serverDocument.body.textContent).toContain("Recevez des nouvelles.");
+    expect(serverDocument.querySelector("input, form, button")).toBeNull();
+    expect(serverDocument.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(effects.session).toHaveBeenCalledTimes(1);
+    expect(effects.api).not.toHaveBeenCalled();
+    expect(effects.browser).not.toHaveBeenCalled();
+  });
+
+  it("retains the public intro and reserved controls through both independent session loads", () => {
+    const { container, rerender } = render(<CheckoutShell locale="en" labels={labels} />);
+    const title = screen.getByRole("heading", { name: messages.contact.title });
+    const subtitle = screen.getByText(messages.contact.subtitle);
+    expect(effects.session).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+
+    // The shell is ready, but the newly mounted StepContact's own session hook
+    // is still resolving. No form or authenticated completion may run yet.
+    effects.session
+      .mockReturnValueOnce({ session: null, loading: false })
+      .mockReturnValue({ session: null, loading: true });
+    rerender(<CheckoutShell locale="en" labels={labels} />);
+    expect(screen.getByRole("heading", { name: messages.contact.title })).toBe(title);
+    expect(screen.getByText(messages.contact.subtitle)).toBe(subtitle);
+    expect(screen.getByTestId("checkout-loading-skeleton")).toHaveAttribute("aria-busy", "true");
+    expect(container.querySelectorAll('[data-testid="skeleton"]')).toHaveLength(5);
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(effects.api).not.toHaveBeenCalled();
+    expect(effects.browser).not.toHaveBeenCalled();
+
+    effects.session.mockReturnValue({ session: null, loading: false });
+    rerender(<CheckoutShell locale="en" labels={labels} />);
+    expect(screen.getByRole("heading", { name: messages.contact.title })).toBe(title);
+    expect(screen.getByText(messages.contact.subtitle)).toBe(subtitle);
+    expect(screen.getAllByRole("heading", { name: messages.contact.title })).toHaveLength(1);
+    expect(screen.getAllByText(messages.contact.subtitle)).toHaveLength(1);
+    expect(screen.queryByTestId("checkout-loading-skeleton")).not.toBeInTheDocument();
+    expect(screen.queryByText(messages.loading)).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: messages.contact.nationalNumber })).toBeEnabled();
+    expect(effects.api).not.toHaveBeenCalled();
+    expect(effects.browser).not.toHaveBeenCalled();
   });
 
   it("keeps the page heading and outer rhythm identical to the resolved state", () => {
