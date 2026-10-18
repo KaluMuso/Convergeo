@@ -75,6 +75,13 @@ export const incompleteLoadWarning = (lhr) =>
       warning.replace(/\s+/g, " ").trim() === INCOMPLETE_LOAD_WARNING,
   );
 const finite = (n) => typeof n === "number" && Number.isFinite(n);
+function validateRequiredMeasurements(lhr) {
+  if (
+    !finite(lhr.categories?.performance?.score) ||
+    !finite(lhr.audits?.["largest-contentful-paint"]?.numericValue)
+  )
+    throw new Error(`Incomplete required performance/LCP measurements: ${lhr.requestedUrl}`);
+}
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b),
     middle = Math.floor(sorted.length / 2);
@@ -197,7 +204,7 @@ export function validatePolicy(config) {
     throw new Error("Only filesystem report output is supported");
 }
 
-/** LHCI 0.15.1 semantics for the explicitly supported assertion subset. */
+/** LHCI assertion semantics, with complete required performance/LCP samples. */
 export function evaluateAssertions(config, reports) {
   validatePolicy(config);
   const results = [];
@@ -208,6 +215,7 @@ export function evaluateAssertions(config, reports) {
       runs.some((lhr) => lhr.runtimeError || incompleteLoadWarning(lhr))
     )
       throw new Error(`Incomplete or failed collection for ${requestedUrl}`);
+    runs.forEach(validateRequiredMeasurements);
     const finalUrls = new Set(runs.map((lhr) => lhr.finalUrl));
     if (finalUrls.size !== 1 || !runs[0].finalUrl)
       throw new Error(`Inconsistent final URL: ${requestedUrl}`);
@@ -417,6 +425,7 @@ export async function runPerformance(
         if (typeof html !== "string" || !html.trim())
           throw new Error(`Missing HTML report: ${url}`);
         if (lhr.lighthouseVersion !== "13.5.0") throw new Error("Unexpected Lighthouse version");
+        validateRequiredMeasurements(lhr);
         reports.push(lhr);
         entry.validCollection = true;
       }

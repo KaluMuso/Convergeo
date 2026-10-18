@@ -15,9 +15,12 @@ collection failures and cleanup failures remain blocking. Reports and the failin
 sample are retained under `.lighthouseci` even when assertions fail.
 
 The existing `lighthouserc.json` URLs, three-run sampling, mobile/throttling
-settings, score/LCP budgets and checkout SEO warning are unchanged. Assertions
-preserve LHCI's supported aggregation/null-value behavior. Unsupported policy
-fails rather than silently disabling coverage. Root full Puppeteer and `yauzl`
+settings, score/LCP budgets and checkout SEO warning are unchanged. Every sample
+must contain finite performance scores and LCP values before collection acceptance
+and median evaluation; invalid values cannot reduce the three-sample population.
+Zero is a valid measurement. Other categories preserve LHCI's supported
+aggregation/null-value behavior. Unsupported policy fails rather than silently
+disabling coverage. Root full Puppeteer and `yauzl`
 are not added: neither is needed to measure an explicitly selected Chrome. The
 browser library's optional archive peer can remain in the transitive lock; this
 workflow does not invoke it and does not certify archive extraction safety.

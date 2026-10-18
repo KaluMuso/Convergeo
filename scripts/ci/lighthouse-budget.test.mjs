@@ -140,10 +140,106 @@ test("LHCI missing-audit and null-score semantics remain fail-closed with pessim
   rows.slice(0, 3).forEach((row) => {
     row.categories.performance.score = NaN;
   });
-  assert.equal(
-    metric(evaluateAssertions(config, rows), url, "categories:performance").passed,
-    false,
-  );
+  assert.throws(() => evaluateAssertions(config, rows), /Incomplete required/);
+});
+for (const [name, mutate] of [
+  ["one null required performance score", (lhr) => (lhr.categories.performance.score = null)],
+  ["one NaN required performance score", (lhr) => (lhr.categories.performance.score = NaN)],
+  ["one omitted required performance score", (lhr) => delete lhr.categories.performance.score],
+  [
+    "one infinite required performance score",
+    (lhr) => (lhr.categories.performance.score = Infinity),
+  ],
+  [
+    "one null required LCP value",
+    (lhr) => (lhr.audits["largest-contentful-paint"].numericValue = null),
+  ],
+  [
+    "one NaN required LCP value",
+    (lhr) => (lhr.audits["largest-contentful-paint"].numericValue = NaN),
+  ],
+  [
+    "one omitted required LCP value",
+    (lhr) => delete lhr.audits["largest-contentful-paint"].numericValue,
+  ],
+  [
+    "one infinite required LCP value",
+    (lhr) => (lhr.audits["largest-contentful-paint"].numericValue = Infinity),
+  ],
+])
+  test(`${name} blocks evaluation and collection without retry`, async () => {
+    const rows = reports();
+    mutate(rows[1]);
+    assert.throws(() => evaluateAssertions(config, rows), /Incomplete required/);
+    const cwd = await mkdtemp(join(tmpdir(), "lighthouse-required-metric-"));
+    let calls = 0;
+    try {
+      const result = await runPerformance(config, {
+        cwd,
+        audit: async (url) => {
+          const lhr = report(url);
+          if (++calls === 2) mutate(lhr);
+          return { lhr, report: ["{}", "<!doctype html>"] };
+        },
+      });
+      assert.equal(result.exitCode, 1);
+      assert.equal(calls, 2);
+      const summary = JSON.parse(await readFile(join(cwd, ".lighthouseci/run-summary.json")));
+      assert.equal(summary.exitCode, 1);
+      assert.equal(summary.collectedReports, 1);
+      assert.equal(summary.errors.length, 1);
+      assert.match(summary.errors[0].message, /Incomplete required/);
+      const manifest = JSON.parse(await readFile(join(cwd, ".lighthouseci/manifest.json")));
+      assert.equal(manifest.length, 2);
+      assert.equal(manifest[0].validCollection, true);
+      assert.equal(manifest[1].validCollection, false);
+      assert.equal(manifest[1].isRepresentativeRun, false);
+      assert.equal(
+        JSON.parse(await readFile(manifest[1].jsonPath)).requestedUrl,
+        rows[1].requestedUrl,
+      );
+      assert.match(await readFile(manifest[1].htmlPath, "utf8"), /doctype/);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+test("finite zero samples and equality medians complete all fifteen runs", async () => {
+  const rows = reports();
+  rows.forEach((lhr, i) => {
+    const limit = lhr.requestedUrl.endsWith("checkout") ? 7200 : 6500;
+    lhr.categories.performance.score = [0, 0.5, 1][i % 3];
+    lhr.audits["largest-contentful-paint"].numericValue = [0, limit, limit + 1][i % 3];
+  });
+  const assertions = evaluateAssertions(config, rows);
+  assert.ok(assertions.every((row) => row.passed));
+  for (const url of config.ci.collect.url) {
+    const performance = metric(assertions, url, "categories:performance"),
+      lcp = metric(assertions, url, "largest-contentful-paint");
+    assert.ok(performance.values.includes(0));
+    assert.ok(lcp.values.includes(0));
+    assert.equal(performance.actual, performance.expected);
+    assert.equal(lcp.actual, lcp.expected);
+  }
+  const cwd = await mkdtemp(join(tmpdir(), "lighthouse-zero-boundary-"));
+  let calls = 0;
+  try {
+    const result = await runPerformance(config, {
+      cwd,
+      audit: async () => ({
+        lhr: rows[calls++],
+        report: ["{}", "<!doctype html>"],
+      }),
+    });
+    assert.equal(result.exitCode, 0);
+    assert.equal(calls, 15);
+    assert.equal(result.manifest.length, 15);
+    assert.ok(result.manifest.every((row) => row.validCollection));
+    const summary = JSON.parse(await readFile(join(cwd, ".lighthouseci/run-summary.json")));
+    assert.equal(summary.collectedReports, 15);
+    assert.deepEqual(summary.errors, []);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
 });
 for (const [name, mutate] of [
   ["missing sample", (rows) => rows.pop()],
