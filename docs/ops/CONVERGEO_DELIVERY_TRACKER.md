@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 14:48 UTC** (16:48 Zambia).
+Updated: **2026-10-18 14:56 UTC** (16:56 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -27,12 +27,12 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 
 | Allocation | Existing owner | Current state | Next action |
 |---|---|---|---|
-| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | SOURCE_COMPLETE / TESTED_LOCAL (owner reported): `06e65b5040c52603649a05f24872d077eb1e04e4` from #752; independent review pending | Independently review exact eleven-path diff and evidence; remaining backend qualification is unresolved; conditional draft publication only after prerequisites |
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | IN_PROGRESS / REVIEW_REVISE: candidate `06e65b5040c52603649a05f24872d077eb1e04e4` preserved; bounded reviewer corrections authorized | Correct and re-review within existing runner/test paths; no publication until acceptance; backend qualification remains separate |
 | CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted qualification pending |
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL: `8399fa04f54e7977d6a79a6774d1d26251bf6d4f`, tree `3c2f44185d44783415307c4a5b743f9957d073e8`; independent local review ACCEPT | Normal hooks completed; exact unchanged draft publication requested; pinned/full hosted qualification remains |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
 
-Current source-writing state: CI-001 is in independent review; OPS-003 has completed writing. No additional writer is activated by this status update. Any review corrections retain exclusive ownership and the two-writer maximum. CUST-002's writing slot was released; its current work is unchanged publication/evidence. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
+Current source-writing state: CI-001 is the sole active source writer for bounded review corrections; OPS-003 has completed writing. No additional writer is activated by this status update. Any review corrections retain exclusive ownership and the two-writer maximum. CUST-002's writing slot was released; its current work is unchanged publication/evidence. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -77,7 +77,7 @@ No new production buyer, vendor or operator capability is claimed by this sprint
 - #752 [CI 38998232152](https://github.com/KaluMuso/Convergeo/actions/runs/38998232152): failed dependency audit; downstream API audit skipped. [Performance38998232160](https://github.com/KaluMuso/Convergeo/actions/runs/38998232160) passed on actual PR merge checkout `475e3b2e0609e97c31199a4a75e3d37d31c45979`.
 - #753 [CI39136081576](https://github.com/KaluMuso/Convergeo/actions/runs/39136081576) and [Performance39136081566](https://github.com/KaluMuso/Convergeo/actions/runs/39136081566) remained in progress at 14:39 UTC. A dependency-audit failure was already visible; terminal overall results are not yet recorded.
 - Layout: 21 focused tests, Customer typecheck/lint and local viewport evidence. Fresh independent review reconstructed exact tree `4bcdc66705aef25ff1ed8e9e5431c277964a2601` and accepted unchanged draft publication. Installed local tooling differed from pins; actual desktop zoom and live authentication remain unverified.
-- CI-001: owner-reported 64 focused tests passed on each of Node22.23.3 and Node24.19.0, strict frozen installation passed and fresh JavaScript production/full audits returned no advisories. Exact commit `06e65b5040c52603649a05f24872d077eb1e04e4`, tree `55c3644879a4b7617541887867488b63c4e515cb`, parent #752. Independent review and remaining backend/full hosted qualification are outstanding; no release acceptance inferred.
+- CI-001: owner-reported 64 focused tests passed on each of Node22.23.3 and Node24.19.0, strict frozen installation passed and fresh JavaScript production/full audits returned no advisories. Exact commit `06e65b5040c52603649a05f24872d077eb1e04e4`, tree `55c3644879a4b7617541887867488b63c4e515cb`, parent #752. Independent review returned REVISE; additional negative controls require correction and exact-source re-review. Remaining backend/full hosted qualification is outstanding; no release acceptance inferred.
 - CUST-002: 75 checkout tests, including 46 focused handoff/loading cases; typecheck/lint/format/hooks passed. Independent reviewer verified exact commit/tree, source/log custody and #752 preservation. Node24.19/pnpm9.15.4/Vitest4.1.12; Node22 and hosted qualification outstanding.
 - OPS-003: independent reviewer verified commit `8399fa04f54e7977d6a79a6774d1d26251bf6d4f`, parent #746 and exact nine-file tree, and independently passed 46 listing plus 12 i18n tests. Normal pre-commit/commit-msg hooks completed using pinned pnpm9.15.4. Test runtime remained Node24/Vitest3; Node22/Vitest4/full frozen and hosted qualification remain outstanding. Reviewed French/Chinese wording and existing English fallback for Bemba/Nyanja are not native-human translation approval.
 - QA-004: six spec contracts prepared; no spec implementation, collection, live execution or acceptance claimed.
@@ -149,3 +149,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 14:44 UTC: preserved initial evidence; recorded verified CUST draft #754 and CI-001 local candidate awaiting independent review. No shared-branch integration or deployment.
 
 - 2026-10-18 14:48 UTC: recorded committed OPS source and independently verified local review/test results; source-writing slot released. Publication request remains separate; no merge/deployment.
+
+- 2026-10-18 14:56 UTC: recorded CI-001 independent REVISE verdict and bounded correction ownership. Candidate remains unpublished; sensitive review details remain private.
