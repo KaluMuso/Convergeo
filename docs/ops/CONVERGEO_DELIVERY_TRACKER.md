@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 14:39 UTC** (16:39 Zambia).
+Updated: **2026-10-18 14:44 UTC** (16:44 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -27,18 +27,18 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 
 | Allocation | Existing owner | Current state | Next action |
 |---|---|---|---|
-| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | IN_PROGRESS: isolated eleven-path dependency/Lighthouse correction from #752 | Exact source, focused tests, audits and independent review; conditional draft publication only after prerequisites |
-| CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Exact unchanged draft publication authorized; verify remote identity and hosted results |
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | SOURCE_COMPLETE / TESTED_LOCAL (owner reported): `06e65b5040c52603649a05f24872d077eb1e04e4` from #752; independent review pending | Independently review exact eleven-path diff and evidence; remaining backend qualification is unresolved; conditional draft publication only after prerequisites |
+| CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted qualification pending |
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | Nine-file QuickList correction staged at tree `3c2f44185d44783415307c4a5b743f9957d073e8`; local tests passed; normal commit hook environment unresolved | Resolve supported tooling without bypass; obtain independent review |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
 
-Current source writers: CI-001 and OPS-003. CUST-002's writing slot was released; its current work is unchanged publication/evidence. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
+Current source-writing reservation: CI-001 (review pending; no new writes during review) and OPS-003. CUST-002's writing slot was released; its current work is unchanged publication/evidence. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
 ## 3. Current PRs, exact sources and dependencies
 
-Observed open PRs at 14:37 UTC; later publication outcomes must be verified before updating this table.
+Observed source PRs refreshed through 14:44 UTC. The documentation-only tracker itself is [draft #755](https://github.com/KaluMuso/Convergeo/pull/755); it does not change an application candidate.
 
 | PR | Exact head | Base / dependency |
 |---|---|---|
@@ -53,6 +53,7 @@ Observed open PRs at 14:37 UTC; later publication outcomes must be verified befo
 | [751](https://github.com/KaluMuso/Convergeo/pull/751) | `cf9ddfb3c55c82d2ff0ab6f2ca79221710d1e871` | master; all nineteen changed paths overlap #752 |
 | [752](https://github.com/KaluMuso/Convergeo/pull/752) | `92421f5d35ec49c382624ca4176c3c867b0192ce` | staging; loading/tooling candidate |
 | [753](https://github.com/KaluMuso/Convergeo/pull/753) | `8825b5e4e2e30290f99a243c88893f8c96a63470` | #752 source; three-file layout delta |
+| [754](https://github.com/KaluMuso/Convergeo/pull/754) | `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e` | #752 source; reviewed three-file status convergence |
 
 #752 diverges from #744/#746; it is not their full successor. The shared ancestor is `2b067aeb72dd5145835ab9b6ee000d603e8dbd73`. The corrected status handoff is byte-identical in #744/#746 and absent from #752. CUST-002 composes that behavior without replacing #752's loading implementation.
 
@@ -76,6 +77,7 @@ No new production buyer, vendor or operator capability is claimed by this sprint
 - #752 [CI 38998232152](https://github.com/KaluMuso/Convergeo/actions/runs/38998232152): failed dependency audit; downstream API audit skipped. [Performance38998232160](https://github.com/KaluMuso/Convergeo/actions/runs/38998232160) passed on actual PR merge checkout `475e3b2e0609e97c31199a4a75e3d37d31c45979`.
 - #753 [CI39136081576](https://github.com/KaluMuso/Convergeo/actions/runs/39136081576) and [Performance39136081566](https://github.com/KaluMuso/Convergeo/actions/runs/39136081566) remained in progress at 14:39 UTC. A dependency-audit failure was already visible; terminal overall results are not yet recorded.
 - Layout: 21 focused tests, Customer typecheck/lint and local viewport evidence. Fresh independent review reconstructed exact tree `4bcdc66705aef25ff1ed8e9e5431c277964a2601` and accepted unchanged draft publication. Installed local tooling differed from pins; actual desktop zoom and live authentication remain unverified.
+- CI-001: owner-reported 64 focused tests passed on each of Node22.23.3 and Node24.19.0, strict frozen installation passed and fresh JavaScript production/full audits returned no advisories. Exact commit `06e65b5040c52603649a05f24872d077eb1e04e4`, tree `55c3644879a4b7617541887867488b63c4e515cb`, parent #752. Independent review and remaining backend/full hosted qualification are outstanding; no release acceptance inferred.
 - CUST-002: 75 checkout tests, including 46 focused handoff/loading cases; typecheck/lint/format/hooks passed. Independent reviewer verified exact commit/tree, source/log custody and #752 preservation. Node24.19/pnpm9.15.4/Vitest4.1.12; Node22 and hosted qualification outstanding.
 - OPS-003: 46 listing and 12 i18n tests plus scoped static checks passed. Installed Node24/pnpm11/Vitest3 differed from pins. Independent review and normal commit completion pending.
 - QA-004: six spec contracts prepared; no spec implementation, collection, live execution or acceptance claimed.
@@ -143,3 +145,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 
 ### Change history
 - 2026-10-18: initial documentation-only draft prepared by King after duplicate-tracker checks. Existing evidence records and ownership preserved. No runtime code or release setting changed.
+
+- 2026-10-18 14:44 UTC: preserved initial evidence; recorded verified CUST draft #754 and CI-001 local candidate awaiting independent review. No shared-branch integration or deployment.
