@@ -350,7 +350,7 @@
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
     },
     "title": "Create listing",
     "intro": "Choose how you want to list. Commission is shown before you publish.",
@@ -391,11 +391,19 @@
     },
     "quickList": {
       "heading": "Quick list",
-      "intro": "For commodities, unique items, and made-to-order offers that stand alone.",
+      "intro": "Save a draft for a unique used item or a made-to-order offer.",
       "titleLabel": "Listing title",
-      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "titlePlaceholder": "e.g. Used wooden chair",
       "publish": "Publish listing",
-      "publishing": "Publishing…"
+      "publishing": "Publishing…",
+      "descriptionLabel": "Listing description",
+      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
+      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft…",
+      "draftNotice": "Saving a draft does not publish the listing.",
+      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
+      "categoriesUnavailable": "Categories are unavailable. Try again later."
     },
     "fields": {
       "priceLabel": "Your price (ZMW)",
@@ -453,7 +461,8 @@
     "success": {
       "live": "Listing is live!",
       "moderation": "Submitted for review — we will notify you on WhatsApp.",
-      "evidence": "Draft saved. Add evidence photos before publishing."
+      "evidence": "Draft saved. Add evidence photos before publishing.",
+      "draft": "Draft saved. This listing is not live."
     },
     "errors": {
       "required": "This field is required",

@@ -336,7 +336,7 @@
     },
     "meta": {
       "title": "创建商品 —— Convergeo 商家",
-      "description": "关联到目录、提交新产品，或快速上架商品。"
+      "description": "关联到目录、提交新产品，或保存独立商品草稿。"
     },
     "title": "创建商品",
     "intro": "选择您的上架方式。发布前将显示佣金。",
@@ -377,11 +377,19 @@
     },
     "quickList": {
       "heading": "快速上架",
-      "intro": "用于独立发布的商品、独一无二物品和按单生产商品。",
+      "intro": "为独一无二的二手商品或按单生产的商品保存草稿。",
       "titleLabel": "商品标题",
-      "titlePlaceholder": "例如：番茄（每公斤）",
+      "titlePlaceholder": "例如：二手木椅",
       "publish": "发布商品",
-      "publishing": "发布中…"
+      "publishing": "发布中…",
+      "descriptionLabel": "商品描述",
+      "descriptionHelp": "请具体描述此商品，至少 20 个字符。",
+      "descriptionInvalid": "请输入至少 20 个字符，开头和结尾的空格不计入。",
+      "saveDraft": "保存草稿",
+      "savingDraft": "正在保存草稿…",
+      "draftNotice": "保存草稿不会发布商品。",
+      "canonicalRequired": "A、B、C 类商品必须关联目录商品。请在“目录”中选择。",
+      "categoriesUnavailable": "暂时无法加载类别，请稍后重试。"
     },
     "fields": {
       "priceLabel": "您的价格（ZMW）",
@@ -439,7 +447,8 @@
     "success": {
       "live": "商品已上架！",
       "moderation": "已提交审核——我们将通过 WhatsApp 通知您。",
-      "evidence": "草稿已保存。发布前请添加凭证照片。"
+      "evidence": "草稿已保存。发布前请添加凭证照片。",
+      "draft": "草稿已保存，此商品尚未发布。"
     },
     "errors": {
       "required": "此字段为必填项",
