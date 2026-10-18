@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 17:35 UTC** (19:35 Zambia).
+Updated: **2026-10-18 18:26 UTC** (20:26 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -27,12 +27,12 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 
 | Allocation | Existing owner | Current state | Next action |
 |---|---|---|---|
-| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | SOURCE_COMPLETE / TESTED_LOCAL at `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf`; both incremental reviews ACCEPT | Draft #757 updated; hosted Performance passed; CI dependency gate remains blocking. Separate API branch published, draft creation blocked |
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | #757 corrections published; isolated API child `85c91c6ece40c55ea99b3757d5a3015839c01582` independently ACCEPTED locally and branch published | API child draft creation blocked; Chrome correction blocked at trusted package-provenance gate, with no Chrome source edits |
 | CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted performance passed, CI dependency audit failed; integration preparation only |
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
 
-Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
+Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active; the latest isolated API composition is qualified locally, while publication and Chrome evidence gates remain blocked. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,15 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### Latest API composition and Chrome checkpoint — 18:26 UTC
+
+- Owner-authorized isolated API child of #757: commit `85c91c6ece40c55ea99b3757d5a3015839c01582`, tree `ad2bfdccaa18e031ea7dbdeee024f66324407ca4`, sole parent `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf`. Exactly one changed file, `services/api/uv.lock`; reviewed six package records preserved, no application/manifest/configuration change. Published branch: `cursor/cg-r4-api-lock-child757-20261018`. Coordinator independently verified remote commit/tree/parent/scope. Draft creation was denied and stopped without retry; no new PR number or hosted run exists for this SHA.
+- Fresh local qualification used pinned CPython 3.12.14 / uv 0.12.19: frozen all-group installation, all 63 installed distributions compatible; six selected wheels, 273 RECORD hashes and 261 installed-file comparisons verified. The unchanged corrected audit block audited all 63 installed packages with zero findings or skips and reconciled the 65-record catalog. This is a fresh installed-scope result, not a new complete-registry advisory query.
+- Exact-source independent API review ACCEPT: receipt SHA256 `7be53be0d5c8357ef0d7ec042196091c3630efbacc27cdcd2753f9900f03daf3`. Writer compatibility: 188 cases plus two distinct JWKS cases; reviewer: 50 cases plus two JWKS cases, all passing without skips. Synthetic guards prevented incidental background database attempts before connection; no analytics/database acceptance is claimed. Full hosted, target-image, database and provider acceptance remain outstanding.
+- Chrome investigation verified exact existing paths `scripts/ci/check_hosted_chrome.sh` and `scripts/ci/check_hosted_chrome.test.sh` against unchanged #756 head `d836b82228bc481fff209bc07a067ee12aeec8f0`. Baseline 19 metadata fixtures and mocked preflight checks passed; the newer runner-image rejection was reproduced. Official image metadata identifies Ubuntu 24.04.5 image 20261012.334.1; this is distinct from direct inventory of the failed host.
+- Independent Chrome verdict **BLOCKED**, receipt SHA256 `01d8d50662b9bffc1f3aa366a178e65c3a4ff159e71ad522a53d1b5153c4e92c`: verified Google signature and current signed package index contain no record for the required 155.0.8059.79-1 pin. The newer signed record alone does not qualify a replacement browser. An image-only allowance would still fail; no source correction, binary installation, sandbox launch or new measurement was performed. A separately scoped trusted-pin qualification or authenticated existing-pin provenance is needed.
+- The sole integration preparation owner retained #718 as proposed financial foundation. Source mapping found that ownership/status endpoints alone do not establish checkout domain type. Product/ticket flows require authoritative validation; service-group handoffs require verified job/obligation context or fail closed. No three-file checkout implementation or broader integration was activated. Existing protected-owner decisions and financial closure remain separate.
 
 ### Latest correction checkpoint — 17:35 UTC
 
@@ -183,3 +192,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 16:20 UTC: recorded exact CI draft #757, terminal hosted results, verified separate API local review and OPS failure diagnosis. Independent bidirectional ancestry verification retained the #700–756 classification; no source-head ancestry correction was warranted. No merge, shared database change or manual deployment.
 
 - 2026-10-18 17:35 UTC: recorded independently reviewed OPS/CI draft corrections, terminal hosted checks and raw Lighthouse artifact verification. API branch published unchanged; draft creation and metadata updates remain blocked. Original ancestry proof preserved, with no recovered evidence supporting a correction. No source integration, shared database change or manual deployment.
+
+- 2026-10-18 18:26 UTC: recorded independently reviewed one-file API child, fresh installed audit/compatibility evidence and remote branch identity. Draft creation remains blocked; Chrome evidence review found an additional package-provenance gate, so no compatibility allowance was published. No integration into a shared release branch or runtime change.
