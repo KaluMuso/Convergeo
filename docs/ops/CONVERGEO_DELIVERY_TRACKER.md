@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 21:44 UTC** (23:44 Zambia).
+Updated: **2026-10-18 22:03 UTC** (19 October 00:03 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -30,7 +30,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | #757 corrections published; isolated API child `85c91c6ece40c55ea99b3757d5a3015839c01582` independently ACCEPTED locally and branch published | API and Chrome child branches locally reviewed; draft creation blocked; hosted qualification outstanding |
 | CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted performance passed, CI dependency audit failed; integration preparation only |
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
-| CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
+| CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
 Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active; the latest isolated API composition is qualified locally, while publication and hosted Chrome qualification remain blocked. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
 
@@ -75,6 +75,14 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### Overnight preparation closure — 22:03 UTC
+
+- The original Admin/RBAC owner was recovered as task `01a12011-465c-746e-a676-2bc9a0c2f060`. Read-only verification found the retained role migration/API/oversight/authorization blobs unchanged from #727 into #746/#756. The owner identified additional protected middleware preservation obligations and a future two-path test/CI qualification proposal; no role grant, source edit or database action occurred.
+- Admin qualification currently binds PostgreSQL 16. The proposed target-faithful extension requires coordinated ownership of `services/api/tests/test_configurable_admin_roles.py` and `.github/workflows/ci.yml`, retaining existing isolation and compatibility checks while adding explicit PostgreSQL 17.6 evidence. It is not implemented or authorized by this status record. Original qualified-types task identity remains unresolved after bounded recovery.
+- QA private revision 2 independently received **ACCEPT_FOR_PREPARATION**, ZIP SHA256 `47e56cae4298273089fe5b823c3c84ecbc22fbcd93a3816a4cfb29cd3d39e04c`. Independent document review verified all 31 manifest entries, six groups, 29 case IDs, 29 native selector references and 20 variants. Every case remains **BLOCKED_NOT_RUN**. No new application or database tests ran.
+- Review corrections make incomplete mutation recipes explicitly non-callable until an approved required-case preflight wrapper exists. The shared-helper scope gap and unresolved state-policy binding are recorded; no existing enforcement or runnable six-spec suite is claimed. Source/blob claims remain distinct from document-only review.
+- The proposed twelve-file Customer correction and protected source composition remain queued for scoped owner approval. Existing API/Chrome publication controls, authentication disposition and cart STOP are unchanged. No source writer is active at this checkpoint; bounded preparation completed without creating filler work.
 
 ### Protected composition preparation — 21:44 UTC
 
@@ -216,3 +224,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 20:54 UTC: recorded independently reviewed Chrome two-file candidate and verified remote identity; draft creation blocked and hosted acceptance not run. Preserved prior provenance findings and bounded integration proposal without creating a combined candidate.
 
 - 2026-10-18 21:44 UTC: recorded protected path-resolution and Customer contract preparation, original reviewer obligations and QA preparation boundaries. All donor publication holds retained; no application implementation, integration or runtime operation.
+
+- 2026-10-18 22:03 UTC: recorded recovered Admin owner and independently accepted QA preparation revision, preserving all unexecuted-test, source-ownership and approval boundaries. No integrated source or runtime change.
