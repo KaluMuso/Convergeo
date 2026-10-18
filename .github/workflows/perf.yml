@@ -197,8 +197,17 @@ jobs:
           node scripts/ci/image-lint.mjs --self-test
           node --test scripts/ci/perf-reporting.test.mjs
 
-      - name: Validate Lighthouse config
-        run: node scripts/ci/validate-lighthouserc.mjs
+      - name: Validate Lighthouse config and adapter
+        run: |
+          node scripts/ci/validate-lighthouserc.mjs
+          pnpm perf:lighthouse:test
+
+      - name: Verify existing Chrome for Lighthouse
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          test -x "$CHROME_PATH"
+          "$CHROME_PATH" --version
 
       - name: Start production server
         run: |
@@ -249,13 +258,12 @@ jobs:
             done
           done
 
-      - name: Lighthouse CI (blocking — see lighthouserc.json)
-        # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
-        # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
-        # Bundle-guard + image-lint remain the hard first-load JS/image gates.
-        # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
-        # itself is unavailable (not for score dips) — document in the PR.
-        run: pnpm exec lhci autorun --config=lighthouserc.json
+      - name: Lighthouse performance assertions (blocking — see lighthouserc.json)
+        # Same five URLs, three samples, median perf/LCP and checkout SEO warning.
+        # Browser/collection failures remain blocking; no installation fallback.
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: pnpm perf:lighthouse --config=lighthouserc.json
 
       - name: Install a11y smoke deps (standalone e2e package)
         working-directory: e2e
@@ -299,6 +307,6 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
-          # LHCI writes into a dot-directory; upload-artifact excludes it by default.
+          # Reports remain in a dot-directory; include them even when assertions fail.
           include-hidden-files: true
           if-no-files-found: ignore

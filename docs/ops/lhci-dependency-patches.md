@@ -1,3 +1,53 @@
+# Direct Lighthouse tooling and retired LHCI patch
+
+The measurement command is now `pnpm perf:lighthouse --config=lighthouserc.json`.
+Root development dependencies are pinned to Lighthouse **13.5.0** and
+chrome-launcher **1.2.2**. Use Node **22.19 or later** (qualification uses
+22.23.3) and pnpm **9.15.4**. The committed lockfile records the exact transitive
+versions; resolve only this tooling closure when updating it.
+
+The adapter requires an explicit `CHROME_PATH` to an existing executable. CI uses
+`/usr/bin/google-chrome` and fails if it is unavailable. There is no browser
+installer, automatic download, archive extraction, sandbox/TLS bypass, or
+collection retry. The launcher constructor and effective flags are checked;
+missing browsers, malformed or redirected reports, incomplete-load warnings,
+collection failures and cleanup failures remain blocking. Reports and the failing
+sample are retained under `.lighthouseci` even when assertions fail.
+
+The existing `lighthouserc.json` URLs, three-run sampling, mobile/throttling
+settings, score/LCP budgets and checkout SEO warning are unchanged. Assertions
+preserve LHCI's supported aggregation/null-value behavior. Unsupported policy
+fails rather than silently disabling coverage. Root full Puppeteer and `yauzl`
+are not added: neither is needed to measure an explicitly selected Chrome. The
+browser library's optional archive peer can remain in the transitive lock; this
+workflow does not invoke it and does not certify archive extraction safety.
+
+The resolved graph removes LHCI, get-uri/basic-ftp, proxy-agent and extract-zip.
+Consequently the old parser patch and its consumer-specific test are retired;
+the historical provenance and notices below remain. Dependency auditing now runs
+separate blocking production and full high-severity audits without advisory
+waivers or exit-status suppression. API pip-audit remains mandatory. An audit
+infrastructure error is a failure, never a clean report.
+
+Focused checks (no browser or services required):
+
+```sh
+node --test scripts/ci/lighthouse-budget.test.mjs scripts/ci/lighthouse-dependencies.test.mjs scripts/ci/dependency-audit-contract.test.mjs scripts/ci/perf-reporting.test.mjs
+node scripts/ci/validate-lighthouserc.mjs
+pnpm install --frozen-lockfile --strict-peer-dependencies --ignore-scripts
+pnpm audit --prod --audit-level high
+pnpm audit --audit-level high
+```
+
+Offline tests cannot qualify real collection. Fresh builds, all five URLs and
+three runs per URL, accessibility checks, and API pip-audit must bind to the final
+source before acceptance. Earlier LHCI/donor results do not certify this change.
+
+## Historical backport provenance — retired, not an active dependency
+
+The remainder records the former patch at source `92421f5d`; its commands and
+paths describe that historical implementation. They are not current checks.
+
 # LHCI dependency patches
 
 ## basic-ftp 5.3.1 listing-parser backport
