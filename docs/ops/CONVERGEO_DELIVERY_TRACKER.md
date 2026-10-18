@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 20:54 UTC** (22:54 Zambia).
+Updated: **2026-10-18 21:44 UTC** (23:44 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -75,6 +75,16 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### Protected composition preparation — 21:44 UTC
+
+- Existing financial and checkout/integration owners completed the retained 67-path resolution plan. No integrated branch, combined SHA, protected source edit or migration application was created. Original Admin/RBAC and qualified type-generation task identities are being reconciled; unresolved ownership does not activate a replacement writer.
+- The proposed Customer-only correction is now twelve explicitly enumerated files on #718 `ae0a219199cccc341dca03df8cfce85153b7a312`, tree `933009940823e294f5d3777d03d85bbd52775cce`. It preserves validated ticket continuation and fresh product checkout, and prepares verified service-job/payment-obligation navigation and full-reload handling. Financial contract review requested additional exact-attempt comparisons; those remain preparation requirements. No implementation approval or positive arbitrary-product-reference resumption is implied.
+- Financial and merchant repairs already present in #718 must be preserved. Original finding-by-finding reviewer closure and combined-source execution remain outstanding; prior repairs are not reassigned for reconstruction.
+- QA-004 reports six acceptance groups with 29 planned cases and source-selector bindings. These are private preparation documents, not collected or executed tests; complete custody review is pending. Required paid product, service and event journeys remain acceptance obligations.
+- PostgreSQL 17.6 target-faithful fresh/upgrade, guarded historical adoption, ACL/RLS, concurrency and generated-type qualification remain required on the eventual exact source. A lighter financial test image or PostgreSQL 16 compatibility run cannot substitute for target-profile evidence.
+- API `85c91c6ece40c55ea99b3757d5a3015839c01582` and Chrome `a2d1be1c9bf12a2d512e35c99d6283a5d4ecdb2f` remain preserved unintegrated donors. Publication controls remain stopped; no alternate route, reconstruction or hosted acceptance is authorized.
+- The owner requested continued bounded work and one consolidated morning approval register. Maximum two source writers remains; preparation and review do not grant new file ownership. Expanded correction, protected-owner dispositions, isolated qualification and eventual integration decisions are queued separately.
 
 ### Latest Chrome and integration-preparation checkpoint — 20:54 UTC
 
@@ -204,3 +214,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 18:26 UTC: recorded independently reviewed one-file API child, fresh installed audit/compatibility evidence and remote branch identity. Draft creation remains blocked; Chrome evidence review found an additional package-provenance gate, so no compatibility allowance was published. No integration into a shared release branch or runtime change.
 
 - 2026-10-18 20:54 UTC: recorded independently reviewed Chrome two-file candidate and verified remote identity; draft creation blocked and hosted acceptance not run. Preserved prior provenance findings and bounded integration proposal without creating a combined candidate.
+
+- 2026-10-18 21:44 UTC: recorded protected path-resolution and Customer contract preparation, original reviewer obligations and QA preparation boundaries. All donor publication holds retained; no application implementation, integration or runtime operation.
