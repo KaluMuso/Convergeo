@@ -355,56 +355,14 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
-      - name: pnpm audit (fail on high)
-        # Blocking (M15-P05): any high/critical advisory fails the pipeline, EXCEPT a
-        # written allowlist of accepted advisories. Accepted:
-        #   GHSA-ph9p-34f9-6g65 — tmp<0.2.6 path traversal, transitive via @lhci/cli
-        #     (Lighthouse CI). Dev/CI-only, never bundled into a shipped app or the API
-        #     runtime => no production exposure. See docs/ops/owasp-audit.md (A06/F1).
-        #     Remove this entry once @lhci/cli ships a tmp>=0.2.6.
-        #   GHSA-mh99-v99m-4gvg — brace-expansion<5.0.8, only in the legacy
-        #     chrome-launcher/glob/minimatch chain of @lhci/cli. The current
-        #     @lhci/cli release still ships this chain; it is CI-only and never
-        #     bundled into a shipped app or the API runtime. See A06/F3.
-        #     Remove this entry once @lhci/cli removes the legacy chain.
-        #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
-        #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
-        #     CI/dev-only; no production exposure. See A06/F7.
-        #   GHSA-7pqw-9j4j-h8q3 — extract-zip<=2.0.1 arbitrary file write via symlink
-        #     archive entries. SAME chain as GHSA-jmr9-qjv8-65gv above, and there is
-        #     no patched release to move to: 2.0.1 IS extract-zip's latest published
-        #     version and the advisory carries no patched range. A parent upgrade
-        #     cannot remove it either — @lhci/cli@0.15.1 is already the newest release
-        #     and exact-pins lighthouse 12.6.1, while the chain is only repaired in
-        #     lighthouse>=13.4.1 (puppeteer-core>=25.3.0 → @puppeteer/browsers>=3.x,
-        #     which drops extract-zip). Root devDependency only; extract-zip runs
-        #     solely to unpack the Chrome archive @puppeteer/browsers downloads from
-        #     Google for Lighthouse CI — not attacker-controlled, never bundled into a
-        #     shipped app or the API runtime. ACCEPTED, REVIEW 2026-12-09.
-        #     Remove once @lhci/cli takes lighthouse>=13.4.1. Full reachability
-        #     analysis: docs/ops/owasp-audit.md (A06/F8).
-        run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv GHSA-7pqw-9j4j-h8q3"
-          pnpm audit --audit-level=high --json > audit.json || true
-          ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
-          import json, os, sys
-          allow = set(os.environ["ALLOWLIST"].split())
-          data = json.load(open("audit.json"))
-          blocking = []
-          for adv in data.get("advisories", {}).values():
-              if adv.get("severity") in ("high", "critical"):
-                  ghsa = adv.get("github_advisory_id", "")
-                  if ghsa in allow:
-                      print(f"::notice::allowlisted {ghsa} ({adv.get('module_name')}) — see owasp-audit.md")
-                      continue
-                  blocking.append(f"{adv.get('severity')} {ghsa} {adv.get('module_name')}")
-          if blocking:
-              print("::error::blocking high/critical advisories:")
-              for b in blocking:
-                  print(f"  - {b}")
-              sys.exit(1)
-          print("pnpm audit: no blocking high/critical advisories")
-          PY
+      - name: Dependency audit workflow contract tests
+        run: node --test scripts/ci/dependency-audit-contract.test.mjs
+
+      - name: pnpm production audit (fail on high)
+        run: pnpm audit --prod --audit-level high
+
+      - name: pnpm full dependency audit (fail on high)
+        run: pnpm audit --audit-level high
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -415,11 +373,102 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: pip-audit (API, fail on high)
-        # Blocking (M15-P05): pip-audit is non-zero on any known vulnerability.
+        # Audit the complete locked API installation; every failure remains blocking.
         working-directory: services/api
         run: |
-          uv sync --dev
-          uv tool run pip-audit
+          set -euo pipefail
+          sha256sum pyproject.toml uv.lock > api-audit-inputs.sha256
+          uv sync --locked --all-groups --no-install-project
+          uv export --locked --all-groups --no-emit-project --no-hashes \
+            --format requirements-txt --output-file api-audit-requirements.txt
+          sha256sum --check api-audit-inputs.sha256
+          .venv/bin/python - <<'PY'
+          import hashlib, importlib.metadata as md, json, os, sys, sysconfig, tomllib
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name as name
+
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          root = Path.cwd().resolve()
+          prefix = root / '.venv'
+          require(prefix.is_dir() and not prefix.is_symlink(), 'Invalid API environment')
+          require(Path(sys.prefix).resolve() == prefix, 'Wrong API interpreter')
+          site = Path(sysconfig.get_path('purelib')).resolve(strict=True)
+          require(site.is_dir() and site.is_relative_to(prefix), 'Invalid API site directory')
+          require(Path(sysconfig.get_path('platlib')).resolve(strict=True) == site, 'Split site paths')
+          lock = tomllib.loads(Path('uv.lock').read_text())
+          records = [p for p in lock['package'] if 'registry' in p['source']]
+          registry = {name(p['name']): p['version'] for p in records}
+          require(registry and len(registry) == len(records), 'Ambiguous registry inventory')
+          catalog, expected = {}, {}
+          for line in Path('api-audit-requirements.txt').read_text().splitlines():
+              if not line.strip() or line.lstrip().startswith('#'):
+                  continue
+              req = Requirement(line.strip())
+              specs = list(req.specifier)
+              require(req.url is None and len(specs) == 1 and specs[0].operator == '==', 'Unpinned export')
+              key, version = name(req.name), specs[0].version
+              require(key not in catalog and registry.get(key) == version, 'Unbound export record')
+              catalog[key] = version
+              if req.marker is None or req.marker.evaluate():
+                  expected[key] = version
+          require(catalog == registry and expected, 'Incomplete locked export')
+          distributions = list(md.distributions(path=[str(site)]))
+          installed = {name(d.metadata['Name']): d.version for d in distributions}
+          require(len(installed) == len(distributions), 'Duplicate installed distribution')
+          require(installed == expected, 'Installed API inventory does not match locked export')
+          files = ['pyproject.toml', 'uv.lock', 'api-audit-requirements.txt']
+          coverage = {
+              'checkoutSha': os.environ['GITHUB_SHA'], 'python': sys.version,
+              'site': str(site), 'installedCount': len(installed),
+              'registryCount': len(registry), 'inactive': sorted(registry.keys() - expected.keys()),
+              'packages': installed,
+              'inputSha256': {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in files},
+              'auditor': 'pip-audit==2.10.1',
+          }
+          Path('api-audit-coverage.json').write_text(json.dumps(coverage, sort_keys=True) + '\n')
+          Path('api-audit-site.txt').write_text(str(site) + '\n')
+          print(json.dumps(coverage, sort_keys=True))
+          PY
+          IFS= read -r API_AUDIT_SITE < api-audit-site.txt
+          test -n "$API_AUDIT_SITE"
+          test -d "$API_AUDIT_SITE"
+          .venv/bin/python - "$API_AUDIT_SITE" <<'PY'
+          import json, sys
+          from pathlib import Path
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          site = Path(sys.argv[1]).resolve(strict=True)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          require(site.is_dir() and str(site) == coverage['site'], 'Unbound audit path')
+          require(site.is_relative_to(Path('.venv').resolve(strict=True)), 'Foreign audit path')
+          PY
+          uv tool run --from pip-audit==2.10.1 pip-audit \
+            --path "$API_AUDIT_SITE" --strict --format json --progress-spinner off \
+            | tee api-audit.json
+          .venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from packaging.utils import canonicalize_name as name
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          report = json.loads(Path('api-audit.json').read_text())
+          entries = report['dependencies']
+          audited = {name(d['name']): d['version'] for d in entries}
+          require(len(audited) == len(entries), 'Duplicate audited distribution')
+          require(audited == coverage['packages'], 'Incomplete or wrong audited inventory')
+          require(len(audited) == coverage['installedCount'], 'Incorrect audited count')
+          require(all(d.get('vulns') == [] and not d.get('skip_reason') for d in entries), 'Uncollected or vulnerable dependency')
+          require(report.get('fixes') == [], 'Unexpected audit fixes')
+          print(json.dumps({'verifiedAuditCount': len(audited), 'coverage': coverage}, sort_keys=True))
+          PY
+          sha256sum --check api-audit-inputs.sha256
 
   security-gates:
     name: Security gates (headers + authz matrix)

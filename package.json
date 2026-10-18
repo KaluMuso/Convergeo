@@ -15,18 +15,21 @@
     "release-certify": "bash scripts/qa/release-certify.sh --mode ci",
     "release-certify:local": "bash scripts/qa/release-certify.sh --mode local-development",
     "release-certify:static": "bash scripts/qa/release-certify.sh --mode ci --layer static --skip-e2e --skip-rls",
-    "release-certify:self-test": "node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs"
+    "release-certify:self-test": "node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs",
+    "perf:lighthouse": "node scripts/ci/lighthouse-budget.mjs",
+    "perf:lighthouse:test": "node --test scripts/ci/lighthouse-budget.test.mjs scripts/ci/lighthouse-dependencies.test.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@eslint/js": "^9.39.5",
-    "@lhci/cli": "^0.15.1",
+    "chrome-launcher": "1.2.2",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "lefthook": "^1.11.3",
+    "lighthouse": "13.5.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.6",
     "turbo": "^2.10.9",
@@ -51,18 +54,13 @@
       "postcss@>=8.0.0 <8.5.23": "8.5.23",
       "nanoid@^3.0.0": "3.3.18",
       "browserslist": "4.28.8",
-      "@lhci/cli@0.15.1>compression": "1.8.2",
       "postcss@8.5.23>source-map-js": "1.2.2",
       "@tailwindcss/node@4.3.3>source-map-js": "1.2.2",
       "sharp@<0.35.5": "0.35.5",
-      "@lhci/cli@0.15.1>express": "4.22.3",
       "express@4.22.3>body-parser": "1.20.8",
       "express@4.22.3>qs": "6.16.0",
       "body-parser@1.20.8>qs": "6.16.0",
       "express@4.22.3>proxy-addr": "2.0.8"
-    },
-    "patchedDependencies": {
-      "basic-ftp@5.3.1": "patches/basic-ftp@5.3.1.patch"
     }
   }
 }
