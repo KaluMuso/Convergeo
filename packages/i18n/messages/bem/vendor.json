@@ -349,8 +349,7 @@
       "retry": "Esheni limbi"
     },
     "meta": {
-      "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+      "title": "Create listing — Convergeo Vendor"
     },
     "title": "Create listing",
     "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
@@ -391,9 +390,7 @@
     },
     "quickList": {
       "heading": "Quick list",
-      "intro": "⚠ For commodities, unique items, and made-to-order offers that stand alone.",
       "titleLabel": "Listing title",
-      "titlePlaceholder": "e.g. Tomatoes per kg",
       "publish": "Publish listing",
       "publishing": "Publishing…"
     },

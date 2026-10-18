@@ -336,7 +336,7 @@
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
-      "description": "Rattachez au catalogue, soumettez un nouveau produit ou créez une annonce rapide."
+      "description": "Rattachez au catalogue, soumettez un nouveau produit ou enregistrez un brouillon autonome."
     },
     "title": "Créer une annonce",
     "intro": "Choisissez votre mode de mise en vente. La commission est affichée avant publication.",
@@ -377,11 +377,19 @@
     },
     "quickList": {
       "heading": "Annonce rapide",
-      "intro": "Pour les produits de base, les pièces uniques et les offres sur commande autonomes.",
+      "intro": "Enregistrez un brouillon pour un article d’occasion unique ou une offre fabriquée sur commande.",
       "titleLabel": "Titre de l'annonce",
-      "titlePlaceholder": "ex. Tomates au kg",
+      "titlePlaceholder": "p. ex. Chaise en bois d’occasion",
       "publish": "Publier l'annonce",
-      "publishing": "Publication…"
+      "publishing": "Publication…",
+      "descriptionLabel": "Description de l’annonce",
+      "descriptionHelp": "Décrivez cet article ou cette offre en au moins 20 caractères.",
+      "descriptionInvalid": "Saisissez au moins 20 caractères, sans compter les espaces au début et à la fin.",
+      "saveDraft": "Enregistrer le brouillon",
+      "savingDraft": "Enregistrement du brouillon…",
+      "draftNotice": "Enregistrer un brouillon ne publie pas l’annonce.",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Sélectionnez-le dans Catalogue.",
+      "categoriesUnavailable": "Les catégories sont indisponibles. Réessayez plus tard."
     },
     "fields": {
       "priceLabel": "Votre prix (ZMW)",
@@ -439,7 +447,8 @@
     "success": {
       "live": "L'annonce est en ligne !",
       "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp.",
-      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier."
+      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier.",
+      "draft": "Brouillon enregistré. Cette annonce n’est pas en ligne."
     },
     "errors": {
       "required": "Ce champ est obligatoire",
