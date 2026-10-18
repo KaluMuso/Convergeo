@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 18:26 UTC** (20:26 Zambia).
+Updated: **2026-10-18 20:54 UTC** (22:54 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -27,12 +27,12 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 
 | Allocation | Existing owner | Current state | Next action |
 |---|---|---|---|
-| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | #757 corrections published; isolated API child `85c91c6ece40c55ea99b3757d5a3015839c01582` independently ACCEPTED locally and branch published | API child draft creation blocked; Chrome correction blocked at trusted package-provenance gate, with no Chrome source edits |
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | #757 corrections published; isolated API child `85c91c6ece40c55ea99b3757d5a3015839c01582` independently ACCEPTED locally and branch published | API and Chrome child branches locally reviewed; draft creation blocked; hosted qualification outstanding |
 | CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted performance passed, CI dependency audit failed; integration preparation only |
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
 
-Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active; the latest isolated API composition is qualified locally, while publication and Chrome evidence gates remain blocked. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
+Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active; the latest isolated API composition is qualified locally, while publication and hosted Chrome qualification remain blocked. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -76,7 +76,15 @@ No new production buyer, vendor or operator capability is claimed by this sprint
 
 ## 5. CI, independent review and remaining validation
 
-### Latest API composition and Chrome checkpoint — 18:26 UTC
+### Latest Chrome and integration-preparation checkpoint — 20:54 UTC
+
+- The owner authorized bounded Chrome 155.0.8059.84-1 qualification at 20:37 UTC. Exact two-file candidate [a2d1be1c9bf12a2d512e35c99d6283a5d4ecdb2f](https://github.com/KaluMuso/Convergeo/commit/a2d1be1c9bf12a2d512e35c99d6283a5d4ecdb2f), tree `c29f898f1a9b1a796e156647400c63b59f00da63`, sole parent #756 `d836b82228bc481fff209bc07a067ee12aeec8f0`, is published on `cursor/cg-r4-hosted-chrome-child756-20261018`. Coordinator independently verified that only `scripts/ci/check_hosted_chrome.sh` and its existing test changed.
+- Independent source ACCEPT receipt SHA256 `1658d5d827dbdc4185391b1dc2528a10d6ea88c8bbc49ab68a8c1b7965db7c21` was read completely by the coordinator. Trusted primary-key/signature/index binding, exact 144080360-byte amd64 package SHA256 `8fbd2ae69cdf7ee98b7513c3396a7b5e06f974f8625fdd590df3091dd0c3e9de` and Debian archive identity were verified. Twelve pipeline cases, nineteen metadata cases and preflight assertions passed, independently repeated on Python 3.12.14 and 3.13.5. These are 31 distinct counted cases, not 62 distinct cases. Authentic-byte acceptance and corrupted-byte rejection were independently checked.
+- Draft creation was denied once and stopped without retry or alternate route. No draft PR or hosted run is claimed. Actual hosted ImageOS/ImageVersion, installed binary ownership/version/policy, sandbox launch, Lighthouse and accessibility remain NOT_RUN. Offline archive identity and official runner metadata do not establish those facts.
+- Original #718/#746 browser and financial CI reconciliation remains with the integration owner. No integrated source was created. The bounded proposal retains #718 as foundation with selected #746/#752/#753/#754/#756/#757/API deltas; measured baseline per-file conflicts and dependency decisions are retained in the private owner report. Original protected-owner and financial acceptance obligations remain open.
+- The proposed 139-plus-four migration union still needs fresh/upgrade qualification and generated-type provenance. Admin and financial disposable database profile assumptions require reconciliation. No shared database or deployment operation occurred.
+
+### Preserved API composition and Chrome checkpoint — 18:26 UTC
 
 - Owner-authorized isolated API child of #757: commit `85c91c6ece40c55ea99b3757d5a3015839c01582`, tree `ad2bfdccaa18e031ea7dbdeee024f66324407ca4`, sole parent `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf`. Exactly one changed file, `services/api/uv.lock`; reviewed six package records preserved, no application/manifest/configuration change. Published branch: `cursor/cg-r4-api-lock-child757-20261018`. Coordinator independently verified remote commit/tree/parent/scope. Draft creation was denied and stopped without retry; no new PR number or hosted run exists for this SHA.
 - Fresh local qualification used pinned CPython 3.12.14 / uv 0.12.19: frozen all-group installation, all 63 installed distributions compatible; six selected wheels, 273 RECORD hashes and 261 installed-file comparisons verified. The unchanged corrected audit block audited all 63 installed packages with zero findings or skips and reconciled the 65-record catalog. This is a fresh installed-scope result, not a new complete-registry advisory query.
@@ -194,3 +202,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 17:35 UTC: recorded independently reviewed OPS/CI draft corrections, terminal hosted checks and raw Lighthouse artifact verification. API branch published unchanged; draft creation and metadata updates remain blocked. Original ancestry proof preserved, with no recovered evidence supporting a correction. No source integration, shared database change or manual deployment.
 
 - 2026-10-18 18:26 UTC: recorded independently reviewed one-file API child, fresh installed audit/compatibility evidence and remote branch identity. Draft creation remains blocked; Chrome evidence review found an additional package-provenance gate, so no compatibility allowance was published. No integration into a shared release branch or runtime change.
+
+- 2026-10-18 20:54 UTC: recorded independently reviewed Chrome two-file candidate and verified remote identity; draft creation blocked and hosted acceptance not run. Preserved prior provenance findings and bounded integration proposal without creating a combined candidate.
