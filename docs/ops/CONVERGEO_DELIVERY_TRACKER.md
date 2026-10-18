@@ -1,0 +1,145 @@
+# Convergeo Delivery Tracker
+
+**Designated editor: King.** Other Codex, ChatGPT Work and ChatGPT sessions may read this file and propose changes, but must not overwrite it independently.
+
+[GitHub Issue #716](https://github.com/KaluMuso/Convergeo/issues/716) remains authoritative for approvals, delivery decisions and ownership. This file is a public-safe, version-controlled summary, not a replacement approval channel. A status entry never grants permission to merge, deploy, change shared data or operate payment rails.
+
+Before every implementation task, read Issue #716, this tracker and applicable AGENTS/contracts. If this file is absent from the selected source, read the proposed tracker branch through its draft PR; do not create another tracker. King must read the latest file and blob SHA before every update, reconcile newer changes, preserve evidence links and serialize writes.
+
+## 1. Latest verified baseline and timestamp
+
+Updated: **2026-10-18 14:39 UTC** (16:39 Zambia).
+Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
+
+- Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
+- Existing feature composition: [#746](https://github.com/KaluMuso/Convergeo/pull/746), `843d10c3f52af3a103767f9800ec96edb0a51787`.
+- Repository master observed at `287d6885a806514b7ddbb73f7b779f8be2d53f14`; staging at `2b067aeb72dd5145835ab9b6ee000d603e8dbd73`.
+- **No single integrated, qualified commercial release SHA is selected.**
+- [Owner-approved public checkpoint](https://github.com/KaluMuso/Convergeo/issues/716#issuecomment-6250963436) records the current bounded allocations.
+
+Duplicate-tracker check: inspected master/staging, current integration heads, open PRs and existing delivery records. The requested path was absent. Existing [Audit Ledger](../production-readiness/AUDIT_LEDGER.md) is dated 6 August; the [Master Reconciliation Register](../production-readiness/2026-07-18/consolidated/master-reconciliation-register.md) is dated 18 July; the [1 October delivery packet](https://github.com/KaluMuso/Convergeo/tree/ae0a219199cccc341dca03df8cfce85153b7a312/docs/delivery/2026-10-01) is a source-custody handoff. These historical records remain preserved; none is an equivalent current four-lane sprint tracker.
+
+Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED, PRODUCTION_VERIFIED, IN_PROGRESS, BLOCKED, UNKNOWN. Passing mocks, skipped tests, source review and READY deployments are not interchangeable acceptance evidence.
+
+## 2. Four Codex workstreams and owners
+
+The CG identifiers are allocation labels; UUIDs identify the existing Codex tasks. Maximum two simultaneous application/tooling source writers. King alone edits this documentation file.
+
+| Allocation | Existing owner | Current state | Next action |
+|---|---|---|---|
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | IN_PROGRESS: isolated eleven-path dependency/Lighthouse correction from #752 | Exact source, focused tests, audits and independent review; conditional draft publication only after prerequisites |
+| CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Exact unchanged draft publication authorized; verify remote identity and hosted results |
+| CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | Nine-file QuickList correction staged at tree `3c2f44185d44783415307c4a5b743f9957d073e8`; local tests passed; normal commit hook environment unresolved | Resolve supported tooling without bypass; obtain independent review |
+| CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
+
+Current source writers: CI-001 and OPS-003. CUST-002's writing slot was released; its current work is unchanged publication/evidence. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
+
+Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
+
+## 3. Current PRs, exact sources and dependencies
+
+Observed open PRs at 14:37 UTC; later publication outcomes must be verified before updating this table.
+
+| PR | Exact head | Base / dependency |
+|---|---|---|
+| [718](https://github.com/KaluMuso/Convergeo/pull/718) | `ae0a219199cccc341dca03df8cfce85153b7a312` | codex/continuity-gap-repair; retained financial/merchant work |
+| [723](https://github.com/KaluMuso/Convergeo/pull/723) | `8e2e84d615c792ee45713e226d291d81c701c04a` | master; older integration/tooling evidence |
+| [736](https://github.com/KaluMuso/Convergeo/pull/736) | `60838e9ef4c1158fba1916bcb429f305d99ddcb2` | cart-add-idempotency branch; overlaps #746 qualification paths |
+| [743](https://github.com/KaluMuso/Convergeo/pull/743) | `3b6f04d7a1a7305829b71b0d6ba302f6ac02b67a` | payment-preflight source; source tests do not establish provider acceptance |
+| [744](https://github.com/KaluMuso/Convergeo/pull/744) | `542e518ccd6e4f609142dc5844de2e9e127d5437` | pr740-forward source; parent of #746 |
+| [746](https://github.com/KaluMuso/Convergeo/pull/746) | `843d10c3f52af3a103767f9800ec96edb0a51787` | #744 source; preserved auth/catalog/cart/role work |
+| [749](https://github.com/KaluMuso/Convergeo/pull/749) | `2a6266c2625e96cb22ae8510baa2631af088e347` | master; overlapping dependency batch |
+| [750](https://github.com/KaluMuso/Convergeo/pull/750) | `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c` | master; four hotfix files already identical in #746 |
+| [751](https://github.com/KaluMuso/Convergeo/pull/751) | `cf9ddfb3c55c82d2ff0ab6f2ca79221710d1e871` | master; all nineteen changed paths overlap #752 |
+| [752](https://github.com/KaluMuso/Convergeo/pull/752) | `92421f5d35ec49c382624ca4176c3c867b0192ce` | staging; loading/tooling candidate |
+| [753](https://github.com/KaluMuso/Convergeo/pull/753) | `8825b5e4e2e30290f99a243c88893f8c96a63470` | #752 source; three-file layout delta |
+
+#752 diverges from #744/#746; it is not their full successor. The shared ancestor is `2b067aeb72dd5145835ab9b6ee000d603e8dbd73`. The corrected status handoff is byte-identical in #744/#746 and absent from #752. CUST-002 composes that behavior without replacing #752's loading implementation.
+
+[744/#752 ancestry](https://github.com/KaluMuso/Convergeo/compare/542e518ccd6e4f609142dc5844de2e9e127d5437...92421f5d35ec49c382624ca4176c3c867b0192ce) · [746/#752 ancestry](https://github.com/KaluMuso/Convergeo/compare/843d10c3f52af3a103767f9800ec96edb0a51787...92421f5d35ec49c382624ca4176c3c867b0192ce)
+
+#724/#727 were closed without merge. Role source is represented in #746; closure neither proves loss nor production activation.
+
+## 4. Completed implementation and delivered capabilities
+
+| Work | Source outcome | Delivered capability boundary |
+|---|---|---|
+| Layout #753 | Three reviewed files; phone sizing and menu viewport positioning corrected | Local Customer/Vendor geometry and Admin nonimpact observed; not staging/production verified |
+| CUST-002 | Commit `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`, tree `42fe57887544cae2bbfe636e6e39f0bd40604e6c`, parent #752 | Local read-only status navigation, expiry/account-switch protection and loading preservation; no payment continuation or deployed claim |
+| OPS-003 | Supported draft-only QuickList behavior and accurate success copy implemented in the approved nine-file scope | Staged local source; no commit/publication/independent acceptance yet |
+| Coordination | Existing owners recovered, four lanes reconciled, public checkpoint published | Prevents duplicate implementation; does not itself create customer capability |
+
+No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
+
+## 5. CI, independent review and remaining validation
+
+- #752 [CI 38998232152](https://github.com/KaluMuso/Convergeo/actions/runs/38998232152): failed dependency audit; downstream API audit skipped. [Performance38998232160](https://github.com/KaluMuso/Convergeo/actions/runs/38998232160) passed on actual PR merge checkout `475e3b2e0609e97c31199a4a75e3d37d31c45979`.
+- #753 [CI39136081576](https://github.com/KaluMuso/Convergeo/actions/runs/39136081576) and [Performance39136081566](https://github.com/KaluMuso/Convergeo/actions/runs/39136081566) remained in progress at 14:39 UTC. A dependency-audit failure was already visible; terminal overall results are not yet recorded.
+- Layout: 21 focused tests, Customer typecheck/lint and local viewport evidence. Fresh independent review reconstructed exact tree `4bcdc66705aef25ff1ed8e9e5431c277964a2601` and accepted unchanged draft publication. Installed local tooling differed from pins; actual desktop zoom and live authentication remain unverified.
+- CUST-002: 75 checkout tests, including 46 focused handoff/loading cases; typecheck/lint/format/hooks passed. Independent reviewer verified exact commit/tree, source/log custody and #752 preservation. Node24.19/pnpm9.15.4/Vitest4.1.12; Node22 and hosted qualification outstanding.
+- OPS-003: 46 listing and 12 i18n tests plus scoped static checks passed. Installed Node24/pnpm11/Vitest3 differed from pins. Independent review and normal commit completion pending.
+- QA-004: six spec contracts prepared; no spec implementation, collection, live execution or acceptance claimed.
+
+Required skipped tests remain obligations. Review acceptance is scoped to its exact source and purpose, never production certification.
+
+## 6. Component integration status
+
+| Component | Current status | Required next evidence |
+|---|---|---|
+| Customer | Separate source improvements and #752 Preview exist; new candidates not integrated | Exact combined source, pinned hosted checks and approved environment verification |
+| Vendor | Existing feature work plus OPS local correction; candidate alignment not established | Reviewed caller contract and exact candidate qualification |
+| Admin | Existing role/oversight source retained; no new live role change | Approved identity/preflight and cross-app acceptance |
+| FastAPI | Existing backend/financial work requires coordinated source adoption | Exact candidate/API image and compatible writer contract |
+| Database | Metadata inventory exists; final migration/schema equivalence unproved | Ordered source-bound qualification and separately approved target/recovery plan |
+| Automation | Operational acceptance remains separate from source work | Authorized runtime evidence, without exposing private operational records here |
+
+No ambiguous staging environment is used for signup, order or payment acceptance merely because its hostname says staging. Details of infrastructure, credentials and sensitive findings stay in private records.
+
+## 7. Critical blockers and next actions
+
+1. Complete CI-001, independent review and fresh exact-source qualification; preserve audit and browser safeguards.
+2. Complete normal hosted verification for the reviewed layout and checkout candidates; resolve environment prerequisites only through separate authorized configuration.
+3. Finish OPS's supported hook/toolchain path, independent review and source custody without bypassing hooks.
+4. Reconcile the divergent feature and loading branches additively; do not merge overlapping PRs wholesale.
+5. Review retained financial/merchant dependencies and migration/security boundaries before selecting an integrated candidate. Detailed sensitive findings are private.
+6. Retain existing KYC/auth/OTP/cart owners and obtain missing source-bound acceptance instead of repeating completed patches.
+7. Supply QA with the selected candidate, approved persona/Admin preflight, exclusive specs and test registration. Synthetic, isolated database, provider-backed and deployed evidence remain distinct.
+8. Prepare exact-target recovery/cutover and production GO/NO-GO evidence before any release approval.
+
+## 8. Pending owner approvals and boundaries
+
+The owner has approved bounded isolated CI/CUST work, the nine-file OPS correction, unchanged layout draft publication, exact reviewed CUST draft publication, and this documentation-only tracker draft.
+
+Still separate: integration into #752 or another shared release branch; staging/production deployment or promotion; shared database mutations; real-money collection/refunds/payouts; customer messaging; credential/security changes and new spending. No such approval can be inferred from this file.
+
+Additional protected paths, ambiguous product behavior, migration conflicts or publication/security denials must be escalated. Do not bypass denials or silently widen a lane. Existing PR configuration is not permission to modify environment variables or aliases.
+
+## 9. Production readiness and dates
+
+**Production readiness: NOT QUALIFIED.** No platform completion percentage is assigned from source counts.
+
+- Accelerated engineering sprint: 18–25 October2026.
+- Commercial GO/NO-GO decision: 26 October2026.
+- Contingency: 7 November2026.
+- Current bounded execution report: 18 October2026,18:22 Zambia (16:22 UTC).
+
+The decision requires one exact integrated source, all three portal/API/database bindings, required CI and independent reviews, provider-backed acceptance, operator readiness and recovery/rollback evidence. A target date does not waive a gate.
+
+## 10. Evidence index and preservation
+
+Public evidence:
+- [Issue716](https://github.com/KaluMuso/Convergeo/issues/716) and [18 October checkpoint](https://github.com/KaluMuso/Convergeo/issues/716#issuecomment-6250963436).
+- PR and run links above, plus the [release-control contract](production-release-control.md).
+- [Canonical requirements](../production-readiness/MASTER_REQUIREMENTS.md), [traceability](../production-readiness/REQUIREMENT_TRACEABILITY.md) and historical ledgers linked in section1.
+
+Private record index (owner-controlled access; contents and access URLs are not published here):
+- Convergeo Delivery Recovery2026-10-18: task custody and detailed runtime evidence.
+- Convergeo Four Sprint Allocations2026-10-18: exact path reservations and private task handoffs.
+- Layout independent review and continuation evidence: exact reviewed source and local measurements.
+- CUST-002 evidence packet and verbatim independent review: exact patch/log/source identities.
+- Financial integration dependency handoff: sensitive source analysis and migration/rollback considerations.
+
+Request any necessary private handoff through the owner/King; only separately verified, authorized private links may be supplied to the intended reader. Public links above do not grant access to private records.
+
+### Change history
+- 2026-10-18: initial documentation-only draft prepared by King after duplicate-tracker checks. Existing evidence records and ownership preserved. No runtime code or release setting changed.
