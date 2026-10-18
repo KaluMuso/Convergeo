@@ -373,11 +373,102 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: pip-audit (API, fail on high)
-        # Blocking (M15-P05): pip-audit is non-zero on any known vulnerability.
+        # Audit the complete locked API installation; every failure remains blocking.
         working-directory: services/api
         run: |
-          uv sync --dev
-          uv tool run pip-audit
+          set -euo pipefail
+          sha256sum pyproject.toml uv.lock > api-audit-inputs.sha256
+          uv sync --locked --all-groups --no-install-project
+          uv export --locked --all-groups --no-emit-project --no-hashes \
+            --format requirements-txt --output-file api-audit-requirements.txt
+          sha256sum --check api-audit-inputs.sha256
+          .venv/bin/python - <<'PY'
+          import hashlib, importlib.metadata as md, json, os, sys, sysconfig, tomllib
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name as name
+
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          root = Path.cwd().resolve()
+          prefix = root / '.venv'
+          require(prefix.is_dir() and not prefix.is_symlink(), 'Invalid API environment')
+          require(Path(sys.prefix).resolve() == prefix, 'Wrong API interpreter')
+          site = Path(sysconfig.get_path('purelib')).resolve(strict=True)
+          require(site.is_dir() and site.is_relative_to(prefix), 'Invalid API site directory')
+          require(Path(sysconfig.get_path('platlib')).resolve(strict=True) == site, 'Split site paths')
+          lock = tomllib.loads(Path('uv.lock').read_text())
+          records = [p for p in lock['package'] if 'registry' in p['source']]
+          registry = {name(p['name']): p['version'] for p in records}
+          require(registry and len(registry) == len(records), 'Ambiguous registry inventory')
+          catalog, expected = {}, {}
+          for line in Path('api-audit-requirements.txt').read_text().splitlines():
+              if not line.strip() or line.lstrip().startswith('#'):
+                  continue
+              req = Requirement(line.strip())
+              specs = list(req.specifier)
+              require(req.url is None and len(specs) == 1 and specs[0].operator == '==', 'Unpinned export')
+              key, version = name(req.name), specs[0].version
+              require(key not in catalog and registry.get(key) == version, 'Unbound export record')
+              catalog[key] = version
+              if req.marker is None or req.marker.evaluate():
+                  expected[key] = version
+          require(catalog == registry and expected, 'Incomplete locked export')
+          distributions = list(md.distributions(path=[str(site)]))
+          installed = {name(d.metadata['Name']): d.version for d in distributions}
+          require(len(installed) == len(distributions), 'Duplicate installed distribution')
+          require(installed == expected, 'Installed API inventory does not match locked export')
+          files = ['pyproject.toml', 'uv.lock', 'api-audit-requirements.txt']
+          coverage = {
+              'checkoutSha': os.environ['GITHUB_SHA'], 'python': sys.version,
+              'site': str(site), 'installedCount': len(installed),
+              'registryCount': len(registry), 'inactive': sorted(registry.keys() - expected.keys()),
+              'packages': installed,
+              'inputSha256': {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in files},
+              'auditor': 'pip-audit==2.10.1',
+          }
+          Path('api-audit-coverage.json').write_text(json.dumps(coverage, sort_keys=True) + '\n')
+          Path('api-audit-site.txt').write_text(str(site) + '\n')
+          print(json.dumps(coverage, sort_keys=True))
+          PY
+          IFS= read -r API_AUDIT_SITE < api-audit-site.txt
+          test -n "$API_AUDIT_SITE"
+          test -d "$API_AUDIT_SITE"
+          .venv/bin/python - "$API_AUDIT_SITE" <<'PY'
+          import json, sys
+          from pathlib import Path
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          site = Path(sys.argv[1]).resolve(strict=True)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          require(site.is_dir() and str(site) == coverage['site'], 'Unbound audit path')
+          require(site.is_relative_to(Path('.venv').resolve(strict=True)), 'Foreign audit path')
+          PY
+          uv tool run --from pip-audit==2.10.1 pip-audit \
+            --path "$API_AUDIT_SITE" --strict --format json --progress-spinner off \
+            | tee api-audit.json
+          .venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from packaging.utils import canonicalize_name as name
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          report = json.loads(Path('api-audit.json').read_text())
+          entries = report['dependencies']
+          audited = {name(d['name']): d['version'] for d in entries}
+          require(len(audited) == len(entries), 'Duplicate audited distribution')
+          require(audited == coverage['packages'], 'Incomplete or wrong audited inventory')
+          require(len(audited) == coverage['installedCount'], 'Incorrect audited count')
+          require(all(d.get('vulns') == [] and not d.get('skip_reason') for d in entries), 'Uncollected or vulnerable dependency')
+          require(report.get('fixes') == [], 'Unexpected audit fixes')
+          print(json.dumps({'verifiedAuditCount': len(audited), 'coverage': coverage}, sort_keys=True))
+          PY
+          sha256sum --check api-audit-inputs.sha256
 
   security-gates:
     name: Security gates (headers + authz matrix)
