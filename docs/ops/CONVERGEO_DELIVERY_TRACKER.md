@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 16:20 UTC** (18:20 Zambia).
+Updated: **2026-10-18 17:35 UTC** (19:35 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -27,12 +27,12 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 
 | Allocation | Existing owner | Current state | Next action |
 |---|---|---|---|
-| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | SOURCE_COMPLETE / TESTED_LOCAL: corrected candidate `3bd3d2d5b48da2cbd7a83fe7ebf5e0bac862cf8b`; independent re-review reported ACCEPT | Published unchanged as [draft #757](https://github.com/KaluMuso/Convergeo/pull/757); hosted CI succeeded but performance validation failed. Separate API lock local review accepted; qualification gaps remain |
+| CG-R4-CI-001 | `01a13a6d-dedf-7108-afff-af9fbdd62010` | SOURCE_COMPLETE / TESTED_LOCAL at `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf`; both incremental reviews ACCEPT | Draft #757 updated; hosted Performance passed; CI dependency gate remains blocking. Separate API branch published, draft creation blocked |
 | CG-R4-CUST-002 | `01a12837-b5f5-7420-81d8-b6ccf0a2d05d` | SOURCE_COMPLETE / TESTED_LOCAL at `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e`; independent local review accepted | Published unchanged as [draft #754](https://github.com/KaluMuso/Convergeo/pull/754); remote identity verified; hosted performance passed, CI dependency audit failed; integration preparation only |
-| CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL: `8399fa04f54e7977d6a79a6774d1d26251bf6d4f`, tree `3c2f44185d44783415307c4a5b743f9957d073e8`; independent local review ACCEPT | Published unchanged as [draft #756](https://github.com/KaluMuso/Convergeo/pull/756); hosted test/setup failures under read-only diagnosis |
+| CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Acceptance preparation complete; test implementation/execution NOT_STARTED | Select candidate, resolve exclusive spec paths, fixture/preflight and registration handoffs |
 
-Current source-writing state: CI-001 and OPS-003 have completed their bounded source corrections; CI-001 has completed the separate authorized one-file API dependency qualification and is returning independent review evidence. No additional writer is activated by this status update. Any review corrections retain exclusive ownership and the two-writer maximum. CUST-002's writing slot was released; its current work is hosted evidence and read-only contract clarification. Existing financial, ledger, KYC, authentication, OTP, cart and layout owners retain their scope.
+Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -54,8 +54,8 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 | [752](https://github.com/KaluMuso/Convergeo/pull/752) | `92421f5d35ec49c382624ca4176c3c867b0192ce` | staging; loading/tooling candidate |
 | [753](https://github.com/KaluMuso/Convergeo/pull/753) | `8825b5e4e2e30290f99a243c88893f8c96a63470` | #752 source; three-file layout delta |
 | [754](https://github.com/KaluMuso/Convergeo/pull/754) | `ee046b06ac4a05fc5cd5a678a5a076a53e2f5c8e` | #752 source; reviewed three-file status convergence |
-| [756](https://github.com/KaluMuso/Convergeo/pull/756) | `8399fa04f54e7977d6a79a6774d1d26251bf6d4f` | #746 source; unchanged reviewed nine-file OPS delta |
-| [757](https://github.com/KaluMuso/Convergeo/pull/757) | `3bd3d2d5b48da2cbd7a83fe7ebf5e0bac862cf8b` | #752 source; reviewed eleven-file CI delta |
+| [756](https://github.com/KaluMuso/Convergeo/pull/756) | `d836b82228bc481fff209bc07a067ee12aeec8f0` | #746 source; original nine-file scope with reviewed two-locale repair |
+| [757](https://github.com/KaluMuso/Convergeo/pull/757) | `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf` | #752 source; eleven-file cumulative scope preserved after three-path correction |
 
 #752 diverges from #744/#746; it is not their full successor. The shared ancestor is `2b067aeb72dd5145835ab9b6ee000d603e8dbd73`. The corrected status handoff is byte-identical in #744/#746 and absent from #752. CUST-002 composes that behavior without replacing #752's loading implementation.
 
@@ -75,6 +75,17 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### Latest correction checkpoint — 17:35 UTC
+
+- **#756:** head `d836b82228bc481fff209bc07a067ee12aeec8f0`, tree `31930eb8f4c3a86e6c70932443c7f4a1d4cf1ae3`, parent `8399fa04f54e7977d6a79a6774d1d26251bf6d4f`. Exactly 12 reviewed English fallback keys added to each Bemba/Nyanja raw overlay; no existing values or application behavior changed. These are fallback strings, not native-language translation certification. Local pinned checks: 52 i18n + 46 listing cases passed; reviewer independently repeated the eight catalog cases. ACCEPT receipt SHA256 `fb0f82b1b0f5722bc7e0943725d761eb9486859bae6c54af7e7a19a0a0d1bd6e`.
+- #756 [CI39146771637](https://github.com/KaluMuso/Convergeo/actions/runs/39146771637) SUCCESS, including JS Test and Build. Generated merge `84af7174995cb399b7ff680663761c97d1ce73cd` has the candidate tree, but actual checkout-log identity and hosted per-suite counts remain unverified. Grounding and COD execution steps were skipped; merge gate skipped. [Performance39146771626](https://github.com/KaluMuso/Convergeo/actions/runs/39146771626) failed at unchanged Chrome setup; measurements were skipped. Vendor/Admin Preview succeeded; Customer Preview failed with cause unverified.
+- **#757:** head `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf`, tree `474769379098f10c060487f9c48e54ba7cf0e7e5`, parent/audit correction `bd2fc15326fecfcfc4b97466b32c436daee794a5`. Exactly three approved incremental paths; eleven cumulative paths preserved. API audit-binding ACCEPT receipt SHA256 `c2caac50cb0d0871f41309d329e0e6df9007efc79efb16e85d6e4eee67a9f681`; Lighthouse test-only ACCEPT receipt SHA256 `f6c00d0165021f6196e8dbdda017eb0269a98a3814dd9b538299e36e81ff7903`. Coordinator read both complete receipts. Audit contracts passed 73 cases on each pinned runtime; 62 distinct performance cases passed in all six local/hosted-context runtime combinations.
+- #757 [CI39147563946](https://github.com/KaluMuso/Convergeo/actions/runs/39147563946) completed FAILURE solely at the dependency-audit job. Actual installed API inventory is now checked; the separate dependency correction has not been adopted. JavaScript audits passed. Python: 4,307 passed / 3,473 skipped / 200 warnings. Grounding execution and merge gate skipped; COD execution ran. Required skips remain obligations. Sensitive finding details remain in private evidence.
+- #757 [Performance39147563918](https://github.com/KaluMuso/Convergeo/actions/runs/39147563918) SUCCESS. Actual checkout `c93d964425a1387915ce45f1c761d6544981e084` and candidate share tree `474769379098f10c060487f9c48e54ba7cf0e7e5`. Hosted 62 adapter cases and three mobile axe cases passed. QA independently inspected all 15 raw Lighthouse reports: five URLs, three valid samples each, no missing/duplicate/invalid samples; all 25 assertions passed (24 blocking, one warning-level). Median performance/LCP: home 0.80/3480.804 ms; category 0.76/5621.263 ms; product 0.87/3649.028 ms; search 0.72/3851.740 ms; checkout 0.88/3640.627 ms. These satisfy this synthetic CI policy, not production or paid-commerce acceptance. [Artifact12144352335](https://github.com/KaluMuso/Convergeo/actions/runs/39147563918/artifacts/12144352335) SHA256 `cd8018d1d0e50baa047db535416d1f896aeffdae6bfaf900f9760105a4a80bde`.
+- **Separate API candidate:** unchanged `cad64b212e93b41cf18872c1c728e79b87509d7e`, tree `1dd4184d466ccd8cb8c9647f5d118462a2bdeb04`, parent #752, one `services/api/uv.lock` path, is published on `cursor/cg-r4-api-lock-qualification-local-20261018`. Draft creation is BLOCKED; no PR number or hosted acceptance claimed. Original 188 writer/50 reviewer cases, six wheel checks and 63-installed/65-registry audit inventories remain preserved. Distinct loopback JWKS addendum passed two writer and two reviewer executions; receipt SHA256 `65d0336a5559c53f947a51045cee1efa520152ea1abed22ac0c064d601765f78`. No adoption or runtime change occurred.
+
+### Preserved earlier-head evidence (superseded where identified above)
 
 - #752 [CI 38998232152](https://github.com/KaluMuso/Convergeo/actions/runs/38998232152): failed dependency audit; downstream API audit skipped. [Performance38998232160](https://github.com/KaluMuso/Convergeo/actions/runs/38998232160) passed on actual PR merge checkout `475e3b2e0609e97c31199a4a75e3d37d31c45979`.
 - #753 [CI39136081576](https://github.com/KaluMuso/Convergeo/actions/runs/39136081576) completed with dependency-audit failure; API audit and merge gate skipped. Python API: 4,307 passed / 3,473 skipped. [Performance39136081566](https://github.com/KaluMuso/Convergeo/actions/runs/39136081566) passed. Grounding and COD smoke job wrappers succeeded while their execution steps were skipped; these are not acceptance passes.
@@ -106,9 +117,9 @@ No ambiguous staging environment is used for signup, order or payment acceptance
 
 ## 7. Critical blockers and next actions
 
-1. Complete CI-001, independent review and fresh exact-source qualification; preserve audit and browser safeguards.
+1. Preserve the corrected CI audit/performance gates; obtain scoped approval for dependency adoption into a disposable integrated candidate and rerun exact-source qualification.
 2. Complete normal hosted verification for the reviewed layout and checkout candidates; resolve environment prerequisites only through separate authorized configuration.
-3. Diagnose #756 hosted test and browser-setup failures; keep its published source unchanged until any needed correction is scoped and approved.
+3. #756 locale defect is corrected; qualify and scope its inherited browser-setup blocker separately. Do not broaden the locale repair.
 4. Reconcile the divergent feature and loading branches additively; do not merge overlapping PRs wholesale.
 5. Review retained financial/merchant dependencies and migration/security boundaries before selecting an integrated candidate. Detailed sensitive findings are private.
 6. Retain existing KYC/auth/OTP/cart owners and obtain missing source-bound acceptance instead of repeating completed patches.
@@ -123,7 +134,7 @@ The existing CUST-002 owner is designated sole integration PREPARATION coordinat
 
 ## 8. Pending owner approvals and boundaries
 
-The owner has approved bounded isolated CI/CUST work, the nine-file OPS correction, unchanged layout draft publication, exact reviewed CUST draft publication, and this documentation-only tracker draft.
+The owner approved the two-locale OPS correction, two-file API audit binding correction, one-file Lighthouse test correction and unchanged API candidate draft publication on 18 October at 16:42 UTC. Existing draft source updates succeeded; API draft creation and metadata updates remain blocked by publication controls. No further retry or alternate publication route is authorized by this tracker. Earlier scoped CI/CUST/layout/tracker approvals remain bounded.
 
 Still separate: integration into #752 or another shared release branch; staging/production deployment or promotion; shared database mutations; real-money collection/refunds/payouts; customer messaging; credential/security changes and new spending. No such approval can be inferred from this file.
 
@@ -136,7 +147,7 @@ Additional protected paths, ambiguous product behavior, migration conflicts or p
 - Accelerated engineering sprint: 18–25 October2026.
 - Commercial GO/NO-GO decision: 26 October2026.
 - Contingency: 7 November2026.
-- Current bounded execution report: 18 October2026,18:22 Zambia (16:22 UTC).
+- Earlier bounded execution report delivered before 18 October2026,18:22 Zambia (16:22 UTC); latest approved correction checkpoint is recorded above.
 
 The decision requires one exact integrated source, all three portal/API/database bindings, required CI and independent reviews, provider-backed acceptance, operator readiness and recovery/rollback evidence. A target date does not waive a gate.
 
@@ -170,3 +181,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 15:39 UTC: recorded OPS draft #756, separate API lock qualification report, verified CI review custody and bounded consolidation/integration preparation. No source integration, configuration change or manual deployment.
 
 - 2026-10-18 16:20 UTC: recorded exact CI draft #757, terminal hosted results, verified separate API local review and OPS failure diagnosis. Independent bidirectional ancestry verification retained the #700–756 classification; no source-head ancestry correction was warranted. No merge, shared database change or manual deployment.
+
+- 2026-10-18 17:35 UTC: recorded independently reviewed OPS/CI draft corrections, terminal hosted checks and raw Lighthouse artifact verification. API branch published unchanged; draft creation and metadata updates remain blocked. Original ancestry proof preserved, with no recovered evidence supporting a correction. No source integration, shared database change or manual deployment.
