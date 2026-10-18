@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
-import test from "node:test";
+import test, { describe } from "node:test";
 import { fileURLToPath, URL } from "node:url";
 
 import {
@@ -15,6 +15,7 @@ import {
   INCOMPLETE_LOAD_WARNING,
   representativeRun,
   runPerformance,
+  sourceIdentity,
   validatePolicy,
 } from "./lighthouse-budget.mjs";
 
@@ -45,6 +46,29 @@ const metric = (rows, url, id) =>
       row.url === url &&
       (row.auditProperty ? `categories:${row.auditProperty}` : row.auditId) === id,
   );
+
+const hostedKeys = [
+  "GITHUB_ACTIONS",
+  "GITHUB_SHA",
+  "GITHUB_EVENT_PATH",
+  "GITHUB_EVENT_NAME",
+  "GITHUB_RUN_ID",
+  "GITHUB_RUN_ATTEMPT",
+];
+async function withLocalCollectorEnvironment(callback) {
+  const saved = hostedKeys.map((key) => [key, Object.hasOwn(process.env, key), process.env[key]]);
+  try {
+    for (const key of hostedKeys) delete process.env[key];
+    return await callback();
+  } finally {
+    for (const key of hostedKeys) delete process.env[key];
+    for (const [key, present, value] of saved) if (present) process.env[key] = value;
+  }
+}
+const runMockedPerformance = (cfg, options) =>
+  withLocalCollectorEnvironment(() => runPerformance(cfg, options));
+const mockedCases = [];
+const mockedTest = (name, callback) => mockedCases.push([name, callback]);
 
 test("the unchanged five-URL/three-run mobile policy and all 25 thresholds are retained", () => {
   assert.equal(config.ci.collect.numberOfRuns, 3);
@@ -167,14 +191,14 @@ for (const [name, mutate] of [
     (lhr) => (lhr.audits["largest-contentful-paint"].numericValue = Infinity),
   ],
 ])
-  test(`${name} blocks evaluation and collection without retry`, async () => {
+  mockedTest(`${name} blocks evaluation and collection without retry`, async () => {
     const rows = reports();
     mutate(rows[1]);
     assert.throws(() => evaluateAssertions(config, rows), /Incomplete required/);
     const cwd = await mkdtemp(join(tmpdir(), "lighthouse-required-metric-"));
     let calls = 0;
     try {
-      const result = await runPerformance(config, {
+      const result = await runMockedPerformance(config, {
         cwd,
         audit: async (url) => {
           const lhr = report(url);
@@ -203,7 +227,7 @@ for (const [name, mutate] of [
       await rm(cwd, { recursive: true, force: true });
     }
   });
-test("finite zero samples and equality medians complete all fifteen runs", async () => {
+mockedTest("finite zero samples and equality medians complete all fifteen runs", async () => {
   const rows = reports();
   rows.forEach((lhr, i) => {
     const limit = lhr.requestedUrl.endsWith("checkout") ? 7200 : 6500;
@@ -223,7 +247,7 @@ test("finite zero samples and equality medians complete all fifteen runs", async
   const cwd = await mkdtemp(join(tmpdir(), "lighthouse-zero-boundary-"));
   let calls = 0;
   try {
-    const result = await runPerformance(config, {
+    const result = await runMockedPerformance(config, {
       cwd,
       audit: async () => ({
         lhr: rows[calls++],
@@ -373,11 +397,11 @@ for (const scenario of [
   "wrong-version",
   "throw",
 ])
-  test(`collection exits and retained artifacts: ${scenario}`, async () => {
+  mockedTest(`collection exits and retained artifacts: ${scenario}`, async () => {
     const cwd = await mkdtemp(join(tmpdir(), "lighthouse-contract-"));
     let calls = 0;
     try {
-      const result = await runPerformance(config, {
+      const result = await runMockedPerformance(config, {
         cwd,
         audit: async (url, settings) => {
           calls++;
@@ -494,11 +518,11 @@ test("explicit missing/relative browser path fails before a launcher is construc
     assert.equal(state.options, undefined);
   }
 });
-test("cleanup failure retains the completed sample and fails collection", async () => {
+mockedTest("cleanup failure retains the completed sample and fails collection", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "lighthouse-cleanup-")),
     { dependencies } = adapterFixture("cleanup-failure");
   try {
-    const result = await runPerformance(config, {
+    const result = await runMockedPerformance(config, {
       cwd,
       audit: (url, settings) => auditWithChrome(url, settings, dependencies),
     });
@@ -536,13 +560,13 @@ test("actual CLI fails on a missing explicit browser and retains failure evidenc
     await rm(cwd, { recursive: true, force: true });
   }
 });
-test("invalid policy is retained as failure and never starts collection", async () => {
+mockedTest("invalid policy is retained as failure and never starts collection", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "lighthouse-policy-"));
   try {
     const cfg = structuredClone(config);
     cfg.ci.collect.numberOfRuns = 1;
     let calls = 0;
-    const result = await runPerformance(cfg, {
+    const result = await runMockedPerformance(cfg, {
       cwd,
       audit: async () => {
         calls++;
@@ -554,7 +578,121 @@ test("invalid policy is retained as failure and never starts collection", async 
       JSON.parse(await readFile(join(cwd, ".lighthouseci/run-summary.json"))).errors.length,
       1,
     );
+    assert.match(result.errors[0].message, /At least three integer runs/);
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }
+});
+
+for (const reject of [false, true])
+  mockedTest(
+    `mocked collector environment restores exact presence and values after ${reject ? "rejection" : "success"}`,
+    async () => {
+      await withLocalCollectorEnvironment(async () => {
+        process.env.GITHUB_ACTIONS = "";
+        process.env.GITHUB_SHA = "synthetic-sha";
+        process.env.GITHUB_RUN_ATTEMPT = "2";
+        const expected = hostedKeys.map((key) => [
+          key,
+          Object.hasOwn(process.env, key),
+          process.env[key],
+        ]);
+        const callback = async () => {
+          assert.ok(hostedKeys.every((key) => !Object.hasOwn(process.env, key)));
+          for (const key of hostedKeys) process.env[key] = "callback-created";
+          if (reject) throw new Error("synthetic callback rejection");
+          return "synthetic result";
+        };
+        if (reject)
+          await assert.rejects(
+            withLocalCollectorEnvironment(callback),
+            /synthetic callback rejection/,
+          );
+        else assert.equal(await withLocalCollectorEnvironment(callback), "synthetic result");
+        assert.ok(
+          expected.every(
+            ([key, present, value]) =>
+              Object.hasOwn(process.env, key) === present && process.env[key] === value,
+          ),
+        );
+      });
+    },
+  );
+
+test("hosted source identity binds a real checkout and rejects incomplete or inconsistent identity", async () => {
+  const repository = fileURLToPath(new URL("../../", import.meta.url));
+  const local = await sourceIdentity(repository, {});
+  assert.match(local.checkout_sha, /^[0-9a-f]{40}$/);
+  assert.match(local.checkout_tree, /^[0-9a-f]{40}$/);
+  const cwd = await mkdtemp(join(tmpdir(), "lighthouse-hosted-identity-"));
+  try {
+    const event = join(cwd, "event.json"),
+      candidate = "b".repeat(40);
+    await writeFile(event, JSON.stringify({ pull_request: { head: { sha: candidate } } }));
+    const env = {
+      GITHUB_ACTIONS: "true",
+      GITHUB_SHA: local.checkout_sha,
+      GITHUB_EVENT_PATH: event,
+      GITHUB_EVENT_NAME: "pull_request",
+      GITHUB_RUN_ID: "12345",
+      GITHUB_RUN_ATTEMPT: "2",
+    };
+    assert.deepEqual(await sourceIdentity(repository, env), {
+      checkout_sha: local.checkout_sha,
+      checkout_tree: local.checkout_tree,
+      candidate_sha: candidate,
+      run_id: "12345",
+      run_attempt: "2",
+    });
+    await assert.rejects(sourceIdentity(cwd, env), /Hosted source identity/);
+    for (const key of ["GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT"])
+      await assert.rejects(
+        sourceIdentity(repository, { ...env, [key]: "" }),
+        /Hosted source identity/,
+      );
+    await assert.rejects(
+      sourceIdentity(repository, { ...env, GITHUB_SHA: "c".repeat(40) }),
+      /Hosted source identity/,
+    );
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+mockedTest(
+  "default production collection still rejects unavailable hosted identity before auditing",
+  async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "lighthouse-default-hosted-"));
+    try {
+      const event = join(cwd, "event.json");
+      await writeFile(event, JSON.stringify({ pull_request: { head: { sha: "b".repeat(40) } } }));
+      await withLocalCollectorEnvironment(async () => {
+        Object.assign(process.env, {
+          GITHUB_ACTIONS: "true",
+          GITHUB_SHA: "a".repeat(40),
+          GITHUB_EVENT_PATH: event,
+          GITHUB_EVENT_NAME: "pull_request",
+          GITHUB_RUN_ID: "12345",
+          GITHUB_RUN_ATTEMPT: "2",
+        });
+        let calls = 0;
+        const result = await runPerformance(config, {
+          cwd,
+          audit: async () => {
+            calls++;
+          },
+        });
+        assert.equal(result.exitCode, 1);
+        assert.equal(calls, 0);
+        assert.equal(result.manifest.length, 0);
+        assert.match(result.errors[0].message, /Hosted source identity/);
+      });
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  },
+);
+
+describe("mocked collection fixtures and environment controls", { concurrency: false }, () => {
+  for (const [name, callback] of mockedCases) test(name, callback);
 });
