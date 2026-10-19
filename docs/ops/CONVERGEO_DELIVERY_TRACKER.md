@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 09:40 UTC** (19 October 11:40 Zambia).
+Updated: **2026-10-19 10:35 UTC** (19 October 12:35 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: the owner approved the exact twelve-file local Customer correction on 19 October. CUST-002 produced local candidate `b6f9742d93bf6f072bced5bdc8b60a9780c66274`; independent Customer and financial reviews are in progress. The Admin fixture remains independently accepted for source only; a separate three-path CI proposal awaits approval. QA adoption remains preparation only. Existing API/Chrome draft-publication holds and protected source ownership remain preserved. No combined release branch, shared database change or deployment has been authorized.
+Current source-writing state: the Customer twelve-file correction and four-file review-fix delta are preserved locally at `12e70ad5cb1217c7e31e37eb5c66db7a744133ef`. Both corrective fixes have source-only acceptance; overall Customer acceptance remains REVISE pending an authoritative product-payment context. The owner has explicitly handed two F2 payment-status paths to the existing API/runtime owner for isolated implementation and tests. CI-001 is investigating the remaining #750 hosted gates read-only. The separate three-path Admin CI proposal awaits approval; QA adoption remains preparation only. Existing API/Chrome publication holds remain preserved. No combined release branch, shared database change or deployment has been authorized.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,31 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October progressive-delivery checkpoint — 10:35 UTC
+
+- The owner approved two parallel delivery tracks: small independently qualified progressive production candidates, and the complete integrated marketplace candidate. Production-triggering master merges and deployments still require exact-target owner approval.
+- Customer local head `12e70ad5cb1217c7e31e37eb5c66db7a744133ef`, tree `564ff354d644dd19c836f00feadb82623ff8e2e7`, preserves parent `b6f9742d93bf6f072bced5bdc8b60a9780c66274`. Independent source review reconstructed identities and accepted the two corrective fixes only. Node 22.23.3 / pnpm 9.15.4 receipts show 116 focused and 1,136 full-suite passes, plus static checks and hooks. Overall verdict remains **REVISE**: the product-card authority dependency is not resolved by mocks.
+- Explicit F2 handoff: existing API/runtime task `01a115f1-0c0f-7418-97aa-66b47fc2406d` now exclusively owns isolated changes to `services/api/app/routers/payment_status.py` and `services/api/tests/test_payment_status.py` on #718 `ae0a219199cccc341dca03df8cfce85153b7a312`. Preserve historical F2 commits `e792ad2ac9e57d2641253790361efc1feb241a8c` and `703dae6d35a6ef08eeb972b11b8461bd2d996002`; no definitive original task ID was recovered. The new read-only authority contract requires financial and independent API review; additional paths, publication and integration are not authorized.
+- Existing [#750](https://github.com/KaluMuso/Convergeo/pull/750) is the correct progressive hotfix unit; no duplicate PR is needed. Head `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c` is one ahead/one behind current master, with the four-file correction absent from master and byte-identical in #746.
+- Independent verdict **ACCEPT_BOUNDED_TELEMETRY_STUBBED_MOCK_QUALIFICATION**: 25 exact cases pass, zero failures/errors/skips or prohibited I/O; all disposable resources cleaned up. Receipt SHA256 `e7bb160ba5c67b0f89c6e832f56aa05c40c7a058171256a95c2f9da106bf4771`. The original strict-isolation failure remains preserved. This does not qualify real telemetry, target image/runtime, provider/database behavior or production.
+- #750's remaining hosted gates include security/dependency checks and release certification in [run 38624266232](https://github.com/KaluMuso/Convergeo/actions/runs/38624266232). Historical image-build evidence is distinct from current release acceptance. Runtime compatibility, restoration procedure and exact-target approval remain open; sensitive operational evidence stays private.
+- The #753 two-file menu delta is source-compatible with master and changes no API calls. Customer production is a six-path successor of master, so its accepted live behavior must be preserved or explicitly reconciled before any master-based release. Vendor/Admin alignment and effective deployment behavior remain part of the release gate. Full branch-protection policy read is permission-limited; no bypass is authorized.
+- The 15-open-PR register was refreshed at 10:27 UTC: 14 drafts and one non-draft. All are retained pending verified integration or replacement. The owner-controlled complete register contains full source identities, path comparison, reviews and dependencies; the wave summary below is a proposal, not merge approval.
+
+| Wave | PRs | Proposed treatment / blocking condition |
+|---|---|---|
+| A0 | Release alignment | Preserve live Customer behavior and verify effective production/rollback settings before master changes. |
+| A1 | #750 | First progressive API candidate after exact-source CI/security, compatibility and restoration gates. |
+| A2 | #753 | Isolated menu delta only; exclude unrelated auth/phone source and qualify a master-compatible composition. |
+| B1 | #718, #723, #744, #746 | Preserve financial/merchant/auth foundation; resolve protected path conflicts with existing owners. |
+| B2 | #752, #754 and local Customer successor | Preserve loading/security improvements; restore all paid-domain positive paths through reviewed authority contracts. |
+| B3 | #756 | Preserve Vendor/Admin donor; required performance, Preview and cross-app acceptance remain. |
+| B4 | #736, #749, #751, #757 | Retain diagnostics and CI/dependency work; exact donor deltas, audit obligations and publication holds remain. |
+| B5 | #743 | Retain paid-domain settlement/drill obligations; metadata passes are not provider acceptance. |
+| C0 | #755 | Maintain this single-editor documentation draft; no application-release authority. |
+
+No PR or branch has been closed or deleted. No master/staging merge, shared database operation, production deployment or money action occurred.
 
 ### 19 October implementation checkpoint — 09:40 UTC
 
@@ -251,3 +276,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 08:41 UTC: recorded the local Admin fixture correction and independent source-only review, exact Customer approval package, expanded QA adoption prerequisites and bounded runtime diagnosis. Preserved all publication, integration and production boundaries.
 
 - 2026-10-19 09:40 UTC: recorded the authorized local Customer candidate and pending independent reviews, bounded Admin CI proposal, source-only hotfix review and unresolved qualification. Preserved private operational details and excluded unrelated source work from release composition.
+
+- 2026-10-19 10:35 UTC: recorded reviewed Customer fixes, explicit two-file F2 handoff, independently accepted bounded hotfix tests, progressive-release alignment and the current 15-PR wave proposal. Preserved all production and integration approval gates.
