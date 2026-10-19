@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 19:03 UTC** (19 October 21:03 Zambia).
+Updated: **2026-10-19 19:07 UTC** (19 October 21:07 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -233,7 +233,7 @@ Required skipped tests remain obligations. Review acceptance is scoped to its ex
 - Existing automatic Preview builds reached terminal states on the exact head: Vendor READY, Admin READY, Customer ERROR due to a build-time configuration prerequisite. Source guards were independently confirmed unchanged. READY is build evidence only, not authenticated commerce acceptance. Supabase Preview was SKIPPED. No environment/settings changes or runtime mutations were made.
 - Local acceptance remains 1,257 Customer passes and independently accepted 181-case bounded mocked API execution. Earlier failed isolation qualification remains failed; actual database/provider/browser and financial-concurrency acceptance remain outstanding.
 - Admin's three-path PostgreSQL qualification implementation still lacks explicit scoped approval. CI-001's inactive certification source remains reported accepted locally with full archive custody held. QA has mapped hosted evidence requirements; all 29 end-to-end cases remain BLOCKED_NOT_RUN.
-- The smallest fully specified next qualification unit is the existing Admin/CI three-path PG17.6 proposal. The next Vendor/Admin/auth/merchant production residual manifest remains unresolved; no wholesale branch adoption or new combined release branch is authorized.
+- The existing Admin/CI three-path PG17.6 proposal remains the next fully specified Admin qualification unit. A separate two-path Vendor QuickList production residual has now been recovered: compose only the single-flight submission guard and pending/retry regressions from reviewed `8399fa04f54e7977d6a79a6774d1d26251bf6d4f` (preserved in #756 `d836b82228bc481fff209bc07a067ee12aeec8f0`) onto Unit 1. Paths: `apps/vendor/app/[locale]/listings/new/_components/quick-list-form.tsx` and `apps/vendor/app/[locale]/listings/new/listings.test.ts`. Target preimages: `f3a866e8a1b18c107a570c00a363c3784a207ca4` and `dd6f3fe785e2a5114352215793b1a9db26f261d6`; donor blobs: `d9f236354a33e62fe759005292ee1667fe979b10` and `4440ad5ef01fee7f8fff6a0828cc4c9523f28b5f`. Existing OPS ownership and independent merchant review are required. Preserve the target's draft-only/domain/category/wholesale/validation behavior and all fourteen Unit 1 blobs. This prevents duplicate pending client dispatch only; server-side exactly-once creation is not established. Proposed isolated implementation/test scope awaits owner approval; no code, branch or publication was created. Wider protected Admin/auth/merchant integration remains unresolved.
 
 ## 6. Component integration status
 
@@ -340,3 +340,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 13:46 UTC: recorded independently verified bounded mock execution for the unchanged fourteen-path candidate and proposed exact draft publication, preserving all prior failures and real-runtime obligations.
 
 - 2026-10-19 19:03 UTC: recorded exact Unit 1 branch publication, independently verified approval-control blockage of draft creation, terminal automatic Preview outcomes and unrun hosted acceptance. All existing release and mutation boundaries preserved.
+
+- 2026-10-19 19:07 UTC: recovered the exact two-path Vendor single-flight residual and requested isolated implementation/test approval, preserving target protections and wider integration holds.
