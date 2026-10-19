@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 13:12 UTC** (19 October 15:12 Zambia).
+Updated: **2026-10-19 13:46 UTC** (19 October 15:46 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: the owner-approved fourteen-path local Customer/API unit is complete at `e58450010466cdd883b8d8152942d5c6918ebe57`, with fresh independent API and financial source-only acceptance. Backend execution qualification is HELD while the existing owner and reviewer resolve a bounded isolation-harness dependency; no application source expansion is authorized. CI-001 reports the approved four-file inactive certification implementation complete at `df226733abcf8b24fc1a640d83308700ab9a7d9b`; full artifact verification remains outstanding. QA has inspected the exact combined source, but all 29 end-to-end cases remain BLOCKED_NOT_RUN. Admin's three-path CI implementation awaits separate approval. Existing API/Chrome publication holds remain preserved; no shared-branch integration or deployment occurred.
+Current source-writing state: the owner-approved fourteen-path local Customer/API unit is complete at `e58450010466cdd883b8d8152942d5c6918ebe57`, with fresh independent API and financial source-only acceptance. The exact 181-case API lane now has independent ACCEPT_BOUNDED_MOCK_EXECUTION; real-runtime qualification remains outstanding. No application source expansion is authorized. CI-001 reports the approved four-file inactive certification implementation complete at `df226733abcf8b24fc1a640d83308700ab9a7d9b`; full artifact verification remains outstanding. QA has inspected the exact combined source, but all 29 end-to-end cases remain BLOCKED_NOT_RUN. Admin's three-path CI implementation awaits separate approval. Existing API/Chrome publication holds remain preserved; no shared-branch integration or deployment occurred.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,15 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October bounded execution closure — 13:46 UTC
+
+- Exact local candidate `e58450010466cdd883b8d8152942d5c6918ebe57` / tree `7bcd06e33f09460dfb5446649c2417ab22ccf3d1` is unchanged. Independent execution verdict: **ACCEPT_BOUNDED_MOCK_EXECUTION**. Receipt SHA256 `4337ec3bd1c7d827f5741498b1dc0b3d9275668da519f63d25ec13a51fbf6285`; private execution packet SHA256 `b9ca98156a1331cd40bdd84f535858dfb95e3e4950549934cf025caf2afcc7bf`.
+- All 99 execution manifest entries independently verified. Seven control modes with ten probes rejected as required before the focused lane. Actual result: 181 passes, zero failures/errors/skips/xfails; 169 validated request-scope calls, twelve direct-function zero-call cases, 181 alias restorations and 543 passing phase reports. Process/session/wrapper exits are zero and no prohibited I/O occurred. All twenty-three source and seven harness bindings remained unchanged.
+- This uses a reviewed external request-telemetry alias spy only; actual telemetry SDK behavior is excluded. Original failed isolation runs remain preserved, and the older inaccessible 165-case archive remains separately held. Neither historical failure nor missing evidence was relabeled passed.
+- Fresh combined source review and independently inspected 1,257-case Customer evidence remain as recorded below. Mock-only acceptance does not qualify real authentication/HTTP/PostgREST, shared database/provider/browser journeys, financial idempotency/concurrency or production.
+- A draft child publication of the unchanged local candidate targeting #718's source branch `codex/coordinator-ci-review-20261001` is proposed and awaits explicit owner approval. Target head was rechecked at `ae0a219199cccc341dca03df8cfce85153b7a312`. Existing deployment guards must remain intact. No draft publication, shared branch merge or release was performed.
+- CI certification artifact custody, full commercial integration, twenty-nine QA journeys and protected migration/financial/merchant acceptance remain outstanding.
 
 ### 19 October bounded integration checkpoint — 13:12 UTC
 
@@ -317,3 +326,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 12:19 UTC: recorded Customer/API source acceptance, independently closed ancestry evidence, held backend execution custody, and the bounded fourteen-path local integration proposal. No source composition or release operation.
 
 - 2026-10-19 13:12 UTC: recorded the authorized fourteen-path local unit, fresh combined-source reviews, inspected Customer bridge evidence, held backend execution, exact-source QA mapping and reported inactive certification implementation. Existing public/private evidence boundaries preserved.
+
+- 2026-10-19 13:46 UTC: recorded independently verified bounded mock execution for the unchanged fourteen-path candidate and proposed exact draft publication, preserving all prior failures and real-runtime obligations.
