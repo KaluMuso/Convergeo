@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-18 22:03 UTC** (19 October 00:03 Zambia).
+Updated: **2026-10-19 08:41 UTC** (19 October 10:41 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: both approved correction batches are complete and published to their existing drafts. No application/tooling source writer is currently active; the latest isolated API composition is qualified locally, while publication and hosted Chrome qualification remain blocked. The separate API branch is published unchanged, but draft creation and PR metadata updates encountered publication controls and remain stopped. CUST-002 continues integration preparation only; QA-004 inspected hosted performance artifacts read-only. Existing protected owners and their outstanding dispositions remain preserved.
+Current source-writing state: the earlier CI/OPS correction batches remain published to their existing drafts. On 19 October the retained Admin owner prepared a one-file local test-fixture correction, independently accepted for source only; the retained CI owner is coordinating the separate workflow prerequisite. The proposed twelve-file Customer correction awaits its explicit implementation approval. QA adoption remains preparation only. Existing API/Chrome draft-publication holds and protected source ownership remain preserved. No combined release branch, shared database change or deployment has been authorized.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,17 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October execution checkpoint — 08:41 UTC
+
+- CUST-002 reverified #718 base `ae0a219199cccc341dca03df8cfce85153b7a312`, tree `933009940823e294f5d3777d03d85bbd52775cce`, and the exact six-production/six-test correction manifest. Implementation remains pending scoped approval. Financial review must bind the resulting patch; no new Customer tests ran.
+- Admin owner `01a12011-465c-746e-a676-2bc9a0c2f060` prepared local commit `b97b3a1aff27b2cf63a37780e7093bd0a64adcc8`, tree `ed7e797e2495efc962d96da593c0d07becf0a917`, based on #746. Only `services/api/tests/test_configurable_admin_roles.py` changed. PG16 default and exact PG17.6 opt-in are preserved with existing test assertions. Normal commit hooks passed; nothing was pushed.
+- Independent verdict: **ACCEPT_FOR_SOURCE_ONLY**. Review verified archive/source hashes, patch reconstruction and unchanged non-fixture AST nodes. Receipts show 14 passed, 153 deselected, zero skipped; 167 identities collected; 16 offline guard probes passed. Database, pgTAP, concurrency and hosted acceptance remain **NOT_RUN**. Target-isolation qualification remains separate. Detailed review limitations are retained privately.
+- CI-001 retains exclusive `.github/workflows/ci.yml` ownership and is preparing the matching bounded workflow qualification. A qualified PG17.6 test image and the full database acceptance evidence remain prerequisites; no image or shared database changes are implied.
+- QA-004 recovered its accepted revision unchanged. The concrete adoption proposal now identifies eleven paths: six specs, the existing classification registry, a preflight helper, a required-case adapter, a preflight self-test and the existing matrix self-test. Additional ownership and candidate-bound scope require approval. All 29 runtime cases remain **BLOCKED_NOT_RUN**; no browser or provider journeys ran.
+- The smallest proposed first integration unit is the two non-auth category-menu files from #753 `8825b5e4e2e30290f99a243c88893f8c96a63470`. Their #718 preimages match the donor base. This is a proposal only, excludes the phone form and does not qualify a release.
+- Read-only operational diagnosis completed through the retained runtime owner. Operational acceptance remains open; evidence and configuration findings are preserved privately. No job replay, account provisioning or production change occurred.
+- Fresh 06:48 UTC reads found #754/#755/#756/#757 unchanged, open draft and unmerged. #754 and #755 dependency checks fail; #755 also has an unexplained Gitleaks failure. #756 main CI passes but Chrome setup prevents performance execution. #757 API audit fails while performance succeeds. Customer Preview checks fail on #754/#756/#757. Passing wrappers and skipped required executions are not runtime acceptance.
 
 ### Overnight preparation closure — 22:03 UTC
 
@@ -226,3 +237,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 21:44 UTC: recorded protected path-resolution and Customer contract preparation, original reviewer obligations and QA preparation boundaries. All donor publication holds retained; no application implementation, integration or runtime operation.
 
 - 2026-10-18 22:03 UTC: recorded recovered Admin owner and independently accepted QA preparation revision, preserving all unexecuted-test, source-ownership and approval boundaries. No integrated source or runtime change.
+
+- 2026-10-19 08:41 UTC: recorded the local Admin fixture correction and independent source-only review, exact Customer approval package, expanded QA adoption prerequisites and bounded runtime diagnosis. Preserved all publication, integration and production boundaries.
