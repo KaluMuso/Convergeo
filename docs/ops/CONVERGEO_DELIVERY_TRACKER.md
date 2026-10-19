@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 19:39 UTC** (19 October 21:39 Zambia).
+Updated: **2026-10-19 19:57 UTC** (19 October 21:57 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: the owner-approved fourteen-path local Customer/API unit is complete at `e58450010466cdd883b8d8152942d5c6918ebe57`, with fresh independent API and financial source-only acceptance. The exact 181-case API lane now has independent ACCEPT_BOUNDED_MOCK_EXECUTION; real-runtime qualification remains outstanding. No application source expansion is authorized. CI-001 reports the approved four-file inactive certification implementation complete at `df226733abcf8b24fc1a640d83308700ab9a7d9b`; full artifact verification remains outstanding. QA has inspected the exact combined source, but all 29 end-to-end cases remain BLOCKED_NOT_RUN. Admin's three-path CI implementation awaits separate approval. Existing API/Chrome publication holds remain preserved; no shared-branch integration or deployment occurred.
+Current source-writing state: Unit 1 and Unit 2 remain accepted at their recorded local evidence levels, with publication/runtime limitations unchanged. The owner approved a bounded overnight local implementation queue on 19 October at 19:54 UTC. Writer slot 1: existing Admin owner prepares only the two PG17 wrapper/test files on the independently reviewed Admin source. Writer slot 2: existing QA-004 owner prepares its nine test-only paths after verifying exact Unit 2 compatibility. CI retains exclusive ownership of `.github/workflows/ci.yml` and the two shared QA registry/matrix paths; those edits wait for a separate free writing window. CI certification qualification and OPS residual integration preparation proceed read-only. No publication, issuance activation, shared database execution, deployment or money operations are authorized by this overnight queue.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -244,6 +244,16 @@ Required skipped tests remain obligations. Review acceptance is scoped to its ex
 - Packet SHA256 `f7411a64dfc7e3909e333b8f6d85e792f33157ca0f48bc1fb1c07a1aa1496179`; patch `561be7fd6a38ebb6e5592429da1da08c433b4aeab9ce35f3a179a91948933f87`; merchant review `1bcdefb4fe0f951b19f7c35af424500703386a2fbe5e5414ffa545a92b12b6bf`; coordinator receipt `81da95e3707c59c46f08ca5a117a1a57f514f7121b3dcadc017b9526f9cd2266`.
 - Hosted CI, browser/API/database/provider and deployed qualification are NOT_RUN. The frontend guard does not establish server-side exactly-once listing creation. Publication holds, Admin three-path scope approval, certification custody and wider protected integration requirements remain open. No application source writers remain active after this completion.
 
+
+### 19 October 19:57 UTC — bounded overnight queue
+
+- Execution window ends 20 October at 09:00 Zambia time. The single morning handoff is enabled for that exact date/time; results must be evidence-backed and consolidated once.
+- Admin owner `01a12011-465c-746e-a676-2bc9a0c2f060`, turn `01a155bb-d62f-7606-a379-79683a1c06bd`: verify base `b97b3a1aff27b2cf63a37780e7093bd0a64adcc8` / tree `ed7e797e2495efc962d96da593c0d07becf0a917`; implement only `scripts/ci/run_admin_rbac_pg17.py` and `scripts/ci/test_run_admin_rbac_pg17.py`. CI-owned workflow follows separately. Preserve PG16 controls, exact PG17.6 qualification, 167 RBAC identities, thirteen SQL contracts and last-superadmin safeguards. Offline tests and independent review only; database-mutating qualification remains unapproved.
+- QA-004 turn `01a155bc-01ee-7714-9a08-f9ba95258a15`: verify exact Unit 2 source/tree and compatible documented nine-path subset before writing. Six specs, fail-closed preflight, required-case adapter and browser-free control tests are locally authorized. No new dependencies. CI retains shared registry/matrix ownership. All twenty-nine actual journeys remain BLOCKED_NOT_RUN; import/collection side effects must be excluded before safe helper execution.
+- CI-001 turn `01a155bc-6073-7121-9259-dcfdcd09e0c1` prepares exact workflow/registry preimages and dependencies read-only while both writer slots are occupied. Existing inactive certification source and evidence are preserved; no issuance activation, release-control replacement or blocked transfer retry.
+- OPS-003 turn `01a155bc-b780-7359-bf53-4e87ef4b8c7e` prepares the smallest residual application manifest read-only, preserving completed Unit 2 and all protected financial/auth/cart/KYC ownership. No unrestricted donor merge.
+- Task starts are verified admissions, not completion or passing-test claims. New results require exact commit/tree/patch custody and independent review. Blocked tasks release their writer slot when safe; no equivalent failed attempts or competing owners. Publication holds remain effective.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -355,3 +365,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 19:22 UTC: recorded explicit Unit 2 two-path local implementation approval and retained OPS-003 exclusive ownership, with QA read-only preparation and all publication/production boundaries preserved.
 
 - 2026-10-19 19:39 UTC: recorded independently verified Unit 2 local source, regression and review evidence; preserved all Unit 1 blobs and publication/runtime boundaries.
+
+- 2026-10-19 19:57 UTC: recorded newly approved overnight local Admin/QA implementation windows, exclusive CI ownership, read-only residual/certification preparation and enabled next-morning report. No new completion or deployment claimed.
