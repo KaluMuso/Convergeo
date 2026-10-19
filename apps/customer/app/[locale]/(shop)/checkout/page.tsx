@@ -3,7 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
-import { CheckoutShell } from "./_components/step-fulfilment";
+import { CheckoutShell, ExistingCheckoutUnavailable } from "./_components/step-fulfilment";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ group?: string | string[]; retry?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export function generateStaticParams() {
@@ -182,6 +182,16 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const labels = buildCheckoutLabels(locale, messages);
   const query = await searchParams;
+  // Legacy aliases and caller hints are not evidence of an owned product cart.
+  // Only the existing ticket loader can classify a group here. An arbitrary
+  // session has no domain-aware backend retrieval contract at this boundary.
+  if (query && ["session", "kind", "job"].some((name) => Object.hasOwn(query, name))) {
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <ExistingCheckoutUnavailable labels={labels} />
+      </div>
+    );
+  }
   const isTicketCheckout = query && Object.hasOwn(query, "group");
   const ticketMessages = isTicketCheckout ? await loadNamespace(locale as Locale, "events") : null;
   const ticketT = ticketMessages

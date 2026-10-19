@@ -1,14 +1,15 @@
 "use client";
 
-import { ApiError, createApiClient } from "@vergeo/config";
+import { createApiClient } from "@vergeo/config";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
-import { useSession } from "../../../../../../lib/customer-session";
+import { customerAuth, useSession } from "../../../../../../lib/customer-session";
+import { CHECKOUT_UUID } from "../../../../account/jobs/[id]/_components/service-payments";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
 type WidgetCustomer = {
@@ -102,63 +103,268 @@ function loadScript(src: string): Promise<void> {
 export default function CardCheckoutPage() {
   const params = useParams<{ locale: string; paymentId: string }>();
   const searchParams = useSearchParams();
-  const locale = params.locale;
-  const paymentId = params.paymentId;
+  const identity = useSession();
+  const query = searchParams.toString();
+  return (
+    <IdentityCardCheckoutPage
+      key={`${identity.generation}:${identity.session?.user.id}:${params.locale}:${params.paymentId}:${query}`}
+      locale={params.locale}
+      paymentId={params.paymentId}
+      query={query}
+      authGeneration={identity.generation}
+      userId={identity.session?.user.id}
+      sessionLoading={identity.loading}
+    />
+  );
+}
+
+type CardContext = {
+  kind: "product" | "service" | "ticket";
+  jobId?: string;
+  paymentId: string;
+  groupId: string;
+  orderId: string;
+  amountNgwee: number;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && CHECKOUT_UUID.test(value);
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function majorAmount(amountNgwee: number): string {
+  const digits = String(amountNgwee).padStart(3, "0");
+  return `${digits.slice(0, -2)}.${digits.slice(-2)}`;
+}
+
+// This projection binds navigation to the exact authenticated payment. Resume and
+// verify retain financial authority; URL hints never select the checkout domain.
+function resolveCardContext(value: unknown, paymentId: string, buyerId: string): CardContext {
+  const context = isRecord(value) ? value.checkout_context : null;
+  if (
+    !isRecord(value) ||
+    !isRecord(context) ||
+    context.version !== 1 ||
+    !isUuid(context.buyer_id) ||
+    context.buyer_id !== buyerId ||
+    context.payment_id !== paymentId ||
+    value.payment_id !== paymentId ||
+    !isUuid(context.checkout_group_id) ||
+    context.checkout_group_id !== value.checkout_group_id ||
+    !Array.isArray(context.order_ids) ||
+    context.order_ids.length === 0 ||
+    !context.order_ids.every(isUuid) ||
+    new Set(context.order_ids).size !== context.order_ids.length ||
+    !isUuid(value.order_id) ||
+    !context.order_ids.includes(value.order_id) ||
+    context.rail !== "card" ||
+    value.rail !== "card" ||
+    context.cod !== false ||
+    value.cod !== false ||
+    context.currency !== "ZMW" ||
+    !isPositiveInteger(context.amount_ngwee) ||
+    context.amount_ngwee !== value.amount_ngwee
+  )
+    throw new Error("invalid_card_payment_context");
+
+  let jobId: string | undefined;
+  switch (context.kind) {
+    case "product": {
+      if (
+        "service" in context ||
+        "ticket" in context ||
+        !Array.isArray(context.orders) ||
+        context.orders.length !== context.order_ids.length
+      )
+        throw new Error("invalid_product_context");
+      const orders = new Set<string>();
+      const items = new Set<string>();
+      for (const order of context.orders) {
+        if (
+          !isRecord(order) ||
+          !isUuid(order.order_id) ||
+          !context.order_ids.includes(order.order_id) ||
+          orders.has(order.order_id) ||
+          !Array.isArray(order.lines) ||
+          order.lines.length === 0
+        )
+          throw new Error("invalid_product_order");
+        orders.add(order.order_id);
+        for (const line of order.lines) {
+          if (
+            !isRecord(line) ||
+            !isUuid(line.order_item_id) ||
+            items.has(line.order_item_id) ||
+            line.item_kind !== "product" ||
+            !isUuid(line.listing_id) ||
+            ("product_id" in line && !isUuid(line.product_id))
+          )
+            throw new Error("invalid_product_line");
+          items.add(line.order_item_id);
+        }
+      }
+      break;
+    }
+    case "service": {
+      const service = context.service;
+      if (
+        "orders" in context ||
+        "ticket" in context ||
+        !isRecord(service) ||
+        !isUuid(service.job_id) ||
+        !isUuid(service.obligation_id) ||
+        (service.leg !== "deposit" && service.leg !== "balance") ||
+        context.order_ids.length !== 1 ||
+        service.order_id !== context.order_ids[0] ||
+        service.obligation_amount_ngwee !== context.amount_ngwee ||
+        service.current_payment_id !== paymentId
+      )
+        throw new Error("invalid_service_context");
+      jobId = service.job_id;
+      break;
+    }
+    case "ticket": {
+      const ticket = context.ticket;
+      if (
+        "orders" in context ||
+        "service" in context ||
+        !isRecord(ticket) ||
+        context.order_ids.length !== 1 ||
+        ticket.order_id !== context.order_ids[0] ||
+        !Array.isArray(ticket.lines) ||
+        ticket.lines.length !== 1
+      )
+        throw new Error("invalid_ticket_context");
+      const line: unknown = ticket.lines[0];
+      if (
+        !isRecord(line) ||
+        !isUuid(line.order_item_id) ||
+        !isUuid(line.ticket_type_id) ||
+        !isUuid(line.instance_id) ||
+        !isPositiveInteger(line.qty) ||
+        !isPositiveInteger(line.unit_price_ngwee)
+      )
+        throw new Error("invalid_ticket_line");
+      // The line is the subtotal. The server's full charge also binds stored
+      // buyer-paid fees; do not recalculate fees or equate these two amounts.
+      break;
+    }
+    default:
+      throw new Error("unknown_card_context");
+  }
+  return {
+    kind: context.kind,
+    jobId,
+    paymentId,
+    groupId: context.checkout_group_id,
+    orderId: value.order_id,
+    amountNgwee: context.amount_ngwee,
+  };
+}
+
+function IdentityCardCheckoutPage({
+  locale,
+  paymentId,
+  query,
+  authGeneration,
+  userId,
+  sessionLoading,
+}: {
+  locale: string;
+  paymentId: string;
+  query: string;
+  authGeneration: number;
+  userId?: string;
+  sessionLoading: boolean;
+}) {
   const t = useTranslations("checkout.card");
   const funding = useTranslations("services.funding");
-  const { session, loading: sessionLoading } = useSession();
 
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
-  const widgetOpened = useRef(false);
-
-  const checkoutPaymentPath = useMemo(() => {
-    const group = searchParams.get("group");
-    return group &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
-      ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
-      : `/${locale}/checkout`;
-  }, [locale, searchParams]);
-  const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
+  // Context survives return handling independently of the mutating widget-session GET.
+  const [context, setContext] = useState<CardContext | null>(null);
+  const contextRef = useRef<CardContext | null>(null);
+  const active = useRef(false);
+  const verifyInFlight = useRef<Promise<VerifyResult | null> | null>(null);
+  const widgetCallbackHandled = useRef(false);
+  const isCurrent = useCallback(() => {
+    const auth = customerAuth.snapshot();
+    return (
+      active.current &&
+      !auth.loading &&
+      !auth.error &&
+      auth.generation === authGeneration &&
+      !!userId &&
+      auth.session?.user.id === userId
+    );
+  }, [authGeneration, userId]);
+  const getToken = useCallback(
+    () => (isCurrent() ? (customerAuth.snapshot().session?.access_token ?? null) : null),
+    [isCurrent],
+  );
+  const jobPath =
+    context?.kind === "service"
+      ? `/${locale}/account/jobs/${encodeURIComponent(context.jobId!)}`
+      : null;
+  const checkoutPaymentPath =
+    jobPath ??
+    (context?.kind === "ticket"
+      ? `/${locale}/checkout?group=${encodeURIComponent(context.groupId)}&retry=1`
+      : null);
+  const ordersPath = `/${locale}/account/orders`;
 
   const verifyReturn = useCallback(
-    async (clientStatus: "success" | "failed" | "closed" | "pending") => {
-      if (!session?.access_token) {
-        setViewState("error");
-        return null;
-      }
+    (clientStatus: "success" | "failed" | "closed" | "pending"): Promise<VerifyResult | null> => {
+      if (!isCurrent() || !contextRef.current) return Promise.resolve(null);
+      if (verifyInFlight.current) return verifyInFlight.current;
       const apiBase = getApiBaseUrl();
       if (!apiBase) {
         setViewState("error");
-        return null;
+        return Promise.resolve(null);
       }
       setViewState("verifying");
       const client = createApiClient({
         baseUrl: apiBase,
-        getToken: () => session.access_token,
+        getToken,
       });
-      try {
-        return await client.request<VerifyResult>(`/payments/card/${paymentId}/verify`, {
-          method: "POST",
-          body: JSON.stringify({ client_status: clientStatus }),
-        });
-      } catch {
-        setViewState("error");
-        return null;
-      }
+      const operation = (async () => {
+        try {
+          const result = await client.request<VerifyResult>(`/payments/card/${paymentId}/verify`, {
+            method: "POST",
+            body: JSON.stringify({ client_status: clientStatus }),
+          });
+          if (!isCurrent()) return null;
+          if (
+            result.payment_id !== paymentId ||
+            result.checkout_group_id !== contextRef.current?.groupId
+          )
+            throw new Error("card_verify_context_mismatch");
+          setViewState(resolveCardVerifyViewState(result));
+          return result;
+        } catch {
+          if (isCurrent()) setViewState("error");
+          return null;
+        } finally {
+          verifyInFlight.current = null;
+        }
+      })();
+      verifyInFlight.current = operation;
+      return operation;
     },
-    [paymentId, session?.access_token],
+    [getToken, isCurrent, paymentId],
   );
-
-  const handleVerifyOutcome = useCallback((result: VerifyResult | null) => {
-    if (!result) {
-      return;
-    }
-    setViewState(resolveCardVerifyViewState(result));
-  }, []);
 
   const openWidget = useCallback(
     async (cardSession: CardSession) => {
+      if (!isCurrent()) return;
       const publicKey = getLencoPublicKey();
       if (!publicKey || !window.LencoPay) {
         setViewState("error");
@@ -179,42 +385,36 @@ export default function CardCheckoutPage() {
           phone: cardSession.customer.phone,
         },
         onSuccess: () => {
-          void (async () => {
-            const result = await verifyReturn("success");
-            handleVerifyOutcome(result);
-          })();
+          if (widgetCallbackHandled.current || !isCurrent()) return;
+          widgetCallbackHandled.current = true;
+          void verifyReturn("success");
         },
         onClose: () => {
-          void (async () => {
-            const result = await verifyReturn("closed");
-            handleVerifyOutcome(result);
-          })();
+          if (widgetCallbackHandled.current || !isCurrent()) return;
+          widgetCallbackHandled.current = true;
+          void verifyReturn("closed");
         },
       });
     },
-    [handleVerifyOutcome, verifyReturn],
+    [isCurrent, t, verifyReturn],
   );
 
   useEffect(() => {
+    active.current = true;
+    let cancelled = false;
+    const current = () => !cancelled && isCurrent();
     if (sessionLoading) {
-      return;
+      return () => {
+        cancelled = true;
+        active.current = false;
+      };
     }
-    if (!session?.access_token) {
+    if (!current()) {
       setViewState("error");
-      return;
-    }
-
-    const returnStatus = searchParams.get("status");
-    if (returnStatus === "success" || returnStatus === "failed") {
-      void (async () => {
-        const result = await verifyReturn(returnStatus === "success" ? "success" : "failed");
-        handleVerifyOutcome(result);
-      })();
-      return;
-    }
-
-    if (widgetOpened.current) {
-      return;
+      return () => {
+        cancelled = true;
+        active.current = false;
+      };
     }
 
     void (async () => {
@@ -225,12 +425,59 @@ export default function CardCheckoutPage() {
       }
       const client = createApiClient({
         baseUrl: apiBase,
-        getToken: () => session.access_token,
+        getToken,
       });
       try {
+        const hints = new URLSearchParams(query);
+        const jobs = hints.getAll("job");
+        const groups = hints.getAll("group");
+        const statuses = hints.getAll("status");
+        if (
+          !CHECKOUT_UUID.test(paymentId) ||
+          statuses.length > 1 ||
+          (statuses.length === 1 && !["success", "failed"].includes(statuses[0]!)) ||
+          hints.has("session") ||
+          hints.has("kind") ||
+          jobs.length > 1 ||
+          groups.length > 1 ||
+          (jobs.length === 1 && !isUuid(jobs[0])) ||
+          (groups.length === 1 && !isUuid(groups[0]))
+        )
+          throw new Error("invalid_card_context");
+        const payment = await client.request<unknown>(
+          `/payments/status?payment=${encodeURIComponent(paymentId)}`,
+        );
+        if (!current()) return;
+        const resolved = resolveCardContext(payment, paymentId, userId!);
+        if (
+          (jobs.length === 1 && (resolved.kind !== "service" || jobs[0] !== resolved.jobId)) ||
+          (groups.length === 1 && groups[0] !== resolved.groupId)
+        )
+          throw new Error("card_context_hint_mismatch");
+        contextRef.current = resolved;
+        setContext(resolved);
+        const returnStatus = statuses[0];
+        if (returnStatus === "success" || returnStatus === "failed") {
+          await verifyReturn(returnStatus);
+          return;
+        }
+        // This GET claims/resumes an attempt. It is deliberately after the
+        // read-only context checks and is never used to discover return context.
         const cardSession = await client.request<CardSession>(
           `/payments/card/${paymentId}/session`,
         );
+        if (!current()) return;
+        if (
+          cardSession.payment_id !== paymentId ||
+          cardSession.checkout_group_id !== resolved.groupId ||
+          cardSession.amount_ngwee !== resolved.amountNgwee ||
+          cardSession.amount_major !== majorAmount(resolved.amountNgwee) ||
+          cardSession.currency !== "ZMW" ||
+          (resolved.kind === "service"
+            ? cardSession.service_job_id !== resolved.jobId
+            : !!cardSession.service_job_id)
+        )
+          throw new Error("card_session_context_mismatch");
         setSessionData(cardSession);
         const publicKey = getLencoPublicKey();
         if (!publicKey) {
@@ -238,25 +485,17 @@ export default function CardCheckoutPage() {
           return;
         }
         await loadScript(cardSession.widget_script_url);
-        widgetOpened.current = true;
+        if (!current()) return;
         await openWidget(cardSession);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          setViewState("error");
-          return;
-        }
-        setViewState("error");
+      } catch {
+        if (current()) setViewState("error");
       }
     })();
-  }, [
-    handleVerifyOutcome,
-    openWidget,
-    paymentId,
-    searchParams,
-    session?.access_token,
-    sessionLoading,
-    verifyReturn,
-  ]);
+    return () => {
+      cancelled = true;
+      active.current = false;
+    };
+  }, [getToken, isCurrent, openWidget, paymentId, query, userId, sessionLoading, verifyReturn]);
 
   const statusMessage = (() => {
     switch (viewState) {
@@ -267,7 +506,7 @@ export default function CardCheckoutPage() {
       case "verifying":
         return t("verifying");
       case "success":
-        return t("successBody");
+        return context?.kind === "service" ? funding("status.success") : t("successBody");
       case "failed":
         return t("failedBody");
       case "held":
@@ -282,7 +521,7 @@ export default function CardCheckoutPage() {
   const title = (() => {
     switch (viewState) {
       case "success":
-        return t("successTitle");
+        return context?.kind === "service" ? funding("title") : t("successTitle");
       case "failed":
         return t("failedTitle");
       case "held":
@@ -319,20 +558,16 @@ export default function CardCheckoutPage() {
 
       {viewState === "success" ? (
         <LinkButton
-          href={
-            sessionData?.service_job_id
-              ? `/${locale}/account/jobs/${sessionData.service_job_id}`
-              : ordersPath
-          }
+          href={jobPath ? jobPath : ordersPath}
           variant="primary"
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {sessionData?.service_job_id ? funding("backToJob") : t("viewOrders")}
+          {jobPath ? funding("backToJob") : t("viewOrders")}
         </LinkButton>
       ) : null}
 
-      {viewState === "failed" || viewState === "error" ? (
+      {(viewState === "failed" || viewState === "error") && checkoutPaymentPath ? (
         <LinkButton
           href={checkoutPaymentPath}
           variant="secondary"
@@ -348,10 +583,7 @@ export default function CardCheckoutPage() {
           type="button"
           className="inline-flex min-h-11 w-full items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
           onClick={() => {
-            void (async () => {
-              const result = await verifyReturn("pending");
-              handleVerifyOutcome(result);
-            })();
+            void verifyReturn("pending");
           }}
         >
           {t("verifying")}

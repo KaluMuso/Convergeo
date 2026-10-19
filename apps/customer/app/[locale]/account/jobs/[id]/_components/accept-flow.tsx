@@ -107,13 +107,17 @@ function ActiveAcceptFlow({
     onPendingChange?.(true);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
-      const result = await client.request<AcceptResponse>(
-        `/jobs/${jobId}/quotes/${quoteId}/accept`,
-        { method: "POST", body: JSON.stringify({}) },
-      );
+      await client.request<AcceptResponse>(`/jobs/${jobId}/quotes/${quoteId}/accept`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
       // The server may have accepted the quote even if this view has gone away.
       if (!isCurrent()) return;
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      // This destination can be the current route. Release the parent's read
+      // barrier so its authoritative refresh removes this accepted quote.
+      // Keep our submit guard until then to prevent another acceptance POST.
+      onPendingChange?.(false);
+      router.push(`/${locale}/account/jobs/${encodeURIComponent(jobId)}`);
     } catch (err) {
       if (!isCurrent()) return;
       if (err instanceof ApiError && err.status === 403) {

@@ -5,14 +5,15 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
-import { useSession } from "../../../../../../lib/customer-session";
+import { customerAuth, useSession } from "../../../../../../lib/customer-session";
 
 const DEFAULT_DEPOSIT_PCT = 50;
 
 type BookResponse = {
+  job_id: string;
   checkout_group_id: string;
   deposit_ngwee: number;
   balance_ngwee: number;
@@ -35,22 +36,53 @@ function previewDepositNgwee(totalNgwee: number, depositPct: number): number {
 /**
  * Direct-booking CTA on the service detail page (shown only for bookable
  * services, alongside the RFQ "request a quote" path). Books at the fixed price
- * and hands off to the standard deposit checkout — the same flow RFQ accept uses.
+ * and hands off to the job's authorized funding surface, as RFQ accept does.
  */
-export function BookService({
+export function BookService(props: BookServiceProps) {
+  const { session, generation } = useSession();
+  return (
+    <IdentityBookService
+      key={`${generation}:${session?.user.id}:${props.locale}:${props.serviceId}`}
+      {...props}
+      authGeneration={generation}
+      userId={session?.user.id}
+    />
+  );
+}
+
+function IdentityBookService({
   locale,
   serviceId,
   priceNgwee,
   depositPct = DEFAULT_DEPOSIT_PCT,
-}: BookServiceProps) {
+  authGeneration,
+  userId,
+}: BookServiceProps & { authGeneration: number; userId?: string }) {
   const t = useTranslations("services.booking");
-  const { session } = useSession();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // One idempotency key per booking attempt, reused across retries so a retried
   // POST can never create a second booking/order.
   const idempotencyKeyRef = useRef<string | null>(null);
+  const active = useRef(false);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const isCurrent = useCallback(() => {
+    const auth = customerAuth.snapshot();
+    return (
+      active.current &&
+      !auth.loading &&
+      !auth.error &&
+      auth.generation === authGeneration &&
+      auth.session?.user.id === userId
+    );
+  }, [authGeneration, userId]);
 
   const depositNgwee = useMemo(
     () => previewDepositNgwee(priceNgwee, depositPct),
@@ -58,13 +90,18 @@ export function BookService({
   );
   const balanceNgwee = priceNgwee - depositNgwee;
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => (isCurrent() ? (customerAuth.snapshot().session?.access_token ?? null) : null),
+    [isCurrent],
+  );
 
   const handleBook = useCallback(async () => {
-    if (!session) {
+    if (!userId) {
       setError(t("errors.authRequired"));
       return;
     }
+    if (!isCurrent() || inFlight.current) return;
+    inFlight.current = true;
     setSubmitting(true);
     setError(null);
     if (!idempotencyKeyRef.current) {
@@ -76,8 +113,16 @@ export function BookService({
         method: "POST",
         body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
       });
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      if (!isCurrent()) return;
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          result.job_id ?? "",
+        )
+      )
+        throw new Error("booking_job_missing");
+      router.push(`/${locale}/account/jobs/${encodeURIComponent(result.job_id)}`);
     } catch (err) {
+      if (!isCurrent()) return;
       if (err instanceof ApiError && err.status === 401) {
         setError(t("errors.authRequired"));
       } else if (err instanceof ApiError && err.status === 409) {
@@ -90,8 +135,9 @@ export function BookService({
         setError(t("errors.generic"));
       }
       setSubmitting(false);
+      inFlight.current = false;
     }
-  }, [session, t, getToken, serviceId, router, locale]);
+  }, [userId, isCurrent, t, getToken, serviceId, router, locale]);
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-surface p-4 shadow-1">

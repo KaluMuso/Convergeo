@@ -605,6 +605,14 @@ type CheckoutShellProps = {
   labels: CheckoutShellLabels;
 };
 
+export function ExistingCheckoutUnavailable({ labels }: { labels: CheckoutShellLabels }) {
+  return (
+    <p role="alert" className="font-body text-sm text-danger">
+      {labels.error}
+    </p>
+  );
+}
+
 export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellProps) {
   const identity = useSession();
   // Reset all checkout state (including child stores and order idempotency) at

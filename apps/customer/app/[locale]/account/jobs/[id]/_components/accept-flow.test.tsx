@@ -210,7 +210,7 @@ it("keeps a pending accept across same-account token refresh and prevents a repe
   await userEvent.setup().click(screen.getByRole("button", { name: /setting up your deposit/i }));
   expect(mocks.request).toHaveBeenCalledTimes(1);
   await act(async () => pending.resolve(accepted));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/account/jobs/job-a");
 });
 
 it("allows retry after a failed accept using the refreshed same-account token", async () => {

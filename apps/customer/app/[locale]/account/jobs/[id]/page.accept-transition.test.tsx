@@ -143,7 +143,7 @@ it("keeps a pending accept mounted through a same-account token refresh", async 
   await rerender();
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/account/jobs/job-a");
 });
 
 it("does not replace a pending accept when an earlier refresh returns accepted", async () => {
@@ -174,7 +174,7 @@ it("does not replace a pending accept when an earlier refresh returns accepted",
   );
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/account/jobs/job-a");
 });
 
 it("refreshes with the latest same-account token after a failed accept", async () => {
@@ -247,7 +247,7 @@ it("keeps a pending accept mounted when an earlier refresh fails transiently", a
   await act(async () => refresh.reject(new Error("transient refresh failure")));
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/account/jobs/job-a");
 });
 
 it.each([401, 403])(
