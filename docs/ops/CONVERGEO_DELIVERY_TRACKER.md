@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 19:57 UTC** (19 October 21:57 Zambia).
+Updated: **2026-10-19 20:17 UTC** (19 October 22:17 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: Unit 1 and Unit 2 remain accepted at their recorded local evidence levels, with publication/runtime limitations unchanged. The owner approved a bounded overnight local implementation queue on 19 October at 19:54 UTC. Writer slot 1: existing Admin owner prepares only the two PG17 wrapper/test files on the independently reviewed Admin source. Writer slot 2: existing QA-004 owner prepares its nine test-only paths after verifying exact Unit 2 compatibility. CI retains exclusive ownership of `.github/workflows/ci.yml` and the two shared QA registry/matrix paths; those edits wait for a separate free writing window. CI certification qualification and OPS residual integration preparation proceed read-only. No publication, issuance activation, shared database execution, deployment or money operations are authorized by this overnight queue.
+Current source-writing state: the overnight queue remains active after the owner's explicit resumption. Writer slot 1 is assigned to the existing Admin owner for a bounded two-file independent-review correction; CI has paused clean and released that slot pending the corrected wrapper. Writer slot 2 is assigned to OPS-003 for a narrow description-validation regression within its existing two-path boundary. QA-004's nine-path closed preparation is committed and under coordinator review; its actual twenty-nine journeys remain BLOCKED_NOT_RUN. The existing integration coordinator is preparing one residual Admin dependency closure read-only. Unit 1/2 evidence and all publication/runtime restrictions remain preserved.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -254,6 +254,16 @@ Required skipped tests remain obligations. Review acceptance is scoped to its ex
 - OPS-003 turn `01a155bc-b780-7359-bf53-4e87ef4b8c7e` prepares the smallest residual application manifest read-only, preserving completed Unit 2 and all protected financial/auth/cart/KYC ownership. No unrestricted donor merge.
 - Task starts are verified admissions, not completion or passing-test claims. New results require exact commit/tree/patch custody and independent review. Blocked tasks release their writer slot when safe; no equivalent failed attempts or competing owners. Publication holds remain effective.
 
+### 19 October 20:17 UTC — reviewed queue advancement
+
+- The owner briefly canceled and then explicitly resumed the same overnight plan at 20:00 UTC. Existing work was preserved; no duplicate assignments were created. The 20 October 09:00 Zambia handoff was re-enabled and independently read back as enabled.
+- Admin wrapper candidate `ff93d98bb8b2de571539e11713d894f137618222`, tree `934c46a592ba19e499bc482cfc041c15947b76a3`, parent `b97b3a1aff27b2cf63a37780e7093bd0a64adcc8`, changes only the approved two wrapper/test files. Thirty-two offline tests and signed-package verification passed, including an independent rerun. Fresh coordinator review identified a bounded isolation-validation defect; **acceptance is HELD pending correction**, with details retained privately. CI preserved a clean exact-source checkout and no workflow change. Admin owner is correcting only the same two paths under the existing authorization.
+- QA-004 reports local `0195c0c50a4854b6dba78d296caa030ac9f4c1dd`, tree `a5c2e610e427987a6614d1212d34cde1632e108c`, sole parent Unit 2. Nine additions preserve the accepted six-group, twenty-nine-case specification. Reported evidence: fifty-seven browser-free helper tests, four denial controls and strict helper typecheck pass; original independent review ACCEPT_CLOSED_PREPARATION. Coordinator custody review verified exact archive, fifty-one manifest members, source identity, nine-path scope and unchanged CI registry blobs; final review is pending. Packet SHA256 `be944c42b86a0a07870b11378c8632bd0a35ec127fdb095f8d27ff12bc92c3e1`.
+- All QA runtime bindings, actual browser collection and twenty-nine journeys remain unqualified. Proposed registration totals are twenty-two files, seventy-nine logical cases and ninety-five project instances; these are arithmetic expectations, not collected execution results.
+- OPS-003 is reproducing and correcting only the demonstrated description-length mismatch within its previously approved form/test paths, preserving Unit 2 guard and all business/payload restrictions. No completed correction is claimed yet.
+- The latest recovered global path register is still a proposal. Neither Unit 1 nor Unit 2 closes all historical protected conflicts. The existing integration owner is preparing only the smallest coherent residual Admin unit and its dependency/approval closure; no combined release branch or protected adoption is authorized.
+- No workflow dispatch, database qualification, deployment, provider operation or publication occurred. CI workflow and QA registration remain sequential dependent work.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -367,3 +377,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 19:39 UTC: recorded independently verified Unit 2 local source, regression and review evidence; preserved all Unit 1 blobs and publication/runtime boundaries.
 
 - 2026-10-19 19:57 UTC: recorded newly approved overnight local Admin/QA implementation windows, exclusive CI ownership, read-only residual/certification preparation and enabled next-morning report. No new completion or deployment claimed.
+
+- 2026-10-19 20:17 UTC: recorded resumed overnight queue, Admin review hold and bounded repair, QA preparation custody, OPS narrow regression work and sequential CI ownership. All runtime/publication boundaries retained.
