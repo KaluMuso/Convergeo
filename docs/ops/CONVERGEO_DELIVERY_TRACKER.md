@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 10:35 UTC** (19 October 12:35 Zambia).
+Updated: **2026-10-19 11:50 UTC** (19 October 13:50 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -75,6 +75,18 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October authority-contract checkpoint — 11:50 UTC
+
+- The two-file F2 implementation is preserved locally at `0ec0e2d4d17277efe04dc88a340de88f3642e419`, tree `ef1a5d14fc1fee6c6e57c71fa552b066892340cb`, parent `3a984a7beba3297dec53d695daa6a7ee9b89e455`, original #718 base unchanged. Only `services/api/app/routers/payment_status.py` and `services/api/tests/test_payment_status.py` differ from that foundation.
+- Independent API **ACCEPT, source only**: receipt SHA256 `8ace37e7fd9f010cda56c4dfc44578db87112ad1d1770959ddbb76474ea947c3`. Fresh independent financial **ACCEPT, source only**: receipt SHA256 `f8eb10e7cf33069d84f5b17ac620bdaf531edb2048ec94ad4714e663bb9b4f7b`. Both verified actual source custody. Runtime/API tests and real PostgREST behavior are separate outstanding gates.
+- The additive exact-payment context derives product, ticket or service linkage from authenticated stored relationships, preserves fee-inclusive ticket amounts and original-order service balance linkage, and performs read-only resolution. Group-only behavior retains a null context. It is navigation context with bounded consistency checks, not a payment authorization or serializable transaction.
+- CI-001 preserved the initial candidate's 115 collected cases, passing lint/diff checks and failing type check. The revised source addresses that finding; new exact-source red/green execution remains pending reviewed isolation-harness qualification. No unexecuted case is counted as passed.
+- CUST-002 resumed its existing approved Customer-only scope to consume the reviewed contract and restore the product card path. The accepted prior fixes at `12e70ad5cb1217c7e31e37eb5c66db7a744133ef` remain preserved. No backend donor adoption, combined release branch or Customer acceptance is implied.
+- The owner approved moving only independent F2 financial review to a fresh read-only reviewer. The conflicted prior review task remains idle and unrelated local source results remain excluded. Original implementation history and protected ownership are preserved.
+- The owner approved local preparation/testing of only `.gitleaksignore` and `scripts/ci/gitleaks-self-test.sh` for #750's thirteen independently verified historical non-secret identifiers. CI-001 retains exclusive ownership; publication is not authorized. A narrowly scoped API-hotfix certification proposal is also authorized for preparation and independent review, but the current release gate remains active and unchanged.
+- Owner-supplied screenshots now establish all three Vercel application roots, master production tracking, disabled Build Command overrides, enabled unchanged-root/dependency skipping, Automatic Ignored Build Step and outside-root file inclusion. Expected skips must still be verified for an actual release event. The newer live Customer phone/guard source must be preserved before a master-based release.
+- Admin's proposed three-path PostgreSQL job implementation and QA's eleven-path adoption remain separately gated. API/Chrome donor publication holds remain in force. No application source publication, shared-branch merge, database mutation, production deployment or real-money action occurred.
 
 ### 19 October progressive-delivery checkpoint — 10:35 UTC
 
@@ -278,3 +290,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 09:40 UTC: recorded the authorized local Customer candidate and pending independent reviews, bounded Admin CI proposal, source-only hotfix review and unresolved qualification. Preserved private operational details and excluded unrelated source work from release composition.
 
 - 2026-10-19 10:35 UTC: recorded reviewed Customer fixes, explicit two-file F2 handoff, independently accepted bounded hotfix tests, progressive-release alignment and the current 15-PR wave proposal. Preserved all production and integration approval gates.
+
+- 2026-10-19 11:50 UTC: recorded exact F2 source-only API/financial acceptance, pending isolated qualification, resumed Customer consumer work, bounded scanner/profile approvals and screenshot-verified deployment settings. No release or shared-data operation.
