@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 13:46 UTC** (19 October 15:46 Zambia).
+Updated: **2026-10-19 19:03 UTC** (19 October 21:03 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -82,7 +82,7 @@ No new production buyer, vendor or operator capability is claimed by this sprint
 - All 99 execution manifest entries independently verified. Seven control modes with ten probes rejected as required before the focused lane. Actual result: 181 passes, zero failures/errors/skips/xfails; 169 validated request-scope calls, twelve direct-function zero-call cases, 181 alias restorations and 543 passing phase reports. Process/session/wrapper exits are zero and no prohibited I/O occurred. All twenty-three source and seven harness bindings remained unchanged.
 - This uses a reviewed external request-telemetry alias spy only; actual telemetry SDK behavior is excluded. Original failed isolation runs remain preserved, and the older inaccessible 165-case archive remains separately held. Neither historical failure nor missing evidence was relabeled passed.
 - Fresh combined source review and independently inspected 1,257-case Customer evidence remain as recorded below. Mock-only acceptance does not qualify real authentication/HTTP/PostgREST, shared database/provider/browser journeys, financial idempotency/concurrency or production.
-- A draft child publication of the unchanged local candidate targeting #718's source branch `codex/coordinator-ci-review-20261001` is proposed and awaits explicit owner approval. Target head was rechecked at `ae0a219199cccc341dca03df8cfce85153b7a312`. Existing deployment guards must remain intact. No draft publication, shared branch merge or release was performed.
+- Owner approved exact unchanged draft publication on 19 October at 18:43 UTC. [Source branch](https://github.com/KaluMuso/Convergeo/tree/wp/cust-api-unit1-718) is now published at `e58450010466cdd883b8d8152942d5c6918ebe57`, tree `7bcd06e33f09460dfb5446649c2417ab22ccf3d1`, sole parent/unchanged #718 target `ae0a219199cccc341dca03df8cfce85153b7a312`. **Draft PR creation was denied by an effective approval control; no PR was created and no retry or alternate route is authorized.** GitHub Actions are NOT_RUN; no CI checkout or test artifact exists for this publication. Existing deployment guards remain unchanged.
 - CI certification artifact custody, full commercial integration, twenty-nine QA journeys and protected migration/financial/merchant acceptance remain outstanding.
 
 ### 19 October bounded integration checkpoint — 13:12 UTC
@@ -225,6 +225,16 @@ No PR or branch has been closed or deleted. No master/staging merge, shared data
 
 Required skipped tests remain obligations. Review acceptance is scoped to its exact source and purpose, never production certification.
 
+
+### 19 October 19:03 UTC — exact Unit 1 publication outcome
+
+- Independent read-only verification confirmed the remote branch/head/tree/parent, all seventeen publication packet manifest members, and unchanged accepted execution evidence. Verification receipt SHA256 `c030c99a365f120e6d42a35754a19bc089d1d5c3c66984ae35fdb48bdb061203`; private packet SHA256 `40f14cc73c2b39461ac56840aab4a0096ebb544734c3b8a03e3fb82b4b0bce53`.
+- Publication is PARTIAL: branch published, draft creation BLOCKED, hosted GitHub acceptance NOT_RUN. The approval layer needs reconciliation with the later scoped authorization; no repository-rule diagnosis or supported permission-setting remedy is established. All API/Chrome donor holds remain intact.
+- Existing automatic Preview builds reached terminal states on the exact head: Vendor READY, Admin READY, Customer ERROR due to a build-time configuration prerequisite. Source guards were independently confirmed unchanged. READY is build evidence only, not authenticated commerce acceptance. Supabase Preview was SKIPPED. No environment/settings changes or runtime mutations were made.
+- Local acceptance remains 1,257 Customer passes and independently accepted 181-case bounded mocked API execution. Earlier failed isolation qualification remains failed; actual database/provider/browser and financial-concurrency acceptance remain outstanding.
+- Admin's three-path PostgreSQL qualification implementation still lacks explicit scoped approval. CI-001's inactive certification source remains reported accepted locally with full archive custody held. QA has mapped hosted evidence requirements; all 29 end-to-end cases remain BLOCKED_NOT_RUN.
+- The smallest fully specified next qualification unit is the existing Admin/CI three-path PG17.6 proposal. The next Vendor/Admin/auth/merchant production residual manifest remains unresolved; no wholesale branch adoption or new combined release branch is authorized.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -328,3 +338,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 13:12 UTC: recorded the authorized fourteen-path local unit, fresh combined-source reviews, inspected Customer bridge evidence, held backend execution, exact-source QA mapping and reported inactive certification implementation. Existing public/private evidence boundaries preserved.
 
 - 2026-10-19 13:46 UTC: recorded independently verified bounded mock execution for the unchanged fourteen-path candidate and proposed exact draft publication, preserving all prior failures and real-runtime obligations.
+
+- 2026-10-19 19:03 UTC: recorded exact Unit 1 branch publication, independently verified approval-control blockage of draft creation, terminal automatic Preview outcomes and unrun hosted acceptance. All existing release and mutation boundaries preserved.
