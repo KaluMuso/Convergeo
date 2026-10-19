@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 08:41 UTC** (19 October 10:41 Zambia).
+Updated: **2026-10-19 09:40 UTC** (19 October 11:40 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: the earlier CI/OPS correction batches remain published to their existing drafts. On 19 October the retained Admin owner prepared a one-file local test-fixture correction, independently accepted for source only; the retained CI owner is coordinating the separate workflow prerequisite. The proposed twelve-file Customer correction awaits its explicit implementation approval. QA adoption remains preparation only. Existing API/Chrome draft-publication holds and protected source ownership remain preserved. No combined release branch, shared database change or deployment has been authorized.
+Current source-writing state: the owner approved the exact twelve-file local Customer correction on 19 October. CUST-002 produced local candidate `b6f9742d93bf6f072bced5bdc8b60a9780c66274`; independent Customer and financial reviews are in progress. The Admin fixture remains independently accepted for source only; a separate three-path CI proposal awaits approval. QA adoption remains preparation only. Existing API/Chrome draft-publication holds and protected source ownership remain preserved. No combined release branch, shared database change or deployment has been authorized.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,16 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October implementation checkpoint — 09:40 UTC
+
+- CUST-002 completed the approved twelve-file local correction on parent `ae0a219199cccc341dca03df8cfce85153b7a312`: head `b6f9742d93bf6f072bced5bdc8b60a9780c66274`, tree `e805cb3616eef0457141b1b3608a229d962256e3`. The owner reports 46 failed / 22 passed before correction and 1,120 passed afterward, with typecheck, lint, formatting and diff checks passing. These receipts and the actual source are now under independent Customer and financial review; coordinator acceptance is pending. The candidate remains local and unpublished.
+- Product-card continuation without an authoritative domain binding remains an explicit acceptance dependency. Fail-closed behavior is not a completed positive product journey. Paid product, service and event acceptance obligations remain preserved.
+- Admin and CI reconciled a three-path source proposal on local `b97b3a1aff27b2cf63a37780e7093bd0a64adcc8`: `.github/workflows/ci.yml`, new `scripts/ci/run_admin_rbac_pg17.py`, and new `scripts/ci/test_run_admin_rbac_pg17.py`. Existing PG16 controls remain unchanged; the proposed PG17.6 wrapper must verify its effective disposable target and all 167 identities, 13 SQL contracts and concurrency evidence. Source implementation awaits scoped approval. Package provenance preparation is not installation or database acceptance.
+- The existing [#750](https://github.com/KaluMuso/Convergeo/pull/750) four-file correction received an additional independent **ACCEPT_FOR_SOURCE_ONLY** review. Exact candidate and #746 file equivalence were independently verified. Fresh execution of 25 declared focused cases remains pending; CI-001 is checking isolated mock-only qualification. Production rollout, rollback and target verification remain separate.
+- QA-004's accepted 29-case specification and eleven-path adoption proposal remain unchanged and **BLOCKED_NOT_RUN** pending candidate-bound preflight, ownership and scope approval.
+- A task-scope discrepancy was identified and contained: an unrelated local source result is preserved separately and excluded from approved release composition. It is not counted as accepted progress. Detailed custody and owner communication are retained privately.
+- No source merge, combined release branch, shared database mutation, production deployment or real-money operation occurred. Existing donor publication holds remain in force.
 
 ### 19 October execution checkpoint — 08:41 UTC
 
@@ -239,3 +249,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-18 22:03 UTC: recorded recovered Admin owner and independently accepted QA preparation revision, preserving all unexecuted-test, source-ownership and approval boundaries. No integrated source or runtime change.
 
 - 2026-10-19 08:41 UTC: recorded the local Admin fixture correction and independent source-only review, exact Customer approval package, expanded QA adoption prerequisites and bounded runtime diagnosis. Preserved all publication, integration and production boundaries.
+
+- 2026-10-19 09:40 UTC: recorded the authorized local Customer candidate and pending independent reviews, bounded Admin CI proposal, source-only hotfix review and unresolved qualification. Preserved private operational details and excluded unrelated source work from release composition.
