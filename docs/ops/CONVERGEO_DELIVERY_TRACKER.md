@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 11:50 UTC** (19 October 13:50 Zambia).
+Updated: **2026-10-19 12:19 UTC** (19 October 14:19 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -32,7 +32,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: the Customer twelve-file correction and four-file review-fix delta are preserved locally at `12e70ad5cb1217c7e31e37eb5c66db7a744133ef`. Both corrective fixes have source-only acceptance; overall Customer acceptance remains REVISE pending an authoritative product-payment context. The owner has explicitly handed two F2 payment-status paths to the existing API/runtime owner for isolated implementation and tests. CI-001 is investigating the remaining #750 hosted gates read-only. The separate three-path Admin CI proposal awaits approval; QA adoption remains preparation only. Existing API/Chrome publication holds remain preserved. No combined release branch, shared database change or deployment has been authorized.
+Current source-writing state: Customer `5b37a756d74a51e0ccb0a290f17c086cffc0a576` and F2 API `0ec0e2d4d17277efe04dc88a340de88f3642e419` have independent source-only acceptance. Both existing owner turns are complete. A read-only fourteen-path composition proposal is prepared; local assembly and the contract-bridge test await scoped approval. Backend execution acceptance remains held pending complete receipt verification. CI-001's local scanner correction is reported complete but its full evidence custody remains outstanding; no publication is authorized. The inactive hotfix-profile four-path implementation and separate three-path Admin CI proposal await approval. QA remains preparation only. Existing API/Chrome publication holds are preserved.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -75,6 +75,16 @@ Source inventory refreshed through #756 at 15:18 UTC; active results updated bel
 No new production buyer, vendor or operator capability is claimed by this sprint snapshot.
 
 ## 5. CI, independent review and remaining validation
+
+### 19 October source-alignment checkpoint — 12:19 UTC
+
+- Customer head `5b37a756d74a51e0ccb0a290f17c086cffc0a576`, tree `54773777cb539fb7f9111cd6147117aa6358bbc2`, received independent Customer and financial **ACCEPT, source only** against F2 `0ec0e2d4d17277efe04dc88a340de88f3642e419`. The reviewed twelve-path correction restores unhinted product continuation while preserving fee-inclusive ticket and authoritative service recovery checks. Customer review receipt SHA256 `38e812e42607fd152d33c100024a2c64f5f8481d341a7fc63cbbe20af4270b45`; financial receipt `b1fb9960e7ae857a0fd3f40fdf9e3cd3a6592a90379991f2229b2644126a7095`.
+- Independently inspected historical mocked logs show 1,227 passing Customer cases across 173 files, including 135 card cases. The preserved red run actually executed 47 cases with three intended failures; a custody addendum clarifies its command metadata. No live backend, provider or ledger acceptance is implied.
+- Both donor trees reconstruct separately against #718 `ae0a219199cccc341dca03df8cfce85153b7a312`. Twelve Customer paths and two API paths do not overlap. The API intermediate commit's raw bytes independently hash to `3a984a7beba3297dec53d695daa6a7ee9b89e455` and directly name that base. No combined checkout, branch or tree has been created.
+- CI reports 165 backend passes and three intended prior-source failures. **Execution acceptance remains HELD** until the complete sealed evidence can be independently inspected. Preparation/harness source acceptance is distinct from execution acceptance; custody recovery remains a private operational blocker.
+- The API-hotfix certification profile revision received **ACCEPT_FOR_PROPOSAL** only; its 73 proposed cases are not run. Exactly four inactive implementation paths and offline tests await owner approval. Existing release gates remain unchanged.
+- Next proposed unit: isolated local composition of the fourteen reviewed paths plus a test-only serialized-response bridge within the existing Customer card test, followed by exact-source independent review. Matching canonical payment status, valid identifiers and stored ticket charges are explicit test dependencies. Additional files, shared data, publication and deployment remain excluded.
+- Existing donor holds and protected ownership remain effective. No production capability, integrated commercial acceptance, migration or money operation is claimed.
 
 ### 19 October authority-contract checkpoint — 11:50 UTC
 
@@ -292,3 +302,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 10:35 UTC: recorded reviewed Customer fixes, explicit two-file F2 handoff, independently accepted bounded hotfix tests, progressive-release alignment and the current 15-PR wave proposal. Preserved all production and integration approval gates.
 
 - 2026-10-19 11:50 UTC: recorded exact F2 source-only API/financial acceptance, pending isolated qualification, resumed Customer consumer work, bounded scanner/profile approvals and screenshot-verified deployment settings. No release or shared-data operation.
+
+- 2026-10-19 12:19 UTC: recorded Customer/API source acceptance, independently closed ancestry evidence, held backend execution custody, and the bounded fourteen-path local integration proposal. No source composition or release operation.
