@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-20 08:27 UTC** (20 October 10:27 Zambia).
+Updated: **2026-10-20 08:31 UTC** (20 October 10:31 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -23,14 +23,14 @@ Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED,
 
 ## 2. Four Codex workstreams and owners
 
-### Current allocation — 20 October 08:27 UTC
+### Current allocation — 20 October 08:31 UTC
 
 - Authentication owner `01a13490-68b3-7597-8078-0cda0d87c076`: Task B **ACCEPT_SOURCE_AND_RETAINED_EVIDENCE** after authorized private transfer and independent inspection. Commit `13dec441db36ad70c249a1d5c8ce3321aa771491`, tree `6ae6a69bc1e6cc5ac9df225df353c379aba9164c`, sole parent Unit 2; only the two approved role files. The 463 retained offline passes are accepted evidence, not a new test execution. Source writer slot released.
-- CI/runtime owner `01a13a6d-dedf-7108-afff-af9fbdd62010`: the three-file containment proof-only package received **ACCEPT_DORMANT_SOURCE_ONLY** with 38 nonexecuting checks; fifteen runtime controls remain **NOT_RUN**. The same owner is correcting the missing loopback-down proof within the approved dormant scope. CI is the only active application/tooling source writer; no qualified execution boundary or client-case execution is claimed.
+- CI/runtime owner `01a13a6d-dedf-7108-afff-af9fbdd62010`: the three-file containment proof-only package received **ACCEPT_DORMANT_SOURCE_ONLY** with 38 nonexecuting checks; fifteen runtime controls remain **NOT_RUN**. The unchanged package is now **BLOCKED_APPROVAL** on design amendment CG750-P02-READFLAGS-01. Independent design acceptance is not implementation or execution permission. No application/tooling source writer is active; no qualified execution boundary or client-case execution is claimed.
 - CUST-002 `01a12837-b5f5-7420-81d8-b6ccf0a2d05d`: **BLOCKED**, read-only custody reconciliation. The owner conditionally approved the exact thirteen-path addition on Unit 3, but all donor custody must be verified before assembly. No integrated source has been written; unrelated artifact output is excluded.
 - Existing API/runtime owner `01a115f1-0c0f-7418-97aa-66b47fc2406d`: today's sanitized failure correlation remains **VERIFIED at log-correlation scope**. Current staging route/running metadata was inspected; live HTTP/key pairing and release qualification are not established. No replay, shared database mutation or production change.
 
-King retains serialized sole ownership of this tracker. CI occupies one source writer slot; this documentation update occupies the second only until verified and released. CUST remains read-only and blocked, not an additional writer. Existing owners and accepted work are preserved. The ceiling remains four useful workstreams and at most two simultaneous source writers; idle capacity does not justify filler or duplicate implementation.
+The existing Admin and QA owners are active read-only on the minimal protected-decision and isolated-execution packages. King retains serialized sole ownership of this tracker. There are **zero application/tooling source writers**; this is the only documentation writer until readback verification and release. CUST remains read-only and blocked, not an additional writer. Existing owners and accepted work are preserved. The ceiling remains four useful workstreams and at most two simultaneous source writers; idle capacity does not justify filler or duplicate implementation.
 
 ### Retained earlier allocation history
 
@@ -353,6 +353,13 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **Staging evidence boundary:** configured route/running metadata binds the sandbox project `iyasmrmbcrvlfxpzescb`, source prefix `ef8dae53` and image prefix `5d1d8e99`. These abbreviated metadata identities are not full immutable source/image qualification, live HTTP verification or public-key pairing. A five-branch-entry configuration proposal is prepared but **not approved or applied**. Customer Preview scope and publication controls remain held.
 - **Release boundary unchanged:** #750 still requires exact production source/image, applicable CI/security, certification and rollback qualification. All 29 QA journeys and nine PostgREST client cases remain unexecuted. No selected integrated candidate exists. 21 October remains **BLOCKED**, 26 October **AT_RISK**, and 7 November the contingency.
 
+### 20 October 08:31 UTC — exact registration custody and proof amendment gate
+
+- **Registration archive verified locally intact:** CI verified the original `qa004-ci-registration-review.tar.gz`, 603,115 bytes, SHA256 `23afe9ec20e795450ec94ff3e4f2ea007eedd1d2a4897854a965d930de66af77`. It has **not been uploaded**. No registration-specific transfer-denial receipt was found. The earlier generic CI hold and CUST Unit 3/QA preparation helper-discovery HTTP 403 are separate facts, not this archive's proven 401/403 gate.
+- Exact permission for transfer of this sealed registration packet into the owner's private ChatGPT Library was requested at **08:29 UTC** and remains **PENDING**. This is not the authentication transfer, which is already complete and independently accepted. No substitute transfer route or patch reconstruction was used.
+- **Dormant proof package unchanged, BLOCKED_APPROVAL:** package SHA256 `b8637668b9203e1ae8b880672a9bd5d5bf61f041eb97f24e302368c66a10de9d` retains its source-only acceptance and 38 nonexecuting checks; fifteen runtime controls remain **NOT_RUN**. Independently accepted design amendment **CG750-P02-READFLAGS-01** proposes a namespace-bound transient read-flags socket/ioctl exception before the final deny-all filter, to prove loopback-down state. The exception is **not implemented or execution-approved**. Design acceptance does not authorize weakening the current boundary.
+- **Capacity and critical path:** zero application/tooling source writers; existing Admin/QA owners are active read-only on minimal protected decisions and an isolated execution package. CUST's conditional thirteen-path assembly remains **unperformed** pending custody. Authentication remains accepted; no integrated candidate exists. 21 October remains **BLOCKED**, 26 October **AT_RISK**, 7 November contingency. Existing API/Chrome/Unit 1 publication holds, all runtime execution gates and release safeguards remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -408,8 +415,8 @@ These are measurable target gates, not delivery promises. Issue #716 remains aut
 
 | Date (Zambia) | Milestone | Status | Measurable exit / evidence |
 |---|---|---|---|
-| 20 Oct | Task closures and today's runtime diagnosis | **IN_PROGRESS** | Task A remains runtime BLOCKED while approved dormant proof correction is active; Task B source and 463 retained passes are independently accepted; the two HTTP 500 exception classes are log-correlated. Donor custody and fresh deployed-source/target qualification remain outstanding. [Latest critical-path checkpoint](#20-october-0827-utc--approved-custody-recovery-and-dormant-proof-progress), [#750](https://github.com/KaluMuso/Convergeo/pull/750). |
-| 21 Oct | Select one isolated integrated candidate | **BLOCKED** | Exact composition manifest on preserved [#718](https://github.com/KaluMuso/Convergeo/pull/718), accepted Unit 1–3 and accepted auth only; custody verified, protected conflicts dispositioned, scoped assembly authorized, resulting commit/tree independently reviewed. No candidate SHA selected. [Revised unassembled composition](#20-october-0827-utc--approved-custody-recovery-and-dormant-proof-progress). |
+| 20 Oct | Task closures and today's runtime diagnosis | **IN_PROGRESS** | Task A remains runtime BLOCKED; the unchanged dormant proof package awaits specific design-amendment approval; Task B source and 463 retained passes are independently accepted; the two HTTP 500 exception classes are log-correlated. Donor custody and fresh deployed-source/target qualification remain outstanding. [Latest critical-path checkpoint](#20-october-0831-utc--exact-registration-custody-and-proof-amendment-gate), [#750](https://github.com/KaluMuso/Convergeo/pull/750). |
+| 21 Oct | Select one isolated integrated candidate | **BLOCKED** | Exact composition manifest on preserved [#718](https://github.com/KaluMuso/Convergeo/pull/718), accepted Unit 1–3 and accepted auth only; custody verified, protected conflicts dispositioned, scoped assembly authorized, resulting commit/tree independently reviewed. No candidate SHA selected. [Revised unassembled composition](#20-october-0831-utc--exact-registration-custody-and-proof-amendment-gate). |
 | 22 Oct | Hosted CI and database qualification | **BLOCKED** | Candidate-bound required CI/security and pinned PostgreSQL 17.6 migration/RLS/typegen evidence, with actual checkout/image/ledger identities and no silently skipped protected checks. Publication/custody, approved execution boundary and Admin lifecycle/cleanup remain prerequisites. [Qualification record](#5-ci-independent-review-and-remaining-validation). |
 | 23 Oct | Aligned staging | **AT_RISK** | Separately approved exact Customer/Vendor/Admin/API image, ordered migration and configuration alignment, guarded rollout and recovery evidence. Current production frontend aliases are not source-aligned; Unit 1 Customer Preview has a verified key-scope gap. No deployment authorization inferred. [Component status](#6-component-integration-status). |
 | 24 Oct | Paid-domain E2E acceptance | **AT_RISK** | All 29 QA journeys executed on the accepted binding, plus required real provider-backed paid product/service/event and applicable rail/negative/after-sales identities under explicit test authority; mocks/COD/free RSVP do not substitute. [Issue #716 acceptance contract](https://github.com/KaluMuso/Convergeo/issues/716), [QA limits](#20-october-0728-utc--task-closures-and-critical-path-checkpoint). |
@@ -418,9 +425,9 @@ These are measurable target gates, not delivery promises. Issue #716 remains aut
 
 ### Top three dependencies threatening 21 October selection
 
-1. **Remaining donor custody:** clarify the original retained registration archive's exact availability/hold and verify all required donor bytes through authorized routes. Authentication transfer and acceptance are complete, not a pending reapproval. Do not reconstruct missing patches or misattribute the helper-discovery denial.
+1. **Remaining donor custody:** the original registration archive is locally verified intact and unuploaded; decide its pending exact private Library transfer, then verify all required donor bytes through authorized routes. Authentication transfer and acceptance are complete, not a pending reapproval. Do not reconstruct missing patches or misattribute the helper-discovery denial.
 2. **Conditional assembly and protected disposition:** the exact thirteen-path isolated addition is approved only after custody verification. The existing owner may then assemble and obtain fresh exact-source independent review; no candidate SHA currently exists. Wider protected auth/cart/financial/Admin adoption remains outside that approval.
-3. **Qualification boundary:** finish the already-approved dormant loopback-down proof correction and static review; obtain separately scoped target/setup/proof/client execution authority where required. Fifteen controls and nine client cases remain NOT_RUN. The five-branch configuration proposal and exact rebuild remain unapproved. Admin migration/lifecycle and required-check dependencies still constrain 22–25 October readiness.
+3. **Qualification boundary:** decide the specific CG750-P02-READFLAGS-01 design-amendment implementation scope before changing the dormant package; obtain separately scoped target/setup/proof/client execution authority where required. Fifteen controls and nine client cases remain NOT_RUN. The five-branch configuration proposal and exact rebuild remain unapproved. Admin migration/lifecycle and required-check dependencies still constrain 22–25 October readiness.
 
 ## 10. Evidence index and preservation
 
@@ -504,3 +511,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 07:55 UTC: recorded completed revised 13-path proposal, proposal-only containment correction, exact pending private-transfer/proof-implementation decisions, #750 capability limits and zero active application writers. No implementation of the proof, integrated assembly, qualification execution or release action.
 
 - 2026-10-20 08:27 UTC: recorded completed authorized auth custody and independent acceptance, approved dormant proof implementation with active bounded correction, conditional thirteen-path assembly authority, corrected custody-denial attribution, and metadata-only staging/configuration proposal boundaries. No integrated candidate, runtime qualification execution or release action.
+
+- 2026-10-20 08:31 UTC: recorded the intact, unuploaded registration archive and pending exact private-transfer permission, absence of a registration-specific denial receipt, unchanged dormant proof blocked on a distinct design-amendment approval, zero source writers and active read-only Admin/QA work. No assembly, exception implementation, execution or release action.
