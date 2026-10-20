@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-20 19:02 UTC** (20 October 21:02 Zambia).
+Updated: **2026-10-20 19:04 UTC** (20 October 21:04 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -23,7 +23,7 @@ Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED,
 
 ## 2. Four Codex workstreams and owners
 
-### Current allocation — 20 October 19:02 UTC
+### Current allocation — 20 October 19:04 UTC
 
 - Authentication owner `01a13490-68b3-7597-8078-0cda0d87c076`: exact one-file child `05c29edee49879dd83c2acd28021ca75bf9b6ebf`, tree `51fbd349b5559c3a42e005702205c7552a8de09f`, is **ACCEPT_EXACT_SOURCE_AND_RETAINED_OFFLINE_RESULTS_WITH_PROVENANCE_LIMITS** after completed authorized private transfer and coordinator inspection. King selected this existing direct child as the next LOCAL source candidate; no new commit, patch or assembly. Accepted parent `e713de3f` remains preserved. Original review-return timestamps are unavailable and retained SDK inspection is not a fresh coordinator byte inspection; native containment remains unproved.
 - CI/runtime owner `01a13a6d-dedf-7108-afff-af9fbdd62010`: the three-file containment proof-only package received **ACCEPT_DORMANT_SOURCE_ONLY** with 38 nonexecuting checks; fifteen runtime controls remain **NOT_RUN**. The unchanged package is now **BLOCKED_APPROVAL** on design amendment CG750-P02-READFLAGS-01. Independent design acceptance is not implementation or execution permission. The launcher remains dormant; the exception is explicitly not approved. No qualified execution boundary or client-case execution is claimed.
@@ -495,6 +495,14 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **Scanner review remains separate and protected:** original scanner evidence packet is under parent review, not adopted. Correct classification of its two identifier entries is immutable-image **source-commit identifiers**, not image digests. No scanner/control change or acceptance is inferred from packet availability.
 - Original parent TS2688 and subsequent TS2345 failures remain historical evidence; the new exact child's typecheck pass does not certify the selected branch's broader hosted/runtime behavior. All 29 journeys, nine native client cases, incident exclusions, proof exception, publication, database/provider and release holds remain. Overall 21 October IN_PROGRESS, 26 October AT_RISK, 7 November contingency.
 
+### 20 October 19:04 UTC — scanner proposal adoption HOLD on exit-status ambiguity
+
+- **New independent finding supersedes retained unconditional scanner acceptance:** protected adoption of `ab9d838d3b7921e10eb70b5b29939eca7e863dca` is **HOLD**. Gitleaks v8.28.0 `cmd/root.go` lines 479–484 uses exit 1 for findings and scanner errors. The proposed self-test accepts exit 1 when thirteen expected report identifiers are present, so an error/partial scan with a complete-looking report can falsely pass.
+- Existing negative controls exercised exit 2, not the relevant scanner-error exit 1 plus a valid-looking report. The source/tree, two-file scope and fingerprint classifications otherwise verify. This is a control-validation flaw, **not evidence of an actual secret leak**.
+- The existing CI owner is preparing an exact **read-only correction proposal**. Candidate approach: a distinct findings exit code via `--exit-code`, exact exit assertion and a negative control for error exit 1 with a valid-looking report. This is not implemented or accepted by this checkpoint. No scan, scanner configuration change, suppression adoption or control wiring is authorized by the proposal dispatch.
+- Independent review's final source references and the minimal protected owner decision remain pending. Do not infer adoption permission from prior local acceptance or from the fact that most identifiers are non-secret.
+- CUST same-file lint child and QA two-path driver retain the two source writer slots. Neither outcome is changed or claimed complete by this finding. All existing publication and release holds remain.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -676,3 +684,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 18:52 UTC: recorded exclusive two-path QA lazy observation-driver/mock-test allocation alongside unfinished one-file CUST type correction, reaching two source writers. No result inferred; 29 journeys remain NOT_RUN, older Admin-selector absence explicitly not generalized to selected source.
 
 - 2026-10-20 19:02 UTC: recorded independently verified exact type-only child and full typecheck/QA/control passes, preserving byte-identical pre-existing lint failure and supplement discovery failure. Same-file lint follow-up remains active with recovery unconfirmed; QA remains the second writer. No runtime or release qualification.
+
+- 2026-10-20 19:04 UTC: recorded urgent scanner adoption HOLD for findings/error exit-1 ambiguity and missing error-plus-valid-report negative control. Prior unconditional acceptance superseded; exact correction proposal is read-only, with no scan, implementation or secret-leak claim. Existing two writer allocations unchanged.
