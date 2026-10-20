@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-20 07:34 UTC** (20 October 09:34 Zambia).
+Updated: **2026-10-20 07:46 UTC** (20 October 09:46 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -25,12 +25,12 @@ Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED,
 
 ### Current allocation — 20 October 07:28 UTC
 
-- Authentication owner `01a13490-68b3-7597-8078-0cda0d87c076`: **IN_PROGRESS**, sole application source writer. Approved Task B is limited to `packages/auth/src/roles.ts` and `packages/auth/src/roles.test.ts` on exact Unit 2. The preceding turn returned an unrelated deliverable, which is excluded from this programme's acceptance. The same owner is reconciling conflicting task context and continuing only the approved isolated scope; no replacement owner or accepted authentication result exists. Independent security review and pinned offline three-reader/portal regressions remain required.
+- Authentication owner `01a13490-68b3-7597-8078-0cda0d87c076`: authorized Task B **completed locally, OWNER_REPORTED; coordinator acceptance HELD**. Final two-file commit `13dec441db36ad70c249a1d5c8ce3321aa771491`, tree `6ae6a69bc1e6cc5ac9df225df353c379aba9164c`, sole parent Unit 2. Owner reports 463 offline passes and independent security acceptance. Source writer slot released; the same owner prepares small local receipts only. Earlier unrelated output remains excluded. Exact evidence custody and coordinator inspection are outstanding.
 - CI/runtime owner `01a13a6d-dedf-7108-afff-af9fbdd62010`: Task A read-only containment preflight **completed, BLOCKED**, independently **ACCEPT_BLOCKED_PREFLIGHT**. Preparing the smallest correction proposal read-only; no setup or client execution is authorized.
 - CUST-002 `01a12837-b5f5-7420-81d8-b6ccf0a2d05d`: narrow next-unit proposal completed; full #718 plus accepted Units 1–3 critical-path composition package is **IN_PROGRESS**, read-only. Exact two-path Vendor join is conditional on custody release and scoped assembly approval; no integration source was written.
 - Existing API/runtime owner `01a115f1-0c0f-7418-97aa-66b47fc2406d`: sanitized correlation of today's API failures **completed, VERIFIED at log-correlation scope**. Remediation and target qualification remain blocked/unapproved. No replay, database mutation, provisioning or production change.
 
-King retains serialized sole ownership of this tracker. The documentation update uses the second writer allocation only while it is being committed; no other application writer is active. Completed OPS/Admin/QA owners and source are preserved, not restarted. Up to four useful workstreams and no more than two simultaneous source writers remain the ceiling, not a requirement to invent work.
+King retains serialized sole ownership of this tracker. There are zero application source writers; only this serialized documentation update occupies a writer allocation while it is being committed. Completed OPS/Admin/QA owners and source are preserved, not restarted. Up to four useful workstreams and no more than two simultaneous source writers remain the ceiling, not a requirement to invent work.
 
 ### Retained earlier allocation history
 
@@ -322,13 +322,23 @@ Required skipped tests remain obligations. Review acceptance is scoped to its ex
 - Smallest proposed configuration resolution: a separately authorized branch-specific, verified **non-production** public key with matched Supabase URL and API/deployment plane, followed by separately approved rebuild of the exact Unit 1 SHA. This remains a proposal; no configuration or rebuild was executed. Do not insert key values in source or substitute a production credential.
 - Effective denied publication controls remain in force. Their current cause and legitimate remedy are **UNKNOWN**. The missing Unit 1 key scope does not explain or remove the publication denial. No bypass, alternate-route retry, source merge, shared database mutation, provider operation or new spending is included.
 
+### 20 October 07:46 UTC — authentication reported completion and revised candidate boundary
+
+- **Task B is completed locally, not coordinator-accepted.** Owner reports commit `13dec441db36ad70c249a1d5c8ce3321aa771491`, tree `6ae6a69bc1e6cc5ac9df225df353c379aba9164c`, sole parent Unit 2 `dfe51b22a8893be666e6d7fb7a9db03ab1784236`. Only `packages/auth/src/roles.ts` and `packages/auth/src/roles.test.ts` changed. The owner reports **463 offline tests passed, zero failed and zero skipped**, plus independent security-oriented acceptance. These are owner-reported results pending coordinator evidence inspection, not a verified integrated or deployed acceptance.
+- The application source writer slot is released. Earlier unrelated output remains excluded. The same authentication owner is preparing small local receipts only; no additional application edits or source reconstruction are requested.
+- **Private evidence-transfer approval is PENDING.** The sealed authentication packet's transfer into the owner's private ChatGPT Library was denied by an approval control because destination authorization was not established. The owner has been asked to approve that exact private destination for inspection/delivery; no public sharing is requested. No transfer workaround was attempted. Coordinator custody and acceptance remain **HELD** until the approved transfer and exact evidence verification succeed.
+- **Revised candidate composition proposal, unassembled:** base accepted Unit 3 `49d43c5f13b9e0277c0eed6c717e8791df41c806`, tree `4a9f8fa37cc3c88a1ea0482566a80bf710c4d2e3`, already contains the preserved #718 → Unit 1 → Unit 2 → Unit 3 foundation. Proposed additions are the **two authentication paths** from `13dec441...`, the **nine QA preparation paths** from `0195c0c50a4854b6dba78d296caa030ac9f4c1dd`, and the **two QA registration paths** from `1f89bf0dbac2d6398a726994048e6923ac121864`. This is a 13-path proposed addition, not a selected integrated SHA or authority to assemble.
+- CUST-002 is revising the exact read-only composition and dependency package. Authentication donor identity is now reported, but coordinator custody is held. QA registration custody remains held after HTTP 403. The wider **49-path protected envelope is not approved**; no protected auth/cart/financial/Admin dependency is silently imported by the small composition.
+- **21 October remains BLOCKED.** The 26 October GO/NO-GO target remains AT_RISK, with 7 November contingency unchanged. All 29 QA journeys remain BLOCKED_NOT_RUN. Exact scoped assembly approval, protected-owner dispositions, source/evidence custody and candidate-bound qualification remain separate gates.
+- No merge, source publication, deployment, shared database mutation, provider/financial operation or production credential change occurred. No new buyer, business or operator deployed capability is claimed.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
 |---|---|---|
 | Customer | Unit 1 Preview ERROR; missing applicable public-key scope VERIFIED; production alias source differs from Vendor/Admin | Authorized matched non-production branch configuration and exact-SHA rebuild; exact combined source and hosted qualification |
 | Vendor | Unit 1 Preview READY is build-only; accepted Unit 3 local correction retained; production alias at `287d6885...` | Reviewed integrated caller/source contract and exact candidate qualification |
-| Admin | Unit 1 Preview READY is build-only; production alias at `287d6885...`; no new live role change | Accepted two-file auth result, approved identity/preflight, PG17.6/RBAC and cross-app acceptance |
+| Admin | Unit 1 Preview READY is build-only; production alias at `287d6885...`; Task B local completion is reported with coordinator custody HELD; no live role change | Coordinator-accepted two-file auth evidence, approved identity/preflight, PG17.6/RBAC and cross-app acceptance |
 | FastAPI | Existing backend/financial work requires coordinated source adoption | Exact candidate/API image and compatible writer contract |
 | Database | Metadata inventory exists; final migration/schema equivalence unproved | Ordered source-bound qualification and separately approved target/recovery plan |
 | Automation | Operational acceptance remains separate from source work | Authorized runtime evidence, without exposing private operational records here |
@@ -377,8 +387,8 @@ These are measurable target gates, not delivery promises. Issue #716 remains aut
 
 | Date (Zambia) | Milestone | Status | Measurable exit / evidence |
 |---|---|---|---|
-| 20 Oct | Task closures and today's runtime diagnosis | **IN_PROGRESS** | Task A closed with reviewed BLOCKED verdict; Task B exact commit/tree, pinned regressions and security acceptance pending; the two HTTP 500 exception classes are now log-correlated, while fresh deployed-source verification and remediation remain outstanding. [Current checkpoint](#20-october-0728-utc--task-closures-and-critical-path-checkpoint), [#750](https://github.com/KaluMuso/Convergeo/pull/750). |
-| 21 Oct | Select one isolated integrated candidate | **BLOCKED** | Exact composition manifest on preserved [#718](https://github.com/KaluMuso/Convergeo/pull/718), accepted Unit 1–3 and accepted auth only; custody verified, protected conflicts dispositioned, scoped assembly authorized, resulting commit/tree independently reviewed. No candidate SHA selected. [Conditional join](#20-october-0728-utc--task-closures-and-critical-path-checkpoint). |
+| 20 Oct | Task closures and today's runtime diagnosis | **IN_PROGRESS** | Task A closed with reviewed BLOCKED verdict; Task B local commit/tree and 463 passes are reported, but coordinator custody/acceptance are HELD; the two HTTP 500 exception classes are log-correlated, while fresh deployed-source verification and remediation remain outstanding. [Task B and composition checkpoint](#20-october-0746-utc--authentication-reported-completion-and-revised-candidate-boundary), [#750](https://github.com/KaluMuso/Convergeo/pull/750). |
+| 21 Oct | Select one isolated integrated candidate | **BLOCKED** | Exact composition manifest on preserved [#718](https://github.com/KaluMuso/Convergeo/pull/718), accepted Unit 1–3 and accepted auth only; custody verified, protected conflicts dispositioned, scoped assembly authorized, resulting commit/tree independently reviewed. No candidate SHA selected. [Revised unassembled composition](#20-october-0746-utc--authentication-reported-completion-and-revised-candidate-boundary). |
 | 22 Oct | Hosted CI and database qualification | **BLOCKED** | Candidate-bound required CI/security and pinned PostgreSQL 17.6 migration/RLS/typegen evidence, with actual checkout/image/ledger identities and no silently skipped protected checks. Publication/custody, approved execution boundary and Admin lifecycle/cleanup remain prerequisites. [Qualification record](#5-ci-independent-review-and-remaining-validation). |
 | 23 Oct | Aligned staging | **AT_RISK** | Separately approved exact Customer/Vendor/Admin/API image, ordered migration and configuration alignment, guarded rollout and recovery evidence. Current production frontend aliases are not source-aligned; Unit 1 Customer Preview has a verified key-scope gap. No deployment authorization inferred. [Component status](#6-component-integration-status). |
 | 24 Oct | Paid-domain E2E acceptance | **AT_RISK** | All 29 QA journeys executed on the accepted binding, plus required real provider-backed paid product/service/event and applicable rail/negative/after-sales identities under explicit test authority; mocks/COD/free RSVP do not substitute. [Issue #716 acceptance contract](https://github.com/KaluMuso/Convergeo/issues/716), [QA limits](#20-october-0728-utc--task-closures-and-critical-path-checkpoint). |
@@ -387,7 +397,7 @@ These are measurable target gates, not delivery promises. Issue #716 remains aut
 
 ### Top three decisions threatening 21 October selection
 
-1. **Custody resolution:** establish a legitimate supported route for exact QA registration and accepted source/evidence bytes; retain current access/publication denials. Without verified bytes, do not reconstruct or assemble from summaries.
+1. **Custody resolution:** decide the pending exact private authentication-packet transfer and establish a legitimate supported route for exact QA registration/source evidence; retain current access/publication denials. Without verified bytes, do not reconstruct or assemble from summaries.
 2. **Exact integration scope and protected disposition:** approve only the verified smallest join once custody is complete; decide the selected wider composition on #718 and owner-reserved auth/cart/financial/Admin conflicts. Include Task B only after independent acceptance. Its implementation approval is already granted and must not be requested again.
 3. **Qualification boundary and dependency order:** choose an attestable pre-provisioned disposable target or approve a precise reviewed containment-only setup/proof after the proposal is available; retain separate nine-case execution approval. Bind Admin migration/lifecycle requirements and required checks before selecting a candidate that claims qualification readiness. Deferral leaves 22–25 October gates at risk; it never permits control weakening.
 
@@ -467,3 +477,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 07:28 UTC: recorded the owner's dated six-day critical path, completed blocked containment preflight, active narrowly scoped authentication work, exact conditional integration join, fresh runtime diagnostic limits and seven measurable milestones. No source assembly, publication-control bypass, hosted dispatch, deployment, shared-data or financial operation.
 
 - 2026-10-20 07:34 UTC: recorded verified Unit 1 public-key scope absence, exact failed Customer deployment, build-only Vendor/Admin statuses, zero Actions/no PR and skipped database Preview, non-aligned production frontend sources and tracker-only automatic preview metadata. No configuration, rebuild, release or publication-control bypass.
+
+- 2026-10-20 07:46 UTC: recorded owner-reported Task B two-file commit/tree, 463 offline passes and independent security acceptance with coordinator custody HELD; pending exact private evidence-transfer approval; revised unassembled 13-path addition on Unit 3; and zero application source writers. Wider protected integration and 21 October selection remain blocked.
