@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-20 19:23 UTC** (20 October 21:23 Zambia).
+Updated: **2026-10-20 19:43 UTC** (20 October 21:43 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -23,16 +23,16 @@ Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED,
 
 ## 2. Four Codex workstreams and owners
 
-### Current allocation — 20 October 19:23 UTC
+### Current allocation — 20 October 19:43 UTC
 
 The owner's 20 October 19:20 UTC directive authorizes rolling work until **21 October 09:00 CAT (Africa/Lusaka, UTC+02:00)**, using four useful lanes and at most two simultaneous source writers. Existing owners and accepted work are preserved; the directive does not waive protected execution or release gates.
 
 - **CUST-002**, `01a12837-b5f5-7420-81d8-b6ccf0a2d05d`: read-only publication-control and hosted qualification package for current selected LOCAL source `2e6416c7341d5092b7b42d1065be9b52b3decd7c`, tree `71a728347a0821a91526d6b9e3252b626beffd63`. Exact-source static qualification remains accepted; no publication or hosted dispatch is implied.
-- **CI**, `01a13a6d-dedf-7108-afff-af9fbdd62010`: the protected one-file scanner correction on `ab9d838d3b7921e10eb70b5b29939eca7e863dca` is now **APPROVED for isolated local implementation, tests and independent review only**, and the existing owner is running. This is the sole application/tooling source writer. No correction outcome is claimed yet; adoption, activation and publication remain unapproved.
+- **CI**, `01a13a6d-dedf-7108-afff-af9fbdd62010`: protected one-file scanner correction `e46b05d7cf75eac8e88935b2bea9f0f162978fda` / tree `38debe9901ada200d6a53921969835d47231d95a` is independently **ACCEPT_LOCAL_ONE_FILE_CORRECTION**; P2 is closed locally. Source writer released. Adoption, activation and publication remain unapproved.
 - **QA**, `01a12838-3cb0-74bd-9908-617e7b0c6064`: read-only exact-source compatibility review between selected `2e6416c` and separately accepted product driver `9a41f252e963d0d7d7844a7b58100b7339256f22`, tree `b23e75a51fdbf2fd661a6d5ce63c9bac6c52a48f`. The driver is **ACCEPT_CLOSED_MOCK_OBSERVATION_DRIVER**, with 92 mock tests and four denial controls; independent report SHA256 `f8de25c546388d479a3d0428dd0e25f1fce9abc90fdae56e68bc980fcbed507b`. It remains unwired and unintegrated; all 29 journeys remain NOT_RUN.
 - **API/runtime**, `01a115f1-0c0f-7418-97aa-66b47fc2406d`: bounded read-only inspection of missing image/rollback evidence, not a repeated full-platform audit. No replay, shared-data change or production action.
 
-King retains sole serialized tracker ownership. There is one application/tooling source writer; this documentation update uses the other writer allocation only until verified and released. Native socket/ioctl proof exception remains unapproved and the launcher dormant. Existing API/Chrome/Unit 1 publication holds and all database/provider/financial/deployment restrictions remain effective. The one-time handoff for **21 October 09:00 CAT** is verified enabled. Commercial GO/NO-GO remains **26 October**, with **7 November** contingency.
+King retains sole serialized tracker ownership. There are zero application/tooling source writers; this is the sole documentation writer until verified and released. Native socket/ioctl proof exception remains unapproved and the launcher dormant. Existing API/Chrome/Unit 1 publication holds and all database/provider/financial/deployment restrictions remain effective. The one-time handoff for **21 October 09:00 CAT** is verified enabled. Commercial GO/NO-GO remains **26 October**, with **7 November** contingency.
 
 ### Retained earlier allocation history
 
@@ -516,6 +516,16 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **Capacity:** both source writers released, zero active source writers. Scanner repair owner approval remains pending; existing scanner adoption HOLD is not cleared by the E2E result.
 - **Next three critical risks:** legitimate publication/hosted permission for the exact selected source; aligned Customer Preview plus isolated database/native acceptance; and #750 security, certification and recovery qualification. All 29 browser journeys and nine native client cases remain **NOT_RUN**. Existing API/Chrome/Unit 1 publication denials, proof-exception and shared-database/provider/deployment holds remain. 26 October remains AT_RISK and 7 November contingency.
 
+### 20 October 19:43 UTC — scanner correction accepted locally; publication and target gates retained
+
+- **Scanner P2 closed locally:** `e46b05d7cf75eac8e88935b2bea9f0f162978fda`, tree `38debe9901ada200d6a53921969835d47231d95a`, parent `ab9d838d3b7921e10eb70b5b29939eca7e863dca`, independently **ACCEPT_LOCAL_ONE_FILE_CORRECTION**. Only `scripts/ci/gitleaks-self-test.sh` changed; thirteen exclusions, workflows and scanner version are unchanged. Report SHA256 `77fba9229a5cfcff0c1050845bcd092924fcb2fe00c3b2daa844a1ff95a7669e`.
+- Two overlapping 33-case runs each contain 32 candidate cases plus one baseline case; they are **not 66 unique cases**. Initial bootstrap **FAILED** and remains preserved; cached normal hooks **PASSED**. The trace is a fixture-only trace, not containment proof. **Adoption/publication remain HOLD**; local correction acceptance is not permission to wire or activate the scanner.
+- **Exact 2e64 publication package accepted READ_ONLY:** report SHA256 `ad40dc32f11393c2ef2ca1b805041d0921c38abdca6438b4b2fc9bfb53913cce`. Proposed branch `codex/coordinator-ci-review-integrated-20261020` is **not created or approved**. Four original API/Chrome draft-creation denial responses are independently verified; their stated reason references original local-only/no-publication scope. No new publication retry occurred.
+- Original denial packet: 11,915 bytes, SHA256 `1a40f718e8643cdbf7e7fed59314665cd2b02d7c8edab4cf70ae94f97a3501f4`; addendum SHA256 `459ea9bd45028ff4590a215e1a70b9d71eb3f6667e63e403282d151dfa4d29aa`. Raw submitted arguments and the metadata operation remain **UNKNOWN**. Archived denials do not prove current authority is absent; reconcile the effective control and exact action-specific scope before any action. No alternate route or bypass is authorized.
+- **API read-only rollback inspection at 19:25 UTC:** original container/configuration match across fifteen fields, but the candidate image is absent from local inventory, startup remains **NOT_QUALIFIED**, and full restore remains unverified. This is narrower than deployment or recovery readiness.
+- **Admin selected-source check:** five-selector inspection against exact `2e6416c` was **BLOCKED_ENVIRONMENT before inspection**. One same-session recovery turn is now admitted, but resumed inspection is not yet confirmed. Do not infer selector presence/absence from this blocked turn. CUST read-only Preview binding remains active.
+- **Product driver stays unwired and unintegrated**, consistent with the latest owner direction. It is not part of selected `2e6416c`; all 29 journeys remain **NOT_RUN**. Zero source writers. Current selected local source, remaining native/hosted/security/Preview/database/recovery gates, API/Chrome/Unit 1 publication holds and 26 October / 7 November targets are unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -703,3 +713,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 19:13 UTC: recorded independently accepted final lint child 2e6416c and closed exact-source static E2E qualification with twelve fresh passing receipts, preserving prior failures. Selected current LOCAL source for hosted planning; separate QA driver remains unwired/under review. Both source writers released; runtime/publication/release holds remain.
 
 - 2026-10-20 19:23 UTC: recorded the owner's overnight four-lane directive through 21 October 09:00 CAT, newly approved local-only scanner correction with one active source writer, independently accepted but unwired product driver, and bounded read-only hosted/compatibility/image work. Exact selected 2e6416c remains unchanged; handoff verified enabled. No scanner adoption, publication, CI dispatch, database operation or deployment.
+
+- 2026-10-20 19:43 UTC: recorded independent local scanner correction acceptance with overlapping-count and bootstrap/trace limits; read-only publication package and four original denial receipts verified with unresolved action metadata; narrow rollback findings and blocked Admin inspection with recovery unconfirmed. Zero source writers, no publication/adoption or runtime acceptance; product driver remains separate.
