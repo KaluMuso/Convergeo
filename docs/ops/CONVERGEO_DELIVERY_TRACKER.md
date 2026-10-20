@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-19 21:26 UTC** (19 October 23:26 Zambia).
+Updated: **2026-10-20 07:28 UTC** (20 October 09:28 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -19,9 +19,20 @@ Scope: focused delivery recovery and active sprint results; the separate archite
 
 Duplicate-tracker check: inspected master/staging, current integration heads, open PRs and existing delivery records. The requested path was absent. Existing [Audit Ledger](../production-readiness/AUDIT_LEDGER.md) is dated 6 August; the [Master Reconciliation Register](../production-readiness/2026-07-18/consolidated/master-reconciliation-register.md) is dated 18 July; the [1 October delivery packet](https://github.com/KaluMuso/Convergeo/tree/ae0a219199cccc341dca03df8cfce85153b7a312/docs/delivery/2026-10-01) is a source-custody handoff. These historical records remain preserved; none is an equivalent current four-lane sprint tracker.
 
-Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED, PRODUCTION_VERIFIED, IN_PROGRESS, BLOCKED, UNKNOWN. Passing mocks, skipped tests, source review and READY deployments are not interchangeable acceptance evidence.
+Status vocabulary: SOURCE_COMPLETE, TESTED_LOCAL, CI_VERIFIED, STAGING_VERIFIED, PRODUCTION_VERIFIED, IN_PROGRESS, BLOCKED, UNKNOWN. Dated milestones additionally use VERIFIED and AT_RISK; VERIFIED applies only to the stated measurable outcome. Passing mocks, skipped tests, source review and READY deployments are not interchangeable acceptance evidence.
 
 ## 2. Four Codex workstreams and owners
+
+### Current allocation — 20 October 07:28 UTC
+
+- Authentication owner `01a13490-68b3-7597-8078-0cda0d87c076`: **IN_PROGRESS**, sole application source writer. Approved Task B is limited to `packages/auth/src/roles.ts` and `packages/auth/src/roles.test.ts` on exact Unit 2. The preceding turn returned an unrelated deliverable, which is excluded from this programme's acceptance. The same owner is reconciling conflicting task context and continuing only the approved isolated scope; no replacement owner or accepted authentication result exists. Independent security review and pinned offline three-reader/portal regressions remain required.
+- CI/runtime owner `01a13a6d-dedf-7108-afff-af9fbdd62010`: Task A read-only containment preflight **completed, BLOCKED**, independently **ACCEPT_BLOCKED_PREFLIGHT**. Preparing the smallest correction proposal read-only; no setup or client execution is authorized.
+- CUST-002 `01a12837-b5f5-7420-81d8-b6ccf0a2d05d`: narrow next-unit proposal completed; full #718 plus accepted Units 1–3 critical-path composition package is **IN_PROGRESS**, read-only. Exact two-path Vendor join is conditional on custody release and scoped assembly approval; no integration source was written.
+- Existing API/runtime owner `01a115f1-0c0f-7418-97aa-66b47fc2406d`: sanitized correlation of today's API failures **completed, VERIFIED at log-correlation scope**. Remediation and target qualification remain blocked/unapproved. No replay, database mutation, provisioning or production change.
+
+King retains serialized sole ownership of this tracker. The documentation update uses the second writer allocation only while it is being committed; no other application writer is active. Completed OPS/Admin/QA owners and source are preserved, not restarted. Up to four useful workstreams and no more than two simultaneous source writers remain the ceiling, not a requirement to invent work.
+
+### Retained earlier allocation history
 
 The CG identifiers are allocation labels; UUIDs identify the existing Codex tasks. Maximum two simultaneous application/tooling source writers. King alone edits this documentation file.
 
@@ -32,7 +43,7 @@ The CG identifiers are allocation labels; UUIDs identify the existing Codex task
 | CG-R4-OPS-003 | `01a12839-f53c-75d9-9e59-8bb5e6a1a04e` | SOURCE_COMPLETE / TESTED_LOCAL at `d836b82228bc481fff209bc07a067ee12aeec8f0`; two-locale repair independently ACCEPTED | Draft #756 updated; main CI passed; separate Performance setup and Customer Preview remain blocked |
 | CG-R4-QA-004 | `01a12838-3cb0-74bd-9908-617e7b0c6064` | Private specification revision 2 independently ACCEPTED_FOR_PREPARATION; 29 cases remain BLOCKED_NOT_RUN | Select candidate; approve explicit test/helper scope and fixture/preflight bindings before collection or execution |
 
-Current source-writing state: no active source writers. The existing CI owner completed the separate QA registration and Admin workflow candidates and released its slot. That owner completed the next offline compatibility preparation; execution is blocked on a separately scoped containment preflight and independent qualification. Admin, QA and OPS local results are preserved; integration and authentication proposals remain read-only and await scoped decisions. Maximum two writers, exclusive ownership and all publication/runtime boundaries remain effective.
+Historical state at 19 October 21:26 UTC: no source writers were active; the authorized queue was completed or blocked. This is superseded by the 20 October allocation above. QA registration/Admin workflow and all accepted Admin, QA and OPS results remain preserved. The new authentication approval does not authorize wider integration, publication or runtime actions.
 
 Layout owner: `01a14bc0-7e64-7061-b018-6f111b52d018`; unchanged reviewed source is now draft #753. No lane may absorb another owner's protected paths merely because a task turn ended.
 
@@ -290,6 +301,17 @@ Required skipped tests remain obligations. Review acceptance is scoped to its ex
 - Current containment is NOT_VERIFIED. No setup attempt or denial occurred. Next gate: scoped authorization and independent review of containment-only preflight, followed by review of any execution-barrier replacement. No client/application execution is authorized by this status entry.
 - All currently admitted preparation turns are completed. There are zero active source writers. Existing owners and handoffs remain preserved for the next genuinely ready authorized action; no duplicate tasks or artificial work were introduced. Outstanding decisions are consolidated for the scheduled morning handoff.
 
+### 20 October 07:28 UTC — task closures and critical-path checkpoint
+
+- **Task A: completed, BLOCKED.** The existing CI/runtime owner verified the unchanged frozen harness/closure hashes and both unconditional execution barriers. Independent verdict: **ACCEPT_BLOCKED_PREFLIGHT**. The inspected environment does not demonstrate the disposable execution boundary required by the harness; filesystem, network, process and native-loader closure remain unqualified. Prerequisites were inspected read-only, not set up, attempted unsuccessfully or denied. No client/application imports, queries, nine-case tests or request-capable entrypoints ran. Retained packet SHA256 `c47c1db7d9bbadc4f54f02d38bb6e1843d50f227951ac725e53ed5c9c81716ca`; coordinator artifact custody is not promoted by this report.
+- **Task B: IN_PROGRESS.** Exact authorized base Unit 2 `dfe51b22a8893be666e6d7fb7a9db03ab1784236`, tree `17ec07fc1e7021ebc901074f568295a6384a0eb2`; only `packages/auth/src/roles.ts` and `packages/auth/src/roles.test.ts` may change. Role recognition must not imply inheritance or restricted-portal admission. Three-reader and relevant portal/recovery/cache/PKCE regressions and independent security acceptance remain required. The preceding owner output was unrelated and is excluded; no authorized Task B commit, regression pass or security acceptance is established. The same owner is reconciling task context and continuing only the approved scope.
+- **First conditional join:** accepted Unit 3 `49d43c5f13b9e0277c0eed6c717e8791df41c806`, tree `4a9f8fa37cc3c88a1ea0482566a80bf710c4d2e3`, contributes only `apps/vendor/app/[locale]/listings/new/_components/quick-list-form.tsx` and `apps/vendor/app/[locale]/listings/new/listings.test.ts` onto QA registration base `1f89bf0dbac2d6398a726994048e6923ac121864`, tree `54cad12d1c9c2bdf96bbdd73e35883195d8c2624`. This preserves the #718 → Unit 1 → Unit 2 foundation and the nine QA preparation plus two registration paths. It is **not READY and not authorized for assembly**: registration custody is HELD, and accepted-packet materialization returned HTTP 403. No alternate route or reconstruction was used. Authentication is a separate later join only after independent acceptance. Proposal SHA256 `98b3b5e99ddc253e422cd898c87162df736e5c7f9496eb24ee7964d3ba7e775c`.
+- All **29 QA journeys remain BLOCKED_NOT_RUN**. Expected collection inventory is **22 files / 79 logical cases / 95 instances**, not collected or passing results. All **104 Admin route-owner decisions remain pending**. The wider eight-/31-path alternatives, protected auth/cart/financial conflicts and migration qualification are not silently adopted by the small join.
+- **Today's runtime diagnosis: VERIFIED at log-correlation scope.** The existing API owner inspected sanitized logs: daily reconciliation raised `LedgerAccountNotFoundError` for the required `platform_cash` account; low-stock raised `AttributeError` on `NoneType.data`. Adjacent correlated error records bind the tracebacks to today's two failures; the tracebacks themselves do not contain request IDs. The running image was identified, but its configured source label `fac35f450d7a92dbd9dba451227b467bbf278355` is not a fresh source-byte verification. These observed failure classes match the boundaries addressed by #750, not proof that deploying it qualifies or fixes the entire runtime. Missing account provisioning/accounting remains an owner decision; no query, replay or change occurred. Later successful ticks are not recovery evidence. Operational identifiers and detailed traces remain private.
+- **#750 remains the first progressive production candidate**, at `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`, tree `eeffd1044b6e4058e49e940f1de48b1512792e30`. Existing bounded mock/source reviews are preserved. Current incident exception classes are log-correlated; exact hotfix coverage, actual-client/application acceptance, applicable CI/security, immutable image/source qualification and exact-target rollback/certification remain open. No alternate certification profile is activated and no production approval is implied.
+- Customer Preview's public-key build configuration and API/Chrome/Unit 1 publication-control holds remain unresolved. No secret is inserted into source, denied publication retried, or production Customer/Vendor/Admin alignment inferred from separate READY previews.
+- **Buyer/business/operator outcome:** no new deployed capability. Measured enabling progress is a reviewed containment verdict and a bounded exact-source integration proposal; authentication implementation remains underway. Tests marked NOT_RUN above must not be counted as skipped or passed.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -338,6 +360,26 @@ Additional protected paths, ambiguous product behavior, migration conflicts or p
 - Earlier bounded execution report delivered before 18 October2026,18:22 Zambia (16:22 UTC); latest approved correction checkpoint is recorded above.
 
 The decision requires one exact integrated source, all three portal/API/database bindings, required CI and independent reviews, provider-backed acceptance, operator readiness and recovery/rollback evidence. A target date does not waive a gate.
+
+### Daily release dashboard — 20–26 October 2026
+
+These are measurable target gates, not delivery promises. Issue #716 remains authoritative. A later date does not waive an unmet predecessor or confer execution authority.
+
+| Date (Zambia) | Milestone | Status | Measurable exit / evidence |
+|---|---|---|---|
+| 20 Oct | Task closures and today's runtime diagnosis | **IN_PROGRESS** | Task A closed with reviewed BLOCKED verdict; Task B exact commit/tree, pinned regressions and security acceptance pending; the two HTTP 500 exception classes are now log-correlated, while fresh deployed-source verification and remediation remain outstanding. [Current checkpoint](#20-october-0728-utc--task-closures-and-critical-path-checkpoint), [#750](https://github.com/KaluMuso/Convergeo/pull/750). |
+| 21 Oct | Select one isolated integrated candidate | **BLOCKED** | Exact composition manifest on preserved [#718](https://github.com/KaluMuso/Convergeo/pull/718), accepted Unit 1–3 and accepted auth only; custody verified, protected conflicts dispositioned, scoped assembly authorized, resulting commit/tree independently reviewed. No candidate SHA selected. [Conditional join](#20-october-0728-utc--task-closures-and-critical-path-checkpoint). |
+| 22 Oct | Hosted CI and database qualification | **BLOCKED** | Candidate-bound required CI/security and pinned PostgreSQL 17.6 migration/RLS/typegen evidence, with actual checkout/image/ledger identities and no silently skipped protected checks. Publication/custody, approved execution boundary and Admin lifecycle/cleanup remain prerequisites. [Qualification record](#5-ci-independent-review-and-remaining-validation). |
+| 23 Oct | Aligned staging | **AT_RISK** | Separately approved exact Customer/Vendor/Admin/API image, ordered migration and configuration alignment, guarded rollout and recovery evidence. No alignment or deployment authorization inferred. [Component status](#6-component-integration-status). |
+| 24 Oct | Paid-domain E2E acceptance | **AT_RISK** | All 29 QA journeys executed on the accepted binding, plus required real provider-backed paid product/service/event and applicable rail/negative/after-sales identities under explicit test authority; mocks/COD/free RSVP do not substitute. [Issue #716 acceptance contract](https://github.com/KaluMuso/Convergeo/issues/716), [QA limits](#20-october-0728-utc--task-closures-and-critical-path-checkpoint). |
+| 25 Oct | Operational and recovery rehearsal | **AT_RISK** | Exact-target restore/cutover, compatible writer drain/resume, receipts/obligations preservation, reconciliation and primary/backup operator rehearsal accepted. No financial or shared-data actions authorized by this schedule. [Issue #716 operating contract](https://github.com/KaluMuso/Convergeo/issues/716). |
+| 26 Oct | Commercial GO/NO-GO | **AT_RISK** | Evidence-backed decision across paid products, services and events; GO only after all protected technical, financial, operational and target-specific approval gates. Otherwise record NO-GO and the remaining exact gates. Contingency remains **7 Nov 2026**. [Release contract](production-release-control.md), [Issue #716](https://github.com/KaluMuso/Convergeo/issues/716). |
+
+### Top three decisions threatening 21 October selection
+
+1. **Custody resolution:** establish a legitimate supported route for exact QA registration and accepted source/evidence bytes; retain current access/publication denials. Without verified bytes, do not reconstruct or assemble from summaries.
+2. **Exact integration scope and protected disposition:** approve only the verified smallest join once custody is complete; decide the selected wider composition on #718 and owner-reserved auth/cart/financial/Admin conflicts. Include Task B only after independent acceptance. Its implementation approval is already granted and must not be requested again.
+3. **Qualification boundary and dependency order:** choose an attestable pre-provisioned disposable target or approve a precise reviewed containment-only setup/proof after the proposal is available; retain separate nine-case execution approval. Bind Admin migration/lifecycle requirements and required checks before selecting a candidate that claims qualification readiness. Deferral leaves 22–25 October gates at risk; it never permits control weakening.
 
 ## 10. Evidence index and preservation
 
@@ -411,3 +453,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-19 21:08 UTC: recorded reported local QA registration/Admin workflow completion with custody holds, independently reviewed Admin proposal and read-only next qualification. No runtime acceptance or production change.
 
 - 2026-10-19 21:26 UTC: recorded blocked source-only client harness preparation and the precise next qualification gate; no runtime test success claimed.
+
+- 2026-10-20 07:28 UTC: recorded the owner's dated six-day critical path, completed blocked containment preflight, active narrowly scoped authentication work, exact conditional integration join, fresh runtime diagnostic limits and seven measurable milestones. No source assembly, publication-control bypass, hosted dispatch, deployment, shared-data or financial operation.
