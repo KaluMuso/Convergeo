@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 18:30 UTC** (21 October 20:30 Zambia).
+Updated: **2026-10-21 18:34 UTC** (21 October 20:34 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -639,6 +639,14 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - The owner explicitly instructed **do not launch PostgreSQL yet**. Q0 launch remains unauthorized. Source transfer, exact image/version/extensions, containment and other approval prerequisites are unchanged.
 - Preserve all 153 existing stopped containers. The maximum remains two source writers and one heavy local workload; no new writer activity, workload or resource change is inferred. All other source, test, publication and release facts remain unchanged.
 
+### 21 October 18:34 UTC — memory stability failed; local PostgreSQL Q0/Q1 blocked
+
+- Owner's second Windows reading fell to **1.88 GiB after sixty seconds**, versus the first **2.56 GiB**. Preserve the first reading as MET_AT_OBSERVATION, but the revised **2.5 GiB admission requirement was not met consistently**. Memory stability **FAILED**; local PostgreSQL **Q0/Q1 remain BLOCKED**.
+- Explicit restrictions: do not modify Docker/WSL resources, terminate workloads or lower the approved threshold. Retain the 16 GB plan, one heavy local workload and maximum two source writers; preserve existing resources.
+- All three #750 offline checks remain containment-BLOCKED / NOT_RUN. Original source transfer remains blocked by helper HTTP 401. Parent task reads returned FORBIDDEN at 18:30 UTC, QA task read at 18:31 UTC and CI-001 task read at 18:34 UTC (TaskComputerNotAuthorizedError); no access retry or alternate route is authorized by this checkpoint.
+- Owner permits exploration only of an **authorized, qualified cloud PostgreSQL runner**. This is not approval to launch a runner/database, spend, dispatch CI or bypass a denied access route. Source custody, image/version/extensions, containment and execution approvals remain required.
+- All other accepted source/evidence, 29 journey/nine native NOT_RUN states and publication/database/provider/release holds remain unchanged. Targets remain 26 October and 7 November.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -854,3 +862,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 18:13 UTC: recorded terminal approved offline preflight BLOCKED_BEFORE_EXECUTION with independently accepted receipt; all three checks NOT_RUN/null results. Existing owner prepares read-only boundary proposal. Serialized local capacity limits and all source/runtime/release holds preserved.
 
 - 2026-10-21 18:30 UTC: recorded owner memory threshold MET_AT_OBSERVATION at 20:27 CAT, with stability and fresh pre-launch check pending. Explicit PostgreSQL no-launch instruction remains; no Q0 or resource action authorized.
+
+- 2026-10-21 18:34 UTC: recorded failed sixty-second memory stability despite first threshold-met observation; Q0/Q1 explicitly BLOCKED with no threshold/resource/workload changes. Recorded source/task-access blockers and exploration-only cloud-runner scope, with no launch or bypass authority.
