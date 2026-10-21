@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 22:55 UTC** (22 October 00:55 Zambia).
+Updated: **2026-10-21 23:27 UTC** (22 October 01:27 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -735,6 +735,14 @@ The owner supplied an independent, scoped recovery route for the original #750 s
 
 The Ubuntu account, canonical destination directory, original archive path, authentication/tool bindings and concrete extractor-wrapper review remain unresolved. The privately delivered preparation ZIP is 8,842 bytes, SHA256 `26478b7802b70a57149f6235820a13e5917755d3a1c60d8e6a318019657a3588`; no private access location is published here. **No fetch, import, test or denied-task retry occurred.** This route remains separate from original-task Support/access recovery and selected integration source `2e6416c` custody. All three approved #750 checks remain NOT_RUN; all existing publication, containment, database and release holds remain unchanged.
 
+### 21 October 23:27 UTC — original archive custody and blocked import-script preparation
+
+Four owner-supplied original CUST/QA archives passed independent hash, CRC and safe-path verification. The retained bundle chain is `e713de3f → 05c29edee → 19dc74c8 → 2e6416c`; the earliest required original `e713de3f` base-object closure is still missing from this chain. QA preparation `0195c0c5` requires `dfe51b22` and is already represented, not a second adoption. Product driver `9a41f252` is an unwired sibling on `05c29edee`, not part of selected `2e6416c`. The publication packet contains no Git bundle. The private 7,666-byte custody addendum ZIP, SHA256 `4a91595a05369fb5ad275bd9f5d33a3ebcd372d0d53ee99d9aebd4099e338ad5`, is accepted as blocked preparation.
+
+A concrete CI-001 import script received independent AST parsing and source review: **ACCEPT_AS_BLOCKED_PREPARATION**, 22,271 bytes, SHA256 `2a43dd835c3fab86857068a09cd141fd0c813fa7981f5cc826885b68e50dbfe8`. Its permitted proposal is offline import from a complete original base bundle only. GitHub authentication/network binding remains **UNBOUND/BLOCKED**. The exact original base-bundle path, hash and acquisition route, plus owner acceptance of the local execution scope, remain prerequisites. **No fetch, import or runtime execution occurred.**
+
+Owner-terminal evidence supplied the Ubuntu account identity, canonical parent directory, archive hash and Git 2.43 version; these are not agent live checks, and personal paths are not published here. Task-to-local/cloud environment bindings remain **UNVERIFIED** and require Support mapping, not inference from archive contents. Overnight laptop, WSL and Docker access is prohibited; questions are deferred until morning. This checkpoint adds custody and script-preparation evidence only, not a new source commit, test, CI, deployment or pilot capability. All existing source, testing and release holds remain.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -895,3 +903,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 22:12 UTC: recorded four independently reviewed overnight preparation reports, precise integration/PG/Python/pilot findings and the retained private evidence fingerprint. No source, application test, CI, deployment or pilot acceptance; all execution and release holds preserved.
 
 - 2026-10-21 22:55 UTC: recorded independently accepted, blocked #750 original-source recovery preparation and exact archive/bundle fingerprints. No runnable procedure, fetch, import, test, access recovery or task retry claimed; integration custody and original-task Support remain separate.
+
+- 2026-10-21 23:27 UTC: recorded verified original archive custody, incomplete base closure, non-duplicative QA ancestry and blocked offline import-script preparation. Owner-terminal evidence is not live verification; overnight local access is prohibited. No fetch, import, tests, new source or release capability.
