@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 17:34 UTC** (21 October 19:34 Zambia).
+Updated: **2026-10-21 18:13 UTC** (21 October 20:13 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -623,6 +623,15 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Accepted #750 local source `234805466c3e07e2cb8dddddf6867cf4b52a708b` remains unchanged. Approval for its three offline checks remains pending. Zero active source writers; no rerun, reconstruction or new tests.
 - All 29 journeys/nine native cases remain NOT_RUN. Existing publication, database/provider and release holds and 26 October / 7 November targets remain unchanged.
 
+### 21 October 18:13 UTC — approved #750 offline checks blocked before execution
+
+- Existing CI owner completed the approved offline attempt's preflight at 18:11 UTC with **BLOCKED_BEFORE_EXECUTION**. Exact clean source `234805466c3e07e2cb8dddddf6867cf4b52a708b`, tree `4ae06ee1e32808eb4b2aa72790f91eb66fcdc607`, Node 22.23.3 / Python 3.12.14 executable hashes, cleared inspector environment and private directories were verified.
+- The available launcher cannot demonstrate effective network denial or scoped child-process/filesystem containment. No exception or alternate executor was used. All three checks are **NOT_RUN**, with null exit codes and null TAP counts; no operation remains pending.
+- Independent verdict **ACCEPT_BLOCKED_RECEIPT**; original evidence packet 13,439 bytes, SHA256 `f0730699fa5eb56a477062ddfc171e9983c6d07633100bbf1ca54b34dd12d501`. This accepts the blocked preflight record, not source execution or successful tests.
+- The existing owner is preparing a bounded **read-only supported-boundary proposal**, not rerunning the checks. Earlier pending-approval status is superseded by approval plus this demonstrated execution blocker.
+- Owner's 18:08 UTC capacity direction retains the 16 GB machine, defers hardware upgrade to 2027, permits only one heavy local workload at a time and prohibits increased global allocations. Parallel cloud work requires a qualified fallback; capacity preference does not authorize a substitute executor or relax isolation.
+- All 29 journeys/nine native cases remain NOT_RUN. Accepted source, historical advisory findings and publication/database/provider/release holds remain unchanged. No new source write or test success; 26 October / 7 November targets preserved.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -834,3 +843,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 15:58 UTC: recorded PG176 revision 1 ACCEPT_AS_BLOCKED_PREPARATION, revised proposed memory threshold and monitored-not-hard disk bound. Custody/checkout/directory/approval prerequisites remain; no launches or tests. Documentation-only update.
 
 - 2026-10-21 17:34 UTC: recorded owner free-memory readings below the reviewed 2.5 GiB PG entry proposal. Local PG remains blocked with other prerequisites intact; no launches, settings changes, workload interruption or tests.
+
+- 2026-10-21 18:13 UTC: recorded terminal approved offline preflight BLOCKED_BEFORE_EXECUTION with independently accepted receipt; all three checks NOT_RUN/null results. Existing owner prepares read-only boundary proposal. Serialized local capacity limits and all source/runtime/release holds preserved.
