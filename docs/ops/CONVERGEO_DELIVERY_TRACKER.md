@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 14:00 UTC** (21 October 16:00 Zambia).
+Updated: **2026-10-21 14:59 UTC** (21 October 16:59 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -591,6 +591,15 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Follow-on dependency matrix is a **proposal only**: seventeen JavaScript paths plus a separate two-path API audit-binding correction. It is not an accepted composition or authorization to adopt source, alter workflows or weaken advisory controls.
 - Selected `2e6416c`, ownership, publication/adoption/workflow holds and all 29 journey/nine native-client NOT_RUN states remain unchanged. Docker availability alone does not establish a qualified isolated target. 26 October and 7 November targets remain.
 
+### 21 October 14:59 UTC — preserved source transport and isolated-database preparation limits
+
+- Owner evidence confirms Ubuntu 24.04.5 / Docker 29.6.2 operational. A single new bounded agent check returned **E_ACCESSDENIED**; checks stopped. The owner will provide Linux metadata; no access retry, alternate route or bypass is authorized. Current running-container count is unknown after empty statistics output. Preserve all 153 existing resources; no resource shutdown/deletion or new test container.
+- **Original source custody verified:** selected `2e6416c7341d5092b7b42d1065be9b52b3decd7c` / tree `71a728347a0821a91526d6b9e3252b626beffd63` remains clean. The earlier 554,745-byte packet contains three incremental bundles and lacks the `e713` base closure. A distinct original-object transport, 57,580,334 bytes, SHA256 `243789a5b6737a68dff41173d8c5d348dd417f5d16da79cf4e5026186a0aa089`, passed strict import/fsck for 3,859 objects and matching 3,284 checkout entries/modes, with independent custody review accepted.
+- Ubuntu import is **NOT_RUN**. Supported Library upload returned HTTP 401 with no confirmed file identities. No successful transfer, publication, replacement reconstruction or alternate route is claimed.
+- **QA004-PG176-01: accepted BLOCKED_PREPARATION**, packet 48,042 bytes, SHA256 `d4572f1f08a20d0def7c730610072096fecf7ed6aa62b9247475ed29d985a0f0`. The selected source has exactly 139 migrations, distinct from the historical 135 and the Admin 139-plus-one profile. Image digest, extensions, runner, containment, storage bounds, headroom and custody prerequisites remain unresolved. No database test or query occurred.
+- **#750 donor identities resolved read-only:** `cf9ddfb3c55c82d2ff0ab6f2ca79221710d1e871` / tree `6ee3d3bcf954f74aca4d3c69a08fea4573617bc8`; `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf` / tree `474769379098f10c060487f9c48e54ba7cf0e7e5`. Seventeen JavaScript paths plus two API audit-binding paths remain a precise-hunk proposal, **not implemented**. The 25 historical advisory findings remain open and Python audit remains SKIPPED; executor initialization failed. Existing CI owner is preparing the final seven-item decision packet only.
+- Zero source writers. All 29 browser journeys and nine native-client cases remain NOT_RUN. Selected source, protected ownership, source-adoption/publication/runtime/shared-data/provider/release holds and 26 October / 7 November targets remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -794,3 +803,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 13:46 UTC: recorded partial read-only Windows assessment, conditional hardware suitability, toolchain/runtime gaps and agent-identity read limits. Missing-facts script statically reviewed but NOT_RUN. No installation, host change, source verification or qualification inferred.
 
 - 2026-10-21 14:00 UTC: corrected local Docker availability using explicit owner evidence while preserving access/isolation/capacity limits; recorded retained #750 advisory rejection and proposal-only dependency matrix. No new resources, scans, source changes or qualification execution.
+
+- 2026-10-21 14:59 UTC: recorded owner-only Linux readiness evidence with agent access denial/no retries, independently verified complete original-object source transport but failed supported upload and no Ubuntu import, blocked PG17.6 preparation and precise unimplemented dependency proposal. No tests, source edits or publication; all holds preserved.
