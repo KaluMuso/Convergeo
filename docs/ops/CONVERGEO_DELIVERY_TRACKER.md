@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 15:39 UTC** (21 October 17:39 Zambia).
+Updated: **2026-10-21 15:58 UTC** (21 October 17:58 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -609,6 +609,13 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **Latest owner-provided local metadata:** all 153 existing containers are stopped, zero running. Three recorded exit-137 events have OOMKilled=false and the same timestamp; their cause is unknown, not proven OOM or agent action. Ubuntu reports Git 2.43 and Python 3.12.3; native Node, pnpm and uv are absent in that observed environment. This does not describe the separate Windows toolchain. Preserve all resources; no restart/delete or setup is implied.
 - Selected `2e6416c` source transfer remains blocked. QA is updating its preparation proposal, not executing it. All 29 journeys/nine native cases, scanner adoption, publication, isolated-database/image, shared-data/provider and production gates remain held. 26 October / 7 November targets remain unchanged.
 
+### 21 October 15:58 UTC — PG176 revision 1 accepted as blocked preparation
+
+- Delivered QA004-PG176 revision 1 preserves version 0: 51,220 bytes, SHA256 `5412c062e0cabb842b511dd8fe71f0f1f05816182a422b57783cdb4d93ad9613`. Independent verdict: **ACCEPT_AS_BLOCKED_PREPARATION**, not execution approval or runtime acceptance.
+- Proposed isolation is network-none with a private Unix socket. PostgreSQL limits: 1 CPU / 1,024 MiB; runner: 1 CPU / 256 MiB. Proposed fresh Windows free-memory threshold is 2.5 GiB measured within five minutes, replacing the earlier 4 GiB proposal. Monitored disk abort threshold is 4 GiB, **not a hard quota**; maximum duration is thirty minutes.
+- No containers launched or tests ran. Source-custody transfer remains HTTP-401 blocked, Ubuntu checkout NOT_RUN, and exact directory bindings, memory evidence and Q0/Q1/Q2 approvals remain pending. Do not infer execution permission from proposal acceptance.
+- All 29 journeys and nine native client cases remain NOT_RUN. #750 source-only acceptance is unchanged; approval for its three offline checks remains pending and none executed. No new audit, application-code change or release operation.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -816,3 +823,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 14:59 UTC: recorded owner-only Linux readiness evidence with agent access denial/no retries, independently verified complete original-object source transport but failed supported upload and no Ubuntu import, blocked PG17.6 preparation and precise unimplemented dependency proposal. No tests, source edits or publication; all holds preserved.
 
 - 2026-10-21 15:39 UTC: recorded exact two-unit #750 local source preparation and independent source-only acceptance with static-check limits; historical advisories remain uncleared. Updated owner-provided local stopped-container/toolchain metadata without inferring exit cause. No install, executable test, audit, runtime or publication outcome.
+
+- 2026-10-21 15:58 UTC: recorded PG176 revision 1 ACCEPT_AS_BLOCKED_PREPARATION, revised proposed memory threshold and monitored-not-hard disk bound. Custody/checkout/directory/approval prerequisites remain; no launches or tests. Documentation-only update.
