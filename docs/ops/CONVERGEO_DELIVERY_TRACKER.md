@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 09:32 UTC** (21 October 11:32 Zambia).
+Updated: **2026-10-21 09:40 UTC** (21 October 11:40 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -556,6 +556,16 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Under the new recovery directive, CUST, CI and Admin read-only recovery tasks are admitted. Admission is not proof of resumed inspection or a result. There are no verified new source changes, tests, hosted checks, browser journeys or native-client executions from these tasks.
 - Selected LOCAL `2e6416c7341d5092b7b42d1065be9b52b3decd7c` / tree `71a728347a0821a91526d6b9e3252b626beffd63`, accepted static evidence, scanner adoption hold and unwired product driver remain unchanged. All 29 journeys/nine native cases remain NOT_RUN. Publication, isolated execution, shared-data/provider and production gates remain; 26 October target and 7 November contingency are preserved.
 
+### 21 October 09:40 UTC — source custody recovered; precise remaining gates
+
+- **CUST original executor usable:** selected `2e6416c7341d5092b7b42d1065be9b52b3decd7c` remains clean. Proposed branch lookup returns 404, no corresponding application PR exists and exact-head Actions count is zero. No callable platform re-review/status mechanism was available; no publication retry occurred. Read-only receipt: 14,800 bytes, SHA256 `74bc569a213df46f6e609debd7156d090b3801f0e69f39cf5b6a416f20e8b799`.
+- **Preview binding still incomplete:** fresh sandbox public-key metadata shows enabled public keys, but matching the encrypted Vercel row is unknown. Twenty-two configuration rows were observed, with no proposed-branch rows and no generic Preview plane entry. Metadata availability does not establish effective inherited configuration or authorize credential changes; exact Preview scope/configuration approval remains required.
+- **Admin source gap now verified, not environment-blocked:** original executor recovered with successful `pwd`, but the former worktree is absent. Original Library evidence verified 85 manifest entries, 3,284 leaves and selected `2e6416c` identity. All five requested Admin selectors and their test file are absent, as are the relevant RBAC routers, migration, SQL contract and PostgreSQL wrapper; no equivalent implementation was verified. Current PostgreSQL target remains unqualified. Existing Admin owner is narrowing the protected donor proposal only, without adoption or execution.
+- **Cumulative scanner review accepted for decision only:** **ACCEPT_CUMULATIVE_TWO_FILE_SOURCE_FOR_SCOPED_ADOPTION_DECISION**, `e46b05d7cf75eac8e88935b2bea9f0f162978fda` / tree `38debe9901ada200d6a53921969835d47231d95a` versus #750 `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`. Exactly `.gitleaksignore` and `scripts/ci/gitleaks-self-test.sh` differ; all thirteen exclusions and other unchanged tree identities were verified from original objects. Report SHA256 `dfde241a159918676e0918e2a2410f636fb95113d9030a6902fb87a4c67f836f`. No tests or reconstruction occurred; the separately serialized patch was not independently rehashed. No workflow change. Adoption/publication remain held.
+- Existing #750 source ref is `cursor/api-low-stock-ledger-hotfix-local-20261014`. Cumulative source acceptance is not remote branch adoption, hosted scan success or release certification.
+- **API isolated target still unverified:** the original runtime connection is usable, but inspected connection metadata shows a Docker CLI without available engine pipes and no Python/uv. The production remote is not a disposable sandbox. No safe isolated image/startup target is established, and no image execution is claimed.
+- No new source edits, application PR, CI dispatch, browser journey or native-client execution occurred. All 29 journeys and nine native cases remain NOT_RUN. Selected source, protected ownership, publication/Preview/database/image-recovery gates and 26 October / 7 November targets remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -751,3 +761,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 06:51 UTC: recorded independently verified new reconciliation and low-stock HTTP 500 responses with underlying causes UNKNOWN, blocked same-owner diagnostic dispatch and read-only overnight checkpoints. No inherited diagnosis, successful retry, resumed engineering or new runtime/source action claimed; accepted source and all holds preserved.
 
 - 2026-10-21 09:32 UTC: recorded recovered original runtime access and fresh request-correlated API causes with traceback/source-attribution limits; admitted read-only recovery lanes and active image-envelope preparation. No replay, SQL, image execution, source change, new test or hosted acceptance; prior holds and targets preserved.
+
+- 2026-10-21 09:40 UTC: recorded recovered CUST/Admin source custody, verified selected-source Admin gaps, incomplete Preview binding and absent publication/hosted evidence, cumulative two-file scanner source acceptance for scoped decision only, and unverified isolated API target. No source/adoption/test/runtime action; holds preserved.
