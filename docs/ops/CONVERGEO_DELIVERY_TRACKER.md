@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 21:32 UTC** (21 October 23:32 Zambia).
+Updated: **2026-10-21 22:12 UTC** (22 October 00:12 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -718,6 +718,17 @@ These are measurable target gates, not delivery promises. Issue #716 remains aut
 | 25 Oct | Operational and recovery rehearsal | **AT_RISK** | Exact-target restore/cutover, compatible writer drain/resume, receipts/obligations preservation, reconciliation and primary/backup operator rehearsal accepted. No financial or shared-data actions authorized by this schedule. [Issue #716 operating contract](https://github.com/KaluMuso/Convergeo/issues/716). |
 | 26 Oct | Commercial GO/NO-GO | **AT_RISK** | Evidence-backed decision across paid products, services and events; GO only after all protected technical, financial, operational and target-specific approval gates. Otherwise record NO-GO and the remaining exact gates. Contingency remains **7 Nov 2026**. [Release contract](production-release-control.md), [Issue #716](https://github.com/KaluMuso/Convergeo/issues/716). |
 
+### 21 October 22:12 UTC — four overnight readiness deliverables completed, preparation only
+
+Four read-only reports received independent **ACCEPT_AS_PREPARATION** review; the security preparation is **ACCEPT_AS_BLOCKED_PREPARATION**. Private owner-held evidence bundle: `Convergeo-Overnight-Readiness-Package-20261022.zip`, version 0, 196,592 bytes, 13 members, SHA256 `a3ddb5c4c887317e01d177eac328ba2ef33b84cc35e29a1a17cfd33ce61fc382`. This reference identifies retained evidence without publishing its private contents or access location.
+
+- **Integration preparation:** all ten requested PRs were read-verified as draft and unmerged. The #718 foundation already contains the empty low-stock guard; the sanitized reconciliation 503 handling from #750 is missing. The proposed action is a missing-hunk-only comparison, not a four-file overwrite. Comparison against current selected `2e6416c` remains custody-gated; no application source was changed.
+- **PostgreSQL preparation:** existing workflow host ports and the critical real-stack host-network configuration cannot be copied into Q0. The proposal retains network-none/private Unix-socket isolation, explicit Q0 probe-database extension-loadability verification, a separate clean Q1 database and explicit cluster-privilege requirements. Image, original-source custody, containment and execution gates remain open. Local memory stability failed; local Q0/Q1 remain **BLOCKED**.
+- **#750 qualification preparation:** system Python 3.13 is not the pinned Python 3.12.14. Preserve `API_AUDIT_TEST_PYTHON` binding. Accepted source `234805466c3e07e2cb8dddddf6867cf4b52a708b` is unchanged; the three approved checks remain **NOT_RUN**, and the 25 historical audit findings remain uncleared. Latest existing CI task read at 21:51:07 UTC still returned **FORBIDDEN** after the owner's access regrant; this is not resumed execution.
+- **Synthetic pilot preparation:** plans cover three core and two optional synthetic businesses, all three domains, and primary/backup operator runbooks. These are preparation artifacts, not customer/vendor traction or pilot acceptance. All **29 journeys and nine native cases remain NOT_RUN**.
+
+No application tests, implementation, source publication, CI dispatch, deployment or pilot acceptance occurred in this checkpoint. Preserve all accepted source and prior failures. The next executable work depends on supported existing-executor access recovery and the already-recorded custody/qualification gates, not repeated local memory optimization. The 26 October commercial target remains **AT_RISK**, with 7 November contingency; no completion percentage is asserted.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -874,3 +885,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 18:34 UTC: recorded failed sixty-second memory stability despite first threshold-met observation; Q0/Q1 explicitly BLOCKED with no threshold/resource/workload changes. Recorded source/task-access blockers and exploration-only cloud-runner scope, with no launch or bypass authority.
 
 - 2026-10-21 21:32 UTC: recorded five thirty-second memory readings with only one above threshold, retained explicit Q0/Q1 block and shifted priority to supported existing-executor access recovery. Source acceptance remains separate from unrun tests/deployment; Actions PG preparation is read-only.
+
+- 2026-10-21 22:12 UTC: recorded four independently reviewed overnight preparation reports, precise integration/PG/Python/pilot findings and the retained private evidence fingerprint. No source, application test, CI, deployment or pilot acceptance; all execution and release holds preserved.
