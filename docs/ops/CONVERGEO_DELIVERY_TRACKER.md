@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 06:51 UTC** (21 October 08:51 Zambia).
+Updated: **2026-10-21 09:32 UTC** (21 October 11:32 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -546,6 +546,16 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Current selected LOCAL source remains `2e6416c7341d5092b7b42d1065be9b52b3decd7c` / tree `71a728347a0821a91526d6b9e3252b626beffd63`; accepted scanner correction remains unadopted, product driver remains unwired, and all 29 journeys/nine native cases remain NOT_RUN. Exact-source static acceptance is preserved; today's failures add runtime evidence, not permission to change production.
 - **Milestones and next action:** 21 October remains IN_PROGRESS overall, with bounded local source/static evidence accepted but hosted/runtime gates unmet; 22 October remains BLOCKED and 26 October AT_RISK, with 7 November contingency. Preserve the four conditional tasks above. The additional diagnostic dependency is same-owner correlation of today's exact request records once authorized connection availability returns, without replay, queries, provisioning or mutation.
 
+### 21 October 09:32 UTC — original runtime connection recovered; fresh causes correlated
+
+- Existing API owner verified the original authorized runtime connection usable at **09:28 UTC** and completed the bounded read-only diagnostic. Today's reconciliation failure is freshly correlated with **LedgerAccountNotFoundError**, missing required `platform_cash` account; today's low-stock failure with **AttributeError: NoneType.data**. These are new 21 October observations, not inherited 20 October diagnoses.
+- Request-specific `app.errors` events at 00:00:54.344354 UTC and 05:00:01.272099 UTC match adjacent ASGI tracebacks at 00:00:54.345562 and 05:00:01.273519 UTC respectively, through endpoint frames and narrow time windows. **The tracebacks themselves lack request IDs.** Correlation is accepted at that evidence scope, not direct traceback-ID attribution. Exact operational identifiers remain in the private diagnostic record.
+- At **09:29 UTC**, the observed running container identity begins `2aa98e8a`; actual image digest is `sha256:59ef3581d10e2f272af5d140bce1b1a11933fc6b3ef69342d634fdbbdc5a217f`. Configured `GIT_SHA` and `API_IMAGE_TAG` both name `fac35f450d7a92dbd9dba451227b467bbf278355`. This is configured source metadata, **not fresh filesystem or build-source verification**.
+- No application requests, replay, SQL, database inventory refresh, image pull/run, provider operation or configuration change occurred. The earlier fifteen-field rollback comparison was not repeated. Recovery of diagnostic access does not establish application recovery or authorize remediation/account provisioning.
+- The existing API owner is now preparing an exact isolated #750 image/startup/restore qualification envelope **read-only**, separating packaged-image inspection from startup/restore execution and identifying missing target/approval prerequisites. No execution outcome is claimed.
+- Under the new recovery directive, CUST, CI and Admin read-only recovery tasks are admitted. Admission is not proof of resumed inspection or a result. There are no verified new source changes, tests, hosted checks, browser journeys or native-client executions from these tasks.
+- Selected LOCAL `2e6416c7341d5092b7b42d1065be9b52b3decd7c` / tree `71a728347a0821a91526d6b9e3252b626beffd63`, accepted static evidence, scanner adoption hold and unwired product driver remain unchanged. All 29 journeys/nine native cases remain NOT_RUN. Publication, isolated execution, shared-data/provider and production gates remain; 26 October target and 7 November contingency are preserved.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -739,3 +749,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 19:53 UTC: recorded independently verified corrected Preview proposal and precise configuration-guard limits, completed bounded lane work, terminal Admin environment blocker and four exclusively owned conditional tasks. Zero writers or filler work; no continued coding claimed while gates remain. All runtime/release holds, dated targets and scheduled handoff preserved.
 
 - 2026-10-21 06:51 UTC: recorded independently verified new reconciliation and low-stock HTTP 500 responses with underlying causes UNKNOWN, blocked same-owner diagnostic dispatch and read-only overnight checkpoints. No inherited diagnosis, successful retry, resumed engineering or new runtime/source action claimed; accepted source and all holds preserved.
+
+- 2026-10-21 09:32 UTC: recorded recovered original runtime access and fresh request-correlated API causes with traceback/source-attribution limits; admitted read-only recovery lanes and active image-envelope preparation. No replay, SQL, image execution, source change, new test or hosted acceptance; prior holds and targets preserved.
