@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 13:46 UTC** (21 October 15:46 Zambia).
+Updated: **2026-10-21 14:00 UTC** (21 October 16:00 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -583,6 +583,14 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Private assessment receipt: 15,632 bytes, SHA256 `3c7346fd786be955b8be41f5e8c019fce155d248a0c6aef8fe1df43909e6ae00`. The 2,931-byte missing-facts script received static review only, SHA256 `b55ef63ba24179ba94d3ebadd749d0cb1c18b33828f3c6735585c2dd95df1549`; execution is **NOT_RUN**. No installation, tests or host changes occurred.
 - Existing source owners and selected local candidate are unchanged. All 29 journeys/nine native client cases remain NOT_RUN, all publication/native/database/provider/release holds remain, and 26 October / 7 November targets are preserved.
 
+### 21 October 14:00 UTC — Docker availability corrected; retained dependency-audit cause established
+
+- Explicit owner evidence at 13:57 UTC confirms Docker Desktop 4.84.0 / Engine 29.6.2 is operational, Linux/amd64 under WSL2 using the desktop-linux context. Reported engine capacity is twelve logical CPUs and 7.579 GiB, **not free RAM**. This supersedes the earlier laptop-engine-unavailable observation, not agent-identity access restrictions.
+- Existing workloads and images are present; the owner will provide inventory. Do not stop/delete existing resources or create new test containers until isolation and capacity are verified. Ubuntu 24.04 DNS access to raw.githubusercontent.com is blocked, but that endpoint is not mandatory for the Docker-first proposal. No installation, test container, test execution or source action occurred.
+- **Retained #750 dependency-audit diagnosis completed:** [CI run 38624266232, job 116059316211](https://github.com/KaluMuso/Convergeo/actions/runs/38624266232/job/116059316211), head `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`, recorded merge-checkout prefix `e7c62ff`. The failure is an actual advisory-policy rejection: 25 non-allowlisted entries covering 22 unique GHSA advisories, including five critical entries, not bootstrap or network failure. pip-audit was SKIPPED. This is retained hosted evidence, not a fresh scan.
+- Follow-on dependency matrix is a **proposal only**: seventeen JavaScript paths plus a separate two-path API audit-binding correction. It is not an accepted composition or authorization to adopt source, alter workflows or weaken advisory controls.
+- Selected `2e6416c`, ownership, publication/adoption/workflow holds and all 29 journey/nine native-client NOT_RUN states remain unchanged. Docker availability alone does not establish a qualified isolated target. 26 October and 7 November targets remain.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -784,3 +792,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 09:44 UTC: recorded completed Admin protected-scope analysis and exact donor/fixture identities, insufficiency of the seven-route subset and retained 104 decisions/runtime prerequisites. Subsequent disconnection does not revoke completed Admin/CI analysis. No implementation or approval inferred.
 
 - 2026-10-21 13:46 UTC: recorded partial read-only Windows assessment, conditional hardware suitability, toolchain/runtime gaps and agent-identity read limits. Missing-facts script statically reviewed but NOT_RUN. No installation, host change, source verification or qualification inferred.
+
+- 2026-10-21 14:00 UTC: corrected local Docker availability using explicit owner evidence while preserving access/isolation/capacity limits; recorded retained #750 advisory rejection and proposal-only dependency matrix. No new resources, scans, source changes or qualification execution.
