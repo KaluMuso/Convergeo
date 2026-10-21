@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 22:12 UTC** (22 October 00:12 Zambia).
+Updated: **2026-10-21 22:55 UTC** (22 October 00:55 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -729,6 +729,12 @@ Four read-only reports received independent **ACCEPT_AS_PREPARATION** review; th
 
 No application tests, implementation, source publication, CI dispatch, deployment or pilot acceptance occurred in this checkpoint. Preserve all accepted source and prior failures. The next executable work depends on supported existing-executor access recovery and the already-recorded custody/qualification gates, not repeated local memory optimization. The 26 October commercial target remains **AT_RISK**, with 7 November contingency; no completion percentage is asserted.
 
+### 21 October 22:55 UTC — independently reviewed source-recovery preparation
+
+The owner supplied an independent, scoped recovery route for the original #750 source archive. This is **ACCEPT_AS_BLOCKED_PREPARATION**, not a runnable script, recovered task access or new execution capability. Original archive SHA256: `d1042fc265f0a5ef64417b10110bef8c228a45e800a0f2c8bb539727b458d68f`, 25 entries. Its original 47,102-byte Git bundle, SHA256 `67263f4e67fc35bb4fbc22597ca84d733805ff576b26df472890ef93911a212a`, requires GitHub base `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c` to recover accepted final `234805466c3e07e2cb8dddddf6867cf4b52a708b`, tree `4ae06ee1e32808eb4b2aa72790f91eb66fcdc607`.
+
+The Ubuntu account, canonical destination directory, original archive path, authentication/tool bindings and concrete extractor-wrapper review remain unresolved. The privately delivered preparation ZIP is 8,842 bytes, SHA256 `26478b7802b70a57149f6235820a13e5917755d3a1c60d8e6a318019657a3588`; no private access location is published here. **No fetch, import, test or denied-task retry occurred.** This route remains separate from original-task Support/access recovery and selected integration source `2e6416c` custody. All three approved #750 checks remain NOT_RUN; all existing publication, containment, database and release holds remain unchanged.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -887,3 +893,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 21:32 UTC: recorded five thirty-second memory readings with only one above threshold, retained explicit Q0/Q1 block and shifted priority to supported existing-executor access recovery. Source acceptance remains separate from unrun tests/deployment; Actions PG preparation is read-only.
 
 - 2026-10-21 22:12 UTC: recorded four independently reviewed overnight preparation reports, precise integration/PG/Python/pilot findings and the retained private evidence fingerprint. No source, application test, CI, deployment or pilot acceptance; all execution and release holds preserved.
+
+- 2026-10-21 22:55 UTC: recorded independently accepted, blocked #750 original-source recovery preparation and exact archive/bundle fingerprints. No runnable procedure, fetch, import, test, access recovery or task retry claimed; integration custody and original-task Support remain separate.
