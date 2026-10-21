@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 09:40 UTC** (21 October 11:40 Zambia).
+Updated: **2026-10-21 09:44 UTC** (21 October 11:44 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -566,6 +566,14 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **API isolated target still unverified:** the original runtime connection is usable, but inspected connection metadata shows a Docker CLI without available engine pipes and no Python/uv. The production remote is not a disposable sandbox. No safe isolated image/startup target is established, and no image execution is claimed.
 - No new source edits, application PR, CI dispatch, browser journey or native-client execution occurred. All 29 journeys and nine native cases remain NOT_RUN. Selected source, protected ownership, publication/Preview/database/image-recovery gates and 26 October / 7 November targets remain unchanged.
 
+### 21 October 09:44 UTC — Admin scope analysis completed; protected adoption remains pending
+
+- Existing Admin owner completed the narrowed read-only scope analysis. Exact donor is `843d10c3f52af3a103767f9800ec96edb0a51787`, tree `4aa4d6d49fd6b01a180c273c2a7342f3a71a0c2a`; fixture source `b97b3a1aff27b2cf63a37780e7093bd0a64adcc8`, tree `ed7e797e2495efc962d96da593c0d07becf0a917`.
+- The proposed seven-route subset is insufficient. Twenty frontend paths can be deferred, but the shared guard still affects all **104 route decisions**, including 26 vendor choices and 34 inheritance/moderator changes. A smaller file count does not remove those protected policy decisions.
+- No implementation occurred. Exact protected scope/hunk policy and original-worktree restoration are prerequisites to adoption. Runtime qualification remains pending: 139 baseline plus one RBAC profile, PostgreSQL 17.6, 167 identities and thirteen SQL contracts.
+- The executor disconnected during follow-on work, but the final scope analysis completed; do not label that completed analysis blocked. CI likewise completed before disconnection and its accepted source remains preserved. Unfinished execution prerequisites remain separate from completed review outcomes.
+- Selected `2e6416c`, all source/publication/native/database/release holds, 29 unexecuted journeys and nine unexecuted client cases remain unchanged. No further audit, source action or runtime operation occurred.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -763,3 +771,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 09:32 UTC: recorded recovered original runtime access and fresh request-correlated API causes with traceback/source-attribution limits; admitted read-only recovery lanes and active image-envelope preparation. No replay, SQL, image execution, source change, new test or hosted acceptance; prior holds and targets preserved.
 
 - 2026-10-21 09:40 UTC: recorded recovered CUST/Admin source custody, verified selected-source Admin gaps, incomplete Preview binding and absent publication/hosted evidence, cumulative two-file scanner source acceptance for scoped decision only, and unverified isolated API target. No source/adoption/test/runtime action; holds preserved.
+
+- 2026-10-21 09:44 UTC: recorded completed Admin protected-scope analysis and exact donor/fixture identities, insufficiency of the seven-route subset and retained 104 decisions/runtime prerequisites. Subsequent disconnection does not revoke completed Admin/CI analysis. No implementation or approval inferred.
