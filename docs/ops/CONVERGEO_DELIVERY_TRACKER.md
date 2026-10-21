@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 18:13 UTC** (21 October 20:13 Zambia).
+Updated: **2026-10-21 18:30 UTC** (21 October 20:30 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -632,6 +632,13 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Owner's 18:08 UTC capacity direction retains the 16 GB machine, defers hardware upgrade to 2027, permits only one heavy local workload at a time and prohibits increased global allocations. Parallel cloud work requires a qualified fallback; capacity preference does not authorize a substitute executor or relax isolation.
 - All 29 journeys/nine native cases remain NOT_RUN. Accepted source, historical advisory findings and publication/database/provider/release holds remain unchanged. No new source write or test success; 26 October / 7 November targets preserved.
 
+### 21 October 18:30 UTC — memory threshold met at one observation; PostgreSQL launch still prohibited
+
+- At **20:27 CAT (18:27 UTC)**, owner evidence reports **2.56 GiB FreePhysicalMemory** and **2,639 MiB Windows Available MBytes**. The revised 2.5 GiB threshold is **MET_AT_OBSERVATION**, superseding the categorical memory BLOCKED status from the earlier lower readings.
+- Stability remains pending a second independent reading. A fresh immediate pre-launch memory check remains required; this observation is not a continuing reservation of RAM.
+- The owner explicitly instructed **do not launch PostgreSQL yet**. Q0 launch remains unauthorized. Source transfer, exact image/version/extensions, containment and other approval prerequisites are unchanged.
+- Preserve all 153 existing stopped containers. The maximum remains two source writers and one heavy local workload; no new writer activity, workload or resource change is inferred. All other source, test, publication and release facts remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -845,3 +852,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 17:34 UTC: recorded owner free-memory readings below the reviewed 2.5 GiB PG entry proposal. Local PG remains blocked with other prerequisites intact; no launches, settings changes, workload interruption or tests.
 
 - 2026-10-21 18:13 UTC: recorded terminal approved offline preflight BLOCKED_BEFORE_EXECUTION with independently accepted receipt; all three checks NOT_RUN/null results. Existing owner prepares read-only boundary proposal. Serialized local capacity limits and all source/runtime/release holds preserved.
+
+- 2026-10-21 18:30 UTC: recorded owner memory threshold MET_AT_OBSERVATION at 20:27 CAT, with stability and fresh pre-launch check pending. Explicit PostgreSQL no-launch instruction remains; no Q0 or resource action authorized.
