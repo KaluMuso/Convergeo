@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-20 19:53 UTC** (20 October 21:53 Zambia).
+Updated: **2026-10-21 06:51 UTC** (21 October 08:51 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -536,6 +536,16 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - All nine native client cases and 29 browser journeys remain **NOT_RUN**. Native proof exception, protected auth/RBAC/RLS/KYC/migration/financial decisions, existing publication denials and production/spending holds remain. Current selected local source is not a deployed commercial release.
 - The overnight directive allows execution to stop when no genuinely executable authorized task remains. The verified **21 October 09:00 CAT** handoff remains scheduled; 26 October GO/NO-GO and 7 November contingency are unchanged. A scheduled checkpoint does not establish unattended progress.
 
+### 21 October 06:51 UTC — morning failure evidence and unchanged execution holds
+
+- **Fresh reconciliation failure verified:** [execution 385256](https://n8n.vergeo5.com/workflow/C1MpTNjrfLACMG3f/executions/385256), 21 October 00:00:53.024–00:00:54.374 UTC. The daily-report node took 1,337 ms; `POST /internal/reconciliation/daily-report` returned **HTTP 500 / internal_error**, with generic message and empty details.
+- **Fresh low-stock failure verified:** [execution 386111](https://n8n.vergeo5.com/workflow/zkIe2zW72qp5fcli/executions/386111), 21 October 05:00:01.028–05:00:01.311 UTC. The tick node took 270 ms; `POST /internal/n8n/low-stock/tick` returned **HTTP 500 / internal_error**, with generic message and empty details. Both executions have null retry-of/retry-success references; neither establishes a successful retry.
+- These original n8n records verify today's failed API responses, **not the underlying API exception**. Exact correlation identifiers are retained privately. Do not carry forward 20 October's `platform_cash` or `None.data` diagnoses, assume a common cause, or claim recovery without new API evidence.
+- Existing API-owner diagnostic dispatch failed twice at the backend; readback at 04:02:53 UTC still showed the old completed turn, with no recorded new admission. Diagnosis is **BLOCKED**, not running; no further retry is underway. Sanitized log correlation by that same owner remains already authorized when the connection becomes available, not a new approval request.
+- Overnight 00:00, 03:00 and 06:00 CAT checks were **status reads only** and found unchanged completed/blocked owners and zero writers. No unattended coding, tests, publication or recovery is claimed.
+- Current selected LOCAL source remains `2e6416c7341d5092b7b42d1065be9b52b3decd7c` / tree `71a728347a0821a91526d6b9e3252b626beffd63`; accepted scanner correction remains unadopted, product driver remains unwired, and all 29 journeys/nine native cases remain NOT_RUN. Exact-source static acceptance is preserved; today's failures add runtime evidence, not permission to change production.
+- **Milestones and next action:** 21 October remains IN_PROGRESS overall, with bounded local source/static evidence accepted but hosted/runtime gates unmet; 22 October remains BLOCKED and 26 October AT_RISK, with 7 November contingency. Preserve the four conditional tasks above. The additional diagnostic dependency is same-owner correlation of today's exact request records once authorized connection availability returns, without replay, queries, provisioning or mutation.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -727,3 +737,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-20 19:43 UTC: recorded independent local scanner correction acceptance with overlapping-count and bootstrap/trace limits; read-only publication package and four original denial receipts verified with unresolved action metadata; narrow rollback findings and blocked Admin inspection with terminal recovery failure and no resumed inspection. Zero source writers, no publication/adoption or runtime acceptance; product driver remains separate.
 
 - 2026-10-20 19:53 UTC: recorded independently verified corrected Preview proposal and precise configuration-guard limits, completed bounded lane work, terminal Admin environment blocker and four exclusively owned conditional tasks. Zero writers or filler work; no continued coding claimed while gates remain. All runtime/release holds, dated targets and scheduled handoff preserved.
+
+- 2026-10-21 06:51 UTC: recorded independently verified new reconciliation and low-stock HTTP 500 responses with underlying causes UNKNOWN, blocked same-owner diagnostic dispatch and read-only overnight checkpoints. No inherited diagnosis, successful retry, resumed engineering or new runtime/source action claimed; accepted source and all holds preserved.
