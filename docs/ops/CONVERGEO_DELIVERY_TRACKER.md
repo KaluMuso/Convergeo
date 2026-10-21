@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 09:44 UTC** (21 October 11:44 Zambia).
+Updated: **2026-10-21 13:46 UTC** (21 October 15:46 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -574,6 +574,15 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - The executor disconnected during follow-on work, but the final scope analysis completed; do not label that completed analysis blocked. CI likewise completed before disconnection and its accepted source remains preserved. Unfinished execution prerequisites remain separate from completed review outcomes.
 - Selected `2e6416c`, all source/publication/native/database/release holds, 29 unexecuted journeys and nine unexecuted client cases remain unchanged. No further audit, source action or runtime operation occurred.
 
+### 21 October 13:46 UTC — partial Windows readiness assessment, read-only only
+
+- The owner's 13:25 UTC authorization permits Windows discovery and a proposal only. No installs, mutating tests, publication, deployment or shared-data activity is approved by that assessment.
+- Owner-provided PowerShell evidence reports an i7-1255U (10 cores / 12 logical processors), 16 GB RAM and approximately 421 GiB free disk; Python 3.12.10, Codex 0.104.0 and Git 2.51.2. Node 24.13 does not match the required Node 22 baseline. WSL 3.0.3 reports a stopped version-2 docker-desktop distribution and the Docker engine pipe is missing.
+- Discovery is **PARTIAL**. Agent-identity restrictions on CIM, WSL, Docker configuration, Git ownership and network reads remain. Do not convert a restricted read into a host-wide claim that Python is absent or networking has failed.
+- Hardware appears **conditionally suitable for serialized heavy work**, not qualified. Available RAM, Windows edition, virtualization, exact local `2e6416c` source identity, PostgreSQL 17.6/extension/runtime qualification and browser qualification remain unverified.
+- Private assessment receipt: 15,632 bytes, SHA256 `3c7346fd786be955b8be41f5e8c019fce155d248a0c6aef8fe1df43909e6ae00`. The 2,931-byte missing-facts script received static review only, SHA256 `b55ef63ba24179ba94d3ebadd749d0cb1c18b33828f3c6735585c2dd95df1549`; execution is **NOT_RUN**. No installation, tests or host changes occurred.
+- Existing source owners and selected local candidate are unchanged. All 29 journeys/nine native client cases remain NOT_RUN, all publication/native/database/provider/release holds remain, and 26 October / 7 November targets are preserved.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -773,3 +782,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 09:40 UTC: recorded recovered CUST/Admin source custody, verified selected-source Admin gaps, incomplete Preview binding and absent publication/hosted evidence, cumulative two-file scanner source acceptance for scoped decision only, and unverified isolated API target. No source/adoption/test/runtime action; holds preserved.
 
 - 2026-10-21 09:44 UTC: recorded completed Admin protected-scope analysis and exact donor/fixture identities, insufficiency of the seven-route subset and retained 104 decisions/runtime prerequisites. Subsequent disconnection does not revoke completed Admin/CI analysis. No implementation or approval inferred.
+
+- 2026-10-21 13:46 UTC: recorded partial read-only Windows assessment, conditional hardware suitability, toolchain/runtime gaps and agent-identity read limits. Missing-facts script statically reviewed but NOT_RUN. No installation, host change, source verification or qualification inferred.
