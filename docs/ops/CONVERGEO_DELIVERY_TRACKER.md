@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 18:34 UTC** (21 October 20:34 Zambia).
+Updated: **2026-10-21 21:32 UTC** (21 October 23:32 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -647,6 +647,14 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - Owner permits exploration only of an **authorized, qualified cloud PostgreSQL runner**. This is not approval to launch a runner/database, spend, dispatch CI or bypass a denied access route. Source custody, image/version/extensions, containment and execution approvals remain required.
 - All other accepted source/evidence, 29 journey/nine native NOT_RUN states and publication/database/provider/release holds remain unchanged. Targets remain 26 October and 7 November.
 
+### 21 October 21:32 UTC — repeated memory evidence and recovery priority
+
+- Owner supplied five free-memory readings at thirty-second intervals: **2.15, 2.44, 2.49, 2.54 and 2.39 GiB**. Only one of five meets or exceeds 2.5 GiB. Consistent admission is not established; local PostgreSQL **Q0/Q1 remain explicitly BLOCKED**. No threshold reduction, resource change or workload termination.
+- Priority shifts to **supported access recovery for the existing executors**. No further local-memory optimization or general audit is assigned. Previously recorded access failures and their timestamps remain preserved; no successful recovery or new execution is claimed.
+- Accepted #750 local source `234805466c3e07e2cb8dddddf6867cf4b52a708b` remains preserved. Its three approved checks are **NOT_RUN**, with containment and subsequent access gates still unmet. Completed source work is not executed test evidence or deployment readiness.
+- Selected `2e6416c` original Git custody remains preserved, but transfer completion is unconfirmed. GitHub Actions PostgreSQL work is **read-only preparation only**: no CI dispatch/run, publication or denied-action retry.
+- Issue #716 remains authoritative and this remains the single delivery tracker. Existing source owners, 29 journey/nine native NOT_RUN states and all release holds remain unchanged; 26 October / 7 November targets preserved.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -864,3 +872,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 18:30 UTC: recorded owner memory threshold MET_AT_OBSERVATION at 20:27 CAT, with stability and fresh pre-launch check pending. Explicit PostgreSQL no-launch instruction remains; no Q0 or resource action authorized.
 
 - 2026-10-21 18:34 UTC: recorded failed sixty-second memory stability despite first threshold-met observation; Q0/Q1 explicitly BLOCKED with no threshold/resource/workload changes. Recorded source/task-access blockers and exploration-only cloud-runner scope, with no launch or bypass authority.
+
+- 2026-10-21 21:32 UTC: recorded five thirty-second memory readings with only one above threshold, retained explicit Q0/Q1 block and shifted priority to supported existing-executor access recovery. Source acceptance remains separate from unrun tests/deployment; Actions PG preparation is read-only.
