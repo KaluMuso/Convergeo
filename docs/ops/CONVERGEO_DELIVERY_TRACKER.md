@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 15:58 UTC** (21 October 17:58 Zambia).
+Updated: **2026-10-21 17:34 UTC** (21 October 19:34 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -616,6 +616,13 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - No containers launched or tests ran. Source-custody transfer remains HTTP-401 blocked, Ubuntu checkout NOT_RUN, and exact directory bindings, memory evidence and Q0/Q1/Q2 approvals remain pending. Do not infer execution permission from proposal acceptance.
 - All 29 journeys and nine native client cases remain NOT_RUN. #750 source-only acceptance is unchanged; approval for its three offline checks remains pending and none executed. No new audit, application-code change or release operation.
 
+### 21 October 17:34 UTC — local PostgreSQL memory entry gate not met
+
+- Owner evidence supplied at 17:33 UTC reports Windows free RAM of **1.59 GiB, then 1.21 GiB**, out of 15.64 GiB. Both are below PG176 revision 1's reviewed proposed **2.5 GiB** entry threshold; the older 4 GiB proposal is superseded.
+- Local PostgreSQL remains **BLOCKED** on memory as well as source custody, image, containment and Q0 approval prerequisites. The owner is diagnosing memory use. No containers launched, settings changed or existing workloads interrupted; preserve all resources.
+- Accepted #750 local source `234805466c3e07e2cb8dddddf6867cf4b52a708b` remains unchanged. Approval for its three offline checks remains pending. Zero active source writers; no rerun, reconstruction or new tests.
+- All 29 journeys/nine native cases remain NOT_RUN. Existing publication, database/provider and release holds and 26 October / 7 November targets remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -825,3 +832,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 15:39 UTC: recorded exact two-unit #750 local source preparation and independent source-only acceptance with static-check limits; historical advisories remain uncleared. Updated owner-provided local stopped-container/toolchain metadata without inferring exit cause. No install, executable test, audit, runtime or publication outcome.
 
 - 2026-10-21 15:58 UTC: recorded PG176 revision 1 ACCEPT_AS_BLOCKED_PREPARATION, revised proposed memory threshold and monitored-not-hard disk bound. Custody/checkout/directory/approval prerequisites remain; no launches or tests. Documentation-only update.
+
+- 2026-10-21 17:34 UTC: recorded owner free-memory readings below the reviewed 2.5 GiB PG entry proposal. Local PG remains blocked with other prerequisites intact; no launches, settings changes, workload interruption or tests.
