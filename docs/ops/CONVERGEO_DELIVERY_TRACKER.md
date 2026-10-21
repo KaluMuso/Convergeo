@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 14:59 UTC** (21 October 16:59 Zambia).
+Updated: **2026-10-21 15:39 UTC** (21 October 17:39 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -600,6 +600,15 @@ This checkpoint supersedes the pending-transfer, pending-proof-implementation an
 - **#750 donor identities resolved read-only:** `cf9ddfb3c55c82d2ff0ab6f2ca79221710d1e871` / tree `6ee3d3bcf954f74aca4d3c69a08fea4573617bc8`; `d8bee631c40896ef92bf0cb37f15092d7e7c6dbf` / tree `474769379098f10c060487f9c48e54ba7cf0e7e5`. Seventeen JavaScript paths plus two API audit-binding paths remain a precise-hunk proposal, **not implemented**. The 25 historical advisory findings remain open and Python audit remains SKIPPED; executor initialization failed. Existing CI owner is preparing the final seven-item decision packet only.
 - Zero source writers. All 29 browser journeys and nine native-client cases remain NOT_RUN. Selected source, protected ownership, source-adoption/publication/runtime/shared-data/provider/release holds and 26 October / 7 November targets remain unchanged.
 
+### 21 October 15:39 UTC — #750 source preparation accepted locally; executable qualification outstanding
+
+- Existing CI-001 owner completed **Unit J**, commit `b7f665d7dfc55fb1810ab6006c59ba12e92b7b51`, tree `d4a8dcd6d00e71ab23d11a0bd72729122cacf8c8`, with seventeen paths; **Unit A/final**, commit `234805466c3e07e2cb8dddddf6867cf4b52a708b`, tree `4ae06ee1e32808eb4b2aa72790f91eb66fcdc607`, adds the two audit-binding paths.
+- Independent J, A and combined reviews each returned **ACCEPT_LOCAL_SOURCE**. Nineteen approved paths and 2,808 unchanged paths are verified. Static checks of eleven importer maps, syntax, YAML, Python AST, whitespace and normal hooks passed. Worktree is clean and the source writer slot is released.
+- Original evidence packet: 288,438 bytes, SHA256 `d1042fc265f0a5ef64417b10110bef8c228a45e800a0f2c8bb539727b458d68f`. Combined patch SHA256 `4fa138206a37f23f0ceb8074ef3de2056e315b29ea36e10aef203a417074465e`. This is local source preparation, not remote #750 adoption or publication.
+- No dependencies were installed and no executable tests, fresh dependency/security audits or runtime qualification ran. The 25 historical advisory findings remain **uncleared**; retained Python-audit SKIPPED status is not replaced by static Python parsing. No CI success or production readiness is inferred.
+- **Latest owner-provided local metadata:** all 153 existing containers are stopped, zero running. Three recorded exit-137 events have OOMKilled=false and the same timestamp; their cause is unknown, not proven OOM or agent action. Ubuntu reports Git 2.43 and Python 3.12.3; native Node, pnpm and uv are absent in that observed environment. This does not describe the separate Windows toolchain. Preserve all resources; no restart/delete or setup is implied.
+- Selected `2e6416c` source transfer remains blocked. QA is updating its preparation proposal, not executing it. All 29 journeys/nine native cases, scanner adoption, publication, isolated-database/image, shared-data/provider and production gates remain held. 26 October / 7 November targets remain unchanged.
+
 ## 6. Component integration status
 
 | Component | Current status | Required next evidence |
@@ -805,3 +814,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 14:00 UTC: corrected local Docker availability using explicit owner evidence while preserving access/isolation/capacity limits; recorded retained #750 advisory rejection and proposal-only dependency matrix. No new resources, scans, source changes or qualification execution.
 
 - 2026-10-21 14:59 UTC: recorded owner-only Linux readiness evidence with agent access denial/no retries, independently verified complete original-object source transport but failed supported upload and no Ubuntu import, blocked PG17.6 preparation and precise unimplemented dependency proposal. No tests, source edits or publication; all holds preserved.
+
+- 2026-10-21 15:39 UTC: recorded exact two-unit #750 local source preparation and independent source-only acceptance with static-check limits; historical advisories remain uncleared. Updated owner-provided local stopped-container/toolchain metadata without inferring exit cause. No install, executable test, audit, runtime or publication outcome.
