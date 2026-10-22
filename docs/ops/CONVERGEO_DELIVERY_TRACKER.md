@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 06:06 UTC** (22 October 08:06 Zambia).
+Updated: **2026-10-22 09:48 UTC** (22 October 11:48 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -755,6 +755,22 @@ Owner-terminal evidence supplied the Ubuntu account identity, canonical parent d
 - Retry-of and retry-success references are both null. The exact request correlation identifier is retained privately. **The underlying API exception, cause and recovery remain UNKNOWN.** This receipt is separate from today's reconciliation execution 389374; neither a common cause nor the 21 October diagnosis is inferred.
 - Verification consisted of one read-only n8n receipt. No task retry, API-log inspection, replay, database activity, laptop access or test occurred. Preserve all existing holds and include this incident in the morning handoff without an overnight user alert.
 
+### 22 October 09:46 UTC — fresh API log correlation; original read access verified
+
+The existing API/runtime owner successfully used its original authorized production connection for bounded reads at 09:45:53–09:46:08 UTC. This establishes that owner's API read access only; it does **not** restore denied CI/CUST/QA access.
+
+- **Reconciliation execution 389374:** the request-specific error event at 00:00:54.481542 UTC is adjacent to the ASGI traceback at 00:00:54.483268 UTC reporting `LedgerAccountNotFoundError`, missing `platform_cash` with `vendor_id=None`. Relevant frames are `internal_reconciliation.py:101`, payment reconciliation lines 604/236 and `ledger/engine.py:90`.
+- **Low-stock execution 390229:** the request-specific error event at 05:00:01.307028 UTC is adjacent to the ASGI traceback at 05:00:01.308455 UTC reporting `AttributeError: NoneType.data`, with `internal_n8n.py` frames 559/268/91.
+- **Attribution limit:** the ASGI tracebacks themselves lack request IDs; request-specific error events contain `exc_info=NoneType: None`. Correlation rests on adjacency and the endpoint time windows, not request-labelled traceback frames or a database check. These are fresh 22 October observations, not inherited prior-day diagnoses.
+- Observed running image: `sha256:59ef3581d10e2f272af5d140bce1b1a11933fc6b3ef69342d634fdbbdc5a217f`. Configured `GIT_SHA/API_IMAGE_TAG`: `fac35f450d7a92dbd9dba451227b467bbf278355`. Configuration is **not source-file verification**. No mutation, replay or recovery was performed or established.
+- Three overnight preparation packages were delivered at 08:48 UTC; the owner verified all 18 manifest-file hashes and accepted preparation only. No execution, source adoption or qualification is implied.
+
+- **Public-base acquisition proposal:** GitHub metadata verifies the repository is public and the #750 head branch resolves to `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`, tree `eeffd1044b6e4058e49e940f1de48b1512792e30`. This is the proposed recovery base, not a newly acquired local object set. One anonymous `ls-remote refs/pull/750/head` attempt at approximately 09:43 UTC failed DNS with exit 128; no objects were fetched and no retry occurred.
+- The independently reviewed proposal is **ACCEPT_AS_CONDITIONAL_PROPOSAL**, not executed or owner-approved. Only `refs/pull/750/head` is admitted, with bounded acquisition/verification timeouts and no alternate-ref fallback. Named legitimate executor, DNS/HTTPS reachability, resource admission and exact owner execution approval remain gates before full reachable-object acquisition, fsck, a self-contained bundle of at most 512 MiB and fresh bare-repository verification. No checkout/importer execution or task-access restoration is implied. Proposal SHA256 `3529d191f3e0b6729b875170e6f2a42e8f101127e4f202b332208da3988bb3a8`; independent review `26ea01df28d1337581f5fcb8cb61a25fbed0caf6f0595c016789370d2983f66a`; private package `f68bf8b54b9d689d12515dd4e64b853062e348f83d34f66f8ae8fce2dec494ea`.
+
+- **Original custody advanced, complete closure still blocked:** supported Library materialization and hash/CRC/path checks located the original `e713de3f` packet (353,854 bytes, SHA256 `ec7b678f7f1e3d052a9e3e88787e576fbd258dc8ddfbe06cf1e59c34e727f1ea`), with all 86 manifest entries matching. Its 36,662-byte delta bundle requires Unit 3 `49d43c5f`; locating this delta is not complete recovery. Original Unit 3 and Unit 2 packets passed 32 and 36 manifest checks respectively; their bundles require `dfe51b22` and `e5845001`.
+- The original Unit 1 packet passed 141 manifest checks and contains commit objects, tree-entry receipts and snapshots, but no bundle or complete object closure. The earliest demonstrated original closure gap is now Unit 1 `e58450010466cdd883b8d8152942d5c6918ebe57`, tree `7bcd06e33f09460dfb5446649c2417ab22ccf3d1`, whose parent is #718 `ae0a219199cccc341dca03df8cfce85153b7a312`, tree `933009940823e294f5d3777d03d85bbd52775cce`. The previously verified 57,580,334-byte selected-source transport remains transfer-unconfirmed. No import, fetch, checkout, tests, reconstruction, donor reapplication or denied-task retry occurred; product driver `9a41f252` remains unwired.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -921,3 +937,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-22 04:08 UTC: recorded the new date-specific reconciliation HTTP 500 from original execution 389374. Root cause and recovery remain unverified; no API-log inspection, replay, data action or task retry. Prior-day diagnoses are not carried forward.
 
 - 2026-10-22 06:06 UTC: recorded separate low-stock execution 390229 HTTP 500 from one original n8n receipt. Underlying cause and recovery remain unknown; no prior-day diagnosis, common cause, retry or runtime investigation inferred.
+
+- 2026-10-22 09:48 UTC: recorded fresh bounded API correlation and original API read-access success, with attribution/configuration limits and no recovery. Recorded preparation delivery, conditional public-base acquisition proposal, failed anonymous DNS check and newly located original delta chain; complete closure remains blocked at Unit 1. No fetch, import, source adoption, tests or release action.
