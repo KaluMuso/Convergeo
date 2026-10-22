@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 11:24 UTC** (22 October 13:24 Zambia).
+Updated: **2026-10-22 11:42 UTC** (22 October 13:42 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -779,6 +779,12 @@ The concrete source-only acquisition script is independently **ACCEPT_FOR_OWNER_
 
 **Explicit owner execution approval remains pending.** The newly proposed Windows resource admission of two readings at least 2.5 GiB, 30 seconds apart, requires acceptance for this Git-acquisition scope; it is not inherited from PostgreSQL admission, and old PG readings do not establish that Git acquisition is blocked. Exact script/filesystem/network/resource scope and fresh host admission remain prerequisites. Original importer and child archive are unchanged. Acquisition, import, checkout and tests remain **NOT_RUN**; no personal filesystem paths are published here.
 
+### 22 October 11:42 UTC — acquisition scope approved; revised exact script acceptance pending
+
+At 11:38 UTC the owner **APPROVED the owner-operated original-base acquisition scope**, using exactly `refs/pull/750/head`. The concrete script was corrected by changing one ref constant from the branch ref to that approved PR ref. Revised script SHA256: `fa3497b055cf4593900d7270accdce34f9fc99609632393661b9faaf2b6df46b`; independent verdict: **ACCEPT_REVISED_SOURCE_FOR_OWNER_SCRIPT_ACCEPTANCE**. The same private package was delivered as version 1 at 11:42 UTC, SHA256 `77027ec57833f31caeb56451c718b9b468bb8f684ac4312bf046b0b13908afb7`, preserving the earlier reviewed version.
+
+This closes the acquisition-scope decision only. **Exact revised-script acceptance remains pending**, as explicitly required by the owner; acceptance of the newly proposed manual memory-admission procedure is not inferred. Acquisition, import and tests remain **NOT_RUN**. No agent laptop access occurred or is implied. Existing source, custody and release holds remain unchanged.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -949,3 +955,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-22 09:48 UTC: recorded fresh bounded API correlation and original API read-access success, with attribution/configuration limits and no recovery. Recorded preparation delivery, conditional public-base acquisition proposal, failed anonymous DNS check and newly located original delta chain; complete closure remains blocked at Unit 1. No fetch, import, source adoption, tests or release action.
 
 - 2026-10-22 11:24 UTC: recorded owner-terminal anonymous ref-read success separately from unchanged cloud DNS failure, and independently accepted concrete acquisition preparation pending exact owner scope approval. Proposed Git resource admission is new, not inherited from PG; no acquisition, import, checkout or tests.
+
+- 2026-10-22 11:42 UTC: recorded owner approval of exact PR-ref acquisition scope and independently reviewed one-constant script correction. Exact revised-script acceptance and new manual memory admission remain pending; no acquisition, import, tests or agent laptop access.
