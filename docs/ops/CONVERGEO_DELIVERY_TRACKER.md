@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 09:48 UTC** (22 October 11:48 Zambia).
+Updated: **2026-10-22 11:24 UTC** (22 October 13:24 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -771,6 +771,14 @@ The existing API/runtime owner successfully used its original authorized product
 - **Original custody advanced, complete closure still blocked:** supported Library materialization and hash/CRC/path checks located the original `e713de3f` packet (353,854 bytes, SHA256 `ec7b678f7f1e3d052a9e3e88787e576fbd258dc8ddfbe06cf1e59c34e727f1ea`), with all 86 manifest entries matching. Its 36,662-byte delta bundle requires Unit 3 `49d43c5f`; locating this delta is not complete recovery. Original Unit 3 and Unit 2 packets passed 32 and 36 manifest checks respectively; their bundles require `dfe51b22` and `e5845001`.
 - The original Unit 1 packet passed 141 manifest checks and contains commit objects, tree-entry receipts and snapshots, but no bundle or complete object closure. The earliest demonstrated original closure gap is now Unit 1 `e58450010466cdd883b8d8152942d5c6918ebe57`, tree `7bcd06e33f09460dfb5446649c2417ab22ccf3d1`, whose parent is #718 `ae0a219199cccc341dca03df8cfce85153b7a312`, tree `933009940823e294f5d3777d03d85bbd52775cce`. The previously verified 57,580,334-byte selected-source transport remains transfer-unconfirmed. No import, fetch, checkout, tests, reconstruction, donor reapplication or denied-task retry occurred; product driver `9a41f252` remains unwired.
 
+### 22 October 11:24 UTC — owner-terminal reachability verified; concrete acquisition scope pending
+
+At 11:14 UTC the owner reported a successful credential-free Ubuntu `ls-remote` of the exact branch `cursor/api-low-stock-ledger-hotfix-local-20261014`, resolving to `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`. This is owner-terminal evidence, not a successful cloud check: the independent cloud DNS failure remains unchanged and was not retried. A remote-ref read does not acquire source-object closure or restore original CI-001 task access.
+
+The concrete source-only acquisition script is independently **ACCEPT_FOR_OWNER_SCOPE_APPROVAL_ONLY**, SHA256 `4e35162360f5b21beebe37119b99f0b9aa87386a801a7430cc60b38a8571603f`. Its private 18,300-byte package has SHA256 `f417b2ee945011c5660a41d3314dd13184b1f1eac074d1bccfb4b358d6223dbc`. AST/static review passed; the complete exact commands and effects were delivered to the owner at 11:24 UTC. This concrete owner-operated route is distinct from the earlier unexecuted cloud proposal.
+
+**Explicit owner execution approval remains pending.** The newly proposed Windows resource admission of two readings at least 2.5 GiB, 30 seconds apart, requires acceptance for this Git-acquisition scope; it is not inherited from PostgreSQL admission, and old PG readings do not establish that Git acquisition is blocked. Exact script/filesystem/network/resource scope and fresh host admission remain prerequisites. Original importer and child archive are unchanged. Acquisition, import, checkout and tests remain **NOT_RUN**; no personal filesystem paths are published here.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -939,3 +947,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-22 06:06 UTC: recorded separate low-stock execution 390229 HTTP 500 from one original n8n receipt. Underlying cause and recovery remain unknown; no prior-day diagnosis, common cause, retry or runtime investigation inferred.
 
 - 2026-10-22 09:48 UTC: recorded fresh bounded API correlation and original API read-access success, with attribution/configuration limits and no recovery. Recorded preparation delivery, conditional public-base acquisition proposal, failed anonymous DNS check and newly located original delta chain; complete closure remains blocked at Unit 1. No fetch, import, source adoption, tests or release action.
+
+- 2026-10-22 11:24 UTC: recorded owner-terminal anonymous ref-read success separately from unchanged cloud DNS failure, and independently accepted concrete acquisition preparation pending exact owner scope approval. Proposed Git resource admission is new, not inherited from PG; no acquisition, import, checkout or tests.
