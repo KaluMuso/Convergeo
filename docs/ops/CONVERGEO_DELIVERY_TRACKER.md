@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 04:08 UTC** (22 October 06:08 Zambia).
+Updated: **2026-10-22 06:06 UTC** (22 October 08:06 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -749,6 +749,12 @@ Owner-terminal evidence supplied the Ubuntu account identity, canonical parent d
 - Retry-of and retry-success references are both null. The exact request correlation identifier is retained privately for the existing API owner. This n8n receipt verifies the failed response only: **the underlying API exception, root cause and recovery are UNKNOWN**. Do not reuse the 21 October diagnosis or infer a successful retry.
 - This was one read-only incident receipt, not API-log inspection, replay, database/provider activity or a task retry. Preserve all existing source, execution and release holds. Include this new evidence in the morning handoff; no overnight user alert is required.
 
+### 22 October 06:06 UTC — new low-stock failure; independent incident evidence
+
+- **Date-specific failure verified:** [execution 390229](https://n8n.vergeo5.com/workflow/zkIe2zW72qp5fcli/executions/390229), 22 October 05:00:01.038–05:00:01.330 UTC, from the daily 07:00 CAT schedule into the low-stock tick. `POST /internal/n8n/low-stock/tick` returned **HTTP 500 / internal_error**, with an unexpected-error message and empty details.
+- Retry-of and retry-success references are both null. The exact request correlation identifier is retained privately. **The underlying API exception, cause and recovery remain UNKNOWN.** This receipt is separate from today's reconciliation execution 389374; neither a common cause nor the 21 October diagnosis is inferred.
+- Verification consisted of one read-only n8n receipt. No task retry, API-log inspection, replay, database activity, laptop access or test occurred. Preserve all existing holds and include this incident in the morning handoff without an overnight user alert.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -913,3 +919,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 23:27 UTC: recorded verified original archive custody, incomplete base closure, non-duplicative QA ancestry and blocked offline import-script preparation. Owner-terminal evidence is not live verification; overnight local access is prohibited. No fetch, import, tests, new source or release capability.
 
 - 2026-10-22 04:08 UTC: recorded the new date-specific reconciliation HTTP 500 from original execution 389374. Root cause and recovery remain unverified; no API-log inspection, replay, data action or task retry. Prior-day diagnoses are not carried forward.
+
+- 2026-10-22 06:06 UTC: recorded separate low-stock execution 390229 HTTP 500 from one original n8n receipt. Underlying cause and recovery remain unknown; no prior-day diagnosis, common cause, retry or runtime investigation inferred.
