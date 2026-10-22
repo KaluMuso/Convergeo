@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 12:31 UTC** (22 October 14:31 Zambia).
+Updated: **2026-10-22 13:06 UTC** (22 October 15:06 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -793,6 +793,20 @@ At 12:31 UTC the owner reverified the original archive at the approved location 
 
 A separate lower-memory proposal is under review, **not approved**; the threshold has not changed. No import, tests, agent laptop access or denied-task retry occurred. Preserve the original failure, accepted script and all other source/release holds.
 
+### 22 October 13:06 UTC — existing hotfix scope confirmed; reconciliation replay is not a harmless check
+
+The owner closed the memory-threshold review at 13:00 UTC: no further analysis without new evidence. The exact acquisition script is accepted and source archive availability is owner-verified; execution still awaits fresh passing memory admission and script entry gates.
+
+Fresh read-only source mapping confirms #750 head `bdf3a9776dd9263f108a0ee4ca6882ec09a7c04c`, a direct child of configured serving source `fac35f450d7a92dbd9dba451227b467bbf278355`, already contains the four-file fix relevant to the two freshly correlated 22 October exceptions:
+- The low-stock None guard retains default threshold 5 and does not swallow transport, permission or missing-table failures. No additional source correction is warranted by this mapping.
+- Reconciliation catches `LedgerAccountNotFoundError` and returns a sanitized **503 / ledger_account_unavailable**. This is honest failure reporting, not a restored reconciliation report or provisioned ledger account.
+- **Provider-operation boundary:** unchanged `services/payments/reconcile.py:576–645` calls Lenco account/transaction retrieval before the missing-ledger lookup. “No report writes” does not mean “no provider calls.” Production replay is not authorized as a harmless check; an existing stored-report replay is not proof of current recovery.
+- Restoring/provisioning `platform_cash` requires an accounting-owner scoped plan specifying the intended account, opening-balance provenance, exact mutation and safeguards. Do not assume an empty account is correct.
+
+No new tests ran. Historical 25- and 37-case results remain mock/offline evidence only; the three approved checks, nine native cases and 29 browser journeys remain **NOT_RUN**. Presence of the relevant hunks in selected `2e6416c` still awaits recovered-source comparison.
+
+Additional original Library inventories, including nested publication-denial and Unit 1 packets, contain no complete bundle, pack or object store. The previously recorded 57,580,334-byte selected-source transport has not been located in Library; its exact retained filename/path and raw transfer receipt remain unavailable. Supported transfer reconciliation by the original CUST owner remains a dependency. No denied-task retry, reconstruction, source change or release action occurred.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -967,3 +981,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-22 11:42 UTC: recorded owner approval of exact PR-ref acquisition scope and independently reviewed one-constant script correction. Exact revised-script acceptance and new manual memory admission remain pending; no acquisition, import, tests or agent laptop access.
 
 - 2026-10-22 12:31 UTC: recorded explicit revision-1 script acceptance and owner-terminal archive/hash revalidation. Historical pre-fetch FileNotFoundError remains unexplained; current memory admission fails, so acquisition stays on hold. No threshold change, import or tests.
+
+- 2026-10-22 13:06 UTC: recorded closed memory review, exact existing #750 fix mapping and provider-call boundary before missing-ledger lookup. Safe 503 is not account/report restoration. Further original packet inventories do not resolve full source closure; no new tests, reconstruction or execution.
