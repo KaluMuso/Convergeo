@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-22 11:42 UTC** (22 October 13:42 Zambia).
+Updated: **2026-10-22 12:31 UTC** (22 October 14:31 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -785,6 +785,14 @@ At 11:38 UTC the owner **APPROVED the owner-operated original-base acquisition s
 
 This closes the acquisition-scope decision only. **Exact revised-script acceptance remains pending**, as explicitly required by the owner; acceptance of the newly proposed manual memory-admission procedure is not inferred. Acquisition, import and tests remain **NOT_RUN**. No agent laptop access occurred or is implied. Existing source, custody and release holds remain unchanged.
 
+### 22 October 12:31 UTC — exact script accepted; acquisition remains on resource hold
+
+At 12:29 UTC the owner explicitly **ACCEPTED revision 1** of the acquisition script, SHA256 `fa3497b055cf4593900d7270accdce34f9fc99609632393661b9faaf2b6df46b`, after verifying its hash and sole PR-ref change. Resource scope is approved conditionally. The owner reported an earlier `FileNotFoundError` before fetch/import; **no acquisition occurred**, and the cause of that historical failure remains unknown.
+
+At 12:31 UTC the owner reverified the original archive at the approved location with exact SHA256 `d1042fc265f0a5ef64417b10110bef8c228a45e800a0f2c8bb539727b458d68f`. Current archive availability is resolved by **OWNER-TERMINAL evidence**, not an agent live check; the personal path is omitted here. Current free-memory readings of **2.08 and 2.13 GiB fail the approved 2.5 GiB admission threshold**. Acquisition remains **HOLD**, pending fresh passing admission and script entry checks.
+
+A separate lower-memory proposal is under review, **not approved**; the threshold has not changed. No import, tests, agent laptop access or denied-task retry occurred. Preserve the original failure, accepted script and all other source/release holds.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -957,3 +965,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-22 11:24 UTC: recorded owner-terminal anonymous ref-read success separately from unchanged cloud DNS failure, and independently accepted concrete acquisition preparation pending exact owner scope approval. Proposed Git resource admission is new, not inherited from PG; no acquisition, import, checkout or tests.
 
 - 2026-10-22 11:42 UTC: recorded owner approval of exact PR-ref acquisition scope and independently reviewed one-constant script correction. Exact revised-script acceptance and new manual memory admission remain pending; no acquisition, import, tests or agent laptop access.
+
+- 2026-10-22 12:31 UTC: recorded explicit revision-1 script acceptance and owner-terminal archive/hash revalidation. Historical pre-fetch FileNotFoundError remains unexplained; current memory admission fails, so acquisition stays on hold. No threshold change, import or tests.
