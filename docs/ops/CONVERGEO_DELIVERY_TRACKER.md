@@ -8,7 +8,7 @@ Before every implementation task, read Issue #716, this tracker and applicable A
 
 ## 1. Latest verified baseline and timestamp
 
-Updated: **2026-10-21 23:27 UTC** (22 October 01:27 Zambia).
+Updated: **2026-10-22 04:08 UTC** (22 October 06:08 Zambia).
 Scope: focused delivery recovery and active sprint results; the separate architecture/baseline inventory is not duplicated here.
 
 - Current staging-targeted source: [#752](https://github.com/KaluMuso/Convergeo/pull/752), `92421f5d35ec49c382624ca4176c3c867b0192ce`, tree `482511117b3a1097b8919a543d8a7eb438aac6cf`.
@@ -743,6 +743,12 @@ A concrete CI-001 import script received independent AST parsing and source revi
 
 Owner-terminal evidence supplied the Ubuntu account identity, canonical parent directory, archive hash and Git 2.43 version; these are not agent live checks, and personal paths are not published here. Task-to-local/cloud environment bindings remain **UNVERIFIED** and require Support mapping, not inference from archive contents. Overnight laptop, WSL and Docker access is prohibited; questions are deferred until morning. This checkpoint adds custody and script-preparation evidence only, not a new source commit, test, CI, deployment or pilot capability. All existing source, testing and release holds remain.
 
+### 22 October 04:08 UTC — new reconciliation failure; root cause unverified
+
+- **Date-specific failure verified:** [execution 389374](https://n8n.vergeo5.com/workflow/C1MpTNjrfLACMG3f/executions/389374), 22 October 00:00:53.031–00:00:54.517 UTC, from the daily 02:00 schedule into the daily reconciliation report. `POST /internal/reconciliation/daily-report` returned **HTTP 500 / internal_error**, with an unexpected-error message and empty details.
+- Retry-of and retry-success references are both null. The exact request correlation identifier is retained privately for the existing API owner. This n8n receipt verifies the failed response only: **the underlying API exception, root cause and recovery are UNKNOWN**. Do not reuse the 21 October diagnosis or infer a successful retry.
+- This was one read-only incident receipt, not API-log inspection, replay, database/provider activity or a task retry. Preserve all existing source, execution and release holds. Include this new evidence in the morning handoff; no overnight user alert is required.
+
 ### Top three dependencies threatening 21 October selection
 
 1. **Exact-source publication/hosted permission:** static qualification is closed on selected 2e6416c. Complete the read-only package and obtain legitimate exact-target publication/hosted authorization without retrying denied controls.
@@ -905,3 +911,5 @@ Request any necessary private handoff through the owner/King; only separately ve
 - 2026-10-21 22:55 UTC: recorded independently accepted, blocked #750 original-source recovery preparation and exact archive/bundle fingerprints. No runnable procedure, fetch, import, test, access recovery or task retry claimed; integration custody and original-task Support remain separate.
 
 - 2026-10-21 23:27 UTC: recorded verified original archive custody, incomplete base closure, non-duplicative QA ancestry and blocked offline import-script preparation. Owner-terminal evidence is not live verification; overnight local access is prohibited. No fetch, import, tests, new source or release capability.
+
+- 2026-10-22 04:08 UTC: recorded the new date-specific reconciliation HTTP 500 from original execution 389374. Root cause and recovery remain unverified; no API-log inspection, replay, data action or task retry. Prior-day diagnoses are not carried forward.
