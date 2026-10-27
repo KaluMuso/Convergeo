@@ -1,11 +1,12 @@
 /** PR758-only hosted experiment. Importing this module performs no operations. */
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
+import { homedir, release } from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
@@ -77,7 +78,9 @@ function receipt(name, value) {
   );
 }
 function save(state) {
-  fs.writeFileSync(path.join(state.dir, "state.json"), JSON.stringify(state), { mode: 0o600 });
+  fs.writeFileSync(path.join(state.dir, "state.json"), JSON.stringify(state), {
+    mode: 0o600,
+  });
 }
 function optionalStat(file) {
   try {
@@ -307,7 +310,9 @@ async function prepare(state) {
     fs.mkdirSync(path.dirname(state.nss), { recursive: true, mode: 0o700 });
     fs.mkdirSync(state.nss, { mode: 0o700 });
     state.createdNss = true;
-    fs.writeFileSync(path.join(state.nss, ".convergeo-owner"), state.owner, { mode: 0o600 });
+    fs.writeFileSync(path.join(state.nss, ".convergeo-owner"), state.owner, {
+      mode: 0o600,
+    });
     save(state);
     command("certutil", ["-N", "--empty-password", "-d", "sql:" + state.nss]);
     command("certutil", [
@@ -361,7 +366,11 @@ async function prepare(state) {
       ]),
     });
   } catch (error) {
-    receipt("preparation-failure", { result: "FAIL", name: error.name, message: error.message });
+    receipt("preparation-failure", {
+      result: "FAIL",
+      name: error.name,
+      message: error.message,
+    });
     try {
       await cleanup(state);
     } catch {
@@ -383,7 +392,11 @@ async function stop(server) {
 }
 function tlsServer(pair) {
   return https.createServer(
-    { key: fs.readFileSync(pair.key), cert: fs.readFileSync(pair.cert), minVersion: "TLSv1.2" },
+    {
+      key: fs.readFileSync(pair.key),
+      cert: fs.readFileSync(pair.cert),
+      minVersion: "TLSv1.2",
+    },
     (req, res) => {
       if (req.headers.origin === WEB) res.setHeader("Access-Control-Allow-Origin", WEB);
       res.setHeader("Content-Type", "application/json");
@@ -396,7 +409,7 @@ function procIdentity(pid) {
   const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
   return { pid, start: fields[19], group: Number(fields[2]) };
 }
-async function browserSession(state, engine, action) {
+async function browserSession(state, engine, action, diagnostic = false) {
   const { lhRequire, e2eRequire } = dependencies();
   const profile = path.join(state.dir, engine + "-profile-" + Date.now());
   let browser, launched, context;
@@ -408,6 +421,7 @@ async function browserSession(state, engine, action) {
         chromiumSandbox: true,
         ignoreHTTPSErrors: false,
         bypassCSP: false,
+        ...(diagnostic ? { timeout: 15_000 } : {}),
       });
       browser = context.browser();
       rootSession = await browser.newBrowserCDPSession();
@@ -534,8 +548,15 @@ async function pageFetch(page, url, options = {}) {
   return page.evaluate(
     async ({ url, options }) => {
       try {
-        const response = await fetch(url, { ...options, signal: AbortSignal.timeout(15000) });
-        return { status: response.status, url: response.url, body: await response.json() };
+        const response = await fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(15000),
+        });
+        return {
+          status: response.status,
+          url: response.url,
+          body: await response.json(),
+        };
       } catch {
         return { error: "fetch-rejected" };
       }
@@ -565,7 +586,11 @@ async function supabasePage(page) {
   );
   assert.equal(result.status, 200, "Actual page Supabase request failed");
   assert.ok(result.body.some((row) => row.slug === "electronics"));
-  return { status: result.status, origin: new URL(result.url).origin, electronics: true };
+  return {
+    status: result.status,
+    origin: new URL(result.url).origin,
+    electronics: true,
+  };
 }
 async function admit(state) {
   requireTrust(state);
@@ -595,7 +620,9 @@ async function admit(state) {
     assert.equal((await good.json()).fixture, "tls-control");
     let httpFailure;
     try {
-      await fetch("http://" + state.host + ":8000", { signal: AbortSignal.timeout(5000) });
+      await fetch("http://" + state.host + ":8000", {
+        signal: AbortSignal.timeout(5000),
+      });
     } catch (error) {
       httpFailure = error.cause?.code;
     }
@@ -607,7 +634,9 @@ async function admit(state) {
     for (const port of [8001, 8002]) {
       let cause;
       try {
-        await fetch("https://" + state.host + ":" + port, { signal: AbortSignal.timeout(15000) });
+        await fetch("https://" + state.host + ":" + port, {
+          signal: AbortSignal.timeout(15000),
+        });
       } catch (error) {
         cause = error.cause?.code;
       }
@@ -678,7 +707,10 @@ async function admit(state) {
           syntheticDocumentOnly: true,
         });
       });
-    receipt("transport-admission", { result: "PASS", engines: ["playwright141", "lighthouse155"] });
+    receipt("transport-admission", {
+      result: "PASS",
+      engines: ["playwright141", "lighthouse155"],
+    });
   } finally {
     const outcomes = await Promise.allSettled(servers.reverse().map(stop));
     const errors = outcomes.filter((result) => result.status === "rejected");
@@ -789,7 +821,9 @@ async function content(state) {
     await page.waitForFunction(() =>
       [...document.querySelectorAll("h1")].some((el) => el.textContent?.trim() === "Smartphone X1"),
     );
-    await page.waitForSelector('[data-testid="pdp-seller-count"]', { visible: true });
+    await page.waitForSelector('[data-testid="pdp-seller-count"]', {
+      visible: true,
+    });
     const sellers = await page.$eval('[data-testid="pdp-seller-count"]', (el) => el.textContent);
     assert.ok(/\b[1-9]\d*\b/.test(sellers ?? ""));
     await page.screenshot({
@@ -873,7 +907,429 @@ async function content(state) {
     });
   });
 }
+// Temporary PR758 diagnostic only. It never prepares trust or qualifies Performance.
+// One API invocation; pinned Playwright may internally retry once only for its
+// documented ld.so condition. The shared launch timeout permits cleanup overrun.
+// The software watchdog and workflow backstop are not exact wall-clock guarantees.
+async function sandboxDiagnose() {
+  const started = Date.now();
+  const state = {
+    dir: directory(),
+    owner: path.basename(directory()),
+    nss: path.join(homedir(), ".pki/nssdb"),
+    createdNss: false,
+    processes: [],
+    diagnosticOnly: true,
+  };
+  let created = false;
+  let observedProcesses = [];
+  const budget = () => assert.ok(Date.now() - started < 85_000, "Diagnostic time budget exhausted");
+  const observed = (action) => {
+    try {
+      budget();
+      return { status: "RECORDED", value: action() };
+    } catch (error) {
+      return {
+        status: "UNAVAILABLE",
+        code: error.code ?? error.name,
+        exit: error.status ?? "NOT_RECORDED",
+        signal: error.signal ?? "NOT_RECORDED",
+      };
+    }
+  };
+  const read = (file, limit = 65_536) => {
+    const fd = fs.openSync(file, "r");
+    try {
+      const data = Buffer.alloc(limit + 1);
+      const length = fs.readSync(fd, data, 0, data.length, 0);
+      assert.ok(length <= limit, "Observation exceeds bounded size");
+      return data.subarray(0, length).toString("utf8").trim();
+    } finally {
+      fs.closeSync(fd);
+    }
+  };
+  const nss = () =>
+    Object.fromEntries(
+      [".pki/nssdb", ".local/share/pki/nssdb"].map((name) => [
+        name,
+        observed(() => Boolean(optionalStat(path.join(homedir(), name)))),
+      ]),
+    );
+  const controls = () =>
+    Object.fromEntries(
+      [
+        "/proc/sys/kernel/apparmor_restrict_unprivileged_userns",
+        "/proc/sys/kernel/unprivileged_userns_clone",
+        "/proc/sys/user/max_user_namespaces",
+        "/proc/self/attr/current",
+        "/proc/self/uid_map",
+        "/proc/self/gid_map",
+        "/sys/module/apparmor/parameters/enabled",
+        "/sys/kernel/security/lsm",
+      ].map((file) => [file, observed(() => read(file))]),
+    );
+  // Only exact profile-argument processes owned by this user may be signalled.
+  const ownedBrowsers = () => {
+    if (!created) return [];
+    const processes = fs
+      .readdirSync("/proc")
+      .filter((name) => /^\d+$/.test(name))
+      .flatMap((name) => {
+        try {
+          const root = "/proc/" + name;
+          if (fs.statSync(root).uid !== process.getuid()) return [];
+          const args = read(root + "/cmdline").split("\0");
+          const owner =
+            args.some((arg) =>
+              arg.startsWith("--user-data-dir=" + state.dir + "/playwright141-profile-"),
+            ) && fs.realpathSync(root + "/exe") === state.pw;
+          const ppid = Number(read(root + "/status").match(/^PPid:\s+(\d+)$/m)?.[1]);
+          return [{ ...procIdentity(Number(name)), ppid, owner }];
+        } catch {
+          return []; // A process may exit between procfs reads.
+        }
+      });
+    const owned = processes.filter((item) => item.owner);
+    for (let index = 0; index < owned.length; index++)
+      owned.push(
+        ...processes.filter(
+          (item) =>
+            item.ppid === owned[index].pid && !owned.some((parent) => parent.pid === item.pid),
+        ),
+      );
+    return owned.reverse();
+  };
+  const removeOwned = () => {
+    const failures = [];
+    let browsers = [];
+    try {
+      browsers = [...observedProcesses, ...ownedBrowsers()].filter(
+        (item, index, rows) =>
+          rows.findIndex((other) => other.pid === item.pid && other.start === item.start) === index,
+      );
+    } catch (error) {
+      failures.push(error.code ?? error.name);
+    }
+    const signals = [];
+    for (const owned of browsers) {
+      try {
+        assert.equal(
+          procIdentity(owned.pid).start,
+          owned.start,
+          "PID reused; refuse cleanup signal",
+        );
+        process.kill(owned.pid, "SIGKILL");
+        signals.push({ pid: owned.pid, start: owned.start, signal: "SIGKILL" });
+      } catch (error) {
+        if (!["ENOENT", "ESRCH"].includes(error.code)) failures.push(error.code ?? error.name);
+      }
+    }
+    const verificationDeadline = Math.min(Date.now() + 1000, started + 89_000);
+    const termination = browsers.map((item) => ({
+      pid: item.pid,
+      start: item.start,
+      result: "UNVERIFIED",
+    }));
+    do {
+      for (const item of termination) {
+        if (["EXITED_OR_REAPED", "ZOMBIE_NO_EXECUTION"].includes(item.result)) continue;
+        try {
+          const identity = procIdentity(item.pid);
+          if (identity.start !== item.start) item.result = "EXITED_OR_REAPED";
+          else if (/^State:\s+Z/m.test(read("/proc/" + item.pid + "/status")))
+            item.result = "ZOMBIE_NO_EXECUTION";
+          else item.result = "STILL_RUNNING";
+        } catch (error) {
+          item.result = ["ENOENT", "ESRCH"].includes(error.code)
+            ? "EXITED_OR_REAPED"
+            : "UNAVAILABLE";
+        }
+      }
+      if (
+        termination.every((item) =>
+          ["EXITED_OR_REAPED", "ZOMBIE_NO_EXECUTION"].includes(item.result),
+        )
+      )
+        break;
+      if (Date.now() < verificationDeadline)
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    } while (Date.now() < verificationDeadline);
+    const remaining = termination.filter(
+      (item) => !["EXITED_OR_REAPED", "ZOMBIE_NO_EXECUTION"].includes(item.result),
+    );
+    if (remaining.length) failures.push("Owned browser termination not established");
+    if (created && !remaining.length) {
+      try {
+        ownedDirectory(state.dir);
+        fs.rmSync(state.dir, { recursive: true });
+      } catch (error) {
+        failures.push(error.code ?? error.name);
+      }
+    }
+    receipt("sandbox-diagnostic-cleanup", {
+      result: failures.length ? "FAIL" : "PASS",
+      ownedDirectoryCreated: created,
+      ownedDirectoryRemoved: created && !fs.existsSync(state.dir),
+      signals,
+      termination,
+      terminationCoverage: {
+        scope: "Matched owned profile roots and their observed same-user descendants only",
+        matchedIdentities: browsers.length,
+        noMatchesMeans: "Absence of matches does not prove all descendants exited",
+        unobservedOrOrphanedDescendants: "NOT_ESTABLISHED",
+      },
+      failures,
+      postProbeNss: nss(),
+      preExistingTrustModified: false,
+    });
+    return failures;
+  };
+  const hardStop = setTimeout(() => {
+    try {
+      receipt("sandbox-diagnostic-timeout", {
+        result: "FAIL",
+        limitMs: 90_000,
+        elapsedMs: Date.now() - started,
+        timingScope: "Software watchdog; synchronous observations and cleanup may delay exit",
+      });
+      removeOwned();
+    } finally {
+      console.error("DIAGNOSTIC_ONLY_NOT_QUALIFICATION: 90-second diagnostic limit");
+      process.exit(1);
+    }
+  }, 90_000);
+  let launchStarted;
+  let probePids = [];
+  try {
+    const osRelease = observed(() => read("/etc/os-release"));
+    receipt("sandbox-diagnostic-identity", {
+      evidenceScope: "NEW_RUNNER_ONLY",
+      platform: process.platform,
+      arch: process.arch,
+      node: process.versions.node,
+      osRelease,
+      run: process.env.GITHUB_RUN_ID,
+      attempt: process.env.GITHUB_RUN_ATTEMPT,
+    });
+    const { cliRequire, e2eRequire } = dependencies();
+    state.pw = fs.realpathSync(e2eRequire("@playwright/test").chromium.executablePath());
+    state.selectedChrome = fs.realpathSync(cliRequire("./src/utils.js").determineChromePath({}));
+    state.chrome = state.selectedChrome;
+    const version = (file) => command(file, ["--version"], { timeout: 2000, maxBuffer: 4096 });
+    const pwVersion = version(state.pw),
+      chromeVersion = version(state.chrome);
+    const files = [
+      state.pw,
+      path.join(path.dirname(state.pw), "chrome_sandbox"),
+      path.join(path.dirname(state.pw), "chrome-sandbox"),
+      "/opt/google/chrome/chrome-sandbox",
+    ];
+    const mounts = read("/proc/self/mountinfo", 262_144).split("\n");
+    const metadata = (file) => {
+      const lst = fs.lstatSync(file),
+        real = fs.realpathSync(file),
+        stat = fs.statSync(real);
+      assert.ok(stat.isFile());
+      const mount = mounts
+        .map((line) => line.split(" "))
+        .filter(
+          (fields) => real === fields[4] || real.startsWith(fields[4].replace(/\/$/, "") + "/"),
+        )
+        .sort((a, b) => b[4].length - a[4].length)[0];
+      return {
+        path: file,
+        realpath: real,
+        symlink: lst.isSymbolicLink(),
+        uid: stat.uid,
+        gid: stat.gid,
+        mode: "0" + (stat.mode & 0o7777).toString(8),
+        size: stat.size,
+        sha256:
+          stat.size <= 64 * 1024 * 1024
+            ? createHash("sha256").update(fs.readFileSync(real)).digest("hex")
+            : "UNAVAILABLE_SIZE_LIMIT_64_MIB",
+        mount: mount
+          ? {
+              point: mount[4],
+              options: mount[5],
+              filesystem: mount[mount.indexOf("-") + 1],
+            }
+          : "NOT_RECORDED",
+        helperExecuted: false,
+        helperApiCompatibility: "NOT_ESTABLISHED",
+      };
+    };
+    receipt("sandbox-diagnostic-before", {
+      evidenceScope: "NEW_RUNNER_ONLY; not the original failed runner",
+      source: command("git", ["rev-parse", "HEAD"], {
+        cwd: checkout,
+        timeout: 2000,
+      }),
+      run: process.env.GITHUB_RUN_ID,
+      attempt: process.env.GITHUB_RUN_ATTEMPT,
+      runner: {
+        os: process.env.RUNNER_OS,
+        arch: process.env.RUNNER_ARCH,
+        imageOS: process.env.ImageOS ?? "NOT_RECORDED",
+        imageVersion: process.env.ImageVersion ?? "NOT_RECORDED",
+        kernel: release(),
+        uid: process.getuid(),
+        gid: process.getgid(),
+        node: process.versions.node,
+      },
+      playwright: { path: state.pw, version: pwVersion },
+      chrome: { path: state.chrome, version: chromeVersion, launched: false },
+      controls: controls(),
+      processStatus: observed(() =>
+        read("/proc/self/status")
+          .split("\n")
+          .filter((line) => /^(?:Uid|Gid|NoNewPrivs|Seccomp|Seccomp_filters):/.test(line)),
+      ),
+      userNamespace: observed(() => fs.readlinkSync("/proc/self/ns/user")),
+      chromePolicy: observed(() =>
+        read("/etc/apparmor.d/chrome", 16_384)
+          .split("\n")
+          .filter((line) => /chrome|userns|profile|flags|include/.test(line)),
+      ),
+      chromeLoadedProfiles: observed(() =>
+        read("/sys/kernel/security/apparmor/profiles")
+          .split("\n")
+          .filter((line) => /chrome|chromium/i.test(line)),
+      ),
+      executableAndHelpers: files.map((file) => ({
+        file,
+        observation: observed(() => metadata(file)),
+      })),
+      preProbeNss: nss(),
+    });
+    assert.equal(process.platform, "linux");
+    assert.equal(process.arch, "x64");
+    assert.equal(process.versions.node, "22.23.3");
+    assert.equal(osRelease.status, "RECORDED");
+    assert.match(osRelease.value, /^VERSION_ID="24\.04"$/m);
+    assert.equal(pwVersion, "Chromium 141.0.7390.37");
+    assert.equal(chromeVersion, "Google Chrome 155.0.8059.39");
+    validateNssParents();
+    for (const name of [".pki/nssdb", ".local/share/pki/nssdb"])
+      assert.ok(
+        !optionalStat(path.join(homedir(), name)),
+        "Pre-existing NSS database: STOP before launch",
+      );
+    assert.ok(!optionalStat(state.dir), "Pre-existing diagnostic directory: STOP");
+    fs.mkdirSync(state.dir, { mode: 0o700 });
+    created = true;
+    save(state);
+    assert.ok(Date.now() - started < 60_000, "Insufficient remaining diagnostic launch budget");
+    launchStarted = new Date().toISOString();
+    await browserSession(
+      state,
+      "playwright141",
+      async ({ page }) => {
+        observedProcesses = ownedBrowsers();
+        probePids = observedProcesses.map((item) => item.pid);
+        await page.goto("about:blank", { timeout: 5000 });
+      },
+      true,
+    );
+    receipt("sandbox-diagnostic-probe", {
+      result: "PASS",
+      apiInvocationCount: 1,
+      maximumPhysicalAttempts: 2,
+      internalRetryPredicate: "Inconsistency detected by ld.so",
+      actualPhysicalAttempts: "NOT_RECORDED",
+      target: "about:blank",
+      launchStarted,
+      elapsedMs: Date.now() - started,
+      apiCallElapsedMs: Date.now() - Date.parse(launchStarted),
+    });
+  } catch (error) {
+    probePids.push(
+      ...[...String(error.message).matchAll(/<launched> pid=(\d+)/g)].map((match) =>
+        Number(match[1]),
+      ),
+    );
+    receipt("sandbox-diagnostic-probe", {
+      result: "FAIL",
+      apiInvocationCount: launchStarted ? 1 : 0,
+      maximumPhysicalAttempts: launchStarted ? 2 : 0,
+      internalRetryPredicate: "Inconsistency detected by ld.so",
+      actualPhysicalAttempts: "NOT_RECORDED; retained launch error may provide evidence",
+      launchStarted: launchStarted ?? "NOT_STARTED",
+      name: error.name,
+      code: error.code ?? "NOT_RECORDED",
+      message: String(error.message).replace(/eyJ[A-Za-z0-9_.-]+/g, "[REDACTED]"),
+      elapsedMs: Date.now() - started,
+      apiCallElapsedMs: launchStarted ? Date.now() - Date.parse(launchStarted) : "NOT_STARTED",
+    });
+  } finally {
+    try {
+      const until = new Date().toISOString();
+      const result = launchStarted
+        ? observed(() => {
+            const journalTime = (value) => value.replace("T", " ").replace(/\.\d+Z$/, " UTC");
+            const raw = command(
+              "journalctl",
+              [
+                "--dmesg",
+                "--since",
+                journalTime(launchStarted),
+                "--until",
+                journalTime(until),
+                "--no-pager",
+                "--output=json",
+              ],
+              { timeout: 3000, maxBuffer: 131_072 },
+            );
+            return raw
+              .split("\n")
+              .filter(Boolean)
+              .map((line) => JSON.parse(line))
+              .filter((row) => {
+                const message = row.MESSAGE ?? "";
+                return (
+                  /apparmor|userns|sandbox/i.test(message) &&
+                  (message.includes(state.pw) ||
+                    probePids.some((pid) => new RegExp("\\bpid=" + pid + "\\b").test(message)))
+                );
+              })
+              .slice(0, 20)
+              .map((row) => ({
+                timestamp: row.__REALTIME_TIMESTAMP,
+                message: String(row.MESSAGE).slice(0, 2048),
+              }));
+          })
+        : { status: "NOT_RUN", reason: "Browser launch not admitted" };
+      receipt("sandbox-diagnostic-after", {
+        controls: controls(),
+        postProbeNss: nss(),
+        correlatedKernelRecords: result,
+        rootCause: "NOT_ESTABLISHED_BY_GENERIC_CHROMIUM_HINT",
+        elapsedMs: Date.now() - started,
+      });
+    } finally {
+      const failures = removeOwned();
+      clearTimeout(hardStop);
+      receipt("sandbox-diagnostic-disposition", {
+        result: "DIAGNOSTIC_ONLY_NOT_QUALIFICATION",
+        elapsedMs: Date.now() - started,
+        cleanup: failures.length ? "FAIL" : "PASS",
+        normalPerformancePaused: true,
+        followOnAllowed: false,
+        timingScope:
+          "Shared 15s launch-operation budget plus cleanup; 90s software watchdog and 2min workflow backstop, no guaranteed 90s wall-clock limit",
+      });
+      console.error(
+        "DIAGNOSTIC_ONLY_NOT_QUALIFICATION: normal Performance qualification is paused",
+      );
+      process.exitCode = 1;
+    }
+  }
+}
 async function cleanup(state) {
+  assert.ok(
+    !state.diagnosticOnly,
+    "Diagnostic cleanup did not establish completion; retain residual owned state for disposable-runner destruction, no generic cleanup fallback",
+  );
   const results = [],
     errors = [];
   const attempt = async (name, action) => {
@@ -881,7 +1337,11 @@ async function cleanup(state) {
       await action();
       results.push({ operation: name, result: "PASS" });
     } catch (error) {
-      errors.push({ operation: name, name: error.name, message: error.message });
+      errors.push({
+        operation: name,
+        name: error.name,
+        message: error.message,
+      });
     }
   };
   for (const owned of [...state.processes].reverse())
@@ -927,6 +1387,7 @@ async function main() {
   requireHosted(process.env);
   process.umask(0o077);
   const mode = process.argv[2];
+  if (mode === "--sandbox-diagnose") return sandboxDiagnose();
   if (mode === "--inventory") return inventory();
   if (mode === "--cleanup" && !fs.existsSync(directory())) {
     receipt("cleanup", {

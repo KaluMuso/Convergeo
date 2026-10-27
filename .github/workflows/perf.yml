@@ -68,6 +68,14 @@ jobs:
           npm install --no-package-lock
           npx playwright install --with-deps chromium
 
+      # Temporary diagnostic transaction. This intentionally fails after capture,
+      # even when the probe succeeds: no normal Performance follow-on is admitted.
+      # One API invocation; pinned Playwright may internally retry once for ld.so.
+      # Its shared 15s timeout permits cleanup overrun; 90s is a software watchdog.
+      - name: DIAGNOSTIC_ONLY_NOT_QUALIFICATION — one Playwright API invocation
+        timeout-minutes: 2
+        run: node scripts/ci/perf-fixture-tls.mjs --sandbox-diagnose
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
