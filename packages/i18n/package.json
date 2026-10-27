@@ -18,7 +18,8 @@
     "next-intl": "^4.13.5"
   },
   "devDependencies": {
-    "next": "^15.5.23",
-    "vitest": "^3.0.9"
+    "next": "^15.5.28",
+    "vitest": "4.1.12",
+    "@types/node": "22.20.1"
   }
 }

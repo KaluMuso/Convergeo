@@ -23,10 +23,7 @@ jobs:
       SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
       SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
       SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: demo
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       ENV: development
@@ -49,6 +46,11 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Fixture input negative controls
+        run: |
+          node --test scripts/ci/perf-fixture-env.test.mjs
+          node --test scripts/ci/check-no-loopback-api.test.mjs
+
       # Blocking i18n completeness gate (M16-P03). Pure-node + offline, so it
       # runs BEFORE the expensive Supabase/build steps and fails fast. Covers
       # hardcoded strings (template/aria/meta), missing keys (used-vs-defined),
@@ -59,6 +61,25 @@ jobs:
           node scripts/ci/i18n-lint.mjs --self-test
           node scripts/ci/i18n-lint.mjs --pseudo-smoke
           node scripts/ci/i18n-lint.mjs
+
+      - name: Install a11y smoke deps (standalone e2e package)
+        working-directory: e2e
+        run: |
+          npm install --no-package-lock
+          npx playwright install --with-deps chromium
+
+      # Temporary diagnostic transaction. This intentionally fails after capture,
+      # even when the probe succeeds: no normal Performance follow-on is admitted.
+      # One API invocation; pinned Playwright may internally retry once for ld.so.
+      # Its shared 15s timeout permits cleanup overrun; 90s is a software watchdog.
+      - name: DIAGNOSTIC_ONLY_NOT_QUALIFICATION — one Playwright API invocation
+        timeout-minutes: 2
+        run: |
+          if [ "${{ github.event.pull_request.head.sha }}" != "5ed9bea61c66f1068a16ef7f656fdca09d49182e" ]; then
+            echo "::error::DIAGNOSTIC_ONLY_NOT_QUALIFICATION: successor probe not authorized"
+            exit 1
+          fi
+          node scripts/ci/perf-fixture-tls.mjs --sandbox-diagnose
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
@@ -108,6 +129,10 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
             echo "SUPABASE_DB_URL=${DB_URL}"
           } >> "$GITHUB_ENV"
+          # Publish only this disposable stack's URL/anon role to the frontend.
+          # The helper rejects privileged roles and nonlocal Supabase origins.
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" \
+            node scripts/ci/perf-fixture-env.mjs --public-supabase
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -125,26 +150,25 @@ jobs:
           uv sync
           uv run python ../../scripts/seed.py --env local
 
-      - name: Start API
-        working-directory: services/api
-        run: |
-          uv sync
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
-          echo $! > /tmp/api-pid
-          for attempt in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
-              echo "API ready on :8000"
-              if ! curl -sf http://127.0.0.1:8000/products/smartphone-x1 >/dev/null; then
-                echo "API product fixture missing for /products/smartphone-x1" >&2
-                curl -i http://127.0.0.1:8000/products/smartphone-x1 || true
-                exit 1
-              fi
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "API failed to become ready"
-          exit 1
+      - name: Configure existing runner-local Docker bridge transport
+        # No production resolver exception: use a verified actual private bridge
+        # address, shared by head/base builds and the runner-local browser.
+        run: node scripts/ci/perf-fixture-env.mjs --api-bridge
+
+      - name: Record actual hosted browser and tool inventory
+        run: node scripts/ci/perf-fixture-tls.mjs --inventory
+
+      - name: Admit both sandboxed browser launches before temporary trust
+        run: node scripts/ci/perf-fixture-tls.mjs --sandbox
+
+      - name: Prepare owned hosted TLS and NSS state
+        run: node scripts/ci/perf-fixture-tls.mjs --prepare
+
+      - name: Admit both sandboxed browsers and certificate controls before builds
+        run: node scripts/ci/perf-fixture-tls.mjs --admit
+
+      - name: Start admitted HTTPS API
+        run: node scripts/ci/perf-fixture-tls.mjs --start-api
 
       - name: Build customer app (head)
         run: pnpm --filter customer build
@@ -200,33 +224,7 @@ jobs:
         run: node scripts/ci/validate-lighthouserc.mjs
 
       - name: Start production server
-        run: |
-          pnpm --filter customer start &
-          echo $! > /tmp/customer-pid
-          for attempt in $(seq 1 60); do
-            if curl -sf http://localhost:3000/en/health >/dev/null; then
-              echo "Customer app ready on :3000"
-              break
-            fi
-            sleep 2
-          done
-          if ! curl -sf http://localhost:3000/en/health >/dev/null; then
-            echo "Server failed to become ready"
-            exit 1
-          fi
-          for url in \
-            http://localhost:3000/en \
-            http://localhost:3000/en/c/electronics \
-            http://localhost:3000/en/p/smartphone-x1 \
-            http://localhost:3000/en/search \
-            http://localhost:3000/en/checkout; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
-            echo "$url -> $code"
-            if [ "$code" != "200" ]; then
-              echo "Lighthouse target not ready: $url"
-              exit 1
-            fi
-          done
+        run: node scripts/ci/perf-fixture-tls.mjs --start-app
 
       - name: Warm Lighthouse targets (reduce cold-start variance)
         run: |
@@ -248,6 +246,16 @@ jobs:
             done
           done
 
+      - name: Verify populated disposable catalogue before measurement
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_THROTTLE: "0"
+        run: npx playwright test --config=playwright.perf-fixture.config.ts
+
+      - name: Verify populated content in the admitted Lighthouse browser
+        run: node scripts/ci/perf-fixture-tls.mjs --content
+
       - name: Lighthouse CI (blocking — see lighthouserc.json)
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
         # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
@@ -255,12 +263,6 @@ jobs:
         # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
         # itself is unavailable (not for score dips) — document in the PR.
         run: pnpm exec lhci autorun --config=lighthouserc.json
-
-      - name: Install a11y smoke deps (standalone e2e package)
-        working-directory: e2e
-        run: |
-          npm install --no-package-lock
-          npx playwright install --with-deps chromium
 
       - name: a11y smoke (axe critical/serious — blocking, H10)
         # Full axe wcag2a/wcag2aa critical+serious sweep over /, /cart, /checkout
@@ -282,20 +284,39 @@ jobs:
           E2E_THROTTLE: "0"
         run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-fast-3g-360
 
-      - name: Stop servers
+      - name: Clean up only owned hosted processes and temporary trust
         if: always()
-        run: |
-          if [ -f /tmp/customer-pid ]; then
-            kill "$(cat /tmp/customer-pid)" 2>/dev/null || true
-          fi
-          if [ -f /tmp/api-pid ]; then
-            kill "$(cat /tmp/api-pid)" 2>/dev/null || true
-          fi
+        run: node scripts/ci/perf-fixture-tls.mjs --cleanup
 
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-reports
-          path: .lighthouseci
+          # LHCI writes reports beneath this hidden directory. Include only its
+          # generated reports/manifest/assertions, never other hidden workspace files.
+          path: |
+            .lighthouseci/lhr-*.json
+            .lighthouseci/lhr-*.html
+            .lighthouseci/*.report.json
+            .lighthouseci/*.report.html
+            .lighthouseci/manifest.json
+            .lighthouseci/assertion-results.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Upload disposable fixture content evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-fixture-content
+          # Only synthetic page screenshots and explicitly redacted observations.
+          # Exclude browser traces, videos, auth state, headers and response bodies.
+          path: |
+            perf-fixture-receipts/*.json
+            perf-fixture-receipts/category-chrome155.png
+            perf-fixture-receipts/product-chrome155.png
+            e2e/results/perf-fixture-content/**/category.png
+            e2e/results/perf-fixture-content/**/product.png
+            e2e/results/perf-fixture-content/**/attachments/fixture-contract-*.json
           if-no-files-found: ignore

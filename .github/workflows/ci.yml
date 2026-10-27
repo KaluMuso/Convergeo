@@ -61,6 +61,12 @@ jobs:
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
 
+      - name: basic-ftp advisory and get-uri compatibility regressions
+        run: node --test scripts/ci/basic-ftp-advisory.test.mjs
+
+      - name: extract-zip advisory and Puppeteer caller compatibility regressions
+        run: node --test scripts/ci/extract-zip-advisory.test.mjs
+
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
@@ -511,6 +517,9 @@ jobs:
         run: supabase db reset --no-seed
 
       - name: Regenerate types
+        env:
+          # Same pinned postgres-meta image; avoid the public ECR data-limit failure.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: bash scripts/gen-types.sh
 
       - name: Fail on stale committed types

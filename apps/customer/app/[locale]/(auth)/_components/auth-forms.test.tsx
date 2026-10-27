@@ -85,6 +85,23 @@ const otpLabels = {
 };
 
 describe("PhoneForm", () => {
+  it("keeps the +260 prefix bounded and the numeric input accessible", async () => {
+    const user = userEvent.setup();
+    render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" />);
+
+    const countryCode = screen.getByRole("textbox", { name: "Country code" });
+    const phoneNumber = screen.getByRole("textbox", { name: "Phone number" });
+    expect(countryCode).toHaveValue("+260");
+    expect(countryCode).toHaveAttribute("readonly");
+    expect(countryCode.parentElement).toHaveClass("w-24", "shrink-0");
+    expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
+    expect(phoneNumber).toHaveClass("min-w-0", "flex-1");
+
+    await user.type(phoneNumber, "971234567");
+    expect(phoneNumber).toHaveValue("971234567");
+    expect(countryCode).toHaveValue("+260");
+  });
+
   it("routes to OTP after successful phone submit", async () => {
     const user = userEvent.setup();
     render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" />);

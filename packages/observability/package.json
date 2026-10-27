@@ -16,12 +16,12 @@
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
-    "@sentry/nextjs": "^10.69.0",
+    "@sentry/nextjs": "^10.75.2",
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.8",
     "react": "^19.2.8",
     "typescript": "^5.8.2",
-    "vitest": "^3.0.9"
+    "vitest": "4.1.12"
   },
   "peerDependencies": {
     "@sentry/nextjs": "^10.69.0",
