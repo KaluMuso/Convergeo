@@ -23,10 +23,7 @@ jobs:
       SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
       SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
       SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
-      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: demo
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       ENV: development
@@ -48,6 +45,11 @@ jobs:
 
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
+
+      - name: Fixture input negative controls
+        run: |
+          node --test scripts/ci/perf-fixture-env.test.mjs
+          node --test scripts/ci/check-no-loopback-api.test.mjs
 
       # Blocking i18n completeness gate (M16-P03). Pure-node + offline, so it
       # runs BEFORE the expensive Supabase/build steps and fails fast. Covers
@@ -108,6 +110,10 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
             echo "SUPABASE_DB_URL=${DB_URL}"
           } >> "$GITHUB_ENV"
+          # Publish only this disposable stack's URL/anon role to the frontend.
+          # The helper rejects privileged roles and nonlocal Supabase origins.
+          SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" \
+            node scripts/ci/perf-fixture-env.mjs --public-supabase
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -125,18 +131,23 @@ jobs:
           uv sync
           uv run python ../../scripts/seed.py --env local
 
+      - name: Configure existing runner-local Docker bridge transport
+        # No production resolver exception: use a verified actual private bridge
+        # address, shared by head/base builds and the runner-local browser.
+        run: node scripts/ci/perf-fixture-env.mjs --api-bridge
+
       - name: Start API
         working-directory: services/api
         run: |
           uv sync
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          uv run uvicorn app.main:app --host "$PERF_FIXTURE_API_HOST" --port 8000 &
           echo $! > /tmp/api-pid
           for attempt in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
+            if curl -sf "$NEXT_PUBLIC_API_BASE_URL/healthz" >/dev/null; then
               echo "API ready on :8000"
-              if ! curl -sf http://127.0.0.1:8000/products/smartphone-x1 >/dev/null; then
+              if ! curl -sf "$NEXT_PUBLIC_API_BASE_URL/products/smartphone-x1" >/dev/null; then
                 echo "API product fixture missing for /products/smartphone-x1" >&2
-                curl -i http://127.0.0.1:8000/products/smartphone-x1 || true
+                curl -i "$NEXT_PUBLIC_API_BASE_URL/products/smartphone-x1" || true
                 exit 1
               fi
               exit 0
@@ -248,6 +259,19 @@ jobs:
             done
           done
 
+      - name: Install a11y smoke deps (standalone e2e package)
+        working-directory: e2e
+        run: |
+          npm install --no-package-lock
+          npx playwright install --with-deps chromium
+
+      - name: Verify populated disposable catalogue before measurement
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_THROTTLE: "0"
+        run: npx playwright test specs/perf-fixture-content.spec.ts --project=mobile-fast-3g-360
+
       - name: Lighthouse CI (blocking — see lighthouserc.json)
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
         # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
@@ -255,12 +279,6 @@ jobs:
         # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
         # itself is unavailable (not for score dips) — document in the PR.
         run: pnpm exec lhci autorun --config=lighthouserc.json
-
-      - name: Install a11y smoke deps (standalone e2e package)
-        working-directory: e2e
-        run: |
-          npm install --no-package-lock
-          npx playwright install --with-deps chromium
 
       - name: a11y smoke (axe critical/serious — blocking, H10)
         # Full axe wcag2a/wcag2aa critical+serious sweep over /, /cart, /checkout
@@ -307,4 +325,18 @@ jobs:
             .lighthouseci/manifest.json
             .lighthouseci/assertion-results.json
           include-hidden-files: true
+          if-no-files-found: ignore
+
+      - name: Upload disposable fixture content evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-fixture-content
+          # Only synthetic page screenshots and explicitly redacted observations.
+          # Exclude browser traces, videos, auth state, headers and response bodies.
+          path: |
+            e2e/results/artifacts/**/category.png
+            e2e/results/artifacts/**/product.png
+            e2e/results/artifacts/**/test-failed-*.png
+            e2e/results/artifacts/**/attachments/fixture-contract-*.json
           if-no-files-found: ignore
