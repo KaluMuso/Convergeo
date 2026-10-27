@@ -74,7 +74,12 @@ jobs:
       # Its shared 15s timeout permits cleanup overrun; 90s is a software watchdog.
       - name: DIAGNOSTIC_ONLY_NOT_QUALIFICATION — one Playwright API invocation
         timeout-minutes: 2
-        run: node scripts/ci/perf-fixture-tls.mjs --sandbox-diagnose
+        run: |
+          if [ "${{ github.event.pull_request.head.sha }}" != "5ed9bea61c66f1068a16ef7f656fdca09d49182e" ]; then
+            echo "::error::DIAGNOSTIC_ONLY_NOT_QUALIFICATION: successor probe not authorized"
+            exit 1
+          fi
+          node scripts/ci/perf-fixture-tls.mjs --sandbox-diagnose
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
