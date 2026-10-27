@@ -58,7 +58,10 @@
       "vite@7.3.6": "7.3.7",
       "zod@4.4.3": "4.6.6",
       "body-parser@1.20.6": "1.20.9",
-      "get-uri@6.0.5>basic-ftp": "6.2.1"
+      "get-uri@6.0.5>basic-ftp": "6.2.1",
+      "puppeteer-core@24.43.1>@puppeteer/browsers": "3.2.6",
+      "get-uri@8.0.0>basic-ftp": "6.2.1",
+      "@lhci/cli@0.15.1>proxy-agent": "8.0.1"
     }
   }
 }

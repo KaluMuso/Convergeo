@@ -64,6 +64,9 @@ jobs:
       - name: basic-ftp advisory and get-uri compatibility regressions
         run: node --test scripts/ci/basic-ftp-advisory.test.mjs
 
+      - name: extract-zip advisory and Puppeteer caller compatibility regressions
+        run: node --test scripts/ci/extract-zip-advisory.test.mjs
+
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
