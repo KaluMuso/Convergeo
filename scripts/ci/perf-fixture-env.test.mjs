@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { bridgeEnvironment, publicSupabaseEnvironment } from "./perf-fixture-env.mjs";
+import { requireHosted, validateArguments } from "./perf-fixture-tls.mjs";
 
 const network = () => [
   {
@@ -21,7 +22,7 @@ const nic = () => [
 test("uses only the matched existing bridge, with preview origin guards unchanged", () => {
   assert.deepEqual(bridgeEnvironment(network(), nic()), {
     PERF_FIXTURE_API_HOST: "172.17.0.1",
-    NEXT_PUBLIC_API_BASE_URL: "http://172.17.0.1:8000",
+    NEXT_PUBLIC_API_BASE_URL: "https://172.17.0.1:8000",
     NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
   });
 });
@@ -139,3 +140,60 @@ for (const key of [jwt("service_role"), jwt("authenticated"), "not-a-jwt", "a.e3
   test("rejects privileged or invalid public keys without exposing them", () =>
     assert.throws(() => publicSupabaseEnvironment("http://127.0.0.1:54321", key)));
 }
+
+const hosted = () => ({
+  GITHUB_ACTIONS: "true",
+  RUNNER_ENVIRONMENT: "github-hosted",
+  GITHUB_REPOSITORY: "KaluMuso/Convergeo",
+  GITHUB_JOB: "perf",
+  GITHUB_EVENT_NAME: "pull_request",
+  GITHUB_BASE_REF: "master",
+  GITHUB_HEAD_REF: "codex/phone-preservation-qualification-20261026",
+  GITHUB_REF: "refs/pull/758/merge",
+  GITHUB_RUN_ID: "123",
+  GITHUB_RUN_ATTEMPT: "1",
+  RUNNER_TEMP: "/tmp/fixture-control",
+});
+
+test("admits only the named disposable hosted PR job (pure validation)", () => {
+  assert.doesNotThrow(() => requireHosted(hosted()));
+});
+for (const key of Object.keys(hosted())) {
+  test("rejects a missing hosted boundary " + key, () => {
+    const env = hosted();
+    delete env[key];
+    assert.throws(() => requireHosted(env));
+  });
+}
+for (const [key, value] of [
+  ["RUNNER_ENVIRONMENT", "self-hosted"],
+  ["GITHUB_REF", "refs/heads/master"],
+  ["GITHUB_EVENT_NAME", "push"],
+  ["GITHUB_HEAD_REF", "another-branch"],
+  ["NODE_TLS_REJECT_UNAUTHORIZED", "0"],
+  ["PUPPETEER_DANGEROUS_NO_SANDBOX", "true"],
+  ["PW_CHROMIUM_PATH", "/opt/private-chromium"],
+  ["VERCEL_AUTOMATION_BYPASS_SECRET", "synthetic-control"],
+]) {
+  test("rejects an unadmitted hosted setting " + key, () =>
+    assert.throws(() => requireHosted({ ...hosted(), [key]: value })),
+  );
+}
+for (const flag of [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--ignore-certificate-errors",
+  "--ignore-certificate-errors-spki-list=synthetic",
+  "--allow-insecure-localhost",
+  "--disable-web-security",
+  "--allow-running-insecure-content",
+  "--disable-features=LocalNetworkAccessChecks,PrivateNetworkAccessSendPreflights",
+]) {
+  test("rejects a browser security bypass " + flag, () =>
+    assert.throws(() => validateArguments(["/managed/chrome", flag])),
+  );
+}
+test("allows ordinary managed-browser arguments without claiming a runtime pass", () =>
+  assert.doesNotThrow(() =>
+    validateArguments(["/managed/chrome", "--headless=new", "--enable-automation"]),
+  ));

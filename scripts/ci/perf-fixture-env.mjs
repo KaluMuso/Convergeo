@@ -60,7 +60,7 @@ export function bridgeEnvironment(networks, interfaces) {
   }
   return {
     PERF_FIXTURE_API_HOST: gateway,
-    NEXT_PUBLIC_API_BASE_URL: `http://${gateway}:8000`,
+    NEXT_PUBLIC_API_BASE_URL: `https://${gateway}:8000`,
     NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
   };
 }

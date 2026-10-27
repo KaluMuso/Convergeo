@@ -62,6 +62,12 @@ jobs:
           node scripts/ci/i18n-lint.mjs --pseudo-smoke
           node scripts/ci/i18n-lint.mjs
 
+      - name: Install a11y smoke deps (standalone e2e package)
+        working-directory: e2e
+        run: |
+          npm install --no-package-lock
+          npx playwright install --with-deps chromium
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
@@ -136,26 +142,20 @@ jobs:
         # address, shared by head/base builds and the runner-local browser.
         run: node scripts/ci/perf-fixture-env.mjs --api-bridge
 
-      - name: Start API
-        working-directory: services/api
-        run: |
-          uv sync
-          uv run uvicorn app.main:app --host "$PERF_FIXTURE_API_HOST" --port 8000 &
-          echo $! > /tmp/api-pid
-          for attempt in $(seq 1 30); do
-            if curl -sf "$NEXT_PUBLIC_API_BASE_URL/healthz" >/dev/null; then
-              echo "API ready on :8000"
-              if ! curl -sf "$NEXT_PUBLIC_API_BASE_URL/products/smartphone-x1" >/dev/null; then
-                echo "API product fixture missing for /products/smartphone-x1" >&2
-                curl -i "$NEXT_PUBLIC_API_BASE_URL/products/smartphone-x1" || true
-                exit 1
-              fi
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "API failed to become ready"
-          exit 1
+      - name: Record actual hosted browser and tool inventory
+        run: node scripts/ci/perf-fixture-tls.mjs --inventory
+
+      - name: Admit both sandboxed browser launches before temporary trust
+        run: node scripts/ci/perf-fixture-tls.mjs --sandbox
+
+      - name: Prepare owned hosted TLS and NSS state
+        run: node scripts/ci/perf-fixture-tls.mjs --prepare
+
+      - name: Admit both sandboxed browsers and certificate controls before builds
+        run: node scripts/ci/perf-fixture-tls.mjs --admit
+
+      - name: Start admitted HTTPS API
+        run: node scripts/ci/perf-fixture-tls.mjs --start-api
 
       - name: Build customer app (head)
         run: pnpm --filter customer build
@@ -211,33 +211,7 @@ jobs:
         run: node scripts/ci/validate-lighthouserc.mjs
 
       - name: Start production server
-        run: |
-          pnpm --filter customer start &
-          echo $! > /tmp/customer-pid
-          for attempt in $(seq 1 60); do
-            if curl -sf http://localhost:3000/en/health >/dev/null; then
-              echo "Customer app ready on :3000"
-              break
-            fi
-            sleep 2
-          done
-          if ! curl -sf http://localhost:3000/en/health >/dev/null; then
-            echo "Server failed to become ready"
-            exit 1
-          fi
-          for url in \
-            http://localhost:3000/en \
-            http://localhost:3000/en/c/electronics \
-            http://localhost:3000/en/p/smartphone-x1 \
-            http://localhost:3000/en/search \
-            http://localhost:3000/en/checkout; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
-            echo "$url -> $code"
-            if [ "$code" != "200" ]; then
-              echo "Lighthouse target not ready: $url"
-              exit 1
-            fi
-          done
+        run: node scripts/ci/perf-fixture-tls.mjs --start-app
 
       - name: Warm Lighthouse targets (reduce cold-start variance)
         run: |
@@ -259,18 +233,15 @@ jobs:
             done
           done
 
-      - name: Install a11y smoke deps (standalone e2e package)
-        working-directory: e2e
-        run: |
-          npm install --no-package-lock
-          npx playwright install --with-deps chromium
-
       - name: Verify populated disposable catalogue before measurement
         working-directory: e2e
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_THROTTLE: "0"
-        run: npx playwright test specs/perf-fixture-content.spec.ts --project=mobile-fast-3g-360
+        run: npx playwright test --config=playwright.perf-fixture.config.ts
+
+      - name: Verify populated content in the admitted Lighthouse browser
+        run: node scripts/ci/perf-fixture-tls.mjs --content
 
       - name: Lighthouse CI (blocking — see lighthouserc.json)
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
@@ -300,15 +271,9 @@ jobs:
           E2E_THROTTLE: "0"
         run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-fast-3g-360
 
-      - name: Stop servers
+      - name: Clean up only owned hosted processes and temporary trust
         if: always()
-        run: |
-          if [ -f /tmp/customer-pid ]; then
-            kill "$(cat /tmp/customer-pid)" 2>/dev/null || true
-          fi
-          if [ -f /tmp/api-pid ]; then
-            kill "$(cat /tmp/api-pid)" 2>/dev/null || true
-          fi
+        run: node scripts/ci/perf-fixture-tls.mjs --cleanup
 
       - name: Upload Lighthouse reports
         if: always()
@@ -335,8 +300,10 @@ jobs:
           # Only synthetic page screenshots and explicitly redacted observations.
           # Exclude browser traces, videos, auth state, headers and response bodies.
           path: |
-            e2e/results/artifacts/**/category.png
-            e2e/results/artifacts/**/product.png
-            e2e/results/artifacts/**/test-failed-*.png
-            e2e/results/artifacts/**/attachments/fixture-contract-*.json
+            perf-fixture-receipts/*.json
+            perf-fixture-receipts/category-chrome155.png
+            perf-fixture-receipts/product-chrome155.png
+            e2e/results/perf-fixture-content/**/category.png
+            e2e/results/perf-fixture-content/**/product.png
+            e2e/results/perf-fixture-content/**/attachments/fixture-contract-*.json
           if-no-files-found: ignore
