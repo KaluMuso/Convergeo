@@ -511,6 +511,9 @@ jobs:
         run: supabase db reset --no-seed
 
       - name: Regenerate types
+        env:
+          # Same pinned postgres-meta image; avoid the public ECR data-limit failure.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: bash scripts/gen-types.sh
 
       - name: Fail on stale committed types

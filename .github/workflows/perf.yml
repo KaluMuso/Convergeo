@@ -297,5 +297,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-reports
-          path: .lighthouseci
+          # LHCI writes reports beneath this hidden directory. Include only its
+          # generated reports/manifest/assertions, never other hidden workspace files.
+          path: |
+            .lighthouseci/lhr-*.json
+            .lighthouseci/lhr-*.html
+            .lighthouseci/*.report.json
+            .lighthouseci/*.report.html
+            .lighthouseci/manifest.json
+            .lighthouseci/assertion-results.json
+          include-hidden-files: true
           if-no-files-found: ignore
