@@ -221,9 +221,16 @@ function renderBody(
   );
 }
 
+/** The variant picker is a lazy chunk (bundle budget) — wait for it to mount. */
+async function renderBodyReady(...args: Parameters<typeof renderBody>) {
+  const view = renderBody(...args);
+  await screen.findAllByRole("radiogroup");
+  return view;
+}
+
 describe("PdpInteractiveBody colour/size variants", () => {
-  it("renders swatches and size pills as labelled radio groups", () => {
-    renderBody();
+  it("renders swatches and size pills as labelled radio groups", async () => {
+    await renderBodyReady();
     const colour = screen.getByRole("radiogroup", { name: "Choose Colour" });
     expect(within(colour).getByRole("radio", { name: "Red" })).toHaveAttribute(
       "aria-checked",
@@ -233,7 +240,7 @@ describe("PdpInteractiveBody colour/size variants", () => {
   });
 
   it("blocks add-to-cart until every option is chosen and highlights what is missing", async () => {
-    renderBody();
+    await renderBodyReady();
     await waitFor(() => expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled());
     fireEvent.click(screen.getByTestId("pdp-add-to-cart"));
     expect(addCartItem).not.toHaveBeenCalled();
@@ -246,8 +253,8 @@ describe("PdpInteractiveBody colour/size variants", () => {
     );
   });
 
-  it("disables sold-out and unoffered combinations with the reason in their name", () => {
-    renderBody();
+  it("disables sold-out and unoffered combinations with the reason in their name", async () => {
+    await renderBodyReady();
     fireEvent.click(screen.getByRole("radio", { name: "Red" }));
     expect(screen.getByRole("radio", { name: "M (sold out)" })).toBeDisabled();
     expect(
@@ -257,7 +264,7 @@ describe("PdpInteractiveBody colour/size variants", () => {
   });
 
   it("swaps price and gallery to the chosen variant and adds it to the cart", async () => {
-    renderBody();
+    await renderBodyReady();
     fireEvent.click(screen.getByRole("radio", { name: "Blue" }));
     fireEvent.click(screen.getByRole("radio", { name: "M" }));
 
@@ -275,8 +282,8 @@ describe("PdpInteractiveBody colour/size variants", () => {
     });
   });
 
-  it("supports arrow-key navigation within a group", () => {
-    renderBody();
+  it("supports arrow-key navigation within a group", async () => {
+    await renderBodyReady();
     const red = screen.getByRole("radio", { name: "Red" });
     red.focus();
     fireEvent.keyDown(red, { key: "ArrowRight" });

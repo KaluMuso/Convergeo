@@ -20,7 +20,6 @@ import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
 import { useListingPurchase } from "./use-listing-purchase";
-import { VariantPicker } from "./variant-picker";
 import {
   initialSelection,
   missingGroups,
@@ -52,6 +51,12 @@ const RequestQuoteButton = dynamic(
 
 const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
   ssr: false,
+});
+
+/** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
+const VariantPicker = dynamic(() => import("./variant-picker").then((mod) => mod.VariantPicker), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" className="min-h-24" />,
 });
 
 /** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
