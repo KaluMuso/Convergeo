@@ -862,11 +862,12 @@ jobs:
       - name: Install pgTAP for disposable platform RBAC acceptance
         run: |
           docker exec "${{ job.services.postgres.id }}" apt-get update
-          docker exec "${{ job.services.postgres.id }}" apt-get install -y --no-install-recommends postgresql-16-pgtap=1.3.4-1.pgdg12+1
+          # The PG17 trixie service image carries the PGDG repository for its own major.
+          docker exec "${{ job.services.postgres.id }}" apt-get install -y --no-install-recommends postgresql-17-pgtap
           docker exec "${{ job.services.postgres.id }}" psql -U postgres -v ON_ERROR_STOP=1 \
             -c 'CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions'
 
-      - name: Platform RBAC SQL and direct API acceptance (disposable PG16)
+      - name: Platform RBAC SQL and direct API acceptance (disposable PG17)
         working-directory: services/api
         env:
           CONVERGEO_RBAC_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres

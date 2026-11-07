@@ -268,7 +268,7 @@ def test_superadmin_can_create_and_assign_only_known_permissions(
 
 
 # These tests use real role rows and the management RPC in an explicitly
-# selected disposable PG16 database. Resource reads remain synthetic, so no
+# selected disposable PG17 database (matching staging/production 17.6). Resource reads remain synthetic, so no
 # provider, ledger, payment or shared database operation can occur.
 PERMISSION_ENDPOINTS = {
     "finance.read": ("/admin/orders/search", {"order_id": "00000000-0000-0000-0000-000000000003"}),
@@ -295,14 +295,14 @@ FORBIDDEN_MUTATIONS = (
 def disposable_role_url() -> str:
     url = os.environ.get("CONVERGEO_RBAC_TEST_DB_URL")
     if not url:
-        pytest.skip("RBAC acceptance requires an explicitly selected disposable PG16 database")
+        pytest.skip("RBAC acceptance requires an explicitly selected disposable PG17 database")
     parsed = urlparse(url)
     assert os.environ.get("CONVERGEO_DISPOSABLE_DB") == "1"
     assert parsed.hostname in {"localhost", "127.0.0.1", "::1"}
     assert parsed.path == "/postgres"
     with psycopg.connect(url, connect_timeout=5, options="-c statement_timeout=15000") as db:
         row = db.execute("show server_version_num").fetchone()
-        assert row is not None and int(row[0]) // 10000 == 16
+        assert row is not None and int(row[0]) // 10000 == 17
     return url
 
 
