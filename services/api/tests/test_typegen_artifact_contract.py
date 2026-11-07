@@ -30,7 +30,7 @@ class Fixture:
         self.git: dict[str, str] = {}
         self.calls: list[list[str]] = []
         self.fault = ""
-        for index in range(114):
+        for index in range(helper.MIGRATION_COUNT - len(helper.REPAIR_ORDER)):
             self.file(f"supabase/migrations/{index + 1:04}_fixture.sql", b"select 1;\n")
         for version in helper.REPAIR_ORDER:
             self.file(f"supabase/migrations/{version}_fixture.sql", b"select 1;\n")
@@ -94,7 +94,7 @@ def test_successful_generation_capture_is_exact_and_nonsecret(stage: Fixture) ->
         "migrations",
         "generated",
     }
-    assert d["migration_count"] == len(d["migrations"]) == 118
+    assert d["migration_count"] == len(d["migrations"]) == h.MIGRATION_COUNT == 143
     assert [r["version"] for r in d["migrations"]][-4:] == h.REPAIR_ORDER
     assert d["generated"]["path"] == h.TYPES_PATH
     assert "PRIVATE_" not in (stage.root / h.MANIFEST_PATH).read_text()

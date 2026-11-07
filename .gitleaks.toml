@@ -89,7 +89,7 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Coordinator source inventory — eight verified nonsecret SHA-256 false positives from run 36862119439"
+description = "Coordinator source inventory — verified nonsecret SHA-256 file digests (run 36862119439 plus release/2026-11 migration and source re-bindings)"
 condition = "AND"
 regexTarget = "secret"
 paths = [
@@ -104,6 +104,13 @@ regexes = [
   '''^e7df832a081eaf85a50401c53f5a7ff482c16e7cbeb137eb084c12c505b968b0$''',
   '''^38be40533f59c15676525ee938bc879fc5cd15794168536740854b6a687d6242$''',
   '''^67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f$''',
+  '''^0dd91a2de3cc22b656d7ab8fba1d1591b7376cabf9eb2e95eec068423563d083$''',
+  '''^71304b8b1509a95ce55548a815372975c98324e985b509568ad496bb87cb992d$''',
+  '''^6d63bfa85e3a280ffe4698390564aa09480180d1227ff6f25b3ce806d5068961$''',
+  '''^d412ae233b93fa2445c86d2b5c557956400a735d758c2077addfaf364ac2f02d$''',
+  '''^22a440e407e8163f48cde4e0eaf94f564ac8a4a7f0660d5317371c27c774f49d$''',
+  '''^6154699044dd19151a9b0859cc8125eceb8c97bea8472d65ddf1c6688870a376$''',
+  '''^403a962b7da76a2652238f50d3c924937c826ab65893a322d4eb92aa0ad87282$''',
 ]
 
 [[allowlists]]
