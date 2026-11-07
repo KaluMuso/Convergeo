@@ -12,14 +12,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.75.0",
+    "@sentry/nextjs": "^10.75.2",
     "@vergeo/analytics": "workspace:*",
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
-    "next": "^15.5.27",
+    "next": "^15.5.28",
     "next-intl": "^4.14.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

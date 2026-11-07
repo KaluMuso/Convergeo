@@ -16,7 +16,7 @@
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
-    "@sentry/nextjs": "^10.75.0",
+    "@sentry/nextjs": "^10.75.2",
     "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "react": "^19.3.0",

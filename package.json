@@ -71,7 +71,18 @@
       "express@4.22.3>body-parser": "1.20.8",
       "express@4.22.3>qs": "6.16.0",
       "body-parser@1.20.8>qs": "6.16.0",
-      "express@4.22.3>proxy-addr": "2.0.8"
+      "express@4.22.3>proxy-addr": "2.0.8",
+      "browserslist@4.28.6": "4.28.7",
+      "source-map-js@1.2.1": "1.2.2",
+      "proxy-addr@2.0.7": "2.0.8",
+      "compression@1.8.1": "1.8.2",
+      "vite@7.3.6": "7.3.7",
+      "zod@4.4.3": "4.6.6",
+      "body-parser@1.20.6": "1.20.9",
+      "get-uri@6.0.5>basic-ftp": "6.2.1",
+      "puppeteer-core@24.43.1>@puppeteer/browsers": "3.2.6",
+      "get-uri@8.0.0>basic-ftp": "6.2.1",
+      "@lhci/cli@0.15.1>proxy-agent": "8.0.1"
     },
     "patchedDependencies": {
       "next@15.5.25": "patches/next.patch",

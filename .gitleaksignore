@@ -41,3 +41,25 @@ fda8e708a0a288268af5fe9f9c767529316ed5e3:.github/workflows/api-image.yml:generic
 # 457: SHA256(supabase/migrations/20260831051000_cleanup_expired_rate_counters_auth_role.sql)
 # 509: SHA256(services/api/tests/rls/test_launch_table_access.py)
 090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:509
+# PROPOSAL ONLY — no repository ignore file created.
+# Requires explicit owner approval for these exact 16 historical generic-api-key findings.
+# Source classifications independently reviewed; no matched values are included.
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# content-digest metadata, not a service credential
+# public Google package-signing key fingerprint
+# public Google package-signing key fingerprint
+# public Google package-signing key fingerprint
+# serialized API fixture source/fixture/lock digest metadata
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:727
+# serialized API fixture source/fixture/lock digest metadata
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:728
+# serialized API fixture source/fixture/lock digest metadata
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:729
+# literal Git SHA / published GHCR image tag metadata
+# literal Git SHA / published GHCR image tag metadata
