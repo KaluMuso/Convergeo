@@ -243,6 +243,7 @@ def _insert_ticket_order(
     unit_price_ngwee: int = UNIT_PRICE_NGWEE,
     created_at: datetime,
     paid: bool = True,
+    fund_escrow: bool = False,
 ) -> None:
     snapshot = _commission_snapshot(ticket_type_id=ticket_type_id, instance_id=instance_id)
     snapshot_sql = json.dumps(snapshot).replace("'", "''")
@@ -302,6 +303,16 @@ def _insert_ticket_order(
         from app.services.events.settlement_snapshot import create_settlement_snapshot
 
         assert create_settlement_snapshot(order_id)
+        if fund_escrow:
+            # Release is capped at escrow still held (C2), so a released-path test
+            # must fund escrow the way the real collection step does.
+            post_transaction(
+                idempotency_key=f"prepaid-charge-{order_id}",
+                template=LedgerTemplate.CHARGE_RECEIVED,
+                order_id=order_id,
+                checkout_group_id=group_id,
+                gross_ngwee=unit_price_ngwee,
+            )
 
 
 def _insert_ticket(
@@ -449,6 +460,7 @@ class TestFullReleaseBranch:
             instance_id=instance_id,
             ticket_type_id=type_id,
             created_at=purchased_at,
+            fund_escrow=True,
         )
 
         too_early = evaluate_event_release(_SERVICE, order_id, now=starts_at)
@@ -493,6 +505,7 @@ class TestFullReleaseBranch:
             instance_id=instance_id,
             ticket_type_id=type_id,
             created_at=purchased_at,
+            fund_escrow=True,
         )
 
         # At the phase-1 window a standard event would release 50%; recurring must not.
@@ -536,6 +549,7 @@ class TestPhasedReleaseBranch:
             instance_id=instance_id,
             ticket_type_id=type_id,
             created_at=purchased_at,
+            fund_escrow=True,
         )
 
         phase1_due = starts_at - timedelta(days=PHASE1_LEAD_DAYS)
@@ -690,6 +704,7 @@ class TestSweepEventReleases:
             instance_id=instance_id,
             ticket_type_id=type_id,
             created_at=purchased_at,
+            fund_escrow=True,
         )
 
         due = _full_release_due(starts_at)
@@ -1159,6 +1174,7 @@ class TestSettlementSnapshotImmutability:
             instance_id=instance_id,
             ticket_type_id=type_id,
             created_at=purchased_at,
+            fund_escrow=True,
         )
 
         rescheduled_starts = original_starts + timedelta(days=30)
