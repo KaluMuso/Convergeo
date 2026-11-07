@@ -263,9 +263,9 @@ describe("PdpInteractiveBody colour/size variants", () => {
 
     expect(screen.getByRole("radiogroup", { name: "Colour: Blue" })).toBeInTheDocument();
     expect(screen.getByTestId("pdp-price")).toHaveTextContent("K250.00");
-    expect(screen.getByTestId("gallery-slide-0").querySelector("img")?.getAttribute("src")).toContain(
-      "img/blue",
-    );
+    expect(
+      screen.getByTestId("gallery-slide-0").querySelector("img")?.getAttribute("src"),
+    ).toContain("img/blue");
 
     await waitFor(() => expect(screen.getByTestId("pdp-add-to-cart")).not.toBeDisabled());
     fireEvent.click(screen.getByTestId("pdp-add-to-cart"));

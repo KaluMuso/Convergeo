@@ -89,7 +89,10 @@ function cartesian(lists: string[][]): string[][] {
  * exist keep everything the vendor typed (matched case-insensitively), new
  * combinations start active and empty, and removed combinations are dropped.
  */
-export function generateMatrix(groups: GroupDraft[], existing: VariantRowDraft[]): VariantRowDraft[] {
+export function generateMatrix(
+  groups: GroupDraft[],
+  existing: VariantRowDraft[],
+): VariantRowDraft[] {
   const usable = groups
     .map((group) => group.values.map((value) => value.label.trim()).filter(Boolean))
     .filter((labels) => labels.length > 0);

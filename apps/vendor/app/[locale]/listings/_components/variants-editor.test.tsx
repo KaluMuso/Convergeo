@@ -81,7 +81,7 @@ describe("VariantsEditor", () => {
     expect(screen.getByText(/listings\.variants\.errors\.stockRequired/)).toBeInTheDocument();
   });
 
-  it("adds a Size option, regenerates the matrix and saves integer ngwee", async () => {
+  it("adds a Size option, keeps the draft across re-renders and saves the new matrix", async () => {
     const api = renderEditor();
     await screen.findByTestId("variants-matrix");
     fireEvent.click(screen.getByTestId("variants-add-group"));
@@ -93,12 +93,16 @@ describe("VariantsEditor", () => {
     fireEvent.click(screen.getByTestId("variants-save"));
 
     await waitFor(() => expect(api.replaceVariants).toHaveBeenCalledTimes(1));
-    const [, payload] = api.replaceVariants.mock.calls[0] as [string, ReturnType<typeof JSON.parse>];
+    const [, payload] = api.replaceVariants.mock.calls[0] as [
+      string,
+      ReturnType<typeof JSON.parse>,
+    ];
     expect(payload.groups.map((g: { name: string }) => g.name)).toEqual(["Colour", "Size"]);
+    // A new combination starts without a price override (inherits the listing price).
     expect(payload.variants[0]).toMatchObject({
       options: ["Red", "M"],
       stock_qty: 3,
-      price_ngwee: 25_000,
+      price_ngwee: null,
     });
     expect(payload.variants[1]).toMatchObject({ options: ["Blue", "M"], price_ngwee: null });
   });

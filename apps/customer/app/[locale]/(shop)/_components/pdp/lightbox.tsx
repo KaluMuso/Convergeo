@@ -110,7 +110,9 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
     (next: number) => {
       const clamped = clampZoom(next);
       setZoom(clamped);
-      setPan((current) => (clamped === MIN_ZOOM ? { x: 0, y: 0 } : clampPan(current, clamped, stageBox())));
+      setPan((current) =>
+        clamped === MIN_ZOOM ? { x: 0, y: 0 } : clampPan(current, clamped, stageBox()),
+      );
     },
     [stageBox],
   );
@@ -339,7 +341,9 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
           className="w-full max-w-3xl"
           style={{
             transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
-            transition: reducedMotion ? "none" : "transform var(--dur, 160ms) var(--ease-out, ease-out)",
+            transition: reducedMotion
+              ? "none"
+              : "transform var(--dur, 160ms) var(--ease-out, ease-out)",
           }}
         >
           <CloudinaryImage

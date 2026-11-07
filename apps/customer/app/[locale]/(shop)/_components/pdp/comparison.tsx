@@ -680,7 +680,9 @@ export function PdpInteractiveBody({
           ? selectedVariant.stockQty
           : selectedListing.stockQty,
       moq: selectedListing.moq,
-      inStock: selectedVariant ? selectedListing.inStock && selectedVariant.inStock : selectedListing.inStock,
+      inStock: selectedVariant
+        ? selectedListing.inStock && selectedVariant.inStock
+        : selectedListing.inStock,
       saleUnit: selectedListing.saleUnit,
       unitStepMilli: selectedListing.unitStepMilli,
       minSteps: selectedListing.minSteps,

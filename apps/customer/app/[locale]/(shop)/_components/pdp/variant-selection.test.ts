@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { GROUPS, VARIANTS, variant } from "./variant-fixtures";
 import {
   formatVariantLabel,
   initialSelection,
@@ -10,8 +11,6 @@ import {
   valueAvailability,
   type VariantOptionGroup,
 } from "./variant-selection";
-
-import { GROUPS, VARIANTS, variant } from "./variant-fixtures";
 
 describe("valueAvailability", () => {
   it("treats every value with some in-stock variant as available before any pick", () => {
@@ -77,7 +76,12 @@ describe("selectValue", () => {
 describe("initialSelection / labels", () => {
   it("preselects only single-choice groups", () => {
     const single: VariantOptionGroup[] = [
-      { id: "g", name: "Colour", display: "pill", values: [{ id: "x", label: "Black", swatchHex: null }] },
+      {
+        id: "g",
+        name: "Colour",
+        display: "pill",
+        values: [{ id: "x", label: "Black", swatchHex: null }],
+      },
     ];
     expect(initialSelection(single, [variant("v", ["x"])])).toEqual({ g: "x" });
     expect(initialSelection(GROUPS, VARIANTS)).toEqual({});

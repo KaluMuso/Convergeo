@@ -30,7 +30,9 @@ function pick(tree: Tree, path: string[]): Tree {
 function flatten(tree: Tree, prefix = ""): Record<string, string> {
   return Object.entries(tree).reduce<Record<string, string>>((acc, [key, value]) => {
     const full = prefix ? `${prefix}.${key}` : key;
-    return typeof value === "string" ? { ...acc, [full]: value } : { ...acc, ...flatten(value, full) };
+    return typeof value === "string"
+      ? { ...acc, [full]: value }
+      : { ...acc, ...flatten(value, full) };
   }, {});
 }
 

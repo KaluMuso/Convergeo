@@ -153,7 +153,9 @@ export function VariantsEditor({
           : null;
       setStatus({
         kind: "error",
-        message: reason ? t(`listings.variants.errors.${reason}`, { max: MAX_GROUPS }) : t("listings.variants.saveFailed"),
+        message: reason
+          ? t(`listings.variants.errors.${reason}`, { max: MAX_GROUPS })
+          : t("listings.variants.saveFailed"),
       });
     } finally {
       setSaving(false);
@@ -353,7 +355,9 @@ export function VariantsEditor({
             ])
           }
         >
-          {groups.length === 0 ? t("listings.variants.addFirstGroup") : t("listings.variants.addGroup")}
+          {groups.length === 0
+            ? t("listings.variants.addFirstGroup")
+            : t("listings.variants.addGroup")}
         </Button>
       ) : null}
 
@@ -422,7 +426,9 @@ export function VariantsEditor({
                         className="min-h-11 w-full rounded border border-border bg-bg px-2 text-sm text-text"
                         value={row.imagePublicId}
                         aria-label={t("listings.variants.photoFor", { variant: label })}
-                        onChange={(event) => updateRow(index, { imagePublicId: event.target.value })}
+                        onChange={(event) =>
+                          updateRow(index, { imagePublicId: event.target.value })
+                        }
                       >
                         <option value="">{t("listings.variants.photoNone")}</option>
                         {imagePublicIds.map((publicId, position) => (
@@ -463,7 +469,6 @@ export function VariantsEditor({
       ) : null}
 
       <Button
-
         loadingLabel={t("listings.variants.saving")}
         type="button"
         variant="primary"

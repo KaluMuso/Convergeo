@@ -304,25 +304,25 @@
     },
     "variants": {
       "groupLabel": "{group}: {value}",
-      "choose": "Choose {group}",
-      "soldOut": "{value} (sold out)",
-      "unavailable": "{value} (not available with your other choices)",
-      "required": "Choose {options} to add this to your cart",
-      "listSeparator": " and ",
-      "chooseOptions": "Choose options",
-      "wasPrice": "Was",
+      "choose": "Sankhani {group}",
+      "soldOut": "{value} (zatha)",
+      "unavailable": "{value} (sizikupezeka ndi zomwe mwasankha)",
+      "required": "Sankhani {options} kuti muonjezere ku cart",
+      "listSeparator": " ndi ",
+      "chooseOptions": "Sankhani zomwe mukufuna",
+      "wasPrice": "Mtengo wakale",
       "errors": {
-        "outOfStock": "That option just sold out. Choose another or lower the quantity.",
-        "unavailable": "That option is no longer available. Choose another.",
-        "conflict": "Your cart already has this item in a different option. Remove it from your cart first to switch."
+        "outOfStock": "Chimene mwasankha chatha. Sankhani china kapena chepetsani kuchuluka.",
+        "unavailable": "Chimene mwasankha sichikupezeka. Sankhani china.",
+        "conflict": "Cart yanu ili kale ndi chinthu ichi mu mtundu wina. Chotsani kaye ku cart kuti musinthe."
       }
     },
     "lightbox": {
-      "open": "View image full screen",
-      "dialog": "Image viewer",
-      "close": "Close image viewer",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out"
+      "open": "Onani chithunzi pa screen yonse",
+      "dialog": "Owonera zithunzi",
+      "close": "Tsekani owonera zithunzi",
+      "zoomIn": "Kulitsani",
+      "zoomOut": "Chepetsani"
     }
   },
   "plp": {
