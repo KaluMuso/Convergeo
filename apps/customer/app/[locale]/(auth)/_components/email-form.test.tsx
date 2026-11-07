@@ -63,7 +63,7 @@ describe("EmailForm portal post-auth", () => {
 
   beforeEach(() => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    getClient.mockResolvedValue({ auth: { signInWithPassword, getSession } });
+    getClient.mockResolvedValue({ auth: { signInWithPassword, signUp, getSession } });
     signInWithPassword.mockResolvedValue({ error: null });
     signUp.mockResolvedValue({
       data: { user: { id: "new-user" }, session: { access_token: "tok" } },

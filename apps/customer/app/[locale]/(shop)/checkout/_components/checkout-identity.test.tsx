@@ -49,7 +49,10 @@ vi.mock("@vergeo/config", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
-vi.mock("./step-contact", () => ({ StepContact: () => null }));
+vi.mock("./step-contact", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./step-contact")>()),
+  StepContact: () => null,
+}));
 
 const { CheckoutShell } = await import("./step-fulfilment");
 const messages = checkoutMessages.checkout;

@@ -8,9 +8,14 @@ vi.mock("@vergeo/i18n", () => ({
       : {},
 }));
 vi.mock("next-intl", () => ({
-  createTranslator:
-    ({ messages, namespace }: { messages: Record<string, unknown>; namespace: string }) =>
-    (key: string) =>
+  createTranslator: ({
+    messages,
+    namespace,
+  }: {
+    messages: Record<string, unknown>;
+    namespace: string;
+  }) => {
+    const translate = (key: string) =>
       key
         .split(".")
         .reduce<unknown>(
@@ -19,10 +24,15 @@ vi.mock("next-intl", () => ({
               ? (value as Record<string, unknown>)[part]
               : undefined,
           messages[namespace],
-        ) ?? key,
+        ) ?? key;
+    return Object.assign(translate, { raw: translate });
+  },
 }));
 vi.mock("next-intl/server", () => ({ getMessages: async () => ({}), setRequestLocale: () => {} }));
-vi.mock("./_components/step-fulfilment", () => ({ CheckoutShell: () => null }));
+vi.mock("./_components/step-fulfilment", () => ({
+  CheckoutShell: () => null,
+  ExistingCheckoutStatus: () => null,
+}));
 vi.mock("./_components/lazy-ticket-checkout", () => ({ LazyTicketCheckout: () => null }));
 
 import CheckoutPage from "./page";
@@ -52,23 +62,18 @@ describe("checkout route", () => {
     ).toHaveProperty("name", "CheckoutShell");
   });
 
-  it("does not enter product checkout for an empty group", async () => {
+  it.each([
+    ["an empty group", { group: "" }],
+    ["repeated group parameters", { group: ["first", "second"], retry: "1" }],
+    ["a malformed group", { group: "../orders" }],
+  ])("fails closed without product checkout for %s", async (_name, query) => {
     const page = await CheckoutPage({
       params: Promise.resolve({ locale: "en" }),
-      searchParams: Promise.resolve({ group: "" }),
+      searchParams: Promise.resolve(query),
     });
-    expect(
-      (page as React.ReactElement<{ children: React.ReactElement }>).props.children.type,
-    ).toHaveProperty("name", "LazyTicketCheckout");
-  });
-
-  it("keeps repeated group parameters in the ticket flow and forwards explicit retry", async () => {
-    const page = await CheckoutPage({
-      params: Promise.resolve({ locale: "en" }),
-      searchParams: Promise.resolve({ group: ["first", "second"], retry: "1" }),
-    });
-    expect(
-      (page as React.ReactElement<{ children: React.ReactElement }>).props.children.props,
-    ).toMatchObject({ groupId: null, retry: true });
+    const child = (page as React.ReactElement<{ children: React.ReactElement<{ groupId: unknown }> }>)
+      .props.children;
+    expect(child.type).toHaveProperty("name", "ExistingCheckoutStatus");
+    expect(child.props.groupId).toBeNull();
   });
 });

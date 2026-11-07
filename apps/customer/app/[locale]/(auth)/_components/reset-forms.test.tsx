@@ -211,19 +211,19 @@ describe("ResetConfirmForm", () => {
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
-  it("shows the password form for an established session without a code or URL errors", async () => {
+  it("rejects an established session without a recovery code", async () => {
+    // A session alone (possibly another account) never opens the password form;
+    // only a fresh PASSWORD_RECOVERY code exchange does.
     window.history.replaceState({}, "", "/en/reset-password/confirm");
     getSession.mockResolvedValue({ data: { session: { access_token: "recovery-session" } } });
     renderWithIntl(<ResetConfirmForm locale="en" />);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
     );
-    expect(screen.getAllByLabelText(/password/i)).toHaveLength(2);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(getSession).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(updateUser).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
   });
 
   it("rejects an expired code and never offers the password form", async () => {
@@ -233,7 +233,7 @@ describe("ResetConfirmForm", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
     );
-    expect(updateUser).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -253,7 +253,7 @@ describe("ResetConfirmForm", () => {
       expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
       expect(exchangeCodeForSession).not.toHaveBeenCalled();
       expect(getSession).not.toHaveBeenCalled();
-      expect(updateUser).not.toHaveBeenCalled();
+      expect(passwordFetch).not.toHaveBeenCalled();
       view.unmount();
     }
   });

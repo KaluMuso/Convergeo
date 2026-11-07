@@ -23,8 +23,13 @@ const mocks = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("@vergeo/auth/use-session", () => ({
-  useSession: () => mocks.auth,
+vi.mock("../../../../../lib/customer-session", () => ({
+  useSession: () => ({ ...mocks.auth, error: null, generation: 1 }),
+  getReadyCustomerSession: vi.fn(async () => mocks.auth.session),
+  customerAuth: {
+    snapshot: () => ({ ...mocks.auth, error: null, generation: 1 }),
+    subscribe: () => () => undefined,
+  },
 }));
 
 vi.mock("@vergeo/config", async (importOriginal) => ({
@@ -100,6 +105,10 @@ beforeEach(() => {
   mocks.auth.session = { access_token: "local-test-token", user: { phone: "+260971234567" } };
   let productAttempts = 0;
   mocks.request.mockImplementation((path: string, options: { method: string }) => {
+    // Ordinary checkout persists the verified account contact first (#718).
+    if (path === "/checkout/steps/contact" && options.method === "POST") {
+      return Promise.resolve({ verified: true });
+    }
     if (path === "/checkout/session" && options.method === "POST") {
       return productAttempts++ === 0
         ? Promise.reject(new ApiError("checkout.cart_empty", "Empty product cart"))

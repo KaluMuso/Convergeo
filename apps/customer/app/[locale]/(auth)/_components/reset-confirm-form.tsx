@@ -34,7 +34,20 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
     let active = true;
     const establishSession = async () => {
       try {
-        const code = new URLSearchParams(window.location.search).get("code");
+        const params = new URLSearchParams(window.location.search);
+        const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        // Supabase reports expired/invalid links with error parameters. Reject
+        // them before any client load or exchange, even if a code is present.
+        if (
+          params.has("error") ||
+          params.has("error_code") ||
+          fragment.has("error") ||
+          fragment.has("error_code")
+        ) {
+          if (active) setReady("invalid");
+          return;
+        }
+        const code = params.get("code");
         if (!code) {
           if (active) setReady("invalid");
           return;
