@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
-from app.errors import AppError
+from app.errors import AppError, get_request_id
+from app.services.ledger.engine import LedgerAccountNotFoundError
 from app.services.payments.reconcile import (
     DailyReportResult,
     DrainResult,
@@ -14,6 +17,7 @@ from app.services.payments.registry import get
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/internal/reconciliation", tags=["internal-reconciliation"])
+logger = logging.getLogger(__name__)
 
 _INTERNAL_TOKEN_ENV = "INTERNAL_RECONCILIATION_TOKEN"
 _DEFAULT_INTERNAL_TOKEN = "dev-internal-reconciliation"
@@ -92,13 +96,71 @@ async def reconciliation_webhook_drain_tick() -> dict[str, int]:
 @router.post(
     "/daily-report",
     dependencies=[Depends(require_internal_reconciliation_token)],
+    responses={
+        503: {
+            "description": (
+                "A required ledger account is unavailable. Reconciliation fails without "
+                "repairing the account or creating a report."
+            ),
+            "headers": {
+                "X-Request-ID": {
+                    "description": "Request correlation ID, also present in the error envelope",
+                    "schema": {"type": "string"},
+                }
+            },
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["error"],
+                        "properties": {
+                            "error": {
+                                "type": "object",
+                                "required": ["code", "message", "details", "request_id"],
+                                "properties": {
+                                    "code": {"type": "string"},
+                                    "message": {"type": "string"},
+                                    "details": {"type": "object"},
+                                    "request_id": {"type": "string"},
+                                },
+                            }
+                        },
+                    },
+                    "example": {
+                        "error": {
+                            "code": "ledger_account_unavailable",
+                            "message": "Ledger account required for reconciliation is unavailable",
+                            "details": {},
+                            "request_id": "00000000-0000-0000-0000-000000000001",
+                        }
+                    },
+                }
+            },
+        }
+    },
 )
-async def reconciliation_daily_report() -> dict[str, object]:
+async def reconciliation_daily_report(request: Request) -> dict[str, object]:
     """Daily reconciliation: Lenco balance/transactions vs ledger (ngwee-exact)."""
     from app.deps import get_supabase_client
 
     service = next(get_supabase_client())
-    result: DailyReportResult = await run_daily_reconciliation_report(service)
+    try:
+        result: DailyReportResult = await run_daily_reconciliation_report(service)
+    except LedgerAccountNotFoundError as exc:
+        logger.error(
+            "reconciliation_daily_report_failed",
+            extra={
+                "request_id": get_request_id(request),
+                "path": request.url.path,
+                "failure_kind": "ledger_account_unavailable",
+                "status_code": 503,
+            },
+        )
+        raise AppError(
+            code="ledger_account_unavailable",
+            message="Ledger account required for reconciliation is unavailable",
+            http_status=503,
+        ) from exc
     return {
         "report_id": result.report_id,
         "report_date": result.report_date.isoformat(),
