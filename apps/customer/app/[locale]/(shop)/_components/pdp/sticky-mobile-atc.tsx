@@ -178,23 +178,41 @@ export function StickyMobileAtc({
               <span aria-hidden>{labels.increaseSymbol}</span>
             </button>
           </div>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            className="shrink-0"
-            disabled={
-              purchase.adding ||
-              (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
-            }
-            loading={purchase.adding}
-            loadingLabel={labels.addingToCartLabel}
-            data-testid="pdp-sticky-add-to-cart"
-            aria-label={labels.addToCartLabel}
-            onClick={purchase.handleAddToCart}
-          >
-            {labels.addToCartLabel}
-          </Button>
+          {purchase.variantSatisfied ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="shrink-0"
+              disabled={
+                purchase.adding ||
+                (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
+              }
+              loading={purchase.adding}
+              loadingLabel={labels.addingToCartLabel}
+              data-testid="pdp-sticky-add-to-cart"
+              aria-label={labels.addToCartLabel}
+              onClick={purchase.handleAddToCart}
+            >
+              {labels.addToCartLabel}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="shrink-0"
+              loadingLabel={labels.addingToCartLabel}
+              data-testid="pdp-sticky-choose-options"
+              onClick={() => {
+                // Flags the missing groups, then brings the picker into view.
+                purchase.handleAddToCart();
+                observeRef.current?.scrollIntoView({ block: "center" });
+              }}
+            >
+              {t("pdp.variants.chooseOptions")}
+            </Button>
+          )}
         </div>
       </div>
     </div>

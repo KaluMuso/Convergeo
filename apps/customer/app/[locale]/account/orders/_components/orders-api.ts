@@ -28,6 +28,9 @@ export type OrderItem = {
   title: string;
   qty: number;
   unit_price_ngwee: number;
+  /** Chosen colour/size, snapshotted when the order was placed. */
+  variant_options?: Array<{ group: string; value: string }>;
+  variant_sku?: string | null;
 };
 
 export type TimelineStep = {

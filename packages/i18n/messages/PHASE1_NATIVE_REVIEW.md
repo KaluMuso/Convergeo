@@ -18,6 +18,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **M17-P06 vendor clips (2026-07-27):** `vendor.clips.*` was added to bem/nya for key parity (CCP-03f). It is **almost entirely EN passthrough** — only the screen title and the "new clip" action were localised. The rest is upload limits, data-cost warnings and moderation-status copy, where a wrong guess either costs a vendor their bundle or tells them a clip is live when it is not. Treat the whole `vendor.clips` subtree as untranslated until a native reviewer signs it off. The surface is behind the `clips` flag (default off), so nothing ships to a vendor before then.
 
+**Listing variants + PDP zoom (2026-11-07):** `catalog.pdp.variants`, `catalog.pdp.lightbox`, `checkout.variant`, `orders.detail.variantOption|variantSeparator`, `vendor.listings.variants` and `vendor.orders.items.variantOption|variantSeparator|sku` were added to bem/nya as **EN passthrough** for key parity. Colour/size picker and checkout copy decide what a buyer pays for, so nothing was guessed; treat these subtrees as untranslated until a native reviewer signs them off.
+
 **CCP-03e verticals (2026-07-20):** `services`, `events`, `directory`, `supplies` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
 
 ## Noindex removal criteria (authoritative)

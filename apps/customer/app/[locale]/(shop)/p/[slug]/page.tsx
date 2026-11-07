@@ -323,6 +323,26 @@ function toProductListings(product: ProductDetail, alt: string): ProductListing[
       publicId: image.public_id,
       alt,
     })),
+    optionGroups: (listing.option_groups ?? []).map((group) => ({
+      id: group.id,
+      name: group.name,
+      display: group.display === "swatch" ? ("swatch" as const) : ("pill" as const),
+      values: group.values.map((value) => ({
+        id: value.id,
+        label: value.label,
+        swatchHex: value.swatch_hex ?? null,
+      })),
+    })),
+    variants: (listing.variants ?? []).map((variant) => ({
+      id: variant.id,
+      sku: variant.sku ?? null,
+      optionValueIds: variant.option_value_ids,
+      priceNgwee: variant.price_ngwee,
+      compareAtNgwee: variant.compare_at_ngwee ?? null,
+      stockQty: variant.stock_qty ?? null,
+      inStock: variant.in_stock,
+      imagePublicId: variant.image_public_id ?? null,
+    })),
   }));
 }
 

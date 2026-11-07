@@ -79,6 +79,8 @@ function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): Listing
     pickupLocationsLoadError: false,
     selectedPickupLocationId: null,
     selectPickupLocation: vi.fn(),
+    variantSatisfied: true,
+    showMissingOptions: false,
     ...overrides,
   };
 }
@@ -302,5 +304,34 @@ describe("StickyMobileAtc", () => {
     );
 
     expect(screen.queryByTestId("pdp-sticky-mobile-atc")).not.toBeInTheDocument();
+  });
+
+  it("routes the buyer back to the picker while colour/size is incomplete", async () => {
+    const user = userEvent.setup();
+    const observeRef = createRef<HTMLElement | null>();
+    const buyBox = document.createElement("section");
+    buyBox.scrollIntoView = vi.fn();
+    observeRef.current = buyBox;
+    const purchase = makePurchase({ variantSatisfied: false });
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={purchase}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+    observerCallback?.(
+      [{ isIntersecting: false, target: buyBox } as unknown as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(await screen.findByTestId("pdp-sticky-choose-options")).toBeInTheDocument();
+    expect(screen.queryByTestId("pdp-sticky-add-to-cart")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("pdp-sticky-choose-options"));
+    expect(purchase.handleAddToCart).toHaveBeenCalledTimes(1);
+    expect(buyBox.scrollIntoView).toHaveBeenCalled();
   });
 });

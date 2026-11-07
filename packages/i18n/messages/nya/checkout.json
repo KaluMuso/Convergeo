@@ -249,5 +249,9 @@
       "title": "Onani phone yanu",
       "waiting": "Tikudikira approval…"
     }
+  },
+  "variant": {
+    "option": "{group}: {value}",
+    "separator": " · "
   }
 }
