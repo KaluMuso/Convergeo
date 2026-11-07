@@ -11,7 +11,6 @@ import admin from "../../../../../../packages/i18n/messages/en/admin.json";
 import auth from "../../../../../../packages/i18n/messages/en/auth.json";
 import common from "../../../../../../packages/i18n/messages/en/common.json";
 import { AdminShell } from "../../../../../admin/app/[locale]/_components/admin-shell";
-import { resolveAdminNavCapabilities } from "../../../../../admin/lib/admin-nav-capabilities";
 
 import { ResetConfirmForm } from "./reset-confirm-form";
 import { ResetRequestForm } from "./reset-request-form";
@@ -22,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   exchange: vi.fn(),
   update: vi.fn(),
   session: vi.fn(),
+  claims: vi.fn(),
+  fetch: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
   authCallback: null as
@@ -59,6 +60,7 @@ beforeEach(() => {
       exchangeCodeForSession: mocks.exchange,
       updateUser: mocks.update,
       getSession: mocks.session,
+      getClaims: mocks.claims,
       onAuthStateChange: (
         callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
       ) => {
@@ -82,10 +84,20 @@ beforeEach(() => {
   mocks.session.mockResolvedValue({
     data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
   });
+  mocks.claims.mockResolvedValue({
+    data: { claims: { sub: "recovery-user", session_id: "recovery-session" } },
+    error: null,
+  });
+  // The password is set with an explicit bearer PUT pinned to the recovery session.
+  mocks.fetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", mocks.fetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("shared admin password recovery forms with isolated Auth fixtures", () => {
@@ -98,7 +110,7 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
   it("keeps the recovery form outside operational admin navigation", async () => {
     render(
       <NextIntlClientProvider locale="en" messages={{ admin, auth, common }}>
-        <AdminShell locale="en" capabilities={resolveAdminNavCapabilities()}>
+        <AdminShell locale="en">
           <ResetRequestForm locale="en" />
         </AdminShell>
       </NextIntlClientProvider>,
@@ -111,7 +123,7 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
     const wrap = () => (
       <NextIntlClientProvider locale="en" messages={{ admin, common }}>
         <ThemeProvider>
-          <AdminShell locale="en" capabilities={resolveAdminNavCapabilities()}>
+          <AdminShell locale="en">
             <p>Fixture</p>
           </AdminShell>
         </ThemeProvider>
@@ -197,7 +209,7 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
         "href",
         "/en/reset-password",
       );
-      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
     },
   );
 
@@ -218,9 +230,9 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
     fireEvent.change(password, { target: { value: "fixture-password" } });
     submit();
     expect(screen.getByRole("alert")).toHaveTextContent("do not match");
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
     fireEvent.change(confirm, { target: { value: "fixture-password" } });
-    mocks.update.mockResolvedValueOnce({ error: { message: "fixture" } });
+    mocks.fetch.mockResolvedValueOnce({ ok: false, status: 500, headers: { get: () => null } });
     submit();
     expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
     await waitFor(() =>
@@ -230,6 +242,13 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
     expect(await screen.findByRole("status")).toHaveTextContent("Password updated");
     fireEvent.click(screen.getByRole("button", { name: "Go to sign in" }));
     expect(mocks.exchange).toHaveBeenCalledExactlyOnceWith("fixture");
+    expect(mocks.fetch).toHaveBeenLastCalledWith(
+      "https://staging.example.supabase.co/auth/v1/user",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+      }),
+    );
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/en/login");
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
@@ -247,7 +266,7 @@ describe("shared admin password recovery forms with isolated Auth fixtures", () 
       await renderRoute(true);
       expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
       expect(mocks.exchange).toHaveBeenCalledTimes(2);
-      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
       expect(log).not.toHaveBeenCalled();
       expect(error).not.toHaveBeenCalled();
       expect(warn).not.toHaveBeenCalled();
