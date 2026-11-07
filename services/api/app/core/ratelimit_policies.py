@@ -321,6 +321,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /vendor/collections/{collection_id}": STANDARD_WRITE,
     "DELETE /vendor/collections/{collection_id}": STANDARD_WRITE,
     "PUT /vendor/collections/{collection_id}/items": STANDARD_WRITE,
+    "PUT /vendor/listings/{listing_id}/variants": STANDARD_WRITE,
     # M18-P05 intake review. Link mint/redeem are SENSITIVE: a link is a
     # single-use credential-adjacent artefact, so minting is deliberately cheap
     # to police and expensive to farm. Submission is SENSITIVE because it is the

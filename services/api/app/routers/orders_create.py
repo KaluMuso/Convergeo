@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Annotated, Literal, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
@@ -108,7 +108,8 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, object]]:
     response = (
         client.table("cart_items")
         .select(
-            "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, rfq_thread_id"
+            "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, rfq_thread_id, "
+            "listing_variant_id"
         )
         .eq("cart_id", cart_id)
         .execute()
@@ -117,6 +118,21 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, object]]:
     if not isinstance(rows, list):
         return []
     return [row for row in rows if isinstance(row, dict)]
+
+
+def _variant_line_fields(
+    item: dict[str, object], listing: dict[str, object]
+) -> tuple[str | None, dict[str, Any] | None]:
+    """Variant id + immutable label snapshot for an order line (empty if none)."""
+    raw_variant = item.get("listing_variant_id")
+    if not isinstance(raw_variant, str) or not raw_variant:
+        return None, None
+    return raw_variant, {
+        "listing_variant_id": raw_variant,
+        "sku": listing.get("_variant_sku"),
+        "options": listing.get("_variant_options") or [],
+        "image_public_id": listing.get("_variant_image_public_id"),
+    }
 
 
 def _to_response(result: CreateOrdersResult) -> CreateOrderResponse:
@@ -260,6 +276,7 @@ async def create_orders(
                 message="Cart line has invalid quantity or price",
                 http_status=409,
             )
+        variant_id, variant_snapshot = _variant_line_fields(item, listing)
         cart_lines.append(
             CartLineInput(
                 cart_item_id=str(item["id"]),
@@ -268,6 +285,8 @@ async def create_orders(
                 qty=qty_raw,
                 unit_price_ngwee=price_raw,
                 title_snapshot=title if isinstance(title, str) else None,
+                listing_variant_id=variant_id,
+                variant_snapshot=variant_snapshot,
             )
         )
 

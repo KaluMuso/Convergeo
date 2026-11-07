@@ -12,9 +12,14 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
-from app.services.cart.grouping import CartLineView, group_by_vendor
+from app.services.cart.grouping import (
+    CartLineView,
+    group_by_vendor,
+    line_variant_id,
+    line_variant_options,
+)
 from app.services.cart.merge import validate_item_qty_for_listing
-from app.services.cart.read_path import listing_cart_access_conflict
+from app.services.cart.read_path import listing_cart_access_conflict, variant_stock_conflict
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
@@ -46,6 +51,11 @@ class ServiceRoleClient(Protocol):
     def client(self) -> Client: ...
 
 
+class VariantOptionOut(BaseModel):
+    group: str
+    value: str
+
+
 class CartLineOut(BaseModel):
     id: str
     listing_id: str
@@ -63,6 +73,8 @@ class CartLineOut(BaseModel):
     lead_time_days: int | None = None
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
+    listing_variant_id: str | None = None
+    variant_options: list[VariantOptionOut] = Field(default_factory=list)
 
 
 class PickupLocationOut(BaseModel):
@@ -227,7 +239,7 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
         client.table("cart_items")
         .select(
             "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
-            "pickup_location_id, rfq_thread_id"
+            "pickup_location_id, rfq_thread_id, listing_variant_id"
         )
         .eq("cart_id", cart_id)
         .execute()
@@ -400,6 +412,10 @@ def _rederive_line_prices(
         if listing is None:
             conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
             continue
+        variant_conflict = variant_stock_conflict(listing_id, listing, int(item["qty"]))
+        if variant_conflict is not None:
+            conflicts.append(variant_conflict)
+            continue
         try:
             fresh_price, fresh_wholesale = validate_item_qty_for_listing(
                 listing=listing,
@@ -471,6 +487,8 @@ def _build_line_views(
                 defect_notes=(
                     str(listing["defect_notes"]) if listing.get("defect_notes") else None
                 ),
+                listing_variant_id=line_variant_id(item),
+                variant_options=line_variant_options(listing),
             )
         )
     return line_views
@@ -722,6 +740,11 @@ async def create_checkout_session(
                         lead_time_days=item.lead_time_days,
                         vendor_capacity_per_week=item.vendor_capacity_per_week,
                         defect_notes=item.defect_notes,
+                        listing_variant_id=item.listing_variant_id,
+                        variant_options=[
+                            VariantOptionOut(group=group_name, value=value)
+                            for group_name, value in item.variant_options
+                        ],
                     )
                     for item in group.items
                 ],

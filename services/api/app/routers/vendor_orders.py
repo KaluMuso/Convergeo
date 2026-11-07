@@ -7,6 +7,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.listings.variants import snapshot_options
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
@@ -53,11 +54,19 @@ class ShipRequest(StrictModel):
     tracking_note: str = Field(min_length=1, max_length=2000)
 
 
+class OrderItemVariantOption(StrictModel):
+    group: str
+    value: str
+
+
 class OrderItemSummary(StrictModel):
     id: str
     title: str
     qty: int
     unit_price_ngwee: int
+    #: Chosen colour/size, from the immutable order-line snapshot.
+    variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
+    variant_sku: str | None = None
 
 
 class OrderEventSummary(StrictModel):
@@ -201,22 +210,36 @@ def _available_vendor_actions(
     return actions
 
 
+def _variant_snapshot_of(row: dict[str, Any]) -> Any:
+    link = row.get("order_item_products")
+    if isinstance(link, list):
+        link = link[0] if link else None
+    return link.get("variant_snapshot") if isinstance(link, dict) else None
+
+
 def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list[OrderItemSummary]:
     response = (
         service_client.client.table("order_items")
-        .select("id, qty, unit_price_ngwee, title_snapshot")
+        .select("id, qty, unit_price_ngwee, title_snapshot, order_item_products(variant_snapshot)")
         .eq("order_id", order_id)
         .execute()
     )
     items: list[OrderItemSummary] = []
     for row in _rows(response):
         title = row.get("title_snapshot")
+        snapshot = _variant_snapshot_of(row)
+        sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
         items.append(
             OrderItemSummary(
                 id=str(row["id"]),
                 title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
+                variant_options=[
+                    OrderItemVariantOption(group=option["group"], value=option["value"])
+                    for option in snapshot_options(snapshot)
+                ],
+                variant_sku=str(sku) if isinstance(sku, str) and sku else None,
             )
         )
     return items
