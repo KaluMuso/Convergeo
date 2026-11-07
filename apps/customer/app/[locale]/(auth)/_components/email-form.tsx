@@ -8,8 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { isPasswordLengthAllowed } from "./email-password-policy";
 import { describeAuthFailure, type AuthFailureStage } from "./auth-diagnostics";
+import { isPasswordLengthAllowed } from "./email-password-policy";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
 import type { ParsedAuthError } from "./auth-utils";
