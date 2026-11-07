@@ -65,3 +65,48 @@ paths = [
   '''(?i)infra/merge-release-evidence\.json$''',
   '''(?i)infra/merge-release-evidence\.example\.json$''',
 ]
+
+[[allowlists]]
+description = "Coordinator gate inputs (PR #718 branch history): SHA-256 file digests keyed by path, not credentials"
+condition = "AND"
+paths = [
+  '''(?i)scripts/ci/coordinator-gate-inputs\.json$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''^[a-f0-9]{64}$''',
+]
+
+[[allowlists]]
+description = "Card checkout page test: SHA-256 digests of API source/fixture/lock files (branch history), not credentials"
+condition = "AND"
+paths = [
+  '''(?i)apps/customer/app/\[locale\]/\(shop\)/checkout/card/\[paymentId\]/page\.test\.tsx$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''^[a-f0-9]{64}$''',
+]
+
+[[allowlists]]
+description = "Hosted Chrome check: published Google signing-certificate fingerprint (public colon-hex), not a credential"
+condition = "AND"
+paths = [
+  '''(?i)scripts/ci/check_hosted_chrome\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){15,}$''',
+  '''^[0-9A-F]{40}$''',
+]
+
+[[allowlists]]
+description = "API image workflow: 40-char git commit SHAs used as image tags, not credentials"
+condition = "AND"
+paths = [
+  '''(?i)\.github/workflows/api-image\.yml$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''^[a-f0-9]{40}$''',
+]
