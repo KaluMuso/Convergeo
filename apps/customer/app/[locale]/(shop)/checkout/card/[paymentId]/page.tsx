@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { groupRoutesFromQuery } from "../../_lib/group-checkout";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
 type WidgetCustomer = {
@@ -103,15 +104,35 @@ export default function CardCheckoutPage() {
   const searchParams = useSearchParams();
   const locale = params.locale;
   const paymentId = params.paymentId;
-  const t = useTranslations("checkout.card");
+  // Messages are provided as { checkout: <checkout.json> }, whose card copy lives
+  // under checkout.checkout.card.
+  const t = useTranslations("checkout.checkout.card");
+  const tGroup = useTranslations("checkout.checkout.group");
   const { session, loading: sessionLoading } = useSession();
 
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
   const widgetOpened = useRef(false);
 
-  const checkoutPaymentPath = useMemo(() => `/${locale}/checkout`, [locale]);
-  const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
+  // Paid-ticket / service-deposit card payments carry ?group=&kind=(&job=) so retry
+  // returns to that group's checkout and success lands on the wallet / job thread.
+  const groupRoutes = useMemo(
+    () =>
+      groupRoutesFromQuery(locale, searchParams.get("group") ?? "", {
+        kind: searchParams.get("kind") ?? undefined,
+        job: searchParams.get("job") ?? undefined,
+      }),
+    [locale, searchParams],
+  );
+  const groupKind = searchParams.get("kind");
+  const checkoutPaymentPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
+  const ordersPath = groupRoutes?.success ?? `/${locale}/account/orders`;
+  const successLabel =
+    groupRoutes && groupKind === "ticket"
+      ? tGroup("viewTickets")
+      : groupRoutes && ordersPath.includes("/account/jobs/")
+        ? tGroup("viewJob")
+        : t("viewOrders");
 
   const verifyReturn = useCallback(
     async (clientStatus: "success" | "failed" | "closed" | "pending") => {
@@ -316,7 +337,7 @@ export default function CardCheckoutPage() {
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {t("viewOrders")}
+          {successLabel}
         </LinkButton>
       ) : null}
 

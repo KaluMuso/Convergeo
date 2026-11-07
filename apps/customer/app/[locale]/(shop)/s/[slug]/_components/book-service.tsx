@@ -76,7 +76,7 @@ export function BookService({
         method: "POST",
         body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
       });
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      router.push(`/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError(t("errors.authRequired"));

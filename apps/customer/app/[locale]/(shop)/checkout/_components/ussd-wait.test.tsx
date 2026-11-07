@@ -64,7 +64,10 @@ const redirect = {
 };
 
 vi.mock("@vergeo/auth/use-session", () => ({
-  useSession: () => ({ session: { access_token: "test-access-token" }, loading: false }),
+  useSession: () => ({
+    session: { access_token: "test-access-token" },
+    loading: false,
+  }),
 }));
 
 vi.mock("next/navigation", () => {
@@ -299,5 +302,43 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
     await screen.findByTestId("payment-failed");
     expect(screen.queryByTestId("payment-confirming")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("PendingPaymentShell group routes (paid ticket / service deposit)", () => {
+  const groupRoutes = {
+    success: "/en/account/tickets",
+    checkout: "/en/checkout?group=chk-e2e-1",
+  };
+
+  function renderGroupShell(payload: PaymentStatusPayload) {
+    redirect.confirmingInDomAtFirstReplace = null;
+    redirect.targets = [];
+    apiRequest.mockImplementation(async () => payload);
+    render(
+      <PendingPaymentShell
+        locale="en"
+        groupId="chk-e2e-1"
+        labels={pendingLabels}
+        groupRoutes={groupRoutes}
+      />,
+    );
+  }
+
+  it("lands a confirmed ticket payment in the ticket wallet, not the order page", async () => {
+    renderGroupShell(statusPayload({ status: "success" }));
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/en/account/tickets"));
+    expect(redirect.targets).not.toContain("/en/account/orders/order-9");
+  });
+
+  it("sends a cancelled group payment back to the group checkout, not the cart", async () => {
+    const user = userEvent.setup();
+    renderGroupShell(statusPayload({ status: "cancelled" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: checkoutMessages.checkout.pending.cancelledCta,
+      }),
+    );
+    expect(routerPush).toHaveBeenCalledWith("/en/checkout?group=chk-e2e-1");
   });
 });
