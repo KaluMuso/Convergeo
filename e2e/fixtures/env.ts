@@ -129,6 +129,7 @@ export const THROTTLE = process.env.E2E_THROTTLE !== "0";
  */
 export const lenco = {
   enabled: flag("LENCO_SANDBOX"),
+  environment: str("LENCO_ENV"),
   publicKey: str("LENCO_SANDBOX_PUBLIC_KEY"),
   secretKey: str("LENCO_SANDBOX_SECRET_KEY"),
   /** A sandbox MoMo number Lenco auto-approves in test mode. */
@@ -137,8 +138,7 @@ export const lenco = {
 
 /** True only when the sandbox flag, keys, number and label are safe. */
 export function lencoSandboxReady(): boolean {
-  const label = str("LENCO_ENV").toLowerCase();
-  return (!label || label === "sandbox") && missingSandboxMomoEvidence(lenco).length === 0;
+  return missingSandboxMomoEvidence(lenco).length === 0;
 }
 
 /**

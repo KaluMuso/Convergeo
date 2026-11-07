@@ -451,3 +451,211 @@ def test_live_full_verdict_rejects_duplicate_step_even_with_all_names(drill_modu
         )
         == "BLOCKED_EXTERNAL"
     )
+
+
+class _EscrowLedger:
+    """Order-ledger fake: one escrow hold per order, no legacy charge row."""
+
+    def __init__(
+        self,
+        *,
+        order_count: int = 2,
+        escrow_holds: int = 2,
+        keyed_holds: int = 2,
+        global_sum: int = 0,
+    ) -> None:
+        self.order_count = order_count
+        self.escrow_holds = escrow_holds
+        self.global_sum = global_sum
+        self.db = Namespace(scalar=lambda _sql: str(keyed_holds))
+
+    def count_orders(self, checkout_group_id: str) -> int:
+        assert checkout_group_id == "checkout-1"
+        return self.order_count
+
+    def count_charge_received(self, checkout_group_id: str) -> int:
+        assert checkout_group_id == "checkout-1"
+        return 0
+
+    def count_collection_kind(self, checkout_group_id: str, *, kind: str) -> int:
+        assert checkout_group_id == "checkout-1"
+        assert kind == "escrow_hold"
+        return self.escrow_holds
+
+    def collection_postings(self, checkout_group_id: str) -> dict[str, int]:
+        assert checkout_group_id == "checkout-1"
+        return {"platform_cash": 25000, "escrow": -25000}
+
+    def global_sum_ngwee(self) -> int:
+        return self.global_sum
+
+
+@pytest.mark.parametrize(
+    ("responses", "expected_status", "expected_observed", "times_out"),
+    [
+        (
+            [{"status": "pending"}, {"status": "success", "amount_ngwee": 25000}],
+            "PASS",
+            "success",
+            False,
+        ),
+        (
+            [{"status": "ussd_pushed"}, {"status": "success", "amount_ngwee": 25000}],
+            "PASS",
+            "success",
+            False,
+        ),
+        (
+            [{"status": "pay_offline"}, {"status": "success", "amount_ngwee": 25000}],
+            "PASS",
+            "success",
+            False,
+        ),
+        # The initial observation is never terminal evidence (stale success guard).
+        ([{"status": "success", "amount_ngwee": 25000}], "FAIL", "success", False),
+        ([{"status": "pending"}, {"status": "failed"}], "FAIL", "failed", False),
+        ([{"status": "pending"}, {"status": "expired"}], "FAIL", "expired", False),
+        ([{"status": "pending"}, {"status": "cancelled"}], "FAIL", "cancelled", False),
+        ([{"status": "pending"}, {"status": "mystery"}], "FAIL", "mystery", True),
+        ([{"status": "pending"}, {}], "FAIL", None, True),
+        (
+            [{"status": "pending"}, {"status": {"unexpected": "state"}}],
+            "FAIL",
+            {"unexpected": "state"},
+            True,
+        ),
+        ([{"status": "pending"}, "success"], "FAIL", None, False),
+        ([{"status": "pending", "amount_ngwee": 25000}], "FAIL", "pending", True),
+    ],
+    ids=[
+        "pending-then-authoritative-success",
+        "ussd-pushed-then-success",
+        "pay-offline-then-success",
+        "immediate-success-is-not-fresh-evidence",
+        "terminal-failure",
+        "terminal-expired",
+        "terminal-cancelled",
+        "unknown-state",
+        "missing-state",
+        "malformed-state",
+        "malformed-response",
+        "timeout",
+    ],
+)
+def test_momo_collection_uses_authoritative_settlement(
+    monkeypatch: pytest.MonkeyPatch,
+    drill_module: Any,
+    responses: list[Any],
+    expected_status: str,
+    expected_observed: Any,
+    times_out: bool,
+) -> None:
+    monkeypatch.setattr(drill_module.time, "sleep", lambda _seconds: None)
+    if times_out:
+        # The clock expires once the first settlement read has been observed.
+        monkeypatch.setattr(
+            drill_module.time,
+            "monotonic",
+            lambda: 121.0 if api.status_reads >= 2 else 0.0,
+        )
+
+    class FakeApi:
+        def __init__(self) -> None:
+            self.status_reads = 0
+            self.drains = 0
+            self.polls = 0
+
+        def payment_retry(self, checkout_group_id: str) -> dict[str, str]:
+            assert checkout_group_id == "checkout-1"
+            return {"payment_id": "payment-1"}
+
+        def webhook_drain(self) -> None:
+            self.drains += 1
+
+        def poll_tick(self) -> None:
+            self.polls += 1
+
+        def payment_status(self, checkout_group_id: str) -> Any:
+            assert checkout_group_id == "checkout-1"
+            response = responses[min(self.status_reads, len(responses) - 1)]
+            self.status_reads += 1
+            return response
+
+    config = Namespace(checkout_group_id="checkout-1", payment_id="")
+    api = FakeApi()
+    result = drill_module.run_momo_collection_live(config, api, _EscrowLedger())
+
+    assert config.payment_id == "payment-1"
+    assert result.status.value == expected_status
+    # One initial observation, then one drain/poll/read per settlement attempt.
+    assert api.drains == api.polls == api.status_reads - 1 >= 1
+    settlement = next(item for item in result.assertions if item.name == "payment_status_success")
+    assert settlement.actual == expected_observed
+    assert settlement.passed == (expected_observed == "success")
+    assert "pending_not_success" not in {item.name for item in result.assertions}
+    assert drill_module._map_gates([result])["S1"] == expected_status
+    if expected_status == "FAIL":
+        assert (
+            drill_module._final_verdict(
+                [result], mode=drill_module.RunMode.LIVE, blockers=[], acceptance=None
+            )
+            == "FAIL"
+        )
+    assertions = {item.name: item for item in result.assertions}
+    assert assertions["legacy_charge_received_absent"].passed
+    assert assertions["escrow_hold_per_order"].passed
+    assert assertions["global_ledger_balanced"].passed
+    if expected_status == "PASS":
+        assert assertions["platform_cash_leg"].passed
+        assert assertions["escrow_leg"].passed
+
+
+@pytest.mark.parametrize(
+    ("ledger", "failed_assertion"),
+    [
+        (_EscrowLedger(escrow_holds=3), "escrow_hold_per_order"),
+        (_EscrowLedger(keyed_holds=1), "escrow_hold_idempotency_keys"),
+        (_EscrowLedger(global_sum=1), "global_ledger_balanced"),
+    ],
+    ids=["duplicate-escrow-hold", "unkeyed-escrow-hold", "ledger-imbalance"],
+)
+def test_success_status_does_not_override_ledger_failure(
+    drill_module: Any,
+    ledger: Any,
+    failed_assertion: str,
+) -> None:
+    class FakeApi:
+        def __init__(self) -> None:
+            self.reads = 0
+
+        def payment_retry(self, _checkout_group_id: str) -> dict[str, str]:
+            return {"payment_id": "payment-1"}
+
+        def webhook_drain(self) -> None:
+            pass
+
+        def poll_tick(self) -> None:
+            pass
+
+        def payment_status(self, _checkout_group_id: str) -> dict[str, Any]:
+            self.reads += 1
+            if self.reads == 1:
+                return {"status": "pending"}
+            return {"status": "success", "amount_ngwee": 25000}
+
+    config = Namespace(checkout_group_id="checkout-1", payment_id="")
+    result = drill_module.run_momo_collection_live(config, FakeApi(), ledger)
+
+    assertions = {item.name: item for item in result.assertions}
+    assert assertions["payment_status_success"].passed
+    assert assertions["platform_cash_leg"].passed
+    assert assertions["escrow_leg"].passed
+    assert not assertions[failed_assertion].passed
+    assert result.status == drill_module.StepStatus.FAIL
+    assert drill_module._map_gates([result])["S1"] == "FAIL"
+    assert (
+        drill_module._final_verdict(
+            [result], mode=drill_module.RunMode.LIVE, blockers=[], acceptance=None
+        )
+        == "FAIL"
+    )

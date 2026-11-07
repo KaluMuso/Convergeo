@@ -6,6 +6,7 @@ import {
   customerOtp,
   customerOtpReady,
   flag,
+  lenco,
   lencoSandboxReady,
   path,
   strictSyntheticRequired,
@@ -26,6 +27,7 @@ import {
   paymentMockMode,
   statusFixture,
 } from "../fixtures/payment-fixtures";
+import { missingSandboxMomoEvidence } from "../fixtures/sandbox-momo-evidence";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -144,11 +146,27 @@ test.describe("critical-path", () => {
             }),
           ]),
         ];
-        if (!sandboxEnabled() || !customerOtpReady() || missingApproval.length) {
+        if (!sandboxEnabled() || !customerOtpReady()) {
+          // The deployed provider branch is required in strict certification.
+          const gate = resolveGate({
+            kind: "REQUIRED_STRICT",
+            journey: "deployed sandbox MoMo settle (F9b)",
+            fixtures: [
+              ...missingSandboxMomoEvidence(lenco),
+              ...(!customerOtpReady() ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+            ],
+          });
+          enforceGate(gate);
+          test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+          test.skip(true, gate.reason);
+          return;
+        }
+        if (missingApproval.length) {
+          // Credentials alone are not approval to contact a provider/recipient.
           const gate = resolveGate({
             kind: "OPTIONAL_GATE",
-            journey: "deployed sandbox MoMo settle (F9b)",
-            fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP", ...missingApproval],
+            journey: "approved deployed sandbox MoMo settle",
+            fixtures: missingApproval,
           });
           test.info().annotations.push({ type: "founder-gated", description: gate.reason });
           test.skip(true, gate.reason);
@@ -193,6 +211,23 @@ test.describe("critical-path", () => {
       await expect(page.getByText(/pay on delivery/i)).toBeVisible();
       await expect(page.getByTestId("payment-confirming")).toHaveCount(0);
       await expect(page.getByText(/you paid|paid upfront/i)).toHaveCount(0);
+      return;
+    }
+
+    // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
+    if (!sandboxEnabled() || !customerOtpReady()) {
+      // The deployed provider branch is required in strict certification.
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "deployed sandbox MoMo settle (F9b)",
+        fixtures: [
+          ...missingSandboxMomoEvidence(lenco),
+          ...(!customerOtpReady() ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+        ],
+      });
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 

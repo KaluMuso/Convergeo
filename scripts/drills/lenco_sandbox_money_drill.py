@@ -671,10 +671,14 @@ def _wait_for_payment_success(
     while time.monotonic() < deadline:
         api.webhook_drain()
         api.poll_tick()
-        last = api.payment_status(checkout_group_id)
-        if last.get("status") == "success":
+        response = api.payment_status(checkout_group_id)
+        if not isinstance(response, dict):
+            return {"status": None, "error": "payment status response is not an object"}
+        last = response
+        status = last.get("status")
+        if status == "success":
             return last
-        if last.get("status") in {"failed", "expired", "cancelled"}:
+        if isinstance(status, str) and status in {"failed", "expired", "cancelled"}:
             break
         time.sleep(3)
     return last
@@ -778,14 +782,19 @@ def run_momo_collection_live(
         _assert_ne(
             "initial_status_not_success",
             "success",
-            pending.get("status"),
+            pending.get("status") if isinstance(pending, dict) else None,
             detail="the initial observation must not be counted as terminal collection evidence",
         )
     )
 
     settled = _wait_for_payment_success(api, checkout_group_id=checkout_group_id)
     assertions.append(
-        _assert_eq("payment_status_success", "success", settled.get("status"))
+        _assert_eq(
+            "payment_status_success",
+            "success",
+            settled.get("status"),
+            detail=str(settled.get("error", "")),
+        )
     )
 
     order_count = ledger.count_orders(checkout_group_id)
