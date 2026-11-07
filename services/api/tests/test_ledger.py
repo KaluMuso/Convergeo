@@ -17,8 +17,12 @@ from app.services.ledger.templates import (
     PostingLeg,
     TemplateResult,
     charge_received,
+    clawback,
     commission_ngwee_from_bps,
+    lenco_fee,
+    refund_lane1,
     refund_lane2,
+    refund_reversal,
     release_to_vendor,
 )
 from tests.rls.conftest import (
@@ -83,6 +87,11 @@ def _build_template_args(
             return {"collected_ngwee": gross, "vendor_id": VENDOR_A}
         case LedgerTemplate.CLAWBACK:
             return {"clawback_ngwee": gross, "vendor_id": VENDOR_A}
+        case LedgerTemplate.REFUND_REVERSAL:
+            original = refund_lane1(refund_ngwee=gross)
+            return {"original_legs": original.legs}
+        case LedgerTemplate.LENCO_FEE:
+            return {"fee_ngwee": gross}
         case _:
             raise AssertionError(f"unhandled template {template}")
 
@@ -119,6 +128,58 @@ def test_release_to_vendor_golden() -> None:
         PostingLeg(AccountRef("escrow"), 184_000),
         PostingLeg(AccountRef("vendor_payable", VENDOR_A), -184_000),
     )
+
+
+def test_refund_reversal_negates_lane1() -> None:
+    original = refund_lane1(refund_ngwee=10_000)
+    reversal = refund_reversal(original_legs=original.legs)
+    assert reversal.kind == LedgerTemplate.REFUND_REVERSAL
+    assert reversal.legs == (
+        PostingLeg(AccountRef("escrow"), -10_000),
+        PostingLeg(AccountRef("platform_cash"), 10_000),
+    )
+
+
+def test_refund_reversal_negates_clawback_back_to_vendor_payable() -> None:
+    original = clawback(clawback_ngwee=7_500, vendor_id=VENDOR_A)
+    reversal = refund_reversal(original_legs=original.legs)
+    assert reversal.legs == (
+        PostingLeg(AccountRef("vendor_payable", VENDOR_A), -7_500),
+        PostingLeg(AccountRef("platform_cash"), 7_500),
+    )
+
+
+def test_refund_reversal_rejects_empty_and_unbalanced() -> None:
+    with pytest.raises(ValueError):
+        refund_reversal(original_legs=())
+    with pytest.raises(ValueError):
+        refund_reversal(original_legs=(PostingLeg(AccountRef("escrow"), 100),))
+
+
+def test_refund_reversal_rejects_float_amounts() -> None:
+    with pytest.raises(TypeError):
+        refund_reversal(
+            original_legs=(
+                PostingLeg(AccountRef("escrow"), 1.5),  # type: ignore[arg-type]
+                PostingLeg(AccountRef("platform_cash"), -1.5),  # type: ignore[arg-type]
+            )
+        )
+
+
+def test_lenco_fee_golden() -> None:
+    result = lenco_fee(fee_ngwee=25)
+    assert result.kind == LedgerTemplate.LENCO_FEE
+    assert result.legs == (
+        PostingLeg(AccountRef("fees"), 25),
+        PostingLeg(AccountRef("platform_cash"), -25),
+    )
+
+
+def test_lenco_fee_rejects_non_positive() -> None:
+    with pytest.raises(ValueError):
+        lenco_fee(fee_ngwee=0)
+    with pytest.raises(ValueError):
+        lenco_fee(fee_ngwee=-5)
 
 
 def test_refund_lane2_golden() -> None:

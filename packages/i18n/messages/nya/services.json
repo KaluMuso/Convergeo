@@ -241,6 +241,8 @@
       "errors": {
         "notOwner": "Mutha kutsimikiza ntchito zanu zokha.",
         "notMarked": "Provider wanu sanamarke ntchito yatha pano.",
+        "depositNotCollected": "Deposit ya ntchitoyi siinalipidwe, choncho simungatsimikizire.",
+        "balanceNotCollected": "Ndalama yotsala ya ntchitoyi siinalipidwe, choncho provider sangalipidwe pano. Gulu lathu lidzakulumikizani.",
         "generic": "Situnathe kutsimikiza ntchito. Yesaninso.",
         "rateLimited": "Ma request ambiri. Dikirani pang'ono."
       }

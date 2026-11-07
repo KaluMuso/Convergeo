@@ -5,9 +5,9 @@ MONEY-CRITICAL. Integer ngwee everywhere; no float on money.
 Completion flow (mirrors the merged order confirm/auto-confirm of M09-P06/P10):
 
   provider marks complete  →  customer confirms (or 48h auto-confirm)  →
-  balance leg (``create_balance_item``, M11-P04) + balance settlement (M08
-  CHARGE_RECEIVED) + escrow release, all EXACTLY ONCE via the order engine's
-  ``release-{order_id}`` idempotency key.
+  collected-escrow guard (C1: escrow must already hold the whole job value — the
+  pilot takes 100% upfront; no ledger posting ever books uncollected balance) +
+  escrow release, EXACTLY ONCE via the order engine's ``release-{order_id}`` key.
 
 Single-release / single-capture invariants
 -------------------------------------------
@@ -36,7 +36,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.commissions.engine import capture_order_commission
+from app.services.commissions.engine import capture_order_commission, compute_order_commission
 from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     claim_release_gate,
@@ -47,6 +47,7 @@ from app.services.escrow.release_accounting import (
     compute_release_amounts,
     order_has_open_dispute,
     release_blocked_reason,
+    summarize_order_release_ledger,
 )
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
@@ -311,20 +312,47 @@ def _load_commission_snapshot(order_id: str) -> dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
-def _settle_balance(order_id: str, balance_ngwee: int) -> None:
-    """Settle the balance collection into escrow via the M08 CHARGE_RECEIVED template.
+def _assert_service_job_fully_collected(
+    *, order_id: str, snapshot: dict[str, Any], delivery_fee_ngwee: int
+) -> int:
+    """C1 guard: never release (or book) service money that was never collected.
 
-    Idempotent on ``charge-balance-{order_id}`` so a retried/auto confirm never
-    double-credits. Skipped for 100%-deposit jobs (balance == 0).
+    The platform has no balance checkout, so the only money in escrow for a service
+    order is what the deposit checkout collected (``escrow_hold`` on the order).
+    Previously confirm posted ``CHARGE_RECEIVED(balance)`` with no customer payment,
+    overstating platform_cash and releasing the full job value to the provider.
+
+    Confirm/release is allowed only when escrow collected for the order covers the
+    whole job value (snapshot basis + delivery). With the pilot's 100% deposit
+    (``service_deposit_pct=100``) a paid deposit always satisfies this; any job
+    accepted with a partial deposit is refused until a real balance collection
+    lands in escrow. Returns the collected amount (ngwee).
     """
-    if balance_ngwee <= 0:
-        return
-    post_transaction(
-        idempotency_key=f"charge-balance-{order_id}",
-        template=LedgerTemplate.CHARGE_RECEIVED,
-        order_id=order_id,
-        gross_ngwee=balance_ngwee,
-    )
+    total_job = compute_order_commission(snapshot).gross_ngwee + int(delivery_fee_ngwee)
+    collected = summarize_order_release_ledger(order_id).charge_received_ngwee
+    if collected <= 0:
+        raise AppError(
+            code="service_deposit_not_collected",
+            message="Service deposit has not been collected for this job",
+            http_status=409,
+            details={
+                "reason": "deposit_not_collected",
+                "message_key": "services.completion.errors.depositNotCollected",
+            },
+        )
+    if collected < total_job:
+        raise AppError(
+            code="service_balance_not_collected",
+            message="Service balance has not been collected; release is blocked",
+            http_status=409,
+            details={
+                "reason": "balance_not_collected",
+                "collected_ngwee": collected,
+                "total_job_ngwee": total_job,
+                "message_key": "services.completion.errors.balanceNotCollected",
+            },
+        )
+    return collected
 
 
 def _assert_service_release_allowed(*, order_id: str, status: str) -> None:
@@ -492,6 +520,12 @@ def confirm_job_completion(
     snapshot, net_ngwee = _require_service_release_amounts(
         order_id=order.order_id, delivery_fee_ngwee=order.delivery_fee_ngwee
     )
+    # 0a. C1: only money actually collected into escrow may be released.
+    _assert_service_job_fully_collected(
+        order_id=order.order_id,
+        snapshot=snapshot,
+        delivery_fee_ngwee=order.delivery_fee_ngwee,
+    )
     # 0b. D17 single-drain claim before capture/release (blocks concurrent refund).
     try:
         claim_release_gate(order.order_id)
@@ -503,9 +537,9 @@ def confirm_job_completion(
             details={"reason": exc.code},
         ) from exc
     # 1. Balance leg on the SAME order (idempotent; commission snapshot untouched).
+    #    No ledger posting here: the guard above proved the balance (if any) was
+    #    already collected into escrow by a real payment. 100% deposit → no-op.
     balance = create_balance_item(order.order_id)
-    # 2. Settle the balance collection into escrow (M08 charge; idempotent).
-    _settle_balance(order.order_id, balance.balance_ngwee)
     # 2b. Capture platform commission from escrow BEFORE the release (idempotent;
     #     mirrors COD/product capture-then-release) so commission_revenue is recognized
     #     and escrow drains to net. Single snapshot — never re-captured across legs.
@@ -591,7 +625,19 @@ def auto_confirm_due_jobs(
     confirmed = 0
     skipped = 0
     for job_id, _order_id in due:
-        result = confirm_job_completion(job_id, actor_id=SYSTEM_ACTOR_ID, is_system=True)
+        try:
+            result = confirm_job_completion(job_id, actor_id=SYSTEM_ACTOR_ID, is_system=True)
+        except AppError as exc:
+            # A job blocked by a money guard (uncollected balance, refund, dispute)
+            # must not abort the whole batch; it stays 'placed' for ops review.
+            if exc.code not in {
+                "service_balance_not_collected",
+                "service_deposit_not_collected",
+                "release_blocked",
+            }:
+                raise
+            skipped += 1
+            continue
         if result.already_confirmed:
             skipped += 1
         else:
