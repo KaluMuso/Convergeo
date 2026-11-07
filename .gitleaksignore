@@ -17,3 +17,12 @@
 090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:456
 090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:457
 090ba3adf6978f9358ef6b437a07a0c993e3bd78:scripts/ci/coordinator-gate-inputs.json:generic-api-key:509
+
+# Three verified SHA-256 digests in the card checkout page test (branch history),
+# recomputed from the referenced files at the same commit; not credentials.
+# 727: SHA256(services/api/app/routers/payment_status.py)
+# 728: SHA256(services/api/tests/test_payment_status.py)
+# 729: SHA256(services/api/uv.lock)
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:727
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:728
+e58450010466cdd883b8d8152942d5c6918ebe57:apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx:generic-api-key:729
