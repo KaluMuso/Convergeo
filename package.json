@@ -51,7 +51,7 @@
       "minimatch@10.2.5>brace-expansion": "5.0.12",
       "minimatch@10.2.6>brace-expansion": "5.0.12",
       "minimatch@3.1.5>brace-expansion": "1.1.21",
-      "fast-uri": "3.1.8",
+      "fast-uri": "3.1.9",
       "ip-address": "10.7.3",
       "js-yaml@>=3.0.0 <3.15.2": "3.15.2",
       "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
@@ -65,7 +65,7 @@
       "source-map-js": "1.2.2",
       "proxy-addr": "2.0.8",
       "compression": "1.8.2",
-      "next": "15.5.27",
+      "next": "15.5.29",
       "postcss@8.5.23>source-map-js": "1.2.2",
       "@tailwindcss/node@4.3.3>source-map-js": "1.2.2",
       "express@4.22.3>body-parser": "1.20.8",
@@ -76,17 +76,17 @@
       "source-map-js@1.2.1": "1.2.2",
       "proxy-addr@2.0.7": "2.0.8",
       "compression@1.8.1": "1.8.2",
-      "vite@7.3.6": "7.3.7",
       "zod@4.4.3": "4.6.6",
       "body-parser@1.20.6": "1.20.9",
       "get-uri@6.0.5>basic-ftp": "6.2.1",
       "puppeteer-core@24.43.1>@puppeteer/browsers": "3.2.6",
       "get-uri@8.0.0>basic-ftp": "6.2.1",
-      "@lhci/cli@0.15.1>proxy-agent": "8.0.1"
+      "@lhci/cli@0.15.1>proxy-agent": "8.0.1",
+      "vite": "7.3.7",
+      "chromium-bidi>zod": "4.6.6"
     },
     "patchedDependencies": {
-      "next@15.5.25": "patches/next.patch",
-      "basic-ftp@5.3.1": "patches/basic-ftp@5.3.1.patch"
+      "next@15.5.29": "patches/next.patch"
     }
   }
 }

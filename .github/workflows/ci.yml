@@ -48,11 +48,9 @@ jobs:
       - name: Next font loader regression
         run: pnpm test:next-font
 
-      - name: basic-ftp advisory and get-uri compatibility regressions
-        run: node --test scripts/ci/basic-ftp-advisory.test.mjs
+      - name: Removed vulnerable dependency chains stay absent
+        run: node --test scripts/ci/vulnerable-chain-absence.test.mjs
 
-      - name: extract-zip advisory and Puppeteer caller compatibility regressions
-        run: node --test scripts/ci/extract-zip-advisory.test.mjs
       - name: Staged formatter regression tests
         run: pnpm format:staged:test
 
@@ -86,12 +84,6 @@ jobs:
 
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
-
-      - name: basic-ftp advisory and get-uri compatibility regressions
-        run: node --test scripts/ci/basic-ftp-advisory.test.mjs
-
-      - name: extract-zip advisory and Puppeteer caller compatibility regressions
-        run: node --test scripts/ci/extract-zip-advisory.test.mjs
 
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
