@@ -46,6 +46,8 @@ const mocks = vi.hoisted(() => ({
   exchange: vi.fn(),
   update: vi.fn(),
   session: vi.fn(),
+  claims: vi.fn(),
+  fetch: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
   authCallback: null as
@@ -86,6 +88,7 @@ beforeEach(() => {
       exchangeCodeForSession: mocks.exchange,
       updateUser: mocks.update,
       getSession: mocks.session,
+      getClaims: mocks.claims,
       onAuthStateChange: (
         callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
       ) => {
@@ -109,10 +112,19 @@ beforeEach(() => {
   mocks.session.mockResolvedValue({
     data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
   });
+  mocks.claims.mockResolvedValue({
+    data: { claims: { sub: "recovery-user", session_id: "recovery-session" } },
+    error: null,
+  });
+  mocks.fetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", mocks.fetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("shared vendor password recovery forms with isolated Auth fixtures", () => {
@@ -247,7 +259,7 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     expect(screen.getByRole("alert")).toHaveTextContent("do not match");
     expect(mocks.update).not.toHaveBeenCalled();
     fireEvent.change(confirm, { target: { value: "fixture-password" } });
-    mocks.update.mockResolvedValueOnce({ error: { message: "fixture" } });
+    mocks.fetch.mockResolvedValueOnce({ ok: false, status: 500, headers: { get: () => null } });
     submit();
     expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
     await waitFor(() =>
@@ -257,6 +269,15 @@ describe("shared vendor password recovery forms with isolated Auth fixtures", ()
     expect(await screen.findByRole("status")).toHaveTextContent("Password updated");
     fireEvent.click(screen.getByRole("button", { name: "Go to sign in" }));
     expect(mocks.exchange).toHaveBeenCalledExactlyOnceWith("fixture");
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.fetch).toHaveBeenLastCalledWith(
+      "https://staging.example.supabase.co/auth/v1/user",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+        body: JSON.stringify({ password: "fixture-password" }),
+      }),
+    );
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith("/en/login");
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });

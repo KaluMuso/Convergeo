@@ -41,7 +41,7 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   };
 });
 
-import { isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
+import { isVendorAuthSetupPath, isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
 import middleware, { config } from "./middleware";
 
 describe("vendor middleware matcher", () => {
@@ -94,12 +94,24 @@ describe("vendor password recovery gate", () => {
     expectNonceReportOnlyCsp(response);
   });
 
+  it.each(LOCALES.flatMap((locale) => [`/${locale}/accept-invite`, `/${locale}/accept-invite/`]))(
+    "allows exact invite acceptance without a session: %s",
+    async (path) => {
+      const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
+      expect(response.status).toBe(200);
+      expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+      expectNonceReportOnlyCsp(response);
+    },
+  );
+
   it.each([
     "/en/listings",
     "/en/orders",
     "/en/reset-password/admin",
     "/en/reset-password/confirm/admin",
     "/en/reset-password-other",
+    "/en/accept-invite/admin",
+    "/en/accept-invite-other",
   ])("keeps unauthenticated non-recovery paths gated: %s", async (path) => {
     const response = await middleware(new NextRequest(`https://vendor.example.test${path}`));
     expect(response.status).toBe(307);
@@ -114,6 +126,11 @@ describe("vendor password recovery gate", () => {
     "/en/reset-password/confirm-extra",
   ])("rejects lookalike/unsupported recovery paths: %s", (path) =>
     expect(isVendorPasswordRecoveryPath(path)).toBe(false),
+  );
+
+  it.each(["/xx/accept-invite", "/accept-invite", "/en/accept-invite//"])(
+    "rejects lookalike invite paths: %s",
+    (path) => expect(isVendorAuthSetupPath(path)).toBe(false),
   );
 
   it.each(["customer", "vendor"] as const)(
@@ -148,7 +165,9 @@ describe("vendor password recovery gate", () => {
 
   it("preserves refreshed session cookies on recovery responses", async () => {
     const sessionResponse = NextResponse.next();
-    sessionResponse.cookies.set("synthetic-refresh", "fixture", { httpOnly: true });
+    sessionResponse.cookies.set("synthetic-refresh", "fixture", {
+      httpOnly: true,
+    });
     vi.mocked(updateSession).mockResolvedValue({
       response: sessionResponse,
       user: null,

@@ -8,3 +8,12 @@ export function isVendorPasswordRecoveryPath(pathname: string): boolean {
       path === `/${locale}/reset-password` || path === `/${locale}/reset-password/confirm`,
   );
 }
+
+/** Public, purpose-bound Auth setup pages; operational routes remain role-gated. */
+export function isVendorAuthSetupPath(pathname: string): boolean {
+  const path = pathname.replace(/\/$/, "");
+  return (
+    isVendorPasswordRecoveryPath(pathname) ||
+    LOCALES.some((locale) => path === `/${locale}/accept-invite`)
+  );
+}

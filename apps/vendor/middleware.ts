@@ -16,7 +16,7 @@ import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
-import { isVendorPasswordRecoveryPath } from "./lib/password-recovery-path";
+import { isVendorAuthSetupPath } from "./lib/password-recovery-path";
 
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
@@ -62,7 +62,7 @@ export default async function middleware(request: NextRequest) {
   // must stay reachable unauthenticated, like any deployment health check.
   const gate =
     isHealthCheckPath(request.nextUrl.pathname, LOCALES) ||
-    isVendorPasswordRecoveryPath(request.nextUrl.pathname)
+    isVendorAuthSetupPath(request.nextUrl.pathname)
       ? null
       : resolveGatedRedirect(
           "vendor",

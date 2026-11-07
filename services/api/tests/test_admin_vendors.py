@@ -101,6 +101,18 @@ class FakeTable:
         return FakeQuery(self, []).update(payload)
 
 
+class FakeKycStorage:
+    def __init__(self) -> None:
+        self.objects: set[str] = set()
+
+    def from_(self, bucket: str) -> FakeKycStorage:
+        assert bucket == "kyc-docs"
+        return self
+
+    def exists(self, path: str) -> bool:
+        return path in self.objects
+
+
 class FakeSupabaseClient:
     def __init__(self) -> None:
         self.tables: dict[str, FakeTable] = {
@@ -109,6 +121,7 @@ class FakeSupabaseClient:
             "audit_log": FakeTable(),
             "notification_outbox": FakeTable(),
         }
+        self.storage = FakeKycStorage()
 
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
@@ -178,6 +191,8 @@ def _mock_audit_insert(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _seed_vendor_queue(fake: FakeSupabaseClient) -> None:
     now = datetime.now(UTC).isoformat()
+    paths = [f"kyc/{VENDOR_ID}/nrc-1700000000", f"kyc/{VENDOR_ID}/selfie-1700000001"]
+    fake.storage.objects.update(paths)
     fake.tables["vendors"].rows.append(
         {
             "id": VENDOR_ID,
@@ -195,7 +210,7 @@ def _seed_vendor_queue(fake: FakeSupabaseClient) -> None:
             "vendor_id": VENDOR_ID,
             "tier": 1,
             "status": "submitted",
-            "doc_storage_paths": ["kyc/nrc.jpg"],
+            "doc_storage_paths": paths,
             "momo_name_match": None,
             "reviewer_notes": None,
             "reviewed_by": None,
@@ -275,6 +290,63 @@ def test_patch_vendor_approve_dispatches_n8n(
     assert scheduled
     assert scheduled[0][0] == "vendor.kyc_updated"
     assert scheduled[0][1]["status"] == "approved"
+
+
+def test_patch_vendor_approve_fails_if_document_disappeared(
+    api_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_auth(monkeypatch, frozenset({"moderator"}))
+    _seed_vendor_queue(fake_client)
+    fake_client.storage.objects.remove(f"kyc/{VENDOR_ID}/selfie-1700000001")
+    approve = MagicMock()
+    monkeypatch.setattr("app.routers.admin_vendors.transition_approve", approve)
+
+    response = api_client.patch(
+        f"/admin/vendors/{VENDOR_ID}/status",
+        headers=_auth_headers(),
+        json={"action": "approve"},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "kyc_document_missing"
+    approve.assert_not_called()
+    assert fake_client.tables["vendors"].rows[0]["status"] == "pending_kyc"
+    assert fake_client.tables["kyc_records"].rows[0]["status"] == "submitted"
+    assert fake_client.tables["notification_outbox"].rows == []
+
+
+def test_vendor_kyc_detail_rejects_foreign_document_path(
+    api_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_auth(monkeypatch, frozenset({"moderator"}))
+    _seed_vendor_queue(fake_client)
+    fake_client.tables["kyc_records"].rows[0]["doc_storage_paths"][0] = (
+        "kyc/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/nrc-1700000000"
+    )
+
+    response = api_client.get(
+        f"/admin/vendors/{VENDOR_ID}/kyc", headers=_auth_headers()
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "kyc_documents_invalid"
+
+
+def test_vendor_kyc_detail_shows_incomplete_record_without_documents(
+    api_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_auth(monkeypatch, frozenset({"moderator"}))
+    _seed_vendor_queue(fake_client)
+    fake_client.tables["kyc_records"].rows[0]["doc_storage_paths"] = []
+
+    response = api_client.get(f"/admin/vendors/{VENDOR_ID}/kyc", headers=_auth_headers())
+    assert response.status_code == 200, response.text
+    assert response.json()["documents"] == []
+    assert response.json()["docs_available"] is False
 
 
 def test_patch_vendor_reject_requires_reason(

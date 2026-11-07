@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   client: vi.fn(),
   exchange: vi.fn(),
   session: vi.fn(),
-  update: vi.fn(),
+  claims: vi.fn(),
+  fetch: vi.fn(),
   unsubscribe: vi.fn(),
   authCallback: null as
     ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null,
@@ -48,7 +49,7 @@ beforeEach(() => {
     auth: {
       exchangeCodeForSession: mocks.exchange,
       getSession: mocks.session,
-      updateUser: mocks.update,
+      getClaims: mocks.claims,
       onAuthStateChange: (
         callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
       ) => {
@@ -70,8 +71,25 @@ beforeEach(() => {
   mocks.session.mockResolvedValue({
     data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
   });
+  mocks.claims.mockImplementation(async (token: string) => ({
+    data: {
+      claims: {
+        sub: token === "other-token" ? "other-user" : "recovery-user",
+        session_id: token === "other-session-token" ? "other-session" : "recovery-session",
+      },
+    },
+    error: null,
+  }));
+  mocks.fetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", mocks.fetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("recovery session bootstrap failures and cleanup", () => {
   it("exchanges only once when Strict Mode cancels and restarts bootstrap", async () => {
@@ -101,7 +119,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
       "/en/reset-password",
     );
     expect(screen.queryByRole("button", { name: "Update password" })).not.toBeInTheDocument();
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("does not start a session exchange after an unmounted lazy load resolves", async () => {
@@ -142,7 +160,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
     await waitFor(() => expect(mocks[kind as "client" | "exchange"]).toHaveBeenCalledOnce());
     view.unmount();
     await act(async () => pending.reject(new Error("synthetic-late-failure")));
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("rejects a code-less visit even with another account already signed in", async () => {
@@ -150,7 +168,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
     renderRecovery();
     expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
     expect(mocks.session).not.toHaveBeenCalled();
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
   it("rejects a valid sign-in code that lacks the recovery event", async () => {
@@ -167,7 +185,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
     });
     renderRecovery();
     expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.unsubscribe).toHaveBeenCalledOnce();
   });
 
@@ -194,7 +212,7 @@ describe("recovery session bootstrap failures and cleanup", () => {
       });
       renderRecovery();
       expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
-      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.fetch).not.toHaveBeenCalled();
     },
   );
 
@@ -211,6 +229,78 @@ describe("recovery session bootstrap failures and cleanup", () => {
     fireEvent.change(confirmation, { target: { value: "fixture-password" } });
     fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
     expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("accepts a refreshed token from the same recovery session", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=recovery-fixture");
+    renderRecovery();
+    await screen.findByRole("button", { name: "Update password" });
+    mocks.session.mockResolvedValue({
+      data: { session: { user: { id: "recovery-user" }, access_token: "refreshed-token" } },
+    });
+    fireEvent.change(screen.getByLabelText(/^New password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
+    expect(await screen.findByRole("status")).toHaveTextContent("Password updated");
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+      "https://staging.example.supabase.co/auth/v1/user",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ Authorization: "Bearer refreshed-token" }),
+        body: JSON.stringify({ password: "fixture-password" }),
+      }),
+    );
+  });
+
+  it("rejects another session for the same user", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=recovery-fixture");
+    renderRecovery();
+    await screen.findByRole("button", { name: "Update password" });
+    mocks.session.mockResolvedValue({
+      data: {
+        session: { user: { id: "recovery-user" }, access_token: "other-session-token" },
+      },
+    });
+    fireEvent.change(screen.getByLabelText(/^New password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("invalid or has expired");
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("pins the password request if another tab switches accounts during submission", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=recovery-fixture");
+    renderRecovery();
+    await screen.findByRole("button", { name: "Update password" });
+    mocks.fetch.mockImplementation(async () => {
+      mocks.session.mockResolvedValue({
+        data: { session: { user: { id: "other-user" }, access_token: "other-token" } },
+      });
+      return { ok: true };
+    });
+    fireEvent.change(screen.getByLabelText(/^New password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/i), {
+      target: { value: "fixture-password" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: "Update password" }).closest("form")!);
+    expect(await screen.findByRole("status")).toHaveTextContent("Password updated");
+    expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+      }),
+    );
+    expect(mocks.session).toHaveBeenCalledTimes(1);
   });
 });

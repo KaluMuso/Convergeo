@@ -8,7 +8,13 @@
       "codex/coordinator-ci-review-20261001": false,
       "codex/continuity-review-corrections-20261001": false,
       "codex/coordinator-ci-review-managed-r2-20261001": false,
-      "codex/release-qualification-20261003": false
+      "codex/release-qualification-20261003": false,
+      "cursor/vendor-recovery-staging-20261007": false,
+      "codex/phone-input-layout-20261008": false,
+      "cursor/release-kyc-auth-integration-20261008": false,
+      "cursor/staging-release-compat-20261009": false,
+      "cursor/staging-payment-fail-closed-20261009": false,
+      "cursor/cart-lighthouse-integration-20261009": false
     }
   }
 }

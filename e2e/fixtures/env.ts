@@ -5,10 +5,12 @@
  * process environment (populated locally via a `.env`-style export or, in CI,
  * from GitHub Actions secrets). Absent flags degrade gracefully: founder-gated
  * legs (Lenco sandbox pay, WhatsApp mock assertions, deterministic seed reset)
- * are skipped with a clear annotation rather than failing.
+ * are skipped with a clear annotation outside strict certification. Required
+ * payment evidence fails the MoMo checkout spec in strict certification.
  */
 
 import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
+import { missingSandboxMomoEvidence } from "./sandbox-momo-evidence";
 import { SEED } from "./seed.generated";
 
 export function flag(name: string): boolean {
@@ -122,8 +124,8 @@ export const THROTTLE = process.env.E2E_THROTTLE !== "0";
 
 /**
  * Lenco sandbox pay leg (founder gate F9b). Runs the live sandbox charge only
- * when the flag is set AND the reference/secret env is present. Otherwise the
- * checkout spec asserts up to the pay-initiation boundary and skips the charge.
+ * when the flag, keys, and test MSISDN are present. No checkout is placed
+ * with missing evidence.
  */
 export const lenco = {
   enabled: flag("LENCO_SANDBOX"),
@@ -133,9 +135,10 @@ export const lenco = {
   testMomoNumber: str("LENCO_SANDBOX_MOMO_NUMBER"),
 };
 
-/** True only when the sandbox flag + creds are all present. */
+/** True only when the sandbox flag, keys, number and label are safe. */
 export function lencoSandboxReady(): boolean {
-  return lenco.enabled && lenco.secretKey.length > 0;
+  const label = str("LENCO_ENV").toLowerCase();
+  return (!label || label === "sandbox") && missingSandboxMomoEvidence(lenco).length === 0;
 }
 
 /**

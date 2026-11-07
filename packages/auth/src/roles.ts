@@ -7,7 +7,9 @@ const APP_ROLES = new Set<AppRole>(["customer", "vendor", "admin"]);
 
 /**
  * Fast-path role read for middleware gating.
- * Reads `app_metadata.roles` from the Supabase user object (JWT-backed).
+ * Reads `app_metadata.roles` from the Supabase user object. The custom access
+ * token hook does not write these roles back to the user object, so middleware
+ * must use verified token claims instead.
  * Authoritative role checks for mutations belong in the API (M04-P02), which
  * reads `public.user_roles` — never trust JWT claims alone for admin actions.
  */
