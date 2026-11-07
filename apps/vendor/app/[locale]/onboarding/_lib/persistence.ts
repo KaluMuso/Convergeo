@@ -1,4 +1,5 @@
 import { isValidZmMobile } from "./kyc-client";
+import { isPrivateKycPath } from "./storage";
 import {
   LOCAL_STORAGE_KEY,
   ONBOARDING_STEPS,
@@ -43,11 +44,23 @@ export function readLocalDraft(userId: string): OnboardingDraft | null {
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<OnboardingDraft>;
+    const parsed = JSON.parse(raw) as Partial<OnboardingDraft> | null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
     return {
-      ...DEFAULT_DRAFT,
-      ...parsed,
-      step: typeof parsed.step === "number" ? parsed.step : 0,
+      step:
+        typeof parsed.step === "number" && Number.isInteger(parsed.step)
+          ? Math.max(0, Math.min(parsed.step, ONBOARDING_STEPS.length - 1))
+          : 0,
+      businessName: typeof parsed.businessName === "string" ? parsed.businessName : "",
+      businessCategory: typeof parsed.businessCategory === "string" ? parsed.businessCategory : "",
+      businessArchetype:
+        typeof parsed.businessArchetype === "string" ? parsed.businessArchetype : "",
+      legalName: typeof parsed.legalName === "string" ? parsed.legalName : "",
+      momoPhone: typeof parsed.momoPhone === "string" ? parsed.momoPhone : "",
+      nrcPath: typeof parsed.nrcPath === "string" ? parsed.nrcPath : null,
+      selfiePath: typeof parsed.selfiePath === "string" ? parsed.selfiePath : null,
     };
   } catch {
     return null;
@@ -58,14 +71,22 @@ export function writeLocalDraft(userId: string, draft: OnboardingDraft): void {
   if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.setItem(draftKey(userId), JSON.stringify(draft));
+  try {
+    window.localStorage.setItem(draftKey(userId), JSON.stringify(draft));
+  } catch {
+    // Storage may be unavailable or full; keep the in-memory/server draft usable.
+  }
 }
 
 export function clearLocalDraft(userId: string): void {
   if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.removeItem(draftKey(userId));
+  try {
+    window.localStorage.removeItem(draftKey(userId));
+  } catch {
+    // A successful server submission must still navigate if storage is blocked.
+  }
 }
 
 export function mergeDraftWithServer(
@@ -84,8 +105,7 @@ export function mergeDraftWithServer(
     step: base.step,
     businessName: base.businessName || server.business_name || "",
     businessCategory: base.businessCategory || server.business_category || "",
-    businessArchetype:
-      base.businessArchetype || server.business_archetype || "",
+    businessArchetype: base.businessArchetype || server.business_archetype || "",
     // legal_name is collected + persisted client-side only (no server field).
     legalName: base.legalName || "",
     momoPhone: base.momoPhone || server.momo_phone || "",
@@ -111,8 +131,8 @@ export function resolveResumeStep(
   }
 
   if (
-    !draft.nrcPath ||
-    !draft.selfiePath ||
+    !isPrivateKycPath(draft.nrcPath ?? "") ||
+    !isPrivateKycPath(draft.selfiePath ?? "") ||
     !isValidZmMobile(draft.momoPhone) ||
     draft.legalName.trim().length < 2
   ) {

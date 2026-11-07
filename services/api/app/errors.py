@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections import deque
+import traceback
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -88,21 +88,18 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
 
 def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = get_request_id(request)
-    # A registered handler need not have an active exception context. Use the
-    # supplied traceback and omit exception text, which may contain data.
-    frames: deque[str] = deque(maxlen=16)
-    traceback = exc.__traceback__
-    while traceback is not None:
-        code = traceback.tb_frame.f_code
-        frames.append(f"{Path(code.co_filename).name}:{traceback.tb_lineno}:{code.co_name}")
-        traceback = traceback.tb_next
+    # FastAPI can call this after the active except block has ended. Log only
+    # code locations and type; exception messages may contain payment data.
     logger.error(
         "Unhandled exception",
         extra={
             "request_id": request_id,
             "path": request.url.path,
-            "exception_type": type(exc).__name__,
-            "exception_frames": list(frames),
+            "exception_type": f"{type(exc).__module__}.{type(exc).__qualname__}",
+            "exception_frames": [
+                f"{Path(frame.f_code.co_filename).name}:{line}:{frame.f_code.co_name}"
+                for frame, line in traceback.walk_tb(exc.__traceback__)
+            ][-16:],
         },
     )
 

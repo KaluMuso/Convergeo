@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect } from "./scanner-artifact-test";
-import { customerOtp, flag, lenco, path, str, vendorOtp } from "./env";
+import { customerOtp, flag, lenco, path, phoneOtpSafetyReady, str, vendorOtp } from "./env";
 import { assertNoAccidentalRealMoney } from "./payment-fixtures";
 import {
   assertOutboundApproval,
@@ -33,6 +33,14 @@ export function missingPaidPrerequisites(): string[] {
       ...(!lenco.testMomoNumber ? ["LENCO_SANDBOX_MOMO_NUMBER"] : []),
       ...(!str("E2E_CUSTOMER_TEST_OTP") ? ["E2E_CUSTOMER_TEST_OTP"] : []),
       ...(!str("E2E_VENDOR_TEST_OTP") ? ["E2E_VENDOR_TEST_OTP"] : []),
+      ...(!phoneOtpSafetyReady()
+        ? [
+            "SMS_OTP_TRANSPORT",
+            "WAHA_OTP_ENABLED",
+            "STAGING_SMS_SANDBOX_ATTESTED",
+            "STAGING_TEST_OTP_MAP_ATTESTED",
+          ]
+        : []),
       ...(!str("STAGING_SUPABASE_URL") ? ["STAGING_SUPABASE_URL"] : []),
       ...(!str("STAGING_SUPABASE_ANON_KEY") ? ["STAGING_SUPABASE_ANON_KEY"] : []),
     ]),

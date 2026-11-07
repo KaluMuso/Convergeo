@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { catalogSaleUnitLabels, formatListingQuantity, resolveSaleUnit } from "../sale-quantity";
 
 import {
@@ -56,6 +55,7 @@ export function useListingPurchase(
     listing ? clampQuantity(getMinimumQuantity(listing), listing) : 1,
   );
   const [adding, setAdding] = useState(false);
+  const addingRef = useRef(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const pickup = usePickupLocationSelection(listingId);
@@ -121,7 +121,7 @@ export function useListingPurchase(
   }, [listing]);
 
   const handleAddToCart = useCallback(() => {
-    if (!listing || !listing.inStock || adding) {
+    if (!listing || !listing.inStock || adding || addingRef.current) {
       return;
     }
     // Fail closed: never send add-to-cart while branch-tracking status is
@@ -133,27 +133,31 @@ export function useListingPurchase(
       return;
     }
 
+    addingRef.current = true;
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
-    void addCartItem(
-      listing.id,
-      quantity,
-      undefined,
-      pickup.selectedLocationId
-        ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" }
-        : undefined,
-    )
-      .then(() => {
-        setAddedMessage(labels.addToCartLabel);
-        setLastAddedMessage(labels.addToCartLabel);
-        openMiniCart();
-      })
+    void (async () => {
+      const { addCartItem, openMiniCart, setLastAddedMessage } =
+        await import("../cart/mini-cart-drawer");
+      await addCartItem(
+        listing.id,
+        quantity,
+        undefined,
+        pickup.selectedLocationId
+          ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" }
+          : undefined,
+      );
+      setAddedMessage(labels.addToCartLabel);
+      setLastAddedMessage(labels.addToCartLabel);
+      openMiniCart();
+    })()
       .catch(() => {
         setAddError(labels.addToCartErrorLabel);
       })
       .finally(() => {
+        addingRef.current = false;
         setAdding(false);
       });
   }, [

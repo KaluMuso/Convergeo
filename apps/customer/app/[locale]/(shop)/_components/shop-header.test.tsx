@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ShopHeader } from "./shop-header";
 
 const eligible = vi.fn<() => boolean>();
+const cartMocks = vi.hoisted(() => ({
+  refreshCart: vi.fn().mockResolvedValue(null),
+  openMiniCart: vi.fn(),
+  setStoreState: vi.fn(),
+}));
+vi.mock("./cart/mini-cart-drawer", () => cartMocks);
 
 vi.mock("./use-business-eligibility", () => ({
   useBusinessEligibility: () => eligible(),
@@ -23,9 +29,9 @@ vi.mock("./desktop-header-search", () => ({
   DesktopHeaderSearch: () => <div role="search">Search</div>,
 }));
 
-vi.mock("./cart/mini-cart-drawer", () => ({
+vi.mock("./cart/cart-store", () => ({
   useCartStore: () => ({ cart: null }),
-  useCartActions: () => ({ refresh: vi.fn(), openDrawer: vi.fn() }),
+  setStoreState: cartMocks.setStoreState,
   getCartItemCount: () => 0,
   CartNavTrigger: ({
     labels,
@@ -41,6 +47,7 @@ vi.mock("./cart/mini-cart-drawer", () => ({
       aria-label={labels.openCart}
       className={className}
       data-testid="cart-nav-trigger"
+      onClick={cartMocks.openMiniCart}
     >
       {cartIcon}
     </button>
@@ -50,6 +57,8 @@ vi.mock("./cart/mini-cart-drawer", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  vi.doMock("./cart/mini-cart-drawer", () => cartMocks);
 });
 
 const labels = {
@@ -121,5 +130,71 @@ describe("ShopHeader", () => {
     eligible.mockReturnValue(false);
     const { container } = render(<ShopHeader locale="en" labels={labels} />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function scheduledIdle() {
+  let run!: () => void;
+  const cancel = vi.fn();
+  vi.stubGlobal(
+    "requestIdleCallback",
+    vi.fn((callback: () => void) => {
+      run = callback;
+      return 7;
+    }),
+  );
+  vi.stubGlobal("cancelIdleCallback", cancel);
+  return { run: () => run(), cancel };
+}
+
+describe("deferred header cart hydration", () => {
+  it("opens the cart before idle loading and cancels a refresh when unmounted during import", async () => {
+    const idle = scheduledIdle();
+    const module = deferred<typeof cartMocks>();
+    const load = vi.fn(() => module.promise);
+    vi.doMock("./cart/mini-cart-drawer", load);
+    const view = render(<ShopHeader locale="en" labels={labels} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Open cart" })[0]!);
+    expect(cartMocks.openMiniCart).toHaveBeenCalledOnce();
+    expect(load).not.toHaveBeenCalled();
+    expect(cartMocks.refreshCart).not.toHaveBeenCalled();
+    act(() => idle.run());
+    await waitFor(() => expect(load).toHaveBeenCalledOnce());
+    view.unmount();
+    expect(idle.cancel).toHaveBeenCalledExactlyOnceWith(7);
+    await act(async () => {
+      module.resolve(cartMocks);
+    });
+    expect(cartMocks.refreshCart).not.toHaveBeenCalled();
+    expect(cartMocks.setStoreState).not.toHaveBeenCalled();
+  });
+
+  it("marks import failure as a load error and can hydrate on the next mounted attempt", async () => {
+    const idle = scheduledIdle();
+    vi.doMock("./cart/mini-cart-drawer", () => {
+      throw new Error("Chunk unavailable");
+    });
+    const view = render(<ShopHeader locale="en" labels={labels} />);
+    act(() => idle.run());
+    await waitFor(() =>
+      expect(cartMocks.setStoreState).toHaveBeenCalledExactlyOnceWith({
+        loading: false,
+        loadError: true,
+      }),
+    );
+    expect(cartMocks.refreshCart).not.toHaveBeenCalled();
+    view.unmount();
+    vi.doMock("./cart/mini-cart-drawer", () => cartMocks);
+    render(<ShopHeader locale="en" labels={labels} />);
+    act(() => idle.run());
+    await waitFor(() => expect(cartMocks.refreshCart).toHaveBeenCalledOnce());
   });
 });

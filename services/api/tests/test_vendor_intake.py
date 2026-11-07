@@ -32,7 +32,8 @@ OTHER_VENDOR_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 SESSION_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 OTHER_SESSION_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 BINDING_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
-PRODUCT_ID = "44444444-4444-4444-8444-444444444444"
+PRODUCT_ID = "12345678-1234-4234-8234-123456789abc"
+CATEGORY_ID = "22345678-1234-4234-8234-123456789abc"
 VALID_TOKEN = "valid.jwt.token"
 
 
@@ -266,6 +267,19 @@ def _seed(
             "model_ref": None,
         }
     )
+    fake.table("products").rows.append(
+        {
+            "id": PRODUCT_ID,
+            "name": "Samsung Fridge",
+            "status": "active",
+            "product_class": "A",
+            "category_id": CATEGORY_ID,
+            "sale_unit": "each",
+            "base_unit": "each",
+            "base_units_per_sale_unit_milli": 1000,
+        }
+    )
+    fake.table("categories").rows.append({"id": CATEGORY_ID, "prohibited": False})
     # Cap machinery reads these.
     fake.table("vendor_listings")
     fake.table("orders")
@@ -308,14 +322,24 @@ def _stub_listing_creation(
 
     from app.routers.vendor_listings import ListingCreateResponse
 
-    def fake_create(service_client: Any, *, vendor: dict[str, Any], body: Any) -> Any:
+    def fake_create(
+        service_client: Any, *, vendor: dict[str, Any], body: Any, insert_listing: Any = None
+    ) -> Any:
+        assert insert_listing is not None
         captured["vendor_id"] = vendor["id"]
         captured["body"] = body
+        service_client.client.table("vendor_listings").insert(
+            {
+                "id": "99999999-9999-9999-9999-999999999999",
+                "product_id": body.product_id,
+                "status": status,
+            }
+        ).execute()
         return ListingCreateResponse(
             listing_id="99999999-9999-9999-9999-999999999999",
             mode=body.mode,
             status=status,
-            product_id=None,
+            product_id=body.product_id,
             product_status=None,
             commission=None,
         )
@@ -333,6 +357,7 @@ def test_handoff_never_publishes() -> None:
     assert request.publish is False
     assert request.mode == "attach"
     assert request.product_id == PRODUCT_ID
+    assert request.product_class == "A"
 
 
 def test_handoff_refuses_used_condition() -> None:
@@ -391,18 +416,18 @@ def test_handoff_tracked_stock_carries_quantity() -> None:
     assert request.stock_qty == 4
 
 
-def test_handoff_made_to_order_maps_to_always_available() -> None:
-    request = handoff.build_listing_request(
-        {
-            "title": "Cake",
-            "price_ngwee": 25_000,
-            "condition": "new",
-            "stock_mode": "made_to_order",
-        },
-        product_id=PRODUCT_ID,
-    )
-    assert request.stock_mode == "always_available"
-    assert request.stock_qty is None
+def test_handoff_made_to_order_is_not_silently_reclassified() -> None:
+    with pytest.raises(handoff.DraftNotSubmittable) as exc:
+        handoff.build_listing_request(
+            {
+                "title": "Cake",
+                "price_ngwee": 25_000,
+                "condition": "new",
+                "stock_mode": "made_to_order",
+            },
+            product_id=PRODUCT_ID,
+        )
+    assert exc.value.details["reason"] == "unsupported_mapping"
 
 
 def test_handoff_preserves_exact_ngwee() -> None:
@@ -657,8 +682,11 @@ def test_submit_is_idempotent(
         headers=_headers(),
         json={"product_id": PRODUCT_ID},
     )
-    # A legacy retry without a body still retrieves the already-created listing.
-    second = client.post(f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers())
+    second = client.post(
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
+    )
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -694,7 +722,11 @@ def test_submit_requires_ready_state(
     _stub_caps(monkeypatch)
     _stub_listing_creation(monkeypatch)
 
-    response = client.post(f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers())
+    response = client.post(
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
+    )
     assert response.status_code == 409
 
 
@@ -723,7 +755,11 @@ def test_submit_of_used_condition_draft_is_refused(
     _stub_caps(monkeypatch)
     _stub_listing_creation(monkeypatch)
 
-    response = client.post(f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers())
+    response = client.post(
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
+    )
     assert response.status_code == 422
     assert response.json()["error"]["details"]["reason"] == "unsupported_condition"
 

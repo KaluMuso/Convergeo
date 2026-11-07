@@ -15,17 +15,14 @@ import {
   MiniCartDrawer,
   closeMiniCart,
   openMiniCart,
-  refreshCart,
+  resetCartClientForTests,
   setLastAddedMessage,
   setStoreStateForTests,
 } from "./mini-cart-drawer";
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: vi.fn(async () => ({
-    auth: {
-      getSession: async () => ({ data: { session: null } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
-    },
+    auth: { getSession: async () => ({ data: { session: null } }) },
   })),
 }));
 
@@ -87,6 +84,7 @@ function renderInIntl(ui: React.ReactElement) {
 }
 
 beforeEach(() => {
+  resetCartClientForTests();
   vi.mocked(getApiBaseUrl).mockReturnValue("http://localhost:8000");
   vi.stubGlobal(
     "fetch",
@@ -118,17 +116,6 @@ afterEach(() => {
 });
 
 describe("MiniCartDrawer a11y", () => {
-  it("fails closed before fetch when the API base is missing", async () => {
-    vi.mocked(getApiBaseUrl).mockReturnValue("");
-    expect(await refreshCart()).toBeNull();
-    expect(fetch).not.toHaveBeenCalled();
-    openMiniCart();
-    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
-    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
-    expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
   it("exposes dialog semantics, close control, and live region for ATC", async () => {
     const user = userEvent.setup();
     setLastAddedMessage("Added to cart");
@@ -157,6 +144,15 @@ describe("MiniCartDrawer a11y", () => {
 
     expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
     expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
+  });
+
+  it("does not fetch a relative cart URL when the API origin is unavailable", async () => {
+    vi.mocked(getApiBaseUrl).mockReturnValue("");
+    openMiniCart();
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
+
+    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("CartNavTrigger opens the drawer with a 44px target", async () => {

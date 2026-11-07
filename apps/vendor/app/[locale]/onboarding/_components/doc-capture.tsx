@@ -30,19 +30,41 @@ export function DocCapture({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const attachedVideoRef = useRef<HTMLVideoElement | null>(null);
+  const lifecycle = useRef({ mounted: false, generation: 0 });
+  const pendingFileRef = useRef<File | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(existingPreviewUrl);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isCurrentCamera = useCallback(
+    (generation: number) =>
+      lifecycle.current.mounted && lifecycle.current.generation === generation,
+    [],
+  );
+
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    // Invalidate pending acquisition, playback and canvas callbacks before release.
+    lifecycle.current.generation += 1;
+    const stream = streamRef.current;
     streamRef.current = null;
-    setCameraActive(false);
+    const video = attachedVideoRef.current;
+    attachedVideoRef.current = null;
+    if (video?.srcObject === stream) {
+      video.srcObject = null;
+    }
+    stream?.getTracks().forEach((track) => track.stop());
+    if (lifecycle.current.mounted) {
+      setCameraActive(false);
+    }
   }, []);
 
   useEffect(() => {
+    lifecycle.current.mounted = true;
     return () => {
+      lifecycle.current.mounted = false;
+      pendingFileRef.current = null;
       stopCamera();
     };
   }, [stopCamera]);
@@ -54,8 +76,13 @@ export function DocCapture({
   }, [existingPreviewUrl]);
 
   const startCamera = useCallback(async () => {
+    if (!lifecycle.current.mounted || disabled) {
+      return;
+    }
     setError(null);
     stopCamera();
+    const generation = lifecycle.current.generation;
+    pendingFileRef.current = null;
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setError("Camera not available on this device.");
@@ -67,23 +94,39 @@ export function DocCapture({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      if (!isCurrentCamera(generation)) {
+        // This stream was never owned by the mounted capture; release it directly.
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        attachedVideoRef.current = video;
+        video.srcObject = stream;
+        await video.play();
+      }
+      if (!isCurrentCamera(generation)) {
+        // stopCamera already released an attached stream on replacement/unmount.
+        return;
       }
       setCameraActive(true);
       setPreviewUrl(null);
       setPendingFile(null);
     } catch {
+      if (!isCurrentCamera(generation)) {
+        return;
+      }
+      stopCamera();
       setError("Could not access camera. Check permissions.");
     }
-  }, [facingMode, stopCamera]);
+  }, [disabled, facingMode, isCurrentCamera, stopCamera]);
 
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) {
+    const generation = lifecycle.current.generation;
+    if (!video || !canvas || !streamRef.current || !isCurrentCamera(generation) || disabled) {
       return;
     }
 
@@ -98,10 +141,11 @@ export function DocCapture({
     ctx.drawImage(video, 0, 0, width, height);
     canvas.toBlob(
       (blob) => {
-        if (!blob) {
+        if (!blob || !isCurrentCamera(generation)) {
           return;
         }
         const file = new File([blob], `capture-${Date.now()}.jpg`, { type: "image/jpeg" });
+        pendingFileRef.current = file;
         setPendingFile(file);
         setPreviewUrl(URL.createObjectURL(blob));
         stopCamera();
@@ -109,20 +153,27 @@ export function DocCapture({
       "image/jpeg",
       0.85,
     );
-  }, [stopCamera]);
+  }, [disabled, isCurrentCamera, stopCamera]);
 
   const confirmPhoto = useCallback(() => {
-    if (pendingFile) {
-      onCapture(pendingFile);
+    const file = pendingFileRef.current;
+    if (file && lifecycle.current.mounted && !disabled) {
+      // Consume synchronously so repeated confirmation cannot upload the same file.
+      pendingFileRef.current = null;
       setPendingFile(null);
+      onCapture(file);
     }
-  }, [onCapture, pendingFile]);
+  }, [disabled, onCapture]);
 
   const retake = useCallback(() => {
+    if (!lifecycle.current.mounted || disabled) {
+      return;
+    }
+    pendingFileRef.current = null;
     setPendingFile(null);
     setPreviewUrl(null);
     void startCamera();
-  }, [startCamera]);
+  }, [disabled, startCamera]);
 
   return (
     <div className="flex flex-col gap-3">

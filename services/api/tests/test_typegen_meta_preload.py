@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 PRELOAD = ROOT / "scripts/ci/preload-typegen-meta.sh"
@@ -180,24 +181,30 @@ def test_workflow_keeps_the_qualified_stack_and_comparison_blocking() -> None:
     match = re.search(r"(?ms)^  db:\n.*?(?=^  [a-z0-9-]+:\n|\Z)", workflow)
     assert match is not None
     db = match.group(0)
-    positions = [
-        db.index(name)
-        for name in [
-            "Setup Supabase CLI",
-            "Start local database",
-            "Reset local database",
-            "Preload qualified postgres-meta from official GHCR",
-            "Regenerate types",
-            "Fail on stale committed types",
-        ]
+    steps = yaml.safe_load(workflow)["jobs"]["db"]["steps"]
+    by_name = {step["name"]: step for step in steps}
+    qualifying = [
+        "Setup Supabase CLI",
+        "Prepare pinned Supabase-compatible database",
+        "Preload qualified postgres-meta from official GHCR",
+        "Regenerate types",
+        "Fail on stale committed types",
     ]
+    positions = [steps.index(by_name[name]) for name in qualifying]
     assert positions == sorted(positions)
-    assert "version: 2.109.1" in db
-    assert "run: bash scripts/ci/preload-typegen-meta.sh" in db
-    assert "run: bash scripts/gen-types.sh" in db
-    assert "run: git diff --exit-code packages/types/src/db.ts" in db
+    for name in qualifying:
+        # Qualifying steps are never conditional or waived; only evidence and
+        # cleanup steps after them may run with always()/!cancelled().
+        assert "if" not in by_name[name] and "continue-on-error" not in by_name[name]
+    assert by_name["Setup Supabase CLI"]["with"]["version"] == "2.109.1"
+    assert by_name["Preload qualified postgres-meta from official GHCR"]["run"] == (
+        "bash scripts/ci/preload-typegen-meta.sh"
+    )
+    assert 'bash scripts/gen-types.sh' in by_name["Regenerate types"]["run"]
+    assert by_name["Fail on stale committed types"]["run"] == (
+        "git diff --exit-code packages/types/src/db.ts"
+    )
     assert "continue-on-error:" not in db
-    assert "if:" not in db
     assert "|| true" not in db
     assert "SUPABASE_INTERNAL_IMAGE_REGISTRY" not in db
     assert "permissions:" not in db

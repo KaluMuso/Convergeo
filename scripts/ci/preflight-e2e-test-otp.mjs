@@ -11,6 +11,9 @@
 import { SEED } from "../../e2e/fixtures/seed.generated.ts";
 import { missingOutboundApproval } from "../../e2e/fixtures/outbound-approval.ts";
 
+const STAGING_AUTH_URL = "https://iyasmrmbcrvlfxpzescb.supabase.co";
+const runs = new WeakMap();
+
 const STRICT_CERT_MODES = new Set(["integrated-staging", "production-readiness"]);
 
 const CANONICAL_PERSONAS = [
@@ -31,7 +34,7 @@ const CANONICAL_PERSONAS = [
 ];
 
 function str(name, env = process.env) {
-  return (env[name] ?? "").trim();
+  return typeof env[name] === "string" ? env[name].trim() : "";
 }
 
 function certificationMode(env = process.env) {
@@ -51,10 +54,10 @@ function maskPhoneTail(phone) {
 }
 
 function toAuthPhone(phone) {
-  const trimmed = phone.trim();
-  if (trimmed.startsWith("+")) return trimmed;
-  if (/^\d+$/.test(trimmed)) return `+${trimmed}`;
-  throw new Error("phone is not in international format");
+  const value = typeof phone === "string" ? phone.trim() : "";
+  const normalized = value.startsWith("+") ? value : `+${value}`;
+  if (!/^\+260[79]\d{8}$/.test(normalized)) throw new Error("invalid synthetic phone");
+  return normalized;
 }
 
 function sameCanonicalAuthPhone(actual, expected) {
@@ -81,8 +84,18 @@ function resolvePersonas(env = process.env) {
 }
 
 export function evaluatePreflightConfig(personas, { strict }) {
+  try {
+    for (const persona of personas) toAuthPhone(persona.phone);
+  } catch {
+    return { verdict: "FAIL", detail: "invalid synthetic phone fixture" };
+  }
   const missingOtps = personas.filter((persona) => !persona.otp).map((persona) => persona.otpEnv);
-  const configured = personas.filter((persona) => persona.otp);
+  const configured = personas
+    .filter((persona) => persona.otp)
+    .map(({ label, otpEnv }) => ({ label, otpEnv }));
+  if (personas.some((persona) => persona.otp && !/^\d{6}$/.test(persona.otp))) {
+    return { verdict: "FAIL", detail: "test OTP must contain exactly six digits" };
+  }
 
   if (strict) {
     if (missingOtps.length > 0) {
@@ -114,6 +127,69 @@ export function evaluatePreflightConfig(personas, { strict }) {
   return { verdict: "READY", configured };
 }
 
+export function evaluatePhoneOtpSafety(env = process.env) {
+  if (
+    str("SMS_OTP_TRANSPORT", env).toLowerCase() !== "waha" ||
+    str("WAHA_OTP_ENABLED", env).toLowerCase() !== "true"
+  ) {
+    return {
+      verdict: "FAIL",
+      detail: "phone OTP requires an explicit enabled WAHA transport declaration",
+    };
+  }
+  const missing = ["STAGING_SMS_SANDBOX_ATTESTED", "STAGING_TEST_OTP_MAP_ATTESTED"].filter(
+    (name) => str(name, env).toLowerCase() !== "true",
+  );
+  return missing.length === 0
+    ? { verdict: "READY" }
+    : {
+        verdict: "FAIL",
+        detail: `phone OTP may reach the SMS hook: owner attestations required: ${missing.join(", ")}`,
+      };
+}
+
+function safeErrorCode(body) {
+  const code = body && typeof body === "object" ? (body.error_code ?? body.code) : undefined;
+  if (code === "otp_expired") return "expired";
+  if (code === "invalid_credentials" || code === "invalid_otp") return "invalid";
+  if (code === "over_sms_send_rate_limit" || code === "over_request_rate_limit") return "throttled";
+  return "rejected";
+}
+
+async function readMetadata(response) {
+  const text = await response.text();
+  if (text.length > 16384) throw new Error("metadata limit");
+  return JSON.parse(text);
+}
+
+// A 200 alone can be the wrong synthetic account or a token minted without the
+// role hook. Decode only the TLS Auth response to check its identity contract;
+// no token or claim value is retained in the result.
+function canonicalSessionIdentity(session, { userId, role, authPhone }) {
+  try {
+    const segments = session.access_token.split(".");
+    const claims =
+      segments.length === 3
+        ? JSON.parse(Buffer.from(segments[1], "base64url").toString("utf8"))
+        : null;
+    const roles = claims?.app_metadata?.roles;
+    return (
+      session.user.id === userId &&
+      sameCanonicalAuthPhone(session.user.phone, authPhone) &&
+      claims?.sub === userId &&
+      sameCanonicalAuthPhone(claims?.phone, authPhone) &&
+      claims?.aud === "authenticated" &&
+      Array.isArray(roles) &&
+      roles.includes(role) &&
+      !roles.includes("admin") &&
+      (role !== "customer" || !roles.includes("vendor"))
+    );
+  } catch {
+    // Malformed session bodies fail closed without reflecting token material.
+    return false;
+  }
+}
+
 async function verifyTestOtpPersona({
   label,
   phone,
@@ -122,112 +198,103 @@ async function verifyTestOtpPersona({
   otp,
   supabaseUrl,
   anonKey,
-  fetchImpl = fetch,
+  fetchImpl,
 }) {
   const authPhone = toAuthPhone(phone);
-  const sendRes = await fetchImpl(`${supabaseUrl}/auth/v1/otp`, {
-    method: "POST",
-    redirect: "error",
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ phone: authPhone, create_user: false }),
-  });
-
-  if (!sendRes.ok) {
-    return {
-      ok: false,
-      label,
-      reason: `otp send failed (HTTP ${sendRes.status})`,
-      phoneTail: maskPhoneTail(authPhone),
-    };
-  }
-
-  const verifyRes = await fetchImpl(`${supabaseUrl}/auth/v1/verify`, {
-    method: "POST",
-    redirect: "error",
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      phone: authPhone,
-      token: otp,
-      type: "sms",
-    }),
-  });
-
-  if (!verifyRes.ok) {
-    return {
-      ok: false,
-      label,
-      reason: "test-OTP verify failed — hosted Auth test_otp mapping likely missing or wrong",
-      phoneTail: maskPhoneTail(authPhone),
-    };
-  }
-
-  // A 200 alone can be an empty response, the wrong synthetic account, or a
-  // token minted without the role hook. Decode only the TLS Auth response to
-  // check its identity contract; this is not a substitute for hosted API/DB
-  // authorization proof and no token or claim value is retained in the result.
-  let validSession = false;
+  let deliveryAccepted = false;
+  const result = { label, phoneTail: maskPhoneTail(authPhone) };
+  const request = (endpoint, body) =>
+    fetchImpl(`${supabaseUrl}/auth/v1/${endpoint}`, {
+      method: "POST",
+      redirect: "error",
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
   try {
-    const session = await verifyRes.json();
-    const token = session?.access_token;
-    const segments = typeof token === "string" ? token.split(".") : [];
-    const claims =
-      segments.length === 3
-        ? JSON.parse(Buffer.from(segments[1], "base64url").toString("utf8"))
-        : null;
-    const roles = claims?.app_metadata?.roles;
-    validSession =
-      session?.user?.id === userId &&
-      sameCanonicalAuthPhone(session.user.phone, authPhone) &&
-      claims?.sub === userId &&
-      sameCanonicalAuthPhone(claims?.phone, authPhone) &&
-      claims?.aud === "authenticated" &&
-      Array.isArray(roles) &&
-      roles.includes(role) &&
-      !roles.includes("admin") &&
-      (role !== "customer" || !roles.includes("vendor"));
+    const sendRes = await request("otp", { phone: authPhone, create_user: false });
+    if (sendRes.redirected || !sendRes.ok) {
+      return {
+        ...result,
+        ok: false,
+        deliveryAccepted: false,
+        confirmed: false,
+        reason: "otp send failed",
+        errorCode: "rejected",
+      };
+    }
+    deliveryAccepted = true;
+    const verifyRes = await request("verify", { phone: authPhone, token: otp, type: "sms" });
+    if (verifyRes.redirected || !verifyRes.ok) {
+      let errorCode = "rejected";
+      try {
+        errorCode = safeErrorCode(await readMetadata(verifyRes));
+      } catch {
+        /* No raw body. */
+      }
+      return {
+        ...result,
+        ok: false,
+        deliveryAccepted,
+        confirmed: false,
+        reason: "test-OTP verify failed",
+        errorCode,
+      };
+    }
+    const data = await readMetadata(verifyRes);
+    const user = data?.user;
+    if (
+      typeof data?.access_token !== "string" ||
+      !data.access_token.trim() ||
+      typeof user?.id !== "string" ||
+      !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(user.id) ||
+      typeof user?.phone !== "string" ||
+      toAuthPhone(user.phone) !== authPhone ||
+      !canonicalSessionIdentity(data, { userId, role, authPhone })
+    ) {
+      return {
+        ...result,
+        ok: false,
+        deliveryAccepted,
+        confirmed: false,
+        reason: "test-OTP verify failed: session confirmation missing",
+        errorCode: "rejected",
+      };
+    }
+    return { ...result, ok: true, deliveryAccepted, confirmed: true };
   } catch {
-    // Malformed session bodies fail closed without reflecting token material.
-  }
-  if (!validSession) {
     return {
+      ...result,
       ok: false,
-      label,
-      reason: "test-OTP session identity or role claim mismatch",
-      phoneTail: maskPhoneTail(authPhone),
+      deliveryAccepted,
+      confirmed: false,
+      reason: "phone OTP interrupted; inspect state before another attempt",
+      errorCode: "interrupted",
     };
   }
-
-  return { ok: true, label, phoneTail: maskPhoneTail(authPhone) };
 }
 
 export async function runPreflight(env = process.env, options = {}) {
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const supabaseUrl = str("SUPABASE_URL", env) || str("STAGING_SUPABASE_URL", env);
-  const anonKey = str("SUPABASE_ANON_KEY", env) || str("STAGING_SUPABASE_ANON_KEY", env);
   const personas = resolvePersonas(env);
-  const strict = options.strict ?? strictRequired(env);
-  const config = evaluatePreflightConfig(personas, { strict });
-
-  if (config.verdict === "FAIL" || config.verdict === "SKIPPED") {
-    return config;
+  const config = evaluatePreflightConfig(personas, {
+    strict: options.strict ?? strictRequired(env),
+  });
+  if (config.verdict !== "READY") return config;
+  const safety = evaluatePhoneOtpSafety(env);
+  if (safety.verdict !== "READY") return safety;
+  const supabaseUrl = (str("SUPABASE_URL", env) || str("STAGING_SUPABASE_URL", env)).replace(
+    /\/$/,
+    "",
+  );
+  const anonKey = str("SUPABASE_ANON_KEY", env) || str("STAGING_SUPABASE_ANON_KEY", env);
+  if (supabaseUrl !== STAGING_AUTH_URL || !anonKey) {
+    return { verdict: "FAIL", detail: "approved staging Auth target and anon key are required" };
   }
-
-  if (!supabaseUrl || !anonKey) {
-    return {
-      verdict: "FAIL",
-      detail:
-        "SUPABASE_URL and SUPABASE_ANON_KEY (or STAGING_* equivalents) are required for test-OTP preflight",
-    };
-  }
-
   // Validate the complete approved recipient set and sandbox target before
   // the first /auth/v1/otp POST. Test-OTP credentials do not imply consent.
   const missingApproval = [
@@ -247,39 +314,30 @@ export async function runPreflight(env = process.env, options = {}) {
       detail: `outbound OTP approval required: ${missingApproval.join(", ")}`,
     };
   }
-
-  const results = [];
-  for (const persona of config.configured) {
-    const result = await verifyTestOtpPersona({
-      label: persona.label,
-      phone: persona.phone,
-      userId: persona.userId,
-      role: persona.role,
-      otp: persona.otp,
-      supabaseUrl,
-      anonKey,
-      fetchImpl,
-    });
-    results.push(result);
-    // A failed first persona makes the preflight unusable. An interrupted run
-    // must not send another OTP to the second synthetic recipient.
-    if (!result.ok) break;
-  }
-
-  const failed = results.filter((result) => !result.ok);
-  if (failed.length > 0) {
+  // Repeated calls in this process share the attempt and its sanitized result.
+  // Neither acceptance nor an interrupted request authorizes a resend/retry.
+  if (runs.has(env)) return runs.get(env);
+  const attempt = Promise.resolve().then(async () => {
+    const results = [];
+    for (const persona of personas) {
+      const result = await verifyTestOtpPersona({
+        ...persona,
+        supabaseUrl,
+        anonKey,
+        fetchImpl: options.fetchImpl ?? fetch,
+      });
+      results.push(result);
+      if (!result.ok)
+        return { verdict: "FAIL", detail: `${result.label}: ${result.reason}`, results };
+    }
     return {
-      verdict: "FAIL",
-      detail: failed.map((result) => `${result.label}: ${result.reason}`).join("; "),
+      verdict: "PASS",
+      detail: `verified ${results.length} synthetic test-OTP persona(s)`,
       results,
     };
-  }
-
-  return {
-    verdict: "PASS",
-    detail: `verified ${results.length} synthetic test-OTP persona(s)`,
-    results,
-  };
+  });
+  runs.set(env, attempt);
+  return attempt;
 }
 
 async function main() {
@@ -306,10 +364,8 @@ async function main() {
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"));
 if (isMain) {
-  main().catch((err) => {
-    console.error(
-      `::error::E2E test-OTP preflight crashed: ${err instanceof Error ? err.message : err}`,
-    );
+  main().catch(() => {
+    console.error("::error::E2E test-OTP preflight stopped; details suppressed");
     process.exit(1);
   });
 }

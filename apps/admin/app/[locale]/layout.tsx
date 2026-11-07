@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { resolveAdminNavCapabilities } from "../../lib/admin-nav-capabilities";
 import { SentryInit } from "../sentry-init";
 
 import { AdminShell } from "./_components/admin-shell";
@@ -55,7 +54,6 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     admin: adminBundle.admin,
     services: adminBundle.services,
   };
-  const navCapabilities = resolveAdminNavCapabilities();
 
   return (
     <html lang={locale} className={fontVariables()}>
@@ -69,9 +67,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
             {/* Authenticated chrome; renders bare children on the login route. */}
-            <AdminShell locale={locale} capabilities={navCapabilities}>
-              {children}
-            </AdminShell>
+            <AdminShell locale={locale}>{children}</AdminShell>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

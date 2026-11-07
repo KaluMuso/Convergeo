@@ -70,6 +70,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_roles: {
+        Row: {
+          created_at: string
+          key: string
+          name: string
+          permissions: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          name: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          name?: string
+          permissions?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -6334,6 +6358,19 @@ export type Database = {
         }[]
       }
       has_role: { Args: { required_role: string }; Returns: boolean }
+      insert_intake_class_a_listing: {
+        Args: {
+          p_expected_category_id: string
+          p_listing_payload: Json
+          p_product_id: string
+          p_vendor_id: string
+        }
+        Returns: {
+          id: string
+          product_id: string
+          status: string
+        }[]
+      }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       listing_line_total_ngwee: {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
@@ -6342,6 +6379,17 @@ export type Database = {
       lock_payment_checkout_scope: {
         Args: { p_checkout: string }
         Returns: undefined
+      }
+      manage_admin_role: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_key: string
+          p_name?: string
+          p_permissions?: string[]
+          p_target?: string
+        }
+        Returns: Json
       }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       order_has_collected_money: { Args: { p_order: string }; Returns: boolean }

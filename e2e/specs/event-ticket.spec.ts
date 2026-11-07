@@ -164,7 +164,14 @@ test.describe("event · ticket lifecycle", () => {
     });
     if (!vendorOtpReady() || !scannerPin || missingApproval.length) {
       const missing: string[] = [];
-      if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
+      if (!vendorOtpReady())
+        missing.push(
+          "E2E_VENDOR_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        );
       if (!scannerPin) missing.push("E2E_TICKET_PIN");
       missing.push(...missingApproval);
       const gate = resolveGate({

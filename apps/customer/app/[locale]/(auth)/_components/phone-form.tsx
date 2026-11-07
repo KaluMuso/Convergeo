@@ -135,21 +135,23 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login", nextParam }
               aria-label={labels.countryCode}
             />
           </div>
-          <Input
-            size="lg"
-            className="min-w-0 flex-1 font-mono"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            placeholder={labels.phonePlaceholder}
-            aria-label={labels.nationalNumber}
-            aria-required
-            value={nationalNumber}
-            error={Boolean(errorMessage)}
-            onChange={(event) => {
-              setNationalNumber(normalizeNationalNumber(event.target.value));
-            }}
-          />
+          <div className="min-w-0 flex-1">
+            <Input
+              size="lg"
+              className="font-mono"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder={labels.phonePlaceholder}
+              aria-label={labels.nationalNumber}
+              aria-required
+              value={nationalNumber}
+              error={Boolean(errorMessage)}
+              onChange={(event) => {
+                setNationalNumber(normalizeNationalNumber(event.target.value));
+              }}
+            />
+          </div>
         </div>
       </FormField>
 

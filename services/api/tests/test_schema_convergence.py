@@ -74,7 +74,10 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261001120100",
     "20261001120200",
     "20261006160000",
+    "20261009100000",
     "20261009110000",
+    "20261009124801",
+    "20261011120000",
 ]
 
 def _module() -> Any:
@@ -114,6 +117,15 @@ def test_v1_profile_is_d33_d34_exact_and_blocks_future_activation() -> None:
 def test_repository_migrations_have_unique_versions_and_manifest_is_deterministic() -> None:
     migrations = schema.repository_migrations(REPO_ROOT / "supabase" / "migrations")
     assert len(migrations) == len({migration.version for migration in migrations})
+    # Bind the expected repair union to actual canonical SQL files.
+    sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
+    actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
+    assert len(sql_files) == len(migrations) == 118
+    assert [migration.version for migration in migrations] == actual_versions
+    repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
+    assert actual_versions[-4:] == repairs
+    assert all(path.stat().st_size > 0 for path in sql_files)
+
     assert schema.manifest_digest(migrations, _manifest()) == schema.manifest_digest(
         migrations, _manifest()
     )
@@ -311,8 +323,7 @@ def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> N
     assert plan.schema_apply_required is True
     assert plan.truly_pending_repository_migrations == POST_REPAIR_PENDING_VERSIONS
     assert any(
-        "record_listing_view_defaults" in item
-        for item in plan.pending_migration_physical_drift
+        "record_listing_view_defaults" in item for item in plan.pending_migration_physical_drift
     )
     assert plan.schema_repair_required is False
 
@@ -422,9 +433,7 @@ def test_wrong_record_listing_view_signature_blocks() -> None:
     bad_functions.pop(six_arg)
     bad_functions[four_arg] = {
         "security": "definer",
-        "arguments": (
-            "p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text"
-        ),
+        "arguments": ("p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text"),
         "search_path": ["public"],
         "grants": ["service_role"],
     }
@@ -488,9 +497,7 @@ def test_all_execute_grants_missing_blocks() -> None:
     state = _physical_state(PHYSICAL_POST_CANONICAL)
     bad = dict(state)
     bad_functions = dict(state["functions"])
-    key = (
-        "private.is_verified_business(uid uuid)"
-    )
+    key = "private.is_verified_business(uid uuid)"
     bad_functions[key] = {
         **bad_functions[key],
         "grants": [],

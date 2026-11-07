@@ -20,6 +20,41 @@ on:
           - vendor-auth
           - checkout-honesty
           - performance
+          - email-diagnostic
+      email_candidate_sha:
+        description: "Email diagnostic only: full current staging SHA"
+        required: false
+        type: string
+      email_source_run_id:
+        description: "Email diagnostic only: successful manual Deploy staging run ID"
+        required: false
+        type: number
+      email_source_run_attempt:
+        description: "Email diagnostic only: successful deployment attempt"
+        required: false
+        type: number
+      email_source_artifact_id:
+        description: "Email diagnostic only: exact authenticated proof artifact ID"
+        required: false
+        type: number
+      owner_provisioned_readiness:
+        description: "Email diagnostic only: owner verified canonical synthetic email accounts and password secrets"
+        required: false
+        default: not-ready
+        type: choice
+        options: [not-ready, ready]
+      phone_transport_readiness:
+        description: "Email diagnostic only: owner verified hosted phone/SMS cannot send live messages"
+        required: false
+        default: unverified
+        type: choice
+        options: [unverified, disabled]
+      payment_outbound_readiness:
+        description: "Email diagnostic only: owner verified sandbox payment target and disabled payout/dispatch"
+        required: false
+        default: unverified
+        type: choice
+        options: [unverified, verified-safe]
 
 permissions:
   actions: read
@@ -49,9 +84,49 @@ jobs:
             exit 1
           fi
 
+      - name: Require SMS sandbox and hosted test-OTP attestations before deployment
+        if: ${{ inputs.focus_group != 'email-diagnostic' }}
+        env:
+          SMS_OTP_TRANSPORT: ${{ vars.SMS_OTP_TRANSPORT || 'disabled' }}
+          WAHA_OTP_ENABLED: ${{ vars.WAHA_OTP_ENABLED || 'false' }}
+          STAGING_SMS_SANDBOX_ATTESTED: ${{ vars.STAGING_SMS_SANDBOX_ATTESTED }}
+          STAGING_TEST_OTP_MAP_ATTESTED: ${{ vars.STAGING_TEST_OTP_MAP_ATTESTED }}
+        run: |
+          set -euo pipefail
+          if [ "${SMS_OTP_TRANSPORT}" != "waha" ] || [ "${WAHA_OTP_ENABLED}" != "true" ] || [ "${STAGING_SMS_SANDBOX_ATTESTED}" != "true" ] || [ "${STAGING_TEST_OTP_MAP_ATTESTED}" != "true" ]; then
+            echo "::error::protected staging operation blocked before deployment: owner must verify ready WAHA transport and attest sandbox SMS credentials and the hosted test-OTP map"
+            exit 1
+          fi
+
+      - name: Require explicit email-only diagnostic readiness
+        if: ${{ inputs.focus_group == 'email-diagnostic' }}
+        env:
+          EMAIL_CANDIDATE_SHA: ${{ inputs.email_candidate_sha }}
+          EMAIL_SOURCE_RUN_ID: ${{ inputs.email_source_run_id }}
+          EMAIL_SOURCE_RUN_ATTEMPT: ${{ inputs.email_source_run_attempt }}
+          EMAIL_SOURCE_ARTIFACT_ID: ${{ inputs.email_source_artifact_id }}
+          OWNER_PROVISIONED_READINESS: ${{ inputs.owner_provisioned_readiness }}
+          PHONE_TRANSPORT_READINESS: ${{ inputs.phone_transport_readiness }}
+          PAYMENT_OUTBOUND_READINESS: ${{ inputs.payment_outbound_readiness }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != 'workflow_dispatch' ] || [ "${EMAIL_CANDIDATE_SHA}" != "${GITHUB_SHA}" ]; then
+            echo '::error::email diagnostic must be manually dispatched at the exact staging SHA'
+            exit 1
+          fi
+          if ! printf '%s' "${EMAIL_SOURCE_RUN_ID}" | grep -Eq '^[1-9][0-9]*$' || ! printf '%s' "${EMAIL_SOURCE_RUN_ATTEMPT}" | grep -Eq '^[1-9][0-9]*$' || ! printf '%s' "${EMAIL_SOURCE_ARTIFACT_ID}" | grep -Eq '^[1-9][0-9]*$'; then
+            echo '::error::email diagnostic requires a concrete deployment run and attempt'
+            exit 1
+          fi
+          if [ "${OWNER_PROVISIONED_READINESS}" != 'ready' ] || [ "${PHONE_TRANSPORT_READINESS}" != 'disabled' ] || [ "${PAYMENT_OUTBOUND_READINESS}" != 'verified-safe' ]; then
+            echo '::error::email diagnostic owner readiness attestations are incomplete'
+            exit 1
+          fi
+
   deploy:
     name: Deploy and prove candidate
     needs: authorize
+    if: ${{ inputs.focus_group != 'email-diagnostic' }}
     uses: ./.github/workflows/deploy-staging.yml
     permissions:
       actions: read
@@ -69,7 +144,7 @@ jobs:
   e2e:
     name: Canonical setup and selected E2E
     needs: deploy
-    if: ${{ needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' }}
+    if: ${{ inputs.focus_group != 'email-diagnostic' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' }}
     uses: ./.github/workflows/e2e.yml
     permissions:
       actions: read
@@ -87,10 +162,37 @@ jobs:
       focus_group: ${{ inputs.focus_group || 'full' }}
     secrets: inherit
 
+  email_diagnostic:
+    name: Owner-provisioned email login diagnostic
+    needs: authorize
+    if: ${{ inputs.focus_group == 'email-diagnostic' && needs.authorize.result == 'success' }}
+    uses: ./.github/workflows/staging-email-diagnostic.yml
+    permissions:
+      actions: read
+      contents: read
+    with:
+      internal_operation_id: ${{ format('{0}:{1}:{2}:{3}', github.repository_id, github.run_id, github.run_attempt, github.sha) }}
+      candidate_sha: ${{ inputs.email_candidate_sha }}
+      source_run_id: ${{ inputs.email_source_run_id }}
+      source_run_attempt: ${{ inputs.email_source_run_attempt }}
+      source_artifact_id: ${{ inputs.email_source_artifact_id }}
+      owner_provisioned_readiness: ${{ inputs.owner_provisioned_readiness }}
+      phone_transport_readiness: ${{ inputs.phone_transport_readiness }}
+      payment_outbound_readiness: ${{ inputs.payment_outbound_readiness }}
+    secrets:
+      E2E_CUSTOMER_EMAIL_PASSWORD: ${{ secrets.E2E_CUSTOMER_EMAIL_PASSWORD }}
+      E2E_VENDOR_EMAIL_PASSWORD: ${{ secrets.E2E_VENDOR_EMAIL_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+      VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+      VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+
   certify:
     name: Certify completed full staging operation
     needs: [authorize, deploy, e2e]
-    if: ${{ needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && github.event_name == 'push' }}
+    if: ${{ inputs.focus_group != 'email-diagnostic' && needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -163,7 +265,7 @@ jobs:
   completion:
     name: One sanitized operation completion
     needs: [authorize, deploy, e2e]
-    if: ${{ always() }}
+    if: ${{ always() && inputs.focus_group != 'email-diagnostic' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -222,3 +324,38 @@ jobs:
           fi
           # This reporting job never replaces the deploy/E2E conclusions.
           exit 0
+
+  email_completion:
+    name: One sanitized email diagnostic completion
+    needs: [authorize, email_diagnostic]
+    if: ${{ always() && inputs.focus_group == 'email-diagnostic' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Record diagnostic completion without release eligibility
+        env:
+          CANDIDATE_SHA: ${{ inputs.email_candidate_sha }}
+          SOURCE_RUN_ID: ${{ inputs.email_source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.email_source_run_attempt }}
+          SOURCE_ARTIFACT_ID: ${{ inputs.email_source_artifact_id }}
+          AUTHORIZE_OUTCOME: ${{ needs.authorize.result }}
+          DIAGNOSTIC_OUTCOME: ${{ needs.email_diagnostic.result }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/email_diagnostic_handoff.py \
+            --completion-summary "${GITHUB_STEP_SUMMARY}" \
+            --candidate-sha "${CANDIDATE_SHA}" \
+            --operation-sha "${GITHUB_SHA}" \
+            --operation-run-id "${GITHUB_RUN_ID}" \
+            --operation-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --run-id "${SOURCE_RUN_ID}" \
+            --attempt "${SOURCE_RUN_ATTEMPT}" \
+            --artifact-id "${SOURCE_ARTIFACT_ID}" \
+            --authorize-outcome "${AUTHORIZE_OUTCOME}" \
+            --diagnostic-outcome "${DIAGNOSTIC_OUTCOME}"

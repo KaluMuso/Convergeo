@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - cursor/release-kyc-auth-integration-20261008
+      - cursor/kyc-bootstrap-empty-20261008
     paths:
       - services/api/app/routers/kyc.py
       - services/api/tests/test_vendor_onboarding_beta.py

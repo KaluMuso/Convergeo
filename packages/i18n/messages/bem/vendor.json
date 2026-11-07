@@ -351,7 +351,7 @@
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
     },
     "title": "Create listing",
     "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
@@ -402,14 +402,19 @@
     },
     "quickList": {
       "heading": "Quick list",
-      "intro": "⚠ For commodities, unique items, and made-to-order offers that stand alone.",
+      "intro": "Save a draft for a unique used item or a made-to-order offer.",
       "titleLabel": "Listing title",
-      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "titlePlaceholder": "e.g. Used wooden chair",
       "publish": "Publish listing",
       "publishing": "Publishing…",
-      "descriptionLabel": "Description",
-      "descriptionHelp": "Describe this offer in at least 20 characters. Include the details buyers need.",
-      "draftNotice": "Standalone offers are saved as drafts. Review the category, release policy and any required photos before publishing."
+      "descriptionLabel": "Listing description",
+      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
+      "draftNotice": "Saving a draft does not publish the listing.",
+      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft…",
+      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
+      "categoriesUnavailable": "Categories are unavailable. Try again later."
     },
     "fields": {
       "priceLabel": "⚠ Your price (ZMW)",
@@ -468,7 +473,7 @@
       "live": "Listing is live!",
       "moderation": "Tumizenited for review — we will notify you on WhatsApp.",
       "evidence": "⚠ Draft saved. Add evidence photos before publishing.",
-      "draft": "Draft saved. Review the listing before publishing."
+      "draft": "Draft saved. This listing is not live."
     },
     "errors": {
       "required": "This field is required",
@@ -1830,7 +1835,10 @@
       "submitting": "Submitting…",
       "submitted": "Submitted for review. Convergeo will check it shortly.",
       "back": "Back to drafts",
-      "canonicalProduct": "Catalogue product"
+      "canonicalProduct": "Catalogue product",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
     },
     "fields": {
       "title": "Product name",
@@ -1873,7 +1881,13 @@
       "missing_quantity": "Add how many you have in stock.",
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
       "unsupported_stock_mode": "That stock option is not supported.",
-      "canonical_required": "Choose the matching active catalogue product before submitting this draft."
+      "canonical_required": "Choose the matching active catalogue product before submitting this draft.",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
   },
   "clips": {

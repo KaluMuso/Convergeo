@@ -2,10 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import vendorMessages from "../../../../../packages/i18n/messages/en/vendor.json";
 
-import {
-  resolveHonestStatusVariant,
-  resolveStatusVariant,
-} from "./_components/status-screen";
+import { resolveHonestStatusVariant, resolveStatusVariant } from "./_components/status-screen";
 import {
   docsRequiredForResubmit,
   isResubmitStatus,
@@ -14,17 +11,14 @@ import {
 } from "./_lib/kyc-client";
 import {
   DEFAULT_DRAFT,
+  clearLocalDraft,
   mergeDraftWithServer,
   readLocalDraft,
   resolveResumeStep,
   stepIndexFromKey,
   writeLocalDraft,
 } from "./_lib/persistence";
-import {
-  assertPrivateKycPath,
-  isPrivateKycPath,
-  type KycSignUploadResponse,
-} from "./_lib/storage";
+import { assertPrivateKycPath, isPrivateKycPath, type KycSignUploadResponse } from "./_lib/storage";
 import { PRIVATE_KYC_BUCKET } from "./_lib/types";
 
 function createLocalStorageMock(): Storage {
@@ -115,9 +109,7 @@ describe("step persistence", () => {
     expect(readLocalDraft(userId)?.businessName).toBe("Keyed Shop");
     expect(readLocalDraft("vendor-user-b")).toBeNull();
     expect(storage.getItem("vergeo5-vendor-onboarding")).toBeNull();
-    expect(
-      storage.getItem(`vergeo5-vendor-onboarding:${userId}`),
-    ).not.toBeNull();
+    expect(storage.getItem(`vergeo5-vendor-onboarding:${userId}`)).not.toBeNull();
   });
 
   it("returns to document validation if a resumed phone is invalid", () => {
@@ -132,26 +124,75 @@ describe("step persistence", () => {
       nrcPath: "kyc/vendor-a/nrc.jpg",
       selfiePath: "kyc/vendor-a/selfie.jpg",
     };
-    expect(
-      resolveResumeStep(draft, { resubmitMode: false, rejectedDocs: null }),
-    ).toBe(stepIndexFromKey("kyc"));
+    expect(resolveResumeStep(draft, { resubmitMode: false, rejectedDocs: null })).toBe(
+      stepIndexFromKey("kyc"),
+    );
+  });
+  it("clears only the submitting account's draft", () => {
+    writeLocalDraft(userId, { ...DEFAULT_DRAFT, businessName: "A Shop" });
+    writeLocalDraft("vendor-user-b", { ...DEFAULT_DRAFT, businessName: "B Shop" });
+    clearLocalDraft(userId);
+    expect(readLocalDraft(userId)).toBeNull();
+    expect(readLocalDraft("vendor-user-b")?.businessName).toBe("B Shop");
+  });
+
+  it("does not persist or read drafts without an account", () => {
+    writeLocalDraft("", { ...DEFAULT_DRAFT });
+    expect(readLocalDraft("")).toBeNull();
+    clearLocalDraft("");
+    expect(storage.length).toBe(0);
+  });
+
+  it.each(["null", "[]", "true", "bad json"])("rejects malformed local drafts: %s", (value) => {
+    storage.setItem(`vergeo5-vendor-onboarding:${userId}`, value);
+    expect(readLocalDraft(userId)).toBeNull();
+  });
+
+  it("sanitizes persisted types and bounds interrupted steps", () => {
+    storage.setItem(
+      `vergeo5-vendor-onboarding:${userId}`,
+      JSON.stringify({
+        ...DEFAULT_DRAFT,
+        step: 99,
+        businessName: 42,
+        legalName: {},
+        momoPhone: true,
+        nrcPath: [],
+      }),
+    );
+    const restored = readLocalDraft(userId)!;
+    expect(restored).toMatchObject({
+      step: 2,
+      businessName: "",
+      legalName: "",
+      momoPhone: "",
+      nrcPath: null,
+    });
+    expect(resolveResumeStep(restored, { resubmitMode: false, rejectedDocs: null })).toBe(0);
+  });
+
+  it("keeps storage failures from breaking server-backed actions", () => {
+    vi.stubGlobal("window", {
+      get localStorage() {
+        throw new Error("storage blocked");
+      },
+    });
+    expect(readLocalDraft(userId)).toBeNull();
+    expect(() => writeLocalDraft(userId, DEFAULT_DRAFT)).not.toThrow();
+    expect(() => clearLocalDraft(userId)).not.toThrow();
   });
 });
 
 describe("upload authz", () => {
   it("accepts private kyc paths under kyc/ prefix", () => {
-    expect(
-      isPrivateKycPath("kyc/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/nrc.jpg"),
-    ).toBe(true);
+    expect(isPrivateKycPath("kyc/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/nrc.jpg")).toBe(true);
     expect(assertPrivateKycPath("kyc/vendor/nrc.jpg")).toBeUndefined();
   });
 
   it("rejects public or traversal paths", () => {
     expect(isPrivateKycPath("public/listings/foo.jpg")).toBe(false);
     expect(isPrivateKycPath("kyc/../secrets.jpg")).toBe(false);
-    expect(() => assertPrivateKycPath("listings/foo.jpg")).toThrow(
-      /private bucket/i,
-    );
+    expect(() => assertPrivateKycPath("listings/foo.jpg")).toThrow(/private bucket/i);
   });
 
   it("requires private bucket in signed upload response", async () => {
@@ -159,8 +200,7 @@ describe("upload authz", () => {
       bucket: "public",
       path: "kyc/vendor/nrc.jpg",
       token: "tok",
-      signed_url:
-        "https://example.supabase.co/storage/v1/upload/sign/private/kyc/vendor/nrc.jpg",
+      signed_url: "https://example.supabase.co/storage/v1/upload/sign/private/kyc/vendor/nrc.jpg",
     };
 
     expect(signed.bucket).not.toBe(PRIVATE_KYC_BUCKET);

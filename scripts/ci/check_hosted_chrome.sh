@@ -2,11 +2,11 @@
 set -euo pipefail
 
 chrome_path=/opt/google/chrome/chrome
-chrome_version=155.0.8059.39
-package_version=155.0.8059.39-1
-package_sha256=c58aa0f2cd66179c9f050e062c882d27aa9b9f8c2b7c73fee3498560b5ed0b38
+chrome_version=155.0.8059.79
+package_version=155.0.8059.79-1
+package_sha256=b7726070ca707965e9a17b38e4f15ba283bf6f65c339626c092862af7b19badc
 google_key_fingerprint=EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796
-package_filename=pool/main/g/google-chrome-stable/google-chrome-stable_155.0.8059.39-1_amd64.deb
+package_filename=pool/main/g/google-chrome-stable/google-chrome-stable_155.0.8059.79-1_amd64.deb
 chrome_defaults=/etc/default/google-chrome
 chrome_sources_dir=/etc/apt/sources.list.d
 
@@ -57,36 +57,40 @@ import gzip
 import hashlib
 from pathlib import Path
 import sys
+import zlib
 
 root, expected_sha, expected_name, expected_version = sys.argv[1:]
-def require(condition):
+def require(condition, reason):
     if not condition:
-        raise SystemExit("Google Chrome package metadata mismatch")
+        raise SystemExit("Google Chrome package metadata mismatch: " + reason)
 
-release = (Path(root) / "InRelease").read_text()
-section = release.split("SHA256:\n", 1)[1].splitlines()
-entries = []
-for line in section:
-    if not line.startswith(" "):
-        break
-    entries.append(line.split())
-matches = [entry for entry in entries if len(entry) == 3 and entry[2] == "main/binary-amd64/Packages.gz"]
-require(len(matches) == 1)
-compressed = (Path(root) / "Packages.gz").read_bytes()
-require(int(matches[0][1]) == len(compressed))
-require(matches[0][0] == hashlib.sha256(compressed).hexdigest())
-records = gzip.decompress(compressed).decode().split("\n\n")
-packages = []
-for record in records:
-    fields = dict(line.split(": ", 1) for line in record.splitlines() if ": " in line)
-    if fields.get("Package") == "google-chrome-stable" and fields.get("Version") == expected_version:
-        packages.append(fields)
-require(len(packages) == 1)
-package = packages[0]
-require(package.get("Architecture") == "amd64")
-require(package.get("Filename") == expected_name)
-require(package.get("SHA256") == expected_sha)
-require(int(package.get("Size", "0")) == 143552428)
+try:
+    release = (Path(root) / "InRelease").read_text()
+    section = release.split("SHA256:\n", 1)[1].splitlines()
+    entries = []
+    for line in section:
+        if not line.startswith(" "):
+            break
+        entries.append(line.split())
+    matches = [entry for entry in entries if len(entry) == 3 and entry[2] == "main/binary-amd64/Packages.gz"]
+    require(len(matches) == 1, "index_record_count")
+    compressed = (Path(root) / "Packages.gz").read_bytes()
+    require(int(matches[0][1]) == len(compressed), "index_size")
+    require(matches[0][0] == hashlib.sha256(compressed).hexdigest(), "index_sha256")
+    records = gzip.decompress(compressed).decode().split("\n\n")
+    packages = []
+    for record in records:
+        fields = dict(line.split(": ", 1) for line in record.splitlines() if ": " in line)
+        if fields.get("Package") == "google-chrome-stable" and fields.get("Version") == expected_version:
+            packages.append(fields)
+    require(len(packages) == 1, "package_record_count")
+    package = packages[0]
+    require(package.get("Architecture") == "amd64", "package_architecture")
+    require(package.get("Filename") == expected_name, "package_filename")
+    require(package.get("SHA256") == expected_sha, "package_sha256")
+    require(int(package.get("Size", "0")) == 143638568, "package_size")
+except (OSError, ValueError, IndexError, EOFError, zlib.error):
+    raise SystemExit("Google Chrome package metadata mismatch: metadata_format") from None
 PY
 
   curl -fsSL --retry 2 --max-time 180 \
@@ -138,10 +142,10 @@ check_hosted_chrome() {
     fi
   fi
   case "$raw_product" in
-    154.0.8037.57 | 154.0.8037.97 | 155.0.8059.39) product=$raw_product ;;
+    154.0.8037.57 | 154.0.8037.97 | 155.0.8059.39 | 155.0.8059.79) product=$raw_product ;;
   esac
   case "$raw_package" in
-    154.0.8037.57-1 | 154.0.8037.97-1 | 155.0.8059.39-1) package=$raw_package ;;
+    154.0.8037.57-1 | 154.0.8037.97-1 | 155.0.8059.39-1 | 155.0.8059.79-1) package=$raw_package ;;
   esac
   printf 'Chrome preflight: ImageOS=%s ImageVersion=%s path=/opt/google/chrome/chrome executable=%s owner=%s product=%s package=%s\n' \
     "$image_os" "$image_version" "$executable" "$owner" "$product" "$package"
@@ -152,7 +156,7 @@ check_hosted_chrome() {
         "$product" == "$chrome_version" && "$package" == "$package_version" ]]; then
     return 0
   fi
-  printf 'Unsupported hosted Chrome image/package; require verified Google Chrome 155.0.8059.39-1 on an approved Ubuntu 24.04 image. No Lighthouse qualification was run.\n' >&2
+  printf 'Unsupported hosted Chrome image/package; require verified Google Chrome 155.0.8059.79-1 on an approved Ubuntu 24.04 image. No Lighthouse qualification was run.\n' >&2
   return 1
 }
 

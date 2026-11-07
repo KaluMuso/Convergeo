@@ -1,7 +1,10 @@
 """Disposable PostgreSQL contract test for the cart add transaction.
 
 Run with CART_IDEMPOTENCY_TEST_DATABASE_URL pointing at a local cart_idem_test
-database. The guard deliberately refuses any other database.
+database and a unique CART_IDEMPOTENCY_TEST_CLUSTER_NAME configured on the
+server. An owned Unix socket may be explicitly allowed with
+CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY. Routing overrides and mismatched actual
+clusters are rejected before destructive fixture DDL.
 """
 
 from __future__ import annotations
@@ -19,13 +22,31 @@ import psycopg
 import pytest
 
 DATABASE_URL = os.environ.get("CART_IDEMPOTENCY_TEST_DATABASE_URL", "")
+SOCKET_DIRECTORY = os.environ.get("CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY", "")
+CLUSTER_NAME = os.environ.get("CART_IDEMPOTENCY_TEST_CLUSTER_NAME", "")
 MIGRATION = (
     Path(__file__).resolve().parents[3]
     / "supabase/migrations/20261009110000_cart_add_idempotency.sql"
 )
 
 
-def _connection() -> psycopg.Connection:
+def _validated_target(url: str) -> dict[str, str | int | None]:
+    target = urlparse(url)
+    if target.scheme not in {"postgres", "postgresql"} or target.query:
+        pytest.fail("Cart idempotency DB test refuses URI query overrides")
+    info = psycopg.conninfo.conninfo_to_dict(url)
+    allowed_hosts = {"127.0.0.1", "localhost"}
+    if SOCKET_DIRECTORY and Path(SOCKET_DIRECTORY).is_absolute():
+        allowed_hosts.add(SOCKET_DIRECTORY)
+    if info.get("host") not in allowed_hosts or info.get("dbname") != "cart_idem_test":
+        pytest.fail("Cart idempotency DB test requires an explicit disposable local target")
+    if any(os.environ.get(key) for key in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE")):
+        pytest.fail("Cart idempotency DB test refuses inherited libpq routing overrides")
+    return info
+
+
+def _connection() -> psycopg.Connection[Any]:
+    _validated_target(DATABASE_URL)
     return psycopg.connect(DATABASE_URL)
 
 
@@ -33,10 +54,15 @@ def _connection() -> psycopg.Connection:
 def disposable_schema() -> None:
     if not DATABASE_URL:
         pytest.skip("Set CART_IDEMPOTENCY_TEST_DATABASE_URL for local PostgreSQL contract test")
-    target = urlparse(DATABASE_URL)
-    if target.hostname not in {"127.0.0.1", "localhost"} or target.path != "/cart_idem_test":
-        pytest.fail("Cart idempotency DB test requires a loopback cart_idem_test database")
+    _validated_target(DATABASE_URL)
+    if not CLUSTER_NAME.startswith("cart_idem_test-") or len(CLUSTER_NAME) < 32:
+        pytest.fail("Set a unique disposable CART_IDEMPOTENCY_TEST_CLUSTER_NAME")
     with _connection() as conn, conn.cursor() as cur:
+        # Bind destructive fixture DDL to the actual freshly owned cluster,
+        # rather than trusting URI spelling or an inherited connection option.
+        cur.execute("select current_database(), current_setting('cluster_name')")
+        if cur.fetchone() != ("cart_idem_test", CLUSTER_NAME):
+            pytest.fail("Cart idempotency DB fixture refuses an unverified cluster")
         cur.execute(
             "drop function if exists public.apply_cart_add_idempotent("
             "uuid,uuid,text,text,jsonb,uuid,integer,integer,uuid,bigint,boolean,uuid)"
@@ -67,7 +93,7 @@ def disposable_schema() -> None:
 
 
 def _call(
-    conn: psycopg.Connection,
+    conn: psycopg.Connection[Any],
     *,
     cart_id: str,
     user_id: str | None,
@@ -76,6 +102,8 @@ def _call(
     key: str,
     qty: int = 2,
     expected_qty: int | None = None,
+    expected_location_id: str | None = None,
+    location_id: str | None = None,
     body: dict[str, Any] | None = None,
 ) -> str:
     body = body or {"listing_id": listing_id, "qty": qty}
@@ -91,10 +119,10 @@ def _call(
                 listing_id,
                 qty,
                 expected_qty,
-                None,
+                expected_location_id,
                 1500,
                 False,
-                None,
+                location_id,
             ),
         )
         row = cur.fetchone()
@@ -307,6 +335,23 @@ def test_owner_and_client_grants() -> None:
             "'execute')"
         )
         assert cur.fetchone() == (False, False, False)
+        cur.execute(
+            "select relrowsecurity, relforcerowsecurity from pg_class "
+            "where oid='public.cart_add_requests'::regclass"
+        )
+        assert cur.fetchone() == (True, True)
+        cur.execute(
+            "select prosecdef, proconfig from pg_proc "
+            "where oid='public.apply_cart_add_idempotent(uuid,uuid,text,text,jsonb,uuid,"
+            "integer,integer,uuid,bigint,boolean,uuid)'::regprocedure"
+        )
+        assert cur.fetchone() == (False, ['search_path=""'])
+        cur.execute(
+            "select has_table_privilege('service_role','public.cart_add_requests','select'), "
+            "has_table_privilege('service_role','public.cart_add_requests','insert'), "
+            "has_table_privilege('authenticated','public.cart_add_requests','select')"
+        )
+        assert cur.fetchone() == (True, True, False)
     with _connection() as conn:
         with conn.cursor() as cur:
             cur.execute("set local role service_role")
@@ -399,3 +444,78 @@ def test_authenticated_role_cannot_execute_rpc() -> None:
                 key="client-blocked",
             )
     assert _claims(cart_id) == 0
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "postgresql://postgres@localhost/cart_idem_test?host=other-host",
+        "postgresql://postgres@localhost/cart_idem_test?dbname=another_database",
+        "postgresql://postgres@localhost/cart_idem_test?service=another_service",
+        "postgresql://postgres@other-host/cart_idem_test",
+    ],
+)
+def test_target_guard_rejects_transport_overrides_before_connect(url: str) -> None:
+    with pytest.raises(pytest.fail.Exception):
+        _validated_target(url)
+
+
+def test_stale_location_snapshot_does_not_claim_or_increment() -> None:
+    cart_id, user_id, guest_token = _new_cart()
+    listing_id, location_id = str(uuid4()), str(uuid4())
+    with _connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "insert into public.cart_items (cart_id,listing_id,qty,unit_price_ngwee,"
+            "wholesale,pickup_location_id) values (%s,%s,2,1500,false,%s)",
+            (cart_id, listing_id, location_id),
+        )
+    with _connection() as conn:
+        assert (
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="stale-location",
+                expected_qty=2,
+                expected_location_id=None,
+                location_id=location_id,
+            )
+            == "stale"
+        )
+    assert _qty(cart_id, listing_id) == 2
+    assert _claims(cart_id) == 0
+
+
+def test_canonical_api_body_accepts_uppercase_uuid_rpc_input() -> None:
+    cart_id, user_id, guest_token = _new_cart()
+    listing_id = str(uuid4())
+    canonical_body = {"listing_id": listing_id, "qty": 2}
+    with _connection() as conn:
+        assert (
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id.upper(),
+                key="canonical-uuid",
+                body=canonical_body,
+            )
+            == "applied"
+        )
+        assert (
+            _call(
+                conn,
+                cart_id=cart_id,
+                user_id=user_id,
+                guest_token=guest_token,
+                listing_id=listing_id,
+                key="canonical-uuid",
+                body=canonical_body,
+            )
+            == "replayed"
+        )
+    assert _qty(cart_id, listing_id) == 2
+    assert _claims(cart_id) == 1

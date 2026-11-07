@@ -10,6 +10,9 @@ export type AuthErrorCode =
   | "invalid_credentials"
   | "email_not_confirmed"
   | "already_registered"
+  | "network"
+  | "client_unavailable"
+  | "service_unavailable"
   | "generic";
 
 export type ParsedAuthError = {
@@ -47,20 +50,58 @@ export function parseAuthError(error: unknown): ParsedAuthError {
   }
 
   const record = error as {
+    code?: unknown;
+    name?: unknown;
     status?: number;
-    message?: string;
+    message?: unknown;
     retryAfter?: number;
   };
 
-  if (record.status === 429 || record.retryAfter !== undefined) {
+  const rateLimited = [
+    "over_request_rate_limit",
+    "over_email_send_rate_limit",
+    "over_sms_send_rate_limit",
+    "over_send_rate_limit",
+  ].includes(typeof record.code === "string" ? record.code : "");
+  if (record.status === 429 || record.retryAfter !== undefined || rateLimited) {
     const seconds =
-      typeof record.retryAfter === "number" && record.retryAfter > 0
+      typeof record.retryAfter === "number" &&
+      Number.isFinite(record.retryAfter) &&
+      record.retryAfter > 0
         ? Math.ceil(record.retryAfter)
         : 60;
     return { code: "throttled", retryAfterSeconds: seconds };
   }
 
-  const message = (record.message ?? "").toLowerCase();
+  if (typeof record.status === "number" && record.status >= 500 && record.status <= 599) {
+    return { code: "service_unavailable" };
+  }
+
+  // Prefer the SDK's stable code. Unknown codes must not be guessed from a
+  // server message (for example, "invalid API key" is not a wrong password).
+  if (typeof record.code === "string" && record.code) {
+    switch (record.code) {
+      case "invalid_credentials":
+      case "user_not_found":
+        return { code: "invalid_credentials" };
+      case "email_not_confirmed":
+        return { code: "email_not_confirmed" };
+      case "otp_expired":
+      case "flow_state_expired":
+        return { code: "expired" };
+      default:
+        return { code: "generic" };
+    }
+  }
+
+  const message = typeof record.message === "string" ? record.message.toLowerCase() : "";
+  if (
+    (record.name === "AuthRetryableFetchError" && (!record.status || record.status === 0)) ||
+    (record.name === "TypeError" &&
+      /failed to fetch|fetch failed|networkerror|load failed/.test(message))
+  ) {
+    return { code: "network" };
+  }
 
   // Email/password specifics — checked before the generic "invalid" match so the
   // OTP flow keeps mapping its "invalid code" to wrong_code.
@@ -80,7 +121,7 @@ export function parseAuthError(error: unknown): ParsedAuthError {
     return { code: "expired" };
   }
 
-  if (message.includes("invalid") || message.includes("incorrect") || message.includes("wrong")) {
+  if (/invalid|incorrect|wrong/.test(message) && /\b(code|otp|token)\b/.test(message)) {
     return { code: "wrong_code" };
   }
 

@@ -45,6 +45,8 @@ export type AuthLoginLabels = {
     invalidCredentials: string;
     emailNotConfirmed: string;
     alreadyRegistered: string;
+    network?: string;
+    unavailable?: string;
     forgotPassword?: string;
   };
   divider: string;

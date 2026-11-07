@@ -315,13 +315,27 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             handleSuccess(response, "quick_list", requiresEvidence)
           }
           onError={setError}
+          onRequestCatalog={() => {
+            setActiveTab("attach");
+            setSelectedProduct(null);
+            setError(null);
+          }}
           labels={{
             heading: t("listings.quickList.heading"),
             intro: t("listings.quickList.intro"),
             titleLabel: t("listings.quickList.titleLabel"),
             titlePlaceholder: t("listings.quickList.titlePlaceholder"),
-            publish: t("listings.quickList.publish"),
-            publishing: t("listings.quickList.publishing"),
+            categoryLabel: t("listings.newCanonical.categoryLabel"),
+            categoryPlaceholder: t("listings.newCanonical.categoryPlaceholder"),
+            descriptionLabel: t("listings.quickList.descriptionLabel"),
+            descriptionHelp: t("listings.quickList.descriptionHelp"),
+            descriptionInvalid: t("listings.quickList.descriptionInvalid"),
+            saveDraft: t("listings.quickList.saveDraft"),
+            savingDraft: t("listings.quickList.savingDraft"),
+            draftNotice: t("listings.quickList.draftNotice"),
+            canonicalRequired: t("listings.quickList.canonicalRequired"),
+            catalogLabel: t("listings.tabs.attach"),
+            categoriesUnavailable: t("listings.quickList.categoriesUnavailable"),
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),

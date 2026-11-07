@@ -51,6 +51,7 @@ export type ListingCreatePayload = {
   description?: string;
   aliases?: string[];
   title_override?: string;
+  description?: string;
   price_ngwee: number;
   product_class: ProductClass;
   sale_unit: SaleUnit;

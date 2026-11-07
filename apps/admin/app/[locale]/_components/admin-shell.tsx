@@ -6,7 +6,13 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { resolveAdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 import { isAdminPasswordRecoveryPath } from "../../../lib/password-recovery-path";
+import {
+  AdminPermissionRefreshContext,
+  AdminPermissionsContext,
+  useAdminPermissionCheck,
+} from "../../../lib/roles-api";
 
 import {
   ADMIN_NAV_GROUPS,
@@ -18,11 +24,8 @@ import {
 } from "./admin-nav-config";
 import { SignOutButton } from "./sign-out-button";
 
-import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
-
 type AdminShellProps = {
   locale: string;
-  capabilities: AdminNavCapabilities;
   children: React.ReactNode;
 };
 
@@ -36,7 +39,7 @@ function navLinkClass(active: boolean, compact = false): string {
   ].join(" ");
 }
 
-export function AdminShell({ locale, capabilities, children }: AdminShellProps) {
+export function AdminShell({ locale, children }: AdminShellProps) {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
@@ -45,18 +48,23 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
-  const visibleItems = flattenAdminNavItems(navGroups);
-
-  const activeKey = resolveAdminActiveItem(rest, visibleItems);
-  const activeGroup = resolveAdminActiveGroup(rest, navGroups);
+  const isBareAuthRoute =
+    rest === "/login" ||
+    rest.startsWith("/login/") ||
+    isAdminPasswordRecoveryPath(pathname) ||
+    rest === "/permission-denied";
+  const {
+    grants,
+    refresh,
+    error: grantError,
+  } = useAdminPermissionCheck(isBareAuthRoute ? null : pathname);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!menuOpen) {
+    if (!menuOpen || isBareAuthRoute) {
       return;
     }
     const onKeyDown = (event: KeyboardEvent) => {
@@ -67,11 +75,27 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen]);
+  }, [menuOpen, isBareAuthRoute]);
 
-  if (rest === "/login" || rest.startsWith("/login/") || isAdminPasswordRecoveryPath(pathname)) {
+  if (isBareAuthRoute) {
     return <>{children}</>;
   }
+
+  const capabilities = resolveAdminNavCapabilities(
+    grants?.permissions ?? [],
+    grants?.unrestricted ?? false,
+    grants?.can_manage_roles ?? false,
+  );
+  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
+  const visibleItems = flattenAdminNavItems(navGroups);
+
+  const activeKey = resolveAdminActiveItem(rest, visibleItems);
+  const activeGroup = resolveAdminActiveGroup(rest, navGroups);
+  const requested = resolveAdminActiveItem(rest);
+  const denied =
+    (requested === "roles" && !capabilities.roles) ||
+    (!grants?.unrestricted &&
+      (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags")));
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -146,23 +170,39 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
                   : t("nav.home")}
               </span>
             </button>
-            <Link
-              href={adminItemHref(locale, "orders")}
-              className={navLinkClass(activeKey === "orders", true)}
-            >
-              {t("nav.orders")}
-            </Link>
-            <Link
-              href={adminItemHref(locale, "kyc")}
-              className={navLinkClass(activeKey === "kyc", true)}
-            >
-              {t("nav.kyc")}
-            </Link>
+            {capabilities.orders ? (
+              <Link
+                href={adminItemHref(locale, "orders")}
+                className={navLinkClass(activeKey === "orders", true)}
+              >
+                {t("nav.orders")}
+              </Link>
+            ) : null}
+            {capabilities.kyc ? (
+              <Link
+                href={adminItemHref(locale, "kyc")}
+                className={navLinkClass(activeKey === "kyc", true)}
+              >
+                {t("nav.kyc")}
+              </Link>
+            ) : null}
           </div>
         </div>
 
         <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
-          {children}
+          {grantError ? (
+            <p role="alert">{t("shell.permissionError")}</p>
+          ) : !grants ? (
+            <p role="status">{t("shell.permissionChecking")}</p>
+          ) : denied ? (
+            <p role="alert">{t("shell.permissionDenied")}</p>
+          ) : (
+            <AdminPermissionsContext.Provider value={grants}>
+              <AdminPermissionRefreshContext.Provider value={refresh}>
+                {children}
+              </AdminPermissionRefreshContext.Provider>
+            </AdminPermissionsContext.Provider>
+          )}
         </main>
       </div>
 

@@ -1,11 +1,9 @@
 "use client";
 
-import { CategorySelection, categoryPath } from "@vergeo/ui/src/category-selection";
-import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { listingCreateErrorMessage } from "../_lib/listing-errors";
-import { Button, FormField, Input, Textarea } from "../_lib/ui";
+import { Button, FormField, Input, Select, Textarea } from "../_lib/ui";
 
 import {
   DEFAULT_LISTING_FIELDS,
@@ -33,24 +31,26 @@ type QuickListFormProps = {
   wholesaleEnabled: boolean;
   onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
   onError: (message: string) => void;
+  onRequestCatalog: () => void;
   labels: {
     heading: string;
     intro: string;
     titleLabel: string;
     titlePlaceholder: string;
-    publish: string;
-    publishing: string;
-    fields: Parameters<typeof ListingFields>[0]["labels"];
-    submitError: string;
-    standaloneRequired: string;
-    canonicalRequired: string;
-    standaloneDetailsRequired: string;
-    policyBlocked: string;
     categoryLabel: string;
     categoryPlaceholder: string;
     descriptionLabel: string;
     descriptionHelp: string;
+    descriptionInvalid: string;
+    saveDraft: string;
+    savingDraft: string;
     draftNotice: string;
+    canonicalRequired: string;
+    catalogLabel: string;
+    categoriesUnavailable: string;
+    fields: Parameters<typeof ListingFields>[0]["labels"];
+    submitError: string;
+    standaloneRequired: string;
     required: string;
   };
 };
@@ -60,59 +60,56 @@ export function QuickListForm({
   wholesaleEnabled,
   onSuccess,
   onError,
+  onRequestCatalog,
   labels,
 }: QuickListFormProps) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoryStatus, setCategoryStatus] = useState<"loading" | "ready" | "error">("loading");
   const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_FIELDS);
   const [submitting, setSubmitting] = useState(false);
-  const taxonomyText = useTranslations("common.categorySelection");
-  const [categoryId, setCategoryId] = useState("");
-  const [description, setDescription] = useState("");
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
+  const submissionInFlight = useRef(false);
   const standalone = fields.productClass === "D" || fields.productClass === "E";
 
   useEffect(() => {
-    if (!standalone) return;
     let cancelled = false;
-    setLoadingCategories(true);
-    void client
-      .listCategories()
-      .then((items) => {
-        if (!cancelled) setCategories(items);
-      })
-      .catch(() => {
-        if (!cancelled) onError(labels.submitError);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCategories(false);
-      });
+    setCategoryStatus("loading");
+    setCategories([]);
+    setCategoryId("");
+    void client.listCategories().then(
+      (items) => {
+        if (!cancelled) {
+          setCategories(items);
+          setCategoryStatus("ready");
+        }
+      },
+      () => {
+        if (!cancelled) setCategoryStatus("error");
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [client, labels.submitError, onError, standalone]);
+  }, [client]);
 
-  const handlePublish = async () => {
-    if (!title.trim()) {
-      onError(labels.required);
-      return;
-    }
+  const handleSaveDraft = async () => {
+    if (submissionInFlight.current) return;
     if (!standalone) {
       onError(labels.canonicalRequired);
       return;
     }
-    if (
-      !categoryPath(
-        categories.map((item) => ({
-          id: item.id,
-          parentId: item.parent_id ?? null,
-          label: item.name,
-        })),
-        categoryId,
-      ).length ||
-      description.trim().length < 20
-    ) {
-      onError(labels.standaloneDetailsRequired);
+    if (categoryStatus !== "ready" || categories.length === 0) {
+      onError(labels.categoriesUnavailable);
+      return;
+    }
+    if (!title.trim() || !categories.some((category) => category.id === categoryId)) {
+      onError(labels.required);
+      return;
+    }
+    if (Array.from(description.trim()).length < 20) {
+      onError(labels.descriptionInvalid);
       return;
     }
     const validationError = validateListingFields(fields, labels.fields);
@@ -120,13 +117,26 @@ export function QuickListForm({
       onError(validationError);
       return;
     }
+    if (fields.condition === "used" && Array.from(fields.defectNotes.trim()).length < 10) {
+      onError(labels.fields.defectNotesInvalid);
+      return;
+    }
+    const parsed = parseListingFieldValues(fields);
+    if (
+      fields.productClass === "E" &&
+      (parsed.vendorCapacityPerWeek ?? 0) < Math.max(parsed.minSteps, parsed.moq)
+    ) {
+      onError(labels.fields.capacityInvalid);
+      return;
+    }
 
+    submissionInFlight.current = true;
     setSubmitting(true);
     try {
-      const parsed = parseListingFieldValues(fields);
       const requiresEvidence = requiresListingEvidence(fields);
       const response = await client.createListing({
         mode: "quick_list",
+        product_id: null,
         title_override: title.trim(),
         category_id: categoryId,
         description: description.trim(),
@@ -151,13 +161,11 @@ export function QuickListForm({
       onError(
         listingCreateErrorMessage(caught, {
           standaloneRequired: labels.standaloneRequired,
-          canonicalRequired: labels.canonicalRequired,
-          standaloneDetailsRequired: labels.standaloneDetailsRequired,
-          policyBlocked: labels.policyBlocked,
           fallback: labels.submitError,
         }),
       );
     } finally {
+      submissionInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -169,6 +177,17 @@ export function QuickListForm({
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 
+      {!standalone ? (
+        <div className="space-y-2">
+          <p role="note" className="text-sm text-text-2">
+            {labels.canonicalRequired}
+          </p>
+          <Button variant="secondary" loadingLabel={labels.catalogLabel} onClick={onRequestCatalog}>
+            {labels.catalogLabel}
+          </Button>
+        </div>
+      ) : null}
+
       <FormField label={labels.titleLabel} required requiredMarker="*">
         <Input
           value={title}
@@ -179,23 +198,25 @@ export function QuickListForm({
 
       {standalone ? (
         <>
-          <CategorySelection
-            nodes={categories.map((item) => ({
-              id: item.id,
-              parentId: item.parent_id ?? null,
-              label: item.name,
-            }))}
-            value={categoryId}
-            onChange={setCategoryId}
-            disabled={loadingCategories || submitting}
-            labels={{
-              category: labels.categoryLabel,
-              subcategory: taxonomyText("subcategory"),
-              placeholder: labels.categoryPlaceholder,
-              empty: taxonomyText("empty"),
-              unavailable: taxonomyText("unavailable"),
-            }}
-          />
+          <FormField label={labels.categoryLabel} required requiredMarker="*">
+            <Select
+              value={categoryId}
+              disabled={categoryStatus !== "ready" || submitting}
+              onChange={(event) => setCategoryId(event.target.value)}
+            >
+              <option value="">{labels.categoryPlaceholder}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          {categoryStatus === "error" || (categoryStatus === "ready" && categories.length === 0) ? (
+            <p role="alert" className="text-sm text-danger">
+              {labels.categoriesUnavailable}
+            </p>
+          ) : null}
           <FormField
             label={labels.descriptionLabel}
             helpText={labels.descriptionHelp}
@@ -204,15 +225,14 @@ export function QuickListForm({
           >
             <Textarea
               value={description}
-              maxLength={5000}
               onChange={(event) => setDescription(event.target.value)}
             />
           </FormField>
-          <p className="text-sm text-text-2">{labels.draftNotice}</p>
+          <p role="note" className="text-sm text-text-2">
+            {labels.draftNotice}
+          </p>
         </>
-      ) : (
-        <p className="text-sm text-text-2">{labels.canonicalRequired}</p>
-      )}
+      ) : null}
 
       <ListingFields
         values={fields}
@@ -227,11 +247,11 @@ export function QuickListForm({
         size="lg"
         className="w-full"
         loading={submitting}
-        disabled={loadingCategories}
-        loadingLabel={labels.fields.savingDraft}
-        onClick={() => void handlePublish()}
+        disabled={!standalone || categoryStatus !== "ready" || categories.length === 0}
+        loadingLabel={labels.savingDraft}
+        onClick={() => void handleSaveDraft()}
       >
-        {standalone ? labels.fields.saveDraft : labels.publish}
+        {labels.saveDraft}
       </Button>
     </div>
   );

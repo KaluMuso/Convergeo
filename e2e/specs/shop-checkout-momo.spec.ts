@@ -42,7 +42,10 @@ import { expectWhatsAppMessage } from "../fixtures/whatsapp";
  * Sandbox credentials alone are still not approval: run-scoped provider and
  * recipient approvals are checked before any order or provider call is made.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("shop · checkout · momo", () => {
+  test.describe.configure({ retries: 0 });
   test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
     assertNoAccidentalRealMoney();
     const missingSandbox = missingSandboxMomoEvidence(lenco);
@@ -63,7 +66,13 @@ test.describe("shop · checkout · momo", () => {
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "MoMo checkout placement (authenticated buyer)",
-        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
       });
       enforceGate(gate);
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });

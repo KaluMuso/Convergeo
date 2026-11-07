@@ -93,6 +93,13 @@ def build_listing_request(
             "unsupported_condition", details={"condition": str(draft["condition"])}
         )
 
+    if (
+        draft.get("sale_unit") not in (None, "each")
+        or draft.get("pricing_mode") not in (None, "fixed")
+        or draft.get("stock_mode") == "made_to_order"
+    ):
+        raise DraftNotSubmittable("unsupported_mapping")
+
     stock_mode = _STOCK_MODE_MAP.get(str(draft.get("stock_mode") or "always"))
     if stock_mode is None:
         raise DraftNotSubmittable(
@@ -108,18 +115,27 @@ def build_listing_request(
             raise DraftNotSubmittable("missing_quantity")
         stock_qty = quantity
 
-    # Normal Class A inventory must have canonical identity even while draft.
-    # Only the vendor's explicit choice is used; extraction never guesses a match.
     try:
-        selected_product = str(uuid.UUID(product_id)) if product_id else None
-    except ValueError as exc:
-        raise DraftNotSubmittable("canonical_required") from exc
-    if selected_product is None:
-        raise DraftNotSubmittable("canonical_required")
+        product_id = str(uuid.UUID(product_id)) if product_id else None
+    except ValueError:
+        product_id = None
+    if product_id is None:
+        raise AppError(
+            code="canonical_product_required",
+            message="Select an existing Class A canonical product before submitting",
+            http_status=422,
+            details={"message_key": "vendor.intake.errors.canonicalRequired"},
+        )
+
+    # The vendor explicitly selects a canonical at submission. The caller
+    # validates its active Class-A identity/category/unit; no model or name
+    # matching may invent this choice, and this handoff never creates products.
     return ListingCreateRequest(
         mode="attach",
-        product_id=selected_product,
+        product_id=product_id,
+        product_class="A",
         title_override=title,
+        description=draft.get("description"),
         price_ngwee=price_raw,
         condition=condition,  # type: ignore[arg-type]
         stock_mode=stock_mode,  # type: ignore[arg-type]

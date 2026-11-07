@@ -150,10 +150,20 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                                            |
 | `waha-intake-sweeps.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
 | `waha-intake-digest.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
+| `waha-otp-handoff.json`           | Staging Auth OTP transport  | not audited             | DORMANT‡                                                              |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 
 †**Added after this audit (M18-P07, 2026-07-27) — not observed live on 2026-07-19.** Both ship `active: false` and are gated behind `feature_flags.waha_vendor_intake` (default `false`); they cannot run until the founder records Stage-1 pilot approval per `docs/ops/waha-vendor-intake.md` §10. Listed here to keep the completeness matrix exhaustive (enforced by `tests/test_ops_n8n_01_audit.py`), **not** because they were audited on the date above.
+
+‡**Added after this audit (2026-10-13).** `waha-otp-handoff.json` is an unpublished,
+inactive source draft with its HMAC and WAHA send nodes disabled and HMAC secret slot empty.
+It was not part of the 2026-07-19 live inventory and has not been imported or run.
+Local mocked protocol tests do not prove runtime HMAC binding, durable replay,
+zero in-flight OTP persistence, or handset delivery. Owner review of the actual
+n8n version, supported secret binding, private replay schema/login, retention,
+backups, access, and bounded staging acceptance remains required. Do not activate;
+see [OTP draft gates](../../../ops/n8n-workflows.md#otp-draft-gates).
 
 ---
 

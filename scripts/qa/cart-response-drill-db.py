@@ -36,9 +36,7 @@ def main() -> None:
             cur.execute("select user_id, status from public.carts where id=%s", (cart,))
             if cur.fetchone() != (None, "active"):
                 raise ValueError("Expected established synthetic guest cart")
-            cur.execute(
-                "select count(*) from public.cart_items where cart_id=%s", (cart,)
-            )
+            cur.execute("select count(*) from public.cart_items where cart_id=%s", (cart,))
             assert cur.fetchone() == (0,)
             cur.execute(
                 "select price_ngwee, stock_mode, stock_qty, wholesale, status "
@@ -72,13 +70,9 @@ def main() -> None:
                 (state["price"] + 100, listing),
             )
         elif action == "stock":
-            cur.execute(
-                "update public.vendor_listings set stock_qty=1 where id=%s", (listing,)
-            )
+            cur.execute("update public.vendor_listings set stock_qty=1 where id=%s", (listing,))
         elif action == "restore-stock":
-            cur.execute(
-                "update public.vendor_listings set stock_qty=10 where id=%s", (listing,)
-            )
+            cur.execute("update public.vendor_listings set stock_qty=10 where id=%s", (listing,))
         elif action not in {"observe", "cleanup"}:
             raise ValueError("Unknown fixture action")
         cur.execute(
@@ -97,9 +91,7 @@ def main() -> None:
                 "delete from public.funnel_events where id=any(%s::uuid[])",
                 (new_events,),
             )
-            cur.execute(
-                "delete from public.carts where id=%s and user_id is null", (cart,)
-            )
+            cur.execute("delete from public.carts where id=%s and user_id is null", (cart,))
             assert cur.rowcount == 1
             conn.commit()
             STATE.unlink()
@@ -111,9 +103,7 @@ def main() -> None:
             (cart, listing),
         )
         item = cur.fetchone()
-        cur.execute(
-            "select count(*) from public.cart_add_requests where cart_id=%s", (cart,)
-        )
+        cur.execute("select count(*) from public.cart_add_requests where cart_id=%s", (cart,))
         count = cur.fetchone()
         assert count is not None
         result: dict[str, Any] = {

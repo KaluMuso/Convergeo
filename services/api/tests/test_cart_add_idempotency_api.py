@@ -8,6 +8,7 @@ import pytest
 from app.errors import AppError
 from app.routers import cart
 from fastapi import Request
+from postgrest.exceptions import APIError
 
 
 def _client(rows: list[list[dict[str, object]]]) -> MagicMock:
@@ -278,3 +279,148 @@ async def test_malformed_header_is_rejected_before_any_write(
         )
     assert raised.value.http_status == 422
     writer.rpc.assert_not_called()
+
+
+@pytest.fixture
+def keyed_writer(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    writer = MagicMock()
+    _query(writer).execute.return_value = SimpleNamespace(data=[])
+    monkeypatch.setattr(cart, "service_db_client", lambda: writer)
+    monkeypatch.setattr(cart, "fetch_listing", lambda *args, **kwargs: {"id": "listing"})
+    monkeypatch.setattr(cart, "_resolve_line_location_id", lambda *args, **kwargs: None)
+    monkeypatch.setattr(cart, "validate_item_qty_for_listing", lambda **kwargs: (1000, False))
+    monkeypatch.setattr(cart, "_enforce_listing_cart_rules", lambda *args, **kwargs: None)
+    return writer
+
+
+def test_rpc_replayed_result_is_not_an_applied_add(keyed_writer: MagicMock) -> None:
+    keyed_writer.rpc.return_value.execute.return_value = SimpleNamespace(data="replayed")
+    assert (
+        cart._keyed_add_result(
+            body=cart.CartItemInput(listing_id="listing", qty=2),
+            key="replayed-key",
+            owner=cart.CartOwner("cart", "user", None, False),
+            client=_client([[]]),
+            business_eligible=False,
+        )
+        is False
+    )
+    assert keyed_writer.rpc.call_count == 1
+
+
+def test_uppercase_uuid_uses_the_same_canonical_fingerprint_and_rpc_id(
+    keyed_writer: MagicMock,
+) -> None:
+    listing_id = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+    keyed_writer.rpc.return_value.execute.return_value = SimpleNamespace(data="applied")
+    assert cart._keyed_add_result(
+        body=cart.CartItemInput(listing_id=listing_id, qty=2),
+        key="uppercase-listing",
+        owner=cart.CartOwner("cart", "user", None, False),
+        client=_client([[]]),
+        business_eligible=False,
+    )
+    parameters = keyed_writer.rpc.call_args.args[1]
+    assert parameters["p_listing_id"] == listing_id.lower()
+    assert parameters["p_body"]["listing_id"] == listing_id.lower()
+
+
+def test_uppercase_uuid_replays_an_existing_canonical_claim(keyed_writer: MagicMock) -> None:
+    body = cart.CartItemInput(listing_id="AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE", qty=2)
+    canonical_body = body.model_dump(mode="json")
+    canonical_body["listing_id"] = body.listing_id.lower()
+    _query(keyed_writer).execute.return_value = SimpleNamespace(
+        data=[{"request_body": canonical_body}]
+    )
+    assert (
+        cart._keyed_add_result(
+            body=body,
+            key="canonical-replay",
+            owner=cart.CartOwner("cart", "user", None, False),
+            client=MagicMock(),
+            business_eligible=False,
+        )
+        is False
+    )
+    keyed_writer.rpc.assert_not_called()
+
+
+def test_rpc_body_mismatch_is_a_conflict(keyed_writer: MagicMock) -> None:
+    keyed_writer.rpc.return_value.execute.side_effect = APIError(
+        {
+            "code": "P0001",
+            "message": "cart.idempotency_mismatch",
+            "details": None,
+            "hint": None,
+        }
+    )
+    with pytest.raises(AppError) as raised:
+        cart._keyed_add_result(
+            body=cart.CartItemInput(listing_id="listing", qty=2),
+            key="mismatched-key",
+            owner=cart.CartOwner("cart", "user", None, False),
+            client=_client([[]]),
+            business_eligible=False,
+        )
+    assert raised.value.code == "cart.idempotency_mismatch"
+    assert raised.value.http_status == 409
+
+
+def test_five_stale_snapshots_return_a_bounded_retry_conflict(keyed_writer: MagicMock) -> None:
+    keyed_writer.rpc.return_value.execute.return_value = SimpleNamespace(data="stale")
+    with pytest.raises(AppError) as raised:
+        cart._keyed_add_result(
+            body=cart.CartItemInput(listing_id="listing", qty=2),
+            key="busy-key",
+            owner=cart.CartOwner("cart", "user", None, False),
+            client=_client([[] for _ in range(5)]),
+            business_eligible=False,
+        )
+    assert raised.value.code == "cart.concurrent_add_retry"
+    assert raised.value.http_status == 409
+    assert keyed_writer.rpc.call_count == 5
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("applied", [True, False])
+async def test_only_applied_keyed_add_emits_analytics(
+    monkeypatch: pytest.MonkeyPatch,
+    applied: bool,
+) -> None:
+    reader = MagicMock()
+    monkeypatch.setattr(cart, "_db_client_for_owner", lambda *args, **kwargs: reader)
+    monkeypatch.setattr(cart, "_business_eligible_for_user", lambda *args: False)
+    monkeypatch.setattr(cart, "_keyed_add_result", lambda **kwargs: applied)
+    monkeypatch.setattr(cart, "_fetch_cart_items", lambda *args: [])
+    monkeypatch.setattr(cart, "fetch_listings_for_items", lambda *args: {})
+    result = object()
+    monkeypatch.setattr(cart, "_cart_response", lambda **kwargs: result)
+    attribution, emit = MagicMock(return_value="verified-clip"), MagicMock()
+    monkeypatch.setattr(cart, "validate_clip_attribution", attribution)
+    monkeypatch.setattr(cart, "emit_cart_add", emit)
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/cart/items",
+            "headers": [(b"idempotency-key", b"analytics-key")],
+        }
+    )
+    response = await cart.add_cart_item(
+        cart.CartItemInput(listing_id="listing", qty=2, clip_id="claimed-clip"),
+        cart.CartOwner("cart", "user", None, False),
+        MagicMock(),
+        MagicMock(),
+        request,
+    )
+    assert response is result
+    if applied:
+        attribution.assert_called_once()
+        emit.assert_called_once_with(
+            checkout_group_id=None,
+            customer_id="user",
+            snapshot={"lines": [{"listing_id": "listing", "qty": 2, "clip_id": "verified-clip"}]},
+        )
+    else:
+        attribution.assert_not_called()
+        emit.assert_not_called()

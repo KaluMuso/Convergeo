@@ -43,9 +43,28 @@ test.use({ serviceWorkers: "block" });
  * Deployed sandbox: continues through MoMo when `LENCO_SANDBOX` + OTP/session
  * env are present. Never enables production real-money rails.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("critical-path", () => {
+  test.describe.configure({ retries: 0 });
   test("browse → cart → checkout honesty matches backend mode", async ({ page }) => {
     assertNoAccidentalRealMoney();
+    if (!paymentMockMode() && !customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "deployed phone-capable critical path",
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
     test.info().annotations.push({
       type: "mode",
       description: paymentMockMode()
@@ -222,7 +241,15 @@ test.describe("critical-path", () => {
         journey: "deployed sandbox MoMo settle (F9b)",
         fixtures: [
           ...missingSandboxMomoEvidence(lenco),
-          ...(!customerOtpReady() ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+          ...(!customerOtpReady()
+            ? [
+                "E2E_CUSTOMER_TEST_OTP",
+                "SMS_OTP_TRANSPORT",
+                "WAHA_OTP_ENABLED",
+                "STAGING_SMS_SANDBOX_ATTESTED",
+                "STAGING_TEST_OTP_MAP_ATTESTED",
+              ]
+            : []),
         ],
       });
       enforceGate(gate);

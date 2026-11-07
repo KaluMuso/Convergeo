@@ -3,7 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
-import { CheckoutShell } from "./_components/step-fulfilment";
+import { CheckoutShell, ExistingCheckoutStatus } from "./_components/step-fulfilment";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<{ group?: string | string[]; retry?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export function generateStaticParams() {
@@ -164,8 +164,6 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     loading: t("checkout.loading"),
     error: t("checkout.error"),
     emptyCart: t("checkout.emptyCart"),
-    retry: t("checkout.retry"),
-    backToCart: t("checkout.backToCart"),
   };
 }
 
@@ -180,44 +178,88 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
-  const labels = buildCheckoutLabels(locale, messages);
-  const query = await searchParams;
-  const isTicketCheckout = query && Object.hasOwn(query, "group");
-  const ticketMessages = isTicketCheckout ? await loadNamespace(locale as Locale, "events") : null;
-  const ticketT = ticketMessages
-    ? createTranslator({
-        locale,
-        messages: { events: ticketMessages } as AbstractIntlMessages,
-        namespace: "events",
-      })
-    : null;
+  const query = (await searchParams) ?? {};
+  const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
+  const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
 
-  return (
-    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      {isTicketCheckout ? (
+  // Ticket purchases (and their card retries) hand off with ?group=; the ticket
+  // checkout owns that payment. Service-deposit handoffs use ?session= below.
+  if (hasGroup && !hasSession) {
+    const labels = buildCheckoutLabels(locale, messages);
+    const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
+    const ticketMessages = await loadNamespace(locale as Locale, "events");
+    const ticketT = createTranslator({
+      locale,
+      messages: { events: ticketMessages } as AbstractIntlMessages,
+      namespace: "events",
+    });
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
         <LazyTicketCheckout
           locale={locale}
           groupId={typeof query.group === "string" ? query.group : null}
           retry={query.retry === "1"}
           labels={labels}
-          loginLabel={ticketT!("ticketPurchase.loginRequired")}
-          payLabel={ticketT!("ticketPurchase.payCta")}
-          retryLabel={createTranslator({ locale, messages, namespace: "checkout" })(
-            "checkout.pending.retry",
-          )}
-          cancelledLabel={createTranslator({ locale, messages, namespace: "checkout" })(
-            "checkout.pending.cancelledTitle",
-          )}
-          expiredLabel={createTranslator({ locale, messages, namespace: "checkout" })(
-            "checkout.pending.timeoutTitle",
-          )}
-          ordersLabel={createTranslator({ locale, messages, namespace: "checkout" })(
-            "checkout.pending.viewOrder",
-          )}
+          loginLabel={ticketT("ticketPurchase.loginRequired")}
+          payLabel={ticketT("ticketPurchase.payCta")}
+          retryLabel={checkoutT("checkout.pending.retry")}
+          cancelledLabel={checkoutT("checkout.pending.cancelledTitle")}
+          expiredLabel={checkoutT("checkout.pending.timeoutTitle")}
+          ordersLabel={checkoutT("checkout.pending.viewOrder")}
         />
-      ) : (
-        <CheckoutShell locale={locale} labels={labels} />
-      )}
+      </div>
+    );
+  }
+
+  // Supplied handoffs never fall through to product-cart creation, even invalid ones.
+  if (hasSession || hasGroup) {
+    const suppliedId = hasSession ? query.session : query.group;
+    const groupId =
+      hasSession !== hasGroup &&
+      typeof suppliedId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
+        ? suppliedId
+        : null;
+    const t = createTranslator({ locale, messages, namespace: "checkout" });
+    const ordersMessages = await loadNamespace(locale as Locale, "orders");
+    const orders = createTranslator({
+      locale,
+      messages: { orders: ordersMessages } as AbstractIntlMessages,
+      namespace: "orders",
+    });
+    const adminMessages = await loadNamespace(locale as Locale, "admin");
+    const admin = createTranslator({
+      locale,
+      messages: { admin: adminMessages } as AbstractIntlMessages,
+      namespace: "admin",
+    });
+
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <ExistingCheckoutStatus
+          key={`${locale}:${groupId ?? "invalid"}`}
+          groupId={groupId}
+          labels={{
+            title: t("checkout.pageTitle"),
+            loading: t("checkout.contact.loading"),
+            error: t("checkout.error"),
+            expired: t("checkout.countdown.expired"),
+            statusTemplate: orders.raw("list.status"),
+            // These existing labels are neutral states, not payment outcomes.
+            pending: admin("business.queue.filter.pending"),
+            completed: orders("status.completed"),
+            payment: t("checkout.steps.payment"),
+            unavailable: t("checkout.payment.unavailable"),
+          }}
+        />
+      </div>
+    );
+  }
+  const labels = buildCheckoutLabels(locale, messages);
+
+  return (
+    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+      <CheckoutShell locale={locale} labels={labels} />
     </div>
   );
 }

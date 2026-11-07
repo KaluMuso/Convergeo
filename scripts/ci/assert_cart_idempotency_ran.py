@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require all 14 real cart DB cases; retain JUnit outcomes without diagnostics."""
+"""Require 16 PostgreSQL cases and four URI guards; retain sanitized outcomes."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from collections import Counter
 from pathlib import Path
 
 MODULE = "tests.test_cart_add_idempotency_db"
-REQUIRED_TESTS = (
+ORIGINAL_POSTGRESQL_TESTS = (
     "test_same_key_replay_mismatch_and_cart_scope",
     "test_concurrent_same_key_commits_once",
     "test_distinct_keys_revalidate_stale_snapshot",
@@ -29,6 +29,22 @@ REQUIRED_TESTS = (
     f"test_rejects_malformed_keys_without_writing[{'x' * 129}]",
     "test_authenticated_role_cannot_execute_rpc",
 )
+ADDITIONAL_POSTGRESQL_TESTS = (
+    "test_stale_location_snapshot_does_not_claim_or_increment",
+    "test_canonical_api_body_accepts_uppercase_uuid_rpc_input",
+)
+URI_GUARD_TESTS = (
+    "test_target_guard_rejects_transport_overrides_before_connect[postgresql://postgres@localhost/cart_idem_test?host=other-host]",
+    "test_target_guard_rejects_transport_overrides_before_connect[postgresql://postgres@localhost/cart_idem_test?dbname=another_database]",
+    "test_target_guard_rejects_transport_overrides_before_connect[postgresql://postgres@localhost/cart_idem_test?service=another_service]",
+    "test_target_guard_rejects_transport_overrides_before_connect[postgresql://postgres@other-host/cart_idem_test]",
+)
+CASE_GROUPS = {
+    "original_postgresql": ORIGINAL_POSTGRESQL_TESTS,
+    "additional_postgresql": ADDITIONAL_POSTGRESQL_TESTS,
+    "uri_guards": URI_GUARD_TESTS,
+}
+REQUIRED_TESTS = (*ORIGINAL_POSTGRESQL_TESTS, *ADDITIONAL_POSTGRESQL_TESTS, *URI_GUARD_TESTS)
 NON_PASSING = {"skipped", "failure", "error"}
 ALLOWED_TAGS = {
     "testsuites",
@@ -65,7 +81,7 @@ def problems(root: ET.Element) -> list[str]:
         issues.append("expected_one_suite")
     else:
         expected_counts = {
-            "tests": "14",
+            "tests": str(len(REQUIRED_TESTS)),
             "failures": "0",
             "errors": "0",
             "skipped": "0",
@@ -97,9 +113,7 @@ def sanitized(root: ET.Element) -> ET.Element:
                 if re.fullmatch(r"\d+(?:\.\d+)?", value):
                     attributes[key] = value
             elif key == "name" and element.tag == "testcase":
-                attributes[key] = (
-                    value if value in REQUIRED_TESTS else "unexpected-case"
-                )
+                attributes[key] = value if value in REQUIRED_TESTS else "unexpected-case"
             elif key == "classname" and element.tag == "testcase":
                 attributes[key] = MODULE if value == MODULE else "unexpected-module"
             elif key == "name" and element.tag == "testsuite":
@@ -107,9 +121,7 @@ def sanitized(root: ET.Element) -> ET.Element:
         element.attrib.clear()
         element.attrib.update(attributes)
         element.text = (
-            "Outcome retained; diagnostics redacted."
-            if element.tag in NON_PASSING
-            else None
+            "Outcome retained; diagnostics redacted." if element.tag in NON_PASSING else None
         )
         element.tail = None
     return result
@@ -117,9 +129,7 @@ def sanitized(root: ET.Element) -> ET.Element:
 
 def main(argv: list[str]) -> int:
     if len(argv) != 4:
-        print(
-            "usage: assert_cart_idempotency_ran.py INPUT.xml SANITIZED.xml VALIDATION.json"
-        )
+        print("usage: assert_cart_idempotency_ran.py INPUT.xml SANITIZED.xml VALIDATION.json")
         return 2
     source, output, receipt = (Path(value) for value in argv[1:])
     issues: list[str]
@@ -131,12 +141,13 @@ def main(argv: list[str]) -> int:
             raise ValueError("DTD is not permitted")
         root = ET.fromstring(raw)
         issues = problems(root)
-        ET.ElementTree(sanitized(root)).write(
-            output, encoding="utf-8", xml_declaration=True
-        )
+        ET.ElementTree(sanitized(root)).write(output, encoding="utf-8", xml_declaration=True)
     except (OSError, ET.ParseError, ValueError):
         issues = ["missing_or_invalid_report"]
     evidence = {
+        "required_case_groups": {name: list(cases) for name, cases in CASE_GROUPS.items()},
+        "postgresql_cases": len(ORIGINAL_POSTGRESQL_TESTS) + len(ADDITIONAL_POSTGRESQL_TESTS),
+        "uri_guard_cases": len(URI_GUARD_TESTS),
         "qualified": not issues,
         "required_cases": list(REQUIRED_TESTS),
         "problems": issues,
@@ -146,7 +157,10 @@ def main(argv: list[str]) -> int:
     print(
         "FAIL: " + ", ".join(issues)
         if issues
-        else "OK: 14 cart DB cases passed (0 skipped)."
+        else (
+            "OK: 20 cart cases passed (16 PostgreSQL: 14 original + 2 additional; "
+            "4 URI guards; 0 skipped)."
+        )
     )
     return 1 if issues else 0
 

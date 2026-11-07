@@ -629,6 +629,13 @@ def _keyed_add_result(
     """Apply a keyed add atomically. Return whether this call committed the add."""
     cart_id = owner.cart_id or ""
     request_body = body.model_dump(mode="json")
+    try:
+        # PostgreSQL canonicalizes UUID arguments. Match its canonical listing
+        # identity in the request fingerprint, including uppercase UUID input.
+        request_body["listing_id"] = str(uuid.UUID(body.listing_id))
+    except ValueError:
+        # Preserve the existing listing-validation path for other identifiers.
+        pass
     writer = service_db_client()
     # A completed retry must still succeed if the listing or stock changed in
     # the meantime. The RPC repeats this check under a cart row lock for races.
@@ -682,7 +689,7 @@ def _keyed_add_result(
                     "p_guest_token": owner.guest_token if owner.is_guest else None,
                     "p_key": key,
                     "p_body": request_body,
-                    "p_listing_id": body.listing_id,
+                    "p_listing_id": request_body["listing_id"],
                     "p_qty": body.qty,
                     "p_expected_qty": expected_qty,
                     "p_expected_location_id": expected_location,

@@ -25,8 +25,7 @@ export const ipv4Rules = [
   "-N CARTDRILL4",
   "-A CARTDRILL4 -d 127.0.0.1/32 -p tcp -m multiport --dports 3000,8000,54321,54322 -j RETURN",
   ...[54321, 54322].map(
-    (p) =>
-      `-A CARTDRILL4 -p tcp -m conntrack --ctorigdst 127.0.0.1 --ctorigdstport ${p} -j RETURN`,
+    (p) => `-A CARTDRILL4 -p tcp -m conntrack --ctorigdst 127.0.0.1 --ctorigdstport ${p} -j RETURN`,
   ),
   ...[3000, 8000].map(
     (p) =>
@@ -48,15 +47,9 @@ export function qualify(outcome, guard, sha) {
   assert.equal(outcome.version, 1);
   assert.equal(outcome.qualified, true);
   assert.equal(outcome.failedPhase, undefined);
-  assert.deepEqual(
-    Object.keys(outcome.checkpoints).sort(),
-    [...checkpoints].sort(),
-  );
-  for (const point of checkpoints)
-    assert.equal(outcome.checkpoints[point], true, point);
-  assert.ok(
-    Number.isInteger(outcome.blockedImages) && outcome.blockedImages >= 0,
-  );
+  assert.deepEqual(Object.keys(outcome.checkpoints).sort(), [...checkpoints].sort());
+  for (const point of checkpoints) assert.equal(outcome.checkpoints[point], true, point);
+  assert.ok(Number.isInteger(outcome.blockedImages) && outcome.blockedImages >= 0);
   assert.equal(outcome.stages.length, 4);
   const price = outcome.stages[0].price;
   assert.ok(Number.isSafeInteger(price) && price > 0);
@@ -74,10 +67,7 @@ export function qualify(outcome, guard, sha) {
   ]);
   assert.equal(guard.version, 1);
   assert.equal(guard.source_sha, sha);
-  assert.equal(
-    guard.customer_execution_mode,
-    "development; production loopback guard preserved",
-  );
+  assert.equal(guard.customer_execution_mode, "development; production loopback guard preserved");
   assert.ok(Number.isInteger(guard.uid) && guard.uid > 0);
   for (const key of [
     "ipv4_owner_hook_verified",
@@ -90,21 +80,13 @@ export function qualify(outcome, guard, sha) {
   ])
     assert.equal(guard[key], true, key);
   assert.match(guard.runtime_manifest_sha256, /^[a-f0-9]{64}$/);
-  assert.deepEqual(
-    guard.allowed_loopback_tcp_ports,
-    [3000, 8000, 54321, 54322],
-  );
+  assert.deepEqual(guard.allowed_loopback_tcp_ports, [3000, 8000, 54321, 54322]);
   assert.deepEqual(guard.dnat_original_tcp_ports, [54321, 54322]);
-  assert.deepEqual(
-    guard.loopback_server_reply_original_tcp_ports,
-    [3000, 8000],
-  );
+  assert.deepEqual(guard.loopback_server_reply_original_tcp_ports, [3000, 8000]);
   assert.equal(guard.dnat_original_destination, "127.0.0.1");
   assert.deepEqual(ruleTokens(guard.ipv4_rules), ruleTokens(ipv4Rules));
   assert.deepEqual(ruleTokens(guard.ipv6_rules), ruleTokens(ipv6Rules));
-  assert.ok(
-    Number.isInteger(guard.rejected_packets) && guard.rejected_packets >= 0,
-  );
+  assert.ok(Number.isInteger(guard.rejected_packets) && guard.rejected_packets >= 0);
   return {
     qualified: true,
     source_sha: sha,
@@ -116,10 +98,8 @@ export function qualify(outcome, guard, sha) {
     rejected_packets: guard.rejected_packets,
     coverage:
       "dedicated UID application/browser/native SQL traffic; Supabase container daemons excluded",
-    analytics_limit:
-      "Controlled funnel counts only; analytics remains best effort",
-    scope_limit:
-      "Same established guest cart; no cross-cart exactly-once claim",
+    analytics_limit: "Controlled funnel counts only; analytics remains best effort",
+    scope_limit: "Same established guest cart; no cross-cart exactly-once claim",
   };
 }
 
@@ -131,30 +111,19 @@ export function qualifyPackage(bytes, receipt, guard, sha) {
   assert.equal(receipt.verified, true);
   assert.equal(receipt.source_sha, sha);
   assert.equal(receipt.manifest_sha256, guard.runtime_manifest_sha256);
-  assert.equal(
-    createHash("sha256").update(bytes).digest("hex"),
-    guard.runtime_manifest_sha256,
-  );
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), guard.runtime_manifest_sha256);
   assert.ok(Number.isInteger(receipt.entries) && receipt.entries > 0);
   assert.equal(receipt.entries, Object.keys(manifest.entries).length);
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [outcomePath, guardPath, outputPath, sha, manifestPath, packagePath] =
     process.argv.slice(2);
   let proof;
   try {
     const guard = JSON.parse(readFileSync(guardPath));
     proof = qualify(JSON.parse(readFileSync(outcomePath)), guard, sha);
-    qualifyPackage(
-      readFileSync(manifestPath),
-      JSON.parse(readFileSync(packagePath)),
-      guard,
-      sha,
-    );
+    qualifyPackage(readFileSync(manifestPath), JSON.parse(readFileSync(packagePath)), guard, sha);
   } catch {
     proof = {
       qualified: false,
@@ -168,8 +137,6 @@ if (
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, JSON.stringify(proof, null, 2) + "\n");
   console.log(
-    proof.qualified
-      ? "PASS: complete cart response drill"
-      : "FAIL: incomplete cart response drill",
+    proof.qualified ? "PASS: complete cart response drill" : "FAIL: incomplete cart response drill",
   );
 }
