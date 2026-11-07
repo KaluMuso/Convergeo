@@ -31,6 +31,13 @@ ORDER_A = "c0ffee00-0000-4000-8000-0000000000a1"
 ORDER_B = "c0ffee00-0000-4000-8000-0000000000b1"
 
 
+class _NoClient:
+    client: Any = None
+
+
+_SVC = _NoClient()
+
+
 class _Recorder:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
@@ -64,7 +71,7 @@ def test_buyer_paid_fee_reconciles_and_posts_separate_fee_hold(
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|5000|250"])
 
     result = ful.fulfill_prepaid_checkout_escrow(
-        object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=5_250
+        _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=5_250
     )
 
     assert result.total_ngwee == 5_250
@@ -80,7 +87,7 @@ def test_buyer_paid_fee_reconciles_and_posts_separate_fee_hold(
 def test_organiser_absorbed_fee_posts_single_hold(monkeypatch: pytest.MonkeyPatch) -> None:
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|5000|0"])
     ful.fulfill_prepaid_checkout_escrow(
-        object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=5_000
+        _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=5_000
     )
     assert [c["order_amount_ngwee"] for c in recorder.calls] == [5_000]
 
@@ -88,7 +95,7 @@ def test_organiser_absorbed_fee_posts_single_hold(monkeypatch: pytest.MonkeyPatc
 def test_multi_order_checkout_sums_fee_per_order(monkeypatch: pytest.MonkeyPatch) -> None:
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|10000|0", f"{ORDER_B}|4000|200"])
     ful.fulfill_prepaid_checkout_escrow(
-        object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=14_200
+        _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=14_200
     )
     assert sum(c["order_amount_ngwee"] for c in recorder.calls) == 14_200
 
@@ -101,7 +108,7 @@ def test_payment_not_equal_to_items_plus_fee_is_refused(
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|5000|250"])
     with pytest.raises(LedgerError, match="does not match payment amount"):
         ful.fulfill_prepaid_checkout_escrow(
-            object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=paid
+            _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=paid
         )
     assert recorder.calls == []
 
@@ -110,7 +117,7 @@ def test_negative_platform_fee_fails_closed(monkeypatch: pytest.MonkeyPatch) -> 
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|5000|-250"])
     with pytest.raises(LedgerError, match="negative platform fee"):
         ful.fulfill_prepaid_checkout_escrow(
-            object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=4_750
+            _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=4_750
         )
     assert recorder.calls == []
 
@@ -118,26 +125,20 @@ def test_negative_platform_fee_fails_closed(monkeypatch: pytest.MonkeyPatch) -> 
 def test_legacy_row_without_fee_column_reads_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     recorder = _fake_orders(monkeypatch, [f"{ORDER_A}|7000|"])
     ful.fulfill_prepaid_checkout_escrow(
-        object(), payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=7_000
+        _SVC, payment_id=PAYMENT, checkout_group_id=CG, amount_ngwee=7_000
     )
     assert [c["order_amount_ngwee"] for c in recorder.calls] == [7_000]
 
 
-def test_order_lookup_reads_platform_fee_tolerantly() -> None:
+def test_order_lookup_reads_platform_fee_tolerantly(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: list[str] = []
 
     def _run(script: str) -> SqlResult:
         captured.append(script)
         return SqlResult(ok=True, rows=[])
 
-    import app.services.payments.fulfillment as module
-
-    original = module.run_sql_script
-    module.run_sql_script = _run  # type: ignore[assignment]
-    try:
-        module._fetch_checkout_orders(CG)
-    finally:
-        module.run_sql_script = original  # type: ignore[assignment]
+    monkeypatch.setattr(ful, "run_sql_script", _run)
+    ful._fetch_checkout_orders(CG)
     assert "to_jsonb(o) ->> 'platform_fee_ngwee'" in captured[0]
 
 
