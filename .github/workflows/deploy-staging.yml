@@ -191,6 +191,7 @@ jobs:
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
           STAGING_SUPABASE_REGION: ${{ vars.STAGING_SUPABASE_REGION || 'eu-west-1' }}
+          SEND_SMS_HOOK_SECRET: ${{ secrets.SEND_SMS_HOOK_SECRET }}
         run: |
           set -euo pipefail
           if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
