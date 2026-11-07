@@ -10,7 +10,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
-const DEFAULT_DEPOSIT_PCT = 50;
+const DEFAULT_DEPOSIT_PCT = 100;
 
 type BookResponse = {
   checkout_group_id: string;

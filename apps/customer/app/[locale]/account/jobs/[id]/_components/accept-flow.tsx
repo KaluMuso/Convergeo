@@ -10,7 +10,7 @@ import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
-export const DEFAULT_DEPOSIT_PCT = 50;
+export const DEFAULT_DEPOSIT_PCT = 100;
 
 type AcceptResponse = {
   checkout_group_id: string;
