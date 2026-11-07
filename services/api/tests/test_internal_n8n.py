@@ -563,22 +563,10 @@ class TestLowStockEndpoint:
         fake_client.tables["platform_config"].rows.append(
             {"key": "low_stock_threshold", "value": value}
         )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == expected
-
-    @pytest.mark.parametrize("value,expected", [(3, 3), ("7", 7)])
-    def test_configured_threshold_overrides_default(
-        self, fake_client: FakeSupabaseClient, value: int | str, expected: int
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", "value": value}
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
+            == expected
         )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == expected
 
     @pytest.mark.parametrize("row", [{}, {"value": None}, {"value": "invalid"}])
     def test_invalid_threshold_uses_configured_default(
@@ -586,38 +574,10 @@ class TestLowStockEndpoint:
     ) -> None:
         from app.routers.internal_n8n import _read_platform_config_int
 
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", **row}
+        fake_client.tables["platform_config"].rows.append({"key": "low_stock_threshold", **row})
+        assert (
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5) == 5
         )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == 5
-
-    @pytest.mark.parametrize("value,expected", [(3, 3), ("7", 7)])
-    def test_configured_threshold_overrides_default(
-        self, fake_client: FakeSupabaseClient, value: int | str, expected: int
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", "value": value}
-        )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == expected
-
-    @pytest.mark.parametrize("row", [{}, {"value": None}, {"value": "invalid"}])
-    def test_invalid_threshold_uses_configured_default(
-        self, fake_client: FakeSupabaseClient, row: dict[str, Any]
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", **row}
-        )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == 5
 
     def test_threshold_query_error_propagates(
         self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
@@ -629,9 +589,7 @@ class TestLowStockEndpoint:
 
         monkeypatch.setattr(FakeQuery, "execute", fail_query)
         with pytest.raises(APIError):
-            _read_platform_config_int(
-                MagicMock(client=fake_client), "low_stock_threshold", 5
-            )
+            _read_platform_config_int(MagicMock(client=fake_client), "low_stock_threshold", 5)
 
     def test_missing_threshold_uses_configured_default(
         self, n8n_client: TestClient, fake_client: FakeSupabaseClient
@@ -656,45 +614,6 @@ class TestLowStockEndpoint:
         assert response.status_code == 200
         assert response.json()["items"][0]["threshold"] == 5
 
-    @pytest.mark.parametrize("value,expected", [(3, 3), ("7", 7)])
-    def test_configured_threshold_overrides_default(
-        self, fake_client: FakeSupabaseClient, value: int | str, expected: int
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", "value": value}
-        )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == expected
-
-    @pytest.mark.parametrize("row", [{}, {"value": None}, {"value": "invalid"}])
-    def test_invalid_threshold_uses_configured_default(
-        self, fake_client: FakeSupabaseClient, row: dict[str, Any]
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        fake_client.tables["platform_config"].rows.append(
-            {"key": "low_stock_threshold", **row}
-        )
-        assert _read_platform_config_int(
-            MagicMock(client=fake_client), "low_stock_threshold", 5
-        ) == 5
-
-    def test_threshold_query_error_propagates(
-        self, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from app.routers.internal_n8n import _read_platform_config_int
-
-        def fail_query(_query: FakeQuery) -> None:
-            raise APIError({"code": "42501", "message": "mock permission failure"})
-
-        monkeypatch.setattr(FakeQuery, "execute", fail_query)
-        with pytest.raises(APIError):
-            _read_platform_config_int(
-                MagicMock(client=fake_client), "low_stock_threshold", 5
-            )
 
 class TestReviewRequestsEndpoint:
     def test_returns_completed_orders_after_24h(
