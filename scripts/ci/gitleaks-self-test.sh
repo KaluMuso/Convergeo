@@ -4,7 +4,6 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CONFIG="${ROOT}/.gitleaks.toml"
 GITLEAKS_BIN="${GITLEAKS_BIN:-gitleaks}"
 
 if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
@@ -12,9 +11,15 @@ if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
   exit 2
 fi
 
-WORKDIR="$(mktemp -d)"
-cleanup() { rm -rf "${WORKDIR}"; }
-trap cleanup EXIT
+python3 - "${ROOT}" "$(command -v "${GITLEAKS_BIN}")" <<'PY'
+import hashlib
+import json
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
 
 fixture_path="scripts/ci/fixtures/merge-evidence-incident-640.json"
 adjacent_path="scripts/ci/fixtures/merge-evidence-incident-641.json"

@@ -65,10 +65,19 @@
       "source-map-js": "1.2.2",
       "proxy-addr": "2.0.8",
       "compression": "1.8.2",
-      "next": "15.5.27"
+      "next": "15.5.27",
+      "@lhci/cli@0.15.1>compression": "1.8.2",
+      "postcss@8.5.23>source-map-js": "1.2.2",
+      "@tailwindcss/node@4.3.3>source-map-js": "1.2.2",
+      "@lhci/cli@0.15.1>express": "4.22.3",
+      "express@4.22.3>body-parser": "1.20.8",
+      "express@4.22.3>qs": "6.16.0",
+      "body-parser@1.20.8>qs": "6.16.0",
+      "express@4.22.3>proxy-addr": "2.0.8"
     },
     "patchedDependencies": {
-      "next@15.5.25": "patches/next.patch"
+      "next@15.5.25": "patches/next.patch",
+      "basic-ftp@5.3.1": "patches/basic-ftp@5.3.1.patch"
     }
   }
 }

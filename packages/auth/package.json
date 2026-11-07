@@ -34,7 +34,7 @@
     "next": "^15.5.27",
     "react": "^19.3.0",
     "typescript": "^5.8.2",
-    "vitest": "^4.1.11"
+    "vitest": "4.1.12"
   },
   "peerDependencies": {
     "next": "^15.0.0",

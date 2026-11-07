@@ -6,6 +6,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { OtpField } from "@vergeo/ui/src/otp-field";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -53,9 +54,56 @@ export type ContactStepLabels = {
 type StepContactProps = {
   labels: ContactStepLabels;
   onComplete: () => void;
+  showIntro?: boolean;
 };
 
-export function StepContact({ labels, onComplete }: StepContactProps) {
+export function ContactStepIntro({
+  labels,
+}: {
+  labels: Pick<ContactStepLabels, "title" | "subtitle">;
+}) {
+  return (
+    <div className="space-y-1">
+      <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+      <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
+    </div>
+  );
+}
+
+export function ContactStepSkeleton({
+  loadingLabel,
+  showIntro = false,
+}: {
+  loadingLabel: string;
+  showIntro?: boolean;
+}) {
+  return (
+    <div className="space-y-4" data-testid="checkout-loading-skeleton" aria-busy="true">
+      <p className="sr-only" aria-live="polite">
+        {loadingLabel}
+      </p>
+      {showIntro ? (
+        <div className="space-y-1" aria-hidden="true">
+          <Skeleton shape="line" width="60%" height="1.5rem" />
+          <Skeleton shape="line" width="80%" />
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-4" aria-hidden="true">
+        <div className="space-y-2">
+          <Skeleton shape="line" width="8rem" />
+          <div className="flex gap-2">
+            <Skeleton width="6rem" height="3rem" />
+            <Skeleton className="min-w-0 flex-1" height="3rem" />
+          </div>
+          <Skeleton shape="line" width="70%" />
+        </div>
+        <Skeleton height="3rem" />
+      </div>
+    </div>
+  );
+}
+
+export function StepContact({ labels, onComplete, showIntro = true }: StepContactProps) {
   const { session, loading: sessionLoading } = useSession();
   const [phase, setPhase] = useState<"phone" | "otp">("phone");
   const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -101,6 +149,9 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   }, [session, sessionLoading, labels.generic, onComplete]);
 
   if (sessionLoading) {
+    if (!showIntro) {
+      return <ContactStepSkeleton loadingLabel={labels.loading} />;
+    }
     return (
       <p className="font-body text-sm text-text-3" aria-live="polite">
         {labels.loading}
@@ -111,7 +162,9 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   if (session?.access_token) {
     return (
       <div className="space-y-2">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        {showIntro ? (
+          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        ) : null}
         <p className="font-body text-sm text-text-2">{labels.skippedLoggedIn}</p>
       </div>
     );
@@ -238,10 +291,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   if (phase === "phone") {
     return (
       <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
-          <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-        </div>
+        {showIntro ? <ContactStepIntro labels={labels} /> : null}
         <form className="flex flex-col gap-4" onSubmit={(event) => void handleSendOtp(event)}>
           <FormField
             label={labels.phoneLabel}
@@ -292,10 +342,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
-        <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-      </div>
+      {showIntro ? <ContactStepIntro labels={labels} /> : null}
       <div className="flex flex-col gap-4">
         <OtpField
           value={code}
