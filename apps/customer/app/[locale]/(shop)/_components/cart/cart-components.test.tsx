@@ -151,6 +151,7 @@ describe("VendorGroups", () => {
   it("renders free-delivery progress nudge below threshold", () => {
     render(
       <VendorGroups
+        freeDeliveryThresholdNgwee={35_000}
         groups={[belowThresholdGroup]}
         noticesByListingId={{}}
         labels={vendorLabels}
@@ -162,7 +163,30 @@ describe("VendorGroups", () => {
 
     expect(screen.getByTestId("cart-free-delivery-progress")).toBeInTheDocument();
     expect(screen.queryByTestId("cart-free-delivery-unlocked")).not.toBeInTheDocument();
+    // Threshold comes from the API value, not a hard-coded K200.
+    expect(screen.getByTestId("cart-delivery-nudge-vendor-a")).toHaveTextContent("K350.00");
   });
+
+  it.each([null, undefined, 0])(
+    "hides the threshold copy and progress bar when the threshold is %s",
+    (threshold) => {
+      render(
+        <VendorGroups
+          freeDeliveryThresholdNgwee={threshold}
+          groups={[belowThresholdGroup]}
+          noticesByListingId={{}}
+          labels={vendorLabels}
+          lineLabels={lineLabels}
+          onQtyChange={vi.fn().mockResolvedValue(undefined)}
+          onRemove={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      expect(screen.queryByTestId("cart-free-delivery-progress")).not.toBeInTheDocument();
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+      expect(screen.getByTestId("cart-delivery-scope-note")).toBeInTheDocument();
+    },
+  );
 
   it("shows unlocked free delivery when group is eligible", () => {
     render(
@@ -188,6 +212,7 @@ describe("VendorGroups", () => {
   it("always shows Lusaka/zone scope note on the delivery nudge (LB-P2-04)", () => {
     render(
       <VendorGroups
+        freeDeliveryThresholdNgwee={20_000}
         groups={[belowThresholdGroup]}
         noticesByListingId={{}}
         labels={vendorLabels}

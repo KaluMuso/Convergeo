@@ -170,8 +170,85 @@ def test_commission_rates_reflects_updated_fixture_row(
     assert response.status_code == 200
 
     body = response.json()
-    electronics = next(
-        row for row in body["rates"] if row["category_key"] == "electronics"
-    )
+    electronics = next(row for row in body["rates"] if row["category_key"] == "electronics")
     assert electronics["rate_pct"] == 6.5
     assert datetime.fromisoformat(body["updated_at"].replace("Z", "+00:00")) == updated_at
+
+
+class FakePlatformConfigClient:
+    def __init__(self, values: dict[str, Any]) -> None:
+        self._values = values
+
+    @property
+    def client(self) -> MagicMock:
+        values = self._values
+        client = MagicMock()
+
+        def table(name: str) -> MagicMock:
+            if name != "platform_config":
+                raise AssertionError(f"unexpected table: {name}")
+            query = MagicMock()
+            state: dict[str, Any] = {}
+
+            def eq(column: str, value: Any) -> MagicMock:
+                assert column == "key"
+                state["key"] = value
+                return query
+
+            def execute() -> MagicMock:
+                key = state["key"]
+                if key in values:
+                    return MagicMock(data={"value": values[key]})
+                return MagicMock(data=None)
+
+            query.select.return_value = query
+            query.eq.side_effect = eq
+            query.maybe_single.return_value = query
+            query.execute.side_effect = execute
+            return query
+
+        client.table.side_effect = table
+        return client
+
+
+def _storefront_client(monkeypatch: pytest.MonkeyPatch, values: dict[str, Any]) -> TestClient:
+    monkeypatch.setattr(
+        "app.deps.get_supabase_service_client",
+        lambda: FakePlatformConfigClient(values),
+    )
+    return TestClient(create_app(), raise_server_exceptions=False)
+
+
+def test_storefront_config_returns_platform_config_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _storefront_client(
+        monkeypatch, {"free_delivery_threshold_ngwee": 35_000, "low_stock_threshold": "8"}
+    )
+    response = client.get("/public/config/storefront")
+
+    assert response.status_code == 200
+    assert response.json() == {"free_delivery_threshold_ngwee": 35_000, "low_stock_threshold": 8}
+    assert "s-maxage" in response.headers.get("cache-control", "")
+
+
+def test_storefront_config_defaults_match_server_enforcement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+    from app.routers.internal_n8n import _DEFAULT_LOW_STOCK_THRESHOLD
+
+    client = _storefront_client(monkeypatch, {})
+    body = client.get("/public/config/storefront").json()
+
+    assert body["free_delivery_threshold_ngwee"] == DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+    assert body["low_stock_threshold"] == _DEFAULT_LOW_STOCK_THRESHOLD
+
+
+def test_storefront_config_ignores_malformed_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _storefront_client(
+        monkeypatch, {"free_delivery_threshold_ngwee": -5, "low_stock_threshold": True}
+    )
+    body = client.get("/public/config/storefront").json()
+
+    assert body == {"free_delivery_threshold_ngwee": 20_000, "low_stock_threshold": 5}

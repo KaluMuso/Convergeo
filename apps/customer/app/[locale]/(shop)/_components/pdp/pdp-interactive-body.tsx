@@ -62,6 +62,7 @@ export type ProductListing = {
   productClass: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   moq: number;
   inStock: boolean;
   saleUnit?: SaleUnit;
@@ -198,6 +199,7 @@ export function PdpInteractiveBody({
       productClass: selectedListing.productClass,
       stockMode: selectedListing.stockMode,
       stockQty: selectedListing.stockQty,
+      lowStockThreshold: selectedListing.lowStockThreshold,
       moq: selectedListing.moq,
       inStock: selectedListing.inStock,
       saleUnit: selectedListing.saleUnit,

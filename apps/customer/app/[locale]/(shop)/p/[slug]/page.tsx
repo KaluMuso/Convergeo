@@ -48,6 +48,8 @@ import {
 
 import type { ComparisonListing } from "../../_components/pdp/comparison";
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
+import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
+
 import type { Metadata } from "next";
 
 // Must be a literal for Next.js segment config (imported constants are rejected).
@@ -260,7 +262,11 @@ function galleryImages(
   }));
 }
 
-function toProductListings(product: ProductDetail, alt: string): ProductListing[] {
+function toProductListings(
+  product: ProductDetail,
+  alt: string,
+  lowStockThreshold: number | null,
+): ProductListing[] {
   return product.listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -269,6 +275,7 @@ function toProductListings(product: ProductDetail, alt: string): ProductListing[
     productClass: listing.product_class ?? "A",
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
+    lowStockThreshold,
     moq: listing.moq,
     inStock: listing.in_stock,
     saleUnit: listing.sale_unit ?? "each",
@@ -422,9 +429,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
-  const [result, contactVendorEnabled] = await Promise.all([
+  const [result, contactVendorEnabled, storefrontConfig] = await Promise.all([
     fetchProduct(slug),
     contactVendorCapabilityAvailable(),
+    fetchStorefrontConfig(),
   ]);
 
   if (result.kind === "redirect") {
@@ -491,7 +499,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     { name: tNav("shop.home"), path: "" },
     { name: product.name, path: `p/${product.slug}` },
   ]);
-  const productListings = toProductListings(product, product.name);
+  const productListings = toProductListings(
+    product,
+    product.name,
+    storefrontConfig.lowStockThreshold,
+  );
   const comparisonListings = toComparisonListings(comparison, product);
   const overviewParagraphs = descriptionParagraphs(product.description);
 

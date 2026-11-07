@@ -77,6 +77,7 @@ type EventDetail = {
   is_free: boolean;
   is_sold_out: boolean;
   platform_fee_payer?: "organiser" | "buyer";
+  platform_fee_bps?: number;
   visibility?: "public" | "unlisted" | "private";
   organiser: {
     id: string;
@@ -418,6 +419,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             isSoldOut={event.is_sold_out}
             eventAccessProof={eventAccessProof}
             platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
+            platformFeeBps={event.platform_fee_bps ?? null}
           />
 
           <section className="rounded-lg border border-border bg-bg-2 p-5">
