@@ -80,6 +80,7 @@
       "success": "Thanks — your message is on its way. We'll be in touch soon.",
       "errorGeneric": "Something went wrong. Please try again, or reach us on WhatsApp.",
       "errorRateLimited": "You've sent a few messages already. Please wait a moment before sending another.",
+      "errorUnavailable": "We can't take messages right now. Please reach us on WhatsApp or try again later.",
       "validation": {
         "nameRequired": "Please tell us your name.",
         "nameTooLong": "That name is too long.",

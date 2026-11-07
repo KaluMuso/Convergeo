@@ -21,6 +21,7 @@ export type ContactFormLabels = {
   success: string;
   errorGeneric: string;
   errorRateLimited: string;
+  errorUnavailable: string;
   validation: Record<ContactErrorKey, string>;
 };
 
@@ -67,7 +68,13 @@ export function ContactForm({ labels }: { labels: ContactFormLabels }) {
       }
 
       setStatus("error");
-      setFormError(res.status === 429 ? labels.errorRateLimited : labels.errorGeneric);
+      setFormError(
+        res.status === 429
+          ? labels.errorRateLimited
+          : res.status === 503
+            ? labels.errorUnavailable
+            : labels.errorGeneric,
+      );
     } catch {
       setStatus("error");
       setFormError(labels.errorGeneric);
