@@ -129,4 +129,20 @@ describe("job quote flow helpers", () => {
       body: JSON.stringify({}),
     });
   });
+
+  it("renders the API balance due and hides the balance line when it is zero", () => {
+    const { rerender } = renderWithServices(
+      <CompleteConfirm jobId="job-1" balanceNgwee={125_000} allowConfirmAttempt />,
+    );
+    expect(screen.getByText(/balance due on completion/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /confirm and pay/i })).toBeInTheDocument();
+
+    rerender(
+      <NextIntlClientProvider locale="en" messages={{ services: servicesMessages }}>
+        <CompleteConfirm jobId="job-1" balanceNgwee={0} allowConfirmAttempt />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.queryByText(/balance due on completion/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /confirm the work is done/i })).toBeInTheDocument();
+  });
 });

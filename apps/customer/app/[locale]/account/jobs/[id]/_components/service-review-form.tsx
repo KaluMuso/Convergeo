@@ -89,7 +89,11 @@ export function ServiceReviewForm({ jobId }: { jobId: string }) {
     try {
       await client.request("/service-reviews", {
         method: "POST",
-        body: JSON.stringify({ job_id: jobId, rating, body: body.trim() || null }),
+        body: JSON.stringify({
+          job_id: jobId,
+          rating,
+          body: body.trim() || null,
+        }),
       });
       setSubmitted(true);
       setEditing(false);

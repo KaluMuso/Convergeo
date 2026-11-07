@@ -258,6 +258,7 @@
       "intro": "Confirm to release the balance to your provider. If you do nothing, we auto-confirm after 48 hours.",
       "balanceLabel": "Balance due on completion",
       "confirmCta": "Confirm and pay {amount}",
+      "confirmCtaNoBalance": "Confirm the work is done",
       "confirming": "Confirming…",
       "confirmed": "Confirmed. Your provider has been paid.",
       "awaitingProvider": "Waiting for your provider to mark the job complete.",

@@ -76,14 +76,16 @@ export function CompleteConfirm({
         <p className="text-sm text-text-2">{t("intro")}</p>
       </header>
 
-      <dl className="text-sm">
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-lg font-semibold text-display-ink">
-            {formatK(balanceNgwee)}
-          </dd>
-        </div>
-      </dl>
+      {balanceNgwee > 0 ? (
+        <dl className="text-sm">
+          <div className="flex items-center justify-between">
+            <dt className="text-text-2">{t("balanceLabel")}</dt>
+            <dd className="font-mono text-lg font-semibold text-display-ink">
+              {formatK(balanceNgwee)}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
 
       <p className="rounded bg-bg-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
 
@@ -103,7 +105,9 @@ export function CompleteConfirm({
             disabled={submitting}
             onClick={() => void handleConfirm()}
           >
-            {t("confirmCta", { amount: formatK(balanceNgwee) })}
+            {balanceNgwee > 0
+              ? t("confirmCta", { amount: formatK(balanceNgwee) })
+              : t("confirmCtaNoBalance")}
           </Button>
         </>
       ) : (

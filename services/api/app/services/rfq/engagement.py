@@ -32,7 +32,7 @@ from app.services.stock.claim import sql_uuid
 
 # Deposit percentage is admin-tunable via platform_config; whole-percent integer.
 CONFIG_KEY_DEPOSIT_PCT = "service_deposit_pct"
-DEFAULT_SERVICE_DEPOSIT_PCT = 50
+DEFAULT_SERVICE_DEPOSIT_PCT = 100  # pilot: services are paid 100% upfront
 
 # Services commission category (0008 seed: ('services', 1200) = 12%).
 SERVICE_COMMISSION_CATEGORY = "services"
@@ -143,6 +143,11 @@ LIMIT 1;
     if raw.startswith('"') and raw.endswith('"') and raw[1:-1].isdigit():
         return int(raw[1:-1])
     return default
+
+
+def read_service_deposit_pct() -> int:
+    """Configured service deposit percentage (platform_config, default 100)."""
+    return _read_config_int(CONFIG_KEY_DEPOSIT_PCT, DEFAULT_SERVICE_DEPOSIT_PCT)
 
 
 def _read_service_commission_bps() -> int:
@@ -324,11 +329,9 @@ def accept_quote(
             details={"status": quote_status},
         )
 
-    deposit_pct = _read_config_int(CONFIG_KEY_DEPOSIT_PCT, DEFAULT_SERVICE_DEPOSIT_PCT)
+    deposit_pct = read_service_deposit_pct()
     rate_bps = _read_service_commission_bps()
-    deposit_ngwee = compute_deposit_ngwee(
-        total_job_ngwee=total_job_ngwee, deposit_pct=deposit_pct
-    )
+    deposit_ngwee = compute_deposit_ngwee(total_job_ngwee=total_job_ngwee, deposit_pct=deposit_pct)
     balance_ngwee = total_job_ngwee - deposit_ngwee
     snapshot = build_service_commission_snapshot(
         total_job_ngwee=total_job_ngwee,

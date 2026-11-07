@@ -11,6 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.rfq.broadcast import broadcast_job
+from app.services.rfq.engagement import compute_deposit_ngwee, read_service_deposit_pct
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
 
@@ -74,6 +75,9 @@ class JobResponse(StrictModel):
     created_at: str
     updated_at: str
     broadcast: JobBroadcastSummary | None = None
+    # Server-derived from the accepted quote + service_deposit_pct; None until a quote is accepted.
+    deposit_ngwee: int | None = None
+    balance_due_ngwee: int | None = None
 
 
 class CreateJobResponse(StrictModel):
@@ -218,11 +222,7 @@ def _assert_owner(job: dict[str, Any], user_id: str) -> None:
 
 
 def _broadcast_summary(result: Any) -> JobBroadcastSummary:
-    message_key = (
-        "services.postJob.ack.noMatch"
-        if result.no_match
-        else "services.postJob.ack.sent"
-    )
+    message_key = "services.postJob.ack.noMatch" if result.no_match else "services.postJob.ack.sent"
     return JobBroadcastSummary(
         matched_count=result.matched_count,
         notified_count=result.notified_count,
@@ -315,7 +315,24 @@ async def get_job(
 ) -> JobResponse:
     job = _load_job(service_client.client, job_id)
     _assert_owner(job, current_user.id)
-    return _serialize_job(job)
+    response = _serialize_job(job)
+    quote = _single_row(
+        service_client.client.table("job_quotes")
+        .select("amount_ngwee")
+        .eq("job_id", job_id)
+        .eq("status", "accepted")
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    if quote is not None:
+        total = int(quote["amount_ngwee"])
+        deposit = compute_deposit_ngwee(
+            total_job_ngwee=total, deposit_pct=read_service_deposit_pct()
+        )
+        response.deposit_ngwee = deposit
+        response.balance_due_ngwee = total - deposit
+    return response
 
 
 @router.post("/{job_id}/cancel", response_model=CancelJobResponse)
