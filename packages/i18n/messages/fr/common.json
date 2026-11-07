@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "La place de marché zambienne — des achats protégés par séquestre"
   },
   "meta": {
     "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Convergeo — la place de marché multi-vendeurs.",

@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "Msika wa ku Zambia — kugula ndi escrow"
   },
   "meta": {
     "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Convergeo.",

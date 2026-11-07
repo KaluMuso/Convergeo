@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { formatListingQuantity, type SaleUnitLabels } from "../../_components/sale-quantity";
 import {
   fetchStandaloneListing,
@@ -24,8 +25,6 @@ import { StandaloneListingBody } from "../../_components/standalone-listing/stan
 
 import type { BuyBoxLabels, BuyBoxListing } from "../../_components/pdp/buy-box";
 import type { PickupLocationPickerLabels } from "../../_components/pdp/pickup-location-picker";
-import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
-
 import type { Metadata } from "next";
 
 export const revalidate = 60;

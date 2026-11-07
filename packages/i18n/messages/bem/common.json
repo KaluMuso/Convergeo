@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "Isoko lya mu Zambia — ukushita na escrow"
   },
   "meta": {
     "defaultDescription": "Shiteni ifintu, bookeni ma-service, no sangeni ma-event mu Zambia pa Convergeo.",

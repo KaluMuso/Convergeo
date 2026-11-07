@@ -30,7 +30,7 @@ export default async function NotFound() {
       <p className="text-sm text-text-2">{tNav("shop.home")}</p>
       <Link
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border bg-surface px-4 text-sm font-medium text-text"
-        href="/en"
+        href={`/${locale}`}
       >
         {tNav("shop.home")}
       </Link>

@@ -20,6 +20,7 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
+import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import {
   fetchProduct,
   productCacheTag,
@@ -48,8 +49,6 @@ import {
 
 import type { ComparisonListing } from "../../_components/pdp/comparison";
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
-import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
-
 import type { Metadata } from "next";
 
 // Must be a literal for Next.js segment config (imported constants are rejected).

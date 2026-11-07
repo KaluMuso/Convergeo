@@ -24,6 +24,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Product-detail recommendations and image viewer (2026-10-04):** `catalog.pdp.related.{vendorHeading,categoryHeading,loading,unavailable}` and `catalog.pdp.gallery.{zoomOpen,zoomClose,zoomTitle,zoomIn,zoomOut}` now have AI-authored provisional Bemba and Nyanja wording for key and ICU completeness. A second AI reviewer checked source-label alignment and confirmed that both `vendorHeading` values retain `{vendor}` while flagging uncertain wording; this is **not** fluent or native-speaker approval. In particular, the image-viewer controls and Bemba zoom wording remain uncertain. Keep these 18 values pending recorded native-speaker review before production; do not mark the sign-off table complete or change SEO publication based on CI passing.
 
+**OG image tagline (2026-11-07):** `common.app.tagline` was added (EN/FR/ZH translated; bem/nya are AI-authored provisional wording — "Isoko lya mu Zambia — ukushita na escrow" / "Msika wa ku Zambia — kugula ndi escrow"). It renders in the social-share (Open Graph) image for each locale. Pending recorded native-speaker review; not a sign-off.
+
 ## Noindex removal criteria (authoritative)
 
 All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):

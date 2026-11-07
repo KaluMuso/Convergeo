@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { getLocale } from "next-intl/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import NotFound from "./not-found";
@@ -53,5 +54,13 @@ describe("vendor not-found page", () => {
 
     expect(screen.getByText("Vergeo5 Vendor")).toBeInTheDocument();
     expect(screen.getAllByText("Home").length).toBeGreaterThan(0);
+  });
+
+  it("links home to the current locale, not a hard-coded /en", async () => {
+    vi.mocked(getLocale).mockResolvedValueOnce("fr");
+    render(await NotFound());
+
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/fr");
   });
 });

@@ -53,7 +53,7 @@ function parseBannerItems(payload: Record<string, unknown>): BannerItemDraft[] {
       {
         key: typeof record.key === "string" ? record.key : `banner-${index}`,
         title: typeof record.title === "string" ? record.title : "",
-        href: typeof record.href === "string" ? record.href : "/en/search",
+        href: typeof record.href === "string" ? record.href : "/search",
         image_public_id:
           typeof record.image_public_id === "string" ? record.image_public_id : undefined,
         subtitle: typeof record.subtitle === "string" ? record.subtitle : undefined,
@@ -109,7 +109,7 @@ function parseCollections(payload: Record<string, unknown>): CollectionDraft[] {
 function parseMegaMenuMinis(payload: Record<string, unknown>): MegaMenuMiniDraft[] {
   const raw = payload.featured_minis;
   if (!Array.isArray(raw) || raw.length === 0) {
-    return [{ key: "mini-0", title: "", href: "/en/search" }];
+    return [{ key: "mini-0", title: "", href: "/search" }];
   }
   return raw.flatMap((entry, index) => {
     if (!entry || typeof entry !== "object") {
@@ -120,7 +120,7 @@ function parseMegaMenuMinis(payload: Record<string, unknown>): MegaMenuMiniDraft
       {
         key: typeof record.key === "string" ? record.key : `mini-${index}`,
         title: typeof record.title === "string" ? record.title : "",
-        href: typeof record.href === "string" ? record.href : "/en/search",
+        href: typeof record.href === "string" ? record.href : "/search",
         price_label: typeof record.price_label === "string" ? record.price_label : undefined,
       },
     ];

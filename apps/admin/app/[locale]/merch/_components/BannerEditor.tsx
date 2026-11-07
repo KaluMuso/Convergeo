@@ -24,7 +24,7 @@ function emptyBanner(index: number): BannerItemDraft {
   return {
     key: `banner-${index}`,
     title: "",
-    href: "/en/search",
+    href: "/search",
   };
 }
 
