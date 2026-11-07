@@ -480,3 +480,17 @@ $$;
 
 revoke execute on function public.consume_listing_variant_stock(uuid, integer) from public, anon, authenticated;
 grant execute on function public.consume_listing_variant_stock(uuid, integer) to service_role;
+
+-- ---------------------------------------------------------------------------
+-- 6. service_role table grants. The API reads variant axes/variants through
+--    PostgREST with the service-role key (PDP, cart, checkout); the base
+--    migration only granted SELECT to anon/authenticated, so those reads 403'd
+--    ("Start API" fixture probe on /products/{slug}). Writes still go through
+--    vendor_replace_listing_variants(); RLS stays enforced for client roles.
+-- ---------------------------------------------------------------------------
+
+grant select, insert, update, delete on table
+  public.listing_option_groups,
+  public.listing_option_values,
+  public.vendor_listing_variants
+to service_role;
