@@ -251,7 +251,11 @@
     "related": {
       "heading": "此类别更多商品",
       "fromPrice": "{price} 起",
-      "vendorFallback": "同类别"
+      "vendorFallback": "同类别",
+      "vendorHeading": "{vendor} 的更多商品",
+      "categoryHeading": "此类别中的更多商品",
+      "loading": "正在加载推荐…",
+      "unavailable": "推荐暂时不可用。"
     },
     "recentlyViewed": {
       "heading": "最近浏览"
@@ -260,7 +264,12 @@
       "empty": "暂无图片",
       "indicator": "第 {current}/{total} 张图片",
       "previous": "上一张图片",
-      "next": "下一张图片"
+      "next": "下一张图片",
+      "zoomOpen": "放大图片",
+      "zoomClose": "关闭图片查看器",
+      "zoomTitle": "商品图片",
+      "zoomIn": "放大",
+      "zoomOut": "适应窗口"
     },
     "specs": {
       "heading": "规格",

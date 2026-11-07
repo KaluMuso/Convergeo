@@ -100,7 +100,7 @@ async def payouts_batch_tick(
 async def payouts_retry_tick(
     supabase: Annotated[Any, Depends(get_supabase_client)],
 ) -> dict[str, int]:
-    """Re-query and retry in-flight payouts (status before re-send)."""
+    """Claim never-sent payouts once and poll every attempted payout."""
     strategy, client = _lenco_adapters()
     stats = await retry_pending_payouts(
         supabase,
@@ -114,6 +114,8 @@ async def payouts_retry_tick(
         "retried": stats.retried,
         "dead_lettered": stats.dead_lettered,
         "skipped": stats.skipped,
+        "manual": stats.manual,
+        "errors": stats.errors,
     }
 
 

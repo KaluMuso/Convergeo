@@ -254,7 +254,11 @@
     "related": {
       "heading": "More in this category",
       "fromPrice": "From {price}",
-      "vendorFallback": "Same category"
+      "vendorFallback": "Same category",
+      "vendorHeading": "More from {vendor}",
+      "categoryHeading": "More in this category",
+      "loading": "Loading recommendations…",
+      "unavailable": "Recommendations are temporarily unavailable."
     },
     "recentlyViewed": {
       "heading": "Recently viewed"
@@ -263,7 +267,12 @@
       "empty": "No images yet",
       "indicator": "Image {current} of {total}",
       "previous": "Previous image",
-      "next": "Next image"
+      "next": "Next image",
+      "zoomOpen": "Enlarge image",
+      "zoomClose": "Close image viewer",
+      "zoomTitle": "Product images",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Fit image"
     },
     "specs": {
       "heading": "Specifications",

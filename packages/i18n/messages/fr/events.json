@@ -26,7 +26,8 @@
     "neighbourhoodLabel": "Quartier",
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Près de moi",
-    "nearMeDenied": "La localisation est désactivée — la recherche par ville reste disponible."
+    "nearMeDenied": "La localisation est désactivée — la recherche par ville reste disponible.",
+    "subcategoryLabel": "Sous-catégorie"
   },
   "categories": {
     "all": "Tous",

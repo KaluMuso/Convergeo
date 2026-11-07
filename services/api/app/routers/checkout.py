@@ -18,6 +18,7 @@ from app.services.cart.read_path import listing_cart_access_conflict
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
     is_rfq_pinned_line,
@@ -544,9 +545,9 @@ def _ensure_session_active(
             expires_at = datetime.now(UTC) + timedelta(minutes=ttl_min)
 
     if expires_at <= datetime.now(UTC):
-        service.client.table("checkout_groups").update({"status": "expired"}).eq(
-            "id", session_id
-        ).execute()
+        expire_checkout_group_if_unpaid(
+            service.client, checkout_group_id=session_id, terminal_status="expired"
+        )
         raise AppError(
             code="checkout.reservation_expired",
             message="Your reservation has expired",
@@ -655,9 +656,9 @@ async def create_checkout_session(
             )
         )
         if not result.claimed and not result.skipped:
-            service.client.table("checkout_groups").update({"status": "abandoned"}).eq(
-                "id", session_id
-            ).execute()
+            expire_checkout_group_if_unpaid(
+                service.client, checkout_group_id=session_id, terminal_status="abandoned"
+            )
             raise AppError(
                 code="checkout.stock_unavailable",
                 message="An item in your cart is no longer available",

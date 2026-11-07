@@ -68,8 +68,11 @@ export function OtpForm({
    * call in the same tick, so acquiring it before the first `await` closes the
    * window. This is the same guarantee OtpField already gives its own
    * `onComplete` via `completedRef` — the form just never applied it here.
-   */
+  */
   const verifyingRef = useRef(false);
+  // Supabase OTPs are single-use. Once accepted, a later cart reconciliation
+  // failure may be retried, but the spent code must never be submitted again.
+  const authAcceptedRef = useRef(false);
 
   const handleVerify = async (otpCode: string) => {
     // Acquire synchronously, before any await, or the guard is not a guard.
@@ -81,43 +84,39 @@ export function OtpForm({
     setErrorMessage(null);
     setLoading(true);
 
-    // Distinguishes "failed before the code was accepted" (recoverable — re-arm
-    // submission) from "failed after it was accepted" (the OTP is spent, so
-    // re-arming could only ever fire a second, doomed verifyOtp).
-    let codeAccepted = false;
-
     try {
-      const supabase = await getBrowserClient();
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otpCode,
-        type: "sms",
-      });
+      if (!authAcceptedRef.current) {
+        const supabase = await getBrowserClient();
+        const { error } = await supabase.auth.verifyOtp({
+          phone,
+          token: otpCode,
+          type: "sms",
+        });
 
-      if (error) {
-        const parsed = parseAuthError(error);
-        if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
-        } else if (parsed.code === "wrong_code") {
-          setErrorMessage(labels.wrongCode);
-        } else if (parsed.code === "expired") {
-          setErrorMessage(labels.expired);
-        } else {
-          setErrorMessage(labels.generic);
+        if (error) {
+          const parsed = parseAuthError(error);
+          if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
+          } else if (parsed.code === "wrong_code") {
+            setErrorMessage(labels.wrongCode);
+          } else if (parsed.code === "expired") {
+            setErrorMessage(labels.expired);
+          } else {
+            setErrorMessage(labels.generic);
+          }
+          // Recoverable: the user must be able to correct and resubmit the code.
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
         }
-        // Recoverable: the user must be able to correct and resubmit the code.
-        verifyingRef.current = false;
-        setLoading(false);
-        return;
+
+        authAcceptedRef.current = true;
       }
 
-      codeAccepted = true;
-
-      // Deliberately NOT released on success: the code is consumed and
-      // navigation is in flight. Releasing here would re-arm submission during
-      // the transition — the precise window this guard exists to close. The
-      // component unmounts when navigation completes; `loading` stays true so
-      // the field and button remain inert until it does.
+      // Deliberately NOT released after navigation succeeds: the code is
+      // consumed and the component is transitioning away.
       await navigateAfterPortalAuth({
         router,
         locale,
@@ -126,9 +125,9 @@ export function OtpForm({
         fallbackPath: defaultNextPath,
       });
     } catch (response) {
-      if (!codeAccepted) {
-        verifyingRef.current = false;
-      }
+      // Re-arm only this flight. If OTP acceptance already succeeded, the next
+      // submit skips verifyOtp and retries post-auth reconciliation/navigation.
+      verifyingRef.current = false;
       setLoading(false);
 
       if (response instanceof Response && response.status === 429) {

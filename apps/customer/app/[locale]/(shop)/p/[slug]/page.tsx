@@ -21,11 +21,6 @@ import { Suspense } from "react";
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import {
-  PdpInteractiveBody,
-  type ComparisonListing,
-  type ProductListing,
-} from "../../_components/pdp/comparison";
-import {
   fetchProduct,
   productCacheTag,
   type Listing,
@@ -33,8 +28,11 @@ import {
 } from "../../_components/pdp/fetch-product";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
+import {
+  PdpInteractiveBody,
+  type ProductListing,
+} from "../../_components/pdp/pdp-interactive-body";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
-import { RelatedProducts } from "../../_components/pdp/related-products";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
@@ -48,6 +46,7 @@ import {
   type ReviewsSectionLabels,
 } from "./_components/reviews-section";
 
+import type { ComparisonListing } from "../../_components/pdp/comparison";
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
@@ -141,40 +140,6 @@ async function fetchComparison(slug: string): Promise<ComparisonApiResponse | nu
     } catch {
       return null;
     }
-  }
-}
-
-type RelatedProduct = {
-  slug: string;
-  name: string;
-  image_public_id: string | null;
-  from_price_ngwee: number | null;
-};
-
-type RelatedApiResponse = {
-  product_slug: string;
-  items: RelatedProduct[];
-};
-
-async function fetchRelated(slug: string): Promise<RelatedProduct[]> {
-  try {
-    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/related`);
-    if (!url) {
-      return [];
-    }
-    const response = await fetch(url, {
-      next: {
-        revalidate,
-        tags: [productCacheTag(slug), "products", "related"],
-      },
-    });
-    if (!response.ok) {
-      return [];
-    }
-    const data = (await response.json()) as RelatedApiResponse;
-    return data.items ?? [];
-  } catch {
-    return [];
   }
 }
 
@@ -494,9 +459,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   }
 
   const product = result.data;
-  const [comparison, related, reviewsForSeo] = await Promise.all([
+  const [comparison, reviewsForSeo] = await Promise.all([
     fetchComparison(slug),
-    fetchRelated(slug),
     fetchProductReviews(product.id),
   ]);
   const selectedListing = selectListing(product.listings, listingId);
@@ -578,7 +542,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const hasOffers = productListings.length > 0;
   const relatedCardLabels = {
-    heading: t("pdp.related.heading"),
+    vendorHeading: t("pdp.related.vendorHeading", { vendor: "{vendor}" }),
+    categoryHeading: t("pdp.related.categoryHeading"),
+    loading: t("pdp.related.loading"),
+    unavailable: t("pdp.related.unavailable"),
     vendorFallback: t("pdp.related.vendorFallback"),
     noReviews: t("plp.card.noReviews"),
     reviewCount: t.raw("plp.card.reviewCount"),
@@ -651,6 +618,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           productImages={images}
           listings={productListings}
           comparisonListings={comparisonListings}
+          relatedLabels={relatedCardLabels}
           initialListingId={listingId}
           singleVendor={singleVendor}
           cloudName={cloudName}
@@ -836,13 +804,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           />
         }
         reviewsPanel={reviewsPanel}
-      />
-
-      <RelatedProducts
-        locale={locale}
-        items={related}
-        labels={relatedCardLabels}
-        cloudName={cloudName}
       />
     </div>
   );

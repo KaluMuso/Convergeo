@@ -53,6 +53,18 @@
       }
     },
     {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.all();\nif (input.length !== 1 || !input[0] || !input[0].json) {\n  throw new Error('Payment sweeper returned unexpected item count');\n}\nconst src = input[0].json;\nconst counters = ['scanned', 'expired', 'reconciled_success', 'released'];\nif (counters.some((key) => !Number.isSafeInteger(src[key]) || src[key] < 0)) {\n  throw new Error('Payment sweeper returned invalid outcome counters');\n}\nreturn [{ json: Object.fromEntries(counters.map((key) => [key, src[key]])) }];"
+      },
+      "id": "assert-sweep-outcome",
+      "name": "Assert Sweep Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
       "parameters": {},
       "id": "error-trigger",
       "name": "On Workflow Error",
@@ -131,6 +143,17 @@
         [
           {
             "node": "Page Founder On Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Stale Payments": {
+      "main": [
+        [
+          {
+            "node": "Assert Sweep Outcome",
             "type": "main",
             "index": 0
           }

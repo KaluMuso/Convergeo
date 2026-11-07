@@ -173,13 +173,15 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
       setSuccessMessage(t("listings.success.evidence"));
     } else if (mode === "new_canonical") {
       setSuccessMessage(t("listings.success.moderation"));
+    } else if (response.status === "draft") {
+      setSuccessMessage(t("listings.success.draft"));
     } else {
       setSuccessMessage(t("listings.success.live"));
     }
     setError(null);
     window.setTimeout(() => {
       router.push(
-        requiresEvidence
+        requiresEvidence || response.status === "draft"
           ? `/${locale}/listings/${response.listing_id}/edit`
           : `/${locale}/listings`,
       );
@@ -272,6 +274,16 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           }
           onError={setError}
           labels={{
+            details: {
+              about: t("listings.newCanonical.details.about"),
+              heading: t("listings.newCanonical.details.heading"),
+              help: t("listings.newCanonical.details.help"),
+              name: t("listings.newCanonical.details.name"),
+              value: t("listings.newCanonical.details.value"),
+              add: t("listings.newCanonical.details.add"),
+              remove: t("listings.newCanonical.details.remove"),
+              invalid: t("listings.newCanonical.details.invalid"),
+            },
             heading: t("listings.newCanonical.heading"),
             intro: t("listings.newCanonical.intro"),
             nameLabel: t("listings.newCanonical.nameLabel"),
@@ -313,6 +325,14 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
+            canonicalRequired: t("listings.errors.canonicalRequired"),
+            standaloneDetailsRequired: t("listings.errors.standaloneDetailsRequired"),
+            policyBlocked: t("listings.errors.policyBlocked"),
+            categoryLabel: t("listings.newCanonical.categoryLabel"),
+            categoryPlaceholder: t("listings.newCanonical.categoryPlaceholder"),
+            descriptionLabel: t("listings.quickList.descriptionLabel"),
+            descriptionHelp: t("listings.quickList.descriptionHelp"),
+            draftNotice: t("listings.quickList.draftNotice"),
             required: t("listings.errors.required"),
           }}
         />

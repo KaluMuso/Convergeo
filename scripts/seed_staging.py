@@ -31,7 +31,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +46,7 @@ from app.staging.auth_personas import (  # noqa: E402
     ensure_auth_personas,
     verify_auth_personas,
 )
+from app.staging.scanner_ticket import issue_scanner_certification_ticket  # noqa: E402
 from app.staging.seed_sql import (  # noqa: E402
     build_cleanup_sql,
     build_seed_sql,
@@ -56,7 +56,7 @@ from app.staging.seed_sql import (  # noqa: E402
 from app.staging.synthetic_contract import (  # noqa: E402
     CATALOG_FIXTURES,
     EVENTS,
-    FIXTURES,
+    FIXTURES,  # noqa: F401 - compatibility re-export
     KYC_FIXTURES_LEGACY,
     PERSONAS,
     SEED_PREFIX,
@@ -66,7 +66,6 @@ from app.staging.synthetic_contract import (  # noqa: E402
 )
 from app.staging.ticket_credentials import (  # noqa: E402
     TicketCredential,
-    mint_ticket_credentials,
     primary_ticket_pin,
 )
 from app.staging.transactional import apply_cod_placed  # noqa: E402
@@ -379,21 +378,18 @@ def main() -> int:
         return _die(f"Auth persona provisioning failed (seed aborted): {exc}")
     print(f"Auth personas: {outcomes}")
 
-    # Scanner credentials are minted only when the caller asks for them.
-    credentials: tuple[TicketCredential, ...] = ()
-    if args.private_file:
-        try:
-            credentials = mint_ticket_credentials()
-        except RuntimeError as exc:
-            return _die(
-                "cannot mint synthetic ticket credentials — "
-                "STAGING_SUPABASE_SERVICE_ROLE_KEY must be mapped into this step "
-                f"as SUPABASE_SERVICE_ROLE_KEY ({exc})"
-            )
-
-    seed = conn.run(build_seed_sql(credentials))
+    seed = conn.run(build_seed_sql())
     if not seed.ok:
         return _die(seed.error or "seed SQL failed")
+
+    # The scanner fixture is a legitimate free RSVP, not a hand-inserted paid
+    # ticket.  This calls the same rsvp() service path as the application and
+    # produces a completed order item without creating or forging a payment.
+    try:
+        scanner_credential = issue_scanner_certification_ticket(auth_client)
+    except Exception as exc:  # noqa: BLE001
+        return _die(f"scanner certification RSVP failed: {exc}")
+    credentials = (scanner_credential,)
 
     if args.private_file:
         try:
@@ -401,7 +397,10 @@ def main() -> int:
         except OSError as exc:
             return _die(f"cannot write private runtime file: {exc}")
         # Path only — never the contents.
-        print(f"Run-scoped scanner credentials written to {args.private_file} (mode 0600)")
+        print(
+            "Environment-bound scanner credentials written to "
+            f"{args.private_file} (mode 0600)"
+        )
 
     try:
         _verify_contract(conn)

@@ -91,6 +91,7 @@ describe("dashboard-truth", () => {
         report_id: "rep-1",
         report_date: "2026-07-18",
         has_mismatch: false,
+        certifiable: true,
       }),
     ).toBe("green");
 
@@ -102,6 +103,21 @@ describe("dashboard-truth", () => {
         has_mismatch: true,
       }),
     ).toBe("red");
+  });
+
+  it("keeps stale and noncertifying reports unknown even with report identities", () => {
+    for (const evidence_state of ["stale", "legacy_unbound", "noncertifying"]) {
+      expect(
+        reconciliationDisplayStatus({
+          status: "unknown",
+          report_id: "immutable-id",
+          report_date: "2026-09-30",
+          has_mismatch: false,
+          evidence_state,
+          certifiable: false,
+        }),
+      ).toBe("unknown");
+    }
   });
 
   it("flags traffic-empty dashboards even when catalog seed counts exist", () => {

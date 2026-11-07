@@ -8,15 +8,12 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
-import {
-  shouldShowComparison,
-  type ComparisonLabels,
-  type ComparisonListing,
-} from "../_components/pdp/comparison";
+import { shouldShowComparison } from "../_components/pdp/comparison-visibility";
 import { catalogLogisticsLabels } from "../_components/plp/logistics-pills";
 
 import { CompareResults } from "./_components/compare-results";
 
+import type { ComparisonLabels, ComparisonListing } from "../_components/pdp/comparison";
 import type { ListingCondition } from "../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 

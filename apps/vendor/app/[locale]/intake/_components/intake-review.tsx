@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
+import { CanonicalSearch } from "../../listings/new/_components/canonical-search";
+import { createListingClient } from "../../listings/new/_lib/listing-client";
 import { zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
   createIntakeClient,
@@ -14,6 +16,8 @@ import {
   type IntakeSessionDetail,
 } from "../_lib/intake-client";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
+
+import type { SuggestItem } from "../../listings/new/_lib/types";
 
 type IntakeReviewProps = {
   locale: string;
@@ -42,6 +46,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
   const [price, setPrice] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<SuggestItem | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +55,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const intakeClient = useMemo(() => createIntakeClient(getToken), [getToken]);
+  const listingClient = useMemo(() => createListingClient(getToken), [getToken]);
 
   const hydrate = useCallback((next: IntakeSessionDetail) => {
     setDetail(next);
@@ -66,6 +72,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
       return;
     }
     let cancelled = false;
+    setSelectedProduct(null);
     setLoading(true);
     setLoadFailed(false);
     intakeClient
@@ -114,10 +121,14 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
   };
 
   const handleSubmit = async () => {
+    if (!selectedProduct) {
+      setActionErrorKey("intake.errors.canonical_required");
+      return;
+    }
     setSubmitting(true);
     setActionErrorKey(null);
     try {
-      await intakeClient.submit(sessionId);
+      await intakeClient.submit(sessionId, selectedProduct.entity_id);
       setSubmitted(true);
       setReloadKey((key) => key + 1);
     } catch {
@@ -252,6 +263,36 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
         </section>
       ) : null}
 
+      {detail.submittable ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-medium">{t("intake.detail.canonicalProduct")}</h2>
+          {selectedProduct ? (
+            <div className="flex items-center gap-3">
+              <p>{selectedProduct.title}</p>
+              <button
+                type="button"
+                className="text-sm underline"
+                onClick={() => setSelectedProduct(null)}
+              >
+                {t("listings.attach.changeProduct")}
+              </button>
+            </div>
+          ) : (
+            <CanonicalSearch
+              client={listingClient}
+              selectedId={null}
+              onSelect={setSelectedProduct}
+              labels={{
+                placeholder: t("listings.attach.searchPlaceholder"),
+                searching: t("listings.attach.searching"),
+                empty: t("listings.attach.empty"),
+                hint: t("intake.errors.canonical_required"),
+              }}
+            />
+          )}
+        </section>
+      ) : null}
+
       {actionErrorKey ? (
         <p role="alert" className="text-sm text-danger">
           {t(actionErrorKey)}
@@ -266,7 +307,7 @@ export function IntakeReview({ locale, sessionId }: IntakeReviewProps) {
         <Button
           type="button"
           onClick={() => void handleSubmit()}
-          disabled={!detail.submittable || submitting}
+          disabled={!detail.submittable || !selectedProduct || submitting}
           loading={submitting}
           loadingLabel={t("intake.detail.submitting")}
           data-testid="intake-submit"

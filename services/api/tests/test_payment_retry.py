@@ -28,6 +28,7 @@ from app.services.payments.state import (
     transition_payment,
 )
 from postgrest.exceptions import APIError
+from tests.support.webhook_evidence import verified_webhook_row
 from tests.test_payment_state import (
     ACTOR_ID,
     CHECKOUT_GROUP_ID,
@@ -156,20 +157,25 @@ class TestRetryReference:
         # Lenco delivers a success webhook carrying the RETRY attempt's reference.
         webhook_id = str(uuid.uuid4())
         service.client.tables["webhook_events"].rows.append(
-            {
-                "id": webhook_id,
-                "provider": "lenco",
-                "event_id": f"evt-{webhook_id}",
-                "processed_at": None,
-                "raw": {
-                    "event": "collection.successful",
-                    "data": {
-                        "reference": second.lenco_reference,
-                        "status": "successful",
+            verified_webhook_row(
+                {
+                    "id": webhook_id,
+                    "provider": "lenco",
+                    "event_id": f"evt-{webhook_id}",
+                    "processed_at": None,
+                    "raw": {
+                        "event": "collection.successful",
+                        "data": {
+                            "reference": second.lenco_reference,
+                            "amount": "100.00",
+                            "currency": "ZMW",
+                            "lencoReference": "lenco-txn",
+                            "status": "successful",
+                        },
                     },
-                },
-                "created_at": datetime.now(UTC).isoformat(),
-            }
+                    "created_at": datetime.now(UTC).isoformat(),
+                }
+            )
         )
 
         outcome = process_webhook_event(service, webhook_event_id=webhook_id)

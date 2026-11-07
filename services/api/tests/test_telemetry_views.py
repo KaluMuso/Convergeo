@@ -20,24 +20,28 @@ from tests.rls.conftest import (
 LISTING_A = "b9100000-0000-0000-0000-00000000000a"
 VENDOR_A = "b9a00000-0000-0000-0000-00000000000a"
 OWNER_A = "33333333-3333-3333-3333-333333333333"
-SESSION_A = "b9s00000-0000-0000-0000-00000000000a"
+SESSION_A = "b9a00000-0000-4000-8000-00000000000a"
 
 
 def _seed_listing(db: PgConn) -> None:
+    cleaned = db.run(
+        f"DELETE FROM public.listing_view_dedup WHERE listing_id = '{LISTING_A}'; "
+        f"DELETE FROM public.listing_analytics WHERE listing_id = '{LISTING_A}';"
+    )
+    assert cleaned.ok, cleaned.error
     script = (
         "BEGIN;\n"
         "SET LOCAL role service_role;\n"
         'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\';\n'
         f"""
-DELETE FROM public.listing_view_dedup WHERE listing_id = '{LISTING_A}';
-DELETE FROM public.listing_analytics WHERE listing_id = '{LISTING_A}';
 INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status, kyc_tier)
 VALUES ('{VENDOR_A}', '{OWNER_A}', 'views-test-vendor', 'Views Test Vendor', 'active', 1)
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.vendor_listings (
-  id, vendor_id, title_override, price_ngwee, condition, stock_mode, status
+  id, vendor_id, product_id, title_override, price_ngwee, condition, stock_mode, status
 ) VALUES (
-  '{LISTING_A}', '{VENDOR_A}', 'Views Test Listing', 10000, 'new', 'always_available', 'active'
+  '{LISTING_A}', '{VENDOR_A}', 'b0000000-0000-0000-0000-000000000001',
+  'Views Test Listing', 10000, 'new', 'always_available', 'active'
 )
 ON CONFLICT (id) DO NOTHING;
 """

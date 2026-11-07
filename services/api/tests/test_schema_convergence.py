@@ -30,6 +30,52 @@ PRODUCTION_DEPLOY_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-production.ym
 LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
 POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
 
+# Expected pending suffix relative to the immutable 2026-08-13 fixture.  This is
+# deliberately test-owned data rather than output derived from the evaluator.
+POST_REPAIR_PENDING_VERSIONS = [
+    "20260812090000",
+    "20260813064106",
+    "20260813150000",
+    "20260813160000",
+    "20260813160100",
+    "20260813160200",
+    "20260815194500",
+    "20260815230000",
+    "20260816220000",
+    "20260817200000",
+    "20260827020000",
+    "20260829120000",
+    "20260831050000",
+    "20260831051000",
+    "20260921155234",
+    "20260923010000",
+    "20260923192645",
+    "20260923193047",
+    "20260923234129",
+    "20260923234132",
+    "20260924001011",
+    "20260924015610",
+    "20260924071905",
+    "20260924095638",
+    "20260924120417",
+    "20260924120418",
+    "20260924120419",
+    # Published F1/F2 schema remains pending in the immutable historical ledger.
+    "20260929120000",
+    "20260929120001",
+    "20260929120002",
+    "20260929120003",
+    "20260930170000",
+    "20260930170100",
+    "20260930203000",
+    "20260930203100",
+    # Additive merchant review corrections remain pending in this historical capture.
+    "20261001120000",
+    "20261001120100",
+    "20261001120200",
+    "20261006160000",
+]
+
 def _module() -> Any:
     spec = importlib.util.spec_from_file_location("schema_convergence", MODULE_PATH)
     assert spec is not None and spec.loader is not None
@@ -244,22 +290,7 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
     assert plan.unresolved_remote_versions == []
     assert len(plan.equivalent_remote_aliases) == 4
     assert len(plan.superseded_rehearsal_rows) == 3
-    assert plan.truly_pending_repository_migrations == [
-        "20260812090000",
-        "20260813064106",
-        "20260813150000",
-        "20260813160000",
-        "20260813160100",
-        "20260813160200",
-        "20260815194500",
-        "20260815230000",
-        "20260816220000",
-        "20260817200000",
-        "20260827020000",
-        "20260829120000",
-        "20260831050000",
-        "20260831051000",
-    ]
+    assert plan.truly_pending_repository_migrations == POST_REPAIR_PENDING_VERSIONS
 
 
 def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> None:
@@ -277,22 +308,7 @@ def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> N
     assert plan.ledger_repair_required is False
     assert plan.unresolved_physical_drift == []
     assert plan.schema_apply_required is True
-    assert plan.truly_pending_repository_migrations == [
-        "20260812090000",
-        "20260813064106",
-        "20260813150000",
-        "20260813160000",
-        "20260813160100",
-        "20260813160200",
-        "20260815194500",
-        "20260815230000",
-        "20260816220000",
-        "20260817200000",
-        "20260827020000",
-        "20260829120000",
-        "20260831050000",
-        "20260831051000",
-    ]
+    assert plan.truly_pending_repository_migrations == POST_REPAIR_PENDING_VERSIONS
     assert any(
         "record_listing_view_defaults" in item
         for item in plan.pending_migration_physical_drift
@@ -646,9 +662,13 @@ def test_preflight_adapter_forbids_manifest_self_mutation() -> None:
 def test_deploy_staging_runs_preflight_before_db_push() -> None:
     workflow = DEPLOY_STAGING_WORKFLOW.read_text(encoding="utf-8")
     preflight = workflow.index("preflight-staging-schema-convergence.sh")
-    push = workflow.index("supabase db push --include-all")
+    routing = workflow.index(
+        "unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS"
+    )
+    adoption = workflow.index("python3 scripts/ci/guard_shared_service_adoption.py")
+    push = workflow.index('supabase db push --db-url "${SUPABASE_DB_URL}" --include-all')
     reconcile = workflow.index("reconcile-staging-migrations.sh")
-    assert preflight < push < reconcile
+    assert preflight < routing < adoption < push < reconcile
     assert "STAGING_LEDGER_REPAIR_REQUIRED" in workflow
     assert "STAGING_SCHEMA_REPAIR_REQUIRED" in workflow
 

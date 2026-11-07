@@ -41,6 +41,7 @@ DEFAULT_SERVICE_COMMISSION_BPS = 1200
 ACCEPTABLE_JOB_STATUSES = frozenset({"open", "quoted"})
 ACCEPT_OUTBOX_EVENT = "service_quote_accepted"
 OUTBOX_CHANNEL = "whatsapp"
+QUOTE_EXPIRED_AT_ACCEPT_ERROR = "rfq_quote_expired_at_accept"
 
 # Services are provider-delivered; orders.fulfilment check allows delivery|pickup.
 SERVICE_FULFILMENT = "pickup"
@@ -282,10 +283,6 @@ def accept_quote(
     """
     _ = service_client  # DB access via run_sql_script (SUPABASE_DB_URL), like the spine.
 
-    replay = _load_existing_accept(quote_id)
-    if replay is not None:
-        return replay
-
     job = _load_job(job_id)
     if job is None:
         raise AppError(code="not_found", message="Job not found", http_status=404)
@@ -297,6 +294,12 @@ def accept_quote(
             http_status=403,
             details={"message_key": "services.accept.errors.notOwner"},
         )
+    replay = _load_existing_accept(quote_id)
+    if replay is not None:
+        if replay.job_id != job_id:
+            raise AppError(code="forbidden", message="Quote/job mismatch", http_status=403)
+        return replay
+
     if job_status not in ACCEPTABLE_JOB_STATUSES:
         raise AppError(
             code="invalid_transition",
@@ -326,9 +329,7 @@ def accept_quote(
 
     deposit_pct = _read_config_int(CONFIG_KEY_DEPOSIT_PCT, DEFAULT_SERVICE_DEPOSIT_PCT)
     rate_bps = _read_service_commission_bps()
-    deposit_ngwee = compute_deposit_ngwee(
-        total_job_ngwee=total_job_ngwee, deposit_pct=deposit_pct
-    )
+    deposit_ngwee = compute_deposit_ngwee(total_job_ngwee=total_job_ngwee, deposit_pct=deposit_pct)
     balance_ngwee = total_job_ngwee - deposit_ngwee
     snapshot = build_service_commission_snapshot(
         total_job_ngwee=total_job_ngwee,
@@ -369,6 +370,20 @@ def accept_quote(
 
     script = f"""
 BEGIN;
+DO $accept$
+DECLARE
+ v_quote_expires_at timestamptz;
+BEGIN
+ PERFORM 1 FROM public.jobs WHERE id={job_sql} AND customer_id={customer_sql}
+   AND status IN ('open','quoted') FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'job no longer available for acceptance'; END IF;
+ SELECT expires_at INTO v_quote_expires_at FROM public.job_quotes
+   WHERE id={quote_sql} AND job_id={job_sql} AND status='submitted' FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'quote no longer available for acceptance'; END IF;
+ IF v_quote_expires_at IS NOT NULL AND v_quote_expires_at <= clock_timestamp() THEN
+   RAISE EXCEPTION '{QUOTE_EXPIRED_AT_ACCEPT_ERROR}';
+ END IF;
+END $accept$;
 INSERT INTO public.checkout_groups (
   id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee, status
 ) VALUES (
@@ -392,6 +407,10 @@ UPDATE public.job_quotes SET status = 'accepted'
   WHERE id = {quote_sql} AND status = 'submitted';
 UPDATE public.jobs SET status = 'accepted'
   WHERE id = {job_sql} AND status IN ('open', 'quoted');
+-- The obligation function validates the accepted quote. These updates and
+-- obligation creation remain inside the same BEGIN/COMMIT transaction.
+SELECT public.create_service_payment_obligations(
+ {order_sql}, {job_sql}, {customer_sql}, {total_job_ngwee}, {deposit_ngwee});
 INSERT INTO public.notification_outbox (dedupe_key, channel, template, payload, status)
 VALUES ({sql_literal(dedupe_key)}, '{OUTBOX_CHANNEL}', {sql_literal(ACCEPT_OUTBOX_EVENT)},
   {_sql_json(payload)}::jsonb, 'pending')
@@ -400,10 +419,18 @@ COMMIT;
 """
     result = run_sql_script(script)
     if not result.ok:
-        if "duplicate key value violates unique constraint" in (result.error or ""):
-            replay = _load_existing_accept(quote_id)
-            if replay is not None:
-                return replay
+        # A concurrent same-quote accept may lose at the job lock before any
+        # unique constraint fires. Replay only this owner's already-linked job.
+        replay = _load_existing_accept(quote_id)
+        if replay is not None and replay.job_id == job_id:
+            return replay
+        if result.error and result.error.splitlines()[0].strip() == QUOTE_EXPIRED_AT_ACCEPT_ERROR:
+            raise AppError(
+                code="invalid_transition",
+                message="Quote has expired",
+                http_status=409,
+                details={"status": "expired"},
+            )
         raise AppError(
             code="internal_error",
             message="Failed to accept quote",
@@ -428,110 +455,20 @@ COMMIT;
 
 
 def create_balance_item(order_id: str) -> BalanceItemResult:
-    """Create the ``service_balance`` order item at completion (for M11-P05).
-
-    Balance = total job value (snapshot basis) − deposit, computed on the SAME order.
-    Does NOT touch the commission snapshot: commission stays a single capture on the
-    total. Idempotent — a second call returns the existing balance item.
-    """
+    """Compatibility read only; balance invoicing belongs to confirm_funded_service."""
     order_sql = sql_uuid(order_id, "order_id")
-
-    existing = run_sql_script(
-        f"""
-SELECT id::text || '|' || unit_price_ngwee::text
-FROM public.order_items
-WHERE order_id = {order_sql} AND item_kind = 'service_balance'
-LIMIT 1;
-"""
-    )
-    if existing.ok and existing.rows:
-        row_parts = existing.rows[0].split("|", 1)
-        balance_item_id = row_parts[0]
-        balance = int(row_parts[1]) if len(row_parts) == 2 and row_parts[1].isdigit() else 0
-        return BalanceItemResult(
-            order_id=order_id,
-            balance_order_item_id=balance_item_id,
-            balance_ngwee=balance,
-            created=False,
-        )
-
-    order = run_sql_script(
-        f"""
-SELECT commission_snapshot::text
-FROM public.orders
-WHERE id = {order_sql}
-LIMIT 1;
-"""
-    )
-    if not order.ok or not order.rows:
-        raise AppError(code="not_found", message="Order not found", http_status=404)
-    snapshot = _parse_snapshot(order.rows[0])
-    total = _snapshot_total_ngwee(snapshot)
-
-    deposit_row = run_sql_script(
-        f"""
-SELECT coalesce(sum(unit_price_ngwee * qty), 0)::text
-FROM public.order_items
-WHERE order_id = {order_sql} AND item_kind = 'service_deposit';
-"""
-    )
-    deposit = (
-        int(deposit_row.rows[0])
-        if deposit_row.ok and deposit_row.rows and deposit_row.rows[0].isdigit()
-        else 0
-    )
-    balance = total - deposit
-    if balance <= 0:
-        # 100% deposit — nothing left to invoice at completion.
-        return BalanceItemResult(
-            order_id=order_id,
-            balance_order_item_id=None,
-            balance_ngwee=0,
-            created=False,
-        )
-
-    link = run_sql_script(
-        f"""
-SELECT ois.job_id::text || '|' || ois.quote_id::text
-FROM public.order_item_services ois
-JOIN public.order_items oi ON oi.id = ois.order_item_id
-WHERE oi.order_id = {order_sql} AND oi.item_kind = 'service_deposit'
-LIMIT 1;
-"""
-    )
-    job_link = "NULL"
-    quote_link = "NULL"
-    if link.ok and link.rows:
-        link_parts = link.rows[0].split("|", 1)
-        if len(link_parts) == 2:
-            job_link = sql_uuid(link_parts[0], "job_id")
-            quote_link = sql_uuid(link_parts[1], "quote_id")
-
-    balance_item_id = str(uuid.uuid4())
-    item_sql = sql_uuid(balance_item_id, "order_item_id")
     result = run_sql_script(
-        f"""
-BEGIN;
-INSERT INTO public.order_items (
-  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
-) VALUES (
-  {item_sql}, {order_sql}, 'service_balance', 1, {balance}, NULL
-);
-INSERT INTO public.order_item_services (order_item_id, job_id, quote_id)
-VALUES ({item_sql}, {job_link}, {quote_link});
-COMMIT;
-"""
+        f"SELECT id::text || '|' || unit_price_ngwee::text "
+        f"FROM public.order_items WHERE order_id={order_sql} "
+        "AND item_kind='service_balance';"
     )
-    if not result.ok:
+    if not result.ok or len(result.rows) != 1:
         raise AppError(
-            code="internal_error",
-            message="Failed to create balance item",
-            http_status=500,
-            details={"error": result.error},
+            code="service.balance_not_acknowledged",
+            message="Acknowledge service work before invoicing the balance",
+            http_status=409,
         )
+    item_id, amount = result.rows[0].split("|", 1)
     return BalanceItemResult(
-        order_id=order_id,
-        balance_order_item_id=balance_item_id,
-        balance_ngwee=balance,
-        created=True,
+        order_id=order_id, balance_order_item_id=item_id, balance_ngwee=int(amount), created=False
     )

@@ -1,7 +1,7 @@
 """M16-P05 analytics unification: one queryable schema over funnel + search.
 
 Verifies the unified `analytics_event_stream` view yields a full funnel
-(search -> product_view -> cart -> checkout -> pay) from seeded events, that the
+(search -> product_view -> cart -> checkout -> order_placed) from seeded events, that the
 existing funnel/search emits still land in their own tables, that the server log is
 anonymized (raw PII rejected; raw search term never exposed), and that the unified
 table is RLS-locked (admin read, no client/anon read).
@@ -105,7 +105,7 @@ def _seed_full_funnel(db: PgConn) -> str:
         props={"listing_id": str(uuid.uuid4())},
     )
 
-    # cart -> checkout -> pay via the funnel stream
+    # cart -> checkout -> order_placed via the funnel stream (not payment success)
     funnel_record_event(
         stage="cart_add",
         checkout_group_id=group_id,
@@ -145,7 +145,7 @@ class TestUnifiedFunnel:
         assert report.count("cart") == 1
         # checkout_start + payment_start both fold onto the checkout step.
         assert report.count("checkout") == 2
-        assert report.count("pay") == 1
+        assert report.count("order_placed") == 1
         assert set(report.steps.keys()) == set(FUNNEL_STEPS)
 
     def test_event_type_to_step_covers_every_stream_event(self) -> None:
@@ -168,8 +168,7 @@ class TestUnifiedFunnel:
         assert search.ok and search.rows and int(search.rows[0]) == 1
 
         pdp = seeded_db.run(
-            "SELECT count(*)::text FROM public.analytics_events "
-            "WHERE event_type = 'product_view';"
+            "SELECT count(*)::text FROM public.analytics_events WHERE event_type = 'product_view';"
         )
         assert pdp.ok and pdp.rows and int(pdp.rows[0]) == 1
 
@@ -179,8 +178,7 @@ class TestAnonymization:
         log_search_query(term="BIG Raw   Term", zero_result=True)
 
         row = seeded_db.run(
-            "SELECT props::text FROM public.analytics_event_stream "
-            "WHERE source = 'search' LIMIT 1;"
+            "SELECT props::text FROM public.analytics_event_stream WHERE source = 'search' LIMIT 1;"
         )
         assert row.ok and row.rows
         props = json.loads(row.rows[0])

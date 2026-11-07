@@ -61,7 +61,9 @@ fi
 # 5) Separation script accepts distinct staging identifiers
 set +e
 STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co/ \
 STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com \
 STAGING_CUSTOMER_URL=https://staging-customer.example.vercel.app \
 STAGING_VENDOR_URL=https://staging-vendor.example.vercel.app \
 STAGING_ADMIN_URL=https://staging-admin.example.vercel.app \
@@ -74,6 +76,59 @@ if [[ "$rc" -eq 0 ]]; then
 else
   bad "separation should pass for distinct identifiers (rc=$rc)"
   cat /tmp/sep-ok.txt || true
+fi
+
+# The two names for each target must resolve to the same staging plane.
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://otherstaging12345678.supabase.co \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-ref.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-mismatched-ref.txt; then
+  ok "separation rejects mismatched Supabase project names"
+else
+  bad "separation should reject mismatched Supabase project names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co@another-host.example \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-url.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-deceptive-url.txt; then
+  ok "separation rejects deceptive Supabase URL host"
+else
+  bad "separation should reject deceptive Supabase URL host (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://other.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-mismatched-api.txt; then
+  ok "separation rejects mismatched API host names"
+else
+  bad "separation should reject mismatched API host names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com:443@another-host.example \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-deceptive-api.txt; then
+  ok "separation rejects deceptive API URL authority"
+else
+  bad "separation should reject deceptive API URL authority (rc=$rc)"
 fi
 
 # 6) Synthetic seed dry-run + no production markers in fixtures
@@ -426,12 +481,24 @@ fi
 
 # 13b) deploy-staging must preflight ledger drift before db push
 preflight_line="$(grep -n 'preflight-staging-schema-convergence.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
-push_line="$(grep -n 'supabase db push --include-all' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+push_line="$(grep -n '^[[:space:]]*supabase db push ' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
 if [[ -n "${preflight_line}" && -n "${push_line}" && "${preflight_line}" -lt "${push_line}" ]] \
   && grep -q 'STAGING_LEDGER_REPAIR_REQUIRED' .github/workflows/deploy-staging.yml; then
   ok "deploy-staging preflight blocks db push when ledger repair is required"
 else
   bad "deploy-staging must run schema preflight before supabase db push"
+fi
+
+# The adoption prerequisite and push must use the same explicit connection.
+# A linked CLI target must not silently replace the database that was checked.
+adoption_guard_line="$(grep -n 'python3 scripts/ci/guard_shared_service_adoption.py' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${adoption_guard_line}" && -n "${push_line}" ]] \
+  && [[ "${preflight_line}" -lt "${adoption_guard_line}" && "${adoption_guard_line}" -lt "${push_line}" ]] \
+  && grep -Fq 'supabase db push --db-url "${SUPABASE_DB_URL}" --include-all' .github/workflows/deploy-staging.yml \
+  && grep -Fq 'unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS' .github/workflows/deploy-staging.yml; then
+  ok "reviewed installed adoption guards an explicit same-target migration push"
+else
+  bad "migration push must follow installed-adoption proof and retain its explicit database target"
 fi
 
 # 14) Preview prove dry-run validates portal mapping without Vercel calls
@@ -1244,7 +1311,8 @@ strict_sites_ok=1
 for site in \
   "e2e/specs/auth-otp.spec.ts:customer OTP verification" \
   "e2e/specs/vendor-sell.spec.ts:vendor authenticated sell flow" \
-  "e2e/specs/event-ticket.spec.ts:event scanner verify + duplicate-reject" \
+  "e2e/specs/event-ticket.spec.ts:free RSVP scanner verify + duplicate-reject" \
+  "e2e/specs/event-ticket.spec.ts:paid ticket order through admission" \
   "e2e/specs/critical-path.spec.ts:checkout place-order -> payment surface"; do
   spec_file="${site%%:*}"
   spec_journey="${site#*:}"
@@ -1262,7 +1330,7 @@ for site in \
   fi
 done
 if [ "${strict_sites_ok}" = "1" ]; then
-  ok "all four release-critical journeys declare AND enforce REQUIRED_STRICT"
+  ok "all five release-critical journeys declare AND enforce REQUIRED_STRICT"
 fi
 
 # Optional gates must stay classified and must never escalate.

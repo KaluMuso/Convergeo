@@ -1,5 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
+import { eventCategoryNodes } from "@vergeo/ui/src/category-selection-data";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
@@ -43,6 +44,7 @@ type PageProps = {
 };
 
 type EventsTranslator = {
+  has(key: string): boolean;
   (key: string, values?: Record<string, string | number>): string;
 };
 
@@ -219,6 +221,25 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const items = data?.items ?? [];
   const calendarDates = data?.calendar_dates ?? [];
   const apiCategories = data?.categories?.length ? data.categories : [...EVENT_CATEGORIES];
+  let categoryTaxonomy: { slug: string; parent_slug: string | null; label_key: string }[] = [];
+  try {
+    const taxonomyUrl = absoluteApiUrl("/categories/events");
+    if (!taxonomyUrl) throw new Error("API URL unavailable");
+    const response = await fetch(taxonomyUrl, { next: { revalidate: 60 } });
+    if (response.ok) {
+      const rows: unknown = await response.json();
+      if (Array.isArray(rows))
+        categoryTaxonomy = rows.filter(
+          (row): row is { slug: string; parent_slug: string | null; label_key: string } =>
+            Boolean(row) &&
+            typeof row.slug === "string" &&
+            (row.parent_slug === null || typeof row.parent_slug === "string") &&
+            typeof row.label_key === "string",
+        );
+    }
+  } catch {
+    /* Existing category chips remain available when taxonomy is unavailable. */
+  }
   const featuredEvent = items[0];
   const remainingEvents = items.slice(1);
 
@@ -229,6 +250,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     nextMonth: t("filters.nextMonth"),
     allDates: t("filters.allDates"),
     categoryLabel: t("filters.categoryLabel"),
+    subcategoryLabel: t("filters.subcategoryLabel"),
     calendarLabel: t("browse.calendarLabel"),
     cityLabel: t("filters.cityLabel"),
     cityPlaceholder: t("filters.cityPlaceholder"),
@@ -344,6 +366,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
               labels={filterLabels}
               calendarDates={calendarDates}
               categories={apiCategories}
+              taxonomy={eventCategoryNodes(categoryTaxonomy, t)}
               activeDateWindow={dateWindow}
               activeOnDate={onDate}
               activeCategory={category}

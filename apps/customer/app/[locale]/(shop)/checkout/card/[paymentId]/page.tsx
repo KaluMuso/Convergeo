@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
@@ -9,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { useSession } from "../../../../../../lib/customer-session";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
 type WidgetCustomer = {
@@ -27,6 +27,7 @@ type CardSession = {
   amount_ngwee: number;
   widget_script_url: string;
   customer: WidgetCustomer;
+  service_job_id?: string | null;
 };
 
 type VerifyResult = {
@@ -104,13 +105,20 @@ export default function CardCheckoutPage() {
   const locale = params.locale;
   const paymentId = params.paymentId;
   const t = useTranslations("checkout.card");
+  const funding = useTranslations("services.funding");
   const { session, loading: sessionLoading } = useSession();
 
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
   const widgetOpened = useRef(false);
 
-  const checkoutPaymentPath = useMemo(() => `/${locale}/checkout`, [locale]);
+  const checkoutPaymentPath = useMemo(() => {
+    const group = searchParams.get("group");
+    return group &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
+      ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
+      : `/${locale}/checkout`;
+  }, [locale, searchParams]);
   const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
 
   const verifyReturn = useCallback(
@@ -311,12 +319,16 @@ export default function CardCheckoutPage() {
 
       {viewState === "success" ? (
         <LinkButton
-          href={ordersPath}
+          href={
+            sessionData?.service_job_id
+              ? `/${locale}/account/jobs/${sessionData.service_job_id}`
+              : ordersPath
+          }
           variant="primary"
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {t("viewOrders")}
+          {sessionData?.service_job_id ? funding("backToJob") : t("viewOrders")}
         </LinkButton>
       ) : null}
 

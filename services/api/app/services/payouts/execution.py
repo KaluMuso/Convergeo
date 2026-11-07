@@ -20,6 +20,12 @@ from app.services.payments.lenco.models import (
 )
 from app.services.payments.references import make_payment_reference
 from app.services.payouts.eligibility import load_vendor_cap_limits
+from app.services.payouts.obligation import (
+    PayoutObservationMismatch,
+    destination_for_profile,
+    make_obligation,
+    validate_transfer_observation,
+)
 from app.services.payouts.reservation import reserve_payout_row
 from app.services.payouts.resolve_check import (
     ResolveBankAccountFn,
@@ -257,14 +263,15 @@ async def _send_lenco_payout(
     amount_ngwee: int,
     initiate_momo_payout: MomoPayoutFn,
     initiate_bank_payout: BankPayoutFn,
+    account_id: str | None = None,
 ) -> InitiatePayoutResult:
-    account_id = lenco_account_id()
+    debit_account_id = account_id or lenco_account_id()
     if profile.rail in MOMO_RAILS:
         return await initiate_momo_payout(
             LencoMomoPayoutRequest(
                 reference=lenco_reference,
                 amount_ngwee=amount_ngwee,
-                account_id=account_id,
+                account_id=debit_account_id,
                 phone=profile.phone,
                 operator=cast(PayoutOperator, profile.operator),
                 country="zm",
@@ -277,7 +284,7 @@ async def _send_lenco_payout(
             LencoBankPayoutRequest(
                 reference=lenco_reference,
                 amount_ngwee=amount_ngwee,
-                account_id=account_id,
+                account_id=debit_account_id,
                 account_number=profile.account_number,
                 bank_id=profile.bank_id,
                 country="zm",
@@ -395,13 +402,30 @@ async def execute_vendor_payout(
 
         limits = load_vendor_cap_limits(service_client, vendor_id)
         enforce_payout_velocity(limits, payout_amount, service_client)
+    debit_account_id = lenco_account_id()
+    obligation = make_obligation(
+        merchant_reference=lenco_reference,
+        amount_ngwee=payout_amount,
+        debit_account_id=debit_account_id,
+        destination=destination_for_profile(profile),
+    )
+    dispatch_owner = str(uuid.uuid4())
+    claimed_snapshot = {
+        **resolve_result.snapshot,
+        "obligation": obligation,
+        "dispatch": {
+            "state": "claimed",
+            "owner": dispatch_owner,
+            "claimed_at": datetime.now(UTC).isoformat(),
+        },
+    }
     reserve_payout_row(
         payout_id=payout_id,
         vendor_id=vendor_id,
         amount_ngwee=payout_amount,
         rail=profile.rail,
         lenco_reference=lenco_reference,
-        resolve_snapshot=resolve_result.snapshot,
+        resolve_snapshot=claimed_snapshot,
         status="processing",
     )
 
@@ -412,11 +436,17 @@ async def execute_vendor_payout(
             amount_ngwee=payout_amount,
             initiate_momo_payout=initiate_momo_payout,
             initiate_bank_payout=initiate_bank_payout,
+            account_id=debit_account_id,
         )
     except Exception as exc:
         failure_snapshot = {
-            **resolve_result.snapshot,
+            **claimed_snapshot,
             "send_error": str(exc),
+            "dispatch": {
+                **claimed_snapshot["dispatch"],
+                "state": "possibly_sent",
+                "failed_at": datetime.now(UTC).isoformat(),
+            },
             "settlement": _settlement_expectation(profile.rail),
         }
         _update_payout_row(
@@ -429,20 +459,63 @@ async def execute_vendor_payout(
     terminal_status = _map_transfer_status(transfer)
     settlement = _settlement_expectation(profile.rail)
     merged_snapshot = {
-        **resolve_result.snapshot,
+        **claimed_snapshot,
         "provider_reference": transfer.provider_reference,
         "transfer_status": transfer.status.value,
+        "dispatch": {
+            **claimed_snapshot["dispatch"],
+            "state": transfer.status.value,
+            "observed_at": datetime.now(UTC).isoformat(),
+        },
         "settlement": settlement,
     }
 
     ledger_id: str | None = None
     if terminal_status == "paid":
+        try:
+            evidence = validate_transfer_observation(
+                payout_id=payout_id,
+                obligation=obligation,
+                observation=transfer,
+            )
+        except PayoutObservationMismatch as exc:
+            _update_payout_row(
+                service_client,
+                payout_id,
+                {
+                    "status": "processing",
+                    "resolve_snapshot": {
+                        **merged_snapshot,
+                        "held": True,
+                        "hold_reason": exc.details["reason"],
+                        "dispatch": {
+                            **merged_snapshot["dispatch"],
+                            "state": "manual_review",
+                        },
+                    },
+                },
+            )
+            raise
+        merged_snapshot["verified_transfer"] = evidence.as_snapshot()
         ledger_id = _post_payout_ledger(
             payout_id=payout_id,
             vendor_id=vendor_id,
             amount_ngwee=payout_amount,
             lenco_reference=lenco_reference,
         )
+
+    if terminal_status == "failed":
+        merged_snapshot.update(
+            {
+                "held": True,
+                "hold_reason": "provider_failed_reference_reuse_unconfirmed",
+                "dispatch": {
+                    **merged_snapshot["dispatch"],
+                    "state": "manual_review",
+                },
+            }
+        )
+        terminal_status = "processing"
 
     _update_payout_row(
         service_client,
@@ -451,8 +524,8 @@ async def execute_vendor_payout(
     )
 
     outcome = PayoutOutcome.PAID if terminal_status == "paid" else PayoutOutcome.PROCESSING
-    if terminal_status == "failed":
-        outcome = PayoutOutcome.FAILED
+    if merged_snapshot.get("held") is True:
+        outcome = PayoutOutcome.HELD
 
     return PayoutExecutionResult(
         payout_id=payout_id,

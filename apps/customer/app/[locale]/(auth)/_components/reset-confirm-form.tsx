@@ -7,7 +7,7 @@ import { Input } from "@vergeo/ui/src/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { parseAuthError } from "./auth-utils";
 
@@ -27,21 +27,56 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const recoveryUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const establishSession = async () => {
-      const supabase = await getBrowserClient();
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        setReady(exchangeError ? "invalid" : "ready");
-        return;
+      try {
+        const code = new URLSearchParams(window.location.search).get("code");
+        if (!code) {
+          if (active) setReady("invalid");
+          return;
+        }
+        const supabase = await getBrowserClient();
+        if (!active) return;
+        // A valid OAuth/sign-in code also creates a session. Only a recovery
+        // exchange may open this form; Supabase marks it with this auth event.
+        let recoveryEventUserId: string | null = null;
+        let recoveryEventAccessToken: string | null = null;
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "PASSWORD_RECOVERY") {
+            recoveryEventUserId = session?.user.id ?? null;
+            recoveryEventAccessToken = session?.access_token ?? null;
+          }
+        });
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const userId =
+            !exchangeError &&
+            recoveryEventAccessToken &&
+            data.session &&
+            data.session.access_token === recoveryEventAccessToken &&
+            data.session.user.id === recoveryEventUserId
+              ? data.session.user.id
+              : null;
+          if (active) {
+            recoveryUserId.current = userId ?? null;
+            setReady(userId ? "ready" : "invalid");
+          }
+        } finally {
+          subscription.unsubscribe();
+        }
+      } catch {
+        if (active) setReady("invalid");
       }
-      // No code in the URL — fall back to any recovery session already established.
-      const { data } = await supabase.auth.getSession();
-      setReady(data.session ? "ready" : "invalid");
     };
     void establishSession();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -60,6 +95,11 @@ export function ResetConfirmForm({ locale }: { locale: string }) {
     setStatus("saving");
     try {
       const supabase = await getBrowserClient();
+      const { data } = await supabase.auth.getSession();
+      if (!recoveryUserId.current || data.session?.user.id !== recoveryUserId.current) {
+        setReady("invalid");
+        return;
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         const parsed = parseAuthError(updateError);

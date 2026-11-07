@@ -185,9 +185,7 @@ def _seed_base(fake: FakeSupabaseClient, *, kyc_tier: int = 1, listing_count: in
             "payout_velocity": {"max_payouts_per_day": 1, "max_amount_ngwee_per_day": 100_000},
         }
     )
-    fake.tables["platform_config"].rows.append(
-        {"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE}
-    )
+    fake.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": COD_CAP_NGWEE})
     for index in range(listing_count):
         fake.tables["vendor_listings"].rows.append(
             {
@@ -215,6 +213,7 @@ def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) ->
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.deps.get_supabase_client", lambda: iter([service_wrapper]))
     monkeypatch.setattr("app.supabase_client.get_supabase_service_client", lambda: service_wrapper)
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service_wrapper)
     return service_wrapper
 
 
@@ -284,6 +283,7 @@ def test_new_canonical_creation_path(
     listing_client: TestClient,
     fake_client: FakeSupabaseClient,
 ) -> None:
+    fake_client.tables["categories"].rows[0]["parent_id"] = "parent-category"
     response = listing_client.post(
         "/vendor/listings",
         headers=_auth_headers(),
@@ -304,6 +304,7 @@ def test_new_canonical_creation_path(
     assert len(fake_client.tables["products"].rows) == 2
     created_product = fake_client.tables["products"].rows[-1]
     assert created_product["status"] == "pending_moderation"
+    assert created_product["category_id"] == CATEGORY_ID
 
 
 def test_quick_list_creation_path(listing_client: TestClient) -> None:
@@ -316,11 +317,8 @@ def test_quick_list_creation_path(listing_client: TestClient) -> None:
             title_override="Fresh tomatoes per kg",
         ),
     )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["mode"] == "quick_list"
-    assert body["status"] == "active"
-    assert body["product_id"] is None
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "canonical_product_required"
 
 
 def test_per_measure_fields_are_persisted(
@@ -331,8 +329,7 @@ def test_per_measure_fields_are_persisted(
         "/vendor/listings",
         headers=_auth_headers(),
         json=_base_payload(
-            mode="quick_list",
-            product_id=None,
+            mode="attach",
             title_override="Fabric sold by half metre",
             sale_unit="metre",
             unit_step_milli=500,
@@ -358,6 +355,8 @@ def test_class_d_draft_persists_used_disclosure(
             mode="quick_list",
             product_id=None,
             title_override="Pre-owned carved chair",
+            category_id=CATEGORY_ID,
+            description="Hand-carved chair with the disclosed arm scratch.",
             product_class="D",
             condition="used",
             defect_notes="Visible scratch along the left arm",
@@ -371,6 +370,8 @@ def test_class_d_draft_persists_used_disclosure(
     created = fake_client.tables["vendor_listings"].rows[-1]
     assert created["product_id"] is None
     assert created["product_class"] == "D"
+    assert created["category_id"] == CATEGORY_ID
+    assert len(created["description"]) >= 20
     assert created["condition"] == "used"
     assert created["defect_notes"] == "Visible scratch along the left arm"
 
@@ -383,6 +384,8 @@ def test_class_d_cannot_publish_before_evidence_upload(listing_client: TestClien
             mode="quick_list",
             product_id=None,
             title_override="Pre-owned carved chair",
+            category_id=CATEGORY_ID,
+            description="Hand-carved chair with the disclosed arm scratch.",
             product_class="D",
             condition="used",
             defect_notes="Visible scratch along the left arm",
@@ -431,6 +434,9 @@ def test_class_e_quick_list_persists_made_to_order_fields(
             mode="quick_list",
             product_id=None,
             title_override="Custom dining table",
+            category_id=CATEGORY_ID,
+            description="Made to order dining table with custom dimensions.",
+            publish=False,
             product_class="E",
             fulfilment_mode="made_to_order",
             lead_time_days=21,
@@ -442,6 +448,9 @@ def test_class_e_quick_list_persists_made_to_order_fields(
     created = fake_client.tables["vendor_listings"].rows[-1]
     assert created["product_id"] is None
     assert created["product_class"] == "E"
+    assert created["status"] == "draft"
+    assert created["category_id"] == CATEGORY_ID
+    assert len(created["description"]) >= 20
     assert created["fulfilment_mode"] == "made_to_order"
     assert created["lead_time_days"] == 21
     assert created["vendor_capacity_per_week"] == 3
@@ -636,3 +645,122 @@ def test_t2_wholesale_allowed(
     app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json()["status"] == "active"
+
+
+def test_canonical_details_persist_without_bypassing_moderation(
+    listing_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    details = {
+        "dimensions": {"value": "20 × 10", "unit": "cm"},
+        "materials": ["cotton"],
+        "care": "Follow supplied label",
+        "weight": 0,
+    }
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="new_canonical",
+            product_id=None,
+            product_name="Detailed product",
+            category_id=CATEGORY_ID,
+            description="  Manufacturer-provided details.\nCare instructions.  ",
+            spec=details,
+        ),
+    )
+    assert response.status_code == 200
+    saved = fake_client.tables["products"].rows[-1]
+    assert saved["description"] == "Manufacturer-provided details.\nCare instructions."
+    assert saved["spec"] == details
+    assert saved["status"] == "pending_moderation"
+    assert response.json()["status"] == "draft"
+    assert response.json()["product_status"] == "pending_moderation"
+    # Public API must not disclose the draft. Approval is simulated only to
+    # verify the existing public read contract against these persisted fields.
+    assert listing_client.get(f"/products/{saved['slug']}").status_code == 404
+    saved["status"] = "active"
+    public = listing_client.get(f"/products/{saved['slug']}")
+    assert public.status_code == 200
+    assert public.json()["description"] == saved["description"]
+    assert public.json()["spec"] == details
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"spec": {" ": "value"}},
+        {"spec": {"x" * 81: "value"}},
+        {"spec": {str(i): "value" for i in range(33)}},
+        {"spec": {"care": "x" * 32001}},
+        {"description": "x" * 5001},
+    ],
+)
+def test_invalid_canonical_details_do_not_write(
+    listing_client: TestClient, fake_client: FakeSupabaseClient, change: dict[str, Any]
+) -> None:
+    before = len(fake_client.tables["products"].rows)
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="new_canonical",
+            product_id=None,
+            product_name="Invalid details",
+            category_id=CATEGORY_ID,
+            **change,
+        ),
+    )
+    assert response.status_code == 422
+    assert len(fake_client.tables["products"].rows) == before
+
+
+def test_attach_details_cannot_rewrite_canonical_product(
+    listing_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    import copy
+
+    before = copy.deepcopy(fake_client.tables["products"].rows)
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="attach",
+            product_id=PRODUCT_ID,
+            description="Unauthorized canonical replacement",
+            spec={"materials": "invented"},
+        ),
+    )
+    assert response.status_code == 200
+    assert fake_client.tables["products"].rows == before
+
+
+def test_canonical_spec_compact_utf8_budget_matches_browser() -> None:
+    import json
+
+    from app.routers.vendor_listings import ListingCreateRequest
+
+    spec = {str(i): "x" * 1990 for i in range(16)}
+    payload = _base_payload(
+        mode="new_canonical",
+        product_id=None,
+        product_name="Boundary",
+        category_id=CATEGORY_ID,
+        spec=spec,
+    )
+    encoded = json.dumps(spec, ensure_ascii=False, separators=(",", ":"))
+    # Fill precisely to the protocol byte limit; formatting whitespace is irrelevant.
+    spec["0"] += "x" * (32000 - len(encoded.encode("utf-8")))
+    assert ListingCreateRequest.model_validate(payload).spec == spec
+    spec["0"] += "x"
+    with pytest.raises(ValueError, match="32000-byte"):
+        ListingCreateRequest.model_validate(payload)
+
+
+def test_listing_category_options_preserve_parent_id(
+    listing_client: TestClient, fake_client: FakeSupabaseClient
+) -> None:
+    fake_client.tables["categories"].rows[0].update(parent_id="parent-category", prohibited=False)
+    response = listing_client.get("/vendor/listings/categories", headers=_auth_headers())
+    assert response.status_code == 200
+    assert response.json()[0]["id"] == CATEGORY_ID
+    assert response.json()[0]["parent_id"] == "parent-category"

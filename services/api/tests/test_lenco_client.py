@@ -12,6 +12,8 @@ import httpx
 import pytest
 from app.services.payments.base import (
     InitiateCollectionRequest,
+    ProviderErrorKind,
+    ProviderOutcome,
     QueryStatusRequest,
     ResolveAccountRequest,
     VerifyWebhookRequest,
@@ -94,6 +96,7 @@ MOMO_PAYOUT_FIXTURE: dict[str, Any] = {
         "currency": "ZMW",
         "reference": "pay-vendor-42",
         "lencoReference": "240730050",
+        "accountId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "status": "pending",
         "reasonForFailure": None,
         "narration": "Vendor payout",
@@ -116,6 +119,7 @@ BANK_PAYOUT_FIXTURE: dict[str, Any] = {
         "currency": "ZMW",
         "reference": "pay-vendor-99",
         "lencoReference": "240730099",
+        "accountId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "status": "pending",
         "reasonForFailure": None,
         "narration": None,
@@ -166,6 +170,7 @@ def lenco_client() -> LencoClient:
         ("POST", "/resolve/mobile-money"): (200, RESOLVE_FIXTURE),
         ("POST", "/transfers/mobile-money"): (200, MOMO_PAYOUT_FIXTURE),
         ("POST", "/transfers/bank-account"): (200, BANK_PAYOUT_FIXTURE),
+        ("GET", "/transfers/status/pay-vendor-42"): (200, MOMO_PAYOUT_FIXTURE),
     }
     transport = _make_transport(_route_handler(routes))
     http = httpx.AsyncClient(transport=transport, base_url=BASE_URL)
@@ -220,6 +225,8 @@ async def test_query_status_contract(lenco_strategy: LencoStrategy) -> None:
     assert result.status == "successful"
     assert result.amount_major == "13.00"
     assert result.provider_reference == "240730001"
+    assert result.outcome == ProviderOutcome.SUCCESSFUL
+    assert result.requested_reference == "ord-order-1-attempt-1"
 
 
 async def test_resolve_account_contract(lenco_strategy: LencoStrategy) -> None:
@@ -257,6 +264,21 @@ async def test_momo_payout_contract(lenco_strategy: LencoStrategy) -> None:
     assert captured["body"]["phone"] == "0961111111"
     assert result.amount_major == "50.00"
     assert result.status.value == "pending"
+    assert result.reference == "pay-vendor-42"
+    assert result.debit_account_id == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    assert result.destination is not None
+    assert result.destination["phone"] == "0961111111"
+
+
+async def test_transfer_status_uses_shared_provider_result(lenco_client: LencoClient) -> None:
+    result = await lenco_client.query_transfer_status("pay-vendor-42")
+
+    assert result.outcome == ProviderOutcome.PENDING
+    assert result.requested_reference == "pay-vendor-42"
+    assert result.reference == "pay-vendor-42"
+    assert result.debit_account_id == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    assert result.destination is not None
+    assert result.destination["operator"] == "mtn"
 
 
 async def test_bank_payout_contract(lenco_strategy: LencoStrategy) -> None:
@@ -355,8 +377,8 @@ async def test_status_get_is_retried_on_server_error() -> None:
     client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
 
     response = await client.query_collection_status("ord-order-1-attempt-1")
-    assert response.data is not None
-    assert response.data.status == "successful"
+    assert response.outcome == ProviderOutcome.SUCCESSFUL
+    assert response.status == "successful"
     assert attempts == MAX_IDEMPOTENT_RETRIES
 
 
@@ -447,3 +469,115 @@ async def test_insufficient_funds_error_from_api_envelope() -> None:
         await client.query_collection_status("ord-insufficient-1")
 
     assert exc_info.value.category == LencoErrorCategory.INSUFFICIENT
+
+
+async def test_http_200_failed_collection_is_authoritative_result() -> None:
+    failed = {
+        **STATUS_FIXTURE,
+        "message": "collection failed",
+        "data": {
+            **STATUS_FIXTURE["data"],
+            "status": "failed",
+            "reasonForFailure": "customer declined",
+        },
+    }
+    http = httpx.AsyncClient(
+        transport=_make_transport(lambda _request: httpx.Response(200, json=failed)),
+        base_url=BASE_URL,
+    )
+    strategy = LencoStrategy(LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL))
+
+    result = await strategy.query_status(
+        QueryStatusRequest(reference="ord-order-1-attempt-1")
+    )
+
+    assert result.outcome == ProviderOutcome.FAILED
+    assert result.status == "failed"
+    assert result.failure_reason == "customer declined"
+    assert result.reference == "ord-order-1-attempt-1"
+
+
+@pytest.mark.parametrize("status_code", [200, 404])
+async def test_reference_not_found_is_authoritative_result(status_code: int) -> None:
+    body = {
+        "status": False,
+        "message": "reference not found",
+        "data": None,
+        "errorCode": "11",
+    }
+    http = httpx.AsyncClient(
+        transport=_make_transport(lambda _request: httpx.Response(status_code, json=body)),
+        base_url=BASE_URL,
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
+
+    result = await client.query_transfer_status("pay-vendor-missing")
+
+    assert result.outcome == ProviderOutcome.NOT_FOUND
+    assert result.requested_reference == "pay-vendor-missing"
+    assert result.reference is None
+    assert result.amount_major is None
+    assert result.provider_reference is None
+
+
+async def test_malformed_status_is_invalid_observation_with_reference() -> None:
+    http = httpx.AsyncClient(
+        transport=_make_transport(
+            lambda _request: httpx.Response(200, content=b"not-json")
+        ),
+        base_url=BASE_URL,
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
+
+    with pytest.raises(LencoClientError) as exc_info:
+        await client.query_collection_status("ord-malformed-1")
+
+    assert exc_info.value.kind == ProviderErrorKind.INVALID_OBSERVATION
+    assert exc_info.value.reference == "ord-malformed-1"
+    assert exc_info.value.observation_uncertain is True
+
+
+async def test_auth_error_is_distinct_and_retains_reference() -> None:
+    http = httpx.AsyncClient(
+        transport=_make_transport(
+            lambda _request: httpx.Response(
+                401,
+                json={"status": False, "message": "invalid token", "errorCode": "09"},
+            )
+        ),
+        base_url=BASE_URL,
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
+
+    with pytest.raises(LencoClientError) as exc_info:
+        await client.query_transfer_status("pay-auth-1")
+
+    assert exc_info.value.kind == ProviderErrorKind.AUTHENTICATION
+    assert exc_info.value.reference == "pay-auth-1"
+
+
+async def test_payout_timeout_retains_reference_and_possible_acceptance() -> None:
+    def timeout(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("response lost", request=request)
+
+    http = httpx.AsyncClient(
+        transport=_make_transport(timeout),
+        base_url=BASE_URL,
+    )
+    client = LencoClient(http_client=http, token=TOKEN, base_url=BASE_URL)
+
+    with pytest.raises(LencoClientError) as exc_info:
+        await client.initiate_momo_payout(
+            LencoMomoPayoutRequest(
+                reference="pay-timeout-1",
+                amount_ngwee=5000,
+                account_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                phone="0961111111",
+                operator="mtn",
+            )
+        )
+
+    assert exc_info.value.kind == ProviderErrorKind.TRANSPORT
+    assert exc_info.value.reference == "pay-timeout-1"
+    assert exc_info.value.observation_uncertain is True
+    assert exc_info.value.dispatch_may_have_succeeded is True

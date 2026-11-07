@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -11,9 +10,14 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { Stepper } from "@vergeo/ui/src/stepper";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  customerAuth,
+  getReadyCustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
 import { ReservationCountdown } from "./reservation-countdown";
@@ -435,6 +439,8 @@ export type CheckoutShellLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -458,6 +464,8 @@ type ResolvedCheckoutLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -587,6 +595,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
     loading: messages.loading,
     error: messages.error,
     emptyCart: messages.emptyCart,
+    retry: messages.retry,
+    backToCart: messages.backToCart,
   };
 }
 
@@ -596,9 +606,46 @@ type CheckoutShellProps = {
 };
 
 export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellProps) {
+  const identity = useSession();
+  // Reset all checkout state (including child stores and order idempotency) at
+  // the render boundary. A returning account is still a different generation.
+  return (
+    <IdentityCheckoutShell
+      key={`${identity.generation}:${identity.session?.user.id ?? "anonymous"}`}
+      locale={locale}
+      labels={messageLabels}
+      identity={identity}
+    />
+  );
+}
+
+function IdentityCheckoutShell({
+  locale,
+  labels: messageLabels,
+  identity,
+}: CheckoutShellProps & { identity: ReturnType<typeof useSession> }) {
   const labels = resolveLabels(messageLabels);
   const router = useRouter();
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, generation, error: authError } = identity;
+  const retrying = useRef(false);
+  const mounted = useRef(false);
+  const started = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const isCurrent = useCallback(() => {
+    const current = customerAuth.snapshot();
+    return (
+      mounted.current &&
+      !current.loading &&
+      !current.error &&
+      current.generation === generation &&
+      current.session?.user.id === session?.user.id
+    );
+  }, [generation, session?.user.id]);
   const [step, setStep] = useState(0);
   const [checkoutSession, setCheckoutSession] = useState<CheckoutSession | null>(null);
   const [fulfilmentTotals, setFulfilmentTotals] = useState<FulfilmentTotals | null>(null);
@@ -616,6 +663,8 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
 
   const initSession = useCallback(
     async (accessToken: string) => {
+      if (!isCurrent() || started.current) return;
+      started.current = true;
       setInitializing(true);
       setErrorMessage(null);
       try {
@@ -623,12 +672,30 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           baseUrl: getApiBaseUrl(),
           getToken: () => accessToken,
         });
+        // Auth may remount this shell before the OTP component resumes. Persist
+        // the accepted account phone before asking the server for its snapshot.
+        const contact = await client.request<{ verified: boolean }>("/checkout/steps/contact", {
+          method: "POST",
+          body: JSON.stringify(session?.user.phone ? { phone: session.user.phone } : {}),
+        });
+        if (!isCurrent()) return;
+        if (contact.verified !== true) throw new Error("checkout.contact_unverified");
         const response = await client.request<CheckoutSession>("/checkout/session", {
           method: "POST",
         });
+        if (!isCurrent()) return;
+        if (!response.vendor_groups.length) {
+          setErrorMessage(labels.error);
+          started.current = false;
+          return;
+        }
         setCheckoutSession(response);
-        setStep(response.contact_skipped ? 1 : 0);
+        // Contact was explicitly verified above; contact_skipped is a profile
+        // snapshot hint, not a reason to hide a completed Contact step.
+        setStep(1);
       } catch (error) {
+        if (!isCurrent()) return;
+        started.current = false;
         if (error instanceof ApiError) {
           if (error.code === "checkout.cart_empty") {
             router.push(cartPath);
@@ -641,33 +708,51 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         }
         setErrorMessage(labels.error);
       } finally {
-        setInitializing(false);
+        if (isCurrent()) setInitializing(false);
       }
     },
-    [cartPath, labels.error, router],
+    [cartPath, labels.error, router, isCurrent, session?.user.phone],
   );
 
   useEffect(() => {
-    if (sessionLoading || !session?.access_token || checkoutSession || initializing) {
+    if (
+      sessionLoading ||
+      authError ||
+      errorMessage ||
+      !session?.access_token ||
+      checkoutSession ||
+      initializing
+    ) {
       return;
     }
     if (step === 0 && !session.user?.phone) {
       return;
     }
     void initSession(session.access_token);
-  }, [session, sessionLoading, checkoutSession, initializing, initSession, step]);
+  }, [
+    session,
+    sessionLoading,
+    authError,
+    errorMessage,
+    checkoutSession,
+    initializing,
+    initSession,
+    step,
+  ]);
 
   const handleContactComplete = async () => {
-    const supabase = await import("@vergeo/auth/browser-client").then((mod) =>
-      mod.createBrowserClient(),
-    );
-    const { data } = await supabase.auth.getSession();
-    const nextToken = data.session?.access_token;
+    let nextToken: string | undefined;
+    try {
+      nextToken = (await getReadyCustomerSession())?.access_token;
+    } catch {
+      if (isCurrent()) setErrorMessage(labels.error);
+      return;
+    }
+    if (!isCurrent()) return;
     if (!nextToken) {
       setErrorMessage(labels.error);
       return;
     }
-    setStep(1);
     await initSession(nextToken);
   };
 
@@ -749,13 +834,35 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         LinkComponent={Link}
       />
 
-      {errorMessage ? (
-        <p role="alert" className="font-body text-sm text-danger">
-          {errorMessage}
-        </p>
+      {authError || errorMessage ? (
+        <div className="space-y-3">
+          <p role="alert" className="font-body text-sm text-danger">
+            {authError ? labels.error : errorMessage}
+          </p>
+          <Button
+            loadingLabel={labels.loading}
+            onClick={() => {
+              if (retrying.current) return;
+              retrying.current = true;
+              void (async () => {
+                try {
+                  if (authError) await getReadyCustomerSession(true);
+                  else if (session?.access_token) await initSession(session.access_token);
+                } catch {
+                  if (mounted.current) setErrorMessage(labels.error);
+                } finally {
+                  retrying.current = false;
+                }
+              })();
+            }}
+          >
+            {labels.retry}
+          </Button>
+          <Link href={cartPath}>{labels.backToCart}</Link>
+        </div>
       ) : null}
 
-      {step === 0 && !checkoutSession ? (
+      {step === 0 && !checkoutSession && !authError && !errorMessage && !session?.user.phone ? (
         <StepContact labels={labels.contact} onComplete={() => void handleContactComplete()} />
       ) : null}
 
@@ -769,6 +876,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           reservationExpiredMessage={labels.reservationExpired}
           cartPath={cartPath}
           onComplete={(totals) => {
+            if (!isCurrent()) return;
             setFulfilmentTotals(totals);
             setStep(2);
           }}
@@ -782,6 +890,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           accessToken={session.access_token}
           labels={labels.payment}
           onComplete={(payment, options) => {
+            if (!isCurrent()) return;
             setPaymentSelection(payment);
             setPaymentOptions(options);
             setStep(3);
@@ -802,6 +911,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           payment={paymentSelection as ReviewPayment}
           labels={labels.review}
           onPlaceOrder={async () => {
+            if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
             if (!fulfilmentTotals.groups.length) {
               throw new Error(labels.review.placeOrderUnavailable);
             }
@@ -821,7 +931,9 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
                 })),
                 addressId: fulfilmentTotals.addressId,
                 idempotencyKey,
-                navigate: (href) => router.push(href),
+                navigate: (href) => {
+                  if (isCurrent()) router.push(href);
+                },
               });
             } catch (error) {
               throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));

@@ -3,6 +3,7 @@ import { checkoutSurface } from "../fixtures/checkout";
 import {
   BASE_URL,
   LOCALE,
+  customerOtp,
   customerOtpReady,
   flag,
   lencoSandboxReady,
@@ -11,6 +12,12 @@ import {
 } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
+import {
+  blockUnapprovedCheckoutWrites,
+  guardApprovedOtpRequests,
+  guardApprovedPaymentRequests,
+  missingOutboundApproval,
+} from "../fixtures/outbound-approval";
 import {
   FIXTURE_GROUP_ID,
   assertNoAccidentalRealMoney,
@@ -21,6 +28,10 @@ import {
 } from "../fixtures/payment-fixtures";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+
+// The payment-honesty branch intercepts provider status with page.route.
+// A registered PWA worker would bypass that deterministic network boundary.
+test.use({ serviceWorkers: "block" });
 
 /**
  * VE-P07 / G16 / S7 — highest-value browse-safe critical path.
@@ -119,6 +130,33 @@ test.describe("critical-path", () => {
       // 5. Reach cart + checkout.
       await page.goto(path("/cart"));
       await expect(page.getByTestId("cart-page")).toBeVisible();
+      // A signed-in CheckoutShell POSTs its contact/session snapshot on mount.
+      // Gate the deployed money/OTP branch before that first checkout navigation.
+      if (paymentMockMode()) {
+        await blockUnapprovedCheckoutWrites(page);
+      } else {
+        const missingApproval = [
+          ...new Set([
+            ...missingOutboundApproval("momo"),
+            ...missingOutboundApproval("otp", process.env, {
+              persona: "customer",
+              recipientPhone: customerOtp.testPhone,
+            }),
+          ]),
+        ];
+        if (!sandboxEnabled() || !customerOtpReady() || missingApproval.length) {
+          const gate = resolveGate({
+            kind: "OPTIONAL_GATE",
+            journey: "deployed sandbox MoMo settle (F9b)",
+            fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP", ...missingApproval],
+          });
+          test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+          test.skip(true, gate.reason);
+          return;
+        }
+        await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
+        await guardApprovedPaymentRequests(page, "momo");
+      }
       await page.goto(path("/checkout"));
       /**
        * Run 35456698878: this assertion used to be
@@ -158,20 +196,6 @@ test.describe("critical-path", () => {
       return;
     }
 
-    // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
-    if (!sandboxEnabled() || !customerOtpReady()) {
-      // OPTIONAL: real sandbox money is a founder gate (F9b). Never escalated,
-      // even in certification — browse/cart were asserted above.
-      const gate = resolveGate({
-        kind: "OPTIONAL_GATE",
-        journey: "deployed sandbox MoMo settle (F9b)",
-        fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP"],
-      });
-      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      test.skip(true, gate.reason);
-      return;
-    }
-
     if (!pdpAvailable) {
       const gate = resolveGate({
         kind: "OPTIONAL_GATE",
@@ -182,8 +206,7 @@ test.describe("critical-path", () => {
       return;
     }
 
-    // Continue checkout → MoMo when the place-order path is wired on the target.
-    await page.goto(path("/checkout"));
+    // Continue checkout → MoMo with guards installed before CheckoutShell mounted.
     const momo = page.locator('[name="payment-method"][value="momo"]');
     if (await momo.count()) {
       await momo

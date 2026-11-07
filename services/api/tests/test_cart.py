@@ -7,7 +7,7 @@ import pytest
 from app.errors import AppError
 from app.main import create_app
 from app.services.cart.grouping import FREE_DELIVERY_THRESHOLD_NGEWEE, CartLineView, group_by_vendor
-from app.services.cart.merge import merge_cart_items, validate_item_qty_for_listing
+from app.services.cart.merge import MergeResolution, merge_cart_items, validate_item_qty_for_listing
 from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.totals import (
     cart_subtotal_ngwee,
@@ -139,6 +139,23 @@ class TestMoq:
 
 
 class TestMergeMatrix:
+    def test_empty_guest_cart_keeps_account_cart(self) -> None:
+        listing = _retail_listing()
+        merged, conflicts = merge_cart_items(
+            user_items=[
+                {
+                    "listing_id": LISTING_RETAIL,
+                    "qty": 2,
+                    "unit_price_ngwee": 10_000,
+                    "wholesale": False,
+                }
+            ],
+            guest_items=[],
+            listings_by_id={LISTING_RETAIL: listing},
+        )
+        assert conflicts == []
+        assert [(item.listing_id, item.qty) for item in merged] == [(LISTING_RETAIL, 2)]
+
     def test_guest_only_items_preserved(self) -> None:
         listing = _retail_listing()
         merged, conflicts = merge_cart_items(
@@ -153,9 +170,34 @@ class TestMergeMatrix:
             ],
             listings_by_id={LISTING_RETAIL: listing},
         )
-        assert len(conflicts) == 0
+        assert [conflict.code for conflict in conflicts] == ["cart.price_changed"]
         assert len(merged) == 1
         assert merged[0].qty == 2
+        assert merged[0].unit_price_ngwee == 10_000
+
+    def test_guest_price_change_requires_explicit_acceptance(self) -> None:
+        line = {
+            "listing_id": LISTING_RETAIL,
+            "qty": 1,
+            "unit_price_ngwee": 9_000,
+            "wholesale": False,
+        }
+        _, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[line],
+            listings_by_id={LISTING_RETAIL: _retail_listing()},
+        )
+        assert [conflict.code for conflict in conflicts] == ["cart.price_changed"]
+
+        merged, resolved = merge_cart_items(
+            user_items=[],
+            guest_items=[line],
+            listings_by_id={LISTING_RETAIL: _retail_listing()},
+            resolution=MergeResolution(
+                accept_price_changes=frozenset({LISTING_RETAIL}),
+            ),
+        )
+        assert resolved == []
         assert merged[0].unit_price_ngwee == 10_000
 
     def test_both_carts_merge_with_qty_sum(self) -> None:
@@ -173,7 +215,7 @@ class TestMergeMatrix:
                 {
                     "listing_id": LISTING_RETAIL,
                     "qty": 3,
-                    "unit_price_ngwee": 9_500,
+                    "unit_price_ngwee": 10_000,
                     "wholesale": False,
                 }
             ],
@@ -255,6 +297,87 @@ class TestMergeMatrix:
         assert len(merged) == 1
         assert merged[0].unit_price_ngwee == 12_000
         assert any(c.code == "cart.price_changed" for c in conflicts)
+
+    def test_different_pickup_locations_require_an_explicit_choice(self) -> None:
+        location_a = "aaaaaaaa-0000-0000-0000-000000000001"
+        location_b = "bbbbbbbb-0000-0000-0000-000000000002"
+        line = {
+            "listing_id": LISTING_RETAIL,
+            "qty": 1,
+            "unit_price_ngwee": 10_000,
+            "wholesale": False,
+        }
+        merged, conflicts = merge_cart_items(
+            user_items=[{**line, "pickup_location_id": location_a}],
+            guest_items=[{**line, "pickup_location_id": location_b}],
+            listings_by_id={LISTING_RETAIL: _retail_listing()},
+        )
+        assert merged[0].qty == 2
+        assert [conflict.code for conflict in conflicts] == ["cart.pickup_conflict"]
+        assert conflicts[0].details["user_pickup_location_id"] == location_a
+        assert conflicts[0].details["guest_pickup_location_id"] == location_b
+
+        resolved, remaining = merge_cart_items(
+            user_items=[{**line, "pickup_location_id": location_a}],
+            guest_items=[{**line, "pickup_location_id": location_b}],
+            listings_by_id={LISTING_RETAIL: _retail_listing()},
+            resolution=MergeResolution(
+                pickup_location_choices={LISTING_RETAIL: location_b},
+            ),
+        )
+        assert remaining == []
+        assert resolved[0].pickup_location_id == location_b
+
+    def test_single_pickup_location_is_preserved(self) -> None:
+        location = "aaaaaaaa-0000-0000-0000-000000000001"
+        merged, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[
+                {
+                    "listing_id": LISTING_RETAIL,
+                    "qty": 1,
+                    "unit_price_ngwee": 10_000,
+                    "wholesale": False,
+                    "pickup_location_id": location,
+                }
+            ],
+            listings_by_id={LISTING_RETAIL: _retail_listing()},
+        )
+        assert conflicts == []
+        assert merged[0].pickup_location_id == location
+
+    def test_tracked_stock_change_is_a_visible_conflict(self) -> None:
+        listing = {**_retail_listing(), "stock_mode": "tracked", "stock_qty": 1}
+        _, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[
+                {
+                    "listing_id": LISTING_RETAIL,
+                    "qty": 2,
+                    "unit_price_ngwee": 10_000,
+                    "wholesale": False,
+                }
+            ],
+            listings_by_id={LISTING_RETAIL: listing},
+        )
+        assert [conflict.code for conflict in conflicts] == ["cart.stock_unavailable"]
+
+    def test_explicit_removal_resolves_an_unavailable_line_without_hiding_it(self) -> None:
+        merged, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[
+                {
+                    "listing_id": LISTING_RETAIL,
+                    "qty": 2,
+                    "unit_price_ngwee": 10_000,
+                    "wholesale": False,
+                }
+            ],
+            listings_by_id={},
+            resolution=MergeResolution(remove_listing_ids=frozenset({LISTING_RETAIL})),
+        )
+        assert merged == []
+        assert conflicts == []
 
 
 class TestWholesaleBusinessGating:

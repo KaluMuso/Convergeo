@@ -1,19 +1,35 @@
 import { customerOtp, customerOtpReady, path } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { nationalNumberFromE164 } from "../fixtures/phone";
+import { guardApprovedOtpRequests, missingOutboundApproval } from "../fixtures/outbound-approval";
 import { expect, test } from "../fixtures/test-base";
+
+test.use({ serviceWorkers: "block" });
 
 /**
  * Critical path: phone OTP login.
  *
- * The "code sent" boundary (entering a phone and requesting an OTP) runs against
- * any live target. The VERIFY leg needs a deterministic test OTP for a fixed
- * test phone (Supabase test-OTP map) → ENV-GATED behind `E2E_TEST_PHONE` +
- * `E2E_TEST_OTP`. Without them the spec asserts the OTP step is reached and
- * skips verification with an annotation (never sends real SMS spam in a loop).
+ * Requesting the code can send SMS. The run-scoped synthetic recipient and
+ * sandbox Auth target are approved before the login UI is opened. Missing
+ * approval fails strict certification or skips a local run before any send.
  */
 test.describe("auth · phone OTP", () => {
   test("request an OTP and (gated) verify to a signed-in session", async ({ page }) => {
+    const missingApproval = missingOutboundApproval("otp", process.env, {
+      persona: "customer",
+      recipientPhone: customerOtp.testPhone,
+    });
+    if (missingApproval.length) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "approved synthetic customer OTP",
+        fixtures: missingApproval,
+      });
+      enforceGate(gate);
+      test.skip(true, gate.reason);
+      return;
+    }
+    await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
     await page.goto(path("/login"));
 
     // Enter the phone number and request a code.

@@ -702,3 +702,23 @@ def test_cancel_event_queues_refund_and_notifies(
     notified = {row["payload"]["recipient_id"] for row in outbox}
     assert "buyer-1" in notified  # buyer
     assert HOLDER_ID in notified  # attendee
+
+
+def test_child_category_create_edit_roundtrip(organiser_client: TestClient) -> None:
+    payload = _create_payload()
+    payload["category"] = "concerts"
+    created = organiser_client.post("/organiser/events", headers=_auth_headers(), json=payload)
+    assert created.status_code == 200
+    event = created.json()["event"]
+    assert event["category"] == "concerts"
+    updated = organiser_client.patch(
+        f"/organiser/events/{event['id']}", headers=_auth_headers(), json={"category": "football"}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["event"]["category"] == "football"
+    rejected = organiser_client.patch(
+        f"/organiser/events/{event['id']}", headers=_auth_headers(), json={"category": "invented"}
+    )
+    assert rejected.status_code == 422
+    readback = organiser_client.get(f"/organiser/events/{event['id']}", headers=_auth_headers())
+    assert readback.json()["event"]["category"] == "football"

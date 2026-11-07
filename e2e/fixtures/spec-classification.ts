@@ -116,7 +116,7 @@ export const SPEC_CLASSIFICATION: readonly SpecEntry[] = [
     file: "event-ticket.spec.ts",
     class: "BEHAVIORAL_ONCE",
     rationale:
-      "REQUIRED_STRICT scanner verify+duplicate-reject; navigates the vendor origin via requireVendorBaseUrl()/urlOn(), covered by the portalBypass auto-fixture on any project.",
+      "REQUIRED_STRICT paid order→wallet→admission and independent free RSVP scanner checks; navigates the vendor origin via requireVendorBaseUrl()/urlOn(), covered by the portalBypass auto-fixture on any project.",
   },
   {
     file: "mobile-layout.spec.ts",

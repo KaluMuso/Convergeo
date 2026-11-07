@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -51,7 +52,8 @@ class _Query:
     payload: dict[str, Any] | None = None
     operation: str = "select"
 
-    def select(self, columns: str) -> _Query:
+    def select(self, columns: str, *, count: str | None = None) -> _Query:
+        assert count in (None, "exact")
         self.columns = columns
         self.operation = "select"
         return self
@@ -84,7 +86,8 @@ class _Query:
     def execute(self) -> MagicMock:
         if self.operation == "update":
             return MagicMock(data=self._run_update())
-        return MagicMock(data=self._run_select())
+        data = self._run_select()
+        return MagicMock(data=data, count=len(data) if isinstance(data, list) else None)
 
     def _where_sql(self) -> str:
         clauses: list[str] = []
@@ -182,6 +185,14 @@ class _PgClient:
 
 @pytest.fixture(scope="module")
 def db() -> Generator[PgConn, None, None]:
+    # The caller owns this disposable, fully migrated database. Never reset it.
+    if isolated_url := os.environ.get("ORDER_TEST_DB_URL"):
+        conn = PgConn(isolated_url)
+        ready = conn.run("SELECT 1 FROM public.orders LIMIT 1")
+        assert ready.ok, ready.error
+        seed_matrix_fixtures(conn)
+        yield conn
+        return
     admin = PgConn("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
     if not admin.run("SELECT 1").ok:
         pytest.skip("Postgres not reachable on 127.0.0.1:5432")
@@ -815,7 +826,7 @@ def _make_api_client(pg_service: SupabaseServiceClient) -> TestClient:
         yield pg_service
 
     app.dependency_overrides[get_supabase_client] = _override_service
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app)
 
 
 class TestCreateOrdersEndpoint:

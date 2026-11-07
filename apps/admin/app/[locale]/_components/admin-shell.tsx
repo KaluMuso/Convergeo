@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { isAdminPasswordRecoveryPath } from "../../../lib/password-recovery-path";
+
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
@@ -43,10 +45,6 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
-    return <>{children}</>;
-  }
-
   const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
   const visibleItems = flattenAdminNavItems(navGroups);
 
@@ -70,6 +68,10 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
+
+  if (rest === "/login" || rest.startsWith("/login/") || isAdminPasswordRecoveryPath(pathname)) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-dvh bg-bg text-text">

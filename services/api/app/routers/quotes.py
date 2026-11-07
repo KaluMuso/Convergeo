@@ -291,6 +291,8 @@ def _quote_is_compare_visible(row: dict[str, Any], *, now: datetime | None = Non
     status = str(row.get("status", ""))
     if status not in COMPARE_VISIBLE_STATUSES:
         return False
+    if status == "accepted":
+        return True
     expires_at = _parse_timestamp(str(row["expires_at"]) if row.get("expires_at") else None)
     instant = now or datetime.now(tz=UTC)
     if expires_at is not None and expires_at <= instant:

@@ -68,7 +68,20 @@
     "escrowTeaser": "When you pay online, Convergeo holds your money until delivery — then releases it to the seller.",
     "stockUnavailableNotice": "An item is no longer available. Review your cart before continuing to checkout.",
     "summaryHeading": "Order summary",
-    "sellerIndex": "Seller {index} of {total}"
+    "sellerIndex": "Seller {index} of {total}",
+    "mergeRecoveryTitle": "Review your cart before continuing",
+    "mergeRecoveryBody": "Your guest cart and account cart disagree. Nothing has been removed. Choose how to resolve the listed items.",
+    "mergeConflictLine": "Item {listing}: {code}",
+    "mergePriceLine": "{item}: {previous} → {current} each × {quantity} = {total} total",
+    "mergeUnnamedItem": "Item #{id}",
+    "mergeWholesaleTerms": "Wholesale minimum {moq} units.",
+    "mergePriceNeedsReview": "This quote cannot be accepted here and will be removed; review it again before buying.",
+    "mergeAccountChoice": "Keep account pickup choices",
+    "mergeGuestChoice": "Use guest pickup choices",
+    "mergeApply": "Accept current prices and remove unavailable items",
+    "mergeRetry": "Retry cart merge",
+    "mergeSignOut": "Sign out",
+    "mergeFailure": "We could not finish securing your cart. Your items are still saved."
   },
   "checkout": {
     "pageTitle": "Checkout",
@@ -134,6 +147,8 @@
     "reservationExpired": "Your reservation expired — items were returned to your cart.",
     "stockUnavailable": "An item is no longer available. Check your cart.",
     "emptyCart": "Your cart is empty.",
+    "retry": "Try again",
+    "backToCart": "Back to cart",
     "loading": "Starting checkout…",
     "error": "Something went wrong. Try again.",
     "payment": {
@@ -211,6 +226,7 @@
       "cancelledTitle": "Payment cancelled",
       "cancelledBody": "You declined the mobile money prompt. You can try again or choose a different payment method at checkout.",
       "cancelledCta": "Back to checkout",
+      "ticketUnavailableBody": "This ticket payment cannot be retried for this order. View your order for details.",
       "timeoutTitle": "Payment timed out",
       "timeoutBody": "The USSD prompt expired before approval. Check your phone has network signal, then retry — we will send a fresh prompt for the same order.",
       "retry": "Retry payment",

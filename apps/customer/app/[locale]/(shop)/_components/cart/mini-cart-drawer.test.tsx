@@ -8,24 +8,29 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 import {
   CartNavTrigger,
   MiniCartDrawer,
   closeMiniCart,
   openMiniCart,
+  refreshCart,
   setLastAddedMessage,
   setStoreStateForTests,
 } from "./mini-cart-drawer";
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: vi.fn(async () => ({
-    auth: { getSession: async () => ({ data: { session: null } }) },
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    },
   })),
 }));
 
 vi.mock("../../../../../lib/api-base-url", () => ({
-  getApiBaseUrl: () => "http://localhost:8000",
+  getApiBaseUrl: vi.fn(() => "http://localhost:8000"),
 }));
 
 vi.mock("next/link", () => ({
@@ -82,6 +87,7 @@ function renderInIntl(ui: React.ReactElement) {
 }
 
 beforeEach(() => {
+  vi.mocked(getApiBaseUrl).mockReturnValue("http://localhost:8000");
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
@@ -112,6 +118,17 @@ afterEach(() => {
 });
 
 describe("MiniCartDrawer a11y", () => {
+  it("fails closed before fetch when the API base is missing", async () => {
+    vi.mocked(getApiBaseUrl).mockReturnValue("");
+    expect(await refreshCart()).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+    openMiniCart();
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
+    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("exposes dialog semantics, close control, and live region for ATC", async () => {
     const user = userEvent.setup();
     setLastAddedMessage("Added to cart");

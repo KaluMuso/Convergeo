@@ -148,7 +148,8 @@ describe("PR C — required sites cannot regress to an unconditional skip", () =
   const REQUIRED_SITES = [
     ["auth-otp.spec.ts", "customer OTP verification"],
     ["vendor-sell.spec.ts", "vendor authenticated sell flow"],
-    ["event-ticket.spec.ts", "event scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "free RSVP scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "paid ticket order through admission"],
     ["critical-path.spec.ts", "checkout place-order -> payment surface"],
   ];
 

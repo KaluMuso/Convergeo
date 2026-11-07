@@ -28,13 +28,17 @@ describe("CloudinaryImage", () => {
     expect(img).toHaveAttribute("decoding", "async");
   });
 
-  it("disables lazy loading when priority is set", () => {
+  it("makes the priority image paint without waiting for client hydration", () => {
     render(
       <CloudinaryImage publicId="hero.jpg" alt="Hero banner" priority cloudName="test-cloud" />,
     );
 
     const img = screen.getByRole("img", { name: "Hero banner" });
     expect(img).toHaveAttribute("loading", "eager");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+    expect(img).toHaveStyle({ opacity: "1" });
+    expect(screen.queryByTestId("cloudinary-shimmer")).not.toBeInTheDocument();
+    expect(screen.getByTestId("cloudinary-image-box")).not.toHaveStyle({ filter: "blur(8px)" });
   });
 
   it("applies aspect-ratio on the container", () => {

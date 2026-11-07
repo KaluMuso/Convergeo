@@ -3,10 +3,12 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, cast
 
+from app.schemas.vendor_listing import SaleUnit, VendorListing
 from app.services.kyc.caps import LISTING_COUNT_STATUSES, VendorCapLimits
 from app.services.listings.canonical_match import (
     CanonicalCandidate,
@@ -18,6 +20,8 @@ from app.services.moderation.prohibited import screen_listing
 ListingCondition = Literal["new", "refurbished"]
 StockMode = Literal["tracked", "always_available"]
 ListingStatus = Literal["draft", "active", "paused"]
+
+logger = logging.getLogger(__name__)
 
 MAX_CSV_BYTES = 512_000
 MAX_CSV_ROWS = 500
@@ -45,6 +49,9 @@ OPTIONAL_COLUMNS = frozenset(
         # Optional canonical product to attach to; when blank the vendor can
         # pick a suggested match in the import preview (see preview_import_rows).
         "product_id",
+        "sale_unit",
+        "unit_step_milli",
+        "min_steps",
     }
 )
 
@@ -76,6 +83,9 @@ class ParsedListingRow:
     return_window_hours: int | None
     status: ListingStatus
     product_id: str | None
+    sale_unit: SaleUnit
+    unit_step_milli: int
+    min_steps: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +94,7 @@ class RowImportResult:
     ok: bool
     errors: list[str]
     listing_id: str | None = None
+    stock_preserved: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,16 +114,16 @@ def is_valid_price_tiers(tiers: list[PriceTierRow]) -> list[str]:
     prev_price: int | None = None
     for tier in ordered:
         if tier.min_qty <= prev_qty:
-            errors.append("price_tiers must have strictly ascending min_qty")
+            errors.append("listings.import.errors.invalidTiers")
             break
         if prev_price is not None and tier.price_ngwee >= prev_price:
-            errors.append("price_tiers must have strictly descending unit prices")
+            errors.append("listings.import.errors.invalidTiers")
             break
         if tier.min_qty < 1:
-            errors.append("price_tiers min_qty must be at least 1")
+            errors.append("listings.import.errors.invalidTiers")
             break
         if tier.price_ngwee <= 0:
-            errors.append("price_tiers price_ngwee must be greater than zero")
+            errors.append("listings.import.errors.invalidTiers")
             break
         prev_qty = tier.min_qty
         prev_price = tier.price_ngwee
@@ -127,18 +138,18 @@ def _parse_bool(value: str | None, *, default: bool = False) -> bool:
         return True
     if normalized in {"0", "false", "no", "n"}:
         return False
-    raise ValueError(f"invalid boolean value: {value}")
+    raise ValueError("listings.import.errors.invalidBoolean")
 
 
 def _parse_int_field(value: str | None, *, field: str, minimum: int | None = None) -> int:
     if value is None or not str(value).strip():
-        raise ValueError(f"{field} is required")
+        raise ValueError("listings.import.errors.missingField")
     try:
         parsed = int(str(value).strip())
     except ValueError as exc:
-        raise ValueError(f"{field} must be an integer") from exc
+        raise ValueError("listings.import.errors.invalidInteger") from exc
     if minimum is not None and parsed < minimum:
-        raise ValueError(f"{field} must be at least {minimum}")
+        raise ValueError("listings.import.errors.invalidMinimum")
     return parsed
 
 
@@ -159,13 +170,13 @@ def _parse_price_tiers(raw: str | None) -> list[PriceTierRow] | None:
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ValueError("price_tiers must be valid JSON") from exc
+        raise ValueError("listings.import.errors.invalidTiers") from exc
     if not isinstance(payload, list):
-        raise ValueError("price_tiers must be a JSON array")
+        raise ValueError("listings.import.errors.invalidTiers")
     tiers: list[PriceTierRow] = []
-    for index, item in enumerate(payload):
+    for item in payload:
         if not isinstance(item, dict):
-            raise ValueError(f"price_tiers[{index}] must be an object")
+            raise ValueError("listings.import.errors.invalidTiers")
         min_qty = _parse_int_field(str(item.get("min_qty", "")), field="min_qty", minimum=1)
         price_ngwee = _parse_int_field(
             str(item.get("price_ngwee", "")),
@@ -183,7 +194,7 @@ def _parse_optional_uuid(value: str | None, *, field: str) -> str | None:
     try:
         uuid.UUID(candidate)
     except ValueError as exc:
-        raise ValueError(f"{field} must be a valid UUID") from exc
+        raise ValueError("listings.import.errors.invalidProduct") from exc
     return candidate
 
 
@@ -196,11 +207,11 @@ def validate_row_dict(
     errors: list[str] = []
     extra_keys = set(raw.keys()) - ALL_COLUMNS
     if extra_keys:
-        errors.append(f"unknown columns: {', '.join(sorted(extra_keys))}")
+        errors.append("listings.import.errors.unknownColumns")
 
     for column in REQUIRED_COLUMNS:
         if not str(raw.get(column, "")).strip():
-            errors.append(f"missing required column: {column}")
+            errors.append("listings.import.errors.missingField")
 
     if errors:
         return None, errors
@@ -208,9 +219,9 @@ def validate_row_dict(
     sku = str(raw["sku"]).strip()
     title = str(raw["title"]).strip()
     if not sku:
-        errors.append("sku must not be empty")
+        errors.append("listings.import.errors.missingField")
     if not title:
-        errors.append("title must not be empty")
+        errors.append("listings.import.errors.missingField")
 
     try:
         price_ngwee = _parse_int_field(raw.get("price_ngwee"), field="price_ngwee", minimum=1)
@@ -220,7 +231,7 @@ def validate_row_dict(
 
     stock_mode_raw = str(raw["stock_mode"]).strip().lower()
     if stock_mode_raw not in {"tracked", "always_available"}:
-        errors.append("stock_mode must be tracked or always_available")
+        errors.append("listings.import.errors.invalidStockMode")
         stock_mode: StockMode = "tracked"
     else:
         stock_mode = cast(StockMode, stock_mode_raw)
@@ -239,7 +250,7 @@ def validate_row_dict(
 
     condition_raw = str(raw["condition"]).strip().lower()
     if condition_raw not in {"new", "refurbished"}:
-        errors.append("condition must be new or refurbished")
+        errors.append("listings.import.errors.invalidCondition")
         condition: ListingCondition = "new"
     else:
         condition = cast(ListingCondition, condition_raw)
@@ -290,7 +301,7 @@ def validate_row_dict(
 
     status_raw = str(raw.get("status") or "active").strip().lower()
     if status_raw not in {"draft", "active", "paused"}:
-        errors.append("status must be draft, active, or paused")
+        errors.append("listings.import.errors.invalidStatus")
         status: ListingStatus = "active"
     else:
         status = cast(ListingStatus, status_raw)
@@ -302,12 +313,44 @@ def validate_row_dict(
         product_id = None
 
     if wholesale and kyc_tier < 2:
-        errors.append("wholesale requires T2 verification or higher")
+        errors.append("listings.import.errors.wholesaleEligibility")
     if wholesale and not price_tiers:
-        errors.append("wholesale listings require price_tiers")
+        errors.append("listings.import.errors.wholesaleEligibility")
 
     if price_tiers:
         errors.extend(is_valid_price_tiers(price_tiers))
+
+    sale_unit = str(raw.get("sale_unit") or "each").strip().lower()
+    unit_step_milli = 1000
+    min_steps = 1
+    for field, default in (("unit_step_milli", 1000), ("min_steps", 1)):
+        try:
+            value = _parse_int_field(raw.get(field) or str(default), field=field, minimum=1)
+            if field == "unit_step_milli":
+                unit_step_milli = value
+            else:
+                min_steps = value
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    if not errors:
+        try:
+            # Reuse the create/editor rules, including the measured-wholesale fence.
+            VendorListing.model_validate(
+                {
+                    "condition": condition,
+                    "stock_mode": stock_mode,
+                    "stock_qty": stock_qty,
+                    "price_ngwee": price_ngwee,
+                    "wholesale": wholesale,
+                    "moq": moq,
+                    "sale_unit": sale_unit,
+                    "unit_step_milli": unit_step_milli,
+                    "min_steps": min_steps,
+                }
+            )
+        except ValueError:
+            errors.append("listings.import.errors.invalidUnits")
 
     if errors:
         return None, errors
@@ -327,6 +370,9 @@ def validate_row_dict(
             return_window_hours=return_window_hours,
             status=status,
             product_id=product_id,
+            sale_unit=cast(SaleUnit, sale_unit),
+            unit_step_milli=unit_step_milli,
+            min_steps=min_steps,
         ),
         [],
     )
@@ -335,27 +381,32 @@ def validate_row_dict(
 def parse_csv_text(csv_text: str) -> tuple[list[dict[str, str]], list[str]]:
     errors: list[str] = []
     if not csv_text.strip():
-        return [], ["CSV file is empty"]
+        return [], ["listings.import.errors.emptyCsv"]
 
     reader = csv.DictReader(io.StringIO(csv_text))
     if reader.fieldnames is None:
-        return [], ["CSV header row is missing"]
+        return [], ["listings.import.errors.missingHeaders"]
 
     normalized_headers = [name.strip() for name in reader.fieldnames if name]
+    if len(set(normalized_headers)) != len(normalized_headers):
+        return [], ["listings.import.errors.duplicateHeaders"]
     missing = REQUIRED_COLUMNS - set(normalized_headers)
     if missing:
-        return [], [f"missing required headers: {', '.join(sorted(missing))}"]
+        return [], ["listings.import.errors.missingHeaders"]
 
     rows: list[dict[str, str]] = []
     for index, raw_row in enumerate(reader, start=2):
         if index - 1 > MAX_CSV_ROWS:
-            errors.append(f"row limit exceeded ({MAX_CSV_ROWS} data rows maximum)")
+            errors.append("listings.import.errors.rowLimit")
             break
         row = {
             (key or "").strip(): (value or "").strip()
             for key, value in raw_row.items()
             if key is not None
         }
+        if raw_row.get(None):
+            # Do not silently truncate surplus cells (e.g. unquoted tier JSON).
+            row["__extra_cells"] = "unexpected cells beyond CSV headers"
         if not any(row.values()):
             continue
         rows.append(row)
@@ -375,6 +426,9 @@ def build_template_csv() -> str:
         {
             "sku": "TOM-001",
             "title": "Fresh tomatoes per kg",
+            "sale_unit": "kg",
+            "unit_step_milli": "1000",
+            "min_steps": "1",
             "price_ngwee": "2500",
             "stock_mode": "tracked",
             "stock_qty": "50",
@@ -423,12 +477,7 @@ def _load_existing_sku_map(
     client: SupabaseTableClient,
     vendor_id: str,
 ) -> dict[str, dict[str, Any]]:
-    response = (
-        client.table("vendor_listings")
-        .select("id, sku, status")
-        .eq("vendor_id", vendor_id)
-        .execute()
-    )
+    response = client.table("vendor_listings").select("*").eq("vendor_id", vendor_id).execute()
     sku_map: dict[str, dict[str, Any]] = {}
     for row in _rows(response):
         sku = row.get("sku")
@@ -446,8 +495,8 @@ def _serialize_price_tiers(tiers: list[PriceTierRow] | None) -> list[dict[str, i
 def _listing_payload(vendor_id: str, parsed: ParsedListingRow) -> dict[str, Any]:
     return {
         "vendor_id": vendor_id,
-        # Attach to the confirmed canonical product when supplied; None keeps the
-        # listing standalone. Existence/active is validated in import_listing_rows.
+        # New normal CSV listings require a confirmed active canonical product.
+        # An omitted value on reimport preserves the existing binding.
         "product_id": parsed.product_id,
         "sku": parsed.sku,
         "title_override": parsed.title,
@@ -461,6 +510,9 @@ def _listing_payload(vendor_id: str, parsed: ParsedListingRow) -> dict[str, Any]
         "returnable": parsed.returnable,
         "return_window_hours": parsed.return_window_hours,
         "status": parsed.status,
+        "sale_unit": parsed.sale_unit,
+        "unit_step_milli": parsed.unit_step_milli,
+        "min_steps": parsed.min_steps,
     }
 
 
@@ -474,6 +526,7 @@ def import_listing_rows(
     vendor_id: str,
     limits: VendorCapLimits,
     rows: list[dict[str, str]],
+    wholesale_eligible: bool = False,
 ) -> ImportSummary:
     results: list[RowImportResult] = []
     accepted = 0
@@ -506,7 +559,7 @@ def import_listing_rows(
                 RowImportResult(
                     row=index,
                     ok=False,
-                    errors=[f"prohibited listing blocked ({guard.reason}): {guard.matched}"],
+                    errors=["listings.import.errors.prohibitedListing"],
                 )
             )
             continue
@@ -517,7 +570,7 @@ def import_listing_rows(
                 RowImportResult(
                     row=index,
                     ok=False,
-                    errors=[f"duplicate sku in file: {sku}"],
+                    errors=["listings.import.errors.duplicateSku"],
                 )
             )
             continue
@@ -529,13 +582,21 @@ def import_listing_rows(
                 RowImportResult(
                     row=index,
                     ok=False,
-                    errors=["product_id does not match an active canonical product"],
+                    errors=["listings.import.errors.invalidProduct"],
                 )
             )
             continue
 
         existing = sku_map.get(sku)
         is_new = existing is None
+        if is_new and parsed.product_id is None:
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index, ok=False, errors=["listings.import.errors.canonicalRequired"]
+                )
+            )
+            continue
         if is_new and _counts_toward_cap(parsed.status):
             if cap_slots_used >= max_listings:
                 rejected += 1
@@ -543,15 +604,91 @@ def import_listing_rows(
                     RowImportResult(
                         row=index,
                         ok=False,
-                        errors=[
-                            f"listing cap exceeded (max {max_listings} for tier T{limits.kyc_tier})"
-                        ],
+                        errors=["listings.import.errors.listingCap"],
                     )
                 )
                 continue
             cap_slots_used += 1
 
         payload = _listing_payload(vendor_id, parsed)
+        if existing is not None:
+            if existing.get("status") not in {"draft", "active", "paused"}:
+                rejected += 1
+                results.append(
+                    RowImportResult(
+                        row=index, ok=False, errors=["listings.import.errors.notEditable"]
+                    )
+                )
+                continue
+            # Imports seed new stock, but never reset available units after a claim
+            # or change a branch-tracked listing back into pooled stock. Use the
+            # coordinated inventory mutation authority for existing stock.
+            payload.pop("stock_qty")
+            payload.pop("stock_mode")
+            for field in OPTIONAL_COLUMNS - {"stock_qty", "stock_mode", "vendor_id"}:
+                if not str(raw_row.get(field) or "").strip():
+                    payload.pop(field, None)
+            # Unit changes require explicit editor review; an old CSV must not
+            # reinterpret current stock, cart steps or existing reservations.
+            unit_changes = any(
+                field in payload and payload[field] != existing.get(field, default)
+                for field, default in (
+                    ("sale_unit", "each"),
+                    ("unit_step_milli", 1000),
+                    ("min_steps", 1),
+                )
+            )
+            if unit_changes:
+                rejected += 1
+                results.append(
+                    RowImportResult(
+                        row=index, ok=False, errors=["listings.import.errors.unitChange"]
+                    )
+                )
+                continue
+        effective = {**(existing or {}), **payload}
+        if existing is not None and (
+            "product_id" in payload and payload["product_id"] != existing.get("product_id")
+        ):
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index, ok=False, errors=["listings.import.errors.productChange"]
+                )
+            )
+            continue
+        try:
+            VendorListing.model_validate(
+                {
+                    key: value
+                    for key, value in effective.items()
+                    if key in VendorListing.model_fields
+                }
+            )
+        except ValueError:
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index, ok=False, errors=["listings.import.errors.invalidListing"]
+                )
+            )
+            if is_new and _counts_toward_cap(parsed.status):
+                cap_slots_used -= 1
+            continue
+        if effective.get("wholesale") and (
+            not wholesale_eligible or not effective.get("price_tiers")
+        ):
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index,
+                    ok=False,
+                    errors=["listings.import.errors.wholesaleEligibility"],
+                )
+            )
+            if is_new and _counts_toward_cap(parsed.status):
+                cap_slots_used -= 1
+            continue
 
         try:
             if existing is not None:
@@ -574,12 +711,19 @@ def import_listing_rows(
                 listing_id = str(created["id"])
                 sku_map[sku] = created
         except Exception as exc:  # noqa: BLE001 — row-level failure isolation
+            # Keep SQL/PostgREST diagnostics in server logs, never row results.
+            logger.exception("Listing import persistence failed", extra={"row": index})
             rejected += 1
             results.append(
                 RowImportResult(
                     row=index,
                     ok=False,
-                    errors=[f"database error: {exc}"],
+                    errors=[
+                        "listings.import.errors.listingCap"
+                        if getattr(exc, "code", None) == "PT403"
+                        and getattr(exc, "message", None) == "listing_cap_exceeded"
+                        else "listings.import.errors.databaseFailure"
+                    ],
                 )
             )
             if is_new and _counts_toward_cap(parsed.status):
@@ -588,7 +732,13 @@ def import_listing_rows(
 
         accepted += 1
         results.append(
-            RowImportResult(row=index, ok=True, errors=[], listing_id=listing_id)
+            RowImportResult(
+                row=index,
+                ok=True,
+                errors=[],
+                listing_id=listing_id,
+                stock_preserved=existing is not None,
+            )
         )
 
     return ImportSummary(accepted=accepted, rejected=rejected, rows=results)
@@ -597,11 +747,11 @@ def import_listing_rows(
 def _decode_and_parse_csv(csv_bytes: bytes) -> tuple[list[dict[str, str]], list[str]]:
     """Decode + parse CSV bytes. Non-empty error list means the rows are unusable."""
     if len(csv_bytes) > MAX_CSV_BYTES:
-        return [], [f"CSV exceeds maximum size of {MAX_CSV_BYTES} bytes"]
+        return [], ["listings.import.errors.fileSize"]
     try:
         csv_text = csv_bytes.decode("utf-8-sig")
     except UnicodeDecodeError:
-        return [], ["CSV must be UTF-8 encoded"]
+        return [], ["listings.import.errors.invalidEncoding"]
     parsed_rows, parse_errors = parse_csv_text(csv_text)
     if parse_errors:
         return [], parse_errors
@@ -614,6 +764,7 @@ def import_csv_bytes(
     vendor_id: str,
     limits: VendorCapLimits,
     csv_bytes: bytes,
+    wholesale_eligible: bool = False,
 ) -> ImportSummary:
     parsed_rows, errors = _decode_and_parse_csv(csv_bytes)
     if errors:
@@ -628,6 +779,7 @@ def import_csv_bytes(
         vendor_id=vendor_id,
         limits=limits,
         rows=parsed_rows,
+        wholesale_eligible=wholesale_eligible,
     )
 
 
@@ -686,6 +838,7 @@ def preview_import_rows(
     *,
     limits: VendorCapLimits,
     rows: list[dict[str, str]],
+    wholesale_eligible: bool = False,
 ) -> ImportPreview:
     """Validate rows WITHOUT writing and attach canonical-match suggestions.
 
@@ -696,6 +849,7 @@ def preview_import_rows(
     candidates = load_active_candidates(client)
     valid_product_ids = {candidate.product_id for candidate in candidates}
     name_by_id = {candidate.product_id: candidate.name for candidate in candidates}
+    sku_map = _load_existing_sku_map(client, limits.vendor_id)
 
     seen_skus: set[str] = set()
     previews: list[RowPreview] = []
@@ -715,16 +869,23 @@ def preview_import_rows(
             sku = parsed.sku
             title = parsed.title
             price = parsed.price_ngwee
+            existing = sku_map.get(parsed.sku)
             product_id = parsed.product_id
+            if product_id is None and existing is not None:
+                product_id = existing.get("product_id")
+            if existing is None and product_id is None:
+                errors.append("listings.import.errors.canonicalRequired")
+                suggestions = _row_suggestions(parsed.title, candidates)
+            if parsed.wholesale and not wholesale_eligible:
+                errors.append("listings.import.errors.wholesaleEligibility")
             guard = screen_listing(title=parsed.title)
             if not guard.allowed:
-                errors.append(
-                    f"prohibited listing blocked ({guard.reason}): {guard.matched}"
-                )
+                errors.append("listings.import.errors.prohibitedListing")
             elif parsed.product_id is not None and parsed.product_id not in valid_product_ids:
-                errors.append("product_id does not match an active canonical product")
+                errors.append("listings.import.errors.invalidProduct")
             elif parsed.sku in seen_skus:
-                errors.append(f"duplicate sku in file: {parsed.sku}")
+                errors.append("listings.import.errors.duplicateSku")
+            seen_skus.add(parsed.sku)
 
         ok = parsed is not None and not errors
         if ok:
@@ -764,6 +925,7 @@ def preview_import_csv_bytes(
     *,
     limits: VendorCapLimits,
     csv_bytes: bytes,
+    wholesale_eligible: bool = False,
 ) -> ImportPreview:
     parsed_rows, errors = _decode_and_parse_csv(csv_bytes)
     if errors:
@@ -786,4 +948,6 @@ def preview_import_csv_bytes(
                 )
             ],
         )
-    return preview_import_rows(client, limits=limits, rows=parsed_rows)
+    return preview_import_rows(
+        client, limits=limits, rows=parsed_rows, wholesale_eligible=wholesale_eligible
+    )

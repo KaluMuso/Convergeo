@@ -1,6 +1,25 @@
-import { CSP_NONCE_PLACEHOLDER, CSP_REPORT_ONLY_HEADER } from "@vergeo/auth/middleware";
+import {
+  CSP_NONCE_PLACEHOLDER,
+  CSP_REPORT_ONLY_HEADER,
+  createPortalRedirect,
+  getLocaleFromPath,
+  resolveGatedRedirect,
+  updateSession,
+} from "@vergeo/auth/middleware";
+import { LOCALES } from "@vergeo/i18n";
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const authMocks = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  getClaims: vi.fn(),
+  getSession: vi.fn(),
+}));
+
+// The SDK belongs to the auth workspace; resolve its fixture from that owner too.
+vi.mock("../../packages/auth/node_modules/@supabase/ssr", () => ({
+  createServerClient: vi.fn(() => ({ auth: authMocks })),
+}));
 
 vi.mock("next-intl/middleware", () => ({
   default: vi.fn(() => vi.fn(() => NextResponse.next())),
@@ -34,19 +53,285 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
 // result, passes on ok, and skips verification entirely outside production.
 const { verifyCfAccessAssertionMock, resolveGatedRedirectMock } = vi.hoisted(() => ({
   verifyCfAccessAssertionMock: vi.fn(),
-  resolveGatedRedirectMock: vi.fn((): "login" | "onboarding" | "permission-denied" | null => null),
+  resolveGatedRedirectMock: vi.fn<typeof import("@vergeo/auth/middleware").resolveGatedRedirect>(
+    () => null,
+  ),
 }));
 
 vi.mock("./lib/cf-access", () => ({
   verifyCfAccessAssertion: verifyCfAccessAssertionMock,
 }));
 
+import { isAdminPasswordRecoveryPath } from "./lib/password-recovery-path";
 import middleware, {
   createCfAccessForbiddenResponse,
   hasCfAccessJwtAssertion,
   isProductionCfAccessRequired,
   isStagingHealthCheckException,
 } from "./middleware";
+
+describe("recovery composition with current verified-claims authorization", () => {
+  const defaultUpdateSession = vi.mocked(updateSession).getMockImplementation()!;
+  const defaultCreatePortalRedirect = vi.mocked(createPortalRedirect).getMockImplementation()!;
+  const defaultGetLocaleFromPath = vi.mocked(getLocaleFromPath).getMockImplementation()!;
+
+  beforeEach(async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_BYPASS", "true");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+    verifyCfAccessAssertionMock.mockReset();
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true });
+    authMocks.getUser.mockReset();
+    authMocks.getClaims.mockReset();
+    authMocks.getSession.mockReset();
+    authMocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "fixture-user",
+          app_metadata: { roles: ["admin"] },
+          user_metadata: { roles: ["admin"] },
+        },
+      },
+    });
+    authMocks.getClaims.mockResolvedValue({
+      data: { claims: { app_metadata: { roles: ["customer"] } } },
+      error: null,
+    });
+    const actual =
+      await vi.importActual<typeof import("@vergeo/auth/middleware")>("@vergeo/auth/middleware");
+    vi.mocked(updateSession).mockImplementation(actual.updateSession);
+    resolveGatedRedirectMock.mockImplementation(actual.resolveGatedRedirect);
+    vi.mocked(createPortalRedirect).mockImplementation(actual.createPortalRedirect);
+    vi.mocked(getLocaleFromPath).mockImplementation(actual.getLocaleFromPath);
+  });
+
+  afterEach(() => {
+    vi.mocked(updateSession).mockImplementation(defaultUpdateSession);
+    vi.mocked(createPortalRedirect).mockImplementation(defaultCreatePortalRedirect);
+    vi.mocked(getLocaleFromPath).mockImplementation(defaultGetLocaleFromPath);
+    resolveGatedRedirectMock.mockReset();
+    resolveGatedRedirectMock.mockReturnValue(null);
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    "/fr/orders",
+    "/fr/reset-password/admin",
+    "/fr/reset-password/confirm/admin",
+    "/fr/reset-password-other",
+  ])(
+    "denies stale User metadata and production bypass outside exact recovery: %s",
+    async (path) => {
+      const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(
+        "https://admin.example.test/fr/permission-denied",
+      );
+      expect(authMocks.getClaims).toHaveBeenCalledOnce();
+      expect(authMocks.getSession).not.toHaveBeenCalled();
+      expect(resolveGatedRedirect).toHaveBeenCalledWith(
+        "admin",
+        path,
+        LOCALES,
+        expect.objectContaining({ id: "fixture-user" }),
+        ["customer"],
+        { adminBypass: false },
+      );
+    },
+  );
+
+  it.each(["missing", "error", "thrown", "malformed", "user_metadata"])(
+    "keeps protected routes closed when verified claims are %s",
+    async (kind) => {
+      if (kind === "thrown") authMocks.getClaims.mockRejectedValue(new Error("fixture"));
+      else
+        authMocks.getClaims.mockResolvedValue({
+          data:
+            kind === "missing"
+              ? null
+              : {
+                  claims:
+                    kind === "user_metadata"
+                      ? { user_metadata: { roles: ["admin"] } }
+                      : { app_metadata: { roles: kind === "error" ? ["admin"] : "admin" } },
+                },
+          error: kind === "error" ? { message: "fixture" } : null,
+        });
+      const response = await middleware(new NextRequest("https://admin.example.test/en/orders"));
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(
+        "https://admin.example.test/en/permission-denied",
+      );
+      expect(authMocks.getSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses verified admin claims even when the User object has no roles", async () => {
+    authMocks.getUser.mockResolvedValue({
+      data: { user: { id: "fixture-admin", app_metadata: {} } },
+    });
+    authMocks.getClaims.mockResolvedValue({
+      data: { claims: { app_metadata: { roles: ["admin"] } } },
+      error: null,
+    });
+    const response = await middleware(new NextRequest("https://admin.example.test/en/orders"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(authMocks.getClaims).toHaveBeenCalledOnce();
+    expect(authMocks.getSession).not.toHaveBeenCalled();
+  });
+
+  it.each(["/en/kyc", "/en/config/commissions", "/en/intake", "/en/events"])(
+    "allows a verified admin through Cloudflare Access on %s",
+    async (path) => {
+      authMocks.getClaims.mockResolvedValue({
+        data: { claims: { app_metadata: { roles: ["admin"] } } },
+        error: null,
+      });
+      const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+      expect(verifyCfAccessAssertionMock).toHaveBeenCalledOnce();
+      expect(authMocks.getClaims).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["customer", "vendor"] as const)(
+    "denies a verified %s role on privileged admin routes after Cloudflare Access",
+    async (role) => {
+      authMocks.getClaims.mockResolvedValue({
+        data: { claims: { app_metadata: { roles: [role] } } },
+        error: null,
+      });
+      for (const path of [
+        "/en/kyc",
+        "/en/config/commissions",
+        "/en/intake",
+        "/en/events",
+        "/en/moderation/products",
+      ]) {
+        const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+        expect(response.status, path).toBe(307);
+        expect(response.headers.get("location"), path).toBe(
+          "https://admin.example.test/en/permission-denied",
+        );
+        expect(verifyCfAccessAssertionMock).toHaveBeenCalled();
+      }
+      expect(authMocks.getSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it("ignores raw session cookies and hostile next redirects on a protected lookalike route", async () => {
+    authMocks.getUser.mockResolvedValue({ data: { user: null } });
+    authMocks.getClaims.mockResolvedValue({ data: null, error: null });
+    const response = await middleware(
+      new NextRequest(
+        "https://admin.example.test/fr/reset-password/confirm/admin?next=https://evil.example.test",
+        { headers: { cookie: "sb-fixture-auth-token=fixture-admin-session" } },
+      ),
+    );
+    const location = new URL(response.headers.get("location")!);
+    expect(response.status).toBe(307);
+    expect(location.origin).toBe("https://admin.example.test");
+    expect(location.pathname).toBe("/fr/login");
+    expect(location.searchParams.get("next")).toBe("/fr/reset-password/confirm/admin");
+    expect(authMocks.getSession).not.toHaveBeenCalled();
+  });
+
+  it.each(["/en/reset-password", "/fr/reset-password/confirm"])(
+    "allows only recovery with unavailable claims after Cloudflare verification: %s",
+    async (path) => {
+      authMocks.getUser.mockResolvedValue({ data: { user: null } });
+      authMocks.getClaims.mockRejectedValue(new Error("fixture"));
+      const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+      expect(response.status).toBe(200);
+      expect(verifyCfAccessAssertionMock).toHaveBeenCalledOnce();
+      expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+      expect(authMocks.getSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["assertion_missing", "verification_failed", "audience_missing", "issuer_missing"])(
+    "fails closed on recovery when Cloudflare returns %s",
+    async (reason) => {
+      verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason });
+      const response = await middleware(
+        new NextRequest("https://admin.example.test/en/reset-password/confirm?code=fixture"),
+      );
+      expect(response.status).toBe(403);
+      expect(response.headers.get("location")).toBeNull();
+      expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("admin password recovery gate", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_ADMIN_BYPASS", undefined);
+    verifyCfAccessAssertionMock.mockReset();
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true });
+    resolveGatedRedirectMock.mockReset();
+    resolveGatedRedirectMock.mockReturnValue("login");
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(
+    LOCALES.flatMap((locale) => [
+      `/${locale}/reset-password`,
+      `/${locale}/reset-password/confirm`,
+      `/${locale}/reset-password/`,
+      `/${locale}/reset-password/confirm/`,
+    ]),
+  )("allows recovery without an app session after CF Access: %s", async (path) => {
+    const response = await middleware(
+      new NextRequest(`https://admin.example.test${path}?code=fixture`),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledOnce();
+    expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["/en/reset-password", "/en/reset-password/confirm"])(
+    "keeps CF Access fail-closed on %s",
+    async (path) => {
+      verifyCfAccessAssertionMock.mockResolvedValue({
+        ok: false,
+        reason: "assertion_missing",
+      });
+      const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+      expect(response.status).toBe(403);
+      expect(resolveGatedRedirectMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    "/en",
+    "/en/reset-password/admin",
+    "/en/reset-password/confirm/admin",
+    "/en/reset-password-other",
+  ])("preserves role gating outside the exact recovery routes: %s", async (path) => {
+    resolveGatedRedirectMock.mockReturnValue("permission-denied");
+    const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/en/permission-denied",
+    );
+    expect(resolveGatedRedirectMock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    "/xx/reset-password",
+    "/reset-password",
+    "/en/reset-password//",
+    "/en/reset-password/confirm-extra",
+  ])("does not classify unsupported or lookalike paths as recovery: %s", (path) => {
+    expect(isAdminPasswordRecoveryPath(path)).toBe(false);
+  });
+});
 
 describe("admin middleware CF Access helpers", () => {
   const originalNodeEnv = process.env.NODE_ENV;
@@ -198,16 +483,19 @@ describe("admin middleware — CF Access enforcement", () => {
     expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith("tampered.jwt.value");
   });
 
-  it("returns 403 in production when the assertion header is absent", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+  it.each(["/en", "/en/kyc", "/en/config/commissions", "/en/events"])(
+    "returns 403 without Cloudflare Access on %s",
+    async (path) => {
+      vi.stubEnv("NODE_ENV", "production");
+      verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
 
-    const request = new NextRequest("https://admin.vergeo5.com/en");
-    const response = await middleware(request);
+      const request = new NextRequest(`https://admin.vergeo5.com${path}`);
+      const response = await middleware(request);
 
-    expect(response.status).toBe(403);
-    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
-  });
+      expect(response.status).toBe(403);
+      expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+    },
+  );
 
   it("proceeds past the CF Access gate in production when verification succeeds", async () => {
     vi.stubEnv("NODE_ENV", "production");

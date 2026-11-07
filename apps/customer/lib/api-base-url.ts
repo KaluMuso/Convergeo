@@ -4,6 +4,12 @@ import {
   type ApiBaseEnvBag,
 } from "@vergeo/config/api-base-url";
 
+import {
+  ciPerfPublicEnabled,
+  ciPerfPublicEnv,
+  CI_PERF_PROXY_PATH,
+} from "../../../packages/ui/src/media/ci-perf-fixture";
+
 type EnvBag = ApiBaseEnvBag;
 
 /**
@@ -20,7 +26,20 @@ export function resolveApiBaseUrl(env: EnvBag = {}): string | null {
 
 /** Convenience for call sites that already handle empty/unreachable API. */
 export function getApiBaseUrl(env: EnvBag = {}): string {
-  return resolveApiBaseUrl(env) ?? "";
+  const upstream = resolveApiBaseUrl(env);
+  if (!upstream) return "";
+  const harnessEnv = ciPerfPublicEnv();
+  // Explicit BFF transport for the isolated CI browser only. The upstream
+  // resolver still decides admission; SSR continues to use its absolute origin.
+  if (
+    typeof window !== "undefined" &&
+    ciPerfPublicEnabled(harnessEnv) &&
+    upstream === harnessEnv.NEXT_PUBLIC_API_BASE_URL &&
+    window.location.origin === harnessEnv.NEXT_PUBLIC_SITE_URL
+  ) {
+    return `${window.location.origin}${CI_PERF_PROXY_PATH}`;
+  }
+  return upstream;
 }
 
 /**
@@ -42,7 +61,7 @@ export function resolveApiHost(env: EnvBag = {}): string | null {
  * during production builds without env (relative URLs hang Next.js SSG).
  */
 export function absoluteApiUrl(path: string, env: EnvBag = {}): string | null {
-  const base = resolveApiBaseUrl(env);
+  const base = getApiBaseUrl(env);
   if (!base) {
     return null;
   }

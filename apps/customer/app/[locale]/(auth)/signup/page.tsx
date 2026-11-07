@@ -59,6 +59,7 @@ export default async function SignupPage({ params, searchParams }: PageProps) {
       invalidCredentials: t("errors.invalidCredentials"),
       emailNotConfirmed: t("errors.emailNotConfirmed"),
       alreadyRegistered: t("errors.alreadyRegistered"),
+      signupConfirmation: t("signup.emailConfirmation"),
     },
     divider: t("signup.divider"),
     emailToggle: t("signup.emailToggle"),

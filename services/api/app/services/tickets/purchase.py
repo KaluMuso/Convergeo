@@ -472,6 +472,15 @@ def _insert_checkout_spine(
                 amount_ngwee=gmv_amount_ngwee,
                 expires_at_literal=expires_literal,
             )
+            # A rejected reservation must abort the entire checkout transaction.
+            # Checking its returned zero after COMMIT leaves an orphaned spine.
+            gmv_reserve_sql += """
+DO $$ BEGIN
+  IF current_setting('app.gmv_reservation_accepted', true) IS DISTINCT FROM '1' THEN
+    RAISE EXCEPTION 'organiser_gmv_cap_exceeded';
+  END IF;
+END $$;
+"""
 
     script = f"""
 BEGIN;
@@ -500,9 +509,11 @@ VALUES ({item_sql}, {type_sql}, {instance_sql}, {names_sql});
 COMMIT;
 """
     result = run_sql_script(script)
-    if not result.ok:
+    if not result.ok and not (
+        gmv_reserve_sql and "organiser_gmv_cap_exceeded" in (result.error or "")
+    ):
         raise RuntimeError(f"ticket checkout spine insert failed: {result.error}")
-    if gmv_reserve_sql and (not result.rows or result.rows[-1] != "1"):
+    if not result.ok:
         assert gmv_event_id is not None and gmv_amount_ngwee is not None
         cap_ngwee = load_organiser_t1_event_gmv_cap_ngwee()
         paid = event_paid_gmv_ngwee(gmv_event_id)

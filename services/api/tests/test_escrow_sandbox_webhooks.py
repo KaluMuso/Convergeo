@@ -17,9 +17,10 @@ from app.deps import get_supabase_client
 from app.main import create_app
 from app.services.db import SqlResult
 from app.services.ledger.templates import LedgerTemplate
+from app.services.orders.audit import sql_literal
 from app.services.payments.fulfillment import EscrowFulfillmentResult, escrow_hold_idempotency_key
 from app.services.payments.reconcile import drain_pending_webhook_events
-from app.services.payments.state import PaymentStatus, apply_payment_status, process_webhook_event
+from app.services.payments.state import PaymentStatus, process_webhook_event
 from app.services.payments.webhook_verify import SIGNATURE_HEADER
 from app.services.payouts.execution import execute_vendor_payout
 from app.services.payouts.gate import PayoutsDisabledError
@@ -36,6 +37,25 @@ CHECKOUT_GROUP_ID = "d1000000-0000-4000-8000-000000000001"
 ORDER_ID = "d2000000-0000-4000-8000-000000000001"
 AMOUNT_NGWEE = 45_000
 LEDGER_TXN_ID = "a1000000-0000-4000-8000-000000000099"
+
+
+def _db_success(db: PgConn, *, payment_id: str, reference: str) -> str:
+    observation = json.dumps(
+        {
+            "reference": reference,
+            "amount_ngwee": AMOUNT_NGWEE,
+            "currency": "ZMW",
+            "provider_reference": None,
+            "source": "db_escrow_test",
+        }
+    )
+    result = db.run(
+        "SELECT public.apply_prepaid_collection_success("
+        f"'{payment_id}'::uuid, '00000000-0000-0000-0000-000000000001'::uuid, "
+        f"'Sandbox prepaid success', {sql_literal(observation)}::jsonb);"
+    )
+    assert result.ok and result.rows, result.error
+    return str(json.loads(result.rows[0])["result"])
 
 
 def _mock_settlement_sql(script: str, *, payment_id: str) -> SqlResult:
@@ -168,8 +188,10 @@ class TestEscrowSandboxWebhooks:
         assert outcome is not None
         assert outcome.to_status == PaymentStatus.SUCCESS
         assert fake.tables["payments"].rows[0]["status"] == "success"
-        mock_fulfill.assert_called_once()
-        assert mock_fulfill.call_args.kwargs["amount_ngwee"] == AMOUNT_NGWEE
+        # The collection path now commits through the atomic RPC; this fake
+        # checks the webhook handoff, while lane_d checks real ledger rows.
+        mock_fulfill.assert_not_called()
+        assert len(fake.tables["audit_log"].rows) == 1
 
     def test_failed_momo_webhook_does_not_settle_escrow(
         self,
@@ -247,7 +269,8 @@ class TestEscrowSandboxWebhooks:
 
         assert first is not None
         assert second is None
-        mock_fulfill.assert_called_once()
+        mock_fulfill.assert_not_called()
+        assert len(fake.tables["audit_log"].rows) == 1
 
     def test_webhook_drain_applies_stored_success_event(
         self,
@@ -355,7 +378,35 @@ class TestEscrowLedgerIntegration:
             os.environ["SUPABASE_DB_URL"] = previous
 
     def _seed_checkout_with_order(self, db: PgConn, *, payment_id: str, reference: str) -> None:
-        db.run(
+        cleaned = db.run_script(
+            f"""
+            BEGIN;
+            DELETE FROM public.ledger_postings lp
+            USING public.ledger_transactions t
+            WHERE lp.transaction_id = t.id
+              AND t.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.ledger_transactions
+            WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.payment_collection_exceptions e
+            USING public.payments p
+            WHERE e.payment_id = p.id
+              AND p.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.payment_collection_receipts r
+            USING public.payments p
+            WHERE r.payment_id = p.id
+              AND p.checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.payments WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            DELETE FROM public.order_items
+            WHERE order_id IN (
+              SELECT id FROM public.orders
+              WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid
+            );
+            DELETE FROM public.orders WHERE checkout_group_id = '{CHECKOUT_GROUP_ID}'::uuid;
+            COMMIT;
+            """
+        )
+        assert cleaned.ok, cleaned.error
+        seeded = db.run(
             f"""
             INSERT INTO public.checkout_groups (
               id, customer_id, idempotency_key, subtotal_ngwee,
@@ -367,21 +418,18 @@ class TestEscrowLedgerIntegration:
 
             INSERT INTO public.orders (
               id, checkout_group_id, vendor_id, customer_id, status, fulfilment, cod,
-              delivery_fee_ngwee, subtotal_ngwee
+              delivery_fee_ngwee
             ) VALUES (
               '{ORDER_ID}', '{CHECKOUT_GROUP_ID}', '{VENDOR_ID}', '{CUSTOMER_ID}',
-              'placed', 'delivery', false, 5000, {AMOUNT_NGWEE - 5_000}
+              'placed', 'delivery', false, 5000
             ) ON CONFLICT (id) DO NOTHING;
 
             INSERT INTO public.order_items (
-              id, order_id, listing_id, qty, unit_price_ngwee, title_snapshot
-            )
-            SELECT
-              '{uuid.uuid4()}', '{ORDER_ID}', vl.id, 1, {AMOUNT_NGWEE - 5_000}, 'Sandbox SKU'
-            FROM public.vendor_listings vl
-            WHERE vl.vendor_id = '{VENDOR_ID}'
-            LIMIT 1
-            ON CONFLICT DO NOTHING;
+              id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+            ) VALUES (
+              '{uuid.uuid4()}', '{ORDER_ID}', 'product', 1,
+              {AMOUNT_NGWEE - 5_000}, 'Sandbox SKU'
+            ) ON CONFLICT DO NOTHING;
 
             INSERT INTO public.payments (
               id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
@@ -391,6 +439,7 @@ class TestEscrowLedgerIntegration:
             ) ON CONFLICT (id) DO NOTHING;
             """
         )
+        assert seeded.ok, seeded.error
 
     def test_apply_success_posts_escrow_hold_ledger_row(
         self,
@@ -401,34 +450,7 @@ class TestEscrowLedgerIntegration:
         reference = f"ord-{payment_id}"
         self._seed_checkout_with_order(db, payment_id=payment_id, reference=reference)
 
-        fake = FakeSupabaseClient()
-        fake.tables["checkout_groups"].rows.append(
-            {"id": CHECKOUT_GROUP_ID, "total_ngwee": AMOUNT_NGWEE, "status": "completed"}
-        )
-        fake.tables["payments"].rows.append(
-            {
-                "id": payment_id,
-                "checkout_group_id": CHECKOUT_GROUP_ID,
-                "provider": "lenco",
-                "rail": "mtn",
-                "lenco_reference": reference,
-                "amount_ngwee": AMOUNT_NGWEE,
-                "status": "ussd_pushed",
-                "raw": {},
-                "created_at": datetime.now(UTC).isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
-            }
-        )
-
-        outcome = apply_payment_status(
-            FakeServiceClient(fake),
-            payment_id=payment_id,
-            incoming_status=PaymentStatus.SUCCESS,
-            actor_id="00000000-0000-0000-0000-000000000001",
-            note="Sandbox prepaid success",
-        )
-        assert outcome is not None
-        assert outcome.to_status == PaymentStatus.SUCCESS
+        assert _db_success(db, payment_id=payment_id, reference=reference) == "applied"
 
         row = db.run(
             f"""
@@ -464,33 +486,8 @@ class TestEscrowLedgerIntegration:
         payment_id = str(uuid.uuid4())
         reference = f"ord-{payment_id}"
         self._seed_checkout_with_order(db, payment_id=payment_id, reference=reference)
-        fake = FakeSupabaseClient()
-        fake.tables["checkout_groups"].rows.append(
-            {"id": CHECKOUT_GROUP_ID, "total_ngwee": AMOUNT_NGWEE, "status": "completed"}
-        )
-        fake.tables["payments"].rows.append(
-            {
-                "id": payment_id,
-                "checkout_group_id": CHECKOUT_GROUP_ID,
-                "provider": "lenco",
-                "rail": "mtn",
-                "lenco_reference": reference,
-                "amount_ngwee": AMOUNT_NGWEE,
-                "status": "success",
-                "raw": {},
-                "created_at": datetime.now(UTC).isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
-            }
-        )
-
-        first = apply_payment_status(
-            FakeServiceClient(fake),
-            payment_id=payment_id,
-            incoming_status=PaymentStatus.SUCCESS,
-            actor_id="00000000-0000-0000-0000-000000000001",
-            note="Replay",
-        )
-        assert first is None
+        assert _db_success(db, payment_id=payment_id, reference=reference) == "applied"
+        assert _db_success(db, payment_id=payment_id, reference=reference) == "duplicate"
 
         count = db.run(
             f"""

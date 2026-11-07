@@ -21,13 +21,36 @@ test.describe("mobile-layout", () => {
       "/",
       `/c/electronics`,
       `/p/${SEED.product.slug}`,
+      "/services",
       "/cart",
       "/checkout",
       "/compare",
+      `/e/${SEED.event.slug}`,
     ];
     for (const route of routes) {
-      await page.goto(path(route));
-      await page.waitForLoadState("domcontentloaded");
+      await page.goto(path(route), { waitUntil: "domcontentloaded" });
+
+      // Measure the rendered service and ticket surfaces, not a loading shell.
+      if (route === "/services") {
+        await expect(page.locator("#services-results-heading")).toBeVisible();
+      }
+      if (route === `/e/${SEED.event.slug}`) {
+        const picker = page.locator('section[aria-labelledby^="ticket-picker-"]');
+        const pickerAvailable = await picker
+          .waitFor({ state: "visible", timeout: 20_000 })
+          .then(() => true)
+          .catch(() => false);
+        if (!pickerAvailable) {
+          const gate = resolveGate({
+            kind: "REQUIRED_STRICT",
+            journey: "seeded event picker layout",
+            detail: "ticket picker unavailable",
+          });
+          if (gate.action === "fail") throw new Error(gate.reason);
+          test.skip(true, gate.reason);
+          return;
+        }
+      }
 
       const overflow = await page.evaluate(() => {
         const doc = document.documentElement;
@@ -42,20 +65,48 @@ test.describe("mobile-layout", () => {
     await page.waitForLoadState("domcontentloaded");
 
     const buyBox = page.getByTestId("pdp-buy-box");
-    if (!(await buyBox.isVisible().catch(() => false))) {
-      if (strictSyntheticRequired()) {
-        throw new Error("strictSyntheticRequired: PDP unavailable for touch-target check");
-      }
-      test.skip(true, "PDP unavailable — skip touch-target check");
+    const pdpAvailable = await buyBox
+      .waitFor({ state: "visible", timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!pdpAvailable) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "seeded product touch target",
+        detail: "PDP unavailable",
+      });
+      if (gate.action === "fail") throw new Error(gate.reason);
+      test.skip(true, gate.reason);
       return;
     }
 
     const addBtn = page.getByTestId("pdp-add-to-cart");
     const box = await addBtn.boundingBox();
-    if (box) {
-      expect(box.height, "add-to-cart height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
-      expect(box.width, "add-to-cart width").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
+    expect(box, "add-to-cart target must have a layout box").not.toBeNull();
+    expect(box!.height, "add-to-cart height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
+    expect(box!.width, "add-to-cart width").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
+
+    await page.goto(path(`/e/${SEED.event.slug}`), { waitUntil: "domcontentloaded" });
+    const picker = page.locator('section[aria-labelledby^="ticket-picker-"]');
+    const pickerAvailable = await picker
+      .waitFor({ state: "visible", timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!pickerAvailable) {
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "seeded ticket CTA touch target",
+        detail: "ticket picker unavailable",
+      });
+      if (gate.action === "fail") throw new Error(gate.reason);
+      test.skip(true, gate.reason);
+      return;
     }
+    const ticketCta = picker.getByRole("button").last();
+    const ticketBox = await ticketCta.boundingBox();
+    expect(ticketBox, "ticket CTA must have a layout box").not.toBeNull();
+    expect(ticketBox!.height, "ticket CTA height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
+    expect(ticketBox!.width, "ticket CTA width").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX - 4);
   });
 
   test("bottom navigation visible and within viewport on mobile", async ({ page }) => {

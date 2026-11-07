@@ -23,6 +23,7 @@ export type CanonicalPreview = {
 };
 
 export type CategoryOption = {
+  parent_id?: string | null;
   id: string;
   name: string;
   commission_key: string;
@@ -47,6 +48,7 @@ export type ListingCreatePayload = {
   brand?: string | null;
   spec?: Record<string, unknown>;
   category_id?: string;
+  description?: string;
   aliases?: string[];
   title_override?: string;
   price_ngwee: number;

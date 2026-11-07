@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Generator
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
-from app.services.payments.base import QueryStatusResult
+from app.logging import JsonFormatter
+from app.services.payments import reconcile as reconcile_module
+from app.services.payments.base import ProviderOutcome, QueryStatusResult
+from app.services.payments.lenco.client import LencoClient, LencoStrategy
 from app.services.payments.reconcile import (
     DailyReportResult,
     DrainResult,
@@ -23,7 +28,18 @@ from app.services.payments.reconcile import (
     poll_non_terminal_payments,
     run_daily_reconciliation_report,
 )
-from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
+from app.services.payments.state import (
+    SYSTEM_ACTOR_ID,
+    PaymentStatus,
+    collection_observation_from_query,
+)
+from app.services.payments.state import (
+    apply_payment_status as state_apply_payment_status,
+)
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -164,6 +180,46 @@ class FakeSupabaseTables:
         if name not in self.tables:
             self.tables[name] = FakeTable()
         return self.tables[name]
+
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        """Unit-only atomic decision stand-in; lane_d asserts the real RPC."""
+        if name == "record_collection_failure":
+            payment = next(
+                row for row in self.tables["payments"].rows
+                if row["id"] == params["p_payment_id"]
+            )
+            payment["raw"]["terminal_provider_failure"] = params["p_observation"]
+            return MagicMock(execute=lambda: MagicMock(data=None))
+        assert name == "apply_prepaid_collection_success"
+        payment = next(
+            row for row in self.tables["payments"].rows
+            if row["id"] == params["p_payment_id"]
+        )
+        observation = params["p_observation"]
+        assert observation["reference"] == payment["lenco_reference"]
+        assert observation["amount_ngwee"] == payment["amount_ngwee"]
+        prior = payment["status"]
+        if prior == "success":
+            result = "duplicate"
+        elif prior == "cancelled":
+            result = "late_collection"
+        else:
+            payment["status"] = "success"
+            self.tables["audit_log"].rows.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "actor": params["p_actor_id"],
+                    "action": "payment.transition",
+                    "entity_type": "payment",
+                    "entity_id": params["p_payment_id"],
+                    "before": {"status": prior},
+                    "after": {"status": "success", "note": params["p_note"]},
+                }
+            )
+            result = "applied"
+        return MagicMock(execute=lambda: MagicMock(data={
+            "result": result, "from_status": prior,
+        }))
 
 
 class FakeServiceClient:
@@ -390,6 +446,140 @@ async def test_poller_isolates_poison_pill_and_continues_batch(
 
 
 @pytest.mark.asyncio
+async def test_poller_retains_authoritative_not_found_without_transition(
+    fake_service: FakeServiceClient,
+) -> None:
+    payment_id = str(uuid.uuid4())
+    fake_service.client.tables["payments"].rows.append(
+        {
+            "id": payment_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": PaymentStatus.USSD_PUSHED.value,
+            "lenco_reference": "ord-missing-1",
+            "amount_ngwee": 25_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {},
+            "updated_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
+        }
+    )
+
+    async def query_status(request: Any) -> QueryStatusResult:
+        return QueryStatusResult(
+            requested_reference=request.reference,
+            outcome=ProviderOutcome.NOT_FOUND,
+            raw={"error_code": "11"},
+        )
+
+    result = await poll_non_terminal_payments(
+        fake_service,
+        query_status=query_status,
+        older_than_minutes=1,
+    )
+
+    assert result == PollResult(scanned=1, updated=0, unchanged=0, errors=1)
+    assert fake_service.client.tables["payments"].rows[0]["status"] == "ussd_pushed"
+
+
+@pytest.mark.asyncio
+async def test_failed_adapter_observation_reaches_state_consumer(
+    fake_service: FakeServiceClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HTTP-200 FAILED evidence crosses the adapter, poller, and state boundary."""
+    payment_id = str(uuid.uuid4())
+    reference = "ord-failed-observation-1"
+    stale_at = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    fake_service.client.tables["payments"].rows.append(
+        {
+            "id": payment_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": PaymentStatus.USSD_PUSHED.value,
+            "lenco_reference": reference,
+            "amount_ngwee": 25_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {"provider_reference": "lenco-failed-observation-1"},
+            "updated_at": stale_at,
+        }
+    )
+    provider_body = {
+        "status": True,
+        "message": "collection failed",
+        "data": {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "initiatedAt": "2026-09-29T08:00:00Z",
+            "completedAt": "2026-09-29T08:01:00Z",
+            "amount": "250.00",
+            "fee": None,
+            "bearer": "merchant",
+            "currency": "ZMW",
+            "reference": reference,
+            "lencoReference": "lenco-failed-observation-1",
+            "type": "mobile-money",
+            "status": "failed",
+            "source": "api",
+            "reasonForFailure": "declined",
+            "settlementStatus": None,
+            "settlement": None,
+            "mobileMoneyDetails": None,
+            "bankAccountDetails": None,
+            "cardDetails": None,
+        },
+    }
+
+    def provider(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == f"/access/v2/collections/status/{reference}"
+        return httpx.Response(200, json=provider_body)
+
+    http = httpx.AsyncClient(
+        transport=httpx.MockTransport(provider),
+        base_url="https://api.lenco.co/access/v2",
+    )
+    strategy = LencoStrategy(
+        LencoClient(
+            http_client=http,
+            token="controlled-http-token",
+            base_url="https://api.lenco.co/access/v2",
+        )
+    )
+    captured: dict[str, Any] = {}
+
+    def consume_status(*args: Any, **kwargs: Any) -> Any:
+        captured["observation"] = kwargs.get("observation")
+        return state_apply_payment_status(*args, **kwargs)
+
+    monkeypatch.setattr(reconcile_module, "apply_payment_status", consume_status)
+    try:
+        result = await poll_non_terminal_payments(
+            fake_service,
+            query_status=strategy.query_status,
+            older_than_minutes=1,
+        )
+    finally:
+        await http.aclose()
+
+    expected = collection_observation_from_query(
+        QueryStatusResult(
+            requested_reference=reference,
+            outcome=ProviderOutcome.FAILED,
+            reference=reference,
+            status="failed",
+            amount_major="250.00",
+            currency="ZMW",
+            provider_reference="lenco-failed-observation-1",
+            failure_reason="declined",
+        ),
+        source="poller",
+    )
+    assert captured["observation"] == expected
+    assert captured["observation"]["source"] == "poller"
+    assert result == PollResult(scanned=1, updated=1, unchanged=0, errors=0)
+    assert fake_service.client.tables["payments"].rows[0]["status"] == "failed"
+
+
+@pytest.mark.asyncio
 async def test_poller_idempotent_rerun(fake_service: FakeServiceClient) -> None:
     payment_id = str(uuid.uuid4())
     stale_at = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
@@ -528,6 +718,14 @@ async def test_daily_report_flags_injected_mismatch(fake_service: FakeServiceCli
     assert len(result.discrepancies["ledger_only"]) == 1
 
 
+def test_daily_report_zero_row_postgrest_response_is_absent() -> None:
+    service = MagicMock()
+    query = service.client.table.return_value.select.return_value.eq.return_value.maybe_single
+    query.return_value.execute.return_value = None
+
+    assert reconcile_module._load_existing_report(service, date(2026, 10, 5)) is None
+
+
 class TestInternalReconciliationRouter:
     def test_poll_tick_requires_internal_token(self, client: Any) -> None:
         denied = client.post("/internal/reconciliation/poll-tick")
@@ -554,6 +752,58 @@ class TestInternalReconciliationRouter:
         denied = client.post("/internal/reconciliation/daily-report")
         assert denied.status_code == 401
 
+    def test_daily_report_failure_correlates_safe_response_and_exception_log(
+        self, client: Any, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        with (
+            patch("app.deps.get_supabase_client", return_value=iter([object()])),
+            patch(
+                "app.routers.internal_reconciliation.run_daily_reconciliation_report",
+                new=AsyncMock(side_effect=RuntimeError("SQL credential business payload")),
+            ),
+            caplog.at_level("WARNING"),
+        ):
+            response = client.post(
+                "/internal/reconciliation/daily-report",
+                headers={
+                    "X-Internal-Token": "dev-internal-reconciliation",
+                    "X-Request-ID": request_id,
+                },
+            )
+
+        assert response.status_code == 500
+        assert response.headers["X-Request-ID"] == request_id
+        assert response.json() == {
+            "error": {
+                "code": "internal_error",
+                "message": "An unexpected error occurred",
+                "details": {},
+                "request_id": request_id,
+            }
+        }
+        assert "SQL credential business payload" not in response.text
+        errors = [
+            record
+            for record in caplog.records
+            if record.name == "app.errors" and record.getMessage() == "Unhandled exception"
+        ]
+        assert len(errors) == 1
+        fields = vars(errors[0])
+        assert fields["request_id"] == request_id
+        assert fields["path"] == "/internal/reconciliation/daily-report"
+        assert errors[0].exc_info is None
+        assert fields["exception_type"] == "RuntimeError"
+        assert fields["exception_frames"]
+        assert any("internal_reconciliation.py" in frame for frame in fields["exception_frames"])
+        log = json.loads(JsonFormatter().format(errors[0]))
+        assert log["request_id"] == request_id
+        assert log["path"] == "/internal/reconciliation/daily-report"
+        assert log["exception_type"] == "RuntimeError"
+        assert log["exception_frames"] == fields["exception_frames"]
+        assert "SQL credential business payload" not in json.dumps(log)
+        assert "SQL credential business payload" not in caplog.text
+
 
 @pytest.fixture(scope="module")
 def db() -> Generator[PgConn, None, None]:
@@ -573,6 +823,9 @@ def db() -> Generator[PgConn, None, None]:
 
 class TestMigration0018:
     def test_migration_replays_clean(self, db: PgConn) -> None:
+        report_date = (
+            date(2000, 1, 1) + timedelta(days=uuid.uuid4().int % 1_000_000)
+        ).isoformat()
         discrepancies = (
             '{"balance_diff_ngwee": 0, "orphaned_lenco": [], '
             '"ledger_only": [], "ngwee_mismatches": []}'
@@ -581,7 +834,7 @@ class TestMigration0018:
             f"""
             INSERT INTO public.reconciliation_reports (report_date, summary, discrepancies)
             VALUES (
-              '2026-07-01',
+              '{report_date}',
               '{{"clean": true}}'::jsonb,
               '{discrepancies}'::jsonb
             )
@@ -591,9 +844,9 @@ class TestMigration0018:
         assert result.ok, result.error
 
         dup = db.run(
-            """
+            f"""
             INSERT INTO public.reconciliation_reports (report_date, summary, discrepancies)
-            VALUES ('2026-07-01', '{}'::jsonb, '{}'::jsonb);
+            VALUES ('{report_date}', '{{}}'::jsonb, '{{}}'::jsonb);
             """
         )
         assert not dup.ok
@@ -643,18 +896,28 @@ def _seed_webhook(
     processed_at: str | None = None,
 ) -> str:
     row_id = str(uuid.uuid4())
+    raw = {
+        "event": event,
+        "data": {
+            "id": event_id,
+            "reference": reference,
+            "status": status,
+            "amount": "250.00",
+            "currency": "ZMW",
+        },
+    }
     fake_service.client.table("webhook_events").rows.append(
         {
             "id": row_id,
             "provider": "lenco",
             "event_id": event_id,
             "signature_valid": True,
+            "verification_version": WEBHOOK_VERIFICATION_VERSION,
+            "payload_sha256": canonical_payload_sha256(raw),
+            "verified_at": created_at,
             "processed_at": processed_at,
             "created_at": created_at,
-            "raw": {
-                "event": event,
-                "data": {"id": event_id, "reference": reference, "status": status},
-            },
+            "raw": raw,
         }
     )
     return row_id

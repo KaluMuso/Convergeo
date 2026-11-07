@@ -18,14 +18,14 @@ Two invariants this file exists to keep:
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Final
 
 from app.errors import AppError
 from app.routers.vendor_listings import ListingCreateRequest
 
-# Intake accepts "used"; the marketplace listing model (M12-P03) does not have a
-# used condition. Refusing loudly is correct — silently promoting a used item to
-# "refurbished" would misdescribe a product to buyers.
+# Intake does not carry the complete used-offer evidence contract. Refuse used
+# submissions rather than silently relabel them as refurbished.
 _CONDITION_MAP: Final[dict[str, str]] = {
     "new": "new",
     "refurbished": "refurbished",
@@ -65,7 +65,9 @@ def missing_fields(draft: dict[str, Any]) -> list[str]:
     return [name for name in REQUIRED_DRAFT_FIELDS if draft.get(name) in (None, "")]
 
 
-def build_listing_request(draft: dict[str, Any]) -> ListingCreateRequest:
+def build_listing_request(
+    draft: dict[str, Any], *, product_id: str | None = None
+) -> ListingCreateRequest:
     """Translate one ``intake_draft_fields`` row into a listing create request.
 
     Raises :class:`DraftNotSubmittable` — never returns a half-valid request.
@@ -106,10 +108,17 @@ def build_listing_request(draft: dict[str, Any]) -> ListingCreateRequest:
             raise DraftNotSubmittable("missing_quantity")
         stock_qty = quantity
 
-    # quick_list: an intake draft has no canonical product yet. Admin attaches or
-    # promotes one in M18-P06 through the normal catalog moderation path.
+    # Normal Class A inventory must have canonical identity even while draft.
+    # Only the vendor's explicit choice is used; extraction never guesses a match.
+    try:
+        selected_product = str(uuid.UUID(product_id)) if product_id else None
+    except ValueError as exc:
+        raise DraftNotSubmittable("canonical_required") from exc
+    if selected_product is None:
+        raise DraftNotSubmittable("canonical_required")
     return ListingCreateRequest(
-        mode="quick_list",
+        mode="attach",
+        product_id=selected_product,
         title_override=title,
         price_ngwee=price_raw,
         condition=condition,  # type: ignore[arg-type]

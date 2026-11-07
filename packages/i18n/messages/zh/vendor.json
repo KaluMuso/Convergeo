@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "数据分析 —— Convergeo 商家",
-      "description": "追踪过去 7 天或 30 天的销售额、订单和购物车活动，查看热门商品，并评估购物车到订单的转化率。"
+      "description": "查看过去 7 天或 30 天的销售额、订单与购物车/结账事件数，并比较独立的订单和事件总数。"
     },
     "eyebrow": "您的店铺",
     "title": "数据分析",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "销售额",
       "orders": "订单",
-      "views": "购物车活动"
+      "views": "购物车/结账事件"
     },
     "sparkline": {
       "sales": "每日销售额趋势",
       "orders": "每日订单趋势",
-      "views": "每日购物车活动趋势"
+      "views": "每日购物车/结账事件数"
     },
     "top": {
       "heading": "热门商品",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {已售 # 件} other {已售 # 件}}"
     },
     "conversion": {
-      "heading": "转化率",
-      "summary": "{orders, plural, one {# 个订单} other {# 个订单}}，来自 {views, plural, one {# 次购物车操作} other {# 次购物车操作}}",
-      "pct": "{pct}% 购物车转订单",
-      "empty": "活动数据尚不足以估算转化率。"
+      "heading": "订单与活动比值",
+      "summary": "本时间段内有 {orders, plural, one {# 个未取消订单} other {# 个未取消订单}}；{views, plural, one {# 次购物车/结账事件} other {# 次购物车/结账事件}}。",
+      "pct": "每 100 次购物车/结账事件对应 {pct} 个订单",
+      "empty": "本时间段内没有购物车/结账事件，无法计算比值。",
+      "definition": "统计加入购物车和开始结账的事件，不是商品浏览量或独立访客数。订单和事件为独立总数，并非转化群组；比值可超过 100。"
     },
     "errors": {
       "loadFailed": "无法加载您的数据分析，请重试。",
@@ -373,7 +374,17 @@
       "categoryPlaceholder": "选择类别",
       "submit": "提交审核",
       "submitting": "提交中…",
-      "moderationNotice": "在我们团队批准该产品之前，您的商品将保持草稿状态。"
+      "moderationNotice": "在我们团队批准该产品之前，您的商品将保持草稿状态。",
+      "details": {
+        "about": "关于此商品",
+        "heading": "商品详情",
+        "help": "仅填写您能核实且适用于此类别的详情，并使用制造商注明的单位。可添加尺寸、重量、测量数据、款式、特点、材质、保养或使用说明。未知详情请留空。所有详情均须审核。 最多32项详情；名称限80字符，内容限2,000字符，描述限5,000字符。",
+        "name": "详情名称",
+        "value": "详情内容",
+        "add": "添加详情",
+        "remove": "删除详情",
+        "invalid": "请为每项详情填写唯一名称和内容，或将其删除。请遵守字段长度限制。"
+      }
     },
     "quickList": {
       "heading": "快速上架",
@@ -381,7 +392,10 @@
       "titleLabel": "商品标题",
       "titlePlaceholder": "例如：番茄（每公斤）",
       "publish": "发布商品",
-      "publishing": "发布中…"
+      "publishing": "发布中…",
+      "descriptionLabel": "描述",
+      "descriptionHelp": "请用至少 20 个字符描述此商品，包含买家需要的信息。",
+      "draftNotice": "独立商品将保存为草稿。发布前请检查类别、发布政策和必需照片。"
     },
     "fields": {
       "priceLabel": "您的价格（ZMW）",
@@ -439,7 +453,8 @@
     "success": {
       "live": "商品已上架！",
       "moderation": "已提交审核——我们将通过 WhatsApp 通知您。",
-      "evidence": "草稿已保存。发布前请添加凭证照片。"
+      "evidence": "草稿已保存。发布前请添加凭证照片。",
+      "draft": "草稿已保存。发布前请检查商品。"
     },
     "errors": {
       "required": "此字段为必填项",
@@ -453,7 +468,10 @@
       "authRequired": "请登录以管理商品。",
       "permissionDenied": "您无权访问此商家目录。",
       "notFound": "未找到该店铺商品。",
-      "retryHint": "请检查网络后重试。"
+      "retryHint": "请检查网络后重试。",
+      "canonicalRequired": "A、B、C 类必须关联目录商品。请使用关联目录或创建目录商品。",
+      "standaloneDetailsRequired": "请为独立商品选择类别，并添加至少 20 个字符的描述。",
+      "policyBlocked": "当前类别或发布政策不允许发布此商品。请检查字段，必要时联系支持。"
     },
     "import": {
       "meta": {
@@ -467,7 +485,9 @@
       "template": {
         "heading": "下载模板",
         "body": "使用我们带有示例行的 CSV 模板。价格以恩格威（整数）为单位。SKU 是每件商品的唯一编码。将 product_id 留空，即可在预览中获得目录匹配建议。",
-        "download": "下载 CSV 模板"
+        "download": "下载 CSV 模板",
+        "stockNote": "导入会为新 SKU 设置初始库存。重新导入已有 SKU 会保留其当前库存、库存模式和单位，不会补回已预留或售出的数量。",
+        "unitsHelp": "价格和库存数量均按销售步长计算。250 克的步长请使用 sale_unit kg 和 unit_step_milli 250；min_steps 4 表示最低购买量为 1 千克。批发阶梯价仅适用于已验证的企业买家，且要求使用 each 单位。"
       },
       "upload": {
         "heading": "上传 CSV",
@@ -484,7 +504,8 @@
         "details": "详情",
         "ok": "正常",
         "failed": "失败",
-        "imported": "已导入"
+        "imported": "已导入",
+        "stockPreserved": "商品已更新；现有库存和库存模式已保留。"
       },
       "preview": {
         "previewButton": "预览行",
@@ -497,7 +518,8 @@
         "attached": "已关联：{name}",
         "matched": "匹配：{name}",
         "detach": "更改",
-        "standalone": "无匹配——单独上架"
+        "standalone": "无匹配——单独上架",
+        "selectionRequired": "导入前请选择有效的目录商品。"
       },
       "apply": {
         "button": "应用导入",
@@ -507,7 +529,36 @@
         "uploadFailed": "导入失败。请检查文件后重试。",
         "previewFailed": "无法检查您的文件，请重试。",
         "no_file": "需要 CSV 文件",
-        "no_payload": "请提供 CSV 文件或 JSON 行"
+        "no_payload": "请提供 CSV 文件或 JSON 行",
+        "templateFailed": "无法下载模板，请重试。",
+        "invalidUnits": "请检查销售单位、数量步长和最低数量。按计量单位销售的商品不能使用批发阶梯价。",
+        "duplicateHeaders": "CSV 列名不得重复。",
+        "notEditable": "此现有商品不能通过导入修改。",
+        "unitChange": "导入不能更改现有 SKU 的单位或最小步数。",
+        "productChange": "此 SKU 已关联其他商品。",
+        "wholesaleEligibility": "批发需要当前有效的 T2 审批和至少一个有效价格档位。",
+        "invalidListing": "这些更改不适用于现有商品。请检查商品字段。",
+        "invalidTiers": "价格阶梯必须使用正数量，且单价须严格递减。",
+        "invalidBoolean": "布尔字段请使用 true 或 false。",
+        "missingField": "请填写必填 CSV 字段，包括 SKU、标题、价格和跟踪库存。",
+        "invalidInteger": "价格、库存和数量字段必须是整数。",
+        "invalidMinimum": "价格和数量步长必须为正数；库存不能为负数。",
+        "invalidProduct": "请选择有效的目录商品。",
+        "unknownColumns": "CSV 含有不支持的列或多余单元格。请使用下载的模板。",
+        "invalidStockMode": "请选择跟踪库存或始终有货。",
+        "invalidCondition": "请选择全新或翻新状态。",
+        "invalidStatus": "请选择草稿、上架或暂停状态。",
+        "emptyCsv": "CSV 文件为空。",
+        "missingHeaders": "CSV 必须包含所有必填列标题。",
+        "rowLimit": "每次最多导入 500 行数据。",
+        "prohibitedListing": "此商品禁止出售。请检查商品内容。",
+        "duplicateSku": "文件中的每个 SKU 只能出现一次。",
+        "listingCap": "已达到商品数量上限。请更新现有 SKU，或检查认证等级。",
+        "fileSize": "CSV 文件不得超过 512,000 字节。",
+        "invalidEncoding": "请使用 UTF-8 编码保存 CSV。",
+        "canonicalRequired": "导入新 SKU 前，请选择目录商品。",
+        "databaseFailure": "无法保存此行。请重试或联系支持。",
+        "unknownError": "此行需要检查。请检查 CSV 字段并重试。"
       }
     },
     "manage": {
@@ -575,7 +626,29 @@
         "returnWindowRequired": "启用退货时，请输入退货窗口期。"
       },
       "emptyTitle": "暂无商品",
-      "statusLabel": "状态"
+      "statusLabel": "状态",
+      "stock": {
+        "heading": "调整可用库存",
+        "help": "输入以销售步数计算的增减量，而非实物盘点总量。可用库存已扣除预留数量。不能在此更改单位或库存模式。新增分店库存需由库存负责人处理。",
+        "refresh": "刷新可用库存",
+        "units": "销售单位：{unit}；每步为该单位的 {step}/1000。",
+        "branch": "分店",
+        "choose": "选择分店",
+        "inactive": "未启用",
+        "pooled": "可用共享库存：{qty}",
+        "delta": "增减量（+ 入库 / − 移除）",
+        "reason": "原因",
+        "retry": "重试同一操作",
+        "apply": "应用调整",
+        "saved": "已记录可用步数：{old} → {next}。操作：{id}。",
+        "invalid": "请选择已启用的分店，输入非零整数增减量和原因。",
+        "conflict": "调整已被拒绝。请刷新库存、检查分店和单位，再提交新调整。",
+        "retrySame": "结果尚未确认。请重试同一操作以获取已记录的结果；不要创建另一调整。",
+        "loadFailed": "无法加载库存，请点击刷新重试。",
+        "storageFailed": "无法保存操作以安全重试。调整库存前请启用会话存储。",
+        "notTracked": "此商品不使用跟踪库存。",
+        "authorityRequired": "请使用库存调整区域。不能在商品编辑器中覆盖现有库存、销售单位或库存模式。"
+      }
     },
     "kycGate": {
       "title": "认证仍在进行",
@@ -1586,6 +1659,14 @@
       "listings": "商品",
       "orders": "订单",
       "profile": "资料"
+    }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "目录商品"
+    },
+    "errors": {
+      "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
     }
   }
 }

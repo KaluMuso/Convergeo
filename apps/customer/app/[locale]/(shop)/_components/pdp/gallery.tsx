@@ -1,6 +1,7 @@
 "use client";
 
 import { ImageGallery } from "@vergeo/ui/src/media/image-gallery";
+import { useTranslations } from "next-intl";
 
 export type PdpGalleryImage = {
   publicId: string;
@@ -38,6 +39,7 @@ export function PdpGallery({
   nextLabel,
   indicatorLabel,
 }: PdpGalleryProps) {
+  const t = useTranslations("catalog.pdp.gallery");
   const usableImages = images.filter((image) => image.publicId.trim().length > 0);
 
   if (usableImages.length === 0) {
@@ -53,6 +55,13 @@ export function PdpGallery({
       previousLabel={previousLabel}
       nextLabel={nextLabel}
       imageFallbackLabel={emptyLabel}
+      zoomLabels={{
+        open: t("zoomOpen"),
+        close: t("zoomClose"),
+        title: t("zoomTitle"),
+        zoomIn: t("zoomIn"),
+        zoomOut: t("zoomOut"),
+      }}
       className="w-full"
     />
   );

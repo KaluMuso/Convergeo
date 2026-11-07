@@ -97,6 +97,8 @@ class ProductDetailResponse(BaseModel):
 
 
 class RelatedProductItem(BaseModel):
+    listing_id: str | None = None
+    vendor_name: str | None = None
     slug: str
     name: str
     image_public_id: str | None = None
@@ -106,6 +108,14 @@ class RelatedProductItem(BaseModel):
 class RelatedProductsResponse(BaseModel):
     product_slug: str
     items: list[RelatedProductItem] = Field(default_factory=list)
+
+
+class RelatedProductRailsResponse(BaseModel):
+    product_slug: str
+    listing_id: str | None = None
+    vendor_name: str | None = None
+    same_vendor: list[RelatedProductItem] = Field(default_factory=list)
+    same_category: list[RelatedProductItem] = Field(default_factory=list)
 
 
 RELATED_LIMIT = 8
@@ -157,8 +167,8 @@ def _parse_vendor_row(
 
 
 def _aggregate_vendor_ratings(
-  client: Any,
-  vendor_ids: list[str],
+    client: Any,
+    vendor_ids: list[str],
 ) -> dict[str, tuple[float | None, int]]:
     if not vendor_ids:
         return {}
@@ -528,9 +538,7 @@ def build_product_detail(
                 fulfilment_mode=fulfilment_mode,
                 lead_time_days=parsed_lead_time,
                 vendor_capacity_per_week=parsed_capacity,
-                defect_notes=(
-                    str(row["defect_notes"]) if row.get("defect_notes") else None
-                ),
+                defect_notes=(str(row["defect_notes"]) if row.get("defect_notes") else None),
                 vendor=_parse_vendor_row(
                     vendor_raw,
                     rating_avg=rating_avg,
@@ -561,6 +569,9 @@ def build_product_detail(
 def _shoppable_related_items(
     client: Any,
     sibling_by_id: dict[str, dict[str, Any]],
+    *,
+    retail_available_only: bool = False,
+    vendor_id: str | None = None,
 ) -> dict[str, RelatedProductItem]:
     """Map each sibling product-id to a card, keeping only shoppable ones.
 
@@ -571,15 +582,23 @@ def _shoppable_related_items(
         return {}
 
     sibling_ids = list(sibling_by_id.keys())
-    listings_response = (
+    listings_query = (
         client.table("vendor_listings")
-        .select("id, product_id, price_ngwee, status, vendors!inner(status)")
+        .select(
+            "id, product_id, vendor_id, price_ngwee, status, wholesale, stock_mode, stock_qty, "
+            "min_steps, moq, product_class, fulfilment_mode, vendor_capacity_per_week, "
+            "vendors!inner(id, display_name, status)"
+        )
         .in_("product_id", sibling_ids)
         .eq("status", "active")
         .eq("vendors.status", "active")
         .order("price_ngwee")
-        .execute()
     )
+    if vendor_id is not None:
+        listings_query = listings_query.eq("vendor_id", vendor_id)
+    if retail_available_only:
+        listings_query = listings_query.eq("wholesale", False)
+    listings_response = listings_query.execute()
     listing_rows = list(listings_response.data or [])
     all_listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, all_listing_ids)
@@ -589,6 +608,25 @@ def _shoppable_related_items(
     for listing_row in listing_rows:
         listing_id = str(listing_row.get("id") or "")
         if listing_id in demo_listing_ids:
+            continue
+        vendor = listing_row.get("vendors") or {}
+        if vendor_id is not None and str(listing_row.get("vendor_id")) != vendor_id:
+            continue
+        if retail_available_only and (
+            listing_row.get("status") != "active"
+            or vendor.get("status") != "active"
+            or listing_row.get("wholesale")
+            or int(listing_row.get("price_ngwee") or 0) <= 0
+            or not is_listing_available(
+                str(listing_row.get("stock_mode") or ""),
+                listing_row.get("stock_qty"),
+                min_steps=int(listing_row.get("min_steps") or 1),
+                moq=int(listing_row.get("moq") or 1),
+                product_class=str(listing_row.get("product_class") or "A"),
+                fulfilment_mode=str(listing_row.get("fulfilment_mode") or "stocked"),
+                vendor_capacity_per_week=listing_row.get("vendor_capacity_per_week"),
+            )
+        ):
             continue
         pid = str(listing_row.get("product_id") or "")
         if pid and pid in sibling_by_id and pid not in cheapest_by_product:
@@ -624,6 +662,8 @@ def _shoppable_related_items(
         sibling = sibling_by_id[pid]
         listing_id = str(listing_row.get("id") or "")
         items[pid] = RelatedProductItem(
+            listing_id=listing_id,
+            vendor_name=(listing_row.get("vendors") or {}).get("display_name"),
             slug=str(sibling.get("slug") or ""),
             name=str(sibling.get("name") or ""),
             image_public_id=image_by_listing.get(listing_id),
@@ -663,9 +703,7 @@ def _curated_related_items(
         .eq("status", "active")
         .execute()
     )
-    sibling_by_id = {
-        str(row["id"]): row for row in (products_response.data or []) if row.get("id")
-    }
+    sibling_by_id = {str(row["id"]): row for row in (products_response.data or []) if row.get("id")}
     item_map = _shoppable_related_items(client, sibling_by_id)
     # Preserve the admin's curated order; drop any that aren't shoppable.
     items = [item_map[pid] for pid in ordered_ids if pid in item_map]
@@ -797,9 +835,7 @@ async def get_product(
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
     access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ProductDetailResponse | RedirectResponse:
-    result = build_product_detail(
-        supabase.client, slug, include_wholesale=access.eligible
-    )
+    result = build_product_detail(supabase.client, slug, include_wholesale=access.eligible)
     if isinstance(result, RedirectResponse):
         return result
     return result
@@ -811,3 +847,112 @@ async def get_related_products(
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
 ) -> RelatedProductsResponse:
     return build_related_products(supabase.client, slug)
+
+
+def build_related_product_rails(
+    client: Any, slug: str, *, listing_id: str | None = None
+) -> RelatedProductRailsResponse:
+    """Public retail suggestions, bound to an explicitly selected public seller.
+
+    Curated relations are not relabelled as category matches. Vendor cards take
+    precedence on overlap; every card links to the exact offer supplying its price.
+    Availability is a browse snapshot, never a stock reservation.
+    """
+    product = _fetch_product_by_slug(client, slug)
+    if product is None or product.get("status") != "active":
+        raise AppError("product.not_found", "Product not found", 404)
+    # Match the public PDP's wholesale/demo visibility, including its 404 policy.
+    build_product_detail(client, slug)
+    product_id = str(product["id"])
+    result = RelatedProductRailsResponse(product_slug=slug)
+    vendor_id: str | None = None
+    if listing_id:
+        source = (
+            client.table("vendor_listings")
+            .select(
+                "id, product_id, vendor_id, wholesale, status, vendors!inner(status, display_name)"
+            )
+            .eq("id", listing_id)
+            .eq("product_id", product_id)
+            .eq("status", "active")
+            .eq("vendors.status", "active")
+            .execute()
+        )
+        source_rows = source.data or []
+        row = source_rows[0] if source_rows else None
+        if (
+            row is not None
+            and not row.get("wholesale")
+            and (row.get("vendors") or {}).get("status") == "active"
+            and row.get("vendor_id")
+            and not fetch_demo_listing_ids(client, [listing_id])
+        ):
+            vendor_id = str(row["vendor_id"])
+            result.listing_id = listing_id
+            result.vendor_name = (row.get("vendors") or {}).get("display_name")
+
+    if vendor_id:
+        offered = (
+            client.table("vendor_listings")
+            .select("product_id")
+            .eq("vendor_id", vendor_id)
+            .eq("status", "active")
+            .execute()
+        )
+        ids = list(
+            {
+                str(row["product_id"])
+                for row in offered.data or []
+                if row.get("product_id") and str(row["product_id"]) != product_id
+            }
+        )
+        if ids:
+            products = (
+                client.table("products")
+                .select("id, slug, name, status")
+                .in_("id", ids)
+                .eq("status", "active")
+                .execute()
+            )
+            candidates = {
+                str(row["id"]): row
+                for row in products.data or []
+                if row.get("status") == "active" and str(row["id"]) != product_id
+            }
+            matches = _shoppable_related_items(
+                client, candidates, retail_available_only=True, vendor_id=vendor_id
+            )
+            result.same_vendor = sorted(
+                matches.values(), key=lambda item: (item.from_price_ngwee or 0, item.slug)
+            )[:RELATED_LIMIT]
+
+    if product.get("category_id"):
+        siblings = (
+            client.table("products")
+            .select("id, slug, name, status")
+            .eq("category_id", product["category_id"])
+            .eq("status", "active")
+            .execute()
+        )
+        excluded_slugs = {item.slug for item in result.same_vendor} | {slug}
+        candidates = {
+            str(row["id"]): row
+            for row in siblings.data or []
+            if row.get("status") == "active"
+            and str(row["id"]) != product_id
+            and row.get("slug") not in excluded_slugs
+        }
+        matches = _shoppable_related_items(client, candidates, retail_available_only=True)
+        result.same_category = sorted(
+            matches.values(), key=lambda item: (item.from_price_ngwee or 0, item.slug)
+        )[:RELATED_LIMIT]
+    return result
+
+
+@router.get("/{slug}/related-rails", response_model=RelatedProductRailsResponse)
+async def get_related_product_rails(
+    slug: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    listing_id: str | None = None,
+) -> RelatedProductRailsResponse:
+    return build_related_product_rails(supabase.client, slug, listing_id=listing_id)

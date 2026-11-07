@@ -1,95 +1,32 @@
-# n8n Activation Runbook (VD-P01…P03)
+# n8n activation runbook
 
-**Purpose:** bring the committed `infra/n8n/*.json` workflows live and record which
-are active. Logic lives in the API — each workflow calls an internal-token endpoint.
+**Status: inventory and approval checklist.** The owner confirms n8n runs on **Hetzner and stays there** ([issue #716](https://github.com/KaluMuso/Convergeo/issues/716) §8). Its current process, workflow IDs, versions, schedules, credentials, queues, and executions have not been verified for this runbook. Import, activation, message delivery, shared database changes, and money operations need separate exact-target owner approval. API and database rules remain in the API/database; n8n coordinates recoverable jobs and delivery.
 
-> **Prerequisite (learned live 2026-07-21).** Every internal tick is **fail-closed**:
-> `app/core/internal_token.resolve_internal_token` returns **503** in `ENV=production`
-> when the endpoint's `INTERNAL_*_TOKEN` is missing/default. And the ticks do real DB
-> work, so `SUPABASE_DB_URL` **must** be set to the Supabase **session pooler** (5432,
-> not 6543) — if it is blank the API falls back to a dead local DSN and every tick 500s
-> with "couldn't get a connection after 10.00 sec" (this also shows as `/search
-degraded=true`). Fix that first; see `infra/.env.example`.
->
-> To activate a workflow you need, on **both** sides: (1) its `INTERNAL_*_TOKEN` on the
-> API host, and (2) a matching n8n **httpHeaderAuth** credential named `X-Internal-Token`.
+## 1. Read-only inventory before any action
 
-## Founder decisions
+With authorized Hetzner/n8n read access, record environment and instance ID, workflow ID/name/version/active state, schedule and timezone, credential **names only**, API endpoint and target plane, queue ownership, linked error workflow, last successful/failed execution, and every outbound message or DB write. Compare each live definition with `infra/n8n/*.json` at the approved source SHA. Preserve secrets and customer data outside the evidence pack. Classify payment, reconciliation, expiry, cancellation, refund, payout, backup, notification and alert writers for the [cutover pause/drain](deploy-verify-runbook.md#1-database-change-boundary).
 
-- **Wave A — activate now.** No money movement.
-- **Wave B — HELD** (`payouts`, `release-job`, `order-jobs`, `event-release`,
-  `event-refund-jobs`, `tickets-issue`, `tickets-release`) until the Lenco **sandbox** money path is proven (VB-P01…P06)
-  **and** legal **F4** (NPS-Act escrow) clears. Do not activate before both are green.
-- **operational-nudges — HELD** until real vendors onboard (it enqueues outward SMS/
-  email that the live dispatch workflow delivers; keeping it off avoids messaging the
-  seeded demo vendors).
+An authorized read-only workflow query can help inventory active state; a count alone cannot establish the expected definitions, credential bindings, healthy executions or launch readiness:
 
-## Token → workflow map
+```bash
+curl -fsS -H "X-N8N-API-KEY: $N8N_API_KEY" \
+  "https://n8n.vergeo5.com/api/v1/workflows?active=true" | jq '.data[] | {id, name, active}'
+```
 
-| Workflow JSON                                                               | API endpoint                                                           | Token env var                                                      | Class                  |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------- |
-| `notification-dispatch.json`                                                | `/internal/dispatch/tick`                                              | `INTERNAL_DISPATCH_TOKEN`                                          | LIVE ✓                 |
-| `reconciliation.json` (bundle)                                              | `/internal/reconciliation/*` + `/internal/payment-sweeper/tick`        | `INTERNAL_RECONCILIATION_TOKEN` / `INTERNAL_PAYMENT_SWEEPER_TOKEN` | LIVE ✓                 |
-| `reservation-sweeper.json`                                                  | `/internal/stock-sweeper/tick`                                         | `INTERNAL_STOCK_SWEEPER_TOKEN`                                     | Wave A                 |
-| `embeddings-cron.json`                                                      | `/internal/embeddings/tick`                                            | `INTERNAL_EMBEDDINGS_TOKEN`                                        | Wave A                 |
-| `admin-digest.json`                                                         | `/internal/digest`                                                     | `INTERNAL_DIGEST_TOKEN`                                            | Wave A                 |
-| `analytics-retention.json`                                                  | `/internal/analytics/retention-tick`                                   | `INTERNAL_ANALYTICS_TOKEN`                                         | Wave A                 |
-| `kyc-nudge` / `low-stock-alert` / `review-request` / `payout-failure-alert` | `/internal/n8n/*/tick`                                                 | `INTERNAL_N8N_TOKEN`                                               | Wave A (nudges — HELD) |
-| `uptime-alert.json`                                                         | inbound webhook                                                        | `UPTIME_WEBHOOK_SECRET` (n8n only)                                 | Wave A                 |
-| `release-job.json`                                                          | `/internal/release-job/tick`                                           | `INTERNAL_RELEASE_JOB_TOKEN`                                       | Wave B                 |
-| `payouts.json`                                                              | `/internal/payouts/{retry,tick}`                                       | `INTERNAL_PAYOUTS_TOKEN`                                           | Wave B                 |
-| `order-jobs.json`                                                           | `/internal/order-jobs/{auto-confirm,auto-release}`                     | `INTERNAL_ORDER_JOBS_TOKEN`                                        | Wave B                 |
-| `event-release.json`                                                        | `/internal/event-release/tick`                                         | `INTERNAL_EVENT_RELEASE_TOKEN`                                     | Wave B                 |
-| `event-refund-jobs.json`                                                    | `/internal/event-refund-jobs/tick`                                     | `INTERNAL_EVENT_REFUND_JOBS_TOKEN`                                 | Wave B                 |
-| `tickets-issue.json` / `tickets-release.json`                               | `/internal/tickets/{issue,release}-tick`                               | `INTERNAL_TICKETS_ISSUE_TOKEN`                                     | Wave B                 |
-| `abandoned-cart.json` / `funnel-abandon.json`                               | `/internal/n8n/abandoned-carts/tick` / `/internal/funnel/abandon-tick` | `INTERNAL_N8N_TOKEN` / `INTERNAL_FUNNEL_TOKEN`                     | Keep OFF (flag-gated)  |
+Confirm the actual URL and permissions before using this example. No live query or status verification was performed for this documentation update.
 
-## Per-workflow activation
+## 2. Activation decision per workflow
 
-1. `openssl rand -hex 32` → one secret per token env var.
-2. Add `INTERNAL_<X>_TOKEN=<secret>` to the host `--env-file` and **recreate** the
-   container (`bash /root/redeploy-api.sh` — a plain `docker restart` does NOT reload
-   the env file). Verify: `curl -s -o /dev/null -w "%{http_code}\n" -XPOST
-https://api.vergeo5.com/internal/<path> -H 'X-Internal-Token: wrong'` → **401**
-   (set), not **503** (unset).
-3. n8n → Credentials → Header Auth → name `X-Internal-Token`, value = the same secret.
-4. Import the workflow, point its HTTP node(s) at that credential, toggle **Active**,
-   and confirm the first execution is `success`.
+For **each** proposed activation, the owner records the exact workflow JSON hash and live ID/version, Hetzner instance, environment, API and database target, schedule, token/credential bindings, intended side effects, operator, approval record, and a disable/recovery path. Check deployment fingerprints and target migration state against the same candidate. `/readyz` being `ok` is only one observation; it never triggers automatic Wave A activation.
 
-## Activation status (2026-07-23)
+Before unpausing a writer after a shared cutover, prove the [writer pause/drain, exact migration application, recovery and compatibility gates](deploy-verify-runbook.md#1-database-change-boundary). Preserve incoming receipt IDs and queue state for replay; avoid two active schedulers for one job. Exercise a wrong token (401 when configured, rather than 503 for a missing token), a bounded safe execution, failure/alert routing, retries and deduplication in an approved isolated environment. A 401 does not prove the job's data behavior. Activate only the individually approved workflow, record the actual first execution result, and verify downstream effects and logs. Stop and disable the specific workflow on an unexpected write, send or failure; keep evidence for reconciliation. Do not assume an OCI Compose command controls the Hetzner instance or stop all n8n schedules as a routine rollback.
 
-Live Wave A (production):
+Money-moving, refund, payout, release, ticket and reconciliation workflows need their applicable provider-backed sandbox tests, approved financial policy, operator permissions, exact migration/ledger compatibility and separate activation approval. Notification and nudge workflows can send outward messages; require approved recipients, consent and message authorization. Neither group WhatsApp support nor delivery/acknowledgment is verified for this account. The [backup and shared-alert checklist](n8n-backup-and-alerts.md) is historical configuration guidance; an import or scheduled run does not prove a real backup/restore or an alert delivered to an operator.
 
-| Workflow                     | ID                 | Active                                                           |
-| ---------------------------- | ------------------ | ---------------------------------------------------------------- |
-| notification dispatch        | `sevKtX1AmimQCWsG` | yes                                                              |
-| payment reconciliation crons | `C1MpTNjrfLACMG3f` | yes (published 2026-07-23)                                       |
-| reservation sweeper          | `F25zEWiPoIveARys` | yes                                                              |
-| embeddings cron              | `oqjfSdMXClfsf3qd` | yes                                                              |
-| admin digest                 | `rb5d4LHlXAOqkfPX` | yes                                                              |
-| analytics retention          | `8drZTFO79pwMPfZy` | yes                                                              |
-| operational nudges           | `zkIe2zW72qp5fcli` | yes (held per policy until real vendors — consider unpublishing) |
+For incident alerts, prove a durable incident record, deduplication, redaction and severity before delivery; keep messages to safe metadata and an authenticated Admin link. Prove authenticated operator acknowledgment, backup escalation and recovery/closure evidence. Use an independently operated uptime check to detect a complete Hetzner/n8n outage. Before any WhatsApp **group** delivery, verify this account/provider/group's API eligibility, group creation and join model, consent, message rules, delivery callbacks and costs; obtain the owner's approval for the actual route. A delivery receipt or group reply is not an acknowledgment or authority for a privileged action.
 
-Held (credentials / policy):
+## 3. Historical inventory, not current status
 
-| Workflow                                                      | ID                 | Reason                                                                                                                       |
-| ------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| shared failure alert (deduplicated)                           | `LVuHqWgT1tqjYOtc` | Live scaffold has no WhatsApp node; **re-import the committed `money-workflow-error-alert.json`** (WA node + dedupe present) |
-| database backup                                               | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds; dedupe env `BACKUP_ALERT_DEDUPE_MINUTES` optional (default 360)                        |
-| Wave B (payouts, release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox; payout workflow also needs the shared error workflow linked and a non-overlap timing check                 |
+The **2026-07-23** observation in the previous revision listed these IDs as active: notification dispatch `sevKtX1AmimQCWsG`, reconciliation `C1MpTNjrfLACMG3f`, reservation sweeper `F25zEWiPoIveARys`, embeddings `oqjfSdMXClfsf3qd`, admin digest `rb5d4LHlXAOqkfPX`, analytics retention `8drZTFO79pwMPfZy`, and operational nudges `zkIe2zW72qp5fcli` (despite a hold noted in that July record). It listed shared failure alert `LVuHqWgT1tqjYOtc` and backup `OAdOD4kmIbSNehkJ` as held. Treat all of these as **historical IDs and claims** until live read-only inventory confirms the current instance. Wave A and Wave B labels in the old plan are not activation authority. No current workflow health, backup receipt, restore result, alert route or launch readiness is established here.
 
-> **Backup + shared alert reconciliation & unchecked founder activation checklist:**
-> `docs/ops/n8n-backup-and-alerts.md`. Both ship `active: false`; failed runs page the founder on a
-> **deduplicated** route (§4 of that doc). Do not activate here.
-
-For `payouts.json`, create one Header Auth credential named `Vergeo5 Internal Payouts`
-whose header is `X-Internal-Token` and whose value matches the API host's
-`INTERNAL_PAYOUTS_TOKEN`. Link the environment-local shared failure-alert workflow in
-Workflow Settings (do not paste a workflow ID into the portable JSON). In staging,
-force a non-zero `failed` result and confirm one deduplicated page, then confirm a full
-retry→batch execution finishes before the next 15-minute trigger. Leave it inactive
-during the drill unless `PAYOUTS_ENABLED=true` and `STAGING_ALLOW_PAYOUTS=true`. A
-production activation requires `PAYOUTS_ENABLED=true`, F4, and F9b to be green; the
-staging-only override is not used in production.
-
-Record activation date + operator per workflow in `docs/production-readiness/2026-07-19/vision-audit/evidence/` as they go live.
+Record dated operator decisions and evidence in the restricted operations record. Update release gates only from actual executions and an independent restore/compatibility review, not from checked-in JSON or this runbook.

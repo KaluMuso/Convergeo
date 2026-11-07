@@ -183,11 +183,11 @@ INSERT INTO public.ledger_accounts (id, kind) VALUES
   ('{ESCROW_ID}', 'escrow'),
   ('{COMMISSION_ID}', 'commission_revenue'),
   ('{FEES_ID}', 'fees')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 INSERT INTO public.ledger_accounts (id, kind, vendor_id) VALUES
   ('{VENDOR_PAYABLE_ID}', 'vendor_payable', '{VENDOR_A}'),
   ('{COD_RECEIVABLE_ID}', 'cod_receivable', '{VENDOR_A}')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 COMMIT;
 """
     result = conn.run_script(script)

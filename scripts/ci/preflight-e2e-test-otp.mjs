@@ -9,12 +9,25 @@
  */
 
 import { SEED } from "../../e2e/fixtures/seed.generated.ts";
+import { missingOutboundApproval } from "../../e2e/fixtures/outbound-approval.ts";
 
 const STRICT_CERT_MODES = new Set(["integrated-staging", "production-readiness"]);
 
 const CANONICAL_PERSONAS = [
-  { label: "customer", phone: SEED.personas.customer.phone, otpEnv: "E2E_CUSTOMER_TEST_OTP" },
-  { label: "vendor", phone: SEED.personas.vendor.phone, otpEnv: "E2E_VENDOR_TEST_OTP" },
+  {
+    label: "customer",
+    phone: SEED.personas.customer.phone,
+    userId: "a1000000-0000-4000-8000-000000000001",
+    role: "customer",
+    otpEnv: "E2E_CUSTOMER_TEST_OTP",
+  },
+  {
+    label: "vendor",
+    phone: SEED.personas.vendor.phone,
+    userId: "a1000000-0000-4000-8000-000000000004",
+    role: "vendor",
+    otpEnv: "E2E_VENDOR_TEST_OTP",
+  },
 ];
 
 function str(name, env = process.env) {
@@ -44,10 +57,24 @@ function toAuthPhone(phone) {
   throw new Error("phone is not in international format");
 }
 
+function sameCanonicalAuthPhone(actual, expected) {
+  // Hosted Auth may store E.164 without its leading '+'. Match only that
+  // observed normalization; reject spaces, punctuation, and local formats.
+  const pattern = /^\+?[0-9]+$/;
+  return (
+    typeof actual === "string" &&
+    pattern.test(actual) &&
+    pattern.test(expected) &&
+    actual.replace(/^\+/, "") === expected.replace(/^\+/, "")
+  );
+}
+
 function resolvePersonas(env = process.env) {
   return CANONICAL_PERSONAS.map((persona) => ({
     label: persona.label,
     phone: persona.phone,
+    userId: persona.userId,
+    role: persona.role,
     otp: str(persona.otpEnv, env),
     otpEnv: persona.otpEnv,
   }));
@@ -90,6 +117,8 @@ export function evaluatePreflightConfig(personas, { strict }) {
 async function verifyTestOtpPersona({
   label,
   phone,
+  userId,
+  role,
   otp,
   supabaseUrl,
   anonKey,
@@ -98,6 +127,7 @@ async function verifyTestOtpPersona({
   const authPhone = toAuthPhone(phone);
   const sendRes = await fetchImpl(`${supabaseUrl}/auth/v1/otp`, {
     method: "POST",
+    redirect: "error",
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
@@ -107,18 +137,17 @@ async function verifyTestOtpPersona({
   });
 
   if (!sendRes.ok) {
-    const body = await sendRes.text();
     return {
       ok: false,
       label,
       reason: `otp send failed (HTTP ${sendRes.status})`,
-      detail: body.slice(0, 200),
       phoneTail: maskPhoneTail(authPhone),
     };
   }
 
   const verifyRes = await fetchImpl(`${supabaseUrl}/auth/v1/verify`, {
     method: "POST",
+    redirect: "error",
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
@@ -132,12 +161,46 @@ async function verifyTestOtpPersona({
   });
 
   if (!verifyRes.ok) {
-    const body = await verifyRes.text();
     return {
       ok: false,
       label,
       reason: "test-OTP verify failed — hosted Auth test_otp mapping likely missing or wrong",
-      detail: body.slice(0, 200),
+      phoneTail: maskPhoneTail(authPhone),
+    };
+  }
+
+  // A 200 alone can be an empty response, the wrong synthetic account, or a
+  // token minted without the role hook. Decode only the TLS Auth response to
+  // check its identity contract; this is not a substitute for hosted API/DB
+  // authorization proof and no token or claim value is retained in the result.
+  let validSession = false;
+  try {
+    const session = await verifyRes.json();
+    const token = session?.access_token;
+    const segments = typeof token === "string" ? token.split(".") : [];
+    const claims =
+      segments.length === 3
+        ? JSON.parse(Buffer.from(segments[1], "base64url").toString("utf8"))
+        : null;
+    const roles = claims?.app_metadata?.roles;
+    validSession =
+      session?.user?.id === userId &&
+      sameCanonicalAuthPhone(session.user.phone, authPhone) &&
+      claims?.sub === userId &&
+      sameCanonicalAuthPhone(claims?.phone, authPhone) &&
+      claims?.aud === "authenticated" &&
+      Array.isArray(roles) &&
+      roles.includes(role) &&
+      !roles.includes("admin") &&
+      (role !== "customer" || !roles.includes("vendor"));
+  } catch {
+    // Malformed session bodies fail closed without reflecting token material.
+  }
+  if (!validSession) {
+    return {
+      ok: false,
+      label,
+      reason: "test-OTP session identity or role claim mismatch",
       phoneTail: maskPhoneTail(authPhone),
     };
   }
@@ -165,18 +228,42 @@ export async function runPreflight(env = process.env, options = {}) {
     };
   }
 
+  // Validate the complete approved recipient set and sandbox target before
+  // the first /auth/v1/otp POST. Test-OTP credentials do not imply consent.
+  const missingApproval = [
+    ...new Set(
+      personas.flatMap((persona) =>
+        missingOutboundApproval("otp", env, {
+          persona: persona.label,
+          recipientPhone: persona.phone,
+          authOrigin: supabaseUrl,
+        }),
+      ),
+    ),
+  ];
+  if (missingApproval.length) {
+    return {
+      verdict: "FAIL",
+      detail: `outbound OTP approval required: ${missingApproval.join(", ")}`,
+    };
+  }
+
   const results = [];
   for (const persona of config.configured) {
-    results.push(
-      await verifyTestOtpPersona({
-        label: persona.label,
-        phone: persona.phone,
-        otp: persona.otp,
-        supabaseUrl,
-        anonKey,
-        fetchImpl,
-      }),
-    );
+    const result = await verifyTestOtpPersona({
+      label: persona.label,
+      phone: persona.phone,
+      userId: persona.userId,
+      role: persona.role,
+      otp: persona.otp,
+      supabaseUrl,
+      anonKey,
+      fetchImpl,
+    });
+    results.push(result);
+    // A failed first persona makes the preflight unusable. An interrupted run
+    // must not send another OTP to the second synthetic recipient.
+    if (!result.ok) break;
   }
 
   const failed = results.filter((result) => !result.ok);

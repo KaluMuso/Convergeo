@@ -1,9 +1,9 @@
 "use client";
 
 import { getRolesFromUser } from "@vergeo/auth/roles";
-import { useSession } from "@vergeo/auth/use-session";
 
 import { getVendorPortalUrl } from "../../(marketing)/sell/_components/vendor-app";
+import { useSession } from "../../../../lib/customer-session";
 
 export type VendorPortalHubLabels = {
   title: string;
