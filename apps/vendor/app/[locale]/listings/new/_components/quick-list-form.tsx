@@ -51,6 +51,8 @@ type QuickListFormProps = {
     fields: Parameters<typeof ListingFields>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    /** Server category/release-policy rejection (listing_policy_blocked). */
+    policyBlocked?: string;
     required: string;
   };
 };
@@ -161,6 +163,7 @@ export function QuickListForm({
       onError(
         listingCreateErrorMessage(caught, {
           standaloneRequired: labels.standaloneRequired,
+          policyBlocked: labels.policyBlocked,
           fallback: labels.submitError,
         }),
       );

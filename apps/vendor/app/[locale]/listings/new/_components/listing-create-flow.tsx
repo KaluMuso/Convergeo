@@ -181,7 +181,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     setError(null);
     window.setTimeout(() => {
       router.push(
-        requiresEvidence || response.status === "draft"
+        requiresEvidence
           ? `/${locale}/listings/${response.listing_id}/edit`
           : `/${locale}/listings`,
       );
@@ -339,14 +339,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
-            canonicalRequired: t("listings.errors.canonicalRequired"),
-            standaloneDetailsRequired: t("listings.errors.standaloneDetailsRequired"),
             policyBlocked: t("listings.errors.policyBlocked"),
-            categoryLabel: t("listings.newCanonical.categoryLabel"),
-            categoryPlaceholder: t("listings.newCanonical.categoryPlaceholder"),
-            descriptionLabel: t("listings.quickList.descriptionLabel"),
-            descriptionHelp: t("listings.quickList.descriptionHelp"),
-            draftNotice: t("listings.quickList.draftNotice"),
             required: t("listings.errors.required"),
           }}
         />

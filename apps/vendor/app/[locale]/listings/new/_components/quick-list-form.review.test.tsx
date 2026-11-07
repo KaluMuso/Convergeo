@@ -20,9 +20,8 @@ const labels = {
   fields: { ...en.listings.fields, required: en.listings.errors.required },
   submitError: en.listings.errors.submitFailed,
   standaloneRequired: en.listings.errors.standalone_required,
-  canonicalRequired: en.listings.errors.canonicalRequired,
-  standaloneDetailsRequired: en.listings.errors.standaloneDetailsRequired,
   policyBlocked: en.listings.errors.policyBlocked,
+  catalogLabel: en.listings.tabs.attach,
   categoryLabel: en.listings.newCanonical.categoryLabel,
   categoryPlaceholder: en.listings.newCanonical.categoryPlaceholder,
   required: en.listings.errors.required,
@@ -37,6 +36,7 @@ function mount() {
         wholesaleEnabled={false}
         onSuccess={onSuccess}
         onError={onError}
+        onRequestCatalog={vi.fn()}
       />
     </NextIntlClientProvider>,
   );
@@ -53,12 +53,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it("does not silently change the default Class C or submit a noncanonical quick offer", () => {
+it("does not silently change the default Class C or submit a noncanonical quick offer", async () => {
   mount();
+  await waitFor(() => expect(client.listCategories).toHaveBeenCalled());
   const productClass = screen.getByLabelText(labels.fields.productClassLabel) as HTMLSelectElement;
   expect(productClass.value).toBe("C");
-  fireEvent.click(screen.getByRole("button", { name: labels.publish }));
-  expect(onError).toHaveBeenCalledWith(labels.canonicalRequired);
+  // Class C must attach to a canonical product: the draft action stays
+  // unavailable and the catalogue path is offered instead.
+  const save = screen.getByRole("button", { name: labels.saveDraft }) as HTMLButtonElement;
+  expect(save.disabled).toBe(true);
+  fireEvent.click(save);
+  expect(screen.getByRole("button", { name: labels.catalogLabel })).toBeTruthy();
   expect(client.createListing).not.toHaveBeenCalled();
 });
 
@@ -69,6 +74,9 @@ for (const productClass of ["D", "E"]) {
       target: { value: productClass },
     });
     await screen.findByRole("option", { name: "Furniture" });
+    await waitFor(() =>
+      expect((screen.getByRole("combobox", { name: labels.categoryLabel }) as HTMLSelectElement).disabled).toBe(false),
+    );
     fireEvent.change(screen.getByRole("combobox", { name: labels.categoryLabel }), {
       target: { value: "category" },
     });
@@ -89,7 +97,7 @@ for (const productClass of ["D", "E"]) {
         target: { value: "3" },
       });
     }
-    fireEvent.click(screen.getByRole("button", { name: labels.fields.saveDraft }));
+    fireEvent.click(screen.getByRole("button", { name: labels.saveDraft }));
     await waitFor(() => expect(client.createListing).toHaveBeenCalledOnce());
     expect(client.createListing.mock.calls[0]?.[0]).toMatchObject({
       mode: "quick_list",
@@ -98,7 +106,8 @@ for (const productClass of ["D", "E"]) {
       description: "Detailed furniture offer with dimensions and materials.",
       publish: false,
     });
-    expect(client.createListing.mock.calls[0]?.[0]).not.toHaveProperty("product_id");
+    // Standalone offers never attach a canonical product (absent or null).
+    expect(client.createListing.mock.calls[0]?.[0]?.product_id ?? null).toBeNull();
     expect(onError).not.toHaveBeenCalled();
     expect(onSuccess).toHaveBeenCalledOnce();
   });

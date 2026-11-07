@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   patchDraft: vi.fn(),
   submit: vi.fn(),
   suggestProducts: vi.fn(),
+  getCanonicalPreview: vi.fn(),
 }));
 vi.mock("@vergeo/auth/use-session", () => ({
   useSession: () => ({ session: mocks.session, loading: false }),
@@ -22,7 +23,10 @@ vi.mock("../_lib/intake-client", () => ({
   createIntakeClient: () => mocks,
 }));
 vi.mock("../../listings/new/_lib/listing-client", () => ({
-  createListingClient: () => ({ suggestProducts: mocks.suggestProducts }),
+  createListingClient: () => ({
+    suggestProducts: mocks.suggestProducts,
+    getCanonicalPreview: mocks.getCanonicalPreview,
+  }),
 }));
 
 const productId = "44444444-4444-4444-8444-444444444444";
@@ -70,6 +74,15 @@ async function chooseProduct() {
 
 beforeEach(() => {
   mocks.getSession.mockResolvedValue(detail);
+  mocks.getCanonicalPreview.mockImplementation(async (id: string) => ({
+    product_id: id,
+    name: "Samsung RT38 fridge",
+    brand: "Samsung",
+    spec: {},
+    category_id: "appliances",
+    category_name: "Appliances",
+    commission: { category_key: "default", rate_bps: 500, rate_percent: 5 },
+  }));
   mocks.suggestProducts.mockResolvedValue([
     {
       entity_id: productId,
@@ -96,7 +109,7 @@ it("requires the vendor's explicit catalogue choice and submits it for human rev
   expect(submit.hasAttribute("disabled")).toBe(true);
   expect(mocks.submit).not.toHaveBeenCalled();
   await chooseProduct();
-  expect(submit.hasAttribute("disabled")).toBe(false);
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
   mocks.getSession.mockResolvedValue({
     ...detail,
     status: "pending_admin_review",
@@ -129,7 +142,9 @@ it("keeps submission disabled when no catalogue match is found", async () => {
 it("clears a catalogue choice when the vendor opens a different intake session", async () => {
   const { rerender } = render(review());
   await chooseProduct();
-  expect(screen.getByTestId("intake-submit").hasAttribute("disabled")).toBe(false);
+  await waitFor(() =>
+    expect(screen.getByTestId("intake-submit").hasAttribute("disabled")).toBe(false),
+  );
   mocks.getSession.mockResolvedValue({ ...detail, id: "session-two" });
   rerender(review("session-two"));
   await waitFor(() => expect(mocks.getSession).toHaveBeenCalledWith("session-two"));

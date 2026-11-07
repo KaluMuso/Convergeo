@@ -21,6 +21,22 @@ vi.mock("../../packages/auth/node_modules/@supabase/ssr", () => ({
   createServerClient: vi.fn(() => ({ auth: authMocks })),
 }));
 
+/** Claims that pass the shared verified-claims contract (issuer, audience, expiry, subject). */
+function verifiedClaims(roles: string[], sub = "fixture-user") {
+  return {
+    data: {
+      claims: {
+        sub,
+        iss: "https://example.supabase.co/auth/v1",
+        aud: "authenticated",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        app_metadata: { roles },
+      },
+    },
+    error: null,
+  };
+}
+
 vi.mock("next-intl/middleware", () => ({
   default: vi.fn(() => vi.fn(() => NextResponse.next())),
 }));
@@ -94,10 +110,7 @@ describe("recovery composition with current verified-claims authorization", () =
         },
       },
     });
-    authMocks.getClaims.mockResolvedValue({
-      data: { claims: { app_metadata: { roles: ["customer"] } } },
-      error: null,
-    });
+    authMocks.getClaims.mockResolvedValue(verifiedClaims(["customer"]));
     const actual =
       await vi.importActual<typeof import("@vergeo/auth/middleware")>("@vergeo/auth/middleware");
     vi.mocked(updateSession).mockImplementation(actual.updateSession);
@@ -171,10 +184,7 @@ describe("recovery composition with current verified-claims authorization", () =
     authMocks.getUser.mockResolvedValue({
       data: { user: { id: "fixture-admin", app_metadata: {} } },
     });
-    authMocks.getClaims.mockResolvedValue({
-      data: { claims: { app_metadata: { roles: ["admin"] } } },
-      error: null,
-    });
+    authMocks.getClaims.mockResolvedValue(verifiedClaims(["admin"], "fixture-admin"));
     const response = await middleware(new NextRequest("https://admin.example.test/en/orders"));
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
@@ -185,10 +195,7 @@ describe("recovery composition with current verified-claims authorization", () =
   it.each(["/en/kyc", "/en/config/commissions", "/en/intake", "/en/events"])(
     "allows a verified admin through Cloudflare Access on %s",
     async (path) => {
-      authMocks.getClaims.mockResolvedValue({
-        data: { claims: { app_metadata: { roles: ["admin"] } } },
-        error: null,
-      });
+      authMocks.getClaims.mockResolvedValue(verifiedClaims(["admin"]));
       const response = await middleware(new NextRequest(`https://admin.example.test${path}`));
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBeNull();
@@ -200,10 +207,7 @@ describe("recovery composition with current verified-claims authorization", () =
   it.each(["customer", "vendor"] as const)(
     "denies a verified %s role on privileged admin routes after Cloudflare Access",
     async (role) => {
-      authMocks.getClaims.mockResolvedValue({
-        data: { claims: { app_metadata: { roles: [role] } } },
-        error: null,
-      });
+      authMocks.getClaims.mockResolvedValue(verifiedClaims([role]));
       for (const path of [
         "/en/kyc",
         "/en/config/commissions",
