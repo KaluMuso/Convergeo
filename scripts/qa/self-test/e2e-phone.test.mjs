@@ -148,7 +148,11 @@ const SAFE_HELPER_ENV = {
 function loadEnv(env) {
   return loadTs(
     "e2e/fixtures/env.ts",
-    { "./portal-bypass": bypass, "./seed.generated": { SEED } },
+    {
+      "./portal-bypass": bypass,
+      "./seed.generated": { SEED },
+      "./sandbox-momo-evidence": loadTs("e2e/fixtures/sandbox-momo-evidence.ts", {}, env),
+    },
     env,
   );
 }
@@ -162,6 +166,16 @@ function loadLogin(env = SAFE_HELPER_ENV, change = {}) {
     "@playwright/test": { expect: expectFake },
     "./env": fixture,
     "./phone": { nationalNumberFromE164 },
+    // Approval itself is covered by preflight/outbound-approval tests; here we
+    // record that the vendor recipient guard runs before the first navigation.
+    "./outbound-approval": {
+      guardApprovedOtpRequests: async (page, persona, phone) => {
+        assert.equal(persona, "vendor");
+        assert.equal(phone, fixture.vendorOtp.testPhone);
+        assert.deepEqual(page.actions, [], "approval guard must precede navigation");
+        page.approvals = (page.approvals ?? 0) + 1;
+      },
+    },
   });
 }
 class FakePage {
@@ -260,14 +274,19 @@ describe("executed phone fixture contracts", () => {
       assert.equal(fixture.customerOtpReady(), fixture.phoneOtpSafetyReady());
       assert.equal(fixture.lencoSandboxReady(), false);
     }
-    assert.equal(
-      loadEnv({
-        ...SAFE_HELPER_ENV,
-        LENCO_SANDBOX: "true",
-        LENCO_SANDBOX_SECRET_KEY: "synthetic",
-      }).lencoSandboxReady(),
-      true,
-    );
+    const sandbox = {
+      ...SAFE_HELPER_ENV,
+      LENCO_SANDBOX: "true",
+      LENCO_ENV: "sandbox",
+      LENCO_SANDBOX_PUBLIC_KEY: "synthetic-public",
+      LENCO_SANDBOX_SECRET_KEY: "synthetic",
+      LENCO_SANDBOX_MOMO_NUMBER: "0960000000",
+    };
+    assert.equal(loadEnv(sandbox).lencoSandboxReady(), true);
+    // Partial evidence (flag and secret only) never opens the provider leg.
+    for (const omitted of ["LENCO_ENV", "LENCO_SANDBOX_PUBLIC_KEY", "LENCO_SANDBOX_MOMO_NUMBER"]) {
+      assert.equal(loadEnv({ ...sandbox, [omitted]: "" }).lencoSandboxReady(), false);
+    }
   });
   it("disabled or invalid code declarations block before any DOM action", async () => {
     for (const change of [
