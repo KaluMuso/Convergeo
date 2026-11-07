@@ -182,9 +182,15 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
   const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
 
-  // Ticket purchases (and their card retries) hand off with ?group=; the ticket
-  // checkout owns that payment. Service-deposit handoffs use ?session= below.
-  if (hasGroup && !hasSession) {
+  // Ticket purchases (and their card retries) hand off with a valid ?group=;
+  // the ticket checkout owns that payment. Service-deposit handoffs use
+  // ?session=, and any invalid or ambiguous handoff fails closed below.
+  if (
+    hasGroup &&
+    !hasSession &&
+    typeof query.group === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
+  ) {
     const labels = buildCheckoutLabels(locale, messages);
     const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
     const ticketMessages = await loadNamespace(locale as Locale, "events");
@@ -197,7 +203,7 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
       <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
         <LazyTicketCheckout
           locale={locale}
-          groupId={typeof query.group === "string" ? query.group : null}
+          groupId={query.group}
           retry={query.retry === "1"}
           labels={labels}
           loginLabel={ticketT("ticketPurchase.loginRequired")}

@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -74,7 +75,16 @@ vi.mock("next-intl", () => ({
 }));
 
 // Keep this regression on route-to-session handoff; contact/OTP has its own tests.
-vi.mock("../_components/step-contact", () => ({ StepContact: () => null }));
+// A valid ?group= is a paid-ticket handoff owned by the payable ticket checkout.
+vi.mock("../_components/lazy-ticket-checkout", () => ({
+  LazyTicketCheckout: ({ groupId }: { groupId: string }) => (
+    <div data-testid="ticket-checkout" data-group-id={groupId} />
+  ),
+}));
+vi.mock("../_components/step-contact", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../_components/step-contact")>()),
+  StepContact: () => null,
+}));
 
 const { ApiError } = await import("@vergeo/config");
 const { default: CheckoutPage } = await import("../page");
@@ -153,10 +163,6 @@ describe("WP10H existing checkout group handoff", () => {
         kind: "service_deposit",
       },
     },
-    {
-      caller: "paid event group parameter",
-      query: { group: "22222222-2222-4222-8222-222222222222" },
-    },
   ];
 
   it.each(handoffs)("does not create a product session for $caller", async ({ query }) => {
@@ -200,7 +206,7 @@ describe("WP10H existing checkout group handoff", () => {
 
   it("preserves the supplied identifier and locale", async () => {
     const id = "ABCDEF12-ABCD-4ABC-8ABC-ABCDEF123456";
-    await visitCheckout({ group: id }, "fr");
+    await visitCheckout({ session: id }, "fr");
     await waitFor(() =>
       expect(mocks.request).toHaveBeenCalledWith(`/checkout/session/${id}`, { method: "GET" }),
     );
@@ -230,7 +236,7 @@ describe("WP10H existing checkout group handoff", () => {
     "uses a generic error for denied/foreign/error response %s",
     async (code) => {
       mocks.request.mockRejectedValue(new Error(`HTTP ${code}: private detail`));
-      await visitCheckout({ group: firstId });
+      await visitCheckout({ session: firstId });
       expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
       expect(screen.queryByText(/private detail/)).not.toBeInTheDocument();
       expectReadOnly();
@@ -264,7 +270,7 @@ describe("WP10H existing checkout group handoff", () => {
 
   it("renders a completed server status without claiming payment or navigating", async () => {
     mocks.request.mockResolvedValue(status(firstId, { status: "completed" }));
-    await visitCheckout({ group: firstId });
+    await visitCheckout({ session: firstId });
     await screen.findByText("Status: Completed");
     expectReadOnly();
   });
@@ -273,7 +279,7 @@ describe("WP10H existing checkout group handoff", () => {
     const view = await visitCheckout({ session: firstId });
     await screen.findByText("Status: Pending");
     view.rerender(await checkoutElement({ session: firstId }));
-    view.rerender(await checkoutElement({ group: firstId }));
+    view.rerender(await checkoutElement({ session: firstId }));
     expect(mocks.request).toHaveBeenCalledTimes(1);
     expectReadOnly();
   });
@@ -288,7 +294,7 @@ describe("WP10H existing checkout group handoff", () => {
     );
     const view = await visitCheckout({ session: firstId });
     expect(screen.getByRole("status")).toHaveTextContent("Please wait");
-    view.rerender(await checkoutElement({ group: secondId }));
+    view.rerender(await checkoutElement({ session: secondId }));
     await screen.findByText("Status: Pending");
     await act(async () => {
       resolveOld(status(firstId, { status: "completed" }));
@@ -302,15 +308,15 @@ describe("WP10H existing checkout group handoff", () => {
   });
 
   it("hides an earlier user's status on logout and token change", async () => {
-    const view = await visitCheckout({ group: firstId });
+    const view = await visitCheckout({ session: firstId });
     await screen.findByText("Status: Pending");
     mocks.auth.session = null;
-    view.rerender(await checkoutElement({ group: firstId }));
+    view.rerender(await checkoutElement({ session: firstId }));
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText("Status: Pending")).not.toBeInTheDocument();
     mocks.auth.session = { access_token: "another-local-token", user: { phone: "+260971234567" } };
     mocks.request.mockRejectedValue(new Error("HTTP 404"));
-    view.rerender(await checkoutElement({ group: firstId }));
+    view.rerender(await checkoutElement({ session: firstId }));
     expect(screen.queryByText("Status: Pending")).not.toBeInTheDocument();
     await screen.findByRole("alert");
     expect(mocks.request).toHaveBeenCalledTimes(2);
@@ -319,11 +325,11 @@ describe("WP10H existing checkout group handoff", () => {
 
   it("localizes completed and expired French group states", async () => {
     mocks.request.mockResolvedValue(status(firstId, { status: "completed" }));
-    const view = await visitCheckout({ group: firstId }, "fr");
+    const view = await visitCheckout({ session: firstId }, "fr");
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Statut : Terminée"));
     expect(screen.getByText("Paiement: Indisponible")).toBeInTheDocument();
     mocks.request.mockResolvedValue(status(secondId, { expired: true }));
-    view.rerender(await checkoutElement({ group: secondId }, "fr"));
+    view.rerender(await checkoutElement({ session: secondId }, "fr"));
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Réservation expirée"));
     expectReadOnly();
   });
@@ -332,7 +338,7 @@ describe("WP10H existing checkout group handoff", () => {
     "rejects missing or empty API origin %j before client creation",
     async (origin) => {
       mocks.apiOrigin = origin;
-      await visitCheckout({ group: firstId });
+      await visitCheckout({ session: firstId });
       expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
       expect(mocks.createClient).not.toHaveBeenCalled();
       expect(mocks.request).not.toHaveBeenCalled();
@@ -374,11 +380,11 @@ describe("WP10H existing checkout group handoff", () => {
     );
     let view!: Awaited<ReturnType<typeof visitCheckout>>;
     await act(async () => {
-      view = await visitCheckout({ group: firstId });
+      view = await visitCheckout({ session: firstId });
     });
     expect(vi.getTimerCount()).toBe(1);
     await act(async () => {
-      view.rerender(await checkoutElement({ group: secondId }));
+      view.rerender(await checkoutElement({ session: secondId }));
     });
     expect(vi.getTimerCount()).toBe(1);
     await act(async () => {
@@ -387,24 +393,76 @@ describe("WP10H existing checkout group handoff", () => {
     expect(screen.getByRole("status").textContent).toBe("Status: Pending");
     mocks.auth.loading = true;
     await act(async () => {
-      view.rerender(await checkoutElement({ group: secondId }));
+      view.rerender(await checkoutElement({ session: secondId }));
     });
     expect(vi.getTimerCount()).toBe(0);
     mocks.auth.loading = false;
     mocks.auth.session = null;
     await act(async () => {
-      view.rerender(await checkoutElement({ group: secondId }));
+      view.rerender(await checkoutElement({ session: secondId }));
     });
     expect(vi.getTimerCount()).toBe(0);
     expect(screen.getByRole("alert")).toBeInTheDocument();
     mocks.auth.session = { access_token: "new-local-token", user: { phone: "+260971234567" } };
     await act(async () => {
-      view.rerender(await checkoutElement({ group: secondId }));
+      view.rerender(await checkoutElement({ session: secondId }));
     });
     expect(vi.getTimerCount()).toBe(1);
     expect(mocks.request).toHaveBeenCalledTimes(3);
     expectReadOnly();
     view.unmount();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps the #752 public contact intro in ordinary checkout SSR only", async () => {
+    mocks.auth.loading = true;
+    mocks.auth.session = null;
+    const ordinary = new DOMParser().parseFromString(
+      renderToString(await checkoutElement({}, "fr")),
+      "text/html",
+    );
+    expect(ordinary.querySelector("h2")?.textContent).toBe("Vos coordonnées");
+    expect(ordinary.body.textContent).toContain(
+      "Nous les utiliserons pour envoyer les mises à jour de commande sur WhatsApp ou SMS.",
+    );
+    expect(ordinary.querySelector('[data-testid="checkout-loading-skeleton"]')).not.toBeNull();
+    expect(ordinary.querySelector("input, form, button")).toBeNull();
+    const handoff = new DOMParser().parseFromString(
+      renderToString(await checkoutElement({ session: firstId }, "fr")),
+      "text/html",
+    );
+    expect(handoff.querySelector('[role="status"]')?.textContent).toBe("Veuillez patienter…");
+    expect(handoff.querySelector("h2, input, form, button")).toBeNull();
+    expect(handoff.querySelector('[data-testid="checkout-loading-skeleton"]')).toBeNull();
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
+    expectReadOnly();
+  });
+
+  it("switches from handoff to ordinary loading without initializing a product cart early", async () => {
+    const view = await visitCheckout({ session: firstId });
+    await screen.findByText("Status: Pending");
+    mocks.auth.loading = true;
+    mocks.auth.session = null;
+    view.rerender(await checkoutElement({}, "fr"));
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Vos coordonnées");
+    expect(screen.getByTestId("checkout-loading-skeleton")).toBeInTheDocument();
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expect(mocks.request).not.toHaveBeenCalledWith("/checkout/session", { method: "POST" });
+    view.rerender(await checkoutElement({ session: secondId }, "fr"));
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("checkout-loading-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByRole("status").textContent).toBe("Veuillez patienter…");
+    expect(mocks.request).toHaveBeenCalledTimes(1);
+    expectReadOnly();
+  });
+
+  it("routes a valid paid-ticket group to the ticket checkout, never a product session", async () => {
+    const group = "22222222-2222-4222-8222-222222222222";
+    await visitCheckout({ group });
+    expect(screen.getByTestId("ticket-checkout")).toHaveAttribute("data-group-id", group);
+    expect(mocks.request).not.toHaveBeenCalledWith("/checkout/session", { method: "POST" });
+    expect(mocks.push).not.toHaveBeenCalledWith("/en/cart");
+    expect(mocks.network).not.toHaveBeenCalled();
   });
 });
