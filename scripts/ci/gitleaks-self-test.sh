@@ -4,6 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CONFIG="${ROOT}/.gitleaks.toml"
 GITLEAKS_BIN="${GITLEAKS_BIN:-gitleaks}"
 
 if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
@@ -11,15 +12,9 @@ if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
   exit 2
 fi
 
-python3 - "${ROOT}" "$(command -v "${GITLEAKS_BIN}")" <<'PY'
-import hashlib
-import json
-import pathlib
-import re
-import shutil
-import subprocess
-import sys
-import tempfile
+WORKDIR="$(mktemp -d)"
+cleanup() { rm -rf "${WORKDIR}"; }
+trap cleanup EXIT
 
 fixture_path="scripts/ci/fixtures/merge-evidence-incident-640.json"
 adjacent_path="scripts/ci/fixtures/merge-evidence-incident-641.json"
@@ -230,7 +225,6 @@ try:
 except Exception:
     raise SystemExit("gitleaks-self-test FAILED: structured detection/control contract failed") from None
 PY
-echo "gitleaks-self-test OK (planted secret caught, exit=${rc})"
 
 # The published staging image tag is a public commit SHA, not a credential.
 # Exercise the exact allowlist with the real scanner: changing either the value
