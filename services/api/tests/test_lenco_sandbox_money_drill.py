@@ -551,13 +551,6 @@ def test_momo_collection_uses_authoritative_settlement(
     times_out: bool,
 ) -> None:
     monkeypatch.setattr(drill_module.time, "sleep", lambda _seconds: None)
-    if times_out:
-        # The clock expires once the first settlement read has been observed.
-        monkeypatch.setattr(
-            drill_module.time,
-            "monotonic",
-            lambda: 121.0 if api.status_reads >= 2 else 0.0,
-        )
 
     class FakeApi:
         def __init__(self) -> None:
@@ -583,6 +576,13 @@ def test_momo_collection_uses_authoritative_settlement(
 
     config = Namespace(checkout_group_id="checkout-1", payment_id="")
     api = FakeApi()
+    if times_out:
+        # The clock expires once the first settlement read has been observed.
+        monkeypatch.setattr(
+            drill_module.time,
+            "monotonic",
+            lambda: 121.0 if api.status_reads >= 2 else 0.0,
+        )
     result = drill_module.run_momo_collection_live(config, api, _EscrowLedger())
 
     assert config.payment_id == "payment-1"

@@ -274,17 +274,22 @@ jobs:
           root = Path('../..')
           workflow = yaml.load((root / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
           steps = workflow['jobs']['rls']['steps']
-          setup = [step for step in steps if step.get('uses') == 'supabase/setup-cli@v2']
-          assert len(setup) == 1
-          assert setup[0]['with']['version'] == '2.109.1'
-          assert setup[0]['timeout-minutes'] == '5'
-          assert setup[0].get('continue-on-error', 'false') == 'false'
+          # The matrix replays every migration into the job's PostgreSQL service;
+          # neither the replay nor the matrix may be conditional or waived.
+          replay = [step for step in steps if step.get('name') == 'Replay migrations']
+          assert len(replay) == 1 and replay[0]['run'] == 'bash scripts/ci/migration-replay.sh'
+          assert all(step.get('continue-on-error', 'false') == 'false' for step in steps)
+          assert 'if' not in replay[0]
           assert next(step for step in steps if step.get('name') == 'RLS isolation matrix')['run'] == 'uv run pytest tests/rls -q'
           expected = {'cursor/auth-diagnostics-otp-744-20261012', 'wp/integrate-auth-catalog-wave1', 'cursor/staging-payment-fail-closed-20261009', 'cursor/staging-email-first-safety-20261009', 'cursor/vendor-recovery-staging-20261007', 'cursor/staging-waha-replay-db-20261009', 'cursor/kyc-bootstrap-empty-20261008', 'cursor/staging-release-compat-20261009', 'cursor/staging-email-diagnostic-leg-20261009', 'cursor/staging-waha-otp-handoff-20261009', 'codex/phone-input-layout-20261008', 'cursor/release-kyc-auth-integration-20261008', 'cursor/typegen-meta-preload-20261012'}
+          maps = []
           for name in ('vercel.json', 'apps/admin/vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json'):
               guards = json.loads((root / name).read_text())['git']['deploymentEnabled']
-              assert set(guards) == expected and all(value is False for value in guards.values())
-          print('PASS: four append-only disabled branch maps; pinned blocking RLS setup bounded at five minutes')
+              # Append-only: every reviewed branch stays disabled; integration may add more.
+              assert expected <= set(guards) and all(value is False for value in guards.values())
+              maps.append(guards)
+          assert all(guards == maps[0] for guards in maps)
+          print('PASS: four append-only disabled branch maps; blocking RLS migration replay and matrix')
           PY
 
       # The gating policy decides whether a missing fixture fails a release

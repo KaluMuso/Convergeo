@@ -413,7 +413,7 @@ class TestLowStockEndpoint:
         self._add_listing(fake_client, LISTING_ID, 2)
         original_execute = FakeQuery.execute
 
-        def execute_with_missing_table(query: FakeQuery) -> MagicMock:
+        def execute_with_missing_table(query: FakeQuery) -> MagicMock | None:
             if query._parent is fake_client.tables["platform_config"]:
                 raise APIError({"code": "42P01", "message": "relation does not exist"})
             return original_execute(query)
@@ -464,7 +464,7 @@ class TestLowStockEndpoint:
 
         original_execute = FakeQuery.execute
 
-        def execute_with_unique_index(query: FakeQuery) -> MagicMock:
+        def execute_with_unique_index(query: FakeQuery) -> MagicMock | None:
             if (
                 query._parent is fake_client.tables["notification_outbox"]
                 and query._pending_op == "insert"
@@ -497,7 +497,7 @@ class TestLowStockEndpoint:
         original_execute = FakeQuery.execute
         fail_once = True
 
-        def execute_with_one_insert_failure(query: FakeQuery) -> MagicMock:
+        def execute_with_one_insert_failure(query: FakeQuery) -> MagicMock | None:
             nonlocal fail_once
             if (
                 fail_once

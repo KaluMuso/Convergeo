@@ -24,7 +24,8 @@
       "cursor/staging-email-first-safety-20261009": false,
       "cursor/staging-waha-otp-handoff-20261009": false,
       "cursor/staging-waha-replay-db-20261009": false,
-      "cursor/staging-email-diagnostic-leg-20261009": false
+      "cursor/staging-email-diagnostic-leg-20261009": false,
+      "codex/phone-preservation-qualification-20261026": false
     }
   }
 }

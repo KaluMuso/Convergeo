@@ -72,7 +72,7 @@ jobs:
   build-kyc-sha:
     if: >-
       github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/cursor/release-kyc-auth-integration-20261008' &&
+      github.ref == 'refs/heads/cursor/kyc-bootstrap-empty-20261008' &&
       github.repository == 'KaluMuso/Convergeo'
     runs-on: ubuntu-latest
     permissions:

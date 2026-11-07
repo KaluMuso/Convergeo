@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 ROOT = Path(__file__).resolve().parents[3]
 PRELOAD = ROOT / "scripts/ci/preload-typegen-meta.sh"
