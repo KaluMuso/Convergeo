@@ -28,6 +28,10 @@ export type FooterProps = {
   className?: string;
   /** Optional trailing slot (e.g. quiet Display / theme link). */
   trailing?: ReactNode;
+  /** Optional one-line promise under the wordmark. */
+  tagline?: ReactNode;
+  /** Optional escrow promise rendered with the copper-ringed seal. */
+  sealLabel?: ReactNode;
 };
 
 function mergeClasses(...classes: Array<string | false | undefined>): string {
@@ -43,6 +47,8 @@ export function Footer({
   LinkComponent = "a" as unknown as ComponentType<FooterLinkProps>,
   className,
   trailing,
+  tagline,
+  sealLabel,
 }: FooterProps) {
   return (
     <footer className={mergeClasses("v-footer", className)}>
@@ -50,6 +56,26 @@ export function Footer({
         <div className="v-footer__grid">
           <div className="v-footer__brand">
             <p className="v-footer__app-name">{appName}</p>
+            {tagline ? <p className="v-footer__tagline">{tagline}</p> : null}
+            {sealLabel ? (
+              <p className="v-footer__seal" data-testid="footer-seal">
+                <span aria-hidden className="ds-seal ds-seal--on-panel">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M6 10V8a6 6 0 1 1 12 0v2M5 10h14v10H5zM12 14v2.5" />
+                  </svg>
+                </span>
+                {sealLabel}
+              </p>
+            ) : null}
           </div>
 
           {columns.map((column) => (

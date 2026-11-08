@@ -302,17 +302,17 @@
   color: var(--panel-text);
   font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.15;
 }
 
 .v-footer__heading {
   margin: 0 0 var(--sp-3);
   color: var(--panel-text);
-  font-size: var(--fs-sm);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.005em;
 }
 
 .v-footer__links {
@@ -361,8 +361,25 @@
 .v-footer__copyright {
   padding-top: var(--sp-6);
   border-top: 1px solid var(--panel-border);
-  margin-top: var(--sp-8);
-  font-size: var(--fs-micro);
+  margin-top: var(--sp-10);
+  font-size: var(--fs-sm);
+}
+
+.v-footer__tagline {
+  margin: var(--sp-3) 0 0;
+  color: var(--panel-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.v-footer__seal {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+  color: var(--panel-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 
 @media (max-width: 1100px) {

@@ -42,15 +42,22 @@ export function EmptyState({
         flexDirection: "column",
         alignItems: "center",
         textAlign: "center",
-        padding: "var(--sp-8) var(--sp-4)",
+        padding: "var(--sp-12) var(--sp-4)",
         gap: "var(--sp-3)",
         color: "var(--text-2)",
+        border: "1px dashed var(--border)",
+        borderRadius: "var(--r-lg)",
+        background: "var(--surface)",
       }}
     >
       <div
         aria-hidden="true"
         style={{
-          color: "var(--text-3)",
+          color: "var(--primary)",
+          background: "var(--primary-tint)",
+          width: "4rem",
+          height: "4rem",
+          borderRadius: "var(--r-pill)",
           marginBottom: "var(--sp-2)",
           display: "flex",
           alignItems: "center",
@@ -63,14 +70,17 @@ export function EmptyState({
         style={{
           margin: 0,
           fontFamily: "var(--font-display)",
-          fontSize: "var(--fs-h3)",
+          fontSize: "1.25rem",
+          fontWeight: 700,
           color: "var(--display-ink)",
         }}
       >
         {title}
       </h3>
       {body ? (
-        <p style={{ margin: 0, fontSize: "var(--fs-body)", maxWidth: "20rem" }}>{body}</p>
+        <p style={{ margin: 0, fontSize: "var(--fs-body)", maxWidth: "26rem", lineHeight: 1.55 }}>
+          {body}
+        </p>
       ) : null}
       {action ? <div style={{ marginTop: "var(--sp-2)" }}>{action}</div> : null}
     </div>
