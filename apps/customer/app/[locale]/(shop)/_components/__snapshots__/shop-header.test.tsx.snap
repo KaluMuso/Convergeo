@@ -25,37 +25,32 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         href="/en"
       >
         <span
-          class="inline-flex items-center gap-2 text-primary"
+          class="inline-flex items-center"
           data-testid="brand-logo"
         >
-          <svg
-            aria-hidden="true"
-            class="shrink-0"
-            fill="none"
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
+            data-nimg="1"
+            decoding="async"
             height="26"
-            viewBox="0 0 32 32"
-            width="26"
-          >
-            <circle
-              cx="16"
-              cy="16"
-              r="14.5"
-              stroke="var(--accent)"
-              stroke-width="3"
-            />
-            <path
-              d="M9.5 10.5 16 22.5l6.5-12"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="3.4"
-            />
-          </svg>
-          <span
-            class="font-display font-extrabold leading-none tracking-tight text-text text-xl"
-          >
-            Convergeo
-          </span>
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
+            data-nimg="1"
+            decoding="async"
+            height="26"
+            loading="lazy"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
         </span>
       </a>
       <div
@@ -135,37 +130,32 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         href="/en"
       >
         <span
-          class="inline-flex items-center gap-2 text-primary"
+          class="inline-flex items-center"
           data-testid="brand-logo"
         >
-          <svg
-            aria-hidden="true"
-            class="shrink-0"
-            fill="none"
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
+            data-nimg="1"
+            decoding="async"
             height="26"
-            viewBox="0 0 32 32"
-            width="26"
-          >
-            <circle
-              cx="16"
-              cy="16"
-              r="14.5"
-              stroke="var(--accent)"
-              stroke-width="3"
-            />
-            <path
-              d="M9.5 10.5 16 22.5l6.5-12"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="3.4"
-            />
-          </svg>
-          <span
-            class="font-display font-extrabold leading-none tracking-tight text-text text-xl"
-          >
-            Convergeo
-          </span>
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
+            data-nimg="1"
+            decoding="async"
+            height="26"
+            loading="lazy"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
         </span>
       </a>
     </div>
