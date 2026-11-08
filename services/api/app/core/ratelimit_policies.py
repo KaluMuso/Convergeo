@@ -118,6 +118,16 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "DELETE /admin/translations/overrides": ADMIN_WRITE,
     "DELETE /cart/items/{listing_id}": STANDARD_WRITE,
     "DELETE /merch/slots/{slot_id}": ADMIN_WRITE,
+    # Admin-governed home feed + advertising (admin sub-router, un-prefixed keys).
+    "POST /home-feed/sections": ADMIN_WRITE,
+    "PATCH /home-feed/sections/{section_id}": ADMIN_WRITE,
+    "DELETE /home-feed/sections/{section_id}": ADMIN_WRITE,
+    "POST /home-feed/sections/reorder": ADMIN_WRITE,
+    "POST /ads/placements": ADMIN_WRITE,
+    "PATCH /ads/placements/{placement_id}": ADMIN_WRITE,
+    "POST /ads/placements/{placement_id}/transition": ADMIN_WRITE,
+    # Public ad impression/click beacon; fail-open, enforced in routers/home_feed.py.
+    "POST /home/ads/events": TELEMETRY_VIEWS,
     "DELETE /organiser/ticket-types/{ticket_type_id}": STANDARD_WRITE,
     "DELETE /vendor/listings/{listing_id}": STANDARD_WRITE,
     "DELETE /vendor/listings/{listing_id}/images/{image_id}": STANDARD_WRITE,

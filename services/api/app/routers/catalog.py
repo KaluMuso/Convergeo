@@ -726,6 +726,9 @@ class _CatalogCandidate(BaseModel):
     distance_m: float | None = None
 
 
+CatalogCandidate = _CatalogCandidate
+
+
 def _matches_filters(
     candidate: _CatalogCandidate,
     *,
@@ -1080,6 +1083,51 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
     )
 
 
+def catalog_item_from_candidate(row: _CatalogCandidate) -> CatalogListingItem:
+    """Project an enriched catalogue candidate onto the public wire item."""
+    logistics = _listing_logistics_fields(row)
+    return CatalogListingItem(
+        id=row.listing.id,
+        title=row.search_doc.title,
+        product_slug=str(row.product["slug"]) if row.product else None,
+        vendor_name=str(row.vendor["display_name"]),
+        vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
+        price_ngwee=row.search_doc.price_min_ngwee or 0,
+        compare_at_ngwee=row.listing.compare_at_ngwee,
+        condition=row.listing.condition,
+        product_class=row.listing.product_class,
+        sale_unit=row.listing.sale_unit,
+        unit_step_milli=row.listing.unit_step_milli,
+        min_steps=row.listing.min_steps,
+        fulfilment_mode=row.listing.fulfilment_mode,
+        lead_time_days=row.listing.lead_time_days,
+        in_stock=row.in_stock,
+        image_public_id=row.image_public_id,
+        rating=row.rating,
+        review_count=row.review_count,
+        lat=row.search_doc.lat,
+        lng=row.search_doc.lng,
+        distance_m=row.distance_m,
+        landmark=row.landmark,
+        below_median=logistics["below_median"],
+        delivery_available=logistics["delivery_available"],
+        pickup_available=logistics["pickup_available"],
+    )
+
+
+def build_catalog_candidates(
+    client: Any,
+    category_path: str | None = None,
+    *,
+    include_wholesale: bool = False,
+) -> list[_CatalogCandidate]:
+    """Public seam for discovery surfaces (home feed, recommendations)."""
+    candidates = _build_candidates(client, category_path)
+    if include_wholesale:
+        return candidates
+    return [row for row in candidates if not row.listing.wholesale]
+
+
 def list_catalog(
     client: Any,
     filters: PlpFilterState,
@@ -1110,38 +1158,7 @@ def list_catalog(
             _with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows
         ]
 
-    items: list[CatalogListingItem] = []
-    for row in page_rows:
-        logistics = _listing_logistics_fields(row)
-        items.append(
-            CatalogListingItem(
-                id=row.listing.id,
-                title=row.search_doc.title,
-                product_slug=str(row.product["slug"]) if row.product else None,
-                vendor_name=str(row.vendor["display_name"]),
-                vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
-                price_ngwee=row.search_doc.price_min_ngwee or 0,
-                compare_at_ngwee=row.listing.compare_at_ngwee,
-                condition=row.listing.condition,
-                product_class=row.listing.product_class,
-                sale_unit=row.listing.sale_unit,
-                unit_step_milli=row.listing.unit_step_milli,
-                min_steps=row.listing.min_steps,
-                fulfilment_mode=row.listing.fulfilment_mode,
-                lead_time_days=row.listing.lead_time_days,
-                in_stock=row.in_stock,
-                image_public_id=row.image_public_id,
-                rating=row.rating,
-                review_count=row.review_count,
-                lat=row.search_doc.lat,
-                lng=row.search_doc.lng,
-                distance_m=row.distance_m,
-                landmark=row.landmark,
-                below_median=logistics["below_median"],
-                delivery_available=logistics["delivery_available"],
-                pickup_available=logistics["pickup_available"],
-            )
-        )
+    items = [catalog_item_from_candidate(row) for row in page_rows]
 
     next_cursor = encode_plp_cursor(end) if end < total else None
     return CatalogListResponse(items=items, facets=facets, total=total, next_cursor=next_cursor)
