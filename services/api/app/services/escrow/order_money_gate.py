@@ -57,8 +57,9 @@ escrow_rem AS (
       THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS commission,
     coalesce(sum(CASE WHEN lt.kind = '{RELEASE_LEDGER_KIND}'
       THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS released,
-    coalesce(sum(CASE WHEN lt.kind IN ({refund_kinds_sql})
-      THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS refunded
+    -- Signed: refund drains (+) net against refund_reversal credits (−) (C5).
+    coalesce(sum(CASE WHEN lt.kind IN ({refund_kinds_sql}, 'refund_reversal')
+      THEN lp.amount_ngwee ELSE 0 END), 0) AS refunded
   FROM public.ledger_transactions lt
   INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
   INNER JOIN public.ledger_accounts la ON la.id = lp.account_id

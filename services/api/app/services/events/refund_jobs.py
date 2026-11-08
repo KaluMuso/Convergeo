@@ -467,6 +467,18 @@ def process_event_refund_job(
     phone, rail = destination
     idempotency_key = f"evt-refund-{job['event_id']}-{job['order_id']}"
 
+    # C4: the job amount is the policy-banded refund (full / minus admin fee / 50%)
+    # computed at enqueue time, already inclusive of any buyer-paid platform fee and
+    # delivery. Pass it as the whole refund (delivery override 0) so execute_refund
+    # never falls back to refunding the full order.
+    try:
+        job_amount_ngwee = int(job.get("amount_ngwee") or "0")
+    except ValueError:
+        job_amount_ngwee = 0
+    if job_amount_ngwee <= 0:
+        _update_job(job_id, status="manual_review", last_error="invalid_job_amount")
+        return EventRefundJobProcessResult(job_id, "manual_review", "invalid_job_amount")
+
     try:
         result: RefundExecutionResult = execute_refund(
             service_client=cast(RefundServiceClient, service_client),
@@ -475,6 +487,8 @@ def process_event_refund_job(
             customer_rail=rail,
             customer_momo=phone,
             idempotency_key=idempotency_key,
+            item_ngwee_override=job_amount_ngwee,
+            delivery_fee_ngwee_override=0,
         )
     except AppError as exc:
         code = str(exc.code or "refund_failed")

@@ -5865,6 +5865,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      ensure_vendor_ledger_accounts: {
+        Args: { p_vendor_id: string }
+        Returns: number
+      }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
       finalize_ask_answer: {
         Args: {

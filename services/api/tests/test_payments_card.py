@@ -363,3 +363,143 @@ class TestCreateCardSession:
         assert response.json()["error"]["code"] == "checkout.profile_incomplete"
         # No payment row is created when the customer can't be addressed.
         assert card_service.client.tables["payments"].rows == []
+
+
+# ---------------------------------------------------------------------------
+# C3: Lenco-reported amount/currency must match the payment row before SUCCESS
+# ---------------------------------------------------------------------------
+
+
+def _strategy_reporting(*, amount_major: str, currency: str = "ZMW") -> MagicMock:
+    strategy = MagicMock()
+    strategy.query_status = AsyncMock(
+        return_value=QueryStatusResult(
+            reference=REFERENCE,
+            status="successful",
+            amount_major=amount_major,
+            currency=currency,
+        )
+    )
+    return strategy
+
+
+class TestCardAmountVerification:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("amount_major", "currency"),
+        [("50.00", "ZMW"), ("100.01", "ZMW"), ("100.00", "USD"), ("not-a-number", "ZMW")],
+    )
+    async def test_underpaid_or_wrong_currency_card_is_held_never_success(
+        self,
+        card_service: FakeServiceClient,
+        amount_major: str,
+        currency: str,
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id)
+        # Even with a stored success webhook, a mismatching amount must not settle.
+        _seed_success_webhook(card_service.client, webhook_id=str(uuid.uuid4()))
+        strategy = _strategy_reporting(amount_major=amount_major, currency=currency)
+
+        with patch("app.services.payments.settlement.settle_prepaid_collection") as settle:
+            result = await verify_card_payment_return(
+                card_service,
+                payment_id=payment_id,
+                customer_id=CUSTOMER_ID,
+                client_status="success",
+                strategy=strategy,
+            )
+            settle.assert_not_called()
+
+        assert result.verified is False
+        assert result.order_confirmed is False
+        assert result.held is True
+        payment = card_service.client.tables["payments"].rows[0]
+        assert payment["status"] == PaymentStatus.USSD_PUSHED.value
+        assert payment["raw"]["hold"]["reason"].startswith("provider_amount_mismatch")
+        notes = [
+            row["after"]["note"]
+            for row in card_service.client.tables["audit_log"].rows
+            if row.get("action") == "payment.transition"
+        ]
+        assert any("provider_amount_mismatch" in note for note in notes)
+
+    @pytest.mark.asyncio
+    async def test_matching_amount_card_still_verifies(
+        self,
+        card_service: FakeServiceClient,
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id)
+        _seed_success_webhook(card_service.client, webhook_id=str(uuid.uuid4()))
+        strategy = _strategy_reporting(amount_major="100.00")
+
+        result = await verify_card_payment_return(
+            card_service,
+            payment_id=payment_id,
+            customer_id=CUSTOMER_ID,
+            client_status="success",
+            strategy=strategy,
+        )
+        assert result.verified is True
+        assert result.order_confirmed is True
+        assert card_service.client.tables["payments"].rows[0]["status"] == "success"
+
+    def test_webhook_with_mismatching_amount_does_not_mark_success(
+        self,
+        card_service: FakeServiceClient,
+    ) -> None:
+        payment_id = str(uuid.uuid4())
+        webhook_id = str(uuid.uuid4())
+        _seed_card_payment(card_service.client, payment_id=payment_id)
+        card_service.client.tables["webhook_events"].rows.append(
+            {
+                "id": webhook_id,
+                "provider": "lenco",
+                "event_id": f"evt-{webhook_id}",
+                "processed_at": None,
+                "raw": {
+                    "event": "collection.successful",
+                    "data": {
+                        "reference": REFERENCE,
+                        "status": "successful",
+                        "amount": "1.00",
+                        "currency": "ZMW",
+                    },
+                },
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        )
+
+        outcome = process_webhook_event(card_service, webhook_event_id=webhook_id)
+
+        assert outcome is None
+        payment = card_service.client.tables["payments"].rows[0]
+        assert payment["status"] == PaymentStatus.USSD_PUSHED.value
+        assert payment["raw"]["hold"]["reason"] == "provider_amount_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("amount", "currency", "expected"),
+    [
+        ("100.00", "ZMW", None),
+        ("100", "ZMW", None),
+        (100, None, None),
+        ("99.99", "ZMW", "amount_mismatch:9999!=10000"),
+        ("100.00", "usd", "currency_mismatch:usd"),
+        (100.0, "ZMW", "amount_unparseable"),
+        (None, "ZMW", "amount_missing"),
+        (True, "ZMW", "amount_missing"),
+        ("abc", "ZMW", "amount_unparseable"),
+        ("100.001", "ZMW", "amount_unparseable"),
+    ],
+)
+def test_provider_amount_mismatch_matrix(amount: Any, currency: Any, expected: str | None) -> None:
+    from app.services.payments.state import provider_amount_mismatch
+
+    assert (
+        provider_amount_mismatch(
+            expected_ngwee=10_000, provider_amount=amount, provider_currency=currency
+        )
+        == expected
+    )
