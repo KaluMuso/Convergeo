@@ -18,38 +18,6 @@ body {
     color var(--dur) var(--ease-std);
 }
 
-/* Soft atmospheric ground — avoids flat single-color canvas without fighting tokens. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      120% 70% at 100% -10%,
-      color-mix(in srgb, var(--primary) 12%, transparent),
-      transparent 55%
-    ),
-    radial-gradient(
-      90% 50% at -10% 20%,
-      color-mix(in srgb, var(--accent) 10%, transparent),
-      transparent 50%
-    ),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-  opacity: 0.98;
-}
-
-[data-theme="dark"] body::before {
-  background:
-    radial-gradient(
-      100% 60% at 90% 0%,
-      color-mix(in srgb, var(--primary) 18%, transparent),
-      transparent 55%
-    ),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-}
-
 /* UI-P4 desktop layer: card content density on lg+ per SELECTION.md §5
    ("card padding 12–16 mobile / 16–20 desktop"). Consumed by the shared
    ProductCard via var(--card-pad, var(--sp-3)); mobile keeps --sp-3. */
@@ -68,51 +36,18 @@ body::before {
   margin-top: var(--sp-8);
 }
 
-/* Homepage rails are quiet editorial surfaces instead of a long, flat feed.
-   The warm paper ground and fine brass rule echo the reference direction while
-   keeping the catalogue itself as the visual focus. */
+/* Homepage rails: quiet white shelves on the stone ground. Hairline border,
+   no wash — the products are the colour. */
 .home-rail {
   position: relative;
   padding: clamp(1rem, 2vw, 1.5rem);
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-  border-radius: calc(var(--r-lg) + 4px);
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--surface) 98%, var(--primary-tint)) 0%,
-      var(--surface) 42%
-    ),
-    var(--surface);
-  box-shadow: var(--shadow-1);
-}
-
-.home-rail::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: clamp(1rem, 2vw, 1.5rem);
-  width: 3.5rem;
-  height: 2px;
-  border-radius: var(--r-pill);
-  background: linear-gradient(
-    90deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 18%, transparent)
-  );
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
 }
 
 .home-rail > :first-child {
-  padding-top: var(--sp-1);
-}
-
-[data-theme="dark"] .home-rail {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--surface-elevated) 96%, var(--primary)) 0%,
-      var(--surface) 48%
-    ),
-    var(--surface);
+  padding-top: 0;
 }
 
 @media (min-width: 64rem) {

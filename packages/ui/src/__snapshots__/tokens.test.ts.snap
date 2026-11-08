@@ -4,21 +4,26 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
 {
   "borderRadius": {
     "DEFAULT": "12px",
-    "lg": "18px",
+    "lg": "16px",
     "pill": "999px",
     "sm": "8px",
+    "xl": "24px",
   },
   "boxShadow": {
-    "1": "0 4px 24px rgba(28,19,8,0.07)",
-    "2": "0 8px 32px rgba(28,19,8,0.14)",
-    "3": "0 12px 48px rgba(28,19,8,0.13)",
-    "focusRing": "0 0 0 3px rgba(76,84,112,0.24)",
+    "1": "0 1px 2px rgba(15,42,33,0.06), 0 2px 8px rgba(15,42,33,0.05)",
+    "2": "0 2px 4px rgba(15,42,33,0.06), 0 8px 24px rgba(15,42,33,0.10)",
+    "3": "0 4px 8px rgba(15,42,33,0.06), 0 20px 48px rgba(15,42,33,0.16)",
+    "focusRing": "0 0 0 2px #FFFFFF, 0 0 0 4px rgba(11,93,69,0.55)",
   },
   "colors": {
-    "accent": "#2D4A7A",
-    "bg": "#FAF7F2",
-    "bg-2": "#F3EDE3",
-    "border": "#E8DFD0",
+    "accent": {
+      "DEFAULT": "#A4501C",
+      "deep": "#7E3C12",
+      "tint": "#F6E8DD",
+    },
+    "bg": "#F7F6F2",
+    "bg-2": "#EEEDE8",
+    "border": "#E3E1DA",
     "cat": {
       "auto": "#8A8AB5",
       "beauty": "#C9A88A",
@@ -28,41 +33,41 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
       "home": "#B5A07A",
     },
     "current": "currentColor",
-    "danger": "#C0392B",
-    "discount": "#C0392B",
-    "display-ink": "#1C1308",
-    "info": "#2A6A9A",
+    "danger": "#B3261E",
+    "discount": "#B3261E",
+    "display-ink": "#0F2A21",
+    "info": "#1D5E8C",
     "inherit": "inherit",
     "on-danger": "#FFFFFF",
-    "panel": "#1C1308",
-    "panel-2": "#231C10",
+    "panel": "#0F2A21",
+    "panel-2": "#163A2E",
     "panel-border": "rgba(255,255,255,0.12)",
-    "panel-muted": "#B8A88A",
-    "panel-text": "#F5EDD8",
-    "price": "#2A2118",
+    "panel-muted": "#A9BFB4",
+    "panel-text": "#F3F0E8",
+    "price": "#15201B",
     "primary": {
-      "DEFAULT": "#4C5470",
-      "deep": "#363C52",
-      "tint": "#D0D4E8",
+      "DEFAULT": "#0B5D45",
+      "deep": "#08473A",
+      "tint": "#E3F0EA",
     },
-    "success": "#3A7A4A",
+    "success": "#1E7A4C",
     "surface": "#FFFFFF",
     "surface-elevated": "#FFFFFF",
-    "text": "#2A1F0E",
-    "text-2": "#6B5A3E",
-    "text-3": "#7A6A52",
+    "text": "#15201B",
+    "text-2": "#4A5550",
+    "text-3": "#5E6963",
     "transparent": "transparent",
-    "warning": "#D4A020",
+    "warning": "#B7791F",
   },
   "fontFamily": {
     "body": [
       "'DM Sans', system-ui, sans-serif",
     ],
     "display": [
-      "'Cormorant Garamond', Georgia, serif",
+      "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
     ],
     "display-alt": [
-      "'DM Serif Display', Georgia, serif",
+      "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
     ],
     "mono": [
       "'JetBrains Mono', monospace",
@@ -71,7 +76,7 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
       "'DM Sans', system-ui, sans-serif",
     ],
     "serif": [
-      "'Cormorant Garamond', Georgia, serif",
+      "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
     ],
   },
   "fontSize": {
@@ -82,13 +87,13 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
       },
     ],
     "h1": [
-      "clamp(1.8rem, 3vw, 2.6rem)",
+      "clamp(1.75rem, 1.35rem + 1.8vw, 2.625rem)",
       {
         "lineHeight": "1.15",
       },
     ],
     "h2": [
-      "clamp(1.5rem, 2.4vw, 2.1rem)",
+      "clamp(1.375rem, 1.15rem + 1vw, 1.875rem)",
       {
         "lineHeight": "1.2",
       },
@@ -101,7 +106,7 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
       },
     ],
     "hero": [
-      "clamp(2.4rem, 4vw, 3.9rem)",
+      "clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem)",
       {
         "lineHeight": "1.1",
       },
@@ -114,7 +119,7 @@ exports[`tailwind preset theme > matches snapshot of resolved theme keys 1`] = `
       },
     ],
     "price": [
-      "1.02rem",
+      "1.0625rem",
       {
         "fontWeight": "700",
         "lineHeight": "1.2",

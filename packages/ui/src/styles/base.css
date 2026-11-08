@@ -5,37 +5,39 @@
 
 :root {
   /* ── Ground & surfaces ── */
-  --bg: #faf7f2;
-  --bg-2: #f3ede3;
+  --bg: #f7f6f2;
+  --bg-2: #eeede8;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --border: #e8dfd0;
+  --border: #e3e1da;
 
   /* ── Dark panels (reference light-theme chrome) ── */
-  --panel: #1c1308;
-  --panel-2: #231c10;
-  --panel-text: #f5edd8;
-  --panel-muted: #b8a88a;
+  --panel: #0f2a21;
+  --panel-2: #163a2e;
+  --panel-text: #f3f0e8;
+  --panel-muted: #a9bfb4;
   --panel-border: rgba(255, 255, 255, 0.12);
 
   /* ── Ink & display ── */
-  --text: #2a1f0e;
-  --text-2: #6b5a3e;
-  --text-3: #7a6a52;
-  --display-ink: #1c1308;
+  --text: #15201b;
+  --text-2: #4a5550;
+  --text-3: #5e6963;
+  --display-ink: #0f2a21;
 
   /* ── Brand & semantic ── */
-  --primary: #4c5470;
-  --primary-deep: #363c52;
-  --primary-tint: #d0d4e8;
-  --accent: #2d4a7a;
-  --success: #3a7a4a;
-  --danger: #c0392b;
-  --warning: #d4a020;
-  --info: #2a6a9a;
+  --primary: #0b5d45;
+  --primary-deep: #08473a;
+  --primary-tint: #e3f0ea;
+  --accent: #a4501c;
+  --accent-deep: #7e3c12;
+  --accent-tint: #f6e8dd;
+  --success: #1e7a4c;
+  --danger: #b3261e;
+  --warning: #b7791f;
+  --info: #1d5e8c;
   --on-danger: #ffffff;
-  --price: #2a2118;
-  --discount: #c0392b;
+  --price: #15201b;
+  --discount: #b3261e;
 
   /* Zambia mobile-money rail brand marks (checkout/payout selectors). */
   --payment-rail-mtn: #ffcc00;
@@ -55,18 +57,18 @@
   --cat-auto: #8a8ab5;
 
   /* ── Type ── */
-  --font-display: "Cormorant Garamond", Georgia, serif;
-  --font-display-alt: "DM Serif Display", Georgia, serif;
+  --font-display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --font-display-alt: var(--font-display);
   --font-body: "DM Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
-  --fs-hero: clamp(2.4rem, 4vw, 3.9rem);
-  --fs-h1: clamp(1.8rem, 3vw, 2.6rem);
-  --fs-h2: clamp(1.5rem, 2.4vw, 2.1rem);
+  --fs-hero: clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem);
+  --fs-h1: clamp(1.75rem, 1.35rem + 1.8vw, 2.625rem);
+  --fs-h2: clamp(1.375rem, 1.15rem + 1vw, 1.875rem);
   --fs-h3: 1.0625rem;
   --fs-body: 0.9375rem;
   --fs-sm: 0.8125rem;
   --fs-micro: 0.6875rem;
-  --fs-price: 1.02rem;
+  --fs-price: 1.0625rem;
 
   /* ── Space (4px base) ── */
   --sp-0: 0px;
@@ -96,14 +98,16 @@
   /* ── Radii ── */
   --r-sm: 8px;
   --r: 12px;
-  --r-lg: 18px;
+  --r-lg: 16px;
+  --r-xl: 24px;
   --r-pill: 999px;
 
   /* ── Shadows ── */
-  --shadow-1: 0 4px 24px rgba(28, 19, 8, 0.07);
-  --shadow-2: 0 8px 32px rgba(28, 19, 8, 0.14);
-  --shadow-3: 0 12px 48px rgba(28, 19, 8, 0.13);
-  --focus-ring: 0 0 0 3px rgba(76, 84, 112, 0.24);
+  --shadow-1: 0 1px 2px rgba(15, 42, 33, 0.06), 0 2px 8px rgba(15, 42, 33, 0.05);
+  --shadow-2: 0 2px 4px rgba(15, 42, 33, 0.06), 0 8px 24px rgba(15, 42, 33, 0.1);
+  --shadow-3: 0 4px 8px rgba(15, 42, 33, 0.06), 0 20px 48px rgba(15, 42, 33, 0.16);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(11, 93, 69, 0.55);
+  --ds-tracking-display: -0.02em;
 
   /* ── Motion ── */
   --dur-fast: 150ms;
@@ -131,29 +135,31 @@
 /* Dark palette — warm charcoal (audit §6.1). Page ground is independent of
    --panel so marketing panels stay distinct chrome rather than tinting the app. */
 [data-theme="dark"] {
-  --bg: #141312;
-  --bg-2: #1c1a18;
-  --surface: #22201e;
-  --surface-elevated: #2a2826;
+  --bg: #121614;
+  --bg-2: #181d1a;
+  --surface: #1b201d;
+  --surface-elevated: #232925;
   --border: rgba(255, 255, 255, 0.1);
-  --text: #f2ede6;
-  --text-2: #b0a99f;
-  --text-3: #918a80;
-  --display-ink: #f2ede6;
-  --primary: #7aa0d4;
-  --primary-deep: #5a82b8;
-  --primary-tint: #2a323c;
-  --accent: #d4a04a;
-  --price: #f2ede6;
-  --discount: #e57368;
+  --text: #e4e8e5;
+  --text-2: #a8b1ac;
+  --text-3: #8e9892;
+  --display-ink: #e4e8e5;
+  --primary: #5fc49c;
+  --primary-deep: #4aae88;
+  --primary-tint: #1d2c26;
+  --accent: #e39255;
+  --accent-deep: #f0ae7c;
+  --accent-tint: #2e2219;
+  --price: #e4e8e5;
+  --discount: #ef8a80;
   --on-danger: #ffffff;
-  /* Primary button in dark: lightened blue bg needs dark text for AA. */
-  --primary-btn-fg: #141312;
-  --primary-btn-hover: #8bb0dc;
+  /* Primary button in dark: lifted malachite bg needs dark text for AA. */
+  --primary-btn-fg: #121614;
+  --primary-btn-hover: #78d0ad;
   --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55);
-  --focus-ring: 0 0 0 3px rgba(122, 154, 181, 0.35);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(95, 196, 156, 0.6);
 
   color-scheme: dark;
 }
@@ -509,4 +515,66 @@
   .tap:active {
     transform: none !important;
   }
+}
+
+/* ── Copperbelt typographic + interaction base (all apps) ───────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(h1, h2, h3, .font-display) {
+  letter-spacing: var(--ds-tracking-display);
+  text-wrap: balance;
+}
+
+:where(p) {
+  text-wrap: pretty;
+}
+
+/* Prices, counters and quantities never jitter between digits. */
+:where([data-price], .tabular, [data-testid*="price"]) {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-tint);
+  color: var(--text);
+}
+
+/* One visible, consistent focus treatment for anything keyboard-focusable that
+   does not draw its own ring. Components with bespoke rings keep theirs. */
+:where(
+  a,
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  summary,
+  input,
+  select,
+  textarea
+):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Escrow seal — the system's signature motif: a copper ring + malachite
+   centre used on trust strips, buy boxes and the hero. */
+.ds-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  background: var(--primary-tint);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.ds-seal--on-panel {
+  background: color-mix(in srgb, var(--panel-text) 10%, transparent);
+  color: var(--panel-text);
 }
