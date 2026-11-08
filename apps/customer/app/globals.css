@@ -88,3 +88,163 @@ body {
     min-width: 2.75rem;
   }
 }
+
+/* ── Storefront header: full-bleed glass bar that blends into the page ───── */
+.v-shop-header {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color var(--dur) var(--ease-std),
+    border-color var(--dur) var(--ease-std);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .v-shop-header {
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: saturate(1.5) blur(14px);
+    backdrop-filter: saturate(1.5) blur(14px);
+  }
+}
+
+/* Soft fade under the bar instead of a hard rule. */
+.v-shop-header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--text) 6%, transparent),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-std);
+}
+
+.v-shop-header[data-scrolled="true"] {
+  border-bottom-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.v-shop-header[data-scrolled="true"]::after {
+  opacity: 1;
+}
+
+/* ── Floating actions (floating-actions.tsx) ─────────────────────────────────
+   Bottom-right stack. On phones it clears the bottom tab bar (4rem) and the
+   safe area; on product pages it also clears the sticky add-to-cart bar. */
+.v-fab-stack {
+  position: fixed;
+  z-index: 55;
+  right: calc(var(--sp-4) + env(safe-area-inset-right, 0px));
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.v-fab-stack--raised {
+  bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 48rem) {
+  .v-fab-stack,
+  .v-fab-stack--raised {
+    right: var(--sp-6);
+    bottom: calc(var(--sp-6) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.v-fab {
+  display: inline-grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--primary);
+  color: var(--primary-btn-fg);
+  box-shadow: var(--shadow-3);
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-std);
+}
+
+.v-fab:hover {
+  background: var(--primary-btn-hover);
+}
+
+.v-fab:active {
+  transform: scale(0.95);
+}
+
+.v-fab--small {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.v-fab--small:hover {
+  background: var(--surface);
+}
+
+.v-fab-panel {
+  position: fixed;
+  z-index: 56;
+  right: calc(var(--sp-4) + env(safe-area-inset-right, 0px));
+  left: calc(var(--sp-4) + env(safe-area-inset-left, 0px));
+  bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  box-shadow: var(--shadow-3);
+  -webkit-backdrop-filter: saturate(1.4) blur(16px);
+  backdrop-filter: saturate(1.4) blur(16px);
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+.v-fab-panel.v-fab-stack--raised {
+  bottom: calc(13.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 48rem) {
+  .v-fab-panel,
+  .v-fab-panel.v-fab-stack--raised {
+    left: auto;
+    width: 24rem;
+    right: var(--sp-6);
+    bottom: calc(var(--sp-6) + 4.25rem);
+  }
+}
+
+/* Home: footer as an overlay sheet so the infinite feed never hits it. */
+.v-footer-sheet {
+  position: fixed;
+  z-index: 54;
+  inset-inline: 0;
+  bottom: 0;
+  max-height: min(80dvh, 44rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top-left-radius: var(--r-xl);
+  border-top-right-radius: var(--r-xl);
+  box-shadow: 0 -12px 40px color-mix(in srgb, var(--text) 18%, transparent);
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+.v-footer-sheet[hidden] {
+  display: none;
+}
+
+.v-footer-sheet .v-footer {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}

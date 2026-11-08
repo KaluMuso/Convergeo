@@ -19,7 +19,11 @@
       "relevance": "Pertinence",
       "cheapest": "Prix le plus bas",
       "nearest": "Le plus proche",
-      "newest": "Le plus récent"
+      "newest": "Le plus récent",
+      "best": "Meilleure correspondance",
+      "verified": "Vendeurs vérifiés",
+      "bundles": "Lots",
+      "cheapestChip": "Moins cher"
     },
     "facets": {
       "heading": "Filtres",
@@ -477,5 +481,12 @@
     "errors": {
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
     }
+  },
+  "backInStock": {
+    "notifyMe": "M'avertir du retour en stock",
+    "subscribed": "Nous vous avertirons dès le retour en stock",
+    "failed": "Impossible de créer l'alerte. Réessayez.",
+    "seeSimilar": "Voir des articles similaires en stock",
+    "unavailable": "Actuellement indisponible"
   }
 }

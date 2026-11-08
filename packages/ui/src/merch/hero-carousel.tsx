@@ -78,6 +78,9 @@ export function HeroCarousel({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isDocumentVisible, setIsDocumentVisible] = useState(true);
+  const [isOnScreen, setIsOnScreen] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const rootRef = useRef<HTMLElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersReducedData = usePrefersReducedData();
 
@@ -99,14 +102,14 @@ export function HeroCarousel({
       if (strip) {
         const slide = strip.children.item(normalized) as HTMLElement | null;
         if (slide) {
-          if (typeof slide.scrollIntoView === "function") {
-            slide.scrollIntoView({
-              behavior: prefersReducedMotion ? "auto" : behavior,
-              inline: "start",
-              block: "nearest",
-            });
+          // Scroll ONLY the strip. `scrollIntoView` also scrolls every scrollable
+          // ancestor (the window), which yanked the page back to the hero on
+          // each auto-advance.
+          const left = slide.offsetLeft;
+          if (typeof strip.scrollTo === "function") {
+            strip.scrollTo({ left, behavior: prefersReducedMotion ? "auto" : behavior });
           } else {
-            strip.scrollLeft = slide.offsetLeft;
+            strip.scrollLeft = left;
           }
         }
       }
@@ -120,6 +123,7 @@ export function HeroCarousel({
 
   const goPrevious = useCallback(
     (announce = true) => {
+      setUserInteracted(true);
       scrollToIndex(currentIndex - 1, "smooth", announce);
     },
     [currentIndex, scrollToIndex],
@@ -127,6 +131,7 @@ export function HeroCarousel({
 
   const goNext = useCallback(
     (announce = true) => {
+      setUserInteracted(true);
       scrollToIndex(currentIndex + 1, "smooth", announce);
     },
     [currentIndex, scrollToIndex],
@@ -178,8 +183,34 @@ export function HeroCarousel({
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
+  // Pause while scrolled out of view.
   useEffect(() => {
-    if (!canAutoAdvance || isHovered || isFocused || !isDocumentVisible) {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry) {
+          setIsOnScreen(entry.isIntersecting);
+        }
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (
+      !canAutoAdvance ||
+      isHovered ||
+      isFocused ||
+      !isDocumentVisible ||
+      !isOnScreen ||
+      userInteracted
+    ) {
       return;
     }
 
@@ -195,7 +226,9 @@ export function HeroCarousel({
     isDocumentVisible,
     isFocused,
     isHovered,
+    isOnScreen,
     scrollToIndex,
+    userInteracted,
   ]);
 
   if (total === 0) {
@@ -206,8 +239,11 @@ export function HeroCarousel({
 
   return (
     <section
+      ref={rootRef}
       className={className}
       data-testid="hero-carousel"
+      // Any direct manipulation (swipe, click, key) stops auto-advance for good.
+      onPointerDown={() => setUserInteracted(true)}
       role="region"
       aria-roledescription="carousel"
       aria-label={regionLabel}

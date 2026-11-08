@@ -1,11 +1,18 @@
 "use client";
 
 import { Button } from "@vergeo/ui/src/button";
-import { CategorySelection, type CategoryNode } from "@vergeo/ui/src/category-selection";
+import {
+  CategorySelection,
+  type CategoryNode,
+} from "@vergeo/ui/src/category-selection";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 
-import { EVENT_CATEGORIES, type EventCategory, type EventDateWindow } from "./event-taxonomy";
+import {
+  EVENT_CATEGORIES,
+  type EventCategory,
+  type EventDateWindow,
+} from "./event-taxonomy";
 
 type DateFilterLabels = {
   tonight: string;
@@ -44,7 +51,23 @@ function monthDays(reference: Date): Date[] {
   const year = reference.getFullYear();
   const month = reference.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, index) => new Date(year, month, index + 1));
+  return Array.from(
+    { length: daysInMonth },
+    (_, index) => new Date(year, month, index + 1),
+  );
+}
+
+/** The next `count` days from `reference` (time-first discovery strip). */
+function upcomingDays(reference: Date, count: number): Date[] {
+  return Array.from(
+    { length: count },
+    (_, index) =>
+      new Date(
+        reference.getFullYear(),
+        reference.getMonth(),
+        reference.getDate() + index,
+      ),
+  );
 }
 
 function lusakaIsoDate(day: Date): string {
@@ -77,13 +100,27 @@ export function DateFilterChips({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [cityDraft, setCityDraft] = useState(activeCity);
-  const [neighbourhoodDraft, setNeighbourhoodDraft] = useState(activeNeighbourhood);
+  const [neighbourhoodDraft, setNeighbourhoodDraft] =
+    useState(activeNeighbourhood);
   const [geoDenied, setGeoDenied] = useState(false);
 
   const eventDateSet = useMemo(() => new Set(calendarDates), [calendarDates]);
   const monthReference = useMemo(() => new Date(), []);
   const days = useMemo(() => monthDays(monthReference), [monthReference]);
-  const categoryChips = categories.length > 0 ? categories : [...EVENT_CATEGORIES];
+  const stripDays = useMemo(
+    () => upcomingDays(monthReference, 14),
+    [monthReference],
+  );
+  const weekdayFormat = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        timeZone: "Africa/Lusaka",
+      }),
+    [],
+  );
+  const categoryChips =
+    categories.length > 0 ? categories : [...EVENT_CATEGORIES];
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -132,10 +169,18 @@ export function DateFilterChips({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2" role="group" aria-label={labels.tonight}>
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label={labels.tonight}
+      >
         <Button
           type="button"
-          variant={activeDateWindow === "tonight" && !activeOnDate ? "primary" : "secondary"}
+          variant={
+            activeDateWindow === "tonight" && !activeOnDate
+              ? "primary"
+              : "secondary"
+          }
           size="sm"
           disabled={isPending}
           loading={isPending}
@@ -146,7 +191,11 @@ export function DateFilterChips({
         </Button>
         <Button
           type="button"
-          variant={activeDateWindow === "this_weekend" && !activeOnDate ? "primary" : "secondary"}
+          variant={
+            activeDateWindow === "this_weekend" && !activeOnDate
+              ? "primary"
+              : "secondary"
+          }
           size="sm"
           disabled={isPending}
           loading={isPending}
@@ -157,7 +206,11 @@ export function DateFilterChips({
         </Button>
         <Button
           type="button"
-          variant={activeDateWindow === "next_week" && !activeOnDate ? "primary" : "secondary"}
+          variant={
+            activeDateWindow === "next_week" && !activeOnDate
+              ? "primary"
+              : "secondary"
+          }
           size="sm"
           disabled={isPending}
           loading={isPending}
@@ -168,7 +221,11 @@ export function DateFilterChips({
         </Button>
         <Button
           type="button"
-          variant={activeDateWindow === "next_month" && !activeOnDate ? "primary" : "secondary"}
+          variant={
+            activeDateWindow === "next_month" && !activeOnDate
+              ? "primary"
+              : "secondary"
+          }
           size="sm"
           disabled={isPending}
           loading={isPending}
@@ -179,7 +236,11 @@ export function DateFilterChips({
         </Button>
         <Button
           type="button"
-          variant={activeDateWindow === "all" && !activeOnDate ? "primary" : "secondary"}
+          variant={
+            activeDateWindow === "all" && !activeOnDate
+              ? "primary"
+              : "secondary"
+          }
           size="sm"
           disabled={isPending}
           loading={isPending}
@@ -213,7 +274,9 @@ export function DateFilterChips({
           />
         </label>
         <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
-          <span className="font-semibold text-text-2">{labels.neighbourhoodLabel}</span>
+          <span className="font-semibold text-text-2">
+            {labels.neighbourhoodLabel}
+          </span>
           <input
             type="search"
             className="min-h-11 rounded-md border border-border bg-bg px-3 text-text"
@@ -222,13 +285,17 @@ export function DateFilterChips({
             onChange={(event) => setNeighbourhoodDraft(event.target.value)}
             onBlur={() => {
               if (neighbourhoodDraft.trim() !== activeNeighbourhood) {
-                updateParams({ neighbourhood: neighbourhoodDraft.trim() || null });
+                updateParams({
+                  neighbourhood: neighbourhoodDraft.trim() || null,
+                });
               }
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                updateParams({ neighbourhood: neighbourhoodDraft.trim() || null });
+                updateParams({
+                  neighbourhood: neighbourhoodDraft.trim() || null,
+                });
               }
             }}
           />
@@ -251,7 +318,9 @@ export function DateFilterChips({
           {labels.nearMe}
         </Button>
       </div>
-      {geoDenied ? <p className="text-xs text-danger">{labels.nearMeDenied}</p> : null}
+      {geoDenied ? (
+        <p className="text-xs text-danger">{labels.nearMeDenied}</p>
+      ) : null}
 
       {taxonomy.length > 0 ? (
         <CategorySelection
@@ -270,7 +339,9 @@ export function DateFilterChips({
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold text-text-2">{labels.categoryLabel}</p>
+            <p className="text-sm font-semibold text-text-2">
+              {labels.categoryLabel}
+            </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -302,46 +373,98 @@ export function DateFilterChips({
         </>
       )}
 
-      <div className="rounded-lg border border-border bg-surface p-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-3">
-          {labels.calendarLabel}
-        </p>
-        <div
-          className="grid grid-cols-7 gap-1 text-center text-xs"
-          aria-label={labels.calendarLabel}
-          role="listbox"
-        >
-          {days.map((day) => {
-            const iso = lusakaIsoDate(day);
-            const hasEvent = eventDateSet.has(iso);
-            const selected = activeOnDate === iso;
-            return (
-              <button
-                key={iso}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                disabled={isPending}
-                onClick={() =>
-                  updateParams({
-                    on_date: selected ? null : iso,
-                    date_window: null,
-                  })
-                }
-                className={`min-h-11 rounded-md px-1 py-2 focus-visible:outline-none focus-visible:shadow-focusRing ${
-                  selected
-                    ? "bg-primary font-semibold text-[var(--primary-btn-fg)]"
-                    : hasEvent
-                      ? "bg-primary/10 font-semibold text-primary"
-                      : "text-text-3"
-                }`}
-              >
+      {/* Time-first strip: the next two weeks, dots where events exist. */}
+      <div
+        className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]"
+        role="listbox"
+        aria-label={labels.calendarLabel}
+        data-testid="events-date-strip"
+      >
+        {stripDays.map((day) => {
+          const iso = lusakaIsoDate(day);
+          const hasEvent = eventDateSet.has(iso);
+          const selected = activeOnDate === iso;
+          return (
+            <button
+              key={`strip-${iso}`}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              disabled={isPending}
+              onClick={() =>
+                updateParams({
+                  on_date: selected ? null : iso,
+                  date_window: null,
+                })
+              }
+              className={`flex min-h-16 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border text-center focus-visible:outline-none focus-visible:shadow-focusRing ${
+                selected
+                  ? "border-primary bg-primary text-[var(--primary-btn-fg)]"
+                  : "border-border bg-surface text-text hover:border-primary"
+              }`}
+            >
+              <span className="text-xs font-medium opacity-80">
+                {weekdayFormat.format(day)}
+              </span>
+              <span className="font-display text-lg font-bold leading-none">
                 {day.getDate()}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+              <span
+                aria-hidden
+                className={`h-1.5 w-1.5 rounded-full ${hasEvent ? (selected ? "bg-current" : "bg-accent") : "bg-transparent"}`}
+              />
+            </button>
+          );
+        })}
       </div>
+
+      {/* Month calendar is the secondary view, folded away by default. */}
+      <details className="group rounded-lg border border-border bg-surface">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-sm font-semibold text-text-2">
+          {labels.calendarLabel}
+          <span
+            aria-hidden
+            className="transition-transform group-open:rotate-180"
+          >
+            ⌄
+          </span>
+        </summary>
+        <div className="px-3 pb-3">
+          <div
+            className="grid grid-cols-7 gap-1 text-center text-xs"
+            role="group"
+          >
+            {days.map((day) => {
+              const iso = lusakaIsoDate(day);
+              const hasEvent = eventDateSet.has(iso);
+              const selected = activeOnDate === iso;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  aria-pressed={selected}
+                  disabled={isPending}
+                  onClick={() =>
+                    updateParams({
+                      on_date: selected ? null : iso,
+                      date_window: null,
+                    })
+                  }
+                  className={`min-h-11 rounded-md px-1 py-2 focus-visible:outline-none focus-visible:shadow-focusRing ${
+                    selected
+                      ? "bg-primary font-semibold text-[var(--primary-btn-fg)]"
+                      : hasEvent
+                        ? "bg-primary/10 font-semibold text-primary"
+                        : "text-text-3"
+                  }`}
+                >
+                  {day.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

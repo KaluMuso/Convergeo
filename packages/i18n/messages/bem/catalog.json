@@ -388,7 +388,13 @@
       "openFilters": "Ama-filters",
       "filtersActive": "Ama-filters (yakonka)"
     },
-    "backToTop": "Bwelele pamo"
+    "backToTop": "Bwelele pamo",
+    "sort": {
+      "best": "Best match",
+      "verified": "Verified sellers",
+      "bundles": "Bundles",
+      "cheapestChip": "Cheapest"
+    }
   },
   "reviews": {
     "report": {
@@ -416,5 +422,12 @@
   "comparison": {
     "conditionUsed": "Yakubomfya",
     "preferredBadge": "Ushitisha asalwa"
+  },
+  "backInStock": {
+    "notifyMe": "Notify me when it's back",
+    "subscribed": "We'll notify you when it's back in stock",
+    "failed": "Couldn't set the alert. Try again.",
+    "seeSimilar": "See similar items in stock",
+    "unavailable": "Currently unavailable"
   }
 }

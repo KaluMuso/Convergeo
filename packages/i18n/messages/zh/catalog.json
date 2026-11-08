@@ -19,7 +19,11 @@
       "relevance": "相关度",
       "cheapest": "价格最低",
       "nearest": "距离最近",
-      "newest": "最新"
+      "newest": "最新",
+      "best": "最佳匹配",
+      "verified": "认证卖家",
+      "bundles": "套装",
+      "cheapestChip": "最便宜"
     },
     "facets": {
       "heading": "筛选",
@@ -477,5 +481,12 @@
     "errors": {
       "rateLimited": "评价请求过多。请稍候再试。"
     }
+  },
+  "backInStock": {
+    "notifyMe": "到货通知我",
+    "subscribed": "到货后我们会通知您",
+    "failed": "无法设置提醒，请重试。",
+    "seeSimilar": "查看有货的类似商品",
+    "unavailable": "暂时缺货"
   }
 }

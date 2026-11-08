@@ -15,3 +15,11 @@ export function buildWhatsappLink(prefill?: string): string {
   const base = `https://wa.me/${number}`;
   return prefill ? `${base}?text=${encodeURIComponent(prefill)}` : base;
 }
+
+const FALLBACK_SUPPORT_EMAIL = "support@vergeo5.com";
+
+/** Customer support mailbox (NEXT_PUBLIC_SUPPORT_EMAIL, default support@vergeo5.com). */
+export function getSupportEmail(): string {
+  const raw = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim();
+  return raw && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) ? raw : FALLBACK_SUPPORT_EMAIL;
+}

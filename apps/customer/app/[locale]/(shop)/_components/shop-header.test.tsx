@@ -2,8 +2,10 @@
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 
 import { ShopHeader } from "./shop-header";
 
@@ -26,7 +28,14 @@ vi.mock("./category-mega-menu", () => ({
 }));
 
 vi.mock("./desktop-header-search", () => ({
-  DesktopHeaderSearch: () => <div role="search">Search</div>,
+  DesktopHeaderSearch: ({ askLabel }: { askLabel?: string }) => (
+    <div role="search">
+      Search
+      {askLabel ? (
+        <button type="button" data-testid="search-ask-vergeo" aria-label={askLabel} />
+      ) : null}
+    </div>
+  ),
 }));
 
 vi.mock("./cart/cart-store", () => ({
@@ -76,7 +85,7 @@ const labels = {
   featuredTitle: "New on Convergeo",
   featuredPromo: "Compare sellers online.",
   featuredPromoCta: "Search marketplace",
-  directory: "Directory",
+  directory: "Vendors",
   services: "Services",
   events: "Events",
   askVergeo: "Ask Vergeo",
@@ -102,13 +111,12 @@ describe("ShopHeader", () => {
 
     expect(screen.getByTestId("shop-header")).toBeInTheDocument();
     expect(screen.getByRole("search")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Directory" })).toHaveAttribute(
-      "href",
-      "/en/directory",
-    );
+    expect(screen.getByRole("link", { name: "Vendors" })).toHaveAttribute("href", "/en/vendors");
     expect(screen.getByRole("link", { name: "Services" })).toHaveAttribute("href", "/en/services");
     expect(screen.getByRole("link", { name: "Events" })).toHaveAttribute("href", "/en/events");
-    expect(screen.getByRole("link", { name: "Ask Vergeo" })).toHaveAttribute("href", "/en/ask");
+    // Ask Vergeo is the sparkle button inside the search field, not a nav link.
+    expect(screen.queryByRole("link", { name: "Ask Vergeo" })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("search-ask-vergeo")[0]).toHaveAccessibleName("Ask Vergeo");
     expect(screen.getAllByRole("link", { name: "Account" })[0]).toHaveAttribute(
       "href",
       "/en/account",
@@ -124,6 +132,30 @@ describe("ShopHeader", () => {
     eligible.mockReturnValue(true);
     render(<ShopHeader locale="en" labels={labels} />);
     expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
+  });
+
+  it("offers the appearance quick toggle when theme labels are provided", () => {
+    eligible.mockReturnValue(false);
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+    render(
+      <ThemeProvider>
+        <ShopHeader
+          locale="en"
+          labels={{
+            ...labels,
+            theme: { label: "Theme", light: "Light", dark: "Dark", system: "System" },
+          }}
+        />
+      </ThemeProvider>,
+    );
+    expect(screen.getAllByTestId("header-theme-toggle")[0]).toHaveAccessibleName(/Theme: /);
   });
 
   it("matches the approved desktop chrome structure snapshot", () => {

@@ -1,6 +1,6 @@
 {
   "index": {
-    "title": "Annuaire des entreprises",
+    "title": "Vendeurs",
     "subtitle": "Découvrez des vendeurs et commerces dans toute la Zambie",
     "results": "{count, plural, one {# entreprise} other {# entreprises}}",
     "searchPlaceholder": "Rechercher des entreprises",
@@ -85,7 +85,13 @@
     "tabServices": "Services",
     "tabEvents": "Événements",
     "serviceFrom": "À partir de {price}",
-    "whatsappCta": "Discuter sur WhatsApp"
+    "whatsappCta": "Discuter sur WhatsApp",
+    "follow": "Suivre",
+    "following": "Abonné",
+    "newSeller": "Nouveau vendeur",
+    "newSellerJoined": "Nouveau vendeur · depuis {date}",
+    "tabAbout": "À propos",
+    "tabReviews": "Avis"
   },
   "listings": {
     "vendor": "Vendu par {vendor}",

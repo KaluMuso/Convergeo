@@ -85,7 +85,13 @@
     "tabServices": "Services",
     "tabEvents": "Events",
     "serviceFrom": "Kufuma {price}",
-    "whatsappCta": "Landa pa WhatsApp"
+    "whatsappCta": "Landa pa WhatsApp",
+    "follow": "Follow",
+    "following": "Following",
+    "newSeller": "New seller",
+    "newSellerJoined": "New seller · joined {date}",
+    "tabAbout": "About",
+    "tabReviews": "Reviews"
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",

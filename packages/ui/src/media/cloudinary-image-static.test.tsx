@@ -81,7 +81,10 @@ describe("CloudinaryImageStatic", () => {
       />,
     );
 
-    expect(screen.getByTestId("cloudinary-image-fallback")).toHaveTextContent("No images yet");
+    // Labelled for assistive tech, but never paints raw text into the stage.
+    const stage = screen.getByTestId("cloudinary-image-fallback");
+    expect(stage).toHaveAccessibleName("No images yet");
+    expect(stage).toHaveTextContent("");
     expect(screen.queryByRole("img", { name: "Smartphone on display" })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages } from "next-intl/server";
 
+import { getSupportEmail } from "../(marketing)/contact/_components/config";
 import { TopUtilityBar } from "../(shop)/_components/top-utility-bar";
 
 type TopUtilityBarSlotProps = {
@@ -11,7 +12,8 @@ type TopUtilityBarSlotProps = {
 export async function TopUtilityBarSlot({ locale }: TopUtilityBarSlotProps) {
   const messages = (await getMessages()) as AbstractIntlMessages;
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
-  const contactEmail = tCommon("contact.email");
+  // Config-driven (not a translation): NEXT_PUBLIC_SUPPORT_EMAIL, default support@vergeo5.com.
+  const contactEmail = getSupportEmail();
   const contactPhone = tCommon("contact.phone");
 
   return (

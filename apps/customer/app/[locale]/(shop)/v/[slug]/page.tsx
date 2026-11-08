@@ -1,5 +1,4 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import { CommercialTierStrip } from "@vergeo/ui/src/commercial-tier-strip";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
@@ -16,13 +15,15 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { ShareLinkButton } from "../../../_components/share-link-button";
+import { FollowVendorButton } from "../../_components/directory/follow-vendor-button";
 import {
-  buildTierStripItems,
   buildVendorLadderLabels,
-  vendorCommercialTier,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
-import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
+import {
+  ListingGrid,
+  type CatalogListing,
+} from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
 
@@ -95,10 +96,15 @@ type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
-  const messages = { ...baseMessages, directory: directoryMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    directory: directoryMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -107,10 +113,15 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
   }) as unknown as DirectoryTranslator;
 }
 
-async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -119,7 +130,9 @@ async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
+async function fetchVendorProfile(
+  slug: string,
+): Promise<VendorProfileApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
     if (!url) {
@@ -171,15 +184,22 @@ function buildVendorJsonLd(
   });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
-    return { title: "Vendor not found", robots: { index: false, follow: false } };
+    return {
+      title: "Vendor not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const t = await getDirectoryTranslator(locale);
-  const description = t("profile.metaDescription", { name: profile.vendor.display_name });
+  const description = t("profile.metaDescription", {
+    name: profile.vendor.display_name,
+  });
   const canonicalPath = buildLocaleCanonical(locale, "v", profile.vendor.slug);
   const ogParams = new URLSearchParams({ name: profile.vendor.display_name });
 
@@ -195,7 +215,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonicalPath,
       images: profile.vendor.logo_url
         ? [profile.vendor.logo_url]
-        : [{ url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}` }],
+        : [
+            {
+              url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
+            },
+          ],
     },
     robots: { index: true, follow: true },
   };
@@ -230,10 +254,15 @@ function VendorServicesGrid({
             ) : null}
           </div>
           <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-text">{service.title}</p>
+            <p className="truncate text-sm font-medium text-text">
+              {service.title}
+            </p>
             {service.from_price_ngwee !== null ? (
               <p className="text-sm text-text-2">
-                {fromLabel.replace("{price}", formatK(service.from_price_ngwee))}
+                {fromLabel.replace(
+                  "{price}",
+                  formatK(service.from_price_ngwee),
+                )}
               </p>
             ) : null}
           </div>
@@ -270,7 +299,9 @@ function VendorEventsGrid({
             ) : null}
           </div>
           <div className="p-3">
-            <p className="truncate text-sm font-medium text-text">{event.title}</p>
+            <p className="truncate text-sm font-medium text-text">
+              {event.title}
+            </p>
           </div>
         </Link>
       ))}
@@ -302,14 +333,19 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
+  const {
+    vendor,
+    listings,
+    services,
+    events,
+    reviews_summary: reviews,
+  } = profile;
   const ladderLabels = buildVendorLadderLabels(t);
   const trustRibbon = vendorTrustRibbon(
     { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
     ladderLabels,
   );
-  const commercial = vendorCommercialTier(vendor.commercial_tier, ladderLabels);
-  const tierStripItems = buildTierStripItems(ladderLabels);
+  // Commercial tier (Bronze…Platinum) is a vendor plan — never shown to buyers.
   const listingsForGrid: CatalogListing[] = listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -382,51 +418,164 @@ export default async function VendorProfilePage({ params }: PageProps) {
     });
   }
 
+  const hasRating = reviews.rating_avg !== null && reviews.rating_count > 0;
+  const hasAnyStat = hasRating || vendor.order_count > 0;
+  const joinedLabel = vendor.created_at
+    ? new Intl.DateTimeFormat(locale, {
+        month: "short",
+        year: "numeric",
+      }).format(new Date(vendor.created_at))
+    : null;
+
+  const hoursEntries =
+    vendor.locations.length > 0
+      ? vendor.locations
+      : vendor.location
+        ? [vendor.location]
+        : [];
+  const aboutPanel =
+    vendor.description || hoursEntries.length > 0 ? (
+      <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
+        {vendor.description ? (
+          <p className="m-0 max-w-prose whitespace-pre-line text-body text-text-2">
+            {vendor.description}
+          </p>
+        ) : null}
+        {hoursEntries.length > 0 ? (
+          <dl className="m-0 space-y-3 text-sm">
+            {hoursEntries.map((branch, index) => (
+              <div key={`${branch.landmark}-${index}`} className="space-y-1">
+                <dt className="font-semibold text-text">{branch.landmark}</dt>
+                {Object.entries(branch.hours ?? {}).map(([day, hours]) => (
+                  <dd key={day} className="m-0 text-text-2">
+                    {t("profile.hoursLine", { day, hours })}
+                  </dd>
+                ))}
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </div>
+    ) : null;
+
+  const reviewsPanel = (
+    <div className="flex flex-wrap items-center gap-3 text-body text-text-2">
+      {hasRating ? (
+        <>
+          <span className="font-display text-h2 font-bold text-display-ink">
+            {reviews.rating_avg?.toFixed(1)}
+          </span>
+          <span>
+            {t("profile.reviewsSummary", {
+              rating: reviews.rating_avg ?? 0,
+              count: reviews.rating_count,
+            })}
+          </span>
+        </>
+      ) : (
+        <span>{t("profile.noReviews")}</span>
+      )}
+    </div>
+  );
+
+  if (aboutPanel) {
+    offeringTabs.push({
+      key: "about",
+      label: t("profile.tabAbout"),
+      panel: aboutPanel,
+    });
+  }
+  offeringTabs.push({
+    key: "reviews",
+    label: t("profile.tabReviews"),
+    panel: reviewsPanel,
+  });
+
   return (
-    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-5xl">
+    <div className="space-y-5 lg:mx-auto lg:w-full lg:max-w-6xl">
       <JsonLdScript data={jsonLd} />
 
-      <header className="overflow-hidden rounded-xl border border-border bg-surface">
-        {/* Cover band — the vendor's uploaded banner, or the malachite-night fallback. */}
+      {/* Compact store header (eBay/Etsy pattern): slim cover, logo tile, name,
+          trust, one meta line, actions. No plan tier, no zero-stat table. */}
+      <header className="relative">
         {vendor.cover_url ? (
           <div
             aria-hidden
-            className="h-32 bg-panel bg-cover bg-center sm:h-52"
+            className="h-24 rounded-lg bg-panel bg-cover bg-center sm:h-36"
             style={{ backgroundImage: `url(${vendor.cover_url})` }}
           />
         ) : (
-          <div className="h-32 bg-panel sm:h-52" aria-hidden />
+          <div className="h-16 rounded-lg bg-panel sm:h-24" aria-hidden />
         )}
-        <div className="flex flex-col gap-4 px-4 pb-4 sm:flex-row sm:items-end sm:gap-5 sm:px-6">
-          <div className="-mt-12 shrink-0 sm:-mt-16">
+        <div className="flex flex-col gap-3 px-1 pt-3 sm:flex-row sm:items-end sm:gap-4 sm:px-4">
+          <div className="-mt-12 shrink-0 sm:-mt-14">
             {vendor.logo_url ? (
               <div
                 aria-hidden
-                className="h-24 w-24 rounded-lg border-4 border-surface bg-surface bg-cover bg-center shadow-2 sm:h-32 sm:w-32"
+                className="h-20 w-20 rounded-lg border-4 border-bg bg-surface bg-cover bg-center sm:h-24 sm:w-24"
                 style={{ backgroundImage: `url(${vendor.logo_url})` }}
               />
             ) : (
               <div
                 aria-hidden
-                className="flex h-24 w-24 items-center justify-center rounded-lg border-4 border-surface bg-primary-tint font-display text-h1 font-bold text-primary shadow-2 sm:h-32 sm:w-32"
+                className="flex h-20 w-20 items-center justify-center rounded-lg border-4 border-bg bg-primary-tint font-display text-h1 font-bold text-primary sm:h-24 sm:w-24"
               >
                 {vendor.display_name.charAt(0)}
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1 space-y-2 sm:pb-1">
-            <h1 className="font-display text-h1 font-bold text-display-ink">
-              {vendor.display_name}
-            </h1>
+          <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
-              <CornerRibbon tier={commercial.tier} tierLabel={commercial.tierLabel} />
-              {vendor.location ? (
-                <span className="text-sm text-text-2">{vendor.location.landmark}</span>
-              ) : null}
+              <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
+                {vendor.display_name}
+              </h1>
+              <CornerRibbon
+                trust={trustRibbon.trust}
+                trustLabel={trustRibbon.trustLabel}
+              />
             </div>
+            <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-2">
+              {hasRating ? (
+                <span className="font-semibold text-text">
+                  ★ {reviews.rating_avg?.toFixed(1)}{" "}
+                  <span className="font-normal text-text-2">
+                    ({reviews.rating_count}{" "}
+                    {t("profile.statReviews").toLowerCase()})
+                  </span>
+                </span>
+              ) : null}
+              {vendor.order_count > 0 ? (
+                <span>
+                  {vendor.order_count} {t("profile.statOrders").toLowerCase()}
+                </span>
+              ) : null}
+              {listings.length > 0 ? (
+                <span>
+                  {listings.length} {t("profile.statListings").toLowerCase()}
+                </span>
+              ) : null}
+              {vendor.location ? <span>{vendor.location.landmark}</span> : null}
+              {!hasAnyStat ? (
+                <span
+                  className="rounded-pill bg-accent-tint px-2.5 py-0.5 text-sm font-semibold text-accent-deep"
+                  data-testid="vendor-new-seller"
+                >
+                  {joinedLabel
+                    ? t("profile.newSellerJoined", { date: joinedLabel })
+                    : t("profile.newSeller")}
+                </span>
+              ) : null}
+            </p>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2 sm:pb-1">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <FollowVendorButton
+              vendorId={vendor.id}
+              locale={locale}
+              labels={{
+                follow: t("profile.follow"),
+                following: t("profile.following"),
+              }}
+            />
             {vendor.whatsapp_msisdn ? (
               <a
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)] no-underline hover:bg-[var(--primary-btn-hover)] focus-visible:outline-none focus-visible:shadow-focusRing"
@@ -452,85 +601,9 @@ export default async function VendorProfilePage({ params }: PageProps) {
             <ShareLinkButton label={shareLabel} title={vendor.display_name} />
           </div>
         </div>
-        <dl className="m-0 grid grid-cols-2 gap-y-3 divide-border border-t border-border px-4 py-4 sm:grid-cols-4 sm:divide-x sm:px-6">
-          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
-            <dt className="text-sm text-text-3">{t("profile.statRating")}</dt>
-            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
-              {reviews.rating_avg !== null && reviews.rating_count > 0
-                ? reviews.rating_avg.toFixed(1)
-                : "—"}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
-            <dt className="text-sm text-text-3">{t("profile.statReviews")}</dt>
-            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
-              {reviews.rating_count}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
-            <dt className="text-sm text-text-3">{t("profile.statListings")}</dt>
-            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
-              {listings.length}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
-            <dt className="text-sm text-text-3">{t("profile.statOrders")}</dt>
-            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
-              {vendor.order_count}
-            </dd>
-          </div>
-        </dl>
-        <CommercialTierStrip
-          activeTier={commercial.tier}
-          items={tierStripItems}
-          ariaLabel={ladderLabels.tierStripAria}
-        />
       </header>
 
-      {vendor.description || vendor.locations.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {vendor.description ? (
-            <section className="rounded-lg border border-border bg-surface p-4">
-              <h2 className="mb-1 text-sm font-semibold text-text">{t("profile.about")}</h2>
-              <p className="text-sm text-text-2">{vendor.description}</p>
-            </section>
-          ) : null}
-
-          {vendor.locations.length > 0 ? (
-            <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
-              <h2 className="text-sm font-semibold text-text">{t("profile.location")}</h2>
-              {vendor.locations.map((branch, index) => {
-                const branchHours = formatHours(branch.hours, (day, hoursValue) =>
-                  t("profile.hoursLine", { day, hours: hoursValue }),
-                );
-                return (
-                  <div key={`${branch.landmark}-${index}`} className="space-y-1">
-                    <p className="text-sm font-medium text-text-2">
-                      {t("profile.landmarkValue", { landmark: branch.landmark })}
-                    </p>
-                    {branchHours.length > 0 ? (
-                      <ul className="space-y-1 text-sm text-text-3">
-                        {branchHours.map((line) => (
-                          <li key={line}>{line}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </section>
-          ) : null}
-        </div>
-      ) : null}
-
-      {offeringTabs.length > 1 ? (
-        <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />
-      ) : offeringTabs.length === 1 ? (
-        <section className="space-y-3">
-          <h2 className="font-display text-lg font-semibold text-text">{offeringTabs[0]?.label}</h2>
-          {offeringTabs[0]?.panel}
-        </section>
-      ) : null}
+      <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />
     </div>
   );
 }

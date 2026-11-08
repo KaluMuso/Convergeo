@@ -17,12 +17,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import {
+  getMessages,
+  getTranslations,
+  setRequestLocale,
+} from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
+import {
+  FloatingActions,
+  type FloatingActionsLabels,
+} from "./_components/floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
@@ -138,11 +146,25 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     namespace: "checkout",
   });
   const year = new Date().getFullYear();
+  const fabCopy = ((messages.common as AbstractIntlMessages | undefined)?.fab ??
+    {}) as Record<string, string>;
+  const fabLabels: FloatingActionsLabels = {
+    ask: fabCopy.ask ?? "",
+    askTitle: fabCopy.askTitle ?? "",
+    askHint: fabCopy.askHint ?? "",
+    askPlaceholder: fabCopy.askPlaceholder ?? "",
+    send: fabCopy.send ?? "",
+    voiceStart: fabCopy.voiceStart ?? "",
+    voiceStop: fabCopy.voiceStop ?? "",
+    listening: fabCopy.listening ?? "",
+    voiceUnsupported: fabCopy.voiceUnsupported ?? "",
+    close: fabCopy.close ?? "",
+    showFooter: fabCopy.showFooter ?? "",
+    hideFooter: fabCopy.hideFooter ?? "",
+  };
   // Translated toast copy for emitToastKey() call sites (no i18n hook needed there).
-  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)?.toast ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)
+    ?.toast ?? {}) as Record<string, unknown>;
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
@@ -228,14 +250,19 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
       <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            <ToastProvider dismissLabel={tCommon("toast.dismiss")} copy={toastCopy}>
+            <ToastProvider
+              dismissLabel={tCommon("toast.dismiss")}
+              copy={toastCopy}
+            >
               {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
               <SentryInit />
               {/* Probe `/sw.js` before registering — never register a missing worker. */}
               <ServiceWorkerRegister />
               {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
-              <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+              <AnalyticsProvider
+                measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
+              />
               <CustomerAuthBarrier
                 labels={{
                   title: tCheckout("cart.mergeRecoveryTitle"),
@@ -243,7 +270,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                   conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
                   priceLine: String(tCheckout.raw("cart.mergePriceLine")),
                   unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
-                  wholesaleTerms: String(tCheckout.raw("cart.mergeWholesaleTerms")),
+                  wholesaleTerms: String(
+                    tCheckout.raw("cart.mergeWholesaleTerms"),
+                  ),
                   priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
                   accountChoice: tCheckout("cart.mergeAccountChoice"),
                   guestChoice: tCheckout("cart.mergeGuestChoice"),
@@ -254,27 +283,41 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                 }}
               />
               <div className="flex flex-1 flex-col">{children}</div>
-              <Footer
-                appName={appName}
-                copyright={tLegal("footer.copyright", { year, appName })}
-                columns={footerColumns}
-                paymentNote={tLegal("footer.paymentNote")}
-                tagline={tCommon("meta.defaultDescription")}
-                sealLabel={tCheckout("checkout.review.escrowStep2")}
-                LinkComponent={Link}
-                trailing={
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                    <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} />
-                    <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
-                      <Link
-                        href={`/${locale}/account/preferences`}
-                        className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
-                        style={{ color: "var(--panel-muted)" }}
-                      >
-                        {tCommon("theme.displayPreferences")}
-                      </Link>
-                    </p>
-                  </div>
+              {/* Footer inline on most pages; on home it becomes an overlay sheet
+                behind the floating toggle (keeps the infinite feed clear). */}
+              <FloatingActions
+                locale={locale}
+                labels={fabLabels}
+                footer={
+                  <Footer
+                    appName={appName}
+                    copyright={tLegal("footer.copyright", { year, appName })}
+                    columns={footerColumns}
+                    paymentNote={tLegal("footer.paymentNote")}
+                    tagline={tCommon("meta.defaultDescription")}
+                    sealLabel={tCheckout("checkout.review.escrowStep2")}
+                    LinkComponent={Link}
+                    trailing={
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        <LocaleSwitcher
+                          locale={locale}
+                          labels={localeSwitcherLabels}
+                        />
+                        <p
+                          className="m-0 text-micro"
+                          style={{ color: "var(--panel-muted)" }}
+                        >
+                          <Link
+                            href={`/${locale}/account/preferences`}
+                            className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+                            style={{ color: "var(--panel-muted)" }}
+                          >
+                            {tCommon("theme.displayPreferences")}
+                          </Link>
+                        </p>
+                      </div>
+                    }
+                  />
                 }
               />
             </ToastProvider>
