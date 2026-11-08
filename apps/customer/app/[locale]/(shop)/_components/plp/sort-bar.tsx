@@ -34,7 +34,7 @@ export function SortBar({ labels, value, hasLocation }: SortBarProps) {
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <label htmlFor="plp-sort" className="text-sm font-medium text-[var(--text-2)]">
+      <label htmlFor="plp-sort" className="text-sm font-medium text-text-2">
         {labels.label}
       </label>
       <select

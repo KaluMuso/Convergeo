@@ -135,12 +135,10 @@ export function AppliedFilterBar({
   return (
     <div
       data-testid="plp-applied-filters"
-      className="motion-fade flex flex-col gap-2 rounded border border-border bg-bg-2/60 px-3 py-2"
+      className="motion-fade flex flex-col gap-2 rounded-lg border border-border bg-surface px-3 py-2"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="m-0 text-micro font-semibold uppercase tracking-wide text-text-3">
-          {labels.ariaLabel}
-        </p>
+        <p className="m-0 text-sm font-semibold text-text-2">{labels.ariaLabel}</p>
         <Link
           href={clearAllHref(pathname, searchParams)}
           className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
@@ -157,7 +155,7 @@ export function AppliedFilterBar({
               <Link
                 href={hrefWithoutChip(pathname, searchParams, chip)}
                 aria-label={removeLabel}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded border border-border bg-surface px-3 text-sm text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-pill border border-primary/30 bg-primary-tint px-3.5 text-sm font-medium text-primary-deep transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
               >
                 <span>{label}</span>
                 <svg
