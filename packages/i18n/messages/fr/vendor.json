@@ -771,6 +771,23 @@
       "permissionDenied": "Vous n'avez pas accès à ce profil boutique.",
       "notFound": "Profil boutique introuvable pour ce compte.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "brand": {
+      "title": "Couleurs de la boutique",
+      "help": "Vos couleurs s'appliquent uniquement à votre page boutique. Nous les ajustons automatiquement pour garder un texte lisible (WCAG AA).",
+      "primary": "Couleur principale",
+      "primaryHelp": "Boutons et liens de votre boutique",
+      "accent": "Couleur d'accent",
+      "accentHelp": "Mises en avant et badges",
+      "contrast": "contraste {ratio}:1",
+      "reset": "Réinitialiser",
+      "adjusted": "Nous avons légèrement assombri cette couleur pour garder le texte lisible.",
+      "extract": "Extraire du logo",
+      "extracting": "Lecture du logo…",
+      "needLogo": "Téléversez d'abord un logo.",
+      "extractFailed": "Impossible de lire les couleurs du logo. Choisissez-les manuellement.",
+      "previewButton": "Ajouter au panier",
+      "previewAccent": "Nouveautés"
     }
   },
   "orders": {

@@ -29,6 +29,8 @@ export type VendorProfile = {
   previous_slug: string | null;
   completeness_score: number;
   completeness: CompletenessBreakdown;
+  /** Storefront-only colours, AA-clamped by the API. */
+  brand_theme?: { primary: string | null; accent: string | null } | null;
 };
 
 export type ProfilePatchPayload = {
@@ -44,6 +46,8 @@ export type ProfilePatchPayload = {
     lng: number;
     landmark: string;
   };
+  /** Send both null to clear. */
+  brand_theme?: { primary: string | null; accent: string | null };
 };
 
 export function createProfileClient(getToken: () => string | null | Promise<string | null>) {

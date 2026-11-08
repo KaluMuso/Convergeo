@@ -1,4 +1,5 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { brandThemeStyle } from "@vergeo/ui/src/brand-theme";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
@@ -53,6 +54,7 @@ type VendorProfileApiResponse = {
     location: VendorLocation | null;
     locations: VendorLocation[];
     created_at: string | null;
+    brand_theme?: { primary: string | null; accent: string | null } | null;
   };
   listings: Array<{
     id: string;
@@ -491,8 +493,21 @@ export default async function VendorProfilePage({ params }: PageProps) {
     panel: reviewsPanel,
   });
 
+  // Vendor colours re-skin this storefront subtree only (AA-clamped again here).
+  const brandStyle = brandThemeStyle(vendor.brand_theme ?? null);
+  const brandClass = [
+    brandStyle?.["--brand-primary"] ? "v-brand-primary" : "",
+    brandStyle?.["--brand-accent"] ? "v-brand-accent" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="space-y-5 lg:mx-auto lg:w-full lg:max-w-6xl">
+    <div
+      className={`space-y-5 lg:mx-auto lg:w-full lg:max-w-6xl ${brandClass}`}
+      style={brandStyle as React.CSSProperties | undefined}
+      data-brand-theme={brandStyle ? "vendor" : undefined}
+    >
       <JsonLdScript data={jsonLd} />
 
       {/* Compact store header (eBay/Etsy pattern): slim cover, logo tile, name,

@@ -248,3 +248,20 @@ body {
 .v-footer-sheet .v-footer {
   padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
+
+/* ── Vendor brand theme (storefront only) ─────────────────────────────────
+   /v/[slug] sets --brand-* inline (AA-clamped, see packages/ui brand-theme.ts)
+   and these classes re-point the platform tokens inside that subtree. Light
+   theme only: vendor colours are tuned for light surfaces, so dark mode keeps
+   the platform palette. */
+:root:not([data-theme="dark"]) .v-brand-primary {
+  --primary: var(--brand-primary);
+  --primary-deep: var(--brand-primary-deep);
+  --primary-tint: var(--brand-primary-tint);
+  --primary-btn-fg: #ffffff;
+  --primary-btn-hover: var(--brand-primary-deep);
+}
+
+:root:not([data-theme="dark"]) .v-brand-accent {
+  --accent: var(--brand-accent);
+}

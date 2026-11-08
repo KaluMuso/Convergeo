@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.brand_theme import read_brand_theme
 from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
@@ -128,6 +129,8 @@ class VendorProfileDetail(BaseModel):
     order_count: int = 0
     location: VendorLocationDetail | None = None
     locations: list[VendorLocationDetail] = Field(default_factory=list)
+    #: Storefront-only colours {primary, accent}, AA-clamped; None = platform palette.
+    brand_theme: dict[str, str | None] | None = None
     created_at: str | None = None
 
 
@@ -732,7 +735,7 @@ def get_vendor_profile(
         client.table("vendors")
         .select(
             "id, slug, display_name, description, logo_url, cover_url, whatsapp_msisdn, status, "
-            "kyc_tier, commercial_tier, preferred_badge, created_at, "
+            "kyc_tier, commercial_tier, preferred_badge, created_at, brand_theme, "
             "vendor_locations(landmark, lat, lng, hours)"
         )
         .eq("slug", slug)
@@ -816,9 +819,7 @@ def get_vendor_profile(
             if str(product.get("status") or "") != "active":
                 continue
         product_name = (
-            str(product.get("name") or "Listing")
-            if isinstance(product, dict)
-            else "Listing"
+            str(product.get("name") or "Listing") if isinstance(product, dict) else "Listing"
         )
         product_slug = product.get("slug") if isinstance(product, dict) else None
         fulfilment_mode = str(listing_row.get("fulfilment_mode") or "stocked")
@@ -875,6 +876,7 @@ def get_vendor_profile(
             logo_url=row.get("logo_url"),
             cover_url=row.get("cover_url"),
             whatsapp_msisdn=row.get("whatsapp_msisdn"),
+            brand_theme=read_brand_theme(row.get("brand_theme")),
             preferred_badge=preferred_badge,
             kyc_tier=effective_tier,
             commercial_tier=_parse_commercial_tier(row.get("commercial_tier")),

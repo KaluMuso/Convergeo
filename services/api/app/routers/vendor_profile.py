@@ -7,6 +7,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.brand_theme import HEX_RE, read_brand_theme, sanitize_brand_theme
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator
 
@@ -42,6 +43,25 @@ class VendorLocationInput(StrictModel):
     landmark: str = Field(min_length=1, max_length=500)
 
 
+class BrandThemeInput(StrictModel):
+    primary: str | None = Field(default=None, max_length=7)
+    accent: str | None = Field(default=None, max_length=7)
+
+    @field_validator("primary", "accent")
+    @classmethod
+    def hex_colour(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        if not HEX_RE.match(value):
+            raise ValueError("must be a #RRGGBB colour")
+        return value.upper()
+
+
+class BrandThemeOut(StrictModel):
+    primary: str | None
+    accent: str | None
+
+
 class ProfilePatchRequest(StrictModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
@@ -51,6 +71,8 @@ class ProfilePatchRequest(StrictModel):
     whatsapp_msisdn: str | None = Field(default=None, max_length=32)
     hours: dict[str, Any] | None = None
     location: VendorLocationInput | None = None
+    #: Storefront-only colours. Send {"primary": null, "accent": null} to clear.
+    brand_theme: BrandThemeInput | None = None
 
     @field_validator("slug")
     @classmethod
@@ -90,6 +112,7 @@ class VendorProfileResponse(StrictModel):
     previous_slug: str | None
     completeness_score: int
     completeness: CompletenessBreakdown
+    brand_theme: BrandThemeOut | None = None
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -262,7 +285,7 @@ def _load_vendor_for_owner(
         service_client.client.table("vendors")
         .select(
             "id, owner_user_id, slug, display_name, description, logo_url, cover_url, "
-            "whatsapp_msisdn, status, kyc_tier, preferred_badge, caps_snapshot"
+            "whatsapp_msisdn, status, kyc_tier, preferred_badge, caps_snapshot, brand_theme"
         )
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
@@ -314,9 +337,7 @@ def _serialize_profile(
     score, breakdown = compute_profile_completeness(
         logo_url=vendor.get("logo_url") if isinstance(vendor.get("logo_url"), str) else None,
         description=(
-            str(vendor["description"])
-            if isinstance(vendor.get("description"), str)
-            else None
+            str(vendor["description"]) if isinstance(vendor.get("description"), str) else None
         ),
         hours=hours,
         lat=lat_value,
@@ -331,12 +352,15 @@ def _serialize_profile(
         slug=str(vendor["slug"]),
         display_name=str(vendor["display_name"]),
         description=(
-            str(vendor["description"])
-            if isinstance(vendor.get("description"), str)
-            else None
+            str(vendor["description"]) if isinstance(vendor.get("description"), str) else None
         ),
         logo_url=str(vendor["logo_url"]) if isinstance(vendor.get("logo_url"), str) else None,
         cover_url=str(vendor["cover_url"]) if isinstance(vendor.get("cover_url"), str) else None,
+        brand_theme=(
+            BrandThemeOut(**theme)
+            if (theme := read_brand_theme(vendor.get("brand_theme")))
+            else None
+        ),
         whatsapp_msisdn=(
             str(vendor["whatsapp_msisdn"])
             if isinstance(vendor.get("whatsapp_msisdn"), str)
@@ -496,6 +520,9 @@ async def patch_vendor_profile(
         vendor_updates["logo_url"] = body.logo_url.strip() or None
     if body.cover_url is not None:
         vendor_updates["cover_url"] = body.cover_url.strip() or None
+    if body.brand_theme is not None:
+        # AA clamp before storing; an all-null theme clears it.
+        vendor_updates["brand_theme"] = sanitize_brand_theme(body.brand_theme.model_dump())
     if body.whatsapp_msisdn is not None:
         stripped = body.whatsapp_msisdn.strip()
         if not stripped:
@@ -563,11 +590,7 @@ def resolve_slug_redirect(
     slug: str,
 ) -> str | None:
     """Return the current slug when ``slug`` is a stored previous slug (301 target)."""
-    response = (
-        service_client.client.table("vendors")
-        .select("slug, caps_snapshot")
-        .execute()
-    )
+    response = service_client.client.table("vendors").select("slug, caps_snapshot").execute()
     data = getattr(response, "data", None)
     if not isinstance(data, list):
         return None

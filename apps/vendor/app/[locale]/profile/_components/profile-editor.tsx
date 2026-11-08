@@ -11,16 +11,27 @@ import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { VendorErrorState } from "../../_components/async-state";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
-import { Button, FormField, Input, Spinner, Switch } from "../../listings/new/_lib/ui";
+import {
+  Button,
+  FormField,
+  Input,
+  Spinner,
+  Switch,
+} from "../../listings/new/_lib/ui";
 import { createProfileClient } from "../_lib/profile-client";
 
+import { BrandThemeEditor } from "./brand-theme-editor";
 import { CompletenessMeter } from "./completeness-meter";
 import { CoverUpload } from "./cover-upload";
 import { HoursEditor } from "./hours-editor";
 import { LogoUpload } from "./logo-upload";
 import { SlugField } from "./slug-field";
 
-import type { ProfilePatchPayload, VendorProfile } from "../_lib/profile-client";
+import type {
+  ProfilePatchPayload,
+  VendorProfile,
+} from "../_lib/profile-client";
+import type { BrandTheme } from "@vergeo/ui/src/brand-theme";
 
 const DEFAULT_HOURS = {
   mon: { open: "08:00", close: "17:00", closed: false },
@@ -45,6 +56,10 @@ export function ProfileEditor() {
   const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [brandTheme, setBrandTheme] = useState<BrandTheme>({
+    primary: null,
+    accent: null,
+  });
   const [hours, setHours] = useState<VendorProfile["hours"]>(DEFAULT_HOURS);
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -56,8 +71,14 @@ export function ProfileEditor() {
   const [success, setSuccess] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
-  const profileClient = useMemo(() => createProfileClient(getToken), [getToken]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
+  const profileClient = useMemo(
+    () => createProfileClient(getToken),
+    [getToken],
+  );
 
   const loadProfile = useCallback(async () => {
     if (!session) {
@@ -75,7 +96,10 @@ export function ProfileEditor() {
       setSlug(loaded.slug);
       setLogoUrl(loaded.logo_url);
       setCoverUrl(loaded.cover_url);
-      setHours(Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS);
+      setBrandTheme(loaded.brand_theme ?? { primary: null, accent: null });
+      setHours(
+        Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS,
+      );
       setLat(loaded.lat?.toString() ?? "");
       setLng(loaded.lng?.toString() ?? "");
       setLandmark(loaded.landmark ?? "");
@@ -110,6 +134,7 @@ export function ProfileEditor() {
       logo_url: logoUrl ?? undefined,
       // Empty string (not undefined) so the remove button can clear the cover.
       cover_url: coverUrl ?? "",
+      brand_theme: brandTheme,
       hours,
     };
 
@@ -119,7 +144,11 @@ export function ProfileEditor() {
 
     const parsedLat = Number.parseFloat(lat);
     const parsedLng = Number.parseFloat(lng);
-    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng) && landmark.trim()) {
+    if (
+      Number.isFinite(parsedLat) &&
+      Number.isFinite(parsedLng) &&
+      landmark.trim()
+    ) {
       payload.location = {
         lat: parsedLat,
         lng: parsedLng,
@@ -138,7 +167,10 @@ export function ProfileEditor() {
     } catch (caught) {
       if (caught instanceof ApiError) {
         const messageKey = caught.details.message_key;
-        if (typeof messageKey === "string" && messageKey.startsWith("vendor.profile.errors.")) {
+        if (
+          typeof messageKey === "string" &&
+          messageKey.startsWith("vendor.profile.errors.")
+        ) {
           const key = messageKey.replace("vendor.profile.errors.", "");
           setError(t(`profile.errors.${key}` as "profile.errors.saveFailed"));
         } else if (caught.code === "conflict") {
@@ -174,7 +206,10 @@ export function ProfileEditor() {
   if (loadErrorKey || !profile) {
     return (
       <VendorErrorState
-        title={t((loadErrorKey ?? "profile.errors.loadFailed") as "profile.errors.loadFailed")}
+        title={t(
+          (loadErrorKey ??
+            "profile.errors.loadFailed") as "profile.errors.loadFailed",
+        )}
         body={t("profile.errors.retryHint")}
         retryLabel={tCommon("common.retry")}
         onRetry={() => setReloadKey((value) => value + 1)}
@@ -197,7 +232,9 @@ export function ProfileEditor() {
   return (
     <div className="space-y-6">
       <header className="space-y-1 px-1">
-        <h1 className="text-xl font-semibold text-text">{t("profile.title")}</h1>
+        <h1 className="text-xl font-semibold text-text">
+          {t("profile.title")}
+        </h1>
         <p className="text-sm text-text-2">{t("profile.intro")}</p>
         {storefrontUrl ? (
           <a
@@ -209,12 +246,17 @@ export function ProfileEditor() {
             {t("profile.actions.viewStorefront")}
           </a>
         ) : (
-          <p className="text-xs text-text-3">{t("profile.actions.viewStorefrontUnavailable")}</p>
+          <p className="text-xs text-text-3">
+            {t("profile.actions.viewStorefrontUnavailable")}
+          </p>
         )}
       </header>
 
       <div className="px-1">
-        <CompletenessMeter score={profile.completeness_score} breakdown={completeness} />
+        <CompletenessMeter
+          score={profile.completeness_score}
+          breakdown={completeness}
+        />
       </div>
 
       <form
@@ -225,7 +267,9 @@ export function ProfileEditor() {
         }}
       >
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.basics")}</h2>
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.sections.basics")}
+          </h2>
           <FormField label={t("profile.fields.displayNameLabel")}>
             <Input
               value={displayName}
@@ -251,11 +295,15 @@ export function ProfileEditor() {
               placeholder={t("profile.fields.descriptionPlaceholder")}
             />
           </FormField>
-          <p className="text-xs text-text-3">{t("profile.fields.descriptionHelp")}</p>
+          <p className="text-xs text-text-3">
+            {t("profile.fields.descriptionHelp")}
+          </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.contact")}</h2>
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.sections.contact")}
+          </h2>
           <FormField label={t("profile.fields.whatsappLabel")}>
             <Input
               type="tel"
@@ -266,11 +314,15 @@ export function ProfileEditor() {
               placeholder={t("profile.fields.whatsappPlaceholder")}
             />
           </FormField>
-          <p className="text-xs text-text-3">{t("profile.fields.whatsappHelp")}</p>
+          <p className="text-xs text-text-3">
+            {t("profile.fields.whatsappHelp")}
+          </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.cover")}</h2>
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.sections.cover")}
+          </h2>
           <CoverUpload
             coverUrl={coverUrl}
             disabled={saving}
@@ -281,7 +333,9 @@ export function ProfileEditor() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.logo")}</h2>
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.sections.logo")}
+          </h2>
           <LogoUpload
             logoUrl={logoUrl}
             disabled={saving}
@@ -291,7 +345,21 @@ export function ProfileEditor() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text">{t("profile.sections.location")}</h2>
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.brand.title")}
+          </h2>
+          <BrandThemeEditor
+            value={brandTheme}
+            onChange={setBrandTheme}
+            logoUrl={logoUrl}
+            disabled={saving}
+          />
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-text">
+            {t("profile.sections.location")}
+          </h2>
           <FormField label={t("profile.fields.landmarkLabel")}>
             <Input
               value={landmark}
@@ -320,7 +388,9 @@ export function ProfileEditor() {
               />
             </FormField>
           </div>
-          <p className="text-xs text-text-3">{t("profile.fields.locationHelp")}</p>
+          <p className="text-xs text-text-3">
+            {t("profile.fields.locationHelp")}
+          </p>
         </section>
 
         <section>

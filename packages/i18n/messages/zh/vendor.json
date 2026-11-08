@@ -771,6 +771,23 @@
       "permissionDenied": "您无权访问此店面资料。",
       "notFound": "未找到此账户的店面资料。",
       "retryHint": "请检查网络后重试。"
+    },
+    "brand": {
+      "title": "店铺配色",
+      "help": "您的配色仅用于您的店铺页面。我们会自动调整以保证文字清晰可读（WCAG AA）。",
+      "primary": "主色",
+      "primaryHelp": "店铺页面的按钮和链接",
+      "accent": "强调色",
+      "accentHelp": "重点标记和徽章",
+      "contrast": "对比度 {ratio}:1",
+      "reset": "重置",
+      "adjusted": "我们稍微加深了该颜色，以保证文字清晰。",
+      "extract": "从标志提取",
+      "extracting": "正在读取标志…",
+      "needLogo": "请先上传标志。",
+      "extractFailed": "无法从标志读取颜色，请手动选择。",
+      "previewButton": "加入购物车",
+      "previewAccent": "新品上架"
     }
   },
   "orders": {

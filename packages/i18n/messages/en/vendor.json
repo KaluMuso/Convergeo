@@ -791,6 +791,23 @@
       "permissionDenied": "You do not have access to this storefront profile.",
       "notFound": "Storefront profile not found for this account.",
       "retryHint": "Check your connection, then try again."
+    },
+    "brand": {
+      "title": "Storefront colours",
+      "help": "Your colours apply to your storefront page only. We adjust them automatically so text stays readable (WCAG AA).",
+      "primary": "Primary colour",
+      "primaryHelp": "Buttons and links on your store page",
+      "accent": "Accent colour",
+      "accentHelp": "Highlights and badges",
+      "contrast": "contrast {ratio}:1",
+      "reset": "Reset",
+      "adjusted": "We darkened that colour slightly so text on it stays readable.",
+      "extract": "Extract from logo",
+      "extracting": "Reading your logo…",
+      "needLogo": "Upload a logo first.",
+      "extractFailed": "Couldn't read colours from your logo. Pick them manually.",
+      "previewButton": "Add to cart",
+      "previewAccent": "New arrivals"
     }
   },
   "orders": {
