@@ -39,7 +39,7 @@ function prefersDark(): boolean {
 
 function readStoredChoice(): ThemeChoice {
   if (typeof window === "undefined") {
-    return "light";
+    return "system";
   }
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -49,7 +49,7 @@ function readStoredChoice(): ThemeChoice {
   } catch {
     /* storage may be unavailable (private mode / disabled) */
   }
-  return "light";
+  return "system";
 }
 
 function applyResolvedTheme(resolved: ResolvedTheme): void {
@@ -61,13 +61,13 @@ function applyResolvedTheme(resolved: ResolvedTheme): void {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // Initialise from storage/OS on mount. The pre-paint <ThemeScript/> has already
   // stamped data-theme, so this only syncs React state — no visible flash.
-  const [theme, setThemeState] = useState<ThemeChoice>("light");
+  const [theme, setThemeState] = useState<ThemeChoice>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
     const stored = readStoredChoice();
     setThemeState(stored);
-    const resolved = resolveInitialTheme(stored, prefersDark());
+    const resolved = resolveInitialTheme(stored === "system" ? null : stored, prefersDark());
     setResolvedTheme(resolved);
     applyResolvedTheme(resolved);
   }, []);
@@ -94,7 +94,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore persistence failure */
     }
-    const resolved = resolveInitialTheme(next, prefersDark());
+    const resolved = resolveInitialTheme(next === "system" ? null : next, prefersDark());
     setResolvedTheme(resolved);
     applyResolvedTheme(resolved);
   }, []);

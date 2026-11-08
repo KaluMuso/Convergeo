@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("ThemePreference", () => {
-  it("defaults to light and persists system when selected", async () => {
+  it("defaults to system and persists light when selected", async () => {
     const user = userEvent.setup();
     render(
       <ThemeProvider>
@@ -47,11 +47,12 @@ describe("ThemePreference", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByLabelText("Light")).toBeChecked();
-
-    await user.click(screen.getByLabelText("System"));
     expect(screen.getByLabelText("System")).toBeChecked();
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("system");
+
+    await user.click(screen.getByLabelText("Light"));
+    expect(screen.getByLabelText("Light")).toBeChecked();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
   });
 
   it("can select dark", async () => {
