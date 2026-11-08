@@ -85,7 +85,13 @@
     "tabServices": "服务",
     "tabEvents": "活动",
     "serviceFrom": "{price} 起",
-    "whatsappCta": "在 WhatsApp 上聊天"
+    "whatsappCta": "在 WhatsApp 上聊天",
+    "follow": "关注",
+    "following": "已关注",
+    "newSeller": "新卖家",
+    "newSellerJoined": "新卖家 · {date} 加入",
+    "tabAbout": "关于",
+    "tabReviews": "评价"
   },
   "listings": {
     "vendor": "由 {vendor} 销售",

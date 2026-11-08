@@ -85,7 +85,13 @@
     "tabServices": "Services",
     "tabEvents": "Events",
     "serviceFrom": "From {price}",
-    "whatsappCta": "Chat on WhatsApp"
+    "whatsappCta": "Chat on WhatsApp",
+    "follow": "Follow",
+    "following": "Following",
+    "newSeller": "New seller",
+    "newSellerJoined": "New seller · joined {date}",
+    "tabAbout": "About",
+    "tabReviews": "Reviews"
   },
   "listings": {
     "vendor": "Sold by {vendor}",

@@ -85,7 +85,13 @@
     "tabServices": "Services",
     "tabEvents": "Events",
     "serviceFrom": "Kuyambira {price}",
-    "whatsappCta": "Lankhulani pa WhatsApp"
+    "whatsappCta": "Lankhulani pa WhatsApp",
+    "follow": "Follow",
+    "following": "Following",
+    "newSeller": "New seller",
+    "newSellerJoined": "New seller · joined {date}",
+    "tabAbout": "About",
+    "tabReviews": "Reviews"
   },
   "listings": {
     "vendor": "Wagulitsa {vendor}",

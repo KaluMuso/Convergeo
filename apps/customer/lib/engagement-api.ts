@@ -130,3 +130,46 @@ export async function recordRecentlyViewedOnServer(productId: string): Promise<v
     body: JSON.stringify({ product_id: productId }),
   });
 }
+
+/** True when signed in (has a Supabase session token). */
+export async function hasCustomerSession(): Promise<boolean> {
+  return (await getAccessToken()) !== null;
+}
+
+type FollowListResponse = { items: Array<{ vendor_id: string }> };
+
+/** Whether the signed-in customer follows `vendorId`; null when signed out or on error. */
+export async function isFollowingVendor(vendorId: string): Promise<boolean | null> {
+  const token = await getAccessToken();
+  if (!token) {
+    return null;
+  }
+  const data = await apiRequest<FollowListResponse>("/me/follows?limit=100", {
+    method: "GET",
+    token,
+  });
+  if (!data) {
+    return null;
+  }
+  return data.items.some((item) => item.vendor_id === vendorId);
+}
+
+/** PUT/DELETE /vendors/{id}/follow (204). Returns false on any failure. */
+export async function setVendorFollow(vendorId: string, follow: boolean): Promise<boolean> {
+  const token = await getAccessToken();
+  if (!token) {
+    return false;
+  }
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/vendors/${encodeURIComponent(vendorId)}/follow`,
+      {
+        method: follow ? "PUT" : "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
