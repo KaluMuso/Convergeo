@@ -58,6 +58,25 @@ class FakeQuery:
         self.filters.append(("gte", column, value))
         return self
 
+    def lte(self, column: str, value: Any) -> FakeQuery:
+        self.filters.append(("lte", column, value))
+        return self
+
+    def gt(self, column: str, value: Any) -> FakeQuery:
+        self.filters.append(("gt", column, value))
+        return self
+
+    def ilike(self, column: str, pattern: str) -> FakeQuery:
+        self.filters.append(("ilike", column, pattern.strip("%").lower()))
+        return self
+
+    def like(self, column: str, pattern: str) -> FakeQuery:
+        self.filters.append(("like", column, pattern.rstrip("%")))
+        return self
+
+    def offset(self, _count: int) -> FakeQuery:
+        return self
+
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
         self.order_by = (column, desc)
         return self
@@ -77,13 +96,28 @@ class FakeQuery:
         self.op = "delete"
         return self
 
+    @staticmethod
+    def _cmp(left: Any, right: Any) -> int:
+        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            return (left > right) - (left < right)
+        a, b = str(left if left is not None else ""), str(right)
+        return (a > b) - (a < b)
+
     def _match(self, row: dict[str, Any]) -> bool:
         for kind, column, value in self.filters:
             if kind == "eq" and row.get(column) != value:
                 return False
             if kind == "in" and row.get(column) not in value:
                 return False
-            if kind == "gte" and str(row.get(column, "")) < str(value):
+            if kind == "gte" and self._cmp(row.get(column), value) < 0:
+                return False
+            if kind == "lte" and self._cmp(row.get(column), value) > 0:
+                return False
+            if kind == "gt" and self._cmp(row.get(column), value) <= 0:
+                return False
+            if kind == "ilike" and value not in str(row.get(column, "")).lower():
+                return False
+            if kind == "like" and not str(row.get(column, "")).startswith(value):
                 return False
         return True
 

@@ -218,6 +218,10 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/admin/search-insights/ask-cost"): "analytics.read",
     ("GET", "/admin/clip-analytics"): "analytics.read",
     ("GET", "/admin/governance/vendors"): "analytics.read",
+    ("GET", "/admin/flash-deals"): "ads.manage",
+    ("POST", "/admin/flash-deals"): "ads.manage",
+    ("PATCH", "/admin/flash-deals/{deal_id}"): "ads.manage",
+    ("POST", "/admin/qa/{kind}/{item_id}/moderate"): "products.manage",
 }
 
 

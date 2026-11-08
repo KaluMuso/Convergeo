@@ -250,6 +250,21 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/reconciliation/webhook-drain-tick": INTERNAL_CRON,
     "POST /internal/release-job/tick": INTERNAL_CRON,
     "POST /internal/review-aggregate/tick": INTERNAL_CRON,
+    "POST /internal/retention/alerts-tick": INTERNAL_CRON,
+    # Retention (customer-owned saved searches / listing alerts; enforced in-router).
+    "POST /me/saved-searches": STANDARD_WRITE,
+    "PATCH /me/saved-searches/{search_id}": STANDARD_WRITE,
+    "DELETE /me/saved-searches/{search_id}": STANDARD_WRITE,
+    "POST /me/listing-alerts": STANDARD_WRITE,
+    "DELETE /me/listing-alerts/{alert_id}": STANDARD_WRITE,
+    # Product Q&A free text — SENSITIVE like comments.
+    "POST /products/{slug}/questions": SENSITIVE_WRITE,
+    "POST /questions/{question_id}/answers": SENSITIVE_WRITE,
+    "POST /qa/{kind}/{item_id}/flag": SENSITIVE_WRITE,
+    # Admin flash deals + Q&A moderation (admin sub-router, un-prefixed keys).
+    "POST /flash-deals": ADMIN_WRITE,
+    "PATCH /flash-deals/{deal_id}": ADMIN_WRITE,
+    "POST /qa/{kind}/{item_id}/moderate": ADMIN_WRITE,
     "POST /internal/sentry-test": INTERNAL_CRON,
     "POST /internal/stock-sweeper/tick": INTERNAL_CRON,
     "POST /internal/sweepers/cart-reservations": INTERNAL_CRON,
