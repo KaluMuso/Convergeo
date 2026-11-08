@@ -100,5 +100,19 @@
   },
   "share": {
     "label": "Partager"
+  },
+  "fab": {
+    "ask": "Demander à Vergeo",
+    "askTitle": "Demander à Vergeo",
+    "askHint": "Décrivez ce qu'il vous faut : un produit, un service ou un événement.",
+    "askPlaceholder": "ex. panneau solaire à moins de 3 000 K à Lusaka",
+    "send": "Demander",
+    "voiceStart": "Dicter votre question",
+    "voiceStop": "Arrêter l'écoute",
+    "listening": "Écoute…",
+    "voiceUnsupported": "La saisie vocale n'est pas prise en charge par ce navigateur.",
+    "close": "Fermer",
+    "showFooter": "Afficher les liens du site",
+    "hideFooter": "Masquer les liens du site"
   }
 }

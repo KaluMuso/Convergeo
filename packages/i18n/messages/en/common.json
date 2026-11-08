@@ -100,5 +100,19 @@
   },
   "share": {
     "label": "Share"
+  },
+  "fab": {
+    "ask": "Ask Vergeo",
+    "askTitle": "Ask Vergeo",
+    "askHint": "Describe what you need — a product, a service or an event.",
+    "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
+    "send": "Ask",
+    "voiceStart": "Speak your question",
+    "voiceStop": "Stop listening",
+    "listening": "Listening…",
+    "voiceUnsupported": "Voice input isn't supported in this browser.",
+    "close": "Close",
+    "showFooter": "Show site links",
+    "hideFooter": "Hide site links"
   }
 }

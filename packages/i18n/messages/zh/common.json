@@ -94,5 +94,19 @@
   },
   "share": {
     "label": "分享"
+  },
+  "fab": {
+    "ask": "问 Vergeo",
+    "askTitle": "问 Vergeo",
+    "askHint": "描述您的需求：商品、服务或活动。",
+    "askPlaceholder": "例如：卢萨卡 3,000 克瓦查以内的太阳能板",
+    "send": "提问",
+    "voiceStart": "语音提问",
+    "voiceStop": "停止聆听",
+    "listening": "正在聆听…",
+    "voiceUnsupported": "此浏览器不支持语音输入。",
+    "close": "关闭",
+    "showFooter": "显示网站链接",
+    "hideFooter": "隐藏网站链接"
   }
 }

@@ -618,11 +618,9 @@
 }
 
 @media (min-width: 64rem) {
+  /* Centred on desktop: bottom-right belongs to the floating action buttons. */
   .v-toaster {
-    left: auto;
-    right: var(--sp-6);
     bottom: var(--sp-6);
-    transform: none;
   }
 }
 
