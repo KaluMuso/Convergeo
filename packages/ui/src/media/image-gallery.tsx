@@ -36,6 +36,12 @@ export type ImageGalleryProps = {
   /** Label shown inside a slide when its Cloudinary asset fails to load. */
   imageFallbackLabel?: string;
   className?: string;
+  /** Controlled slide index: when it changes the strip scrolls to it (e.g. a variant photo). */
+  activeIndex?: number;
+  /** Called when a slide is tapped/clicked (e.g. to open a full-screen viewer). */
+  onImageActivate?: (index: number) => void;
+  /** Reports the visible slide index (swipe, arrows, thumbnails). */
+  onIndexChange?: (index: number) => void;
 };
 
 export function ImageGallery({
@@ -47,6 +53,9 @@ export function ImageGallery({
   nextLabel,
   imageFallbackLabel,
   className,
+  activeIndex,
+  onImageActivate,
+  onIndexChange,
 }: ImageGalleryProps) {
   const galleryId = useId();
   const stripRef = useRef<HTMLDivElement>(null);
@@ -96,6 +105,23 @@ export function ImageGallery({
     const next = Math.min(cappedImages.length - 1, currentIndex + 1);
     scrollToIndex(next);
   }, [cappedImages.length, currentIndex, scrollToIndex]);
+
+  // Only react to the caller changing the index, not to our own scrolling.
+  const lastActiveIndex = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (activeIndex === lastActiveIndex.current) {
+      return;
+    }
+    lastActiveIndex.current = activeIndex;
+    if (activeIndex === undefined || activeIndex < 0 || activeIndex >= cappedImages.length) {
+      return;
+    }
+    scrollToIndex(activeIndex);
+  }, [activeIndex, cappedImages.length, scrollToIndex]);
+
+  useEffect(() => {
+    onIndexChange?.(currentIndex);
+  }, [currentIndex, onIndexChange]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
@@ -164,9 +190,11 @@ export function ImageGallery({
             <div
               key={`${galleryId}-${image.publicId}-${index}`}
               data-testid={`gallery-slide-${index}`}
+              onClick={onImageActivate ? () => onImageActivate(index) : undefined}
               style={{
                 flex: "0 0 100%",
                 scrollSnapAlign: "center",
+                cursor: onImageActivate ? "zoom-in" : undefined,
               }}
             >
               <CloudinaryImage

@@ -10,6 +10,8 @@ from uuid import UUID
 
 from app.errors import AppError
 from app.services.payments.base import QueryStatusRequest
+from app.services.payments.fees import fee_fields_from_provider_raw
+from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
 
 # Well-known UUID for automated jobs (sweeper, webhook processor).
 SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
@@ -239,6 +241,40 @@ def payment_status_to_event(status: PaymentStatus) -> PaymentEvent | None:
         return None
 
 
+def provider_amount_mismatch(
+    *,
+    expected_ngwee: int,
+    provider_amount: object,
+    provider_currency: object,
+) -> str | None:
+    """C3: compare what Lenco says it collected with our payment row.
+
+    Returns ``None`` when Lenco's amount (decimal-major string, Decimal-parsed)
+    and currency match ``expected_ngwee`` ZMW exactly; otherwise a short reason.
+    The card widget amount is set client-side, so the server must never trust it.
+    Fails closed: unparseable / float / missing amount is a mismatch.
+    """
+    if provider_currency is not None and str(provider_currency).upper() != SUPPORTED_CURRENCY:
+        return f"currency_mismatch:{provider_currency}"
+    if isinstance(provider_amount, bool) or provider_amount is None:
+        return "amount_missing"
+    if isinstance(provider_amount, int):
+        provider_amount = str(provider_amount)
+    if not isinstance(provider_amount, str):
+        # Floats (or anything else) are never parsed as money.
+        return "amount_unparseable"
+    try:
+        collected = major_str_to_ngwee(provider_amount.strip())
+    except (TypeError, ValueError):
+        return "amount_unparseable"
+    if collected != expected_ngwee:
+        return f"amount_mismatch:{collected}!={expected_ngwee}"
+    return None
+
+
+_AMOUNT_NOT_SUPPLIED: Any = object()
+
+
 def write_payment_audit_log(
     service_client: ServiceRoleClient,
     *,
@@ -391,14 +427,39 @@ def apply_payment_status(
     incoming_status: PaymentStatus,
     actor_id: str,
     note: str,
+    provider_amount: object = _AMOUNT_NOT_SUPPLIED,
+    provider_currency: object = None,
+    provider_fee: object = None,
+    provider_bearer: object = None,
 ) -> TransitionOutcome | None:
-    """Apply a target status with precedence rules (webhooks / poller)."""
+    """Apply a target status with precedence rules (webhooks / poller).
+
+    When the caller passes ``provider_amount`` (Lenco's reported amount), SUCCESS
+    is only applied if it equals the payment row's ``amount_ngwee`` in ZMW;
+    a mismatch is audited, held on ``payments.raw.hold`` and returns ``None``
+    (no settlement, no SUCCESS).
+    """
     snapshot = _load_payment(service_client, payment_id)
     if not should_apply_status(current=snapshot.status, incoming=incoming_status):
         return None
     event = payment_status_to_event(incoming_status)
     if event is None:
         return None
+    if incoming_status == PaymentStatus.SUCCESS and provider_amount is not _AMOUNT_NOT_SUPPLIED:
+        mismatch = provider_amount_mismatch(
+            expected_ngwee=snapshot.amount_ngwee,
+            provider_amount=provider_amount,
+            provider_currency=provider_currency,
+        )
+        if mismatch is not None:
+            _hold_amount_mismatch(
+                service_client,
+                snapshot=snapshot,
+                actor_id=actor_id,
+                note=note,
+                reason=mismatch,
+            )
+            return None
     if incoming_status == PaymentStatus.SUCCESS:
         from app.services.payments.settlement import settle_prepaid_collection
 
@@ -425,6 +486,13 @@ def apply_payment_status(
                 ),
             )
             return None
+        # C6: book Lenco's collection fee (idempotent per payment) alongside the
+        # escrow settlement so platform_cash tracks the Lenco balance.
+        from app.services.payments.fees import book_collection_fee
+
+        book_collection_fee(
+            payment_id=payment_id, fee=provider_fee, bearer=provider_bearer
+        )
     outcome = transition_payment(
         service_client,
         payment_id=payment_id,
@@ -441,6 +509,34 @@ def apply_payment_status(
             lenco_reference=snapshot.lenco_reference,
         )
     return outcome
+
+
+def _hold_amount_mismatch(
+    service_client: ServiceRoleClient,
+    *,
+    snapshot: PaymentSnapshot,
+    actor_id: str,
+    note: str,
+    reason: str,
+) -> None:
+    """Audit + flag a provider amount/currency mismatch; payment status unchanged."""
+    write_payment_audit_log(
+        service_client,
+        actor_id=actor_id,
+        payment_id=snapshot.id,
+        from_status=snapshot.status.value,
+        to_status=snapshot.status.value,
+        note=f"{note} [provider_amount_mismatch {reason}]",
+    )
+    raw = dict(snapshot.raw)
+    raw["hold"] = {
+        "reason": "provider_amount_mismatch",
+        "detail": reason,
+        "at": datetime.now(UTC).isoformat(),
+    }
+    service_client.client.table("payments").update({"raw": raw}).eq(
+        "id", snapshot.id
+    ).execute()
 
 
 def _emit_payment_success_notifications(
@@ -595,9 +691,14 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.SUCCESS,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Late-success reconciliation after sweeper re-query",
+                provider_amount=query_result.amount_major,
+                provider_currency=query_result.currency,
+                provider_fee=fee_fields_from_provider_raw(query_result.raw)[0],
+                provider_bearer=fee_fields_from_provider_raw(query_result.raw)[1],
             )
             if outcome is not None:
                 reconciled_success += 1
+            # Never expire a payment Lenco says succeeded (even on mismatch hold).
             continue
 
         if lenco_status == PaymentStatus.PAY_OFFLINE:
@@ -708,12 +809,21 @@ def process_webhook_event(
 
     outcome: TransitionOutcome | None = None
     if incoming is not None:
+        # Verify Lenco's reported amount when the webhook carries one (Lenco
+        # collection payloads do); card verify additionally re-queries Lenco.
+        provider_amount: object = (
+            data.get("amount") if "amount" in data else _AMOUNT_NOT_SUPPLIED
+        )
         outcome = apply_payment_status(
             service_client,
             payment_id=payment.id,
             incoming_status=incoming,
             actor_id=SYSTEM_ACTOR_ID,
             note=f"Webhook {event_name} ({row.get('event_id', '')})",
+            provider_amount=provider_amount,
+            provider_currency=data.get("currency"),
+            provider_fee=data.get("fee"),
+            provider_bearer=data.get("bearer"),
         )
 
     service_client.client.table("webhook_events").update(

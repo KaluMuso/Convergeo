@@ -5,6 +5,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,
   formatMadeToOrderLeadTime,
@@ -19,6 +20,8 @@ export type ReviewStepLabels = {
   subtitle: string;
   lineItems: string;
   qtyTemplate: string;
+  variantOption?: string;
+  variantSeparator?: string;
   saleUnits: SaleUnitLabels;
   madeToOrderLeadTime: string;
   subtotal: string;
@@ -174,7 +177,13 @@ export function StepReview({
                   <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
                     <span className="min-w-0 break-words font-body text-text-2">
                       <span>
-                        {lineTitle(item)}{" "}
+                        {lineTitle(item)}
+                        <VariantLineLabel
+                          options={item.variant_options}
+                          template={labels.variantOption ?? "{value}"}
+                          separator={labels.variantSeparator ?? ", "}
+                          testId={`review-line-variant-${item.listing_id}`}
+                        />{" "}
                         <span className="text-text-3">
                           {labels.qtyTemplate.replace(
                             "{qty}",

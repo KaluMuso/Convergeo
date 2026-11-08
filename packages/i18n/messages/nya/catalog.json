@@ -301,6 +301,28 @@
         "misleading": "Zosokoneza kapena zolakwika",
         "other": "Nkhawa ina"
       }
+    },
+    "variants": {
+      "groupLabel": "{group}: {value}",
+      "choose": "Sankhani {group}",
+      "soldOut": "{value} (zatha)",
+      "unavailable": "{value} (sizikupezeka ndi zomwe mwasankha)",
+      "required": "Sankhani {options} kuti muonjezere ku cart",
+      "listSeparator": " ndi ",
+      "chooseOptions": "Sankhani zomwe mukufuna",
+      "wasPrice": "Mtengo wakale",
+      "errors": {
+        "outOfStock": "Chimene mwasankha chatha. Sankhani china kapena chepetsani kuchuluka.",
+        "unavailable": "Chimene mwasankha sichikupezeka. Sankhani china.",
+        "conflict": "Cart yanu ili kale ndi chinthu ichi mu mtundu wina. Chotsani kaye ku cart kuti musinthe."
+      }
+    },
+    "lightbox": {
+      "open": "Onani chithunzi pa screen yonse",
+      "dialog": "Owonera zithunzi",
+      "close": "Tsekani owonera zithunzi",
+      "zoomIn": "Kulitsani",
+      "zoomOut": "Chepetsani"
     }
   },
   "plp": {

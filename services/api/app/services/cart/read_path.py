@@ -56,6 +56,38 @@ def listing_cart_access_conflict(
             details={"listing_id": listing_id, "status": listing.get("status")},
         )
 
+    # Variant overlay (store.fetch_listings_for_items): the line's chosen option
+    # was archived/removed, or the vendor added options after the line was made.
+    if listing.get("_variant_unavailable"):
+        return MergeConflict(
+            listing_id=listing_id,
+            code="cart.variant_unavailable",
+            message_key="cart.variant_unavailable",
+            details={"listing_id": listing_id, "listing_variant_id": listing.get("_variant_id")},
+        )
+    if listing.get("_variant_required"):
+        return MergeConflict(
+            listing_id=listing_id,
+            code="cart.variant_required",
+            message_key="cart.variant_required",
+            details={"listing_id": listing_id},
+        )
+
+    return None
+
+
+def variant_stock_conflict(
+    listing_id: str, listing: dict[str, Any], qty: int
+) -> dict[str, Any] | None:
+    """Checkout-time guard: the line's variant has fewer units than requested."""
+    available = listing.get("_variant_available_qty")
+    if isinstance(available, int) and qty > available:
+        return {
+            "listing_id": listing_id,
+            "code": "cart.variant_out_of_stock",
+            "available_qty": available,
+            "requested_qty": qty,
+        }
     return None
 
 

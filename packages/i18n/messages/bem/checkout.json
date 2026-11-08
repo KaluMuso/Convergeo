@@ -249,5 +249,9 @@
       "title": "Loleni phone yenu",
       "waiting": "Tuletekele approval…"
     }
+  },
+  "variant": {
+    "option": "{group}: {value}",
+    "separator": " · "
   }
 }

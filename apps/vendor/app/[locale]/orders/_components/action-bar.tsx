@@ -15,6 +15,9 @@ export type OrderItemSummary = {
   title: string;
   qty: number;
   unit_price_ngwee: number;
+  /** Chosen colour/size, snapshotted when the order was placed. */
+  variant_options?: Array<{ group: string; value: string }>;
+  variant_sku?: string | null;
 };
 
 export type OrderEventSummary = {
@@ -452,6 +455,26 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-text">{item.title}</p>
+                  {item.variant_options && item.variant_options.length > 0 ? (
+                    <p
+                      className="text-sm font-medium text-text"
+                      data-testid={`vendor-order-line-variant-${item.id}`}
+                    >
+                      {item.variant_options
+                        .map((option) =>
+                          t("orders.items.variantOption", {
+                            group: option.group,
+                            value: option.value,
+                          }),
+                        )
+                        .join(t("orders.items.variantSeparator"))}
+                    </p>
+                  ) : null}
+                  {item.variant_sku ? (
+                    <p className="text-xs text-text-2">
+                      {t("orders.items.sku", { sku: item.variant_sku })}
+                    </p>
+                  ) : null}
                   <p className="text-sm text-text-2">{t("orders.items.qty", { qty: item.qty })}</p>
                 </div>
                 <PriceBlock ngwee={item.unit_price_ngwee * item.qty} />

@@ -271,5 +271,9 @@
       "viewTickets": "View my tickets",
       "viewJob": "Back to the job"
     }
+  },
+  "variant": {
+    "option": "{group}: {value}",
+    "separator": " · "
   }
 }

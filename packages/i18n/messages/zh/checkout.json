@@ -246,5 +246,9 @@
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
     }
+  },
+  "variant": {
+    "option": "{group}：{value}",
+    "separator": " · "
   }
 }

@@ -12,7 +12,12 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
-from app.services.cart.grouping import CartLineView, group_by_vendor
+from app.services.cart.grouping import (
+    CartLineView,
+    group_by_vendor,
+    line_variant_id,
+    line_variant_options,
+)
 from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
 from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.store import (
@@ -31,6 +36,14 @@ from app.services.listings.class_rules import (
     count_weekly_committed_qty,
     listing_lead_time_days,
     validate_listing_purchasable_for_cart,
+)
+from app.services.listings.variants import (
+    EMPTY_SET,
+    ListingVariant,
+    ListingVariantSet,
+    load_variant_sets,
+    overlay_listing_for_variant,
+    resolve_variant_for_purchase,
 )
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
@@ -65,6 +78,9 @@ class CartItemInput(BaseModel):
     #: otherwise. Refusing the cart action on a bad clip id would let a forged
     #: value DENY someone their add-to-cart, which is the worse bug.
     clip_id: str | None = None
+    #: Required when the listing has option groups (colour/size). Validated
+    #: server-side: must be an ACTIVE variant of THIS listing with enough stock.
+    listing_variant_id: str | None = None
 
 
 class CartItemUpdate(BaseModel):
@@ -81,6 +97,11 @@ class AcceptRfqCartRequest(BaseModel):
     fulfilment: Literal["pickup", "delivery"] | None = None
     delivery_lat: float | None = None
     delivery_lng: float | None = None
+
+
+class VariantOptionResponse(BaseModel):
+    group: str
+    value: str
 
 
 class CartLineResponse(BaseModel):
@@ -102,6 +123,8 @@ class CartLineResponse(BaseModel):
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
     is_rfq_quote: bool = False
+    listing_variant_id: str | None = None
+    variant_options: list[VariantOptionResponse] = Field(default_factory=list)
 
 
 class VendorGroupResponse(BaseModel):
@@ -320,7 +343,7 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
         client.table("cart_items")
         .select(
             "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
-            "pickup_location_id, rfq_thread_id"
+            "pickup_location_id, rfq_thread_id, listing_variant_id"
         )
         .eq("cart_id", cart_id)
         .execute()
@@ -408,6 +431,8 @@ def _build_cart_response(
                     else None
                 ),
                 is_rfq_quote=is_rfq_quote,
+                listing_variant_id=line_variant_id(item),
+                variant_options=line_variant_options(listing),
             )
         )
 
@@ -438,6 +463,8 @@ def _build_cart_response(
                 vendor_capacity_per_week=line.vendor_capacity_per_week,
                 defect_notes=line.defect_notes,
                 is_rfq_quote=line.is_rfq_quote,
+                listing_variant_id=line.listing_variant_id,
+                variant_options=_variant_option_responses(line),
             )
             for line in line_views
         ],
@@ -464,6 +491,8 @@ def _build_cart_response(
                         vendor_capacity_per_week=item.vendor_capacity_per_week,
                         defect_notes=item.defect_notes,
                         is_rfq_quote=item.is_rfq_quote,
+                        listing_variant_id=item.listing_variant_id,
+                        variant_options=_variant_option_responses(item),
                     )
                     for item in group.items
                 ],
@@ -482,6 +511,37 @@ def _build_cart_response(
             )
             for conflict in (conflicts or [])
         ],
+    )
+
+
+def _variant_option_responses(line: CartLineView) -> list[VariantOptionResponse]:
+    return [
+        VariantOptionResponse(group=group, value=value) for group, value in line.variant_options
+    ]
+
+
+def _variant_set_for(listing_id: str) -> ListingVariantSet:
+    return load_variant_sets(service_db_client(), [listing_id]).get(listing_id, EMPTY_SET)
+
+
+def _variant_conflict_error(
+    listing_id: str,
+    *,
+    existing_variant_id: str | None,
+    variant_set: ListingVariantSet,
+) -> AppError:
+    existing = variant_set.get(existing_variant_id)
+    return AppError(
+        code="cart.variant_conflict",
+        message="Your cart already holds this item in a different option",
+        http_status=409,
+        details={
+            "listing_id": listing_id,
+            "existing_listing_variant_id": existing_variant_id,
+            "existing_options": variant_set.options_for(existing) if existing else [],
+            "message_key": "cart.variant_conflict",
+            "retry": False,
+        },
     )
 
 
@@ -598,7 +658,14 @@ async def add_cart_item(
     # Eligibility is resolved BEFORE the fetch: under D36 it decides whether the
     # listing is visible at all, not merely how it is priced.
     business_eligible = _business_eligible_for_user(owner.user_id)
-    listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+    raw_listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+    variant_set = _variant_set_for(body.listing_id)
+    variant: ListingVariant | None = resolve_variant_for_purchase(
+        variant_set, listing=raw_listing, variant_id=body.listing_variant_id, qty=body.qty
+    )
+    variant_id = variant.id if variant is not None else None
+    # Price derivation below reads listing["price_ngwee"]: view it as the variant.
+    listing = overlay_listing_for_variant(raw_listing, variant_set, variant_id)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -620,7 +687,7 @@ async def add_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("id, qty, pickup_location_id")
+        .select("id, qty, pickup_location_id, listing_variant_id")
         .eq("cart_id", cart_id)
         .eq("listing_id", body.listing_id)
         .limit(1)
@@ -638,7 +705,20 @@ async def add_cart_item(
         existing_location_id = (
             str(existing_location) if isinstance(existing_location, str) else None
         )
+        existing_variant_id = line_variant_id(rows[0])
+        if existing_variant_id != variant_id:
+            # One line per listing: a different colour/size of the same listing
+            # is refused rather than silently swapped or merged.
+            raise _variant_conflict_error(
+                body.listing_id,
+                existing_variant_id=existing_variant_id,
+                variant_set=variant_set,
+            )
         new_qty = int(rows[0]["qty"]) + body.qty
+        if variant is not None:
+            resolve_variant_for_purchase(
+                variant_set, listing=raw_listing, variant_id=variant_id, qty=new_qty
+            )
         location_id = _resolve_line_location_id(
             body.listing_id,
             pickup_location_id=body.pickup_location_id,
@@ -668,12 +748,15 @@ async def add_cart_item(
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
                 "pickup_location_id": location_id,
+                **({"listing_variant_id": variant_id} if variant_id is not None else {}),
             }
         ).execute()
 
     # Fire-and-forget funnel event (cart_add); server operational, consent-independent.
     # snapshot.lines carries the listing so vendor analytics can attribute the view.
     line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+    if variant_id is not None:
+        line["listing_variant_id"] = variant_id
     attributed_clip = validate_clip_attribution(
         service_client,
         clip_id=body.clip_id,
@@ -707,7 +790,7 @@ async def update_cart_item(
     request: Request,
 ) -> CartResponse:
     business_eligible = _business_eligible_for_user(owner.user_id)
-    listing = fetch_listing(listing_id, business_eligible=business_eligible)
+    raw_listing = fetch_listing(listing_id, business_eligible=business_eligible)
 
     client = _db_client_for_owner(
         owner,
@@ -718,7 +801,9 @@ async def update_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("pickup_location_id, rfq_thread_id, unit_price_ngwee, wholesale")
+        .select(
+            "pickup_location_id, rfq_thread_id, unit_price_ngwee, wholesale, listing_variant_id"
+        )
         .eq("cart_id", cart_id)
         .eq("listing_id", listing_id)
         .limit(1)
@@ -729,7 +814,9 @@ async def update_cart_item(
     rfq_thread_id: str | None = None
     rfq_unit_price: int | None = None
     rfq_wholesale = False
+    existing_variant_id: str | None = None
     if existing_rows and isinstance(existing_rows[0], dict):
+        existing_variant_id = line_variant_id(existing_rows[0])
         raw_location = existing_rows[0].get("pickup_location_id")
         if isinstance(raw_location, str):
             existing_location_id = raw_location
@@ -740,6 +827,14 @@ async def update_cart_item(
             if raw_price is not None:
                 rfq_unit_price = int(raw_price)
             rfq_wholesale = bool(existing_rows[0].get("wholesale"))
+
+    listing = raw_listing
+    if rfq_thread_id is None:
+        variant_set = _variant_set_for(listing_id)
+        resolve_variant_for_purchase(
+            variant_set, listing=raw_listing, variant_id=existing_variant_id, qty=body.qty
+        )
+        listing = overlay_listing_for_variant(raw_listing, variant_set, existing_variant_id)
 
     location_id = _resolve_line_location_id(
         listing_id,
@@ -851,6 +946,7 @@ def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNotic
                 if isinstance(item.get("pickup_location_id"), str)
                 else None
             ),
+            listing_variant_id=line_variant_id(item),
         )
         for item in items
         if not is_rfq_pinned_line(item)
@@ -994,6 +1090,29 @@ async def merge_cart_on_login(
             guest_cart_id = str(guest_cart["id"])
             guest_items = _fetch_cart_items(service_db_client(), guest_cart_id)
 
+    # One line per listing: a guest line for a different variant of a listing
+    # the user cart already holds is dropped with an explicit conflict.
+    user_variants = {str(item["listing_id"]): line_variant_id(item) for item in user_items}
+    variant_conflicts: list[MergeConflict] = []
+    kept_guest_items: list[dict[str, Any]] = []
+    for item in guest_items:
+        listing_key = str(item["listing_id"])
+        if listing_key in user_variants and user_variants[listing_key] != line_variant_id(item):
+            variant_conflicts.append(
+                MergeConflict(
+                    listing_id=listing_key,
+                    code="cart.variant_conflict",
+                    message_key="cart.variant_conflict",
+                    details={"listing_id": listing_key, "retry": False},
+                )
+            )
+            continue
+        kept_guest_items.append(item)
+    guest_items = kept_guest_items
+    variant_by_listing = {
+        str(item["listing_id"]): line_variant_id(item) for item in guest_items + user_items
+    }
+
     all_items = user_items + guest_items
     listings = fetch_listings_for_items(all_items)
     from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
@@ -1026,6 +1145,11 @@ async def merge_cart_on_login(
                         if item.rfq_thread_id is not None
                         else {}
                     ),
+                    **(
+                        {"listing_variant_id": variant_by_listing[item.listing_id]}
+                        if variant_by_listing.get(item.listing_id)
+                        else {}
+                    ),
                 }
                 for item in merged_items
             ]
@@ -1042,7 +1166,7 @@ async def merge_cart_on_login(
         items=final_items,
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(current_user.id),
-        conflicts=conflicts,
+        conflicts=variant_conflicts + list(conflicts),
         customer_id=current_user.id,
     )
 

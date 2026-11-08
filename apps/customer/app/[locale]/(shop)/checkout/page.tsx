@@ -151,6 +151,8 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       subtitle: t("checkout.review.subtitle"),
       lineItems: t("checkout.review.lineItems"),
       qtyTemplate: t("checkout.review.qty"),
+      variantOption: String(t.raw("variant.option")),
+      variantSeparator: String(t.raw("variant.separator")),
       saleUnits: {
         each: t("cart.saleUnits.each"),
         metre: t("cart.saleUnits.metre"),

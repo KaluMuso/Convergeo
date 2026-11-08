@@ -49,6 +49,26 @@ export type Listing = {
   vendor_capacity_per_week?: number | null;
   vendor: VendorSummary;
   images: ProductImage[];
+  option_groups?: ListingOptionGroup[];
+  variants?: ListingVariant[];
+};
+
+export type ListingOptionGroup = {
+  id: string;
+  name: string;
+  display: "pill" | "swatch";
+  values: Array<{ id: string; label: string; swatch_hex: string | null }>;
+};
+
+export type ListingVariant = {
+  id: string;
+  sku: string | null;
+  option_value_ids: string[];
+  price_ngwee: number;
+  compare_at_ngwee: number | null;
+  stock_qty: number | null;
+  in_stock: boolean;
+  image_public_id: string | null;
 };
 
 export type ProductDetail = {
