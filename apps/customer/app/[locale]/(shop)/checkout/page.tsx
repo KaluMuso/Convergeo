@@ -2,9 +2,7 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
-import { CheckoutShell } from "./_components/step-fulfilment";
-import { resolveGroupParam, type SearchParams } from "./_lib/group-checkout";
+import { CheckoutEntry } from "./_components/checkout-entry";
 
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
@@ -19,7 +17,6 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<SearchParams>;
 };
 
 function buildGroupLabels(
@@ -200,7 +197,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
   };
 }
 
-export default async function CheckoutPage({ params, searchParams }: PageProps) {
+export default async function CheckoutPage({ params }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -215,19 +212,14 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
     checkout: checkoutMessages,
   } as AbstractIntlMessages;
   const labels = buildCheckoutLabels(locale, messages);
-  const groupId = resolveGroupParam(await searchParams);
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      {groupId !== undefined ? (
-        <GroupCheckoutLazy
-          locale={locale}
-          groupId={groupId}
-          labels={buildGroupLabels(locale, messages, labels)}
-        />
-      ) : (
-        <CheckoutShell locale={locale} labels={labels} />
-      )}
+      <CheckoutEntry
+        locale={locale}
+        labels={labels}
+        groupLabels={buildGroupLabels(locale, messages, labels)}
+      />
     </div>
   );
 }
