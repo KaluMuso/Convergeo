@@ -388,5 +388,12 @@
   "comparison": {
     "conditionUsed": "Yakubomfya",
     "preferredBadge": "Ushitisha asalwa"
+  },
+  "backInStock": {
+    "notifyMe": "Notify me when it's back",
+    "subscribed": "We'll notify you when it's back in stock",
+    "failed": "Couldn't set the alert. Try again.",
+    "seeSimilar": "See similar items in stock",
+    "unavailable": "Currently unavailable"
   }
 }

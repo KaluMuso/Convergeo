@@ -449,5 +449,12 @@
     "errors": {
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
     }
+  },
+  "backInStock": {
+    "notifyMe": "M'avertir du retour en stock",
+    "subscribed": "Nous vous avertirons dès le retour en stock",
+    "failed": "Impossible de créer l'alerte. Réessayez.",
+    "seeSimilar": "Voir des articles similaires en stock",
+    "unavailable": "Actuellement indisponible"
   }
 }

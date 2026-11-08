@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -38,7 +45,12 @@ vi.mock("next-intl", () => ({
 // below override this per-case.
 const usePickupLocationSelectionMock = vi.fn((_listingId: string | null) => ({
   branchTracked: false as boolean | null,
-  locations: [] as Array<{ id: string; landmark: string; lat: number; lng: number }>,
+  locations: [] as Array<{
+    id: string;
+    landmark: string;
+    lat: number;
+    lng: number;
+  }>,
   loading: false,
   loadError: false,
   selectedLocationId: null as string | null,
@@ -174,7 +186,9 @@ describe("BuyBox", () => {
       />,
     );
 
-    expect(screen.getByTestId("pdp-stock-state")).toHaveTextContent("Only 5 left");
+    expect(screen.getByTestId("pdp-stock-state")).toHaveTextContent(
+      "Only 5 left",
+    );
     expect(screen.getByTestId("pdp-price")).toHaveTextContent("K4,500.00");
     expect(screen.getByTestId("pdp-add-to-cart")).toBeEnabled();
 
@@ -196,13 +210,20 @@ describe("BuyBox", () => {
     await user.click(screen.getByTestId("pdp-add-to-cart"));
 
     await waitFor(() => {
-      expect(addCartItem).toHaveBeenCalledWith("listing-1", 1, undefined, undefined);
+      expect(addCartItem).toHaveBeenCalledWith(
+        "listing-1",
+        1,
+        undefined,
+        undefined,
+      );
       expect(openMiniCart).toHaveBeenCalled();
-      expect(screen.getByTestId("pdp-add-to-cart-success")).toHaveTextContent("Add to cart");
+      expect(screen.getByTestId("pdp-add-to-cart-success")).toHaveTextContent(
+        "Add to cart",
+      );
     });
   });
 
-  it("renders out-of-stock state with disabled stepper", () => {
+  it("replaces the stepper and Add to cart with Notify me when out of stock", () => {
     render(
       <BuyBox
         listing={outOfStockListing}
@@ -212,9 +233,17 @@ describe("BuyBox", () => {
       />,
     );
 
-    expect(screen.getByTestId("pdp-stock-state")).toHaveTextContent("Out of stock");
-    expect(screen.getByTestId("pdp-qty-decrease")).toBeDisabled();
-    expect(screen.getByTestId("pdp-qty-increase")).toBeDisabled();
+    expect(screen.getByTestId("pdp-stock-state")).toHaveTextContent(
+      "Out of stock",
+    );
+    expect(screen.queryByTestId("pdp-qty-decrease")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pdp-add-to-cart")).not.toBeInTheDocument();
+    expect(screen.getByTestId("pdp-notify-me")).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId("pdp-out-of-stock")
+        .querySelector('a[href="#pdp-related"]'),
+    ).not.toBeNull();
     expect(screen.getByTestId("pdp-single-vendor")).toBeInTheDocument();
   });
 
@@ -225,13 +254,21 @@ describe("BuyBox", () => {
         labels={labels}
         pickupLabels={pickupLabels}
         singleVendor={false}
-        seller={{ displayName: "Lusaka Hub", ratingLabel: "4.8 (12)", preferred: true }}
+        seller={{
+          displayName: "Lusaka Hub",
+          ratingLabel: "4.8 (12)",
+          preferred: true,
+        }}
         preferredBadgeLabel="Preferred seller"
       />,
     );
 
-    expect(screen.getByTestId("pdp-buy-box-seller")).toHaveTextContent("Lusaka Hub");
-    expect(screen.getByTestId("corner-ribbon-trust")).toHaveTextContent("Preferred seller");
+    expect(screen.getByTestId("pdp-buy-box-seller")).toHaveTextContent(
+      "Lusaka Hub",
+    );
+    expect(screen.getByTestId("corner-ribbon-trust")).toHaveTextContent(
+      "Preferred seller",
+    );
   });
 });
 
@@ -254,7 +291,9 @@ describe("BuyBox — required pickup branch selection", () => {
       />,
     );
 
-    expect(screen.getByTestId("pdp-pickup-location-loading")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pdp-pickup-location-loading"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("pdp-add-to-cart")).toBeDisabled();
   });
 
@@ -276,7 +315,9 @@ describe("BuyBox — required pickup branch selection", () => {
       />,
     );
 
-    expect(screen.getByTestId("pdp-pickup-location-unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pdp-pickup-location-unavailable"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("pdp-add-to-cart")).toBeDisabled();
   });
 
@@ -317,7 +358,9 @@ describe("BuyBox — required pickup branch selection", () => {
   it("sends the selected pickup_location_id and fulfilment=pickup through addCartItem", async () => {
     usePickupLocationSelectionMock.mockReturnValue({
       branchTracked: true,
-      locations: [{ id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 }],
+      locations: [
+        { id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 },
+      ],
       loading: false,
       loadError: false,
       selectedLocationId: "branch-1",
@@ -347,7 +390,9 @@ describe("BuyBox — required pickup branch selection", () => {
   it("blocks the click-time fallback with a real error if somehow clicked without a selection", async () => {
     usePickupLocationSelectionMock.mockReturnValue({
       branchTracked: true,
-      locations: [{ id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 }],
+      locations: [
+        { id: "branch-1", landmark: "East Park Mall", lat: -15.4, lng: 28.3 },
+      ],
       loading: false,
       loadError: false,
       selectedLocationId: null,
@@ -407,7 +452,12 @@ describe("standalone purchase while cart actions load", () => {
       module.resolve(cartMocks);
     });
     await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
-    expect(addCartItem).toHaveBeenCalledWith("listing-1", 1, undefined, undefined);
+    expect(addCartItem).toHaveBeenCalledWith(
+      "listing-1",
+      1,
+      undefined,
+      undefined,
+    );
     expect(openMiniCart).not.toHaveBeenCalled();
     expect(cartMocks.setLastAddedMessage).not.toHaveBeenCalled();
     expect(onAdded).not.toHaveBeenCalled();
@@ -417,7 +467,9 @@ describe("standalone purchase while cart actions load", () => {
     });
     await waitFor(() => expect(onAdded).toHaveBeenCalledOnce());
     expect(openMiniCart).toHaveBeenCalledOnce();
-    expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
+    expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(
+      labels.addToCartLabel,
+    );
     expect(button).toBeEnabled();
   });
 
@@ -466,7 +518,9 @@ describe("standalone purchase while cart actions load", () => {
       expect(alerts[0]).toHaveAttribute("role", "alert");
       expect(alerts[0]).toHaveTextContent(localizedLabels.addToCartErrorLabel);
       expect(button).toBeEnabled();
-      expect(screen.queryByTestId("pdp-add-to-cart-success")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("pdp-add-to-cart-success"),
+      ).not.toBeInTheDocument();
       expect(openMiniCart).not.toHaveBeenCalled();
       expect(cartMocks.setLastAddedMessage).not.toHaveBeenCalled();
       expect(addCartItem).toHaveBeenCalledOnce();
@@ -491,12 +545,16 @@ describe("standalone purchase while cart actions load", () => {
     );
     const button = screen.getByTestId("pdp-add-to-cart");
     await userEvent.click(button);
-    expect(await screen.findByText(labels.addToCartErrorLabel)).toBeInTheDocument();
+    expect(
+      await screen.findByText(labels.addToCartErrorLabel),
+    ).toBeInTheDocument();
     await waitFor(() => expect(button).toBeEnabled());
     expect(addCartItem).not.toHaveBeenCalled();
     expect(onAdded).not.toHaveBeenCalled();
     vi.doMock("../cart/mini-cart-drawer", () => cartMocks);
-    cartMocks.addCartItem.mockRejectedValueOnce(new Error("Request unavailable"));
+    cartMocks.addCartItem.mockRejectedValueOnce(
+      new Error("Request unavailable"),
+    );
     await userEvent.click(button);
     await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
     await waitFor(() => expect(button).toBeEnabled());
@@ -507,6 +565,8 @@ describe("standalone purchase while cart actions load", () => {
     await waitFor(() => expect(onAdded).toHaveBeenCalledOnce());
     expect(addCartItem).toHaveBeenCalledTimes(2);
     expect(openMiniCart).toHaveBeenCalledOnce();
-    expect(screen.queryByText(labels.addToCartErrorLabel)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(labels.addToCartErrorLabel),
+    ).not.toBeInTheDocument();
   });
 });

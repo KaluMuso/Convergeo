@@ -4,7 +4,11 @@
  */
 
 import { getApiBaseUrl } from "./api-base-url";
-import { listWishlistEntries, replaceWishlistLocal, type WishlistEntry } from "./wishlist-local";
+import {
+  listWishlistEntries,
+  replaceWishlistLocal,
+  type WishlistEntry,
+} from "./wishlist-local";
 
 async function getAccessToken(): Promise<string | null> {
   try {
@@ -23,15 +27,18 @@ async function apiRequest<T>(
 ): Promise<T | null> {
   const { token, ...rest } = init;
   try {
-    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
-      ...rest,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(rest.headers ?? {}),
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}${path}`,
+      {
+        ...rest,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(rest.headers ?? {}),
+        },
       },
-    });
+    );
     if (!response.ok) {
       return null;
     }
@@ -107,7 +114,9 @@ export async function syncWishlistWithServer(): Promise<void> {
   );
 }
 
-export async function pushWishlistProductIds(productIds: string[]): Promise<void> {
+export async function pushWishlistProductIds(
+  productIds: string[],
+): Promise<void> {
   const token = await getAccessToken();
   if (!token) {
     return;
@@ -119,7 +128,9 @@ export async function pushWishlistProductIds(productIds: string[]): Promise<void
   });
 }
 
-export async function recordRecentlyViewedOnServer(productId: string): Promise<void> {
+export async function recordRecentlyViewedOnServer(
+  productId: string,
+): Promise<void> {
   const token = await getAccessToken();
   if (!token || !productId) {
     return;
@@ -139,7 +150,9 @@ export async function hasCustomerSession(): Promise<boolean> {
 type FollowListResponse = { items: Array<{ vendor_id: string }> };
 
 /** Whether the signed-in customer follows `vendorId`; null when signed out or on error. */
-export async function isFollowingVendor(vendorId: string): Promise<boolean | null> {
+export async function isFollowingVendor(
+  vendorId: string,
+): Promise<boolean | null> {
   const token = await getAccessToken();
   if (!token) {
     return null;
@@ -155,7 +168,10 @@ export async function isFollowingVendor(vendorId: string): Promise<boolean | nul
 }
 
 /** PUT/DELETE /vendors/{id}/follow (204). Returns false on any failure. */
-export async function setVendorFollow(vendorId: string, follow: boolean): Promise<boolean> {
+export async function setVendorFollow(
+  vendorId: string,
+  follow: boolean,
+): Promise<boolean> {
   const token = await getAccessToken();
   if (!token) {
     return false;
@@ -171,5 +187,28 @@ export async function setVendorFollow(vendorId: string, follow: boolean): Promis
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Back-in-stock alert: POST /listings/{id}/back-in-stock (contract agreed with
+ * the feed/API stream; 2xx = subscribed). Returns "signed_out" when there is
+ * no session so the caller can route to login.
+ */
+export async function subscribeBackInStock(
+  listingId: string,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/listings/${encodeURIComponent(listingId)}/back-in-stock`,
+      { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+    );
+    return response.ok ? "ok" : "error";
+  } catch {
+    return "error";
   }
 }

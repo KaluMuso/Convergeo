@@ -20,7 +20,10 @@ import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
-import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
+import {
+  ListingGrid,
+  type CatalogListing,
+} from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
 
@@ -93,10 +96,15 @@ type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
-  const messages = { ...baseMessages, directory: directoryMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    directory: directoryMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -105,10 +113,15 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
   }) as unknown as DirectoryTranslator;
 }
 
-async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -117,7 +130,9 @@ async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
+async function fetchVendorProfile(
+  slug: string,
+): Promise<VendorProfileApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
     if (!url) {
@@ -169,15 +184,22 @@ function buildVendorJsonLd(
   });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
-    return { title: "Vendor not found", robots: { index: false, follow: false } };
+    return {
+      title: "Vendor not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const t = await getDirectoryTranslator(locale);
-  const description = t("profile.metaDescription", { name: profile.vendor.display_name });
+  const description = t("profile.metaDescription", {
+    name: profile.vendor.display_name,
+  });
   const canonicalPath = buildLocaleCanonical(locale, "v", profile.vendor.slug);
   const ogParams = new URLSearchParams({ name: profile.vendor.display_name });
 
@@ -193,7 +215,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonicalPath,
       images: profile.vendor.logo_url
         ? [profile.vendor.logo_url]
-        : [{ url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}` }],
+        : [
+            {
+              url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
+            },
+          ],
     },
     robots: { index: true, follow: true },
   };
@@ -228,10 +254,15 @@ function VendorServicesGrid({
             ) : null}
           </div>
           <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-text">{service.title}</p>
+            <p className="truncate text-sm font-medium text-text">
+              {service.title}
+            </p>
             {service.from_price_ngwee !== null ? (
               <p className="text-sm text-text-2">
-                {fromLabel.replace("{price}", formatK(service.from_price_ngwee))}
+                {fromLabel.replace(
+                  "{price}",
+                  formatK(service.from_price_ngwee),
+                )}
               </p>
             ) : null}
           </div>
@@ -268,7 +299,9 @@ function VendorEventsGrid({
             ) : null}
           </div>
           <div className="p-3">
-            <p className="truncate text-sm font-medium text-text">{event.title}</p>
+            <p className="truncate text-sm font-medium text-text">
+              {event.title}
+            </p>
           </div>
         </Link>
       ))}
@@ -300,7 +333,13 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
+  const {
+    vendor,
+    listings,
+    services,
+    events,
+    reviews_summary: reviews,
+  } = profile;
   const ladderLabels = buildVendorLadderLabels(t);
   const trustRibbon = vendorTrustRibbon(
     { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
@@ -382,12 +421,18 @@ export default async function VendorProfilePage({ params }: PageProps) {
   const hasRating = reviews.rating_avg !== null && reviews.rating_count > 0;
   const hasAnyStat = hasRating || vendor.order_count > 0;
   const joinedLabel = vendor.created_at
-    ? new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(
-        new Date(vendor.created_at),
-      )
+    ? new Intl.DateTimeFormat(locale, {
+        month: "short",
+        year: "numeric",
+      }).format(new Date(vendor.created_at))
     : null;
 
-  const hoursEntries = vendor.locations.length > 0 ? vendor.locations : vendor.location ? [vendor.location] : [];
+  const hoursEntries =
+    vendor.locations.length > 0
+      ? vendor.locations
+      : vendor.location
+        ? [vendor.location]
+        : [];
   const aboutPanel =
     vendor.description || hoursEntries.length > 0 ? (
       <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
@@ -434,9 +479,17 @@ export default async function VendorProfilePage({ params }: PageProps) {
   );
 
   if (aboutPanel) {
-    offeringTabs.push({ key: "about", label: t("profile.tabAbout"), panel: aboutPanel });
+    offeringTabs.push({
+      key: "about",
+      label: t("profile.tabAbout"),
+      panel: aboutPanel,
+    });
   }
-  offeringTabs.push({ key: "reviews", label: t("profile.tabReviews"), panel: reviewsPanel });
+  offeringTabs.push({
+    key: "reviews",
+    label: t("profile.tabReviews"),
+    panel: reviewsPanel,
+  });
 
   return (
     <div className="space-y-5 lg:mx-auto lg:w-full lg:max-w-6xl">
@@ -476,14 +529,18 @@ export default async function VendorProfilePage({ params }: PageProps) {
               <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
                 {vendor.display_name}
               </h1>
-              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
+              <CornerRibbon
+                trust={trustRibbon.trust}
+                trustLabel={trustRibbon.trustLabel}
+              />
             </div>
             <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-2">
               {hasRating ? (
                 <span className="font-semibold text-text">
                   ★ {reviews.rating_avg?.toFixed(1)}{" "}
                   <span className="font-normal text-text-2">
-                    ({reviews.rating_count} {t("profile.statReviews").toLowerCase()})
+                    ({reviews.rating_count}{" "}
+                    {t("profile.statReviews").toLowerCase()})
                   </span>
                 </span>
               ) : null}
@@ -514,7 +571,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
             <FollowVendorButton
               vendorId={vendor.id}
               locale={locale}
-              labels={{ follow: t("profile.follow"), following: t("profile.following") }}
+              labels={{
+                follow: t("profile.follow"),
+                following: t("profile.following"),
+              }}
             />
             {vendor.whatsapp_msisdn ? (
               <a
