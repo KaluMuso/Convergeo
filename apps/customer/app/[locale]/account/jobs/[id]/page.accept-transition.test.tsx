@@ -127,7 +127,7 @@ it("keeps a pending accept mounted through a same-account token refresh", async 
   });
   const rerender = await mount();
   await screen.findByText("Provider A");
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
       "token-a",
@@ -143,7 +143,7 @@ it("keeps a pending accept mounted through a same-account token refresh", async 
   await rerender();
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?group=checkout-a&kind=service_deposit");
 });
 
 it("does not replace a pending accept when an earlier refresh returns accepted", async () => {
@@ -165,7 +165,7 @@ it("does not replace a pending accept when an earlier refresh returns accepted",
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith("token-refreshed", "/jobs/job-a/quotes", undefined),
   );
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await act(async () =>
     refresh.resolve({
       items: [{ ...quoted, status: "accepted" }],
@@ -174,7 +174,7 @@ it("does not replace a pending accept when an earlier refresh returns accepted",
   );
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?group=checkout-a&kind=service_deposit");
 });
 
 it("refreshes with the latest same-account token after a failed accept", async () => {
@@ -186,7 +186,7 @@ it("refreshes with the latest same-account token after a failed accept", async (
   });
   const rerender = await mount();
   await screen.findByText("Provider A");
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   state.session = {
     access_token: "token-refreshed",
     user: { id: "account-a" },
@@ -196,7 +196,7 @@ it("refreshes with the latest same-account token after a failed accept", async (
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith("token-refreshed", "/jobs/job-a/quotes", undefined),
   );
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
   expect(mocks.push).not.toHaveBeenCalled();
 });
 
@@ -213,7 +213,7 @@ it("does not navigate from A's acceptance after B receives 403", async () => {
   });
   const rerender = await mount();
   await screen.findByText("Provider A");
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   state.session = { access_token: "token-b", user: { id: "account-b" } };
   state.generation++;
   await rerender();
@@ -243,11 +243,11 @@ it("keeps a pending accept mounted when an earlier refresh fails transiently", a
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith("token-refreshed", "/jobs/job-a/quotes", undefined),
   );
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await act(async () => refresh.reject(new Error("transient refresh failure")));
   expect(screen.getByRole("button", { name: /setting up your deposit/i })).toBeDisabled();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?group=checkout-a&kind=service_deposit");
 });
 
 it.each([401, 403])(
@@ -269,7 +269,7 @@ it.each([401, 403])(
       user: { id: "account-a" },
     };
     await rerender();
-    await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+    await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
     await act(async () => refresh.reject(new ApiError("denied", "Denied", { status })));
     expect(screen.queryByText("Provider A")).not.toBeInTheDocument();
     expect(screen.queryByText("Private message A")).not.toBeInTheDocument();
@@ -301,11 +301,11 @@ it("does not navigate from A's acceptance after route navigation to job B", asyn
   });
   const rerender = await mount();
   await screen.findByText("Provider A");
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await rerender("job-b");
   expect(await screen.findByText("Provider B")).toBeInTheDocument();
   expect(screen.queryByText("Private message A")).not.toBeInTheDocument();
   await act(async () => accept.resolve({ checkout_group_id: "checkout-a" }));
   expect(mocks.push).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });

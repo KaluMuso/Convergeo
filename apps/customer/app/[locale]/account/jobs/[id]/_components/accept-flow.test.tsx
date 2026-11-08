@@ -98,7 +98,7 @@ function renderFlow(jobId?: string, quoteId?: string) {
 async function startPendingAccept() {
   const pending = deferred<typeof accepted>();
   mocks.request.mockReturnValueOnce(pending.promise);
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(1));
   return pending;
 }
@@ -121,7 +121,7 @@ it("does not navigate or show A's accept error after switching accounts", async 
   await act(async () => pending.reject(new Error("A failed")));
   expect(mocks.push).not.toHaveBeenCalled();
   expect(screen.queryByText(/could not start the deposit/i)).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });
 
 it("does not send A's completed checkout to B after switching accounts", async () => {
@@ -132,7 +132,7 @@ it("does not send A's completed checkout to B after switching accounts", async (
   view.rerender(flow());
   await act(async () => pending.resolve(accepted));
   expect(mocks.push).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });
 
 it("does not navigate when auth publishes B before React rerenders", async () => {
@@ -143,7 +143,7 @@ it("does not navigate when auth publishes B before React rerenders", async () =>
   await act(async () => pending.resolve(accepted));
   expect(mocks.push).not.toHaveBeenCalled();
   view.rerender(flow());
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });
 
 it("does not update A's error when signout publishes before React rerenders", async () => {
@@ -154,14 +154,14 @@ it("does not update A's error when signout publishes before React rerenders", as
   await act(async () => pending.reject(new Error("A failed")));
   expect(screen.queryByText(/could not start the deposit/i)).not.toBeInTheDocument();
   view.rerender(flow());
-  expect(screen.queryByRole("button", { name: /pay deposit/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /accept and pay/i })).not.toBeInTheDocument();
 });
 
 it("does not start an accept from stale UI after auth publishes a new account", async () => {
   renderFlow();
   mocks.auth.session = { user: { id: "account-b" }, access_token: "token-b" };
   mocks.auth.generation = 2;
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   expect(mocks.request).not.toHaveBeenCalled();
 });
 
@@ -172,7 +172,7 @@ it("discards acceptance completion from an earlier auth generation", async () =>
   view.rerender(flow());
   await act(async () => pending.resolve(accepted));
   expect(mocks.push).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });
 
 it("does not navigate when acceptance completes after signout", async () => {
@@ -183,7 +183,7 @@ it("does not navigate when acceptance completes after signout", async () => {
   view.rerender(flow());
   await act(async () => pending.resolve(accepted));
   expect(mocks.push).not.toHaveBeenCalled();
-  expect(screen.queryByRole("button", { name: /pay deposit/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /accept and pay/i })).not.toBeInTheDocument();
 });
 
 it.each([
@@ -195,7 +195,7 @@ it.each([
   view.rerender(flow(jobId, quoteId));
   await act(async () => pending.resolve(accepted));
   expect(mocks.push).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled();
+  expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled();
 });
 
 it("keeps a pending accept across same-account token refresh and prevents a repeat click", async () => {
@@ -210,21 +210,21 @@ it("keeps a pending accept across same-account token refresh and prevents a repe
   await userEvent.setup().click(screen.getByRole("button", { name: /setting up your deposit/i }));
   expect(mocks.request).toHaveBeenCalledTimes(1);
   await act(async () => pending.resolve(accepted));
-  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-a&kind=service_deposit");
+  expect(mocks.push).toHaveBeenCalledWith("/en/checkout?group=checkout-a&kind=service_deposit");
 });
 
 it("allows retry after a failed accept using the refreshed same-account token", async () => {
   const view = renderFlow();
   mocks.request.mockRejectedValueOnce(new Error("network"));
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
-  await waitFor(() => expect(screen.getByRole("button", { name: /pay deposit/i })).toBeEnabled());
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
+  await waitFor(() => expect(screen.getByRole("button", { name: /accept and pay/i })).toBeEnabled());
   mocks.auth.session = {
     user: { id: "account-a" },
     access_token: "token-a-refreshed",
   };
   view.rerender(flow());
   mocks.request.mockResolvedValueOnce(accepted);
-  await userEvent.setup().click(screen.getByRole("button", { name: /pay deposit/i }));
+  await userEvent.setup().click(screen.getByRole("button", { name: /accept and pay/i }));
   await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
   expect(mocks.request).toHaveBeenCalledTimes(2);
   expect(mocks.getToken?.()).toBe("token-a-refreshed");

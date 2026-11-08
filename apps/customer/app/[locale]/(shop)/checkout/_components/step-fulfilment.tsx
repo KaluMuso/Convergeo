@@ -7,6 +7,7 @@ import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
 import { Stepper } from "@vergeo/ui/src/stepper";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -26,15 +27,17 @@ import {
   StepContact,
   type ContactStepLabels,
 } from "./step-contact";
-import {
-  StepPayment,
-  type PaymentOptions,
-  type PaymentStepLabels,
-  type ValidatedPayment,
-} from "./step-payment";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
+import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
 import type { FulfilmentMode, SaleUnit } from "../../_components/sale-quantity";
+
+/** Lazy — step 3 is only reached after contact + fulfilment; keeps /checkout first-load JS in budget. */
+const StepPayment = dynamic(() => import("./step-payment").then((mod) => mod.StepPayment), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" className="min-h-48" />,
+});
+
 
 export type PickupLocation = {
   landmark: string;

@@ -2,9 +2,12 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell, ExistingCheckoutStatus } from "./_components/step-fulfilment";
+import { resolveGroupParam } from "./_lib/group-checkout";
 
+import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
@@ -14,6 +17,37 @@ export const metadata: Metadata = {
     follow: false,
   },
 };
+
+function buildGroupLabels(
+  locale: string,
+  messages: AbstractIntlMessages,
+  shell: CheckoutShellLabels,
+): GroupCheckoutLabels {
+  const t = createTranslator({ locale, messages, namespace: "checkout" });
+  return {
+    pageTitle: t("checkout.group.pageTitle"),
+    loading: t("checkout.group.loading"),
+    error: t("checkout.group.error"),
+    loginRequired: t("checkout.group.loginRequired"),
+    forbidden: t("checkout.group.forbidden"),
+    notFound: t("checkout.group.notFound"),
+    expired: t("checkout.group.expired"),
+    notPayable: t("checkout.group.notPayable"),
+    ticketHeading: t("checkout.group.ticketHeading"),
+    serviceHeading: t("checkout.group.serviceHeading"),
+    providerLabel: t("checkout.group.providerLabel"),
+    tierLineTemplate: t.raw("checkout.group.tierLine") as string,
+    subtotal: t("checkout.group.subtotal"),
+    platformFee: t("checkout.group.platformFee"),
+    total: t("checkout.group.total"),
+    serviceNote: t("checkout.group.serviceNote"),
+    payCtaTemplate: t.raw("checkout.group.payCta") as string,
+    viewOrder: t("checkout.group.viewOrder"),
+    escrowTitle: shell.review.escrowTitle,
+    escrowSteps: [shell.review.escrowStep1, shell.review.escrowStep2, shell.review.escrowStep3],
+    payment: shell.payment,
+  };
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -185,6 +219,29 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   const query = (await searchParams) ?? {};
   const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
   const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
+
+  // #760 service-deposit group checkout: the job accept flow hands off with
+  // ?group=<id>&kind=service_deposit.
+  // It pays the deposit obligation's group; tickets keep the ticket checkout below.
+  // Legacy ?session=…&kind=service_deposit links keep the read-only status view below.
+  if (query.kind === "service_deposit" && !hasSession) {
+    const depositGroupId = resolveGroupParam(query);
+    if (
+      typeof depositGroupId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(depositGroupId)
+    ) {
+      const labels = buildCheckoutLabels(locale, messages);
+      return (
+        <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+          <GroupCheckoutLazy
+            locale={locale}
+            groupId={depositGroupId}
+            labels={buildGroupLabels(locale, messages, labels)}
+          />
+        </div>
+      );
+    }
+  }
 
   // Ticket purchases (and their card retries) hand off with a valid ?group=;
   // the ticket checkout owns that payment. Service-deposit handoffs use

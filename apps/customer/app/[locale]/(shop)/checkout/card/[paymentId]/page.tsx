@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { useSession } from "../../../../../../lib/customer-session";
+import { groupRoutesFromQuery } from "../../_lib/group-checkout";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
 type WidgetCustomer = {
@@ -104,21 +105,37 @@ export default function CardCheckoutPage() {
   const searchParams = useSearchParams();
   const locale = params.locale;
   const paymentId = params.paymentId;
-  const t = useTranslations("checkout.card");
-  const funding = useTranslations("services.funding");
+  // Messages are provided as { checkout: <checkout.json> }, whose card copy lives
+  // under checkout.checkout.card.
+  const t = useTranslations("checkout.checkout.card");
+  const tGroup = useTranslations("checkout.checkout.group");
   const { session, loading: sessionLoading } = useSession();
 
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
   const widgetOpened = useRef(false);
 
+  // Service-deposit card payments from the #760 group checkout carry
+  // ?group=&kind=service_deposit(&job=) so retry returns to that group's checkout and
+  // success lands on the job thread. Ticket card retries keep the ticket checkout's
+  // ?group=&retry=1 hand-back.
+  const groupRoutes = useMemo(
+    () =>
+      groupRoutesFromQuery(locale, searchParams.get("group") ?? "", {
+        kind: searchParams.get("kind") ?? undefined,
+        job: searchParams.get("job") ?? undefined,
+      }),
+    [locale, searchParams],
+  );
+  const groupKind = searchParams.get("kind");
   const checkoutPaymentPath = useMemo(() => {
+    if (groupRoutes && groupKind === "service_deposit") return groupRoutes.checkout;
     const group = searchParams.get("group");
     return group &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
       ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
       : `/${locale}/checkout`;
-  }, [locale, searchParams]);
+  }, [groupKind, groupRoutes, locale, searchParams]);
   const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
 
   const verifyReturn = useCallback(
@@ -296,6 +313,13 @@ export default function CardCheckoutPage() {
     }
   })();
 
+  const successHref =
+    groupRoutes && groupKind === "service_deposit"
+      ? groupRoutes.success
+      : sessionData?.service_job_id
+        ? `/${locale}/account/jobs/${sessionData.service_job_id}`
+        : ordersPath;
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 py-8">
       <header className="space-y-2 text-center">
@@ -319,16 +343,12 @@ export default function CardCheckoutPage() {
 
       {viewState === "success" ? (
         <LinkButton
-          href={
-            sessionData?.service_job_id
-              ? `/${locale}/account/jobs/${sessionData.service_job_id}`
-              : ordersPath
-          }
+          href={successHref}
           variant="primary"
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {sessionData?.service_job_id ? funding("backToJob") : t("viewOrders")}
+          {successHref.includes("/account/jobs/") ? tGroup("viewJob") : t("viewOrders")}
         </LinkButton>
       ) : null}
 

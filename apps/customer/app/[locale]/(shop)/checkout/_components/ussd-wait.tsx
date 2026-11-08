@@ -124,6 +124,12 @@ type PendingPaymentShellProps = {
   groupId: string;
   labels: PendingLabels;
   ticketCheckout?: boolean;
+  /**
+   * Server-created groups (paid ticket / service deposit) land somewhere other than
+   * the order page on success (ticket wallet / job thread) and return to
+   * `/checkout?group=` rather than the cart checkout. Omitted for cart checkouts.
+   */
+  groupRoutes?: { success: string; checkout: string };
 };
 
 export function PendingPaymentShell({
@@ -131,6 +137,7 @@ export function PendingPaymentShell({
   groupId,
   labels,
   ticketCheckout = false,
+  groupRoutes,
 }: PendingPaymentShellProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
@@ -144,7 +151,8 @@ export function PendingPaymentShell({
   const orderPath = statusPayload
     ? `/${locale}/account/orders/${statusPayload.order_id}`
     : `/${locale}/account/orders`;
-  const checkoutPath = `/${locale}/checkout`;
+  const checkoutPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
+  const successPath = groupRoutes?.success ?? null;
 
   const fetchStatus = useCallback(async (): Promise<PaymentStatusPayload | null> => {
     const token = session?.access_token;
@@ -262,11 +270,12 @@ export function PendingPaymentShell({
       return;
     }
     router.replace(
-      statusPayload.order_id
-        ? `/${locale}/account/orders/${statusPayload.order_id}`
-        : `/${locale}/account/orders`,
+      successPath ??
+        (statusPayload.order_id
+          ? `/${locale}/account/orders/${statusPayload.order_id}`
+          : `/${locale}/account/orders`),
     );
-  }, [locale, router, statusPayload]);
+  }, [locale, router, statusPayload, successPath]);
 
   useEffect(() => {
     if (!statusPayload?.cod) {
@@ -343,7 +352,9 @@ export function PendingPaymentShell({
   }
 
   const amountLocale = `${locale}-ZM`;
-  const formattedAmount = formatK(statusPayload.amount_ngwee, { locale: amountLocale });
+  const formattedAmount = formatK(statusPayload.amount_ngwee, {
+    locale: amountLocale,
+  });
 
   if (statusPayload.cod) {
     return (

@@ -22,6 +22,8 @@ import { ServiceReviewForm } from "./_components/service-review-form";
 type JobDetail = {
   id: string;
   status: string;
+  deposit_ngwee?: number | null;
+  balance_due_ngwee?: number | null;
 };
 
 type QuoteProvider = {

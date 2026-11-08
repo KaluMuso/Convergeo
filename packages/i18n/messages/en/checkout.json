@@ -264,6 +264,28 @@
       "widgetUnavailable": "Card payments are temporarily unavailable. Try mobile money or try again later.",
       "widgetLabel": "Convergeo order",
       "secureNote": "Secured by Lenco — PCI compliant hosted checkout"
+    },
+    "group": {
+      "pageTitle": "Complete your payment",
+      "loading": "Loading your checkout…",
+      "error": "We could not load this checkout. Check your connection and try again.",
+      "loginRequired": "Sign in to pay",
+      "forbidden": "This checkout belongs to a different account. Sign in with the account that made the booking.",
+      "notFound": "We could not find this checkout. It may have been removed.",
+      "expired": "This checkout has expired and can no longer be paid. Start again from the event or job page.",
+      "notPayable": "This checkout is already paid or closed. Check your order for its status.",
+      "ticketHeading": "Event tickets",
+      "serviceHeading": "Service booking",
+      "providerLabel": "Provider",
+      "tierLine": "{tier} × {qty}",
+      "subtotal": "Tickets",
+      "platformFee": "Booking fee",
+      "total": "Total to pay",
+      "serviceNote": "Amount due now for this job, as agreed in the accepted quote.",
+      "payCta": "Pay {amount}",
+      "viewOrder": "View my order",
+      "viewTickets": "View my tickets",
+      "viewJob": "Back to the job"
     }
   },
   "variant": {

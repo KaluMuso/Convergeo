@@ -5,12 +5,12 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { customerAuth, useSession } from "../../../../../../lib/customer-session";
 
-export const DEFAULT_DEPOSIT_PCT = 50;
+export const DEFAULT_DEPOSIT_PCT = 100;
 
 type AcceptResponse = {
   checkout_group_id: string;
@@ -26,8 +26,6 @@ type AcceptFlowProps = {
   quoteId: string;
   vendorName: string;
   totalNgwee: number;
-  /** Admin-tunable server default; used only for the pre-accept preview. */
-  depositPct?: number;
   onCancel?: () => void;
   onPendingChange?: (pending: boolean) => void;
 };
@@ -61,7 +59,6 @@ function ActiveAcceptFlow({
   quoteId,
   vendorName,
   totalNgwee,
-  depositPct = DEFAULT_DEPOSIT_PCT,
   onCancel,
   onPendingChange,
   accessToken,
@@ -91,12 +88,6 @@ function ActiveAcceptFlow({
     return active.current && auth.generation === authGeneration && auth.session?.user.id === userId;
   }, [authGeneration, userId]);
 
-  const depositNgwee = useMemo(
-    () => previewDepositNgwee(totalNgwee, depositPct),
-    [totalNgwee, depositPct],
-  );
-  const balanceNgwee = totalNgwee - depositNgwee;
-
   const getToken = useCallback(() => accessToken, [accessToken]);
 
   const handleAccept = useCallback(async () => {
@@ -113,7 +104,11 @@ function ActiveAcceptFlow({
       );
       // The server may have accepted the quote even if this view has gone away.
       if (!isCurrent()) return;
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      // #760 group checkout pays the deposit obligation's group with the amount the
+      // API set for it; the preview above is display-only.
+      router.push(
+        `/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}&kind=service_deposit`,
+      );
     } catch (err) {
       if (!isCurrent()) return;
       if (err instanceof ApiError && err.status === 403) {
@@ -135,23 +130,13 @@ function ActiveAcceptFlow({
     <section className="space-y-4 rounded border border-border bg-surface p-4">
       <header className="space-y-1">
         <h3 className="font-display text-h3 text-display-ink">{t("title")}</h3>
-        <p className="text-sm text-text-2">{t("intro", { pct: depositPct, vendor: vendorName })}</p>
+        <p className="text-sm text-text-2">{t("payIntro", { vendor: vendorName })}</p>
       </header>
 
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
           <dt className="text-text-2">{t("totalLabel")}</dt>
           <dd className="font-mono text-display-ink">{formatK(totalNgwee)}</dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("depositLabel")}</dt>
-          <dd className="font-mono text-lg font-semibold text-display-ink">
-            {formatK(depositNgwee)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-display-ink">{formatK(balanceNgwee)}</dd>
         </div>
       </dl>
 
@@ -168,7 +153,7 @@ function ActiveAcceptFlow({
           disabled={submitting}
           onClick={() => void handleAccept()}
         >
-          {t("confirmCta", { amount: formatK(depositNgwee) })}
+          {t("payCta")}
         </Button>
         {onCancel ? (
           <Button
