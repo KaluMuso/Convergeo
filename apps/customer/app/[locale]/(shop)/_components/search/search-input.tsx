@@ -51,6 +51,9 @@ export type SearchInputProps = {
   autoFocus?: boolean;
   /** Extra classes on the underlying input (e.g. desktop header chrome). */
   inputClassName?: string;
+  /** When set, renders an "Ask Vergeo" sparkle button inside the field that
+   * opens the assistant with the typed query. */
+  askLabel?: string;
 };
 
 const DEBOUNCE_MS = 200;
@@ -66,6 +69,7 @@ export function SearchInput({
   compact = false,
   autoFocus = false,
   inputClassName,
+  askLabel,
 }: SearchInputProps) {
   const router = useRouter();
   const listboxId = useId();
@@ -308,8 +312,26 @@ export function SearchInput({
           autoComplete="off"
           autoFocus={autoFocus}
           size={compact ? "sm" : "md"}
-          className={["pr-12", inputClassName].filter(Boolean).join(" ")}
+          className={[askLabel ? "pr-24" : "pr-12", inputClassName].filter(Boolean).join(" ")}
         />
+        {askLabel ? (
+          <button
+            type="button"
+            data-testid="search-ask-vergeo"
+            aria-label={askLabel}
+            title={askLabel}
+            onClick={() => {
+              const q = value.trim();
+              router.push(q ? `/${locale}/ask?q=${encodeURIComponent(q)}` : `/${locale}/ask`);
+            }}
+            className="absolute right-12 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded text-accent transition-colors hover:text-accent-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+          >
+            <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M11 2.5l1.6 4.6a3 3 0 0 0 1.8 1.8L19 10.5l-4.6 1.6a3 3 0 0 0-1.8 1.8L11 18.5l-1.6-4.6a3 3 0 0 0-1.8-1.8L3 10.5l4.6-1.6a3 3 0 0 0 1.8-1.8L11 2.5Z" />
+              <path d="M18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" />
+            </svg>
+          </button>
+        ) : null}
         <button
           type="submit"
           className="absolute right-1 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded px-2 text-sm font-medium text-primary focus-visible:outline-none focus-visible:shadow-focusRing"

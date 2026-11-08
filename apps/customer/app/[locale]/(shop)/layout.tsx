@@ -97,6 +97,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
             locale={locale}
             triggerLabel={t("shop.searchPlaceholder")}
             sheetTitle={tSearch("title")}
+            askLabel={t("shop.askVergeo")}
             labels={{
               placeholder: t("shop.searchPlaceholder"),
               submit: t("shop.searchSubmit"),
@@ -132,6 +133,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           // Interpolated with the live cart count in the header client component.
           cartWithCount: String(t.raw("shop.cartWithCount")),
           openCart: tCheckout("cart.openCart"),
+          theme: {
+            label: tCommon("theme.label"),
+            light: tCommon("theme.light"),
+            dark: tCommon("theme.dark"),
+            system: tCommon("theme.system"),
+          },
           searchInput: {
             placeholder: t("shop.searchPlaceholder"),
             submit: t("shop.searchSubmit"),

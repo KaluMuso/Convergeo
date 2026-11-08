@@ -88,3 +88,45 @@ body {
     min-width: 2.75rem;
   }
 }
+
+/* ── Storefront header: full-bleed glass bar that blends into the page ───── */
+.v-shop-header {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color var(--dur) var(--ease-std),
+    border-color var(--dur) var(--ease-std);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .v-shop-header {
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: saturate(1.5) blur(14px);
+    backdrop-filter: saturate(1.5) blur(14px);
+  }
+}
+
+/* Soft fade under the bar instead of a hard rule. */
+.v-shop-header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--text) 6%, transparent),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease-std);
+}
+
+.v-shop-header[data-scrolled="true"] {
+  border-bottom-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.v-shop-header[data-scrolled="true"]::after {
+  opacity: 1;
+}
