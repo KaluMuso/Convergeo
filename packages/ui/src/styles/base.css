@@ -820,3 +820,25 @@
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Mobile bottom nav (bottom-nav.tsx) — native-feeling tab bar ─────────── */
+.v-bottom-nav {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  backdrop-filter: saturate(1.4) blur(12px);
+}
+
+.v-bottom-nav__icon {
+  width: 3.25rem;
+  height: 1.75rem;
+  border-radius: var(--r-pill);
+  transition: background-color var(--dur-fast) var(--ease-std);
+}
+
+.v-bottom-nav [aria-current="page"] > .v-bottom-nav__icon {
+  background: var(--primary-tint);
+}
+
+.v-bottom-nav [aria-current="page"] {
+  font-weight: 700;
+}
