@@ -207,6 +207,34 @@
       "seconds": "Sec",
       "expired": "Offre terminée",
       "ariaLabel": "Se termine dans {time}"
+    },
+    "feed": {
+      "sponsored": "Sponsorisé",
+      "sponsoredBy": "Sponsorisé par {advertiser}",
+      "adCta": "En savoir plus",
+      "loadingMore": "Chargement",
+      "end": "Vous avez tout vu",
+      "retry": "Réessayer",
+      "loadError": "Impossible de charger plus pour le moment.",
+      "forYouPersonal": "Sélectionné d'après vos visites",
+      "forYouTrending": "Tendances chez les acheteurs en Zambie",
+      "eventCapacity": "{filled}/{total} places",
+      "sections": {
+        "forYou": "Pour vous",
+        "servicesNearYou": "Services près de chez vous",
+        "bestElectronics": "Le meilleur de l'électronique",
+        "bestFashion": "Le meilleur de la mode",
+        "mens": "Homme",
+        "womens": "Femme",
+        "kids": "Enfants",
+        "underK100": "Bonnes affaires à moins de K100",
+        "techGadgets": "Gadgets high-tech",
+        "seasonalSummer": "Sélection été",
+        "eventsThisWeek": "Événements cette semaine",
+        "newArrivals": "Nouveautés",
+        "trending": "Tendances",
+        "topVendors": "Meilleurs vendeurs"
+      }
     }
   },
   "pdp": {

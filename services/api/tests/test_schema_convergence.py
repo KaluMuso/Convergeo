@@ -78,6 +78,9 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261009110000",
     "20261009124801",
     "20261011120000",
+    # Home feed / ads and retention foundations (additive).
+    "20261108100000",
+    "20261108110000",
 ]
 
 def _module() -> Any:
@@ -120,10 +123,11 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 143
+    assert len(sql_files) == len(migrations) == 145
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
-    assert actual_versions[-4:] == repairs
+    assert actual_versions[-6:-2] == repairs
+    assert actual_versions[-2:] == ["20261108100000", "20261108110000"]
     assert all(path.stat().st_size > 0 for path in sql_files)
 
     assert schema.manifest_digest(migrations, _manifest()) == schema.manifest_digest(

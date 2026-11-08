@@ -65,6 +65,9 @@ PENDING_REPAIR_VERSIONS = {
     "20261009100000",
     "20261009124801",
     "20261011120000",
+    # Home feed / ads and retention foundations (additive).
+    "20261108100000",
+    "20261108110000",
 }
 
 

@@ -157,6 +157,18 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/healthz"),
         ("GET", "/readyz"),
         ("GET", "/merch/slots"),
+        # Admin-governed home feed (cache-friendly; optional bearer only personalises
+        # the for_you section inside the handler) + fire-and-forget ad beacon that
+        # only increments aggregates for live placements. Both IP rate-limited.
+        ("GET", "/home/feed"),
+        # Public recommendation rails / live flash deals / published product Q&A —
+        # read-only, IP rate-limited, same visibility rules as the PLP/PDP.
+        ("GET", "/products/{slug}/recommendations"),
+        ("GET", "/services/{service_id}/recommendations"),
+        ("GET", "/events/{slug}/recommendations"),
+        ("GET", "/deals"),
+        ("GET", "/products/{slug}/questions"),
+        ("POST", "/home/ads/events"),
         ("GET", "/public/config/commission-rates"),
         ("GET", "/products/{slug}"),
         ("GET", "/products/{slug}/comparison"),
