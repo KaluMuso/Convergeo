@@ -25,32 +25,37 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         href="/en"
       >
         <span
-          class="inline-flex items-center"
+          class="inline-flex items-center gap-2 text-primary"
           data-testid="brand-logo"
         >
-          <img
-            alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
-            data-nimg="1"
-            decoding="async"
-            height="23"
-            src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
-            style="color: transparent;"
-            width="132"
-          />
-          <img
-            alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
-            data-nimg="1"
-            decoding="async"
-            height="23"
-            loading="lazy"
-            src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
-            style="color: transparent;"
-            width="126"
-          />
+          <svg
+            aria-hidden="true"
+            class="shrink-0"
+            fill="none"
+            height="26"
+            viewBox="0 0 32 32"
+            width="26"
+          >
+            <circle
+              cx="16"
+              cy="16"
+              r="14.5"
+              stroke="var(--accent)"
+              stroke-width="3"
+            />
+            <path
+              d="M9.5 10.5 16 22.5l6.5-12"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3.4"
+            />
+          </svg>
+          <span
+            class="font-display font-extrabold leading-none tracking-tight text-text text-xl"
+          >
+            Convergeo
+          </span>
         </span>
       </a>
       <div
@@ -130,32 +135,37 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         href="/en"
       >
         <span
-          class="inline-flex items-center"
+          class="inline-flex items-center gap-2 text-primary"
           data-testid="brand-logo"
         >
-          <img
-            alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
-            data-nimg="1"
-            decoding="async"
-            height="23"
-            src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
-            style="color: transparent;"
-            width="132"
-          />
-          <img
-            alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
-            data-nimg="1"
-            decoding="async"
-            height="23"
-            loading="lazy"
-            src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
-            style="color: transparent;"
-            width="126"
-          />
+          <svg
+            aria-hidden="true"
+            class="shrink-0"
+            fill="none"
+            height="26"
+            viewBox="0 0 32 32"
+            width="26"
+          >
+            <circle
+              cx="16"
+              cy="16"
+              r="14.5"
+              stroke="var(--accent)"
+              stroke-width="3"
+            />
+            <path
+              d="M9.5 10.5 16 22.5l6.5-12"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="3.4"
+            />
+          </svg>
+          <span
+            class="font-display font-extrabold leading-none tracking-tight text-text text-xl"
+          >
+            Convergeo
+          </span>
         </span>
       </a>
     </div>
@@ -257,9 +267,9 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         >
           <a
             class="inline-flex min-h-11 items-center rounded-pill border border-border px-3.5 text-sm font-medium text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing lg:rounded lg:border-transparent lg:px-3 lg:hover:border-transparent lg:hover:bg-bg-2 lg:hover:text-text"
-            href="/en/directory"
+            href="/en/vendors"
           >
-            Directory
+            Vendors
           </a>
         </li>
         <li

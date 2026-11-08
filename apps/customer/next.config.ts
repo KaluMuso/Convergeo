@@ -121,6 +121,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // "Directory" was renamed to "Vendors" (owner, Nov 2026); keep old links working.
+  async redirects() {
+    return [
+      { source: "/:locale/directory", destination: "/:locale/vendors", permanent: true },
+    ];
+  },
   async headers() {
     // Report-only CSP (with per-request nonce) is applied in middleware.ts only.
     // Emitting `Content-Security-Policy-Report-Only` here with the unsubstituted

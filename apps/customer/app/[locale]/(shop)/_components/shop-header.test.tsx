@@ -85,7 +85,7 @@ const labels = {
   featuredTitle: "New on Convergeo",
   featuredPromo: "Compare sellers online.",
   featuredPromoCta: "Search marketplace",
-  directory: "Directory",
+  directory: "Vendors",
   services: "Services",
   events: "Events",
   askVergeo: "Ask Vergeo",
@@ -111,10 +111,7 @@ describe("ShopHeader", () => {
 
     expect(screen.getByTestId("shop-header")).toBeInTheDocument();
     expect(screen.getByRole("search")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Directory" })).toHaveAttribute(
-      "href",
-      "/en/directory",
-    );
+    expect(screen.getByRole("link", { name: "Vendors" })).toHaveAttribute("href", "/en/vendors");
     expect(screen.getByRole("link", { name: "Services" })).toHaveAttribute("href", "/en/services");
     expect(screen.getByRole("link", { name: "Events" })).toHaveAttribute("href", "/en/events");
     // Ask Vergeo is the sparkle button inside the search field, not a nav link.

@@ -136,7 +136,7 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
   // Order agreed with the owner: Directory · Services · Events (Ask Vergeo
   // moved into the search field as the sparkle button).
   const navLinks = [
-    { key: "directory", href: `/${locale}/directory`, label: labels.directory },
+    { key: "directory", href: `/${locale}/vendors`, label: labels.directory },
     { key: "services", href: `/${locale}/services`, label: labels.services },
     { key: "events", href: `/${locale}/events`, label: labels.events },
   ].map((link) => ({

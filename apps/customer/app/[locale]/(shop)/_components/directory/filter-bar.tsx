@@ -89,7 +89,7 @@ export function FilterBar({
 
   const onClear = () => {
     startTransition(() => {
-      router.push(`/${locale}/directory`);
+      router.push(`/${locale}/vendors`);
     });
   };
 

@@ -107,13 +107,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: t("index.title"),
     description: t("index.subtitle"),
-    alternates: buildCanonicalAlternates(locale, "directory"),
+    alternates: buildCanonicalAlternates(locale, "vendors"),
     openGraph: {
       title: t("index.title"),
       description: t("index.subtitle"),
       type: "website",
       locale,
-      url: buildLocaleCanonical(locale, "directory"),
+      url: buildLocaleCanonical(locale, "vendors"),
     },
     robots: { index: true, follow: true },
   };

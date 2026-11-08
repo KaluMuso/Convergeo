@@ -1,6 +1,6 @@
 {
   "index": {
-    "title": "Annuaire des entreprises",
+    "title": "Vendeurs",
     "subtitle": "Découvrez des vendeurs et commerces dans toute la Zambie",
     "results": "{count, plural, one {# entreprise} other {# entreprises}}",
     "searchPlaceholder": "Rechercher des entreprises",

@@ -286,7 +286,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     },
     {
       key: "directory",
-      href: `/${locale}/directory`,
+      href: `/${locale}/vendors`,
       label: tNav("shop.directory"),
     },
     {
