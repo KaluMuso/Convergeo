@@ -518,46 +518,50 @@
 }
 
 /* ── Copperbelt typographic + interaction base (all apps) ───────────────── */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
+/* In @layer base so Tailwind utilities (tracking-*, focus-visible:outline-none)
+   still win over these defaults. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
 
-:where(h1, h2, h3, .font-display) {
-  letter-spacing: var(--ds-tracking-display);
-  text-wrap: balance;
-}
+  :where(h1, h2, h3, .font-display) {
+    letter-spacing: var(--ds-tracking-display);
+    text-wrap: balance;
+  }
 
-:where(p) {
-  text-wrap: pretty;
-}
+  :where(p) {
+    text-wrap: pretty;
+  }
 
-/* Prices, counters and quantities never jitter between digits. */
-:where([data-price], .tabular, [data-testid*="price"]) {
-  font-variant-numeric: tabular-nums;
-}
+  /* Prices, counters and quantities never jitter between digits. */
+  :where([data-price], .tabular, [data-testid*="price"]) {
+    font-variant-numeric: tabular-nums;
+  }
 
-::selection {
-  background: var(--accent-tint);
-  color: var(--text);
-}
+  ::selection {
+    background: var(--accent-tint);
+    color: var(--text);
+  }
 
-/* One visible, consistent focus treatment for anything keyboard-focusable that
-   does not draw its own ring. Components with bespoke rings keep theirs. */
-:where(
-  a,
-  button,
-  [role="button"],
-  [role="tab"],
-  [role="menuitem"],
-  summary,
-  input,
-  select,
-  textarea
-):focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  /* One visible, consistent focus treatment for anything keyboard-focusable that
+     does not draw its own ring. Components with bespoke rings keep theirs. */
+  :where(
+    a,
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"],
+    summary,
+    input,
+    select,
+    textarea
+  ):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 /* Escrow seal — the system's signature motif: a copper ring + malachite
@@ -751,4 +755,51 @@ html {
   color: color-mix(in srgb, var(--panel-text) 82%, transparent);
   font-size: 1rem;
   line-height: 1.55;
+}
+
+/* ── Product card refinements (product-card.tsx) ────────────────────────────
+   Hairline card, no resting shadow; title leads, vendor is quiet metadata,
+   price sits in the display face. */
+.v-card--product {
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v-card--product:not(.v-card--static):hover {
+    box-shadow: var(--shadow-2);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  }
+}
+
+.v-card__title {
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.v-card__title--compact {
+  font-size: var(--fs-sm);
+}
+
+.v-card__vendor {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.v-card--product [data-testid="price-block"] {
+  font-family: var(--font-display);
+}
+
+.v-card__discount {
+  display: inline-block;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--discount);
+  color: var(--on-danger);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
 }
