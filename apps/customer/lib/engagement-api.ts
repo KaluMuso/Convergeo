@@ -191,9 +191,9 @@ export async function setVendorFollow(
 }
 
 /**
- * Back-in-stock alert: POST /listings/{id}/back-in-stock (contract agreed with
- * the feed/API stream; 2xx = subscribed). Returns "signed_out" when there is
- * no session so the caller can route to login.
+ * Back-in-stock alert: POST /me/listing-alerts {listing_id, kind:"back_in_stock"}
+ * (retention API, 201). Returns "signed_out" when there is no session so the
+ * caller can route to login.
  */
 export async function subscribeBackInStock(
   listingId: string,
@@ -203,10 +203,11 @@ export async function subscribeBackInStock(
     return "signed_out";
   }
   try {
-    const response = await fetch(
-      `${getApiBaseUrl().replace(/\/$/, "")}/listings/${encodeURIComponent(listingId)}/back-in-stock`,
-      { method: "POST", headers: { Authorization: `Bearer ${token}` } },
-    );
+    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
+    });
     return response.ok ? "ok" : "error";
   } catch {
     return "error";
