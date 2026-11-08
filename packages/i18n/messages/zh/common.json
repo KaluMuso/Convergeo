@@ -91,5 +91,8 @@
     "messageSent": "消息已发送",
     "following": "您已关注 {name}",
     "unfollowed": "您已取消关注 {name}"
+  },
+  "share": {
+    "label": "分享"
   }
 }

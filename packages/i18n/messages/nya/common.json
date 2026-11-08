@@ -88,5 +88,8 @@
     "messageSent": "Message sent",
     "following": "You're following {name}",
     "unfollowed": "You unfollowed {name}"
+  },
+  "share": {
+    "label": "Share"
   }
 }

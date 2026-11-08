@@ -21,6 +21,7 @@ import {
   vendorCommercialTier,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
+import { ShareLinkButton } from "../../../_components/share-link-button";
 import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
@@ -285,11 +286,17 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const [t, tCatalog, profile] = await Promise.all([
+  const [t, tCatalog, profile, baseMessages] = await Promise.all([
     getDirectoryTranslator(locale),
     getCatalogTranslator(locale),
     fetchVendorProfile(slug),
+    getMessages(),
   ]);
+  const shareLabel = createTranslator({
+    locale,
+    messages: baseMessages as AbstractIntlMessages,
+    namespace: "common",
+  })("share.label");
 
   if (!profile) {
     notFound();
@@ -379,79 +386,98 @@ export default async function VendorProfilePage({ params }: PageProps) {
     <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-5xl">
       <JsonLdScript data={jsonLd} />
 
-      <header className="overflow-hidden rounded-lg border border-border bg-surface">
-        {/* Cover band — the vendor's uploaded banner, or a gradient fallback. */}
+      <header className="overflow-hidden rounded-xl border border-border bg-surface">
+        {/* Cover band — the vendor's uploaded banner, or the malachite-night fallback. */}
         {vendor.cover_url ? (
           <div
             aria-hidden
-            className="h-28 bg-cover bg-center sm:h-40"
+            className="h-32 bg-panel bg-cover bg-center sm:h-52"
             style={{ backgroundImage: `url(${vendor.cover_url})` }}
           />
         ) : (
-          <div className="h-28 bg-gradient-to-br from-panel to-panel-2 sm:h-40" aria-hidden />
+          <div className="h-32 bg-panel sm:h-52" aria-hidden />
         )}
-        <div className="flex flex-col gap-3 px-4 sm:flex-row sm:items-end sm:gap-4">
+        <div className="flex flex-col gap-4 px-4 pb-4 sm:flex-row sm:items-end sm:gap-5 sm:px-6">
           <div className="-mt-12 shrink-0 sm:-mt-16">
             {vendor.logo_url ? (
               <div
                 aria-hidden
-                className="h-20 w-20 rounded-full border-4 border-surface bg-cover bg-center sm:h-24 sm:w-24"
+                className="h-24 w-24 rounded-lg border-4 border-surface bg-surface bg-cover bg-center shadow-2 sm:h-32 sm:w-32"
                 style={{ backgroundImage: `url(${vendor.logo_url})` }}
               />
             ) : (
               <div
                 aria-hidden
-                className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-surface bg-bg-2 font-display text-h1 text-display-ink sm:h-24 sm:w-24"
+                className="flex h-24 w-24 items-center justify-center rounded-lg border-4 border-surface bg-primary-tint font-display text-h1 font-bold text-primary shadow-2 sm:h-32 sm:w-32"
               >
                 {vendor.display_name.charAt(0)}
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1 space-y-2 pb-1 sm:pb-3">
-            <h1 className="font-display text-h1 text-display-ink">{vendor.display_name}</h1>
+          <div className="min-w-0 flex-1 space-y-2 sm:pb-1">
+            <h1 className="font-display text-h1 font-bold text-display-ink">
+              {vendor.display_name}
+            </h1>
             <div className="flex flex-wrap items-center gap-2">
               <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
               <CornerRibbon tier={commercial.tier} tierLabel={commercial.tierLabel} />
               {vendor.location ? (
-                <span className="text-sm text-text-3">{vendor.location.landmark}</span>
+                <span className="text-sm text-text-2">{vendor.location.landmark}</span>
               ) : null}
             </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2 sm:pb-1">
             {vendor.whatsapp_msisdn ? (
               <a
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-success px-4 text-sm font-medium text-surface no-underline"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)] no-underline hover:bg-[var(--primary-btn-hover)] focus-visible:outline-none focus-visible:shadow-focusRing"
                 href={`https://wa.me/${vendor.whatsapp_msisdn}`}
                 rel="noopener noreferrer"
                 target="_blank"
               >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.7L4 20Z" />
+                </svg>
                 {t("profile.whatsappCta")}
               </a>
             ) : null}
+            <ShareLinkButton label={shareLabel} title={vendor.display_name} />
           </div>
         </div>
-        <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-border px-4 py-3 sm:grid-cols-4">
-          <div className="text-center">
-            <dd className="font-display text-h3 font-bold text-display-ink">
+        <dl className="m-0 grid grid-cols-2 gap-y-3 divide-border border-t border-border px-4 py-4 sm:grid-cols-4 sm:divide-x sm:px-6">
+          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
+            <dt className="text-sm text-text-3">{t("profile.statRating")}</dt>
+            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
               {reviews.rating_avg !== null && reviews.rating_count > 0
                 ? reviews.rating_avg.toFixed(1)
                 : "—"}
             </dd>
-            <dt className="text-micro text-text-3">{t("profile.statRating")}</dt>
           </div>
-          <div className="text-center">
-            <dd className="font-display text-h3 font-bold text-display-ink">
+          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
+            <dt className="text-sm text-text-3">{t("profile.statReviews")}</dt>
+            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
               {reviews.rating_count}
             </dd>
-            <dt className="text-micro text-text-3">{t("profile.statReviews")}</dt>
           </div>
-          <div className="text-center">
-            <dd className="font-display text-h3 font-bold text-display-ink">{listings.length}</dd>
-            <dt className="text-micro text-text-3">{t("profile.statListings")}</dt>
+          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
+            <dt className="text-sm text-text-3">{t("profile.statListings")}</dt>
+            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
+              {listings.length}
+            </dd>
           </div>
-          <div className="text-center">
-            <dd className="font-display text-h3 font-bold text-display-ink">
+          <div className="flex flex-col gap-0.5 px-2 text-left first:pl-0">
+            <dt className="text-sm text-text-3">{t("profile.statOrders")}</dt>
+            <dd className="m-0 font-display text-h3 font-bold text-display-ink tabular">
               {vendor.order_count}
             </dd>
-            <dt className="text-micro text-text-3">{t("profile.statOrders")}</dt>
           </div>
         </dl>
         <CommercialTierStrip

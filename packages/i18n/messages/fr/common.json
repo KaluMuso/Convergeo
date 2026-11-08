@@ -97,5 +97,8 @@
     "messageSent": "Message envoyé",
     "following": "Vous suivez {name}",
     "unfollowed": "Vous ne suivez plus {name}"
+  },
+  "share": {
+    "label": "Partager"
   }
 }
