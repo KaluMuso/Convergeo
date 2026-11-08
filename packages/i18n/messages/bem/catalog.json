@@ -360,7 +360,13 @@
       "openFilters": "Ama-filters",
       "filtersActive": "Ama-filters (yakonka)"
     },
-    "backToTop": "Bwelele pamo"
+    "backToTop": "Bwelele pamo",
+    "sort": {
+      "best": "Best match",
+      "verified": "Verified sellers",
+      "bundles": "Bundles",
+      "cheapestChip": "Cheapest"
+    }
   },
   "reviews": {
     "report": {

@@ -19,7 +19,11 @@
       "relevance": "相关度",
       "cheapest": "价格最低",
       "nearest": "距离最近",
-      "newest": "最新"
+      "newest": "最新",
+      "best": "最佳匹配",
+      "verified": "认证卖家",
+      "bundles": "套装",
+      "cheapestChip": "最便宜"
     },
     "facets": {
       "heading": "筛选",

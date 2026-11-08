@@ -360,7 +360,13 @@
       "openFilters": "Ma-filters",
       "filtersActive": "Ma-filters (yogwira)"
     },
-    "backToTop": "Bwererani pamwamba"
+    "backToTop": "Bwererani pamwamba",
+    "sort": {
+      "best": "Best match",
+      "verified": "Verified sellers",
+      "bundles": "Bundles",
+      "cheapestChip": "Cheapest"
+    }
   },
   "reviews": {
     "report": {

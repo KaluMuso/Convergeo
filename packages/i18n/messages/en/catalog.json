@@ -21,7 +21,11 @@
       "relevance": "Relevance",
       "cheapest": "Lowest price",
       "nearest": "Nearest",
-      "newest": "Newest"
+      "newest": "Newest",
+      "best": "Best match",
+      "verified": "Verified sellers",
+      "bundles": "Bundles",
+      "cheapestChip": "Cheapest"
     },
     "facets": {
       "heading": "Filters",
