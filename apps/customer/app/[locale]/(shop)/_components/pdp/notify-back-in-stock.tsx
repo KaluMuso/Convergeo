@@ -29,7 +29,7 @@ export function NotifyBackInStock({
     const result = await subscribeBackInStock(listingId);
     if (result === "signed_out") {
       setState("idle");
-      router.push(
+      window.location.assign(
         `/${locale}/login?next=${encodeURIComponent(window.location.pathname)}`,
       );
       return;
