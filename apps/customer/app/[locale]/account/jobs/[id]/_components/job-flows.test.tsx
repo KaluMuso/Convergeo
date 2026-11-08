@@ -78,7 +78,7 @@ describe("job quote flow helpers", () => {
     expect(shouldShowCompletion("accepted", "submitted")).toBe(false);
   });
 
-  it("previews the integer-ngwee deposit and redirects to service-deposit checkout", async () => {
+  it("accepts without computing a deposit and redirects to the group checkout", async () => {
     const user = userEvent.setup();
     mocks.request.mockResolvedValue({
       checkout_group_id: "checkout-1",
@@ -99,7 +99,9 @@ describe("job quote flow helpers", () => {
     );
 
     expect(previewDepositNgwee(120_001, 50)).toBe(60_001);
-    await user.click(screen.getByRole("button", { name: /pay deposit/i }));
+    // The amount due is the API's (pilot: 100% upfront) — no client-side deposit preview.
+    expect(screen.queryByText(/deposit due now/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /accept and pay/i }));
 
     await waitFor(() => {
       expect(mocks.request).toHaveBeenCalledWith("/jobs/job-1/quotes/quote-1/accept", {
@@ -107,7 +109,7 @@ describe("job quote flow helpers", () => {
         body: JSON.stringify({}),
       });
     });
-    expect(mocks.push).toHaveBeenCalledWith("/en/checkout?session=checkout-1&kind=service_deposit");
+    expect(mocks.push).toHaveBeenCalledWith("/en/checkout?group=checkout-1");
   });
 
   it("lets the API block customer confirmation until the provider marks complete", async () => {
@@ -126,5 +128,21 @@ describe("job quote flow helpers", () => {
       method: "POST",
       body: JSON.stringify({}),
     });
+  });
+
+  it("renders the API balance due and hides the balance line when it is zero", () => {
+    const { rerender } = renderWithServices(
+      <CompleteConfirm jobId="job-1" balanceNgwee={125_000} allowConfirmAttempt />,
+    );
+    expect(screen.getByText(/balance due on completion/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /confirm and pay/i })).toBeInTheDocument();
+
+    rerender(
+      <NextIntlClientProvider locale="en" messages={{ services: servicesMessages }}>
+        <CompleteConfirm jobId="job-1" balanceNgwee={0} allowConfirmAttempt />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.queryByText(/balance due on completion/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /confirm the work is done/i })).toBeInTheDocument();
   });
 });

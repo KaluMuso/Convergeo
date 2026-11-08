@@ -2,8 +2,9 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { CheckoutShell } from "./_components/step-fulfilment";
+import { CheckoutEntry } from "./_components/checkout-entry";
 
+import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
@@ -17,6 +18,37 @@ export const metadata: Metadata = {
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
+
+function buildGroupLabels(
+  locale: string,
+  messages: AbstractIntlMessages,
+  shell: CheckoutShellLabels,
+): GroupCheckoutLabels {
+  const t = createTranslator({ locale, messages, namespace: "checkout" });
+  return {
+    pageTitle: t("checkout.group.pageTitle"),
+    loading: t("checkout.group.loading"),
+    error: t("checkout.group.error"),
+    loginRequired: t("checkout.group.loginRequired"),
+    forbidden: t("checkout.group.forbidden"),
+    notFound: t("checkout.group.notFound"),
+    expired: t("checkout.group.expired"),
+    notPayable: t("checkout.group.notPayable"),
+    ticketHeading: t("checkout.group.ticketHeading"),
+    serviceHeading: t("checkout.group.serviceHeading"),
+    providerLabel: t("checkout.group.providerLabel"),
+    tierLineTemplate: t.raw("checkout.group.tierLine") as string,
+    subtotal: t("checkout.group.subtotal"),
+    platformFee: t("checkout.group.platformFee"),
+    total: t("checkout.group.total"),
+    serviceNote: t("checkout.group.serviceNote"),
+    payCtaTemplate: t.raw("checkout.group.payCta") as string,
+    viewOrder: t("checkout.group.viewOrder"),
+    escrowTitle: shell.review.escrowTitle,
+    escrowSteps: [shell.review.escrowStep1, shell.review.escrowStep2, shell.review.escrowStep3],
+    payment: shell.payment,
+  };
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -177,12 +209,19 @@ export default async function CheckoutPage({ params }: PageProps) {
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const labels = buildCheckoutLabels(locale, messages);
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <CheckoutShell locale={locale} labels={labels} />
+      <CheckoutEntry
+        locale={locale}
+        labels={labels}
+        groupLabels={buildGroupLabels(locale, messages, labels)}
+      />
     </div>
   );
 }

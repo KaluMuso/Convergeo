@@ -69,12 +69,25 @@ export type ValidatedPayment = {
   payer_number: string | null;
 };
 
+/**
+ * Pre-resolved options for a server-created checkout group (paid ticket / service
+ * deposit). The amount comes from `GET /checkout/groups/{id}`; the cart-session
+ * option fetch and `/checkout/steps/payment` validation are skipped, COD is never
+ * offered, and `onComplete` starts the payment (errors surface in this step).
+ */
+export type PresetPayment = {
+  options: PaymentOptions;
+  methods: ReadonlyArray<"momo" | "card">;
+  continueLabel?: string;
+};
+
 type StepPaymentProps = {
   locale: string;
   sessionId: string;
   accessToken: string;
   labels: PaymentStepLabels;
-  onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void;
+  onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void | Promise<void>;
+  preset?: PresetPayment;
 };
 
 function MethodOption({ selected, children }: { selected: boolean; children: ReactNode }) {
@@ -99,18 +112,26 @@ export function StepPayment({
   accessToken,
   labels,
   onComplete,
+  preset,
 }: StepPaymentProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const groupLabelId = useId();
-  const [options, setOptions] = useState<PaymentOptions | null>(null);
-  const [method, setMethod] = useState<PaymentMethod>("momo");
+  const [options, setOptions] = useState<PaymentOptions | null>(preset?.options ?? null);
+  const [method, setMethod] = useState<PaymentMethod>(
+    preset && !preset.methods.includes("momo") ? "card" : "momo",
+  );
   const [rail, setRail] = useState<MomoRail>("mtn");
   const [nationalNumber, setNationalNumber] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
+  const [initializing, setInitializing] = useState(!preset);
+  const offers = (candidate: PaymentMethod) =>
+    preset ? (preset.methods as ReadonlyArray<PaymentMethod>).includes(candidate) : true;
 
   useEffect(() => {
+    if (preset) {
+      return;
+    }
     let cancelled = false;
     const loadOptions = async () => {
       setInitializing(true);
@@ -142,7 +163,7 @@ export function StepPayment({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, labels.error, method, sessionId]);
+  }, [accessToken, labels.error, method, preset, sessionId]);
 
   useEffect(() => {
     if (!errorMessage) {
@@ -169,6 +190,30 @@ export function StepPayment({
     }
 
     setLoading(true);
+    if (preset) {
+      try {
+        await onComplete(
+          {
+            method,
+            rail: method === "momo" ? rail : null,
+            payer_number:
+              method === "momo" ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber) : null,
+          },
+          preset.options,
+        );
+        // Success navigates away; keep the button busy so it cannot double-submit.
+      } catch (error) {
+        setErrorMessage(
+          error instanceof ApiError && error.code === "payments_disabled"
+            ? labels.paymentsDisabled
+            : error instanceof ApiError && error.code === "checkout.invalid_payer_number"
+              ? labels.invalidPayer
+              : labels.error,
+        );
+        setLoading(false);
+      }
+      return;
+    }
     try {
       const client = createApiClient({
         baseUrl: getApiBaseUrl(),
@@ -240,7 +285,9 @@ export function StepPayment({
     );
   }
 
-  const codCapFormatted = formatK(options.cod_cap_ngwee, { locale: `${locale}-ZM` });
+  const codCapFormatted = formatK(options.cod_cap_ngwee, {
+    locale: `${locale}-ZM`,
+  });
 
   return (
     <div className="space-y-5">
@@ -257,47 +304,51 @@ export function StepPayment({
         className="flex flex-col gap-3"
         data-testid="checkout-payment-methods"
       >
-        <MethodOption selected={method === "momo"}>
-          <div className="flex items-start justify-between gap-3">
-            <Radio
-              name="payment-method"
-              label={labels.momo}
-              checked={method === "momo"}
-              onChange={() => {
-                setMethod("momo");
-                setErrorMessage(null);
-              }}
-            />
-            {method === "momo" ? (
-              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
-                {labels.selected}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
-        </MethodOption>
+        {offers("momo") ? (
+          <MethodOption selected={method === "momo"}>
+            <div className="flex items-start justify-between gap-3">
+              <Radio
+                name="payment-method"
+                label={labels.momo}
+                checked={method === "momo"}
+                onChange={() => {
+                  setMethod("momo");
+                  setErrorMessage(null);
+                }}
+              />
+              {method === "momo" ? (
+                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                  {labels.selected}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
+          </MethodOption>
+        ) : null}
 
-        <MethodOption selected={method === "card"}>
-          <div className="flex items-start justify-between gap-3">
-            <Radio
-              name="payment-method"
-              label={labels.card}
-              checked={method === "card"}
-              onChange={() => {
-                setMethod("card");
-                setErrorMessage(null);
-              }}
-            />
-            {method === "card" ? (
-              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
-                {labels.selected}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
-        </MethodOption>
+        {offers("card") ? (
+          <MethodOption selected={method === "card"}>
+            <div className="flex items-start justify-between gap-3">
+              <Radio
+                name="payment-method"
+                label={labels.card}
+                checked={method === "card"}
+                onChange={() => {
+                  setMethod("card");
+                  setErrorMessage(null);
+                }}
+              />
+              {method === "card" ? (
+                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                  {labels.selected}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
+          </MethodOption>
+        ) : null}
 
-        {options.cod_eligible ? (
+        {preset ? null : options.cod_eligible ? (
           <MethodOption selected={method === "cod"}>
             <div className="flex items-start justify-between gap-3">
               <Radio
@@ -420,19 +471,29 @@ export function StepPayment({
         <span ref={errorRef} className="sr-only" aria-hidden="true" />
       ) : null}
 
-      <Button
-        type="button"
-        size="lg"
-        className="w-full"
-        loading={loading}
-        loadingLabel={labels.loading}
-        disabled={loading}
-        onClick={() => {
-          void handleSubmit();
-        }}
-      >
-        {labels.continue}
-      </Button>
+      {preset && preset.methods.length === 0 ? (
+        <p
+          role="alert"
+          className="font-body text-sm text-danger"
+          data-testid="checkout-payments-off"
+        >
+          {labels.paymentsDisabled}
+        </p>
+      ) : (
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          loading={loading}
+          loadingLabel={labels.loading}
+          disabled={loading}
+          onClick={() => {
+            void handleSubmit();
+          }}
+        >
+          {preset?.continueLabel ?? labels.continue}
+        </Button>
+      )}
     </div>
   );
 }

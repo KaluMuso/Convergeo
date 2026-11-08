@@ -6,11 +6,11 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
-export const DEFAULT_DEPOSIT_PCT = 50;
+export const DEFAULT_DEPOSIT_PCT = 100;
 
 type AcceptResponse = {
   checkout_group_id: string;
@@ -26,8 +26,6 @@ type AcceptFlowProps = {
   quoteId: string;
   vendorName: string;
   totalNgwee: number;
-  /** Admin-tunable server default; used only for the pre-accept preview. */
-  depositPct?: number;
   onCancel?: () => void;
 };
 
@@ -42,7 +40,6 @@ export function AcceptFlow({
   quoteId,
   vendorName,
   totalNgwee,
-  depositPct = DEFAULT_DEPOSIT_PCT,
   onCancel,
 }: AcceptFlowProps) {
   const t = useTranslations("services.accept");
@@ -50,12 +47,6 @@ export function AcceptFlow({
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const depositNgwee = useMemo(
-    () => previewDepositNgwee(totalNgwee, depositPct),
-    [totalNgwee, depositPct],
-  );
-  const balanceNgwee = totalNgwee - depositNgwee;
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
@@ -68,8 +59,9 @@ export function AcceptFlow({
         `/jobs/${jobId}/quotes/${quoteId}/accept`,
         { method: "POST", body: JSON.stringify({}) },
       );
-      // Hand off to the standard deposit checkout for the created checkout group.
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      // Hand off to the group checkout; it shows the amount the API set for this group
+      // (pilot: 100% upfront) — the client never computes the deposit itself.
+      router.push(`/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(t("errors.notOwner"));
@@ -88,23 +80,13 @@ export function AcceptFlow({
     <section className="space-y-4 rounded border border-border bg-surface p-4">
       <header className="space-y-1">
         <h3 className="font-display text-h3 text-display-ink">{t("title")}</h3>
-        <p className="text-sm text-text-2">{t("intro", { pct: depositPct, vendor: vendorName })}</p>
+        <p className="text-sm text-text-2">{t("payIntro", { vendor: vendorName })}</p>
       </header>
 
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
           <dt className="text-text-2">{t("totalLabel")}</dt>
           <dd className="font-mono text-display-ink">{formatK(totalNgwee)}</dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("depositLabel")}</dt>
-          <dd className="font-mono text-lg font-semibold text-display-ink">
-            {formatK(depositNgwee)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-display-ink">{formatK(balanceNgwee)}</dd>
         </div>
       </dl>
 
@@ -121,7 +103,7 @@ export function AcceptFlow({
           disabled={submitting}
           onClick={() => void handleAccept()}
         >
-          {t("confirmCta", { amount: formatK(depositNgwee) })}
+          {t("payCta")}
         </Button>
         {onCancel ? (
           <Button

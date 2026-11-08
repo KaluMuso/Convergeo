@@ -122,9 +122,20 @@ type PendingPaymentShellProps = {
   locale: string;
   groupId: string;
   labels: PendingLabels;
+  /**
+   * Server-created groups (paid ticket / service deposit) land somewhere other than
+   * the order page on success (ticket wallet / job thread) and return to
+   * `/checkout?group=` rather than the cart checkout. Omitted for cart checkouts.
+   */
+  groupRoutes?: { success: string; checkout: string };
 };
 
-export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentShellProps) {
+export function PendingPaymentShell({
+  locale,
+  groupId,
+  labels,
+  groupRoutes,
+}: PendingPaymentShellProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [statusPayload, setStatusPayload] = useState<PaymentStatusPayload | null>(null);
@@ -137,7 +148,8 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   const orderPath = statusPayload
     ? `/${locale}/account/orders/${statusPayload.order_id}`
     : `/${locale}/account/orders`;
-  const checkoutPath = `/${locale}/checkout`;
+  const checkoutPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
+  const successPath = groupRoutes?.success ?? null;
 
   const fetchStatus = useCallback(async (): Promise<PaymentStatusPayload | null> => {
     const token = session?.access_token;
@@ -255,11 +267,12 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
       return;
     }
     router.replace(
-      statusPayload.order_id
-        ? `/${locale}/account/orders/${statusPayload.order_id}`
-        : `/${locale}/account/orders`,
+      successPath ??
+        (statusPayload.order_id
+          ? `/${locale}/account/orders/${statusPayload.order_id}`
+          : `/${locale}/account/orders`),
     );
-  }, [locale, router, statusPayload]);
+  }, [locale, router, statusPayload, successPath]);
 
   useEffect(() => {
     if (!statusPayload?.cod) {
@@ -336,7 +349,9 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   }
 
   const amountLocale = `${locale}-ZM`;
-  const formattedAmount = formatK(statusPayload.amount_ngwee, { locale: amountLocale });
+  const formattedAmount = formatK(statusPayload.amount_ngwee, {
+    locale: amountLocale,
+  });
 
   if (statusPayload.cod) {
     return (

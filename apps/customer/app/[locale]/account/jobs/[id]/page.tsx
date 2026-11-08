@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
-import { AcceptFlow, DEFAULT_DEPOSIT_PCT, previewDepositNgwee } from "./_components/accept-flow";
+import { AcceptFlow } from "./_components/accept-flow";
 import { CompleteConfirm } from "./_components/complete-confirm";
 import { canAcceptQuote, shouldShowCompletion } from "./_components/job-status";
 import { ServiceReviewForm } from "./_components/service-review-form";
@@ -22,6 +22,8 @@ import { ServiceReviewForm } from "./_components/service-review-form";
 type JobDetail = {
   id: string;
   status: string;
+  deposit_ngwee?: number | null;
+  balance_due_ngwee?: number | null;
 };
 
 type QuoteProvider = {
@@ -140,10 +142,8 @@ export default function JobComparePage({ params }: PageProps) {
   };
 
   const acceptedQuote = quotes.find((quote) => quote.status === "accepted") ?? null;
-  const acceptedBalanceNgwee = acceptedQuote
-    ? acceptedQuote.amount_ngwee -
-      previewDepositNgwee(acceptedQuote.amount_ngwee, DEFAULT_DEPOSIT_PCT)
-    : 0;
+  // Amounts come from the API (server-derived from the stored quote + configured deposit pct).
+  const acceptedBalanceNgwee = job?.balance_due_ngwee ?? 0;
 
   if (sessionLoading || loading) {
     return (

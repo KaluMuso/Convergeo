@@ -3,6 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { PendingPaymentShell, type PendingLabels } from "../../_components/ussd-wait";
+import { groupRoutesFromQuery, type SearchParams } from "../../_lib/group-checkout";
 
 import type { Metadata } from "next";
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string; groupId: string }>;
+  searchParams?: Promise<SearchParams>;
 };
 
 export function generateStaticParams() {
@@ -63,7 +65,7 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
   };
 }
 
-export default async function PendingCheckoutPage({ params }: PageProps) {
+export default async function PendingCheckoutPage({ params, searchParams }: PageProps) {
   const { locale, groupId } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -73,12 +75,20 @@ export default async function PendingCheckoutPage({ params }: PageProps) {
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const labels = buildPendingLabels(locale, messages);
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <PendingPaymentShell locale={locale} groupId={groupId} labels={labels} />
+      <PendingPaymentShell
+        locale={locale}
+        groupId={groupId}
+        labels={labels}
+        groupRoutes={groupRoutesFromQuery(locale, groupId, await searchParams)}
+      />
     </div>
   );
 }

@@ -219,12 +219,14 @@
   "accept": {
     "title": "Accept this quote",
     "intro": "Pay a {pct}% deposit now to secure {vendor}. The balance is due when the work is done.",
+    "payIntro": "Accept {vendor}'s quote and pay securely. The amount due now is confirmed on the next screen.",
     "quoteFrom": "Quote from {vendor}",
     "totalLabel": "Total job value",
     "depositLabel": "Deposit due now",
     "balanceLabel": "Balance on completion",
     "escrowNote": "Your deposit is held safely by Convergeo and only released to the provider once the work is confirmed.",
     "confirmCta": "Pay deposit of {amount}",
+    "payCta": "Accept and pay",
     "submitting": "Setting up your deposit…",
     "cancel": "Not now",
     "errors": {
@@ -256,6 +258,7 @@
       "intro": "Confirm to release the balance to your provider. If you do nothing, we auto-confirm after 48 hours.",
       "balanceLabel": "Balance due on completion",
       "confirmCta": "Confirm and pay {amount}",
+      "confirmCtaNoBalance": "Confirm the work is done",
       "confirming": "Confirming…",
       "confirmed": "Confirmed. Your provider has been paid.",
       "awaitingProvider": "Waiting for your provider to mark the job complete.",
