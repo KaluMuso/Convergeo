@@ -4,6 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CONFIG="${ROOT}/.gitleaks.toml"
 GITLEAKS_BIN="${GITLEAKS_BIN:-gitleaks}"
 
 if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
@@ -11,15 +12,9 @@ if ! command -v "${GITLEAKS_BIN}" >/dev/null 2>&1; then
   exit 2
 fi
 
-python3 - "${ROOT}" "$(command -v "${GITLEAKS_BIN}")" <<'PY'
-import hashlib
-import json
-import pathlib
-import re
-import shutil
-import subprocess
-import sys
-import tempfile
+WORKDIR="$(mktemp -d)"
+cleanup() { rm -rf "${WORKDIR}"; }
+trap cleanup EXIT
 
 fixture_path="scripts/ci/fixtures/merge-evidence-incident-640.json"
 adjacent_path="scripts/ci/fixtures/merge-evidence-incident-641.json"
@@ -138,14 +133,16 @@ config = root / ".gitleaks.toml"
 ignore = root / ".gitleaksignore"
 historical_commit = "090ba3adf6978f9358ef6b437a07a0c993e3bd78"
 manifest = "scripts/ci/coordinator-gate-inputs.json"
+card_commit = "e58450010466cdd883b8d8152942d5c6918ebe57"
+card_test = "apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.test.tsx"
 expected = {
     f"{historical_commit}:{manifest}:generic-api-key:{line}"
     for line in (360, 394, 408, 453, 455, 456, 457, 509)
-}
+} | {f"{card_commit}:{card_test}:generic-api-key:{line}" for line in (727, 728, 729)}
 entries = [line.strip() for line in ignore.read_text().splitlines()
            if line.strip() and not line.lstrip().startswith("#")]
-if len(entries) != 8 or set(entries) != expected:
-    raise SystemExit("gitleaks-self-test: exception set differs from eight approved fingerprints")
+if len(entries) != 11 or set(entries) != expected:
+    raise SystemExit("gitleaks-self-test: exception set differs from eleven approved fingerprints")
 
 def git(repo, *args):
     return subprocess.check_output(["git", "-C", str(repo), *args], stderr=subprocess.DEVNULL).decode().strip()
@@ -230,7 +227,6 @@ try:
 except Exception:
     raise SystemExit("gitleaks-self-test FAILED: structured detection/control contract failed") from None
 PY
-echo "gitleaks-self-test OK (planted secret caught, exit=${rc})"
 
 # The published staging image tag is a public commit SHA, not a credential.
 # Exercise the exact allowlist with the real scanner: changing either the value
