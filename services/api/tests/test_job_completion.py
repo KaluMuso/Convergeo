@@ -24,8 +24,10 @@ from app.routers.job_completion import (
 )
 from app.routers.reviews import REVIEWABLE_ORDER_STATUSES
 from app.services.escrow.release import release_idempotency_key
-from app.services.ledger.engine import account_balance_ngwee
-from app.services.rfq.engagement import accept_quote
+from app.services.ledger.engine import account_balance_ngwee, post_transaction
+from app.services.ledger.templates import LedgerTemplate
+from app.services.payments.fulfillment import escrow_hold_idempotency_key
+from app.services.rfq.engagement import CONFIG_KEY_DEPOSIT_PCT, accept_quote
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -145,7 +147,9 @@ def _seed_quote(
     )
 
 
-def _accept(conn: PgConn, *, customer_id: str = CUSTOMER_A, total: int = 250_000) -> Any:
+def _accept_unpaid(
+    conn: PgConn, *, customer_id: str = CUSTOMER_A, total: int = 250_000
+) -> Any:
     job_id = str(uuid.uuid4())
     quote_id = str(uuid.uuid4())
     vendor_id = _any_vendor_id(conn)
@@ -153,6 +157,60 @@ def _accept(conn: PgConn, *, customer_id: str = CUSTOMER_A, total: int = 250_000
     _seed_job(conn, job_id=job_id, customer_id=customer_id)
     _seed_quote(conn, quote_id=quote_id, job_id=job_id, vendor_id=vendor_id, amount_ngwee=total)
     return accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=customer_id)
+
+
+def _collect_deposit(accepted: Any) -> None:
+    """Simulate the deposit checkout's prepaid settlement (escrow_hold on the order)."""
+    post_transaction(
+        idempotency_key=escrow_hold_idempotency_key(accepted.order_id),
+        template=LedgerTemplate.ESCROW_HOLD,
+        checkout_group_id=accepted.checkout_group_id,
+        order_id=accepted.order_id,
+        order_amount_ngwee=accepted.deposit_ngwee,
+    )
+
+
+def _accept(conn: PgConn, *, customer_id: str = CUSTOMER_A, total: int = 250_000) -> Any:
+    """Accept a quote and collect its (pilot: 100%) deposit into escrow."""
+    accepted = _accept_unpaid(conn, customer_id=customer_id, total=total)
+    _collect_deposit(accepted)
+    return accepted
+
+
+@pytest.fixture
+def deposit_pct(db: PgConn) -> Generator[Any, None, None]:
+    """Temporarily override platform_config.service_deposit_pct; restores the prior row."""
+    before = db.run(
+        f"SELECT value::text FROM public.platform_config WHERE key = '{CONFIG_KEY_DEPOSIT_PCT}';"
+    )
+    prior = before.rows[0] if before.ok and before.rows else None
+
+    def _set(pct: int) -> None:
+        db.run(
+            f"""
+            INSERT INTO public.platform_config (key, value)
+            VALUES ('{CONFIG_KEY_DEPOSIT_PCT}', '{pct}'::jsonb)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+            """
+        )
+
+    yield _set
+    if prior is None:
+        db.run(f"DELETE FROM public.platform_config WHERE key = '{CONFIG_KEY_DEPOSIT_PCT}';")
+    else:
+        db.run(
+            f"UPDATE public.platform_config SET value = '{prior}'::jsonb "
+            f"WHERE key = '{CONFIG_KEY_DEPOSIT_PCT}';"
+        )
+
+
+def _charge_balance_count(conn: PgConn, order_id: str) -> int:
+    result = conn.run(
+        "SELECT count(*)::text FROM public.ledger_transactions "
+        f"WHERE order_id = '{order_id}' AND kind = 'charge_received';"
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
 
 
 def _order_status(conn: PgConn, order_id: str) -> str:
@@ -233,21 +291,25 @@ class TestDoubleConfirmIdempotency:
         assert first.already_confirmed is False
         assert first.released is True
         assert first.release_created is True
-        assert first.balance_created is True
-        assert first.balance_ngwee == accepted.balance_ngwee
+        # Pilot: 100% upfront → no balance leg, and never a fabricated charge.
+        assert accepted.balance_ngwee == 0
+        assert accepted.deposit_ngwee == accepted.total_job_ngwee
+        assert first.balance_created is False
+        assert first.balance_ngwee == 0
+        assert _charge_balance_count(db, accepted.order_id) == 0
         # Vendor net == total − 12% commission (single snapshot), integer-exact.
         assert first.net_ngwee == accepted.total_job_ngwee - accepted.commission_ngwee
 
-        # Order completed; exactly one balance leg and one release posting.
+        # Order completed; no balance leg (100% deposit) and one release posting.
         assert _order_status(db, accepted.order_id) == "completed"
-        assert _balance_item_count(db, accepted.order_id) == 1
+        assert _balance_item_count(db, accepted.order_id) == 0
         assert _release_count(db, accepted.order_id) == 1
 
-        # Second confirm is an idempotent no-op — no second release, no second balance leg.
+        # Second confirm is an idempotent no-op — no second release, no balance leg.
         second = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert second.already_confirmed is True
         assert second.released is False
-        assert _balance_item_count(db, accepted.order_id) == 1
+        assert _balance_item_count(db, accepted.order_id) == 0
         assert _release_count(db, accepted.order_id) == 1
 
     def test_confirm_before_mark_complete_rejected(
@@ -427,7 +489,7 @@ class TestConfirmFailureNoStrand:
         assert recovered.release_created is False  # release already posted on the first pass
         assert _order_status(db, accepted.order_id) == "completed"
         assert _release_count(db, accepted.order_id) == 1
-        assert _balance_item_count(db, accepted.order_id) == 1
+        assert _balance_item_count(db, accepted.order_id) == 0
 
     def test_failure_during_release_leaves_order_placed_no_release(
         self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
@@ -577,3 +639,77 @@ class TestCompletionAuditActor:
         assert _order_status(db, accepted.order_id) == "completed"
         actor = _completion_event_actor(db, accepted.order_id)
         assert actor == SYSTEM_ACTOR_ID
+
+
+# ---------------------------------------------------------------------------
+# C1: confirm never books or releases uncollected service money
+# ---------------------------------------------------------------------------
+
+
+class TestUncollectedServiceMoneyGuard:
+    def test_default_deposit_is_full_job_value(self, db: PgConn, db_url_env: None) -> None:
+        accepted = _accept_unpaid(db, total=210_000)
+        assert accepted.deposit_ngwee == 210_000
+        assert accepted.balance_ngwee == 0
+
+    def test_confirm_with_unpaid_deposit_is_refused(self, db: PgConn, db_url_env: None) -> None:
+        accepted = _accept_unpaid(db, total=230_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        with pytest.raises(AppError) as exc:
+            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert exc.value.code == "service_deposit_not_collected"
+        assert exc.value.http_status == 409
+        assert _order_status(db, accepted.order_id) == "placed"
+        assert _release_count(db, accepted.order_id) == 0
+        assert _commission_capture_count(db, accepted.order_id) == 0
+        assert _charge_balance_count(db, accepted.order_id) == 0
+
+    def test_partial_deposit_balance_never_charged_or_released(
+        self, db: PgConn, db_url_env: None, deposit_pct: Any
+    ) -> None:
+        deposit_pct(50)
+        accepted = _accept(db, total=200_000)
+        assert accepted.deposit_ngwee == 100_000
+        assert accepted.balance_ngwee == 100_000
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        with pytest.raises(AppError) as exc:
+            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert exc.value.code == "service_balance_not_collected"
+        assert exc.value.details["collected_ngwee"] == 100_000
+        assert exc.value.details["total_job_ngwee"] == 200_000
+        # No fabricated CHARGE_RECEIVED, no balance item, no capture, no release.
+        assert _charge_balance_count(db, accepted.order_id) == 0
+        assert _balance_item_count(db, accepted.order_id) == 0
+        assert _commission_capture_count(db, accepted.order_id) == 0
+        assert _release_count(db, accepted.order_id) == 0
+        assert _order_status(db, accepted.order_id) == "placed"
+
+    def test_auto_confirm_skips_blocked_job_without_aborting_batch(
+        self, db: PgConn, db_url_env: None, deposit_pct: Any
+    ) -> None:
+        deposit_pct(50)
+        blocked = _accept(db, total=200_000)
+        deposit_pct(100)
+        ok = _accept(db, total=150_000)
+        for accepted in (blocked, ok):
+            mark_job_complete(
+                _job_id_for(db, accepted.order_id), _vendor_owner(db, accepted.vendor_id)
+            )
+        marked_at = max(
+            _marker_at(db, _job_id_for(db, blocked.order_id)),
+            _marker_at(db, _job_id_for(db, ok.order_id)),
+        )
+
+        auto_confirm_due_jobs(now=marked_at + timedelta(hours=49))
+
+        assert _order_status(db, blocked.order_id) == "placed"
+        assert _release_count(db, blocked.order_id) == 0
+        assert _charge_balance_count(db, blocked.order_id) == 0
+        assert _order_status(db, ok.order_id) == "completed"
+        assert _release_count(db, ok.order_id) == 1

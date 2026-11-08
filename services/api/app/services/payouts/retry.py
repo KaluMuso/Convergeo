@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
+from app.services.payments.fees import book_transfer_fee, fee_fields_from_provider_raw
 from app.services.payments.lenco.models import LencoTransferStatusResponse
 from app.services.payments.state import SYSTEM_ACTOR_ID
 from app.services.payouts.execution import (
@@ -230,6 +231,8 @@ async def retry_payout_row(
                     amount_ngwee=amount_ngwee,
                     lenco_reference=lenco_reference,
                 )
+            # C6: Lenco's transfer fee (vendor payout or customer refund payout).
+            book_transfer_fee(payout_id=payout_id, fee=query_response.data.fee)
             _update_payout_row(
                 service_client,
                 payout_id,
@@ -363,6 +366,9 @@ async def retry_payout_row(
                 amount_ngwee=amount_ngwee,
                 lenco_reference=lenco_reference,
             )
+        book_transfer_fee(
+            payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0]
+        )
         _update_payout_row(
             service_client,
             payout_id,

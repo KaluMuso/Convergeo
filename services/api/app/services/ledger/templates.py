@@ -24,6 +24,8 @@ class LedgerTemplate(StrEnum):
     REFUND_LANE2 = "refund_lane2"
     COD_COLLECTED = "cod_collected"
     CLAWBACK = "clawback"
+    REFUND_REVERSAL = "refund_reversal"
+    LENCO_FEE = "lenco_fee"
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,6 +244,53 @@ def clawback(*, clawback_ngwee: int, vendor_id: str) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.CLAWBACK, legs=legs)
 
 
+def refund_reversal(*, original_legs: tuple[PostingLeg, ...]) -> TemplateResult:
+    """Compensating entry for a refund whose customer payout definitively failed.
+
+    Negates every leg of the original refund posting (``refund_lane1`` /
+    ``refund_lane2`` / ``clawback``) so escrow / vendor_payable / platform_cash
+    return to where they were before the refund decision. The original rows are
+    never mutated (immutable ledger) — this is a new balanced transaction.
+    """
+    if not original_legs:
+        msg = "original_legs must not be empty"
+        raise ValueError(msg)
+    legs = tuple(
+        PostingLeg(leg.account, -parse_ngwee_signed(leg.amount_ngwee)) for leg in original_legs
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.REFUND_REVERSAL, legs=legs)
+
+
+def lenco_fee(*, fee_ngwee: int) -> TemplateResult:
+    """Provider fee Lenco deducts from our merchant account (bearer=merchant).
+
+    Debit fees (+fee) — platform expense.
+    Credit platform_cash (−fee) — the Lenco balance is lower by the fee.
+
+    Booking this keeps ``platform_cash`` equal to the Lenco available balance so
+    the daily reconciliation report can come out clean.
+    """
+    fee = parse_ngwee(fee_ngwee)
+    legs = (
+        PostingLeg(AccountRef("fees"), fee),
+        PostingLeg(AccountRef("platform_cash"), -fee),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.LENCO_FEE, legs=legs)
+
+
+def parse_ngwee_signed(value: int) -> int:
+    """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        msg = "posting amount must be integer ngwee"
+        raise TypeError(msg)
+    if value == 0:
+        msg = "posting amount must be non-zero"
+        raise ValueError(msg)
+    return value
+
+
 TemplateFn = Callable[..., TemplateResult]
 
 TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
@@ -254,6 +303,8 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.REFUND_LANE2: refund_lane2,
     LedgerTemplate.COD_COLLECTED: cod_collected,
     LedgerTemplate.CLAWBACK: clawback,
+    LedgerTemplate.REFUND_REVERSAL: refund_reversal,
+    LedgerTemplate.LENCO_FEE: lenco_fee,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

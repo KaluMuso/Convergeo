@@ -254,7 +254,29 @@ class TestTwoLegCommissionSingleCount:
         _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
                     amount_ngwee=total)
 
-        result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+        # Pilot default is 100% upfront (no balance leg). Exercise the two-leg
+        # commission invariant with an explicit 50% deposit config.
+        prior = db.run(
+            "SELECT value::text FROM public.platform_config WHERE key = 'service_deposit_pct';"
+        )
+        db.run(
+            "INSERT INTO public.platform_config (key, value) "
+            "VALUES ('service_deposit_pct', '50'::jsonb) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;"
+        )
+        try:
+            result = accept_quote(
+                _SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A
+            )
+        finally:
+            if prior.ok and prior.rows:
+                db.run(
+                    f"UPDATE public.platform_config SET value = '{prior.rows[0]}'::jsonb "
+                    "WHERE key = 'service_deposit_pct';"
+                )
+            else:
+                db.run("DELETE FROM public.platform_config WHERE key = 'service_deposit_pct';")
+        assert result.balance_ngwee == total // 2
         expected_commission = total * DEFAULT_SERVICE_COMMISSION_BPS // 10_000
 
         # 12% of the TOTAL, computed once at accept.

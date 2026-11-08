@@ -241,6 +241,8 @@
       "errors": {
         "notOwner": "Mungakonfirma imilimo yenu fye.",
         "notMarked": "Provider wenu taamarka umulimo ugapwa pano.",
+        "depositNotCollected": "Ideposit lya uyu mulimo talilalipilwa, kanshi tamwingasuminisha.",
+        "balanceNotCollected": "Ibalance lya uyu mulimo talilalipilwa, kanshi provider tengapeelwa indalama nomba. Iteam yesu ikamulondolola.",
         "generic": "Tatwakwanisha ukukonfirma umulimo. Esheni again.",
         "rateLimited": "Requests shingi. Loleni akanya."
       }

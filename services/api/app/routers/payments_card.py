@@ -12,7 +12,8 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.identity import lookup_user_email
-from app.services.payments.base import PaymentStrategy, QueryStatusRequest
+from app.services.payments.base import PaymentStrategy, QueryStatusRequest, QueryStatusResult
+from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.lenco.config import LencoEnvironment, get_lenco_environment
 from app.services.payments.money import ngwee_to_major_str
 from app.services.payments.references import make_order_reference
@@ -26,8 +27,10 @@ from app.services.payments.state import (
     lenco_collection_status_to_payment_status,
     lenco_webhook_event_to_payment_status,
     process_webhook_event,
+    provider_amount_mismatch,
     release_checkout_for_retry,
     transition_payment,
+    write_payment_audit_log,
 )
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -314,9 +317,9 @@ async def _query_lenco_status(
     strategy: PaymentStrategy,
     *,
     reference: str,
-) -> PaymentStatus | None:
+) -> tuple[PaymentStatus | None, QueryStatusResult]:
     result = await strategy.query_status(QueryStatusRequest(reference=reference))
-    return lenco_collection_status_to_payment_status(result.status)
+    return lenco_collection_status_to_payment_status(result.status), result
 
 
 def _ensure_card_payment_owned(
@@ -365,7 +368,41 @@ async def verify_card_payment_return(
         )
 
     provider = strategy or get_payment_strategy(str(payment.get("provider", LENCO_PROVIDER)))
-    lenco_status = await _query_lenco_status(provider, reference=lenco_reference)
+    lenco_status, lenco_result = await _query_lenco_status(provider, reference=lenco_reference)
+
+    # C3: the widget amount is set client-side. Before ANY success path (including
+    # draining a stored webhook below), Lenco's own reported amount/currency must
+    # equal this payment row; otherwise hold + audit and never mark SUCCESS.
+    if lenco_status == PaymentStatus.SUCCESS:
+        mismatch = provider_amount_mismatch(
+            expected_ngwee=int(payment["amount_ngwee"]),
+            provider_amount=lenco_result.amount_major,
+            provider_currency=lenco_result.currency,
+        )
+        if mismatch is not None:
+            _hold_payment_mismatch(
+                service_client,
+                payment_id=payment_id,
+                lenco_reference=lenco_reference,
+                reason=f"provider_amount_mismatch:{mismatch}",
+                lenco_status=lenco_status.value,
+            )
+            write_payment_audit_log(
+                service_client,
+                actor_id=SYSTEM_ACTOR_ID,
+                payment_id=payment_id,
+                from_status=current_status.value,
+                to_status=current_status.value,
+                note=f"Card verify rejected: provider_amount_mismatch {mismatch}",
+            )
+            return VerifyCardReturnResponse(
+                payment_id=payment_id,
+                checkout_group_id=checkout_group_id,
+                status=current_status.value,
+                verified=False,
+                order_confirmed=False,
+                held=True,
+            )
 
     webhook_row = _find_success_webhook(service_client, reference=lenco_reference)
     if webhook_row is not None and webhook_row.get("processed_at") is None:
@@ -412,12 +449,30 @@ async def verify_card_payment_return(
             incoming_status=PaymentStatus.SUCCESS,
             actor_id=SYSTEM_ACTOR_ID,
             note="Card payment verified via Lenco status query and webhook cross-check",
+            provider_amount=lenco_result.amount_major,
+            provider_currency=lenco_result.currency,
+            provider_fee=fee_fields_from_provider_raw(lenco_result.raw)[0],
+            provider_bearer=fee_fields_from_provider_raw(lenco_result.raw)[1],
         )
         if outcome is not None:
             _mark_fulfilled(
                 service_client,
                 payment_id=payment_id,
                 note="Card payment fulfilled after server verification",
+            )
+        refreshed = PaymentStatus(
+            str(_load_payment(service_client, payment_id=payment_id)["status"])
+        )
+        if refreshed != PaymentStatus.SUCCESS:
+            # Settlement refused (e.g. late success after a sibling settled) —
+            # never tell the client the order is confirmed.
+            return VerifyCardReturnResponse(
+                payment_id=payment_id,
+                checkout_group_id=checkout_group_id,
+                status=refreshed.value,
+                verified=False,
+                order_confirmed=False,
+                held=True,
             )
         return VerifyCardReturnResponse(
             payment_id=payment_id,

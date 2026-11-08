@@ -6,12 +6,18 @@ import uuid
 from typing import Any
 
 import pytest
+from app.services.db import SqlResult
+from app.services.ledger.engine import LedgerError, PostedTransaction
+from app.services.ledger.templates import AccountRef, LedgerTemplate, PostingLeg
+from app.services.refunds import state as refund_state
 from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from app.services.refunds.execute import execute_refund
 from app.services.refunds.state import (
     complete_refund_from_provider_payout,
     fail_refund_from_provider_payout,
     mark_refund_awaiting_payout,
+    refund_reversal_idempotency_key,
+    reverse_refund_ledger,
 )
 
 
@@ -163,7 +169,8 @@ def test_complete_refund_from_provider_payout_idempotent() -> None:
     assert service.client.tables["refunds"].rows[0]["status"] == "completed"
 
 
-def test_fail_refund_from_provider_payout() -> None:
+def test_fail_refund_from_provider_payout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(refund_state, "reverse_refund_ledger", lambda **_k: ["rev-1"])
     service = FakeService()
     payout_id = str(uuid.uuid4())
     refund_id = str(uuid.uuid4())
@@ -216,3 +223,147 @@ def test_execute_returns_existing_awaiting_refund(status: str) -> None:
         )
     assert result.created is False
     assert result.refund_id == existing["id"]
+
+
+# ---------------------------------------------------------------------------
+# C5: definitive payout failure reverses the refund ledger posting
+# ---------------------------------------------------------------------------
+
+
+def _awaiting_refund(service: FakeService, *, status: str = "awaiting_payout") -> tuple[str, str]:
+    payout_id = str(uuid.uuid4())
+    refund_id = str(uuid.uuid4())
+    service.client.tables["refunds"].rows.append(
+        {
+            "id": refund_id,
+            "order_id": str(uuid.uuid4()),
+            "status": status,
+            "payout_ref": payout_id,
+            "breakdown": {},
+        }
+    )
+    return payout_id, refund_id
+
+
+def test_definitive_failure_reverses_ledger_and_audits(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def _reverse(**kwargs: Any) -> list[str]:
+        calls.append(kwargs)
+        return ["rev-txn-1"]
+
+    monkeypatch.setattr(refund_state, "reverse_refund_ledger", _reverse)
+    service = FakeService()
+    payout_id, refund_id = _awaiting_refund(service)
+
+    assert fail_refund_from_provider_payout(
+        service, payout_id=payout_id, reason="provider_failed", provider_status="failed"
+    )
+
+    assert len(calls) == 1 and calls[0]["refund_id"] == refund_id
+    row = service.client.tables["refunds"].rows[0]
+    assert row["status"] == "failed"
+    assert row["breakdown"]["ledger_reversal_transaction_ids"] == ["rev-txn-1"]
+    audit = service.client.tables["audit_log"].rows[-1]
+    assert audit["after"]["ledger_reversal_transaction_ids"] == ["rev-txn-1"]
+
+
+@pytest.mark.parametrize("reason", ["max_retry_attempts_exceeded", "ConnectTimeout()"])
+def test_ambiguous_failure_does_not_reverse(
+    monkeypatch: pytest.MonkeyPatch, reason: str
+) -> None:
+    """Exhausted retries after send errors may have paid out — never auto-reverse."""
+
+    def _boom(**_kwargs: Any) -> list[str]:
+        raise AssertionError("ambiguous failure must not reverse the ledger")
+
+    monkeypatch.setattr(refund_state, "reverse_refund_ledger", _boom)
+    service = FakeService()
+    payout_id, _refund_id = _awaiting_refund(service)
+
+    assert fail_refund_from_provider_payout(
+        service, payout_id=payout_id, reason=reason, dead_lettered=True
+    )
+    row = service.client.tables["refunds"].rows[0]
+    assert row["status"] == "failed"
+    assert row["breakdown"]["ledger_reversal"] == "manual_review_ambiguous_failure"
+
+
+def test_reversal_failure_leaves_refund_awaiting(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(**_kwargs: Any) -> list[str]:
+        raise LedgerError("ledger post failed")
+
+    monkeypatch.setattr(refund_state, "reverse_refund_ledger", _boom)
+    service = FakeService()
+    payout_id, _refund_id = _awaiting_refund(service)
+
+    with pytest.raises(LedgerError):
+        fail_refund_from_provider_payout(service, payout_id=payout_id, reason="provider_failed")
+    # Not FAILED-with-escrow-drained: still awaiting, so the next notice retries.
+    assert service.client.tables["refunds"].rows[0]["status"] == "awaiting_payout"
+    assert service.client.tables["audit_log"].rows == []
+
+
+def test_repeat_failure_notice_reensures_reversal(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def _reverse(**kwargs: Any) -> list[str]:
+        calls.append(kwargs["refund_id"])
+        return ["rev"]
+
+    monkeypatch.setattr(refund_state, "reverse_refund_ledger", _reverse)
+    service = FakeService()
+    payout_id, refund_id = _awaiting_refund(service, status="failed")
+
+    assert fail_refund_from_provider_payout(service, payout_id=payout_id, reason="provider_failed")
+    assert calls == [refund_id]
+    assert service.client.tables["audit_log"].rows == []
+
+
+def test_reverse_refund_ledger_negates_each_original_transaction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vendor = str(uuid.uuid4())
+    lane1_txn = str(uuid.uuid4())
+    claw_txn = str(uuid.uuid4())
+    rows = [
+        f"{lane1_txn}|escrow||10000",
+        f"{lane1_txn}|platform_cash||-10000",
+        f"{claw_txn}|vendor_payable|{vendor}|2500",
+        f"{claw_txn}|platform_cash||-2500",
+    ]
+    monkeypatch.setattr(refund_state, "run_sql_script", lambda _s: SqlResult(ok=True, rows=rows))
+    posted: list[dict[str, Any]] = []
+
+    def _post(**kwargs: Any) -> PostedTransaction:
+        posted.append(kwargs)
+        return PostedTransaction(
+            id=f"rev-{len(posted)}", kind="refund_reversal",
+            idempotency_key=kwargs["idempotency_key"], created=True,
+        )
+
+    monkeypatch.setattr(refund_state, "post_transaction", _post)
+    refund_id = str(uuid.uuid4())
+    ids = reverse_refund_ledger(refund_id=refund_id, order_id=None)
+
+    assert ids == ["rev-1", "rev-2"]
+    assert [p["idempotency_key"] for p in posted] == [
+        refund_reversal_idempotency_key(lane1_txn),
+        refund_reversal_idempotency_key(claw_txn),
+    ]
+    assert all(p["template"] == LedgerTemplate.REFUND_REVERSAL for p in posted)
+    assert posted[0]["original_legs"] == (
+        PostingLeg(AccountRef("escrow"), 10_000),
+        PostingLeg(AccountRef("platform_cash"), -10_000),
+    )
+    assert posted[1]["original_legs"][0] == PostingLeg(AccountRef("vendor_payable", vendor), 2_500)
+
+
+def test_reverse_refund_ledger_fails_closed_on_lookup_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        refund_state, "run_sql_script", lambda _s: SqlResult(ok=False, rows=[], error="down")
+    )
+    with pytest.raises(LedgerError):
+        reverse_refund_ledger(refund_id=str(uuid.uuid4()), order_id=None)

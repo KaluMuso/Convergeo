@@ -32,7 +32,9 @@ from app.services.stock.claim import sql_uuid
 
 # Deposit percentage is admin-tunable via platform_config; whole-percent integer.
 CONFIG_KEY_DEPOSIT_PCT = "service_deposit_pct"
-DEFAULT_SERVICE_DEPOSIT_PCT = 50
+# Pilot owner decision (C1, 2026-11-07): 100% upfront. No balance checkout exists,
+# so an unset config must never create an uncollectable balance.
+DEFAULT_SERVICE_DEPOSIT_PCT = 100
 
 # Services commission category (0008 seed: ('services', 1200) = 12%).
 SERVICE_COMMISSION_CATEGORY = "services"
