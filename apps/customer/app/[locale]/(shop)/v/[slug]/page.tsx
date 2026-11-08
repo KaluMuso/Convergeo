@@ -223,6 +223,11 @@ export async function generateMetadata({
             },
           ],
     },
+    twitter: {
+      card: "summary_large_image",
+      title: profile.vendor.display_name,
+      description,
+    },
     robots: { index: true, follow: true },
   };
 }

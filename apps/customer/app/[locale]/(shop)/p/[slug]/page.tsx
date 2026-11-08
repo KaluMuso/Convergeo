@@ -2,6 +2,7 @@ import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { cldUrl } from "@vergeo/ui/src/media/cloudinary-url";
 import {
   buildBreadcrumbListJsonLd,
   buildCanonicalAlternates,
@@ -438,7 +439,14 @@ export async function generateMetadata({
       description,
       locale,
       url: canonicalPath,
-      imageUrl: ogImageUrl,
+      // Real product photo first (WhatsApp picks the first), then the
+      // generated name + price card.
+      imageUrls: [
+        ...(product.images[0]?.public_id
+          ? [cldUrl(product.images[0].public_id, { width: 1200 })]
+          : []),
+        ogImageUrl,
+      ].filter((url) => url.length > 0),
     }),
     robots: {
       index: indexable,
