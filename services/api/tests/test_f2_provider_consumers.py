@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 import pytest
 from app.routers.payments_card import verify_card_payment_return
+from app.services.payments import fees as fees_mod
 from app.services.payments.lenco import LencoClient, LencoStrategy
 from tests.test_lenco_client import STATUS_FIXTURE
 from tests.test_payment_state import CUSTOMER_ID
@@ -18,7 +19,12 @@ from tests.test_payments_card import card_service as card_service
 @pytest.mark.parametrize(
     "outcome", ["successful", "failed", "pending", "not_found", "wrong_amount"]
 )
-async def test_card_actual_transport_outcome(card_service: Any, outcome: str) -> None:
+async def test_card_actual_transport_outcome(
+    card_service: Any, outcome: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # C6 ledger seam: the fake service client has no ledger DB; record fee posts.
+    fee_posts: list[dict[str, Any]] = []
+    monkeypatch.setattr(fees_mod, "post_transaction", lambda **kwargs: fee_posts.append(kwargs))
     payment_id = str(uuid4())
     _seed_card_payment(card_service.client, payment_id=payment_id)
     calls: list[str] = []
@@ -56,6 +62,12 @@ async def test_card_actual_transport_outcome(card_service: Any, outcome: str) ->
         )
     assert calls
     assert result.order_confirmed is (outcome == "successful")
+    if outcome == "successful":
+        # Lenco's fixture fee (K0.33, merchant-borne) is booked exactly once.
+        assert [post["fee_ngwee"] for post in fee_posts] == [33]
+        assert fee_posts[0]["payment_id"] == payment_id
+    else:
+        assert fee_posts == []
     if outcome == "failed":
         assert result.retry_checkout
         assert card_service.client.tables["payments"].rows[0]["raw"]["terminal_provider_failure"]

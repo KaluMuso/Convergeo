@@ -42,6 +42,10 @@ output=$(check_hosted_chrome 2>&1)
 set_fixture ubuntu24 20260927.320.1 155.0.8059.79 155.0.8059.79-1
 check_hosted_chrome >/dev/null
 
+set_fixture ubuntu24 20261101.360.1 155.0.8059.79 155.0.8059.79-1
+output=$(check_hosted_chrome 2>&1)
+[[ "$output" == *'ImageOS=ubuntu24 ImageVersion=20261101.360.1'* ]]
+
 set_fixture ubuntu24 20260927.320.1 154.0.8037.57 154.0.8037.57-1
 if output=$(check_hosted_chrome 2>&1); then exit 1; fi
 [[ "$output" == *'ImageVersion=20260927.320.1'* ]]

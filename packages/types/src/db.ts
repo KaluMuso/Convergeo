@@ -6242,7 +6242,7 @@ export type Database = {
           p_wholesale: boolean
         }
         Returns: string
-        }
+      }
       apply_cart_add_idempotent_v2: {
         Args: {
           p_body: Json
@@ -6260,7 +6260,7 @@ export type Database = {
           p_wholesale: boolean
         }
         Returns: string
-        }
+      }
       apply_login_cart_merge: {
         Args: {
           p_expected_authority: Json
