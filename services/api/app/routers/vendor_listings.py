@@ -113,13 +113,13 @@ class ListingCreateRequest(StrictModel):
             return self
         if self.mode == "quick_list" and self.product_class in {"A", "B", "C"}:
             return self
+        # Missing/short standalone category or description is rejected at the
+        # shared create seam with the stable standalone_details_required code.
         if self.product_class in {"D", "E"}:
-            if not self.category_id or not self.category_id.strip():
-                raise ValueError("category_id is required for standalone Class D/E listings")
-            if self.description is None or len(self.description.strip()) < 20:
-                raise ValueError("Class D/E listings require description of at least 20 characters")
-            self.category_id = self.category_id.strip()
-            self.description = self.description.strip()
+            if self.category_id is not None:
+                self.category_id = self.category_id.strip()
+            if self.description is not None:
+                self.description = self.description.strip()
         status: ListingStatus = (
             "draft" if self.mode == "new_canonical" or not self.publish else "active"
         )
@@ -515,12 +515,23 @@ def create_listing_for_vendor(
                 http_status=422,
                 details={"message_key": "vendor.listings.errors.standalone_required"},
             )
-        if not body.category_id or len((body.description or "").strip()) < 20:
+        missing_fields = [
+            name
+            for name, ok in (
+                ("category_id", bool(body.category_id)),
+                ("description", len((body.description or "").strip()) >= 20),
+            )
+            if not ok
+        ]
+        if missing_fields:
             raise AppError(
                 code="standalone_details_required",
                 message="Select a category and provide a description of at least 20 characters",
                 http_status=422,
-                details={"message_key": "vendor.listings.errors.standaloneDetailsRequired"},
+                details={
+                    "message_key": "vendor.listings.errors.standaloneDetailsRequired",
+                    "fields": missing_fields,
+                },
             )
 
     # Resolve the vendor-supplied category up front so the moderation screen's

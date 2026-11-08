@@ -268,7 +268,8 @@ def test_superadmin_can_create_and_assign_only_known_permissions(
 
 
 # These tests use real role rows and the management RPC in an explicitly
-# selected disposable PG17 database (matching staging/production 17.6). Resource reads remain synthetic, so no
+# selected disposable PG17 database
+# (matching staging/production 17.6). Resource reads remain synthetic, so no
 # provider, ledger, payment or shared database operation can occur.
 PERMISSION_ENDPOINTS = {
     "finance.read": ("/admin/orders/search", {"order_id": "00000000-0000-0000-0000-000000000003"}),
