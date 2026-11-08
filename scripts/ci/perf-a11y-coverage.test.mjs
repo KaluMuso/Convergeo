@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -21,10 +21,17 @@ function discover(extraArgs = []) {
   const command = smokeStep?.match(/^\s*run:\s*(npx playwright test[^\n]*)$/m)?.[1];
   assert.ok(command, "the workflow must expose its Playwright smoke command");
   const args = command.split(/\s+/).slice(2);
+  const cli = path.join(root, "e2e/node_modules/@playwright/test/cli.js");
+  // Fail with the cause, not a module-resolution crash, when the job skipped or
+  // failed "Install a11y smoke deps" (e.g. an earlier step such as Chrome setup failed).
+  assert.ok(
+    existsSync(cli),
+    "e2e Playwright is not installed: the a11y smoke deps step did not run, so coverage is unproven",
+  );
   const output = execFileSync(
     process.execPath,
     [
-      path.join(root, "e2e/node_modules/@playwright/test/cli.js"),
+      cli,
       ...args,
       ...extraArgs,
       "--list",
@@ -73,11 +80,14 @@ test("the actual Performance command discovers all three routes at 360px and 390
 });
 
 test("a selector that drops 360px coverage is rejected", () => {
-  assert.throws(() => assertCoverage(discover(["--project=mobile-390"])), assert.AssertionError);
+  // Discover outside assert.throws: a discovery failure must fail, not satisfy, this test.
+  const report = discover(["--project=mobile-390"]);
+  assert.throws(() => assertCoverage(report), assert.AssertionError);
 });
 
 test("discovery alone cannot qualify completed accessibility coverage", () => {
-  assert.throws(() => assertCoverage(discover(), true), assert.AssertionError);
+  const report = discover();
+  assert.throws(() => assertCoverage(report, true), assert.AssertionError);
 });
 
 if (process.env.PERF_A11Y_RESULTS) {

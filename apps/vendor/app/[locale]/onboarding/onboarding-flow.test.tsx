@@ -127,9 +127,14 @@ async function startPhoto() {
     fireEvent.click(button);
   });
 }
+// Camera readiness is a promise chain (getUserMedia -> play) plus a React commit;
+// under a loaded CI runner that can exceed waitFor's 1s default without any defect.
+const CAMERA_READY_TIMEOUT_MS = 4000;
 async function takeReadyPhoto() {
-  await waitFor(() =>
-    expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "false"),
+  await waitFor(
+    () =>
+      expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "false"),
+    { timeout: CAMERA_READY_TIMEOUT_MS },
   );
   fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
 }
