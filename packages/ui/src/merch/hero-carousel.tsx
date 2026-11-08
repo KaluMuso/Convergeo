@@ -226,7 +226,7 @@ export function HeroCarousel({
         overflow: "hidden",
         color: "var(--panel-text)",
         isolation: "isolate",
-        boxShadow: "0 18px 52px color-mix(in srgb, var(--panel) 28%, transparent)",
+        background: "var(--panel)",
       }}
     >
       <div
@@ -258,7 +258,7 @@ export function HeroCarousel({
                 position: "relative",
                 flex: "0 0 100%",
                 scrollSnapAlign: "start",
-                minHeight: "clamp(20rem, 52vw, 31rem)",
+                minHeight: "clamp(22rem, 46vw, 30rem)",
                 display: "grid",
                 alignItems: "end",
               }}
@@ -277,72 +277,32 @@ export function HeroCarousel({
                     position: "absolute",
                     inset: 0,
                     background:
-                      "radial-gradient(90% 100% at 96% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%), linear-gradient(105deg, color-mix(in srgb, var(--panel) 94%, transparent) 0%, color-mix(in srgb, var(--panel) 68%, transparent) 42%, color-mix(in srgb, var(--panel) 16%, transparent) 76%, transparent 100%)",
+                      "linear-gradient(0deg, color-mix(in srgb, var(--panel) 88%, transparent) 0%, color-mix(in srgb, var(--panel) 55%, transparent) 45%, transparent 75%), linear-gradient(90deg, color-mix(in srgb, var(--panel) 92%, transparent) 0%, color-mix(in srgb, var(--panel) 50%, transparent) 50%, transparent 85%)",
                   }}
                 />
               </div>
 
               {(slide.eyebrow || slide.title || slide.subtitle || slide.cta) && (
-                <div
-                  className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-12 sm:px-6 sm:py-14 lg:px-6 lg:py-20"
-                  style={{ zIndex: 1 }}
-                >
+                <div className="v-hero__content" style={{ zIndex: 1 }}>
                   {slide.eyebrow ? (
                     <p
                       data-testid={index === 0 ? "home-hero-brand" : undefined}
-                      className="font-display"
-                      style={{
-                        margin: 0,
-                        fontSize: "clamp(2.5rem, 6vw, 4.6rem)",
-                        lineHeight: 1,
-                        letterSpacing: "-0.02em",
-                        color: "var(--panel-text)",
-                      }}
+                      className="v-hero__brand font-display"
                     >
+                      <span aria-hidden className="v-hero__brand-seal" />
                       {slide.eyebrow}
                     </p>
                   ) : null}
                   {slide.title ? (
                     hasHeading && index === 0 && headingId ? (
-                      <h1
-                        id={headingId}
-                        className="font-display"
-                        style={{
-                          margin: 0,
-                          fontSize: "clamp(1.8rem, 3.4vw, 2.65rem)",
-                          lineHeight: 1.15,
-                          color: "var(--panel-text)",
-                        }}
-                      >
+                      <h1 id={headingId} className="v-hero__title font-display">
                         {slide.title}
                       </h1>
                     ) : (
-                      <p
-                        className="font-display"
-                        style={{
-                          margin: 0,
-                          fontSize: "var(--fs-h2)",
-                          lineHeight: 1.15,
-                          color: "var(--panel-text)",
-                        }}
-                      >
-                        {slide.title}
-                      </p>
+                      <p className="v-hero__title font-display">{slide.title}</p>
                     )
                   ) : null}
-                  {slide.subtitle ? (
-                    <p
-                      style={{
-                        margin: 0,
-                        maxWidth: "34rem",
-                        fontSize: "var(--fs-body)",
-                        color: "var(--panel-muted)",
-                        lineHeight: 1.65,
-                      }}
-                    >
-                      {slide.subtitle}
-                    </p>
-                  ) : null}
+                  {slide.subtitle ? <p className="v-hero__subtitle">{slide.subtitle}</p> : null}
                   {slide.cta ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}>
                       {slide.cta}
@@ -363,9 +323,9 @@ export function HeroCarousel({
           position: "absolute",
           insetInline: 0,
           bottom: 0,
-          height: "45%",
+          height: "4.5rem",
           background:
-            "linear-gradient(to top, var(--bg) 0%, color-mix(in srgb, var(--bg) 72%, transparent) 38%, transparent 100%)",
+            "linear-gradient(to top, color-mix(in srgb, var(--panel) 70%, transparent), transparent)",
         }}
       />
 

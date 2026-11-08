@@ -55,7 +55,7 @@ export function HomeHeroCarousel({
               href={`/${locale}/sell`}
               variant="secondary"
               LinkComponent={Link}
-              className="border-panel-muted/40 bg-transparent text-panel-text hover:bg-panel-text/10"
+              className="border-panel-text/40 bg-transparent text-panel-text hover:bg-panel-text/10"
             >
               {t("home.hero.secondaryCta")}
             </LinkButton>
@@ -81,7 +81,7 @@ export function HomeHeroCarousel({
       slides={slides}
       labels={labels}
       headingId="home-hero-heading"
-      className="motion-rise relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen bg-panel"
+      className="motion-rise relative -mx-4 overflow-hidden bg-panel sm:mx-0 sm:rounded-xl"
     />
   );
 }

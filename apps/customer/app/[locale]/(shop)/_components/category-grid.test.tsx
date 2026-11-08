@@ -37,7 +37,7 @@ describe("readCategoryImageMap", () => {
 });
 
 describe("CategoryGrid (CUST-HOME-01)", () => {
-  it("renders accessible links with colour/icon fallback when no image is configured", () => {
+  it("falls back to default department photography when merch sets no image", () => {
     render(
       <CategoryGrid
         categories={[
@@ -55,10 +55,32 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
         t={t}
       />,
     );
+    expect(screen.getByTestId("category-image")).toBeInTheDocument();
+    expect(screen.queryByTestId("category-fallback-icon")).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByTestId("home-category-electronics")).toHaveAttribute(
+  it("renders accessible links with colour/icon fallback when no image is configured", () => {
+    render(
+      <CategoryGrid
+        categories={[
+          {
+            id: "1",
+            name: "Electronics",
+            slug: "electronics-unmapped",
+            path: "electronics",
+            position: 0,
+            parent_id: null,
+            prohibited: false,
+          },
+        ]}
+        locale="en"
+        t={t}
+      />,
+    );
+
+    expect(screen.getByTestId("home-category-electronics-unmapped")).toHaveAttribute(
       "href",
-      "/en/c/electronics",
+      "/en/c/electronics-unmapped",
     );
     expect(screen.getByTestId("category-fallback-icon")).toBeInTheDocument();
     expect(screen.queryByTestId("category-image")).not.toBeInTheDocument();
