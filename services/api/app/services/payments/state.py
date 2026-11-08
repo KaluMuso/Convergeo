@@ -15,7 +15,8 @@ from app.services.payments.base import (
     QueryStatusRequest,
     QueryStatusResult,
 )
-from app.services.payments.money import major_str_to_ngwee
+from app.services.payments.fees import fee_fields_from_provider_raw
+from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
 from app.services.payments.webhook_verify import (
     WEBHOOK_VERIFICATION_VERSION,
     canonical_payload_sha256,
@@ -389,6 +390,102 @@ def validate_collection_observation(
         raise PaymentObservationMismatch(payment.id, "provider_reference")
 
 
+def provider_amount_mismatch(
+    *,
+    expected_ngwee: int,
+    provider_amount: object,
+    provider_currency: object,
+) -> str | None:
+    """C3: compare Lenco's reported amount/currency with the payment row.
+
+    Returns ``None`` on an exact ZMW ngwee match, otherwise a short reason.
+    Fails closed: unparseable / float / missing amounts are mismatches.
+    """
+    if provider_currency is not None and str(provider_currency).upper() != SUPPORTED_CURRENCY:
+        return f"currency_mismatch:{provider_currency}"
+    if isinstance(provider_amount, bool) or provider_amount is None:
+        return "amount_missing"
+    if isinstance(provider_amount, int):
+        provider_amount = str(provider_amount)
+    if not isinstance(provider_amount, str):
+        return "amount_unparseable"
+    try:
+        collected = major_str_to_ngwee(provider_amount.strip())
+    except (TypeError, ValueError):
+        return "amount_unparseable"
+    if collected != expected_ngwee:
+        return f"amount_mismatch:{collected}!={expected_ngwee}"
+    return None
+
+
+def _hold_amount_mismatch(
+    service_client: ServiceRoleClient,
+    *,
+    snapshot: PaymentSnapshot,
+    actor_id: str,
+    note: str,
+    reason: str,
+) -> None:
+    """Audit + flag a provider observation mismatch; payment status unchanged."""
+    write_payment_audit_log(
+        service_client,
+        actor_id=actor_id,
+        payment_id=snapshot.id,
+        from_status=snapshot.status.value,
+        to_status=snapshot.status.value,
+        note=f"{note} [provider_amount_mismatch {reason}]",
+    )
+    raw = dict(snapshot.raw)
+    raw["hold"] = {
+        "reason": "provider_amount_mismatch",
+        "detail": reason,
+        "at": datetime.now(UTC).isoformat(),
+    }
+    service_client.client.table("payments").update({"raw": raw}).eq("id", snapshot.id).execute()
+
+
+def validate_collection_observation_or_hold(
+    service_client: ServiceRoleClient,
+    payment: PaymentSnapshot,
+    *,
+    actor_id: str,
+    note: str,
+    reference: object,
+    amount_major: object,
+    currency: object,
+    provider_reference: object,
+) -> None:
+    """D1 validation that also records the C3 hold + audit before refusing.
+
+    A mismatched collection never reaches the atomic success decision; the
+    payment keeps its status, ``payments.raw.hold`` explains why, and the
+    original ``PaymentObservationMismatch`` is re-raised to the caller.
+    """
+    try:
+        validate_collection_observation(
+            payment,
+            reference=reference,
+            amount_major=amount_major,
+            currency=currency,
+            provider_reference=provider_reference,
+        )
+    except PaymentObservationMismatch as exc:
+        reason = str(exc.details.get("reason", "observation_mismatch"))
+        detail = provider_amount_mismatch(
+            expected_ngwee=payment.amount_ngwee,
+            provider_amount=amount_major,
+            provider_currency=currency,
+        )
+        _hold_amount_mismatch(
+            service_client,
+            snapshot=payment,
+            actor_id=actor_id,
+            note=note,
+            reason=detail or reason,
+        )
+        raise
+
+
 def validate_query_collection_observation(
     service_client: ServiceRoleClient,
     *,
@@ -396,8 +493,11 @@ def validate_query_collection_observation(
     result: QueryStatusResult,
 ) -> None:
     payment = _load_payment(service_client, payment_id)
-    validate_collection_observation(
+    validate_collection_observation_or_hold(
+        service_client,
         payment,
+        actor_id=SYSTEM_ACTOR_ID,
+        note="Provider query observation",
         reference=result.reference,
         amount_major=result.amount_major,
         currency=result.currency,
@@ -412,8 +512,11 @@ def validate_webhook_collection_observation(
     data: dict[str, Any],
 ) -> None:
     payment = _load_payment(service_client, payment_id)
-    validate_collection_observation(
+    validate_collection_observation_or_hold(
+        service_client,
         payment,
+        actor_id=SYSTEM_ACTOR_ID,
+        note="Provider webhook observation",
         reference=data.get("reference"),
         amount_major=data.get("amount"),
         currency=data.get("currency"),
@@ -523,8 +626,15 @@ def apply_payment_status(
     actor_id: str,
     note: str,
     observation: dict[str, Any] | None = None,
+    provider_fee: object = None,
+    provider_bearer: object = None,
 ) -> TransitionOutcome | None:
-    """Apply a target status with precedence rules (webhooks / poller)."""
+    """Apply a target status with precedence rules (webhooks / poller).
+
+    SUCCESS is decided atomically in ``apply_prepaid_collection_success``
+    (per-order escrow holds). Once applied, the Lenco collection fee is booked
+    to ``fees`` (C6, idempotent per payment) so platform_cash tracks Lenco.
+    """
     snapshot = _load_payment(service_client, payment_id)
     if incoming_status == PaymentStatus.SUCCESS:
         if observation is None:
@@ -561,6 +671,9 @@ def apply_payment_status(
             )
         if result.get("result") != "applied":
             return None
+        from app.services.payments.fees import book_collection_fee
+
+        book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=provider_bearer)
         return TransitionOutcome(
             payment_id=payment_id,
             from_status=PaymentStatus(str(result["from_status"])),
@@ -740,13 +853,21 @@ async def sweep_stale_payments(
             continue
         if query_result.outcome == ProviderOutcome.NOT_FOUND:
             continue
-        validate_collection_observation(
-            payment,
-            reference=query_result.reference,
-            amount_major=query_result.amount_major,
-            currency=query_result.currency,
-            provider_reference=query_result.provider_reference,
-        )
+        try:
+            validate_collection_observation_or_hold(
+                service_client,
+                payment,
+                actor_id=SYSTEM_ACTOR_ID,
+                note="Sweeper re-query",
+                reference=query_result.reference,
+                amount_major=query_result.amount_major,
+                currency=query_result.currency,
+                provider_reference=query_result.provider_reference,
+            )
+        except PaymentObservationMismatch:
+            # Held and audited; one mismatched collection never expires or
+            # settles, and must not abort recovery of the batch.
+            continue
         lenco_status = lenco_collection_status_to_payment_status(query_result.status)
         if lenco_status == PaymentStatus.SUCCESS:
             outcome = apply_payment_status(
@@ -756,6 +877,8 @@ async def sweep_stale_payments(
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Late-success reconciliation after sweeper re-query",
                 observation=collection_observation_from_query(query_result, source="sweeper"),
+                provider_fee=fee_fields_from_provider_raw(query_result.raw)[0],
+                provider_bearer=fee_fields_from_provider_raw(query_result.raw)[1],
             )
             if outcome is not None:
                 reconciled_success += 1
@@ -890,8 +1013,11 @@ def process_webhook_event(
 
     outcome: TransitionOutcome | None = None
     if incoming is not None:
-        validate_collection_observation(
+        validate_collection_observation_or_hold(
+            service_client,
             payment,
+            actor_id=SYSTEM_ACTOR_ID,
+            note=f"Webhook {event_name}",
             reference=reference,
             amount_major=data.get("amount"),
             currency=data.get("currency"),
@@ -930,6 +1056,8 @@ def process_webhook_event(
                 if incoming in {PaymentStatus.SUCCESS, PaymentStatus.FAILED}
                 else None
             ),
+            provider_fee=data.get("fee"),
+            provider_bearer=data.get("bearer"),
         )
 
     service_client.client.table("webhook_events").update(

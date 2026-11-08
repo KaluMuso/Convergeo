@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
 from app.services.payments.base import ProviderOutcome, ProviderResult
+from app.services.payments.fees import book_transfer_fee, fee_fields_from_provider_raw
 from app.services.payouts.execution import (
     BankPayoutFn,
     MomoPayoutFn,
@@ -268,6 +269,13 @@ def _complete_verified_payout(
             amount_ngwee=int(payout_row["amount_ngwee"]),
             lenco_reference=str(payout_row["lenco_reference"]),
         )
+    # C6: Lenco's transfer fee (vendor payout or customer refund payout),
+    # booked idempotently per payout so platform_cash tracks the Lenco balance.
+    raw = getattr(observation, "raw", None)
+    book_transfer_fee(
+        payout_id=payout_id,
+        fee=fee_fields_from_provider_raw(raw if isinstance(raw, dict) else None)[0],
+    )
     _update_payout_row(
         service_client,
         payout_id,

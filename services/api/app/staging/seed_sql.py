@@ -64,6 +64,12 @@ INSERT INTO public.vendors (
   display_name = EXCLUDED.display_name,
   status = EXCLUDED.status,
   kyc_tier = EXCLUDED.kyc_tier;
+-- B1: every vendor needs its payable / COD receivable ledger accounts or
+-- release_to_vendor / payout / clawback fail with ledger_account_unavailable.
+INSERT INTO public.ledger_accounts (kind, vendor_id)
+SELECT k.kind, '{persona.vendor_id}'::uuid
+FROM (VALUES ('vendor_payable'), ('cod_receivable')) AS k(kind)
+ON CONFLICT (kind, vendor_id) WHERE vendor_id IS NOT NULL DO NOTHING;
 """
             )
 
@@ -468,9 +474,25 @@ WHERE id IN ({kyc_ids});
 DELETE FROM public.business_buyers
 WHERE id = '{business_buyer_id}';
 
+-- ledger_accounts.vendor_id restrict-references vendors. Drop only accounts
+-- that never carried a posting (money history is never deleted); a vendor whose
+-- accounts hold postings survives, mirroring the real-order guard.
+DELETE FROM public.ledger_accounts la
+WHERE la.vendor_id IN (
+    SELECT v.id FROM public.vendors v
+    WHERE (v.id IN ({vendor_ids}) OR v.slug LIKE '{SEED_PREFIX}%')
+      AND v.id NOT IN ({real_order_vendor_ids_sql})
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM public.ledger_postings lp WHERE lp.account_id = la.id
+  );
+
 DELETE FROM public.vendors
 WHERE (id IN ({vendor_ids}) OR slug LIKE '{SEED_PREFIX}%')
-  AND id NOT IN ({real_order_vendor_ids_sql});
+  AND id NOT IN ({real_order_vendor_ids_sql})
+  AND id NOT IN (
+    SELECT la.vendor_id FROM public.ledger_accounts la WHERE la.vendor_id IS NOT NULL
+  );
 
 DELETE FROM public.user_roles
 WHERE user_id IN ({user_ids});

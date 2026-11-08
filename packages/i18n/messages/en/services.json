@@ -265,6 +265,8 @@
       "errors": {
         "notOwner": "You can only confirm your own jobs.",
         "notMarked": "Your provider has not marked this job complete yet.",
+        "depositNotCollected": "The job deposit has not been paid yet, so it cannot be confirmed.",
+        "balanceNotCollected": "This job's balance has not been paid, so the provider cannot be released yet. Our team will follow up.",
         "generic": "Could not confirm the job. Please try again.",
         "rateLimited": "Too many requests. Please wait a moment."
       },

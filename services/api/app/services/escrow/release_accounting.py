@@ -327,8 +327,10 @@ SELECT
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'release_to_vendor'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
-  coalesce(sum(CASE WHEN lt.kind IN ('refund_lane1', 'refund_lane2')
-    THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text
+  -- Signed escrow legs: refund drains are debits (+); a refund_reversal (payout
+  -- definitively failed, C5) is the matching credit (−), netting the drain to 0.
+  coalesce(sum(CASE WHEN lt.kind IN ('refund_lane1', 'refund_lane2', 'refund_reversal')
+    THEN lp.amount_ngwee ELSE 0 END), 0)::text
 FROM public.ledger_transactions lt
 INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
 INNER JOIN public.ledger_accounts la ON la.id = lp.account_id

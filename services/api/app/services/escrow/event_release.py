@@ -44,6 +44,7 @@ from app.services.escrow.release_accounting import (
     compute_release_amounts,
     order_has_open_dispute,
     order_is_refund_blocked,
+    remaining_escrow_ngwee,
 )
 from app.services.events.settlement_snapshot import (
     SettlementSchedule,
@@ -56,6 +57,7 @@ from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import SYSTEM_ACTOR_ID
+from app.services.payments.fulfillment import held_platform_fee_ngwee
 
 PHASED_THRESHOLD_DAYS = 14
 FULL_RELEASE_DELAY_HOURS = 24
@@ -125,6 +127,34 @@ def phase1_release_key(order_id: str) -> str:
 
 def phase2_release_key(order_id: str) -> str:
     return f"event-release-{order_id}-phase2"
+
+
+def platform_fee_capture_key(order_id: str) -> str:
+    return f"{event_commission_idempotency_prefix(order_id)}-platform-fee"
+
+
+def _capture_held_platform_fee(order_id: str) -> str | None:
+    """C2: move the buyer-paid platform fee held in escrow to commission_revenue.
+
+    The fee was held as its own escrow leg at collection (never organiser money).
+    Captured exactly once (idempotent key) before any organiser release; capped at
+    what is still in escrow so a refunded fee is never captured.
+    """
+    fee = held_platform_fee_ngwee(order_id)
+    if fee <= 0:
+        return None
+    remaining = remaining_escrow_ngwee(order_id)
+    amount = min(fee, remaining)
+    if amount <= 0:
+        return None
+    posted = post_transaction(
+        idempotency_key=platform_fee_capture_key(order_id),
+        template=LedgerTemplate.COMMISSION_CAPTURE,
+        order_id=order_id,
+        gross_ngwee=amount,
+        commission_bps=10_000,
+    )
+    return posted.id
 
 
 def event_commission_idempotency_prefix(order_id: str) -> str:
@@ -533,10 +563,19 @@ def evaluate_event_release(
         idempotency_key_prefix=event_commission_idempotency_prefix(order_id),
     )
 
+    _capture_held_platform_fee(order_id)
+
+    # Never release more than escrow still holds: a partial band refund (buyer
+    # cancel minus admin fee / 50%) drains part of the order before release.
+    escrow_left = remaining_escrow_ngwee(order_id)
+
     phases_posted: list[str] = []
     transaction_ids: list[str] = []
     total_net = 0
-    for phase_name, amount, key in phases_due:
+    for phase_name, due_amount, key in phases_due:
+        amount = min(due_amount, escrow_left - total_net)
+        if amount <= 0:
+            continue
         txn_id = _post_event_release(
             order_id=order_id,
             vendor_id=context.vendor_id,
@@ -546,6 +585,14 @@ def evaluate_event_release(
         phases_posted.append(phase_name)
         transaction_ids.append(txn_id)
         total_net += amount
+
+    if not phases_posted:
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason="no_escrow_remaining",
+            branch=branch,
+        )
 
     posted_after = _posted_release_keys(required_keys)
     if set(required_keys) <= posted_after:

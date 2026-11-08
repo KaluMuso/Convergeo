@@ -13,6 +13,7 @@ from app.errors import AppError
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.payments.base import InitiatePayoutResult, TransferStatus
+from app.services.payments.fees import book_transfer_fee, fee_fields_from_provider_raw
 from app.services.payments.lenco.models import (
     LencoBankPayoutRequest,
     LencoMomoPayoutRequest,
@@ -502,6 +503,10 @@ async def execute_vendor_payout(
             vendor_id=vendor_id,
             amount_ngwee=payout_amount,
             lenco_reference=lenco_reference,
+        )
+        # C6: book Lenco's transfer fee so platform_cash tracks the Lenco balance.
+        book_transfer_fee(
+            payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0]
         )
 
     if terminal_status == "failed":

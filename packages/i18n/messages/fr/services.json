@@ -237,6 +237,8 @@
       "errors": {
         "notOwner": "Vous ne pouvez confirmer que vos propres missions.",
         "notMarked": "Votre prestataire n'a pas encore marqué cette mission comme terminée.",
+        "depositNotCollected": "L'acompte de cette mission n'a pas encore été payé ; elle ne peut pas être confirmée.",
+        "balanceNotCollected": "Le solde de cette mission n'a pas été payé ; le prestataire ne peut pas encore être réglé. Notre équipe vous recontactera.",
         "generic": "Impossible de confirmer la mission. Veuillez réessayer.",
         "rateLimited": "Trop de demandes. Veuillez patienter un instant."
       },

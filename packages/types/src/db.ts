@@ -6339,6 +6339,10 @@ export type Database = {
         Returns: undefined
       }
       ensure_account_cart: { Args: { p_user_id: string }; Returns: string }
+      ensure_vendor_ledger_accounts: {
+        Args: { p_vendor_id: string }
+        Returns: number
+      }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
       expire_checkout_group_if_unpaid: {
         Args: { p_checkout_id: string; p_terminal_status: string }

@@ -18,6 +18,7 @@ from app.services.payments.base import (
     ProviderOutcome,
     QueryStatusRequest,
 )
+from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.initiate import claim_payment_attempt, require_payments_enabled
 from app.services.payments.lenco.config import LencoEnvironment, get_lenco_environment
 from app.services.payments.money import ngwee_to_major_str
@@ -449,6 +450,8 @@ async def verify_card_payment_return(
             actor_id=SYSTEM_ACTOR_ID,
             note="Card payment verified via Lenco status query and webhook cross-check",
             observation=collection_observation_from_query(query_result, source="card_return"),
+            provider_fee=fee_fields_from_provider_raw(query_result.raw)[0],
+            provider_bearer=fee_fields_from_provider_raw(query_result.raw)[1],
         )
         if outcome is not None:
             _mark_fulfilled(

@@ -16,6 +16,7 @@ from app.services.ledger.engine import account_balance_ngwee, resolve_account_id
 from app.services.ledger.templates import AccountRef
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.payments.base import ProviderOutcome, QueryStatusRequest, QueryStatusResult
+from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.lenco.config import get_api_token, get_base_url
 from app.services.payments.lenco.reconciliation import LencoReconciliationAdapter
 from app.services.payments.money import major_str_to_ngwee
@@ -456,6 +457,8 @@ async def poll_non_terminal_payments(
                     if incoming in (PaymentStatus.SUCCESS, PaymentStatus.FAILED)
                     else None
                 ),
+                provider_fee=fee_fields_from_provider_raw(query_result.raw)[0],
+                provider_bearer=fee_fields_from_provider_raw(query_result.raw)[1],
             )
             if outcome is None:
                 unchanged += 1

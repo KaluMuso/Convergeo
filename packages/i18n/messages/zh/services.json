@@ -237,6 +237,8 @@
       "errors": {
         "notOwner": "您只能确认自己的需求。",
         "notMarked": "您的服务商尚未将此需求标记为已完成。",
+        "depositNotCollected": "此需求的定金尚未支付，暂时无法确认。",
+        "balanceNotCollected": "此需求的尾款尚未支付，暂时无法向服务商放款。我们的团队会跟进。",
         "generic": "无法确认需求。请重试。",
         "rateLimited": "请求过于频繁。请稍候。"
       },
