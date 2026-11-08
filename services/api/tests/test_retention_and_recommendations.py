@@ -20,7 +20,6 @@ from app.services.discovery.recommendations import (
     recommend_services,
 )
 from fastapi.testclient import TestClient
-
 from tests.test_home_feed import FakeClient
 
 CUSTOMER_ID = "00000000-0000-0000-0000-0000000c0001"
