@@ -1,11 +1,11 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Skeleton } from "@vergeo/ui/src/skeleton";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

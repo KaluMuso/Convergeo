@@ -1,8 +1,8 @@
 "use client";
 
-import { notify } from "@vergeo/ui/src/toast";
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
+import { notify } from "@vergeo/ui/src/toast";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";

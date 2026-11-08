@@ -1,8 +1,8 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
 import { Badge } from "@vergeo/ui/src/badge";
 import { ProductCard } from "@vergeo/ui/src/product-card";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 

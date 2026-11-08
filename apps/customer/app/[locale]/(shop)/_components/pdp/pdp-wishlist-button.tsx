@@ -1,7 +1,7 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
 import { IconHeart } from "@vergeo/ui/src/icons";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useEffect, useState } from "react";
 
 import { syncWishlistWithServer } from "../../../../../lib/engagement-api";

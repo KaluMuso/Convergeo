@@ -1,7 +1,7 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";

@@ -15,13 +15,13 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { ShareLinkButton } from "../../../_components/share-link-button";
 import {
   buildTierStripItems,
   buildVendorLadderLabels,
   vendorCommercialTier,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
-import { ShareLinkButton } from "../../../_components/share-link-button";
 import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";

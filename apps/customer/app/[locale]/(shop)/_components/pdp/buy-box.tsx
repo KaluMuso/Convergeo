@@ -1,11 +1,11 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState, type ReactNode, type Ref } from "react";

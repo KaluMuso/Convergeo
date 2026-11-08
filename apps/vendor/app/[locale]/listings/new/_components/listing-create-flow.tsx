@@ -1,7 +1,7 @@
 "use client";
 
-import { notify } from "@vergeo/ui/src/toast";
 import { useSession } from "@vergeo/auth/use-session";
+import { notify } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
