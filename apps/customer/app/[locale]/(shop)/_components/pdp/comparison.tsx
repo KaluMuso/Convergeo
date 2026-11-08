@@ -20,6 +20,15 @@ import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
 import { useListingPurchase } from "./use-listing-purchase";
+import {
+  initialSelection,
+  missingGroups,
+  resolveVariant,
+  selectValue,
+  type ListingVariantOption,
+  type VariantOptionGroup,
+  type VariantSelection,
+} from "./variant-selection";
 import { VendorBlock } from "./vendor-block";
 
 import type { PickupLocationPickerLabels } from "./pickup-location-picker";
@@ -42,6 +51,12 @@ const RequestQuoteButton = dynamic(
 
 const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
   ssr: false,
+});
+
+/** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
+const VariantPicker = dynamic(() => import("./variant-picker").then((mod) => mod.VariantPicker), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" className="min-h-24" />,
 });
 
 /** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
@@ -129,7 +144,13 @@ export type ProductListing = {
     landmark: string | null;
   };
   images: Array<{ publicId: string; alt: string }>;
+  /** Colour/size axes; empty when the listing has no variants. */
+  optionGroups?: VariantOptionGroup[];
+  variants?: ListingVariantOption[];
 };
+
+const NO_GROUPS: VariantOptionGroup[] = [];
+const NO_VARIANTS: ListingVariantOption[] = [];
 
 export type PdpInteractiveBodyProps = {
   locale: string;
@@ -600,12 +621,53 @@ export function PdpInteractiveBody({
     [comparisonListings, selectedListing?.id],
   );
 
-  const galleryImages = useMemo(() => {
+  const optionGroups = selectedListing?.optionGroups ?? NO_GROUPS;
+  const listingVariants = selectedListing?.variants ?? NO_VARIANTS;
+  const hasVariants = optionGroups.length > 0 && listingVariants.length > 0;
+  const [variantSelection, setVariantSelection] = useState<VariantSelection>(() =>
+    hasVariants ? initialSelection(optionGroups, listingVariants) : {},
+  );
+  useEffect(() => {
+    // A different seller's listing has its own option ids.
+    setVariantSelection(hasVariants ? initialSelection(optionGroups, listingVariants) : {});
+  }, [hasVariants, listingVariants, optionGroups]);
+  const selectedVariant = useMemo(
+    () => (hasVariants ? resolveVariant(optionGroups, listingVariants, variantSelection) : null),
+    [hasVariants, listingVariants, optionGroups, variantSelection],
+  );
+  const handleVariantSelect = useCallback(
+    (groupId: string, valueId: string) =>
+      setVariantSelection((current) =>
+        selectValue(optionGroups, listingVariants, current, groupId, valueId),
+      ),
+    [listingVariants, optionGroups],
+  );
+  const missingOptionNames = hasVariants
+    ? missingGroups(optionGroups, variantSelection).map((group) => group.name)
+    : [];
+
+  const baseGalleryImages = useMemo(() => {
     if (selectedListing && selectedListing.images.length > 0) {
       return selectedListing.images;
     }
     return productImages;
   }, [productImages, selectedListing]);
+
+  // Choosing a colour swaps the gallery to that variant's photo.
+  const variantImageId = selectedVariant?.imagePublicId ?? null;
+  const galleryImages = useMemo(() => {
+    if (!variantImageId || baseGalleryImages.some((image) => image.publicId === variantImageId)) {
+      return baseGalleryImages;
+    }
+    const alt = baseGalleryImages[0]?.alt ?? selectedListing?.title ?? "";
+    return [{ publicId: variantImageId, alt }, ...baseGalleryImages];
+  }, [baseGalleryImages, selectedListing?.title, variantImageId]);
+  const galleryActiveIndex = variantImageId
+    ? Math.max(
+        0,
+        galleryImages.findIndex((image) => image.publicId === variantImageId),
+      )
+    : undefined;
 
   const buyBoxListing: BuyBoxListing | null = useMemo(() => {
     if (!selectedListing) {
@@ -614,22 +676,47 @@ export function PdpInteractiveBody({
     return {
       id: selectedListing.id,
       title: selectedListing.title,
-      priceNgwee: selectedListing.priceNgwee,
+      priceNgwee: selectedVariant?.priceNgwee ?? selectedListing.priceNgwee,
       condition: selectedListing.condition,
       productClass: selectedListing.productClass,
       stockMode: selectedListing.stockMode,
-      stockQty: selectedListing.stockQty,
+      stockQty:
+        selectedVariant && selectedVariant.stockQty !== null
+          ? selectedVariant.stockQty
+          : selectedListing.stockQty,
       moq: selectedListing.moq,
-      inStock: selectedListing.inStock,
+      inStock: selectedVariant
+        ? selectedListing.inStock && selectedVariant.inStock
+        : selectedListing.inStock,
       saleUnit: selectedListing.saleUnit,
       unitStepMilli: selectedListing.unitStepMilli,
       minSteps: selectedListing.minSteps,
       leadTimeDays: selectedListing.leadTimeDays,
       vendorCapacityPerWeek: selectedListing.vendorCapacityPerWeek,
     };
-  }, [selectedListing]);
+  }, [selectedListing, selectedVariant]);
 
-  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels, locale);
+  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels, locale, {
+    required: hasVariants,
+    variantId: selectedVariant?.id ?? null,
+    missingLabel: t("pdp.variants.required", {
+      options: missingOptionNames.join(t("pdp.variants.listSeparator")),
+    }),
+  });
+
+  const lightboxLabels = useMemo(
+    () => ({
+      open: t("pdp.lightbox.open"),
+      dialog: t("pdp.lightbox.dialog"),
+      close: t("pdp.lightbox.close"),
+      previous: galleryLabels.previous,
+      next: galleryLabels.next,
+      zoomIn: t("pdp.lightbox.zoomIn"),
+      zoomOut: t("pdp.lightbox.zoomOut"),
+      indicator: t.raw("pdp.gallery.indicator") as string,
+    }),
+    [galleryLabels.next, galleryLabels.previous, t],
+  );
 
   const priceContextLabel = useMemo(() => {
     if (!selectedListing) {
@@ -693,6 +780,8 @@ export function PdpInteractiveBody({
           previousLabel={galleryLabels.previous}
           nextLabel={galleryLabels.next}
           indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
+          activeIndex={galleryActiveIndex}
+          lightboxLabels={lightboxLabels}
         />
       </div>
 
@@ -715,6 +804,18 @@ export function PdpInteractiveBody({
             priceContextLabel={priceContextLabel}
             compareHref={compareHref}
             compareLabel={comparePageLabel}
+            compareAtNgwee={selectedVariant?.compareAtNgwee ?? null}
+            variantSlot={
+              hasVariants ? (
+                <VariantPicker
+                  groups={optionGroups}
+                  variants={listingVariants}
+                  selection={variantSelection}
+                  onSelect={handleVariantSelect}
+                  showMissing={purchase.showMissingOptions}
+                />
+              ) : null
+            }
             wishlistSlot={
               <PdpWishlistButton
                 productId={productId}

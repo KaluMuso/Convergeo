@@ -10,7 +10,9 @@
     "subtotal": "Subtotal ya zinthu",
     "lineQty": "{title} × {qty}",
     "deliveryFee": "Fee ya delivery",
-    "relatedTitle": "Ogulitsa ena mu checkout iyi"
+    "relatedTitle": "Ogulitsa ena mu checkout iyi",
+    "variantOption": "{group}: {value}",
+    "variantSeparator": " · "
   },
   "empty": {
     "body": "Mukagula kuchokera kwa ogulitsa a Convergeo, ma-order ndi tracking zidzaonekera apa.",

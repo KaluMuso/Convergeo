@@ -171,6 +171,18 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="text-display-ink">
                 {t("detail.lineQty", { title: item.title, qty: item.qty })}
+                {item.variant_options && item.variant_options.length > 0 ? (
+                  <span
+                    className="block text-xs text-text-2"
+                    data-testid={`order-line-variant-${item.id}`}
+                  >
+                    {item.variant_options
+                      .map((option) =>
+                        t("detail.variantOption", { group: option.group, value: option.value }),
+                      )
+                      .join(t("detail.variantSeparator"))}
+                  </span>
+                ) : null}
               </span>
               <span className="shrink-0 font-mono text-display-ink">
                 {formatK(item.qty * item.unit_price_ngwee)}

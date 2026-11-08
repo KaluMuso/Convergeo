@@ -6,8 +6,10 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.services.listings.variants import snapshot_options
 from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from fastapi import APIRouter, Depends
+from pydantic import Field
 
 router = APIRouter(prefix="/account/orders", tags=["customer-orders"])
 
@@ -66,11 +68,19 @@ class _ServiceRoleClient(Protocol):
     def client(self) -> Any: ...
 
 
+class OrderItemVariantOption(StrictModel):
+    group: str
+    value: str
+
+
 class OrderItemSummary(StrictModel):
     id: str
     title: str
     qty: int
     unit_price_ngwee: NgweeInt
+    #: Chosen colour/size, from the immutable order-line snapshot.
+    variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
+    variant_sku: str | None = None
 
 
 class TimelineStepOut(StrictModel):
@@ -223,22 +233,36 @@ def _load_vendor_names(
     return names
 
 
+def _variant_snapshot_of(row: dict[str, Any]) -> Any:
+    link = row.get("order_item_products")
+    if isinstance(link, list):
+        link = link[0] if link else None
+    return link.get("variant_snapshot") if isinstance(link, dict) else None
+
+
 def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list[OrderItemSummary]:
     response = (
         service_client.client.table("order_items")
-        .select("id, qty, unit_price_ngwee, title_snapshot")
+        .select("id, qty, unit_price_ngwee, title_snapshot, order_item_products(variant_snapshot)")
         .eq("order_id", order_id)
         .execute()
     )
     items: list[OrderItemSummary] = []
     for row in _rows(response):
         title = row.get("title_snapshot")
+        snapshot = _variant_snapshot_of(row)
+        sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
         items.append(
             OrderItemSummary(
                 id=str(row["id"]),
                 title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
+                variant_options=[
+                    OrderItemVariantOption(group=option["group"], value=option["value"])
+                    for option in snapshot_options(snapshot)
+                ],
+                variant_sku=str(sku) if isinstance(sku, str) and sku else None,
             )
         )
     return items

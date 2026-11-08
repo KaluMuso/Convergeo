@@ -133,12 +133,16 @@ def test_a_read_failure_resolves_to_no_credit_rather_than_raising(store: Store) 
 
 
 def test_the_cart_input_accepts_an_optional_clip_id_and_nothing_else_new() -> None:
-    """One cart, one payload: attribution is a field, not a parallel endpoint."""
+    """One cart, one payload: attribution is a field, not a parallel endpoint.
+
+    ``listing_variant_id`` is the variant selector, not an attribution channel.
+    """
     from app.routers.cart import CartItemInput
 
     fields = set(CartItemInput.model_fields)
     assert fields == {
         "listing_id",
+        "listing_variant_id",
         "qty",
         "clip_id",
         "pickup_location_id",

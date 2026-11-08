@@ -31,7 +31,9 @@
     "back": "Back to orders",
     "actionsTitle": "After delivery",
     "requestReturn": "Request a return",
-    "openDispute": "Open or view dispute"
+    "openDispute": "Open or view dispute",
+    "variantOption": "{group}: {value}",
+    "variantSeparator": " · "
   },
   "status": {
     "placed": "Placed",

@@ -301,6 +301,28 @@
         "misleading": "Cilebangilisha nangu tacafyelamo",
         "other": "Ifyo fimbi ifya kukabilisha"
       }
+    },
+    "variants": {
+      "groupLabel": "{group}: {value}",
+      "choose": "Saleni {group}",
+      "soldOut": "{value} (fyapwa)",
+      "unavailable": "{value} (tacilipo na fyo mwasala)",
+      "required": "Saleni {options} pa kuti mulonge ici mu cart",
+      "listSeparator": " na ",
+      "chooseOptions": "Saleni ifyo mulefwaya",
+      "wasPrice": "Umutengo wa kale",
+      "errors": {
+        "outOfStock": "Ici mwasala capwa. Saleni cimbi nangu mucefye ubwingi.",
+        "unavailable": "Ici mwasala tacilipo nomba. Saleni cimbi.",
+        "conflict": "Mu cart yenu mwaliba kale ici mu cimbi. Fumyeni ici mu cart pa kuti mwalule."
+      }
+    },
+    "lightbox": {
+      "open": "Moneni picture pa screen yonse",
+      "dialog": "Ukumona amapictures",
+      "close": "Isalenipo ukumona amapictures",
+      "zoomIn": "Kusheni picture",
+      "zoomOut": "Cefyeni picture"
     }
   },
   "plp": {

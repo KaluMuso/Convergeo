@@ -96,6 +96,8 @@ export default async function CartPage({ params }: CartPageProps) {
       saveForLater: t("cart.saveForLater"),
       saveForLaterLabel: raw("cart.saveForLaterLabel"),
       outOfStockLine: t("cart.outOfStockLine"),
+      variantOption: raw("variant.option"),
+      variantSeparator: raw("variant.separator"),
     },
     notices: {
       title: t("cart.noticesTitle"),

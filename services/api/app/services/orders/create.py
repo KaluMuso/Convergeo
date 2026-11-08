@@ -39,6 +39,10 @@ class CartLineInput:
     qty: int
     unit_price_ngwee: int
     title_snapshot: str | None
+    #: Chosen colour/size variant (validated against the listing upstream; the
+    #: DB trigger re-checks it belongs to the listing) and its immutable label.
+    listing_variant_id: str | None = None
+    variant_snapshot: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +114,12 @@ _HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
 # would exceed the vendor's current UTC-week capacity. Its payload is intentionally
 # machine-readable so the Python boundary can return a stable customer-facing 409.
 _CLASS_E_CAPACITY_MARKER = "FIXA_CLASS_E_CAPACITY_EXCEEDED"
+# Raised by public.consume_listing_variant_stock (migration 20261107120000).
+_VARIANT_STOCK_ERROR_RE = re.compile(
+    r"VARIANT_(?P<kind>OUT_OF_STOCK|UNAVAILABLE):"
+    r"(?P<variant_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+    re.IGNORECASE,
+)
 _CLASS_E_CAPACITY_ERROR_RE = re.compile(
     rf"{_CLASS_E_CAPACITY_MARKER}:"
     r"(?P<listing_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
@@ -746,6 +756,12 @@ INSERT INTO public.orders (
             else:
                 product_columns = ""
                 product_values = ""
+            if line.listing_variant_id is not None:
+                product_columns += ", listing_variant_id, variant_snapshot"
+                product_values += (
+                    f", {sql_uuid(line.listing_variant_id, 'listing_variant_id')}"
+                    f", {_sql_json(line.variant_snapshot or {})}::jsonb"
+                )
             statements.append(
                 f"""
 INSERT INTO public.order_items (
@@ -779,6 +795,17 @@ INSERT INTO public.notification_outbox (
 """
             )
 
+    # Per-variant stock: lock + decrement each chosen variant in UUID order (no
+    # deadlocks across overlapping carts); a sold-out variant aborts the tx.
+    for line in sorted(
+        (line for line in cart_lines if line.listing_variant_id is not None),
+        key=lambda line: str(line.listing_variant_id),
+    ):
+        variant_sql = sql_uuid(str(line.listing_variant_id), "listing_variant_id")
+        statements.append(
+            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.qty)});"
+        )
+
     for line in cart_lines:
         statements.append(
             _consume_reservation_conditional_sql(
@@ -811,6 +838,25 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        variant_match = _VARIANT_STOCK_ERROR_RE.search(error)
+        if variant_match is not None:
+            kind = variant_match.group("kind").upper()
+            code = (
+                "cart.variant_out_of_stock"
+                if kind == "OUT_OF_STOCK"
+                else "cart.variant_unavailable"
+            )
+            raise AppError(
+                code=code,
+                message="An option in your cart is no longer available in that quantity",
+                http_status=409,
+                details={
+                    "message_key": code,
+                    "listing_variant_id": variant_match.group("variant_id"),
+                    "redirect_to": "cart",
+                    "retry": False,
+                },
+            )
         capacity_match = _CLASS_E_CAPACITY_ERROR_RE.search(error)
         if capacity_match is not None:
             requested_qty = int(capacity_match.group("requested"))

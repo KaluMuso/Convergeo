@@ -31,7 +31,9 @@
     "back": "Retour aux commandes",
     "actionsTitle": "Après la livraison",
     "requestReturn": "Demander un retour",
-    "openDispute": "Ouvrir ou voir le litige"
+    "openDispute": "Ouvrir ou voir le litige",
+    "variantOption": "{group} : {value}",
+    "variantSeparator": " · "
   },
   "status": {
     "placed": "Passée",

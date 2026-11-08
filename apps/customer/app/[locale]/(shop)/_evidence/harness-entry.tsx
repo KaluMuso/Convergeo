@@ -94,6 +94,8 @@ function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): Listing
     pickupLocationsLoadError: false,
     selectedPickupLocationId: null,
     selectPickupLocation: () => {},
+    variantSatisfied: true,
+    showMissingOptions: false,
     ...overrides,
   };
 }

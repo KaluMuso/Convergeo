@@ -246,5 +246,9 @@
       "widgetLabel": "Commande Convergeo",
       "secureNote": "Sécurisé par Lenco — paiement hébergé conforme PCI"
     }
+  },
+  "variant": {
+    "option": "{group} : {value}",
+    "separator": " · "
   }
 }
