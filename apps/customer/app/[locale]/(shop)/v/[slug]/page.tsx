@@ -158,13 +158,6 @@ async function fetchVendorProfile(
   }
 }
 
-function formatHours(
-  hours: Record<string, string>,
-  formatLine: (day: string, hoursValue: string) => string,
-): string[] {
-  return Object.entries(hours).map(([day, value]) => formatLine(day, value));
-}
-
 function buildVendorJsonLd(
   vendor: VendorProfileApiResponse["vendor"],
   reviews: VendorProfileApiResponse["reviews_summary"],
