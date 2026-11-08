@@ -12,15 +12,12 @@ import { SeasonalThemeStyle } from "@vergeo/ui/src/seasonal-theme";
 import { getMetadataBase } from "@vergeo/ui/src/seo/metadata";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
+import { ToastProvider } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
-import {
-  getMessages,
-  getTranslations,
-  setRequestLocale,
-} from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
@@ -141,6 +138,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     namespace: "checkout",
   });
   const year = new Date().getFullYear();
+  // Translated toast copy for emitToastKey() call sites (no i18n hook needed there).
+  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)?.toast ?? {}) as Record<
+    string,
+    unknown
+  >;
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
@@ -226,60 +228,54 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
       <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
-            <SentryInit />
-            {/* Probe `/sw.js` before registering — never register a missing worker. */}
-            <ServiceWorkerRegister />
-            {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
+            <ToastProvider dismissLabel={tCommon("toast.dismiss")} copy={toastCopy}>
+              {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+              <SentryInit />
+              {/* Probe `/sw.js` before registering — never register a missing worker. */}
+              <ServiceWorkerRegister />
+              {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
-            <AnalyticsProvider
-              measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
-            />
-            <CustomerAuthBarrier
-              labels={{
-                title: tCheckout("cart.mergeRecoveryTitle"),
-                body: tCheckout("cart.mergeRecoveryBody"),
-                conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
-                priceLine: String(tCheckout.raw("cart.mergePriceLine")),
-                unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
-                wholesaleTerms: String(tCheckout.raw("cart.mergeWholesaleTerms")),
-                priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
-                accountChoice: tCheckout("cart.mergeAccountChoice"),
-                guestChoice: tCheckout("cart.mergeGuestChoice"),
-                apply: tCheckout("cart.mergeApply"),
-                retry: tCheckout("cart.mergeRetry"),
-                signOut: tCheckout("cart.mergeSignOut"),
-                failure: tCheckout("cart.mergeFailure"),
-              }}
-            />
-            <div className="flex flex-1 flex-col">{children}</div>
-            <Footer
-              appName={appName}
-              copyright={tLegal("footer.copyright", { year, appName })}
-              columns={footerColumns}
-              paymentNote={tLegal("footer.paymentNote")}
-              LinkComponent={Link}
-              trailing={
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                  <LocaleSwitcher
-                    locale={locale}
-                    labels={localeSwitcherLabels}
-                  />
-                  <p
-                    className="m-0 text-micro"
-                    style={{ color: "var(--panel-muted)" }}
-                  >
-                    <Link
-                      href={`/${locale}/account/preferences`}
-                      className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
-                      style={{ color: "var(--panel-muted)" }}
-                    >
-                      {tCommon("theme.displayPreferences")}
-                    </Link>
-                  </p>
-                </div>
-              }
-            />
+              <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+              <CustomerAuthBarrier
+                labels={{
+                  title: tCheckout("cart.mergeRecoveryTitle"),
+                  body: tCheckout("cart.mergeRecoveryBody"),
+                  conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
+                  priceLine: String(tCheckout.raw("cart.mergePriceLine")),
+                  unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
+                  wholesaleTerms: String(tCheckout.raw("cart.mergeWholesaleTerms")),
+                  priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
+                  accountChoice: tCheckout("cart.mergeAccountChoice"),
+                  guestChoice: tCheckout("cart.mergeGuestChoice"),
+                  apply: tCheckout("cart.mergeApply"),
+                  retry: tCheckout("cart.mergeRetry"),
+                  signOut: tCheckout("cart.mergeSignOut"),
+                  failure: tCheckout("cart.mergeFailure"),
+                }}
+              />
+              <div className="flex flex-1 flex-col">{children}</div>
+              <Footer
+                appName={appName}
+                copyright={tLegal("footer.copyright", { year, appName })}
+                columns={footerColumns}
+                paymentNote={tLegal("footer.paymentNote")}
+                LinkComponent={Link}
+                trailing={
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                    <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} />
+                    <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
+                      <Link
+                        href={`/${locale}/account/preferences`}
+                        className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+                        style={{ color: "var(--panel-muted)" }}
+                      >
+                        {tCommon("theme.displayPreferences")}
+                      </Link>
+                    </p>
+                  </div>
+                }
+              />
+            </ToastProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

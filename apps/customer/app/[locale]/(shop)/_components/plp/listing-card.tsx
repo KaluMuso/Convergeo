@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { Badge } from "@vergeo/ui/src/badge";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
@@ -198,9 +199,11 @@ export function ListingCard({
     void quickAddListing(listing.id, quickAddQuantity, labels.quickAdd)
       .then(() => {
         setQuickAddAnnouncement(labels.quickAdd);
+        emitToastKey("addedToCart", { type: "cart" });
       })
       .catch(() => {
         setQuickAddAnnouncement(labels.quickAddError ?? labels.quickAdd);
+        emitToastKey("addToCartFailed", { type: "error" });
       })
       .finally(() => {
         setQuickAdding(false);

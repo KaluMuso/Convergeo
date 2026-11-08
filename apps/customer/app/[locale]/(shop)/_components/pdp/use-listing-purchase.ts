@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -152,9 +153,11 @@ export function useListingPurchase(
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
+      emitToastKey("addedToCart", { type: "cart" });
     })()
       .catch(() => {
         setAddError(labels.addToCartErrorLabel);
+        emitToastKey("addToCartFailed", { type: "error" });
       })
       .finally(() => {
         addingRef.current = false;

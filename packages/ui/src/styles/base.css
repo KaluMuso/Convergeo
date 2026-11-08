@@ -578,3 +578,121 @@ html {
   background: color-mix(in srgb, var(--panel-text) 10%, transparent);
   color: var(--panel-text);
 }
+
+/* ── Toasts (toast.tsx) ─────────────────────────────────────────────────────
+   Bottom-centre on phones (above the bottom nav), bottom-right on desktop.
+   Ink-on-surface card with a coloured icon disc; motion collapses to opacity
+   via the reduced-motion variables above. */
+.v-toaster {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(var(--sp-4) + 4rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: min(100% - var(--sp-8), 24rem);
+  pointer-events: none;
+}
+
+@media (min-width: 64rem) {
+  .v-toaster {
+    left: auto;
+    right: var(--sp-6);
+    bottom: var(--sp-6);
+    transform: none;
+  }
+}
+
+.v-toaster__region {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.v-toast {
+  --toast-tone: var(--info);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--toast-tone);
+  border-radius: var(--r);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  pointer-events: auto;
+  touch-action: pan-y;
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+.v-toast[data-state="closed"] {
+  animation: toast-out var(--dur-fast) var(--ease-std) forwards;
+}
+
+.v-toast[data-swiping="true"] {
+  animation: none;
+  transition: none;
+}
+
+.v-toast[data-toast-type="success"] {
+  --toast-tone: var(--success);
+}
+.v-toast[data-toast-type="error"] {
+  --toast-tone: var(--danger);
+}
+.v-toast[data-toast-type="cart"] {
+  --toast-tone: var(--primary);
+}
+
+.v-toast__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--toast-tone) 12%, transparent);
+  color: var(--toast-tone);
+}
+
+.v-toast__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 3px;
+}
+
+.v-toast__message {
+  font-weight: 600;
+}
+
+.v-toast__description {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.v-toast__close {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.v-toast__close:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}

@@ -74,5 +74,28 @@
     "unavailable": "This category is unavailable. Choose an available category.",
     "loading": "Loading categories…",
     "error": "Categories could not be loaded. Reload to try again."
+  },
+  "toast": {
+    "dismiss": "Dismiss notification",
+    "addedToCart": "Added to cart",
+    "addedToCartDetail": "{name} is in your cart.",
+    "addToCartFailed": "Couldn't add to cart. Check your connection and try again.",
+    "wishlistAdded": "Saved to your wishlist",
+    "wishlistRemoved": "Removed from your wishlist",
+    "linkCopied": "Link copied",
+    "copyFailed": "Couldn't copy the link",
+    "signedIn": "You're signed in",
+    "signedOut": "You're signed out",
+    "saved": "Changes saved",
+    "saveFailed": "Couldn't save changes. Try again.",
+    "uploaded": "Upload complete",
+    "uploadFailed": "Upload failed. Try again.",
+    "orderStatusUpdated": "Order status updated",
+    "actionFailed": "Something went wrong. Try again.",
+    "moderationApplied": "Moderation decision recorded",
+    "configSaved": "Settings saved",
+    "messageSent": "Message sent",
+    "following": "You're following {name}",
+    "unfollowed": "You unfollowed {name}"
   }
 }

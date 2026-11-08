@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -72,6 +73,7 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
       });
       closeDialog();
       setMessage(t("dialog.success"));
+      notify.success(t("dialog.success"));
       await load();
     } catch {
       setActionError(t("dialog.failure"));

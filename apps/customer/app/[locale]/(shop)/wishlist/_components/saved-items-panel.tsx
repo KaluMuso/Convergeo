@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
@@ -244,6 +245,7 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
                           })
                           .catch(() => {
                             setActionError(labels.loadError);
+                            emitToastKey("addToCartFailed", { type: "error" });
                           })
                           .finally(() => {
                             setCartBusy(null);

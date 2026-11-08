@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useSession } from "@vergeo/auth/use-session";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -298,13 +299,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           : current,
       );
       setTiers(tiersFromListing(response.listing));
-      setNotice(
-        response.cart_revalidation?.has_changes
-          ? t("listings.manage.edit.priceChangedNotice")
-          : t("listings.manage.edit.saved"),
-      );
+      const savedNotice = response.cart_revalidation?.has_changes
+        ? t("listings.manage.edit.priceChangedNotice")
+        : t("listings.manage.edit.saved");
+      setNotice(savedNotice);
+      notify.success(savedNotice);
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -330,8 +332,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         images: response.listing.images ?? current?.images,
       }));
       setNotice(t("listings.manage.edit.saved"));
+      notify.success(t("listings.manage.edit.saved"));
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -352,6 +356,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       }
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }

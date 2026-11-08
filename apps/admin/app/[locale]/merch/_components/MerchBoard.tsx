@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -93,8 +94,10 @@ export function MerchBoard({ locale }: MerchBoardProps) {
       });
       setSlots((current) => current.map((row) => (row.id === updated.id ? updated : row)));
       setMessage(tCommon("publishSuccess"));
+      notify.success(tCommon("publishSuccess"));
     } catch {
       setMessage(tCommon("publishFailure"));
+      notify.error(tCommon("publishFailure"));
     }
   };
 
@@ -102,6 +105,7 @@ export function MerchBoard({ locale }: MerchBoardProps) {
     setSlots((current) => current.map((row) => (row.id === updated.id ? updated : row)));
     setEditingId(null);
     setMessage(tCommon("success"));
+    notify.success(tCommon("success"));
   };
 
   if (loading) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { syncWishlistWithServer } from "../../../../../lib/engagement-api";
@@ -51,7 +52,10 @@ export function useLocalWishlist(productSlug: string | null): {
     if (!productSlug) {
       return;
     }
-    toggleWishlistLocal({ slug: productSlug });
+    const saved = toggleWishlistLocal({ slug: productSlug });
+    emitToastKey(saved ? "wishlistAdded" : "wishlistRemoved", {
+      type: saved ? "success" : "info",
+    });
     void syncWishlistWithServer();
   }, [productSlug]);
 

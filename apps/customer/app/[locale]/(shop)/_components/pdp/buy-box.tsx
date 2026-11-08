@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
@@ -265,9 +266,11 @@ export function BuyBox({
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
+      emitToastKey("addedToCart", { type: "cart" });
       onAddedToCart?.();
     } catch {
       setAddError(labels.addToCartErrorLabel);
+      emitToastKey("addToCartFailed", { type: "error" });
     } finally {
       addingRef.current = false;
       setAdding(false);

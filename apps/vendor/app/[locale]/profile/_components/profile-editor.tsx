@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { useParams } from "next/navigation";
@@ -133,6 +134,7 @@ export function ProfileEditor() {
       setWhatsapp(updated.whatsapp_msisdn ?? "");
       setCoverUrl(updated.cover_url);
       setSuccess(t("profile.success.saved"));
+      notify.success(t("profile.success.saved"));
     } catch (caught) {
       if (caught instanceof ApiError) {
         const messageKey = caught.details.message_key;

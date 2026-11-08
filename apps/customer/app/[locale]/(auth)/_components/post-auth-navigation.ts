@@ -1,5 +1,7 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
+
 import { getReadyCustomerSession } from "../../../../lib/customer-session";
 import { createAccountApiClient } from "../../account/_components/account-api";
 
@@ -40,6 +42,7 @@ export async function navigateAfterPortalAuth({
   fallbackPath,
 }: NavigateAfterPortalAuthArgs): Promise<void> {
   const fallback = resolvePostAuthPath(locale, nextParam, fallbackPath);
+  emitToastKey("signedIn", { type: "success" });
 
   if (portal !== "customer") {
     router.push(fallback);

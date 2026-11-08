@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { formatK } from "@vergeo/i18n";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -102,8 +103,10 @@ export function ProductSheet({
         // whether that clip actually earns the attribution.
         await addCartItem(listingId, 1, clipId);
         setAddedId(listingId);
+        emitToastKey("addedToCart", { type: "cart" });
       } catch {
         setFailedId(listingId);
+        emitToastKey("addToCartFailed", { type: "error" });
       } finally {
         setBusyId(null);
       }

@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey, notify } from "@vergeo/ui/src/toast";
 import { createApiClient } from "@vergeo/config";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
@@ -65,8 +66,10 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
           throw new Error("missing secure_url");
         }
         onUploaded(secureUrl);
+        emitToastKey("uploaded", { type: "success" });
       } catch {
         setError(t("profile.logo.uploadFailed"));
+        notify.error(t("profile.logo.uploadFailed"));
       } finally {
         setUploading(false);
       }

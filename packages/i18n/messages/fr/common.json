@@ -74,5 +74,28 @@
     "unavailable": "Cette catégorie est indisponible. Choisissez une catégorie disponible.",
     "loading": "Chargement des catégories…",
     "error": "Impossible de charger les catégories. Rechargez pour réessayer."
+  },
+  "toast": {
+    "dismiss": "Fermer la notification",
+    "addedToCart": "Ajouté au panier",
+    "addedToCartDetail": "{name} est dans votre panier.",
+    "addToCartFailed": "Impossible d'ajouter au panier. Vérifiez votre connexion et réessayez.",
+    "wishlistAdded": "Ajouté à vos favoris",
+    "wishlistRemoved": "Retiré de vos favoris",
+    "linkCopied": "Lien copié",
+    "copyFailed": "Impossible de copier le lien",
+    "signedIn": "Vous êtes connecté",
+    "signedOut": "Vous êtes déconnecté",
+    "saved": "Modifications enregistrées",
+    "saveFailed": "Impossible d'enregistrer. Réessayez.",
+    "uploaded": "Téléversement terminé",
+    "uploadFailed": "Échec du téléversement. Réessayez.",
+    "orderStatusUpdated": "Statut de la commande mis à jour",
+    "actionFailed": "Une erreur s'est produite. Réessayez.",
+    "moderationApplied": "Décision de modération enregistrée",
+    "configSaved": "Paramètres enregistrés",
+    "messageSent": "Message envoyé",
+    "following": "Vous suivez {name}",
+    "unfollowed": "Vous ne suivez plus {name}"
   }
 }
