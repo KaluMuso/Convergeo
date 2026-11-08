@@ -361,6 +361,28 @@
         "misleading": "Trompeur ou inexact",
         "other": "Autre préoccupation"
       }
+    },
+    "variants": {
+      "groupLabel": "{group} : {value}",
+      "choose": "Choisir {group}",
+      "soldOut": "{value} (épuisé)",
+      "unavailable": "{value} (indisponible avec vos autres choix)",
+      "required": "Choisissez {options} pour ajouter cet article au panier",
+      "listSeparator": " et ",
+      "chooseOptions": "Choisir les options",
+      "wasPrice": "Avant",
+      "errors": {
+        "outOfStock": "Cette option vient d'être épuisée. Choisissez-en une autre ou réduisez la quantité.",
+        "unavailable": "Cette option n'est plus disponible. Choisissez-en une autre.",
+        "conflict": "Votre panier contient déjà cet article dans une autre option. Retirez-le d'abord du panier pour changer."
+      }
+    },
+    "lightbox": {
+      "open": "Afficher l'image en plein écran",
+      "dialog": "Visionneuse d'images",
+      "close": "Fermer la visionneuse",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière"
     }
   },
   "returnableBadge": {

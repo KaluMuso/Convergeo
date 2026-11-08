@@ -374,6 +374,7 @@ export type Database = {
           created_at: string
           id: string
           listing_id: string
+          listing_variant_id: string | null
           pickup_location_id: string | null
           qty: number
           rfq_thread_id: string | null
@@ -386,6 +387,7 @@ export type Database = {
           created_at?: string
           id?: string
           listing_id: string
+          listing_variant_id?: string | null
           pickup_location_id?: string | null
           qty: number
           rfq_thread_id?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           created_at?: string
           id?: string
           listing_id?: string
+          listing_variant_id?: string | null
           pickup_location_id?: string | null
           qty?: number
           rfq_thread_id?: string | null
@@ -418,6 +421,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_listing_variant_id_fkey"
+            columns: ["listing_variant_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listing_variants"
             referencedColumns: ["id"]
           },
           {
@@ -3056,7 +3066,9 @@ export type Database = {
       listing_option_groups: {
         Row: {
           created_at: string
+          display: string
           id: string
+          kind: string
           listing_id: string
           name: string
           position: number
@@ -3064,7 +3076,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display?: string
           id?: string
+          kind?: string
           listing_id: string
           name: string
           position?: number
@@ -3072,7 +3086,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display?: string
           id?: string
+          kind?: string
           listing_id?: string
           name?: string
           position?: number
@@ -3097,6 +3113,7 @@ export type Database = {
           label: string
           position: number
           price_delta_ngwee: number
+          swatch_hex: string | null
         }
         Insert: {
           created_at?: string
@@ -3106,6 +3123,7 @@ export type Database = {
           label: string
           position?: number
           price_delta_ngwee?: number
+          swatch_hex?: string | null
         }
         Update: {
           created_at?: string
@@ -3115,6 +3133,7 @@ export type Database = {
           label?: string
           position?: number
           price_delta_ngwee?: number
+          swatch_hex?: string | null
         }
         Relationships: [
           {
@@ -3328,23 +3347,29 @@ export type Database = {
         Row: {
           listing_id: string
           listing_snapshot: Json
+          listing_variant_id: string | null
           order_item_id: string
           product_id: string | null
           specification_snapshot_id: string | null
+          variant_snapshot: Json
         }
         Insert: {
           listing_id: string
           listing_snapshot?: Json
+          listing_variant_id?: string | null
           order_item_id: string
           product_id?: string | null
           specification_snapshot_id?: string | null
+          variant_snapshot?: Json
         }
         Update: {
           listing_id?: string
           listing_snapshot?: Json
+          listing_variant_id?: string | null
           order_item_id?: string
           product_id?: string | null
           specification_snapshot_id?: string | null
+          variant_snapshot?: Json
         }
         Relationships: [
           {
@@ -3352,6 +3377,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_products_listing_variant_id_fkey"
+            columns: ["listing_variant_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listing_variants"
             referencedColumns: ["id"]
           },
           {
@@ -5473,9 +5505,12 @@ export type Database = {
           id: string
           image_public_id: string | null
           listing_id: string
-          price_ngwee: number
-          product_variant_id: string
+          option_value_ids: string[]
+          position: number
+          price_ngwee: number | null
+          product_variant_id: string | null
           sku_override: string | null
+          status: string
           stock_qty: number | null
           updated_at: string
         }
@@ -5485,9 +5520,12 @@ export type Database = {
           id?: string
           image_public_id?: string | null
           listing_id: string
-          price_ngwee: number
-          product_variant_id: string
+          option_value_ids?: string[]
+          position?: number
+          price_ngwee?: number | null
+          product_variant_id?: string | null
           sku_override?: string | null
+          status?: string
           stock_qty?: number | null
           updated_at?: string
         }
@@ -5497,9 +5535,12 @@ export type Database = {
           id?: string
           image_public_id?: string | null
           listing_id?: string
-          price_ngwee?: number
-          product_variant_id?: string
+          option_value_ids?: string[]
+          position?: number
+          price_ngwee?: number | null
+          product_variant_id?: string | null
           sku_override?: string | null
+          status?: string
           stock_qty?: number | null
           updated_at?: string
         }
@@ -6202,6 +6243,24 @@ export type Database = {
         }
         Returns: string
         }
+      apply_cart_add_idempotent_v2: {
+        Args: {
+          p_body: Json
+          p_cart_id: string
+          p_expected_location_id: string
+          p_expected_qty: number
+          p_guest_token: string
+          p_key: string
+          p_listing_id: string
+          p_listing_variant_id: string
+          p_location_id: string
+          p_qty: number
+          p_unit_price_ngwee: number
+          p_user_id: string
+          p_wholesale: boolean
+        }
+        Returns: string
+        }
       apply_login_cart_merge: {
         Args: {
           p_expected_authority: Json
@@ -6318,6 +6377,10 @@ export type Database = {
       confirm_funded_service: {
         Args: { p_actor_id: string; p_job_id: string; p_system?: boolean }
         Returns: Json
+      }
+      consume_listing_variant_stock: {
+        Args: { p_qty: number; p_variant_id: string }
+        Returns: undefined
       }
       create_service_payment_obligations: {
         Args: {
@@ -6534,6 +6597,10 @@ export type Database = {
       vendor_licence_is_valid: {
         Args: { p_class: string; p_vendor_id: string }
         Returns: boolean
+      }
+      vendor_replace_listing_variants: {
+        Args: { p_groups: Json; p_listing_id: string; p_variants: Json }
+        Returns: Json
       }
     }
     Enums: {

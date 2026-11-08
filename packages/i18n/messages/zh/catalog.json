@@ -361,6 +361,28 @@
         "misleading": "误导或不准确",
         "other": "其他问题"
       }
+    },
+    "variants": {
+      "groupLabel": "{group}：{value}",
+      "choose": "选择{group}",
+      "soldOut": "{value}（已售罄）",
+      "unavailable": "{value}（与您的其他选择不可组合）",
+      "required": "请选择{options}后再加入购物车",
+      "listSeparator": "和",
+      "chooseOptions": "选择规格",
+      "wasPrice": "原价",
+      "errors": {
+        "outOfStock": "该规格刚刚售罄。请选择其他规格或减少数量。",
+        "unavailable": "该规格已不再提供。请选择其他规格。",
+        "conflict": "您的购物车中已有该商品的其他规格。请先从购物车中移除再更换。"
+      }
+    },
+    "lightbox": {
+      "open": "全屏查看图片",
+      "dialog": "图片查看器",
+      "close": "关闭图片查看器",
+      "zoomIn": "放大",
+      "zoomOut": "缩小"
     }
   },
   "returnableBadge": {

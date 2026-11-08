@@ -31,7 +31,9 @@
     "back": "返回订单列表",
     "actionsTitle": "送达之后",
     "requestReturn": "申请退货",
-    "openDispute": "发起或查看纠纷"
+    "openDispute": "发起或查看纠纷",
+    "variantOption": "{group}：{value}",
+    "variantSeparator": " · "
   },
   "status": {
     "placed": "已下单",

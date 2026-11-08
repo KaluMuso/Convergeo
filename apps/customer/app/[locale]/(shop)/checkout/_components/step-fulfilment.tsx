@@ -59,6 +59,8 @@ export type VendorGroupSession = {
     min_steps?: number;
     fulfilment_mode?: FulfilmentMode;
     lead_time_days?: number | null;
+    listing_variant_id?: string | null;
+    variant_options?: Array<{ group: string; value: string }>;
   }>;
   subtotal_ngwee: number;
   delivery_eligible: boolean;
@@ -411,6 +413,8 @@ export type CheckoutShellLabels = {
     subtitle: string;
     lineItems: string;
     qtyTemplate: string;
+    variantOption?: string;
+    variantSeparator?: string;
     saleUnits: ReviewStepLabels["saleUnits"];
     madeToOrderLeadTime: string;
     subtotal: string;
@@ -563,6 +567,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       subtitle: messages.review.subtitle,
       lineItems: messages.review.lineItems,
       qtyTemplate: messages.review.qtyTemplate,
+      variantOption: messages.review.variantOption,
+      variantSeparator: messages.review.variantSeparator,
       saleUnits: messages.review.saleUnits,
       madeToOrderLeadTime: messages.review.madeToOrderLeadTime,
       subtotal: messages.review.subtotal,

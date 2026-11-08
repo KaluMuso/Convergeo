@@ -88,6 +88,10 @@ export type BuyBoxProps = {
   compareHref?: string | null;
   compareLabel?: string;
   wishlistSlot?: ReactNode;
+  /** Colour/size picker, rendered above pickup + quantity. */
+  variantSlot?: ReactNode;
+  /** Struck-through "was" price for the chosen variant, in ngwee. */
+  compareAtNgwee?: number | null;
   locale?: string;
 };
 
@@ -160,6 +164,8 @@ export function BuyBox({
   compareHref,
   compareLabel,
   wishlistSlot,
+  variantSlot,
+  compareAtNgwee,
   locale = "en",
 }: BuyBoxProps) {
   const t = useTranslations("catalog");
@@ -332,6 +338,12 @@ export function BuyBox({
             : t("pdp.buyBox.pricePerIncrement", { quantity: formattedIncrement })}
         </p>
         <PriceBlock ngwee={listing.priceNgwee} className="mt-0.5" />
+        {compareAtNgwee != null && compareAtNgwee > listing.priceNgwee ? (
+          <p className="text-sm text-text-2" data-testid="pdp-compare-at">
+            <span className="sr-only">{t("pdp.variants.wasPrice")} </span>
+            <s>{formatK(compareAtNgwee)}</s>
+          </p>
+        ) : null}
         {priceContextLabel ? (
           <p className="mt-1 text-xs font-medium text-text-2" data-testid="pdp-price-context">
             {priceContextLabel}
@@ -375,6 +387,8 @@ export function BuyBox({
             : t("pdp.buyBox.minimumOrderQuantity", { quantity: formattedMinimum })}
         </p>
       ) : null}
+
+      {variantSlot}
 
       {listing.inStock && pickupBranchTracked !== false ? (
         <PickupLocationPicker

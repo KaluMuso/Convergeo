@@ -13,6 +13,13 @@ from app.services.inventory.location_stock import (
 )
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
+from app.services.listings.variants import (
+    ListingVariantSet,
+    effective_price_ngwee,
+    load_variant_sets,
+    variant_available_qty,
+    variant_in_stock,
+)
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -61,6 +68,33 @@ class VendorSummaryResponse(BaseModel):
     location: VendorLocationResponse | None = None
 
 
+class OptionValueResponse(BaseModel):
+    id: str
+    label: str
+    swatch_hex: str | None = None
+
+
+class OptionGroupResponse(BaseModel):
+    id: str
+    name: str
+    #: "swatch" renders colour chips, "pill" renders text pills (sizes, storage).
+    display: str = "pill"
+    values: list[OptionValueResponse] = Field(default_factory=list)
+
+
+class VariantResponse(BaseModel):
+    id: str
+    sku: str | None = None
+    option_value_ids: list[str] = Field(default_factory=list)
+    #: Effective unit price in ngwee (override, or the listing price).
+    price_ngwee: int
+    compare_at_ngwee: int | None = None
+    #: Own stock; None when the variant is not stock-limited separately.
+    stock_qty: int | None = None
+    in_stock: bool
+    image_public_id: str | None = None
+
+
 class ListingResponse(BaseModel):
     id: str
     title: str
@@ -81,6 +115,9 @@ class ListingResponse(BaseModel):
     defect_notes: str | None = None
     vendor: VendorSummaryResponse
     images: list[ProductImageResponse] = Field(default_factory=list)
+    option_groups: list[OptionGroupResponse] = Field(default_factory=list)
+    #: Active variants only; archived ones are never offered.
+    variants: list[VariantResponse] = Field(default_factory=list)
 
 
 class ProductDetailResponse(BaseModel):
@@ -364,6 +401,39 @@ def _resolve_uuid_to_product_slug(client: Any, value: str) -> str | None:
     return _fetch_product_slug_for_listing(client, value)
 
 
+def _variant_payload(
+    row: dict[str, Any], variant_set: ListingVariantSet | None
+) -> tuple[list[OptionGroupResponse], list[VariantResponse]]:
+    if variant_set is None or not variant_set.requires_variant:
+        return [], []
+    groups = [
+        OptionGroupResponse(
+            id=group.id,
+            name=group.name,
+            display=group.display,
+            values=[
+                OptionValueResponse(id=value.id, label=value.label, swatch_hex=value.swatch_hex)
+                for value in group.values
+            ],
+        )
+        for group in variant_set.groups
+    ]
+    variants = [
+        VariantResponse(
+            id=variant.id,
+            sku=variant.sku,
+            option_value_ids=list(variant.option_value_ids),
+            price_ngwee=effective_price_ngwee(row, variant),
+            compare_at_ngwee=variant.compare_at_ngwee,
+            stock_qty=variant_available_qty(row, variant),
+            in_stock=variant_in_stock(row, variant),
+            image_public_id=variant.image_public_id,
+        )
+        for variant in variant_set.active_variants
+    ]
+    return groups, variants
+
+
 def build_product_detail(
     client: Any,
     slug: str,
@@ -470,6 +540,7 @@ def build_product_detail(
         if isinstance(vendor, dict) and vendor.get("id"):
             vendor_ids.append(str(vendor["id"]))
     vendor_ratings = _aggregate_vendor_ratings(client, list(dict.fromkeys(vendor_ids)))
+    variant_sets = load_variant_sets(client, listing_ids)
 
     primary_listing_id = str(listing_rows[0]["id"]) if listing_rows else None
     gallery_images = _collect_images(
@@ -511,6 +582,18 @@ def build_product_detail(
             )
             if image_row.get("cloudinary_public_id")
         ][:MAX_GALLERY_IMAGES]
+        option_groups, variants = _variant_payload(row, variant_sets.get(listing_id))
+        listing_in_stock = is_listing_available(
+            stock_mode,
+            parsed_stock_qty,
+            min_steps=min_steps,
+            moq=moq,
+            product_class=product_class,
+            fulfilment_mode=fulfilment_mode,
+            vendor_capacity_per_week=parsed_capacity,
+        )
+        if variants:
+            listing_in_stock = listing_in_stock and any(variant.in_stock for variant in variants)
 
         listings.append(
             ListingResponse(
@@ -526,15 +609,7 @@ def build_product_detail(
                 stock_qty=parsed_stock_qty,
                 moq=moq,
                 wholesale=bool(row.get("wholesale")),
-                in_stock=is_listing_available(
-                    stock_mode,
-                    parsed_stock_qty,
-                    min_steps=min_steps,
-                    moq=moq,
-                    product_class=product_class,
-                    fulfilment_mode=fulfilment_mode,
-                    vendor_capacity_per_week=parsed_capacity,
-                ),
+                in_stock=listing_in_stock,
                 fulfilment_mode=fulfilment_mode,
                 lead_time_days=parsed_lead_time,
                 vendor_capacity_per_week=parsed_capacity,
@@ -545,6 +620,8 @@ def build_product_detail(
                     rating_count=rating_count,
                 ),
                 images=listing_images,
+                option_groups=option_groups,
+                variants=variants,
             )
         )
 

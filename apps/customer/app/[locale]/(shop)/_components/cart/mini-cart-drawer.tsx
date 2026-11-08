@@ -32,6 +32,7 @@ import {
   subscribeStore,
   useCartStore,
 } from "./cart-store";
+import { VariantLineLabel } from "./variant-line-label";
 
 export {
   CartNavTrigger,
@@ -72,6 +73,9 @@ export type CartLine = {
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;
   is_rfq_quote?: boolean;
+  listing_variant_id?: string | null;
+  /** Chosen options, e.g. [{group: "Colour", value: "Red"}]. */
+  variant_options?: Array<{ group: string; value: string }>;
 };
 
 export type VendorGroup = {
@@ -658,6 +662,8 @@ async function cartMutationRequest<T>(
 export type AddCartItemLocationOptions = {
   pickupLocationId?: string;
   fulfilment?: "pickup" | "delivery";
+  /** Chosen colour/size variant; required by the API when the listing has options. */
+  listingVariantId?: string;
 };
 
 /**
@@ -687,6 +693,9 @@ export async function addCartItem(
       ? { pickup_location_id: locationOptions.pickupLocationId }
       : {}),
     ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
+    ...(locationOptions?.listingVariantId
+      ? { listing_variant_id: locationOptions.listingVariantId }
+      : {}),
   });
   const { key, slot } = await cartAddKey(body, context);
   let cart: CartResponse;
@@ -1018,6 +1027,12 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
                       <span className="block truncate">
                         {item.title_override ?? item.listing_id}
                       </span>
+                      <VariantLineLabel
+                        options={item.variant_options}
+                        template={tCheckout.raw("variant.option") as string}
+                        separator={tCheckout.raw("variant.separator") as string}
+                        testId={`mini-cart-variant-${item.listing_id}`}
+                      />
                       <span className="block text-xs text-text-2">
                         {labels.quantityValue.replace(
                           "{count}",

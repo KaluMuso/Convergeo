@@ -2,6 +2,7 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
+import type { VariantsPayload } from "../../../_lib/variant-matrix";
 import type {
   FulfilmentMode,
   ListingCondition,
@@ -121,6 +122,28 @@ export type StockOutcome = {
   new_qty: number;
 };
 
+export type ListingVariantsResponse = {
+  listing_id: string;
+  listing_price_ngwee: number;
+  stock_mode: string;
+  groups: Array<{
+    id: string;
+    name: string;
+    display: "pill" | "swatch";
+    values: Array<{ id: string; label: string; swatch_hex: string | null }>;
+  }>;
+  variants: Array<{
+    id: string;
+    options: string[];
+    sku: string | null;
+    stock_qty: number | null;
+    price_ngwee: number | null;
+    compare_at_ngwee: number | null;
+    image_public_id: string | null;
+    status: string;
+  }>;
+};
+
 export function createManageClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
@@ -163,6 +186,17 @@ export function createManageClient(getToken: () => string | null | Promise<strin
     unpauseListing(listingId: string): Promise<ListingUpdateResponse> {
       return client.request<ListingUpdateResponse>(`/vendor/listings/${listingId}/unpause`, {
         method: "POST",
+      });
+    },
+
+    getVariants(listingId: string): Promise<ListingVariantsResponse> {
+      return client.request<ListingVariantsResponse>(`/vendor/listings/${listingId}/variants`);
+    },
+
+    replaceVariants(listingId: string, payload: VariantsPayload): Promise<ListingVariantsResponse> {
+      return client.request<ListingVariantsResponse>(`/vendor/listings/${listingId}/variants`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
       });
     },
 

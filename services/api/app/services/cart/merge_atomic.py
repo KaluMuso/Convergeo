@@ -19,39 +19,55 @@ class AtomicMergeOutcome(StrEnum):
     STALE_AUTHORITY = "stale_authority"
 
 
+def _with_variant(line: dict[str, Any], variant_id: object) -> dict[str, Any]:
+    """Add ``listing_variant_id`` only when set: variant-free lines keep the old shape."""
+    if isinstance(variant_id, str) and variant_id:
+        line["listing_variant_id"] = variant_id
+    return line
+
+
 def cart_items_snapshot(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return the exact stable shape the SQL RPC compares under its cart locks."""
     snapshot = [
-        {
-            "id": str(item["id"]),
-            "listing_id": str(item["listing_id"]),
-            "qty": int(item["qty"]),
-            "unit_price_ngwee": int(item["unit_price_ngwee"]),
-            "wholesale": bool(item["wholesale"]),
-            "pickup_location_id": (
-                str(item["pickup_location_id"])
-                if item.get("pickup_location_id") is not None
-                else None
-            ),
-            "rfq_thread_id": (
-                str(item["rfq_thread_id"]) if item.get("rfq_thread_id") is not None else None
-            ),
-        }
+        _with_variant(
+            {
+                "id": str(item["id"]),
+                "listing_id": str(item["listing_id"]),
+                "qty": int(item["qty"]),
+                "unit_price_ngwee": int(item["unit_price_ngwee"]),
+                "wholesale": bool(item["wholesale"]),
+                "pickup_location_id": (
+                    str(item["pickup_location_id"])
+                    if item.get("pickup_location_id") is not None
+                    else None
+                ),
+                "rfq_thread_id": (
+                    str(item["rfq_thread_id"]) if item.get("rfq_thread_id") is not None else None
+                ),
+            },
+            str(item["listing_variant_id"]) if item.get("listing_variant_id") else None,
+        )
         for item in items
     ]
     return sorted(snapshot, key=lambda item: cast(str, item["id"]))
 
 
-def _proposal_payload(items: list[MergedCartItem]) -> list[dict[str, Any]]:
+def _proposal_payload(
+    items: list[MergedCartItem], variant_by_listing: dict[str, str | None] | None = None
+) -> list[dict[str, Any]]:
+    variants = variant_by_listing or {}
     return [
-        {
-            "listing_id": item.listing_id,
-            "qty": item.qty,
-            "unit_price_ngwee": item.unit_price_ngwee,
-            "wholesale": item.wholesale,
-            "pickup_location_id": item.pickup_location_id,
-            "rfq_thread_id": item.rfq_thread_id,
-        }
+        _with_variant(
+            {
+                "listing_id": item.listing_id,
+                "qty": item.qty,
+                "unit_price_ngwee": item.unit_price_ngwee,
+                "wholesale": item.wholesale,
+                "pickup_location_id": item.pickup_location_id,
+                "rfq_thread_id": item.rfq_thread_id,
+            },
+            variants.get(item.listing_id),
+        )
         for item in items
     ]
 
@@ -107,6 +123,7 @@ def apply_login_cart_merge_atomic(
     merged_items: list[MergedCartItem],
     removed_items: list[dict[str, Any]],
     resolution: dict[str, Any],
+    variant_by_listing: dict[str, str | None] | None = None,
 ) -> AtomicMergeOutcome:
     """Apply one optimistic proposal; stale callers must re-read and recompute."""
     params = {
@@ -117,7 +134,7 @@ def apply_login_cart_merge_atomic(
         "p_expected_user_items": cart_items_snapshot(expected_user_items),
         "p_expected_guest_items": cart_items_snapshot(expected_guest_items),
         "p_expected_authority": expected_authority,
-        "p_merged_items": _proposal_payload(merged_items),
+        "p_merged_items": _proposal_payload(merged_items, variant_by_listing),
         "p_removed_items": removed_items,
         "p_resolution": resolution,
     }

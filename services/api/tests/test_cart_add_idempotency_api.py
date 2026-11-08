@@ -424,3 +424,67 @@ async def test_only_applied_keyed_add_emits_analytics(
     else:
         attribution.assert_not_called()
         emit.assert_not_called()
+
+
+def _variant_add_env(monkeypatch: pytest.MonkeyPatch, writer: MagicMock) -> None:
+    monkeypatch.setattr(cart, "service_db_client", lambda: writer)
+    monkeypatch.setattr(cart, "fetch_listing", lambda *args, **kwargs: {"id": "listing"})
+    monkeypatch.setattr(cart, "_resolve_line_location_id", lambda *args, **kwargs: None)
+    monkeypatch.setattr(cart, "_variant_set_for", lambda _listing_id: MagicMock())
+    monkeypatch.setattr(
+        cart,
+        "resolve_variant_for_purchase",
+        lambda _set, *, listing, variant_id, qty: SimpleNamespace(id=variant_id),
+    )
+    monkeypatch.setattr(
+        cart, "overlay_listing_for_variant", lambda listing, _set, _variant_id: listing
+    )
+    monkeypatch.setattr(cart, "validate_item_qty_for_listing", lambda **kwargs: (1200, False))
+    monkeypatch.setattr(cart, "_enforce_listing_cart_rules", lambda *args, **kwargs: None)
+
+
+RED = "11111111-0000-4000-8000-000000000001"
+BLUE = "11111111-0000-4000-8000-000000000002"
+
+
+def test_keyed_add_sends_the_chosen_variant(monkeypatch: pytest.MonkeyPatch) -> None:
+    writer = MagicMock()
+    _query(writer).execute.return_value = SimpleNamespace(data=[])
+    writer.rpc.return_value.execute.return_value = SimpleNamespace(data="applied")
+    _variant_add_env(monkeypatch, writer)
+
+    applied = cart._keyed_add_result(
+        body=cart.CartItemInput(listing_id="listing", qty=1, listing_variant_id=RED.upper()),
+        key="key-variant",
+        owner=cart.CartOwner("cart", "user", None, False),
+        client=_client([[]]),
+        business_eligible=False,
+    )
+
+    assert applied is True
+    name, params = writer.rpc.call_args.args
+    assert name == "apply_cart_add_idempotent_v2"
+    assert params["p_listing_variant_id"] == RED
+    # The claimed body names the canonical variant, so replays compare exactly.
+    assert params["p_body"]["listing_variant_id"] == RED
+
+
+def test_keyed_add_refuses_another_variant_of_a_held_listing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    writer = MagicMock()
+    _query(writer).execute.return_value = SimpleNamespace(data=[])
+    _variant_add_env(monkeypatch, writer)
+    client = _client([[{"qty": 1, "pickup_location_id": None, "listing_variant_id": RED}]])
+
+    with pytest.raises(AppError) as exc:
+        cart._keyed_add_result(
+            body=cart.CartItemInput(listing_id="listing", qty=1, listing_variant_id=BLUE),
+            key="key-blue",
+            owner=cart.CartOwner("cart", "user", None, False),
+            client=client,
+            business_eligible=False,
+        )
+
+    assert exc.value.code == "cart.variant_conflict"
+    writer.rpc.assert_not_called()

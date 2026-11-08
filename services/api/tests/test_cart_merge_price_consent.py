@@ -175,6 +175,10 @@ def test_route_retries_stale_authority_without_broadening_price_consent(
     )
     monkeypatch.setattr(merge_atomic, "fetch_cart_merge_authority", authority)
     monkeypatch.setattr(merge_atomic, "apply_login_cart_merge_atomic", apply)
+    # #762 variant overlay: these listings have no options.
+    from app.services.listings import variants as listing_variants
+
+    monkeypatch.setattr(listing_variants, "load_variant_sets", lambda *_args: {})
     settings = SimpleNamespace(supabase_service_role_key="local-only-signing-key-32-bytes-long")
 
     def run(body: CartMergeResolutionInput | None = None) -> None:

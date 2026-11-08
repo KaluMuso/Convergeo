@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { VendorErrorState } from "../../../../_components/async-state";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
+import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
   parseListingFieldValues,
@@ -489,6 +490,25 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         minimumImages={minimumEvidenceImages}
         onImagesChange={(images) =>
           setListing((current) => (current ? { ...current, images } : current))
+        }
+      />
+
+      <VariantsEditor
+        listingId={listingId}
+        client={manageClient}
+        imagePublicIds={[...(listing.images ?? [])]
+          .sort((a, b) => a.position - b.position)
+          .map((image) => image.cloudinary_public_id)}
+        stockTracked={listing.stock_mode === "tracked"}
+        listingPriceNgwee={listing.price_ngwee}
+        unsupportedReason={
+          listing.product_class === "E"
+            ? "classE"
+            : listing.wholesale || (listing.price_tiers?.length ?? 0) > 0
+              ? "wholesale"
+              : (listing.sale_unit ?? "each") !== "each"
+                ? "measured"
+                : null
         }
       />
 

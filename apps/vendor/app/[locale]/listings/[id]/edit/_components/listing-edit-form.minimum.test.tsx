@@ -6,7 +6,22 @@ import { ListingEditForm } from "./listing-edit-form";
 const mocks = vi.hoisted(() => ({
   translate: (key: string) => key,
   session: { access_token: "test-token", user: { id: "owner" } },
-  client: { getListing: vi.fn(), getStock: vi.fn(), updateListing: vi.fn() },
+  client: {
+    getListing: vi.fn(),
+    getStock: vi.fn(),
+    updateListing: vi.fn(),
+    // #762 variants editor: a listing without options.
+    getVariants: vi.fn((listingId: string) =>
+      Promise.resolve({
+        listing_id: listingId,
+        listing_price_ngwee: 0,
+        stock_mode: "tracked",
+        groups: [],
+        variants: [],
+      }),
+    ),
+    replaceVariants: vi.fn(),
+  },
 }));
 vi.mock("next-intl", () => ({ useTranslations: () => mocks.translate }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));

@@ -126,7 +126,14 @@ def fetch_listings_for_items(items: list[dict[str, Any]]) -> dict[str, dict[str,
     rows = response.data
     if not isinstance(rows, list):
         return {}
-    return {str(row["id"]): row for row in rows if isinstance(row, dict)}
+    listings = {str(row["id"]): row for row in rows if isinstance(row, dict)}
+    # One cart line per listing, so each listing can be viewed "as the line's
+    # variant": price override, availability and label are overlaid here and
+    # every downstream price derivation (read path, checkout, orders) agrees.
+    from app.services.listings.variants import load_variant_sets, overlay_listings_for_items
+
+    variant_sets = load_variant_sets(service.client, listings.keys())
+    return overlay_listings_for_items(items, listings, variant_sets)
 
 
 def mark_guest_cart_converted(guest_cart_id: str) -> None:

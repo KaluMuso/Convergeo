@@ -866,3 +866,120 @@ def test_product_writer_serializes_after_merge_and_unrelated_product_progresses(
             finally:
                 merge.commit()
             future.result(timeout=3)
+
+
+# ---------------------------------------------------------------------------
+# #762 variants through the atomic paths (20261107160000)
+# ---------------------------------------------------------------------------
+
+
+def _two_variants(db: _PsycopgDb, listing_id: str) -> tuple[str, str]:
+    payload_groups = json.dumps(
+        [{"name": "Colour", "values": [{"label": "Red"}, {"label": "Blue"}]}]
+    )
+    payload_variants = json.dumps(
+        [{"options": ["Red"], "stock_qty": 5}, {"options": ["Blue"], "stock_qty": 5}]
+    )
+    replaced = db.run(
+        f"select public.vendor_replace_listing_variants('{listing_id}'::uuid, "
+        f"'{payload_groups}'::jsonb, '{payload_variants}'::jsonb)::text"
+    )
+    assert replaced.ok, replaced.error
+    rows = db.run(
+        "select id::text from public.vendor_listing_variants "
+        f"where listing_id = '{listing_id}' and status = 'active' order by position"
+    )
+    assert rows.ok and len(rows.rows) == 2, rows.error
+    return rows.rows[0], rows.rows[1]
+
+
+def _variant_conflict_case(db: _PsycopgDb) -> tuple[dict[str, Any], str, str]:
+    params = _seed_merge_case(db)
+    listing = params["user_listing_id"]
+    red, blue = _two_variants(db, listing)
+    moved = db.run(
+        f"update public.cart_items set listing_variant_id = '{red}' "
+        f"where id = '{params['user_line_id']}';"
+        f"update public.cart_items set listing_id = '{listing}', listing_variant_id = '{blue}' "
+        f"where id = '{params['guest_line_id']}';"
+    )
+    assert moved.ok, moved.error
+    user = json.loads(params["user_snapshot"])[0] | {"listing_variant_id": red}
+    guest = json.loads(params["guest_snapshot"])[0] | {
+        "listing_id": listing,
+        "listing_variant_id": blue,
+    }
+    params["user_snapshot"] = json.dumps([user])
+    params["guest_snapshot"] = json.dumps([guest])
+    params["authority"] = _authority(db, params["user_id"], [listing])
+    return params, red, blue
+
+
+def test_variant_lines_are_never_folded_into_another_variant(atomic_db: _PsycopgDb) -> None:
+    params, red, _blue = _variant_conflict_case(atomic_db)
+    proposal = json.loads(params["user_snapshot"])[0]
+    proposal = {k: v for k, v in proposal.items() if k != "id"} | {"qty": 2}
+    params["proposal"] = json.dumps([proposal])
+
+    sqlstate, message = _service_error(atomic_db, params)
+    assert sqlstate == "PT409"
+    assert "conserve or explicitly remove" in message
+    guest = atomic_db.run(f"select status from public.carts where id = '{params['guest_cart_id']}'")
+    assert guest.rows == ["active"]
+
+
+def test_other_variant_guest_line_is_removed_explicitly_and_account_variant_kept(
+    atomic_db: _PsycopgDb,
+) -> None:
+    params, red, blue = _variant_conflict_case(atomic_db)
+    user = json.loads(params["user_snapshot"])[0]
+    params["proposal"] = json.dumps([{k: v for k, v in user.items() if k != "id"}])
+    params["removed"] = json.dumps(
+        [{"listing_id": params["user_listing_id"], "qty": 1, "listing_variant_id": blue}]
+    )
+
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "applied"
+    final = atomic_db.run(
+        "select qty::text || '|' || listing_variant_id::text from public.cart_items "
+        f"where cart_id = '{params['user_cart_id']}'"
+    )
+    assert final.rows == [f"1|{red}"]
+
+
+def test_stale_variant_snapshot_is_detected(atomic_db: _PsycopgDb) -> None:
+    params, _red, blue = _variant_conflict_case(atomic_db)
+    # Expected snapshot omits the guest line's variant: the account must not merge it blind.
+    guest = json.loads(params["guest_snapshot"])[0]
+    guest.pop("listing_variant_id")
+    params["guest_snapshot"] = json.dumps([guest])
+    result = _service_call(atomic_db.dsn, params, threading.Barrier(1))
+    assert json.loads(result)["outcome"] == "stale_snapshot"
+
+
+def test_keyed_add_v2_writes_variant_and_refuses_another_variant(atomic_db: _PsycopgDb) -> None:
+    params = _seed_merge_case(atomic_db)
+    listing = params["concurrent_listing_id"]
+    red, blue = _two_variants(atomic_db, listing)
+
+    def add(key: str, variant: str, expected_qty: int | None) -> str:
+        body = json.dumps({"listing_id": listing, "qty": 1, "listing_variant_id": variant})
+        expected = "null" if expected_qty is None else str(expected_qty)
+        result = atomic_db.run(
+            "select public.apply_cart_add_idempotent_v2("
+            f"'{params['user_cart_id']}', '{params['user_id']}', null, '{key}', "
+            f"'{body}'::jsonb, '{listing}', 1, {expected}, null, 1500, false, null, "
+            f"'{variant}')"
+        )
+        assert result.ok, result.error
+        return result.rows[0]
+
+    assert add("v2-red-1", red, None) == "applied"
+    assert add("v2-red-2", red, 1) == "applied"
+    # Another variant of the same listing never increments the red line.
+    assert add("v2-blue-1", blue, 2) == "stale"
+    line = atomic_db.run(
+        "select qty::text || '|' || listing_variant_id::text from public.cart_items "
+        f"where cart_id = '{params['user_cart_id']}' and listing_id = '{listing}'"
+    )
+    assert line.rows == [f"2|{red}"]

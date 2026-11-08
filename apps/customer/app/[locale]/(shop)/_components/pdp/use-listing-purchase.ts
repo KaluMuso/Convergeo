@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiError } from "@vergeo/config";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -36,6 +37,27 @@ export type ListingPurchaseControls = {
   pickupLocationsLoadError: boolean;
   selectedPickupLocationId: string | null;
   selectPickupLocation: (locationId: string) => void;
+  /** False while the listing has options and the buyer hasn't completed them. */
+  variantSatisfied: boolean;
+  /** True after an add-to-cart was blocked for missing options (highlight them). */
+  showMissingOptions: boolean;
+};
+
+/** API variant refusals that deserve a specific message instead of the generic one. */
+const VARIANT_ERROR_KEYS: Record<string, string> = {
+  "cart.variant_out_of_stock": "pdp.variants.errors.outOfStock",
+  "cart.variant_unavailable": "pdp.variants.errors.unavailable",
+  "cart.variant_invalid": "pdp.variants.errors.unavailable",
+  "cart.variant_conflict": "pdp.variants.errors.conflict",
+};
+
+export type ListingPurchaseVariant = {
+  /** Listing has option groups — a complete choice is needed to buy. */
+  required: boolean;
+  /** Resolved variant for the current picks, or null while incomplete. */
+  variantId: string | null;
+  /** Message shown when add-to-cart is blocked for missing options. */
+  missingLabel: string;
 };
 
 /**
@@ -45,6 +67,7 @@ export function useListingPurchase(
   listing: BuyBoxListing | null,
   labels: BuyBoxLabels,
   locale = "en",
+  variant?: ListingPurchaseVariant,
 ): ListingPurchaseControls | null {
   const t = useTranslations("catalog");
   const listingId = listing?.id ?? null;
@@ -58,6 +81,11 @@ export function useListingPurchase(
   const addingRef = useRef(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const [showMissingOptions, setShowMissingOptions] = useState(false);
+  const variantRequired = variant?.required ?? false;
+  const variantId = variant?.variantId ?? null;
+  const variantMissingLabel = variant?.missingLabel ?? "";
+  const variantSatisfied = !variantRequired || variantId !== null;
   const pickup = usePickupLocationSelection(listingId);
 
   const listingStockMode = listing?.stockMode;
@@ -72,6 +100,7 @@ export function useListingPurchase(
     setQuantity(clampQuantity(getMinimumQuantity(listing), listing));
     setAddError(null);
     setAddedMessage(null);
+    setShowMissingOptions(false);
   }, [
     listing,
     listingId,
@@ -121,7 +150,17 @@ export function useListingPurchase(
   }, [listing]);
 
   const handleAddToCart = useCallback(() => {
-    if (!listing || !listing.inStock || adding || addingRef.current) {
+    if (!listing || adding || addingRef.current) {
+      return;
+    }
+    // Options first: a buyer must be told what to pick even when the listing
+    // as a whole reads out of stock for their current partial choice.
+    if (!variantSatisfied) {
+      setAddError(variantMissingLabel);
+      setShowMissingOptions(true);
+      return;
+    }
+    if (!listing.inStock) {
       return;
     }
     // Fail closed: never send add-to-cart while branch-tracking status is
@@ -145,16 +184,23 @@ export function useListingPurchase(
         listing.id,
         quantity,
         undefined,
-        pickup.selectedLocationId
-          ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" }
+        pickup.selectedLocationId || variantId
+          ? {
+              ...(pickup.selectedLocationId
+                ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" as const }
+                : {}),
+              ...(variantId ? { listingVariantId: variantId } : {}),
+            }
           : undefined,
       );
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
     })()
-      .catch(() => {
-        setAddError(labels.addToCartErrorLabel);
+      .catch((error: unknown) => {
+        const variantErrorKey =
+          error instanceof ApiError ? VARIANT_ERROR_KEYS[error.code] : undefined;
+        setAddError(variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel);
       })
       .finally(() => {
         addingRef.current = false;
@@ -169,7 +215,18 @@ export function useListingPurchase(
     pickup.selectedLocationId,
     quantity,
     t,
+    variantId,
+    variantMissingLabel,
+    variantSatisfied,
   ]);
+
+  // Clear the "missing options" highlight once the choice is complete.
+  useEffect(() => {
+    if (variantSatisfied) {
+      setShowMissingOptions(false);
+      setAddError((current) => (current === variantMissingLabel ? null : current));
+    }
+  }, [variantSatisfied, variantMissingLabel]);
 
   if (!listing) {
     return null;
@@ -196,5 +253,7 @@ export function useListingPurchase(
     selectedPickupLocationId: pickup.selectedLocationId,
     selectPickupLocation: pickup.selectLocation,
     maxQuantity,
+    variantSatisfied,
+    showMissingOptions,
   };
 }

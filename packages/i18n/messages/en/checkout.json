@@ -265,5 +265,9 @@
       "widgetLabel": "Convergeo order",
       "secureNote": "Secured by Lenco — PCI compliant hosted checkout"
     }
+  },
+  "variant": {
+    "option": "{group}: {value}",
+    "separator": " · "
   }
 }

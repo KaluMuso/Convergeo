@@ -23,7 +23,8 @@ vi.mock("../../../../../lib/api-base-url", () => ({
   getApiBaseUrl: () => "http://127.0.0.1:8000",
 }));
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  // `.raw` feeds #762's variant line label templates.
+  useTranslations: () => Object.assign((key: string) => key, { raw: (key: string) => key }),
 }));
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (

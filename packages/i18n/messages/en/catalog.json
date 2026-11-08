@@ -416,7 +416,29 @@
       "used": "Used",
       "authenticity": "Condition & Authenticity"
     },
-    "leadTime": "Requires {days} days lead time"
+    "leadTime": "Requires {days} days lead time",
+    "variants": {
+      "groupLabel": "{group}: {value}",
+      "choose": "Choose {group}",
+      "soldOut": "{value} (sold out)",
+      "unavailable": "{value} (not available with your other choices)",
+      "required": "Choose {options} to add this to your cart",
+      "listSeparator": " and ",
+      "chooseOptions": "Choose options",
+      "wasPrice": "Was",
+      "errors": {
+        "outOfStock": "That option just sold out. Choose another or lower the quantity.",
+        "unavailable": "That option is no longer available. Choose another.",
+        "conflict": "Your cart already has this item in a different option. Remove it from your cart first to switch."
+      }
+    },
+    "lightbox": {
+      "open": "View image full screen",
+      "dialog": "Image viewer",
+      "close": "Close image viewer",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    }
   },
   "returnableBadge": {
     "label": "Returnable within {days} days"

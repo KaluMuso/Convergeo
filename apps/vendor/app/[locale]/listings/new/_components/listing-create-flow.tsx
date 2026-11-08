@@ -11,7 +11,7 @@ import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { createListingClient } from "../_lib/listing-client";
-import { Spinner, Tabs } from "../_lib/ui";
+import { Spinner, Switch, Tabs } from "../_lib/ui";
 
 import { AttachForm } from "./attach-form";
 import { CanonicalSearch } from "./canonical-search";
@@ -39,6 +39,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   const [kycErrorKey, setKycErrorKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Colour/size options are set on the edit screen (variant photos need the
+  // listing's uploaded images), so opting in routes there after creation.
+  const [wantsOptions, setWantsOptions] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -181,9 +184,11 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     setError(null);
     window.setTimeout(() => {
       router.push(
-        requiresEvidence
-          ? `/${locale}/listings/${response.listing_id}/edit`
-          : `/${locale}/listings`,
+        wantsOptions
+          ? `/${locale}/listings/${response.listing_id}/edit#options`
+          : requiresEvidence
+            ? `/${locale}/listings/${response.listing_id}/edit`
+            : `/${locale}/listings`,
       );
     }, 1200);
   };
@@ -392,6 +397,13 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           {successMessage}
         </p>
       ) : null}
+
+      <Switch
+        label={t("listings.variants.createOptIn")}
+        checked={wantsOptions}
+        data-testid="listing-create-wants-options"
+        onChange={(event) => setWantsOptions(event.target.checked)}
+      />
 
       <Tabs
         ariaLabel={t("listings.tabs.ariaLabel")}
