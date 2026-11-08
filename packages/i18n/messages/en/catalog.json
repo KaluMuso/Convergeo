@@ -206,6 +206,34 @@
       "seconds": "Sec",
       "expired": "Deal ended",
       "ariaLabel": "Ends in {time}"
+    },
+    "feed": {
+      "sponsored": "Sponsored",
+      "sponsoredBy": "Sponsored by {advertiser}",
+      "adCta": "Learn more",
+      "loadingMore": "Loading more",
+      "end": "You're all caught up",
+      "retry": "Try again",
+      "loadError": "Couldn't load more right now.",
+      "forYouPersonal": "Picked from what you've been browsing",
+      "forYouTrending": "Trending with shoppers in Zambia",
+      "eventCapacity": "{filled}/{total} spots",
+      "sections": {
+        "forYou": "For you",
+        "servicesNearYou": "Services near you",
+        "bestElectronics": "Best in electronics",
+        "bestFashion": "Best in fashion",
+        "mens": "Men's",
+        "womens": "Women's",
+        "kids": "Kids",
+        "underK100": "Cheap finds under K100",
+        "techGadgets": "Tech gadgets",
+        "seasonalSummer": "Summer picks",
+        "eventsThisWeek": "Events this week",
+        "newArrivals": "New arrivals",
+        "trending": "Trending now",
+        "topVendors": "Top vendors"
+      }
     }
   },
   "pdp": {

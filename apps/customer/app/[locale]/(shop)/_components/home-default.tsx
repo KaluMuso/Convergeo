@@ -15,6 +15,7 @@ import {
 import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
+import type { AdCreative } from "./home-feed/feed-types";
 import type { CategoryRow } from "./merch-data";
 import type { LogisticsPillLabels } from "./plp/logistics-pills";
 
@@ -253,7 +254,10 @@ export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<Ho
         newest?: CatalogApiResponse;
         services?: ServiceApiItem[] | { items?: ServiceApiItem[] };
         vendors?: { items?: VendorApiItem[] };
-        department_rails?: Array<{ category_path: string; listings?: CatalogApiResponse }>;
+        department_rails?: Array<{
+          category_path: string;
+          listings?: CatalogApiResponse;
+        }>;
       }>(bffUrl, { next: { revalidate: 60 } });
 
       const serviceItems = Array.isArray(data.services)
@@ -342,6 +346,8 @@ type HomeHeroBandProps = {
    * never invent a stock scene when the feed has no public ids.
    */
   visualPublicId?: string | null;
+  /** Sponsored carousel slides from `GET /home/feed` (first page only). */
+  sponsoredSlides?: AdCreative[];
 };
 
 /** First newest listing with a Cloudinary public id (for the default hero plane). */
@@ -358,13 +364,19 @@ export function pickHeroVisualPublicId(listings: CatalogListing[]): string | nul
  * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
  * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({ locale, brandName, visualPublicId }: HomeHeroBandProps) {
+export function HomeHeroBand({
+  locale,
+  brandName,
+  visualPublicId,
+  sponsoredSlides,
+}: HomeHeroBandProps) {
   return (
     <div data-testid="home-hero-band">
       <HomeHeroCarousel
         locale={locale}
         brandName={brandName}
         catalogVisualPublicId={visualPublicId}
+        sponsoredSlides={sponsoredSlides}
       />
     </div>
   );
@@ -647,7 +659,10 @@ export function HomeVendorsRail({
                 tier={commercial.tier}
                 tierLabel={commercial.tierLabel}
                 stats={[
-                  { label: labels.listings, value: String(vendor.listingCount) },
+                  {
+                    label: labels.listings,
+                    value: String(vendor.listingCount),
+                  },
                   { label: labels.reviews, value: ratingValue },
                 ]}
                 ctaLabel={labels.view}

@@ -203,6 +203,34 @@
       "seconds": "秒",
       "expired": "活动已结束",
       "ariaLabel": "{time} 后结束"
+    },
+    "feed": {
+      "sponsored": "赞助",
+      "sponsoredBy": "由 {advertiser} 赞助",
+      "adCta": "了解更多",
+      "loadingMore": "正在加载",
+      "end": "已经到底了",
+      "retry": "重试",
+      "loadError": "暂时无法加载更多内容。",
+      "forYouPersonal": "根据你的浏览记录挑选",
+      "forYouTrending": "赞比亚买家热门",
+      "eventCapacity": "{filled}/{total} 个名额",
+      "sections": {
+        "forYou": "为你推荐",
+        "servicesNearYou": "附近的服务",
+        "bestElectronics": "精选电子产品",
+        "bestFashion": "精选时尚",
+        "mens": "男士",
+        "womens": "女士",
+        "kids": "儿童",
+        "underK100": "K100 以下好物",
+        "techGadgets": "科技小物",
+        "seasonalSummer": "夏季精选",
+        "eventsThisWeek": "本周活动",
+        "newArrivals": "新品上架",
+        "trending": "当下热门",
+        "topVendors": "优质商家"
+      }
     }
   },
   "pdp": {
