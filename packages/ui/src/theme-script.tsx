@@ -13,12 +13,19 @@ export const THEME_STORAGE_KEY = "vg-theme";
 export type ThemeChoice = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
-/** Collapse a stored choice (or none) + OS preference into a concrete theme. */
+/**
+ * Collapse a stored choice + OS preference into a concrete theme.
+ * Light is the product default (owner decision, Nov 2026): the OS preference
+ * applies only when the user explicitly chose "system".
+ */
 export function resolveInitialTheme(stored: string | null, prefersDark: boolean): ResolvedTheme {
   if (stored === "light" || stored === "dark") {
     return stored;
   }
-  return prefersDark ? "dark" : "light";
+  if (stored === "system") {
+    return prefersDark ? "dark" : "light";
+  }
+  return "light";
 }
 
 /**
@@ -32,7 +39,7 @@ export function resolveInitialTheme(stored: string | null, prefersDark: boolean)
  * so it executes and is only reported; vendor/admin set no script CSP. When a
  * live per-request nonce lands, pass it through `nonce` on <ThemeScript/>.
  */
-export const THEME_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var d=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=(s==="light"||s==="dark")?s:(d?"dark":"light");document.documentElement.dataset.theme=t;}catch(e){}})();`;
+export const THEME_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var d=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=(s==="light"||s==="dark")?s:(s==="system"&&d?"dark":"light");document.documentElement.dataset.theme=t;}catch(e){}})();`;
 
 /** Renders the pre-paint bootstrap script. Place first in the app shell. */
 export function ThemeScript({ nonce }: { nonce?: string }) {

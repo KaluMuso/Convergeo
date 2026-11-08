@@ -42,10 +42,11 @@ describe("resolveInitialTheme (no-FOUC logic)", () => {
     expect(resolveInitialTheme("light", true)).toBe("light");
   });
 
-  it("falls back to OS preference when unset or 'system'", () => {
-    expect(resolveInitialTheme(null, true)).toBe("dark");
+  it("defaults to light when unset, and follows the OS only for an explicit 'system'", () => {
+    expect(resolveInitialTheme(null, true)).toBe("light");
     expect(resolveInitialTheme(null, false)).toBe("light");
     expect(resolveInitialTheme("system", true)).toBe("dark");
+    expect(resolveInitialTheme("system", false)).toBe("light");
   });
 });
 
@@ -59,12 +60,20 @@ describe("THEME_SCRIPT", () => {
 });
 
 describe("ThemeProvider / useTheme", () => {
-  it("defaults to system and resolves from prefers-color-scheme", () => {
+  it("defaults to light even when the OS prefers dark", () => {
     mockMatchMedia(true);
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(result.current.theme).toBe("light");
+    expect(result.current.resolvedTheme).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
+  });
+
+  it("resolves from prefers-color-scheme when 'system' is stored", () => {
+    mockMatchMedia(true);
+    window.localStorage.setItem(THEME_STORAGE_KEY, "system");
     const { result } = renderHook(() => useTheme(), { wrapper });
     expect(result.current.theme).toBe("system");
     expect(result.current.resolvedTheme).toBe("dark");
-    expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
   it("reads a persisted choice on mount", () => {

@@ -15,7 +15,7 @@ export type ThemePreferenceProps = {
   className?: string;
 };
 
-const OPTIONS: readonly ThemeChoice[] = ["system", "light", "dark"];
+const OPTIONS: readonly ThemeChoice[] = ["light", "dark", "system"];
 
 function cx(...parts: Array<string | false | undefined>): string {
   return parts.filter(Boolean).join(" ");
@@ -23,7 +23,7 @@ function cx(...parts: Array<string | false | undefined>): string {
 
 /**
  * Explicit light / dark / system radios for Account → Preferences.
- * Default choice is `system` (ThemeProvider + ThemeScript). Applies immediately
+ * Default choice is `light` (ThemeProvider + ThemeScript). Applies immediately
  * via localStorage — no server round-trip.
  */
 export function ThemePreference({
