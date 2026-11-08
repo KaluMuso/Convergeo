@@ -488,5 +488,38 @@
     "failed": "Impossible de créer l'alerte. Réessayez.",
     "seeSimilar": "Voir des articles similaires en stock",
     "unavailable": "Actuellement indisponible"
+  },
+  "deals": {
+    "metaTitle": "Offres du jour",
+    "title": "Offres du jour",
+    "subtitle": "Prix limités de vendeurs vérifiés. Paiement protégé par séquestre.",
+    "endsIn": "Se termine dans {time}",
+    "ended": "Terminé",
+    "off": "-{percent} %",
+    "emptyTitle": "Aucune offre en cours",
+    "emptyBody": "De nouvelles offres arrivent souvent. Parcourez le catalogue en attendant.",
+    "browse": "Voir tous les produits",
+    "unavailable": "Les offres sont indisponibles. Réessayez bientôt."
+  },
+  "qa": {
+    "title": "Questions et réponses",
+    "empty": "Aucune question pour l'instant. Posez votre question au vendeur.",
+    "askLabel": "Votre question",
+    "askPlaceholder": "ex. Le chargeur est-il inclus ?",
+    "submit": "Demander",
+    "submitting": "Envoi…",
+    "signIn": "Connectez-vous pour poser une question",
+    "sent": "Question envoyée. Elle apparaîtra après vérification.",
+    "failed": "Impossible d'envoyer votre question. Réessayez.",
+    "tooShort": "Écrivez au moins 5 caractères.",
+    "sellerAnswer": "Vendeur",
+    "buyerAnswer": "Acheteur",
+    "loadFailed": "Les questions n'ont pas pu être chargées."
+  },
+  "saveSearch": {
+    "cta": "Enregistrer la recherche",
+    "saved": "Recherche enregistrée — nous vous alerterons des nouveautés",
+    "signIn": "Connectez-vous pour enregistrer des recherches",
+    "failed": "Impossible d'enregistrer cette recherche. Réessayez."
   }
 }

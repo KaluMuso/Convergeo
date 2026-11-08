@@ -36,6 +36,7 @@ import {
   PdpInteractiveBody,
   type ProductListing,
 } from "../../_components/pdp/pdp-interactive-body";
+import { ProductQuestions } from "../../_components/pdp/product-questions";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import {
@@ -878,6 +879,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }
         reviewsPanel={reviewsPanel}
       />
+
+      <ProductQuestions productSlug={product.slug} locale={locale} />
     </div>
   );
 }

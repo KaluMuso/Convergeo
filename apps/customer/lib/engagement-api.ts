@@ -203,13 +203,86 @@ export async function subscribeBackInStock(
     return "signed_out";
   }
   try {
-    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
-    });
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
+      },
+    );
     return response.ok ? "ok" : "error";
   } catch {
     return "error";
   }
+}
+
+export type ProductQuestion = {
+  id: string;
+  body: string;
+  created_at?: string | null;
+  answers: Array<{
+    id: string;
+    body: string;
+    author_role: string;
+    vendor_name?: string | null;
+  }>;
+};
+
+/** Public Q&A list: GET /products/{slug}/questions. null on failure. */
+export async function fetchProductQuestions(
+  slug: string,
+): Promise<ProductQuestion[] | null> {
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/products/${encodeURIComponent(slug)}/questions?limit=10`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as ProductQuestion[];
+  } catch {
+    return null;
+  }
+}
+
+/** Ask a question: POST /products/{slug}/questions (signed in). */
+export async function askProductQuestion(
+  slug: string,
+  body: string,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  const result = await apiRequest<unknown>(
+    `/products/${encodeURIComponent(slug)}/questions`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ body }),
+    },
+  );
+  return result === null ? "error" : "ok";
+}
+
+/** Save a search: POST /me/saved-searches {query, filters}. */
+export async function saveSearch(
+  query: string,
+  filters: Record<string, string>,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  const result = await apiRequest<unknown>("/me/saved-searches", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ query, filters }),
+  });
+  return result === null ? "error" : "ok";
 }

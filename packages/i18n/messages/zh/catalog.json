@@ -488,5 +488,38 @@
     "failed": "无法设置提醒，请重试。",
     "seeSimilar": "查看有货的类似商品",
     "unavailable": "暂时缺货"
+  },
+  "deals": {
+    "metaTitle": "今日特惠",
+    "title": "今日特惠",
+    "subtitle": "认证卖家的限时价格，托管支付更安心。",
+    "endsIn": "{time} 后结束",
+    "ended": "已结束",
+    "off": "-{percent}%",
+    "emptyTitle": "暂无进行中的特惠",
+    "emptyBody": "特惠经常上新，先逛逛商品吧。",
+    "browse": "浏览全部商品",
+    "unavailable": "特惠暂时不可用，请稍后再试。"
+  },
+  "qa": {
+    "title": "问答",
+    "empty": "暂无提问，向卖家咨询这件商品吧。",
+    "askLabel": "您的问题",
+    "askPlaceholder": "例如：是否附带充电器？",
+    "submit": "提问",
+    "submitting": "发送中…",
+    "signIn": "登录后提问",
+    "sent": "问题已发送，审核后显示。",
+    "failed": "无法发送问题，请重试。",
+    "tooShort": "请至少输入 5 个字符。",
+    "sellerAnswer": "卖家",
+    "buyerAnswer": "买家",
+    "loadFailed": "问题加载失败。"
+  },
+  "saveSearch": {
+    "cta": "保存搜索",
+    "saved": "搜索已保存 — 有新匹配时会提醒您",
+    "signIn": "登录后保存搜索",
+    "failed": "无法保存此搜索，请重试。"
   }
 }
