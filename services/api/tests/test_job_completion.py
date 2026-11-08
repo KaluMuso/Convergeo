@@ -262,6 +262,20 @@ def _charge_balance_count(conn: PgConn, order_id: str) -> int:
     return int(result.rows[0])
 
 
+def _escrow_held_ngwee(conn: PgConn, order_id: str) -> int:
+    """Escrow credited for ``order_id`` by verified escrow_hold receipts."""
+    result = conn.run(
+        "SELECT coalesce(sum(-lp.amount_ngwee), 0)::text "
+        "FROM public.ledger_transactions lt "
+        "JOIN public.ledger_postings lp ON lp.transaction_id = lt.id "
+        "JOIN public.ledger_accounts la ON la.id = lp.account_id "
+        f"WHERE lt.order_id = '{order_id}' AND lt.kind = 'escrow_hold' "
+        "AND la.kind = 'escrow';"
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
+
+
 def _order_status(conn: PgConn, order_id: str) -> str:
     result = conn.run(f"SELECT status FROM public.orders WHERE id = '{order_id}'")
     assert result.ok and result.rows
@@ -701,9 +715,12 @@ class TestUncollectedServiceMoneyGuard:
         result = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
         assert result.status == "awaiting_payment"
         assert result.released is False
-        # No fabricated CHARGE_RECEIVED, no balance item, no capture, no release.
+        # No fabricated CHARGE_RECEIVED, no capture, no release. In #718's model the
+        # balance is an open payment obligation (its order item exists so it can be
+        # collected), but nothing beyond the collected deposit is held in escrow.
         assert _charge_balance_count(db, accepted.order_id) == 0
-        assert _balance_item_count(db, accepted.order_id) == 0
+        assert _balance_item_count(db, accepted.order_id) == 1
+        assert _escrow_held_ngwee(db, accepted.order_id) == 100_000
         assert _commission_capture_count(db, accepted.order_id) == 0
         assert _release_count(db, accepted.order_id) == 0
         assert _order_status(db, accepted.order_id) == "placed"

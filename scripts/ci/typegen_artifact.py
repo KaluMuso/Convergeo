@@ -23,8 +23,11 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 143
+MIGRATION_COUNT = 146
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
+# Reviewed money-path reconciliation (#759 into #718), replayed after the repair order.
+POST_REPAIR_ORDER = ["20261107130000", "20261107140000", "20261107150000"]
+TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]
 
 
@@ -137,7 +140,7 @@ def inputs(root: Path, run: Run) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         )
     versions = [row["version"] for row in rows]
     require(
-        len(rows) == len(set(versions)) == MIGRATION_COUNT and versions[-4:] == REPAIR_ORDER,
+        len(rows) == len(set(versions)) == MIGRATION_COUNT and versions[-len(TAIL_ORDER) :] == TAIL_ORDER,
         "migration_union_or_order_mismatch",
     )
     generated = root / TYPES_PATH

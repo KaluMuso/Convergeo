@@ -287,6 +287,7 @@ def _hold_payment_mismatch(
     lenco_reference: str,
     reason: str,
     lenco_status: str | None,
+    detail: str | None = None,
 ) -> None:
     logger.error(
         "Card payment verification mismatch — payment held",
@@ -295,19 +296,21 @@ def _hold_payment_mismatch(
             "payment_id": payment_id,
             "lenco_reference": lenco_reference,
             "reason": reason,
+            "detail": detail,
             "lenco_status": lenco_status,
         },
     )
+    hold: dict[str, Any] = {
+        "reason": reason,
+        "at": datetime.now(UTC).isoformat(),
+        "lenco_status": lenco_status,
+    }
+    if detail is not None:
+        hold["detail"] = detail
     _patch_payment_raw(
         service_client,
         payment_id=payment_id,
-        patch={
-            "hold": {
-                "reason": reason,
-                "at": datetime.now(UTC).isoformat(),
-                "lenco_status": lenco_status,
-            }
-        },
+        patch={"hold": hold},
     )
 
 
@@ -414,7 +417,9 @@ async def verify_card_payment_return(
             service_client,
             payment_id=payment_id,
             lenco_reference=lenco_reference,
-            reason=str(exc.details.get("reason", "provider_observation")),
+            # C3 (#759): one hold vocabulary across card, webhook, poller, sweeper.
+            reason="provider_amount_mismatch",
+            detail=str(exc.details.get("reason", "provider_observation")),
             lenco_status=None,
         )
         return VerifyCardReturnResponse(

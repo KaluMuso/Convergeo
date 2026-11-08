@@ -15,6 +15,7 @@ from app.main import create_app
 from app.routers.payments_card import verify_card_payment_return
 from app.services.payments.base import QueryStatusResult
 from app.services.payments.state import (
+    PaymentObservationMismatch,
     PaymentStatus,
     count_payment_audit_events,
     process_webhook_event,
@@ -170,7 +171,8 @@ class TestForgedReturn:
         assert result.held is True and result.order_confirmed is False
         payment = card_service.client.tables["payments"].rows[0]
         assert payment["status"] == PaymentStatus.USSD_PUSHED.value
-        assert payment["raw"]["hold"]["reason"] == "amount"
+        assert payment["raw"]["hold"]["reason"] == "provider_amount_mismatch"
+        assert payment["raw"]["hold"]["detail"] == "amount"
 
     @pytest.mark.asyncio
     async def test_wrong_amount_webhook_cannot_confirm_card_return(
@@ -528,28 +530,31 @@ class TestCardAmountVerification:
         payment_id = str(uuid.uuid4())
         webhook_id = str(uuid.uuid4())
         _seed_card_payment(card_service.client, payment_id=payment_id)
+        # Verified signature evidence: an untrusted row is quarantined before the
+        # amount check, which would make this test vacuous.
         card_service.client.tables["webhook_events"].rows.append(
-            {
-                "id": webhook_id,
-                "provider": "lenco",
-                "event_id": f"evt-{webhook_id}",
-                "processed_at": None,
-                "raw": {
-                    "event": "collection.successful",
-                    "data": {
-                        "reference": REFERENCE,
-                        "status": "successful",
-                        "amount": "1.00",
-                        "currency": "ZMW",
+            verified_webhook_row(
+                {
+                    "id": webhook_id,
+                    "provider": "lenco",
+                    "event_id": f"evt-{webhook_id}",
+                    "processed_at": None,
+                    "raw": {
+                        "event": "collection.successful",
+                        "data": {
+                            "reference": REFERENCE,
+                            "status": "successful",
+                            "amount": "1.00",
+                            "currency": "ZMW",
+                        },
                     },
-                },
-                "created_at": datetime.now(UTC).isoformat(),
-            }
+                    "created_at": datetime.now(UTC).isoformat(),
+                }
+            )
         )
 
-        outcome = process_webhook_event(card_service, webhook_event_id=webhook_id)
-
-        assert outcome is None
+        with pytest.raises(PaymentObservationMismatch):
+            process_webhook_event(card_service, webhook_event_id=webhook_id)
         payment = card_service.client.tables["payments"].rows[0]
         assert payment["status"] == PaymentStatus.USSD_PUSHED.value
         assert payment["raw"]["hold"]["reason"] == "provider_amount_mismatch"

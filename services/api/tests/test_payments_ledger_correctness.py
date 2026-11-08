@@ -260,6 +260,7 @@ def test_transfer_fee_key_is_payout_scoped(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_successful_webhook_books_collection_fee(monkeypatch: pytest.MonkeyPatch) -> None:
+    from tests.support.webhook_evidence import verified_webhook_row
     from tests.test_payment_state import FakeServiceClient, FakeSupabaseClient
 
     booked: list[dict[str, Any]] = []
@@ -281,24 +282,27 @@ def test_successful_webhook_books_collection_fee(monkeypatch: pytest.MonkeyPatch
         }
     )
     webhook_id = str(uuid.uuid4())
+    # Verified signature evidence (untrusted rows are quarantined first).
     fake.tables["webhook_events"].rows.append(
-        {
-            "id": webhook_id,
-            "provider": "lenco",
-            "event_id": "evt-fee-1",
-            "processed_at": None,
-            "raw": {
-                "event": "collection.successful",
-                "data": {
-                    "reference": "ord-fee-1",
-                    "status": "successful",
-                    "amount": "10.00",
-                    "currency": "ZMW",
-                    "fee": "0.25",
-                    "bearer": "merchant",
+        verified_webhook_row(
+            {
+                "id": webhook_id,
+                "provider": "lenco",
+                "event_id": "evt-fee-1",
+                "processed_at": None,
+                "raw": {
+                    "event": "collection.successful",
+                    "data": {
+                        "reference": "ord-fee-1",
+                        "status": "successful",
+                        "amount": "10.00",
+                        "currency": "ZMW",
+                        "fee": "0.25",
+                        "bearer": "merchant",
+                    },
                 },
-            },
-        }
+            }
+        )
     )
     from app.services.payments.state import process_webhook_event
 
@@ -353,3 +357,110 @@ def test_service_deposit_code_default_is_full_upfront() -> None:
 
     assert DEFAULT_SERVICE_DEPOSIT_PCT == 100
     assert compute_deposit_ngwee(total_job_ngwee=123_457, deposit_pct=100) == 123_457
+
+
+# ---------------------------------------------------------------------------
+# C2 on #718's live path: the atomic settlement RPC posts the fee leg
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def settlement_db() -> Any:
+    from tests.rls.conftest import (
+        PgConn,
+        apply_migrations,
+        resolve_db_url,
+        schema_ready,
+        seed_matrix_fixtures,
+    )
+
+    url = resolve_db_url()
+    conn = PgConn(url)
+    if not conn.run("SELECT 1").ok:
+        pytest.skip(f"Postgres not reachable at {url}")
+    if not schema_ready(conn):
+        conn.run("DROP SCHEMA IF EXISTS public CASCADE")
+        conn.run("CREATE SCHEMA public")
+        conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        apply_migrations(conn)
+    seed_matrix_fixtures(conn)
+    return conn
+
+
+def _seed_fee_checkout(
+    conn: Any, *, item: int, delivery: int, fee: int, paid: int
+) -> tuple[str, str]:
+    import json
+
+    cg, order, payment = (str(uuid.uuid4()) for _ in range(3))
+    observation = json.dumps(
+        {
+            "reference": f"ord-{payment}",
+            "currency": "ZMW",
+            "amount_ngwee": paid,
+            "provider_reference": f"synthetic-{payment}",
+            "source": "c2-fee-leg-test",
+        }
+    )
+    seeded = conn.run_script(
+        f"""
+        INSERT INTO public.checkout_groups (
+          id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee,
+          total_ngwee, status
+        ) VALUES ('{cg}', '11111111-1111-1111-1111-111111111111', 'cg-{cg}', {item},
+          {delivery}, {paid}, 'pending');
+        INSERT INTO public.orders (
+          id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
+          delivery_fee_ngwee, platform_fee_ngwee, cod, commission_snapshot
+        ) VALUES ('{order}', '{cg}', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '11111111-1111-1111-1111-111111111111', 'placed', 'delivery', {delivery},
+          {fee}, false, '{{}}'::jsonb);
+        INSERT INTO public.order_items (
+          id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+        ) VALUES ('{uuid.uuid4()}', '{order}', 'product', 1, {item}, 'C2 ticket');
+        INSERT INTO public.payments (
+          id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+        ) VALUES ('{payment}', '{cg}', 'lenco', 'mtn', 'ord-{payment}', {paid},
+          'ussd_pushed');
+        """
+    )
+    assert seeded.ok, seeded.error
+    applied = conn.run(
+        f"SELECT public.apply_prepaid_collection_success('{payment}', NULL, "
+        f"'c2 fee leg', '{observation}'::jsonb)::text;"
+    )
+    return order, (applied.rows[0] if applied.ok and applied.rows else applied.error or "")
+
+
+def _hold_amounts(conn: Any, order_id: str) -> dict[str, int]:
+    result = conn.run(
+        "SELECT lt.idempotency_key || '|' || (-lp.amount_ngwee)::text "
+        "FROM public.ledger_transactions lt "
+        "JOIN public.ledger_postings lp ON lp.transaction_id = lt.id "
+        "JOIN public.ledger_accounts la ON la.id = lp.account_id "
+        f"WHERE lt.order_id = '{order_id}' AND lt.kind = 'escrow_hold' "
+        "AND la.kind = 'escrow';"
+    )
+    assert result.ok
+    return {row.split("|")[0]: int(row.split("|")[1]) for row in result.rows}
+
+
+def test_settlement_rpc_posts_separate_buyer_fee_hold(settlement_db: Any) -> None:
+    # K50 ticket + K5 delivery + K2.50 buyer-paid fee; Lenco collected K57.50.
+    order, outcome = _seed_fee_checkout(
+        settlement_db, item=5_000, delivery=500, fee=250, paid=5_750
+    )
+    assert '"result": "applied"' in outcome, outcome
+    assert _hold_amounts(settlement_db, order) == {
+        f"escrow-hold-{order}": 5_500,
+        ful.platform_fee_hold_idempotency_key(order): 250,
+    }
+
+
+def test_settlement_rpc_refuses_payment_missing_the_buyer_fee(settlement_db: Any) -> None:
+    # Collected only items + delivery: the fee is owed, so nothing settles.
+    order, outcome = _seed_fee_checkout(
+        settlement_db, item=5_000, delivery=500, fee=250, paid=5_500
+    )
+    assert '"result": "applied"' not in outcome
+    assert _hold_amounts(settlement_db, order) == {}
