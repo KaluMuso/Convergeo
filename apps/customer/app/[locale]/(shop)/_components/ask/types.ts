@@ -6,7 +6,38 @@ export type AskCitation = {
   entity_id: string;
   title: string;
   price_display: string | null;
+  /** Public route slug resolved server-side; the card builds the href from it. */
+  slug?: string | null;
+  in_stock?: boolean | null;
+  distance_km?: number | null;
 };
+
+/** Mirror of `FaqRef` (services/api/app/services/ask/faq.py) — i18n keys only. */
+export type AskFaq = {
+  id: string;
+  question_key: string;
+  answer_key: string;
+};
+
+/** Mirror of `OrderRef` (services/api/app/services/ask/intents.py). */
+export type AskOrder = {
+  id: string;
+  ref: string;
+  status: string;
+  status_key: string;
+  fulfilment?: string | null;
+  created_at?: string | null;
+};
+
+/** Mirror of `AskQuota` — remaining AI questions today for this caller. */
+export type AskQuota = {
+  tier: "guest" | "free" | "premium" | string;
+  daily_limit: number;
+  used: number;
+  remaining: number;
+};
+
+export type AskSource = "ai" | "workflow" | "fallback";
 
 /** Mirror of the API `AskResponse` (services/api/app/routers/ask.py) — NON-STREAMING. */
 export type AskResponse = {
@@ -16,6 +47,18 @@ export type AskResponse = {
   cached: boolean;
   refused: boolean;
   message_key: string | null;
+  // --- Ask Vergeo upgrade (optional so older payloads still parse) ---
+  source?: AskSource;
+  intent?: string | null;
+  answer_key?: string | null;
+  answer_params?: Record<string, string | number>;
+  notice_key?: string | null;
+  signup_prompt_key?: string | null;
+  faq?: AskFaq[];
+  orders?: AskOrder[];
+  needs_location?: boolean;
+  sign_in_required?: boolean;
+  quota?: AskQuota | null;
 };
 
 export type AskErrorState = {
@@ -58,4 +101,22 @@ export function extractErrorState(error: unknown): AskErrorState {
     };
   }
   return { messageKey: "ai.ask.networkError", signupPromptKey: null };
+}
+
+/** Only accept a well-formed quota object from the wire. */
+export function parseQuota(value: unknown): AskQuota | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const { tier, daily_limit: dailyLimit, used, remaining } = record;
+  if (
+    typeof tier !== "string" ||
+    typeof dailyLimit !== "number" ||
+    typeof used !== "number" ||
+    typeof remaining !== "number"
+  ) {
+    return null;
+  }
+  return { tier, daily_limit: dailyLimit, used, remaining: Math.max(0, remaining) };
 }

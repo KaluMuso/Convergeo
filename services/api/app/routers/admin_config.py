@@ -26,6 +26,12 @@ MIN_AI_FREE_MONTHLY_QUOTA = 1
 MAX_AI_FREE_MONTHLY_QUOTA = 1000
 MIN_AI_MONTHLY_CAP_USD = 1
 MAX_AI_MONTHLY_CAP_USD = 100
+# Ask Vergeo daily quotas (per Africa/Lusaka day): key -> (min, max).
+AI_DAILY_QUOTA_BOUNDS: dict[str, tuple[int, int]] = {
+    "ai_guest_daily_quota": (1, 100),
+    "ai_free_daily_quota": (1, 1000),
+    "ai_premium_daily_quota": (1, 5000),
+}
 
 NGWEE_PLATFORM_KEYS = frozenset({"cod_cap_ngwee", "free_delivery_threshold_ngwee"})
 INT_PLATFORM_KEYS = frozenset(
@@ -36,6 +42,7 @@ INT_PLATFORM_KEYS = frozenset(
         "ai_monthly_cap_usd",
         "release_after_delivered_hours",
         "release_after_shipped_days",
+        *AI_DAILY_QUOTA_BOUNDS,
     }
 )
 EDITABLE_PLATFORM_KEYS = NGWEE_PLATFORM_KEYS | INT_PLATFORM_KEYS
@@ -140,6 +147,17 @@ def validate_platform_value(key: str, value: int) -> None:
                         f"and {MAX_RELEASE_DELIVERED_HOURS}"
                     )
                 },
+            )
+        return
+
+    if key in AI_DAILY_QUOTA_BOUNDS:
+        low, high = AI_DAILY_QUOTA_BOUNDS[key]
+        if value < low or value > high:
+            raise AppError(
+                code="validation_error",
+                message=f"{key} out of bounds",
+                http_status=422,
+                details={key: f"must be between {low} and {high}"},
             )
         return
 

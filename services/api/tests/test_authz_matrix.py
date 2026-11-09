@@ -107,6 +107,8 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/telemetry/frontend-errors"),
         ("POST", "/telemetry/views"),
         ("POST", "/ask"),
+        # Read-only remaining-quota lookup; optional bearer only selects the tier.
+        ("GET", "/ask/quota"),
         ("POST", "/auth/guard/otp-quota"),
         # M16-P09 beta gate: pre-login invite gate + feedback. redeem/gate are
         # inherently pre-auth; feedback is optional-auth (attaches user_id if a

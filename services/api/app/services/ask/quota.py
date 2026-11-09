@@ -1,15 +1,21 @@
 """Ask Vergeo quota enforcement, abuse filters, and spend metering.
 
-Guest lifetime quota is keyed by ``guest_key`` (device cookie) with a best-effort
-``client_ip`` heuristic so clearing cookies does not reset the 3-question lifetime cap
-on the same network path. This is intentionally approximate (shared NAT, mobile
-carrier rotation) and documented for operators.
+Daily (Africa/Lusaka day) quotas per tier, limits in ``platform_config``:
+guest ``ai_guest_daily_quota`` (3), signed-in free ``ai_free_daily_quota`` (10),
+premium ``ai_premium_daily_quota`` (100; flag in ``ask_user_tiers``). The global
+``ai_monthly_cap_usd`` kill-switch still applies on top.
+
+Guest quota is keyed by ``guest_key`` (device cookie) with a best-effort ``client_ip``
+heuristic so clearing cookies does not reset the cap on the same network path. This is
+intentionally approximate (shared NAT, mobile carrier rotation) and documented for
+operators.
 """
 
 from __future__ import annotations
 
 import hashlib
 import importlib
+import ipaddress
 import logging
 import re
 import threading
@@ -48,8 +54,50 @@ _active_reservations: dict[str, str] = {}
 
 
 @dataclass(frozen=True, slots=True)
+class QuotaStatus:
+    tier: str
+    daily_limit: int
+    used: int
+    remaining: int
+
+
+@dataclass(frozen=True, slots=True)
 class QuotaReservation:
     id: str
+    status: QuotaStatus | None = None
+
+
+def _int_field(row: dict[str, Any], key: str) -> int:
+    value = row.get(key)
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return max(value, 0)
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return 0
+
+
+def _status_from_row(row: dict[str, Any]) -> QuotaStatus | None:
+    tier = row.get("tier")
+    if not isinstance(tier, str) or not tier:
+        return None
+    return QuotaStatus(
+        tier=tier,
+        daily_limit=_int_field(row, "daily_limit"),
+        used=_int_field(row, "used"),
+        remaining=_int_field(row, "remaining"),
+    )
+
+
+def normalize_client_ip(client_ip: str | None) -> str | None:
+    """Return a Postgres-``inet``-safe IP string, or None (e.g. ``"unknown"``)."""
+    if not client_ip:
+        return None
+    try:
+        return str(ipaddress.ip_address(client_ip.strip()))
+    except ValueError:
+        return None
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -197,7 +245,7 @@ def _reserve_quota(
     q_hash: str,
 ) -> QuotaReservation:
     response = client.rpc(
-        "reserve_ask_quota",
+        "reserve_ask_quota_daily",
         {
             "p_user_id": user_id,
             "p_guest_key": guest_key,
@@ -210,31 +258,49 @@ def _reserve_quota(
         raise RuntimeError("reserve_ask_quota returned no rows")
 
     row = rows[0]
+    status = _status_from_row(row)
+    status_details: dict[str, Any] = {}
+    if status is not None:
+        status_details = {
+            "tier": status.tier,
+            "daily_limit": status.daily_limit,
+            "used": status.used,
+            "remaining": 0,
+        }
     if not row.get("allowed"):
         reason = str(row.get("reason", ""))
         if reason == "guest_exceeded":
             raise _quota_error(
                 code="ai_quota_guest_exceeded",
-                i18n_key="ai.quota.guestExceeded",
+                i18n_key="ai.quota.guestDailyExceeded",
                 http_status=429,
-                details={"signup_prompt_key": "ai.quota.signupPrompt"},
+                details={"signup_prompt_key": "ai.quota.signupPromptDaily", **status_details},
+            )
+        if reason == "daily_exceeded":
+            raise _quota_error(
+                code="ai_quota_daily_exceeded",
+                i18n_key="ai.quota.dailyExceeded",
+                http_status=429,
+                details=status_details,
             )
         if reason == "monthly_exceeded":
             raise _quota_error(
                 code="ai_quota_monthly_exceeded",
                 i18n_key="ai.quota.monthlyExceeded",
                 http_status=429,
+                details=status_details,
             )
         raise _quota_error(
             code="ai_quota_exceeded",
-            i18n_key="ai.quota.monthlyExceeded",
+            i18n_key="ai.quota.dailyExceeded",
             http_status=429,
+            details=status_details,
         )
 
     reservation_id = row.get("reservation_id")
     if not isinstance(reservation_id, str) or not reservation_id:
-        raise RuntimeError("reserve_ask_quota missing reservation_id")
-    return QuotaReservation(id=reservation_id)
+        raise RuntimeError("reserve_ask_quota_daily missing reservation_id")
+    return QuotaReservation(id=reservation_id, status=status)
 
 
 def check_and_reserve(
@@ -247,6 +313,7 @@ def check_and_reserve(
 ) -> QuotaReservation:
     """Validate abuse filters, kill-switch, and atomically reserve one quota slot."""
     service = client or _service_client()
+    client_ip = normalize_client_ip(client_ip)
 
     raise_if_killed(client=service)
     _screen_abuse(
@@ -289,7 +356,9 @@ def record_answer(
     elif isinstance(reservation, str):
         reservation_id = reservation
     else:
-        request_key = user_id or _abuse_key(guest_key=guest_key, client_ip=client_ip)
+        request_key = user_id or _abuse_key(
+            guest_key=guest_key, client_ip=normalize_client_ip(client_ip)
+        )
         with _reservation_lock:
             reservation_id = _active_reservations.pop(request_key, None)
 
@@ -308,6 +377,59 @@ def record_answer(
     )
 
 
+def release_reservation(
+    *,
+    client: ServiceClient | None = None,
+    reservation: QuotaReservation | str | None = None,
+    user_id: str | None = None,
+    guest_key: str | None = None,
+    client_ip: str | None = None,
+) -> bool:
+    """Give back a reserved-but-unanswered slot (provider error → fallback answer)."""
+    service = client or _service_client()
+    reservation_id: str | None
+    if isinstance(reservation, QuotaReservation):
+        reservation_id = reservation.id
+    elif isinstance(reservation, str):
+        reservation_id = reservation
+    else:
+        request_key = user_id or _abuse_key(
+            guest_key=guest_key, client_ip=normalize_client_ip(client_ip)
+        )
+        with _reservation_lock:
+            reservation_id = _active_reservations.pop(request_key, None)
+    if not reservation_id:
+        return False
+    response = service.rpc(
+        "release_ask_reservation", {"p_reservation_id": reservation_id}
+    ).execute()
+    return bool(getattr(response, "data", None))
+
+
+def quota_status(
+    *,
+    client: ServiceClient | None = None,
+    user_id: str | None = None,
+    guest_key: str | None = None,
+    client_ip: str | None = None,
+) -> QuotaStatus | None:
+    """Read-only remaining-quota lookup (no reservation)."""
+    service = client or _service_client()
+    response = service.rpc(
+        "ask_quota_status",
+        {
+            "p_user_id": user_id,
+            "p_guest_key": guest_key,
+            "p_client_ip": normalize_client_ip(client_ip),
+        },
+    ).execute()
+    rows = _rows(response)
+    if not rows:
+        data = getattr(response, "data", None)
+        rows = [cast(dict[str, Any], data)] if isinstance(data, dict) else []
+    return _status_from_row(rows[0]) if rows else None
+
+
 def clear_active_reservations_for_tests() -> None:
     with _reservation_lock:
         _active_reservations.clear()
@@ -315,8 +437,12 @@ def clear_active_reservations_for_tests() -> None:
 
 __all__ = [
     "QuotaReservation",
+    "QuotaStatus",
     "check_and_reserve",
     "clear_active_reservations_for_tests",
+    "normalize_client_ip",
     "question_hash",
+    "quota_status",
     "record_answer",
+    "release_reservation",
 ]
