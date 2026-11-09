@@ -523,5 +523,13 @@
     "saved": "Recherche enregistrée — nous vous alerterons des nouveautés",
     "signIn": "Connectez-vous pour enregistrer des recherches",
     "failed": "Impossible d'enregistrer cette recherche. Réessayez."
+  },
+  "delivery": {
+    "deliveryToday": "Livraison à Lusaka aujourd'hui",
+    "deliveryTomorrow": "Livraison à Lusaka demain",
+    "deliveryDays": "Livraison à Lusaka sous {min} à {max} jours",
+    "pickupToday": "Retrait aujourd'hui",
+    "pickupTomorrow": "Retrait demain",
+    "pickupDays": "Retrait sous {min} à {max} jours"
   }
 }

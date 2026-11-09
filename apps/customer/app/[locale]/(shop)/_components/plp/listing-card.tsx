@@ -4,12 +4,30 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
+import {
+  estimateDelivery,
+  formatDeliveryEstimate,
+  type DeliveryEstimateLabels,
+} from "../../../../../lib/delivery-estimate";
 import { queueListingImpression } from "../../../../../lib/listing-view-telemetry";
-import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
+import {
+  isDemoListingPublicId,
+  shouldShowSampleListingBadge,
+} from "../demo-listing";
 
-import { ListingLogisticsPills, type LogisticsPillLabels } from "./logistics-pills";
+
+import {
+  ListingLogisticsPills,
+  type LogisticsPillLabels,
+} from "./logistics-pills";
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
@@ -53,12 +71,17 @@ export type ListingCardLabels = {
   conditionRefurbished?: string;
   conditionUsed?: string;
   logistics?: LogisticsPillLabels;
+  /** catalog.delivery.* — renders "Delivery in Lusaka tomorrow" style line. */
+  delivery?: DeliveryEstimateLabels;
 };
 
 /** Map listing.condition to a label; unknown values render nothing (no invention). */
 export function listingConditionLabel(
   condition: string,
-  labels: Pick<ListingCardLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
+  labels: Pick<
+    ListingCardLabels,
+    "conditionNew" | "conditionRefurbished" | "conditionUsed"
+  >,
 ): string | undefined {
   if (condition === "new") {
     return labels.conditionNew;
@@ -72,8 +95,12 @@ export function listingConditionLabel(
   return undefined;
 }
 
-export function listingQuickAddQuantity(minSteps: number | null | undefined): number {
-  return Number.isSafeInteger(minSteps) && (minSteps ?? 0) > 0 ? (minSteps as number) : 1;
+export function listingQuickAddQuantity(
+  minSteps: number | null | undefined,
+): number {
+  return Number.isSafeInteger(minSteps) && (minSteps ?? 0) > 0
+    ? (minSteps as number)
+    : 1;
 }
 
 type ListingCardProps = {
@@ -103,8 +130,11 @@ export function ListingCard({
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
 }: ListingCardProps) {
-  const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(listing.productSlug);
-  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
+  const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(
+    listing.productSlug,
+  );
+  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] =
+    useState("");
   const [quickAdding, setQuickAdding] = useState(false);
   const [quickAddAnnouncement, setQuickAddAnnouncement] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -121,7 +151,9 @@ export function ListingCard({
   ) : undefined;
 
   const wishlistLabel =
-    isWishlisted && labels.wishlistRemove ? labels.wishlistRemove : labels.wishlist;
+    isWishlisted && labels.wishlistRemove
+      ? labels.wishlistRemove
+      : labels.wishlist;
   const conditionLabel = listingConditionLabel(listing.condition, labels);
 
   // Struck compare-at price only when in stock and genuinely cheaper now.
@@ -133,7 +165,12 @@ export function ListingCard({
     hasDiscount && labels.discount
       ? labels.discount.replace(
           "{percent}",
-          String(Math.round(((listing.oldNgwee! - listing.priceNgwee) / listing.oldNgwee!) * 100)),
+          String(
+            Math.round(
+              ((listing.oldNgwee! - listing.priceNgwee) / listing.oldNgwee!) *
+                100,
+            ),
+          ),
         )
       : undefined;
 
@@ -161,7 +198,9 @@ export function ListingCard({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries.find((candidate) => candidate.target === cardElement);
+        const entry = entries.find(
+          (candidate) => candidate.target === cardElement,
+        );
         const isEligible =
           entry?.isIntersecting === true &&
           entry.intersectionRatio >= IMPRESSION_VISIBILITY_THRESHOLD;
@@ -217,6 +256,20 @@ export function ListingCard({
     quickAdding,
   ]);
 
+  // Lusaka-clock estimate from lead time; null when not in stock / no fulfilment.
+  const deliveryLine = labels.delivery
+    ? formatDeliveryEstimate(
+        estimateDelivery({
+          deliveryAvailable: listing.deliveryAvailable,
+          pickupAvailable: listing.pickupAvailable,
+          fulfilmentMode: listing.fulfilmentMode,
+          leadTimeDays: listing.leadTimeDays,
+          inStock: listing.inStock,
+        }),
+        labels.delivery,
+      )
+    : null;
+
   const card = (
     <>
       <ProductCard
@@ -228,7 +281,10 @@ export function ListingCard({
         rating={listing.rating}
         reviewCount={listing.reviewCount}
         noReviewsLabel={labels.noReviews}
-        reviewCountLabel={labels.reviewCount.replace("{count}", String(listing.reviewCount))}
+        reviewCountLabel={labels.reviewCount.replace(
+          "{count}",
+          String(listing.reviewCount),
+        )}
         quickAddLabel={labels.quickAdd}
         wishlistLabel={wishlistLabel}
         wishlistStatusAnnouncement={wishlistStatusAnnouncement}
@@ -237,13 +293,27 @@ export function ListingCard({
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
         meta={
-          conditionLabel || labels.logistics ? (
+          conditionLabel || labels.logistics || deliveryLine ? (
             <div className="flex flex-col gap-1.5">
+              {deliveryLine ? (
+                <span
+                  className="font-semibold text-success"
+                  data-testid="listing-card-delivery"
+                  suppressHydrationWarning
+                >
+                  {deliveryLine}
+                </span>
+              ) : null}
               {labels.logistics ? (
-                <ListingLogisticsPills listing={listing} labels={labels.logistics} />
+                <ListingLogisticsPills
+                  listing={listing}
+                  labels={labels.logistics}
+                />
               ) : null}
               {conditionLabel ? (
-                <span data-testid="listing-card-condition">{conditionLabel}</span>
+                <span data-testid="listing-card-condition">
+                  {conditionLabel}
+                </span>
               ) : null}
             </div>
           ) : undefined
@@ -254,7 +324,11 @@ export function ListingCard({
         media={media}
       />
       {quickAddAnnouncement ? (
-        <p className="sr-only" aria-live="polite" data-testid="listing-card-quick-add-status">
+        <p
+          className="sr-only"
+          aria-live="polite"
+          data-testid="listing-card-quick-add-status"
+        >
           {quickAddAnnouncement}
         </p>
       ) : null}

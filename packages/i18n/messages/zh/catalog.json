@@ -523,5 +523,13 @@
     "saved": "搜索已保存 — 有新匹配时会提醒您",
     "signIn": "登录后保存搜索",
     "failed": "无法保存此搜索，请重试。"
+  },
+  "delivery": {
+    "deliveryToday": "卢萨卡今日送达",
+    "deliveryTomorrow": "卢萨卡明日送达",
+    "deliveryDays": "卢萨卡 {min}–{max} 天送达",
+    "pickupToday": "今日可自提",
+    "pickupTomorrow": "明日可自提",
+    "pickupDays": "{min}–{max} 天后可自提"
   }
 }

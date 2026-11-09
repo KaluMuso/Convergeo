@@ -2,6 +2,7 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { catalogDeliveryLabels } from "../../(shop)/_components/plp/delivery-labels";
 import { getAccountTranslator } from "../_components/account-server";
 
 import { FollowFeedPanel } from "./_components/follow-feed-panel";
@@ -57,6 +58,7 @@ export default async function AccountFollowingPage({ params }: PageProps) {
           wishlist: tCatalog("plp.card.wishlist"),
           outOfStock: tCatalog("plp.card.outOfStock"),
           discount: tCatalog.raw("plp.card.discount") as string,
+          delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
         },
       }}
     />

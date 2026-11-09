@@ -464,5 +464,13 @@
     "saved": "Search saved — we'll alert you to new matches",
     "signIn": "Sign in to save searches",
     "failed": "Couldn't save this search. Try again."
+  },
+  "delivery": {
+    "deliveryToday": "Delivery in Lusaka today",
+    "deliveryTomorrow": "Delivery in Lusaka tomorrow",
+    "deliveryDays": "Delivery in Lusaka in {min}–{max} days",
+    "pickupToday": "Pickup today",
+    "pickupTomorrow": "Pickup tomorrow",
+    "pickupDays": "Pickup in {min}–{max} days"
   }
 }

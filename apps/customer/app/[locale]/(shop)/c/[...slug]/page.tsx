@@ -22,6 +22,7 @@ import { buildCategoryTree } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
+import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
 import {
   FacetPanel,
   type FacetCounts,
@@ -331,6 +332,7 @@ export default async function CategoryPlpPage({
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
     },
+    delivery: catalogDeliveryLabels((key) => t.raw(key)),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [

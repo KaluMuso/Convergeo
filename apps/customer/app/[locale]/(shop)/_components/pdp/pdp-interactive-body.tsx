@@ -13,6 +13,11 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  estimateDelivery,
+  formatDeliveryEstimate,
+} from "../../../../../lib/delivery-estimate";
+import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
@@ -355,6 +360,19 @@ export function PdpInteractiveBody({
             returnsLabel={trustLabels.returns}
             returnsHref={`/${locale}/legal/returns`}
             escrowLabel={trustLabels.escrow}
+            deliveryEstimate={formatDeliveryEstimate(
+              estimateDelivery({
+                deliveryAvailable:
+                  selectedComparison?.deliveryAvailable ?? false,
+                pickupAvailable: selectedComparison?.pickupAvailable ?? false,
+                fulfilmentMode: selectedListing.leadTimeDays
+                  ? "made_to_order"
+                  : "stocked",
+                leadTimeDays: selectedListing.leadTimeDays,
+                inStock: selectedListing.inStock,
+              }),
+              catalogDeliveryLabels((key) => t.raw(key)),
+            )}
           />
         </div>
       ) : null}

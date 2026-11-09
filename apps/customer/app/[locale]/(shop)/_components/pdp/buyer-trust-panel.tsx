@@ -1,6 +1,9 @@
 import Link from "next/link";
 
-import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
+import {
+  FulfillmentLogisticsPills,
+  type LogisticsPillLabels,
+} from "../plp/logistics-pills";
 
 export type BuyerTrustPanelProps = {
   sellerStatusLabel: string;
@@ -10,6 +13,8 @@ export type BuyerTrustPanelProps = {
   returnsLabel: string;
   returnsHref: string;
   escrowLabel: string;
+  /** "Delivery in Lusaka tomorrow" (Lusaka-clock estimate); omitted when unknown. */
+  deliveryEstimate?: string | null;
 };
 
 /**
@@ -25,6 +30,7 @@ export function BuyerTrustPanel({
   returnsLabel,
   returnsHref,
   escrowLabel,
+  deliveryEstimate,
 }: BuyerTrustPanelProps) {
   return (
     <aside
@@ -54,10 +60,23 @@ export function BuyerTrustPanel({
             <path d="M6 10V8a6 6 0 1 1 12 0v2M5 10h14v10H5zM12 14v2.5" />
           </svg>
         </span>
-        <p data-testid="pdp-trust-escrow" className="m-0 font-medium leading-snug">
+        <p
+          data-testid="pdp-trust-escrow"
+          className="m-0 font-medium leading-snug"
+        >
           {escrowLabel}
         </p>
       </div>
+      {deliveryEstimate ? (
+        <p
+          className="m-0 flex items-center gap-2 font-semibold text-success"
+          data-testid="pdp-delivery-estimate"
+          suppressHydrationWarning
+        >
+          <TrustGlyph path="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+          {deliveryEstimate}
+        </p>
+      ) : null}
       {logisticsPillLabels ? (
         <FulfillmentLogisticsPills
           deliveryAvailable={deliveryAvailable}

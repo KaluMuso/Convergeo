@@ -169,6 +169,7 @@ export default async function DealsPage({ params }: PageProps) {
               wishlist: t("plp.card.wishlist"),
               outOfStock: t("plp.card.outOfStock"),
               discount: t.raw("plp.card.discount") as string,
+              delivery: catalogDeliveryLabels((key) => t.raw(key)),
             }}
           />
         </>

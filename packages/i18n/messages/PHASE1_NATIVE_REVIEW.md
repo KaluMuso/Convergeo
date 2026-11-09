@@ -107,3 +107,4 @@ Until then, **bem** and **nya** stay routable but are **not** SEO-published (`no
 
 **PDP recommendation rails (2026-11-09):** `catalog.pdp.related.{storeHeading,similarHeading}` have AI-authored provisional Bemba/Nyanja wording (the `pdp` prefix is Phase-1 critical, so EN passthrough fails CI). Pending native-speaker review.
 **Follow feed (2026-11-09):** `account.nav.following` has AI-authored provisional Bemba/Nyanja wording (critical `nav` prefix); `account.following.*` is EN passthrough. Pending native review.
+**Delivery estimates (2026-11-09):** `catalog.delivery.*` (outside critical prefixes) is EN passthrough in bem/nya, pending native review.
