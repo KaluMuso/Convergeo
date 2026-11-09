@@ -93,7 +93,10 @@
     "tabAbout": "关于",
     "tabReviews": "评价",
     "followedToast": "您已关注 {name}",
-    "viewFeed": "查看关注店铺的新品"
+    "viewFeed": "查看关注店铺的新品",
+    "searchStore": "在 {name} 中搜索",
+    "allCategories": "全部",
+    "noMatches": "没有匹配的商品，换个关键词或分类试试。"
   },
   "listings": {
     "vendor": "由 {vendor} 销售",

@@ -93,7 +93,10 @@
     "tabAbout": "À propos",
     "tabReviews": "Avis",
     "followedToast": "Vous suivez {name}",
-    "viewFeed": "Voir les nouveautés des boutiques suivies"
+    "viewFeed": "Voir les nouveautés des boutiques suivies",
+    "searchStore": "Rechercher chez {name}",
+    "allCategories": "Tout",
+    "noMatches": "Aucun produit ne correspond. Essayez un autre mot ou une autre catégorie."
   },
   "listings": {
     "vendor": "Vendu par {vendor}",

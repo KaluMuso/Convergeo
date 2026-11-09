@@ -93,7 +93,10 @@
     "tabAbout": "About",
     "tabReviews": "Reviews",
     "followedToast": "You're following {name}",
-    "viewFeed": "See new from stores you follow"
+    "viewFeed": "See new from stores you follow",
+    "searchStore": "Search {name}",
+    "allCategories": "All",
+    "noMatches": "No products match. Try another word or category."
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",

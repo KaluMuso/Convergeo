@@ -18,13 +18,16 @@ import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { ShareLinkButton } from "../../../_components/share-link-button";
 import { FollowVendorButton } from "../../_components/directory/follow-vendor-button";
 import {
+  StorefrontProducts,
+  type StorefrontListing,
+} from "../../_components/directory/storefront-products";
+import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
-import {
-  ListingGrid,
-  type CatalogListing,
-} from "../../_components/plp/listing-grid";
+import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
+
+
 
 import type { Metadata } from "next";
 
@@ -70,6 +73,8 @@ type VendorProfileApiResponse = {
     min_steps: number;
     fulfilment_mode: string;
     lead_time_days: number | null;
+    category_slug?: string | null;
+    category_name?: string | null;
   }>;
   services: Array<{
     id: string;
@@ -96,6 +101,7 @@ type PageProps = {
 
 type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  raw: (key: string) => unknown;
 };
 
 async function getDirectoryTranslator(
@@ -346,7 +352,9 @@ export default async function VendorProfilePage({ params }: PageProps) {
     ladderLabels,
   );
   // Commercial tier (Bronze…Platinum) is a vendor plan — never shown to buyers.
-  const listingsForGrid: CatalogListing[] = listings.map((listing) => ({
+  const listingsForGrid: StorefrontListing[] = listings.map((listing) => ({
+    categorySlug: listing.category_slug ?? null,
+    categoryName: listing.category_name ?? null,
     id: listing.id,
     title: listing.title,
     productSlug: listing.product_slug,
@@ -379,10 +387,15 @@ export default async function VendorProfilePage({ params }: PageProps) {
       key: "products",
       label: t("profile.tabProducts"),
       panel: (
-        <ListingGrid
+        <StorefrontProducts
           locale={locale}
           listings={listingsForGrid}
           labels={{
+            search: t("profile.searchStore", { name: vendor.display_name }),
+            all: t("profile.allCategories"),
+            noMatches: t("profile.noMatches"),
+          }}
+          gridLabels={{
             vendor: t("listings.vendor"),
             noReviews: t("listings.noReviews"),
             reviewCount: t("listings.reviewCount"),
@@ -392,6 +405,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionNew: t("listings.conditionNew"),
             conditionRefurbished: t("listings.conditionRefurbished"),
             conditionUsed: tCatalog("plp.card.conditionUsed"),
+            delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),

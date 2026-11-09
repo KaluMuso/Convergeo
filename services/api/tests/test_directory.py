@@ -446,6 +446,18 @@ class TestVendorProfile:
             "East Park Mall, Lusaka"
         ]
 
+    def test_profile_listing_exposes_category_for_storefront_chips(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendor_listings[0]["products"] = {
+            **store.vendor_listings[0]["products"],
+            "categories": {"slug": "phones", "name": "Phones"},
+        }
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        assert payload["listings"][0]["category_slug"] == "phones"
+        assert payload["listings"][0]["category_name"] == "Phones"
+
     def test_profile_includes_standalone_made_to_order_listing(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:

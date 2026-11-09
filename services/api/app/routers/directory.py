@@ -107,6 +107,9 @@ class DirectoryListingItem(BaseModel):
     lead_time_days: int | None = None
     in_stock: bool
     image_public_id: str | None = None
+    #: Storefront category chips; None for standalone (non-canonical) listings.
+    category_slug: str | None = None
+    category_name: str | None = None
 
 
 class ReviewsSummary(BaseModel):
@@ -772,7 +775,7 @@ def get_vendor_profile(
             "sale_unit, unit_step_milli, min_steps, fulfilment_mode, lead_time_days, "
             "vendor_capacity_per_week, stock_mode, stock_qty, moq, "
             "status, wholesale, "
-            "products(name, slug, status)"
+            "products(name, slug, status, categories(slug, name))"
         )
         .eq("vendor_id", vendor_id)
         .eq("status", "active")
@@ -822,12 +825,21 @@ def get_vendor_profile(
             str(product.get("name") or "Listing") if isinstance(product, dict) else "Listing"
         )
         product_slug = product.get("slug") if isinstance(product, dict) else None
+        category = product.get("categories") if isinstance(product, dict) else None
+        category_slug = (
+            str(category["slug"]) if isinstance(category, dict) and category.get("slug") else None
+        )
+        category_name = (
+            str(category["name"]) if isinstance(category, dict) and category.get("name") else None
+        )
         fulfilment_mode = str(listing_row.get("fulfilment_mode") or "stocked")
         listings.append(
             DirectoryListingItem(
                 id=str(listing_row["id"]),
                 title=_listing_title(listing_row, product_name),
                 product_slug=str(product_slug) if product_slug else None,
+                category_slug=category_slug,
+                category_name=category_name,
                 price_ngwee=int(listing_row.get("price_ngwee") or 0),
                 condition=str(listing_row.get("condition") or "new"),
                 product_class=str(listing_row.get("product_class") or "A"),
