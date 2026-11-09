@@ -596,6 +596,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const hasOffers = productListings.length > 0;
   const relatedCardLabels = {
     vendorHeading: t("pdp.related.vendorHeading", { vendor: "{vendor}" }),
+    storeHeading: t("pdp.related.storeHeading"),
+    similarHeading: t("pdp.related.similarHeading"),
     categoryHeading: t("pdp.related.categoryHeading"),
     loading: t("pdp.related.loading"),
     unavailable: t("pdp.related.unavailable"),

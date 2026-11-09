@@ -239,7 +239,9 @@
       "vendorHeading": "Fimbi ukufuma ku {vendor}",
       "categoryHeading": "Fimbi mu category iyi",
       "loading": "Ilelodisha ifintu fimbi…",
-      "unavailable": "Tatwaishibe ukuleta ifintu fimbi nomba."
+      "unavailable": "Tatwaishibe ukuleta ifintu fimbi nomba.",
+      "storeHeading": "Fimbi ukufuma kuli iyi shopu",
+      "similarHeading": "Ifyapalana mu category iyi"
     },
     "recentlyViewed": {
       "heading": "Ifyo mwamonapo"

@@ -239,7 +239,9 @@
       "vendorHeading": "Zina kuchokera kwa {vendor}",
       "categoryHeading": "Zina mu category iyi",
       "loading": "Ikutenga zinthu zina…",
-      "unavailable": "Sitinathe kutenga zinthu zina pano."
+      "unavailable": "Sitinathe kutenga zinthu zina pano.",
+      "storeHeading": "Zina kuchokera ku shopu iyi",
+      "similarHeading": "Zofanana mu category iyi"
     },
     "recentlyViewed": {
       "heading": "Zomwe mwaonapo"

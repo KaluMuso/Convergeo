@@ -104,3 +104,5 @@ Until then, **bem** and **nya** stay routable but are **not** SEO-published (`no
 - `common.theme.*` / `common.install.*`
 
 **Storefront redesign toasts (2026-11-08):** `common.toast.*` (21 keys: cart/wishlist/copy/auth/save/upload/moderation confirmations) , `common.share.label` and `common.fab.*` (floating Ask Vergeo + footer toggle, 13 keys) and `directory.profile.{follow,following,newSeller,newSellerJoined,tabAbout,tabReviews}` , `catalog.backInStock.*` and `catalog.plp.sort.{best,verified,bundles,cheapestChip}` , `vendor.profile.brand.*` and `catalog.{deals,qa,saveSearch}.*` were added to bem/nya as **English passthrough** for key parity. These are short transient confirmations outside the Phase-1 critical prefixes; a wrong vernacular guess in an error toast ("couldn't add to cart") misleads more than English does. Treat the subtree as untranslated pending native-speaker review.
+
+**PDP recommendation rails (2026-11-09):** `catalog.pdp.related.{storeHeading,similarHeading}` have AI-authored provisional Bemba/Nyanja wording (the `pdp` prefix is Phase-1 critical, so EN passthrough fails CI). Pending native-speaker review.

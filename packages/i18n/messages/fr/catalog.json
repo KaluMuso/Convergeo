@@ -287,7 +287,9 @@
       "vendorHeading": "Autres articles de {vendor}",
       "categoryHeading": "Autres articles de cette catégorie",
       "loading": "Chargement des recommandations…",
-      "unavailable": "Les recommandations sont temporairement indisponibles."
+      "unavailable": "Les recommandations sont temporairement indisponibles.",
+      "storeHeading": "Plus de cette boutique",
+      "similarHeading": "Similaires dans cette catégorie"
     },
     "recentlyViewed": {
       "heading": "Consultés récemment"

@@ -287,7 +287,9 @@
       "vendorHeading": "{vendor} 的更多商品",
       "categoryHeading": "此类别中的更多商品",
       "loading": "正在加载推荐…",
-      "unavailable": "推荐暂时不可用。"
+      "unavailable": "推荐暂时不可用。",
+      "storeHeading": "本店更多商品",
+      "similarHeading": "同类相似商品"
     },
     "recentlyViewed": {
       "heading": "最近浏览"

@@ -290,7 +290,9 @@
       "vendorHeading": "More from {vendor}",
       "categoryHeading": "More in this category",
       "loading": "Loading recommendations…",
-      "unavailable": "Recommendations are temporarily unavailable."
+      "unavailable": "Recommendations are temporarily unavailable.",
+      "storeHeading": "More from this store",
+      "similarHeading": "Similar in this category"
     },
     "recentlyViewed": {
       "heading": "Recently viewed"
