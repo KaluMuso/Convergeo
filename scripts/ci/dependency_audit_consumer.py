@@ -110,8 +110,8 @@ def package_membership(requirements):
         pattern = rf"(?im)^{re.escape(name)}==[A-Za-z0-9_.+!~-]+(?:\s*;.*)?$"
         if not re.search(pattern, text):
             missing.append(name)
-    if "cryptography==50.0.0" not in text:
-        missing.append("cryptography==50.0.0")
+    if "cryptography==50.0.2" not in text:
+        missing.append("cryptography==50.0.2")
     return sorted(set(missing))
 
 
@@ -122,8 +122,8 @@ def audited_membership(report):
     audited = {entry.get("name", "").lower().replace("_", "-"): entry.get("version")
                for entry in report["dependencies"] if isinstance(entry, dict)}
     missing = sorted(name for name in required if name not in audited)
-    if audited.get("cryptography") != "50.0.0":
-        missing.append("cryptography==50.0.0")
+    if audited.get("cryptography") != "50.0.2":
+        missing.append("cryptography==50.0.2")
     return sorted(set(missing))
 
 

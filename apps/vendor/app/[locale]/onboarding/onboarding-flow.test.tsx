@@ -130,12 +130,15 @@ async function startPhoto() {
 // Camera readiness is a promise chain (getUserMedia -> play) plus a React commit;
 // under a loaded CI runner that can exceed waitFor's 1s default without any defect.
 const CAMERA_READY_TIMEOUT_MS = 4000;
-async function takeReadyPhoto() {
+async function waitForCameraReady() {
   await waitFor(
     () =>
       expect(nrcCaptureElement().querySelector("video")).toHaveAttribute("aria-hidden", "false"),
     { timeout: CAMERA_READY_TIMEOUT_MS },
   );
+}
+async function takeReadyPhoto() {
+  await waitForCameraReady();
   fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
 }
 async function confirmPhoto() {
@@ -587,6 +590,8 @@ describe("repeat actions, retry and navigation", () => {
     await act(async () => {
       fireEvent.click(nrcCapture().getByRole("button", { name: "onboarding.kyc.capture" }));
     });
+    // The camera must actually be running before the switch, or there is nothing to stop.
+    await waitForCameraReady();
     await switchAccount(view, "B");
     await docs();
     expect(mock.stopCamera).toHaveBeenCalledOnce();

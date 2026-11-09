@@ -58,10 +58,10 @@ def fake(kind, args):
                 ("fastapi", "httpx", "psycopg", "pydantic-settings", "sentry-sdk",
                  "slowapi", "supabase", "uvicorn"))
             if scenario != "api_missing":
-                requirements += "\ncryptography==50.0.0"
+                requirements += "\ncryptography==50.0.2"
             Path(args[args.index("--output-file") + 1]).write_text(requirements + "\n")
         if args[0] == "tool":
-            deps = [{"name": name, "version": "50.0.0" if name == "cryptography" else "1.0.0",
+            deps = [{"name": name, "version": "50.0.2" if name == "cryptography" else "1.0.0",
                      "vulns": []} for name in
                     ("fastapi", "httpx", "psycopg", "pydantic-settings", "sentry-sdk",
                      "slowapi", "supabase", "uvicorn", "cryptography")]

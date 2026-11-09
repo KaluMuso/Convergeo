@@ -42,6 +42,16 @@ FORWARD = [
     "20261001120100_stock_claim_replay_authority.sql",
     "20261001120200_stock_claim_parent_lock_compatibility.sql",
     "20261006160000_service_table_acl_hardening.sql",
+    # Reviewed repair order, #762 variants and #759-into-#718 money reconciliation.
+    "20261009100000_configurable_admin_roles.sql",
+    "20261009110000_cart_add_idempotency.sql",
+    "20261009124801_otp_replay_reservation.sql",
+    "20261011120000_intake_class_a_insert_atomic.sql",
+    "20261107120000_listing_variants_cart_orders.sql",
+    "20261107130000_seed_ledger_accounts.sql",
+    "20261107140000_reconcile_approve_kyc_vendor.sql",
+    "20261107150000_prepaid_settlement_platform_fee_leg.sql",
+    "20261107160000_cart_variant_atomic_paths.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -85,7 +95,7 @@ def financial_identities() -> dict[str, list[str]]:
     """Bind this NEW proposal's concrete inventory, without an approval claim."""
     manifest = json.loads((ROOT / "scripts/ci/coordinator-gate-inputs.json").read_text())
     identities: dict[str, list[str]] = manifest["financial"]
-    for group, count in (("f1", 6), ("f2", 43), ("related", 760)):
+    for group, count in (("f1", 6), ("f2", 43), ("related", 764)):
         if len(identities[group]) != count or len(set(identities[group])) != count:
             raise RuntimeError("Financial concrete identity binding differs: " + group)
     require_collection(F1_NODES, identities["f1"], 0)
@@ -357,11 +367,12 @@ class Runner:
         ET.ElementTree(xml_root).write(merged, encoding="unicode")
         related, _ = report.related_report(Path(self.env.pop("F2_COLLECTION_OUTPUT")), merged,
                                           int(any(exits)), collection_rc)
-        # Reviewer bound 760 identities. Do not silently accept a reduced collection.
-        if related.get("expected") != 760:
+        # Reviewer bound 764 identities (760 + four #759 C1 guards).
+        # Do not silently accept a reduced collection.
+        if related.get("expected") != 764:
             related["accepted"] = False
             related["inventory_error"] = (
-                "Expected the independently reviewed 760 related identities"
+                "Expected the independently reviewed 764 related identities"
             )
         results["related"] = related
         self.write_result()
@@ -413,7 +424,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 139 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 148 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

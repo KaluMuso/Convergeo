@@ -61,7 +61,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
     def test_reviewed_inventories_preserved(self) -> None:
         self.assertEqual(len(runner.F1_NODES), 6)
         self.assertEqual(len(set(runner.F1_NODES)), 6)
-        self.assertEqual(len(runner.FORWARD), 12)
+        # 12 F2 forward migrations + 9 reviewed repair/variant/money reconciliation files.
+        self.assertEqual(len(runner.FORWARD), 21)
+        self.assertEqual(len(set(runner.FORWARD)), 21)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

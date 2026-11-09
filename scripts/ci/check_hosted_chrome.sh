@@ -52,6 +52,22 @@ download_verified_chrome() (
   gpg --batch --no-default-keyring --keyring "$scratch/google.gpg" \
     --verify "$scratch/InRelease" 2>/dev/null || exit 1
 
+  # Diagnostic only: when the pin has left Google's signed index, name what it now
+  # offers so the pin can be re-qualified. Nothing here is trusted or installed.
+  python3 - "$scratch" "$package_version" <<'DIAG' >&2 || true
+import gzip, sys
+from pathlib import Path
+records = gzip.decompress((Path(sys.argv[1]) / "Packages.gz").read_bytes()).decode().split("\n\n")
+offers = []
+for record in records:
+    fields = dict(line.split(": ", 1) for line in record.splitlines() if ": " in line)
+    if fields.get("Package") == "google-chrome-stable":
+        offers.append(fields)
+if not any(f.get("Version") == sys.argv[2] for f in offers):
+    for f in offers:
+        print("Pinned Chrome retired; signed index offers "
+              + " ".join(f"{k}={f.get(k)}" for k in ("Version", "Filename", "SHA256", "Size")))
+DIAG
   python3 - "$scratch" "$package_sha256" "$package_filename" "$package_version" <<'PY' || exit 1
 import gzip
 import hashlib
