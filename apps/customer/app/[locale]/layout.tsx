@@ -27,13 +27,11 @@ import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
-import {
-  FloatingActions,
-  type FloatingActionsLabels,
-} from "./_components/floating-actions";
+import { LazyFloatingActions } from "./_components/lazy-floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
+import type { FloatingActionsLabels } from "./_components/floating-actions";
 import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
@@ -284,7 +282,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               <div className="flex flex-1 flex-col">{children}</div>
               {/* Footer inline on most pages; on home it becomes an overlay sheet
                 behind the floating toggle (keeps the infinite feed clear). */}
-              <FloatingActions
+              <LazyFloatingActions
                 locale={locale}
                 labels={fabLabels}
                 footer={
