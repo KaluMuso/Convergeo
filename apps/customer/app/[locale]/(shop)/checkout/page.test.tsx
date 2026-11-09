@@ -31,6 +31,8 @@ vi.mock("next-intl", () => ({
 vi.mock("next-intl/server", () => ({ getMessages: async () => ({}), setRequestLocale: () => {} }));
 vi.mock("./_components/step-fulfilment", () => ({
   CheckoutShell: () => null,
+}));
+vi.mock("./_components/existing-checkout-status-lazy", () => ({
   ExistingCheckoutStatus: () => null,
 }));
 vi.mock("./_components/lazy-ticket-checkout", () => ({ LazyTicketCheckout: () => null }));

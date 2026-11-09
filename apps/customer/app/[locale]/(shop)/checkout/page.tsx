@@ -2,9 +2,10 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { ExistingCheckoutStatus } from "./_components/existing-checkout-status-lazy";
 import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
 import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
-import { CheckoutShell, ExistingCheckoutStatus } from "./_components/step-fulfilment";
+import { CheckoutShell } from "./_components/step-fulfilment";
 import { resolveGroupParam } from "./_lib/group-checkout";
 
 import type { GroupCheckoutLabels } from "./_components/group-checkout";

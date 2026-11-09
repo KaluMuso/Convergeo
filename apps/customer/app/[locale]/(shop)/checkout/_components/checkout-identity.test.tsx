@@ -138,7 +138,9 @@ for (const nextAccount of ["account-b", "account-a"]) {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(screen.getByTestId("checkout-loading-skeleton")).toBeInTheDocument();
       await act(async () => resolveB(checkout("Current Vendor")));
-      expect(screen.getByText("Current Vendor")).toBeInTheDocument();
+      // The fulfilment step is lazy-loaded; wait for it, then prove A never rendered.
+      expect(await screen.findByText("Current Vendor")).toBeInTheDocument();
+      expect(screen.queryByText("Private A Vendor")).not.toBeInTheDocument();
       expect(request).toHaveBeenCalledTimes(2);
       state.session = null;
       state.generation++;
