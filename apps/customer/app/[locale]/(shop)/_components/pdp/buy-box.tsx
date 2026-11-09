@@ -6,6 +6,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
 import { emitToastKey } from "@vergeo/ui/src/toast";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -28,7 +29,6 @@ import {
 } from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
-import { NotifyBackInStock } from "./notify-back-in-stock";
 import {
   PickupLocationPicker,
   type PickupLocationPickerLabels,
@@ -36,6 +36,12 @@ import {
 import { usePickupLocationSelection } from "./use-pickup-location-selection";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
+
+// Only out-of-stock listings need it; keep it off the in-stock first load.
+const NotifyBackInStock = dynamic(
+  () => import("./notify-back-in-stock").then((mod) => mod.NotifyBackInStock),
+  { ssr: false, loading: () => null },
+);
 
 export type BuyBoxListing = {
   id: string;

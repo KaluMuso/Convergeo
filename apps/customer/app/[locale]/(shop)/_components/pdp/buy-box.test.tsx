@@ -223,7 +223,7 @@ describe("BuyBox", () => {
     });
   });
 
-  it("replaces the stepper and Add to cart with Notify me when out of stock", () => {
+  it("replaces the stepper and Add to cart with Notify me when out of stock", async () => {
     render(
       <BuyBox
         listing={outOfStockListing}
@@ -238,7 +238,10 @@ describe("BuyBox", () => {
     );
     expect(screen.queryByTestId("pdp-qty-decrease")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pdp-add-to-cart")).not.toBeInTheDocument();
-    expect(screen.getByTestId("pdp-notify-me")).toBeInTheDocument();
+    // Lazy chunk (next/dynamic) — wait for it.
+    expect(
+      await screen.findByTestId("pdp-notify-me", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(
       screen
         .getByTestId("pdp-out-of-stock")

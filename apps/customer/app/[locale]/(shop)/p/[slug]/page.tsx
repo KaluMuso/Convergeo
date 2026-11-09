@@ -30,13 +30,13 @@ import {
   type Listing,
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
+import { LazyProductQuestions } from "../../_components/pdp/lazy-product-questions";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import {
   PdpInteractiveBody,
   type ProductListing,
 } from "../../_components/pdp/pdp-interactive-body";
-import { ProductQuestions } from "../../_components/pdp/product-questions";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import {
@@ -882,7 +882,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         reviewsPanel={reviewsPanel}
       />
 
-      <ProductQuestions productSlug={product.slug} locale={locale} />
+      <LazyProductQuestions productSlug={product.slug} locale={locale} />
     </div>
   );
 }
