@@ -390,28 +390,38 @@ def _validate_actor_id(actor_role: ActorRole, actor_id: str) -> None:
         raise ValueError("actor_id must be a valid UUID for non-system actors")
 
 
-def transition_order(
+def check_order_transition(
     *,
     order_id: str,
     event: OrderEvent,
     actor_role: ActorRole,
-    actor_id: str,
-    note: str,
     refund_path: bool = False,
-) -> TransitionOutcome:
-    """Execute a guarded order transition via service-role row-locked update."""
-    _validate_actor_id(actor_role, actor_id)
-    if not note.strip():
-        raise AppError(
-            code="validation_error",
-            message="Transition note is required",
-            http_status=422,
-        )
+) -> tuple[OrderSnapshot, OrderStatus]:
+    """Validate a transition exactly as ``transition_order`` would, without writing.
 
+    Lets a caller that must change a SECOND aggregate first (e.g. a courier
+    dispatch claiming its single-use handover code) fail fast on every rule the
+    order state machine would reject, before it commits anything. Returns the
+    snapshot it validated against and the destination status.
+    """
     snapshot = _fetch_order_snapshot(order_id)
     if snapshot is None:
         raise AppError(code="not_found", message="Order not found", http_status=404)
+    return snapshot, _validate_snapshot_transition(
+        snapshot,
+        event=event,
+        actor_role=actor_role,
+        refund_path=refund_path,
+    )
 
+
+def _validate_snapshot_transition(
+    snapshot: OrderSnapshot,
+    *,
+    event: OrderEvent,
+    actor_role: ActorRole,
+    refund_path: bool,
+) -> OrderStatus:
     resolved = resolve_transition(
         from_status=snapshot.status,
         event=event,
@@ -439,9 +449,40 @@ def transition_order(
             event=event.value,
             actor_role=actor_role.value,
         )
+    return resolved.to_status
+
+
+def transition_order(
+    *,
+    order_id: str,
+    event: OrderEvent,
+    actor_role: ActorRole,
+    actor_id: str,
+    note: str,
+    refund_path: bool = False,
+) -> TransitionOutcome:
+    """Execute a guarded order transition via service-role row-locked update."""
+    _validate_actor_id(actor_role, actor_id)
+    if not note.strip():
+        raise AppError(
+            code="validation_error",
+            message="Transition note is required",
+            http_status=422,
+        )
+
+    snapshot = _fetch_order_snapshot(order_id)
+    if snapshot is None:
+        raise AppError(code="not_found", message="Order not found", http_status=404)
+
+    to_status_enum = _validate_snapshot_transition(
+        snapshot,
+        event=event,
+        actor_role=actor_role,
+        refund_path=refund_path,
+    )
 
     order_sql = sql_uuid(order_id, "order_id")
-    to_status = resolved.to_status.value
+    to_status = to_status_enum.value
     from_status = snapshot.status.value
     update_script = f"""
 BEGIN;
@@ -475,7 +516,7 @@ COMMIT;
     return TransitionOutcome(
         order_id=order_id,
         from_status=snapshot.status,
-        to_status=resolved.to_status,
+        to_status=to_status_enum,
         event=event,
         actor_id=actor_id,
         note=note,

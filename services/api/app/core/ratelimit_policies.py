@@ -130,6 +130,15 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /config/commissions/{category_key}": ADMIN_WRITE,
     "PATCH /config/delivery-zones/{zone_key}": ADMIN_WRITE,
     "PATCH /config/flags/{flag}": ADMIN_WRITE,
+    # Courier dispatch v1 (admin_dispatch.py). The handover-code endpoint is
+    # SENSITIVE (brute-force surface) and additionally enforces a tighter
+    # per-admin ceiling in-router plus a per-dispatch lockout in the service.
+    "PATCH /dispatch/couriers/{courier_id}": ADMIN_WRITE,
+    "POST /dispatch/couriers": ADMIN_WRITE,
+    "POST /dispatch/requests": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/handover": SENSITIVE_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/notify": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/transition": ADMIN_WRITE,
     "PATCH /config/platform/{key}": ADMIN_WRITE,
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,
@@ -218,6 +227,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/job-completion/auto-confirm": INTERNAL_CRON,
     "POST /internal/jobs/expire-tick": INTERNAL_CRON,
     "POST /internal/n8n/abandoned-carts/tick": INTERNAL_CRON,
+    "POST /internal/n8n/dispatch-stale/tick": INTERNAL_CRON,
     "POST /internal/n8n/kyc-stalled/tick": INTERNAL_CRON,
     "POST /internal/n8n/low-stock/tick": INTERNAL_CRON,
     "POST /internal/n8n/payout-failures/tick": INTERNAL_CRON,

@@ -8,6 +8,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Badge, Button, FormField, Input, PriceBlock, Spinner } from "../../listings/new/_lib/ui";
 
+import {
+  CourierStatusCard,
+  type VendorCourierDispatch,
+  type VendorDeliveryResponse,
+} from "./courier-status";
+
 export type VendorActionName = "confirm" | "reject" | "pack" | "ship" | "ready_for_pickup";
 
 export type OrderItemSummary = {
@@ -57,6 +63,9 @@ function createOrdersClient(getToken: () => string | null | Promise<string | nul
   return {
     getOrder(orderId: string): Promise<OrderDetail> {
       return client.request<OrderDetail>(`/vendor/orders/${orderId}`);
+    },
+    getDelivery(orderId: string): Promise<VendorDeliveryResponse> {
+      return client.request<VendorDeliveryResponse>(`/vendor/orders/${orderId}/delivery`);
     },
     confirm(orderId: string): Promise<OrderActionResponse> {
       return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/confirm`, {
@@ -311,6 +320,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [courier, setCourier] = useState<VendorCourierDispatch | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const ordersClient = useMemo(() => createOrdersClient(getToken), [getToken]);
@@ -333,6 +343,13 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
       const detail = await ordersClient.getOrder(orderId);
       setOrder(detail);
       setError(null);
+      if (detail.fulfilment === "delivery") {
+        // Courier dispatch v1 — optional; never blocks the order view.
+        ordersClient
+          .getDelivery(orderId)
+          .then((delivery) => setCourier(delivery.dispatch))
+          .catch(() => setCourier(null));
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(t("orders.errors.forbidden"));
@@ -441,6 +458,8 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
           </p>
         ) : null}
       </section>
+
+      {courier ? <CourierStatusCard dispatch={courier} /> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-text">{t("orders.items.heading")}</h2>

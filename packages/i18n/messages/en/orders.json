@@ -209,5 +209,23 @@
     "loading": "Loading review form…",
     "starFilled": "★",
     "starEmpty": "☆"
+  },
+  "courier": {
+    "title": "Courier delivery",
+    "courier": "Courier",
+    "reference": "Courier reference",
+    "statuses": {
+      "requested": "Courier requested",
+      "accepted": "Courier assigned",
+      "picked_up": "On the way to you",
+      "delivered": "Delivered",
+      "failed": "Delivery attempt failed",
+      "cancelled": "Courier cancelled"
+    },
+    "codDue": "Pay the rider {amount} in cash when your items arrive.",
+    "handoverTitle": "Your handover code",
+    "handoverBody": "Give this code to the rider only once you have checked your items. It confirms delivery and releases payment to the seller.",
+    "handoverAria": "Handover code {code}",
+    "failedBody": "We will arrange another delivery and update you here."
   }
 }

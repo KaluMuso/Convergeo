@@ -647,3 +647,71 @@ async def preferred_badge_tick(
         "granted": granted,
         "revoked": revoked,
     }
+
+
+# --- Courier dispatch v1: stale-request founder alert -------------------------
+
+DISPATCH_STALE_MINUTES_KEY = "dispatch_stale_minutes"
+
+
+def fetch_stale_dispatches(client: Any) -> list[dict[str, Any]]:
+    """Dispatches ``requested`` > N minutes (default 45) with no courier acceptance.
+
+    Returns nothing while the ``courier_dispatch`` flag is off. Recipient is the
+    existing operator-alert channel (``FOUNDER_WHATSAPP_E164``) — the same one
+    the payout-failure alert uses.
+    """
+    from app.services.dispatch import service as dispatch_service
+
+    if not dispatch_service.is_courier_dispatch_enabled():
+        return []
+    minutes = _read_platform_config_int(
+        client,
+        DISPATCH_STALE_MINUTES_KEY,
+        dispatch_service.STALE_REQUESTED_MINUTES_DEFAULT,
+    )
+    founder_phone = _founder_phone_e164()
+    return [
+        {
+            "dispatch_id": str(row["dispatch_id"]),
+            "order_id": str(row["order_id"]),
+            "order_reference": str(row["order_reference"]),
+            "courier_name": str(row.get("courier_name") or ""),
+            "requested_at": str(row.get("requested_at") or ""),
+            "minutes_waiting": int(row.get("minutes_waiting") or 0),
+            "threshold_minutes": minutes,
+            "to": founder_phone,
+            "phone_e164": founder_phone,
+            "locale": "en",
+        }
+        for row in dispatch_service.list_stale_requested(minutes=max(minutes, 1))
+    ]
+
+
+@router.get(
+    "/dispatch-stale",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def dispatch_stale(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    return _envelope(fetch_stale_dispatches(supabase))
+
+
+@router.post(
+    "/dispatch-stale/tick",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def dispatch_stale_tick(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    """Enqueue ONE founder alert per stale dispatch (outbox dedupe on dispatch id)."""
+    items = fetch_stale_dispatches(supabase)
+    enqueued, skipped = _enqueue_items(
+        supabase,
+        event_type="dispatch_stale_alert",
+        template="dispatch_stale_alert",
+        items=items,
+        entity_key="dispatch_id",
+    )
+    return _tick_envelope(items, enqueued=enqueued, skipped=skipped)
