@@ -32,10 +32,13 @@ import { createPortal } from "react-dom";
 
 export type ToastType = "success" | "error" | "info" | "cart";
 
+export type ToastAction = { label: string; href: string };
+
 export type ToastItem = {
   id: string;
   message: string;
   description?: string;
+  action?: ToastAction;
   type: ToastType;
   durationMs: number;
 };
@@ -44,6 +47,8 @@ export type ToastOptions = {
   type?: ToastType;
   /** Optional second line (e.g. "View cart" context). */
   description?: string;
+  /** Optional link rendered inside the toast (e.g. "See your feed"). */
+  action?: ToastAction;
   durationMs?: number;
 };
 
@@ -159,6 +164,7 @@ export function ToastProvider({
         id: nextToastId(),
         message,
         description: options?.description,
+        action: options?.action,
         type,
         durationMs:
           options?.durationMs ?? (type === "error" ? ERROR_DURATION_MS : DEFAULT_DURATION_MS),
@@ -461,6 +467,11 @@ function ToastView({ item, onDismiss, dismissLabel }: ToastViewProps) {
       <span className="v-toast__body">
         <span className="v-toast__message">{item.message}</span>
         {item.description ? <span className="v-toast__description">{item.description}</span> : null}
+        {item.action ? (
+          <a className="v-toast__action" href={item.action.href} data-testid="toast-action">
+            {item.action.label}
+          </a>
+        ) : null}
       </span>
       <button
         type="button"

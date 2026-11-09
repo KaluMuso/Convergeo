@@ -1,22 +1,34 @@
 "use client";
 
-import { emitToastKey } from "@vergeo/ui/src/toast";
+import { emitToastKey, notify } from "@vergeo/ui/src/toast";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { isFollowingVendor, setVendorFollow } from "../../../../../lib/engagement-api";
+import {
+  isFollowingVendor,
+  setVendorFollow,
+} from "../../../../../lib/engagement-api";
 
 type FollowVendorButtonProps = {
   vendorId: string;
   locale: string;
-  labels: { follow: string; following: string };
+  labels: {
+    follow: string;
+    following: string;
+    followedToast?: string;
+    viewFeed?: string;
+  };
 };
 
 /**
  * Follow / unfollow a store (PUT|DELETE /vendors/{id}/follow). Signed-out
  * shoppers are sent to login and returned here.
  */
-export function FollowVendorButton({ vendorId, locale, labels }: FollowVendorButtonProps) {
+export function FollowVendorButton({
+  vendorId,
+  locale,
+  labels,
+}: FollowVendorButtonProps) {
   const router = useRouter();
   const [following, setFollowing] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +47,8 @@ export function FollowVendorButton({ vendorId, locale, labels }: FollowVendorBut
 
   const onClick = async () => {
     if (following === null) {
-      const next = typeof window !== "undefined" ? window.location.pathname : `/${locale}`;
+      const next =
+        typeof window !== "undefined" ? window.location.pathname : `/${locale}`;
       router.push(`/${locale}/login?next=${encodeURIComponent(next)}`);
       return;
     }
@@ -48,6 +61,13 @@ export function FollowVendorButton({ vendorId, locale, labels }: FollowVendorBut
       return;
     }
     setFollowing(target);
+    if (target && labels.followedToast) {
+      notify.success(labels.followedToast, {
+        action: labels.viewFeed
+          ? { label: labels.viewFeed, href: `/${locale}/account/following` }
+          : undefined,
+      });
+    }
   };
 
   const isFollowing = following === true;
@@ -75,7 +95,11 @@ export function FollowVendorButton({ vendorId, locale, labels }: FollowVendorBut
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        {isFollowing ? <path d="m5 12.5 4.5 4.5L19 7.5" /> : <path d="M12 5v14M5 12h14" />}
+        {isFollowing ? (
+          <path d="m5 12.5 4.5 4.5L19 7.5" />
+        ) : (
+          <path d="M12 5v14M5 12h14" />
+        )}
       </svg>
       {isFollowing ? labels.following : labels.follow}
     </button>

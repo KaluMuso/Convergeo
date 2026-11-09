@@ -91,7 +91,9 @@
     "newSeller": "New seller",
     "newSellerJoined": "New seller · joined {date}",
     "tabAbout": "About",
-    "tabReviews": "Reviews"
+    "tabReviews": "Reviews",
+    "followedToast": "You're following {name}",
+    "viewFeed": "See new from stores you follow"
   },
   "listings": {
     "vendor": "Sold by {vendor}",

@@ -286,3 +286,39 @@ export async function saveSearch(
   });
   return result === null ? "error" : "ok";
 }
+
+/** /me/follows/feed item (CatalogListingItem subset). */
+export type FollowFeedItem = {
+  id: string;
+  title: string;
+  product_slug: string | null;
+  vendor_name: string;
+  price_ngwee: number;
+  compare_at_ngwee?: number | null;
+  condition: string;
+  in_stock: boolean;
+  image_public_id: string | null;
+  rating: number;
+  review_count: number;
+  distance_m: number | null;
+  delivery_available?: boolean;
+  pickup_available?: boolean;
+  fulfilment_mode?: string;
+  lead_time_days?: number | null;
+};
+
+/** New listings from followed stores. "signed_out" when there is no session. */
+export async function fetchFollowFeed(
+  offset = 0,
+): Promise<
+  { items: FollowFeedItem[]; next_offset: number | null } | "signed_out" | null
+> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  return apiRequest<{ items: FollowFeedItem[]; next_offset: number | null }>(
+    `/me/follows/feed?limit=24&offset=${offset}`,
+    { method: "GET", token },
+  );
+}

@@ -13,7 +13,8 @@
     "privacy": "Data & privacy",
     "business": "Business mode",
     "signOut": "Sign out",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "following": "Following"
   },
   "business": {
     "title": "Business mode",
@@ -285,5 +286,18 @@
     "remove": "Remove",
     "removeLabel": "Remove {name} from recently viewed",
     "viewProduct": "View"
+  },
+  "following": {
+    "title": "Following",
+    "description": "New arrivals from the stores you follow, from the last 30 days.",
+    "emptyTitle": "Nothing new yet",
+    "emptyBody": "Follow stores you like and their new products will show up here.",
+    "browseVendors": "Browse vendors",
+    "signIn": "Sign in to see the stores you follow",
+    "signInCta": "Sign in",
+    "loadFailed": "Couldn't load your feed. Try again.",
+    "retry": "Try again",
+    "loadMore": "Show more",
+    "viewFeed": "See new from stores you follow"
   }
 }

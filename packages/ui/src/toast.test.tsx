@@ -248,6 +248,18 @@ describe("Toast", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Following Mwila Crafts");
   });
 
+  it("renders an optional action link", () => {
+    render(
+      <ToastProvider>
+        <span />
+      </ToastProvider>,
+    );
+    act(() => {
+      notify.success("Following Shop", { action: { label: "See feed", href: "/en/account/following" } });
+    });
+    expect(screen.getByTestId("toast-action")).toHaveAttribute("href", "/en/account/following");
+  });
+
   it("throws when useToast is outside provider", () => {
     const Bad = () => {
       useToast();

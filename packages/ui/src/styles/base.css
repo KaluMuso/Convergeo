@@ -899,3 +899,13 @@
 img[data-broken="true"] {
   visibility: hidden;
 }
+
+.v-toast__action {
+  align-self: flex-start;
+  margin-top: 2px;
+  color: var(--primary);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

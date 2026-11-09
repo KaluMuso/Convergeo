@@ -91,7 +91,9 @@
     "newSeller": "新卖家",
     "newSellerJoined": "新卖家 · {date} 加入",
     "tabAbout": "关于",
-    "tabReviews": "评价"
+    "tabReviews": "评价",
+    "followedToast": "您已关注 {name}",
+    "viewFeed": "查看关注店铺的新品"
   },
   "listings": {
     "vendor": "由 {vendor} 销售",
