@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "../_lib/ui";
 
@@ -60,7 +60,10 @@ export function DocCapture({
     }
   }, []);
 
-  useEffect(() => {
+  // Layout effect: the capture button is tappable as soon as it commits, before
+  // passive effects flush. A passive effect left a window where a tap was
+  // silently ignored as "unmounted".
+  useLayoutEffect(() => {
     lifecycle.current.mounted = true;
     return () => {
       lifecycle.current.mounted = false;
