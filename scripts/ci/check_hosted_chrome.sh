@@ -2,11 +2,11 @@
 set -euo pipefail
 
 chrome_path=/opt/google/chrome/chrome
-chrome_version=155.0.8059.79
-package_version=155.0.8059.79-1
-package_sha256=b7726070ca707965e9a17b38e4f15ba283bf6f65c339626c092862af7b19badc
+chrome_version=157.0.8103.38
+package_version=157.0.8103.38-1
+package_sha256=a62b277dc03da2cff50cc04589deb66f6875be339c066d46adb49b49eedb629d
 google_key_fingerprint=EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796
-package_filename=pool/main/g/google-chrome-stable/google-chrome-stable_155.0.8059.79-1_amd64.deb
+package_filename=pool/main/g/google-chrome-stable/google-chrome-stable_157.0.8103.38-1_amd64.deb
 chrome_defaults=/etc/default/google-chrome
 chrome_sources_dir=/etc/apt/sources.list.d
 
@@ -104,7 +104,7 @@ try:
     require(package.get("Architecture") == "amd64", "package_architecture")
     require(package.get("Filename") == expected_name, "package_filename")
     require(package.get("SHA256") == expected_sha, "package_sha256")
-    require(int(package.get("Size", "0")) == 143638568, "package_size")
+    require(int(package.get("Size", "0")) == 147633324, "package_size")
 except (OSError, ValueError, IndexError, EOFError, zlib.error):
     raise SystemExit("Google Chrome package metadata mismatch: metadata_format") from None
 PY
@@ -158,10 +158,10 @@ check_hosted_chrome() {
     fi
   fi
   case "$raw_product" in
-    154.0.8037.57 | 154.0.8037.97 | 155.0.8059.39 | 155.0.8059.79) product=$raw_product ;;
+    154.0.8037.57 | 154.0.8037.97 | 155.0.8059.39 | 155.0.8059.79 | 157.0.8103.38) product=$raw_product ;;
   esac
   case "$raw_package" in
-    154.0.8037.57-1 | 154.0.8037.97-1 | 155.0.8059.39-1 | 155.0.8059.79-1) package=$raw_package ;;
+    154.0.8037.57-1 | 154.0.8037.97-1 | 155.0.8059.39-1 | 155.0.8059.79-1 | 157.0.8103.38-1) package=$raw_package ;;
   esac
   printf 'Chrome preflight: ImageOS=%s ImageVersion=%s path=/opt/google/chrome/chrome executable=%s owner=%s product=%s package=%s\n' \
     "$image_os" "$image_version" "$executable" "$owner" "$product" "$package"
@@ -172,7 +172,7 @@ check_hosted_chrome() {
         "$product" == "$chrome_version" && "$package" == "$package_version" ]]; then
     return 0
   fi
-  printf 'Unsupported hosted Chrome image/package; require verified Google Chrome 155.0.8059.79-1 on an approved Ubuntu 24.04 image. No Lighthouse qualification was run.\n' >&2
+  printf 'Unsupported hosted Chrome image/package; require verified Google Chrome 157.0.8103.38-1 on an approved Ubuntu 24.04 image. No Lighthouse qualification was run.\n' >&2
   return 1
 }
 
