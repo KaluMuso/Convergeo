@@ -21,17 +21,17 @@
     "@commitlint/cli": "^19.8.0",
     "@commitlint/config-conventional": "^19.8.0",
     "@eslint/js": "^9.39.5",
-    "@lhci/cli": "^0.15.1",
+    "@lhci/cli": "^0.16.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "lefthook": "^1.11.3",
     "lint-staged": "^15.5.0",
-    "prettier": "^3.9.6",
-    "turbo": "^2.10.9",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.66.0"
+    "typescript-eslint": "^8.72.1"
   },
   "lint-staged": {
     "*": "prettier --config packages/config/prettier.config.mjs --write --ignore-unknown"
