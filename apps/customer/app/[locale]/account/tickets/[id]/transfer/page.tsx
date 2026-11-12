@@ -128,6 +128,8 @@ export default function TransferTicketPage({ params }: PageProps) {
             return t("errors.cutoffPassed");
           case "ticket_transfer_not_pending":
             return t("errors.notPending");
+          case "ticket_transfer_expired":
+            return t("errors.expired");
           case "ticket_not_transferable":
             return t("errors.notTransferable");
           case "forbidden":
@@ -137,7 +139,7 @@ export default function TransferTicketPage({ params }: PageProps) {
           case "rate_limited":
             return t("errors.rateLimited");
           default:
-            return err.message || t("errors.generic");
+            return t("errors.generic");
         }
       }
       return t("errors.generic");
