@@ -730,6 +730,22 @@ try {
     if (m.type() === "error" || m.type() === "warning" || /Fast Refresh|HMR|reload/i.test(m.text()))
       debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] ${m.type()}: ${m.text().slice(0, 300)}`);
   });
+  page.on("websocket", (ws) => {
+    ws.on("framesent", (f) => {
+      const text = typeof f.payload === "string" ? f.payload : "";
+      if (text.includes("client-full-reload")) debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] WS-SENT ${text.slice(0, 3000)}`);
+    });
+  });
+  page.on("response", async (r) => {
+    if (!/hot-update\.js/.test(r.url())) return;
+    try {
+      const body = await r.text();
+      const keys = [...body.matchAll(/"(\(app-pages-browser\)[^"]{0,200})"\s*:/g)].map((m) => m[1]);
+      debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] HOT ${r.url().split("/").pop()} modules=${JSON.stringify(keys).slice(0, 2500)}`);
+    } catch (e) {
+      debugConsole.push(`HOT body error ${String(e).slice(0, 100)}`);
+    }
+  });
   page.on("framenavigated", (f) => {
     if (f === page.mainFrame()) debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] NAV ${f.url()}`);
   });
