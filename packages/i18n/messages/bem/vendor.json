@@ -291,7 +291,7 @@
       },
       "approved": {
         "title": "You are verified",
-        "body": "⚠ T1 KYC approved. You can create listings — buyers will see them once you publish.",
+        "body": "Your ID is verified. You can create listings — buyers see them once you publish.",
         "cta": "Create your first listing",
         "t2Link": "Upgrade to T2 (PACRA + TPIN)"
       },
@@ -326,7 +326,50 @@
       "notFound": "We could not find your vendor application.",
       "retryHint": "Loleni connection yenu, then try again."
     },
-    "loading": "Ilelodisha…"
+    "loading": "Ilelodisha…",
+    "checklist": {
+      "heading": "Ifyakulolesha pa kushininkishiwa",
+      "progress": "{done} pali {total} fyapwa",
+      "items": {
+        "business": {
+          "title": "Ifya bukwebo bwenu",
+          "why": "Your shop name and type, so buyers know who they're buying from."
+        },
+        "momo": {
+          "title": "Inambala ya mobile money",
+          "why": "We check the name on this number matches your NRC. Payouts will go here once they open."
+        },
+        "nrc": {
+          "title": "Icikope ca NRC",
+          "why": "Proves you are who you say you are. Never shown to buyers."
+        },
+        "selfie": {
+          "title": "Icikope cenu (selfie)",
+          "why": "Matched to your NRC photo so no one else can sell in your name."
+        },
+        "review": {
+          "title": "Ukulolesha kwa Vergeo5",
+          "why": "Our team checks everything, usually within 1 working day. We'll message you on WhatsApp."
+        }
+      },
+      "states": {
+        "not_started": "Tamulatendeka",
+        "saved": "Fyasungwa, tafilatumwa",
+        "submitted": "Fyatumwa",
+        "under_review": "Filelolesheshiwa",
+        "approved": "Fyasuminishiwa",
+        "rejected": "Filefwaya ukulungika"
+      },
+      "fix": {
+        "nrc": "How to fix: retake the NRC photo in daylight with all four corners in the frame.",
+        "selfie": "How to fix: retake the selfie facing the camera, without a hat or sunglasses.",
+        "review": "Fix the items marked above, then send again — you don't have to start over."
+      },
+      "reasonLabel": "Ifyo icilonganino cesu calandile",
+      "ctaFinish": "Twalilileni ukushininkishiwa",
+      "ctaFix": "Lungikeni no kutuma na kabili",
+      "pendingNote": "You can look around while you wait. Your listings stay hidden from buyers until you're approved."
+    }
   },
   "listings": {
     "images": {
@@ -621,7 +664,7 @@
         "delete": "Delete listing",
         "deleting": "Deleting…",
         "returnableLabel": "Accept returns",
-        "returnableHelp": "Lane-2 return policy for this listing.",
+        "returnableHelp": "Let buyers return this item within the window below if it isn't right.",
         "returnWindowLabel": "Return window (hours)",
         "compareAtLabel": "Compare-at price (ZMW)",
         "compareAtHelp": "Optional 'was' price, shown struck through on your listing. Leave blank for no sale; it must be higher than the price.",
@@ -671,11 +714,23 @@
         "storageFailed": "Could not preserve the operation for a safe retry. Enable session storage before adjusting stock.",
         "notTracked": "This listing does not use tracked stock.",
         "authorityRequired": "Use the stock adjustment section. Existing stock, sale units and stock mode cannot be replaced in the listing editor."
+      },
+      "statusGuide": {
+        "heading": "What Draft, Live and Paused mean",
+        "draft": "Only you can see it. Finish the details and publish when ready.",
+        "active": "Buyers can find and order it.",
+        "paused": "Hidden from buyers. Resume it when you have stock again.",
+        "kycNote": "Until your verification is approved, buyers can't see any of your listings."
+      },
+      "statusHint": {
+        "draft": "Ni imwe fye mulemona",
+        "active": "Abashita kuti bamona no kushita",
+        "paused": "Califisilwa ku bashita"
       }
     },
     "kycGate": {
       "title": "Verification still in progress",
-      "body": "⚠ Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
+      "body": "You can prepare listings now, but buyers only see them after your verification is approved.",
       "cta": "Check verification status",
       "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
     },
@@ -750,6 +805,25 @@
         "saveFailed": "We couldn't save your options. Try again."
       },
       "saving": "Saving…"
+    },
+    "guide": {
+      "heading": "Amano ya kushitisha bwangu",
+      "photos": {
+        "title": "Photos (up to 8)",
+        "body": "Use daylight and a plain background. The first photo is the cover buyers see. Show the front, back, labels and any marks or damage."
+      },
+      "title": {
+        "title": "Title",
+        "body": "Say what it is, the brand and the key detail, e.g. \"Samsung A15, 128GB, black\". No ALL CAPS and no phone numbers."
+      },
+      "price": {
+        "title": "Price in Kwacha",
+        "body": "Enter the full price the buyer pays, e.g. 1250 or 1250.50. Our commission comes out of this price."
+      },
+      "stock": {
+        "title": "Stock and options",
+        "body": "Enter how many you really have. Add options like size or colour when buyers must choose — each option keeps its own stock."
+      }
     }
   },
   "profile": {
@@ -921,7 +995,11 @@
     "timeline": {
       "heading": "Inshitaline",
       "empty": "No events yet",
-      "note": "Note: {note}"
+      "note": "Note: {note}",
+      "stateDone": "fyapwa",
+      "stateCurrent": "e pali nomba",
+      "stateUpcoming": "fileisa",
+      "srState": "({state})"
     },
     "actions": {
       "heading": "Actions",
@@ -943,7 +1021,14 @@
       "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
       "submitReject": "Reject with reason",
       "submitShip": "Mark as shipped",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "after": {
+        "confirm": "The customer is told you accepted. Next you'll pack it.",
+        "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
+        "pack": "The customer sees that you're preparing their order.",
+        "ship": "Tap when the rider has the parcel. Add the rider's name or phone.",
+        "ready_for_pickup": "The customer is told to come and collect it from you."
+      }
     },
     "success": {
       "confirmed": "Order confirmed.",
@@ -958,7 +1043,8 @@
       "forbidden": "You can only manage your own orders.",
       "invalidTransition": "That action is not available for this order.",
       "reasonRequired": "A reason is required when rejecting.",
-      "trackingRequired": "A tracking note is required when shipping."
+      "trackingRequired": "A tracking note is required when shipping.",
+      "retryHint": "Check your connection, then try again."
     },
     "courier": {
       "heading": "Courier",
@@ -974,6 +1060,59 @@
       },
       "codDue": "Rider collects {amount} from the customer",
       "handoverNote": "The customer confirms delivery with a code they give the rider."
+    },
+    "guide": {
+      "headingNow": "Ifyakucita nomba",
+      "headingNext": "Ifikonkelepo",
+      "scanCta": "Open Scan to hand over",
+      "paidExplainer": "The customer has paid. Vergeo5 holds the money safely until the order is delivered.",
+      "unpaidExplainer": "The customer hasn't paid yet. Don't pack or send anything until payment shows as received.",
+      "cod": {
+        "body": "The customer pays the rider in cash when the order arrives. You don't collect any money yourself.",
+        "settlement": "Vergeo5 settles the order money with you — you don't need to chase the rider or the customer."
+      },
+      "steps": {
+        "confirm": {
+          "title": "Accept or reject this order",
+          "body": "The customer is waiting. Check you have every item, then accept. If you can't fulfil it, reject it with a reason."
+        },
+        "pack": {
+          "title": "Pack the items",
+          "body": "Tap Start packing when you begin. Check sizes and colours against the items list below."
+        },
+        "handToRider": {
+          "title": "Hand the parcel to the rider",
+          "body": "When the rider collects it, tap Mark shipped and add the rider's name or phone number."
+        },
+        "readyForPickup": {
+          "title": "Mark it ready for pickup",
+          "body": "When the parcel is packed and waiting at your shop, tap Ready for pickup. We tell the customer to come."
+        },
+        "awaitCollection": {
+          "title": "Waiting for the customer to collect",
+          "body": "When they arrive, scan their QR code or enter their PIN on the Scan page before you hand it over."
+        },
+        "awaitDelivery": {
+          "title": "On the way with the rider",
+          "body": "Nothing to do now. The customer gives the rider a code to confirm delivery."
+        },
+        "awaitConfirmation": {
+          "title": "Delivered",
+          "body": "The customer has a short time to report a problem. After that the order completes on its own."
+        },
+        "done": {
+          "title": "Order complete",
+          "body": "Nothing more to do on this order."
+        },
+        "cancelled": {
+          "title": "Order cancelled",
+          "body": "No further action. Don't send these items."
+        },
+        "unknown": {
+          "title": "Check this order",
+          "body": "Refresh to see the latest status."
+        }
+      }
     }
   },
   "home": {
@@ -992,7 +1131,7 @@
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "GMV",
+      "gmv": "Sales",
       "gmvCaption": "30 days"
     },
     "needsAction": {
@@ -1053,6 +1192,52 @@
       "ariaLabel": "Quick links",
       "listings": "Catalogue",
       "profile": "Profile"
+    },
+    "tasks": {
+      "heading": "Ifyakucita fyenu ifikonkelepo",
+      "intro": "Tendekeni pa muulu — icacindama sana e cabalilapo.",
+      "items": {
+        "kycFix": {
+          "title": "Fix your verification",
+          "body": "We couldn't approve one of your documents. See what to change — you don't have to start over."
+        },
+        "kycFinish": {
+          "title": "Finish your verification",
+          "body": "Buyers can't see your shop until we've checked your ID. It takes about 5 minutes."
+        },
+        "kycPending": {
+          "title": "Verification is being reviewed",
+          "body": "Nothing to do now. Our team usually replies within 1 working day on WhatsApp."
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Accept and pack before 14:00 so delivery orders go out with today's riders."
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Less than an hour to the 14:00 dispatch cut-off — accept and pack now."
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Today's 14:00 cut-off has passed. Get them ready now so they leave first on the next run."
+        },
+        "catalogueProducts": {
+          "title": "Check your products",
+          "body": "Keep stock and prices right so buyers never order something you don't have."
+        },
+        "catalogueServices": {
+          "title": "Check your services",
+          "body": "Keep prices and availability current, and reply to quote requests quickly."
+        },
+        "catalogueEvents": {
+          "title": "Check your events",
+          "body": "Make sure dates, ticket types and prices are right before you share your event."
+        },
+        "profile": {
+          "title": "Complete your shop profile",
+          "body": "A logo, opening hours and a short description help buyers trust you."
+        }
+      }
     }
   },
   "queue": {
@@ -1085,7 +1270,37 @@
       "cancel": "Not now"
     },
     "errors": {
-      "loadFailed": "Could not load orders. Pull to refresh."
+      "loadFailed": "Could not load orders. Pull to refresh.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "emptyNeedsAction": {
+      "title": "Nothing waiting on you",
+      "body": "New orders show up here first. We also send you a WhatsApp message when one arrives."
+    },
+    "emptyFiltered": {
+      "title": "No orders in this view",
+      "body": "Try another tab, or go back to the orders that need you.",
+      "cta": "Show orders that need action"
+    },
+    "nextStep": {
+      "confirm": "Ifikonkelepo: sumineni nangu kaneni",
+      "pack": "Ifikonkelepo: pakeni ifipe",
+      "handToRider": "Ifikonkelepo: pereni kuli uutwala",
+      "readyForPickup": "Ifikonkelepo: lembeni ati fyaipekanya",
+      "awaitCollection": "Ukulolela kasitoma ukusenda",
+      "awaitDelivery": "Fili na uutwala",
+      "awaitConfirmation": "Fyafika — ukulolela kasitoma",
+      "done": "Fyapwa",
+      "cancelled": "Fyafumishiwapo"
+    },
+    "cutoff": {
+      "before": "Dispatch cut-off 14:00 · {time} left",
+      "timeHoursMinutes": "{hours} h {minutes} min",
+      "timeMinutes": "{minutes} min",
+      "beforeBody": "Delivery orders accepted, packed and handed to the rider before 14:00 (Lusaka time) go out with today's riders.",
+      "urgentBody": "Less than an hour left — finish packing now to make today's riders.",
+      "after": "Today's 14:00 dispatch cut-off has passed",
+      "afterBody": "Delivery orders you prepare now go out on the next dispatch run. Pickup orders aren't affected."
     }
   },
   "payouts": {
@@ -1158,7 +1373,27 @@
       "kycRequired": "⚠ Complete KYC before changing your payout method.",
       "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
       "rateLimited": "Too many requests. Try again shortly.",
-      "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow."
+      "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "pilot": {
+      "badge": "Tacilaisulwa",
+      "title": "Payouts aren't switched on during the pilot",
+      "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
+      "meanwhileHeading": "How money works during the pilot",
+      "meanwhile": {
+        "cod": "Cash on delivery: the customer pays the rider in cash, and Vergeo5 settles with you.",
+        "prepaid": "Paid orders: Vergeo5 holds the customer's money safely until the order is delivered.",
+        "questions": "Questions about money owed to you? Ask the Vergeo5 pilot team."
+      },
+      "laterHeading": "What you'll see here later",
+      "later": {
+        "held": "Money held for orders that are still being delivered",
+        "released": "Money released to you and ready to pay out",
+        "history": "Every payout to your mobile-money number, with its status",
+        "statement": "A monthly statement you can download"
+      },
+      "notify": "We'll tell you on WhatsApp before payouts are switched on."
     }
   },
   "scan": {
@@ -1567,7 +1802,7 @@
       "namePlaceholder": "General Admission",
       "priceLabel": "⚠ Price (ZMW)",
       "pricePlaceholder": "75.00",
-      "priceHelp": "⚠ Enter amount in kwacha; stored as ngwee (no decimals in DB).",
+      "priceHelp": "Enter the price in Kwacha, e.g. 75 or 75.50.",
       "priceFreeHelp": "Free RSVP is always K0.00.",
       "qtyCapLabel": "Quantity cap (optional)",
       "qtyCapPlaceholder": "Unlimited",

@@ -114,3 +114,13 @@ Until then, **bem** and **nya** stay routable but are **not** SEO-published (`no
 **PDP recommendation rails (2026-11-09):** `catalog.pdp.related.{storeHeading,similarHeading}` have AI-authored provisional Bemba/Nyanja wording (the `pdp` prefix is Phase-1 critical, so EN passthrough fails CI). Pending native-speaker review.
 **Follow feed (2026-11-09):** `account.nav.following` has AI-authored provisional Bemba/Nyanja wording (critical `nav` prefix); `account.following.*` is EN passthrough. Pending native review.
 **Delivery estimates (2026-11-09):** `catalog.delivery.*` (outside critical prefixes) is EN passthrough in bem/nya, pending native review.
+
+## Vendor UX pass
+
+**Vendor UX pass (2026-11-12, `feat/ux-vendor-pass`, pilot 13 Nov):** new vendor guidance copy (home next steps, KYC checklist, order next-step / COD / dispatch cut-off / timeline, listing tips and status guide, payouts pilot notice). EN is authoritative; fr/zh are full translations.
+
+In **bem/nya**, only short labels and headings carry **AI-authored provisional drafts** (not native-reviewed). Everything that tells a vendor what to do with money, deadlines or documents is **EN passthrough** on purpose, matching the vendor-namespace precedent above (a wrong guess on COD, payouts or the 14:00 cut-off costs a pilot vendor money). Pending native-speaker review:
+
+- Provisional drafts: `vendor.home.tasks.heading`, `vendor.home.tasks.intro`, `vendor.onboarding.checklist.{heading,progress,reasonLabel,ctaFinish,ctaFix}`, `vendor.onboarding.checklist.items.*.title`, `vendor.onboarding.checklist.states.*`, `vendor.listings.guide.heading`, `vendor.listings.manage.statusHint.*`, `vendor.orders.guide.{headingNow,headingNext}`, `vendor.orders.timeline.{stateDone,stateCurrent,stateUpcoming}`, `vendor.queue.nextStep.*`, `vendor.payouts.pilot.badge`
+- EN passthrough (untranslated): `vendor.home.tasks.items.*`, `vendor.onboarding.checklist.{items.*.why,fix.*,pendingNote}`, `vendor.listings.guide.{photos,title,price,stock}.*`, `vendor.listings.manage.statusGuide.*`, `vendor.orders.actions.after.*`, `vendor.orders.guide.{scanCta,paidExplainer,unpaidExplainer,cod.*,steps.*}`, `vendor.orders.timeline.srState`, `vendor.orders.errors.retryHint`, `vendor.queue.{emptyNeedsAction,emptyFiltered,cutoff,errors.retryHint}.*`, `vendor.payouts.pilot.*` (except `badge`), `vendor.payouts.errors.retryHint`
+- EN wording changed (bem/nya now carry the new EN): `vendor.home.analytics.gmv`, `vendor.onboarding.status.approved.body`, `vendor.listings.kycGate.body`, `vendor.listings.manage.edit.returnableHelp`, `vendor.tickets.fields.priceHelp`

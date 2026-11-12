@@ -277,7 +277,7 @@
       },
       "approved": {
         "title": "您已通过验证",
-        "body": "T1 KYC 已通过。您可以创建商品，发布后买家即可看到。",
+        "body": "您的身份已认证。现在可以创建商品——发布后买家即可看到。",
         "cta": "创建您的第一个商品",
         "t2Link": "升级到 T2（PACRA + TPIN）"
       },
@@ -312,7 +312,50 @@
       "notFound": "未找到您的商家申请。",
       "retryHint": "请检查网络后重试。"
     },
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "checklist": {
+      "heading": "认证清单",
+      "progress": "已完成 {done}/{total}",
+      "items": {
+        "business": {
+          "title": "商家信息",
+          "why": "店铺名称和类型，让买家知道在向谁购买。"
+        },
+        "momo": {
+          "title": "移动钱包号码",
+          "why": "我们会核对该号码登记的姓名是否与您的 NRC 一致。付款功能开放后，款项将转入此号码。"
+        },
+        "nrc": {
+          "title": "NRC 照片",
+          "why": "用于证明您的身份，绝不会展示给买家。"
+        },
+        "selfie": {
+          "title": "自拍照",
+          "why": "与您的 NRC 照片比对，防止他人冒用您的名义销售。"
+        },
+        "review": {
+          "title": "Vergeo5 审核",
+          "why": "我们的团队会核查所有资料，通常在 1 个工作日内完成，并通过 WhatsApp 通知您。"
+        }
+      },
+      "states": {
+        "not_started": "未开始",
+        "saved": "已保存，尚未提交",
+        "submitted": "已提交",
+        "under_review": "审核中",
+        "approved": "已通过",
+        "rejected": "需要修改"
+      },
+      "fix": {
+        "nrc": "修改方法：在自然光下重拍 NRC 照片，确保四个角都在画面内。",
+        "selfie": "修改方法：正对镜头重拍自拍照，不要戴帽子或墨镜。",
+        "review": "修改上面标出的项目后重新提交——无需从头开始。"
+      },
+      "reasonLabel": "审核团队的说明",
+      "ctaFinish": "继续认证",
+      "ctaFix": "修改并重新提交",
+      "pendingNote": "等待期间您可以先熟悉后台。通过审核前，买家看不到您的商品。"
+    }
   },
   "listings": {
     "images": {
@@ -607,7 +650,7 @@
         "delete": "删除商品",
         "deleting": "删除中…",
         "returnableLabel": "接受退货",
-        "returnableHelp": "此商品的 Lane-2 退货政策。",
+        "returnableHelp": "如果商品不合适，允许买家在下方期限内退货。",
         "returnWindowLabel": "退货窗口期（小时）",
         "tierHeading": "批发价格档位",
         "tierQtyLabel": "最小数量",
@@ -653,11 +696,23 @@
         "storageFailed": "无法保存操作以安全重试。调整库存前请启用会话存储。",
         "notTracked": "此商品不使用跟踪库存。",
         "authorityRequired": "请使用库存调整区域。不能在商品编辑器中覆盖现有库存、销售单位或库存模式。"
+      },
+      "statusGuide": {
+        "heading": "草稿、在售和已暂停是什么意思",
+        "draft": "只有您能看到。完善信息后即可发布。",
+        "active": "买家可以搜索并下单。",
+        "paused": "对买家隐藏。有库存后可恢复上架。",
+        "kycNote": "认证通过之前，买家看不到您的任何商品。"
+      },
+      "statusHint": {
+        "draft": "仅您可见",
+        "active": "买家可见并可下单",
+        "paused": "对买家隐藏"
       }
     },
     "kycGate": {
       "title": "认证仍在进行",
-      "body": "在 KYC 获批并有可审计记录之前，商品可能保持受限。没有审计轨迹绝不会显示已认证徽章。",
+      "body": "您现在就可以准备商品，但只有在认证通过后买家才能看到。",
       "cta": "查看认证状态",
       "wholesaleLocked": "批发价需在可审计的 T2 认证后解锁。"
     },
@@ -732,6 +787,25 @@
         "saveFailed": "无法保存您的规格，请重试。"
       },
       "saving": "正在保存…"
+    },
+    "guide": {
+      "heading": "让商品更好卖的小技巧",
+      "photos": {
+        "title": "照片（最多 8 张）",
+        "body": "使用自然光和纯色背景。第一张照片是买家看到的封面。展示正面、背面、标签以及任何瑕疵。"
+      },
+      "title": {
+        "title": "标题",
+        "body": "写明商品是什么、品牌和关键信息，例如“Samsung A15，128GB，黑色”。不要全部大写，也不要写电话号码。"
+      },
+      "price": {
+        "title": "克瓦查价格",
+        "body": "填写买家支付的完整价格，例如 1250 或 1250.50。平台佣金从该价格中扣除。"
+      },
+      "stock": {
+        "title": "库存和选项",
+        "body": "填写您实际拥有的数量。买家需要选择时（如尺码、颜色）请添加选项——每个选项单独计算库存。"
+      }
     }
   },
   "profile": {
@@ -901,7 +975,11 @@
     "timeline": {
       "heading": "时间线",
       "empty": "暂无事件",
-      "note": "备注：{note}"
+      "note": "备注：{note}",
+      "stateDone": "已完成",
+      "stateCurrent": "当前步骤",
+      "stateUpcoming": "待进行",
+      "srState": "（{state}）"
     },
     "actions": {
       "heading": "操作",
@@ -923,7 +1001,14 @@
       "shipPlaceholder": "例如：Yango 快递，司机 John 0977…",
       "submitReject": "填写原因并拒绝",
       "submitShip": "标记为已发货",
-      "cancel": "取消"
+      "cancel": "取消",
+      "after": {
+        "confirm": "系统会通知顾客您已接单。下一步是打包。",
+        "reject": "订单将被取消并告知顾客原因。如需退款由 Vergeo5 处理。",
+        "pack": "顾客会看到您正在准备订单。",
+        "ship": "骑手取件后点击此处，并填写骑手姓名或电话。",
+        "ready_for_pickup": "系统会通知顾客到您店里取货。"
+      }
     },
     "success": {
       "confirmed": "订单已确认。",
@@ -938,7 +1023,61 @@
       "forbidden": "您只能管理自己的订单。",
       "invalidTransition": "该操作不适用于此订单。",
       "reasonRequired": "拒绝时必须填写原因。",
-      "trackingRequired": "发货时必须填写物流备注。"
+      "trackingRequired": "发货时必须填写物流备注。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "guide": {
+      "headingNow": "现在要做的",
+      "headingNext": "接下来会怎样",
+      "scanCta": "打开扫码页面交付",
+      "paidExplainer": "顾客已付款。Vergeo5 会妥善保管这笔钱，直到订单送达。",
+      "unpaidExplainer": "顾客尚未付款。在显示已收款之前，请不要打包或发货。",
+      "cod": {
+        "body": "订单送达时，顾客用现金付给骑手。您本人无需收取任何款项。",
+        "settlement": "订单款项由 Vergeo5 与您结算——您无需向骑手或顾客催款。"
+      },
+      "steps": {
+        "confirm": {
+          "title": "接受或拒绝此订单",
+          "body": "顾客正在等待。确认所有商品都有货后接单。如果无法履约，请填写原因后拒绝。"
+        },
+        "pack": {
+          "title": "打包商品",
+          "body": "开始时点击“开始打包”。对照下方的商品清单核对尺码和颜色。"
+        },
+        "handToRider": {
+          "title": "把包裹交给骑手",
+          "body": "骑手取件后，点击“标记为已发货”并填写骑手姓名或电话。"
+        },
+        "readyForPickup": {
+          "title": "标记为待自提",
+          "body": "包裹打包好并在店里等候时，点击“待自提”。我们会通知顾客前来。"
+        },
+        "awaitCollection": {
+          "title": "等待顾客取货",
+          "body": "顾客到店后，先在扫码页面扫描其二维码或输入 PIN，再交付商品。"
+        },
+        "awaitDelivery": {
+          "title": "骑手配送中",
+          "body": "现在无需操作。顾客会向骑手提供验证码以确认收货。"
+        },
+        "awaitConfirmation": {
+          "title": "已送达",
+          "body": "顾客有一小段时间可以反馈问题，之后订单会自动完成。"
+        },
+        "done": {
+          "title": "订单已完成",
+          "body": "此订单无需再做任何操作。"
+        },
+        "cancelled": {
+          "title": "订单已取消",
+          "body": "无需操作。请不要发出这些商品。"
+        },
+        "unknown": {
+          "title": "请查看此订单",
+          "body": "刷新以查看最新状态。"
+        }
+      }
     }
   },
   "home": {
@@ -996,6 +1135,55 @@
       "ariaLabel": "快捷入口",
       "listings": "目录",
       "profile": "资料"
+    },
+    "analytics": {
+      "gmv": "销售额"
+    },
+    "tasks": {
+      "heading": "您的下一步",
+      "intro": "从上往下做——最紧急的排在最前面。",
+      "items": {
+        "kycFix": {
+          "title": "修正您的认证资料",
+          "body": "您的一份资料未能通过审核。查看需要修改的地方——无需从头开始。"
+        },
+        "kycFinish": {
+          "title": "完成身份认证",
+          "body": "在我们核实您的身份之前，买家看不到您的店铺。大约需要 5 分钟。"
+        },
+        "kycPending": {
+          "title": "认证正在审核中",
+          "body": "现在无需操作。我们的团队通常会在 1 个工作日内通过 WhatsApp 回复。"
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "请在 14:00 前接单并打包，配送订单即可随当天的骑手发出。"
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "距离 14:00 发货截止不到一小时——请立即接单并打包。"
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "今天 14:00 的截止时间已过。现在准备好，下一批发货时将优先送出。"
+        },
+        "catalogueProducts": {
+          "title": "检查您的商品",
+          "body": "保持库存和价格准确，避免买家订购您没有的商品。"
+        },
+        "catalogueServices": {
+          "title": "检查您的服务",
+          "body": "保持价格和可预约时间最新，并尽快回复报价请求。"
+        },
+        "catalogueEvents": {
+          "title": "检查您的活动",
+          "body": "分享活动前，请确认日期、票种和价格无误。"
+        },
+        "profile": {
+          "title": "完善店铺资料",
+          "body": "店铺标志、营业时间和简短介绍能让买家更信任您。"
+        }
+      }
     }
   },
   "queue": {
@@ -1028,7 +1216,37 @@
       "cancel": "暂不"
     },
     "errors": {
-      "loadFailed": "无法加载订单。下拉刷新。"
+      "loadFailed": "无法加载订单。下拉刷新。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "emptyNeedsAction": {
+      "title": "没有待您处理的订单",
+      "body": "新订单会首先显示在这里。我们也会通过 WhatsApp 通知您。"
+    },
+    "emptyFiltered": {
+      "title": "此视图中没有订单",
+      "body": "换个标签看看，或返回需要您处理的订单。",
+      "cta": "显示需要处理的订单"
+    },
+    "nextStep": {
+      "confirm": "下一步：接受或拒绝",
+      "pack": "下一步：打包商品",
+      "handToRider": "下一步：交给骑手",
+      "readyForPickup": "下一步：标记为待自提",
+      "awaitCollection": "等待顾客取货",
+      "awaitDelivery": "骑手配送中",
+      "awaitConfirmation": "已送达——等待顾客确认",
+      "done": "已完成",
+      "cancelled": "已取消"
+    },
+    "cutoff": {
+      "before": "发货截止 14:00 · 还剩 {time}",
+      "timeHoursMinutes": "{hours} 小时 {minutes} 分钟",
+      "timeMinutes": "{minutes} 分钟",
+      "beforeBody": "在 14:00（卢萨卡时间）前接单、打包并交给骑手的配送订单，将随当天的骑手发出。",
+      "urgentBody": "不到一小时了——请立即完成打包，赶上今天的骑手。",
+      "after": "今天 14:00 的发货截止时间已过",
+      "afterBody": "现在准备的配送订单将在下一批发出。自提订单不受影响。"
     }
   },
   "payouts": {
@@ -1101,7 +1319,27 @@
       "kycRequired": "更改结算方式前请先完成 KYC。",
       "payoutsPaused": "更改结算方式后结算已暂停。",
       "rateLimited": "请求过于频繁。请稍后重试。",
-      "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。"
+      "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "pilot": {
+      "badge": "尚未开通",
+      "title": "试点期间暂未开通付款",
+      "body": "您暂时无法通过本应用收到付款，因此这里没有余额可显示。这是正常的——您的账户没有任何问题。",
+      "meanwhileHeading": "试点期间的资金流程",
+      "meanwhile": {
+        "cod": "货到付款：顾客用现金付给骑手，再由 Vergeo5 与您结算。",
+        "prepaid": "已付款订单：Vergeo5 会妥善保管顾客的钱，直到订单送达。",
+        "questions": "对应付给您的款项有疑问？请联系 Vergeo5 试点团队。"
+      },
+      "laterHeading": "以后这里会显示",
+      "later": {
+        "held": "仍在配送中的订单所暂存的款项",
+        "released": "已释放给您、可以提现的款项",
+        "history": "每一笔转入您移动钱包号码的付款及其状态",
+        "statement": "可下载的月度对账单"
+      },
+      "notify": "开通付款前，我们会通过 WhatsApp 通知您。"
     }
   },
   "scan": {
@@ -1477,7 +1715,7 @@
       "namePlaceholder": "普通入场",
       "priceLabel": "价格（ZMW）",
       "pricePlaceholder": "75.00",
-      "priceHelp": "以克瓦查输入金额；在数据库中以 ngwee 存储（无小数）。",
+      "priceHelp": "以克瓦查填写价格，例如 75 或 75.50。",
       "priceFreeHelp": "免费 RSVP 始终为 K0.00。",
       "qtyCapLabel": "数量上限（可选）",
       "qtyCapPlaceholder": "无限制",
