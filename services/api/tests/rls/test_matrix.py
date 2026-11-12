@@ -3377,6 +3377,36 @@ EXPECTATIONS: TableExpectations = {
     "payment_collection_receipts": client_invisible(),
     "payment_collection_exceptions": client_invisible(),
     "cart_merge_receipts": client_invisible(),
+    # Notification center (20261113050000). Own-row SELECT; the only client UPDATE
+    # grant is the (seen_at, read_at) column pair, so the generic
+    # `SET created_at = created_at` probe is denied; no client INSERT/DELETE.
+    "in_app_notifications": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
+    # Web Push subscriptions: API writes for the caller; clients read/delete own.
+    "web_push_subscriptions": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "permit"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()
