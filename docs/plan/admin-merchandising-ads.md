@@ -39,3 +39,15 @@ events, vendors: create/edit, block, remove, restore).
 - **Category/search sponsored slots**: not built; needs a ranking + labelling rule (how many per page, relevance floor).
 - **Service moderation permission**: the RBAC set has only `services.read`; mutating services is gated to `products.manage` for restricted roles here. A dedicated `services.manage` would be a new permission — left to the RBAC audit.
 - **Event unpublish with sold tickets**: unpublish hides the event page/browse; issued tickets stay valid. Cancel-with-refund remains the organiser/finance flow.
+
+## 4. Delivered on this branch (2026-11-13)
+
+- Migration `20261113020000_catalog_moderation_holds_and_ad_targets.sql` (additive, documented down): holds table, `moderate_catalog_entity` / `release_catalog_moderation`, hold guard triggers, `ad_placements.target_kind/target_id`. Verified on a scratch Postgres (`tests/test_catalog_moderation_db.py`, run with `CATALOG_MODERATION_ISOLATED_DB=1`).
+- API: `/admin/catalog/{listings,services,events,vendors}` (list, moderate, restore, edit text), `/admin/ads/targets`, target validation, remove-with-reason, resolver target/advertiser visibility filter, merch fallback fix, cart/checkout/order-create vendor gate, `catalog.moderation_hold` 409 for vendor re-publish attempts.
+- Admin: Catalog control page + nav entry (products.manage / events.manage / vendors.manage), advertising edit/target/remove/Lusaka-time UX.
+- Customer: Sponsored label covered in all five locales (bem/nya EN passthrough, logged in `PHASE1_NATIVE_REVIEW.md`).
+
+### Follow-ups
+- Vendor/organiser apps do not yet show a friendly message for `catalog.moderation_hold` (they get the API's 409 message).
+- Optional notification to the vendor on hide/block (outbox template) — not wired; flags flow already notifies on its own actions.
+- `packages/types/src/db.ts` was hand-updated; let CI typegen confirm.
