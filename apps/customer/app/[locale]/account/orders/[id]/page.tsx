@@ -95,7 +95,8 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     },
     escrow: {
       held: t("escrow.held"),
-      released: t("escrow.released"),
+      // COD: the platform never held the money, so there is nothing "released".
+      released: order.payment_mode === "cod" ? "" : t("escrow.released"),
       refunded: t("escrow.refunded"),
       cod: t("escrow.cod"),
     },

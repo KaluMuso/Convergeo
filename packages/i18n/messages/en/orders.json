@@ -79,7 +79,7 @@
     "held": "Your payment is held safely by Convergeo until you receive your order.",
     "released": "Funds were released to the vendor after fulfilment.",
     "refunded": "A refund is being returned to your mobile money wallet.",
-    "cod": "Pay the vendor in cash or mobile money when you receive the order."
+    "cod": "Pay in cash when you receive your order."
   },
   "pickup": {
     "title": "Pickup details",

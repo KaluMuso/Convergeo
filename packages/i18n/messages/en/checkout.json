@@ -268,7 +268,7 @@
       "viewOrder": "View order",
       "cod": {
         "orderNumberLabel": "Order number",
-        "amountDueLabel": "Pay on delivery",
+        "amountDueLabel": "Amount to pay in cash",
         "nextTitle": "What happens next",
         "step1Title": "The seller confirms your order",
         "step1Body": "They check stock and accept it. You can follow every update on your order page.",

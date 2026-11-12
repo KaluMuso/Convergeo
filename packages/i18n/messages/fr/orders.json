@@ -79,7 +79,7 @@
     "held": "Votre paiement est conservé en toute sécurité par Convergeo jusqu'à ce que vous receviez votre commande.",
     "released": "Les fonds ont été versés au vendeur une fois votre commande honorée.",
     "refunded": "Un remboursement est en cours vers votre portefeuille mobile money.",
-    "cod": "Payez le vendeur en espèces ou par mobile money à la réception de la commande."
+    "cod": "Payez en espèces à la réception de votre commande."
   },
   "pickup": {
     "title": "Détails du retrait",

@@ -24,7 +24,7 @@
     "notFound": "Order tacasangwa"
   },
   "escrow": {
-    "cod": "Lipileni vendor mu cash nangu mobile money ilyo mupoka order.",
+    "cod": "Lipileni mu cash ilyo mwapokelela order yenu.",
     "held": "Payment yenu yikwata bwino na Convergeo mpaka mupoke order yenu.",
     "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
     "released": "Indalama shyasuminishwa ku vendor pantu fulfilment."

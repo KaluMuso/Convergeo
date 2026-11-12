@@ -24,7 +24,7 @@
     "notFound": "Order sichipezeka"
   },
   "escrow": {
-    "cod": "Lipirani vendor mu cash kapena mobile money mukalandira order.",
+    "cod": "Lipirani mu cash mukalandira order yanu.",
     "held": "Payment yanu ikusungidwa ndi Convergeo mpaka mulandire order yanu.",
     "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
     "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment."
