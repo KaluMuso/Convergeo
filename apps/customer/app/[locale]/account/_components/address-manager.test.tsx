@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { ApiError } from "@vergeo/config";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ApiError } from "@vergeo/config";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
