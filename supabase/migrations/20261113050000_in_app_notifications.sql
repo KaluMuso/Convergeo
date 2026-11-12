@@ -162,6 +162,13 @@ insert into public.feature_flags (flag, enabled, description) values
   )
 on conflict (flag) do nothing;
 
+-- Rate-limit scopes used by services/api/app/routers/notifications.py.
+insert into private.rate_counter_scope_manifest (scope) values
+  ('notifications_read'),
+  ('notifications_write'),
+  ('web_push_subscribe')
+on conflict (scope) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- 2. Writers (service-side only)
 -- ---------------------------------------------------------------------------
@@ -528,3 +535,5 @@ create trigger tickets_in_app
 -- drop table if exists public.in_app_notifications;
 -- drop function if exists private.in_app_notifications_guard_update();
 -- delete from public.feature_flags where flag = 'web_push';
+-- delete from private.rate_counter_scope_manifest
+--   where scope in ('notifications_read', 'notifications_write', 'web_push_subscribe');
