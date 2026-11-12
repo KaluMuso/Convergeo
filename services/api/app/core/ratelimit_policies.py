@@ -74,7 +74,9 @@ CLOUDINARY_WEBHOOK = RateLimitPolicy(
 
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
-# limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
+# limiter outage never drops analytics. Enforced in routers/analytics_collect.py — with
+# feature flag analytics_v2_collect ON the endpoint instead uses the in-process
+# token buckets there (no DB write per beacon; per worker, see plan §R-C).
 PUBLIC_BEACON = RateLimitPolicy(
     scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
 )
@@ -202,6 +204,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /webhooks/cloudinary": CLOUDINARY_WEBHOOK,
     "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
+    "POST /internal/analytics/v2-retention-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,

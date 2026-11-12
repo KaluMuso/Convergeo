@@ -3,10 +3,16 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from anyio import to_thread
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.errors import AppError
 from app.services.analytics import flags as analytics_flags
-from app.services.analytics.retention import RetentionSweepResult, sweep_analytics_retention
+from app.services.analytics.retention import (
+    RetentionSweepResult,
+    analytics_storage_report,
+    sweep_analytics_retention,
+    sweep_v2_retention,
+)
 from app.services.analytics.writer import get_writer
 from fastapi import APIRouter, Depends, Request
 
@@ -76,3 +82,41 @@ async def analytics_ingest_stats() -> dict[str, Any]:
         "limiter_tracked_keys": v2_limiter_keys(),
         "writer": get_writer().stats(),
     }
+
+
+@router.post(
+    "/v2-retention-tick",
+    dependencies=[Depends(require_internal_analytics_token)],
+)
+async def analytics_v2_retention_tick() -> dict[str, Any]:
+    """analytics_v2 retention (1A-07): no-op unless ``analytics_v2_rollups`` is ON.
+
+    Deletes raw v2 events past 30 days, purges stale listing-view dedup keys (2 days)
+    and collapses raw search terms past 30 days to their normalized form. Batched and
+    idempotent; ``complete=false`` means the next tick continues.
+    """
+    if not await analytics_flags.flag_enabled_async(analytics_flags.ROLLUPS_FLAG):
+        return {"skipped": "flag_off"}
+    result = await to_thread.run_sync(sweep_v2_retention)
+    return {
+        "event_log_deleted": result.event_log_deleted,
+        "listing_dedup_purged": result.listing_dedup_purged,
+        "search_terms_scrubbed": result.search_terms_scrubbed,
+        "complete": result.complete,
+    }
+
+
+@router.get(
+    "/storage",
+    dependencies=[Depends(require_internal_analytics_token)],
+)
+async def analytics_storage() -> dict[str, Any]:
+    """DB-impact monitoring (plan §F.3): bytes and row estimates per analytics table."""
+    try:
+        return await to_thread.run_sync(analytics_storage_report)
+    except RuntimeError as exc:
+        raise AppError(
+            code="analytics_storage_unavailable",
+            message="Analytics storage report failed",
+            http_status=503,
+        ) from exc
