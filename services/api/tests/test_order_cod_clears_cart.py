@@ -10,6 +10,7 @@ orders, so a rollback keeps the cart and a commit never leaves a stale line.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Generator
 
 import pytest
 from app.errors import AppError
@@ -34,6 +35,16 @@ from tests.test_order_creation import (
 )
 
 PRICE = 40_000
+
+
+@pytest.fixture(autouse=True)
+def _leave_no_cart_behind(db: PgConn) -> Generator[None, None, None]:  # noqa: F811
+    """The shared customer may hold one active cart; never leak ours to other suites."""
+    yield
+    cleared = db.run(
+        f"DELETE FROM public.carts WHERE user_id = '{CUSTOMER_ID}' OR guest_token LIKE 'cod-cart-clear-%';"
+    )
+    assert cleared.ok, cleared.error
 
 
 def _seed_cart(conn: PgConn, *, listing_ids: list[str]) -> tuple[str, dict[str, str]]:
@@ -196,7 +207,7 @@ def test_cod_order_never_deletes_another_customers_line(
     seeded = db.run(
         f"""
         INSERT INTO public.carts (id, guest_token, status)
-        VALUES ('{other_cart}', 'guest-{other_cart}', 'active');
+        VALUES ('{other_cart}', 'cod-cart-clear-{other_cart}', 'active');
         INSERT INTO public.cart_items (id, cart_id, listing_id, qty, unit_price_ngwee, wholesale)
         VALUES ('{other_item}', '{other_cart}', '{listing_id}', 1, {PRICE}, false);
         """
