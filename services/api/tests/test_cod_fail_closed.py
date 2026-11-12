@@ -100,7 +100,10 @@ def test_confirm_cod_collection_blocks_invalid_snapshot() -> None:
     post.assert_not_called()
 
 
-def test_execute_refund_blocks_uncollected_cod() -> None:
+def test_execute_refund_blocks_uncollected_cod(monkeypatch: pytest.MonkeyPatch) -> None:
+    # COD guard is evaluated with payouts ON; the payouts-off refusal runs earlier
+    # (tests/test_refund_payout_guard.py).
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
     service = MagicMock()
     with (
         patch(
