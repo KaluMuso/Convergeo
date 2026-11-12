@@ -23,7 +23,7 @@ type Status = "hidden" | "idle" | "working" | "on" | "denied" | "failed";
 
 type WebPushConfig = { enabled: boolean; vapid_public_key: string | null };
 
-export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
+export function decodeVapidPublicKey(base64: string): Uint8Array<ArrayBuffer> {
   const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4))
     .replace(/-/g, "+")
     .replace(/_/g, "/");
@@ -90,7 +90,7 @@ export function WebPushOptIn({ request, audience, serviceWorkerUrl, labels }: We
       await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(config.vapid_public_key),
+        applicationServerKey: decodeVapidPublicKey(config.vapid_public_key),
       });
       const json = subscription.toJSON();
       await request("/me/push-subscriptions", {
