@@ -53,6 +53,11 @@ ZONE_BANDS_KM: tuple[tuple[str, float], ...] = (
     ("lusaka_c", 25.0),
 )
 DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000
+# Towns a typed landmark can name that are definitely not Lusaka delivery.
+OTHER_TOWN_TOKENS: tuple[str, ...] = ("ndola", "kitwe", "livingstone", "chipata")
+# platform_config key naming the delivery zone for a typed Lusaka landmark the
+# keyword matcher cannot place. Unset (the default) keeps the strict behaviour.
+FALLBACK_DELIVERY_ZONE_KEY = "delivery_fallback_zone"
 
 
 class ServiceRoleClient(Protocol):
@@ -184,6 +189,11 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * radius_km * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def landmark_names_other_town(landmark: str | None) -> bool:
+    lower = (landmark or "").lower()
+    return any(token in lower for token in OTHER_TOWN_TOKENS)
+
+
 def resolve_delivery_zone(
     *,
     lat: float | None,
@@ -200,7 +210,7 @@ def resolve_delivery_zone(
 
     if landmark:
         lower = landmark.lower()
-        if any(token in lower for token in ("ndola", "kitwe", "livingstone", "chipata")):
+        if landmark_names_other_town(landmark):
             return None
         if "band a" in lower or "central" in lower or "cbd" in lower:
             return "lusaka_a"
@@ -291,6 +301,33 @@ def _load_free_delivery_threshold(service: ServiceRoleClient) -> int:
         if isinstance(raw, str) and raw.isdigit():
             return int(raw)
     return DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+
+
+def _load_fallback_delivery_zone(
+    service: ServiceRoleClient, zones: dict[str, dict[str, Any]]
+) -> str | None:
+    """Operator-chosen zone for a Lusaka landmark the matcher cannot place.
+
+    The fulfilment form collects a free-text landmark and no GPS, and the matcher
+    only knows a handful of area names, so most real Lusaka addresses used to be
+    refused as "outside Lusaka". Which band (and so which fee) such an address
+    gets is a pricing choice, so it is read from ``platform_config`` and only
+    honoured when it names an active zone; unset keeps the refusal.
+    """
+    response = (
+        service.client.table("platform_config")
+        .select("value")
+        .eq("key", FALLBACK_DELIVERY_ZONE_KEY)
+        .maybe_single()
+        .execute()
+    )
+    data = _extract_data(response)
+    if not isinstance(data, dict):
+        return None
+    raw = data.get("value")
+    if isinstance(raw, str) and raw.strip() in zones:
+        return raw.strip()
+    return None
 
 
 def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> dict[str, str]:
@@ -972,6 +1009,13 @@ async def validate_fulfilment_step(
             lng=body.address.lng,
             landmark=body.address.landmark,
         )
+        if (
+            resolved_zone is None
+            and body.address.lat is None
+            and body.address.lng is None
+            and not landmark_names_other_town(body.address.landmark)
+        ):
+            resolved_zone = _load_fallback_delivery_zone(service, zones)
         if resolved_zone is None:
             pickup_only = True
             for choice in body.groups:
