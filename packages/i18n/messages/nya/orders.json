@@ -64,7 +64,21 @@
     "ready": "Yakonzeka ku pickup",
     "refunded": "Refund ku mobile money yanu",
     "shipped": "Ikubwera kwa inu",
-    "title": "Progress ya order"
+    "title": "Progress ya order",
+    "explain": {
+      "placed": "Talandira order yanu ndi kuitumiza kwa seller.",
+      "paymentHeld": "Ndalama yanu ikusungidwa ndi Convergeo. Seller amalipidwa pambuyo pa delivery basi.",
+      "paymentCod": "Palibe ndalama yotengedwa. Mumalipira mu cash mukalandira order.",
+      "confirmed": "Seller wavomereza order yanu ndipo akuikonza.",
+      "processing": "Seller akunyamula zinthu zanu.",
+      "ready": "Order yanu yakonzeka. Onetsani code ya pickup kwa seller mukamatenga.",
+      "shipped": "Order yanu ili ndi rider. Siyani foni ili on ngati angakuyimbireni.",
+      "delivered": "Order yanu yafika. Onani zinthu zanu, kenako tsimikizani pansipa.",
+      "completed": "Order iyi yatha.",
+      "cancelled": "Order iyi yaletsedwa. Lankhulani ndi support ngati simunayembekezere.",
+      "refunded": "Ndalama yanu ikubwerera ku mobile money wallet yanu."
+    },
+    "now": "Pano"
   },
   "title": "Ma-order anu",
   "pickup": {
@@ -86,5 +100,11 @@
     "tracking": "Note ya tracking",
     "empty": "Zambiri za dispatch zidzaonekera apa order yanu ikubwera.",
     "statusUpdates": "Zosintha za status"
+  },
+  "help": {
+    "title": "Mukufuna thandizo pa order iyi?",
+    "beforeDispatch": "Mukufuna kusintha kapena kuletsa? Lankhulani ndi support ndi nambala ya order isanatumizidwe.",
+    "afterDispatch": "Pali vuto ndi order yanu? Lankhulani ndi support ndi nambala ya order.",
+    "contactCta": "Lankhulani ndi support"
   }
 }

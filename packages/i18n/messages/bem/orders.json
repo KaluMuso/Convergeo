@@ -64,7 +64,21 @@
     "ready": "Yikwete kale ku pickup",
     "refunded": "Refund ku mobile money yenu",
     "shipped": "Ileisa kuli imwe",
-    "title": "Progress ya order"
+    "title": "Progress ya order",
+    "explain": {
+      "placed": "Twapokelela order yenu no kuitumina seller.",
+      "paymentHeld": "Indalama yenu yasungwa na Convergeo. Seller alipilwa fye pa numa ya delivery.",
+      "paymentCod": "Tapali indalama yashimbwa. Mulalipila mu cash ilyo mwapokelela order.",
+      "confirmed": "Seller asuminisha order yenu kabili alepekanya.",
+      "processing": "Seller alepakila ifintu fyenu.",
+      "ready": "Order yenu yaipekanishiwa. Langeni code ya pickup kuli seller ilyo mwaya mukusenda.",
+      "shipped": "Order yenu ili na rider. Shalikeni foni ili on nga kuti amutumina.",
+      "delivered": "Order yenu yafika. Lolesheni ifintu fyenu, lyena suminisheni panshi.",
+      "completed": "Iyi order yapwa.",
+      "cancelled": "Iyi order yafumishiwapo. Tumineni support nga tamwalecitenekela.",
+      "refunded": "Indalama yenu ileya ku mobile money wallet yenu."
+    },
+    "now": "Nomba"
   },
   "title": "Ama-order yenu",
   "pickup": {
@@ -86,5 +100,11 @@
     "tracking": "Note ya tracking",
     "empty": "Ifya dispatch fikaboneka apa ilyo order yenu ileisa.",
     "statusUpdates": "Updates ya status"
+  },
+  "help": {
+    "title": "Mulefwaya ubwafwilisho pali iyi order?",
+    "beforeDispatch": "Mulefwaya ukwaluka nangu ukufumyapo? Tumineni support na namba ya order ilyo tailatumwa.",
+    "afterDispatch": "Kwaliba ubwafya na order yenu? Tumineni support na namba ya order.",
+    "contactCta": "Tumineni support"
   }
 }

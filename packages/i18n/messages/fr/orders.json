@@ -58,7 +58,21 @@
     "delivered": "Livrée",
     "completed": "Paiement versé au vendeur",
     "cancelled": "Commande annulée",
-    "refunded": "Remboursement sur votre mobile money"
+    "refunded": "Remboursement sur votre mobile money",
+    "explain": {
+      "placed": "Nous avons reçu votre commande et l'avons transmise au vendeur.",
+      "paymentHeld": "Votre paiement est conservé par Convergeo. Le vendeur n'est payé qu'après la livraison.",
+      "paymentCod": "Rien n'a été débité. Vous payez en espèces à la réception.",
+      "confirmed": "Le vendeur a accepté votre commande et la prépare.",
+      "processing": "Le vendeur emballe vos articles.",
+      "ready": "Votre commande est prête. Montrez votre code de retrait au vendeur.",
+      "shipped": "Votre commande est avec le livreur. Gardez votre téléphone allumé au cas où il appelle.",
+      "delivered": "Votre commande a été livrée. Vérifiez vos articles, puis confirmez ci-dessous.",
+      "completed": "Cette commande est terminée.",
+      "cancelled": "Cette commande a été annulée. Contactez l'assistance si vous ne vous y attendiez pas.",
+      "refunded": "Votre remboursement est en route vers votre portefeuille mobile money."
+    },
+    "now": "En cours"
   },
   "escrow": {
     "held": "Votre paiement est conservé en toute sécurité par Convergeo jusqu'à ce que vous receviez votre commande.",
@@ -209,5 +223,11 @@
     "loading": "Chargement du formulaire d'avis…",
     "starFilled": "★",
     "starEmpty": "☆"
+  },
+  "help": {
+    "title": "Besoin d'aide pour cette commande ?",
+    "beforeDispatch": "Envie de modifier ou d'annuler ? Contactez l'assistance avec votre numéro de commande avant l'expédition.",
+    "afterDispatch": "Un problème avec votre commande ? Contactez l'assistance avec votre numéro de commande.",
+    "contactCta": "Contacter l'assistance"
   }
 }

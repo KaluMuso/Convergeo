@@ -97,7 +97,22 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       refunded: t("escrow.refunded"),
       cod: t("escrow.cod"),
     },
+    explain: {
+      placed: t("timeline.explain.placed"),
+      paymentHeld: t("timeline.explain.paymentHeld"),
+      paymentCod: t("timeline.explain.paymentCod"),
+      confirmed: t("timeline.explain.confirmed"),
+      processing: t("timeline.explain.processing"),
+      ready: t("timeline.explain.ready"),
+      shipped: t("timeline.explain.shipped"),
+      delivered: t("timeline.explain.delivered"),
+      completed: t("timeline.explain.completed"),
+      cancelled: t("timeline.explain.cancelled"),
+      refunded: t("timeline.explain.refunded"),
+    },
+    now: t("timeline.now"),
   };
+  const beforeDispatch = ["placed", "confirmed", "processing", "ready"].includes(order.status);
 
   // Courier dispatch v1 — owner-only endpoint; a failure here must never break
   // the order page, so it degrades to the legacy dispatch timeline.
@@ -141,6 +156,25 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       </header>
 
       <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
+
+      <section
+        aria-labelledby="order-help-heading"
+        className="space-y-2 rounded border border-border bg-bg-2 p-4"
+        data-testid="order-help"
+      >
+        <h3 id="order-help-heading" className="text-sm font-semibold text-display-ink">
+          {t("help.title")}
+        </h3>
+        <p className="text-sm text-text-2">
+          {beforeDispatch ? t("help.beforeDispatch") : t("help.afterDispatch")}
+        </p>
+        <Link
+          href={`/${locale}/contact`}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {t("help.contactCta")}
+        </Link>
+      </section>
 
       {courierDelivery ? (
         <CourierDeliveryBlock
