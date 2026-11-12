@@ -23,7 +23,7 @@ def _cleanup(db: PgConn) -> None:
     result = db.run_script(
         "BEGIN;\n"
         # orders refuse client deletes (guard trigger); the cleanup acts as service_role.
-        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}';\n"
+        'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\';\n'
         "DELETE FROM public.orders o USING public.checkout_groups g "
         f"WHERE o.checkout_group_id = g.id AND g.idempotency_key LIKE '{PREFIX}%';\n"
         f"DELETE FROM public.checkout_groups WHERE idempotency_key LIKE '{PREFIX}%';\n"
