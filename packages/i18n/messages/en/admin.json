@@ -23,6 +23,7 @@
     "kyc": "KYC queue",
     "business": "Business",
     "moderation": "Moderation",
+    "catalog": "Catalog control",
     "disputes": "Disputes",
     "orders": "Orders",
     "config": "Configuration",
@@ -1583,7 +1584,9 @@
     "ctaHint": "Internal path (e.g. /c/electronics) or an https link on an approved advertiser domain.",
     "errors": {
       "invalidAmount": "Enter a kwacha amount such as 1500 or 99.50.",
-      "invalidWindow": "End must be after start."
+      "invalidWindow": "End must be after start.",
+      "targetNotVisible": "That item is not visible to customers, so it cannot be advertised.",
+      "reasonRequired": "Enter a reason (at least 3 characters)."
     },
     "kinds": {
       "vendor": "Vendor",
@@ -1635,6 +1638,42 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    },
+    "edit": "Edit",
+    "editTitle": "Edit placement",
+    "saveChanges": "Save changes",
+    "updated": "Placement updated",
+    "remove": "Remove",
+    "removeTitle": "Remove this placement?",
+    "removeSummary": "“{headline}” stops showing immediately and is ended for good. Its history and stats are kept.",
+    "reasonLabel": "Reason (required, kept in the audit log)",
+    "reasonPlaceholder": "e.g. advertiser withdrew, wrong creative",
+    "removed": "Placement removed",
+    "lusakaTime": "Times are Africa/Lusaka (CAT).",
+    "emptyBody": "Create a placement to promote a product, service, event or vendor on the home feed or hero carousel.",
+    "targetHidden": "Not showing: the promoted item is hidden, blocked or its vendor is suspended.",
+    "targetLabel": "Promotes {kind}",
+    "copyId": "Copy placement ID",
+    "target": {
+      "title": "What does this ad promote?",
+      "kind": "Target type",
+      "none": "Nothing (link only)",
+      "search": "Search by name",
+      "searchButton": "Search",
+      "searching": "Searching…",
+      "noResults": "No matches.",
+      "use": "Use",
+      "selected": "Selected: {label}",
+      "clear": "Clear target",
+      "unavailable": "Hidden from customers",
+      "hint": "Ads with a target disappear automatically if the target is hidden, blocked or its vendor is suspended."
+    },
+    "targetKinds": {
+      "listing": "Listing",
+      "product": "Product",
+      "service": "Service",
+      "event": "Event",
+      "vendor": "Vendor"
     }
   },
   "dispatch": {
@@ -1819,6 +1858,70 @@
     "notifications": {
       "title": "Failed notifications",
       "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
+    }
+  },
+  "catalog": {
+    "title": "Catalog control",
+    "subtitle": "Find any listing, service, event or vendor and control what customers see. Every action needs a reason and is written to the audit log.",
+    "tabs": {
+      "listings": "Listings",
+      "services": "Services",
+      "events": "Events",
+      "vendors": "Vendors"
+    },
+    "search": "Search by name",
+    "searchButton": "Search",
+    "heldOnly": "Only hidden or blocked",
+    "loading": "Loading…",
+    "loadError": "Could not load this list.",
+    "permissionDenied": "You do not have permission to manage this tab.",
+    "permissionHint": "Ask a superadmin to grant the matching permission.",
+    "retry": "Retry",
+    "empty": "Nothing matches.",
+    "emptyBody": "Try another search, or clear “Only hidden or blocked”.",
+    "visible": "Visible to customers",
+    "notVisible": "Not visible to customers",
+    "statusLabel": "Status: {status}",
+    "heldBy": "{action, select, hide {Hidden} block {Blocked} other {Held}} by admin: {reason}",
+    "vendorSuspendedNote": "Vendor not active — hidden everywhere until the vendor is restored.",
+    "open": "Open on site",
+    "copyId": "Copy ID",
+    "actions": {
+      "hide": "Hide",
+      "block": "Block",
+      "restore": "Restore",
+      "edit": "Edit text"
+    },
+    "confirm": {
+      "hideTitle": "Hide from customers?",
+      "hideSummary": "“{label}” disappears from search, the home feed, its page and checkout. The vendor cannot re-publish it until you restore it.",
+      "blockTitle": "Block?",
+      "blockSummary": "“{label}” is blocked: removed from every customer surface, carts and checkout. The vendor cannot undo this.",
+      "blockVendorSummary": "“{label}” is suspended: all its listings, services and events disappear from search, the home feed, pages and checkout. Its open orders are not cancelled.",
+      "restoreTitle": "Restore?",
+      "restoreSummary": "“{label}” returns to the status it had before it was hidden or blocked.",
+      "restoreVendorSummary": "“{label}” is reactivated. Only possible while the vendor’s KYC is approved.",
+      "editTitle": "Edit display text",
+      "editSummary": "Changes what customers read for “{label}”. Status, price and ownership are not changed here.",
+      "reasonLabel": "Reason (required, kept in the audit log)",
+      "reasonPlaceholder": "e.g. counterfeit report confirmed",
+      "titleLabel": "Title / name",
+      "descriptionLabel": "Description",
+      "confirmHide": "Hide",
+      "confirmBlock": "Block",
+      "confirmRestore": "Restore",
+      "confirmEdit": "Save text"
+    },
+    "done": {
+      "hide": "Hidden from customers",
+      "block": "Blocked",
+      "restore": "Restored",
+      "edit": "Text updated"
+    },
+    "errors": {
+      "generic": "That did not work. Refresh and try again.",
+      "conflict": "Not allowed from its current state (it may already be hidden, or the vendor’s KYC is not approved).",
+      "permission": "You do not have permission for this action."
     }
   }
 }
