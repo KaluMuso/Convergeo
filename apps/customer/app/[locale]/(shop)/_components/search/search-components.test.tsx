@@ -317,6 +317,28 @@ describe("ZeroResults", () => {
       "Ask Vergeo assistant slot",
     );
   });
+
+  it("hides the category block when the categories API gave nothing", () => {
+    render(
+      <ZeroResults
+        query="zzzz-no-match"
+        locale="en"
+        labels={{
+          title: "No results",
+          suggestionsTitle: "Try searching for",
+          categoriesTitle: "Browse categories",
+          suggestionTerms: ["chitenge"],
+          categories: [],
+          askVergeoTitle: "Ask Vergeo",
+          askVergeoTeaser: "Not sure what to search?",
+          askVergeoSlotLabel: "Ask Vergeo assistant slot",
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("Browse categories")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ask-vergeo-slot")).toBeInTheDocument();
+  });
 });
 
 describe("Recent searches localStorage", () => {

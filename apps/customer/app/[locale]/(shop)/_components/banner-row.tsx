@@ -1,6 +1,8 @@
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
+import { withLocaleHref } from "./merch-href";
+
 import type { MerchSlotRow } from "./merch-data";
 
 type CatalogTranslator = {
@@ -29,7 +31,10 @@ function parseBannerItems(payload: Record<string, unknown>, locale: string): Ban
 
     const record = entry as Record<string, unknown>;
     const title = typeof record.title === "string" ? record.title : undefined;
-    const href = typeof record.href === "string" ? record.href : `/${locale}/search`;
+    const href = withLocaleHref(
+      locale,
+      typeof record.href === "string" ? record.href : `/${locale}/search`,
+    );
 
     if (!title) {
       return [];

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
 import { isPastEventInstance } from "../_lib/instance-time";
+import { buyerPlatformFeeNgwee, parsePlatformFeeBps } from "../_lib/platform-fee";
 import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
 
 export type TicketPickerInstance = {
@@ -47,6 +48,8 @@ export type TicketPickerProps = {
   ticketTypes: TicketPickerType[];
   isSoldOut: boolean;
   platformFeePayer?: "organiser" | "buyer";
+  /** Buyer fee rate (bps) from the events API; without it a buyer-pays total is not shown. */
+  platformFeeBps?: number | null;
 };
 
 async function getAccessToken(): Promise<string | null> {
@@ -94,6 +97,7 @@ export function TicketPicker({
   ticketTypes,
   isSoldOut,
   platformFeePayer = "organiser",
+  platformFeeBps = null,
 }: TicketPickerProps) {
   const t = useTranslations("events.ticketPurchase");
   const tEvents = useTranslations("events");
@@ -142,10 +146,12 @@ export function TicketPicker({
   }, [selectedType, qty]);
 
   const lineTotalNgwee = resolvedUnitNgwee * qty;
+  const feeBps = parsePlatformFeeBps(platformFeeBps);
+  const buyerPaysFee = platformFeePayer === "buyer" && !selectedType?.is_free;
+  // Buyer pays the fee but the API gave no rate: never show a total that omits it.
+  const feeUnknown = buyerPaysFee && feeBps === null;
   const platformFeeNgwee =
-    platformFeePayer === "buyer" && !selectedType?.is_free
-      ? Math.floor((lineTotalNgwee * 500) / 10_000)
-      : 0;
+    buyerPaysFee && feeBps !== null ? buyerPlatformFeeNgwee(lineTotalNgwee, feeBps) : 0;
   const checkoutTotalNgwee = lineTotalNgwee + platformFeeNgwee;
 
   const earlyBirdActive = useMemo(
@@ -466,7 +472,7 @@ export function TicketPicker({
         </label>
       ) : null}
 
-      {selectedType && !selectedType.is_free ? (
+      {selectedType && !selectedType.is_free && !feeUnknown ? (
         <div className="flex flex-col gap-1 text-sm">
           {platformFeeNgwee > 0 ? (
             <>

@@ -415,3 +415,13 @@ def test_readyz_logs_upstream_failure_for_data_api_401(
     assert record.dependency == "supabase_rest"
     assert record.failure_kind == UpstreamFailureKind.UNEXPECTED_STATUS.value
     assert record.status_code == 401
+
+
+@pytest.mark.parametrize("path", ["/healthz", "/readyz"])
+def test_head_matches_get_status_without_body(client: TestClient, path: str) -> None:
+    """Free UptimeRobot monitors probe with HEAD only (GET-only routes 405)."""
+    got = client.get(path)
+    head = client.head(path)
+    assert head.status_code == got.status_code
+    assert head.status_code != 405
+    assert head.content == b""

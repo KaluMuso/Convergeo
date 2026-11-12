@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { formatListingQuantity, type SaleUnitLabels } from "../../_components/sale-quantity";
 import {
   fetchStandaloneListing,
@@ -63,7 +64,10 @@ function unitLabels(t: CatalogTranslator): SaleUnitLabels {
   };
 }
 
-function toBuyBoxListing(listing: StandaloneListing): BuyBoxListing {
+function toBuyBoxListing(
+  listing: StandaloneListing,
+  lowStockThreshold: number | null,
+): BuyBoxListing {
   return {
     id: listing.id,
     title: listing.title,
@@ -72,6 +76,7 @@ function toBuyBoxListing(listing: StandaloneListing): BuyBoxListing {
     productClass: listing.product_class,
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
+    lowStockThreshold,
     moq: listing.moq,
     inStock: listing.in_stock,
     saleUnit: listing.sale_unit,
@@ -162,7 +167,10 @@ export default async function StandaloneListingPage({ params }: PageProps) {
     getTranslator(locale, "nav"),
     getOptionalAccessToken(),
   ]);
-  const result = await fetchStandaloneListing(id, accessToken);
+  const [result, storefrontConfig] = await Promise.all([
+    fetchStandaloneListing(id, accessToken),
+    fetchStorefrontConfig(),
+  ]);
 
   if (result.kind === "not_found") {
     notFound();
@@ -259,7 +267,7 @@ export default async function StandaloneListingPage({ params }: PageProps) {
 
       <StandaloneListingBody
         locale={locale}
-        listing={toBuyBoxListing(listing)}
+        listing={toBuyBoxListing(listing, storefrontConfig.lowStockThreshold)}
         sellerName={listing.vendor.name}
         images={images}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}

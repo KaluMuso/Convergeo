@@ -21,7 +21,10 @@ async function loadMarketing(locale: string): Promise<AbstractIntlMessages> {
 async function getMarketingTranslator(locale: string): Promise<MarketingTranslator> {
   const baseMessages = await getMessages();
   const marketingMessages = await loadNamespace(locale as Locale, "marketing");
-  const messages = { ...baseMessages, marketing: marketingMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    marketing: marketingMessages,
+  } as AbstractIntlMessages;
   return createTranslator({
     locale,
     messages,
@@ -51,6 +54,7 @@ export default async function HelpPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getMarketingTranslator(locale);
+  const whatsappHref = buildWhatsappLink();
   const index = buildSearchIndex();
   const clientMessages = await loadMarketing(locale);
 
@@ -72,14 +76,16 @@ export default async function HelpPage({ params }: PageProps) {
         <h2 className="font-display text-h2 text-display-ink">{t("cta.heading")}</h2>
         <p className="text-body text-text-2">{t("cta.body")}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <a
-            className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-            href={buildWhatsappLink()}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            {t("cta.whatsapp")}
-          </a>
+          {whatsappHref ? (
+            <a
+              className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
+              href={whatsappHref}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {t("cta.whatsapp")}
+            </a>
+          ) : null}
           <LinkButton href={`/${locale}/contact`} variant="secondary" LinkComponent={Link}>
             {t("cta.contact")}
           </LinkButton>

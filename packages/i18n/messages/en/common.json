@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "Zambia's marketplace — escrow-backed shopping"
   },
   "meta": {
     "defaultDescription": "Shop products, book services, and find events across Zambia on Convergeo — Zambia's multivendor marketplace.",

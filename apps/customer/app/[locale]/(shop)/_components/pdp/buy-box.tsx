@@ -33,6 +33,8 @@ export type BuyBoxListing = {
   productClass?: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
+  /** platform_config low_stock_threshold from the public config API; null/undefined = no low-stock label. */
+  lowStockThreshold?: number | null;
   moq: number;
   inStock: boolean;
   saleUnit?: SaleUnit;
@@ -144,7 +146,11 @@ export function getStockLabel(
   if (listing.stockMode === "always_available") {
     return labels.alwaysAvailableLabel;
   }
-  if (listing.stockQty !== null && listing.stockQty <= 5) {
+  if (
+    listing.stockQty !== null &&
+    typeof listing.lowStockThreshold === "number" &&
+    listing.stockQty <= listing.lowStockThreshold
+  ) {
     return labels.lowStockLabel(listing.stockQty);
   }
   return labels.inStockLabel;

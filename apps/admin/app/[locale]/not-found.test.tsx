@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { getLocale } from "next-intl/server";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -54,5 +55,10 @@ describe("admin not-found page", () => {
 
     expect(html).toContain("Vergeo5 Admin");
     expect(html).toContain("Home");
+  });
+
+  it("links home to the current locale, not a hard-coded /en", async () => {
+    vi.mocked(getLocale).mockResolvedValueOnce("fr");
+    expect(renderToStaticMarkup(await NotFound())).toContain('href="/fr"');
   });
 });

@@ -135,7 +135,18 @@ describe("buy-box helpers", () => {
       ...labels,
       lowStockLabel: (count: number) => `Only ${count} left`,
     };
-    expect(getStockLabel(inStockListing, withLowStock)).toBe("Only 5 left");
+    expect(getStockLabel({ ...inStockListing, lowStockThreshold: 5 }, withLowStock)).toBe(
+      "Only 5 left",
+    );
+    // Threshold is API-driven: 3 units is not "low" under a threshold of 2...
+    expect(
+      getStockLabel({ ...inStockListing, stockQty: 3, lowStockThreshold: 2 }, withLowStock),
+    ).toBe("In stock");
+    // ...and with no threshold available we never invent a low-stock claim.
+    expect(getStockLabel(inStockListing, withLowStock)).toBe("In stock");
+    expect(getStockLabel({ ...inStockListing, lowStockThreshold: null }, withLowStock)).toBe(
+      "In stock",
+    );
     expect(getStockLabel(outOfStockListing, withLowStock)).toBe("Out of stock");
     expect(
       getStockLabel(
@@ -167,7 +178,7 @@ describe("BuyBox", () => {
     const user = userEvent.setup();
     render(
       <BuyBox
-        listing={inStockListing}
+        listing={{ ...inStockListing, lowStockThreshold: 5 }}
         labels={labels}
         pickupLabels={pickupLabels}
         singleVendor={false}

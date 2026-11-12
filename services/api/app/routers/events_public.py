@@ -17,6 +17,7 @@ from app.services.events.date_windows import (
     instance_in_bounds,
     window_bounds,
 )
+from app.services.events.fees import EVENT_TICKETS_RATE_BPS
 from app.services.events.ranking import (
     NEAR_ME_DEFAULT_KM,
     browse_rank_tuple,
@@ -139,6 +140,9 @@ class EventDetailResponse(BaseModel):
     visibility: Literal["public", "unlisted", "private"] = "public"
     age_restriction: int | None = None
     platform_fee_payer: Literal["organiser", "buyer"] = "organiser"
+    # Buyer pass-through fee rate (bps of the ticket line) — the same constant the
+    # ticket purchase charges with, so the UI never re-hard-codes it.
+    platform_fee_bps: int = EVENT_TICKETS_RATE_BPS
     id_check_enabled: bool = False
     instances: list[EventInstanceResponse] = Field(default_factory=list)
     ticket_types: list[TicketTypeResponse] = Field(default_factory=list)
@@ -849,6 +853,7 @@ def build_detail_response(
         ),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
         platform_fee_payer="buyer" if event.get("platform_fee_payer") == "buyer" else "organiser",
+        platform_fee_bps=EVENT_TICKETS_RATE_BPS,
         id_check_enabled=bool(event.get("id_check_enabled")),
         instances=instance_responses,
         ticket_types=ticket_type_responses,

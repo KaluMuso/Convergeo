@@ -547,6 +547,28 @@ def test_detail_surfaces_category_and_event_landmark(store: FakeSupabaseStore) -
     assert detail.landmark == "Next to the National Museum"
 
 
+def test_detail_surfaces_platform_fee_bps_matching_ticket_purchase(
+    store: FakeSupabaseStore,
+) -> None:
+    from app.services.events.fees import EVENT_TICKETS_RATE_BPS, platform_fee_ngwee
+
+    _append_categorised_event(
+        store,
+        suffix="fe",
+        slug="fee-event",
+        title="Fee Event",
+        category_slug="cultural-arts",
+        landmark="Somewhere",
+    )
+    detail = build_detail_response(store, "fee-event")
+    assert detail.platform_fee_bps == EVENT_TICKETS_RATE_BPS
+    # The UI computes floor(line * bps / 10_000); it must equal what the API charges.
+    assert (
+        platform_fee_ngwee(line_total_ngwee=12_345, fee_payer="buyer", is_free=False)
+        == (12_345 * detail.platform_fee_bps) // 10_000
+    )
+
+
 def test_browse_tonight_filter(store: FakeSupabaseStore) -> None:
     response = build_browse_response(store, date_window="tonight", ref=REF_THURSDAY)
     slugs = {item.slug for item in response.items}

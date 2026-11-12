@@ -11,6 +11,7 @@ import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
+import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { PopularSearches } from "../_components/search/popular-searches";
 import { RecentSearches } from "../_components/search/recent-searches";
@@ -264,12 +265,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     tabCounts,
   });
 
-  const categorySuggestions = [
-    { key: "electronics", href: `/${locale}/c/electronics`, label: t("categories.electronics") },
-    { key: "fashion", href: `/${locale}/c/fashion`, label: t("categories.fashion") },
-    { key: "home", href: `/${locale}/c/home-living`, label: t("categories.home") },
-    { key: "groceries", href: `/${locale}/c/groceries-staples`, label: t("categories.groceries") },
-  ];
+  const categorySuggestions = categoriesResult.ok
+    ? buildTopCategorySuggestions(categoriesResult.categories, locale)
+    : [];
 
   const suggestionTerms = [
     t("suggestionTerms.phones"),
