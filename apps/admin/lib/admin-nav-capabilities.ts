@@ -20,6 +20,8 @@ export function resolveAdminNavCapabilities(
     home: has("analytics.read"),
     kyc: has("vendors.manage"),
     moderation: has("products.manage"),
+    // Catalog control: each tab is still gated by the API per entity kind.
+    catalog: has("products.manage") || has("events.manage") || has("vendors.manage"),
     disputes: unrestricted,
     support: unrestricted,
     intake: has("vendors.manage"),

@@ -3037,6 +3037,8 @@ EXPECTATIONS: TableExpectations = {
     "ad_placements": client_invisible(),
     "ad_placement_transitions": client_invisible(),
     "ad_placement_daily_stats": client_invisible(),
+    # Admin catalog control holds (20261113091000): service-role only.
+    "catalog_moderation_holds": client_invisible(),
     "flash_deals": client_invisible(),
     "product_questions": client_invisible(),
     "product_answers": client_invisible(),

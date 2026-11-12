@@ -75,9 +75,9 @@ describe("admin navigation from current API permissions", () => {
 
   it.each([
     ["finance.read", ["orders"]],
-    ["events.manage", ["events"]],
-    ["products.manage", ["moderation"]],
-    ["vendors.manage", ["kyc", "intake", "business"]],
+    ["events.manage", ["catalog", "events"]],
+    ["products.manage", ["moderation", "catalog"]],
+    ["vendors.manage", ["kyc", "catalog", "intake", "business"]],
     ["ads.manage", ["merch", "homeFeed", "advertising"]],
     ["analytics.read", ["home"]],
     ["services.read", ["services"]],
@@ -90,6 +90,7 @@ describe("admin navigation from current API permissions", () => {
     expect(visible(["finance.read", "products.manage", "vendors.manage", "finance.read"])).toEqual([
       "kyc",
       "moderation",
+      "catalog",
       "intake",
       "orders",
       "business",
@@ -107,14 +108,14 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("intake");
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
-    expect(keys).toHaveLength(18);
+    expect(keys).toHaveLength(19);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
 
   it("removes previously visible items on role update and revocation", () => {
     expect(visible(["finance.read"])).toEqual(["orders"]);
-    expect(visible(["products.manage"])).toEqual(["moderation"]);
+    expect(visible(["products.manage"])).toEqual(["moderation", "catalog"]);
     expect(visible([])).toEqual([]);
   });
 
@@ -314,12 +315,12 @@ describe("mounted current-permission shell", () => {
     await renderRoute("/en/orders");
     current = grants(["finance.read", "products.manage"]);
     await refocus();
-    expect(navHrefs()).toEqual(["/en/moderation", "/en/orders"]);
+    expect(navHrefs()).toEqual(["/en/moderation", "/en/catalog", "/en/orders"]);
     current = grants(["products.manage"]);
     await refocus();
     expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
     expect(container.querySelector("[data-protected-route]")).toBeNull();
-    expect(navHrefs()).toEqual(["/en/moderation"]);
+    expect(navHrefs()).toEqual(["/en/moderation", "/en/catalog"]);
     current = grants([]);
     await refocus();
     expect(navHrefs()).toEqual([]);
@@ -339,7 +340,7 @@ describe("mounted current-permission shell", () => {
     await act(async () => {
       old.resolve(reply(grants([], true)));
     });
-    expect(navHrefs()).toEqual(["/en/moderation"]);
+    expect(navHrefs()).toEqual(["/en/moderation", "/en/catalog"]);
     expect(container.querySelector('[data-protected-route="/en/moderation"]')).not.toBeNull();
     const slower = deferred<Response>();
     nextReply = slower.promise;

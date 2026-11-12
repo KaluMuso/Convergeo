@@ -332,14 +332,14 @@ describe("role forms and mutation lifecycle through the current permission shell
 
     fixture.account = "target";
     await shell("/en/orders", <p data-target-content>Fixture order read</p>);
-    expect(nav()).toEqual(["/en/moderation", "/en/orders", "/en/services"]);
+    expect(nav()).toEqual(["/en/moderation", "/en/catalog", "/en/orders", "/en/services"]);
     expect(container.querySelector("[data-target-content]")).not.toBeNull();
     // A separately authorized actor revokes the synthetic row in this fixture.
     // The restricted browser performs only its normal permission recheck.
     assignments = assignments.filter((row) => row.role !== "rbac_finance");
     const before = mutations().length;
     await act(async () => window.dispatchEvent(new Event("focus")));
-    expect(nav()).toEqual(["/en/moderation", "/en/services"]);
+    expect(nav()).toEqual(["/en/moderation", "/en/catalog", "/en/services"]);
     expect(container.querySelector("[data-target-content]")).toBeNull();
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
       "admin.shell.permissionDenied",

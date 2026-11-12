@@ -46,6 +46,35 @@ def create_guest_cart(guest_token: str) -> dict[str, Any]:
     return {"id": cart_id, "user_id": None, "guest_token": guest_token, "status": "active"}
 
 
+# A listing is only purchasable while its vendor storefront is active. Cart and
+# checkout read listings with the service role (RLS does not apply), so the
+# vendor gate that RLS enforces for public reads is re-applied here: the
+# in-memory projection of a suspended vendor's listing reports this status, and
+# every downstream ``status != "active"`` check (add, read, merge, checkout,
+# order create) blocks the line with its existing non-disclosing conflict.
+VENDOR_UNAVAILABLE_STATUS = "unavailable"
+
+
+def _active_vendor_ids(service: Any, vendor_ids: set[str]) -> set[str]:
+    if not vendor_ids:
+        return set()
+    response = (
+        service.client.table("vendors").select("id, status").in_("id", sorted(vendor_ids)).execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    return {
+        str(row["id"]) for row in rows if isinstance(row, dict) and row.get("status") == "active"
+    }
+
+
+def apply_vendor_gate(service: Any, listings: dict[str, dict[str, Any]]) -> None:
+    vendor_ids = {str(row.get("vendor_id")) for row in listings.values() if row.get("vendor_id")}
+    active = _active_vendor_ids(service, vendor_ids)
+    for row in listings.values():
+        if str(row.get("vendor_id")) not in active:
+            row["status"] = VENDOR_UNAVAILABLE_STATUS
+
+
 def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[str, Any]:
     """Load a listing for a cart mutation, applying D36's wholesale omission rule.
 
@@ -79,6 +108,7 @@ def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[s
     if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
         raise _not_found()
     listing = rows[0]
+    apply_vendor_gate(service, {listing_id: listing})
 
     # D36 — a wholesale-only listing is omitted from every consumer surface, and a
     # direct hit is answered as though it never existed.
@@ -127,6 +157,7 @@ def fetch_listings_for_items(items: list[dict[str, Any]]) -> dict[str, dict[str,
     if not isinstance(rows, list):
         return {}
     listings = {str(row["id"]): row for row in rows if isinstance(row, dict)}
+    apply_vendor_gate(service, listings)
     # One cart line per listing, so each listing can be viewed "as the line's
     # variant": price override, availability and label are overlaid here and
     # every downstream price derivation (read path, checkout, orders) agrees.

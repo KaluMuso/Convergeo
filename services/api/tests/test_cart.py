@@ -558,7 +558,7 @@ class TestWholesaleOnlyIsOmittedFromTheCart:
     """
 
     @staticmethod
-    def _store_returning(row: dict[str, Any] | None) -> Any:
+    def _store_returning(row: dict[str, Any] | None, vendor_status: str = "active") -> Any:
         """Fake the service-role client chain `fetch_listing` walks."""
 
         class FakeQuery:
@@ -574,8 +574,21 @@ class TestWholesaleOnlyIsOmittedFromTheCart:
             def execute(self) -> MagicMock:
                 return MagicMock(data=[row] if row is not None else [])
 
+        class FakeVendors:
+            def select(self, *_a: Any, **_k: Any) -> FakeVendors:
+                return self
+
+            def in_(self, _field: str, ids: list[str]) -> FakeVendors:
+                self._ids = ids
+                return self
+
+            def execute(self) -> MagicMock:
+                return MagicMock(data=[{"id": vid, "status": vendor_status} for vid in self._ids])
+
         service = MagicMock()
-        service.client.table.return_value = FakeQuery()
+        service.client.table.side_effect = lambda name: (
+            FakeVendors() if name == "vendors" else FakeQuery()
+        )
         return service
 
     def _fetch(
@@ -584,11 +597,23 @@ class TestWholesaleOnlyIsOmittedFromTheCart:
         row: dict[str, Any] | None,
         *,
         business_eligible: bool,
+        vendor_status: str = "active",
     ) -> dict[str, Any]:
         from app.services.cart import store
 
-        monkeypatch.setattr(store, "get_service_client", lambda: self._store_returning(row))
+        monkeypatch.setattr(
+            store, "get_service_client", lambda: self._store_returning(row, vendor_status)
+        )
         return store.fetch_listing(LISTING_WHOLESALE, business_eligible=business_eligible)
+
+    def test_suspended_vendor_listing_cannot_be_added(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Admin catalog control: a suspended vendor's still-active listing is blocked."""
+        retail = {**_wholesale_listing(), "wholesale": False}
+        with pytest.raises(AppError) as excinfo:
+            self._fetch(monkeypatch, retail, business_eligible=False, vendor_status="suspended")
+        assert excinfo.value.code == "cart.listing_inactive"
 
     def test_consumer_cannot_fetch_a_wholesale_only_listing(
         self, monkeypatch: pytest.MonkeyPatch
