@@ -203,6 +203,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     emptyCart: t("checkout.emptyCart"),
     retry: t("checkout.retry"),
     backToCart: t("checkout.backToCart"),
+    overCodCapTemplate: t.raw("checkout.overCodCap") as string,
   };
 }
 

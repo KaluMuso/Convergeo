@@ -43,7 +43,9 @@ vi.mock("@vergeo/config", () => ({
     request: (path: string, options: unknown) =>
       path === "/checkout/steps/contact"
         ? Promise.resolve({ verified: true })
-        : request(getToken(), path, options),
+        : path.startsWith("/checkout/steps/payment-options")
+          ? Promise.resolve({ cod_cap_ngwee: 50_000, available_methods: ["cod"] })
+          : request(getToken(), path, options),
   }),
 }));
 vi.mock("next/navigation", () => ({
