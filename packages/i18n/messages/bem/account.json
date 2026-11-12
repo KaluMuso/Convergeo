@@ -86,5 +86,14 @@
     "remove": "Fumya",
     "removeLabel": "Fumya {name} ku recently viewed",
     "viewProduct": "Lola"
+  },
+  "privacy": {
+    "analytics": {
+      "title": "Analytics",
+      "description": "Tumwafwe ukusuma Convergeo pa kutwebelela ukumona ifyo mubomfya, nga amapeji mwingila.",
+      "toggleLabel": "Ukwabana ifyo mubomfya",
+      "on": "Kuli: tulemona amapeji mwingila, kabili panuma ya kwingila tulemulumanya ku akaunti yenu. Ifilumanya fisulwa panuma ya matazi 30.",
+      "off": "Cilekwa: tusunga fye ubwingi bwa bantu (anonymous counts), nga bangaye bamona peji. Takuli ifyo mwacita ifisungwa, kabili takuli cilumenwe kuli imwe."
+    }
   }
 }

@@ -1,9 +1,11 @@
 "use client";
 
+import { getAnalyticsConsent, setAnalyticsConsent } from "@vergeo/analytics/consent";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
+import { Switch } from "@vergeo/ui/src/switch";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -39,6 +41,7 @@ export default function AccountPrivacyPage() {
   return (
     <div className="flex w-full max-w-lg flex-col gap-8">
       <PrivacyIntro locale={locale} />
+      <AnalyticsSection />
       <ExportSection locale={locale} />
       <DeleteSection locale={locale} />
     </div>
@@ -63,6 +66,44 @@ function PrivacyIntro({ locale }: { locale: string }) {
         {t("retentionNote")}
       </p>
     </>
+  );
+}
+
+/**
+ * Analytics opt-out (1A-09). Off keeps anonymous counts only: no visitor id, no journeys,
+ * no sign-in link. Only an explicit "denied" turns it off; absent a choice it is on.
+ */
+function AnalyticsSection() {
+  const t = useTranslations("account.privacy.analytics");
+  const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    setEnabled(getAnalyticsConsent() !== "denied");
+  }, []);
+
+  const handleChange = (next: boolean) => {
+    setAnalyticsConsent(next ? "granted" : "denied");
+    setEnabled(next);
+  };
+
+  return (
+    <section
+      aria-labelledby="analytics-heading"
+      className="space-y-3 rounded-xl border border-border p-4"
+    >
+      <h2 id="analytics-heading" className="text-lg font-semibold">
+        {t("title")}
+      </h2>
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
+      <Switch
+        checked={enabled}
+        label={t("toggleLabel")}
+        onChange={(event) => handleChange(event.target.checked)}
+      />
+      <p aria-live="polite" className="text-sm leading-relaxed text-muted">
+        {enabled ? t("on") : t("off")}
+      </p>
+    </section>
   );
 }
 

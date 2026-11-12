@@ -9,6 +9,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import accountMessages from "../../../../../../packages/i18n/messages/en/account.json";
 
 const request = vi.fn();
+const setConsentSpy = vi.fn();
+
+vi.mock("@vergeo/analytics/consent", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@vergeo/analytics/consent")>();
+  return {
+    ...actual,
+    setAnalyticsConsent: (state: "granted" | "denied") => {
+      setConsentSpy(state);
+      actual.setAnalyticsConsent(state);
+    },
+  };
+});
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
@@ -30,6 +42,7 @@ vi.mock("@vergeo/auth/browser-client", () => ({
 }));
 
 afterEach(() => {
+  document.cookie = "vg_analytics_consent=; path=/; max-age=0";
   cleanup();
   vi.clearAllMocks();
 });
@@ -112,5 +125,32 @@ describe("account privacy (DPA) page i18n", () => {
     const download = await screen.findByRole("link", { name: privacy.export.success });
     expect(download).toHaveAttribute("href", "https://files.example/export.json");
     expect(request).toHaveBeenCalledWith("/account/export", { method: "POST" });
+  });
+
+  it("analytics toggle persists consent and says opting out keeps anonymous counts only", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = screen.getByRole("switch", { name: privacy.analytics.toggleLabel });
+    expect(toggle).toBeChecked();
+    expect(screen.getByText(privacy.analytics.on)).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(setConsentSpy).toHaveBeenLastCalledWith("denied");
+    expect(document.cookie).toContain("vg_analytics_consent=denied");
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText(privacy.analytics.off)).toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(setConsentSpy).toHaveBeenLastCalledWith("granted");
+    expect(document.cookie).toContain("vg_analytics_consent=granted");
+    expect(toggle).toBeChecked();
+  });
+
+  it("analytics toggle starts off when consent was previously denied", async () => {
+    document.cookie = "vg_analytics_consent=denied; path=/";
+    renderPage();
+    const toggle = screen.getByRole("switch", { name: privacy.analytics.toggleLabel });
+    await waitFor(() => expect(toggle).not.toBeChecked());
   });
 });

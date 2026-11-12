@@ -133,6 +133,13 @@
     "deletePhraseLabel": "Confirmation phrase",
     "deletePhrasePlaceholder": "DELETE MY DATA",
     "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted.",
+    "analytics": {
+      "title": "Analytics",
+      "description": "Help us improve Convergeo by letting us see how you use it, such as which pages you visit.",
+      "toggleLabel": "Share usage analytics",
+      "on": "On: we can see which pages you visit and, after you sign in, link them to your account. Links are deleted after 30 days.",
+      "off": "Off: we keep only anonymous counts, such as how many people viewed a page. No journeys are recorded and nothing is linked to you."
+    },
     "export": {
       "title": "Export my data",
       "description": "Download a copy of the personal data Convergeo holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
