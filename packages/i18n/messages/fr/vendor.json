@@ -1051,6 +1051,10 @@
       "noticeTitle": "Versements suspendus pendant 24 heures",
       "noticeBody": "Après le changement de votre numéro mobile money, les versements sont suspendus pendant 24 heures, le temps de vérifier le changement. Vous serez notifié lorsque les versements reprendront."
     },
+    "paused": {
+      "noticeTitle": "Les versements sont désactivés pour le moment",
+      "noticeBody": "Aucun argent n'est encore envoyé vers votre numéro mobile money. Les soldes ci-dessous restent enregistrés dans le grand livre."
+    },
     "history": {
       "heading": "Historique des versements",
       "empty": "Aucun versement pour le moment.",
