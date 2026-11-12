@@ -464,6 +464,88 @@ def _build_commission_snapshot(
     return payload
 
 
+def _load_vendor_owner_ids(client: Any, vendor_ids: list[str]) -> dict[str, str]:
+    """Owner account per vendor — the recipient of that vendor's notifications."""
+    if not vendor_ids:
+        return {}
+    response = client.table("vendors").select("id, owner_user_id").in_("id", vendor_ids).execute()
+    rows = response.data if isinstance(response.data, list) else []
+    owners: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        vendor_id = row.get("id")
+        owner_id = row.get("owner_user_id")
+        if isinstance(vendor_id, str) and isinstance(owner_id, str) and owner_id:
+            owners[vendor_id] = owner_id
+    return owners
+
+
+def _load_product_names(client: Any, product_ids: list[str]) -> dict[str, str]:
+    if not product_ids:
+        return {}
+    response = client.table("products").select("id, name").in_("id", product_ids).execute()
+    rows = response.data if isinstance(response.data, list) else []
+    names: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        product_id = row.get("id")
+        name = row.get("name")
+        if isinstance(product_id, str) and isinstance(name, str) and name.strip():
+            names[product_id] = name.strip()
+    return names
+
+
+def order_display_reference(order_id: str) -> str:
+    """The short order number the vendor and customer apps show (``1A2B3C4D``)."""
+    return order_id.replace("-", "")[:8].upper()
+
+
+def _vendor_new_order_payload(
+    *,
+    order: CreatedOrder,
+    lines: list[CartLineInput],
+    session_id: str,
+    customer_id: str,
+    owner_user_id: str | None,
+    product_ids: dict[str, str],
+    product_names: dict[str, str],
+) -> dict[str, Any]:
+    """Outbox payload the ``vendor_new_order`` templates can actually render.
+
+    The dispatcher addresses a row only through ``recipient_id`` and the WhatsApp
+    template requires ``order_reference``, ``product_title`` and ``quantity``. The
+    COD row used to carry none of them, so a vendor was never told about a new
+    cash-on-delivery order on any channel.
+    """
+    titles: list[str] = []
+    for line in lines:
+        title = (line.title_snapshot or "").strip()
+        if not title:
+            title = product_names.get(product_ids.get(line.listing_id, ""), "")
+        if title:
+            titles.append(title)
+    if not titles:
+        product_title = order_display_reference(order.order_id)
+    elif len(lines) > 1:
+        product_title = f"{titles[0]} +{len(lines) - 1}"
+    else:
+        product_title = titles[0]
+    payload: dict[str, Any] = {
+        "order_id": order.order_id,
+        "checkout_group_id": session_id,
+        "vendor_id": order.vendor_id,
+        "customer_id": customer_id,
+        "order_reference": order_display_reference(order.order_id),
+        "product_title": product_title,
+        "quantity": sum(line.qty for line in lines),
+    }
+    if owner_user_id:
+        payload["recipient_id"] = owner_user_id
+    return payload
+
+
 def _load_orders_for_group(client: Any, checkout_group_id: str) -> tuple[CreatedOrder, ...]:
     group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
     script = f"""
@@ -762,6 +844,8 @@ def create_orders_atomic(
     product_ids = _load_product_ids(client, listing_ids)
 
     cod = payment_method == "cod"
+    vendor_owner_ids = _load_vendor_owner_ids(client, sorted(groups_by_vendor)) if cod else {}
+    product_names = _load_product_names(client, sorted(set(product_ids.values()))) if cod else {}
     planned_orders: list[tuple[CreatedOrder, list[CartLineInput]]] = []
     for vendor_id in sorted(groups_by_vendor):
         group = groups_by_vendor[vendor_id]
@@ -866,12 +950,15 @@ VALUES ({item_sql}, {listing_sql}{product_values});
         # COD: fulfilment-valid at place — notify immediately.
         if order.cod:
             dedupe_key = build_dedupe_key("order.placed", order.order_id, OUTBOX_CHANNEL)
-            payload = {
-                "order_id": order.order_id,
-                "checkout_group_id": session_id,
-                "vendor_id": order.vendor_id,
-                "customer_id": customer_id,
-            }
+            payload = _vendor_new_order_payload(
+                order=order,
+                lines=vendor_lines,
+                session_id=session_id,
+                customer_id=customer_id,
+                owner_user_id=vendor_owner_ids.get(order.vendor_id),
+                product_ids=product_ids,
+                product_names=product_names,
+            )
             statements.append(
                 f"""
 INSERT INTO public.notification_outbox (
