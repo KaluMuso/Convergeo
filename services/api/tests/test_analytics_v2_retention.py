@@ -83,3 +83,21 @@ def test_n8n_workflow_chains_v2_tick_in_utc() -> None:
     assert workflow["connections"]["Sweep Analytics PII"]["main"][0][0]["node"] == (
         "Sweep Analytics v2 (flag-gated)"
     )
+
+
+def test_storage_report_flags_70_percent_of_free_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """FC-1: Supabase Free 500 MB quota; alert at 70% (350 MB)."""
+    from app.services.analytics import retention
+    from app.services.db import SqlResult
+
+    mb = 1024 * 1024
+    for size, alert in ((22 * mb, False), (350 * mb - 1, False), (350 * mb, True)):
+        monkeypatch.setattr(
+            retention,
+            "run_sql_script",
+            lambda _s, size=size: SqlResult(ok=True, rows=[f"database|{size}|0"]),
+        )
+        report = retention.analytics_storage_report()
+        assert report["quota_bytes"] == 500 * mb
+        assert report["alert_threshold_bytes"] == 350 * mb
+        assert report["alert"] is alert

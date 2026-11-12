@@ -234,6 +234,14 @@ def sweep_v2_retention(
     )
 
 
+#: FC-1 (founder, 12 Nov 2026): Supabase FREE plan — 500 MB database, switched to
+#: read-only when full, no automated daily backups (the Hetzner pg_dump is the only
+#: restore path). Prod DB measured at 22 MB on 12 Nov 2026. Supabase sizes are binary MB.
+DB_PLAN_QUOTA_BYTES = 500 * 1024 * 1024
+#: Storage alert at 70% of the plan quota (350 MB).
+DB_STORAGE_ALERT_RATIO_PCT = 70
+DB_STORAGE_ALERT_BYTES = DB_PLAN_QUOTA_BYTES * DB_STORAGE_ALERT_RATIO_PCT // 100
+
 #: Tables whose size the storage endpoint reports (plan §F.3 DB-impact monitoring).
 ANALYTICS_TABLES: tuple[str, ...] = (
     "analytics_event_log",
@@ -280,4 +288,7 @@ SELECT 'database|' || pg_database_size(current_database())::text || '|0';
         "database_bytes": database_bytes,
         "analytics_total_bytes": sum(t["total_bytes"] for t in tables.values()),
         "tables": tables,
+        "quota_bytes": DB_PLAN_QUOTA_BYTES,
+        "alert_threshold_bytes": DB_STORAGE_ALERT_BYTES,
+        "alert": database_bytes >= DB_STORAGE_ALERT_BYTES,
     }

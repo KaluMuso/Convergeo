@@ -95,3 +95,7 @@ def test_storage_report(live: PgConn) -> None:
     assert isinstance(tables, dict)
     assert "analytics_event_log" in tables and "listing_view_dedup" in tables
     assert isinstance(report["database_bytes"], int) and report["database_bytes"] > 0
+    # FC-1: Supabase Free (500 MB), alert at 70% = 350 MB.
+    assert report["quota_bytes"] == 500 * 1024 * 1024
+    assert report["alert_threshold_bytes"] == 350 * 1024 * 1024
+    assert report["alert"] is (report["database_bytes"] >= 350 * 1024 * 1024)
