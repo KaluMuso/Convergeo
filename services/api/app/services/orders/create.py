@@ -108,6 +108,8 @@ def _sql_json(value: dict[str, Any]) -> str:
 # `pending` (a concurrent submit already completed it) — Python maps it to an
 # idempotent replay instead of a hard failure.
 _ALREADY_COMPLETED_MARKER = "FIXA_CHECKOUT_ALREADY_COMPLETED"
+# Marker raised when the delivery address is not one of the buyer's own.
+_ADDRESS_NOT_OWNED_MARKER = "FIXA_ADDRESS_NOT_OWNED"
 # Marker raised when a tracked hold vanished or no longer covers the ordered qty
 # between the pre-transaction check and the in-tx consumption (#4 oversell guard).
 _HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
@@ -156,6 +158,27 @@ BEGIN
   END IF;
 END
 $lock$;
+"""
+
+
+def _require_own_address_sql(address_sql: str, customer_sql: str) -> str:
+    """Abort unless the delivery address belongs to the buyer placing the order.
+
+    ``address_id`` arrives from the client. Without this check an order could be
+    attached to any address row, sending a courier to (and showing the buyer the
+    landmark and phone of) somebody else.
+    """
+    return f"""
+DO $address$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.addresses
+    WHERE id = {address_sql} AND user_id = {customer_sql}
+  ) THEN
+    RAISE EXCEPTION '{_ADDRESS_NOT_OWNED_MARKER}';
+  END IF;
+END
+$address$;
 """
 
 
@@ -783,6 +806,10 @@ def create_orders_atomic(
 
     statements: list[str] = ["BEGIN;"]
     statements.append(_lock_and_recheck_sql(session_sql, customer_sql))
+    if address_id is not None:
+        statements.append(
+            _require_own_address_sql(sql_uuid(address_id, "address_id"), customer_sql)
+        )
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
 
     for order, vendor_lines in planned_orders:
@@ -901,6 +928,13 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        if _ADDRESS_NOT_OWNED_MARKER in error:
+            raise AppError(
+                code="checkout.address_invalid",
+                message="Delivery address was not found for this account",
+                http_status=422,
+                details={"field": "address_id"},
+            )
         variant_match = _VARIANT_STOCK_ERROR_RE.search(error)
         if variant_match is not None:
             kind = variant_match.group("kind").upper()

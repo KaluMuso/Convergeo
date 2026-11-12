@@ -12,6 +12,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from app.errors import AppError
 from app.services.orders.create import (
     CartLineInput,
     VendorFulfilmentInput,
@@ -212,3 +213,88 @@ def test_cod_order_never_deletes_another_customers_line(
     )
 
     assert _cart_listing_ids(db, other_cart) == {listing_id}
+
+
+def _place_with_address(
+    pg_service: SupabaseServiceClient,  # noqa: F811
+    *,
+    session_id: str,
+    listing_id: str,
+    address_id: str,
+) -> None:
+    create_orders_atomic(
+        client=pg_service.client,
+        customer_id=CUSTOMER_ID,
+        session_id=session_id,
+        idempotency_key=f"address-{uuid.uuid4()}",
+        payment_method="cod",
+        cart_lines=[
+            CartLineInput(
+                cart_item_id=str(uuid.uuid4()),
+                listing_id=listing_id,
+                vendor_id=VENDOR_A,
+                qty=1,
+                unit_price_ngwee=PRICE,
+                title_snapshot="Phone",
+            )
+        ],
+        vendor_groups=[
+            VendorFulfilmentInput(
+                vendor_id=VENDOR_A,
+                fulfilment="delivery",
+                delivery_zone="lusaka_a",
+                delivery_fee_ngwee=0,
+                subtotal_ngwee=PRICE,
+            )
+        ],
+        address_id=address_id,
+    )
+
+
+def test_order_cannot_be_attached_to_another_customers_address(
+    db: PgConn,  # noqa: F811
+    db_url_env: None,  # noqa: F811
+    pg_service: SupabaseServiceClient,  # noqa: F811
+) -> None:
+    listing_id = str(uuid.uuid4())
+    session_id = _prepare_session(db, listing_id)
+    other_user = db.run(
+        f"SELECT id::text FROM auth.users WHERE id <> '{CUSTOMER_ID}' ORDER BY id LIMIT 1;"
+    )
+    assert other_user.ok and other_user.rows, other_user.error
+    foreign_address = str(uuid.uuid4())
+    seeded = db.run(
+        f"INSERT INTO public.addresses (id, user_id, landmark) "
+        f"VALUES ('{foreign_address}', '{other_user.rows[0]}', 'Somebody else, Kabulonga');"
+    )
+    assert seeded.ok, seeded.error
+
+    with pytest.raises(AppError) as excinfo:
+        _place_with_address(
+            pg_service, session_id=session_id, listing_id=listing_id, address_id=foreign_address
+        )
+
+    assert excinfo.value.code == "checkout.address_invalid"
+    assert excinfo.value.http_status == 422
+    assert _order_count(db, session_id) == 0
+
+
+def test_order_accepts_the_buyers_own_address(
+    db: PgConn,  # noqa: F811
+    db_url_env: None,  # noqa: F811
+    pg_service: SupabaseServiceClient,  # noqa: F811
+) -> None:
+    listing_id = str(uuid.uuid4())
+    session_id = _prepare_session(db, listing_id)
+    own_address = str(uuid.uuid4())
+    seeded = db.run(
+        f"INSERT INTO public.addresses (id, user_id, landmark) "
+        f"VALUES ('{own_address}', '{CUSTOMER_ID}', 'Woodlands Stage 2');"
+    )
+    assert seeded.ok, seeded.error
+
+    _place_with_address(
+        pg_service, session_id=session_id, listing_id=listing_id, address_id=own_address
+    )
+
+    assert _order_count(db, session_id) == 1
