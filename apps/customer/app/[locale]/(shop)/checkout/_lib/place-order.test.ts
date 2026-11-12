@@ -1,7 +1,7 @@
 import { ApiError } from "@vergeo/config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { placeOrder, placeOrderErrorMessage } from "./place-order";
+import { classifyPlaceOrderError, placeOrder } from "./place-order";
 
 const request = vi.fn();
 
@@ -65,14 +65,50 @@ describe("placeOrder", () => {
     );
     expect(navigate).toHaveBeenCalledWith("/en/checkout/pending/grp-1");
   });
+});
 
-  it("surfaces ApiError messages", () => {
+describe("classifyPlaceOrderError", () => {
+  it("sends the buyer back to the cart when the stock hold lapsed", () => {
     expect(
-      placeOrderErrorMessage(
-        new ApiError("x", "Delivery address required", { status: 422 }),
-        "fallback",
+      classifyPlaceOrderError(
+        new ApiError("checkout.reservation_expired", "Your reservation has expired", {
+          status: 410,
+        }),
       ),
-    ).toBe("Delivery address required");
-    expect(placeOrderErrorMessage(new Error("nope"), "fallback")).toBe("fallback");
+    ).toEqual({ kind: "return_to_cart", notice: "reservation_expired" });
+  });
+
+  it.each([
+    "checkout.cart_changed",
+    "checkout.stock_unavailable",
+    "orders.totals_mismatch",
+    "cart.variant_out_of_stock",
+    "cart.variant_unavailable",
+  ])("sends the buyer back to review a stale cart on %s", (code) => {
+    expect(classifyPlaceOrderError(new ApiError(code, "server detail", { status: 409 }))).toEqual({
+      kind: "return_to_cart",
+      notice: "stock_unavailable",
+    });
+  });
+
+  it("flags a cash-on-delivery rejection so the payment copy can explain it", () => {
+    expect(
+      classifyPlaceOrderError(
+        new ApiError("checkout.cod_ineligible", "Cash on delivery is not available", {
+          status: 422,
+        }),
+      ),
+    ).toEqual({ kind: "cod_ineligible" });
+  });
+
+  it("never passes the API's developer English through", () => {
+    expect(
+      classifyPlaceOrderError(
+        new ApiError("first_order_cap_exceeded", "Vendor cap enforcement blocked this action", {
+          status: 403,
+        }),
+      ),
+    ).toEqual({ kind: "unavailable" });
+    expect(classifyPlaceOrderError(new Error("nope"))).toEqual({ kind: "unavailable" });
   });
 });

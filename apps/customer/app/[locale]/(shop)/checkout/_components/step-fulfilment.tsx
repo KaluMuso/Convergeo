@@ -14,7 +14,7 @@ import {
   getReadyCustomerSession,
   useSession,
 } from "../../../../../lib/customer-session";
-import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
+import { classifyPlaceOrderError, placeOrder } from "../_lib/place-order";
 
 import {
   ContactStepIntro,
@@ -457,7 +457,12 @@ function IdentityCheckoutShell({
             router.push(cartPath);
             return;
           }
-          if (error.details.notice_key === "checkout.checkout.stockUnavailable") {
+          if (
+            error.details.notice_key === "checkout.checkout.stockUnavailable" ||
+            error.details.redirect_to === "cart"
+          ) {
+            // Stock ran out or the cart needs review (price, minimum quantity,
+            // withdrawn listing): retrying here can never succeed.
             router.push(`${cartPath}?notice=stock_unavailable`);
             return;
           }
@@ -664,7 +669,25 @@ function IdentityCheckoutShell({
                 },
               });
             } catch (error) {
-              throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));
+              const failure = classifyPlaceOrderError(error);
+              if (failure.kind === "return_to_cart") {
+                // The hold lapsed or the cart moved on: only a fresh checkout can
+                // succeed, so explain it on the cart instead of looping here.
+                if (isCurrent()) router.push(`${cartPath}?notice=${failure.notice}`);
+                return;
+              }
+              throw new Error(
+                failure.kind === "cod_ineligible"
+                  ? labels.payment.codRejected
+                  : labels.review.placeOrderUnavailable,
+              );
+            }
+            if (paymentSelection.method === "cod") {
+              // The order took its lines out of the cart; refresh the shared
+              // store so the header badge stops counting what was just bought.
+              void import("../../_components/cart/mini-cart-drawer")
+                .then(({ refreshCart }) => refreshCart())
+                .catch(() => undefined);
             }
           }}
         />

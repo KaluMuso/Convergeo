@@ -87,11 +87,36 @@ export async function placeOrder(input: PlaceOrderInput): Promise<CreateOrderRes
   return created;
 }
 
-export function placeOrderErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) {
-    if (typeof error.message === "string" && error.message.trim()) {
-      return error.message;
-    }
-  }
-  return fallback;
+/** Cart-page notices the cart knows how to explain (`?notice=`). */
+export type CartNotice = "reservation_expired" | "stock_unavailable";
+
+/**
+ * What the buyer can do about a failed place-order. The API's `message` is
+ * developer English, so it is never shown: every outcome maps to copy that
+ * exists in each locale.
+ */
+export type PlaceOrderFailure =
+  | { kind: "return_to_cart"; notice: CartNotice }
+  | { kind: "cod_ineligible" }
+  | { kind: "unavailable" };
+
+/** Codes where the cart is stale and only a fresh checkout can succeed. */
+const RETURN_TO_CART: Record<string, CartNotice> = {
+  "checkout.reservation_expired": "reservation_expired",
+  "checkout.stock_unavailable": "stock_unavailable",
+  "checkout.cart_changed": "stock_unavailable",
+  "checkout.cart_empty": "stock_unavailable",
+  "orders.totals_mismatch": "stock_unavailable",
+  "orders.invalid_cart_line": "stock_unavailable",
+  "orders.invalid_vendor_groups": "stock_unavailable",
+  "cart.variant_out_of_stock": "stock_unavailable",
+  "cart.variant_unavailable": "stock_unavailable",
+};
+
+export function classifyPlaceOrderError(error: unknown): PlaceOrderFailure {
+  if (!(error instanceof ApiError)) return { kind: "unavailable" };
+  const notice = RETURN_TO_CART[error.code];
+  if (notice) return { kind: "return_to_cart", notice };
+  if (error.code === "checkout.cod_ineligible") return { kind: "cod_ineligible" };
+  return { kind: "unavailable" };
 }
