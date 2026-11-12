@@ -26,7 +26,7 @@ from typing import Annotated, Any, Final, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.clips import flags, ranking, state_machine
+from app.services.clips import flags, pilot, ranking, state_machine
 from fastapi import APIRouter, Depends, Query
 
 router = APIRouter(prefix="/clips", tags=["clips"])
@@ -261,10 +261,14 @@ async def get_clip_feed(
     vendors = _load_vendors(
         service_client, sorted({str(c.get("vendor_id") or "") for c in candidates})
     )
+    # Pilot allowlist: while enforced, only allowlisted vendors' clips are served.
+    # Mirrors the restrictive RLS policy so client and service-role reads agree.
+    pilot_vendors = pilot.visible_vendor_ids(service_client)
     visible = [
         clip
         for clip in candidates
         if str(vendors.get(str(clip.get("vendor_id")), {}).get("status")) == "active"
+        and (pilot_vendors is None or str(clip.get("vendor_id")) in pilot_vendors)
     ]
 
     ordered = ranking.rank(visible, page_size=limit)[:limit]
@@ -314,7 +318,9 @@ async def get_clip(
     clip = rows[0]
 
     vendors = _load_vendors(service_client, [str(clip.get("vendor_id") or "")])
-    if str(vendors.get(str(clip.get("vendor_id")), {}).get("status")) != "active":
+    if str(
+        vendors.get(str(clip.get("vendor_id")), {}).get("status")
+    ) != "active" or not pilot.vendor_in_pilot(service_client, str(clip.get("vendor_id") or "")):
         raise AppError(
             code="not_found",
             message="Clip not found",
@@ -339,12 +345,16 @@ async def explain_clip_ranking(
     flags.require_clips_enabled(service_client)
     rows = _rows(
         service_client.client.table(CLIPS_TABLE)
-        .select("id, status, published_at, like_count")
+        .select("id, status, vendor_id, published_at, like_count")
         .eq("id", clip_id)
         .maybe_single()
         .execute()
     )
-    if not rows or str(rows[0].get("status")) != state_machine.PUBLISHED:
+    if (
+        not rows
+        or str(rows[0].get("status")) != state_machine.PUBLISHED
+        or not pilot.vendor_in_pilot(service_client, str(rows[0].get("vendor_id") or ""))
+    ):
         raise AppError(
             code="not_found",
             message="Clip not found",

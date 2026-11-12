@@ -38,7 +38,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.analytics import events as analytics_events
-from app.services.clips import flags, screen, state_machine
+from app.services.clips import flags, pilot, screen, state_machine
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import Field
 
@@ -170,6 +170,9 @@ def _load_published_clip(
     )
     if not rows or str(rows[0].get("status")) != state_machine.PUBLISHED:
         raise _not_found(clip_id)
+    # A clip outside the pilot allowlist is as invisible here as in the feed.
+    if not pilot.vendor_in_pilot(service_client, str(rows[0].get("vendor_id") or "")):
+        raise _not_found(clip_id)
     return rows[0]
 
 
@@ -269,9 +272,13 @@ async def unlike_clip(
 
 # --- Comments ---------------------------------------------------------------
 def _require_comments_enabled(service_client: ServiceRoleClient) -> None:
-    """F-V2 gate. Built, but OFF until the founder flips ``clips_comments``."""
+    """F-V2 gate. Built, but OFF until the founder flips ``clips_comments``.
+
+    Also OFF for the whole allowlist pilot, whatever the flag says — see
+    ``pilot.comments_allowed``.
+    """
     flags.require_clips_enabled(service_client)
-    if not flags.comments_enabled(service_client):
+    if not pilot.comments_allowed(service_client, flags.comments_enabled(service_client)):
         raise AppError(
             code="clip_comments_disabled",
             message="Comments are not available",

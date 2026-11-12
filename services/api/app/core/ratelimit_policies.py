@@ -392,6 +392,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     # M17-P08 cost guard reversal. ADMIN_WRITE like the rest of the admin plane;
     # the action is audited, so the ceiling here bounds volume, not accountability.
     "POST /clip-analytics/reset-kill-switch": ADMIN_WRITE,
+    # Clips pilot allowlist edits (admin plane, audited per change).
+    "POST /clip-pilot/vendors": ADMIN_WRITE,
+    "DELETE /clip-pilot/vendors/{vendor_id}": ADMIN_WRITE,
     "POST /vendor/intake/links/redeem": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/link": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,

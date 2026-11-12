@@ -28,7 +28,7 @@ from app.media.cloudinary_signing import (
     build_signed_clip_params,
 )
 from app.schemas.base import StrictModel
-from app.services.clips import flags, quota, screen, spend, state_machine
+from app.services.clips import flags, pilot, quota, screen, spend, state_machine
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -138,6 +138,9 @@ async def create_clip(
     that row rather than from anything the caller sent.
     """
     flags.require_clips_enabled(service_client)
+    # Pilot allowlist: while the pilot gate is enforced only allowlisted vendors
+    # may mint an upload slot, so a non-pilot vendor cannot spend a credit.
+    pilot.require_vendor_in_pilot(service_client, scope.vendor_id)
     # D-V3, checked before anything is created or signed.
     if body.file_size_bytes is not None and body.file_size_bytes > MAX_CLIP_BYTES:
         raise AppError(
