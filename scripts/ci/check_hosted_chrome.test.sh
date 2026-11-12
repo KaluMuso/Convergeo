@@ -153,7 +153,7 @@ with tempfile.TemporaryDirectory(dir=fixture, prefix="metadata-") as temp:
             "Architecture": "amd64",
             "Filename": expected_name,
             "SHA256": expected_sha,
-            "Size": "147633324",
+            "Size": "147497676",
         }
         if fault == "retired_pin":
             fields["Version"] = "155.0.8059.39-1"
