@@ -871,6 +871,15 @@ class TestCreateOrdersEndpoint:
             delivery_fee=0,
             total=price,
         )
+        # What POST /checkout/steps/fulfilment records; POST /orders prices from it.
+        db.run(
+            f"""
+            UPDATE public.checkout_groups
+            SET fulfilment_choices = '[{{"vendor_id": "{VENDOR_A}",
+              "fulfilment": "pickup", "delivery_zone": null}}]'::jsonb
+            WHERE id = '{session_id}';
+            """
+        )
         db.run(
             f"""
             INSERT INTO public.stock_reservations (

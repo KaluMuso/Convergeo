@@ -126,7 +126,15 @@ def test_unmatched_landmark_gets_the_configured_zone_and_its_fee(post_fulfilment
     assert body["delivery_fee_ngwee"] == 4500
     assert body["total_ngwee"] == 10_000 + 4500
     assert service.group_updates == [
-        {"subtotal_ngwee": 10_000, "delivery_fee_ngwee": 4500, "total_ngwee": 14_500}
+        {
+            "subtotal_ngwee": 10_000,
+            "delivery_fee_ngwee": 4500,
+            "total_ngwee": 14_500,
+            # POST /orders re-prices from these recorded choices.
+            "fulfilment_choices": [
+                {"vendor_id": VENDOR_ID, "fulfilment": "delivery", "delivery_zone": "lusaka_b"}
+            ],
+        }
     ]
 
 
