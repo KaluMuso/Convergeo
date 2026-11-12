@@ -104,7 +104,7 @@ try:
     require(package.get("Architecture") == "amd64", "package_architecture")
     require(package.get("Filename") == expected_name, "package_filename")
     require(package.get("SHA256") == expected_sha, "package_sha256")
-    require(int(package.get("Size", "0")) == 147633324, "package_size")
+    require(int(package.get("Size", "0")) == 147497676, "package_size")
 except (OSError, ValueError, IndexError, EOFError, zlib.error):
     raise SystemExit("Google Chrome package metadata mismatch: metadata_format") from None
 PY
