@@ -1,18 +1,19 @@
 /** Support contact configuration, resolved from env (NEXT_PUBLIC_SUPPORT_WHATSAPP). */
 
 /**
- * Vergeo5 support line (founder-confirmed 2026-11-08); env overrides it. This is the
- * real support number, not a placeholder, so it is safe in production builds.
- */
-const FALLBACK_WHATSAPP = "260761359005";
-
-/**
- * Digits-only WhatsApp number for wa.me deep links. Typed nullable so callers keep
- * hiding the WhatsApp CTA if the line is ever withdrawn (no fake numbers).
+ * Digits-only support number for wa.me / tel links, or `null` when
+ * NEXT_PUBLIC_SUPPORT_WHATSAPP is not configured. Owner decision (2026-11-12): no
+ * built-in fallback number in any environment; callers hide phone/WhatsApp CTAs.
  */
 export function getSupportWhatsappNumber(): string | null {
   const digits = (process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "").replace(/[^0-9]/g, "");
-  return digits || FALLBACK_WHATSAPP;
+  return digits || null;
+}
+
+/** Display form of the configured support number ("+260761359005"), or `null`. */
+export function getSupportPhoneDisplay(): string | null {
+  const digits = getSupportWhatsappNumber();
+  return digits ? `+${digits}` : null;
 }
 
 /** Build a wa.me deep link with an optional prefilled message; `null` when unconfigured. */

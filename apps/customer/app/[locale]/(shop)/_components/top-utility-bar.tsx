@@ -10,7 +10,7 @@ export type TopUtilityBarLabels = {
   countryCode: string;
   localeAria: string;
   localeNames: Record<string, string>;
-  phone: string;
+  phone: string | null;
   email: string;
   socialAria: string;
   facebookAria: string;
@@ -20,7 +20,7 @@ export type TopUtilityBarLabels = {
 };
 
 export type TopUtilityBarLinks = {
-  phoneHref: string;
+  phoneHref: string | null;
   emailHref: string;
   facebook: string;
   twitter: string;
@@ -132,12 +132,14 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
         </div>
 
         <div className="hidden min-w-0 items-center gap-4 text-panel-muted md:flex">
-          <a
-            href={links.phoneHref}
-            className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            {labels.phone}
-          </a>
+          {labels.phone && links.phoneHref ? (
+            <a
+              href={links.phoneHref}
+              className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
+              {labels.phone}
+            </a>
+          ) : null}
           <a
             href={links.emailHref}
             className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"

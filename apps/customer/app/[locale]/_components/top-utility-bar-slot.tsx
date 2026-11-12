@@ -1,7 +1,7 @@
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages } from "next-intl/server";
 
-import { getSupportEmail } from "../(marketing)/contact/_components/config";
+import { getSupportEmail, getSupportPhoneDisplay } from "../(marketing)/contact/_components/config";
 import { TopUtilityBar } from "../(shop)/_components/top-utility-bar";
 
 type TopUtilityBarSlotProps = {
@@ -14,7 +14,8 @@ export async function TopUtilityBarSlot({ locale }: TopUtilityBarSlotProps) {
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   // Config-driven (not a translation): NEXT_PUBLIC_SUPPORT_EMAIL, default support@vergeo5.com.
   const contactEmail = getSupportEmail();
-  const contactPhone = tCommon("contact.phone");
+  // Config-driven: hidden unless NEXT_PUBLIC_SUPPORT_WHATSAPP is set.
+  const contactPhone = getSupportPhoneDisplay();
 
   return (
     <TopUtilityBar
@@ -38,7 +39,7 @@ export async function TopUtilityBarSlot({ locale }: TopUtilityBarSlotProps) {
         emailAria: tCommon("utilityBar.emailAria"),
       }}
       links={{
-        phoneHref: `tel:${contactPhone.replace(/\s+/g, "")}`,
+        phoneHref: contactPhone ? `tel:${contactPhone}` : null,
         emailHref: `mailto:${contactEmail}`,
         facebook: tCommon("social.facebook"),
         twitter: tCommon("social.twitter"),
