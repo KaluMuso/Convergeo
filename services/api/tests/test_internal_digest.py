@@ -128,11 +128,27 @@ def digest_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None
         yield client
 
 
+def _fake_order_status_sql(fake: FakeSupabaseClient) -> Any:
+    """1B-02: _orders_by_status is a SQL count aggregate; evaluate it over the fake rows."""
+    from app.routers.admin_dashboards import _ORDER_STATUSES
+    from app.services.db import SqlResult
+
+    def run(script: str) -> SqlResult:
+        if "FROM public.orders;" not in script:
+            return SqlResult(ok=False, rows=[], error="unexpected SQL in digest test")
+        statuses = [str(row.get("status")) for row in fake.table("orders").rows]
+        counts = [sum(s == status for s in statuses) for status in _ORDER_STATUSES]
+        return SqlResult(ok=True, rows=["|".join(str(c) for c in counts)])
+
+    return run
+
+
 @pytest.fixture
 def fake_service(monkeypatch: pytest.MonkeyPatch) -> FakeSupabaseClient:
     fake = FakeSupabaseClient()
     wrapper = MagicMock()
     wrapper.client = fake
+    monkeypatch.setattr("app.routers.admin_dashboards.run_sql_script", _fake_order_status_sql(fake))
     monkeypatch.setattr(
         "app.routers.internal_digest.get_supabase_client",
         lambda: iter([wrapper]),
