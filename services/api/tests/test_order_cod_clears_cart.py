@@ -42,7 +42,8 @@ def _leave_no_cart_behind(db: PgConn) -> Generator[None, None, None]:  # noqa: F
     """The shared customer may hold one active cart; never leak ours to other suites."""
     yield
     cleared = db.run(
-        f"DELETE FROM public.carts WHERE user_id = '{CUSTOMER_ID}' OR guest_token LIKE 'cod-cart-clear-%';"
+        f"DELETE FROM public.carts WHERE user_id = '{CUSTOMER_ID}' "
+        "OR guest_token LIKE 'cod-cart-clear-%';"
     )
     assert cleared.ok, cleared.error
 
