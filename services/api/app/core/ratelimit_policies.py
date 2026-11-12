@@ -80,6 +80,11 @@ CLOUDINARY_WEBHOOK = RateLimitPolicy(
 PUBLIC_BEACON = RateLimitPolicy(
     scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
 )
+# Signed-in sign-in link (POST /analytics/identify): fires once per v2 session after login.
+# Keyed per user and enforced fail-open in routers/analytics_identify.py.
+ANALYTICS_IDENTIFY = RateLimitPolicy(
+    scope="analytics_identify_user", limit=20, window=timedelta(minutes=1)
+)
 # Public browser error beacon from Next.js error boundaries (navigator.sendBeacon).
 TELEMETRY_FRONTEND_ERRORS = RateLimitPolicy(
     scope="telemetry_frontend_errors_ip", limit=60, window=timedelta(minutes=1)
@@ -158,6 +163,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /admin/orders/{order_id}/cod/confirm-collection": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/refuse-collection": PAYMENT_WRITE,
     "POST /analytics/collect": PUBLIC_BEACON,
+    "POST /analytics/identify": ANALYTICS_IDENTIFY,
     "POST /ask": STANDARD_WRITE,
     "POST /auth/guard/otp-quota": SENSITIVE_WRITE,
     "POST /beta/feedback": STANDARD_WRITE,

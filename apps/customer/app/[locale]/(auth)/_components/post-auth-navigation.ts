@@ -2,6 +2,7 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { createAccountApiClient } from "../../account/_components/account-api";
 
 import {
@@ -59,6 +60,16 @@ export async function navigateAfterPortalAuth({
       router.refresh();
       return;
     }
+
+    // analytics_v2 sign-in link (1A-08): best-effort, lazy chunk, anonymous session id only.
+    void import("@vergeo/analytics/identify")
+      .then(({ identifyAnalyticsSession }) =>
+        identifyAnalyticsSession({
+          apiBaseUrl: getApiBaseUrl(),
+          accessToken: session.access_token,
+        }),
+      )
+      .catch(() => undefined);
 
     const api = createAccountApiClient(() => session.access_token);
     const preferences = await api.getPreferences();

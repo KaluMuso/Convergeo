@@ -12,7 +12,8 @@
     "./events": "./src/events.ts",
     "./track": "./src/track.ts",
     "./session": "./src/session.ts",
-    "./provider": "./src/analytics-provider.ts"
+    "./provider": "./src/analytics-provider.ts",
+    "./identify": "./src/v2/identify.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

@@ -199,6 +199,9 @@ EXPECTATIONS: TableExpectations = {
     # so the `UPDATE … WHERE false` probe errors on the column, not on privilege — the
     # same harness limitation as intake_field_provenance, hence the noop-update shape.
     "analytics_event_log": client_invisible_noop_update(),
+    # Convergeo Intelligence 1A-08: anonymous-session -> customer links. service_role only
+    # (no client grant, RLS FORCE); same noop-update probe shape as analytics_event_log.
+    "analytics_session_links": client_invisible_noop_update(),
     # Convergeo Intelligence 1B-01: daily rollups — admin read, service_role write. Same
     # grant shape as analytics_events (authenticated SELECT grant + admin-only policy →
     # non-admins see zero rows; no client write grant; anon nothing). Like

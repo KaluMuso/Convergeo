@@ -15,6 +15,7 @@ from app.services.analytics.retention import (
     sweep_v2_retention,
 )
 from app.services.analytics.rollup import run_rollup_tick
+from app.services.analytics.session_links import purge_expired_links
 from app.services.analytics.writer import get_writer
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -94,17 +95,20 @@ async def analytics_v2_retention_tick() -> dict[str, Any]:
     """analytics_v2 retention (1A-07): no-op unless ``analytics_v2_rollups`` is ON.
 
     Deletes raw v2 events past 30 days, purges stale listing-view dedup keys (2 days)
-    and collapses raw search terms past 30 days to their normalized form. Batched and
+    collapses raw search terms past 30 days to their normalized form and deletes
+    sign-in session links past 30 days (1A-08). Batched and
     idempotent; ``complete=false`` means the next tick continues.
     """
     if not await analytics_flags.flag_enabled_async(analytics_flags.ROLLUPS_FLAG):
         return {"skipped": "flag_off"}
     result = await to_thread.run_sync(sweep_v2_retention)
+    links_purged, links_complete = await to_thread.run_sync(purge_expired_links)
     return {
         "event_log_deleted": result.event_log_deleted,
         "listing_dedup_purged": result.listing_dedup_purged,
         "search_terms_scrubbed": result.search_terms_scrubbed,
-        "complete": result.complete,
+        "session_links_purged": links_purged,
+        "complete": result.complete and links_complete,
     }
 
 
