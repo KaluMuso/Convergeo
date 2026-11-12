@@ -120,3 +120,22 @@ def test_n8n_rollup_workflow_targets_tick_daily_utc() -> None:
     assert any(u.endswith("/internal/analytics/rollup-tick") for u in urls)
     trigger = workflow["nodes"][0]["parameters"]["rule"]["interval"][0]
     assert trigger["triggerAtHour"] == 2 and trigger["triggerAtMinute"] == 15
+
+
+def test_commercial_daily_parses_rows_and_bounds_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.analytics import metrics
+
+    scripts: list[str] = []
+
+    def fake_sql(script: str) -> SqlResult:
+        scripts.append(script)
+        return SqlResult(ok=True, rows=["2026-11-18|4|5|1|4|3|3|38901|38901|26556"])
+
+    monkeypatch.setattr(metrics, "run_sql_script", fake_sql)
+    (day,) = metrics.commercial_daily(date(2026, 11, 18), date(2026, 11, 18))
+    assert day.gmv_paid_ngwee == 26_556 and not day.payment_mismatch
+    assert "statement_timeout" in scripts[0]
+    with pytest.raises(ValueError):
+        metrics.commercial_daily(date(2026, 11, 18), date(2026, 11, 17))
+    with pytest.raises(ValueError):
+        metrics.commercial_daily(date(2024, 1, 1), date(2026, 1, 1))
