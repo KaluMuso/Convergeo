@@ -3,16 +3,16 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useSession } from "@vergeo/auth/use-session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
+import { useSession } from "../../../../../lib/customer-session";
 
 import { ContactVendorButton, type ContactVendorLabels } from "./contact-vendor-button";
 
 const labels = catalogMessages.pdp.contactVendor as ContactVendorLabels;
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: vi.fn(),
 }));
 

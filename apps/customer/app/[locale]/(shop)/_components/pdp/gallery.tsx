@@ -2,6 +2,7 @@
 
 import { ImageGallery } from "@vergeo/ui/src/media/image-gallery";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import type { LightboxLabels } from "./lightbox";
@@ -53,6 +54,7 @@ export function PdpGallery({
   activeIndex,
   lightboxLabels,
 }: PdpGalleryProps) {
+  const t = useTranslations("catalog.pdp.gallery");
   const usableImages = images.filter((image) => image.publicId.trim().length > 0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -87,6 +89,17 @@ export function PdpGallery({
         activeIndex={targetIndex}
         onIndexChange={setCurrentIndex}
         onImageActivate={lightboxLabels ? openLightbox : undefined}
+        zoomLabels={
+          lightboxLabels
+            ? undefined
+            : {
+                open: t("zoomOpen"),
+                close: t("zoomClose"),
+                title: t("zoomTitle"),
+                zoomIn: t("zoomIn"),
+                zoomOut: t("zoomOut"),
+              }
+        }
       />
       {lightboxLabels ? (
         <button

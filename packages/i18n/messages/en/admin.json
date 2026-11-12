@@ -7,7 +7,10 @@
     "navAriaLabel": "Admin navigation",
     "mobileNavLabel": "Admin menu",
     "mobileMenuTitle": "All admin tools",
-    "mobileMenuClose": "Close"
+    "mobileMenuClose": "Close",
+    "permissionError": "Unable to verify admin permissions.",
+    "permissionChecking": "Checking permissions…",
+    "permissionDenied": "You do not have access to this admin section."
   },
   "nav": {
     "groups": {
@@ -29,7 +32,10 @@
     "support": "Support",
     "intake": "WhatsApp intake",
     "clips": "Clips moderation",
-    "events": "High-value events"
+    "events": "High-value events",
+    "roles": "Admin roles",
+    "services": "Services",
+    "inventory": "Inventory"
   },
   "hubs": {
     "moderation": {
@@ -432,7 +438,8 @@
         "cancel": "Cancel",
         "submitting": "Saving…",
         "success": "Decision recorded.",
-        "failure": "Could not save decision."
+        "failure": "Could not save decision.",
+        "details": "Product details"
       }
     },
     "related": {
@@ -865,7 +872,22 @@
       "drillIn": "View report details",
       "hideDrillIn": "Hide details",
       "mismatchAlert": "Ledger mismatch detected — investigate discrepancies.",
-      "cleanDay": "No discrepancies on the latest report."
+      "cleanDay": "No discrepancies on the latest report.",
+      "evidenceState": "Evidence: {state}",
+      "version": "Report version {number}",
+      "accountCurrency": "Account {account} · {currency}",
+      "states": {
+        "missing": "No report",
+        "account_unconfigured": "Provider account is not configured",
+        "legacy_unbound": "Legacy report without account or version binding",
+        "invalid": "Invalid evidence",
+        "stale": "Report is older than the expected reporting day",
+        "unresolved": "Unresolved discrepancies",
+        "noncertifying": "Evidence does not certify reconciliation",
+        "current_clean": "Current certified clean evidence"
+      },
+      "provenanceBound": "Immutable report bound to the configured provider account",
+      "provenanceLegacy": "Legacy evidence without account or version binding"
     },
     "orders": {
       "title": "Orders by status",
@@ -1055,7 +1077,9 @@
       "submitting": "Sending…",
       "success": "Queued on {channel}.",
       "successDeduped": "Already queued on {channel} (deduped).",
-      "failure": "Could not send message."
+      "failure": "Could not send message.",
+      "conflict": "This send ID belongs to an earlier recipient or message. Review the customer and draft before starting a new send.",
+      "startNew": "Start a new send"
     },
     "log": {
       "title": "Interaction log",
@@ -1274,5 +1298,53 @@
       "permissionDenied": "You do not have permission to view clip analytics.",
       "error": "Clip analytics could not be loaded."
     }
+  },
+  "rolesUi": {
+    "title": "Admin roles",
+    "subtitle": "Create restricted roles, then assign them to existing account IDs. Changes take effect at the API immediately.",
+    "createHeading": "Create a role",
+    "editHeading": "Edit {key}",
+    "key": "Key (letters, digits, underscore)",
+    "keyPrefix": "rbac_",
+    "name": "Name",
+    "permissions": "Permissions",
+    "create": "Create role",
+    "save": "Save role",
+    "cancel": "Cancel edit",
+    "current": "Current roles",
+    "edit": "Edit",
+    "delete": "Delete",
+    "assignHeading": "Assign an account",
+    "accountUuid": "Account UUID",
+    "role": "Role",
+    "choose": "Choose a role",
+    "superadmin": "Superadmin",
+    "assign": "Assign",
+    "assignments": "Assignments",
+    "revoke": "Revoke",
+    "confirmDelete": "Delete {name}? Assigned roles cannot be deleted.",
+    "confirmSuperadmin": "Grant full superadmin access to account {userId}?",
+    "confirmRevoke": "Revoke {role} from {userId}?",
+    "loading": "Loading roles…",
+    "loadFailed": "Could not load roles.",
+    "mutationFailed": "The role change did not complete.",
+    "permissionDenied": "You do not have permission to manage admin roles.",
+    "emptyRoles": "No custom roles found.",
+    "emptyAssignments": "No role assignments found.",
+    "retry": "Try again",
+    "invalid": "Check the role key, name, permissions, and account UUID."
+  },
+  "oversightUi": {
+    "services": "Services",
+    "inventory": "Inventory",
+    "subtitle": "Read only oversight · latest 100 records",
+    "empty": "No records found.",
+    "vendor": "Vendor {vendorId} · {status}",
+    "stock": "Stock {quantity}",
+    "loading": "Loading records…",
+    "loadFailed": "Could not load records.",
+    "permissionDenied": "You do not have access to this overview.",
+    "unknownStock": "Unknown",
+    "retry": "Try again"
   }
 }

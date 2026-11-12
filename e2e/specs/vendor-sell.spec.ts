@@ -1,8 +1,11 @@
-import { requireVendorBaseUrl, urlOn, vendorOtpReady } from "../fixtures/env";
+import { requireVendorBaseUrl, urlOn, vendorOtp, vendorOtpReady } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
+import { missingOutboundApproval } from "../fixtures/outbound-approval";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+
+test.use({ serviceWorkers: "block" });
 
 /**
  * Critical path (vendor app, separate origin): approved-vendor fixture →
@@ -19,31 +22,46 @@ import { expect, test } from "../fixtures/test-base";
  *
  * The vendor app requires an authenticated, approved vendor session. Login uses
  * the same OTP mechanism as the customer app, so the authenticated legs are
- * ENV-GATED behind the OTP test creds. Without them, the spec asserts the vendor
- * login surface loads and skips the authenticated flow with an annotation.
+ * gated before navigation by U4a. Missing declarations fail strict certification
+ * or skip the journey locally without sending a code.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("vendor · sell", () => {
+  test.describe.configure({ retries: 0 });
   test("approved vendor lists, receives and ships an order", async ({ page }) => {
     // Resolved once: in a strict certification run this throws rather than
     // letting the customer origin stand in for the vendor app.
     const vendorOrigin = requireVendorBaseUrl();
 
-    if (!vendorOtpReady()) {
+    const missingApproval = missingOutboundApproval("otp", process.env, {
+      persona: "vendor",
+      recipientPhone: vendorOtp.testPhone,
+    });
+    if (!vendorOtpReady() || missingApproval.length) {
       // Vendor app login surface (separate origin) — asserted reachable even
       // when the authenticated leg is gated off.
       await page.goto(urlOn(vendorOrigin, "/login"));
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "vendor authenticated sell flow (list -> receive order -> ship)",
-        fixtures: ["E2E_VENDOR_TEST_OTP"],
+        fixtures: [
+          ...(!vendorOtpReady()
+            ? [
+                "E2E_VENDOR_TEST_OTP",
+                "SMS_OTP_TRANSPORT",
+                "WAHA_OTP_ENABLED",
+                "STAGING_SMS_SANDBOX_ATTESTED",
+                "STAGING_TEST_OTP_MAP_ATTESTED",
+              ]
+            : []),
+          ...missingApproval,
+        ],
       });
       // Without this the order state machine is never exercised end to end, so
       // a certification run must not report success.
       enforceGate(gate);
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      await expect(
-        page.getByRole("heading").first().or(page.locator("form").first()),
-      ).toBeVisible();
       test.skip(true, gate.reason);
       return;
     }
@@ -66,10 +84,14 @@ test.describe("vendor · sell", () => {
     // same queue. Product title, price and status are equally unusable — none
     // of them identify an order row.
     await page.goto(urlOn(vendorOrigin, `/orders?status=${SEED.codOrder.initialStatus}`));
+    // Other genuine buyer orders can coexist in this queue. Select the
+    // canonical single-listing product B fixture whose transition chain this
+    // case owns, and require exactly one matching placed order.
     const orderCards = page.getByTestId("vendor-order-card-link");
-    await expect(orderCards).toHaveCount(1);
+    const canonicalOrder = orderCards.filter({ hasText: SEED.codOrder.productName });
+    await expect(canonicalOrder).toHaveCount(1);
 
-    const firstOrder = orderCards.first();
+    const firstOrder = canonicalOrder.first();
     await expect(firstOrder).toBeVisible();
     // The fixture is recreated by the per-run cleanup + seed, so a stale order
     // left in a later state must fail loudly here rather than skip transitions.

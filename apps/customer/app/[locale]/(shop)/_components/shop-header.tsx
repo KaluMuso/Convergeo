@@ -6,12 +6,7 @@ import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
-import {
-  CartNavTrigger,
-  getCartItemCount,
-  useCartActions,
-  useCartStore,
-} from "./cart/mini-cart-drawer";
+import { CartNavTrigger, getCartItemCount, setStoreState, useCartStore } from "./cart/cart-store";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
@@ -64,7 +59,6 @@ const navLinkClassName =
 export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
-  const { refresh } = useCartActions();
   const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
@@ -73,7 +67,13 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
     let cancelled = false;
     const run = () => {
       if (!cancelled) {
-        void refresh();
+        void import("./cart/mini-cart-drawer")
+          .then(({ refreshCart }) => {
+            if (!cancelled) void refreshCart();
+          })
+          .catch(() => {
+            if (!cancelled) setStoreState({ loading: false, loadError: true });
+          });
       }
     };
     const w = window as Window &
@@ -97,7 +97,7 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
         clearTimeout(timeoutId);
       }
     };
-  }, [refresh]);
+  }, []);
 
   const cartCount = getCartItemCount(cart);
   const cartCountLabel =

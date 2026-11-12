@@ -89,6 +89,39 @@ export type ListingDeleteResponse = {
   message_key: string;
 };
 
+export type StockContext = {
+  listing_id: string;
+  branch_tracked: boolean;
+  stock_qty: number | null;
+  stock_mode: StockMode;
+  sale_unit: SaleUnit;
+  unit_step_milli: number;
+  branches: Array<{
+    location_id: string;
+    label: string | null;
+    stock_qty: number;
+    active: boolean;
+  }>;
+};
+
+export type StockAdjustment = {
+  operation_id: string;
+  location_id: string | null;
+  delta: number;
+  reason: string;
+  sale_unit: SaleUnit;
+  unit_step_milli: number;
+};
+
+export type StockOutcome = {
+  ok: true;
+  operation_id: string;
+  listing_id: string;
+  location_id: string | null;
+  old_qty: number;
+  new_qty: number;
+};
+
 export type ListingVariantsResponse = {
   listing_id: string;
   listing_price_ngwee: number;
@@ -133,10 +166,14 @@ export function createManageClient(getToken: () => string | null | Promise<strin
       });
     },
 
-    adjustStock(listingId: string, delta: number): Promise<ListingUpdateResponse> {
-      return client.request<ListingUpdateResponse>(`/vendor/listings/${listingId}/stock`, {
+    getStock(listingId: string): Promise<StockContext> {
+      return client.request<StockContext>(`/vendor/listings/${listingId}/stock`);
+    },
+
+    adjustStock(listingId: string, payload: StockAdjustment): Promise<StockOutcome> {
+      return client.request<StockOutcome>(`/vendor/listings/${listingId}/stock`, {
         method: "PATCH",
-        body: JSON.stringify({ delta }),
+        body: JSON.stringify(payload),
       });
     },
 

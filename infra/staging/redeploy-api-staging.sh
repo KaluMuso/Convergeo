@@ -88,8 +88,8 @@ fi
 if [[ "$TAG" == "latest" ]]; then
   die "refusing tag 'latest' — staging requires an immutable git SHA tag"
 fi
-if [[ ! "$TAG" =~ ^[0-9a-f]{7,40}$ ]]; then
-  die "tag must look like a git SHA (got: ${TAG})"
+if [[ ! "$TAG" =~ ^[0-9a-f]{40}$ ]]; then
+  die "tag must be a full lowercase git SHA (got: ${TAG})"
 fi
 
 echo "→ Pulling ${IMAGE}:${TAG} ..."

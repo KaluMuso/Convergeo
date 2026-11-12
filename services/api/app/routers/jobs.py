@@ -327,11 +327,25 @@ async def get_job(
     )
     if quote is not None:
         total = int(quote["amount_ngwee"])
-        deposit = compute_deposit_ngwee(
-            total_job_ngwee=total, deposit_pct=read_service_deposit_pct()
+        # #718: the accepted quote's payment obligations are the snapshot of what is
+        # owed. A later platform_config change must not re-price an accepted job.
+        obligations = (
+            service_client.client.table("service_payment_obligations")
+            .select("leg, amount_ngwee")
+            .eq("job_id", job_id)
+            .execute()
         )
+        legs = obligations.data if isinstance(obligations.data, list) else []
+        if legs:
+            deposit = sum(int(row["amount_ngwee"]) for row in legs if row.get("leg") == "deposit")
+            balance = sum(int(row["amount_ngwee"]) for row in legs if row.get("leg") == "balance")
+        else:
+            deposit = compute_deposit_ngwee(
+                total_job_ngwee=total, deposit_pct=read_service_deposit_pct()
+            )
+            balance = total - deposit
         response.deposit_ngwee = deposit
-        response.balance_due_ngwee = total - deposit
+        response.balance_due_ngwee = balance
     return response
 
 

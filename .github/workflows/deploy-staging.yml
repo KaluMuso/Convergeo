@@ -249,10 +249,15 @@ jobs:
             exit 1
           fi
 
-      - name: Push migrations from blank/current staging DB
+      - name: Push migrations after reviewed installed adoption boundary
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_REGION: ${{ vars.STAGING_SUPABASE_REGION || 'eu-west-1' }}
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+          SERVICE_ADOPTION_REVIEW_EVIDENCE_JSON: ${{ vars.STAGING_SERVICE_ADOPTION_REVIEW_EVIDENCE_JSON }}
           SEND_SMS_HOOK_SECRET: ${{ secrets.SEND_SMS_HOOK_SECRET }}
         run: |
           set -euo pipefail
@@ -264,8 +269,19 @@ jobs:
             echo "::error::SEND_SMS_HOOK_SECRET must match v1,whsec_<base64-secret>"
             exit 1
           fi
-          # Applies repository migrations (including 0056) to the linked staging project.
-          supabase db push --include-all
+          if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
+            export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
+          else
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-${STAGING_SUPABASE_REGION}.pooler.supabase.com:5432/postgres"
+          fi
+          # Clear libpq routing overrides for BOTH prerequisite and push.
+          unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS
+          # READ ONLY: refuses pending/raw adoption or unreviewed history. This
+          # does not install the disposable helper or repair shared history.
+          SCHEMA_TARGET_PROJECT_REF="${STAGING_SUPABASE_PROJECT_ID}" \
+            python3 scripts/ci/guard_shared_service_adoption.py
+          # Bind push to the same native DSN just checked, not separate link state.
+          supabase db push --db-url "${SUPABASE_DB_URL}" --include-all
 
       - name: Reconcile repository migrations against remote ledger
         env:

@@ -12,8 +12,11 @@ import type { CheckoutShellLabels } from "./step-fulfilment";
 const query = { value: "" };
 const useSessionSpy = vi.fn(() => ({ session: null, loading: true }));
 
-vi.mock("@vergeo/auth/use-session", () => ({
+// The cart shell's session hook (#718 identity barrier) lives in lib/customer-session.
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => useSessionSpy(),
+  customerAuth: { snapshot: () => ({ session: null, loading: true }), subscribe: () => () => {} },
+  getReadyCustomerSession: async () => null,
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),

@@ -33,6 +33,7 @@ from tests.rls.conftest import (
     schema_ready,
     seed_matrix_fixtures,
 )
+from tests.test_release import seed_escrow_for_order, seed_ledger_accounts
 
 CUSTOMER_ID = "11111111-1111-1111-1111-111111111111"
 OTHER_CUSTOMER_ID = "22222222-2222-2222-2222-222222222222"
@@ -83,6 +84,7 @@ def db() -> Generator[PgConn, None, None]:
     else:
         ensure_migration_0019(conn)
         seed_matrix_fixtures(conn)
+    seed_ledger_accounts(conn)
     yield conn
 
 
@@ -401,6 +403,7 @@ class TestHoldBeatsTimer:
             created_at=delivered_at,
         )
         _insert_dispute(db, order_id=order_id, status="open")
+        seed_escrow_for_order(db, suffix=order_id)
 
         result = evaluate_and_release(_SERVICE, order_id, now=now)
         assert result.outcome == "held"
@@ -424,6 +427,7 @@ class TestHoldBeatsTimer:
             created_at=delivered_at,
         )
         _insert_dispute(db, order_id=order_id, status="under_review")
+        seed_escrow_for_order(db, suffix=order_id)
 
         result = evaluate_and_release(_SERVICE, order_id, now=now)
         assert result.outcome == "held"

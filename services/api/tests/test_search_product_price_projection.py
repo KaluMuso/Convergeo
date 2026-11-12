@@ -16,7 +16,7 @@ import pytest
 from app.staging.seed_sql import build_seed_sql
 from app.staging.synthetic_contract import assert_contract_valid, product_fixture
 from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url
-from tests.test_seed_staging import MIGRATION_SHIM_SQL
+from tests.test_seed_staging import MIGRATION_SHIM_SQL, _bare_auth_users_sql
 
 MIGRATION_PATH = (
     Path(__file__).resolve().parents[3]
@@ -555,6 +555,8 @@ class TestConfirmedDefectReproduction:
         self, migrated_db: PgConn
     ) -> None:
         assert_contract_valid()
+        auth_users = migrated_db.run_script(_bare_auth_users_sql())
+        assert auth_users.ok, auth_users.error or "local Auth user stand-in failed"
         seeded = migrated_db.run_script(build_seed_sql())
         assert seeded.ok, seeded.error or "canonical seed failed"
 

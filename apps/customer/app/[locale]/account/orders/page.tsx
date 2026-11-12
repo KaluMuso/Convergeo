@@ -4,7 +4,8 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getAccountAccessToken } from "../_components/account-server";
+import { AccountListBoundary } from "../_components/account-list-boundary";
+import { getAccountListSession } from "../_components/account-list-server";
 
 import { createOrdersApiClient } from "./_components/orders-api";
 
@@ -33,7 +34,7 @@ export default async function AccountOrdersPage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const accessToken = await getAccountAccessToken(locale);
+  const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
   const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
@@ -46,7 +47,7 @@ export default async function AccountOrdersPage({ params }: PageProps) {
   const { groups } = await api.listOrders();
 
   if (groups.length === 0) {
-    return (
+    const content = (
       <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
         <h2 className="font-display text-h2 text-display-ink">{t("empty.title")}</h2>
         <p className="text-sm text-text-2">{t("empty.body")}</p>
@@ -60,9 +61,10 @@ export default async function AccountOrdersPage({ params }: PageProps) {
         </LinkButton>
       </section>
     );
+    return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;
   }
 
-  return (
+  const content = (
     <section className="space-y-6">
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("title")}</h2>
@@ -143,4 +145,5 @@ export default async function AccountOrdersPage({ params }: PageProps) {
       </div>
     </section>
   );
+  return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;
 }

@@ -2,9 +2,8 @@
 
 import { ApiError } from "@vergeo/config";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { catalogSaleUnitLabels, formatListingQuantity, resolveSaleUnit } from "../sale-quantity";
 
 import {
@@ -79,6 +78,7 @@ export function useListingPurchase(
     listing ? clampQuantity(getMinimumQuantity(listing), listing) : 1,
   );
   const [adding, setAdding] = useState(false);
+  const addingRef = useRef(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [showMissingOptions, setShowMissingOptions] = useState(false);
@@ -96,11 +96,9 @@ export function useListingPurchase(
     if (!listing) {
       return;
     }
-    // Intentional identity deps (id / stock bounds) — avoid resetting on new object identity each render.
+    // Stock bounds or a refreshed listing object only re-clamp the quantity;
+    // the add-to-cart outcome stays visible (e.g. after a cart add refreshes stock).
     setQuantity(clampQuantity(getMinimumQuantity(listing), listing));
-    setAddError(null);
-    setAddedMessage(null);
-    setShowMissingOptions(false);
   }, [
     listing,
     listingId,
@@ -110,6 +108,13 @@ export function useListingPurchase(
     listingStockQty,
     listingInStock,
   ]);
+
+  useEffect(() => {
+    // A different listing starts with a clean purchase state.
+    setAddError(null);
+    setAddedMessage(null);
+    setShowMissingOptions(false);
+  }, [listingId]);
 
   const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
   const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
@@ -150,7 +155,7 @@ export function useListingPurchase(
   }, [listing]);
 
   const handleAddToCart = useCallback(() => {
-    if (!listing || adding) {
+    if (!listing || adding || addingRef.current) {
       return;
     }
     // Options first: a buyer must be told what to pick even when the listing
@@ -172,34 +177,38 @@ export function useListingPurchase(
       return;
     }
 
+    addingRef.current = true;
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
-    void addCartItem(
-      listing.id,
-      quantity,
-      undefined,
-      pickup.selectedLocationId || variantId
-        ? {
-            ...(pickup.selectedLocationId
-              ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" as const }
-              : {}),
-            ...(variantId ? { listingVariantId: variantId } : {}),
-          }
-        : undefined,
-    )
-      .then(() => {
-        setAddedMessage(labels.addToCartLabel);
-        setLastAddedMessage(labels.addToCartLabel);
-        openMiniCart();
-      })
+    void (async () => {
+      const { addCartItem, openMiniCart, setLastAddedMessage } =
+        await import("../cart/mini-cart-drawer");
+      await addCartItem(
+        listing.id,
+        quantity,
+        undefined,
+        pickup.selectedLocationId || variantId
+          ? {
+              ...(pickup.selectedLocationId
+                ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" as const }
+                : {}),
+              ...(variantId ? { listingVariantId: variantId } : {}),
+            }
+          : undefined,
+      );
+      setAddedMessage(labels.addToCartLabel);
+      setLastAddedMessage(labels.addToCartLabel);
+      openMiniCart();
+    })()
       .catch((error: unknown) => {
         const variantErrorKey =
           error instanceof ApiError ? VARIANT_ERROR_KEYS[error.code] : undefined;
         setAddError(variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel);
       })
       .finally(() => {
+        addingRef.current = false;
         setAdding(false);
       });
   }, [

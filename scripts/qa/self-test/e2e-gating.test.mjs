@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 import { resolveGatePolicy } from "../../../e2e/fixtures/gating-policy.ts";
+import {
+  missingSandboxMomoEvidence,
+  runSandboxMomoCheckout,
+} from "../../../e2e/fixtures/sandbox-momo-evidence.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const SPEC_DIR = path.join(REPO_ROOT, "e2e", "specs");
@@ -148,8 +152,10 @@ describe("PR C — required sites cannot regress to an unconditional skip", () =
   const REQUIRED_SITES = [
     ["auth-otp.spec.ts", "customer OTP verification"],
     ["vendor-sell.spec.ts", "vendor authenticated sell flow"],
-    ["event-ticket.spec.ts", "event scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "free RSVP scanner verify + duplicate-reject"],
+    ["event-ticket.spec.ts", "paid ticket order through admission"],
     ["critical-path.spec.ts", "checkout place-order -> payment surface"],
+    ["shop-checkout-momo.spec.ts", "MoMo checkout and Lenco sandbox charge (F9b)"],
   ];
 
   for (const [file, journey] of REQUIRED_SITES) {
@@ -176,7 +182,6 @@ describe("PR C — required sites cannot regress to an unconditional skip", () =
 
   it("optional legs are still classified, not escalated", () => {
     const optional = [
-      ["shop-checkout-momo.spec.ts", "OPTIONAL_GATE"],
       ["clips-feed.spec.ts", "FEATURE_DISABLED"],
       ["clips-commerce.spec.ts", "FEATURE_DISABLED"],
       ["mobile-layout.spec.ts", "VIEWPORT_NOT_APPLICABLE"],
@@ -194,6 +199,86 @@ describe("PR C — required sites cannot regress to an unconditional skip", () =
         `${file} must not enforce — ${kind} is never a failure`,
       );
     }
+  });
+});
+
+describe("MoMo checkout preflight", () => {
+  const ready = {
+    enabled: true,
+    publicKey: "synthetic-public-key",
+    secretKey: "synthetic-secret-key",
+    testMomoNumber: "0961111111",
+    environment: "sandbox",
+  };
+
+  it("rejects absent and invalid sandbox evidence before any checkout action", async () => {
+    const invalid = [
+      { ...ready, enabled: false },
+      { ...ready, publicKey: "" },
+      { ...ready, secretKey: "" },
+      { ...ready, environment: "" },
+      { ...ready, environment: "preview" },
+      { ...ready, environment: "production" },
+      { ...ready, testMomoNumber: "" },
+      { ...ready, testMomoNumber: "not-a-phone" },
+    ];
+    for (const config of invalid) {
+      let checkoutRequests = 0;
+      const missing = missingSandboxMomoEvidence(config);
+      const verdict = resolveGatePolicy({
+        kind: "REQUIRED_STRICT",
+        journey: "MoMo checkout and Lenco sandbox charge (F9b)",
+        fixtures: missing,
+        strict: true,
+      });
+      await assert.rejects(
+        runSandboxMomoCheckout(config, async () => {
+          checkoutRequests += 1;
+        }),
+        /requires sandbox evidence/,
+      );
+      assert.equal(checkoutRequests, 0);
+      assert.equal(verdict.action, "fail");
+    }
+    assert.deepEqual(missingSandboxMomoEvidence(ready), []);
+    let checkoutRequests = 0;
+    await runSandboxMomoCheckout(ready, async () => {
+      checkoutRequests += 1;
+    });
+    assert.equal(checkoutRequests, 1);
+  });
+
+  it("checks sandbox evidence before navigation or completeCheckout", () => {
+    const source = readFileSync(path.join(SPEC_DIR, "shop-checkout-momo.spec.ts"), "utf8");
+    const moneySafety = source.indexOf("    assertNoAccidentalRealMoney();");
+    const preflight = source.indexOf("missingSandboxMomoEvidence(lenco)");
+    assert.ok(moneySafety >= 0);
+    assert.ok(preflight >= 0);
+    assert.ok(moneySafety < source.indexOf("await page.goto("));
+    assert.ok(preflight < source.indexOf("await page.goto("));
+    assert.ok(preflight < source.indexOf("await runSandboxMomoCheckout(lenco"));
+    assert.ok(
+      source.indexOf("enforceGate(gate)") < source.indexOf("await runSandboxMomoCheckout(lenco"),
+    );
+    assert.ok(source.includes("runSandboxMomoCheckout(lenco, () =>\n      completeCheckout(page"));
+    assert.ok(!source.includes("lenco.testMomoNumber || SEED.address.phone"));
+    const buyerGate = source.indexOf('journey: "MoMo checkout placement (authenticated buyer)"');
+    assert.ok(buyerGate >= 0);
+    assert.ok(
+      source
+        .slice(buyerGate, source.indexOf("await page.goto(", buyerGate))
+        .includes("enforceGate(gate)"),
+    );
+    assert.match(source.slice(buyerGate - 80, buyerGate), /kind: "REQUIRED_STRICT"/);
+  });
+
+  it("passes the sandbox label into hosted E2E and requires the deployed provider leg", () => {
+    assert.match(readFileSync(E2E_WORKFLOW, "utf8"), /LENCO_ENV: \$\{\{ secrets\.LENCO_ENV \}\}/);
+    const critical = readFileSync(path.join(SPEC_DIR, "critical-path.spec.ts"), "utf8");
+    const settle = critical.indexOf('journey: "deployed sandbox MoMo settle (F9b)"');
+    assert.ok(settle >= 0);
+    assert.match(critical.slice(settle - 80, settle), /kind: "REQUIRED_STRICT"/);
+    assert.ok(critical.slice(settle, settle + 300).includes("enforceGate(gate)"));
   });
 });
 

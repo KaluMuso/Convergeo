@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
@@ -9,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { useSession } from "../../../../../../lib/customer-session";
 import { groupRoutesFromQuery } from "../../_lib/group-checkout";
 import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
 
@@ -28,6 +28,7 @@ type CardSession = {
   amount_ngwee: number;
   widget_script_url: string;
   customer: WidgetCustomer;
+  service_job_id?: string | null;
 };
 
 type VerifyResult = {
@@ -114,8 +115,10 @@ export default function CardCheckoutPage() {
   const [sessionData, setSessionData] = useState<CardSession | null>(null);
   const widgetOpened = useRef(false);
 
-  // Paid-ticket / service-deposit card payments carry ?group=&kind=(&job=) so retry
-  // returns to that group's checkout and success lands on the wallet / job thread.
+  // Service-deposit card payments from the #760 group checkout carry
+  // ?group=&kind=service_deposit(&job=) so retry returns to that group's checkout and
+  // success lands on the job thread. Ticket card retries keep the ticket checkout's
+  // ?group=&retry=1 hand-back.
   const groupRoutes = useMemo(
     () =>
       groupRoutesFromQuery(locale, searchParams.get("group") ?? "", {
@@ -125,14 +128,15 @@ export default function CardCheckoutPage() {
     [locale, searchParams],
   );
   const groupKind = searchParams.get("kind");
-  const checkoutPaymentPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
-  const ordersPath = groupRoutes?.success ?? `/${locale}/account/orders`;
-  const successLabel =
-    groupRoutes && groupKind === "ticket"
-      ? tGroup("viewTickets")
-      : groupRoutes && ordersPath.includes("/account/jobs/")
-        ? tGroup("viewJob")
-        : t("viewOrders");
+  const checkoutPaymentPath = useMemo(() => {
+    if (groupRoutes && groupKind === "service_deposit") return groupRoutes.checkout;
+    const group = searchParams.get("group");
+    return group &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(group)
+      ? `/${locale}/checkout?group=${encodeURIComponent(group)}&retry=1`
+      : `/${locale}/checkout`;
+  }, [groupKind, groupRoutes, locale, searchParams]);
+  const ordersPath = useMemo(() => `/${locale}/account/orders`, [locale]);
 
   const verifyReturn = useCallback(
     async (clientStatus: "success" | "failed" | "closed" | "pending") => {
@@ -309,6 +313,13 @@ export default function CardCheckoutPage() {
     }
   })();
 
+  const successHref =
+    groupRoutes && groupKind === "service_deposit"
+      ? groupRoutes.success
+      : sessionData?.service_job_id
+        ? `/${locale}/account/jobs/${sessionData.service_job_id}`
+        : ordersPath;
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 py-8">
       <header className="space-y-2 text-center">
@@ -332,12 +343,12 @@ export default function CardCheckoutPage() {
 
       {viewState === "success" ? (
         <LinkButton
-          href={ordersPath}
+          href={successHref}
           variant="primary"
           className="w-full px-5 text-sm"
           LinkComponent={Link}
         >
-          {successLabel}
+          {successHref.includes("/account/jobs/") ? tGroup("viewJob") : t("viewOrders")}
         </LinkButton>
       ) : null}
 

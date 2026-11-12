@@ -10,6 +10,7 @@ import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
 import { resolveWorkers } from "./fixtures/worker-policy";
 
 const isCI = !!process.env.CI;
+const privateCredentialRun = process.env.E2E_PRIVATE_CREDENTIAL_RUN === "1";
 
 /**
  * Vercel Deployment Protection bypass is deliberately ABSENT from this file.
@@ -101,10 +102,10 @@ function fast3gProject() {
 
 export default defineConfig({
   testDir: "./specs",
-  // Whole-suite budget. The matrix shrank from 325 to 65 project-test
+  // Whole-suite budget. The matrix shrank from 325 to 66 project-test
   // instances (PR B — removed the unscoped 5x spec×project fan-out and
   // mobile-layout's internal viewport loop); 720s is derived from run #47's
-  // measured PASSING-test durations (p90 ≈17.3s/test × 65 tests / 2 CI
+  // measured PASSING-test durations (p90 ≈17.3s/test × 66 tests / 2 CI
   // workers ≈562s, + the ≈64s observed pre-suite setup, + ~15% margin) —
   // see scripts/qa/self-test/e2e-matrix.test.mjs and the PR description.
   globalTimeout: 720 * 1000,
@@ -130,11 +131,14 @@ export default defineConfig({
     ["json", { outputFile: "results/results.json" }],
   ],
   outputDir: "results/artifacts",
+  // Private local Auth/scanner runs retain statuses and structured assertions,
+  // while Playwright drops DOM/media output that can contain OTPs or ticket PINs.
+  preserveOutput: privateCredentialRun ? "never" : "always",
   use: {
     baseURL: BASE_URL,
-    trace: "on-first-retry",
-    video: "retain-on-failure",
-    screenshot: "only-on-failure",
+    trace: privateCredentialRun ? "off" : "on-first-retry",
+    video: privateCredentialRun ? "off" : "retain-on-failure",
+    screenshot: privateCredentialRun ? "off" : "only-on-failure",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
     launchOptions: executablePath ? { executablePath } : {},

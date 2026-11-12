@@ -21,17 +21,19 @@ from app.core.auth import (
 from app.core.supabase import get_user_client
 from app.main import create_app
 from app.settings import get_settings
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from jwt.algorithms import RSAAlgorithm
-from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
+from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError, InvalidTokenError
+from jwt.types import Options
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
 VALID_TOKEN = "valid.jwt.token"
 EXPIRED_TOKEN = "expired.jwt.token"
 TAMPERED_TOKEN = "tampered.jwt.token"
 JWT_KID = "test-rs256-kid"
+ES256_KID = "test-es256-kid"
 
 
 @pytest.fixture
@@ -326,6 +328,77 @@ def test_verify_supabase_jwt_accepts_rs256_jwks_token(
     assert claims["aud"] == "authenticated"
 
 
+@pytest.fixture
+def es256_jwks_stub() -> Generator[tuple[str, str, str], None, None]:
+    trusted_key = ec.generate_private_key(ec.SECP256R1())
+    untrusted_key = ec.generate_private_key(ec.SECP256R1())
+    public_jwk: dict[str, Any] = json.loads(ECAlgorithm.to_jwk(trusted_key.public_key()))
+    public_jwk.update({"kid": ES256_KID, "use": "sig", "alg": "ES256"})
+    jwks_body = json.dumps({"keys": [public_jwk]}).encode()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(jwks_body)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    supabase_url = f"http://127.0.0.1:{port}"
+    issuer = f"{supabase_url}/auth/v1"
+    now = int(time.time())
+    claims = {
+        "sub": USER_ID,
+        "aud": "authenticated",
+        "role": "authenticated",
+        "iss": issuer,
+        "iat": now,
+        "exp": now + 3600,
+    }
+    valid_token = jwt.encode(claims, trusted_key, algorithm="ES256", headers={"kid": ES256_KID})
+    invalid_token = jwt.encode(claims, untrusted_key, algorithm="ES256", headers={"kid": ES256_KID})
+
+    try:
+        yield supabase_url, valid_token, invalid_token
+    finally:
+        server.shutdown()
+
+
+def test_verify_supabase_jwt_accepts_es256_jwks_token(
+    es256_jwks_stub: tuple[str, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    supabase_url, token, _ = es256_jwks_stub
+    monkeypatch.setenv("SUPABASE_URL", supabase_url)
+    get_settings.cache_clear()
+    _jwks_client.cache_clear()
+
+    claims = verify_supabase_jwt(token, get_settings())
+
+    assert claims["sub"] == USER_ID
+    assert claims["aud"] == "authenticated"
+
+
+def test_verify_supabase_jwt_rejects_es256_token_with_invalid_signature(
+    es256_jwks_stub: tuple[str, str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    supabase_url, _, token = es256_jwks_stub
+    monkeypatch.setenv("SUPABASE_URL", supabase_url)
+    get_settings.cache_clear()
+    _jwks_client.cache_clear()
+
+    with pytest.raises(InvalidSignatureError):
+        verify_supabase_jwt(token, get_settings())
+
+
 def test_verify_supabase_jwt_rejects_hs256_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -370,3 +443,17 @@ def test_rs256_jwks_token_yields_current_user_with_roles(
     body = response.json()
     assert body["id"] == USER_ID
     assert body["roles"] == ["customer"]
+
+
+def test_pyjwt_unverified_decode_does_not_disable_later_claim_checks() -> None:
+    """Protect against reusing mutated options after an unverified decode."""
+    secret = "x" * 48
+    token = jwt.encode({"exp": int(time.time()) - 60, "aud": "expected"}, secret, algorithm="HS256")
+    options: Options = {"verify_signature": False}
+
+    jwt.decode(token, options=options, algorithms=["HS256"])
+    assert options == {"verify_signature": False}
+
+    options["verify_signature"] = True
+    with pytest.raises(ExpiredSignatureError):
+        jwt.decode(token, secret, options=options, algorithms=["HS256"], audience="expected")

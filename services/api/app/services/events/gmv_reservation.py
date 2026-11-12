@@ -148,7 +148,11 @@ inserted AS (
   FROM allowed
   RETURNING checkout_group_id
 )
-SELECT coalesce((SELECT count(*)::text FROM inserted), '0');
+SELECT set_config(
+  'app.gmv_reservation_accepted',
+  coalesce((SELECT count(*)::text FROM inserted), '0'),
+  true
+);
 """
 
 

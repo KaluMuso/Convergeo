@@ -1,25 +1,27 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const signInWithOtp = vi.fn(async () => ({ error: null }));
+const exchangeCodeForSession = vi.fn();
 
-vi.mock("@vergeo/auth/browser-client-lazy", () => ({
-  getBrowserClient: async () => ({
-    auth: {
-      signInWithOtp,
-      verifyOtp: vi.fn(),
-      exchangeCodeForSession: vi.fn(),
-      getSession: vi.fn(),
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-    },
-  }),
+const getBrowserClient = vi.hoisted(() => vi.fn());
+getBrowserClient.mockImplementation(async () => ({
+  auth: {
+    signInWithOtp,
+    verifyOtp: vi.fn(),
+    exchangeCodeForSession,
+    getSession: vi.fn(),
+    signInWithPassword: vi.fn(),
+    signUp: vi.fn(),
+  },
 }));
+
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({ getBrowserClient }));
 
 vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({ getPreferences: vi.fn() }),
@@ -34,9 +36,10 @@ vi.mock("next/navigation", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.history.replaceState({}, "", "/en/login");
 });
 
-import { AuthLoginShell, type AuthLoginLabels } from "./login-shell";
+import { AuthLoginShell, AuthSignupShell, type AuthLoginLabels } from "./login-shell";
 
 const labels: AuthLoginLabels = {
   title: "Sign in",
@@ -76,6 +79,78 @@ const labels: AuthLoginLabels = {
   googleLoading: "Signing in with Google",
   genericError: "Something went wrong",
 };
+
+describe("OAuth callback code is exchanged once", () => {
+  it("does not spend a callback code after the page unmounts during client loading", async () => {
+    window.history.replaceState({}, "", "/en/login?code=unused-code");
+    const client = await getBrowserClient();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    getBrowserClient.mockImplementationOnce(async () => {
+      await pending;
+      return client;
+    });
+
+    const view = render(
+      <AuthLoginShell locale="en" variant="vendor" labels={labels} defaultNextPath="/en" />,
+    );
+    view.unmount();
+    await act(async () => release());
+
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("navigates a successful vendor callback once under Strict Mode", async () => {
+    window.history.replaceState({}, "", "/en/login?code=vendor-code");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    render(
+      <React.StrictMode>
+        <AuthLoginShell
+          locale="en"
+          variant="vendor"
+          labels={labels}
+          defaultNextPath="/en"
+          nextParam="/en/services"
+          showSignupLink={false}
+        />
+      </React.StrictMode>,
+    );
+
+    await waitFor(() => expect(push).toHaveBeenCalledExactlyOnceWith("/en/services"));
+    expect(exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith("vendor-code");
+  });
+
+  it.each(["login", "signup"])("%s callback survives Strict Mode effect replay", async (page) => {
+    window.history.replaceState({}, "", `/en/${page}?code=single-use-code`);
+    exchangeCodeForSession.mockResolvedValue({
+      error: new Error("expired code"),
+    });
+
+    render(
+      <React.StrictMode>
+        {page === "login" ? (
+          <AuthLoginShell locale="en" variant="customer" labels={labels} defaultNextPath="/en" />
+        ) : (
+          <AuthSignupShell
+            locale="en"
+            labels={{
+              ...labels,
+              loginPrompt: "Have an account?",
+              loginLink: "Sign in",
+            }}
+            defaultNextPath="/en"
+          />
+        )}
+      </React.StrictMode>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(labels.genericError);
+    expect(exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith("single-use-code");
+  });
+});
 
 /**
  * D25/PR-D: the shared shell is the ONE decision point for whether phone OTP

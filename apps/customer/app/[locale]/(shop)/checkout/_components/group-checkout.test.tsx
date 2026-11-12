@@ -23,7 +23,7 @@ const sessionState = {
   loading: false,
 };
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../../lib/customer-session", () => ({
   useSession: () => sessionState,
 }));
 

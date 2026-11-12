@@ -1,3 +1,5 @@
+import { isValidZmMobile } from "./kyc-client";
+import { isPrivateKycPath } from "./storage";
 import {
   LOCAL_STORAGE_KEY,
   ONBOARDING_STEPS,
@@ -26,39 +28,65 @@ export function stepIndexFromKey(key: OnboardingStepKey): number {
   return index >= 0 ? index : 0;
 }
 
-export function readLocalDraft(): OnboardingDraft | null {
-  if (typeof window === "undefined") {
+function draftKey(userId: string): string {
+  return `${LOCAL_STORAGE_KEY}:${userId}`;
+}
+
+export function readLocalDraft(userId: string): OnboardingDraft | null {
+  if (typeof window === "undefined" || !userId) {
     return null;
   }
 
   try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+    // The former unscoped key may belong to a different account on this device.
+    window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+    const raw = window.localStorage.getItem(draftKey(userId));
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<OnboardingDraft>;
+    const parsed = JSON.parse(raw) as Partial<OnboardingDraft> | null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
     return {
-      ...DEFAULT_DRAFT,
-      ...parsed,
-      step: typeof parsed.step === "number" ? parsed.step : 0,
+      step:
+        typeof parsed.step === "number" && Number.isInteger(parsed.step)
+          ? Math.max(0, Math.min(parsed.step, ONBOARDING_STEPS.length - 1))
+          : 0,
+      businessName: typeof parsed.businessName === "string" ? parsed.businessName : "",
+      businessCategory: typeof parsed.businessCategory === "string" ? parsed.businessCategory : "",
+      businessArchetype:
+        typeof parsed.businessArchetype === "string" ? parsed.businessArchetype : "",
+      legalName: typeof parsed.legalName === "string" ? parsed.legalName : "",
+      momoPhone: typeof parsed.momoPhone === "string" ? parsed.momoPhone : "",
+      nrcPath: typeof parsed.nrcPath === "string" ? parsed.nrcPath : null,
+      selfiePath: typeof parsed.selfiePath === "string" ? parsed.selfiePath : null,
     };
   } catch {
     return null;
   }
 }
 
-export function writeLocalDraft(draft: OnboardingDraft): void {
-  if (typeof window === "undefined") {
+export function writeLocalDraft(userId: string, draft: OnboardingDraft): void {
+  if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(draft));
+  try {
+    window.localStorage.setItem(draftKey(userId), JSON.stringify(draft));
+  } catch {
+    // Storage may be unavailable or full; keep the in-memory/server draft usable.
+  }
 }
 
-export function clearLocalDraft(): void {
-  if (typeof window === "undefined") {
+export function clearLocalDraft(userId: string): void {
+  if (typeof window === "undefined" || !userId) {
     return;
   }
-  window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(draftKey(userId));
+  } catch {
+    // A successful server submission must still navigate if storage is blocked.
+  }
 }
 
 export function mergeDraftWithServer(
@@ -102,7 +130,12 @@ export function resolveResumeStep(
     return stepIndexFromKey("business");
   }
 
-  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim() || !draft.legalName.trim()) {
+  if (
+    !isPrivateKycPath(draft.nrcPath ?? "") ||
+    !isPrivateKycPath(draft.selfiePath ?? "") ||
+    !isValidZmMobile(draft.momoPhone) ||
+    draft.legalName.trim().length < 2
+  ) {
     return stepIndexFromKey("kyc");
   }
 

@@ -1,3 +1,5 @@
+rc: ./scripts/ci/hook-rc.sh
+
 commit-msg:
   commands:
     commitlint:
@@ -5,5 +7,5 @@ commit-msg:
 
 pre-commit:
   commands:
-    lint-staged:
-      run: pnpm exec lint-staged
+    format-staged:
+      run: pnpm format:staged

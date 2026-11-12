@@ -74,6 +74,7 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
         }
         video.srcObject = stream;
         await video.play();
+        if (cancelled) return;
         setMode("active");
 
         const scanFrame = async () => {
@@ -97,6 +98,7 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
               context.drawImage(videoEl, 0, 0, width, height);
               const imageData = context.getImageData(0, 0, width, height);
               const code = await decodeQrFromImageData(imageData);
+              if (cancelled) return;
               const now = Date.now();
               // Debounce re-firing the exact same code for a couple of
               // seconds so holding the QR in frame doesn't spam re-scans.
@@ -114,12 +116,14 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
         frameRef.current = requestAnimationFrame(scanFrame);
       } catch {
         if (!cancelled) {
+          stopCamera();
           setMode("denied");
           onCameraDenied();
         }
       }
     }
 
+    setMode("loading");
     void startCamera();
 
     return () => {
@@ -127,24 +131,6 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
       stopCamera();
     };
   }, [disabled, onCameraDenied, onCodeDetected, stopCamera]);
-
-  if (mode === "loading") {
-    return (
-      <div
-        data-testid="event-scan-camera-loading"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "14rem",
-          borderRadius: "var(--r)",
-          background: "var(--bg-2)",
-        }}
-      >
-        <Spinner label={t("scan.eventCheckIn.camera.loading")} />
-      </div>
-    );
-  }
 
   if (mode === "denied") {
     return (
@@ -168,7 +154,9 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
   }
 
   return (
-    <div data-testid="event-scan-camera-active">
+    <div
+      data-testid={mode === "loading" ? "event-scan-camera-loading" : "event-scan-camera-active"}
+    >
       <div
         style={{
           position: "relative",
@@ -179,6 +167,20 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
           maxHeight: "18rem",
         }}
       >
+        {mode === "loading" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "grid",
+              placeItems: "center",
+              background: "var(--bg-2)",
+              zIndex: 1,
+            }}
+          >
+            <Spinner label={t("scan.eventCheckIn.camera.loading")} />
+          </div>
+        )}
         <video
           ref={videoRef}
           playsInline

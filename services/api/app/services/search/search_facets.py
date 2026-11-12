@@ -28,8 +28,7 @@ class SearchFacets(StrictModel):
     price: list[SearchFacetBucket]
 
 
-def _price_bucket(price_ngwee: int | None) -> PriceBucket:
-    price = price_ngwee or 0
+def _price_bucket(price: int) -> PriceBucket:
     if price < 50_000:
         return "under_50k"
     if price < 200_000:
@@ -149,6 +148,9 @@ def compute_search_facets[T: FacetHit](
 
     for hit in _product_hits(hits):
         if not _matches_category(hit, category_path):
+            continue
+        # Unknown prices are not free offers and cannot populate a numeric bucket.
+        if hit.price_min_ngwee is None:
             continue
         bucket = _price_bucket(hit.price_min_ngwee)
         price_counts[bucket] += 1

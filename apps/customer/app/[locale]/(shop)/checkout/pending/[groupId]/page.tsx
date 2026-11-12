@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string; groupId: string }>;
-  searchParams?: Promise<SearchParams>;
+  searchParams?: Promise<SearchParams & { ticket?: string }>;
 };
 
 export function generateStaticParams() {
@@ -41,6 +41,7 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
     codBody: t("checkout.pending.codBody"),
     codCta: t("checkout.pending.codCta"),
     viewOrder: t("checkout.pending.viewOrder"),
+    ticketUnavailableBody: t("checkout.pending.ticketUnavailableBody"),
     ussd: {
       title: t("checkout.ussd.title"),
       subtitle: t("checkout.ussd.subtitle"),
@@ -80,6 +81,7 @@ export default async function PendingCheckoutPage({ params, searchParams }: Page
     checkout: checkoutMessages,
   } as AbstractIntlMessages;
   const labels = buildPendingLabels(locale, messages);
+  const ticketCheckout = (await searchParams)?.ticket === "1";
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
@@ -87,6 +89,7 @@ export default async function PendingCheckoutPage({ params, searchParams }: Page
         locale={locale}
         groupId={groupId}
         labels={labels}
+        ticketCheckout={ticketCheckout}
         groupRoutes={groupRoutesFromQuery(locale, groupId, await searchParams)}
       />
     </div>

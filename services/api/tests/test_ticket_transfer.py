@@ -65,7 +65,8 @@ def ensure_ticket_transfers_table(conn: PgConn) -> None:
         WHERE table_schema = 'public' AND table_name = 'ticket_transfers';
         """
     )
-    if result.ok and result.rows and result.rows[0] == "0":
+    assert result.ok and result.rows, result.error
+    if result.rows[0] == "0":
         migration = MIGRATIONS_DIR / "0026_ticket_transfers.sql"
         applied = conn.run_file(migration)
         if not applied.ok:
@@ -82,9 +83,13 @@ def db() -> Generator[PgConn, None, None]:
     if not conn.run("SELECT 1").ok:
         pytest.skip(f"Postgres not reachable at {url}")
     if not schema_ready(conn):
-        conn.run("DROP SCHEMA IF EXISTS public CASCADE")
-        conn.run("CREATE SCHEMA public")
-        conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        for statement in (
+            "DROP SCHEMA IF EXISTS public CASCADE",
+            "CREATE SCHEMA public",
+            "DROP SCHEMA IF EXISTS auth CASCADE",
+        ):
+            reset = conn.run(statement)
+            assert reset.ok, reset.error
         apply_migrations(conn)
     ensure_ticket_transfers_table(conn)
     seed_matrix_fixtures(conn)
@@ -329,7 +334,7 @@ def _insert_event_instance(conn: PgConn, *, starts_at: datetime) -> dict[str, st
     instance_id = str(uuid.uuid4())
     ticket_type_id = str(uuid.uuid4())
     slug = f"transfer-{event_id[:8]}"
-    conn.run(
+    created = conn.run(
         f"""
         INSERT INTO public.events (
           id, organiser_vendor_id, title, slug, venue, lat, lng, status
@@ -344,6 +349,7 @@ def _insert_event_instance(conn: PgConn, *, starts_at: datetime) -> dict[str, st
         ) VALUES ('{ticket_type_id}', '{event_id}', 'fixed', 'GA', 20000);
         """
     )
+    assert created.ok, created.error
     return {"event_id": event_id, "instance_id": instance_id, "ticket_type_id": ticket_type_id}
 
 
@@ -364,7 +370,7 @@ def _insert_ticket(
         item_id = str(uuid.uuid4())
         order_id = str(uuid.uuid4())
         group_id = str(uuid.uuid4())
-        conn.run(
+        order_seed = conn.run(
             f"""
             INSERT INTO public.checkout_groups (
               id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee,
@@ -388,11 +394,12 @@ def _insert_ticket(
             VALUES ('{item_id}', '{ticket_type_id}', '{instance_id}');
             """
         )
+        assert order_seed.ok, order_seed.error
         item_sql = f"'{item_id}'"
 
     pin_hash = seal_pin_storage(pin=pin, ticket_id=ticket_id)
     checked_sql = "timezone('utc', now())" if status == "checked_in" else "NULL"
-    conn.run(
+    ticket_seed = conn.run(
         f"""
         INSERT INTO public.tickets (
           id, instance_id, ticket_type_id, holder_user_id, status,
@@ -403,25 +410,31 @@ def _insert_ticket(
         );
         """
     )
+    assert ticket_seed.ok, ticket_seed.error
 
 
 def _insert_user_with_phone(conn: PgConn, *, user_id: str, phone: str) -> None:
     email = f"{user_id[:8]}@transfer-fixture.test"
-    conn.run(
+    auth_seed = conn.run(
         f"""
         INSERT INTO auth.users (
-          instance_id, id, aud, role, email, encrypted_password,
-          email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+          id, email, created_at
         ) VALUES (
-          '00000000-0000-0000-0000-000000000000', '{user_id}', 'authenticated', 'authenticated',
-          '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-          timezone('utc', now()), timezone('utc', now())
+          '{user_id}', '{email}', timezone('utc', now())
         ) ON CONFLICT (id) DO NOTHING;
+        """
+    )
+    assert auth_seed.ok, auth_seed.error
+    profile_seed = conn.run(
+        f"""
         INSERT INTO public.profiles (id, phone, display_name)
         VALUES ('{user_id}', '{phone}', 'Transfer Fixture User')
         ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone;
         """
     )
+    assert profile_seed.ok, profile_seed.error
+    phone_row = conn.run(f"SELECT phone FROM public.profiles WHERE id = '{user_id}';")
+    assert phone_row.ok and phone_row.rows == [phone], phone_row.error or phone_row.rows
 
 
 def _ticket_row(conn: PgConn, ticket_id: str) -> dict[str, str]:

@@ -251,7 +251,11 @@
     "related": {
       "heading": "Plus dans cette catégorie",
       "fromPrice": "À partir de {price}",
-      "vendorFallback": "Même catégorie"
+      "vendorFallback": "Même catégorie",
+      "vendorHeading": "Autres articles de {vendor}",
+      "categoryHeading": "Autres articles de cette catégorie",
+      "loading": "Chargement des recommandations…",
+      "unavailable": "Les recommandations sont temporairement indisponibles."
     },
     "recentlyViewed": {
       "heading": "Consultés récemment"
@@ -260,7 +264,12 @@
       "empty": "Pas encore d'images",
       "indicator": "Image {current} sur {total}",
       "previous": "Image précédente",
-      "next": "Image suivante"
+      "next": "Image suivante",
+      "zoomOpen": "Agrandir l’image",
+      "zoomClose": "Fermer la visionneuse",
+      "zoomTitle": "Images du produit",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Ajuster l’image"
     },
     "specs": {
       "heading": "Caractéristiques",

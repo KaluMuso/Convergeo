@@ -5,10 +5,12 @@
  * process environment (populated locally via a `.env`-style export or, in CI,
  * from GitHub Actions secrets). Absent flags degrade gracefully: founder-gated
  * legs (Lenco sandbox pay, WhatsApp mock assertions, deterministic seed reset)
- * are skipped with a clear annotation rather than failing.
+ * are skipped with a clear annotation outside strict certification. Required
+ * payment evidence fails the MoMo checkout spec in strict certification.
  */
 
 import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
+import { missingSandboxMomoEvidence } from "./sandbox-momo-evidence";
 import { SEED } from "./seed.generated";
 
 export function flag(name: string): boolean {
@@ -122,20 +124,21 @@ export const THROTTLE = process.env.E2E_THROTTLE !== "0";
 
 /**
  * Lenco sandbox pay leg (founder gate F9b). Runs the live sandbox charge only
- * when the flag is set AND the reference/secret env is present. Otherwise the
- * checkout spec asserts up to the pay-initiation boundary and skips the charge.
+ * when the flag, keys, and test MSISDN are present. No checkout is placed
+ * with missing evidence.
  */
 export const lenco = {
   enabled: flag("LENCO_SANDBOX"),
+  environment: str("LENCO_ENV"),
   publicKey: str("LENCO_SANDBOX_PUBLIC_KEY"),
   secretKey: str("LENCO_SANDBOX_SECRET_KEY"),
   /** A sandbox MoMo number Lenco auto-approves in test mode. */
   testMomoNumber: str("LENCO_SANDBOX_MOMO_NUMBER"),
 };
 
-/** True only when the sandbox flag + creds are all present. */
+/** True only when the sandbox flag, keys, number and label are safe. */
 export function lencoSandboxReady(): boolean {
-  return lenco.enabled && lenco.secretKey.length > 0;
+  return missingSandboxMomoEvidence(lenco).length === 0;
 }
 
 /**
@@ -184,21 +187,30 @@ export const vendorOtp = {
 };
 
 export function customerOtpReady(): boolean {
-  return customerOtp.staticCode.length > 0;
+  return /^\d{6}$/.test(customerOtp.staticCode) && phoneOtpSafetyReady();
 }
 
 export function vendorOtpReady(): boolean {
-  return vendorOtp.staticCode.length > 0;
+  return /^\d{6}$/.test(vendorOtp.staticCode) && phoneOtpSafetyReady();
+}
+
+/** Declarations gate test sends; they do not inspect or activate hosted flags. */
+export function phoneOtpSafetyReady(): boolean {
+  return (
+    str("SMS_OTP_TRANSPORT").toLowerCase() === "waha" &&
+    str("WAHA_OTP_ENABLED").toLowerCase() === "true" &&
+    str("STAGING_SMS_SANDBOX_ATTESTED").toLowerCase() === "true" &&
+    str("STAGING_TEST_OTP_MAP_ATTESTED").toLowerCase() === "true"
+  );
 }
 
 /**
  * Organiser scanner credential for the seeded ticket.
  *
- * This is the stable PIN fallback, not the rotating QR: the real QR window code
- * changes every 60 seconds (`services/tickets/qr.py`), so no stored value could
- * stay valid. It is minted per run by the canonical seed step, masked, and
- * exported into the job — never committed. `E2E_TICKET_QR` remains a temporary
- * backward-compatible alias.
+ * This is the holder-visible PIN issued by the real free-RSVP service for this
+ * seed run, not the rotating QR. It is recovered into a private 0600 runtime
+ * file, masked, and exported into the job — never derived, logged, or committed.
+ * `E2E_TICKET_QR` remains a temporary backward-compatible alias.
  */
 export function ticketPin(): string {
   return str("E2E_TICKET_PIN") || str("E2E_TICKET_QR");

@@ -9,12 +9,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const resetPasswordForEmail = vi.fn();
 const exchangeCodeForSession = vi.fn();
-const updateUser = vi.fn();
+const getClaims = vi.fn();
 const getSession = vi.fn();
+const passwordFetch = vi.fn();
+let authCallback:
+  ((event: string, session?: { user: { id: string }; access_token: string }) => void) | null = null;
 
-vi.mock("@vergeo/auth/browser-client", () => ({
-  createBrowserClient: () => ({
-    auth: { resetPasswordForEmail, exchangeCodeForSession, updateUser, getSession },
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({
+    auth: {
+      resetPasswordForEmail,
+      exchangeCodeForSession,
+      getClaims,
+      getSession,
+      onAuthStateChange: (
+        callback: (event: string, session?: { user: { id: string }; access_token: string }) => void,
+      ) => {
+        authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
+    },
   }),
 }));
 
@@ -66,14 +80,34 @@ function renderWithIntl(node: React.ReactNode) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   window.history.replaceState({}, "", "/");
 });
 
 beforeEach(() => {
   resetPasswordForEmail.mockResolvedValue({ error: null });
-  exchangeCodeForSession.mockResolvedValue({ error: null });
-  updateUser.mockResolvedValue({ error: null });
-  getSession.mockResolvedValue({ data: { session: null } });
+  exchangeCodeForSession.mockImplementation(async () => {
+    authCallback?.("PASSWORD_RECOVERY", {
+      user: { id: "recovery-user" },
+      access_token: "recovery-token",
+    });
+    return {
+      data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+      error: null,
+    };
+  });
+  getClaims.mockResolvedValue({
+    data: { claims: { sub: "recovery-user", session_id: "recovery-session" } },
+    error: null,
+  });
+  passwordFetch.mockResolvedValue({ ok: true });
+  vi.stubGlobal("fetch", passwordFetch);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://staging.example.supabase.co/");
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "public-fixture-key");
+  getSession.mockResolvedValue({
+    data: { session: { user: { id: "recovery-user" }, access_token: "recovery-token" } },
+  });
 });
 
 describe("ResetRequestForm", () => {
@@ -90,7 +124,7 @@ describe("ResetRequestForm", () => {
       { redirectTo: string },
     ];
     expect(emailArg).toBe("founder@example.com");
-    expect(opts.redirectTo).toContain("/en/reset-password/confirm");
+    expect(opts.redirectTo).toBe(`${window.location.origin}/en/reset-password/confirm`);
     expect(screen.getByText(/a reset link is on its way/i)).toBeInTheDocument();
   });
 
@@ -100,6 +134,38 @@ describe("ResetRequestForm", () => {
     await user.click(screen.getByRole("button", { name: /send reset link/i }));
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
     expect(screen.getByText("Required")).toBeInTheDocument();
+  });
+
+  it("uses this portal and locale as the recovery return and reports rate limiting", async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: { status: 429, retryAfter: 31 } });
+    window.history.replaceState({}, "", "/fr/reset-password");
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="fr" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    await waitFor(() =>
+      expect(resetPasswordForEmail).toHaveBeenCalledWith("person@example.test", {
+        redirectTo: `${window.location.origin}/fr/reset-password/confirm`,
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Wait 31s");
+    expect(screen.queryByText(/a reset link is on its way/i)).not.toBeInTheDocument();
+  });
+
+  it("reports operational mail errors without exposing their raw details", async () => {
+    resetPasswordForEmail.mockResolvedValue({
+      error: { code: "email_address_not_authorized", message: "Sender is not configured" },
+    });
+    const user = userEvent.setup();
+    renderWithIntl(<ResetRequestForm locale="en" />);
+
+    await user.type(screen.getByLabelText(/email address/i), "person@example.test");
+    await user.click(screen.getByRole("button", { name: /send reset link/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Something went wrong");
+    expect(screen.queryByText(/Sender is not configured/i)).not.toBeInTheDocument();
   });
 });
 
@@ -118,14 +184,22 @@ describe("ResetConfirmForm", () => {
     await user.type(newPw, "supersecret1");
     await user.type(confirmPw, "different1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    expect(updateUser).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
     expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
 
     // Matching passwords update and show success.
     await user.clear(confirmPw);
     await user.type(confirmPw, "supersecret1");
     await user.click(screen.getByRole("button", { name: /update password/i }));
-    await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ password: "supersecret1" }));
+    await waitFor(() =>
+      expect(passwordFetch).toHaveBeenCalledExactlyOnceWith(
+        "https://staging.example.supabase.co/auth/v1/user",
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer recovery-token" }),
+          body: JSON.stringify({ password: "supersecret1" }),
+        }),
+      ),
+    );
     expect(screen.getByText(/password updated/i)).toBeInTheDocument();
   });
 
@@ -135,5 +209,74 @@ describe("ResetConfirmForm", () => {
       expect(screen.getByText(/reset link is invalid or has expired/i)).toBeInTheDocument(),
     );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects an established session without a recovery code", async () => {
+    // A session alone (possibly another account) never opens the password form;
+    // only a fresh PASSWORD_RECOVERY code exchange does.
+    window.history.replaceState({}, "", "/en/reset-password/confirm");
+    getSession.mockResolvedValue({ data: { session: { access_token: "recovery-session" } } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+    expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(passwordFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expired code and never offers the password form", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=expired");
+    exchangeCodeForSession.mockResolvedValue({ error: { message: "expired" } });
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+    expect(passwordFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["query error", "?error=access_denied"],
+    ["query error_code", "?error_code=otp_expired"],
+    ["fragment error", "#error=access_denied"],
+    ["fragment error_code", "#error_code=otp_expired"],
+    ["code with fragment error", "?code=valid#state=x&error=access_denied"],
+  ])("rejects %s with and without an unrelated session", async (_name, suffix) => {
+    for (const session of [null, { access_token: "other-session" }]) {
+      window.history.replaceState({}, "", `/en/reset-password/confirm${suffix}`);
+      getSession.mockResolvedValue({ data: { session } });
+      const view = renderWithIntl(<ResetConfirmForm locale="en" />);
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+      );
+      expect(screen.queryByRole("button", { name: /update password/i })).not.toBeInTheDocument();
+      expect(exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(getSession).not.toHaveBeenCalled();
+      expect(passwordFetch).not.toHaveBeenCalled();
+      view.unmount();
+    }
+  });
+
+  it("ends checking when code exchange rejects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=bad");
+    exchangeCodeForSession.mockRejectedValue(new Error("network unavailable"));
+    renderWithIntl(<ResetConfirmForm locale="en" />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/invalid or has expired/i),
+    );
+  });
+
+  it("exchanges a single-use code once under React strict effects", async () => {
+    window.history.replaceState({}, "", "/en/reset-password/confirm?code=single-use");
+    renderWithIntl(
+      <React.StrictMode>
+        <ResetConfirmForm locale="en" />
+      </React.StrictMode>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /update password/i })).toBeInTheDocument(),
+    );
+    expect(exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 });

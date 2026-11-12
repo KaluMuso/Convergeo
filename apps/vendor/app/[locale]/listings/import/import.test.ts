@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.json";
 
-import { applyRawRows, previewCsv } from "./_lib/import-client";
+import { applyRawRows, downloadTemplateCsv, previewCsv } from "./_lib/import-client";
 
 function mockFetchOnce(payload: unknown, ok = true, status = 200): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -16,6 +16,25 @@ function mockFetchOnce(payload: unknown, ok = true, status = 200): ReturnType<ty
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("server import template", () => {
+  it("downloads the authenticated server CSV including unit and tier columns", async () => {
+    const csv = "sku,sale_unit,unit_step_milli,min_steps,price_tiers\n";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => csv });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await downloadTemplateCsv(() => "tok")).toBe(csv);
+    const [url, options] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toContain("/listings/import/template");
+    expect(options.headers.get("Authorization")).toBe("Bearer tok");
+  });
+
+  it("rejects a failed template response rather than downloading error content", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    await expect(downloadTemplateCsv(() => "tok")).rejects.toMatchObject({
+      code: "template_failed",
+    });
+  });
 });
 
 describe("import i18n", () => {

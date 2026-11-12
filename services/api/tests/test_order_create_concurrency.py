@@ -9,6 +9,7 @@ exercised for real.
 
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
@@ -41,6 +42,14 @@ from tests.test_order_creation import (
 
 @pytest.fixture(scope="module")
 def db() -> Generator[PgConn, None, None]:
+    # The caller owns this disposable, fully migrated database. Never reset it.
+    if isolated_url := os.environ.get("ORDER_TEST_DB_URL"):
+        conn = PgConn(isolated_url)
+        ready = conn.run("SELECT 1 FROM public.orders LIMIT 1")
+        assert ready.ok, ready.error
+        seed_matrix_fixtures(conn)
+        yield conn
+        return
     admin = PgConn("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
     if not admin.run("SELECT 1").ok:
         pytest.skip("Postgres not reachable on 127.0.0.1:5432")
@@ -92,16 +101,27 @@ def _insert_made_to_order_listing(
     price_ngwee: int,
 ) -> None:
     capacity_sql = str(capacity_per_week) if capacity_per_week is not None else "NULL"
+    ids = _load_ids()
+    product_sql = f"'{ids['products']['phone']}'" if product_class == "A" else "NULL"
+    category_sql = f"'{ids['categories']['electronics']}'" if product_class == "E" else "NULL"
+    if product_class == "E":
+        enabled = conn.run(
+            "INSERT INTO public.feature_flags (flag, enabled) "
+            "VALUES ('product_class_e_customer_release', true) "
+            "ON CONFLICT (flag) DO UPDATE SET enabled = true;"
+        )
+        assert enabled.ok, enabled.error
     result = conn.run(
         f"""
         INSERT INTO public.vendor_listings (
           id, vendor_id, product_id, title_override, price_ngwee, condition,
           stock_mode, stock_qty, status, fulfilment_mode, lead_time_days,
-          product_class, vendor_capacity_per_week
+          product_class, vendor_capacity_per_week, category_id, description
         ) VALUES (
-          '{listing_id}', '{VENDOR_A}', NULL, 'Made-to-order test item',
+          '{listing_id}', '{VENDOR_A}', {product_sql}, 'Made-to-order test item',
           {price_ngwee}, 'new', 'tracked', 0, 'active', 'made_to_order', 7,
-          '{product_class}', {capacity_sql}
+          '{product_class}', {capacity_sql}, {category_sql},
+          'Made to order fixture with a detailed specification for this capacity test.'
         );
         """
     )

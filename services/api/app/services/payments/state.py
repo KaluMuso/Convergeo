@@ -9,9 +9,18 @@ from typing import Any, Protocol, cast
 from uuid import UUID
 
 from app.errors import AppError
-from app.services.payments.base import QueryStatusRequest
+from app.services.payments.base import (
+    PaymentProviderError,
+    ProviderOutcome,
+    QueryStatusRequest,
+    QueryStatusResult,
+)
 from app.services.payments.fees import fee_fields_from_provider_raw
 from app.services.payments.money import SUPPORTED_CURRENCY, major_str_to_ngwee
+from app.services.payments.webhook_verify import (
+    WEBHOOK_VERIFICATION_VERSION,
+    canonical_payload_sha256,
+)
 
 # Well-known UUID for automated jobs (sweeper, webhook processor).
 SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
@@ -22,6 +31,25 @@ DEFAULT_PAYMENT_TTL_MINUTES = 15
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Any: ...
+
+
+def expire_checkout_group_if_unpaid(
+    client: Any, *, checkout_group_id: str, terminal_status: str
+) -> bool:
+    """Atomically terminalize a checkout only while it has no paid payment."""
+    response = client.rpc(
+        "expire_checkout_group_if_unpaid",
+        {
+            "p_checkout_id": checkout_group_id,
+            "p_terminal_status": terminal_status,
+        },
+    ).execute()
+    data = getattr(response, "data", None)
+    if isinstance(data, bool):
+        return data
+    if isinstance(data, list) and data and isinstance(data[0], bool):
+        return data[0]
+    return False
 
 
 class PaymentStatus(StrEnum):
@@ -111,6 +139,18 @@ class PaymentTransitionError(AppError):
             message=message,
             http_status=409,
             details={"from_status": from_status, "event": event},
+        )
+
+
+class PaymentObservationMismatch(AppError):
+    """A provider observation does not identify the expected collection."""
+
+    def __init__(self, payment_id: str, reason: str) -> None:
+        super().__init__(
+            code="payment_provider_observation_mismatch",
+            message="Provider collection does not match the payment",
+            http_status=409,
+            details={"payment_id": payment_id, "reason": reason},
         )
 
 
@@ -206,15 +246,15 @@ def should_apply_status(
         return False
     if current == PaymentStatus.SUCCESS:
         return False
-    if incoming == PaymentStatus.SUCCESS:
-        return True
     if current == PaymentStatus.CANCELLED:
         return False
+    if incoming == PaymentStatus.SUCCESS:
+        return True
     return _STATUS_RANK[incoming] > _STATUS_RANK[current]
 
 
-def lenco_collection_status_to_payment_status(lenco_status: str) -> PaymentStatus | None:
-    normalized = lenco_status.strip().lower().replace("_", "-")
+def lenco_collection_status_to_payment_status(lenco_status: str | None) -> PaymentStatus | None:
+    normalized = (lenco_status or "").strip().lower().replace("_", "-")
     mapping: dict[str, PaymentStatus] = {
         "pending": PaymentStatus.USSD_PUSHED,
         "pay-offline": PaymentStatus.PAY_OFFLINE,
@@ -239,40 +279,6 @@ def payment_status_to_event(status: PaymentStatus) -> PaymentEvent | None:
         return PaymentEvent(status.value)
     except ValueError:
         return None
-
-
-def provider_amount_mismatch(
-    *,
-    expected_ngwee: int,
-    provider_amount: object,
-    provider_currency: object,
-) -> str | None:
-    """C3: compare what Lenco says it collected with our payment row.
-
-    Returns ``None`` when Lenco's amount (decimal-major string, Decimal-parsed)
-    and currency match ``expected_ngwee`` ZMW exactly; otherwise a short reason.
-    The card widget amount is set client-side, so the server must never trust it.
-    Fails closed: unparseable / float / missing amount is a mismatch.
-    """
-    if provider_currency is not None and str(provider_currency).upper() != SUPPORTED_CURRENCY:
-        return f"currency_mismatch:{provider_currency}"
-    if isinstance(provider_amount, bool) or provider_amount is None:
-        return "amount_missing"
-    if isinstance(provider_amount, int):
-        provider_amount = str(provider_amount)
-    if not isinstance(provider_amount, str):
-        # Floats (or anything else) are never parsed as money.
-        return "amount_unparseable"
-    try:
-        collected = major_str_to_ngwee(provider_amount.strip())
-    except (TypeError, ValueError):
-        return "amount_unparseable"
-    if collected != expected_ngwee:
-        return f"amount_mismatch:{collected}!={expected_ngwee}"
-    return None
-
-
-_AMOUNT_NOT_SUPPLIED: Any = object()
 
 
 def write_payment_audit_log(
@@ -306,9 +312,7 @@ def write_payment_audit_log(
 def _load_payment(service_client: ServiceRoleClient, payment_id: str) -> PaymentSnapshot:
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .eq("id", payment_id)
         .maybe_single()
         .execute()
@@ -335,9 +339,7 @@ def _load_payment_by_reference(
 ) -> PaymentSnapshot | None:
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .eq("lenco_reference", reference)
         .maybe_single()
         .execute()
@@ -356,6 +358,202 @@ def _load_payment_by_reference(
         provider=str(row["provider"]),
         raw=cast(dict[str, Any], raw) if isinstance(raw, dict) else {},
     )
+
+
+def validate_collection_observation(
+    payment: PaymentSnapshot,
+    *,
+    reference: object,
+    amount_major: object,
+    currency: object,
+    provider_reference: object,
+) -> None:
+    """Require a collection's identity and value to match before any transition."""
+    if payment.provider != "lenco" or reference != payment.lenco_reference:
+        raise PaymentObservationMismatch(payment.id, "reference")
+    if currency != "ZMW":
+        raise PaymentObservationMismatch(payment.id, "currency")
+    if not isinstance(amount_major, str):
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid")
+    try:
+        observed_ngwee = major_str_to_ngwee(amount_major, currency="ZMW")
+    except (TypeError, ValueError) as exc:
+        raise PaymentObservationMismatch(payment.id, "amount_missing_or_invalid") from exc
+    if observed_ngwee != payment.amount_ngwee:
+        raise PaymentObservationMismatch(payment.id, "amount")
+    expected_provider_reference = payment.raw.get("provider_reference")
+    if (
+        isinstance(expected_provider_reference, str)
+        and expected_provider_reference
+        and provider_reference != expected_provider_reference
+    ):
+        raise PaymentObservationMismatch(payment.id, "provider_reference")
+
+
+def provider_amount_mismatch(
+    *,
+    expected_ngwee: int,
+    provider_amount: object,
+    provider_currency: object,
+) -> str | None:
+    """C3: compare Lenco's reported amount/currency with the payment row.
+
+    Returns ``None`` on an exact ZMW ngwee match, otherwise a short reason.
+    Fails closed: unparseable / float / missing amounts are mismatches.
+    """
+    if provider_currency is not None and str(provider_currency).upper() != SUPPORTED_CURRENCY:
+        return f"currency_mismatch:{provider_currency}"
+    if isinstance(provider_amount, bool) or provider_amount is None:
+        return "amount_missing"
+    if isinstance(provider_amount, int):
+        provider_amount = str(provider_amount)
+    if not isinstance(provider_amount, str):
+        return "amount_unparseable"
+    try:
+        collected = major_str_to_ngwee(provider_amount.strip())
+    except (TypeError, ValueError):
+        return "amount_unparseable"
+    if collected != expected_ngwee:
+        return f"amount_mismatch:{collected}!={expected_ngwee}"
+    return None
+
+
+def _hold_amount_mismatch(
+    service_client: ServiceRoleClient,
+    *,
+    snapshot: PaymentSnapshot,
+    actor_id: str,
+    note: str,
+    reason: str,
+) -> None:
+    """Audit + flag a provider observation mismatch; payment status unchanged."""
+    write_payment_audit_log(
+        service_client,
+        actor_id=actor_id,
+        payment_id=snapshot.id,
+        from_status=snapshot.status.value,
+        to_status=snapshot.status.value,
+        note=f"{note} [provider_amount_mismatch {reason}]",
+    )
+    raw = dict(snapshot.raw)
+    raw["hold"] = {
+        "reason": "provider_amount_mismatch",
+        "detail": reason,
+        "at": datetime.now(UTC).isoformat(),
+    }
+    service_client.client.table("payments").update({"raw": raw}).eq("id", snapshot.id).execute()
+
+
+def validate_collection_observation_or_hold(
+    service_client: ServiceRoleClient,
+    payment: PaymentSnapshot,
+    *,
+    actor_id: str,
+    note: str,
+    reference: object,
+    amount_major: object,
+    currency: object,
+    provider_reference: object,
+) -> None:
+    """D1 validation that also records the C3 hold + audit before refusing.
+
+    A mismatched collection never reaches the atomic success decision; the
+    payment keeps its status, ``payments.raw.hold`` explains why, and the
+    original ``PaymentObservationMismatch`` is re-raised to the caller.
+    """
+    try:
+        validate_collection_observation(
+            payment,
+            reference=reference,
+            amount_major=amount_major,
+            currency=currency,
+            provider_reference=provider_reference,
+        )
+    except PaymentObservationMismatch as exc:
+        reason = str(exc.details.get("reason", "observation_mismatch"))
+        detail = provider_amount_mismatch(
+            expected_ngwee=payment.amount_ngwee,
+            provider_amount=amount_major,
+            provider_currency=currency,
+        )
+        _hold_amount_mismatch(
+            service_client,
+            snapshot=payment,
+            actor_id=actor_id,
+            note=note,
+            reason=detail or reason,
+        )
+        raise
+
+
+def validate_query_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    result: QueryStatusResult,
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation_or_hold(
+        service_client,
+        payment,
+        actor_id=SYSTEM_ACTOR_ID,
+        note="Provider query observation",
+        reference=result.reference,
+        amount_major=result.amount_major,
+        currency=result.currency,
+        provider_reference=result.provider_reference,
+    )
+
+
+def validate_webhook_collection_observation(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    data: dict[str, Any],
+) -> None:
+    payment = _load_payment(service_client, payment_id)
+    validate_collection_observation_or_hold(
+        service_client,
+        payment,
+        actor_id=SYSTEM_ACTOR_ID,
+        note="Provider webhook observation",
+        reference=data.get("reference"),
+        amount_major=data.get("amount"),
+        currency=data.get("currency"),
+        provider_reference=data.get("lencoReference", data.get("lenco_reference")),
+    )
+
+
+def collection_observation_from_query(result: QueryStatusResult, *, source: str) -> dict[str, Any]:
+    """Canonical identity retained by the atomic decision after D1 validation."""
+    if not isinstance(result.amount_major, str):
+        raise ValueError("validated query amount is missing")
+    return {
+        "reference": result.reference,
+        "amount_ngwee": major_str_to_ngwee(result.amount_major, currency="ZMW"),
+        "currency": result.currency,
+        "provider_reference": result.provider_reference,
+        "source": source,
+        "canonical_status_verified": result.outcome == ProviderOutcome.SUCCESSFUL,
+        "provider_outcome": result.outcome,
+    }
+
+
+def collection_observation_from_webhook(
+    data: dict[str, Any], *, webhook_event_id: str
+) -> dict[str, Any]:
+    amount = data.get("amount")
+    if not isinstance(amount, str):
+        raise ValueError("validated webhook amount is missing")
+    return {
+        "reference": data.get("reference"),
+        "amount_ngwee": major_str_to_ngwee(amount, currency="ZMW"),
+        "currency": data.get("currency"),
+        "provider_reference": data.get("lencoReference", data.get("lenco_reference")),
+        "source": "webhook",
+        "provider_outcome": data.get("status"),
+        "webhook_event_id": webhook_event_id,
+    }
 
 
 def transition_payment(
@@ -427,72 +625,78 @@ def apply_payment_status(
     incoming_status: PaymentStatus,
     actor_id: str,
     note: str,
-    provider_amount: object = _AMOUNT_NOT_SUPPLIED,
-    provider_currency: object = None,
+    observation: dict[str, Any] | None = None,
     provider_fee: object = None,
     provider_bearer: object = None,
 ) -> TransitionOutcome | None:
     """Apply a target status with precedence rules (webhooks / poller).
 
-    When the caller passes ``provider_amount`` (Lenco's reported amount), SUCCESS
-    is only applied if it equals the payment row's ``amount_ngwee`` in ZMW;
-    a mismatch is audited, held on ``payments.raw.hold`` and returns ``None``
-    (no settlement, no SUCCESS).
+    SUCCESS is decided atomically in ``apply_prepaid_collection_success``
+    (per-order escrow holds). Once applied, the Lenco collection fee is booked
+    to ``fees`` (C6, idempotent per payment) so platform_cash tracks Lenco.
     """
     snapshot = _load_payment(service_client, payment_id)
+    if incoming_status == PaymentStatus.SUCCESS:
+        if observation is None:
+            raise AppError(
+                code="payment_observation_required",
+                message="Provider collection evidence is required for success",
+                http_status=422,
+            )
+        if snapshot.rail == "card" and observation.get("canonical_status_verified") is not True:
+            raise AppError(
+                code="card_verification_required",
+                message="Canonical provider status verification is required",
+                http_status=409,
+            )
+        response = service_client.client.rpc(
+            "apply_prepaid_collection_success",
+            {
+                "p_payment_id": payment_id,
+                "p_actor_id": actor_id,
+                "p_note": note,
+                "p_observation": observation,
+            },
+        ).execute()
+        result = _single_row(response)
+        if result is None:
+            data = getattr(response, "data", None)
+            if isinstance(data, dict):
+                result = data
+        if not isinstance(result, dict):
+            raise AppError(
+                code="payment_atomic_settlement_failed",
+                message="Atomic collection decision returned no result",
+                http_status=500,
+            )
+        if result.get("result") != "applied":
+            return None
+        from app.services.payments.fees import book_collection_fee
+
+        book_collection_fee(payment_id=payment_id, fee=provider_fee, bearer=provider_bearer)
+        return TransitionOutcome(
+            payment_id=payment_id,
+            from_status=PaymentStatus(str(result["from_status"])),
+            to_status=PaymentStatus.SUCCESS,
+            event=PaymentEvent.SUCCESS,
+            actor_id=actor_id,
+            note=note,
+        )
+    if incoming_status == PaymentStatus.FAILED and observation is not None:
+        # Merge validated terminal evidence under the same checkout/payment locks
+        # as new claims; never turn a local timeout/close into retry permission.
+        service_client.client.rpc(
+            "record_collection_failure",
+            {
+                "p_payment_id": payment_id,
+                "p_observation": observation,
+            },
+        ).execute()
     if not should_apply_status(current=snapshot.status, incoming=incoming_status):
         return None
     event = payment_status_to_event(incoming_status)
     if event is None:
         return None
-    if incoming_status == PaymentStatus.SUCCESS and provider_amount is not _AMOUNT_NOT_SUPPLIED:
-        mismatch = provider_amount_mismatch(
-            expected_ngwee=snapshot.amount_ngwee,
-            provider_amount=provider_amount,
-            provider_currency=provider_currency,
-        )
-        if mismatch is not None:
-            _hold_amount_mismatch(
-                service_client,
-                snapshot=snapshot,
-                actor_id=actor_id,
-                note=note,
-                reason=mismatch,
-            )
-            return None
-    if incoming_status == PaymentStatus.SUCCESS:
-        from app.services.payments.settlement import settle_prepaid_collection
-
-        settlement = settle_prepaid_collection(
-            service_client,
-            payment_id=payment_id,
-            checkout_group_id=snapshot.checkout_group_id,
-            amount_ngwee=snapshot.amount_ngwee,
-        )
-        if settlement.skipped_sibling:
-            # Another payment already posted CHARGE_RECEIVED for this checkout
-            # (retry won; this is a late SUCCESS on a prior FAILED/EXPIRED attempt).
-            # Do not mark this row SUCCESS — unique index + books stay single-gross.
-            # Ops refunds the duplicate MoMo collection out-of-band.
-            write_payment_audit_log(
-                service_client,
-                actor_id=actor_id,
-                payment_id=payment_id,
-                from_status=snapshot.status.value,
-                to_status=snapshot.status.value,
-                note=(
-                    f"{note} [late_success_after_sibling_settled "
-                    f"txn={settlement.transaction_id}]"
-                ),
-            )
-            return None
-        # C6: book Lenco's collection fee (idempotent per payment) alongside the
-        # escrow settlement so platform_cash tracks the Lenco balance.
-        from app.services.payments.fees import book_collection_fee
-
-        book_collection_fee(
-            payment_id=payment_id, fee=provider_fee, bearer=provider_bearer
-        )
     outcome = transition_payment(
         service_client,
         payment_id=payment_id,
@@ -500,43 +704,7 @@ def apply_payment_status(
         actor_id=actor_id,
         note=note,
     )
-    if outcome.to_status == PaymentStatus.SUCCESS:
-        _emit_payment_success_notifications(
-            service_client,
-            payment_id=payment_id,
-            checkout_group_id=snapshot.checkout_group_id,
-            amount_ngwee=snapshot.amount_ngwee,
-            lenco_reference=snapshot.lenco_reference,
-        )
     return outcome
-
-
-def _hold_amount_mismatch(
-    service_client: ServiceRoleClient,
-    *,
-    snapshot: PaymentSnapshot,
-    actor_id: str,
-    note: str,
-    reason: str,
-) -> None:
-    """Audit + flag a provider amount/currency mismatch; payment status unchanged."""
-    write_payment_audit_log(
-        service_client,
-        actor_id=actor_id,
-        payment_id=snapshot.id,
-        from_status=snapshot.status.value,
-        to_status=snapshot.status.value,
-        note=f"{note} [provider_amount_mismatch {reason}]",
-    )
-    raw = dict(snapshot.raw)
-    raw["hold"] = {
-        "reason": "provider_amount_mismatch",
-        "detail": reason,
-        "at": datetime.now(UTC).isoformat(),
-    }
-    service_client.client.table("payments").update({"raw": raw}).eq(
-        "id", snapshot.id
-    ).execute()
 
 
 def _emit_payment_success_notifications(
@@ -599,7 +767,7 @@ def release_checkout_for_retry(
         service_client.client.table("checkout_groups")
         .update({"status": "pending"})
         .eq("id", checkout_group_id)
-        .neq("status", "completed")
+        .eq("status", "pending")
         .execute()
     )
     _ = _single_row(response)
@@ -642,9 +810,7 @@ def _fetch_stale_payments(
     cutoff = datetime.now(UTC) - timedelta(minutes=ttl_minutes)
     response = (
         service_client.client.table("payments")
-        .select(
-            "id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw"
-        )
+        .select("id, checkout_group_id, status, lenco_reference, amount_ngwee, rail, provider, raw")
         .in_("status", [PaymentStatus.PAY_OFFLINE.value, PaymentStatus.USSD_PUSHED.value])
         .lt("updated_at", cutoff.isoformat())
         .execute()
@@ -680,9 +846,28 @@ async def sweep_stale_payments(
     released = 0
 
     for payment in stale:
-        query_result = await query_status(
-            QueryStatusRequest(reference=payment.lenco_reference)
-        )
+        try:
+            query_result = await query_status(QueryStatusRequest(reference=payment.lenco_reference))
+        except PaymentProviderError:
+            # One ambiguous reference must not abort recovery of the batch.
+            continue
+        if query_result.outcome == ProviderOutcome.NOT_FOUND:
+            continue
+        try:
+            validate_collection_observation_or_hold(
+                service_client,
+                payment,
+                actor_id=SYSTEM_ACTOR_ID,
+                note="Sweeper re-query",
+                reference=query_result.reference,
+                amount_major=query_result.amount_major,
+                currency=query_result.currency,
+                provider_reference=query_result.provider_reference,
+            )
+        except PaymentObservationMismatch:
+            # Held and audited; one mismatched collection never expires or
+            # settles, and must not abort recovery of the batch.
+            continue
         lenco_status = lenco_collection_status_to_payment_status(query_result.status)
         if lenco_status == PaymentStatus.SUCCESS:
             outcome = apply_payment_status(
@@ -691,14 +876,12 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.SUCCESS,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Late-success reconciliation after sweeper re-query",
-                provider_amount=query_result.amount_major,
-                provider_currency=query_result.currency,
+                observation=collection_observation_from_query(query_result, source="sweeper"),
                 provider_fee=fee_fields_from_provider_raw(query_result.raw)[0],
                 provider_bearer=fee_fields_from_provider_raw(query_result.raw)[1],
             )
             if outcome is not None:
                 reconciled_success += 1
-            # Never expire a payment Lenco says succeeded (even on mismatch hold).
             continue
 
         if lenco_status == PaymentStatus.PAY_OFFLINE:
@@ -717,6 +900,7 @@ async def sweep_stale_payments(
                 incoming_status=PaymentStatus.FAILED,
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Sweeper re-query reported failed",
+                observation=collection_observation_from_query(query_result, source="sweeper"),
             )
             if outcome is not None:
                 release_checkout_for_retry(
@@ -728,21 +912,9 @@ async def sweep_stale_payments(
                 released += 1
             continue
 
-        transition_payment(
-            service_client,
-            payment_id=payment.id,
-            event=PaymentEvent.EXPIRED,
-            actor_id=SYSTEM_ACTOR_ID,
-            note="Stale payment expired after Lenco re-query confirmed unpaid",
-        )
-        expired += 1
-        release_checkout_for_retry(
-            service_client,
-            checkout_group_id=payment.checkout_group_id,
-            actor_id=SYSTEM_ACTOR_ID,
-            note="Payment expired — checkout released for retry",
-        )
-        released += 1
+        # Pending, not-found and unknown are not proof that a submitted
+        # collection cannot arrive. Keep its reference in flight for reconciliation.
+        continue
 
     return SweepResult(
         scanned=len(stale),
@@ -760,7 +932,10 @@ def process_webhook_event(
     """Consume a stored webhook_events row with status-precedence."""
     response = (
         service_client.client.table("webhook_events")
-        .select("id, provider, event_id, raw, processed_at")
+        .select(
+            "id, provider, event_id, raw, processed_at, signature_valid, "
+            "verification_version, payload_sha256, verified_at"
+        )
         .eq("id", webhook_event_id)
         .maybe_single()
         .execute()
@@ -774,6 +949,25 @@ def process_webhook_event(
     raw = row.get("raw")
     if not isinstance(raw, dict):
         raw = {}
+
+    # Missing or incomplete proof is untrusted, including legacy rows.
+    trusted = (
+        row.get("signature_valid") is True
+        and row.get("verification_version") == WEBHOOK_VERIFICATION_VERSION
+        and isinstance(row.get("verified_at"), str)
+        and isinstance(row.get("payload_sha256"), str)
+        and row["payload_sha256"] == canonical_payload_sha256(raw)
+    )
+    if not trusted:
+        now = datetime.now(UTC).isoformat()
+        service_client.client.table("webhook_events").update(
+            {
+                "processed_at": now,
+                "quarantine_reason": "untrusted_webhook_evidence",
+                "quarantined_at": now,
+            }
+        ).eq("id", webhook_event_id).execute()
+        return None
 
     provider = str(row.get("provider", ""))
     if provider != "lenco":
@@ -790,38 +984,78 @@ def process_webhook_event(
     reference = data.get("reference")
     if not isinstance(reference, str):
         service_client.client.table("webhook_events").update(
-            {"processed_at": datetime.now(UTC).isoformat()}
+            {
+                "processed_at": datetime.now(UTC).isoformat(),
+                "quarantine_reason": "missing_merchant_reference",
+                "quarantined_at": datetime.now(UTC).isoformat(),
+            }
         ).eq("id", webhook_event_id).execute()
         return None
 
     payment = _load_payment_by_reference(service_client, reference)
     if payment is None:
         service_client.client.table("webhook_events").update(
-            {"processed_at": datetime.now(UTC).isoformat()}
+            {
+                "processed_at": datetime.now(UTC).isoformat(),
+                "quarantine_reason": "unknown_merchant_reference",
+                "quarantined_at": datetime.now(UTC).isoformat(),
+            }
         ).eq("id", webhook_event_id).execute()
         return None
 
+    # A transfer event can carry a status and even a matching-looking reference;
+    # it is never evidence that a collection was paid.
     incoming = lenco_webhook_event_to_payment_status(event_name)
-    if incoming is None:
+    if incoming is None and event_name.startswith("collection."):
         collection_status = data.get("status")
         if isinstance(collection_status, str):
             incoming = lenco_collection_status_to_payment_status(collection_status)
 
     outcome: TransitionOutcome | None = None
     if incoming is not None:
-        # Verify Lenco's reported amount when the webhook carries one (Lenco
-        # collection payloads do); card verify additionally re-queries Lenco.
-        provider_amount: object = (
-            data.get("amount") if "amount" in data else _AMOUNT_NOT_SUPPLIED
+        validate_collection_observation_or_hold(
+            service_client,
+            payment,
+            actor_id=SYSTEM_ACTOR_ID,
+            note=f"Webhook {event_name}",
+            reference=reference,
+            amount_major=data.get("amount"),
+            currency=data.get("currency"),
+            provider_reference=data.get("lencoReference", data.get("lenco_reference")),
         )
+        if payment.rail == "card" and incoming == PaymentStatus.SUCCESS:
+            # Durable ingress remains undrained until canonical polling/return has
+            # settled this receipt. This synchronous worker never calls an async
+            # provider through a second client or trusts a local success flag.
+            receipt = _single_row(
+                service_client.client.table("payment_collection_receipts")
+                .select("receipt_identity,canonical_status_verified_at")
+                .eq("payment_id", payment.id)
+                .maybe_single()
+                .execute()
+            )
+            if receipt is None or receipt.get("canonical_status_verified_at") is None:
+                return None
+            identity = receipt.get("receipt_identity", {})
+            if identity.get("merchant_reference") != reference or identity.get(
+                "provider_reference"
+            ) != data.get("lencoReference", data.get("lenco_reference")):
+                return None
+            service_client.client.table("webhook_events").update(
+                {"processed_at": datetime.now(UTC).isoformat()}
+            ).eq("id", webhook_event_id).execute()
+            return None
         outcome = apply_payment_status(
             service_client,
             payment_id=payment.id,
             incoming_status=incoming,
             actor_id=SYSTEM_ACTOR_ID,
             note=f"Webhook {event_name} ({row.get('event_id', '')})",
-            provider_amount=provider_amount,
-            provider_currency=data.get("currency"),
+            observation=(
+                collection_observation_from_webhook(data, webhook_event_id=webhook_event_id)
+                if incoming in {PaymentStatus.SUCCESS, PaymentStatus.FAILED}
+                else None
+            ),
             provider_fee=data.get("fee"),
             provider_bearer=data.get("bearer"),
         )

@@ -314,3 +314,25 @@ def test_canonical_endpoints_forbid_vendor(
         ).status_code
         == 403
     )
+
+
+def test_moderator_can_inspect_details_before_deciding(
+    api_client: TestClient, fake_client: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_auth(monkeypatch, frozenset({"moderator"}))
+    _seed_pending_product(fake_client)
+    fake_client.tables["products"].rows[0].update(
+        description="Supplier text", spec={"dimensions": {"value": 10, "unit": "cm"}}
+    )
+    monkeypatch.setattr(
+        "app.routers.admin_products.get_settings", lambda: MagicMock(cloudinary_cloud_name="demo")
+    )
+    response = api_client.get(
+        "/admin/products/canonical?status=pending_moderation", headers=_auth_headers()
+    )
+    assert response.status_code == 200
+    row = response.json()[0]
+    assert row["description"] == "Supplier text"
+    assert row["spec"] == {"dimensions": {"value": 10, "unit": "cm"}}
+    assert row["status"] == "pending_moderation"
+    assert fake_client.tables["vendor_listings"].rows[0]["status"] == "draft"

@@ -1,7 +1,8 @@
 # n8n workflow registry
 
-Complete registry of every operational n8n workflow for Vergeo5. **Logic stays in
-the API** — each workflow calls an internal-token endpoint. Most operational nudges
+Complete registry of every operational n8n workflow for Vergeo5. **Operational logic stays in
+the API** — scheduled ticks call internal-token endpoints. The inactive Auth OTP
+transport draft has its separate contract and gates below. Most operational nudges
 enqueue rows to `notification_outbox` and rely on the **Notification Dispatch Tick**
 workflow (`notification-dispatch.json`) to deliver via WhatsApp → SMS → email. The
 founder digest (`admin-digest.json`) is the exception: it reads read-only aggregates
@@ -15,8 +16,10 @@ and delivers directly to the founder's WhatsApp.
 
 ## Security
 
-- Every workflow uses `X-Internal-Token` from n8n credentials / `$env` — **never**
-  inline secrets in JSON exports.
+- Internal API ticks use `X-Internal-Token` from n8n credentials / `$env` — **never**
+  inline secrets in JSON exports. The inactive OTP draft has separate webhook,
+  replay-database, and send-only WAHA credential references. Its HMAC secret slot
+  is deliberately empty pending a supported, owner-reviewed secret binding.
 - Internal tokens are per-concern: `INTERNAL_N8N_TOKEN` (M14 operational nudges),
   `INTERNAL_DIGEST_TOKEN` (founder digest), plus the per-job tokens used by earlier
   ticks (e.g. `INTERNAL_ORDER_JOBS_TOKEN`, `INTERNAL_TICKETS_ISSUE_TOKEN`,
@@ -40,8 +43,9 @@ and delivers directly to the founder's WhatsApp.
 
 ## Registry
 
-Every `infra/n8n/*.json` (schedule = `scheduleTrigger`; all default **inactive** —
-activate per environment after credentials + F5 WhatsApp are live):
+Every `infra/n8n/*.json` is listed below. Scheduled ticks use `scheduleTrigger`;
+the OTP draft uses an authenticated webhook. All default **inactive** and require
+their own documented activation gates.
 
 | Workflow file                     | Trigger                                                      | API endpoint                                                         | Purpose                                                                                                                                                                                                                                                                 | Owner             |
 | --------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -64,6 +68,7 @@ activate per environment after credentials + F5 WhatsApp are live):
 | `funnel-abandon.json`             | Every 5m                                                     | `POST /internal/funnel/abandon-tick`                                 | Sweep abandoned checkout funnels for analytics                                                                                                                                                                                                                          | M07-P08           |
 | `waha-intake-sweeps.json`         | Every 1h                                                     | `POST /internal/intake/{expire-sessions,purge-messages,purge-links}` | D35 intake ops: expire stale sessions via the guarded transition · null `raw_excerpt` past `purge_after` (§12 retention, IDs/dispositions kept) · delete expired **unredeemed** review links                                                                            | M18-P07           |
 | `waha-intake-digest.json`         | Daily 07:00 UTC                                              | `GET /internal/intake/metrics`                                       | Reviewer-queue digest: sessions awaiting admin review, completion mix, listings created, drop dispositions → founder WhatsApp (Lane 1)                                                                                                                                  | M18-P07           |
+| `waha-otp-handoff.json`           | Authenticated webhook (inactive; WAHA send disabled)         | Private WAHA `POST /api/sendText`                                    | Source-only staging Supabase Auth OTP transport draft; see the [OTP draft gates](#otp-draft-gates). No runtime acceptance or delivery claim.                                                                                                                            | Staging OTP draft |
 | `analytics-retention.json`        | Daily 03:00 UTC                                              | `POST /internal/analytics/retention-tick`                            | DPA retention sweep: NULL person-links >30d (search_query_log / funnel_events / analytics_events)                                                                                                                                                                       | M16-P07           |
 | `export-purge.json`               | Daily 04:00 UTC                                              | `POST /internal/privacy/export-purge-tick`                           | DPA sweep: delete data-export bundles older than `DATA_EXPORT_TTL_HOURS` (24h) from `private-artifacts/data-exports/`                                                                                                                                                   | FIX-L             |
 | `embeddings-cron.json`            | Every 5m                                                     | `POST /internal/embeddings/tick`                                     | Generate embeddings for pending catalog rows                                                                                                                                                                                                                            | M06-P01           |
@@ -79,6 +84,36 @@ activate per environment after credentials + F5 WhatsApp are live):
 > and `docs/ops/backup-restore-drill.md`. Supabase dashboard backups alone are insufficient.
 > Consolidated review + **unchecked founder activation checklist** for backup **and** the shared
 > failure alert: `docs/ops/n8n-backup-and-alerts.md`.
+
+### OTP draft gates
+
+`infra/n8n/build-waha-otp-handoff.mjs` generates `waha-otp-handoff.json` locally.
+The draft is unpublished and inactive; its HMAC and WAHA send nodes are disabled. It consumes
+the Edge transport's signed version-1 envelope and returns only
+`{ accepted: true, requestId }` after a matching provider acceptance. `PENDING`
+alone is insufficient; acceptance is not handset delivery. There is no automatic
+retry or SMS fallback, including after an uncertain send outcome.
+
+Do not import, activate, or send from this draft. The repository-pinned n8n 1.82.1
+Crypto node is version 1 and requires a secret parameter; it does not declare a
+`crypto` credential. This template leaves that parameter empty and the HMAC node
+disabled: validated input has no calculated HMAC, so signature verification fails
+before reservation or provider work. An owner must separately review a supported secret binding without
+plaintext secrets in workflow exports. The actual target n8n version and all node
+and response behavior still require verification. The dedicated webhook, replay
+database, and WAHA credential IDs are placeholders, not provisioned credentials.
+See the [pinned Crypto node source](https://github.com/n8n-io/n8n/blob/n8n%401.82.1/packages/nodes-base/nodes/Crypto/Crypto.node.ts).
+
+Durable replay requires the separately owned private `otp_replay` schema, restricted
+login and pinned search path, expiry maintenance, and native concurrency/outage
+proof. Those dependencies are not applied by this unit. The draft stores only a
+request ID and expiry in its reservation query; it does not store OTP or phone
+content there. Completed, error, manual, and progress execution saving are disabled,
+but these settings do not prove zero in-flight persistence, backup retention, or
+operator access. Retention/deletion, backups, access, credential bindings, deployed
+Edge/Auth hook identity, and bounded staging acceptance remain owner gates. Keep
+`SMS_OTP_TRANSPORT=disabled` and `WAHA_OTP_ENABLED=false`; source selection defaults
+and placeholder references are not evidence of actual hosted configuration.
 
 ### Founder digest aggregates (`admin-digest.json`)
 

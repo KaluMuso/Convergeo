@@ -18,6 +18,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
 import { verifyCfAccessAssertion } from "./lib/cf-access";
+import { isAdminPasswordRecoveryPath } from "./lib/password-recovery-path";
 
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
@@ -135,18 +136,28 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  const gate = healthCheckException
-    ? null
-    : resolveGatedRedirect(
-        "admin",
-        request.nextUrl.pathname,
-        LOCALES,
-        session.user,
-        session.roles,
-        {
-          adminBypass,
-        },
-      );
+  const gate =
+    healthCheckException || isAdminPasswordRecoveryPath(request.nextUrl.pathname)
+      ? null
+      : resolveGatedRedirect(
+          "admin",
+          request.nextUrl.pathname,
+          LOCALES,
+          session.user,
+          // Verified claims admit the shell; every privileged API request
+          // independently reloads current database roles and permissions.
+          session.roles.some(
+            (role) =>
+              role === "superadmin" ||
+              role === "moderator" ||
+              /^rbac_[a-z][a-z0-9_]{2,39}$/.test(role),
+          )
+            ? [...session.roles, "admin"]
+            : session.roles,
+          {
+            adminBypass,
+          },
+        );
 
   if (gate) {
     return applyReportOnlyCspNonce(

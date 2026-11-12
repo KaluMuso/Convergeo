@@ -8,9 +8,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import { addCartItem } from "../cart/mini-cart-drawer";
 
-import { PdpInteractiveBody, type ProductListing } from "./comparison";
 import { type ContactVendorLabels } from "./contact-vendor-button";
 import { assertRscSafeGalleryLabels } from "./gallery-labels";
+import { PdpInteractiveBody, type ProductListing } from "./pdp-interactive-body";
 import { GROUPS, VARIANTS } from "./variant-fixtures";
 
 vi.mock("../cart/mini-cart-drawer", () => ({

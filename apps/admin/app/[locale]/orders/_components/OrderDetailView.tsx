@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAdminPermissions } from "../../../../lib/roles-api";
+
 import { type OrderDetail, ordersApi } from "./api";
 import { DispatchPanel } from "./DispatchPanel";
 import { EscrowPanel } from "./EscrowPanel";
@@ -17,7 +19,9 @@ type OrderDetailViewProps = {
 };
 
 export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
+  const canMutate = useAdminPermissions()?.unrestricted === true;
   const t = useTranslations("admin.orders.detail");
+  const funding = useTranslations("services.funding");
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +30,9 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
     setLoading(true);
     setError(null);
     try {
-      const data = await ordersApi.request<OrderDetail>(`/admin/orders/${orderId}`);
+      const data = await ordersApi.request<OrderDetail>(
+        `/admin/orders/${orderId}`,
+      );
       setOrder(data);
     } catch {
       setError(t("error"));
@@ -77,24 +83,45 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
         <p className="text-sm text-muted">
           {t("summary", {
             vendor: order.vendor_display_name,
-            customer: order.customer_display_name ?? order.customer_phone ?? "—",
+            customer:
+              order.customer_display_name ?? order.customer_phone ?? "—",
             fulfilment: t(`fulfilment.${order.fulfilment}`),
           })}
         </p>
       </header>
 
+      {Boolean(order.service_obligations?.length) && (
+        <section className="space-y-2">
+          <h2>{funding("title")}</h2>
+          {order.service_obligations?.map((leg) => (
+            <p key={leg.id}>
+              {funding(leg.leg)}: {formatK(leg.amount_ngwee)} —{" "}
+              {funding(`status.${leg.status}`)}
+              <span className="block font-mono text-xs">
+                {leg.checkout_group_id}
+              </span>
+            </p>
+          ))}
+        </section>
+      )}
+
       <section className="space-y-2">
         <h2 className="font-medium text-text">{t("itemsTitle")}</h2>
         <ul className="divide-y divide-border rounded-md border border-border">
           {order.items.map((item) => (
-            <li key={item.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
+            <li
+              key={item.id}
+              className="flex justify-between gap-3 px-3 py-2 text-sm"
+            >
               <span>
                 {t("itemLine", {
                   title: item.title_snapshot ?? item.item_kind,
                   qty: item.qty,
                 })}
               </span>
-              <span className="font-mono">{formatK(item.unit_price_ngwee * item.qty)}</span>
+              <span className="font-mono">
+                {formatK(item.unit_price_ngwee * item.qty)}
+              </span>
             </li>
           ))}
         </ul>
@@ -109,10 +136,19 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
             {order.payments.map((payment) => (
               <li key={payment.id} className="px-3 py-2 text-sm">
                 <div className="flex justify-between gap-3">
-                  <span>{t("paymentLine", { rail: payment.rail, status: payment.status })}</span>
-                  <span className="font-mono">{formatK(payment.amount_ngwee)}</span>
+                  <span>
+                    {t("paymentLine", {
+                      rail: payment.rail,
+                      status: payment.status,
+                    })}
+                  </span>
+                  <span className="font-mono">
+                    {formatK(payment.amount_ngwee)}
+                  </span>
                 </div>
-                <p className="font-mono text-xs text-muted">{payment.lenco_reference}</p>
+                <p className="font-mono text-xs text-muted">
+                  {payment.lenco_reference}
+                </p>
               </li>
             ))}
           </ul>
@@ -126,11 +162,19 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
         ) : (
           <ul className="space-y-2">
             {order.ledger.map((txn) => {
-              const balance = txn.postings.reduce((sum, posting) => sum + posting.amount_ngwee, 0);
+              const balance = txn.postings.reduce(
+                (sum, posting) => sum + posting.amount_ngwee,
+                0,
+              );
               return (
-                <li key={txn.id} className="rounded-md border border-border px-3 py-2 text-sm">
+                <li
+                  key={txn.id}
+                  className="rounded-md border border-border px-3 py-2 text-sm"
+                >
                   <div className="font-mono text-xs">{txn.kind}</div>
-                  <div className="text-xs text-muted">{t("ledgerBalance", { balance })}</div>
+                  <div className="text-xs text-muted">
+                    {t("ledgerBalance", { balance })}
+                  </div>
                 </li>
               );
             })}
@@ -143,12 +187,15 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
         <OrderTimeline events={order.timeline} locale={locale} />
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DispatchPanel order={order} onSuccess={() => void load()} />
-        <InterventionPanel order={order} onSuccess={() => void load()} />
-      </div>
-
-      <EscrowPanel order={order} onSuccess={() => void load()} />
+      {canMutate ? (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DispatchPanel order={order} onSuccess={() => void load()} />
+            <InterventionPanel order={order} onSuccess={() => void load()} />
+          </div>
+          <EscrowPanel order={order} onSuccess={() => void load()} />
+        </>
+      ) : null}
     </div>
   );
 }

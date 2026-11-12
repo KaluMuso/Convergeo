@@ -11,6 +11,7 @@ import {
 } from "./_lib/kyc-client";
 import {
   DEFAULT_DRAFT,
+  clearLocalDraft,
   mergeDraftWithServer,
   readLocalDraft,
   resolveResumeStep,
@@ -40,6 +41,7 @@ function createLocalStorageMock(): Storage {
 
 describe("step persistence", () => {
   let storage: Storage;
+  const userId = "vendor-user-a";
 
   beforeEach(() => {
     storage = createLocalStorageMock();
@@ -51,7 +53,7 @@ describe("step persistence", () => {
   });
 
   it("resumes at saved step after interruption", () => {
-    writeLocalDraft({
+    writeLocalDraft(userId, {
       ...DEFAULT_DRAFT,
       step: stepIndexFromKey("kyc"),
       businessName: "Lusaka Tech",
@@ -59,7 +61,7 @@ describe("step persistence", () => {
       businessArchetype: "registered_retailer",
     });
 
-    const restored = readLocalDraft();
+    const restored = readLocalDraft(userId);
     expect(restored?.step).toBe(1);
     expect(restored?.businessName).toBe("Lusaka Tech");
 
@@ -80,8 +82,11 @@ describe("step persistence", () => {
   });
 
   it("merges server draft paths with local step", () => {
-    writeLocalDraft({ ...DEFAULT_DRAFT, step: stepIndexFromKey("review") });
-    const merged = mergeDraftWithServer(readLocalDraft(), {
+    writeLocalDraft(userId, {
+      ...DEFAULT_DRAFT,
+      step: stepIndexFromKey("review"),
+    });
+    const merged = mergeDraftWithServer(readLocalDraft(userId), {
       business_name: "Server Shop",
       business_category: "home",
       business_archetype: "registered_retailer",
@@ -95,9 +100,86 @@ describe("step persistence", () => {
     expect(merged.step).toBe(stepIndexFromKey("review"));
   });
 
-  it("uses localStorage key vergeo5-vendor-onboarding", () => {
-    writeLocalDraft({ ...DEFAULT_DRAFT, businessName: "Keyed Shop" });
-    expect(readLocalDraft()?.businessName).toBe("Keyed Shop");
+  it("isolates saved drafts by account and drops the old shared key", () => {
+    storage.setItem(
+      "vergeo5-vendor-onboarding",
+      JSON.stringify({ ...DEFAULT_DRAFT, businessName: "Old account" }),
+    );
+    writeLocalDraft(userId, { ...DEFAULT_DRAFT, businessName: "Keyed Shop" });
+    expect(readLocalDraft(userId)?.businessName).toBe("Keyed Shop");
+    expect(readLocalDraft("vendor-user-b")).toBeNull();
+    expect(storage.getItem("vergeo5-vendor-onboarding")).toBeNull();
+    expect(storage.getItem(`vergeo5-vendor-onboarding:${userId}`)).not.toBeNull();
+  });
+
+  it("returns to document validation if a resumed phone is invalid", () => {
+    const draft = {
+      ...DEFAULT_DRAFT,
+      step: stepIndexFromKey("review"),
+      businessName: "Lusaka Tech",
+      businessCategory: "electronics",
+      businessArchetype: "registered_retailer",
+      legalName: "Lusaka Tech Ltd",
+      momoPhone: "0123456789",
+      nrcPath: "kyc/vendor-a/nrc.jpg",
+      selfiePath: "kyc/vendor-a/selfie.jpg",
+    };
+    expect(resolveResumeStep(draft, { resubmitMode: false, rejectedDocs: null })).toBe(
+      stepIndexFromKey("kyc"),
+    );
+  });
+  it("clears only the submitting account's draft", () => {
+    writeLocalDraft(userId, { ...DEFAULT_DRAFT, businessName: "A Shop" });
+    writeLocalDraft("vendor-user-b", { ...DEFAULT_DRAFT, businessName: "B Shop" });
+    clearLocalDraft(userId);
+    expect(readLocalDraft(userId)).toBeNull();
+    expect(readLocalDraft("vendor-user-b")?.businessName).toBe("B Shop");
+  });
+
+  it("does not persist or read drafts without an account", () => {
+    writeLocalDraft("", { ...DEFAULT_DRAFT });
+    expect(readLocalDraft("")).toBeNull();
+    clearLocalDraft("");
+    expect(storage.length).toBe(0);
+  });
+
+  it.each(["null", "[]", "true", "bad json"])("rejects malformed local drafts: %s", (value) => {
+    storage.setItem(`vergeo5-vendor-onboarding:${userId}`, value);
+    expect(readLocalDraft(userId)).toBeNull();
+  });
+
+  it("sanitizes persisted types and bounds interrupted steps", () => {
+    storage.setItem(
+      `vergeo5-vendor-onboarding:${userId}`,
+      JSON.stringify({
+        ...DEFAULT_DRAFT,
+        step: 99,
+        businessName: 42,
+        legalName: {},
+        momoPhone: true,
+        nrcPath: [],
+      }),
+    );
+    const restored = readLocalDraft(userId)!;
+    expect(restored).toMatchObject({
+      step: 2,
+      businessName: "",
+      legalName: "",
+      momoPhone: "",
+      nrcPath: null,
+    });
+    expect(resolveResumeStep(restored, { resubmitMode: false, rejectedDocs: null })).toBe(0);
+  });
+
+  it("keeps storage failures from breaking server-backed actions", () => {
+    vi.stubGlobal("window", {
+      get localStorage() {
+        throw new Error("storage blocked");
+      },
+    });
+    expect(readLocalDraft(userId)).toBeNull();
+    expect(() => writeLocalDraft(userId, DEFAULT_DRAFT)).not.toThrow();
+    expect(() => clearLocalDraft(userId)).not.toThrow();
   });
 });
 

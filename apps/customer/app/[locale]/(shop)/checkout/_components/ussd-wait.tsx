@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
@@ -10,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { useSession } from "../../../../../lib/customer-session";
 import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
 
 import { PaymentFailed, type PaymentFailedLabels } from "./payment-failed";
@@ -38,6 +38,7 @@ export type PendingLabels = {
   codBody: string;
   codCta: string;
   viewOrder: string;
+  ticketUnavailableBody: string;
   ussd: UssdWaitLabels;
   failed: PaymentFailedLabels;
 };
@@ -122,6 +123,7 @@ type PendingPaymentShellProps = {
   locale: string;
   groupId: string;
   labels: PendingLabels;
+  ticketCheckout?: boolean;
   /**
    * Server-created groups (paid ticket / service deposit) land somewhere other than
    * the order page on success (ticket wallet / job thread) and return to
@@ -134,6 +136,7 @@ export function PendingPaymentShell({
   locale,
   groupId,
   labels,
+  ticketCheckout = false,
   groupRoutes,
 }: PendingPaymentShellProps) {
   const router = useRouter();
@@ -382,6 +385,35 @@ export function PendingPaymentShell({
         <h1 className="font-display text-h1 text-display-ink">{labels.confirmingTitle}</h1>
         <p className="font-body text-sm text-text-2">{labels.confirmingBody}</p>
         <Spinner label={labels.confirmingBody} />
+      </div>
+    );
+  }
+
+  if (
+    ticketCheckout &&
+    (statusPayload.status === "cancelled" || statusPayload.status === "expired")
+  ) {
+    return (
+      <div
+        className="space-y-4 rounded-card border border-danger/30 bg-surface p-5"
+        role="alert"
+        data-testid="ticket-payment-unavailable"
+      >
+        <h1 className="font-display text-h1 text-display-ink">
+          {statusPayload.status === "cancelled"
+            ? labels.failed.cancelledTitle
+            : labels.failed.timeoutTitle}
+        </h1>
+        <p className="font-body text-sm text-text-2">{labels.ticketUnavailableBody}</p>
+        <LinkButton
+          href={orderPath}
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          LinkComponent={Link}
+        >
+          {labels.viewOrder}
+        </LinkButton>
       </div>
     );
   }

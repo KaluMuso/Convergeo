@@ -11,6 +11,9 @@ const verifyOtp = vi.fn();
 const exchangeCodeForSession = vi.fn();
 const getSession = vi.fn();
 const getPreferences = vi.fn();
+const { getReadyCustomerSession } = vi.hoisted(() => ({
+  getReadyCustomerSession: vi.fn(),
+}));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -27,6 +30,10 @@ vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({
     getPreferences,
   }),
+}));
+
+vi.mock("../../../../lib/customer-session", () => ({
+  getReadyCustomerSession,
 }));
 
 const push = vi.fn();
@@ -49,6 +56,7 @@ beforeEach(() => {
   getPreferences.mockResolvedValue({
     onboarding: { completed_at: "2026-01-01T00:00:00Z" },
   });
+  getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
 });
 
 import { OtpForm } from "./otp-form";
@@ -85,22 +93,26 @@ const otpLabels = {
 };
 
 describe("PhoneForm", () => {
-  it("keeps the +260 prefix bounded and the numeric input accessible", async () => {
-    const user = userEvent.setup();
-    render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" />);
+  it.each(["login", "signup"] as const)(
+    "keeps the +260 prefix bounded and the numeric input accessible in %s mode",
+    async (mode) => {
+      const user = userEvent.setup();
+      render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" mode={mode} />);
 
-    const countryCode = screen.getByRole("textbox", { name: "Country code" });
-    const phoneNumber = screen.getByRole("textbox", { name: "Phone number" });
-    expect(countryCode).toHaveValue("+260");
-    expect(countryCode).toHaveAttribute("readonly");
-    expect(countryCode.parentElement).toHaveClass("w-24", "shrink-0");
-    expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
-    expect(phoneNumber).toHaveClass("min-w-0", "flex-1");
+      const countryCode = screen.getByRole("textbox", { name: "Country code" });
+      const phoneNumber = screen.getByRole("textbox", { name: "Phone number" });
+      expect(countryCode).toHaveValue("+260");
+      expect(countryCode).toHaveAttribute("readonly");
+      expect(countryCode.parentElement).toHaveClass("w-24", "shrink-0");
+      expect(phoneNumber).toHaveAttribute("inputmode", "numeric");
+      expect(phoneNumber.parentElement).toHaveClass("min-w-0", "flex-1");
 
-    await user.type(phoneNumber, "971234567");
-    expect(phoneNumber).toHaveValue("971234567");
-    expect(countryCode).toHaveValue("+260");
-  });
+      await user.type(phoneNumber, "971234567");
+      expect(phoneNumber).toHaveValue("971234567");
+      expect(countryCode).toHaveValue("+260");
+      expect(signInWithOtp).not.toHaveBeenCalled();
+    },
+  );
 
   it("routes to OTP after successful phone submit", async () => {
     const user = userEvent.setup();
@@ -272,10 +284,46 @@ describe("OtpForm", () => {
         token: "123456",
         type: "sms",
       });
+      expect(getReadyCustomerSession).toHaveBeenCalledWith();
       expect(getPreferences).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en");
       expect(refresh).toHaveBeenCalled();
     });
+  });
+
+  it("retries failed post-auth reconciliation without consuming the OTP twice", async () => {
+    verifyOtp.mockResolvedValue({ error: null });
+    getReadyCustomerSession
+      .mockRejectedValueOnce(new Error("merge failed"))
+      .mockResolvedValueOnce({ access_token: "tok" });
+    const user = userEvent.setup();
+
+    render(
+      <OtpForm
+        locale="en"
+        phone="+260971234567"
+        labels={otpLabels}
+        loginPath="/login"
+        defaultNextPath="/en"
+      />,
+    );
+
+    await fillOtp(user);
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Generic error");
+    });
+
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+    expect(getReadyCustomerSession).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await waitFor(() => {
+      expect(getReadyCustomerSession).toHaveBeenCalledTimes(2);
+      expect(push).toHaveBeenCalledWith("/en");
+    });
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
   });
 
   it("vendor OTP never calls customer preferences", async () => {
@@ -298,6 +346,7 @@ describe("OtpForm", () => {
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalled();
+      expect(getReadyCustomerSession).not.toHaveBeenCalled();
       expect(getPreferences).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en/listings");
     });

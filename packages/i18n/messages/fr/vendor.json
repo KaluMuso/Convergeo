@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Statistiques — Vendeur Convergeo",
-      "description": "Suivez vos ventes, commandes et activité du panier sur les 7 ou 30 derniers jours, consultez vos meilleures annonces et évaluez la conversion panier-commande."
+      "description": "Suivez les ventes, commandes et événements panier/passage en caisse sur 7 ou 30 jours, et comparez des totaux indépendants."
     },
     "eyebrow": "Votre boutique",
     "title": "Statistiques",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "Ventes",
       "orders": "Commandes",
-      "views": "Activité du panier"
+      "views": "Événements panier/caisse"
     },
     "sparkline": {
       "sales": "Tendance quotidienne des ventes",
       "orders": "Tendance quotidienne des commandes",
-      "views": "Tendance quotidienne de l'activité du panier"
+      "views": "Nombre quotidien d’événements panier/caisse"
     },
     "top": {
       "heading": "Meilleures annonces",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# vendu} other {# vendus}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# commande} other {# commandes}} sur {views, plural, one {# action panier} other {# actions panier}}",
-      "pct": "{pct}% panier-commande",
-      "empty": "Pas encore assez d'activité pour estimer la conversion."
+      "heading": "Ratio commandes/activité",
+      "summary": "{orders, plural, one {# commande non annulée} other {# commandes non annulées}} ; {views, plural, one {# événement panier/caisse} other {# événements panier/caisse}} sur cette période.",
+      "pct": "{pct} commandes pour 100 événements panier/caisse",
+      "empty": "Aucun événement panier/caisse sur cette période ; le ratio est indisponible.",
+      "definition": "Compte les ajouts au panier et débuts de passage en caisse, pas les vues ni les visiteurs uniques. Les commandes et événements sont des totaux indépendants, pas une cohorte de conversion ; le ratio peut dépasser 100."
     },
     "errors": {
       "loadFailed": "Impossible de charger vos statistiques. Veuillez réessayer.",
@@ -336,7 +337,7 @@
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
-      "description": "Rattachez au catalogue, soumettez un nouveau produit ou créez une annonce rapide."
+      "description": "Rattachez au catalogue, soumettez un nouveau produit ou enregistrez un brouillon autonome."
     },
     "title": "Créer une annonce",
     "intro": "Choisissez votre mode de mise en vente. La commission est affichée avant publication.",
@@ -373,15 +374,33 @@
       "categoryPlaceholder": "Sélectionner une catégorie",
       "submit": "Soumettre pour examen",
       "submitting": "Soumission…",
-      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit."
+      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit.",
+      "details": {
+        "about": "À propos de cet article",
+        "heading": "Détails du produit",
+        "help": "Indiquez uniquement des détails vérifiables pour cette catégorie, avec les unités du fabricant : dimensions, poids, mesures, style, caractéristiques, matériaux, entretien ou instructions. Laissez les détails inconnus vides. Tous les détails sont soumis à modération. Jusqu’à 32 détails ; noms : 80 caractères ; valeurs : 2 000 ; description : 5 000.",
+        "name": "Nom du détail",
+        "value": "Valeur du détail",
+        "add": "Ajouter un détail",
+        "remove": "Supprimer le détail",
+        "invalid": "Donnez à chaque détail un nom unique et une valeur, ou supprimez-le. Respectez les limites indiquées."
+      }
     },
     "quickList": {
       "heading": "Annonce rapide",
-      "intro": "Pour les produits de base, les pièces uniques et les offres sur commande autonomes.",
+      "intro": "Enregistrez un brouillon pour un article d’occasion unique ou une offre fabriquée sur commande.",
       "titleLabel": "Titre de l'annonce",
-      "titlePlaceholder": "ex. Tomates au kg",
+      "titlePlaceholder": "p. ex. Chaise en bois d’occasion",
       "publish": "Publier l'annonce",
-      "publishing": "Publication…"
+      "publishing": "Publication…",
+      "descriptionLabel": "Description de l’annonce",
+      "descriptionHelp": "Décrivez cet article ou cette offre en au moins 20 caractères.",
+      "draftNotice": "Enregistrer un brouillon ne publie pas l’annonce.",
+      "descriptionInvalid": "Saisissez au moins 20 caractères, sans compter les espaces au début et à la fin.",
+      "saveDraft": "Enregistrer le brouillon",
+      "savingDraft": "Enregistrement du brouillon…",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Sélectionnez-le dans Catalogue.",
+      "categoriesUnavailable": "Les catégories sont indisponibles. Réessayez plus tard."
     },
     "fields": {
       "priceLabel": "Votre prix (ZMW)",
@@ -439,7 +458,8 @@
     "success": {
       "live": "L'annonce est en ligne !",
       "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp.",
-      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier."
+      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier.",
+      "draft": "Brouillon enregistré. Cette annonce n’est pas en ligne."
     },
     "errors": {
       "required": "Ce champ est obligatoire",
@@ -453,7 +473,10 @@
       "authRequired": "Connectez-vous pour gérer les annonces.",
       "permissionDenied": "Vous n'avez pas accès à ce catalogue vendeur.",
       "notFound": "Cette annonce est introuvable pour votre boutique.",
-      "retryHint": "Vérifiez votre connexion, puis réessayez."
+      "retryHint": "Vérifiez votre connexion, puis réessayez.",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Utilisez l’association au catalogue ou la création d’un produit.",
+      "standaloneDetailsRequired": "Sélectionnez une catégorie et ajoutez une description d’au moins 20 caractères pour cette annonce autonome.",
+      "policyBlocked": "Cette annonce ne peut pas être publiée selon la politique de catégorie ou de lancement actuelle. Vérifiez ses champs et contactez l’assistance si nécessaire."
     },
     "import": {
       "meta": {
@@ -467,7 +490,9 @@
       "template": {
         "heading": "Télécharger le modèle",
         "body": "Utilisez notre modèle CSV avec des exemples de lignes. Les prix sont en ngwee (nombre entier). Le SKU est votre code unique par annonce. Laissez product_id vide pour obtenir des suggestions de correspondance au catalogue dans l'aperçu.",
-        "download": "Télécharger le modèle CSV"
+        "download": "Télécharger le modèle CSV",
+        "stockNote": "Les imports définissent le stock initial des nouveaux SKU. Réimporter un SKU existant conserve son stock actuel, son mode et ses unités, sans remettre en stock les unités réservées ou vendues.",
+        "unitsHelp": "Les prix et le stock sont exprimés par palier de vente. Pour des paliers de 250 g, utilisez sale_unit kg et unit_step_milli 250 ; min_steps 4 indique un minimum de 1 kg. Les tarifs de gros sont réservés aux acheteurs professionnels vérifiés et exigent des unités each."
       },
       "upload": {
         "heading": "Importer un CSV",
@@ -484,7 +509,8 @@
         "details": "Détails",
         "ok": "OK",
         "failed": "Échec",
-        "imported": "Importée"
+        "imported": "Importée",
+        "stockPreserved": "Annonce mise à jour ; le stock existant et son mode ont été conservés."
       },
       "preview": {
         "previewButton": "Aperçu des lignes",
@@ -497,7 +523,8 @@
         "attached": "Rattaché : {name}",
         "matched": "Correspond : {name}",
         "detach": "Modifier",
-        "standalone": "Aucune correspondance — annoncé séparément"
+        "standalone": "Aucune correspondance — annoncé séparément",
+        "selectionRequired": "Sélectionnez un produit actif du catalogue avant l’importation."
       },
       "apply": {
         "button": "Appliquer l'importation",
@@ -507,7 +534,36 @@
         "uploadFailed": "Échec de l'importation. Vérifiez votre fichier et réessayez.",
         "previewFailed": "Impossible de vérifier votre fichier. Veuillez réessayer.",
         "no_file": "Un fichier CSV est requis",
-        "no_payload": "Fournissez un fichier CSV ou des lignes JSON"
+        "no_payload": "Fournissez un fichier CSV ou des lignes JSON",
+        "templateFailed": "Impossible de télécharger le modèle. Veuillez réessayer.",
+        "invalidUnits": "Vérifiez l’unité de vente, le pas de quantité et la quantité minimale. Les unités mesurées ne peuvent pas utiliser les tarifs de gros.",
+        "duplicateHeaders": "Chaque nom de colonne CSV doit être unique.",
+        "notEditable": "Cette annonce existante ne peut pas être modifiée par importation.",
+        "unitChange": "Une importation ne peut pas modifier les unités ou le nombre minimal de pas d’un SKU existant.",
+        "productChange": "Ce SKU est déjà associé à un autre produit.",
+        "wholesaleEligibility": "La vente en gros nécessite une approbation T2 en cours et au moins un palier de prix valide.",
+        "invalidListing": "Ces modifications ne sont pas valides pour cette annonce. Vérifiez ses champs.",
+        "invalidTiers": "Les paliers doivent avoir des quantités positives et des prix strictement décroissants.",
+        "invalidBoolean": "Utilisez true ou false pour les champs booléens.",
+        "missingField": "Complétez les champs CSV obligatoires : référence, titre, prix et stock suivi.",
+        "invalidInteger": "Les prix, stocks et quantités doivent être des nombres entiers.",
+        "invalidMinimum": "Les prix et les pas de quantité doivent être positifs ; le stock ne peut pas être négatif.",
+        "invalidProduct": "Sélectionnez un produit actif du catalogue.",
+        "unknownColumns": "Le CSV contient des colonnes non prises en charge ou des cellules en trop. Utilisez le modèle téléchargé.",
+        "invalidStockMode": "Choisissez un stock suivi ou toujours disponible.",
+        "invalidCondition": "Choisissez l’état neuf ou reconditionné.",
+        "invalidStatus": "Choisissez le statut brouillon, actif ou en pause.",
+        "emptyCsv": "Le fichier CSV est vide.",
+        "missingHeaders": "Le CSV doit inclure tous les en-têtes de colonnes obligatoires.",
+        "rowLimit": "Importez au maximum 500 lignes de données à la fois.",
+        "prohibitedListing": "Cet article est interdit. Vérifiez le contenu de l’annonce.",
+        "duplicateSku": "Chaque référence doit apparaître une seule fois dans le fichier.",
+        "listingCap": "Votre limite d’annonces est atteinte. Mettez à jour les références existantes ou vérifiez votre niveau de vérification.",
+        "fileSize": "Le CSV ne doit pas dépasser 512 000 octets.",
+        "invalidEncoding": "Enregistrez le CSV avec l’encodage UTF-8.",
+        "canonicalRequired": "Sélectionnez un produit du catalogue avant d’importer cette nouvelle référence.",
+        "databaseFailure": "Cette ligne n’a pas pu être enregistrée. Réessayez ou contactez l’assistance.",
+        "unknownError": "Cette ligne doit être vérifiée. Contrôlez les champs CSV et réessayez."
       }
     },
     "manage": {
@@ -575,7 +631,29 @@
         "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
       },
       "emptyTitle": "Aucune annonce",
-      "statusLabel": "Statut"
+      "statusLabel": "Statut",
+      "stock": {
+        "heading": "Ajuster le stock disponible",
+        "help": "Saisissez une variation en pas de vente, pas un total physique compté. Les unités réservées sont déjà exclues. Les unités et le mode de stock sont fixes. La création de stocks par agence nécessite le responsable du stock.",
+        "refresh": "Actualiser la disponibilité",
+        "units": "Unité : {unit} ; chaque pas vaut {step}/1000 de cette unité.",
+        "branch": "Agence",
+        "choose": "Choisir une agence",
+        "inactive": "Inactive",
+        "pooled": "Stock mutualisé disponible : {qty}",
+        "delta": "Variation (+ reçu / − retiré)",
+        "reason": "Motif",
+        "retry": "Réessayer la même opération",
+        "apply": "Appliquer la variation",
+        "saved": "Enregistré : {old} → {next} pas disponibles. Opération : {id}.",
+        "invalid": "Choisissez une agence active, une variation entière non nulle et un motif.",
+        "conflict": "Ajustement refusé. Actualisez la disponibilité, vérifiez l’agence et les unités, puis soumettez un nouvel ajustement.",
+        "retrySame": "Résultat incertain. Réessayez la même opération pour obtenir son résultat enregistré ; ne créez pas un autre ajustement.",
+        "loadFailed": "Impossible de charger la disponibilité. Réessayez avec Actualiser.",
+        "storageFailed": "Impossible de conserver l’opération pour la réessayer sans doublon. Activez le stockage de session.",
+        "notTracked": "Cette annonce n’utilise pas de stock suivi.",
+        "authorityRequired": "Utilisez la section d’ajustement du stock. Le stock existant, les unités et le mode de stock ne peuvent pas être remplacés dans cet éditeur."
+      }
     },
     "kycGate": {
       "title": "Vérification en cours",
@@ -1661,6 +1739,14 @@
       "listings": "Annonces",
       "orders": "Commandes",
       "profile": "Profil"
+    }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "Produit du catalogue"
+    },
+    "errors": {
+      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
     }
   }
 }

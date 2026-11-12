@@ -1,10 +1,14 @@
 "use client";
 
+import { CategorySelection, categoryPath } from "@vergeo/ui/src/category-selection";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { listingCreateErrorMessage } from "../_lib/listing-errors";
-import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
+import { Button, FormField, Input, Spinner } from "../_lib/ui";
 
+import { buildCanonicalSpec, type DetailEntry } from "./canonical-details";
+import { CanonicalDetailsFields, type CanonicalDetailsLabels } from "./canonical-details-fields";
 import { CommissionBanner } from "./commission-banner";
 import {
   DEFAULT_LISTING_FIELDS,
@@ -26,6 +30,7 @@ type NewCanonicalFormProps = {
   onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
   onError: (message: string) => void;
   labels: {
+    details: CanonicalDetailsLabels;
     heading: string;
     intro: string;
     nameLabel: string;
@@ -52,9 +57,12 @@ export function NewCanonicalForm({
   onError,
   labels,
 }: NewCanonicalFormProps) {
+  const taxonomyText = useTranslations("common.categorySelection");
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [productName, setProductName] = useState("");
+  const [description, setDescription] = useState("");
+  const [details, setDetails] = useState<DetailEntry[]>([]);
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_LISTING_FIELDS);
@@ -87,7 +95,17 @@ export function NewCanonicalForm({
   const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
 
   const handleSubmit = async () => {
-    if (!productName.trim() || !categoryId) {
+    if (
+      !productName.trim() ||
+      !categoryPath(
+        categories.map((item) => ({
+          id: item.id,
+          parentId: item.parent_id ?? null,
+          label: item.name,
+        })),
+        categoryId,
+      ).length
+    ) {
       onError(labels.required);
       return;
     }
@@ -97,6 +115,11 @@ export function NewCanonicalForm({
       return;
     }
 
+    const spec = buildCanonicalSpec(details);
+    if (spec === null || description.length > 5000) {
+      onError(labels.details.invalid);
+      return;
+    }
     setSubmitting(true);
     try {
       const parsed = parseListingFieldValues(fields);
@@ -104,6 +127,8 @@ export function NewCanonicalForm({
         mode: "new_canonical",
         product_name: productName.trim(),
         brand: brand.trim() || null,
+        description: description.trim(),
+        spec,
         category_id: categoryId,
         price_ngwee: parsed.priceNgwee,
         product_class: fields.productClass,
@@ -161,16 +186,23 @@ export function NewCanonicalForm({
         />
       </FormField>
 
-      <FormField label={labels.categoryLabel} required requiredMarker="*">
-        <Select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-          <option value="">{labels.categoryPlaceholder}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </Select>
-      </FormField>
+      <CategorySelection
+        nodes={categories.map((item) => ({
+          id: item.id,
+          parentId: item.parent_id ?? null,
+          label: item.name,
+        }))}
+        value={categoryId}
+        onChange={setCategoryId}
+        disabled={loadingCategories || submitting}
+        labels={{
+          category: labels.categoryLabel,
+          subcategory: taxonomyText("subcategory"),
+          placeholder: labels.categoryPlaceholder,
+          empty: taxonomyText("empty"),
+          unavailable: taxonomyText("unavailable"),
+        }}
+      />
 
       {selectedCategory ? (
         <CommissionBanner
@@ -179,6 +211,14 @@ export function NewCanonicalForm({
           labels={labels.commission}
         />
       ) : null}
+
+      <CanonicalDetailsFields
+        description={description}
+        entries={details}
+        onDescription={setDescription}
+        onEntries={setDetails}
+        labels={labels.details}
+      />
 
       <ListingFields
         values={fields}

@@ -77,6 +77,26 @@ def test_valid_proof_passes() -> None:
     proof_mod.validate_portal_proof("customer", _proof("customer"), candidate_sha=CANDIDATE_SHA)
 
 
+@pytest.mark.parametrize("image_tag", [None, "", "unknown", OTHER_SHA])
+def test_staging_api_fingerprint_requires_bound_image_tag_when_expected(
+    image_tag: str | None,
+) -> None:
+    fingerprint = {
+        "env": "staging",
+        "git_sha": CANDIDATE_SHA,
+        "supabase_project_ref": proof_mod.STAGING_SUPABASE_PROJECT_REF,
+    }
+    if image_tag is not None:
+        fingerprint["image_tag"] = image_tag
+    with pytest.raises(proof_mod.ProofValidationError, match="image_tag"):
+        proof_mod.validate_api_fingerprint(
+            fingerprint,
+            candidate_sha=CANDIDATE_SHA,
+            staging_supabase_project_id=proof_mod.STAGING_SUPABASE_PROJECT_REF,
+            expected_image_tag=CANDIDATE_SHA,
+        )
+
+
 # --- SHA-proof combinations (mirrors vercel_preview_health_verify.py policy) ---
 
 

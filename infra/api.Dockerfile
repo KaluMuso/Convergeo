@@ -22,6 +22,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     GIT_SHA=${GIT_SHA} \
     API_IMAGE_TAG=${API_IMAGE_TAG}
 
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+
 RUN groupadd --system vergeo && useradd --system --gid vergeo --create-home vergeo
 
 WORKDIR /app

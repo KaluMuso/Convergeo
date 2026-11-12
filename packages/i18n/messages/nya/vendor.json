@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Analytics — Convergeo Vendor",
-      "description": "Onani kugulitsa kwanu, orders, and cart activity over the last 7 or Masiku 30, see your top listings, and gauge cart-to-order conversion."
+      "description": "Track sales, orders and cart/checkout event counts over 7 or 30 days, and compare independent order and activity totals."
     },
     "eyebrow": "Storefront yanu",
     "title": "Analytics",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "⚠ Sales",
       "orders": "Ma-order",
-      "views": "Activity ya cart"
+      "views": "Cart/checkout events"
     },
     "sparkline": {
       "sales": "⚠ Daily sales trend",
       "orders": "Daily orders trend",
-      "views": "Daily cart activity trend"
+      "views": "Daily cart/checkout event count"
     },
     "top": {
       "heading": "Listings zazikulu",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# sold} other {# sold}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# cart action} other {# cart actions}}",
-      "pct": "⚠ {pct}% cart-to-order",
-      "empty": "Not enough activity yet to estimate conversion."
+      "heading": "Order/activity ratio",
+      "summary": "{orders, plural, one {# non-cancelled order} other {# non-cancelled orders}}; {views, plural, one {# cart/checkout event} other {# cart/checkout events}} in this window.",
+      "pct": "{pct} orders per 100 cart/checkout events",
+      "empty": "No cart/checkout events in this window; the ratio is unavailable.",
+      "definition": "Counts cart-add and checkout-start events, not listing views or unique visitors. Orders and events are independent totals, not a conversion cohort; the ratio can exceed 100."
     },
     "errors": {
       "loadFailed": "Sitinathe kulodza your analytics. Yesaninso.",
@@ -350,7 +351,7 @@
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
     },
     "title": "Create listing",
     "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
@@ -387,15 +388,33 @@
       "categoryPlaceholder": "Select category",
       "submit": "Tumizani for review",
       "submitting": "Tumizaniting…",
-      "moderationNotice": "Your listing stays in draft until our team approves the product."
+      "moderationNotice": "Your listing stays in draft until our team approves the product.",
+      "details": {
+        "about": "About this item",
+        "heading": "Product details",
+        "help": "Enter only details you can verify for this category. Include units as stated by the manufacturer. You can add dimensions, weight, measurements, style, features, materials, care or guide instructions. Leave unknown details blank. All details require moderation. Up to 32 details; names: 80 characters; values: 2,000; description: 5,000.",
+        "name": "Detail name",
+        "value": "Detail value",
+        "add": "Add detail",
+        "remove": "Remove detail",
+        "invalid": "Complete each detail with a unique name and value, or remove it. Keep the description and details within the displayed limits."
+      }
     },
     "quickList": {
       "heading": "Quick list",
-      "intro": "⚠ For commodities, unique items, and made-to-order offers that stand alone.",
+      "intro": "Save a draft for a unique used item or a made-to-order offer.",
       "titleLabel": "Listing title",
-      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "titlePlaceholder": "e.g. Used wooden chair",
       "publish": "Publish listing",
-      "publishing": "Publishing…"
+      "publishing": "Publishing…",
+      "descriptionLabel": "Listing description",
+      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
+      "draftNotice": "Saving a draft does not publish the listing.",
+      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft…",
+      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
+      "categoriesUnavailable": "Categories are unavailable. Try again later."
     },
     "fields": {
       "priceLabel": "⚠ Your price (ZMW)",
@@ -453,7 +472,8 @@
     "success": {
       "live": "Listing is live!",
       "moderation": "Tumizanited for review — we will notify you on WhatsApp.",
-      "evidence": "⚠ Draft saved. Add evidence photos before publishing."
+      "evidence": "⚠ Draft saved. Add evidence photos before publishing.",
+      "draft": "Draft saved. This listing is not live."
     },
     "errors": {
       "required": "This field is required",
@@ -467,7 +487,10 @@
       "authRequired": "Sign in to manage listings.",
       "permissionDenied": "Mulibe access to this vendor catalogue.",
       "notFound": "That listing was not found for your shop.",
-      "retryHint": "Onani connection yanu, then try again."
+      "retryHint": "Onani connection yanu, then try again.",
+      "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
+      "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
+      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
     },
     "import": {
       "meta": {
@@ -481,7 +504,9 @@
       "template": {
         "heading": "Download template",
         "body": "⚠ Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing. Leave product_id blank to get catalogue-match suggestions in the preview.",
-        "download": "Download CSV template"
+        "download": "Download CSV template",
+        "stockNote": "Imports set opening stock for new SKUs. Reimporting an existing SKU preserves its current stock, stock mode, and units; it does not restock reserved or sold units.",
+        "unitsHelp": "Prices and stock counts are per sale step. For 250 g steps use sale_unit kg and unit_step_milli 250; min_steps 4 means a minimum of 1 kg. Wholesale tiers are for verified business buyers and require each units."
       },
       "upload": {
         "heading": "Upload CSV",
@@ -498,7 +523,8 @@
         "details": "Details",
         "ok": "OK",
         "failed": "Failed",
-        "imported": "Imported"
+        "imported": "Imported",
+        "stockPreserved": "Listing updated; existing stock and stock mode were kept."
       },
       "preview": {
         "previewButton": "Preview rows",
@@ -511,7 +537,8 @@
         "attached": "Attached: {name}",
         "matched": "Matches: {name}",
         "detach": "Change",
-        "standalone": "No match — lists on its own"
+        "standalone": "No match — lists on its own",
+        "selectionRequired": "Select an active catalogue product before importing."
       },
       "apply": {
         "button": "Apply import",
@@ -521,7 +548,36 @@
         "uploadFailed": "Import failed. Check your file and try again.",
         "previewFailed": "Could not check your file. Yesaninso.",
         "no_file": "CSV file is required",
-        "no_payload": "Provide a CSV file or JSON rows"
+        "no_payload": "Provide a CSV file or JSON rows",
+        "templateFailed": "Could not download the template. Please try again.",
+        "invalidUnits": "Check the sale unit, quantity step and minimum quantity. Measured units cannot use wholesale tiers.",
+        "duplicateHeaders": "CSV column names must be unique.",
+        "notEditable": "This existing listing cannot be edited by import.",
+        "unitChange": "An import cannot change the units or minimum steps of an existing SKU.",
+        "productChange": "This SKU is already linked to a different product.",
+        "wholesaleEligibility": "Wholesale requires current approval at tier T2 and at least one valid price tier.",
+        "invalidListing": "These changes are not valid for the existing listing. Review its listing fields.",
+        "invalidTiers": "Price tiers must use positive quantities and strictly decreasing prices.",
+        "invalidBoolean": "Use true or false for boolean fields.",
+        "missingField": "Complete the required CSV fields, including SKU, title, price and tracked stock.",
+        "invalidInteger": "Prices, stock counts and quantity fields must be whole numbers.",
+        "invalidMinimum": "Prices and quantity steps must be positive; stock cannot be negative.",
+        "invalidProduct": "Select an active catalogue product.",
+        "unknownColumns": "The CSV has unsupported columns or extra cells. Use the downloaded template.",
+        "invalidStockMode": "Choose tracked or always available stock.",
+        "invalidCondition": "Choose new or refurbished condition.",
+        "invalidStatus": "Choose draft, active or paused status.",
+        "emptyCsv": "The CSV file is empty.",
+        "missingHeaders": "The CSV must include all required column headers.",
+        "rowLimit": "Import at most 500 data rows at a time.",
+        "prohibitedListing": "This item is prohibited. Review the listing content.",
+        "duplicateSku": "Each SKU must appear only once in the file.",
+        "listingCap": "Your listing limit has been reached. Update existing SKUs or review your verification tier.",
+        "fileSize": "The CSV must be no larger than 512,000 bytes.",
+        "invalidEncoding": "Save the CSV using UTF-8 encoding.",
+        "canonicalRequired": "Select a catalogue product before importing this new SKU.",
+        "databaseFailure": "This row could not be saved. Please try again or contact support.",
+        "unknownError": "This row needs review. Check the CSV fields and try again."
       }
     },
     "manage": {
@@ -593,7 +649,29 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
-      "statusLabel": "Status"
+      "statusLabel": "Status",
+      "stock": {
+        "heading": "Adjust available stock",
+        "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
+        "refresh": "Refresh availability",
+        "units": "Sale unit: {unit}; each step is {step}/1000 of that unit.",
+        "branch": "Branch",
+        "choose": "Select a branch",
+        "inactive": "Inactive",
+        "pooled": "Available pooled stock: {qty}",
+        "delta": "Change (+ received / − removed)",
+        "reason": "Reason",
+        "retry": "Retry the same operation",
+        "apply": "Apply adjustment",
+        "saved": "Recorded {old} → {next} available steps. Operation: {id}.",
+        "invalid": "Choose an active branch, a nonzero integer change and a reason.",
+        "conflict": "The adjustment was rejected. Refresh availability, review the branch and units, then submit a new adjustment.",
+        "retrySame": "The outcome is uncertain. Retry this same operation to retrieve its recorded result; do not create another adjustment.",
+        "loadFailed": "Could not load availability. Use Refresh to try again.",
+        "storageFailed": "Could not preserve the operation for a safe retry. Enable session storage before adjusting stock.",
+        "notTracked": "This listing does not use tracked stock.",
+        "authorityRequired": "Use the stock adjustment section. Existing stock, sale units and stock mode cannot be replaced in the listing editor."
+      }
     },
     "kycGate": {
       "title": "Verification still in progress",
@@ -1831,7 +1909,11 @@
       "submit": "Submit for review",
       "submitting": "Submitting…",
       "submitted": "Submitted for review. Convergeo will check it shortly.",
-      "back": "Back to drafts"
+      "back": "Back to drafts",
+      "canonicalProduct": "Catalogue product",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
     },
     "fields": {
       "title": "Product name",
@@ -1873,7 +1955,14 @@
       "invalid_price": "The price is not valid.",
       "missing_quantity": "Add how many you have in stock.",
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
-      "unsupported_stock_mode": "That stock option is not supported."
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonical_required": "Choose the matching active catalogue product before submitting this draft.",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
   },
   "clips": {

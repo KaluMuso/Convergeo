@@ -116,10 +116,10 @@ export function createIntakeClient(getToken: () => string | null | Promise<strin
       );
     },
 
-    submit(sessionId: string): Promise<SubmitResult> {
+    submit(sessionId: string, productId: string): Promise<SubmitResult> {
       return client.request<SubmitResult>(
         `/vendor/intake/sessions/${encodeURIComponent(sessionId)}/submit`,
-        { method: "POST" },
+        { method: "POST", body: JSON.stringify({ product_id: productId }) },
       );
     },
 

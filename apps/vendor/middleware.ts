@@ -16,6 +16,8 @@ import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
+import { isVendorAuthSetupPath } from "./lib/password-recovery-path";
+
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
   defaultLocale: DEFAULT_LOCALE,
@@ -58,15 +60,17 @@ export default async function middleware(request: NextRequest) {
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
   // /health carries only non-secret status/config facts (see route.ts) — it
   // must stay reachable unauthenticated, like any deployment health check.
-  const gate = isHealthCheckPath(request.nextUrl.pathname, LOCALES)
-    ? null
-    : resolveGatedRedirect(
-        "vendor",
-        request.nextUrl.pathname,
-        LOCALES,
-        session.user,
-        session.roles,
-      );
+  const gate =
+    isHealthCheckPath(request.nextUrl.pathname, LOCALES) ||
+    isVendorAuthSetupPath(request.nextUrl.pathname)
+      ? null
+      : resolveGatedRedirect(
+          "vendor",
+          request.nextUrl.pathname,
+          LOCALES,
+          session.user,
+          session.roles,
+        );
 
   if (gate) {
     return applyReportOnlyCspNonce(

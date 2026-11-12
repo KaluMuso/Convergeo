@@ -1,0 +1,7 @@
+{
+    "unbalanced_ledger_transactions": 0,
+    "post_repair_wrong_amount_pending": 6,
+    "pre_repair_wrong_amount_successes": 1,
+    "cancelled_payments_with_gross_receipt": 3,
+    "checkouts_with_multiple_gross_receipts": 0
+}

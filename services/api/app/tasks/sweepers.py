@@ -113,7 +113,7 @@ WHERE lt.kind = 'escrow_hold'
     FROM public.ledger_transactions rel
     WHERE rel.idempotency_key = ({release_prefix} || lt.order_id::text)
   )
-ORDER BY lt.order_id ASC;
+ORDER BY lt.order_id::text ASC;
 """
     result = run_sql_script(script)
     if not result.ok:

@@ -7,6 +7,7 @@
   "scripts": {
     "test": "playwright test",
     "test:list": "playwright test --list",
+    "test:scanner-artifacts": "node scripts/assert-scanner-artifact-containment.mjs",
     "typecheck": "tsc --noEmit",
     "report": "playwright show-report"
   },

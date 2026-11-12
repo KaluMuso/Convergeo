@@ -1,0 +1,360 @@
+{
+  "version": 1,
+  "evidence_label": "SYNTHETIC_HARNESS_ONLY",
+  "currency": "ZMW",
+  "configured_account_id": "acct-configured",
+  "cutoff_utc": "2026-09-28T23:59:59+00:00",
+  "accounts": [
+    {
+      "account_id": "acct-wrong-first",
+      "currency": "ZMW",
+      "available_balance_ngwee": 999999,
+      "ledger_balance_ngwee": 999999
+    },
+    {
+      "account_id": "acct-configured",
+      "currency": "ZMW",
+      "available_balance_ngwee": 240000,
+      "ledger_balance_ngwee": 249000
+    }
+  ],
+  "provider_pages": [
+    {
+      "page_number": 1,
+      "cursor": null,
+      "next_cursor": "cursor-2",
+      "page_count": 3,
+      "total": 11,
+      "movements": [
+        {
+          "movement_id": "txn-product",
+          "amount_ngwee": 100000,
+          "direction": "credit",
+          "kind": "collection",
+          "merchant_reference": "ord-product-1",
+          "provider_reference": "lenco-product-1",
+          "observed_at": "2026-09-28T08:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-service-deposit",
+          "amount_ngwee": 30000,
+          "direction": "credit",
+          "kind": "service_deposit",
+          "merchant_reference": "ord-service-deposit",
+          "provider_reference": "lenco-service-deposit",
+          "observed_at": "2026-09-28T09:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-service-balance",
+          "amount_ngwee": 70000,
+          "direction": "credit",
+          "kind": "service_balance",
+          "merchant_reference": "ord-service-balance",
+          "provider_reference": "lenco-service-balance",
+          "observed_at": "2026-09-28T10:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "cursor": "cursor-2",
+      "next_cursor": "cursor-3",
+      "page_count": 3,
+      "total": 11,
+      "movements": [
+        {
+          "movement_id": "txn-product",
+          "amount_ngwee": 100000,
+          "direction": "credit",
+          "kind": "collection",
+          "merchant_reference": "ord-product-1",
+          "provider_reference": "lenco-product-1",
+          "observed_at": "2026-09-28T08:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-repeat-a",
+          "amount_ngwee": 5000,
+          "direction": "credit",
+          "kind": "collection",
+          "merchant_reference": "ord-repeated-reference",
+          "provider_reference": "lenco-repeat-a",
+          "observed_at": "2026-09-28T11:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-repeat-b",
+          "amount_ngwee": 7000,
+          "direction": "credit",
+          "kind": "collection",
+          "merchant_reference": "ord-repeated-reference",
+          "provider_reference": "lenco-repeat-b",
+          "observed_at": "2026-09-28T11:30:00+00:00"
+        },
+        {
+          "movement_id": "txn-vendor-payout",
+          "amount_ngwee": 40000,
+          "direction": "debit",
+          "kind": "vendor_payout",
+          "merchant_reference": "pay-payout-1",
+          "provider_reference": "lenco-payout-1",
+          "observed_at": "2026-09-28T12:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "page_number": 3,
+      "cursor": "cursor-3",
+      "next_cursor": null,
+      "page_count": 3,
+      "total": 11,
+      "movements": [
+        {
+          "movement_id": "txn-refund-payout",
+          "amount_ngwee": 15000,
+          "direction": "debit",
+          "kind": "refund_payout",
+          "merchant_reference": "rfd-refund-1",
+          "provider_reference": "lenco-refund-1",
+          "observed_at": "2026-09-28T13:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-collection-exception",
+          "amount_ngwee": 9000,
+          "direction": "credit",
+          "kind": "collection_exception",
+          "merchant_reference": "ord-late-cancelled",
+          "provider_reference": "lenco-late-cancelled",
+          "observed_at": "2026-09-28T14:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-unparsed",
+          "amount_ngwee": 2000,
+          "direction": "credit",
+          "kind": "unknown",
+          "merchant_reference": null,
+          "provider_reference": null,
+          "observed_at": "2026-09-28T15:00:00+00:00"
+        },
+        {
+          "movement_id": "txn-after-cutoff",
+          "amount_ngwee": 11000,
+          "direction": "credit",
+          "kind": "collection",
+          "merchant_reference": "ord-after-cutoff",
+          "provider_reference": "lenco-after-cutoff",
+          "observed_at": "2026-09-29T00:00:01+00:00"
+        }
+      ]
+    }
+  ],
+  "local_movements": [
+    {
+      "local_id": "allocation-order-a",
+      "movement_group": "collection-product",
+      "kind": "collection",
+      "amount_ngwee": 60000,
+      "provider_transaction_id": "txn-product",
+      "merchant_reference": "ord-product-1",
+      "provider_reference": "lenco-product-1",
+      "checkout_id": "checkout-product",
+      "order_id": "order-a",
+      "payment_id": "payment-product",
+      "ledger_transaction_id": "ledger-product-a",
+      "ledger_linkage_id": "order-a",
+      "allocation_id": "allocation-a",
+      "actor_id": "buyer-a",
+      "rail": "mtn"
+    },
+    {
+      "local_id": "allocation-order-b",
+      "movement_group": "collection-product",
+      "kind": "collection",
+      "amount_ngwee": 40000,
+      "provider_transaction_id": "txn-product",
+      "merchant_reference": "ord-product-1",
+      "provider_reference": "lenco-product-1",
+      "checkout_id": "checkout-product",
+      "order_id": "order-b",
+      "payment_id": "payment-product",
+      "ledger_transaction_id": "ledger-product-b",
+      "ledger_linkage_id": "order-b",
+      "allocation_id": "allocation-b",
+      "actor_id": "buyer-a",
+      "rail": "mtn"
+    },
+    {
+      "local_id": "service-deposit",
+      "movement_group": "collection-service-deposit",
+      "kind": "service_deposit",
+      "amount_ngwee": 30000,
+      "provider_transaction_id": "txn-service-deposit",
+      "merchant_reference": "ord-service-deposit",
+      "provider_reference": "lenco-service-deposit",
+      "checkout_id": "checkout-deposit",
+      "order_id": "order-service",
+      "job_id": "job-service",
+      "obligation_id": "obligation-deposit",
+      "payment_id": "payment-deposit",
+      "ledger_transaction_id": "ledger-deposit",
+      "ledger_linkage_id": "obligation-deposit",
+      "allocation_id": "allocation-deposit",
+      "actor_id": "buyer-service",
+      "rail": "airtel",
+      "leg": "deposit"
+    },
+    {
+      "local_id": "service-balance",
+      "movement_group": "collection-service-balance",
+      "kind": "service_balance",
+      "amount_ngwee": 70000,
+      "provider_transaction_id": "txn-service-balance",
+      "merchant_reference": "ord-service-balance",
+      "provider_reference": "lenco-service-balance",
+      "checkout_id": "checkout-balance",
+      "order_id": "order-service",
+      "job_id": "job-service",
+      "obligation_id": "obligation-balance",
+      "payment_id": "payment-balance",
+      "ledger_transaction_id": "ledger-balance",
+      "ledger_linkage_id": "obligation-balance",
+      "allocation_id": "allocation-balance",
+      "actor_id": "buyer-service",
+      "rail": "airtel",
+      "leg": "balance"
+    },
+    {
+      "local_id": "repeat-a",
+      "movement_group": "collection-repeat-a",
+      "kind": "collection",
+      "amount_ngwee": 5000,
+      "provider_transaction_id": "txn-repeat-a",
+      "merchant_reference": "ord-repeated-reference",
+      "provider_reference": "lenco-repeat-a",
+      "payment_id": "payment-repeat-a",
+      "ledger_transaction_id": "ledger-repeat-a",
+      "ledger_linkage_id": "payment-repeat-a",
+      "actor_id": "buyer-repeat",
+      "rail": "mtn"
+    },
+    {
+      "local_id": "repeat-b",
+      "movement_group": "collection-repeat-b",
+      "kind": "collection",
+      "amount_ngwee": 7000,
+      "provider_transaction_id": "txn-repeat-b",
+      "merchant_reference": "ord-repeated-reference",
+      "provider_reference": "lenco-repeat-b",
+      "payment_id": "payment-repeat-b",
+      "ledger_transaction_id": "ledger-repeat-b",
+      "ledger_linkage_id": "payment-repeat-b",
+      "actor_id": "buyer-repeat",
+      "rail": "mtn"
+    },
+    {
+      "local_id": "vendor-payout",
+      "movement_group": "payout-vendor",
+      "kind": "vendor_payout",
+      "amount_ngwee": -40000,
+      "provider_transaction_id": "txn-vendor-payout",
+      "merchant_reference": "pay-payout-1",
+      "provider_reference": "lenco-payout-1",
+      "payout_id": "payout-1",
+      "ledger_transaction_id": "ledger-payout-1",
+      "ledger_linkage_id": "payout-1",
+      "actor_id": "vendor-a",
+      "rail": "mtn"
+    },
+    {
+      "local_id": "refund-payout",
+      "movement_group": "payout-refund",
+      "kind": "refund_payout",
+      "amount_ngwee": -15000,
+      "provider_transaction_id": "txn-refund-payout",
+      "merchant_reference": "rfd-refund-1",
+      "provider_reference": "lenco-refund-1",
+      "payout_id": "payout-refund-1",
+      "refund_id": "refund-1",
+      "ledger_transaction_id": "ledger-refund-1",
+      "ledger_linkage_id": "refund-1",
+      "actor_id": "buyer-refund",
+      "rail": "airtel"
+    },
+    {
+      "local_id": "collection-exception",
+      "movement_group": "collection-exception",
+      "kind": "collection_exception",
+      "amount_ngwee": 9000,
+      "provider_transaction_id": "txn-collection-exception",
+      "merchant_reference": "ord-late-cancelled",
+      "provider_reference": "lenco-late-cancelled",
+      "payment_id": "payment-late",
+      "order_id": "order-cancelled",
+      "collection_exception_id": "exception-1",
+      "actor_id": "buyer-late",
+      "rail": "mtn"
+    }
+  ],
+  "balance_bridge": {
+    "account_id": "acct-configured",
+    "currency": "ZMW",
+    "statement_id": "statement-2026-09-28",
+    "statement_source_hash": "sha256:synthetic-provider-statement",
+    "statement_cutoff_utc": "2026-09-28T23:59:59+00:00",
+    "opening_funds_ngwee": 100000,
+    "settled_credits_ngwee": 205000,
+    "successful_outgoing_transfers_ngwee": 40000,
+    "successful_refunds_ngwee": 15000,
+    "evidenced_reversals_ngwee": 3000,
+    "unsettled_credits_ngwee": 7000,
+    "disputed_positions_ngwee": 9000,
+    "observed_ledger_balance_ngwee": 249000,
+    "observed_available_balance_ngwee": 240000,
+    "credit_basis": "gross",
+    "fees": [
+      {
+        "fee_id": "fee-collection",
+        "source_movement_id": "txn-product",
+        "amount_ngwee": 5000,
+        "reversed_ngwee": 1000,
+        "previously_recovered_ngwee": 0,
+        "recoverability_evidence_id": null
+      }
+    ]
+  },
+  "adversarial_cases": {
+    "wrong_account": "replace acct-configured with acct-shared",
+    "omitted_page": "remove provider page 2",
+    "repeated_cursor": "set page 3 cursor to cursor-2",
+    "conflicting_duplicate": "change the page-2 txn-product amount",
+    "ambiguous_mapping": "remove provider transaction ids from repeat-a and repeat-b",
+    "reversal": "remove fee-collection.reversed_ngwee",
+    "late_collection": "move txn-after-cutoff to the report period",
+    "no_fee_evidence": "set fee-collection.amount_ngwee to null",
+    "incorrect_ledger_linkage": "set refund ledger_linkage_id to order-unrelated"
+  },
+  "acceptance_rows": [
+    { "case_id": 1, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 2, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 3, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 4, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 5, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 6, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 7, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 8, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 9, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 10, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 11, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 12, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 13, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 14, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 15, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 16, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 17, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 18, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 19, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 20, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 21, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 22, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 23, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true },
+    { "case_id": 24, "verdict": "NOT_RUN", "origin": "synthetic", "simulated": true }
+  ]
+}

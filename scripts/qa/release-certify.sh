@@ -470,7 +470,7 @@ run_recovery() {
     local log_out ms rc=0
     log_out="$(mktemp)"
     set +e
-    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --dry-run"
+    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --dry-run" || true
     rc=$_RUN_TIMED_RC
     ms=$_RUN_TIMED_MS
     set -e
@@ -484,27 +484,35 @@ run_recovery() {
     write_gate "backup-script-dry-run" "recovery" "NOT_RUN" "backup_drill.sh missing"
   fi
 
-  # RESTORE_DRILL_PROOF — real restore drill; dry-run cannot satisfy this gate.
+  # The local drill exercises restore mechanics with synthetic data. Neither it
+  # nor backup_drill.sh --local is trusted evidence of a hosted recovery drill.
+  if [[ "$MODE" == "integrated-staging" || "$MODE" == "production-readiness" ]]; then
+    write_gate "restore-drill-proof" "recovery" "BLOCKED_EXTERNAL" \
+      "missing trusted recovery evidence: synthetic/local drills cannot qualify staging or production; an authenticated candidate-bound recovery proof contract is required"
+    return 0
+  fi
+
+  # Non-promotion modes may run the local mechanism rehearsal.
   if [[ "${CERT_RUN_RESTORE_DRILL:-0}" == "1" && -f "${REPO_ROOT}/infra/scripts/restore-drill.sh" ]]; then
     local log_out ms rc=0
     log_out="$(mktemp)"
     set +e
-    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/infra/scripts/restore-drill.sh'"
+    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/infra/scripts/restore-drill.sh'" || true
     rc=$_RUN_TIMED_RC
     ms=$_RUN_TIMED_MS
     set -e
     if [[ $rc -eq 0 ]]; then
-      write_gate "restore-drill-proof" "recovery" "PASS" "infra/scripts/restore-drill.sh" "$ms" "$rc"
+      write_gate "restore-drill-proof" "recovery" "PASS" "mechanism-only: infra/scripts/restore-drill.sh" "$ms" "$rc"
     else
-      write_gate "restore-drill-proof" "recovery" "FAIL" "restore drill failed: $(cat "$log_out")" "$ms" "$rc"
+      write_gate "restore-drill-proof" "recovery" "FAIL" "local mechanism drill failed: $(cat "$log_out")" "$ms" "$rc"
     fi
     rm -f "$log_out"
   elif [[ -f "${REPO_ROOT}/scripts/ops/backup_drill.sh" && "${CERT_RUN_RESTORE_DRILL:-0}" == "1" ]]; then
-    run_gate_cmd "restore-drill-proof" "recovery" "Restore drill (--local)" \
-      bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --local"
+    run_gate_cmd "restore-drill-proof" "recovery" "Restore drill (--local, mechanism-only)" \
+      bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --local" || true
   else
     write_gate "restore-drill-proof" "recovery" "BLOCKED_EXTERNAL" \
-      "set CERT_RUN_RESTORE_DRILL=1 to execute restore proof (dry-run cannot satisfy)"
+      "set CERT_RUN_RESTORE_DRILL=1 to rehearse the local restore mechanism (not hosted recovery proof)"
   fi
 }
 

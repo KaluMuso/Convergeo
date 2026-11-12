@@ -73,6 +73,17 @@ export function BottomSheet({
   }, [open]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    // Never start a drag (and capture the pointer) from an interactive child:
+    // capture retargets the click to the sheet, so buttons such as Close would
+    // stop working on touch and mouse.
+    const target = event.target as Element | null;
+    if (
+      target?.closest?.(
+        "button, a, input, select, textarea, label, [role='button'], [role='link'], [contenteditable='true']",
+      )
+    ) {
+      return;
+    }
     isDragging.current = true;
     dragStartY.current = event.clientY;
     dragOffsetRef.current = 0;

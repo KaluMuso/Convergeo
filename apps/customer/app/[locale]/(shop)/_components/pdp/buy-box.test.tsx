@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../cart/mini-cart-drawer", () => ({
+import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
+
+const cartMocks = vi.hoisted(() => ({
   addCartItem: vi.fn().mockResolvedValue({ items: [{ qty: 2 }] }),
   openMiniCart: vi.fn(),
   setLastAddedMessage: vi.fn(),
 }));
+vi.mock("../cart/mini-cart-drawer", () => cartMocks);
+const { addCartItem, openMiniCart } = cartMocks;
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, number>) => {
@@ -46,8 +50,6 @@ vi.mock("./use-pickup-location-selection", () => ({
     usePickupLocationSelectionMock(listingId),
 }));
 
-import { addCartItem, openMiniCart } from "../cart/mini-cart-drawer";
-
 import {
   BuyBox,
   clampQuantity,
@@ -56,12 +58,15 @@ import {
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
+import { useListingPurchase } from "./use-listing-purchase";
 
 import type { PickupLocationPickerLabels } from "./pickup-location-picker";
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.doMock("../cart/mini-cart-drawer", () => cartMocks);
+  cartMocks.addCartItem.mockReset().mockResolvedValue({ items: [{ qty: 2 }] });
   usePickupLocationSelectionMock.mockReturnValue({
     branchTracked: false,
     locations: [],
@@ -361,5 +366,147 @@ describe("BuyBox — required pickup branch selection", () => {
     // never fire even if some future change bypasses the disabled attribute.
     expect(screen.getByTestId("pdp-add-to-cart")).toBeDisabled();
     expect(addCartItem).not.toHaveBeenCalled();
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+describe("standalone purchase while cart actions load", () => {
+  it("locks the first interaction before module loading and emits success only after the request", async () => {
+    const module = deferred<typeof cartMocks>();
+    const response = deferred<{ items: Array<{ qty: number }> }>();
+    const load = vi.fn(() => module.promise);
+    vi.doMock("../cart/mini-cart-drawer", load);
+    cartMocks.addCartItem.mockReturnValueOnce(response.promise);
+    const onAdded = vi.fn();
+    render(
+      <BuyBox
+        listing={inStockListing}
+        labels={labels}
+        pickupLabels={pickupLabels}
+        singleVendor={false}
+        onAddedToCart={onAdded}
+      />,
+    );
+    const button = screen.getByTestId("pdp-add-to-cart");
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(button).toBeDisabled();
+    await waitFor(() => expect(load).toHaveBeenCalledOnce());
+    expect(addCartItem).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+    await act(async () => {
+      module.resolve(cartMocks);
+    });
+    await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
+    expect(addCartItem).toHaveBeenCalledWith("listing-1", 1, undefined, undefined);
+    expect(openMiniCart).not.toHaveBeenCalled();
+    expect(cartMocks.setLastAddedMessage).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(button).toBeDisabled();
+    await act(async () => {
+      response.resolve({ items: [{ qty: 1 }] });
+    });
+    await waitFor(() => expect(onAdded).toHaveBeenCalledOnce());
+    expect(openMiniCart).toHaveBeenCalledOnce();
+    expect(cartMocks.setLastAddedMessage).toHaveBeenCalledExactlyOnceWith(labels.addToCartLabel);
+    expect(button).toBeEnabled();
+  });
+
+  it("renders one localized shared-purchase error only after a delayed request rejects", async () => {
+    const localizedLabels = {
+      ...labels,
+      addToCartErrorLabel: catalogMessages.pdp.buyBox.addToCartError,
+    };
+    expect(localizedLabels.addToCartErrorLabel).toEqual(expect.any(String));
+    expect(localizedLabels.addToCartErrorLabel.trim()).not.toBe("");
+    let reject!: (error: Error) => void;
+    cartMocks.addCartItem.mockReturnValueOnce(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    function SharedPurchase() {
+      const purchase = useListingPurchase(inStockListing, localizedLabels);
+      return purchase ? (
+        <BuyBox
+          listing={inStockListing}
+          labels={localizedLabels}
+          pickupLabels={pickupLabels}
+          singleVendor={false}
+          purchase={purchase}
+        />
+      ) : null;
+    }
+    render(<SharedPurchase />);
+    const button = screen.getByTestId("pdp-add-to-cart");
+    await userEvent.click(button);
+    await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(screen.queryAllByTestId("pdp-add-to-cart-error")).toHaveLength(0);
+      expect(button).toBeDisabled();
+      await act(async () => {
+        reject(new Error("Synthetic connection reset after commit"));
+      });
+      const alerts = screen.getAllByTestId("pdp-add-to-cart-error");
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]).toBeVisible();
+      expect(alerts[0]).toHaveAttribute("role", "alert");
+      expect(alerts[0]).toHaveTextContent(localizedLabels.addToCartErrorLabel);
+      expect(button).toBeEnabled();
+      expect(screen.queryByTestId("pdp-add-to-cart-success")).not.toBeInTheDocument();
+      expect(openMiniCart).not.toHaveBeenCalled();
+      expect(cartMocks.setLastAddedMessage).not.toHaveBeenCalled();
+      expect(addCartItem).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows existing errors on import and request failure, then permits a successful retry", async () => {
+    vi.doMock("../cart/mini-cart-drawer", () => {
+      throw new Error("Chunk unavailable");
+    });
+    const onAdded = vi.fn();
+    render(
+      <BuyBox
+        listing={inStockListing}
+        labels={labels}
+        pickupLabels={pickupLabels}
+        singleVendor={false}
+        onAddedToCart={onAdded}
+      />,
+    );
+    const button = screen.getByTestId("pdp-add-to-cart");
+    await userEvent.click(button);
+    expect(await screen.findByText(labels.addToCartErrorLabel)).toBeInTheDocument();
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(addCartItem).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+    vi.doMock("../cart/mini-cart-drawer", () => cartMocks);
+    cartMocks.addCartItem.mockRejectedValueOnce(new Error("Request unavailable"));
+    await userEvent.click(button);
+    await waitFor(() => expect(addCartItem).toHaveBeenCalledOnce());
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(screen.getByText(labels.addToCartErrorLabel)).toBeInTheDocument();
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(openMiniCart).not.toHaveBeenCalled();
+    await userEvent.click(button);
+    await waitFor(() => expect(onAdded).toHaveBeenCalledOnce());
+    expect(addCartItem).toHaveBeenCalledTimes(2);
+    expect(openMiniCart).toHaveBeenCalledOnce();
+    expect(screen.queryByText(labels.addToCartErrorLabel)).not.toBeInTheDocument();
   });
 });

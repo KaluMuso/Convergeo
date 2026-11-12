@@ -10,8 +10,10 @@
   "steps": {
     "momo_collection": {
       "payment_status": "success",
-      "charge_received_count": 1,
-      "idempotency_key": "prepaid-charge-checkout-d1000000-0000-4000-8000-000000000001",
+      "order_count": 2,
+      "charge_received_count": 0,
+      "escrow_hold_count": 2,
+      "idempotency_key_count": 2,
       "ledger_postings": {
         "platform_cash": 25000,
         "escrow": -25000
@@ -29,26 +31,37 @@
       "ledger_txn_count_after": 1
     },
     "release_payout_refund": {
+      "vendor_id": "d3000000-0000-4000-8000-000000000003",
       "commission_capture_count": 1,
       "release_to_vendor_count": 1,
       "payout_executed_count": 1,
-      "refund_lane1_count": 1,
-      "customer_refund_payout_status": "paid",
+      "payout_id": "d4000000-0000-4000-8000-000000000004",
+      "payout_status": "paid",
+      "refund_id": "d5000000-0000-4000-8000-000000000005",
+      "refund_payout_id": "d6000000-0000-4000-8000-000000000006",
+      "refund_payout_linked": true,
+      "refund_payout_status": "paid",
+      "refund_status": "completed",
+      "clawback_count": 1,
       "escrow_remaining_ngwee": 0,
       "orphaned_payout_count": 0,
       "global_ledger_sum_ngwee": 0
     },
-    "card_false_success": {
-      "verify_without_webhook": {
+    "card_verification": {
+      "negative_checkout_group_id": "d7000000-0000-4000-8000-000000000007",
+      "positive_checkout_group_id": "d8000000-0000-4000-8000-000000000008",
+      "negative_without_webhook": {
         "client_status": "success",
         "verified": false,
         "order_confirmed": false,
         "held": true
       },
-      "verify_with_webhook": {
+      "positive_with_provider_evidence": {
         "verified": true,
         "order_confirmed": true,
-        "held": false
+        "held": false,
+        "receipt_count": 1,
+        "ledger_count": 1
       }
     }
   }

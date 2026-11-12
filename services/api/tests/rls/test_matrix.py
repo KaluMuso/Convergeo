@@ -167,6 +167,7 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "admin_roles": client_invisible(),
     "analytics_events": {
         # M16-P05: admin-read / service-role-write superset analytics sink. Same
         # shape as funnel_events / search_query_log — authenticated gets a SELECT
@@ -281,6 +282,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: all_permit(),
     },
+    "cart_add_requests": client_invisible(),
     "cart_items": {
         # 0086 (B0-P02a) revoked client INSERT and UPDATE outright: cart line
         # prices are server-derived and service-role-writable only, so every
@@ -2198,6 +2200,17 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "rate_counters": client_invisible(),
+    # Append-only F3 reports: authenticated SELECT is filtered to admins;
+    # every client write is revoked, including admin writes.
+    "reconciliation_report_versions": {
+        Persona.ANON: deny_all(),
+        **{persona: select_only() for persona in Persona if persona != Persona.ANON},
+    },
+    # Financial obligations are service-only; stock history is accessed solely
+    # through its reviewed definer RPC. Neither exposes direct client DML.
+    "service_payment_obligations": client_invisible(),
+    "vendor_stock_operations": client_invisible(),
+    "stock_claim_identities": client_invisible(),
     "reconciliation_reports": {
         # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write,
         # but authenticated also holds effectively-dead insert/update/delete grants with
@@ -2332,16 +2345,15 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "reviews": {
-        # DEFAULT VALUES insert hits the verified-purchase BEFORE INSERT trigger
-        # ("order_item not found") before RLS WITH CHECK — counted permit for any
-        # persona with INSERT grant. ANON has no grant → deny_all. Legitimate
-        # insert authz is proven by 0007 pgTAP + cross-tenant tests below.
+        # INSERT probes use a real delivered order item. The owner succeeds;
+        # other identities reach the verified-purchase trigger and must receive
+        # its exact wrong-owner rejection (never an arbitrary P0001).
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: malformed_write_probe(),
-        Persona.OTHER_CUSTOMER: malformed_write_probe(),
-        Persona.VENDOR: malformed_write_probe(),
-        Persona.OTHER_VENDOR: malformed_write_probe(),
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: {**malformed_write_probe(), "insert": "permit"},
+        Persona.OTHER_CUSTOMER: {**malformed_write_probe(), "insert": "reject"},
+        Persona.VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.OTHER_VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.ADMIN: {**all_permit(), "insert": "reject"},
     },
     # Listing/service RFQ — same two-party read / API-only write posture as enquiries.
     "rfq_messages": {
@@ -2451,16 +2463,13 @@ EXPECTATIONS: TableExpectations = {
     "service_reviews": {
         # 0054: authenticated CRUD grant + published SELECT policy + author insert
         # + vendor reply update + admin_all. ANON has no table GRANT → deny_all.
-        # Authenticated DEFAULT VALUES insert hits the verified-engagement BEFORE
-        # INSERT trigger ("job not found") before RLS WITH CHECK — counted permit
-        # (same convention as other trigger-gated tables). Update/delete WHERE
-        # false are RLS-filtered no-ops → permit. FORCE already set in 0054.
+        # INSERT probes use the completed job/accepted quote/service-order chain.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: malformed_write_probe(),
-        Persona.OTHER_CUSTOMER: malformed_write_probe(),
-        Persona.VENDOR: malformed_write_probe(),
-        Persona.OTHER_VENDOR: malformed_write_probe(),
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: {**malformed_write_probe(), "insert": "permit"},
+        Persona.OTHER_CUSTOMER: {**malformed_write_probe(), "insert": "reject"},
+        Persona.VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.OTHER_VENDOR: {**malformed_write_probe(), "insert": "reject"},
+        Persona.ADMIN: {**all_permit(), "insert": "reject"},
     },
     "stock_reservations": {
         Persona.ANON: {
@@ -2986,44 +2995,9 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
-    "vendor_listings": {
-        Persona.ANON: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    # Protected creation/edit/delete use the authenticated API/service authority;
+    # client roles retain filtered availability reads but no direct writes.
+    "vendor_listings": {persona: select_only() for persona in Persona},
     "vendor_listing_variants": {
         Persona.ANON: select_only(),
         Persona.CUSTOMER: select_only(),
@@ -3164,44 +3138,12 @@ EXPECTATIONS: TableExpectations = {
     # M18-P05 (0075). Same posture: a review link is minted and redeemed through
     # the API, never read directly by a client.
     "intake_deep_links": client_invisible(),
-    "webhook_events": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    # D3 provider evidence is service-only, including for authenticated admins.
+    # Quarantine visibility and replay go through the protected API.
+    "webhook_events": client_invisible(),
+    "payment_collection_receipts": client_invisible(),
+    "payment_collection_exceptions": client_invisible(),
+    "cart_merge_receipts": client_invisible(),
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()
@@ -3233,10 +3175,37 @@ def _probe_select(session: RoleSession, table: str) -> Any:
 def _probe_insert(session: RoleSession, table: str) -> Any:
     if table == "vendor_listings":
         return _probe_vendor_listings_insert(session)
+    if table == "reviews":
+        return _probe_review_insert(session)
+    if table == "service_reviews":
+        return _probe_service_review_insert(session)
     session.execute("SAVEPOINT rls_probe")
     result = session.execute(f"INSERT INTO public.{table} DEFAULT VALUES RETURNING 1")
     session.execute("ROLLBACK TO SAVEPOINT rls_probe")
     return result
+
+
+def _probe_review_insert(session: RoleSession) -> Any:
+    return session.execute(
+        "INSERT INTO public.reviews (id, order_item_id, rating, body) VALUES "
+        "('71000000-0000-4000-8000-000000000001', "
+        "'c3000000-0000-0000-0000-000000000002', 5, 'RLS probe'); "
+        "SELECT id::text || '|' || count(*)::text FROM public.reviews "
+        "WHERE id = '71000000-0000-4000-8000-000000000001' GROUP BY id; ROLLBACK"
+    )
+
+
+def _probe_service_review_insert(session: RoleSession) -> Any:
+    return session.execute(
+        "INSERT INTO public.service_reviews "
+        "(id, job_id, provider_vendor_id, customer_id, rating, body) VALUES "
+        "('72000000-0000-4000-8000-000000000001', "
+        "'f1000000-0000-0000-0000-000000000002', "
+        "'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', "
+        "'11111111-1111-1111-1111-111111111111', 5, 'RLS probe'); "
+        "SELECT id::text || '|' || count(*)::text FROM public.service_reviews "
+        "WHERE id = '72000000-0000-4000-8000-000000000001' GROUP BY id; ROLLBACK"
+    )
 
 
 def _probe_vendor_listings_insert(session: RoleSession) -> Any:
@@ -3256,6 +3225,10 @@ def _probe_vendor_listings_insert(session: RoleSession) -> Any:
 
 
 def _update_probe_sql(db: PgConn, table: str) -> str:
+    if table == "payment_collection_receipts":
+        # This receipt table uses payment_id and has no id/created_at.
+        # Probe a real column so a missing-column error cannot mask its ACL.
+        return f"UPDATE public.{table} SET accepted_at = accepted_at WHERE false"
     col_result = db.run(
         f"""
         SELECT column_name FROM information_schema.columns
@@ -3344,7 +3317,19 @@ def test_matrix_cell(
     denied = _is_permission_denied(result)
     if expected == "permit":
         assert not denied, f"{table}/{persona}/{verb}: expected permit, got {result.error}"
+        if table in {"reviews", "service_reviews"} and verb == "insert":
+            assert result.ok and len(result.rows) == 1, result.error
+            assert result.rows[0].endswith("|1"), result.rows
         MATRIX_SUMMARY["allow"] += 1
+    elif expected == "reject":
+        expected_message = (
+            "review author must be the order customer"
+            if table == "reviews"
+            else "service review author must be the job customer"
+        )
+        assert result.sqlstate == "P0001", result.error
+        assert expected_message in (result.error or ""), result.error
+        MATRIX_SUMMARY["business_reject"] += 1
     else:
         assert denied, f"{table}/{persona}/{verb}: expected deny, query succeeded"
         MATRIX_SUMMARY["deny"] += 1
@@ -3435,6 +3420,9 @@ def test_matrix_summary(db: PgConn, role_factory: Callable[[Persona], RoleSessio
                 if expected == "permit":
                     assert not _is_permission_denied(result)
                     allow += 1
+                elif expected == "reject":
+                    assert result.sqlstate == "P0001"
+                    deny += 1
                 else:
                     assert _is_permission_denied(result)
                     deny += 1
@@ -3481,7 +3469,7 @@ def test_cross_vendor_cannot_update_rival_listing(
     result = as_other_vendor.execute(
         f"UPDATE public.vendor_listings SET price_ngwee = 1 WHERE id = '{listing_a}'"
     )
-    assert result.ok
+    assert _is_permission_denied(result), result.error
     after = db.run(f"SELECT price_ngwee::text FROM public.vendor_listings WHERE id = '{listing_a}'")
     assert after.rows == before.rows
     assert after.rows[0] != "1"
@@ -3554,7 +3542,7 @@ def test_cross_customer_cannot_read_addresses(
 
 
 def test_service_role_only_tables_invisible(as_customer: RoleSession) -> None:
-    for table in ("notification_outbox", "audit_log"):
+    for table in ("notification_outbox", "audit_log", "admin_roles"):
         result = as_customer.execute(f"SELECT 1 FROM public.{table} LIMIT 1")
         assert _is_permission_denied(result), table
     for table in ("user_roles", "stock_reservations"):

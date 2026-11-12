@@ -65,5 +65,14 @@
     "instagramAria": "Convergeo sur Instagram",
     "emailAria": "Envoyer un e-mail à Convergeo",
     "countryCode": "ZM"
+  },
+  "categorySelection": {
+    "category": "Catégorie",
+    "subcategory": "Sous-catégorie",
+    "placeholder": "Choisir une catégorie",
+    "empty": "Aucune catégorie disponible.",
+    "unavailable": "Cette catégorie est indisponible. Choisissez une catégorie disponible.",
+    "loading": "Chargement des catégories…",
+    "error": "Impossible de charger les catégories. Rechargez pour réessayer."
   }
 }

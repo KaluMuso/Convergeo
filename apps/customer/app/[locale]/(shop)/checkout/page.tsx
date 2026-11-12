@@ -2,7 +2,11 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { CheckoutEntry } from "./_components/checkout-entry";
+import { ExistingCheckoutStatus } from "./_components/existing-checkout-status-lazy";
+import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
+import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
+import { CheckoutShell } from "./_components/step-fulfilment";
+import { resolveGroupParam } from "./_lib/group-checkout";
 
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
@@ -13,10 +17,6 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-};
-
-type PageProps = {
-  params: Promise<{ locale: string }>;
 };
 
 function buildGroupLabels(
@@ -49,6 +49,11 @@ function buildGroupLabels(
     payment: shell.payment,
   };
 }
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -196,10 +201,12 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     loading: t("checkout.loading"),
     error: t("checkout.error"),
     emptyCart: t("checkout.emptyCart"),
+    retry: t("checkout.retry"),
+    backToCart: t("checkout.backToCart"),
   };
 }
 
-export default async function CheckoutPage({ params }: PageProps) {
+export default async function CheckoutPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -209,19 +216,118 @@ export default async function CheckoutPage({ params }: PageProps) {
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = {
-    ...baseMessages,
-    checkout: checkoutMessages,
-  } as AbstractIntlMessages;
+  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const query = (await searchParams) ?? {};
+  const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
+  const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
+
+  // #760 service-deposit group checkout: the job accept flow hands off with
+  // ?group=<id>&kind=service_deposit.
+  // It pays the deposit obligation's group; tickets keep the ticket checkout below.
+  // Legacy ?session=…&kind=service_deposit links keep the read-only status view below.
+  if (query.kind === "service_deposit" && !hasSession) {
+    const depositGroupId = resolveGroupParam(query);
+    if (
+      typeof depositGroupId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(depositGroupId)
+    ) {
+      const labels = buildCheckoutLabels(locale, messages);
+      return (
+        <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+          <GroupCheckoutLazy
+            locale={locale}
+            groupId={depositGroupId}
+            labels={buildGroupLabels(locale, messages, labels)}
+          />
+        </div>
+      );
+    }
+  }
+
+  // Ticket purchases (and their card retries) hand off with a valid ?group=;
+  // the ticket checkout owns that payment. Service-deposit handoffs use
+  // ?session=, and any invalid or ambiguous handoff fails closed below.
+  if (
+    hasGroup &&
+    !hasSession &&
+    typeof query.group === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
+  ) {
+    const labels = buildCheckoutLabels(locale, messages);
+    const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
+    const ticketMessages = await loadNamespace(locale as Locale, "events");
+    const ticketT = createTranslator({
+      locale,
+      messages: { events: ticketMessages } as AbstractIntlMessages,
+      namespace: "events",
+    });
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <LazyTicketCheckout
+          locale={locale}
+          groupId={query.group}
+          retry={query.retry === "1"}
+          labels={labels}
+          loginLabel={ticketT("ticketPurchase.loginRequired")}
+          payLabel={ticketT("ticketPurchase.payCta")}
+          retryLabel={checkoutT("checkout.pending.retry")}
+          cancelledLabel={checkoutT("checkout.pending.cancelledTitle")}
+          expiredLabel={checkoutT("checkout.pending.timeoutTitle")}
+          ordersLabel={checkoutT("checkout.pending.viewOrder")}
+        />
+      </div>
+    );
+  }
+
+  // Supplied handoffs never fall through to product-cart creation, even invalid ones.
+  if (hasSession || hasGroup) {
+    const suppliedId = hasSession ? query.session : query.group;
+    const groupId =
+      hasSession !== hasGroup &&
+      typeof suppliedId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
+        ? suppliedId
+        : null;
+    const t = createTranslator({ locale, messages, namespace: "checkout" });
+    const ordersMessages = await loadNamespace(locale as Locale, "orders");
+    const orders = createTranslator({
+      locale,
+      messages: { orders: ordersMessages } as AbstractIntlMessages,
+      namespace: "orders",
+    });
+    const adminMessages = await loadNamespace(locale as Locale, "admin");
+    const admin = createTranslator({
+      locale,
+      messages: { admin: adminMessages } as AbstractIntlMessages,
+      namespace: "admin",
+    });
+
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <ExistingCheckoutStatus
+          key={`${locale}:${groupId ?? "invalid"}`}
+          groupId={groupId}
+          labels={{
+            title: t("checkout.pageTitle"),
+            loading: t("checkout.contact.loading"),
+            error: t("checkout.error"),
+            expired: t("checkout.countdown.expired"),
+            statusTemplate: orders.raw("list.status"),
+            // These existing labels are neutral states, not payment outcomes.
+            pending: admin("business.queue.filter.pending"),
+            completed: orders("status.completed"),
+            payment: t("checkout.steps.payment"),
+            unavailable: t("checkout.payment.unavailable"),
+          }}
+        />
+      </div>
+    );
+  }
   const labels = buildCheckoutLabels(locale, messages);
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <CheckoutEntry
-        locale={locale}
-        labels={labels}
-        groupLabels={buildGroupLabels(locale, messages, labels)}
-      />
+      <CheckoutShell locale={locale} labels={labels} />
     </div>
   );
 }

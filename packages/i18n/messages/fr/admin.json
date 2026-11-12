@@ -383,6 +383,11 @@
       "saving": "Enregistrement…",
       "saved": "Sélection enregistrée.",
       "saveError": "Impossible d'enregistrer la sélection."
+    },
+    "canonical": {
+      "dialog": {
+        "details": "Détails du produit"
+      }
     }
   },
   "flags": {
@@ -724,7 +729,22 @@
       "drillIn": "Voir les détails du rapport",
       "hideDrillIn": "Masquer les détails",
       "mismatchAlert": "Écart détecté dans le grand livre — examinez les divergences.",
-      "cleanDay": "Aucune divergence dans le dernier rapport."
+      "cleanDay": "Aucune divergence dans le dernier rapport.",
+      "evidenceState": "Evidence: {state}",
+      "version": "Report version {number}",
+      "accountCurrency": "Account {account} · {currency}",
+      "states": {
+        "missing": "No report",
+        "account_unconfigured": "Provider account is not configured",
+        "legacy_unbound": "Legacy report without account or version binding",
+        "invalid": "Invalid evidence",
+        "stale": "Report is older than the expected reporting day",
+        "unresolved": "Unresolved discrepancies",
+        "noncertifying": "Evidence does not certify reconciliation",
+        "current_clean": "Current certified clean evidence"
+      },
+      "provenanceBound": "Immutable report bound to the configured provider account",
+      "provenanceLegacy": "Legacy evidence without account or version binding"
     },
     "orders": {
       "title": "Commandes par statut",
@@ -911,7 +931,9 @@
       "submitting": "Envoi…",
       "success": "Mis en file d'attente sur {channel}.",
       "successDeduped": "Déjà en file d'attente sur {channel} (dédupliqué).",
-      "failure": "Impossible d'envoyer le message."
+      "failure": "Impossible d'envoyer le message.",
+      "conflict": "Cet identifiant d'envoi correspond à un autre destinataire ou message. Vérifiez le client et le brouillon avant de commencer un nouvel envoi.",
+      "startNew": "Commencer un nouvel envoi"
     },
     "log": {
       "title": "Journal des interactions",

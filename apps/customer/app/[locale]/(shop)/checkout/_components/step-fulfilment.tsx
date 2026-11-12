@@ -1,24 +1,27 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
-import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
-import { FormField } from "@vergeo/ui/src/form-field";
-import { Input } from "@vergeo/ui/src/input";
-import { Radio } from "@vergeo/ui/src/radio";
-import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { Stepper } from "@vergeo/ui/src/stepper";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  customerAuth,
+  getReadyCustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
-import { ReservationCountdown } from "./reservation-countdown";
-import { StepContact, type ContactStepLabels } from "./step-contact";
+import {
+  ContactStepIntro,
+  ContactStepSkeleton,
+  StepContact,
+  type ContactStepLabels,
+} from "./step-contact";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
 import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
@@ -101,7 +104,7 @@ export type CountdownLabels = {
   ariaLive: (time: string) => string;
 };
 
-type GroupChoice = {
+export type GroupChoice = {
   vendor_id: string;
   fulfilment: "delivery" | "pickup";
 };
@@ -123,263 +126,11 @@ export type FulfilmentTotals = {
   addressId: string | null;
 };
 
-type StepFulfilmentProps = {
-  locale: string;
-  session: CheckoutSession;
-  accessToken: string;
-  labels: FulfilmentStepLabels;
-  countdownLabels: CountdownLabels;
-  reservationExpiredMessage: string;
-  cartPath: string;
-  onComplete?: (totals: FulfilmentTotals) => void;
-};
-
-function formatHours(hours: Record<string, unknown>): string {
-  const entries = Object.entries(hours);
-  if (entries.length === 0) {
-    return "—";
-  }
-  return entries.map(([day, value]) => `${day}: ${String(value)}`).join(", ");
-}
-
-export function StepFulfilment({
-  locale,
-  session,
-  accessToken,
-  labels,
-  countdownLabels,
-  reservationExpiredMessage,
-  cartPath,
-  onComplete,
-}: StepFulfilmentProps) {
-  const router = useRouter();
-  const [landmark, setLandmark] = useState("");
-  const [choices, setChoices] = useState<GroupChoice[]>(
-    session.vendor_groups.map((group) => ({
-      vendor_id: group.vendor_id,
-      fulfilment: group.delivery_eligible ? "delivery" : "pickup",
-    })),
-  );
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [totals, setTotals] = useState<{
-    subtotal_ngwee: number;
-    delivery_fee_ngwee: number;
-    total_ngwee: number;
-  } | null>(null);
-
-  const handleExpired = useCallback(() => {
-    router.push(`${cartPath}?notice=reservation_expired`);
-  }, [cartPath, router]);
-
-  const setGroupFulfilment = (vendorId: string, fulfilment: "delivery" | "pickup") => {
-    setChoices((current) =>
-      current.map((choice) => (choice.vendor_id === vendorId ? { ...choice, fulfilment } : choice)),
-    );
-    setTotals(null);
-  };
-
-  const handleSubmit = async () => {
-    setErrorMessage(null);
-    const deliveryNeeded = choices.some((choice) => choice.fulfilment === "delivery");
-    if (deliveryNeeded && !landmark.trim()) {
-      setErrorMessage(labels.landmarkLabel);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const client = createApiClient({
-        baseUrl: getApiBaseUrl(),
-        getToken: () => accessToken,
-      });
-
-      // Delivery orders require a persisted address_id on POST /orders.
-      let addressId: string | null = null;
-      if (deliveryNeeded) {
-        const address = await client.request<{ id: string }>("/account/addresses", {
-          method: "POST",
-          body: JSON.stringify({
-            landmark: landmark.trim(),
-            label: labels.addressLabel,
-          }),
-        });
-        addressId = address.id;
-      }
-
-      const response = await client.request<{
-        subtotal_ngwee: number;
-        delivery_fee_ngwee: number;
-        total_ngwee: number;
-        groups: FulfilmentGroupResult[];
-      }>("/checkout/steps/fulfilment", {
-        method: "POST",
-        body: JSON.stringify({
-          session_id: session.session_id,
-          address: deliveryNeeded ? { landmark: landmark.trim() } : undefined,
-          groups: choices,
-        }),
-      });
-      const nextTotals: FulfilmentTotals = {
-        subtotal_ngwee: response.subtotal_ngwee,
-        delivery_fee_ngwee: response.delivery_fee_ngwee,
-        total_ngwee: response.total_ngwee,
-        groups: response.groups ?? [],
-        addressId,
-      };
-      setTotals(nextTotals);
-      onComplete?.(nextTotals);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.code === "checkout.reservation_expired") {
-          router.push(`${cartPath}?notice=reservation_expired`);
-          return;
-        }
-        if (error.code === "checkout.outside_delivery_zone") {
-          setErrorMessage(labels.outsideZone);
-          return;
-        }
-      }
-      setErrorMessage(labels.error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const displaySubtotal = totals?.subtotal_ngwee ?? session.subtotal_ngwee;
-  const displayDelivery = totals?.delivery_fee_ngwee ?? 0;
-  const displayTotal = totals?.total_ngwee ?? session.subtotal_ngwee;
-
-  return (
-    <div className="space-y-5">
-      <ReservationCountdown
-        expiresAt={session.expires_at}
-        label={countdownLabels.label}
-        expiredLabel={countdownLabels.expired}
-        ariaLiveLabel={countdownLabels.ariaLive}
-        onExpired={handleExpired}
-      />
-
-      <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
-        <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-        <p className="font-body text-xs text-text-3">{labels.mixedHint}</p>
-      </div>
-
-      {choices.some((choice) => choice.fulfilment === "delivery") ? (
-        <FormField
-          label={labels.landmarkLabel}
-          helpText={labels.landmarkHelp}
-          required
-          requiredMarker="*"
-        >
-          <Input
-            size="lg"
-            value={landmark}
-            placeholder={labels.landmarkPlaceholder}
-            onChange={(event) => {
-              setLandmark(event.target.value);
-              setTotals(null);
-            }}
-          />
-        </FormField>
-      ) : null}
-
-      <div className="space-y-4">
-        {session.vendor_groups.map((group) => {
-          const choice = choices.find((item) => item.vendor_id === group.vendor_id);
-          const fulfilment = choice?.fulfilment ?? "pickup";
-          const pickup = group.pickup_location;
-
-          return (
-            <section
-              key={group.vendor_id}
-              className="space-y-3 rounded-card border border-border bg-surface p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-body text-base font-semibold text-text">{group.vendor_name}</h3>
-                <span className="font-mono text-sm text-text-2">
-                  {formatK(group.subtotal_ngwee, { locale: `${locale}-ZM` })}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Radio
-                  name={`fulfilment-${group.vendor_id}`}
-                  label={labels.delivery}
-                  checked={fulfilment === "delivery"}
-                  disabled={!group.delivery_eligible}
-                  onChange={() => {
-                    setGroupFulfilment(group.vendor_id, "delivery");
-                  }}
-                />
-                <Radio
-                  name={`fulfilment-${group.vendor_id}`}
-                  label={labels.pickup}
-                  checked={fulfilment === "pickup"}
-                  onChange={() => {
-                    setGroupFulfilment(group.vendor_id, "pickup");
-                  }}
-                />
-              </div>
-
-              {fulfilment === "pickup" && pickup ? (
-                <div className="rounded-md bg-bg-2 px-3 py-2 text-sm text-text-2">
-                  <p>{labels.pickupAt(pickup.landmark)}</p>
-                  <p className="text-xs text-text-3">
-                    {labels.pickupHours(formatHours(pickup.hours))}
-                  </p>
-                </div>
-              ) : null}
-
-              {fulfilment === "delivery" && !group.delivery_eligible ? (
-                <p className="text-xs text-warning">{labels.outsideZone}</p>
-              ) : null}
-            </section>
-          );
-        })}
-      </div>
-
-      <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
-        <div className="flex justify-between">
-          <span>{labels.subtotal}</span>
-          <span>{formatK(displaySubtotal, { locale: `${locale}-ZM` })}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>{labels.deliveryFees}</span>
-          <span>{formatK(displayDelivery, { locale: `${locale}-ZM` })}</span>
-        </div>
-        <div className="flex justify-between font-semibold text-text">
-          <span>{labels.total}</span>
-          <span>{formatK(displayTotal, { locale: `${locale}-ZM` })}</span>
-        </div>
-      </div>
-
-      {errorMessage ? (
-        <p role="alert" className="font-body text-sm text-danger">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      <Button
-        type="button"
-        size="lg"
-        className="w-full"
-        loading={loading}
-        loadingLabel={labels.loading}
-        onClick={() => {
-          void handleSubmit();
-        }}
-      >
-        {labels.continue}
-      </Button>
-
-      <p className="sr-only" aria-live="assertive">
-        {reservationExpiredMessage}
-      </p>
-    </div>
-  );
-}
+/** Lazy — step 2 is only reached after contact; keeps /checkout first-load JS in budget. */
+const StepFulfilment = dynamic(
+  () => import("./step-fulfilment-step").then((mod) => mod.StepFulfilment),
+  { ssr: false, loading: () => <div aria-hidden="true" className="min-h-48" /> },
+);
 
 export type CheckoutShellLabels = {
   pageTitle: string;
@@ -442,6 +193,8 @@ export type CheckoutShellLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -465,6 +218,8 @@ type ResolvedCheckoutLabels = {
   loading: string;
   error: string;
   emptyCart: string;
+  retry: string;
+  backToCart: string;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -596,6 +351,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
     loading: messages.loading,
     error: messages.error,
     emptyCart: messages.emptyCart,
+    retry: messages.retry,
+    backToCart: messages.backToCart,
   };
 }
 
@@ -605,9 +362,46 @@ type CheckoutShellProps = {
 };
 
 export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellProps) {
+  const identity = useSession();
+  // Reset all checkout state (including child stores and order idempotency) at
+  // the render boundary. A returning account is still a different generation.
+  return (
+    <IdentityCheckoutShell
+      key={`${identity.generation}:${identity.session?.user.id ?? "anonymous"}`}
+      locale={locale}
+      labels={messageLabels}
+      identity={identity}
+    />
+  );
+}
+
+function IdentityCheckoutShell({
+  locale,
+  labels: messageLabels,
+  identity,
+}: CheckoutShellProps & { identity: ReturnType<typeof useSession> }) {
   const labels = resolveLabels(messageLabels);
   const router = useRouter();
-  const { session, loading: sessionLoading } = useSession();
+  const { session, loading: sessionLoading, generation, error: authError } = identity;
+  const retrying = useRef(false);
+  const mounted = useRef(false);
+  const started = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const isCurrent = useCallback(() => {
+    const current = customerAuth.snapshot();
+    return (
+      mounted.current &&
+      !current.loading &&
+      !current.error &&
+      current.generation === generation &&
+      current.session?.user.id === session?.user.id
+    );
+  }, [generation, session?.user.id]);
   const [step, setStep] = useState(0);
   const [checkoutSession, setCheckoutSession] = useState<CheckoutSession | null>(null);
   const [fulfilmentTotals, setFulfilmentTotals] = useState<FulfilmentTotals | null>(null);
@@ -625,6 +419,8 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
 
   const initSession = useCallback(
     async (accessToken: string) => {
+      if (!isCurrent() || started.current) return;
+      started.current = true;
       setInitializing(true);
       setErrorMessage(null);
       try {
@@ -632,12 +428,30 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           baseUrl: getApiBaseUrl(),
           getToken: () => accessToken,
         });
+        // Auth may remount this shell before the OTP component resumes. Persist
+        // the accepted account phone before asking the server for its snapshot.
+        const contact = await client.request<{ verified: boolean }>("/checkout/steps/contact", {
+          method: "POST",
+          body: JSON.stringify(session?.user.phone ? { phone: session.user.phone } : {}),
+        });
+        if (!isCurrent()) return;
+        if (contact.verified !== true) throw new Error("checkout.contact_unverified");
         const response = await client.request<CheckoutSession>("/checkout/session", {
           method: "POST",
         });
+        if (!isCurrent()) return;
+        if (!response.vendor_groups.length) {
+          setErrorMessage(labels.error);
+          started.current = false;
+          return;
+        }
         setCheckoutSession(response);
-        setStep(response.contact_skipped ? 1 : 0);
+        // Contact was explicitly verified above; contact_skipped is a profile
+        // snapshot hint, not a reason to hide a completed Contact step.
+        setStep(1);
       } catch (error) {
+        if (!isCurrent()) return;
+        started.current = false;
         if (error instanceof ApiError) {
           if (error.code === "checkout.cart_empty") {
             router.push(cartPath);
@@ -650,33 +464,51 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         }
         setErrorMessage(labels.error);
       } finally {
-        setInitializing(false);
+        if (isCurrent()) setInitializing(false);
       }
     },
-    [cartPath, labels.error, router],
+    [cartPath, labels.error, router, isCurrent, session?.user.phone],
   );
 
   useEffect(() => {
-    if (sessionLoading || !session?.access_token || checkoutSession || initializing) {
+    if (
+      sessionLoading ||
+      authError ||
+      errorMessage ||
+      !session?.access_token ||
+      checkoutSession ||
+      initializing
+    ) {
       return;
     }
     if (step === 0 && !session.user?.phone) {
       return;
     }
     void initSession(session.access_token);
-  }, [session, sessionLoading, checkoutSession, initializing, initSession, step]);
+  }, [
+    session,
+    sessionLoading,
+    authError,
+    errorMessage,
+    checkoutSession,
+    initializing,
+    initSession,
+    step,
+  ]);
 
   const handleContactComplete = async () => {
-    const supabase = await import("@vergeo/auth/browser-client").then((mod) =>
-      mod.createBrowserClient(),
-    );
-    const { data } = await supabase.auth.getSession();
-    const nextToken = data.session?.access_token;
+    let nextToken: string | undefined;
+    try {
+      nextToken = (await getReadyCustomerSession())?.access_token;
+    } catch {
+      if (isCurrent()) setErrorMessage(labels.error);
+      return;
+    }
+    if (!isCurrent()) return;
     if (!nextToken) {
       setErrorMessage(labels.error);
       return;
     }
-    setStep(1);
     await initSession(nextToken);
   };
 
@@ -687,67 +519,14 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
     { key: "review", label: labels.steps.review },
   ];
 
-  if (sessionLoading || initializing) {
-    /**
-     * Layout-stability contract (Run #68 CLS).
-     *
-     * This state used to be a heading plus a one-line "Loading…" paragraph,
-     * which then swapped for the full Stepper + first-step surface once the
-     * session resolved — a shift of most of the viewport that pushed checkout
-     * CLS to ~0.21 against a 0.20 ceiling, failing or passing purely on whether
-     * the swap landed inside the sampling window.
-     *
-     * The fix is structural, not a threshold change: render the SAME outer
-     * spacing and the REAL Stepper (its geometry is then exact by construction,
-     * not an approximation, and the four step labels are true static chrome —
-     * no fabricated content), then reserve the first step's shape with
-     * skeletons. Heights come from the primitives and the real form controls
-     * they stand in for, so this stays correct at 360/390 and on desktop
-     * without pinning viewport-sized boxes.
-     */
-    return (
-      <div className="space-y-6" aria-busy="true">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+  const busy = sessionLoading || initializing;
+  const showContact = step === 0 && !checkoutSession;
 
-        <Stepper
-          steps={steps}
-          currentStep={step}
-          stepAnnouncement={(current, total) => labels.stepAnnouncement(current, total)}
-          doneIndicator={labels.doneIndicator}
-          LinkComponent={Link}
-        />
-
-        {/*
-         * Reserves the first step's geometry: section heading + subtitle, a
-         * labelled field row (lg Input is h-12), and a full-width lg Button
-         * (h-12). Matches StepContact's `space-y-4` / `gap-4` rhythm.
-         */}
-        <div className="space-y-4" data-testid="checkout-loading-skeleton">
-          <p className="sr-only" aria-live="polite">
-            {labels.loading}
-          </p>
-          <div className="space-y-1" aria-hidden="true">
-            <Skeleton shape="line" width="60%" height="1.5rem" />
-            <Skeleton shape="line" width="80%" />
-          </div>
-          <div className="flex flex-col gap-4" aria-hidden="true">
-            <div className="space-y-2">
-              <Skeleton shape="line" width="8rem" />
-              <div className="flex gap-2">
-                <Skeleton width="6rem" height="3rem" />
-                <Skeleton className="min-w-0 flex-1" height="3rem" />
-              </div>
-              <Skeleton shape="line" width="70%" />
-            </div>
-            <Skeleton height="3rem" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
+  // Keep public contact copy in the same DOM slot across both session-loading
+  // boundaries. Only the controls wait for auth; mounting StepContact earlier
+  // would also run its authenticated completion effect earlier.
+  const renderShell = (content: ReactNode) => (
+    <div className="space-y-6" aria-busy={busy || undefined}>
       <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
 
       <Stepper
@@ -758,14 +537,61 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         LinkComponent={Link}
       />
 
-      {errorMessage ? (
-        <p role="alert" className="font-body text-sm text-danger">
-          {errorMessage}
-        </p>
+      {showContact ? (
+        <div className="space-y-4">
+          <ContactStepIntro labels={labels.contact} />
+          {content}
+        </div>
+      ) : (
+        content
+      )}
+    </div>
+  );
+
+  if (busy) {
+    // Preserve the Stepper and form geometry (Run #68 CLS) while rendering the
+    // real public intro immediately instead of revealing the LCP text late.
+    return renderShell(
+      <ContactStepSkeleton loadingLabel={labels.loading} showIntro={!showContact} />,
+    );
+  }
+
+  return renderShell(
+    <>
+      {authError || errorMessage ? (
+        <div className="space-y-3">
+          <p role="alert" className="font-body text-sm text-danger">
+            {authError ? labels.error : errorMessage}
+          </p>
+          <Button
+            loadingLabel={labels.loading}
+            onClick={() => {
+              if (retrying.current) return;
+              retrying.current = true;
+              void (async () => {
+                try {
+                  if (authError) await getReadyCustomerSession(true);
+                  else if (session?.access_token) await initSession(session.access_token);
+                } catch {
+                  if (mounted.current) setErrorMessage(labels.error);
+                } finally {
+                  retrying.current = false;
+                }
+              })();
+            }}
+          >
+            {labels.retry}
+          </Button>
+          <Link href={cartPath}>{labels.backToCart}</Link>
+        </div>
       ) : null}
 
-      {step === 0 && !checkoutSession ? (
-        <StepContact labels={labels.contact} onComplete={() => void handleContactComplete()} />
+      {step === 0 && !checkoutSession && !authError && !errorMessage && !session?.user.phone ? (
+        <StepContact
+          labels={labels.contact}
+          onComplete={() => void handleContactComplete()}
+          showIntro={false}
+        />
       ) : null}
 
       {step === 1 && checkoutSession && session?.access_token ? (
@@ -778,6 +604,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           reservationExpiredMessage={labels.reservationExpired}
           cartPath={cartPath}
           onComplete={(totals) => {
+            if (!isCurrent()) return;
             setFulfilmentTotals(totals);
             setStep(2);
           }}
@@ -791,6 +618,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           accessToken={session.access_token}
           labels={labels.payment}
           onComplete={(payment, options) => {
+            if (!isCurrent()) return;
             setPaymentSelection(payment);
             setPaymentOptions(options);
             setStep(3);
@@ -811,6 +639,7 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           payment={paymentSelection as ReviewPayment}
           labels={labels.review}
           onPlaceOrder={async () => {
+            if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
             if (!fulfilmentTotals.groups.length) {
               throw new Error(labels.review.placeOrderUnavailable);
             }
@@ -830,7 +659,9 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
                 })),
                 addressId: fulfilmentTotals.addressId,
                 idempotencyKey,
-                navigate: (href) => router.push(href),
+                navigate: (href) => {
+                  if (isCurrent()) router.push(href);
+                },
               });
             } catch (error) {
               throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));
@@ -838,6 +669,6 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           }}
         />
       ) : null}
-    </div>
+    </>,
   );
 }

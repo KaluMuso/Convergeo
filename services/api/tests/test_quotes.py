@@ -419,6 +419,33 @@ class TestQuoteValidityExpiry:
         )
         assert expired_row["status"] == "expired"
 
+    @pytest.mark.parametrize("job_status", ["accepted", "completed"])
+    def test_accepted_quote_remains_visible_after_offer_deadline(
+        self, seeded_fake: FakeSupabaseClient, job_status: str
+    ) -> None:
+        seeded_fake.tables["jobs"].rows[0]["status"] = job_status
+        accepted = next(
+            row for row in seeded_fake.tables["job_quotes"].rows if row["id"] == QUOTE_A_ID
+        )
+        accepted["status"] = "accepted"
+        accepted["expires_at"] = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+
+        owner = _make_client_app(
+            seeded_fake,
+            CurrentUser(id=CUSTOMER_A_ID, roles=frozenset({"customer"}), token="token-c"),
+        )
+        response = owner.get(f"/jobs/{JOB_ID}/quotes")
+        assert response.status_code == 200
+        assert response.json()["view"] == "customer_compare"
+        assert QUOTE_A_ID in {item["id"] for item in response.json()["items"]}
+        assert accepted["status"] == "accepted"
+
+        stranger = _make_client_app(
+            seeded_fake,
+            CurrentUser(id=CUSTOMER_B_ID, roles=frozenset({"customer"}), token="token-b2"),
+        )
+        assert stranger.get(f"/jobs/{JOB_ID}/quotes").status_code == 403
+
 
 class TestCompareOrdering:
     def test_customer_compare_sorted_by_price_then_rating(

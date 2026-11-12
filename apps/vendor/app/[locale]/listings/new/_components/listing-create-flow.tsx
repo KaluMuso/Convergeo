@@ -176,6 +176,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
       setSuccessMessage(t("listings.success.evidence"));
     } else if (mode === "new_canonical") {
       setSuccessMessage(t("listings.success.moderation"));
+    } else if (response.status === "draft") {
+      setSuccessMessage(t("listings.success.draft"));
     } else {
       setSuccessMessage(t("listings.success.live"));
     }
@@ -277,6 +279,16 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           }
           onError={setError}
           labels={{
+            details: {
+              about: t("listings.newCanonical.details.about"),
+              heading: t("listings.newCanonical.details.heading"),
+              help: t("listings.newCanonical.details.help"),
+              name: t("listings.newCanonical.details.name"),
+              value: t("listings.newCanonical.details.value"),
+              add: t("listings.newCanonical.details.add"),
+              remove: t("listings.newCanonical.details.remove"),
+              invalid: t("listings.newCanonical.details.invalid"),
+            },
             heading: t("listings.newCanonical.heading"),
             intro: t("listings.newCanonical.intro"),
             nameLabel: t("listings.newCanonical.nameLabel"),
@@ -308,16 +320,31 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             handleSuccess(response, "quick_list", requiresEvidence)
           }
           onError={setError}
+          onRequestCatalog={() => {
+            setActiveTab("attach");
+            setSelectedProduct(null);
+            setError(null);
+          }}
           labels={{
             heading: t("listings.quickList.heading"),
             intro: t("listings.quickList.intro"),
             titleLabel: t("listings.quickList.titleLabel"),
             titlePlaceholder: t("listings.quickList.titlePlaceholder"),
-            publish: t("listings.quickList.publish"),
-            publishing: t("listings.quickList.publishing"),
+            categoryLabel: t("listings.newCanonical.categoryLabel"),
+            categoryPlaceholder: t("listings.newCanonical.categoryPlaceholder"),
+            descriptionLabel: t("listings.quickList.descriptionLabel"),
+            descriptionHelp: t("listings.quickList.descriptionHelp"),
+            descriptionInvalid: t("listings.quickList.descriptionInvalid"),
+            saveDraft: t("listings.quickList.saveDraft"),
+            savingDraft: t("listings.quickList.savingDraft"),
+            draftNotice: t("listings.quickList.draftNotice"),
+            canonicalRequired: t("listings.quickList.canonicalRequired"),
+            catalogLabel: t("listings.tabs.attach"),
+            categoriesUnavailable: t("listings.quickList.categoriesUnavailable"),
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
+            policyBlocked: t("listings.errors.policyBlocked"),
             required: t("listings.errors.required"),
           }}
         />

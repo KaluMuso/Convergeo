@@ -26,7 +26,8 @@
     "neighbourhoodLabel": "Cipande",
     "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Pepi naine",
-    "nearMeDenied": "Location ileikala off — ukufwaya mushi kulebomba."
+    "nearMeDenied": "Location ileikala off — ukufwaya mushi kulebomba.",
+    "subcategoryLabel": "Subcategory"
   },
   "categories": {
     "all": "Shonse",

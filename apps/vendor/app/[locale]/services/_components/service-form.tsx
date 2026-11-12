@@ -5,8 +5,10 @@ import { ApiError } from "@vergeo/config";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { ngweeToZmwInput } from "../../listings/[id]/edit/_lib/money";
+import { isValidZmwDecimal, zmwDecimalToNgwee } from "../../listings/new/_lib/money";
 import {
   createServicesClient,
   SERVICE_VERTICALS,
@@ -23,8 +25,22 @@ type ServiceFormProps = {
   initialService?: ServiceSummary;
 };
 
-export function ServiceForm({ locale, mode, serviceId, initialService }: ServiceFormProps) {
+export function ServiceForm(props: ServiceFormProps) {
   const ts = useTranslations("services");
+  if (props.mode === "edit" && (!props.serviceId || props.initialService?.id !== props.serviceId)) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Spinner label={ts("vendor.list.loading")} />
+      </div>
+    );
+  }
+  const identity = props.mode === "edit" ? (props.serviceId ?? props.initialService?.id) : "new";
+  return <ServiceFormForIdentity key={`${props.mode}:${identity}`} {...props} />;
+}
+
+function ServiceFormForIdentity({ locale, mode, serviceId, initialService }: ServiceFormProps) {
+  const ts = useTranslations("services");
+  const tv = useTranslations("vendor");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
 
@@ -36,39 +52,59 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
   const [includes, setIncludes] = useState((initialService?.includes ?? []).join("\n"));
   const [serviceArea, setServiceArea] = useState(initialService?.service_area ?? "");
   const [fromPrice, setFromPrice] = useState(
-    initialService?.from_price_ngwee ? String(initialService.from_price_ngwee / 100) : "",
+    initialService?.from_price_ngwee ? ngweeToZmwInput(initialService.from_price_ngwee) : "",
   );
   const [bookable, setBookable] = useState(initialService?.bookable ?? false);
   const [bookingPrice, setBookingPrice] = useState(
-    initialService?.booking_price_ngwee ? String(initialService.booking_price_ngwee / 100) : "",
+    initialService?.booking_price_ngwee ? ngweeToZmwInput(initialService.booking_price_ngwee) : "",
   );
   const [status, setStatus] = useState<ServiceStatus>(initialService?.status ?? "draft");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const active = useRef(true);
+  const authGeneration = useRef(0);
+
+  useLayoutEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    authGeneration.current += 1;
+  }, [session?.user.id]);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const servicesClient = useMemo(() => createServicesClient(getToken), [getToken]);
 
   async function handleSave(nextStatus?: ServiceStatus) {
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (Array.from(trimmedTitle).length < 2) {
+      setError(ts("vendor.errors.titleInvalid"));
       return;
     }
-    const fromPriceNgwee = fromPrice.trim() ? Math.round(Number.parseFloat(fromPrice) * 100) : null;
-    const bookingPriceNgwee = bookingPrice.trim()
-      ? Math.round(Number.parseFloat(bookingPrice) * 100)
-      : null;
-
-    if (bookable && (bookingPriceNgwee === null || bookingPriceNgwee <= 0)) {
+    if (fromPrice.trim() && !isValidZmwDecimal(fromPrice)) {
+      setError(tv("listings.fields.priceInvalid"));
+      return;
+    }
+    if (bookable && !isValidZmwDecimal(bookingPrice)) {
       setError(ts("vendor.errors.bookablePrice"));
       return;
     }
+    const fromPriceNgwee = fromPrice.trim() ? zmwDecimalToNgwee(fromPrice) : null;
+    const bookingPriceNgwee = isValidZmwDecimal(bookingPrice)
+      ? zmwDecimalToNgwee(bookingPrice)
+      : null;
+    const submittingAuthGeneration = authGeneration.current;
+    const isCurrentSave = () =>
+      active.current && authGeneration.current === submittingAuthGeneration;
 
     setSaving(true);
     setError(null);
 
     const payload = {
       category,
-      title: title.trim(),
+      title: trimmedTitle,
       description: description.trim() || null,
       service_area: serviceArea.trim() || null,
       from_price_ngwee: fromPriceNgwee,
@@ -85,6 +121,7 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
     try {
       if (mode === "create") {
         await servicesClient.createService(payload);
+        if (!isCurrentSave()) return;
         router.push(`/${locale}/services`);
         router.refresh();
         return;
@@ -93,16 +130,18 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
         return;
       }
       await servicesClient.updateService(serviceId, payload);
+      if (!isCurrentSave()) return;
       router.push(`/${locale}/services`);
       router.refresh();
     } catch (err) {
+      if (!isCurrentSave()) return;
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError(ts("vendor.errors.saveFailed"));
       }
     } finally {
-      setSaving(false);
+      if (active.current) setSaving(false);
     }
   }
 

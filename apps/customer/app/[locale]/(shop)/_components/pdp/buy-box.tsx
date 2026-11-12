@@ -7,9 +7,8 @@ import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState, type ReactNode, type Ref } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import {
   catalogSaleUnitLabels,
   formatListingQuantity,
@@ -174,6 +173,7 @@ export function BuyBox({
     clampQuantity(getMinimumQuantity(listing), listing),
   );
   const [adding, setAdding] = useState(false);
+  const addingRef = useRef(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   // Only used when `purchase` is not supplied (standalone-listing path) —
@@ -241,7 +241,7 @@ export function BuyBox({
   }, [listing]);
 
   const handleAddToCart = useCallback(async () => {
-    if (!listing.inStock || adding) {
+    if (!listing.inStock || adding || addingRef.current) {
       return;
     }
     // Same fail-closed gate as useListingPurchase's handleAddToCart — never
@@ -252,11 +252,14 @@ export function BuyBox({
       return;
     }
 
+    addingRef.current = true;
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
     try {
+      const { addCartItem, openMiniCart, setLastAddedMessage } =
+        await import("../cart/mini-cart-drawer");
       await addCartItem(
         listing.id,
         quantity,
@@ -272,6 +275,7 @@ export function BuyBox({
     } catch {
       setAddError(labels.addToCartErrorLabel);
     } finally {
+      addingRef.current = false;
       setAdding(false);
     }
   }, [

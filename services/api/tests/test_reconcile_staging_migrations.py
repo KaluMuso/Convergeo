@@ -14,6 +14,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = REPO_ROOT / "scripts" / "ci" / "reconcile_staging_migrations.py"
 LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
 POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
+# Independently maintained inventory of migrations that were not present in the
+# immutable 2026-08-13 post-repair ledger fixture.  Keep the captured ledger
+# bytes untouched: repository migrations appended after that snapshot belong
+# here and must remain visibly pending.
 PENDING_REPAIR_VERSIONS = {
     "20260812090000",
     "20260813064106",
@@ -30,8 +34,42 @@ PENDING_REPAIR_VERSIONS = {
     "20260829120000",
     "20260831050000",
     "20260831051000",
+    "20260921155234",
+    "20260923010000",
+    "20260923192645",
+    "20260923193047",
+    "20260923234129",
+    "20260923234132",
+    "20260924001011",
+    "20260924015610",
+    "20260924071905",
+    "20260924095638",
+    "20260924120417",
+    "20260924120418",
+    "20260924120419",
+    # Published F1/F2 schema remains pending in the immutable historical ledger.
+    "20260929120000",
+    "20260929120001",
+    "20260929120002",
+    "20260929120003",
+    "20260930170000",
+    "20260930170100",
+    "20260930203000",
+    "20260930203100",
+    # Additive merchant review corrections remain pending in this historical capture.
+    "20261001120000",
+    "20261001120100",
+    "20261001120200",
+    "20261006160000",
+    "20261009110000",
+    "20261009100000",
+    "20261009124801",
+    "20261011120000",
     "20261107120000",
     "20261107130000",
+    "20261107140000",
+    "20261107150000",
+    "20261107160000",
 }
 
 
@@ -89,6 +127,16 @@ def test_post_repair_ledger_does_not_accept_rehearsal_rows() -> None:
         reconcile.reconcile_versions(_repo_versions_applied_after_repair(), extra)
 
 
+def test_appended_repository_migration_remains_pending() -> None:
+    """A future repository tip must not turn a historical snapshot green."""
+    appended_version = "29991231235959"
+    repository_versions = [*_repo_versions(), appended_version]
+    remote = reconcile.parse_remote_versions(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
+
+    with pytest.raises(reconcile.MigrationReconcileError, match=appended_version):
+        reconcile.reconcile_versions(repository_versions, remote)
+
+
 def test_cli_live_fixture_fails() -> None:
     result = subprocess.run(
         [
@@ -125,3 +173,6 @@ def test_cli_post_repair_prefix_reports_missing_pending() -> None:
     )
     assert result.returncode == 1
     assert "missing repository migrations" in result.stderr
+    assert "20261009110000" in result.stderr
+    assert "20261009124801" in result.stderr
+    assert "20261011120000" in result.stderr

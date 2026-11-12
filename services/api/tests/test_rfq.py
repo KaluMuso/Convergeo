@@ -192,6 +192,7 @@ class FakeSupabaseClient:
             "audit_log": FakeTable(),
             "platform_config": FakeTable(),
             "rate_counters": FakeTable(),
+            "service_payment_obligations": FakeTable(),
         }
 
     @property
@@ -497,6 +498,42 @@ class TestJobsAuthz:
 
         assert body["deposit_ngwee"] == deposit
         assert body["balance_due_ngwee"] == balance
+
+    def test_job_amounts_come_from_the_accepted_obligations_not_current_config(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Accepted at 50%; config later moved to 100%. The snapshot wins (#718).
+        monkeypatch.setattr("app.routers.jobs.read_service_deposit_pct", lambda: 100)
+        fake = FakeSupabaseClient()
+        fake.tables["jobs"].rows.append(
+            {
+                "id": JOB_A_ID,
+                "customer_id": CUSTOMER_A_ID,
+                "category": "home_services",
+                "description": "Fix kitchen sink",
+                "preferred_date": None,
+                "budget_band_min_ngwee": None,
+                "budget_band_max_ngwee": None,
+                "status": "accepted",
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        fake.tables["job_quotes"].rows.append(
+            {"id": "q-1", "job_id": JOB_A_ID, "status": "accepted", "amount_ngwee": 200_000}
+        )
+        fake.tables["service_payment_obligations"].rows.extend(
+            [
+                {"job_id": JOB_A_ID, "leg": "deposit", "amount_ngwee": 100_000},
+                {"job_id": JOB_A_ID, "leg": "balance", "amount_ngwee": 100_000},
+            ]
+        )
+        client = _make_client_app(fake, CurrentUser(CUSTOMER_A_ID, frozenset(), "token-a"))
+
+        body = client.get(f"/jobs/{JOB_A_ID}").json()
+
+        assert body["deposit_ngwee"] == 100_000
+        assert body["balance_due_ngwee"] == 100_000
 
 
 class TestExpireTick:

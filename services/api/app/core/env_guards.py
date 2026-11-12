@@ -12,7 +12,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Final
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit
 
 # Canonical forbidden production identifiers (public).
 PROD_SUPABASE_PROJECT_REF: Final = "dpadrlxukcjbewpqympu"
@@ -25,6 +25,8 @@ PROD_WWW_HOST: Final = "www.vergeo5.com"
 PROD_VENDOR_HOST: Final = "vendor.vergeo5.com"
 PROD_ADMIN_HOST: Final = "admin.vergeo5.com"
 PROD_N8N_HOST: Final = "n8n.vergeo5.com"
+DEFAULT_STAGING_LENCO_BASE_URL: Final = "https://api.sandbox.lenco.co/access/v2"
+_LENCO_SANDBOX_HOSTS: Final = frozenset({"api.sandbox.lenco.co", "sandbox.lenco.co"})
 
 _SUPABASE_HOST_RE = re.compile(
     r"^(?P<ref>[a-z0-9]+)\.supabase\.(?:co|in|com)$",
@@ -149,14 +151,39 @@ def payouts_suppressed(*, env: str | None = None) -> bool:
 
 
 def require_sandbox_payments(*, env: str) -> None:
-    """When ENV=staging, refuse LENCO_ENV=production."""
+    """Require an explicit sandbox label and a sandbox REST destination on staging."""
     if env != "staging":
         return
     lenco_env = os.environ.get("LENCO_ENV", "").strip().lower()
-    if lenco_env in {"", "production", "prod", "live"}:
+    if lenco_env != "sandbox":
         raise StagingIsolationError(
-            "ENV=staging requires LENCO_ENV=sandbox (or mock). "
+            "ENV=staging requires LENCO_ENV=sandbox. "
             "Production payment credentials must not be used on staging."
+        )
+    assert_staging_lenco_destination(
+        os.environ.get("LENCO_SANDBOX_BASE_URL", DEFAULT_STAGING_LENCO_BASE_URL)
+    )
+
+
+def assert_staging_lenco_destination(base_url: str) -> None:
+    """Refuse non-sandbox or malformed v2 REST targets before a provider request."""
+    try:
+        parsed = urlsplit(base_url.strip())
+        valid = (
+            parsed.scheme == "https"
+            and parsed.hostname in _LENCO_SANDBOX_HOSTS
+            and parsed.port in {None, 443}
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.path.rstrip("/") == "/access/v2"
+            and not parsed.query
+            and not parsed.fragment
+        )
+    except ValueError:
+        valid = False
+    if not valid:
+        raise StagingIsolationError(
+            "ENV=staging requires an HTTPS Lenco sandbox /access/v2 destination"
         )
 
 

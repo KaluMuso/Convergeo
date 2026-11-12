@@ -262,15 +262,10 @@ def _seed_escrow(conn: PgConn, *, suffix: str) -> None:
     from app.services.ledger.templates import LedgerTemplate
 
     post_transaction(
-        idempotency_key=f"charge-{suffix}",
-        template=LedgerTemplate.CHARGE_RECEIVED,
-        gross_ngwee=GROSS_NGEWEE,
-    )
-    post_transaction(
-        idempotency_key=f"commission-{suffix}",
-        template=LedgerTemplate.COMMISSION_CAPTURE,
-        gross_ngwee=GROSS_NGEWEE,
-        commission_bps=COMMISSION_BPS,
+        idempotency_key=f"escrow-hold-{suffix}",
+        template=LedgerTemplate.ESCROW_HOLD,
+        order_id=suffix,
+        order_amount_ngwee=GROSS_NGEWEE,
     )
 
 
@@ -441,7 +436,9 @@ class TestAutoReleaseJob:
         assert first.json()["released"] == 1
         assert second.status_code == 200
         assert second.json()["released"] == 0
-        assert second.json()["already_released"] == 1
+        # The candidate query excludes orders with a committed release key.
+        assert second.json()["already_released"] == 0
+        assert second.json()["scanned"] == 0
         assert _release_txn_count(db, order_id) == 1
 
     def test_skips_disputed_order(

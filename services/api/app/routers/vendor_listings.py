@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import re
 import uuid
+from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, require_role
@@ -41,6 +43,7 @@ class ListingCreateRequest(StrictModel):
     brand: str | None = None
     spec: dict[str, Any] | None = None
     category_id: str | None = None
+    description: str | None = Field(default=None, max_length=5000)
     aliases: list[str] = Field(default_factory=list)
     title_override: str | None = None
     price_ngwee: NgweeInt
@@ -80,6 +83,21 @@ class ListingCreateRequest(StrictModel):
                 raise ValueError("product_name is required for new_canonical mode")
             if not self.category_id:
                 raise ValueError("category_id is required for new_canonical mode")
+            if self.spec is not None:
+                if len(self.spec) > 32 or any(
+                    not key.strip() or len(key) > 80 for key in self.spec
+                ):
+                    raise ValueError(
+                        "Specifications require at most 32 named details (80 characters per name)"
+                    )
+                try:
+                    encoded = json.dumps(
+                        self.spec, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+                    )
+                except (ValueError, TypeError) as exc:
+                    raise ValueError("Specifications must contain valid JSON values") from exc
+                if len(encoded.encode("utf-8")) > 32000:
+                    raise ValueError("Specifications exceed the 32000-byte limit")
         if self.mode == "quick_list":
             if not self.title_override or not self.title_override.strip():
                 raise ValueError("title_override is required for quick_list mode")
@@ -87,10 +105,21 @@ class ListingCreateRequest(StrictModel):
             raise ValueError("return_window_hours is required when returnable is true")
         if self.compare_at_ngwee is not None and self.compare_at_ngwee <= self.price_ngwee:
             raise ValueError("compare_at_ngwee must be greater than price_ngwee")
-        # Classes D/E are standalone offers and are rejected with a stable
-        # AppError in create_listing_for_vendor before any product row is written.
-        if self.product_class in {"D", "E"} and self.mode != "quick_list":
+        # Invalid canonical/standalone pairings get a stable AppError at the
+        # shared create seam, before any product or listing row is written.
+        if self.product_class in {"D", "E"} and (
+            self.mode != "quick_list" or self.product_id is not None
+        ):
             return self
+        if self.mode == "quick_list" and self.product_class in {"A", "B", "C"}:
+            return self
+        # Missing/short standalone category or description is rejected at the
+        # shared create seam with the stable standalone_details_required code.
+        if self.product_class in {"D", "E"}:
+            if self.category_id is not None:
+                self.category_id = self.category_id.strip()
+            if self.description is not None:
+                self.description = self.description.strip()
         status: ListingStatus = (
             "draft" if self.mode == "new_canonical" or not self.publish else "active"
         )
@@ -121,6 +150,7 @@ class CommissionPreview(StrictModel):
 
 
 class CategoryOption(StrictModel):
+    parent_id: str | None = None
     id: str
     name: str
     commission_key: str
@@ -190,11 +220,7 @@ def _unique_product_slug(service_client: ServiceRoleClient, base_name: str) -> s
     for suffix in range(0, 100):
         candidate = base if suffix == 0 else f"{base}-{suffix}"
         existing = (
-            client.table("products")
-            .select("id")
-            .eq("slug", candidate)
-            .maybe_single()
-            .execute()
+            client.table("products").select("id").eq("slug", candidate).maybe_single().execute()
         )
         if _single_row(existing) is None:
             return candidate
@@ -352,7 +378,7 @@ async def list_listing_categories(
 ) -> list[CategoryOption]:
     response = (
         service_client.client.table("categories")
-        .select("id, name, commission_key, prohibited, position")
+        .select("id, name, parent_id, commission_key, prohibited, position")
         .eq("prohibited", False)
         .order("position")
         .execute()
@@ -367,6 +393,7 @@ async def list_listing_categories(
         options.append(
             CategoryOption(
                 id=str(row["id"]),
+                parent_id=str(row["parent_id"]) if row.get("parent_id") else None,
                 name=str(row["name"]),
                 commission_key=commission_key,
                 commission=_load_commission(service_client, commission_key),
@@ -431,6 +458,7 @@ def create_listing_for_vendor(
     *,
     vendor: dict[str, Any],
     body: ListingCreateRequest,
+    insert_listing: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> ListingCreateResponse:
     """The listing-creation seam, callable without an HTTP request.
 
@@ -442,10 +470,25 @@ def create_listing_for_vendor(
 
     Callers are responsible for the KYC listing cap (the route does it via
     ``require_listing_cap``; M18-P05 calls ``enforce_listing_cap`` explicitly).
+    ``insert_listing`` is an internal intake hook, never a request field; it
+    replaces only insertion after all shared validation and payload construction.
     """
     vendor_id = str(vendor["id"])
 
-    if body.product_class in {"D", "E"} and body.mode != "quick_list":
+    if body.mode == "quick_list" and body.product_class in {"A", "B", "C"}:
+        raise AppError(
+            code="canonical_product_required",
+            message="Class A, B and C listings require a canonical product",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "product_class": body.product_class,
+            },
+        )
+
+    if body.product_class in {"D", "E"} and (
+        body.mode != "quick_list" or body.product_id is not None
+    ):
         raise AppError(
             code="standalone_product_class_required",
             message="Class D and E listings must be standalone offers",
@@ -457,12 +500,46 @@ def create_listing_for_vendor(
             },
         )
 
+    if body.mode == "quick_list":
+        if body.product_class in {"A", "B", "C"}:
+            raise AppError(
+                code="canonical_product_required",
+                message="Attach a catalogue product or create one for Classes A, B and C",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.canonicalRequired"},
+            )
+        if body.product_id is not None:
+            raise AppError(
+                code="standalone_product_class_required",
+                message="Standalone listings cannot attach a catalogue product",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.standalone_required"},
+            )
+        missing_fields = [
+            name
+            for name, ok in (
+                ("category_id", bool(body.category_id)),
+                ("description", len((body.description or "").strip()) >= 20),
+            )
+            if not ok
+        ]
+        if missing_fields:
+            raise AppError(
+                code="standalone_details_required",
+                message="Select a category and provide a description of at least 20 characters",
+                http_status=422,
+                details={
+                    "message_key": "vendor.listings.errors.standaloneDetailsRequired",
+                    "fields": missing_fields,
+                },
+            )
+
     # Resolve the vendor-supplied category up front so the moderation screen's
     # category-block layer runs and DB-flagged prohibited categories are rejected
     # (D8) before anything is written.
     category_name: str | None = None
     resolved_commission_key: str | None = None
-    if body.mode == "new_canonical" and body.category_id:
+    if body.mode in {"new_canonical", "quick_list"} and body.category_id:
         category_name, resolved_commission_key = _load_category_commission_key(
             service_client,
             body.category_id,
@@ -470,7 +547,7 @@ def create_listing_for_vendor(
 
     guard = screen_listing(
         title=body.title_override or body.product_name,
-        description=body.brand,
+        description=" ".join(part for part in (body.brand, body.description) if part),
         category=category_name,
     )
     if not guard.allowed:
@@ -534,6 +611,7 @@ def create_listing_for_vendor(
                     "slug": slug,
                     "brand": body.brand.strip() if body.brand else None,
                     "spec": body.spec or {},
+                    "description": (body.description or "").strip() or None,
                     "category_id": body.category_id,
                     "aliases": body.aliases,
                     "status": "pending_moderation",
@@ -576,11 +654,48 @@ def create_listing_for_vendor(
         "status": _resolve_listing_status(body.mode, body.publish),
     }
 
+    # The SQL parent-condition constraint and its backfill require these exact
+    # mirrors. Both come from the explicit validated condition; used grading
+    # carries additional information and must not be guessed here.
+    if body.condition in {"new", "refurbished"}:
+        listing_payload["condition_detail"] = body.condition
+
     if body.mode == "quick_list":
         listing_payload["product_id"] = None
+        listing_payload["category_id"] = body.category_id
+    if body.description is not None:
+        listing_payload["description"] = body.description.strip()
+    elif body.mode == "quick_list":
+        listing_payload["description"] = ""
 
-    listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
-    created_listing = _single_row(listing_insert)
+    try:
+        if insert_listing is None:
+            # The database guard makes quota admission atomic across API/import writers.
+            listing_insert = client.table("vendor_listings").insert(listing_payload).execute()
+            created_listing = _single_row(listing_insert)
+        else:
+            # Intake retains every shared validation and uses its same-client RPC
+            # solely for the canonical-locked insert. Never fall back on RPC failure.
+            created_listing = insert_listing(listing_payload)
+    except Exception as exc:
+        if (
+            getattr(exc, "code", None) == "PT403"
+            and getattr(exc, "message", None) == "listing_cap_exceeded"
+        ):
+            raise AppError(
+                code="listing_cap_exceeded",
+                message="Vendor listing limit reached",
+                http_status=403,
+                details={"message_key": "vendor.caps.listing_limit"},
+            ) from exc
+        if getattr(exc, "code", None) == "23514":
+            raise AppError(
+                code="listing_policy_blocked",
+                message="This listing does not satisfy the current category or release policy",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.policyBlocked"},
+            ) from exc
+        raise
     if created_listing is None:
         raise AppError(
             code="internal_error",

@@ -18,6 +18,10 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  # Only this isolated review lane selects the immutable head; regular PRs retain merge evidence.
+  QUALIFICATION_SHA: ${{ startsWith(github.head_ref, 'codex/coordinator-ci-review-') && github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   js:
     name: JavaScript / TypeScript
@@ -26,6 +30,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -40,10 +45,21 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      - name: Next font loader regression
+        run: pnpm test:next-font
+
+      - name: Removed vulnerable dependency chains stay absent
+        run: node --test scripts/ci/vulnerable-chain-absence.test.mjs
+
+      - name: Staged formatter regression tests
+        run: pnpm format:staged:test
+
       - name: Resolve Turbo filter
         id: turbo
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [[ "${{ github.head_ref }}" == codex/coordinator-ci-review-* ]]; then
+            echo "filter=*" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "filter=...[${{ github.event.pull_request.base.sha }}]" >> "$GITHUB_OUTPUT"
           else
             echo "filter=...[HEAD^1]" >> "$GITHUB_OUTPUT"
@@ -57,6 +73,14 @@ jobs:
 
       - name: Test
         run: pnpm turbo run test --filter="${{ steps.turbo.outputs.filter }}"
+
+      # RC-2: the shared Zambian national-number helper OTP specs fill their
+      # phone inputs with, proven independently of any live OTP send.
+      - name: E2E phone national-number helper tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
+
+      - name: Cart response drill evidence contract tests
+        run: node --test scripts/ci/assert-cart-response-drill.test.mjs
 
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
@@ -76,6 +100,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -88,7 +115,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Ruff
         run: uv run ruff check .
@@ -100,8 +127,10 @@ jobs:
         # Blocking broad suite (testpaths=tests). The route x role authorization
         # matrix has one mandatory owner below in `security-gates`; excluding that
         # exact file here removes duplicate execution without excluding any other
-        # security, integration or deny-path test.
-        run: uv run pytest --ignore=tests/test_authz_matrix.py
+        # security, integration or deny-path test. F1 real-stack has its dedicated
+        # fresh/upgrade owner and fails (rather than skips) without that stack.
+        # Merchant stock SQL has the separate 26-identity mandatory owner below.
+        run: uv run pytest --ignore=tests/test_authz_matrix.py --ignore=tests/test_f1_payout_real_stack.py --ignore=tests/test_vendor_stock_adjustment_db.py --ignore=tests/test_merchant_review_boundaries_db.py
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
@@ -117,6 +146,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           # Full history so the path filter can diff against the PR base sha.
           fetch-depth: 0
 
@@ -156,7 +186,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Grounding evals (deterministic — no live API key)
         if: steps.changes.outputs.run == 'true'
@@ -168,6 +198,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -184,6 +217,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       # test-staging-guards.sh invokes scripts/seed_staging.py, which imports
       # `supabase` (Auth Admin API client for canonical persona provisioning)
@@ -200,7 +236,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Self-test separation + seed + config syntax
         run: bash scripts/ci/test-staging-guards.sh
@@ -214,6 +250,48 @@ jobs:
       - name: E2E test-OTP preflight unit tests
         run: node --experimental-strip-types --test scripts/qa/self-test/preflight-e2e-test-otp.test.mjs
 
+      - name: Isolated email/password diagnostic unit tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-email-acceptance.test.mjs
+
+      - name: Inactive signed WAHA handoff contract tests
+        run: |
+          node --test infra/n8n/waha-otp-handoff.test.mjs
+          node --experimental-strip-types --test supabase/functions/send-sms-otp/waha_transport.test.mjs
+
+      - name: Email deployment provenance and passwordless replay bootstrap unit tests
+        working-directory: services/api
+        run: |
+          uv run python ../../scripts/ci/test_email_diagnostic_handoff.py
+          uv run python ../../scripts/ops/test_apply_otp_replay_login_staging.py
+
+      - name: OTP branch suppression and bounded RLS setup regression
+        working-directory: services/api
+        run: |
+          uv run python - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+          root = Path('../..')
+          workflow = yaml.load((root / '.github/workflows/ci.yml').read_text(), Loader=yaml.BaseLoader)
+          steps = workflow['jobs']['rls']['steps']
+          # The matrix replays every migration into the job's PostgreSQL service;
+          # neither the replay nor the matrix may be conditional or waived.
+          replay = [step for step in steps if step.get('name') == 'Replay migrations']
+          assert len(replay) == 1 and replay[0]['run'] == 'bash scripts/ci/migration-replay.sh'
+          assert all(step.get('continue-on-error', 'false') == 'false' for step in steps)
+          assert 'if' not in replay[0]
+          assert next(step for step in steps if step.get('name') == 'RLS isolation matrix')['run'] == 'uv run pytest tests/rls -q'
+          expected = {'cursor/auth-diagnostics-otp-744-20261012', 'wp/integrate-auth-catalog-wave1', 'cursor/staging-payment-fail-closed-20261009', 'cursor/staging-email-first-safety-20261009', 'cursor/vendor-recovery-staging-20261007', 'cursor/staging-waha-replay-db-20261009', 'cursor/kyc-bootstrap-empty-20261008', 'cursor/staging-release-compat-20261009', 'cursor/staging-email-diagnostic-leg-20261009', 'cursor/staging-waha-otp-handoff-20261009', 'codex/phone-input-layout-20261008', 'cursor/release-kyc-auth-integration-20261008', 'cursor/typegen-meta-preload-20261012'}
+          maps = []
+          for name in ('vercel.json', 'apps/admin/vercel.json', 'apps/customer/vercel.json', 'apps/vendor/vercel.json'):
+              guards = json.loads((root / name).read_text())['git']['deploymentEnabled']
+              # Append-only: every reviewed branch stays disabled; integration may add more.
+              assert expected <= set(guards) and all(value is False for value in guards.values())
+              maps.append(guards)
+          assert all(guards == maps[0] for guards in maps)
+          print('PASS: four append-only disabled branch maps; blocking RLS migration replay and matrix')
+          PY
+
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the
       # pure TypeScript policy directly (Node type-stripping) — no browser, no
@@ -226,11 +304,6 @@ jobs:
       # data-testid production never renders.
       - name: E2E bottom-nav locator contract tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-nav-contract.test.mjs
-
-      # RC-2: the shared Zambian national-number helper OTP specs fill their
-      # phone inputs with, proven independently of any live OTP send.
-      - name: E2E phone national-number helper tests
-        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
 
       # RC-5: required-synthetic-surface checks (PDP buy box, cart terminal
       # state, vendor storefront) must genuinely wait in strict mode instead
@@ -268,6 +341,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Self-test release-control contract
         run: bash scripts/ci/test-release-control-contract.sh
@@ -283,6 +359,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Detect whether merge evidence is required
@@ -318,6 +395,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           fetch-depth: 0
 
       - name: Install gitleaks
@@ -334,7 +412,90 @@ jobs:
         run: bash scripts/ci/validate-n8n-no-plaintext-secrets.sh
 
       - name: Run gitleaks
-        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          raw_dir="$(mktemp -d "${RUNNER_TEMP}/gitleaks-raw.XXXXXX")"
+          trap 'rm -rf -- "$raw_dir"' EXIT
+          export GITLEAKS_RAW_REPORT="${raw_dir}/raw.json"
+          export GITLEAKS_SAFE_REPORT="${RUNNER_TEMP}/gitleaks-report.json"
+          rm -f -- "$GITLEAKS_SAFE_REPORT"
+          scanner_status=0
+          gitleaks detect --source . --config .gitleaks.toml --verbose --redact=100 \
+            --report-format json --report-path "$GITLEAKS_RAW_REPORT" || scanner_status=$?
+          export GITLEAKS_EXIT_STATUS="$scanner_status"
+          python3 - <<'PYREPORT'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import re
+          import subprocess
+
+          def require(condition):
+              if not condition:
+                  raise ValueError("Invalid diagnostic metadata")
+
+          def sha(value):
+              require(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value))
+              return value
+
+          try:
+              raw = Path(os.environ["GITLEAKS_RAW_REPORT"])
+              findings = json.loads(raw.read_text())
+              require(isinstance(findings, list))
+              projected = []
+              for finding in findings:
+                  require(isinstance(finding, dict) and finding.get("Secret") == "REDACTED")
+                  rule = finding.get("RuleID")
+                  path = finding.get("File")
+                  start = finding.get("StartLine")
+                  end = finding.get("EndLine")
+                  commit = sha(finding.get("Commit"))
+                  require(isinstance(rule, str) and re.fullmatch(r"[a-z0-9_-]{1,128}", rule))
+                  require(isinstance(path, str) and 0 < len(path) <= 1024)
+                  require(not PurePosixPath(path).is_absolute() and ".." not in PurePosixPath(path).parts)
+                  require(not any(ord(character) < 32 or ord(character) == 127 for character in path))
+                  require(type(start) is int and type(end) is int and 1 <= start <= end)
+                  projected.append({"rule_id": rule, "path": path, "start_line": start,
+                                    "end_line": end, "commit": commit,
+                                    "fingerprint": f"{commit}:{path}:{rule}:{start}"})
+              exit_status = int(os.environ["GITLEAKS_EXIT_STATUS"])
+              require(0 <= exit_status <= 255)
+              run_id = int(os.environ["GITHUB_RUN_ID"])
+              attempt = int(os.environ["GITHUB_RUN_ATTEMPT"])
+              require(run_id > 0 and attempt > 0)
+              payload = {
+                  "schema_version": 1,
+                  "checkout_sha": sha(subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()),
+                  "checkout_tree": sha(subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"], text=True).strip()),
+                  "candidate_sha": sha(os.environ["CANDIDATE_SHA"]),
+                  "run_id": run_id, "run_attempt": attempt,
+                  "scanner_version": "8.28.0",
+                  "config_sha256": hashlib.sha256(Path(".gitleaks.toml").read_bytes()).hexdigest(),
+                  "scanner_exit_status": exit_status,
+                  "finding_count": len(projected), "findings": projected,
+              }
+              # Only this strict projection is published. Raw source matches, secret
+              # values, commit messages, author/email and other free text stay private.
+              safe = raw.with_name("safe.json")
+              safe.write_text(json.dumps(payload, indent=2) + "\n")
+              safe.replace(Path(os.environ["GITLEAKS_SAFE_REPORT"]))
+          except Exception:
+              raise SystemExit("Gitleaks diagnostic report failed validation") from None
+          PYREPORT
+          exit "$scanner_status"
+
+      - name: Upload projected Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-report-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gitleaks-report.json
+          if-no-files-found: error
+          retention-days: 3
 
   deps-audit:
     name: Dependency audit
@@ -342,9 +503,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -355,56 +521,15 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
-      - name: pnpm audit (fail on high)
-        # Blocking (M15-P05): any high/critical advisory fails the pipeline, EXCEPT a
-        # written allowlist of accepted advisories. Accepted:
-        #   GHSA-ph9p-34f9-6g65 — tmp<0.2.6 path traversal, transitive via @lhci/cli
-        #     (Lighthouse CI). Dev/CI-only, never bundled into a shipped app or the API
-        #     runtime => no production exposure. See docs/ops/owasp-audit.md (A06/F1).
-        #     Remove this entry once @lhci/cli ships a tmp>=0.2.6.
-        #   GHSA-mh99-v99m-4gvg — brace-expansion<5.0.8, only in the legacy
-        #     chrome-launcher/glob/minimatch chain of @lhci/cli. The current
-        #     @lhci/cli release still ships this chain; it is CI-only and never
-        #     bundled into a shipped app or the API runtime. See A06/F3.
-        #     Remove this entry once @lhci/cli removes the legacy chain.
-        #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
-        #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
-        #     CI/dev-only; no production exposure. See A06/F7.
-        #   GHSA-7pqw-9j4j-h8q3 — extract-zip<=2.0.1 arbitrary file write via symlink
-        #     archive entries. SAME chain as GHSA-jmr9-qjv8-65gv above, and there is
-        #     no patched release to move to: 2.0.1 IS extract-zip's latest published
-        #     version and the advisory carries no patched range. A parent upgrade
-        #     cannot remove it either — @lhci/cli@0.15.1 is already the newest release
-        #     and exact-pins lighthouse 12.6.1, while the chain is only repaired in
-        #     lighthouse>=13.4.1 (puppeteer-core>=25.3.0 → @puppeteer/browsers>=3.x,
-        #     which drops extract-zip). Root devDependency only; extract-zip runs
-        #     solely to unpack the Chrome archive @puppeteer/browsers downloads from
-        #     Google for Lighthouse CI — not attacker-controlled, never bundled into a
-        #     shipped app or the API runtime. ACCEPTED, REVIEW 2026-12-09.
-        #     Remove once @lhci/cli takes lighthouse>=13.4.1. Full reachability
-        #     analysis: docs/ops/owasp-audit.md (A06/F8).
-        run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv GHSA-7pqw-9j4j-h8q3"
-          pnpm audit --audit-level=high --json > audit.json || true
-          ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
-          import json, os, sys
-          allow = set(os.environ["ALLOWLIST"].split())
-          data = json.load(open("audit.json"))
-          blocking = []
-          for adv in data.get("advisories", {}).values():
-              if adv.get("severity") in ("high", "critical"):
-                  ghsa = adv.get("github_advisory_id", "")
-                  if ghsa in allow:
-                      print(f"::notice::allowlisted {ghsa} ({adv.get('module_name')}) — see owasp-audit.md")
-                      continue
-                  blocking.append(f"{adv.get('severity')} {ghsa} {adv.get('module_name')}")
-          if blocking:
-              print("::error::blocking high/critical advisories:")
-              for b in blocking:
-                  print(f"  - {b}")
-              sys.exit(1)
-          print("pnpm audit: no blocking high/critical advisories")
-          PY
+      - name: Dependency audit workflow contract tests
+        run: node --test scripts/ci/dependency-audit-contract.test.mjs
+
+      - name: pnpm production audit (fail on high)
+        # Separate production scope and full toolchain scope; neither waives advisories.
+        run: pnpm audit --prod --audit-level high
+
+      - name: pnpm full dependency audit (fail on high)
+        run: pnpm audit --audit-level high
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -415,12 +540,120 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: pip-audit (API, fail on high)
-        # Blocking (M15-P05): pip-audit is non-zero on any known vulnerability.
+        # Audit the complete locked API installation; every failure remains blocking.
         working-directory: services/api
         run: |
-          uv sync --dev
-          uv tool run pip-audit
+          set -euo pipefail
+          sha256sum pyproject.toml uv.lock > api-audit-inputs.sha256
+          uv sync --locked --all-groups --no-install-project
+          uv export --locked --all-groups --no-emit-project --no-hashes \
+            --format requirements-txt --output-file api-audit-requirements.txt
+          sha256sum --check api-audit-inputs.sha256
+          .venv/bin/python - <<'PY'
+          import hashlib, importlib.metadata as md, json, os, sys, sysconfig, tomllib
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name as name
 
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          root = Path.cwd().resolve()
+          prefix = root / '.venv'
+          require(prefix.is_dir() and not prefix.is_symlink(), 'Invalid API environment')
+          require(Path(sys.prefix).resolve() == prefix, 'Wrong API interpreter')
+          site = Path(sysconfig.get_path('purelib')).resolve(strict=True)
+          require(site.is_dir() and site.is_relative_to(prefix), 'Invalid API site directory')
+          require(Path(sysconfig.get_path('platlib')).resolve(strict=True) == site, 'Split site paths')
+          lock = tomllib.loads(Path('uv.lock').read_text())
+          records = [p for p in lock['package'] if 'registry' in p['source']]
+          registry = {name(p['name']): p['version'] for p in records}
+          require(registry and len(registry) == len(records), 'Ambiguous registry inventory')
+          catalog, expected = {}, {}
+          for line in Path('api-audit-requirements.txt').read_text().splitlines():
+              if not line.strip() or line.lstrip().startswith('#'):
+                  continue
+              req = Requirement(line.strip())
+              specs = list(req.specifier)
+              require(req.url is None and len(specs) == 1 and specs[0].operator == '==', 'Unpinned export')
+              key, version = name(req.name), specs[0].version
+              require(key not in catalog and registry.get(key) == version, 'Unbound export record')
+              catalog[key] = version
+              if req.marker is None or req.marker.evaluate():
+                  expected[key] = version
+          require(catalog == registry and expected, 'Incomplete locked export')
+          distributions = list(md.distributions(path=[str(site)]))
+          installed = {name(d.metadata['Name']): d.version for d in distributions}
+          require(len(installed) == len(distributions), 'Duplicate installed distribution')
+          require(installed == expected, 'Installed API inventory does not match locked export')
+          files = ['pyproject.toml', 'uv.lock', 'api-audit-requirements.txt']
+          coverage = {
+              'checkoutSha': os.environ['GITHUB_SHA'], 'python': sys.version,
+              'site': str(site), 'installedCount': len(installed),
+              'registryCount': len(registry), 'inactive': sorted(registry.keys() - expected.keys()),
+              'packages': installed,
+              'inputSha256': {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in files},
+              'auditor': 'pip-audit==2.10.1',
+          }
+          Path('api-audit-coverage.json').write_text(json.dumps(coverage, sort_keys=True) + '\n')
+          Path('api-audit-site.txt').write_text(str(site) + '\n')
+          print(json.dumps(coverage, sort_keys=True))
+          PY
+          IFS= read -r API_AUDIT_SITE < api-audit-site.txt
+          test -n "$API_AUDIT_SITE"
+          test -d "$API_AUDIT_SITE"
+          .venv/bin/python - "$API_AUDIT_SITE" <<'PY'
+          import json, sys
+          from pathlib import Path
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          site = Path(sys.argv[1]).resolve(strict=True)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          require(site.is_dir() and str(site) == coverage['site'], 'Unbound audit path')
+          require(site.is_relative_to(Path('.venv').resolve(strict=True)), 'Foreign audit path')
+          PY
+          uv tool run --from pip-audit==2.10.1 pip-audit \
+            --path "$API_AUDIT_SITE" --strict --format json --progress-spinner off \
+            | tee api-audit.json
+          .venv/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from packaging.utils import canonicalize_name as name
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+          coverage = json.loads(Path('api-audit-coverage.json').read_text())
+          report = json.loads(Path('api-audit.json').read_text())
+          entries = report['dependencies']
+          audited = {name(d['name']): d['version'] for d in entries}
+          require(len(audited) == len(entries), 'Duplicate audited distribution')
+          require(audited == coverage['packages'], 'Incomplete or wrong audited inventory')
+          require(len(audited) == coverage['installedCount'], 'Incorrect audited count')
+          require(all(d.get('vulns') == [] and not d.get('skip_reason') for d in entries), 'Uncollected or vulnerable dependency')
+          require(report.get('fixes') == [], 'Unexpected audit fixes')
+          print(json.dumps({'verifiedAuditCount': len(audited), 'coverage': coverage}, sort_keys=True))
+          PY
+          sha256sum --check api-audit-inputs.sha256
+
+      - name: Dependency audit consumer process controls
+        run: python3 scripts/ci/dependency_audit_consumer.test.py
+
+      - name: Audit Node, frozen API graph, and standalone E2E lock
+        env:
+          UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/dependency-audit-api-venv
+          UV_CACHE_DIR: ${{ runner.temp }}/dependency-audit-uv-cache
+          UV_TOOL_DIR: ${{ runner.temp }}/dependency-audit-uv-tools
+          npm_config_cache: ${{ runner.temp }}/dependency-audit-npm-cache
+        run: python3 scripts/ci/dependency_audit_consumer.py --evidence-dir "$RUNNER_TEMP/dependency-audit"
+
+      - name: Upload dependency audit evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-audit-evidence
+          path: ${{ runner.temp }}/dependency-audit/
+          if-no-files-found: error
   security-gates:
     name: Security gates (headers + authz matrix)
     # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
@@ -429,6 +662,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -451,7 +687,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Collect trusted authorization matrix inventory
         # Independent collection prevents the execution report from defining its
@@ -461,7 +697,7 @@ jobs:
           uv run python3 ../../scripts/ci/assert_authz_matrix_ran.py collect
           --inventory authz-matrix-expected.json
           --repo-root ../..
-          --checkout-sha "${GITHUB_SHA}"
+          --checkout-sha "${QUALIFICATION_SHA}"
 
       - name: Route x role authz matrix (sole owner, no DB)
         # Isolation-clean: dependency overrides and guards short-circuit before DB
@@ -480,7 +716,7 @@ jobs:
           python3 ../../scripts/ci/assert_authz_matrix_ran.py validate authz-matrix.xml
           --inventory authz-matrix-expected.json
           --repo-root ../..
-          --checkout-sha "${GITHUB_SHA}"
+          --checkout-sha "${QUALIFICATION_SHA}"
 
       - name: Upload authorization matrix report
         if: always()
@@ -498,6 +734,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -549,8 +788,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — required for migration 0001 (vector extension).
-        image: pgvector/pgvector:pg16
+        # Qualification input; runtime checks below prove the mutable tag contents.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -564,6 +803,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -577,6 +819,12 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
 
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            bash scripts/ci/verify-postgres-runtime.sh
+
       - name: Setup uv (canonical migration re-entrant replay)
         uses: astral-sh/setup-uv@v5
         with:
@@ -589,7 +837,7 @@ jobs:
 
       - name: Install API deps (canonical migration re-entrant replay)
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Canonical migration re-entrant replay (STG-DRIFT-03)
         working-directory: services/api
@@ -611,6 +859,54 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
 
+      - name: Install pgTAP for disposable platform RBAC acceptance
+        run: |
+          docker exec "${{ job.services.postgres.id }}" apt-get update
+          # The PG17 trixie service image carries the PGDG repository for its own major.
+          # pgTAP is SQL-only: unpack just its extension files. `apt-get install` would
+          # pull a newer postgresql-17 minor whose plpgsql.so no longer matches the
+          # already-running server binary ("undefined symbol: heap_datum_update_type").
+          docker exec -w /tmp "${{ job.services.postgres.id }}" sh -ec \
+            'apt-get download postgresql-17-pgtap && dpkg -x postgresql-17-pgtap_*.deb / && rm -f postgresql-17-pgtap_*.deb'
+          docker exec "${{ job.services.postgres.id }}" psql -U postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions'
+
+      - name: Platform RBAC SQL and direct API acceptance (disposable PG17)
+        working-directory: services/api
+        env:
+          CONVERGEO_RBAC_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          CONVERGEO_DISPOSABLE_DB: "1"
+          PAYMENTS_ENABLED: "false"
+          PAYMENTS_ALLOW_PRODUCTION: "false"
+        run: |
+          uv run pytest tests/test_configurable_admin_roles.py -q --junit-xml=rbac-backend.xml
+          uv run python - <<'PY'
+          import xml.etree.ElementTree as ET
+          from collections import Counter
+          cases = ET.parse("rbac-backend.xml").getroot().findall(".//testcase")
+          assert len(cases) == 167, f"Expected 167 RBAC acceptance cases, got {len(cases)}"
+          assert all(c.find("skipped") is None and c.find("failure") is None and c.find("error") is None for c in cases), "RBAC acceptance contains a skipped or failed case"
+          names = Counter(c.attrib["name"].split("[", 1)[0] for c in cases)
+          for name, expected in {
+              "test_disposable_api_permission_domains": 64,
+              "test_disposable_non_admins_cannot_enter_platform": 24,
+              "test_disposable_custom_roles_cannot_mutate_money_or_controls": 56,
+              "test_disposable_all_thirteen_sql_contracts": 1,
+              "test_disposable_browser_identities_cannot_bypass_api": 4,
+              "test_disposable_distinct_roles_and_role_union": 1,
+              "test_disposable_revocation_and_update_use_unchanged_jwt": 1,
+          }.items():
+              assert names[name] == expected, (name, names[name], expected)
+          print("PASS: 167 RBAC acceptance cases, zero skips; all 13 SQL contracts included")
+          PY
+
+      - name: Concurrent last-superadmin protection (disposable replay DB)
+        working-directory: services/api
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          CONVERGEO_DISPOSABLE_DB: "1"
+        run: uv run python ../../scripts/ci/check-last-superadmin-concurrency.py
+
   db:
     name: Database / typegen drift
     needs: migrations
@@ -625,9 +921,18 @@ jobs:
       SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
       SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
       SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
+      # Explicit typegen-only profile for supabase/postgres:17.6.1.143.
+      EXPECTED_SERVER_VERSION_NUM: "170006"
+      EXPECTED_VECTOR_VERSION: "0.8.2"
+      EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
+      EXPECTED_PGCRYPTO_VERSION: "1.3"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "148"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
@@ -637,21 +942,150 @@ jobs:
           # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
           version: 2.109.1
 
-      - name: Start local database
-        run: supabase db start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Reset local database
-        run: supabase db reset --no-seed
+      - name: Typegen helper negative controls
+        run: |
+          bash scripts/ci/test-typegen-contract.sh
+          PYTHONPATH=scripts/ci python3 -m unittest scripts/ci/test_explicit_transaction_boundary.py
+
+      - name: Prepare pinned Supabase-compatible database
+        id: cart_typegen_reset
+        run: |
+          TYPEGEN_WORKDIR="$(mktemp -d)"
+          echo "TYPEGEN_WORKDIR=${TYPEGEN_WORKDIR}" >> "${GITHUB_ENV}"
+          bash scripts/ci/prepare-typegen-workdir.sh "${TYPEGEN_WORKDIR}"
+          python3 scripts/ci/rehearse_explicit_transaction_profile.py "${TYPEGEN_WORKDIR}"
+
+          TYPEGEN_DB_CONTAINER_ID="$(docker ps \
+            --filter 'name=^/supabase_db_vergeo5-typegen$' \
+            --format '{{.ID}}')"
+          if [[ -z "${TYPEGEN_DB_CONTAINER_ID}" ]]; then
+            echo "error: disposable Supabase database container was not found" >&2
+            exit 1
+          fi
+          echo "TYPEGEN_DB_CONTAINER_ID=${TYPEGEN_DB_CONTAINER_ID}" >> "${GITHUB_ENV}"
+
+      - name: Initialize disposable typegen GraphQL
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/initialize-typegen-graphql.sh \
+            | tee generated-types/graphql-initialization.txt
+
+      - name: Qualify migrations and Supabase database shape
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p generated-types
+          bash scripts/ci/qualify-typegen-database.sh \
+            | tee generated-types/database-shape.txt
+
+      - name: Verify service table ACL hardening in disposable database
+        shell: bash
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: bash scripts/ci/test-service-table-acl-hardening.sh
+
+      - name: Prefetch pinned postgres-meta generator
+        run: bash scripts/ci/prefetch-postgres-meta.sh
+
+      - name: Preload qualified postgres-meta from official GHCR
+        id: cart_typegen_meta
+        run: bash scripts/ci/preload-typegen-meta.sh
 
       - name: Regenerate types
-        run: bash scripts/gen-types.sh
+        id: cart_typegen_generate
+        env:
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+        run: |
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cp packages/types/src/db.ts generated-types/db.first.ts
+          SUPABASE_WORKDIR="${TYPEGEN_WORKDIR}" bash scripts/gen-types.sh
+          cmp generated-types/db.first.ts packages/types/src/db.ts
+          cp packages/types/src/db.ts generated-types/db.ts
+
+      - name: Record generated type provenance
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          SUPABASE_TYPEGEN_SCHEMAS: public,graphql_public
+          TYPEGEN_OUTPUT: packages/types/src/db.ts
+          PROVENANCE_OUTPUT: generated-types/provenance.txt
+          TYPEGEN_GRAPHQL_INITIALIZATION_EVIDENCE: generated-types/graphql-initialization.txt
+        run: |
+          bash scripts/ci/record-typegen-provenance.sh
+
+      - name: Upload generated database types
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-database-types-${{ env.QUALIFICATION_SHA }}
+          path: generated-types
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Capture genuine generated types provenance
+        id: cart_typegen_manifest
+        if: ${{ !cancelled() && steps.cart_typegen_generate.outcome == 'success' }}
+        env:
+          TYPEGEN_GENERATION_OUTCOME: ${{ steps.cart_typegen_generate.outcome }}
+          TYPEGEN_RESET_OUTCOME: ${{ steps.cart_typegen_reset.outcome }}
+          TYPEGEN_META_OUTCOME: ${{ steps.cart_typegen_meta.outcome }}
+        run: python3 scripts/ci/typegen_artifact.py capture
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
 
+      - name: Prove genuine generated types artifact is complete
+        id: cart_typegen_proof
+        if: always()
+        env:
+          TYPEGEN_GENERATION_OUTCOME: ${{ steps.cart_typegen_generate.outcome }}
+          TYPEGEN_RESET_OUTCOME: ${{ steps.cart_typegen_reset.outcome }}
+          TYPEGEN_META_OUTCOME: ${{ steps.cart_typegen_meta.outcome }}
+        run: python3 scripts/ci/typegen_artifact.py verify
+
+      - name: Upload genuine generated database types
+        if: ${{ !cancelled() && steps.cart_typegen_generate.outcome == 'success' && steps.cart_typegen_manifest.outcome == 'success' && steps.cart_typegen_proof.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-generated-types-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            packages/types/src/db.ts
+            typegen-artifact-manifest.json
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Stop disposable Supabase database
+        if: always()
+        run: |
+          if [[ -n "${TYPEGEN_WORKDIR:-}" && -f "${TYPEGEN_WORKDIR}/.owned-typegen-stack" ]]; then
+            owned_id="$(cat "${TYPEGEN_WORKDIR}/.owned-typegen-stack")"
+            current_id="$(docker ps --filter 'name=^/supabase_db_vergeo5-typegen$' --format '{{.ID}}')"
+            if [[ "${owned_id}" =~ ^[0-9a-f]{12,64}$ && "${current_id}" == "${owned_id}" ]]; then
+              supabase --workdir "${TYPEGEN_WORKDIR}" stop --no-backup
+            fi
+          fi
+
   rls:
     name: RLS isolation matrix
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     # Same auth-hook/OAuth dummy env as db — stack cannot start without them.
     env:
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -668,22 +1102,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
         with:
-          # Pinned (not `latest`) so setup-cli skips the unauthenticated
-          # GitHub "resolve latest release" API call, which intermittently
-          # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
-          version: 2.109.1
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
-      - name: Start local database
-        run: supabase db start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Reset local database (no demo seed)
-        # The RLS fixture owns its matrix data. `supabase/config.toml` also has
-        # db.seed.enabled=false, so make the observed no-seed precondition explicit.
-        run: supabase db reset --no-seed
+      - name: Replay migrations
+        working-directory: ${{ github.workspace }}
+        env:
+          PGHOST: localhost
+          PGPORT: 54322
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: bash scripts/ci/migration-replay.sh
 
       # Provision the matrix's impersonation roles in ISOLATION, before any
       # pytest process touches the database. On 2026-08-02 the same bootstrap,
@@ -699,6 +1133,11 @@ jobs:
             exit 1
           fi
 
+      - name: Verify PostgreSQL/vector runtime and role shape
+        run: |
+          POSTGRES_CONTAINER_ID="$(docker ps --filter ancestor=pgvector/pgvector:0.8.0-pg17-trixie --format '{{.ID}}' | head -1)" \
+            bash ../../scripts/ci/verify-postgres-runtime.sh
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -710,7 +1149,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: DB-backed integration (curated, isolation-clean)
         run: uv run pytest tests/test_db_adapter.py tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py tests/test_kyc_state.py -q
@@ -727,6 +1166,191 @@ jobs:
         # to stabilise the environment, not to hide the signal again.
         run: uv run pytest tests/rls -q
 
+  critical-real-stack:
+    name: Critical real-stack execution (88 identities)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev --frozen
+
+      - name: Execute exact critical identities on isolated PostgreSQL and PostgREST
+        shell: bash
+        run: bash scripts/ci/run-critical-real-stack.sh
+
+      - name: Retain critical execution identity and JUnit evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: critical-real-stack-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
+          path: critical-real-stack-evidence
+          if-no-files-found: warn
+
+  financial-real-stack:
+    name: Financial real-stack execution (fresh and upgrade)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout full accepted-baseline history
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Setup pinned Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Frozen API dependency install
+        working-directory: services/api
+        run: uv sync --dev --frozen
+      - name: Financial orchestration and synthetic history unit controls
+        run: |
+          python -m unittest discover -s scripts/ci -p test_financial_ci_orchestration.py -v
+          python -m unittest discover -s scripts/ci -p test_synthetic_migration_history.py -v
+      - name: Shared adoption prerequisite negative controls
+        run: python -m unittest discover -s scripts/ci -p test_guard_shared_service_adoption.py -v
+      - name: Execute real financial database gates
+        shell: bash
+        run: python scripts/ci/run_financial_real_stack.py
+      - name: Rehearse guarded adoption catalog and atomic history
+        env:
+          ADOPTION_REHEARSAL_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        working-directory: services/api
+        run: uv run --no-sync python ../../scripts/ci/rehearse_service_adoption.py --evidence-dir ../../adoption-rehearsal-evidence
+      - name: Retain sanitized financial evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: financial-real-stack-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
+          path: |
+            financial-real-stack-evidence
+            adoption-rehearsal-evidence
+          if-no-files-found: error
+
+  coordinator-acceptance:
+    name: Coordinator acceptance (${{ matrix.gate }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [f3, merchant, curated]
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17-trixie
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout exact qualification source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup pinned Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+      - name: Frozen API install
+        working-directory: services/api
+        run: uv sync --dev --frozen
+      - name: Setup pnpm
+        if: matrix.gate == 'merchant'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+      - name: Setup Node
+        if: matrix.gate == 'merchant'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Frozen workspace install
+        if: matrix.gate == 'merchant'
+        run: pnpm i --frozen-lockfile
+      - name: Pinned coordinator Ruff/mypy
+        working-directory: services/api
+        run: |
+          uv run --no-sync ruff check ../../scripts/ci/run_coordinator_gates.py ../../scripts/ci/test_coordinator_gates.py ../../scripts/ci/run_financial_real_stack.py
+          uv run --no-sync mypy --follow-imports=silent ../../scripts/ci/run_coordinator_gates.py ../../scripts/ci/test_coordinator_gates.py ../../scripts/ci/run_financial_real_stack.py
+      - name: Coordinator orchestration controls
+        run: python -m unittest discover -s scripts/ci -p test_coordinator_gates.py -v
+      - name: Execute retained acceptance contracts
+        run: python scripts/ci/run_coordinator_gates.py ${{ matrix.gate }}
+      - name: Retain sanitized gate evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coordinator-${{ matrix.gate }}-${{ env.QUALIFICATION_SHA }}-${{ github.run_attempt }}
+          path: coordinator-gate-evidence
+          if-no-files-found: error
+
   money-db-triggers:
     name: Money DB-trigger integration
     runs-on: ubuntu-latest
@@ -739,7 +1363,7 @@ jobs:
     # re-applies migrations). Keeps this money coverage from silently skipping in CI.
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -762,6 +1386,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -777,7 +1404,7 @@ jobs:
           python-version-file: services/api/.python-version
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Provision Supabase-managed roles
         # AUTH_BOOTSTRAP_SQL (tests/rls/conftest.py) creates anon/authenticated/service_role
@@ -801,7 +1428,7 @@ jobs:
           for f in test_release test_release_accounting test_reconcile; do
             echo "::group::$f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
+              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP SCHEMA IF EXISTS reconciliation_private CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
             uv run pytest "tests/$f.py" -q
             echo "::endgroup::"
           done
@@ -816,7 +1443,7 @@ jobs:
         # the rls job (whose curated set depends on retained fixture state).
         run: |
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-            -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
+            -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP SCHEMA IF EXISTS reconciliation_private CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
           uv run pytest tests/test_seed_staging.py -q \
             --junit-xml=staging-cleanup-regression.xml
 
@@ -835,6 +1462,151 @@ jobs:
           path: services/api/staging-cleanup-regression.xml
           if-no-files-found: error
 
+      - name: Cart idempotency DB contract (16 PostgreSQL cases and 4 URI guards)
+        timeout-minutes: 5
+        env:
+          PGCONNECT_TIMEOUT: "5"
+          PAYMENTS_ENABLED: "false"
+          PAYMENTS_ALLOW_PRODUCTION: "false"
+          LENCO_ENV: sandbox
+        run: |
+          set -euo pipefail
+          unset PGHOST PGHOSTADDR PGSERVICE PGSERVICEFILE PGPORT PGDATABASE PGUSER PGPASSWORD PGOPTIONS
+          cart_db_nonce=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
+          [[ "$cart_db_nonce" =~ ^[a-f0-9]{32}$ ]]
+          cart_db_name="cart-idem-$cart_db_nonce"
+          cart_db_cluster="cart_idem_test-$cart_db_nonce"
+          cart_db_cid=
+          cart_db_start_attempted=false
+          cart_db_root=
+          cart_db_verified=false
+          cart_db_server_verified=false
+          cart_db_pytest_status=not_run
+          cart_db_source=$(git rev-parse HEAD)
+          [[ "$cart_db_source" =~ ^[a-f0-9]{40}$ && "$cart_db_source" = "${QUALIFICATION_SHA:?}" ]]
+          rm -f cart-idempotency-db.xml cart-idempotency-db-sanitized.xml cart-idempotency-db-validation.json cart-idempotency-db-lifecycle.json
+          cart_db_owned() {
+            [[ "$cart_db_cid" =~ ^[a-f0-9]{64}$ ]] &&
+              [[ "$(timeout 10 docker inspect --format '{{ index .Config.Labels "convergeo.cart-native" }}' "$cart_db_cid")" = "$cart_db_nonce" ]]
+          }
+          cleanup_cart_db() {
+            cart_db_status=$?
+            trap - EXIT
+            cart_db_cleanup_ok=true
+            # Recover only this nonce-labelled name after a partially failed Docker start.
+            if [ -z "$cart_db_cid" ] && [ "$cart_db_start_attempted" = true ]; then
+              if cart_db_partial=$(timeout 10 docker inspect --format '{{.Id}}' "$cart_db_name" 2>/dev/null); then
+                cart_db_cid="$cart_db_partial"
+              else
+                # An inspection failure cannot prove absence after an attempted start.
+                cart_db_cleanup_ok=false
+              fi
+            fi
+            if [ -n "$cart_db_cid" ]; then
+              if ! cart_db_owned; then
+                cart_db_cleanup_ok=false
+              elif ! timeout 10 docker rm --force "$cart_db_cid" >/dev/null; then
+                cart_db_cleanup_ok=false
+              elif ! cart_db_remaining=$(timeout 10 docker container ls --all --filter "id=$cart_db_cid" --format '{{.ID}}'); then
+                cart_db_cleanup_ok=false
+              elif [ -n "$cart_db_remaining" ]; then
+                cart_db_cleanup_ok=false
+              fi
+            fi
+            if [ -n "$cart_db_root" ] && [ "$cart_db_cleanup_ok" = true ]; then
+              if ! rm -rf -- "$cart_db_root"; then cart_db_cleanup_ok=false; fi
+            fi
+            if ! python3 - "$cart_db_source" "$cart_db_verified" "$cart_db_server_verified" "$cart_db_pytest_status" "$cart_db_cleanup_ok" <<'PY'
+          import json, sys
+          from pathlib import Path
+          source, container, server, status, cleanup = sys.argv[1:]
+          Path('cart-idempotency-db-lifecycle.json').write_text(json.dumps({
+              'source_sha': source,
+              'owned_container_verified': container == 'true',
+              'postgres17_database_cluster_verified': server == 'true',
+              'pytest_exit_code': None if status == 'not_run' else int(status),
+              'owned_container_and_directory_cleanup': cleanup == 'true',
+          }, indent=2) + '\n')
+          PY
+            then cart_db_cleanup_ok=false; fi
+            if [ "$cart_db_cleanup_ok" != true ] && [ "$cart_db_status" -eq 0 ]; then cart_db_status=1; fi
+            exit "$cart_db_status"
+          }
+          trap cleanup_cart_db EXIT
+          trap 'exit 143' TERM
+          trap 'exit 130' INT
+          # Reuse immutable bytes from the already-provisioned job service; never pull an image.
+          cart_db_image=$(timeout 10 docker inspect --format '{{.Image}}' '${{ job.services.postgres.id }}')
+          [[ "$cart_db_image" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "$(timeout 10 docker image inspect --format '{{.Id}}' "$cart_db_image")" = "$cart_db_image" ]]
+          [[ "${RUNNER_TEMP:?}" = /* && -d "$RUNNER_TEMP" ]]
+          cart_db_root=$(mktemp -d "$RUNNER_TEMP/cart-idem.XXXXXXXX")
+          cart_db_socket="$cart_db_root/socket"
+          mkdir "$cart_db_socket"
+          cart_db_start_attempted=true
+          cart_db_cid=$(timeout 10 docker run --detach --pull=never --name "$cart_db_name" \
+            --label "convergeo.cart-native=$cart_db_nonce" --network none \
+            --tmpfs /var/lib/postgresql/data:rw \
+            --mount "type=bind,src=$cart_db_socket,dst=/var/run/postgresql" \
+            --env POSTGRES_HOST_AUTH_METHOD=trust --env POSTGRES_DB=cart_idem_test \
+            "$cart_db_image" -c listen_addresses= -c "cluster_name=$cart_db_cluster")
+          cart_db_owned
+          # Check actual resource isolation before any fixture connection or DDL.
+          timeout 10 docker inspect "$cart_db_cid" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d)==1; d=d[0]; assert d["Id"]==sys.argv[1]; assert d["Image"]==sys.argv[2]; assert d["Config"]["Labels"]["convergeo.cart-native"]==sys.argv[3]; h=d["HostConfig"]; assert h["NetworkMode"]=="none" and not h.get("PortBindings") and not h.get("Privileged"); assert set(h.get("Tmpfs",{}))=={"/var/lib/postgresql/data"}; m=d["Mounts"]; assert len(m)==1 and m[0]["Type"]=="bind" and m[0]["Source"]==sys.argv[4] and m[0]["Destination"]=="/var/run/postgresql"' "$cart_db_cid" "$cart_db_image" "$cart_db_nonce" "$cart_db_socket"
+          cart_db_verified=true
+          cart_db_ready=false
+          for cart_db_attempt in $(seq 1 20); do
+            if timeout 5 docker exec --user postgres "$cart_db_cid" pg_isready -q -t 3 -h /var/run/postgresql -U postgres -d cart_idem_test; then
+              cart_db_ready=true
+              break
+            fi
+            sleep 1
+           done
+          [[ "$cart_db_ready" = true ]]
+          # Only the newly owned socket directory changes mode; its parent stays private0700.
+          timeout 10 docker exec --user postgres "$cart_db_cid" chmod 0777 /var/run/postgresql
+          cart_db_identity=$(timeout 10 docker exec --user postgres "$cart_db_cid" \
+            psql -U postgres -d cart_idem_test -Atc "select current_setting('server_version_num') || '|' || current_database() || '|' || current_setting('cluster_name')")
+          [[ "$cart_db_identity" =~ ^17[0-9]{4}\|cart_idem_test\|cart_idem_test-[a-f0-9]{32}$ ]]
+          [[ "$cart_db_identity" = *"|cart_idem_test|$cart_db_cluster" ]]
+          cart_db_server_verified=true
+          export CART_IDEMPOTENCY_TEST_CLUSTER_NAME="$cart_db_cluster"
+          export CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY="$cart_db_socket"
+          export CART_IDEMPOTENCY_TEST_DATABASE_URL=$(python3 -c 'import os; from urllib.parse import quote; print("postgresql://postgres@" + quote(os.environ["CART_IDEMPOTENCY_TEST_SOCKET_DIRECTORY"], safe="") + "/cart_idem_test")')
+          # Preserve native failures; cleanup failure also prevents a green execution.
+          set +e
+          timeout 120 uv run --frozen --no-sync pytest tests/test_cart_add_idempotency_db.py -q --junitxml=cart-idempotency-db.xml
+          cart_db_pytest_status=$?
+          set -e
+          exit "$cart_db_pytest_status"
+
+      - name: Prove every cart idempotency case and owned cleanup passed
+        if: always()
+        run: |
+          python3 ../../scripts/ci/assert_cart_idempotency_ran.py \
+            cart-idempotency-db.xml cart-idempotency-db-sanitized.xml cart-idempotency-db-validation.json
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          d = json.loads(Path('cart-idempotency-db-lifecycle.json').read_text())
+          assert d['source_sha'] == os.environ['QUALIFICATION_SHA']
+          assert d['owned_container_verified'] is True
+          assert d['postgres17_database_cluster_verified'] is True
+          assert d['pytest_exit_code'] == 0
+          assert d['owned_container_and_directory_cleanup'] is True
+          PY
+
+      - name: Upload cart idempotency DB evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cart-idempotency-db-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            services/api/cart-idempotency-db-sanitized.xml
+            services/api/cart-idempotency-db-validation.json
+            services/api/cart-idempotency-db-lifecycle.json
+          if-no-files-found: error
+
   cod-container-smoke:
     name: COD production-container smoke
     # Blocking (WP-1B): builds the real infra/api.Dockerfile image and drives ONE
@@ -849,8 +1621,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Postgres 16 with pgvector — the same image the `migrations` job replays onto.
-        image: pgvector/pgvector:pg16
+        # Same explicitly qualified image input as migration replay.
+        image: pgvector/pgvector:0.8.0-pg17-trixie
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
@@ -865,6 +1637,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ env.QUALIFICATION_SHA }}
           # Full history so the path filter can diff against the PR base sha.
           fetch-depth: 0
 
@@ -910,7 +1683,7 @@ jobs:
       - name: Install API dependencies
         if: steps.changes.outputs.run == 'true'
         working-directory: services/api
-        run: uv sync --dev
+        run: uv sync --dev --frozen
 
       - name: Set up Buildx
         if: steps.changes.outputs.run == 'true'

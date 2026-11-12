@@ -63,11 +63,8 @@ const redirect = {
   targets: [] as string[],
 };
 
-vi.mock("@vergeo/auth/use-session", () => ({
-  useSession: () => ({
-    session: { access_token: "test-access-token" },
-    loading: false,
-  }),
+vi.mock("../../../../../lib/customer-session", () => ({
+  useSession: () => ({ session: { access_token: "test-access-token" }, loading: false }),
 }));
 
 vi.mock("next/navigation", () => {
@@ -121,6 +118,7 @@ const pendingLabels: PendingLabels = {
   codBody: pendingMessages.codBody,
   codCta: pendingMessages.codCta,
   viewOrder: pendingMessages.viewOrder,
+  ticketUnavailableBody: pendingMessages.ticketUnavailableBody,
   ussd: ussdLabels,
   failed: failedLabels,
 };
@@ -140,7 +138,7 @@ function statusPayload(overrides: Partial<PaymentStatusPayload> = {}): PaymentSt
 }
 
 /** Render the shell with `GET /payments/status` answering with `payload`. */
-function renderPendingShell(payload: PaymentStatusPayload) {
+function renderPendingShell(payload: PaymentStatusPayload, ticketCheckout = false) {
   redirect.confirmingInDomAtFirstReplace = null;
   redirect.targets = [];
   apiRequest.mockImplementation(async (endpoint: string) => {
@@ -150,7 +148,14 @@ function renderPendingShell(payload: PaymentStatusPayload) {
     throw new Error(`unexpected endpoint in this test: ${endpoint}`);
   });
 
-  render(<PendingPaymentShell locale="en" groupId="chk-e2e-1" labels={pendingLabels} />);
+  render(
+    <PendingPaymentShell
+      locale="en"
+      groupId="chk-e2e-1"
+      labels={pendingLabels}
+      ticketCheckout={ticketCheckout}
+    />,
+  );
   return { replace: routerReplace, redirect };
 }
 
@@ -302,6 +307,33 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
     await screen.findByTestId("payment-failed");
     expect(screen.queryByTestId("payment-confirming")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("shows an honest ticket cancellation with an order link, preserving product checkout behavior", async () => {
+    const user = userEvent.setup();
+    renderPendingShell(statusPayload({ status: "cancelled" }), true);
+    expect(await screen.findByTestId("ticket-payment-unavailable")).toHaveTextContent(
+      pendingMessages.ticketUnavailableBody,
+    );
+    expect(screen.getByRole("link", { name: pendingMessages.viewOrder })).toHaveAttribute(
+      "href",
+      "/en/account/orders/order-9",
+    );
+    expect(routerPush).not.toHaveBeenCalled();
+
+    cleanup();
+    routerPush.mockClear();
+    renderPendingShell(statusPayload({ status: "cancelled" }));
+    await user.click(await screen.findByRole("button", { name: failedLabels.cancelledCta }));
+    expect(routerPush).toHaveBeenCalledWith("/en/checkout");
+  });
+
+  it("does not promise a retry for an expired ticket attempt", async () => {
+    renderPendingShell(statusPayload({ status: "expired" }), true);
+    expect(await screen.findByTestId("ticket-payment-unavailable")).toHaveTextContent(
+      pendingMessages.ticketUnavailableBody,
+    );
+    expect(screen.queryByTestId("payment-retry-button")).not.toBeInTheDocument();
   });
 });
 
