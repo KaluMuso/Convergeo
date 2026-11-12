@@ -412,7 +412,7 @@ export function StepPayment({
             data-testid="checkout-cod-unavailable"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-body text-sm font-semibold text-text-3">{labels.cod}</p>
                 <p className="mt-1 font-body text-sm font-medium text-text">
                   {labels.codUnavailableTitle}
@@ -475,14 +475,18 @@ export function StepPayment({
             requiredMarker="*"
             asGroup
           >
-            <div className="flex gap-2">
-              <Input
-                size="lg"
-                className="w-24 shrink-0 text-center font-mono"
-                value={DEFAULT_COUNTRY_CODE}
-                readOnly
-                aria-label={labels.countryCode}
-              />
+            {/* Input carries `w-full` from field styles, which beats `w-24` in the
+                generated CSS — size the prefix via a wrapper so the row fits 360px. */}
+            <div className="flex min-w-0 gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  size="lg"
+                  className="text-center font-mono"
+                  value={DEFAULT_COUNTRY_CODE}
+                  readOnly
+                  aria-label={labels.countryCode}
+                />
+              </div>
               <Input
                 size="lg"
                 className="min-w-0 flex-1 font-mono"
