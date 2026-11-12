@@ -863,7 +863,11 @@ jobs:
         run: |
           docker exec "${{ job.services.postgres.id }}" apt-get update
           # The PG17 trixie service image carries the PGDG repository for its own major.
-          docker exec "${{ job.services.postgres.id }}" apt-get install -y --no-install-recommends postgresql-17-pgtap
+          # pgTAP is SQL-only: unpack just its extension files. `apt-get install` would
+          # pull a newer postgresql-17 minor whose plpgsql.so no longer matches the
+          # already-running server binary ("undefined symbol: heap_datum_update_type").
+          docker exec -w /tmp "${{ job.services.postgres.id }}" sh -ec \
+            'apt-get download postgresql-17-pgtap && dpkg -x postgresql-17-pgtap_*.deb / && rm -f postgresql-17-pgtap_*.deb'
           docker exec "${{ job.services.postgres.id }}" psql -U postgres -v ON_ERROR_STOP=1 \
             -c 'CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions'
 
