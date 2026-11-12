@@ -14,7 +14,7 @@ Claude = architect/planner/prompt-writer/reviewer. Cursor Composer agents = impl
 - **Frontend:** Next.js 15 App Router + TS strict + Tailwind 4 + next-intl + PWA (serwist). THREE apps, one monorepo (pnpm + turborepo): `apps/customer` (Vercel, SSR/ISR, SEO), `apps/vendor`, `apps/admin` (OCI/Caddy, hardened origin) + `packages/ui|types|config|i18n`.
 - **Infra:** OCI Always-Free VM (Docker Compose: api, caddy, n8n) + Cloudflare + Vercel + Supabase cloud. Budget ceiling **$50/mo**.
 - **Payments:** Lenco only (abstraction seam for later). MoMo = direct USSD-push API; cards = Lenco hosted widget (NO direct card API — PCI). No refunds API ⇒ refunds are ledger-orchestrated payouts. Contract reference: `docs/ops/lenco/lenco-api-distilled.md`.
-- **Search/AI:** Postgres FTS + pg_trgm + pgvector, RRF fusion; same index feeds "Ask Vergeo" RAG (OpenRouter, quotas: guest 3, free 25/mo, $15/mo kill-switch).
+- **Search/AI:** Postgres FTS + pg_trgm + pgvector, RRF fusion; same index feeds "Ask Vergeo" RAG (OpenRouter, workflow-first; daily quotas guest 3 / free 10 / premium 100, $15/mo kill-switch — D23).
 - **Media:** Cloudinary (public, f_auto/q_auto) + Supabase Storage (private). ≤8 images/listing.
 - **Notifications:** WhatsApp Cloud API (official only — WAHA forbidden for all customer-facing/transactional use) → SMS fallback (Africa's Talking) → email (Resend). Outbox pattern. Setup: `docs/ops/whatsapp-cloud-api-setup.md`. **Sole WAHA exception (D35):** an isolated, flag-gated (`waha_vendor_intake`, default off), inbound-only, 1:1 **verified-vendor product-intake** lane → `docs/ops/waha-vendor-intake.md`. No groups, no customer/OTP/payment/support use.
 - **Automation:** n8n on OCI (digests, nudges, reconciliation alerts).
