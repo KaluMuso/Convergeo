@@ -3,7 +3,7 @@
 import { track } from "@vergeo/analytics";
 import { useEffect } from "react";
 
-import { recordRecentlyViewedOnServer } from "../../../../../lib/engagement-api";
+import { getAccessToken, recordRecentlyViewedOnServer } from "../../../../../lib/engagement-api";
 import { recordListingPdpView } from "../../../../../lib/listing-view-telemetry";
 import { recordRecentlyViewed } from "../recently-viewed/use-recently-viewed";
 
@@ -32,7 +32,12 @@ export function ProductViewTracker({ productId, listingId, recent }: Props): nul
       listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
     );
     if (listingId) {
-      recordListingPdpView(listingId);
+      if (process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1") {
+        // v2: attach the session token (if any) so the API can drop vendor self-views.
+        void getAccessToken().then((token) => recordListingPdpView(listingId, token));
+      } else {
+        recordListingPdpView(listingId);
+      }
     }
     if (recentSlug && recentName) {
       recordRecentlyViewed(recentSlug, recentName);

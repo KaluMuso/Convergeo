@@ -6,7 +6,7 @@
 import { getApiBaseUrl } from "./api-base-url";
 import { listWishlistEntries, replaceWishlistLocal, type WishlistEntry } from "./wishlist-local";
 
-async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(): Promise<string | null> {
   try {
     const { createBrowserClient } = await import("@vergeo/auth/browser-client");
     const supabase = createBrowserClient();
