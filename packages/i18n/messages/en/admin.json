@@ -1026,6 +1026,7 @@
         "submitting": "Processing…",
         "success": "Decision recorded — parties will be notified.",
         "failure": "Could not record decision.",
+        "refundUnavailablePayoutsDisabled": "Refunds are unavailable while payouts are disabled. No money was moved — choose Release to vendor or try again once payouts are enabled.",
         "alreadyResolved": "This dispute has already been resolved."
       }
     }
