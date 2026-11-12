@@ -706,7 +706,14 @@ try {
   await context.routeWebSocket("**/*", (socket) => {
     const url = new URL(socket.url());
     if (url.origin === "ws://127.0.0.1:3000" && url.pathname === "/_next/webpack-hmr") {
-      socket.connectToServer();
+      // Keep the dev HMR socket open but never connect it to the dev server.
+      // After the first PDP load, Next dev recompiles the client graph (async
+      // chunk ids for the lazily imported mini-cart move) and pushes an HMR
+      // update touching non-component modules (use-listing-purchase, cart-store,
+      // api-client). Fast Refresh cannot apply those and performs a full page
+      // reload at an arbitrary moment, wiping the open drawer, the add outcome
+      // or an in-flight navigation. The page under test must not be reloaded
+      // by dev tooling; production has no HMR.
       return;
     }
     externalRequests += 1;
