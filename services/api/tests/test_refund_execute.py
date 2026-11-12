@@ -314,9 +314,12 @@ class TestConcurrentAndRetry:
         assert active[0]["source_key"] == CALLER_KEY
         # Exactly one payout — the loser returned the winner's refund, never paid out.
         assert len(fake.tables["payouts"].rows) == 1
-        # Escrow drained exactly once: one distinct ledger idempotency key created.
+        # Escrow drained exactly once: one ledger transaction created. When the loser
+        # finds the winner still "processing" it resumes it, re-posting with the same
+        # stable idempotency key (deduped by the ledger), so 1-2 calls are both valid.
         assert ledger.created_count == 1
-        assert ledger.keys.count(f"{CALLER_KEY}-ledger") == 1
+        assert set(ledger.keys) == {f"{CALLER_KEY}-ledger"}
+        assert 1 <= len(ledger.keys) <= 2
         # Both callers observe the same refund; exactly one performed the creation.
         assert {r.refund_id for r in results} == {active[0]["id"]}
         assert sum(1 for r in results if r.created) == 1
