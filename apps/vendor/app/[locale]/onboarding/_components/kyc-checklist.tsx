@@ -16,10 +16,10 @@ const STATE_CLASSES: Record<KycChecklistItemState, string> = {
 };
 
 const STATE_ICON: Record<KycChecklistItemState, string> = {
-  not_started: "○",
-  saved: "◐",
-  submitted: "◐",
-  under_review: "◔",
+  not_started: "",
+  saved: "•",
+  submitted: "•",
+  under_review: "…",
   approved: "✓",
   rejected: "!",
 };
@@ -29,20 +29,29 @@ type KycChecklistCardProps = {
   locale: string;
   /** Hide the built-in CTA when the host screen already shows one. */
   showCta?: boolean;
+  /** Drop the outer card chrome when nested inside another card (saves width at 360px). */
+  embedded?: boolean;
 };
 
 /**
  * What verification needs, why each item is asked for, and where it stands —
  * with the reviewer's reason and a concrete fix when something was rejected.
  */
-export function KycChecklistCard({ application, locale, showCta = true }: KycChecklistCardProps) {
+export function KycChecklistCard({
+  application,
+  locale,
+  showCta = true,
+  embedded = false,
+}: KycChecklistCardProps) {
   const t = useTranslations("vendor");
   const checklist = buildKycChecklist(application);
   const total = checklist.items.length;
 
   return (
     <section
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
+      className={`flex flex-col gap-3 ${
+        embedded ? "border-t border-border pt-3" : "rounded-xl border border-border bg-surface p-4"
+      }`}
       aria-labelledby="vendor-kyc-checklist-heading"
       data-testid="vendor-kyc-checklist"
       data-overall={checklist.overall}

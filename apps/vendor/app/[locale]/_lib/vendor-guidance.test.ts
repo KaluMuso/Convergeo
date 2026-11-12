@@ -244,6 +244,17 @@ describe("buildHomeTasks", () => {
     expect(tasks[1]?.count).toBe(2);
   });
 
+  it("ranks waiting orders above an informational pending review", () => {
+    const tasks = buildHomeTasks({
+      kycOverall: "pending",
+      needsActionCount: 3,
+      hasDeliveryWaiting: true,
+      cutoff: before,
+      sellerKind: "products",
+    });
+    expect(tasks.map((t) => t.key)).toEqual(["ordersWaiting", "kycPending", "catalogueProducts"]);
+  });
+
   it("escalates waiting delivery orders in the last hour before 14:00", () => {
     const tasks = buildHomeTasks({
       kycOverall: "approved",

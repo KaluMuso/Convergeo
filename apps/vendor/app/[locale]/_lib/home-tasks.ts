@@ -2,8 +2,8 @@ import type { DispatchCutoffState } from "./dispatch-cutoff";
 
 /**
  * "Top 3 things to do" on the vendor home. Pure ranking so the order is
- * predictable and testable: blockers first (verification), then money-moving
- * work (orders waiting on the vendor), then catalogue / profile upkeep.
+ * predictable and testable: verification blockers first, then orders waiting
+ * on the vendor, then a pending-review notice, then catalogue / profile upkeep.
  */
 export type HomeTaskKey =
   | "kycFix"
@@ -46,8 +46,6 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
     tasks.push({ key: "kycFix", href: "/onboarding/status", tone: "danger" });
   } else if (input.kycOverall === "draft") {
     tasks.push({ key: "kycFinish", href: "/onboarding", tone: "warning" });
-  } else if (input.kycOverall === "pending") {
-    tasks.push({ key: "kycPending", href: "/onboarding/status", tone: "info" });
   }
 
   if (input.needsActionCount > 0) {
@@ -60,6 +58,12 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
       key = "ordersWaitingAfterCutoff";
     }
     tasks.push({ key, href: "/orders", tone, count: input.needsActionCount });
+  }
+
+  // Informational only (nothing for the vendor to do), so it ranks after
+  // orders that are waiting on them.
+  if (input.kycOverall === "pending") {
+    tasks.push({ key: "kycPending", href: "/onboarding/status", tone: "info" });
   }
 
   const catalogue: HomeTask =

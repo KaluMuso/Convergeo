@@ -111,7 +111,9 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
       dashboardHref={`/${locale}`}
       listingsHref={`/${locale}/listings/new`}
       resubmitHref={`/${locale}/onboarding`}
-      checklist={<KycChecklistCard application={application} locale={locale} showCta={false} />}
+      checklist={
+        <KycChecklistCard application={application} locale={locale} showCta={false} embedded />
+      }
       labels={{
         heading: t("onboarding.status.heading"),
         pending: {

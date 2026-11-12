@@ -795,8 +795,6 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <HomeTaskList locale={locale} tasks={tasks} />
 
-      {hasDeliveryWaiting ? <DispatchCutoffBanner cutoff={cutoff} /> : null}
-
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
