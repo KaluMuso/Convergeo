@@ -109,5 +109,62 @@
     "payout_failure_alert": {
       "body": "放款失败警报：{vendor_name} — {amount}（参考号 {lenco_reference}）。请在管理后台查看。"
     }
+  },
+  "center": {
+    "bell": "通知",
+    "bellUnread": "{count, plural, other {# 条未读通知}}",
+    "title": "通知",
+    "markAllRead": "全部标为已读",
+    "seeAll": "查看全部通知",
+    "empty": "暂无新通知。新的动态会显示在这里。",
+    "loading": "加载中…",
+    "loadError": "无法加载通知。",
+    "retry": "重试",
+    "loadMore": "加载更多",
+    "unreadDot": "未读",
+    "view": "查看",
+    "close": "关闭",
+    "pageDescription": "您的订单、付款和账户动态。",
+    "push": {
+      "enable": "开启手机提醒",
+      "enabled": "手机提醒已开启",
+      "denied": "提醒已在浏览器设置中被阻止。",
+      "hint": "即使应用已关闭，也能在本机收到提醒。",
+      "unavailable": "手机提醒暂不可用。",
+      "failed": "无法开启提醒，请重试。"
+    },
+    "errors": {
+      "forbidden": "您无权查看这些通知。",
+      "rateLimited": "请求过于频繁，请稍候。",
+      "invalidCursor": "该页面链接已过期，请刷新后继续。"
+    }
+  },
+  "inApp": {
+    "fallback": "您有一条新动态。",
+    "customer": {
+      "order_placed": "订单 {ref} 已提交。卖家确认后我们会通知您。",
+      "order_confirmed": "卖家已确认订单 {ref}。",
+      "order_rejected": "卖家已拒绝订单 {ref}。已付款项将退还给您。",
+      "order_packed": "订单 {ref} 正在打包。",
+      "order_shipped": "订单 {ref} 已发出。",
+      "order_ready_pickup": "订单 {ref} 可以自提了。打开查看您的取货码。",
+      "order_delivered": "订单 {ref} 已送达。体验如何？",
+      "quote_received": "您收到了新的报价。请在应用中比较并接受。",
+      "ticket_issued": "您的门票已就绪。入场时请出示二维码。"
+    },
+    "vendor": {
+      "order_placed": "新订单 {ref}。请确认后开始处理。",
+      "order_delivered": "订单 {ref} 已送达。",
+      "kyc_submitted": "我们已收到您的认证资料，将尽快审核。",
+      "kyc_approved": "您的店铺已通过认证，现在可以收款了。",
+      "kyc_rejected": "您的认证需要修改。打开查看原因。",
+      "rfq_received": "有顾客向您询价。",
+      "job_matched": "有新的工作与您的服务匹配。",
+      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。"
+    },
+    "admin": {
+      "kyc_submitted": "有新的 KYC 申请待审核。",
+      "dispute_opened": "订单 {ref} 有新的争议。"
+    }
   }
 }

@@ -70,10 +70,10 @@ def db() -> Iterator[PgConn]:
           (id, recipient_user_id, audience, type, i18n_key, params, link_path, dedupe_key)
         VALUES
           ('{SEEDED_A}', '{CUSTOMER_A}', 'customer', 'order_shipped',
-           'notifications.inApp.order_shipped', '{{"ref":"AAAA0000"}}',
+           'notifications.inApp.customer.order_shipped', '{{"ref":"AAAA0000"}}',
            '/account/orders/x', 'seed:a'),
           ('{SEEDED_B}', '{CUSTOMER_B}', 'customer', 'order_shipped',
-           'notifications.inApp.order_shipped', '{{"ref":"BBBB0000"}}',
+           'notifications.inApp.customer.order_shipped', '{{"ref":"BBBB0000"}}',
            '/account/orders/y', 'seed:b');
         INSERT INTO public.web_push_subscriptions (user_id, audience, endpoint, p256dh, auth_secret)
         VALUES ('{CUSTOMER_A}', 'customer', 'https://push.example.test/a',
@@ -114,7 +114,7 @@ def test_vendor_status_change_notifies_customer_in_app(db: PgConn) -> None:
         """,
     )
     assert rows == [
-        f"{CUSTOMER_A}|customer|order_shipped|notifications.inApp.order_shipped"
+        f"{CUSTOMER_A}|customer|order_shipped|notifications.inApp.customer.order_shipped"
         f'|/account/orders/{ORDER_PAID}|{{"ref": "C2000000"}}'
     ]
 
@@ -313,7 +313,8 @@ def test_content_columns_are_not_client_writable(db: PgConn) -> None:
         db,
         CUSTOMER_A,
         "INSERT INTO public.in_app_notifications (recipient_user_id, audience, type, i18n_key, "
-        f"dedupe_key) VALUES ('{CUSTOMER_A}', 'customer', 'x_y', 'notifications.inApp.x_y', 'k');",
+        f"dedupe_key) VALUES ('{CUSTOMER_A}', 'customer', 'x_y', "
+        "'notifications.inApp.customer.x_y', 'k');",
     )
     assert not ok
     assert "permission denied" in (error or "").lower()

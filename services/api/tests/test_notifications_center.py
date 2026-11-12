@@ -38,7 +38,9 @@ class FakeQuery:
         self.head = False
         self.count: str | None = None
 
-    def select(self, _columns: str = "*", count: str | None = None, head: bool = False) -> FakeQuery:
+    def select(
+        self, _columns: str = "*", count: str | None = None, head: bool = False
+    ) -> FakeQuery:
         self.count, self.head = count, head
         return self
 
@@ -103,7 +105,11 @@ class FakeQuery:
             return MagicMock(data=[dict(r) for r in hit])
         out = [dict(r) for r in rows if self._matches(r)]
         for column, desc in reversed(self.orders):
-            out.sort(key=lambda r, c=column: str(r.get(c)), reverse=desc)
+
+            def sort_key(r: dict[str, Any], c: str = column) -> str:
+                return str(r.get(c))
+
+            out.sort(key=sort_key, reverse=desc)
         if self.limit_n is not None:
             out = out[: self.limit_n]
         return MagicMock(data=[] if self.head else out, count=len(out))
@@ -149,7 +155,7 @@ def _row(n: int, user: str, audience: str = "customer", **extra: Any) -> dict[st
         "recipient_user_id": user,
         "audience": audience,
         "type": "order_shipped",
-        "i18n_key": "notifications.inApp.order_shipped",
+        "i18n_key": "notifications.inApp.customer.order_shipped",
         "params": {"ref": f"REF{n}", "nested": {"x": 1}},
         "link_path": f"/account/orders/{n}",
         "created_at": f"2026-11-13T10:{n:02d}:00+00:00",

@@ -19,7 +19,7 @@ every app's navbar, a dropdown/sheet + full `/notifications` page, in-app toasts
 
 - `in_app_notifications(id, recipient_user_id, audience customer|vendor|admin, type, i18n_key, params jsonb, link_path,
   dedupe_key, created_at, seen_at, read_at)`; `UNIQUE(recipient_user_id, audience, dedupe_key)`.
-  - `i18n_key` = `notifications.inApp.<type>` — never raw text. `params` is an allow-listed object (short order
+  - `i18n_key` = `notifications.inApp.<audience>.<type>` — never raw text. `params` is an allow-listed object (short order
     ref only; ≤1 KB). Pickup PINs/QR tokens, phone numbers, notes and amounts in the outbox payload are **not** copied.
   - `link_path` is app-relative and locale-less (`/account/orders/<id>`), checked by regex.
   - FORCE RLS: `authenticated` may `SELECT` own rows and `UPDATE (seen_at, read_at)` own rows only (column grant);

@@ -3,6 +3,9 @@
 -- Per-recipient in-app notifications for the customer, vendor and admin apps,
 -- populated from the SAME domain events the outbox already carries:
 --
+-- i18n_key = notifications.inApp.<audience>.<type> (the same event reads
+-- differently to a vendor and to an admin, e.g. kyc_submitted).
+--
 --   * AFTER INSERT on public.notification_outbox — every outbox enqueue path
 --     (PostgREST enqueue_outbox_row, run_sql_script, and SQL functions such as
 --     apply_payment_status / COD checkout) writes its in-app rows in the same
@@ -30,7 +33,8 @@ create table public.in_app_notifications (
   recipient_user_id uuid not null references auth.users (id) on delete cascade,
   audience text not null check (audience in ('customer', 'vendor', 'admin')),
   type text not null check (type ~ '^[a-z][a-z0-9_]{1,62}$'),
-  i18n_key text not null check (i18n_key ~ '^notifications\.inApp\.[a-z][a-z0-9_]{1,62}$'),
+  i18n_key text not null
+    check (i18n_key ~ '^notifications\.inApp\.(customer|vendor|admin)\.[a-z][a-z0-9_]{1,62}$'),
   params jsonb not null default '{}'::jsonb
     check (jsonb_typeof(params) = 'object' and octet_length(params::text) <= 1024),
   link_path text check (link_path is null or link_path ~ '^/[A-Za-z0-9/_-]{0,200}$'),
@@ -193,7 +197,7 @@ begin
   insert into public.in_app_notifications (
     recipient_user_id, audience, type, i18n_key, params, link_path, dedupe_key
   ) values (
-    p_recipient, p_audience, p_type, 'notifications.inApp.' || p_type,
+    p_recipient, p_audience, p_type, 'notifications.inApp.' || p_audience || '.' || p_type,
     coalesce(p_params, '{}'::jsonb), p_link_path, p_dedupe_key
   )
   on conflict (recipient_user_id, audience, dedupe_key) do nothing;
@@ -215,7 +219,7 @@ begin
   insert into public.in_app_notifications (
     recipient_user_id, audience, type, i18n_key, params, link_path, dedupe_key
   )
-  select ur.user_id, 'admin', p_type, 'notifications.inApp.' || p_type,
+  select ur.user_id, 'admin', p_type, 'notifications.inApp.admin.' || p_type,
          coalesce(p_params, '{}'::jsonb), p_link_path, p_dedupe_key
   from public.user_roles ur
   join auth.users u on u.id = ur.user_id

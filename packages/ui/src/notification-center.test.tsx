@@ -37,7 +37,7 @@ function item(n: number, extra: Partial<NotificationItem> = {}): NotificationIte
   return {
     id: `id-${n}`,
     type: "order_shipped",
-    i18n_key: "notifications.inApp.order_shipped",
+    i18n_key: "notifications.inApp.customer.order_shipped",
     params: { ref: `REF${n}` },
     link_path: `/account/orders/${n}`,
     created_at: "2026-11-13T10:00:00+00:00",
