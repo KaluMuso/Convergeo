@@ -183,7 +183,13 @@ $address$;
 
 
 def _consume_reservation_conditional_sql(
-    *, checkout_group_id: str, listing_id: str, qty: int
+    *,
+    checkout_group_id: str,
+    listing_id: str,
+    qty: int,
+    order_id: str,
+    order_item_id: str,
+    listing_variant_id: str | None = None,
 ) -> str:
     """Consume one tracked hold, aborting the tx if it is gone or too small (#4).
 
@@ -193,10 +199,23 @@ def _consume_reservation_conditional_sql(
     the meantime, no row matches and we abort the whole transaction — no partial
     order, no oversell. Non-tracked and made-to-order listings never create stock
     holds, so they are skipped here as well.
+
+    In the same transaction it records what this order line took from stock —
+    the hold's quantity and branch, and the variant quantity decremented by
+    ``consume_listing_variant_stock`` (which runs earlier in the script) — so a
+    pre-dispatch cancellation can put back exactly that, once
+    (``public.release_cancelled_order_stock``).
     """
     group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
     listing_sql = sql_uuid(listing_id, "listing_id")
     listing_literal = sql_literal(listing_id)
+    order_sql = sql_uuid(order_id, "order_id")
+    item_sql = sql_uuid(order_item_id, "order_item_id")
+    variant_sql = (
+        sql_uuid(listing_variant_id, "listing_variant_id")
+        if listing_variant_id is not None
+        else "NULL::uuid"
+    )
     qty_sql = str(int(qty))
     return f"""
 DO $consume$
@@ -205,6 +224,9 @@ DECLARE
   v_product_class text;
   v_fulfilment_mode text;
   v_deleted int;
+  v_location uuid;
+  v_listing_qty int := 0;
+  v_variant_qty int := 0;
 BEGIN
   SELECT stock_mode, product_class, fulfilment_mode
   INTO v_mode, v_product_class, v_fulfilment_mode
@@ -216,11 +238,28 @@ BEGIN
     DELETE FROM public.stock_reservations
     WHERE checkout_group_id = {group_sql}
       AND listing_id = {listing_sql}
-      AND qty >= {qty_sql};
+      AND qty >= {qty_sql}
+    RETURNING location_id INTO v_location;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     IF v_deleted = 0 THEN
       RAISE EXCEPTION '{_HOLD_INVALID_MARKER}:%', {listing_literal};
     END IF;
+    v_listing_qty := {qty_sql};
+  END IF;
+  IF {variant_sql} IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.vendor_listing_variants
+    WHERE id = {variant_sql} AND stock_qty IS NOT NULL
+  ) THEN
+    v_variant_qty := {qty_sql};
+  END IF;
+  IF v_listing_qty > 0 OR v_variant_qty > 0 THEN
+    INSERT INTO public.order_item_stock_consumption (
+      order_item_id, order_id, listing_id, listing_qty, location_id,
+      listing_variant_id, variant_qty
+    ) VALUES (
+      {item_sql}, {order_sql}, {listing_sql}, v_listing_qty, v_location,
+      {variant_sql}, v_variant_qty
+    );
   END IF;
 END
 $consume$;
@@ -981,12 +1020,21 @@ INSERT INTO public.notification_outbox (
             f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.qty)});"
         )
 
+    placed_item_by_cart_line: dict[str, tuple[str, str]] = {
+        line.cart_item_id: (order.order_id, item.order_item_id)
+        for order, vendor_lines in planned_orders
+        for item, line in zip(order.items, vendor_lines, strict=True)
+    }
     for line in cart_lines:
+        placed_order_id, placed_item_id = placed_item_by_cart_line[line.cart_item_id]
         statements.append(
             _consume_reservation_conditional_sql(
                 checkout_group_id=session_id,
                 listing_id=line.listing_id,
                 qty=line.qty,
+                order_id=placed_order_id,
+                order_item_id=placed_item_id,
+                listing_variant_id=line.listing_variant_id,
             )
         )
     statements.append(_consume_reservations_sql(session_id))
