@@ -18,6 +18,7 @@ from app.services.orders.create import (
     CreateOrdersResult,
     VendorFulfilmentInput,
     create_orders_atomic,
+    replay_if_completed,
 )
 from app.services.orders.events import emit_order_placed_funnel
 from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
@@ -205,6 +206,17 @@ async def create_orders(
 ) -> CreateOrderResponse:
     _ensure_session_active(service, body.session_id, current_user.id)
 
+    # A retried submit (double tap, lost response on a slow link) must get its
+    # orders back before anything below re-reads a cart the order already emptied.
+    replayed = replay_if_completed(
+        service.client,
+        session_id=body.session_id,
+        customer_id=current_user.id,
+        idempotency_key=body.idempotency_key,
+    )
+    if replayed is not None:
+        return _to_response(replayed)
+
     group_response = (
         service.client.table("checkout_groups")
         .select("subtotal_ngwee, delivery_fee_ngwee, total_ngwee")
@@ -241,15 +253,30 @@ async def create_orders(
         )
 
     user_client = get_user_client(current_user.token, settings)
-    cart = _fetch_active_cart_by_user(user_client, current_user.id)
-    cart_id = str(cart["id"])
-    items = _fetch_cart_items(user_client, cart_id)
-    if not items:
-        raise AppError(
-            code="checkout.cart_empty",
-            message="Your cart is empty",
-            http_status=400,
+    try:
+        cart = _fetch_active_cart_by_user(user_client, current_user.id)
+        cart_id = str(cart["id"])
+        items = _fetch_cart_items(user_client, cart_id)
+        if not items:
+            raise AppError(
+                code="checkout.cart_empty",
+                message="Your cart is empty",
+                http_status=400,
+            )
+    except AppError as exc:
+        if exc.code != "checkout.cart_empty":
+            raise
+        # A concurrent submit of this same session may have just committed and
+        # emptied the cart between the check above and this read.
+        raced = replay_if_completed(
+            service.client,
+            session_id=body.session_id,
+            customer_id=current_user.id,
+            idempotency_key=body.idempotency_key,
         )
+        if raced is None:
+            raise
+        return _to_response(raced)
 
     listings_by_id = fetch_listings_for_items(
         [dict(item) for item in items if isinstance(item, dict)]

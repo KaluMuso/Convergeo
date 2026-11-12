@@ -557,6 +557,41 @@ def _resolve_completed_after_race(
     )
 
 
+def replay_if_completed(
+    client: Any,
+    *,
+    session_id: str,
+    customer_id: str,
+    idempotency_key: str,
+) -> CreateOrdersResult | None:
+    """Return the existing order set when this session has already been ordered.
+
+    ``None`` means the session is not completed and the caller should carry on.
+    A completed session replayed with its own idempotency key returns the same
+    orders; any other key is a conflict. Callers use this before they read the
+    cart, because a placed COD order has already taken its lines out of it.
+    """
+    response = (
+        client.table("checkout_groups")
+        .select("*")
+        .eq("id", session_id)
+        .eq("customer_id", customer_id)
+        .maybe_single()
+        .execute()
+    )
+    row = response.data if response is not None else None
+    if not isinstance(row, dict) or str(row.get("status")) != "completed":
+        return None
+    if str(row.get("idempotency_key")) == idempotency_key:
+        return _result_from_group(row, client=client, replayed=True)
+    raise AppError(
+        code="orders.session_already_completed",
+        message="Checkout session already completed",
+        http_status=409,
+        details={"session_id": session_id},
+    )
+
+
 def _validate_vendor_groups(
     *,
     vendor_groups: list[VendorFulfilmentInput],

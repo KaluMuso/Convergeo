@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import math
 import secrets
 import uuid
@@ -29,13 +30,20 @@ from app.services.rfq.listing_cart_authority import (
     is_rfq_pinned_line,
     validate_rfq_pinned_line_authority,
 )
-from app.services.stock.claim import claim_reservation, get_reservation_ttl_minutes
+from app.services.stock.claim import (
+    claim_reservation,
+    get_reservation_ttl_minutes,
+    run_sql_script,
+    sql_uuid,
+)
+from app.services.stock.release import release_reservation
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
 
 router = APIRouter(prefix="/checkout", tags=["checkout"])
+logger = logging.getLogger(__name__)
 
 LUSAKA_CENTER_LAT = -15.4167
 LUSAKA_CENTER_LNG = 28.2833
@@ -535,11 +543,72 @@ def _session_expires_at(service: ServiceRoleClient, session_id: str) -> datetime
     return datetime.fromisoformat(raw.replace("Z", "+00:00"))
 
 
+def _release_session_holds(session_id: str) -> int:
+    """Put every stock hold of ``session_id`` back on the shelf right away."""
+    group_sql = sql_uuid(session_id, "session_id")
+    held = run_sql_script(
+        f"SELECT listing_id::text FROM public.stock_reservations "
+        f"WHERE checkout_group_id = {group_sql};"
+    )
+    if not held.ok:
+        raise RuntimeError(f"load session holds failed: {held.error}")
+    released = 0
+    for listing_id in sorted({row for row in held.rows if row}):
+        if release_reservation(listing_id=listing_id, checkout_group_id=session_id).released:
+            released += 1
+    return released
+
+
+def _supersede_own_pending_sessions(customer_id: str) -> int:
+    """Abandon the caller's earlier, never-ordered checkouts and free their stock.
+
+    Every visit to /checkout opens a new session, and each session takes its own
+    hold. Without this, a refresh or a trip back to the cart left the buyer
+    competing with their own previous hold for up to the reservation TTL: the
+    last unit of a listing showed as out of stock in the cart of the very person
+    trying to buy it. Only sessions that still hold stock and never produced an
+    order or a payment are touched; the status flip waits on the same row lock
+    order creation takes, so a session that is completing concurrently wins.
+    """
+    customer_sql = sql_uuid(customer_id, "customer_id")
+    superseded = run_sql_script(
+        f"""
+BEGIN;
+WITH superseded AS (
+  UPDATE public.checkout_groups cg
+  SET status = 'abandoned'
+  WHERE cg.customer_id = {customer_sql}
+    AND cg.status = 'pending'
+    AND EXISTS (
+      SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+    )
+    AND NOT EXISTS (SELECT 1 FROM public.orders o WHERE o.checkout_group_id = cg.id)
+    AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.checkout_group_id = cg.id)
+  RETURNING cg.id
+)
+SELECT id::text FROM superseded;
+COMMIT;
+"""
+    )
+    if not superseded.ok:
+        raise RuntimeError(f"supersede pending checkouts failed: {superseded.error}")
+    released = 0
+    for session_id in sorted({row for row in superseded.rows if row}):
+        released += _release_session_holds(session_id)
+    return released
+
+
 def _ensure_session_active(
     service: ServiceRoleClient, session_id: str, customer_id: str
 ) -> tuple[dict[str, Any], datetime]:
     group = _fetch_checkout_group(service, session_id, customer_id)
     status = str(group.get("status") or "")
+    if status == "completed":
+        # The order is placed and its holds were consumed, so the reservation
+        # clock no longer applies. Expiring here would turn a retried POST /orders
+        # (lost response on a slow link) into "reservation expired" for an order
+        # that exists; the idempotent replay downstream owns this case.
+        return group, datetime.now(UTC)
     if status in {"expired", "abandoned"}:
         raise AppError(
             code="checkout.reservation_expired",
@@ -637,6 +706,12 @@ async def create_checkout_session(
     )
     subtotal = cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
 
+    try:
+        _supersede_own_pending_sessions(current_user.id)
+    except Exception:
+        # Best effort: the sweeper still reclaims these holds at TTL.
+        logger.warning("checkout.supersede_pending_failed", exc_info=True)
+
     session_id = str(uuid.uuid4())
     idempotency_key = f"chk-{secrets.token_urlsafe(16)}"
     service.client.table("checkout_groups").insert(
@@ -677,6 +752,11 @@ async def create_checkout_session(
             expire_checkout_group_if_unpaid(
                 service.client, checkout_group_id=session_id, terminal_status="abandoned"
             )
+            try:
+                # Lines claimed before the one that failed must not stay held.
+                _release_session_holds(session_id)
+            except Exception:
+                logger.warning("checkout.release_partial_holds_failed", exc_info=True)
             raise AppError(
                 code="checkout.stock_unavailable",
                 message="An item in your cart is no longer available",
@@ -835,7 +915,15 @@ async def validate_fulfilment_step(
     settings: Annotated[Settings, Depends(get_settings)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> FulfilmentStepResponse:
-    _ensure_session_active(service, body.session_id, current_user.id)
+    active_group, _ = _ensure_session_active(service, body.session_id, current_user.id)
+    if str(active_group.get("status") or "") == "completed":
+        # Totals of an ordered session are what the buyer agreed to pay.
+        raise AppError(
+            code="orders.session_already_completed",
+            message="Checkout session already completed",
+            http_status=409,
+            details={"session_id": body.session_id},
+        )
 
     user_client = get_user_client(current_user.token, settings)
     cart = _fetch_active_cart_by_user(user_client, current_user.id)
@@ -944,7 +1032,7 @@ async def validate_fulfilment_step(
             "delivery_fee_ngwee": total_delivery_fee,
             "total_ngwee": total,
         }
-    ).eq("id", body.session_id).execute()
+    ).eq("id", body.session_id).eq("status", "pending").execute()
 
     return FulfilmentStepResponse(
         session_id=body.session_id,
