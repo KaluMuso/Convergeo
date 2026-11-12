@@ -716,6 +716,252 @@
   color: var(--text);
 }
 
+/* ── Notification center (notification-center.tsx / notification-list.tsx) ──
+   Bell + top-right unseen badge; the panel is a bottom sheet on phones and an
+   anchored dropdown from 40rem up. Tokens only; motion reuses the toast-in
+   keyframes so reduced-motion collapses it the same way. */
+.v-notif {
+  position: relative;
+  display: inline-flex;
+}
+
+.v-notif__bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.v-notif__bell:hover {
+  background: var(--bg-2);
+}
+
+.v-notif__bell:focus-visible,
+.v-notif__item:focus-visible,
+.v-notif__link-button:focus-visible,
+.v-notif__more:focus-visible,
+.v-notif__see-all:focus-visible,
+.v-notif__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.v-notif__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--danger);
+  color: var(--on-danger);
+  font-family: var(--font-body);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.v-notif__panel {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(80dvh, 32rem);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-family: var(--font-body);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+@media (min-width: 40rem) {
+  .v-notif__panel {
+    position: absolute;
+    left: auto;
+    right: 0;
+    bottom: auto;
+    top: calc(100% + var(--sp-2));
+    width: 24rem;
+    border-radius: var(--r);
+  }
+}
+
+.v-notif__list[data-variant="page"] {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.v-notif__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-notif__head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.v-notif__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.v-notif__link-button,
+.v-notif__see-all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.v-notif__close {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+.v-notif__status {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.v-notif__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-notif__items > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.v-notif__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: var(--sp-1) var(--sp-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.v-notif__item:hover {
+  background: var(--bg-2);
+}
+
+.v-notif__item[data-read="false"] {
+  background: var(--primary-tint);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.v-notif__dot {
+  position: absolute;
+  left: var(--sp-2);
+  top: calc(var(--sp-3) + 0.4rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+}
+
+.v-notif__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.v-notif__message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.v-notif__time {
+  color: var(--text-3);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.v-notif__foot {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+
+.v-notif__more {
+  min-height: 2.75rem;
+  padding: 0 var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v-notif__more:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 /* ── Hero (merch/hero-carousel.tsx) ─────────────────────────────────────── */
 .v-hero__content {
   position: relative;
