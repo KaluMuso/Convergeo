@@ -52,6 +52,13 @@ FORWARD = [
     "20261107140000_reconcile_approve_kyc_vendor.sql",
     "20261107150000_prepaid_settlement_platform_fee_leg.sql",
     "20261107160000_cart_variant_atomic_paths.sql",
+    # Reviewed 2026-11 queued features: #766 feed/retention, #765 brand theme,
+    # #768 courier dispatch, #767 Ask daily quotas (all additive, no money paths).
+    "20261108100000_home_feed_sections.sql",
+    "20261108110000_retention_foundations.sql",
+    "20261108120000_vendor_brand_theme.sql",
+    "20261109100000_courier_dispatch_v1.sql",
+    "20261109120000_ask_vergeo_daily_quota.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -424,7 +431,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 148 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 153 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

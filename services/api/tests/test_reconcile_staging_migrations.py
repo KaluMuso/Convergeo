@@ -70,10 +70,13 @@ PENDING_REPAIR_VERSIONS = {
     "20261107140000",
     "20261107150000",
     "20261107160000",
-    # Home feed / ads and retention foundations (additive).
+    # 2026-11 queued features (additive): #766 home feed/ads + retention,
+    # #765 vendor brand theme, #768 courier dispatch, #767 Ask daily quotas.
     "20261108100000",
     "20261108110000",
+    "20261108120000",
     "20261109100000",
+    "20261109120000",
 }
 
 
