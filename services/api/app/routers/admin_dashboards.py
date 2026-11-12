@@ -203,14 +203,43 @@ def _count_table(service_client: ServiceRoleClient, table: str) -> int:
     return len(_rows(response))
 
 
-def _orders_by_status(service_client: ServiceRoleClient) -> OrdersByStatusOut:
-    response = service_client.client.table("orders").select("status").execute()
-    counts = OrdersByStatusOut()
-    for row in _rows(response):
-        status = str(row.get("status", ""))
-        if hasattr(counts, status):
-            setattr(counts, status, getattr(counts, status) + 1)
-    return counts
+_ORDER_STATUSES: tuple[str, ...] = (
+    "placed",
+    "confirmed",
+    "processing",
+    "ready",
+    "shipped",
+    "delivered",
+    "completed",
+    "cancelled",
+)
+
+
+def _sql_counts(script: str, *, what: str) -> list[int]:
+    """Run a one-row ``count(*) FILTER (...)`` aggregate and return its integer columns.
+
+    1B-02: dashboard counts are SQL aggregates, not PostgREST row selects — a PostgREST
+    select is capped at ``max_rows`` (1,000 on Supabase) and silently under-reports.
+    """
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise AppError(
+            code="dashboard_query_failed",
+            message=f"Failed to compute {what}",
+            http_status=500,
+            details={"error": result.error},
+        )
+    return [int(part) for part in result.rows[0].split("|")]
+
+
+def _orders_by_status(service_client: ServiceRoleClient | None = None) -> OrdersByStatusOut:
+    del service_client  # kept for call-site compatibility; counts come from SQL
+    filters = ",\n  ".join(
+        f"count(*) FILTER (WHERE status = '{status}')" for status in _ORDER_STATUSES
+    )
+    script = f"SELECT concat_ws('|',\n  {filters}\n) FROM public.orders;"
+    counts = _sql_counts(script, what="orders by status")
+    return OrdersByStatusOut(**dict(zip(_ORDER_STATUSES, counts, strict=True)))
 
 
 def _latest_reconciliation(service_client: ServiceRoleClient) -> ReconciliationTileOut:
@@ -264,33 +293,23 @@ def _ai_monthly_cap_usd(service_client: ServiceRoleClient) -> int:
     return DEFAULT_AI_MONTHLY_CAP_USD
 
 
-def _funnel_snapshot(service_client: ServiceRoleClient) -> FunnelSnapshotOut:
-    checkout_response = (
-        service_client.client.table("checkout_groups").select("status").execute()
-    )
-    checkout_started = 0
-    checkout_completed = 0
-    for row in _rows(checkout_response):
-        status = str(row.get("status", ""))
-        if status in {"pending", "completed", "abandoned", "expired"}:
-            checkout_started += 1
-        if status == "completed":
-            checkout_completed += 1
-
-    orders_response = service_client.client.table("orders").select("status").execute()
-    orders_placed = 0
-    orders_completed = 0
-    for row in _rows(orders_response):
-        status = str(row.get("status", ""))
-        if status != "cancelled":
-            orders_placed += 1
-        if status == "completed":
-            orders_completed += 1
-
+def _funnel_snapshot(service_client: ServiceRoleClient | None = None) -> FunnelSnapshotOut:
+    del service_client  # kept for call-site compatibility; counts come from SQL
+    script = """
+SELECT concat_ws('|',
+  (SELECT count(*) FILTER (
+     WHERE status IN ('pending', 'completed', 'abandoned', 'expired')
+   ) FROM public.checkout_groups),
+  (SELECT count(*) FILTER (WHERE status = 'completed') FROM public.checkout_groups),
+  (SELECT count(*) FILTER (WHERE status <> 'cancelled') FROM public.orders),
+  (SELECT count(*) FILTER (WHERE status = 'completed') FROM public.orders)
+);
+"""
+    started, completed, placed, orders_completed = _sql_counts(script, what="funnel snapshot")
     return FunnelSnapshotOut(
-        checkout_started=checkout_started,
-        checkout_completed=checkout_completed,
-        orders_placed=orders_placed,
+        checkout_started=started,
+        checkout_completed=completed,
+        orders_placed=placed,
         orders_completed=orders_completed,
     )
 

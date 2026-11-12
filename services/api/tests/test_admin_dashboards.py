@@ -161,9 +161,34 @@ def dashboard_client(dashboard_app: Any) -> Generator[TestClient, None, None]:
     clear_dashboard_cache()
 
 
+def _fake_count_sql(client: FakeSupabaseClient) -> Any:
+    """Stand-in for run_sql_script that evaluates the 1B-02 count aggregates on fakes."""
+    from app.routers.admin_dashboards import _ORDER_STATUSES
+    from app.services.db import SqlResult
+
+    def run(script: str) -> SqlResult:
+        orders = [str(r.get("status")) for r in client.tables["orders"].rows]
+        groups = [str(r.get("status")) for r in client.tables["checkout_groups"].rows]
+        if "public.checkout_groups" in script:
+            values = [
+                sum(g in {"pending", "completed", "abandoned", "expired"} for g in groups),
+                sum(g == "completed" for g in groups),
+                sum(o != "cancelled" for o in orders),
+                sum(o == "completed" for o in orders),
+            ]
+        elif "FROM public.orders;" in script:
+            values = [sum(o == status for o in orders) for status in _ORDER_STATUSES]
+        else:
+            return SqlResult(ok=False, rows=[], error=f"unexpected SQL: {script[:60]}")
+        return SqlResult(ok=True, rows=["|".join(str(v) for v in values)])
+
+    return run
+
+
 @pytest.fixture
 def fake_client(monkeypatch: pytest.MonkeyPatch) -> FakeSupabaseClient:
     client = FakeSupabaseClient()
+    monkeypatch.setattr("app.routers.admin_dashboards.run_sql_script", _fake_count_sql(client))
     service_wrapper = MagicMock()
     service_wrapper.client = client
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
