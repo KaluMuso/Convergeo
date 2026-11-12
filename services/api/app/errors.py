@@ -87,7 +87,7 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
 
 
 def _is_catalog_moderation_hold(exc: Exception) -> bool:
-    """DB guard ``guard_catalog_moderation_hold`` (20261113020000) refused a write.
+    """DB guard ``guard_catalog_moderation_hold`` (20261113091000) refused a write.
 
     Raised when any non-admin path (vendor API, organiser publish, n8n) tries to
     put an admin-held listing/service/event/vendor back on its public status.

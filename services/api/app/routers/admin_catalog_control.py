@@ -4,7 +4,7 @@ listings, services, events and vendors.
 Mounted on the shared ``/admin`` router (``require_admin_scope`` + audited route
 class: every mutation writes exactly one ``audit_log`` row). Status changes go
 through the guarded SQL functions ``moderate_catalog_entity`` /
-``release_catalog_moderation`` (20261113020000) — never a raw status UPDATE. An
+``release_catalog_moderation`` (20261113091000) — never a raw status UPDATE. An
 active hold pins the entity off its customer-visible status for every other
 writer, so a vendor cannot undo an admin block.
 

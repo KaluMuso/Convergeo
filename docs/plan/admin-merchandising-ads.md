@@ -42,7 +42,7 @@ events, vendors: create/edit, block, remove, restore).
 
 ## 4. Delivered on this branch (2026-11-13)
 
-- Migration `20261113020000_catalog_moderation_holds_and_ad_targets.sql` (additive, documented down): holds table, `moderate_catalog_entity` / `release_catalog_moderation`, hold guard triggers, `ad_placements.target_kind/target_id`. Verified on a scratch Postgres (`tests/test_catalog_moderation_db.py`, run with `CATALOG_MODERATION_ISOLATED_DB=1`).
+- Migration `20261113091000_catalog_moderation_holds_and_ad_targets.sql` (additive, documented down): holds table, `moderate_catalog_entity` / `release_catalog_moderation`, hold guard triggers, `ad_placements.target_kind/target_id`. Verified on a scratch Postgres (`tests/test_catalog_moderation_db.py`, run with `CATALOG_MODERATION_ISOLATED_DB=1`).
 - API: `/admin/catalog/{listings,services,events,vendors}` (list, moderate, restore, edit text), `/admin/ads/targets`, target validation, remove-with-reason, resolver target/advertiser visibility filter, merch fallback fix, cart/checkout/order-create vendor gate, `catalog.moderation_hold` 409 for vendor re-publish attempts.
 - Admin: Catalog control page + nav entry (products.manage / events.manage / vendors.manage), advertising edit/target/remove/Lusaka-time UX.
 - Customer: Sponsored label covered in all five locales (bem/nya EN passthrough, logged in `PHASE1_NATIVE_REVIEW.md`).
