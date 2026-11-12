@@ -7,7 +7,7 @@
     "loading": "Loading your cart…",
     "emptyTitle": "Your cart is empty",
     "emptyBody": "Browse products and add items to get started.",
-    "emptyTrustEscrow": "Online payment is held by Convergeo until delivery confirmation.",
+    "emptyTrustEscrow": "Pay in cash when your order arrives on eligible orders — nothing is charged online.",
     "emptyTrustDelivery": "Lusaka delivery zones are confirmed at checkout before you pay.",
     "emptyTrustPickup": "Nationwide pickup remains available when delivery is not.",
     "browseCta": "Continue shopping",
@@ -65,7 +65,7 @@
     "loadErrorBody": "Check your connection and try again. Your items are not lost.",
     "loadErrorRetry": "Retry",
     "multiSellerNote": "Items from different sellers may have different delivery or pickup options. Each seller is checked out with its own fulfilment choice.",
-    "escrowTeaser": "When you pay online, Convergeo holds your money until delivery — then releases it to the seller.",
+    "escrowTeaser": "Cash on delivery: pay the rider when your order arrives. You'll see if your order qualifies at checkout.",
     "stockUnavailableNotice": "An item is no longer available. Review your cart before continuing to checkout.",
     "summaryHeading": "Order summary",
     "sellerIndex": "Seller {index} of {total}",
@@ -137,7 +137,21 @@
       "continue": "Continue",
       "subtotal": "Subtotal",
       "deliveryFees": "Delivery fees",
-      "total": "Total"
+      "total": "Total",
+      "guide": {
+        "deliveryHelp": "A rider brings it to you in Lusaka. You'll see the fee before you place the order.",
+        "pickupHelp": "Collect it from the seller yourself. No delivery fee.",
+        "groupHint": "Each seller packs and sends their own items, so you choose delivery or pickup for each seller.",
+        "tipsTitle": "Help the rider find you",
+        "tip1": "Name a place people nearby know — a church, school, filling station or market.",
+        "tip2": "Add your area and street, and something that marks your gate, like its colour.",
+        "tip3": "Keep your phone on. The rider may call your checkout number to find you.",
+        "landmarkRequired": "Add a landmark and area so the rider can find you.",
+        "cutoffTitle": "When will it be sent?",
+        "cutoffBefore": "Order before 14:00 (Lusaka time) and in-stock items are usually sent out today, once the seller confirms.",
+        "cutoffAfter": "It's after 14:00 in Lusaka, so in-stock items will usually be sent out tomorrow, once the seller confirms.",
+        "cutoffMadeToOrder": "Made-to-order items are sent once they're ready — see each item for its lead time."
+      }
     },
     "countdown": {
       "label": "Items reserved for",
@@ -153,7 +167,7 @@
     "error": "Something went wrong. Try again.",
     "payment": {
       "title": "How would you like to pay?",
-      "subtitle": "Your payment is held securely until delivery.",
+      "subtitle": "Choose how you'll pay. You'll check everything on the next step before the order is placed.",
       "momo": "Mobile money",
       "card": "Debit or credit card",
       "cod": "Cash on delivery",
@@ -180,7 +194,16 @@
       "codHelp": "Pay cash to the courier on delivery for eligible orders.",
       "codUnavailableTitle": "Cash on delivery unavailable",
       "selected": "Selected",
-      "unavailable": "Unavailable"
+      "unavailable": "Unavailable",
+      "codGuide": {
+        "title": "How cash on delivery works",
+        "step1": "Nothing is charged now.",
+        "step2": "Pay {amount} in cash when your order arrives — to the rider, or at the shop if you collect.",
+        "step3": "Riders may not carry change, so have the exact amount ready if you can.",
+        "capNote": "Cash on delivery is available for orders up to {cap}.",
+        "overCap": "Your order total is {total}. To pay cash on delivery, remove some items or place separate orders of {cap} or less.",
+        "editCart": "Edit cart"
+      }
     },
     "review": {
       "title": "Review your order",
@@ -210,7 +233,17 @@
       "whatHappensNext": "What happens next",
       "nextMomo": "You’ll get a USSD prompt on your phone. Approve it to start payment — the order is not confirmed until we verify approval.",
       "nextCard": "You’ll continue on Lenco’s secure page. Do not close that page until payment finishes.",
-      "nextCod": "Your order is placed for cash on delivery. Pay the courier when the order arrives — online payment is not taken now."
+      "nextCod": "Your order is placed for cash on delivery. Pay the courier when the order arrives — online payment is not taken now.",
+      "codGuide": {
+        "title": "How you'll pay",
+        "step1": "Nothing is charged when you place this order.",
+        "step2": "The seller confirms your order and gets it ready.",
+        "step3": "You pay {amount} in cash when you receive it.",
+        "deliveryTo": "Delivery to: {landmark}",
+        "deliveryNoLandmark": "Lusaka delivery",
+        "pickupFromSeller": "You'll collect from the seller",
+        "placeOrderCod": "Place order — pay on delivery"
+      }
     },
     "pending": {
       "pageTitle": "Approve payment",
@@ -232,7 +265,22 @@
       "retry": "Retry payment",
       "retrying": "Sending a new prompt…",
       "retryError": "Could not retry payment. Check your connection and try again.",
-      "viewOrder": "View order"
+      "viewOrder": "View order",
+      "cod": {
+        "orderNumberLabel": "Order number",
+        "amountDueLabel": "Pay on delivery",
+        "nextTitle": "What happens next",
+        "step1Title": "The seller confirms your order",
+        "step1Body": "They check stock and accept it. You can follow every update on your order page.",
+        "step2Title": "Your order is sent out",
+        "step2Body": "In-stock items confirmed before 14:00 (Lusaka time) usually leave the same day; later ones go the next day.",
+        "step3Title": "You pay when it arrives",
+        "step3Body": "Pay {amount} in cash to the rider — or at the shop if you're collecting.",
+        "helpTitle": "Need to change or cancel?",
+        "helpBody": "Contact us with your order number before your order is sent out.",
+        "contactCta": "Contact support",
+        "continueShopping": "Continue shopping"
+      }
     },
     "ussd": {
       "title": "Check your phone",

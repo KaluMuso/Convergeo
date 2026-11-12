@@ -16,7 +16,7 @@
     "emptyBody": "Twaleni ifintu no longeni items pakuti mwampe.",
     "emptyTitle": "Cart yenu iyapwa",
     "emptyTrustDelivery": "Ama-zone ya delivery ya Lusaka yalasuminishwa pa checkout ilyo tamulalipila.",
-    "emptyTrustEscrow": "Payment ya online yikalindwa na Convergeo mpaka delivery yasuminishwa.",
+    "emptyTrustEscrow": "Lipileni mu cash ilyo order yafika ku ma-order ayasuminishwa — tapali ukulipila pa intaneti.",
     "emptyTrustPickup": "Pickup ya mu Zambia yonse ikalipo ilyo delivery tayaisa.",
     "freeDeliveryProgress": "{amount} ya {threshold} ku free Lusaka delivery",
     "freeDeliveryUnlocked": "Subtotal ya vendor iyi yaisuminisha free Lusaka delivery",
@@ -38,7 +38,7 @@
     "loadErrorBody": "Checkeni connection no wesheni limbi. Ama-items yenu tayapwa.",
     "loadErrorRetry": "Wesheni limbi",
     "multiSellerNote": "Ama-items ukufuma ku abashitisha bambi yangaba na delivery nangu pickup iyapusana. Ushitisha cila umo asala fulfilment yakwe pa checkout.",
-    "escrowTeaser": "Ilyo mulalipila online, Convergeo yikwata bwino indalama yenu mpaka delivery — elyo yasuminishwa ku ushitisha.",
+    "escrowTeaser": "Cash on delivery: lipileni rider ilyo order yafika. Mukamona nga order yenu yalinga pa checkout.",
     "stockUnavailableNotice": "Icintu tacili mu stock. Loleni cart yenu ilyo tamwapita ku checkout.",
     "summaryHeading": "Summary ya order",
     "sellerIndex": "Ushitisha {index} wa {total}",
@@ -154,7 +154,21 @@
       "continue": "Pitililani",
       "subtotal": "Subtotal yafye",
       "deliveryFees": "Amafees ya delivery",
-      "total": "Yonse"
+      "total": "Yonse",
+      "guide": {
+        "deliveryHelp": "Rider akamuletela ku Lusaka. Mukamona umutengo wa delivery ilyo tamulatuma order.",
+        "pickupHelp": "Mwebene mukasende ku seller. Tapali ubwafya bwa delivery fee.",
+        "groupHint": "Seller onse alongela no kutuma ifintu fyakwe, e ico musalapo delivery nangu pickup kuli seller onse.",
+        "tipsTitle": "Afweni rider ukumusanga",
+        "tip1": "Lumbuleni icifulo abantu bonse balishiba — church, isukulu, filling station nangu musika.",
+        "tip2": "Lembeni area ne street, ne cimo icingalanga geti lyenu, nga ni colour yalyo.",
+        "tip3": "Shalikeni foni yenu ili on. Rider kuti amutumina pa namba yenu pa kumusanga.",
+        "landmarkRequired": "Lembeni landmark ne area pa kuti rider amusange.",
+        "cutoffTitle": "Ni lilali fikatumwa?",
+        "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
+        "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
+        "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
+      }
     },
     "countdown": {
       "label": "Ifintu fyasungwa pa",
@@ -189,8 +203,17 @@
       "railRejected": "Mobile money network iyi teyasuminishwa",
       "railRequired": "Saleni mobile money network",
       "required": "Lemeni nambala ya payer",
-      "subtitle": "Payment yenu yikwata bwino mpaka kufika.",
-      "title": "Mufwaya ukulipila shani?"
+      "subtitle": "Saleni ifyo mukalipila. Mukamona fyonse pa step ikonkapo ilyo order tailatumwa.",
+      "title": "Mufwaya ukulipila shani?",
+      "codGuide": {
+        "title": "Ifyo cash on delivery ibomba",
+        "step1": "Tapali indalama ishimbwa nomba.",
+        "step2": "Lipileni {amount} mu cash ilyo order yafika — kuli rider, nangu ku shop nga mwaya mukusenda.",
+        "step3": "Rider kuti tali na change, e ico ipekanyeni indalama ilingene nga kuti mwacikwanisha.",
+        "capNote": "Cash on delivery ilipo ku ma-order ayafika {cap}.",
+        "overCap": "Order yenu yonse ni {total}. Pa kulipila cash on delivery, fumyamo ifintu fimo nangu tumeni ama-order ayalekanalekana aya {cap} nangu panono.",
+        "editCart": "Lungikeni cart"
+      }
     },
     "pending": {
       "cancelledBody": "Mwakana mobile money prompt. Mungawesha limbi nangu saleni payment method yambi pa checkout.",
@@ -212,7 +235,22 @@
       "ticketUnavailableBody": "Payment ya iyi ticket teti mweshe limbi pa iyi order. Loleni ifya order yenu.",
       "timeoutBody": "USSD prompt yafwile pantu yasuminishwa. Checkeni phone yenu ili na network, elyo wesheni — tutuma prompt yambi ku order imo.",
       "timeoutTitle": "Payment yafwile time",
-      "viewOrder": "Loleni order"
+      "viewOrder": "Loleni order",
+      "cod": {
+        "orderNumberLabel": "Namba ya order",
+        "amountDueLabel": "Lipileni pa delivery",
+        "nextTitle": "Ifyo fikakonka",
+        "step1Title": "Seller asuminisha order yenu",
+        "step1Body": "Balalolesha stock no kuisuminisha. Kuti mwakonkelela fyonse pa page ya order yenu.",
+        "step2Title": "Order yenu yatumwa",
+        "step2Body": "Ifintu fya mu stock ifyasuminishiwa pa ntanshi ya 14:00 (inshita ya Lusaka) filatumwa ubushiku bumo; ifya pa numa filatumwa mailo.",
+        "step3Title": "Mulalipila ilyo yafika",
+        "step3Body": "Lipileni {amount} mu cash kuli rider — nangu ku shop nga mwaya mukusenda.",
+        "helpTitle": "Mulefwaya ukwaluka nangu ukufumyapo?",
+        "helpBody": "Tumineni na namba ya order ilyo order tailatumwa.",
+        "contactCta": "Tumineni support",
+        "continueShopping": "Konkeni ukushita"
+      }
     },
     "reservationExpired": "Reservation yenu yafwile — ifintu fyabwelela mu cart yenu.",
     "review": {
@@ -243,7 +281,17 @@
       "subtitle": "Checkeni fyonse fyabwino pantu mulipila.",
       "subtotal": "Subtotal yafye",
       "title": "Loleni order yenu",
-      "total": "Yonse"
+      "total": "Yonse",
+      "codGuide": {
+        "title": "Ifyo mukalipila",
+        "step1": "Tapali indalama ishimbwa ilyo mwatuma iyi order.",
+        "step2": "Seller asuminisha order yenu no kuipekanya.",
+        "step3": "Mulalipila {amount} mu cash ilyo mwapokelela.",
+        "deliveryTo": "Delivery ku: {landmark}",
+        "deliveryNoLandmark": "Delivery mu Lusaka",
+        "pickupFromSeller": "Mukasenda ku seller",
+        "placeOrderCod": "Tumeni order — lipileni pa delivery"
+      }
     },
     "stepAnnouncement": "Step {current} ya {total}",
     "steps": {

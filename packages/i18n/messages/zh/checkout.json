@@ -6,7 +6,7 @@
     "title": "您的购物车",
     "emptyTitle": "您的购物车是空的",
     "emptyBody": "浏览商品并添加到购物车即可开始。",
-    "emptyTrustEscrow": "在线付款由 Convergeo 保管，直到配送确认。",
+    "emptyTrustEscrow": "符合条件的订单可在送达时以现金支付——不会在线扣款。",
     "emptyTrustDelivery": "卢萨卡配送区域会在您付款前于结账时确认。",
     "emptyTrustPickup": "无法配送时，仍可选择全国自提。",
     "browseCta": "继续购物",
@@ -62,7 +62,7 @@
     "loadErrorBody": "请检查网络后重试。您的商品不会丢失。",
     "loadErrorRetry": "重试",
     "multiSellerNote": "来自不同卖家的商品可能有不同的配送或自提条件。每位卖家在结账时单独选择履约方式。",
-    "escrowTeaser": "在线支付时，Convergeo 会托管您的款项直至送达，再释放给卖家。",
+    "escrowTeaser": "货到付款：订单送达时向骑手付款。结账时会显示您的订单是否符合条件。",
     "stockUnavailableNotice": "有商品已不可用。请在继续结账前检查购物车。",
     "summaryHeading": "订单摘要",
     "sellerIndex": "卖家 {index}/{total}",
@@ -134,7 +134,21 @@
       "continue": "继续",
       "subtotal": "小计",
       "deliveryFees": "配送费",
-      "total": "总计"
+      "total": "总计",
+      "guide": {
+        "deliveryHelp": "骑手会在卢萨卡送货上门。下单前您会看到运费。",
+        "pickupHelp": "您自行到卖家处取货，无需运费。",
+        "groupHint": "每位卖家分别打包和发货，因此请为每位卖家选择送货或自取。",
+        "tipsTitle": "帮助骑手找到您",
+        "tip1": "写一个附近人人都知道的地方，比如教堂、学校、加油站或市场。",
+        "tip2": "填写您的区域和街道，以及大门的标识，例如颜色。",
+        "tip3": "请保持手机开机，骑手可能会拨打您的下单号码来找您。",
+        "landmarkRequired": "请填写地标和区域，方便骑手找到您。",
+        "cutoffTitle": "什么时候发货？",
+        "cutoffBefore": "在14:00（卢萨卡时间）前下单，现货商品通常在卖家确认后当天发出。",
+        "cutoffAfter": "卢萨卡时间已过14:00，现货商品通常会在卖家确认后于明天发出。",
+        "cutoffMadeToOrder": "定制商品在制作完成后发出——请查看每件商品的制作周期。"
+      }
     },
     "countdown": {
       "label": "商品已预留",
@@ -150,7 +164,7 @@
     "error": "出了点问题。请重试。",
     "payment": {
       "title": "您想如何付款？",
-      "subtitle": "您的款项将安全托管，直到送达。",
+      "subtitle": "选择付款方式。下单前您可以在下一步核对所有信息。",
       "momo": "移动支付",
       "card": "借记卡或信用卡",
       "cod": "货到付款",
@@ -177,7 +191,16 @@
       "codHelp": "符合条件的订单可在送达时向快递员支付现金。",
       "codUnavailableTitle": "货到付款不可用",
       "selected": "已选择",
-      "unavailable": "不可用"
+      "unavailable": "不可用",
+      "codGuide": {
+        "title": "货到付款如何运作",
+        "step1": "现在不会扣款。",
+        "step2": "订单送达时以现金支付 {amount}——付给骑手，自取则在店内支付。",
+        "step3": "骑手可能没有零钱，请尽量准备好准确金额。",
+        "capNote": "货到付款适用于不超过 {cap} 的订单。",
+        "overCap": "您的订单总额为 {total}。如需货到付款，请移除部分商品，或分成每笔不超过 {cap} 的订单。",
+        "editCart": "编辑购物车"
+      }
     },
     "review": {
       "title": "确认您的订单",
@@ -207,7 +230,17 @@
       "whatHappensNext": "接下来会发生什么",
       "nextMomo": "您将收到手机 USSD 提示。批准后才开始付款 — 订单仅在我们验证批准后确认。",
       "nextCard": "您将在 Lenco 安全页面继续。付款完成前请勿关闭该页面。",
-      "nextCod": "订单将以货到付款方式下单。送达时向快递员付款 — 现在不会收取在线付款。"
+      "nextCod": "订单将以货到付款方式下单。送达时向快递员付款 — 现在不会收取在线付款。",
+      "codGuide": {
+        "title": "您的付款方式",
+        "step1": "提交此订单时不会扣款。",
+        "step2": "卖家确认您的订单并备货。",
+        "step3": "收货时以现金支付 {amount}。",
+        "deliveryTo": "送货至：{landmark}",
+        "deliveryNoLandmark": "卢萨卡送货",
+        "pickupFromSeller": "您将到卖家处自取",
+        "placeOrderCod": "提交订单——货到付款"
+      }
     },
     "pending": {
       "pageTitle": "批准付款",
@@ -228,7 +261,22 @@
       "retry": "重试付款",
       "retrying": "正在发送新提示…",
       "retryError": "无法重试付款。请检查您的网络连接后重试。",
-      "viewOrder": "查看订单"
+      "viewOrder": "查看订单",
+      "cod": {
+        "orderNumberLabel": "订单号",
+        "amountDueLabel": "货到应付",
+        "nextTitle": "接下来会发生什么",
+        "step1Title": "卖家确认您的订单",
+        "step1Body": "卖家核对库存并接单。您可以在订单页面查看每一步进展。",
+        "step2Title": "订单发出",
+        "step2Body": "14:00（卢萨卡时间）前确认的现货商品通常当天发出，之后确认的次日发出。",
+        "step3Title": "送达时付款",
+        "step3Body": "以现金向骑手支付 {amount}——自取则在店内支付。",
+        "helpTitle": "需要修改或取消？",
+        "helpBody": "请在订单发出前凭订单号联系我们。",
+        "contactCta": "联系客服",
+        "continueShopping": "继续购物"
+      }
     },
     "ussd": {
       "title": "请查看您的手机",
