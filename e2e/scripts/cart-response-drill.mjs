@@ -843,10 +843,15 @@ try {
       // Keep redirects inside this interception boundary; never auto-follow.
       routeStage = "other_response_fetch";
       noteNavigationRoute(request, "started");
+      // A document request can wait on a cold dev-server page compile; all
+      // other proxied requests keep the 15s bound.
       const response = await route.fetch({
         maxRedirects: 0,
         maxRetries: 0,
-        timeout: 15_000,
+        timeout:
+          typeof request.isNavigationRequest === "function" && request.isNavigationRequest()
+            ? 150_000
+            : 15_000,
       });
       noteNavigationRoute(request, "completed", response);
       routeStage = "other_redirect_guard";
