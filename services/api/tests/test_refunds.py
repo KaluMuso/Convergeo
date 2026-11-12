@@ -30,6 +30,15 @@ REFUND_ID = "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1a1"
 CUSTOMER_MOMO = "+260971234567"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent

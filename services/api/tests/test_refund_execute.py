@@ -33,6 +33,15 @@ CUSTOMER_MOMO = "+260971234567"
 CALLER_KEY = "dispute-11111111-2222-3333-4444-555555555555-refund"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class IdempotentPostTransaction:
     """Thread-safe stand-in for the ledger engine's ON CONFLICT(idempotency_key) dedup.
 
