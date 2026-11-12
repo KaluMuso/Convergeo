@@ -725,9 +725,17 @@ try {
   failureStage = "browser_console_setup";
   page.on("console", observeBrowserDiagnostic);
   debugPage = page;
+  const t0 = Date.now();
   page.on("console", (m) => {
-    if (m.type() === "error" || m.type() === "warning")
-      debugConsole.push(`[${failureStage}] ${m.type()}: ${m.text().slice(0, 600)}`);
+    if (m.type() === "error" || m.type() === "warning" || /Fast Refresh|HMR|reload/i.test(m.text()))
+      debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] ${m.type()}: ${m.text().slice(0, 300)}`);
+  });
+  page.on("framenavigated", (f) => {
+    if (f === page.mainFrame()) debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] NAV ${f.url()}`);
+  });
+  page.on("request", (r) => {
+    if (r.isNavigationRequest() || /hot-update|on-demand|__nextjs/.test(r.url()))
+      debugConsole.push(`+${Date.now() - t0}ms [${failureStage}] REQ ${r.method()} ${r.url().slice(0, 160)}`);
   });
   page.on("pageerror", (e) => debugConsole.push(`[${failureStage}] pageerror: ${String(e?.stack ?? e).slice(0, 1200)}`));
   page.setDefaultTimeout(15_000);
@@ -1171,6 +1179,9 @@ try {
       report.checkpoints.synthetic_fixture_cleanup === true;
     console.log(`cart-drill-browser-failure-summary: ${JSON.stringify(report.failureDiagnostic)}`);
   }
+  try {
+    writeFileSync(resolve(root, "e2e/results/cart-response-drill/debug-timeline.json"), JSON.stringify({ stage: failureStage, qualified: report.qualified, timeline: debugConsole }, null, 2) + "\n");
+  } catch {}
   if (browser) await browser.close();
   clearTimeout(deadline);
   writeFileSync(output, JSON.stringify(report, null, 2) + "\n");

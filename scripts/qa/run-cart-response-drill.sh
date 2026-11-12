@@ -537,7 +537,10 @@ PY
   if [ -n "$drill_package_root" ]; then
     mkdir -p "$drill_artifact_output" || drill_cleanup_ok=false
     chmod 700 "$drill_artifact_output" || drill_cleanup_ok=false
-    for drill_evidence in outcome.json guard.json diagnostics.json python-path-diagnostics.json debug-close.json debug-close.png; do
+    if [ -f "$drill_output/private-customer.log" ]; then
+      grep -aE "ompil|eload|Ready|GET /|POST /|rror|arn" "$drill_output/private-customer.log" | tail -400 > "$drill_output/debug-customer.log" || true
+    fi
+    for drill_evidence in outcome.json guard.json diagnostics.json python-path-diagnostics.json debug-close.json debug-close.png debug-timeline.json debug-customer.log; do
       if [ "$drill_output" = "$drill_artifact_output" ]; then break; fi
       if [ -f "$drill_output/$drill_evidence" ] && [ ! -L "$drill_output/$drill_evidence" ]; then
         cp -- "$drill_output/$drill_evidence" "$drill_artifact_output/$drill_evidence" || drill_cleanup_ok=false
