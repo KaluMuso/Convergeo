@@ -6,10 +6,11 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
+import { ListSkeleton } from "../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
+import { KycChecklistCard } from "../_components/kyc-checklist";
 import { resolveHonestStatusVariant, StatusScreen } from "../_components/status-screen";
 import { createKycClient } from "../_lib/kyc-client";
-import { Spinner } from "../_lib/ui";
 
 import type { KycApplication } from "../_lib/types";
 
@@ -68,9 +69,9 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
 
   if (sessionLoading || loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <Spinner label={t("onboarding.loading")} />
-      </div>
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+        <ListSkeleton label={t("onboarding.loading")} rows={5} />
+      </main>
     );
   }
 
@@ -110,6 +111,7 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
       dashboardHref={`/${locale}`}
       listingsHref={`/${locale}/listings/new`}
       resubmitHref={`/${locale}/onboarding`}
+      checklist={<KycChecklistCard application={application} locale={locale} showCta={false} />}
       labels={{
         heading: t("onboarding.status.heading"),
         pending: {
