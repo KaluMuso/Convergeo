@@ -1380,7 +1380,10 @@
     "loadFailed": "Could not load records.",
     "permissionDenied": "You do not have access to this overview.",
     "unknownStock": "Unknown",
-    "retry": "Try again"
+    "retry": "Try again",
+    "packages": "{count, plural, =0 {No packages} one {# package} other {# packages}}",
+    "packageLine": "{tier} · {name} · {price} · {days, plural, one {# day} other {# days}} · {status}",
+    "packagePriceQuote": "on request"
   },
   "homeFeed": {
     "title": "Home feed",

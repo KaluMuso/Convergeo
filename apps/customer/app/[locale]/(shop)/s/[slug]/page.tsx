@@ -16,6 +16,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { BookService } from "./_components/book-service";
+import { ServicePackages } from "./_components/service-packages";
+import { normalisePackages } from "./_components/service-packages-model";
 import { ServiceQuoteCta } from "./_components/service-quote-cta";
 import { ServiceReviewsSection } from "./_components/service-reviews-section";
 
@@ -35,6 +37,7 @@ type ServiceDetail = {
   booking_price_ngwee: number | null;
   portfolio_images: string[];
   includes: string[];
+  packages?: unknown;
   provider: {
     id: string;
     slug: string;
@@ -202,6 +205,38 @@ export default async function ServiceDetailPage({ params }: PageProps) {
 
   const reviewData = await fetchServiceReviews(service.id);
   const tier = service.provider.response_time_tier;
+  const quoteLabels = {
+    cta: t("detail.requestQuote"),
+    dialogTitle: t("detail.requestQuoteDialogTitle"),
+    dialogHint: t("detail.requestQuoteDialogHint", {
+      vendor: service.provider.display_name,
+    }),
+    detailsLabel: t("detail.requestQuoteDetailsLabel"),
+    detailsPlaceholder: t(
+      "detail.requestQuoteDetailsPlaceholder",
+    ),
+    submit: t("detail.requestQuoteSubmit"),
+    submitting: t("detail.requestQuoteSubmitting"),
+    cancel: t("detail.requestQuoteCancel"),
+    done: t("detail.requestQuoteDone"),
+    successTitle: t("detail.requestQuoteSuccessTitle"),
+    successBody: t("detail.requestQuoteSuccessBody"),
+    successContinued: t("detail.requestQuoteSuccessContinued"),
+    signInPrompt: t("detail.requestQuoteSignInPrompt"),
+    signInCta: t("detail.requestQuoteSignInCta"),
+    errors: {
+      empty: t("detail.requestQuoteErrors.empty"),
+      tooLong: t("detail.requestQuoteErrors.tooLong"),
+      prohibited: t("detail.requestQuoteErrors.prohibited"),
+      rateLimited: t("detail.requestQuoteErrors.rateLimited"),
+      ownListing: t("detail.requestQuoteErrors.ownListing"),
+      generic: t("detail.requestQuoteErrors.generic"),
+      signInRequired: t(
+        "detail.requestQuoteErrors.signInRequired",
+      ),
+    },
+  };
+  const packages = normalisePackages(service.packages);
   const isQuoteBased = service.from_price_ngwee === null;
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
   const heroImage = service.portfolio_images[0];
@@ -283,6 +318,21 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               </p>
             </section>
           ) : null}
+
+          <ServicePackages
+            locale={locale}
+            serviceId={service.id}
+            vendorName={service.provider.display_name}
+            packages={packages}
+            t={(key, values) => t(`packages.${key}`, values)}
+            quoteLabels={{
+              ...quoteLabels,
+              errors: {
+                ...quoteLabels.errors,
+                packageUnavailable: t("packages.errors.unavailable"),
+              },
+            }}
+          />
 
           {service.includes.length > 0 ? (
             <section
@@ -402,37 +452,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
                 serviceId={service.id}
                 vendorName={service.provider.display_name}
                 hint={t("detail.requestQuoteHintDirect")}
-                labels={{
-                  cta: t("detail.requestQuote"),
-                  dialogTitle: t("detail.requestQuoteDialogTitle"),
-                  dialogHint: t("detail.requestQuoteDialogHint", {
-                    vendor: service.provider.display_name,
-                  }),
-                  detailsLabel: t("detail.requestQuoteDetailsLabel"),
-                  detailsPlaceholder: t(
-                    "detail.requestQuoteDetailsPlaceholder",
-                  ),
-                  submit: t("detail.requestQuoteSubmit"),
-                  submitting: t("detail.requestQuoteSubmitting"),
-                  cancel: t("detail.requestQuoteCancel"),
-                  done: t("detail.requestQuoteDone"),
-                  successTitle: t("detail.requestQuoteSuccessTitle"),
-                  successBody: t("detail.requestQuoteSuccessBody"),
-                  successContinued: t("detail.requestQuoteSuccessContinued"),
-                  signInPrompt: t("detail.requestQuoteSignInPrompt"),
-                  signInCta: t("detail.requestQuoteSignInCta"),
-                  errors: {
-                    empty: t("detail.requestQuoteErrors.empty"),
-                    tooLong: t("detail.requestQuoteErrors.tooLong"),
-                    prohibited: t("detail.requestQuoteErrors.prohibited"),
-                    rateLimited: t("detail.requestQuoteErrors.rateLimited"),
-                    ownListing: t("detail.requestQuoteErrors.ownListing"),
-                    generic: t("detail.requestQuoteErrors.generic"),
-                    signInRequired: t(
-                      "detail.requestQuoteErrors.signInRequired",
-                    ),
-                  },
-                }}
+                labels={quoteLabels}
               />
             ) : (
               <>

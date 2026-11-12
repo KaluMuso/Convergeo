@@ -19,6 +19,7 @@ export type UseRequestQuoteResult = {
   submitRequest: (payload: {
     listingId?: string;
     serviceId?: string;
+    packageId?: string;
     details: string;
   }) => Promise<boolean>;
   reset: () => void;
@@ -35,6 +36,9 @@ function mapError(error: unknown): string {
     }
     if (code === "rfq.own_listing") {
       return "ownListing";
+    }
+    if (code === "rfq.package_unavailable" || code === "rfq.package_requires_service") {
+      return "packageUnavailable";
     }
     if (code === "unauthorized" || code === "auth.required") {
       return "signInRequired";
@@ -64,7 +68,12 @@ export function useRequestQuote(): UseRequestQuoteResult {
   }, []);
 
   const submitRequest = useCallback(
-    async (payload: { listingId?: string; serviceId?: string; details: string }) => {
+    async (payload: {
+      listingId?: string;
+      serviceId?: string;
+      packageId?: string;
+      details: string;
+    }) => {
       const trimmed = payload.details.trim();
       if (!trimmed) {
         setErrorKey("empty");
@@ -88,6 +97,7 @@ export function useRequestQuote(): UseRequestQuoteResult {
         const response = await rfqClient.createRfq({
           listing_id: payload.listingId,
           service_id: payload.serviceId,
+          ...(payload.packageId ? { package_id: payload.packageId } : {}),
           requested_details: trimmed,
         });
         setReusedExistingThread(response.reused_existing_thread);
