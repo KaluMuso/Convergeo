@@ -281,7 +281,7 @@ export function Comparison({
           const distanceLabel =
             distanceM !== undefined
               ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
-              : "—";
+              : null;
           const isSelected = listing.id === selectedListingId;
           const ratingLabel =
             listing.vendor.ratingAvg !== null && listing.vendor.ratingCount > 0
@@ -333,7 +333,9 @@ export function Comparison({
                     condition={listing.condition}
                     label={conditionLabel(listing.condition, labels)}
                   />
-                  <span className="text-xs text-text-2">{distanceLabel}</span>
+                  {distanceLabel ? (
+                    <span className="text-xs text-text-2">{distanceLabel}</span>
+                  ) : null}
                   <FulfillmentLogisticsPills
                     deliveryAvailable={listing.deliveryAvailable}
                     pickupAvailable={listing.pickupAvailable}
@@ -354,7 +356,7 @@ export function Comparison({
               <th className="px-4 py-2 font-medium">{labels.vendor}</th>
               <th className="px-4 py-2 font-medium">{labels.price}</th>
               <th className="px-4 py-2 font-medium">{labels.condition}</th>
-              <th className="px-4 py-2 font-medium">{labels.distance}</th>
+              <th className="px-4 py-2 font-medium">{labels.sortDistance}</th>
               <th className="px-4 py-2 font-medium">{labels.fulfillment}</th>
               <th className="sr-only">{labels.selectListing}</th>
             </tr>

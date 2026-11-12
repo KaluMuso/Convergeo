@@ -126,7 +126,8 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     sortDistance: t("comparison.sortDistance"),
     price: t("comparison.price"),
     condition: t("comparison.condition"),
-    distance: t("comparison.distance"),
+    // Keep the {distance} placeholder; the client fills it per listing.
+    distance: t("comparison.distance", { distance: "{distance}" }),
     vendor: t("comparison.vendor"),
     fulfillment: t("comparison.fulfillment"),
     delivery: t("comparison.delivery"),

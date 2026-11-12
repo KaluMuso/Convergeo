@@ -165,4 +165,22 @@ describe("Comparison mobile cards", () => {
     );
     expect(screen.queryByTestId("pdp-comparison")).not.toBeInTheDocument();
   });
+
+  it("renders the distance line only when a distance is known, never the raw template", () => {
+    render(
+      <Comparison
+        listings={listings}
+        selectedListingId="a"
+        labels={labels}
+        logisticsPillLabels={logisticsPillLabels}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    // Listing "a" has coordinates: distance is interpolated.
+    expect(screen.getByTestId("comparison-card-a")).toHaveTextContent(/\d.* away/);
+    // Listing "b" has no coordinates: no distance line at all.
+    expect(screen.getByTestId("comparison-card-b")).not.toHaveTextContent("away");
+    expect(document.body).not.toHaveTextContent("{distance}");
+  });
 });
