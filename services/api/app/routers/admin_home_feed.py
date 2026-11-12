@@ -18,6 +18,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services.catalog_visibility import TARGET_KINDS, load_targets, search_targets
 from app.services.home_feed.models import (
     PlacementCreate,
     PlacementOut,
@@ -36,6 +37,7 @@ from app.services.home_feed.resolver import (
     PLACEMENT_COLUMNS,
     SECTION_COLUMNS,
     build_feed_page,
+    filter_placements_with_visible_targets,
     parse_ts,
     placement_effective_state,
     section_is_live,
@@ -348,7 +350,11 @@ def _stats_by_placement(client: Any, ids: list[str]) -> dict[str, PlacementStats
 
 
 def _placement_out(
-    row: dict[str, Any], *, now: datetime, stats: PlacementStats | None = None
+    row: dict[str, Any],
+    *,
+    now: datetime,
+    stats: PlacementStats | None = None,
+    target_visible: bool = True,
 ) -> PlacementOut:
     return PlacementOut(
         id=str(row["id"]),
@@ -371,6 +377,9 @@ def _placement_out(
         status=row["status"],
         enabled=bool(row.get("enabled", True)),
         effective_state=placement_effective_state(row, now=now),  # type: ignore[arg-type]
+        target_kind=row.get("target_kind"),
+        target_id=str(row["target_id"]) if row.get("target_id") else None,
+        target_visible=target_visible,
         stats=stats or PlacementStats(),
         updated_at=parse_ts(row.get("updated_at")),
     )
@@ -387,8 +396,50 @@ async def list_ad_placements(
         .execute()
     )
     stats = _stats_by_placement(service_client.client, [str(row["id"]) for row in rows])
+    servable = {
+        str(row["id"])
+        for row in filter_placements_with_visible_targets(service_client.client, rows)
+    }
     now = datetime.now(UTC)
-    return [_placement_out(row, now=now, stats=stats.get(str(row["id"]))) for row in rows]
+    return [
+        _placement_out(
+            row,
+            now=now,
+            stats=stats.get(str(row["id"])),
+            target_visible=str(row["id"]) in servable,
+        )
+        for row in rows
+    ]
+
+
+def _require_visible_target(client: Any, kind: str, target_id: str) -> None:
+    rows = load_targets(client, kind, [target_id])
+    if not rows:
+        raise AppError(
+            code="validation_error",
+            message="Ad target not found",
+            http_status=422,
+            details={"target_kind": kind, "target_id": target_id},
+        )
+    if not rows[0]["visible"]:
+        raise AppError(
+            code="ad_target_not_visible",
+            message="Ad target is hidden, blocked or its vendor is suspended",
+            http_status=422,
+            details={"target_kind": kind, "target_id": target_id, "status": rows[0]["status"]},
+        )
+
+
+@feed_admin_router.get("/ads/targets")
+async def search_ad_targets(
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+    kind: Annotated[str, Query(max_length=16)],
+    q: Annotated[str, Query(max_length=80)] = "",
+) -> list[dict[str, Any]]:
+    """Admin picker: products, listings, services, events or vendors an ad can promote."""
+    if kind not in TARGET_KINDS:
+        raise _validation("Unsupported target kind")
+    return search_targets(service_client.client, kind, q, limit=20)
 
 
 @feed_admin_router.post("/ads/placements", response_model=PlacementOut, status_code=201)
@@ -402,7 +453,9 @@ async def create_ad_placement(
         cta_href = validate_cta_href(body.cta_href, allowed_external_hosts())
     except ValueError as exc:
         raise _validation(str(exc)) from exc
-    row = body.model_dump(mode="json")
+    if body.target_kind and body.target_id:
+        _require_visible_target(service_client.client, body.target_kind, body.target_id)
+    row = body.model_dump(mode="json", exclude_none=True)
     row.update(
         {"cta_href": cta_href, "status": "draft", "created_by": user.id, "updated_by": user.id}
     )
@@ -433,6 +486,12 @@ async def update_ad_placement(
     if before.get("status") == "ended":
         raise _validation("Ended placements are read-only")
     fields = body.model_dump(mode="json", exclude_none=True)
+    clear_target = bool(fields.pop("clear_target", False))
+    if clear_target:
+        fields["target_kind"] = None
+        fields["target_id"] = None
+    elif body.target_kind and body.target_id:
+        _require_visible_target(service_client.client, body.target_kind, body.target_id)
     if "cta_href" in fields:
         try:
             fields["cta_href"] = validate_cta_href(fields["cta_href"], allowed_external_hosts())
@@ -473,6 +532,9 @@ async def transition_ad_placement(
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> PlacementOut:
     before = _load_placement(service_client.client, placement_id)
+    if body.to_status == "ended" and len((body.reason or "").strip()) < 3:
+        # Ending is "remove" in the admin UI: irreversible, so a reason is required.
+        raise _validation("A reason is required to remove (end) a placement")
     try:
         result = service_client.client.rpc(
             "transition_ad_placement",

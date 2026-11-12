@@ -1,3 +1,4 @@
+# ruff: noqa: E501  (inline SQL statements read better unwrapped)
 """Real-Postgres checks for catalog moderation holds (no table doubles).
 
 Runs only against a disposable migrated LOCAL database with
@@ -131,8 +132,14 @@ def test_held_listing_cannot_be_reactivated_by_any_other_writer(db: PgConn) -> N
 
 def test_block_escalates_hide_and_keeps_original_restore_target(db: PgConn) -> None:
     listing = _listing(db, _active_vendor(db))
-    _one(db, f"SELECT id FROM public.moderate_catalog_entity('listing', '{listing}', 'hide', '{ACTOR}', 'first')")
-    _one(db, f"SELECT id FROM public.moderate_catalog_entity('listing', '{listing}', 'block', '{ACTOR}', 'second')")
+    _one(
+        db,
+        f"SELECT id FROM public.moderate_catalog_entity('listing', '{listing}', 'hide', '{ACTOR}', 'first')",
+    )
+    _one(
+        db,
+        f"SELECT id FROM public.moderate_catalog_entity('listing', '{listing}', 'block', '{ACTOR}', 'second')",
+    )
     assert _status(db, "vendor_listings", listing) == "removed"
     assert (
         _one(
@@ -147,8 +154,7 @@ def test_block_escalates_hide_and_keeps_original_restore_target(db: PgConn) -> N
 def test_reason_is_required(db: PgConn) -> None:
     listing = _listing(db, _active_vendor(db))
     result = _svc(
-        db,
-        f"SELECT public.moderate_catalog_entity('listing', '{listing}', 'hide', '{ACTOR}', ' ')"
+        db, f"SELECT public.moderate_catalog_entity('listing', '{listing}', 'hide', '{ACTOR}', ' ')"
     )
     assert not result.ok
     assert _status(db, "vendor_listings", listing) == "active"
@@ -156,7 +162,10 @@ def test_reason_is_required(db: PgConn) -> None:
 
 def test_vendor_block_and_reinstate_requires_approved_kyc(db: PgConn) -> None:
     vendor = _active_vendor(db)
-    _one(db, f"SELECT id FROM public.moderate_catalog_entity('vendor', '{vendor}', 'block', '{ACTOR}', 'Fraud')")
+    _one(
+        db,
+        f"SELECT id FROM public.moderate_catalog_entity('vendor', '{vendor}', 'block', '{ACTOR}', 'Fraud')",
+    )
     assert _status(db, "vendors", vendor) == "suspended"
     blocked = _svc(db, f"UPDATE public.vendors SET status = 'active' WHERE id = '{vendor}'")
     assert not blocked.ok
@@ -166,8 +175,7 @@ def test_vendor_block_and_reinstate_requires_approved_kyc(db: PgConn) -> None:
         f"VALUES ('{vendor}', 1, 'rejected', now() + interval '1 second') RETURNING id",
     )
     refused = _svc(
-        db,
-        f"SELECT public.release_catalog_moderation('vendor', '{vendor}', '{ACTOR}', 'appeal')"
+        db, f"SELECT public.release_catalog_moderation('vendor', '{vendor}', '{ACTOR}', 'appeal')"
     )
     assert not refused.ok
     assert _status(db, "vendors", vendor) == "suspended"
@@ -176,7 +184,10 @@ def test_vendor_block_and_reinstate_requires_approved_kyc(db: PgConn) -> None:
 def test_vendor_reinstate_after_flag_suspension_without_hold(db: PgConn) -> None:
     vendor = _active_vendor(db)
     _one(db, f"UPDATE public.vendors SET status = 'suspended' WHERE id = '{vendor}' RETURNING id")
-    _one(db, f"SELECT id FROM public.release_catalog_moderation('vendor', '{vendor}', '{ACTOR}', 'appeal ok')")
+    _one(
+        db,
+        f"SELECT id FROM public.release_catalog_moderation('vendor', '{vendor}', '{ACTOR}', 'appeal ok')",
+    )
     assert _status(db, "vendors", vendor) == "active"
 
 
@@ -184,7 +195,7 @@ def test_restore_without_hold_is_refused(db: PgConn) -> None:
     listing = _listing(db, _active_vendor(db))
     result = _svc(
         db,
-        f"SELECT public.release_catalog_moderation('listing', '{listing}', '{ACTOR}', 'nothing')"
+        f"SELECT public.release_catalog_moderation('listing', '{listing}', '{ACTOR}', 'nothing')",
     )
     assert not result.ok
 
@@ -215,6 +226,6 @@ def test_ad_target_pair_constraint(db: PgConn) -> None:
         "INSERT INTO public.ad_placements (advertiser_kind, advertiser_name, placement_type, "
         "image_public_id, headline, cta_href, starts_at, ends_at, target_kind) VALUES "
         "('external', 'Acme', 'feed_slot', 'img/a', 'Hello', '/', now(), now() + interval '1 day', "
-        "'listing')"
+        "'listing')",
     )
     assert not result.ok

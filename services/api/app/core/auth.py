@@ -209,6 +209,7 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("POST", "/admin/home-feed/sections/reorder"): "ads.manage",
     ("GET", "/admin/home-feed/preview"): "ads.manage",
     ("GET", "/admin/ads/placements"): "ads.manage",
+    ("GET", "/admin/ads/targets"): "ads.manage",
     ("POST", "/admin/ads/placements"): "ads.manage",
     ("PATCH", "/admin/ads/placements/{placement_id}"): "ads.manage",
     ("POST", "/admin/ads/placements/{placement_id}/transition"): "ads.manage",

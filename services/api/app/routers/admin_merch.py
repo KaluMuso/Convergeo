@@ -272,27 +272,17 @@ def resolve_slots_for_display(
 
         if non_default_in_window:
             chosen = non_default_in_window[0]
-        elif defaults:
-            active_defaults = [row for row in defaults if bool(row.get("active", True))]
-            pool = active_defaults or defaults
-            pool.sort(key=lambda row: int(row.get("position", 0)))
-            chosen = pool[0]
+        elif active_defaults := [row for row in defaults if bool(row.get("active", True))]:
+            # Only an ACTIVE default may stand in; a paused default is hidden too.
+            active_defaults.sort(key=lambda row: int(row.get("position", 0)))
+            chosen = active_defaults[0]
             is_fallback = not bool(non_default_in_window) and (
                 not in_window or all(_is_default_slot(row) for row in in_window)
             )
         elif in_window:
             chosen = in_window[0]
-        else:
-            evergreen = [
-                row
-                for row in candidates
-                if row.get("schedule_from") is None and row.get("schedule_to") is None
-            ]
-            pool = evergreen or candidates
-            pool.sort(key=lambda row: int(row.get("position", 0)))
-            if pool:
-                chosen = pool[0]
-                is_fallback = True
+        # Otherwise nothing renders for this key: expired, not-yet-started and
+        # paused slots never leak through as a "fallback".
 
         if chosen is None:
             continue

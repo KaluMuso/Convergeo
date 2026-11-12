@@ -59,16 +59,11 @@ def _active_vendor_ids(service: Any, vendor_ids: set[str]) -> set[str]:
     if not vendor_ids:
         return set()
     response = (
-        service.client.table("vendors")
-        .select("id, status")
-        .in_("id", sorted(vendor_ids))
-        .execute()
+        service.client.table("vendors").select("id, status").in_("id", sorted(vendor_ids)).execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     return {
-        str(row["id"])
-        for row in rows
-        if isinstance(row, dict) and row.get("status") == "active"
+        str(row["id"]) for row in rows if isinstance(row, dict) and row.get("status") == "active"
     }
 
 
