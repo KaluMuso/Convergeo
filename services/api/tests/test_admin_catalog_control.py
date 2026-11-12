@@ -241,3 +241,18 @@ def test_display_edit_changes_text_only_with_audit(
     audit = catalog.table("audit_log").rows[-1]
     assert audit["action"] == "catalog.listing.edit"
     assert audit["before"] == {"title_override": "Phone"}
+
+
+def test_vendor_write_refused_by_moderation_hold_maps_to_409() -> None:
+    from app.errors import unhandled_exception_handler
+    from starlette.requests import Request
+
+    request = Request({"type": "http", "method": "PATCH", "path": "/vendor/x", "headers": []})
+    held = APIError(
+        {"code": "42501", "message": "catalog_moderation_hold: listing x is held by an admin"}
+    )
+    response = unhandled_exception_handler(request, held)
+    assert response.status_code == 409
+    assert b"catalog.moderation_hold" in response.body
+    other = unhandled_exception_handler(request, APIError({"code": "42501", "message": "nope"}))
+    assert other.status_code == 500

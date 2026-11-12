@@ -86,8 +86,28 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
     )
 
 
+def _is_catalog_moderation_hold(exc: Exception) -> bool:
+    """DB guard ``guard_catalog_moderation_hold`` (20261113020000) refused a write.
+
+    Raised when any non-admin path (vendor API, organiser publish, n8n) tries to
+    put an admin-held listing/service/event/vendor back on its public status.
+    """
+    message = str(getattr(exc, "message", "") or "")
+    return str(getattr(exc, "code", "")) == "42501" and "catalog_moderation_hold" in message
+
+
 def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = get_request_id(request)
+    if _is_catalog_moderation_hold(exc):
+        return JSONResponse(
+            status_code=409,
+            content=build_error_envelope(
+                code="catalog.moderation_hold",
+                message="This item was taken down by Vergeo5 moderation. Contact support.",
+                request_id=request_id,
+            ),
+            headers={"X-Request-ID": request_id},
+        )
     # FastAPI can call this after the active except block has ended. Log only
     # code locations and type; exception messages may contain payment data.
     logger.error(
