@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from datetime import date
+from typing import Annotated, Any
 
 from anyio import to_thread
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
@@ -13,8 +14,9 @@ from app.services.analytics.retention import (
     sweep_analytics_retention,
     sweep_v2_retention,
 )
+from app.services.analytics.rollup import run_rollup_tick
 from app.services.analytics.writer import get_writer
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 router = APIRouter(prefix="/internal/analytics", tags=["internal-analytics"])
 
@@ -120,3 +122,35 @@ async def analytics_storage() -> dict[str, Any]:
             message="Analytics storage report failed",
             http_status=503,
         ) from exc
+
+
+@router.post(
+    "/rollup-tick",
+    dependencies=[Depends(require_internal_analytics_token)],
+)
+async def analytics_rollup_tick(
+    day: Annotated[date | None, Query(description="Recompute one UTC day (YYYY-MM-DD).")] = None,
+) -> dict[str, Any]:
+    """Daily rollups (1B-01): no-op unless ``analytics_v2_rollups`` is ON.
+
+    Without ``day``: recomputes every day of the last 7 with no successful run, plus
+    yesterday. Idempotent (delete + insert per day); runs in a worker thread with a
+    60 s statement timeout per day — never on a customer request path.
+    """
+    if not await analytics_flags.flag_enabled_async(analytics_flags.ROLLUPS_FLAG):
+        return {"skipped": "flag_off"}
+    try:
+        result = await to_thread.run_sync(lambda: run_rollup_tick(day=day))
+    except ValueError as exc:
+        raise AppError(
+            code="invalid_rollup_day",
+            message=str(exc),
+            http_status=422,
+        ) from exc
+    except RuntimeError as exc:
+        raise AppError(
+            code="analytics_rollup_unavailable",
+            message="Analytics rollup tick failed",
+            http_status=503,
+        ) from exc
+    return result.as_dict()

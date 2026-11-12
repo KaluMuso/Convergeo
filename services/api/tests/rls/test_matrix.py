@@ -63,6 +63,19 @@ def client_invisible_noop_update() -> PersonaExpectations:
     }
 
 
+def admin_read_noop_update() -> PersonaExpectations:
+    """Admin-read / service-write table without generic update-probe columns (1B rollups).
+
+    authenticated: SELECT grant + admin-only policy (non-admins see zero rows → permit),
+    no write grant (insert/delete → deny). anon: no grant. The update probe is a no-op.
+    """
+    authenticated = {"select": "permit", "insert": "deny", "update": "permit", "delete": "deny"}
+    anon = {"select": "deny", "insert": "deny", "update": "permit", "delete": "deny"}
+    return {
+        persona: dict(anon if persona is Persona.ANON else authenticated) for persona in Persona
+    }
+
+
 def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
     """SELECT + all write grants to authenticated, but only an admin SELECT policy.
 
@@ -186,6 +199,14 @@ EXPECTATIONS: TableExpectations = {
     # so the `UPDATE … WHERE false` probe errors on the column, not on privilege — the
     # same harness limitation as intake_field_provenance, hence the noop-update shape.
     "analytics_event_log": client_invisible_noop_update(),
+    # Convergeo Intelligence 1B-01: daily rollups — admin read, service_role write. Same
+    # grant shape as analytics_events (authenticated SELECT grant + admin-only policy →
+    # non-admins see zero rows; no client write grant; anon nothing). Like
+    # analytics_event_log, the tables have none of the generic update-probe columns, so
+    # the `UPDATE … WHERE false` probe cannot hit a privilege check (noop → permit).
+    "analytics_daily_rollup": admin_read_noop_update(),
+    "analytics_search_daily": admin_read_noop_update(),
+    "analytics_rollup_runs": admin_read_noop_update(),
     "ask_cache": client_invisible(),
     "ask_spend_monthly": {
         Persona.ANON: deny_all(),
