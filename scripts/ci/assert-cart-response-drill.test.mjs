@@ -985,6 +985,7 @@ async function offlineJourney(fault = null, scenario = {}) {
     calls = [];
   const privateError = new Error("PRIVATE_COOKIE_TOKEN_BODY_URL");
   let routeHandler,
+    webSocketHandler,
     consoleHandler,
     clicks = 0,
     injected = false;
@@ -1102,8 +1103,9 @@ async function offlineJourney(fault = null, scenario = {}) {
       trip();
       return page;
     },
-    async routeWebSocket() {
+    async routeWebSocket(_pattern, handler) {
       trip();
+      webSocketHandler = handler;
     },
     async route(_pattern, callback) {
       trip();
@@ -1245,8 +1247,31 @@ async function offlineJourney(fault = null, scenario = {}) {
   );
   assert.deepEqual(plain(result.report), written);
   assert.ok(!JSON.stringify(written).includes("PRIVATE"));
-  return { ...result, report: plain(result.report), logs, calls, clicks };
+  return { ...result, report: plain(result.report), logs, calls, clicks, webSocketHandler };
 }
+
+test("dev HMR socket stays open but is never connected, so dev tooling cannot reload the page", async () => {
+  const { webSocketHandler } = await offlineJourney();
+  const fakeSocket = (url) => {
+    const seen = [];
+    return {
+      seen,
+      url: () => url,
+      connectToServer() {
+        seen.push("connect");
+      },
+      close() {
+        seen.push("close");
+      },
+    };
+  };
+  const hmr = fakeSocket("ws://127.0.0.1:3000/_next/webpack-hmr");
+  webSocketHandler(hmr);
+  assert.deepEqual(hmr.seen, []);
+  const external = fakeSocket("wss://example.invalid/socket");
+  webSocketHandler(external);
+  assert.deepEqual(external.seen, ["close"]);
+});
 
 test("actual entire offline journey still qualifies every original checkpoint", async () => {
   const result = await offlineJourney();

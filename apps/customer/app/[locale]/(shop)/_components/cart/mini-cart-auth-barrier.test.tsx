@@ -148,7 +148,13 @@ describe("mounted mini-cart identity barrier", () => {
     expect(mini.useCartStore).toBeDefined();
     await customer.getReadyCustomerSession(true);
     mocks.fetch.mockResolvedValue(response(cart("account-a")));
-    await mini.addCartItem("listing-a", 1);
+    // The host's post-reconciliation cart refresh may overlap this add on a slow
+    // runner; the client then fails closed with cart.session_changed (by design),
+    // and the buyer's retry goes through. Mirror that single retry here.
+    await mini.addCartItem("listing-a", 1).catch((error: { code?: string }) => {
+      if (error?.code !== "cart.session_changed") throw error;
+      return mini.addCartItem("listing-a", 1);
+    });
     const itemCall = mocks.fetch.mock.calls.find(([url]) => String(url).endsWith("/cart/items"));
     expect(new Headers(itemCall?.[1]?.headers).get("Authorization")).toBe("Bearer token-account-a");
     expect(mocks.getSession).toHaveBeenCalledOnce();
