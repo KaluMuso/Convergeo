@@ -273,7 +273,6 @@ _EXPLICIT_BAND_PATTERNS = tuple(
 # One pattern over every area name so the longest phrase wins wherever it appears.
 _AREA_ZONE_BY_KEYWORD = {word: zone for zone, words in _AREA_KEYWORDS.items() for word in words}
 _AREA_PATTERN = _keyword_pattern(tuple(_AREA_ZONE_BY_KEYWORD))
-_LUSAKA_PATTERN = _keyword_pattern(("lusaka",))
 
 
 def _normalise_landmark(landmark: str) -> str:
@@ -290,8 +289,6 @@ def _match_landmark_zone(landmark: str) -> str | None:
     found = [re.sub(r"\s+", " ", m.group(0)) for m in _AREA_PATTERN.finditer(text)]
     if found:
         return _AREA_ZONE_BY_KEYWORD[max(found, key=len)]
-    if _LUSAKA_PATTERN.search(text):
-        return "lusaka_a"
     return None
 
 

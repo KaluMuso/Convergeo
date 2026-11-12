@@ -167,3 +167,12 @@ def test_other_town_detection() -> None:
     assert landmark_names_other_town("Kitwe, Parklands")
     assert not landmark_names_other_town("Plot 12, behind the blue gate")
     assert not landmark_names_other_town(None)
+
+
+def test_city_name_only_landmark_gets_the_fallback_zone(post_fulfilment: Any) -> None:
+    response, _ = post_fulfilment(
+        {FALLBACK_DELIVERY_ZONE_KEY: "lusaka_b"}, {"landmark": "Plot 5, Lusaka"}
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["resolved_zone_key"] == "lusaka_b"

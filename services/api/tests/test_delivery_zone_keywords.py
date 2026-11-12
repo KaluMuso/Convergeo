@@ -87,6 +87,11 @@ def test_other_towns_still_refused() -> None:
     assert _zone("Kitwe, Chilenje") is None
 
 
+@pytest.mark.parametrize("landmark", ["Plot 5, Lusaka", "Lusaka"])
+def test_city_name_alone_is_unmatched(landmark: str) -> None:
+    assert _zone(landmark) is None
+
+
 def test_unknown_landmark_has_no_keyword_zone() -> None:
     assert _zone("Plot 12, behind the blue gate") is None
 
