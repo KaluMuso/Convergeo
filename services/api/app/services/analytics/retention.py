@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+from app.services.analytics.reporting_day import reporting_today
 from app.services.analytics.search_log import PII_RETENTION_DAYS, trim_search_pii
 from app.services.orders.audit import run_sql_script, sql_literal
 
@@ -113,6 +114,9 @@ class V2RetentionResult:
     listing_dedup_purged: int
     search_terms_scrubbed: int
     complete: bool  # False when a step hit V2_MAX_BATCHES (the next tick continues)
+    #: analytics_search_daily rows removed by the OD-10 rule (below-k > 30 days,
+    #: met-k > 13 whole months) — ``public.analytics_search_daily_purge``.
+    search_daily_purged: int = 0
 
 
 def _batched(statement: str, *, batch_size: int, max_batches: int) -> tuple[int, bool]:
@@ -140,14 +144,42 @@ COMMIT;
     return total, False
 
 
+def purge_search_daily(
+    now: datetime | None = None,
+    *,
+    batch_size: int = V2_BATCH_SIZE,
+    max_batches: int = V2_MAX_BATCHES,
+) -> tuple[int, bool]:
+    """OD-10 retention for ``analytics_search_daily`` (Lusaka reporting days)."""
+    today = reporting_today(now)
+    total = 0
+    for _ in range(max_batches):
+        result = run_sql_script(
+            "BEGIN;\n"
+            "SET LOCAL statement_timeout = '15s';\n"
+            "SET LOCAL lock_timeout = '2s';\n"
+            "SELECT public.analytics_search_daily_purge("
+            f"{sql_literal(today.isoformat())}::date, {int(batch_size)})::text;\n"
+            "COMMIT;\n"
+        )
+        if not result.ok or not result.rows:
+            raise RuntimeError(f"analytics search_daily purge failed: {result.error}")
+        changed = int(result.rows[-1])
+        total += changed
+        if changed < batch_size:
+            return total, True
+    return total, False
+
+
 def sweep_v2_retention(
     now: datetime | None = None,
     *,
     batch_size: int = V2_BATCH_SIZE,
     max_batches: int = V2_MAX_BATCHES,
 ) -> V2RetentionResult:
-    """Delete expired v2 raw events, purge stale listing-view dedup keys and scrub old
-    raw search terms. Caller is responsible for the ``analytics_v2_rollups`` gate."""
+    """Delete expired v2 raw events, purge stale listing-view dedup keys, scrub old raw
+    search terms and apply the OD-10 ``analytics_search_daily`` retention. Caller is
+    responsible for the ``analytics_v2_rollups`` gate."""
     current = now or datetime.now(UTC)
     log_cutoff = current - timedelta(days=EVENT_LOG_RETENTION_DAYS)
     term_cutoff = current - timedelta(days=SEARCH_TERM_SCRUB_DAYS)
@@ -190,11 +222,15 @@ def sweep_v2_retention(
         batch_size=batch_size,
         max_batches=max_batches,
     )
+    search_daily, ok_daily = purge_search_daily(
+        current, batch_size=batch_size, max_batches=max_batches
+    )
     return V2RetentionResult(
         event_log_deleted=deleted,
         listing_dedup_purged=purged,
         search_terms_scrubbed=scrubbed,
-        complete=ok_log and ok_dedup and ok_terms,
+        complete=ok_log and ok_dedup and ok_terms and ok_daily,
+        search_daily_purged=search_daily,
     )
 
 

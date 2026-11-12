@@ -95,7 +95,8 @@ async def analytics_v2_retention_tick() -> dict[str, Any]:
 
     Deletes raw v2 events past 30 days, purges stale listing-view dedup keys (2 days)
     and collapses raw search terms past 30 days to their normalized form. Batched and
-    idempotent; ``complete=false`` means the next tick continues.
+    idempotent; ``complete=false`` means the next tick continues. Also applies the
+    OD-10 ``analytics_search_daily`` retention (below-k terms 30 days, met-k 13 months).
     """
     if not await analytics_flags.flag_enabled_async(analytics_flags.ROLLUPS_FLAG):
         return {"skipped": "flag_off"}
@@ -104,6 +105,7 @@ async def analytics_v2_retention_tick() -> dict[str, Any]:
         "event_log_deleted": result.event_log_deleted,
         "listing_dedup_purged": result.listing_dedup_purged,
         "search_terms_scrubbed": result.search_terms_scrubbed,
+        "search_daily_purged": result.search_daily_purged,
         "complete": result.complete,
     }
 
