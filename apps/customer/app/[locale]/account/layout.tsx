@@ -113,7 +113,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           navAriaLabel: tNav("account.ariaLabel"),
           searchPlaceholder: tNav("shop.searchPlaceholder"),
           cart: tNav("shop.cart"),
-          cartWithCount: tNav("shop.cartWithCount"),
+          cartWithCount: String(tNav.raw("shop.cartWithCount")),
           accountMenuAria: tNav("account.menuAria"),
           accountOverview: t("nav.overview"),
           accountOrders: t("nav.orders"),
