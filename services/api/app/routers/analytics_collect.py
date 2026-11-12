@@ -20,16 +20,23 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
+import time
 from datetime import timedelta
-from typing import Any
+from typing import Any, Final
 
 from app.core.auth import get_current_user
+from app.core.inproc_ratelimit import InProcessRateLimiter
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.errors import AppError
+from app.services.analytics.client_key import trusted_client_key
+from app.services.analytics.envelope import RawBatch, normalize_batch
 from app.services.analytics.events import record_event
+from app.services.analytics.flags import collect_v2_enabled_async
+from app.services.analytics.writer import get_writer
 from app.settings import get_settings
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +124,103 @@ def _enforce_rate_limit(request: Request) -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# analytics_v2 collect path (Convergeo Intelligence 1A-03, plan §R-C/§R-D).
+# Active only when feature flag ``analytics_v2_collect`` is ON; otherwise the v1 path
+# below runs exactly as before. The v2 path does NO DB I/O on the request: in-process
+# rate limit -> pure validation -> non-blocking hand-off to the bounded writer.
+# ---------------------------------------------------------------------------
+
+# Per WORKER (the API runs 2 workers, so effective ceilings are 2x these figures).
+V2_GLOBAL_BATCHES_PER_SEC: Final = 40.0
+V2_GLOBAL_BURST: Final = 80
+# Generous per key: many real visitors share one key (Vercel egress / CF edge IPs).
+V2_KEY_BATCHES_PER_MIN: Final = 240
+V2_KEY_BURST: Final = 60
+
+_v2_limiter = InProcessRateLimiter(
+    global_rate_per_sec=V2_GLOBAL_BATCHES_PER_SEC,
+    global_burst=V2_GLOBAL_BURST,
+    key_rate_per_sec=V2_KEY_BATCHES_PER_MIN / 60.0,
+    key_burst=V2_KEY_BURST,
+)
+
+_INGEST_COUNTER_KEYS: Final = (
+    "batches",
+    "accepted",
+    "skipped",
+    "rejected_invalid",
+    "rejected_unknown",
+    "rejected_malformed",
+    "dropped_rate_limited",
+    "dropped_overload",
+)
+_ingest_counters: dict[str, int] = dict.fromkeys(_INGEST_COUNTER_KEYS, 0)
+_ingest_lock = threading.Lock()
+
+
+def _count(**deltas: int) -> None:
+    with _ingest_lock:
+        for key, delta in deltas.items():
+            _ingest_counters[key] = _ingest_counters.get(key, 0) + delta
+
+
+def ingest_counters() -> dict[str, int]:
+    """Per-worker v2 ingest counters (served by /internal/analytics/ingest-stats)."""
+    with _ingest_lock:
+        return dict(_ingest_counters)
+
+
+def v2_limiter_keys() -> int:
+    return _v2_limiter.tracked_keys()
+
+
+def reset_v2_state_for_tests(limiter: InProcessRateLimiter | None = None) -> None:
+    global _v2_limiter
+    with _ingest_lock:
+        for key in _INGEST_COUNTER_KEYS:
+            _ingest_counters[key] = 0
+    if limiter is not None:
+        _v2_limiter = limiter
+
+
+async def _collect_v2(request: Request) -> CollectResponse:
+    if not _v2_limiter.allow(trusted_client_key(request)):
+        _count(dropped_rate_limited=1)
+        raise_rate_limited(
+            retry_after=1,
+            message_key="analytics.rate_limited",
+            message="Too many analytics beacons",
+        )
+    try:
+        # FastAPI already read (and cached) the body to build the v1 model; re-parse
+        # it leniently as the v1/v2 superset so the v2 fields are not discarded.
+        batch = RawBatch.model_validate(await request.json())
+    except (ValidationError, ValueError):
+        _count(batches=1, rejected_malformed=1)
+        return CollectResponse(accepted=0, skipped=0, rejected=0)
+
+    # Beacons cannot carry a bearer token (sendBeacon has no headers), so v2 never
+    # resolves a user here; the sign-in link is the separate identify call (1A-08).
+    normalized = normalize_batch(batch, now_ms=int(time.time() * 1000))
+    accepted = len(normalized.rows)
+    if accepted and not get_writer().submit_rows(normalized.rows):
+        _count(dropped_overload=accepted)
+        accepted = 0
+    _count(
+        batches=1,
+        accepted=accepted,
+        skipped=normalized.skipped,
+        rejected_invalid=normalized.rejected_invalid,
+        rejected_unknown=normalized.rejected_unknown,
+    )
+    return CollectResponse(
+        accepted=accepted,
+        skipped=normalized.skipped,
+        rejected=normalized.rejected,
+    )
+
+
 @router.post("/collect", response_model=CollectResponse)
 async def collect(request: Request, body: CollectRequest) -> CollectResponse:
     if len(body.events) > MAX_EVENTS_PER_BATCH:
@@ -127,6 +231,10 @@ async def collect(request: Request, body: CollectRequest) -> CollectResponse:
             details={"max": MAX_EVENTS_PER_BATCH},
         )
 
+    if await collect_v2_enabled_async():
+        return await _collect_v2(request)
+
+    # ----- v1 path (flag OFF): unchanged -----
     _enforce_rate_limit(request)
 
     session_id = _valid_uuid_or_none(body.session_id)

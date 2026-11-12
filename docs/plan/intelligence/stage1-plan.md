@@ -266,7 +266,7 @@ There are no destructive changes to existing tables in 1A. The `search_query_log
   - The v2 batch is the **same object plus** `v:2`, `anon`, `sid`, `app`, `consent`, and per event `id`, `ev`, `seq`, `page`.
   - A v1 server (collect off) ignores the extra keys (`extra="ignore"` already) and behaves exactly as today. `session_id` keeps its v1 meaning (the legacy persistent id) so `analytics_events.session_id` semantics are unchanged.
 - **v1 clients against a v2 server:** the server accepts v1-shaped batches (no `v`). It synthesises `event_id` server-side (no client dedup available), sets `anon_id = session_id` and `session_id = NULL`, and writes `product_view` through the writer.
-- **Readers:** `analytics_event_stream` (v1 view), `query_funnel` and the admin dashboards stay correct, because the writer **projects `product_view` into `analytics_events`** in the same transaction (`entity_type='product'`, `entity_id = product_id`). The projection is removed only in 1B, after the rollups replace the v1 readers (1B-06, [P]).
+- **Readers:** `analytics_event_stream` (v1 view), `query_funnel` and the admin dashboards stay correct, because the writer **projects `product_view` into `analytics_events`** in the same transaction, with exactly the v1 row shape (`session_id` = legacy visitor id, no entity columns, same props) and only for newly inserted (deduplicated) rows. The projection is removed only in 1B, after the rollups replace the v1 readers (1B-06, [P]).
 - **API response shape** `{accepted, skipped, rejected}` is unchanged.
 
 ### F.5 Future-proof event structures for deferred profiles and segments — [E] (structure only)
