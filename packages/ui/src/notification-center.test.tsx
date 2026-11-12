@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildNotificationCopy,
   createNotificationsApi,
   formatBadgeCount,
   formatNotificationTime,
@@ -191,6 +192,55 @@ describe("NotificationBell", () => {
     expect(api.markSeen).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("notification-badge")).toBeNull();
     expect(await screen.findByText("Order REF1 shipped")).toBeInTheDocument();
+  });
+});
+
+describe("shared poller", () => {
+  it("two mounted bells (phone + desktop rows) share one poll and raise one toast", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = fakeApi([1, 2], [item(8)]);
+    const bell = (
+      <NotificationBell
+        api={api}
+        locale="en"
+        labels={labels}
+        renderMessage={render$}
+        pageHref="/en/n"
+        intervalMs={1000}
+      />
+    );
+    render(
+      <ToastProvider>
+        {bell}
+        {bell}
+      </ToastProvider>,
+    );
+    await waitFor(() => expect(screen.getAllByTestId("notification-bell")).toHaveLength(2));
+    expect(api.unseenCount).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(await screen.findAllByText("Order REF8 shipped")).toHaveLength(1);
+    expect(api.unseenCount).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("buildNotificationCopy", () => {
+  it("renders audience keys with params and falls back for unknown types", () => {
+    const messages: Record<string, string> = {
+      "inApp.customer.order_shipped": "Order {ref} is on its way.",
+      "inApp.fallback": "You have a new update.",
+    };
+    const t = Object.assign(
+      (key: string, values?: Record<string, string | number>) =>
+        (messages[key] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(values?.[k] ?? "")),
+      { has: (key: string) => key in messages },
+    );
+    const { renderMessage } = buildNotificationCopy(t);
+    expect(renderMessage(item(3))).toBe("Order REF3 is on its way.");
+    expect(
+      renderMessage(item(3, { i18n_key: "notifications.inApp.customer.brand_new_event" })),
+    ).toBe("You have a new update.");
   });
 });
 

@@ -790,15 +790,20 @@
 }
 
 @media (min-width: 40rem) {
+  /* Portalled to <body>; anchored under the bell via inline custom props. */
   .v-notif__panel {
-    position: absolute;
     left: auto;
-    right: 0;
+    right: var(--notif-right, var(--sp-4));
     bottom: auto;
-    top: calc(100% + var(--sp-2));
+    top: var(--notif-top, 4rem);
     width: 24rem;
+    max-height: min(70dvh, 32rem);
     border-radius: var(--r);
   }
+}
+
+.v-notif__panel:focus {
+  outline: none;
 }
 
 .v-notif__list[data-variant="page"] {
@@ -955,6 +960,25 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
+}
+
+.v-notif__push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.v-notif__push-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
 }
 
 .v-notif__more:disabled {

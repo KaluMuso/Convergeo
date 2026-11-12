@@ -27,8 +27,10 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { emitToast } from "./toast";
 
@@ -81,6 +83,47 @@ export type NotificationMessageRenderer = (item: NotificationItem) => string;
 
 export const POLL_INTERVAL_MS = 60_000;
 export const BADGE_CAP = 9;
+
+/** Structural subset of next-intl's `useTranslations("notifications")`. */
+export type NotificationTranslator = {
+  (key: string, values?: Record<string, string | number>): string;
+  has(key: string): boolean;
+};
+
+/**
+ * Labels + message renderer from the `notifications` namespace. Rows carry
+ * `notifications.inApp.<audience>.<type>`; an unknown key (a newer server
+ * event than this bundle) renders the generic fallback, never the raw key.
+ */
+export function buildNotificationCopy(t: NotificationTranslator): {
+  labels: NotificationLabels;
+  renderMessage: NotificationMessageRenderer;
+} {
+  const labels: NotificationLabels = {
+    bell: t("center.bell"),
+    bellUnread: (count) => t("center.bellUnread", { count }),
+    title: t("center.title"),
+    markAllRead: t("center.markAllRead"),
+    seeAll: t("center.seeAll"),
+    empty: t("center.empty"),
+    loading: t("center.loading"),
+    loadError: t("center.loadError"),
+    retry: t("center.retry"),
+    loadMore: t("center.loadMore"),
+    unreadDot: t("center.unreadDot"),
+    view: t("center.view"),
+    close: t("center.close"),
+  };
+  const renderMessage: NotificationMessageRenderer = (item) => {
+    const key = item.i18n_key.replace(/^notifications\./, "");
+    const values: Record<string, string | number> = { ref: "", ...item.params };
+    if (/^inApp\.(customer|vendor|admin)\.[a-z0-9_]+$/.test(key) && t.has(key)) {
+      return t(key, values);
+    }
+    return t("inApp.fallback");
+  };
+  return { labels, renderMessage };
+}
 
 /** "" for nothing to show, the number up to 9, then "9+". */
 export function formatBadgeCount(count: number): string {
@@ -192,92 +235,130 @@ export function syncAppBadge(count: number): void {
   }
 }
 
+type CountPoller = {
+  count: number | null;
+  subscribers: Set<(count: number | null) => void>;
+  onIncrease?: (next: number, previous: number) => void;
+  inflight: boolean;
+  refresh: () => Promise<void>;
+  setCount: (n: number) => void;
+  stop?: () => void;
+};
+
 /**
- * Poll the unseen count while visible. Calls `onIncrease(next, previous)` when
- * it rises. Returns `null` until the first answer (and while signed out).
+ * One poller per `NotificationsApi` object, shared by every mounted bell (the
+ * customer header renders a phone row and a desktop row), so there is one
+ * interval, one request per tick and one toast per increase.
+ */
+const pollers = new WeakMap<NotificationsApi, CountPoller>();
+
+function getPoller(api: NotificationsApi): CountPoller {
+  const existing = pollers.get(api);
+  if (existing) return existing;
+  const poller: CountPoller = {
+    count: null,
+    subscribers: new Set(),
+    inflight: false,
+    setCount(n) {
+      poller.count = n;
+      syncAppBadge(n);
+      for (const notify of poller.subscribers) notify(n);
+    },
+    async refresh() {
+      if (poller.inflight) return;
+      poller.inflight = true;
+      try {
+        const next = await api.unseenCount();
+        const previous = poller.count;
+        poller.count = next;
+        if (next !== null) syncAppBadge(next);
+        for (const notify of poller.subscribers) notify(next);
+        if (next !== null && previous !== null && shouldToastOnCountChange(previous, next)) {
+          poller.onIncrease?.(next, previous);
+        }
+      } catch {
+        /* transient (3G) — keep the last known count, retry next tick */
+      } finally {
+        poller.inflight = false;
+      }
+    },
+  };
+  pollers.set(api, poller);
+  return poller;
+}
+
+function startPolling(poller: CountPoller, intervalMs: number): () => void {
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const stop = () => {
+    if (timer !== undefined) clearInterval(timer);
+    timer = undefined;
+  };
+  const start = () => {
+    stop();
+    timer = setInterval(() => {
+      if (document.visibilityState === "visible") void poller.refresh();
+    }, intervalMs);
+  };
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+      void poller.refresh();
+      start();
+    } else {
+      stop();
+    }
+  };
+  const onFocus = () => void poller.refresh();
+  if (document.visibilityState === "visible") {
+    void poller.refresh();
+    start();
+  }
+  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("focus", onFocus);
+  return () => {
+    stop();
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("focus", onFocus);
+  };
+}
+
+/**
+ * Poll the unseen count only while the tab is visible (and immediately on
+ * focus / visibility regain). `onIncrease` fires once per rise across all
+ * subscribers. Returns `null` until the first answer and while signed out.
  */
 export function useUnseenCount(
-  fetchCount: () => Promise<number | null>,
+  api: NotificationsApi,
   options: {
     intervalMs?: number;
     onIncrease?: (next: number, previous: number) => void;
   } = {},
 ): { count: number | null; setCount: (n: number) => void; refresh: () => Promise<void> } {
-  const { intervalMs = POLL_INTERVAL_MS } = options;
-  const [count, setCountState] = useState<number | null>(null);
-  const lastRef = useRef<number | null>(null);
-  const onIncreaseRef = useRef(options.onIncrease);
-  onIncreaseRef.current = options.onIncrease;
-  const fetchRef = useRef(fetchCount);
-  fetchRef.current = fetchCount;
-  const inflight = useRef(false);
+  const { intervalMs = POLL_INTERVAL_MS, onIncrease } = options;
+  const poller = getPoller(api);
+  const [count, setCountState] = useState<number | null>(poller.count);
 
-  const setCount = useCallback((n: number) => {
-    lastRef.current = n;
-    setCountState(n);
-    syncAppBadge(n);
-  }, []);
-
-  const refresh = useCallback(async () => {
-    if (inflight.current) return;
-    inflight.current = true;
-    try {
-      const next = await fetchRef.current();
-      const previous = lastRef.current;
-      if (next === null) {
-        lastRef.current = null;
-        setCountState(null);
-        return;
-      }
-      lastRef.current = next;
-      setCountState(next);
-      syncAppBadge(next);
-      if (shouldToastOnCountChange(previous, next) && previous !== null) {
-        onIncreaseRef.current?.(next, previous);
-      }
-    } catch {
-      /* transient (3G) — keep the last known count, retry next tick */
-    } finally {
-      inflight.current = false;
-    }
-  }, []);
+  useEffect(() => {
+    poller.onIncrease = onIncrease;
+  }, [poller, onIncrease]);
 
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const stop = () => {
-      if (timer !== undefined) clearInterval(timer);
-      timer = undefined;
-    };
-    const start = () => {
-      stop();
-      timer = setInterval(() => {
-        if (document.visibilityState === "visible") void refresh();
-      }, intervalMs);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void refresh();
-        start();
-      } else {
-        stop();
+    poller.subscribers.add(setCountState);
+    if (poller.subscribers.size === 1) {
+      poller.stop = startPolling(poller, intervalMs);
+    } else {
+      setCountState(poller.count);
+    }
+    return () => {
+      poller.subscribers.delete(setCountState);
+      if (poller.subscribers.size === 0) {
+        poller.stop?.();
+        poller.stop = undefined;
       }
     };
-    const onFocus = () => void refresh();
-    if (document.visibilityState === "visible") {
-      void refresh();
-      start();
-    }
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("focus", onFocus);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("focus", onFocus);
-    };
-  }, [intervalMs, refresh]);
+  }, [poller, intervalMs]);
 
-  return { count, setCount, refresh };
+  return { count, setCount: poller.setCount, refresh: poller.refresh };
 }
 
 export function IconBell(props: { className?: string }) {
@@ -341,7 +422,9 @@ export function NotificationBell({
   const [listKey, setListKey] = useState(0);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
 
   const onIncrease = useCallback(() => {
     void api
@@ -359,7 +442,7 @@ export function NotificationBell({
     setListKey((k) => k + 1);
   }, [api, labels.view, locale, pageHref, renderMessage]);
 
-  const { count, setCount } = useUnseenCount(() => api.unseenCount(), {
+  const { count, setCount } = useUnseenCount(api, {
     intervalMs,
     onIncrease,
   });
@@ -367,7 +450,9 @@ export function NotificationBell({
   useEffect(() => {
     if (!open) return undefined;
     const onPointer = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -377,6 +462,7 @@ export function NotificationBell({
     };
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
+    panelRef.current?.focus();
     return () => {
       document.removeEventListener("pointerdown", onPointer);
       document.removeEventListener("keydown", onKey);
@@ -390,6 +476,13 @@ export function NotificationBell({
 
   const toggle = () => {
     const next = !open;
+    if (next && buttonRef.current) {
+      // The panel is portalled to <body> (the sticky glass header's
+      // backdrop-filter would otherwise trap position:fixed), so anchor it to
+      // the bell's on-screen position for the ≥40rem dropdown layout.
+      const rect = buttonRef.current.getBoundingClientRect();
+      setAnchor({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) });
+    }
     setOpen(next);
     if (next && count > 0) {
       // Opening the bell clears the badge (seen ≠ read: rows stay bold).
@@ -424,30 +517,46 @@ export function NotificationBell({
           </span>
         ) : null}
       </button>
-      {open ? (
-        <div
-          id={panelId}
-          role="dialog"
-          aria-label={labels.title}
-          className="v-notif__panel"
-          data-testid="notification-panel"
-        >
-          <Suspense fallback={<p className="v-notif__status">{labels.loading}</p>}>
-            <LazyNotificationList
-              key={listKey}
-              api={api}
-              locale={locale}
-              labels={labels}
-              renderMessage={renderMessage}
-              variant="dropdown"
-              pageHref={pageHref}
-              onNavigate={go}
-              LinkComponent={LinkComponent}
-              onClose={() => setOpen(false)}
-            />
-          </Suspense>
-        </div>
-      ) : null}
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              id={panelId}
+              role="dialog"
+              aria-label={labels.title}
+              tabIndex={-1}
+              className="v-notif__panel"
+              data-testid="notification-panel"
+              style={
+                anchor
+                  ? ({
+                      "--notif-top": `${anchor.top}px`,
+                      "--notif-right": `${anchor.right}px`,
+                    } as CSSProperties)
+                  : undefined
+              }
+            >
+              <Suspense fallback={<p className="v-notif__status">{labels.loading}</p>}>
+                <LazyNotificationList
+                  key={listKey}
+                  api={api}
+                  locale={locale}
+                  labels={labels}
+                  renderMessage={renderMessage}
+                  variant="dropdown"
+                  pageHref={pageHref}
+                  onNavigate={go}
+                  LinkComponent={LinkComponent}
+                  onClose={() => {
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                />
+              </Suspense>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

@@ -32,6 +32,8 @@ import {
   type RuntimeCaching,
 } from "serwist";
 
+import { parsePushPayload, safeNotificationUrl } from "./lib/push-payload";
+
 /** Default-locale offline shell (precached; served when a navigation fails). */
 const OFFLINE_FALLBACK_URL = "/en/offline";
 
@@ -87,6 +89,16 @@ export function isWalletPage(pathname: string): boolean {
 /** Wallet API responses — folded from the M10 `sw-wallet.ts` fragment. */
 export function isWalletApi(url: URL): boolean {
   return isApiRequest(url) && url.pathname.startsWith(WALLET_API_PATH_PREFIX);
+}
+
+/** Notification center + Web Push endpoints on our API origin. */
+export function isNotificationsApi(url: URL): boolean {
+  return (
+    isApiRequest(url) &&
+    (url.pathname.startsWith("/me/notifications") ||
+      url.pathname.startsWith("/me/push-subscriptions") ||
+      url.pathname === "/me/web-push")
+  );
 }
 
 // ── Runtime-cache rules (named so the test can assert them by name) ─────────
@@ -160,6 +172,14 @@ export const cacheRules: NamedRule[] = [
     }),
   },
   {
+    // 5a. Notification center API — per-user and live (badge counts, read
+    //     state): NetworkOnly so one signed-in user's feed is never served
+    //     from the shared runtime cache to another user of the same phone.
+    name: "notifications-network-only",
+    matcher: ({ url }) => isNotificationsApi(url),
+    handler: new NetworkOnly(),
+  },
+  {
     // 5. Our API GETs — network-first (fresh data, offline fall-back to cache).
     name: "api",
     matcher: ({ url, request }) =>
@@ -199,14 +219,40 @@ export const SW_UPDATE_POLICY = { skipWaiting: false, clientsClaim: false } as c
 
 // Minimal shape of the service-worker global — the customer tsconfig lib does
 // not ship the full `webworker` types, so we model only what we touch.
+type WaitableEvent = { waitUntil: (promise: Promise<unknown>) => void };
+type PushEventLike = WaitableEvent & { data?: { text: () => string } | null };
+type NotificationClickLike = WaitableEvent & {
+  notification: { close: () => void; data?: { url?: unknown } };
+};
+type WindowClientLike = {
+  url: string;
+  focus: () => Promise<unknown>;
+  navigate?: (url: string) => Promise<unknown>;
+};
 type ServiceWorkerScope = {
   __SW_MANIFEST?: (PrecacheEntry | string)[];
   skipWaiting: () => Promise<void>;
-  addEventListener: (
+  addEventListener: ((
     type: "message",
     listener: (event: { data?: { type?: string } }) => void,
-  ) => void;
+  ) => void) &
+    ((type: "push", listener: (event: PushEventLike) => void) => void) &
+    ((type: "notificationclick", listener: (event: NotificationClickLike) => void) => void);
+  registration: {
+    showNotification: (title: string, options: Record<string, unknown>) => Promise<void>;
+  };
+  clients: {
+    matchAll: (options: {
+      type: "window";
+      includeUncontrolled: boolean;
+    }) => Promise<WindowClientLike[]>;
+    openWindow: (url: string) => Promise<unknown>;
+  };
+  navigator?: { setAppBadge?: (count?: number) => Promise<void> };
 };
+
+/** Fallback tap target when a push carries no usable link. */
+const PUSH_FALLBACK_URL = "/en/account/notifications";
 
 function inServiceWorkerContext(): boolean {
   return (
@@ -239,6 +285,41 @@ if (inServiceWorkerContext()) {
     },
   });
   serwist.addEventListeners();
+
+  // Web Push display path (flag `web_push`, default OFF — no subscription can
+  // exist until the founder enables it). Payload contract: lib/push-payload.ts.
+  sw.addEventListener("push", (event) => {
+    const display = parsePushPayload(event.data?.text() ?? null, PUSH_FALLBACK_URL);
+    const badge = display.badge;
+    event.waitUntil(
+      Promise.all([
+        sw.registration.showNotification(display.title, {
+          body: display.body,
+          icon: "/brand/convergeo-icon-192.png",
+          badge: "/brand/convergeo-icon-192.png",
+          tag: "vergeo-notification",
+          data: { url: display.url },
+        }),
+        badge !== null && typeof sw.navigator?.setAppBadge === "function"
+          ? sw.navigator.setAppBadge(badge).catch(() => undefined)
+          : Promise.resolve(),
+      ]),
+    );
+  });
+
+  sw.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    const url = safeNotificationUrl(event.notification.data?.url, PUSH_FALLBACK_URL);
+    event.waitUntil(
+      sw.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+        const open = windows[0];
+        if (open) {
+          return open.focus().then(() => open.navigate?.(url));
+        }
+        return sw.clients.openWindow(url);
+      }),
+    );
+  });
 
   // Update prompt handshake: the page asks the waiting SW to take over.
   sw.addEventListener("message", (event) => {
