@@ -63,7 +63,7 @@ def _rate_limit(service_client: ServiceRoleClient, user_id: str) -> None:
     if not allowed:
         raise_rate_limited(
             retry_after=retry_after,
-            message_key="vendor.services.packages.errors.rateLimited",
+            message_key="services.vendor.packages.errors.rateLimited",
             message="Too many package changes",
         )
 
@@ -77,7 +77,7 @@ def _screen(body: PackageUpsertRequest, category: Any) -> None:
             message="Package contains a prohibited category or keyword",
             http_status=422,
             details={
-                "message_key": "vendor.services.packages.errors.prohibited",
+                "message_key": "services.vendor.packages.errors.prohibited",
                 "reason": verdict.reason,
                 "matched": verdict.matched,
             },
@@ -181,7 +181,7 @@ def archive_service_package(
             code="not_found",
             message="Package not found",
             http_status=404,
-            details={"message_key": "vendor.services.packages.errors.notFound"},
+            details={"message_key": "services.vendor.packages.errors.notFound"},
         )
     row = state.transition_status(
         service_client,

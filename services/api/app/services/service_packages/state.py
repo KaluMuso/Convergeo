@@ -138,7 +138,7 @@ def transition_status(
             code="invalid_transition",
             message=f"Package cannot move from {from_status} to {to_status}",
             http_status=409,
-            details={"message_key": "vendor.services.packages.errors.invalidTransition"},
+            details={"message_key": "services.vendor.packages.errors.invalidTransition"},
         )
     package_id = str(package["id"])
     updated = rows(
@@ -154,7 +154,7 @@ def transition_status(
             code="conflict",
             message="Package changed concurrently",
             http_status=409,
-            details={"message_key": "vendor.services.packages.errors.conflict"},
+            details={"message_key": "services.vendor.packages.errors.conflict"},
         )
     audit = rows(
         service_client.client.table("audit_log")
