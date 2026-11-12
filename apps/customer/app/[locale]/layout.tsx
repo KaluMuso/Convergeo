@@ -22,6 +22,7 @@ import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 import { LocaleSwitcher } from "./_components/locale-switcher";
+import { PageViewTracker } from "./_components/page-view-tracker";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
 import type { Metadata, Viewport } from "next";
@@ -220,6 +221,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
             <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+            {/* analytics_v2 page_view (no-op unless NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1). */}
+            <PageViewTracker />
             <div className="flex flex-1 flex-col">{children}</div>
             <Footer
               appName={appName}

@@ -340,7 +340,7 @@ There are no destructive changes to existing tables in 1A. The `search_query_log
   - Bundle delta ≤ 2 KB gz per customer route. The v2 code is ~1.3 KB gz minified (ids, page-key, envelope fields, timer).
   - With tracking off, the v2 branches are guarded by the inlined `process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING`, so the minifier can drop them.
   - No added request on page load: the beacon is still batched, there is one flush per ≤ 15 s while events are pending, and visibility-hide still flushes.
-  - No additional storage writes beyond one localStorage `setItem` per event (`vg_sess2.last`, throttled to once per 10 s).
+  - No additional storage writes beyond one small localStorage `setItem` per tracked event (`vg_sess2` = `{id,last,seq}`; the sequence must survive navigation, so it is not throttled).
 - **API:**
   - Zero DB I/O on the request path for v2 collect.
   - One writer connection per worker at most.
