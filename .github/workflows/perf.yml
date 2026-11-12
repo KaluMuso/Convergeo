@@ -368,6 +368,16 @@ jobs:
             e2e/results/cart-response-drill/runtime-package.json
           if-no-files-found: error
 
+      - name: DEBUG ONLY upload cart drill close capture
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: debug-cart-drill-close-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            e2e/results/cart-response-drill/debug-close.json
+            e2e/results/cart-response-drill/debug-close.png
+          if-no-files-found: warn
+
       - name: Stop servers
         if: always()
         run: |

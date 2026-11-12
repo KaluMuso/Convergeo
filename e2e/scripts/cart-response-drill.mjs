@@ -624,6 +624,39 @@ async function waitForFirstDiscard(completion) {
   }
 }
 
+const debugConsole = [];
+async function debugCloseCapture(page, error) {
+  const dir = resolve(root, "e2e/results/cart-response-drill");
+  const out = { errorClass: error?.constructor?.name, errorMessage: String(error?.message ?? error).slice(0, 6000), console: debugConsole };
+  try {
+    out.dom = await page.evaluate(() => {
+      const describe = (el) => {
+        if (!el) return null;
+        const id = el.id ? `#${el.id}` : "";
+        const tid = el.getAttribute?.("data-testid") ? `[data-testid=${el.getAttribute("data-testid")}]` : "";
+        const cls = typeof el.className === "string" && el.className ? `.${el.className.trim().split(/\s+/).slice(0, 6).join(".")}` : "";
+        const cs = getComputedStyle(el);
+        return `${el.tagName.toLowerCase()}${id}${tid}${cls} pos=${cs.position} z=${cs.zIndex} pe=${cs.pointerEvents}`;
+      };
+      const buttons = [...document.querySelectorAll('[data-testid="mini-cart-close"]')];
+      const res = { closeCount: buttons.length, viewport: [innerWidth, innerHeight], scrollY, active: describe(document.activeElement), buttons: [] };
+      for (const b of buttons) {
+        const r = b.getBoundingClientRect();
+        const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+        const stack = document.elementsFromPoint(cx, cy).slice(0, 8).map(describe);
+        let anc = []; for (let e = b; e; e = e.parentElement) anc.push(describe(e));
+        res.buttons.push({ rect: [r.x, r.y, r.width, r.height], connected: b.isConnected, disabled: b.disabled, top: describe(document.elementFromPoint(cx, cy)), stack, ancestors: anc.slice(0, 10), anims: b.getAnimations({ subtree: false }).length, sheetAnims: (b.closest('[data-testid="mini-cart-drawer-sheet"]')?.getAnimations() ?? []).map((a) => `${a.animationName ?? a.constructor.name}:${a.playState}`) });
+      }
+      res.portals = [...document.querySelectorAll("nextjs-portal")].map((p) => ({ html: (p.shadowRoot?.innerHTML ?? "").replace(/<style[\s\S]*?<\/style>/g, "").slice(0, 3000) }));
+      res.dialogs = [...document.querySelectorAll("dialog")].map((d) => `${describe(d)} open=${d.open} modal=${d.matches(":modal")}`);
+      res.fixedHighZ = [...document.querySelectorAll("body *")].filter((e) => { const cs = getComputedStyle(e); return (cs.position === "fixed" || cs.position === "sticky") && cs.zIndex !== "auto"; }).slice(0, 20).map((e) => `${describe(e)} rect=${JSON.stringify(e.getBoundingClientRect())}`);
+      return res;
+    });
+  } catch (e) { out.domError = String(e).slice(0, 500); }
+  try { await page.screenshot({ path: resolve(dir, "debug-close.png"), fullPage: false, timeout: 5000 }); } catch (e) { out.screenshotError = String(e).slice(0, 300); }
+  try { writeFileSync(resolve(dir, "debug-close.json"), JSON.stringify(out, null, 2) + "\n"); } catch {}
+}
+
 function db(action, payload = {}) {
   return JSON.parse(
     execFileSync(python, [helper, action], {
@@ -689,6 +722,11 @@ try {
   const page = await context.newPage();
   failureStage = "browser_console_setup";
   page.on("console", observeBrowserDiagnostic);
+  page.on("console", (m) => {
+    if (m.type() === "error" || m.type() === "warning")
+      debugConsole.push(`[${failureStage}] ${m.type()}: ${m.text().slice(0, 600)}`);
+  });
+  page.on("pageerror", (e) => debugConsole.push(`[${failureStage}] pageerror: ${String(e?.stack ?? e).slice(0, 1200)}`));
   page.setDefaultTimeout(15_000);
   let cartId, listingId, price, firstKey, firstBody;
   let posts = 0;
@@ -981,7 +1019,13 @@ try {
   await expect(page.getByTestId("mini-cart-drawer")).toContainText("Quantity: 1");
   point("replay_quantity_price_ui");
   failureStage = "retry_drawer_close";
-  await page.getByTestId("mini-cart-close").click();
+  // DEBUG ONLY (debug/cart-drill-close): capture the real click failure.
+  try {
+    await page.getByTestId("mini-cart-close").click();
+  } catch (error) {
+    await debugCloseCapture(page, error);
+    throw error;
+  }
   phase = "price_notice";
   failureStage = "price_fixture";
   db("price");
