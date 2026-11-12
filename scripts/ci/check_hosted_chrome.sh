@@ -13,7 +13,7 @@ chrome_sources_dir=/etc/apt/sources.list.d
 supported_image() {
   [[ "${ImageOS-}" == ubuntu24 ]] || return 1
   case "${ImageVersion-}" in
-    20260927.320.1 | 20261004.327.1 | 20261101.360.1) return 0 ;;
+    20260927.320.1 | 20261004.327.1 | 20261101.360.1 | 20261111.370.1) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -145,7 +145,7 @@ check_hosted_chrome() {
   # Print only fixed labels, even when a runner returns unexpected text.
   if [[ "${ImageOS-}" == ubuntu24 ]]; then image_os=ubuntu24; fi
   case "${ImageVersion-}" in
-    20260927.320.1 | 20261004.327.1 | 20261101.360.1) image_version=$ImageVersion ;;
+    20260927.320.1 | 20261004.327.1 | 20261101.360.1 | 20261111.370.1) image_version=$ImageVersion ;;
   esac
   raw_owner=$(dpkg-query -S "$chrome_path" 2>/dev/null) || raw_owner=
   raw_package=$(dpkg-query -W -f='${Version}' google-chrome-stable 2>/dev/null) || raw_package=
