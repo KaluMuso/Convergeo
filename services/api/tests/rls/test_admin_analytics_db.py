@@ -37,23 +37,30 @@ def live(db: PgConn, monkeypatch: pytest.MonkeyPatch) -> Generator[PgConn, None,
 
 
 def test_k_threshold_hides_four_shows_five(live: PgConn) -> None:
-    rows = [("zz1b04 four", 4, 4), ("zz1b04 five", 5, 5), ("zz1b04 big", 30, 1)]
-    for term, searches, zero in rows:
+    # (term, searches, zero_results, distinct sessions) — k counts sessions (OD-8).
+    rows = [
+        ("zz1b04 four", 4, 4, 4),
+        ("zz1b04 five", 5, 5, 5),
+        ("zz1b04 big", 30, 1, 12),
+        ("zz1b04 repeat", 20, 0, 1),  # one session, 20 searches: hidden
+    ]
+    for term, searches, zero, sessions in rows:
         assert live.run(
             "INSERT INTO public.analytics_search_daily (day, normalized_term, searches, "
-            f"zero_results) VALUES ('{DAY.isoformat()}', '{term}', {searches}, {zero})"
+            f"zero_results, sessions) VALUES ('{DAY.isoformat()}', '{term}', {searches}, "
+            f"{zero}, {sessions})"
         ).ok
     out = build_search_demand(DAY, DAY)
     terms = [t["normalized_term"] for t in out["top_terms"]]
     assert terms == ["zz1b04 big", "zz1b04 five"]
-    assert "zz1b04 four" not in str(out)
+    assert "zz1b04 four" not in str(out) and "zz1b04 repeat" not in str(out)
     assert out["zero_result_terms"] == [
         {"normalized_term": "zz1b04 five", "searches": 5, "zero_results": 5}
     ]
-    assert out["other"] == {"terms": 1, "searches": 4, "zero_results": 4}
-    assert out["totals"]["searches"] == 39
+    assert out["other"] == {"terms": 2, "searches": 24, "zero_results": 4}
+    assert out["totals"]["searches"] == 59
     assert out["totals"]["zero_results"] == 10
-    assert out["totals"]["zero_result_share_bps"] == 2564  # 10 / 39, n = 39 >= 20
+    assert out["totals"]["zero_result_share_bps"] == 1695  # 10 / 59, n = 59 >= 20
     assert out["k"] == 5
 
 

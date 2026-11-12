@@ -7,9 +7,10 @@ route reads raw events, ids or raw search terms.
 
 * Gated by ``analytics_v2_rollups``: with the flag OFF every data route answers 404
   ``analytics_disabled`` and ``/status`` reports ``enabled: false`` — nothing else changes.
-* Privacy: a search term is returned only when it reaches the k-threshold (k >= 5,
-  ``platform_config.analytics_term_k_min``) in the window; below-k terms are folded into
-  an "other" bucket inside SQL so they never leave the database.
+* Privacy: a search term is returned only when it was searched in at least k DISTINCT
+  anonymous sessions (k >= 5, ``platform_config.analytics_term_k_min``; OD-6/OD-8) in the
+  window; below-k terms are folded into an "other" bucket inside SQL so they never leave
+  the database. Session-less searches count as at most one session.
 * Rates are integers in basis points and are ``null`` below the minimum sample
   (``platform_config.analytics_min_sample_n``, default 20). Money is integer ngwee.
 * Reads run in a worker thread with a short statement timeout and are cached for 60 s
@@ -50,6 +51,15 @@ MAX_WINDOW_DAYS: Final = 92
 TOP_LIMIT: Final = 20
 CACHE_TTL_SECONDS: Final = 60.0
 STATEMENT_TIMEOUT: Final = "5s"
+
+#: Distinct-session k measure for a term over a window (OD-6/OD-8). Session-less rows
+#: (no client session id, or legacy rows whose ``sessions`` is NULL) count as at most ONE
+#: session across the whole window, so one person repeating a term never reaches k.
+#: Mirrored by ``public.analytics_search_daily_purge`` (retention, OD-10).
+SEARCH_K_MEASURE_SQL: Final = (
+    "greatest(coalesce(sum(sessions), 0), "
+    "max(CASE WHEN sessions IS NULL OR unsessioned_searches > 0 THEN 1 ELSE 0 END))"
+)
 
 _cache: dict[tuple[str, str, str], tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.Lock()
@@ -222,9 +232,8 @@ def build_overview(start: date, end: date) -> dict[str, Any]:
 def build_search_demand(start: date, end: date) -> dict[str, Any]:
     k, min_n = _thresholds()
     window = f"day BETWEEN {_day(start)} AND {_day(end)}"
-    # k-threshold applied IN SQL: below-k terms never leave the database. While
-    # search_query_log has no session link, `sessions` is NULL and k applies to searches.
-    k_measure = "coalesce(sum(sessions), sum(searches))"
+    # k-threshold applied IN SQL: below-k terms never leave the database.
+    k_measure = SEARCH_K_MEASURE_SQL
     top = _rows(
         "SELECT normalized_term || '|' || sum(searches) || '|' || sum(zero_results) "
         f"FROM public.analytics_search_daily WHERE {window} "

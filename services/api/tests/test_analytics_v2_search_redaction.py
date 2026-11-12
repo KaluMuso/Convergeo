@@ -69,3 +69,17 @@ def test_zero_result_app_log_redacted_when_flag_on(caplog: pytest.LogCaptureFixt
     with caplog.at_level(logging.INFO, logger=search_service.logger.name):
         search_service.log_zero_result(query="tv a@b.com", filters={}, kind=None)
     assert [r.query for r in caplog.records if r.message == "search_zero_result"] == ["tv @"]  # type: ignore[attr-defined]
+
+
+def test_session_id_sql_only_with_collect_on_and_valid_uuid() -> None:
+    """OD-8: the anonymous session id is stored only under analytics_v2_collect."""
+    from app.services.analytics import flags as analytics_flags
+    from app.services.analytics.search_log import _session_id_sql
+
+    sid = "0D080000-0000-4000-8000-000000000001"
+    analytics_flags.override_for_tests(analytics_flags.COLLECT_FLAG, False)
+    assert _session_id_sql(sid) == "null"
+    analytics_flags.override_for_tests(analytics_flags.COLLECT_FLAG, True)
+    assert _session_id_sql(sid) == f"'{sid.lower()}'::uuid"
+    assert _session_id_sql("not-a-uuid'; drop table x;--") == "null"
+    assert _session_id_sql(None) == "null"

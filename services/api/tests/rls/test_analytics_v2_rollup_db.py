@@ -120,7 +120,8 @@ def _rollup(db: PgConn) -> dict[tuple[str, str, str], tuple[int, int]]:
 def _search(db: PgConn) -> list[str]:
     result = db.run(
         "SELECT normalized_term || '|' || searches || '|' || zero_results || '|' || "
-        "coalesce(sessions::text, 'null') FROM public.analytics_search_daily "
+        "coalesce(sessions::text, 'null') || '|' || unsessioned_searches "
+        "FROM public.analytics_search_daily "
         f"WHERE day = '{DAY.isoformat()}' AND normalized_term LIKE 'zz1b01 %' ORDER BY 1"
     )
     assert result.ok, result.error
@@ -153,7 +154,8 @@ def test_rollup_day_exact_values(live: PgConn) -> None:
     assert r[("session_entries", "page_key", "search")] == (2, 2)
     assert r[("product_views", "product_id", PRODUCT)] == (1, 1)
 
-    assert _search(live) == ["zz1b01 phones|3|1|null", "zz1b01 solar|1|1|null"]
+    # No session ids on these rows: 0 distinct sessions, every search is session-less.
+    assert _search(live) == ["zz1b01 phones|3|1|0|3", "zz1b01 solar|1|1|0|1"]
 
 
 def test_29_minutes_is_one_session_31_minutes_is_two(live: PgConn) -> None:

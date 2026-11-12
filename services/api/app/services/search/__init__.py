@@ -459,6 +459,7 @@ async def run_search(
     user_lat: float | None = None,
     user_lng: float | None = None,
     include_kind_totals: bool = False,
+    analytics_session_id: str | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -556,6 +557,7 @@ async def run_search(
             entity_counts=dict(Counter(hit.entity_kind for hit in display_hits)),
             zero_result=total == 0,
             user_id=user_id,
+            session_id=analytics_session_id,
         )
 
     if total == 0 and trimmed:
