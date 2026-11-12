@@ -122,25 +122,24 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
       </header>
 
       {canMutate ? (
-        <div className="space-y-4">
-          <InterventionPanel
-            order={order}
-            guard={guard}
-            payoutsOn={payoutsOn}
-            onSuccess={() => void load()}
-          />
-          {dispatchEvents.length > 0 ? (
-            <DispatchPanel
-              key={dispatchEvents.join(",")}
-              order={order}
-              events={dispatchEvents}
-              onSuccess={() => void load()}
-            />
-          ) : null}
-        </div>
+        <InterventionPanel
+          order={order}
+          guard={guard}
+          payoutsOn={payoutsOn}
+          onSuccess={() => void load()}
+        />
       ) : null}
 
       <DeliveryCard locale={locale} order={order} board={board} />
+
+      {canMutate && dispatchEvents.length > 0 ? (
+        <DispatchPanel
+          key={dispatchEvents.join(",")}
+          order={order}
+          events={dispatchEvents}
+          onSuccess={() => void load()}
+        />
+      ) : null}
 
       {Boolean(order.service_obligations?.length) && (
         <section className="space-y-2">
