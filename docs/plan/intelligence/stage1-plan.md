@@ -60,12 +60,12 @@
   - `vg_analytics_consent=denied`, or the browser's Global Privacy Control (`navigator.globalPrivacyControl === true`), switches the client to **counts-only mode**. `anon_id` and `session_id` are not sent (the server stores NULL); `event_id` (unlinkable) is still sent so counts stay deduplicated.
   - When the visitor opts out, `vg_anon_id` is deleted. Opting back in creates a fresh id, with no relinking.
   - `denied` keeps disabling GA4 as today.
-  - The **decision** for the founder is whether "opt-out" must mean _zero_ first-party collection (stricter than the current doctrine, "anonymised server log regardless of consent"). Counts-only is the recommended middle ground: aggregate demand data is legitimate-interest, and journeys are not collected. **Open decision OD-1.**
+  - The **decision** for the founder is whether "opt-out" must mean _zero_ first-party collection (stricter than the current doctrine, "anonymised server log regardless of consent"). Counts-only is the recommended middle ground: aggregate demand data is legitimate-interest, and journeys are not collected. **OD-1 — DECIDED (King, 12 Nov 2026): keep the current design.** Opt-out (consent `denied` or GPC) means anonymous counts only: no `anon_id`, no `session_id`, no journeys. Zero-collection is not adopted.
 - **Sign-in linking** — [P], PR 1A-08:
   - Today's stitch never works (claim 9). The fix is an authenticated `POST /analytics/identify {anon_id, session_id}`, called **once per v2 session** after sign-in through the existing dynamic-imported Supabase browser client (`lib/engagement-api.ts` pattern, so it is off the first-load bundle).
   - It writes `analytics_session_links(session_id pk, user_id, linked_at)`. Rollups join this table; **raw events are never back-filled with `user_id`**.
   - Links are deleted with the raw rows at 30 d, and the table is subject to account deletion (FK cascade).
-  - It is postponable because every money and order metric comes from authoritative tables keyed by `customer_id` (§R-I). Only "anonymous browsing before first purchase" journeys need it. **Open decision OD-2:** link or not, and for how long.
+  - It is postponable because every money and order metric comes from authoritative tables keyed by `customer_id` (§R-I). Only "anonymous browsing before first purchase" journeys need it. **OD-2 — DECIDED (King, 12 Nov 2026): YES, link** the analytics session to the account at sign-in, with the default link retention of **30 days** (links deleted with the raw rows, FK cascade on account deletion). Implementation is 1A-08 (identify) and 1A-09 (opt-out UI), on their own branches; this decision only unblocks them.
 - **Sensitive inference ban:** the registry carries no free text, no health, religion or ethnicity categories, and no location finer than district (and location is not collected in 1A at all).
 
 ### R-C. Rate limiter for 2 workers behind Cloudflare, Caddy and Vercel, without spoofable IPs — [E]
@@ -112,7 +112,7 @@
 - `normalized_term` is derived from the **redacted** term.
 - **Retention:** after 30 days the daily sweep sets `term = normalized_term` (removing original casing and spelling) and NULLs `user_id` (as today). Rows older than **180 days** are deleted once 1B daily rollups (`analytics_search_daily`) hold the aggregates. The delete is gated on `analytics_v2_rollups`, so it never runs before rollups exist.
 - **k-threshold (k-anonymity for terms):**
-  - Admin and AI surfaces show a term only if it was searched in **≥ k distinct sessions** (or ≥ k rows when sessions are unknown) in the window. The default is **k = 5**, stored in `platform_config.analytics_term_k_min`.
+  - Admin and AI surfaces show a term only if it was searched in **≥ k distinct anonymous sessions** in the window (OD-8, decided 12 Nov 2026). Searches without a session id (legacy, no-JS, counts-only) count as **at most one session across the whole window**, and add nothing once real sessions exist, so one person can never pass k. The default is **k = 5**, stored in `platform_config.analytics_term_k_min` (floored at 5).
   - Below-k terms are aggregated into an "other (n)" bucket.
   - `sample_term` (the raw `min(term)`) is **removed** from the admin response in 1B, which returns `normalized_term` only.
 - **AI reporting (1C)** receives only rollups that already pass k. Any metric whose underlying count is below **n = 20** is reported as "insufficient data", not as a percentage (minimum sample threshold).
@@ -339,7 +339,7 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 | 1A-06b         | done            | Tracking ON: impressions send a slug-free `surface` taken from the page template at flush time (client dedup stays one per listing/session/day); PDP views send `surface=pdp` and, when signed in, the bearer via keepalive fetch. Collect ON: the API stores the surface (unknown values → `unknown`) and resolves the bearer in the background task to pass `p_viewer_user_id`, so a vendor's view of their own listing is not counted. Either flag OFF ⇒ the exact v1 payload and 4-arg SQL call. Deploy order: API before a tracking-ON build (the v1 API rejects the extra field) |
 | 1A-07          | done            | n8n retention was already UTC, so the v2 tick is chained after the v1 sweep                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 1A-04b         | done            | Added during implementation (bundle budget, see §1A.2)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 1A-08, 1A-09   | not started [P] | Blocked on OD-2 and OD-1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 1A-08, 1A-09   | not started [P] | Unblocked: OD-1 and OD-2 decided 12 Nov 2026                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 **Verification:**
 
@@ -352,7 +352,7 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 **Before production tracking ON:**
 
 - The PDP first-load JS is at exactly **150.0 KB gz** (budget 150) with tracking ON. Any further PDP growth must be offset. 1A-06b was trimmed to stay within it (bundle guard green with tracking ON and OFF).
-- FC-1 (Supabase plan) and OD-1 (opt-out semantics) are still open.
+- FC-1 (Supabase plan) and OD-1 (opt-out semantics) were decided on 12 Nov 2026 (see §1A.6). Enabling collection on the Free plan still requires the 1A-07 dedup purge and the 30-day raw event deletion to be live (`analytics_v2_rollups` ON so the v2 retention tick runs).
 
 ### 1A.3 Migration and rollback
 
@@ -401,14 +401,14 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 4. Killing the DB connection for 60 s causes no customer-visible error, and the drop counter rises.
 5. Collect OFF reproduces v1 exactly (the existing tests, plus a manual diff of `analytics_events` rows).
 6. Bundle guard green.
-7. The founder signs off on FC-1 and OD-1.
+7. The founder signs off on FC-1 and OD-1 (done 12 Nov 2026).
 
 ### 1A.6 Unresolved decisions (1A)
 
-- **OD-1:** opt-out semantics (counts-only versus zero collection).
-- **OD-2:** sign-in linking (on/off, 30-day retention).
+- **OD-1 — DECIDED (King, 12 Nov 2026):** keep the current design. Opt-out means anonymous counts only, no journeys.
+- **OD-2 — DECIDED (King, 12 Nov 2026):** YES, link analytics sessions to the account at sign-in; link retention 30 days (plan default). Implemented by 1A-08/1A-09 on separate branches.
 - **OD-3:** origin lock to Cloudflare (infra).
-- **FC-1:** Supabase plan, quota and current DB size.
+- **FC-1 — DECIDED (King, 12 Nov 2026):** Supabase **Free** plan: 500 MB database, switched to **read-only when full**, **no automated daily backups**. Prod DB size measured at **22 MB** on 12 Nov 2026. The storage alert threshold is **70% of 500 MB = 350 MB** (`retention.DB_PLAN_QUOTA_BYTES` / `DB_STORAGE_ALERT_BYTES`; `GET /internal/analytics/storage` returns `quota_bytes`, `alert_threshold_bytes` and `alert`). `analytics_v2_collect` stays **OFF by default**; enabling collection on Free requires the 1A-07 dedup purge **and** the 30-day raw event deletion to be live first. Because Free has no automated backups, the **Hetzner `pg_dump` backup is the only restore path** (verify it before enabling collection).
 - **FC-2:** whether `NEXT_PUBLIC_GA4_MEASUREMENT_ID` is set in Vercel.
 - **OD-5:** whether the beacon should move from the Vercel rewrite to a direct `api.` post with a `text/plain` body. This would save one hop and make the CF IP a real visitor IP, but needs CORS and CSP review. Recommended for after the pilot.
 
@@ -445,20 +445,22 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 
 Stack order (continuing from 1A-06b): `1B-01 → 1B-02 → 1B-03 → 1B-04 → 1B-05`, branches `feat/intel-1b-0N-…`. Nothing is merged, deployed or enabled.
 
-| PR    | Status          | Notes                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1B-01 | done            | Migration `20261112130000_analytics_rollups.sql`; `analytics_rollup_day(day, idle_minutes=30)`; `POST /internal/analytics/rollup-tick` (rollups-gated, 60 s statement timeout per day, single-flight); `infra/n8n/analytics-rollup.json` (02:15 UTC, inactive). Bounce = a session with at most one interaction (events other than `session_start`); a session that spans UTC midnight counts on both days |
-| 1B-02 | done            | SQL `count(*) FILTER` for order-status and funnel tiles. Bug fix, not flag-gated (identical numbers below 1,000 rows)                                                                                                                                                                                                                                                                                      |
-| 1B-03 | done            | Migration `20261112140000_analytics_commercial.sql`: `analytics_commercial_daily(from, to)` is the only paid-order/GMV definition (orders, order_items, checkout_groups, payments). The rollup stores the same numbers plus `dq_payment_mismatch`. `services/analytics/metrics.py`                                                                                                                         |
-| 1B-04 | done            | `routers/admin_analytics.py` (admin/superadmin only; rollups-gated; k inside SQL, k ≥ 5; n ≥ 20 for rates; 60 s cache). `/admin/search-insights` no longer returns raw terms and omits below-k terms (privacy fix, not flag-gated; it had no UI consumer)                                                                                                                                                  |
-| 1B-05 | done            | Admin `/analytics` (Overview, Search & demand, Products & funnel, Insights placeholder). Nav entry hidden unless `/admin/analytics/status` reports the flag ON                                                                                                                                                                                                                                             |
-| 1B-06 | not started [P] | Needs 30 days of parallel run                                                                                                                                                                                                                                                                                                                                                                              |
+| PR     | Status          | Notes                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1B-01  | done            | Migration `20261112130000_analytics_rollups.sql`; `analytics_rollup_day(day, idle_minutes=30)`; `POST /internal/analytics/rollup-tick` (rollups-gated, 60 s statement timeout per day, single-flight); `infra/n8n/analytics-rollup.json` (02:15 UTC, inactive). Bounce = a session with at most one interaction (events other than `session_start`); a session that spans UTC midnight counts on both days |
+| 1B-02  | done            | SQL `count(*) FILTER` for order-status and funnel tiles. Bug fix, not flag-gated (identical numbers below 1,000 rows)                                                                                                                                                                                                                                                                                      |
+| 1B-03  | done            | Migration `20261112140000_analytics_commercial.sql`: `analytics_commercial_daily(from, to)` is the only paid-order/GMV definition (orders, order_items, checkout_groups, payments). The rollup stores the same numbers plus `dq_payment_mismatch`. `services/analytics/metrics.py`                                                                                                                         |
+| 1B-04  | done            | `routers/admin_analytics.py` (admin/superadmin only; rollups-gated; k inside SQL, k ≥ 5; n ≥ 20 for rates; 60 s cache). `/admin/search-insights` no longer returns raw terms and omits below-k terms (privacy fix, not flag-gated; it had no UI consumer)                                                                                                                                                  |
+| 1B-05  | done            | Admin `/analytics` (Overview, Search & demand, Products & funnel, Insights placeholder). Nav entry hidden unless `/admin/analytics/status` reports the flag ON                                                                                                                                                                                                                                             |
+| 1B-06  | not started [P] | Needs 30 days of parallel run                                                                                                                                                                                                                                                                                                                                                                              |
+| 1B-06a | done            | Founder decisions (branch `feat/intel-1b-06-founder-decisions`): migrations `20261112150000_analytics_search_sessions.sql` (OD-8), `20261112150100_analytics_lusaka_day.sql` (OD-9), `20261112150200_analytics_search_daily_retention.sql` (OD-10); storage quota/alert (FC-1). All behind the existing analytics_v2 flags (default OFF)                                                                   |
 
 **Known limits:**
 
-- `search_query_log` has no session link, so `analytics_search_daily.sessions` is NULL and k counts searches, not distinct sessions. One person repeating a term 5 times passes k. Adding an anonymous session column to the search log is a follow-up (OD-8).
-- Day boundaries are UTC, which is 02:00 in Lusaka (OD-9).
-- `analytics_search_daily` keeps redacted, normalized terms (including below-k ones, never shown) with no expiry (OD-10).
+- Resolved by 1B-06a: k now counts distinct sessions (OD-8), days are Lusaka days (OD-9) and `analytics_search_daily` has a retention rule (OD-10). See §1B.6.
+- **OD-8 follow-up (client):** the API accepts `X-Analytics-Session`, but the customer app does not send it yet. The first results page is server-rendered (RSC), where the localStorage `vg_sess2` id is not available; only the client-side "load more" fetch could send it today (and would need the header in `CORS_ALLOW_HEADERS`). Until a client PR forwards it (respecting counts-only mode), every search row is session-less and the k rule is maximally conservative: a term then needs real sessions to be shown, so the Search & demand top terms will mostly sit in "other".
+- Sessions that span Lusaka midnight count on both days (also for the per-day distinct search sessions summed over a window).
+- The listing-view dedup (1A) and the v1 `/admin/search-insights` Ask-cost-by-day still use UTC days; they are outside the 1B rollups.
 - Refunds and take-rate are not in 1B-03; they need the refund/payout ledger semantics confirmed.
 
 ### 1B.3 Migration and rollback
@@ -470,7 +472,7 @@ Stack order (continuing from 1A-06b): `1B-01 → 1B-02 → 1B-03 → 1B-04 → 1
 ### 1B.4 Performance and security
 
 - The rollup runs once a day per day of data, as one SQL function over a BRIN-ranged day (≈ 24k–60k rows): a seconds-scale query.
-- It runs at 02:15 UTC (pilot low traffic) with `statement_timeout` 60 s.
+- It runs at 02:15 UTC = 04:15 CAT (pilot low traffic), after the Lusaka day closed at 22:00 UTC, with `statement_timeout` 60 s.
 - Admin endpoints read **only** rollups and authoritative aggregates, never raw events. They are cached 60 s in process.
 - Every route is `require_role('admin')` via `admin_base` (audited).
 - Customer-level drill-down is **out of scope** for 1B. Aggregates only; k ≥ 5 for terms; n ≥ 20 for rates.
@@ -482,16 +484,18 @@ Stack order (continuing from 1A-06b): `1B-01 → 1B-02 → 1B-03 → 1B-04 → 1
 - Commercial metrics equal direct SQL over the seeded `orders`/`payments`.
 - The admin count fix is verified with 1,500 seeded orders.
 - Non-admin gets 403 on every `/admin/analytics/*` route.
-- The k-threshold hides a term seen in 4 sessions and shows it at 5.
+- The k-threshold hides a term seen in 4 sessions and shows it at 5; one session searching 5 times does not pass; session-less rows over 5 days count as one session (OD-8).
+- An event, search or order at 23:30 UTC lands on the next Lusaka day; the 29/31-minute rule holds across UTC midnight (OD-9).
+- `analytics_search_daily_purge` deletes below-k terms after 30 days and keeps met-k terms 13 months; batched and idempotent (OD-10).
 - **Acceptance:** after 7 days of staging data, the Overview numbers reconcile with `orders`/`payments` exactly, and the founder can answer "what are customers searching for but not finding" from Search & Demand.
 
 ### 1B.6 Open decisions
 
-- **OD-6:** k value (default 5) and minimum n (default 20).
+- **OD-6 — DECIDED (12 Nov 2026, chosen on King's behalf):** keep **k = 5** and **minimum n = 20**, with k counting **distinct anonymous sessions** (OD-8).
 - **OD-7:** whether vendor-facing analytics adopt rollups now or stay on `listing_analytics` (recommended: stay; vendor intelligence is deferred).
-- **OD-8:** add an anonymous session id to `search_query_log` so the term k-threshold counts distinct sessions rather than searches.
-- **OD-9:** reporting day boundary: UTC (implemented) or Africa/Lusaka.
-- **OD-10:** retention for `analytics_search_daily` terms (for example, drop below-k terms after 180 days).
+- **OD-8 — DECIDED (12 Nov 2026, chosen on King's behalf):** `search_query_log.analytics_session_id` (nullable uuid; the same anonymous rotating v2 session id as `vg_sess2`; no PII, no user id; written only under `analytics_v2_collect` from the optional `X-Analytics-Session` header on `/search`; never used for authz; NULLed by the 30-day PII trim). `analytics_search_daily.sessions` = count(distinct session) and `unsessioned_searches` counts searches without one. The k measure over a window is `greatest(sum(sessions), 1 if any session-less row)`. Migration `20261112150000_analytics_search_sessions.sql`. Client forwarding is a follow-up (§1B.2 known limits).
+- **OD-9 — DECIDED (King, 12 Nov 2026):** the reporting day is **Africa/Lusaka** (CAT, UTC+2, no DST) in `analytics_rollup_day`, `analytics_commercial_daily` and the admin analytics API (`reporting_day.reporting_today`). Stored timestamps stay UTC. Migration `20261112150100_analytics_lusaka_day.sql`.
+- **OD-10 — DECIDED (12 Nov 2026, chosen on King's behalf):** in `analytics_search_daily`, below-k terms are deleted after **30 days**; terms that met k (in their calendar month) are kept **13 months** (whole months), then deleted. `analytics_search_daily_purge(today, limit)` in migration `20261112150200_analytics_search_daily_retention.sql`, run in batches by the flag-gated v2 retention tick.
 
 ---
 
