@@ -77,6 +77,20 @@ def test_cors_allows_configured_origin(client: TestClient) -> None:
     assert "Authorization" in (response.headers.get("access-control-allow-headers") or "")
 
 
+def test_cors_allows_analytics_session_header(client: TestClient) -> None:
+    response = client.options(
+        "/search",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "x-analytics-session",
+        },
+    )
+    assert response.status_code == 200
+    allowed = (response.headers.get("access-control-allow-headers") or "").lower()
+    assert "x-analytics-session" in allowed
+
+
 def test_cors_rejects_foreign_origin(client: TestClient) -> None:
     response = client.get("/healthz", headers={"Origin": "https://evil.example"})
     assert response.headers.get("access-control-allow-origin") is None
