@@ -2,7 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONSENT_COOKIE } from "../consent";
 import { __resetSessionMemory } from "../session";
-import { __resetQueue, __queueLength, flush, MAX_QUEUE_V2, track, trackPageView } from "../track";
+import {
+  __loadV2RuntimeForTests,
+  __queueLength,
+  __resetQueue,
+  __unloadV2RuntimeForTests,
+  flush,
+  MAX_QUEUE_V2,
+  track,
+  trackPageView,
+} from "../track";
 
 import { __resetIdsMemory, ANON_KEY, SESSION_IDLE_MS } from "./ids";
 import { pageKeyFromPath, referrerKind } from "./page-key";
@@ -84,8 +93,35 @@ describe("v2 tracking OFF (default)", () => {
 });
 
 describe("v2 tracking ON", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.stubEnv("NEXT_PUBLIC_ANALYTICS_V2_TRACKING", "1");
+    await __loadV2RuntimeForTests();
+  });
+
+  it("degrades to a v1 body when flushed before the runtime chunk loads", async () => {
+    __unloadV2RuntimeForTests();
+    track("product_view", { product_id: PRODUCT });
+    flush(); // e.g. the tab was hidden within milliseconds of the first event
+    const body = JSON.parse(bodies[0]!) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(["events", "session_id"]);
+    expect((body.events as Array<{ event: string }>)[0]!.event).toBe("product_view");
+
+    await __loadV2RuntimeForTests();
+    vi.advanceTimersByTime(2_000);
+    trackPageView();
+    flush();
+    expect(lastBatch().v).toBe(2);
+  });
+
+  it("buffers events captured while the runtime loads, then envelopes them", async () => {
+    __unloadV2RuntimeForTests();
+    track("product_view", { product_id: PRODUCT });
+    expect(__queueLength()).toBe(0); // pending, not yet enveloped
+    await __loadV2RuntimeForTests();
+    expect(__queueLength()).toBe(2); // session_start + product_view
+    flush();
+    expect(lastBatch().events.map((e) => e.event)).toEqual(["session_start", "product_view"]);
+    expect(lastBatch().events[1]!.page).toBe("pdp");
   });
 
   it("emits session_start first, then the event, with the v2 envelope", () => {

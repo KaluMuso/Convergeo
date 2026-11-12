@@ -21,25 +21,18 @@
 
 import { hasAnalyticsConsent } from "./consent";
 import { getSessionId } from "./session";
-import { buildBatchV2, buildEventV2, type WireEventV2 } from "./v2/envelope";
-import {
-  currentSessionId,
-  forgetAnonId,
-  getAnonId,
-  isCountsOnly,
-  newId,
-  touchSession,
-} from "./v2/ids";
-import { pageKeyFromPath, referrerKind } from "./v2/page-key";
 
 import type { AnalyticsEventMap, AnalyticsEventName } from "./events";
 import type { GtagWindow } from "./gtag";
+import type { CapturedEvent } from "./v2/runtime";
 
 interface QueuedEvent {
   event: string;
   props: Record<string, unknown>;
   ts: number;
 }
+
+type V2Runtime = typeof import("./v2/runtime");
 
 /** Flush the batch automatically once it reaches this size. */
 export const MAX_BATCH = 20;
@@ -49,8 +42,10 @@ export const FLUSH_INTERVAL_MS_V2 = 15_000;
 
 let queue: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
-let lastV2Key = "";
-let lastV2At = 0;
+// v2 runtime is an async chunk; events captured before it loads wait here.
+let v2Runtime: V2Runtime | null = null;
+let v2Loading: Promise<void> | null = null;
+let v2Pending: CapturedEvent[] = [];
 
 /**
  * Build-time switch. Call sites below spell out `process.env.NEXT_PUBLIC_…` literally so
@@ -59,10 +54,6 @@ let lastV2At = 0;
  */
 export function isV2Tracking(): boolean {
   return process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1";
-}
-
-function currentPageKey(): string {
-  return typeof location === "undefined" ? "other" : pageKeyFromPath(location.pathname);
 }
 
 function scheduleFlushV2(): void {
@@ -75,31 +66,7 @@ function scheduleFlushV2(): void {
   }, FLUSH_INTERVAL_MS_V2);
 }
 
-function enqueueV2(event: string, props: Record<string, unknown>): void {
-  const now = Date.now();
-  // Drop exact repeats within 1 s (e.g. React StrictMode double effects).
-  const key = event + JSON.stringify(props);
-  if (key === lastV2Key && now - lastV2At < 1000) {
-    return;
-  }
-  lastV2Key = key;
-  lastV2At = now;
-
-  const page = currentPageKey();
-  const session = touchSession(now, 2);
-  const seq = session?.seq ?? 0;
-  if (session?.isNew && event !== "session_start") {
-    const own = typeof location === "undefined" ? "" : location.hostname;
-    const ref = typeof document === "undefined" ? "" : document.referrer;
-    queue.push(
-      buildEventV2(
-        "session_start",
-        { entry_page_key: page, referrer_kind: referrerKind(ref, own) },
-        { id: newId(), seq, ts: now, page },
-      ),
-    );
-  }
-  queue.push(buildEventV2(event, props, { id: newId(), seq: seq + 1, ts: now, page }));
+function afterEnqueueV2(): void {
   if (queue.length > MAX_QUEUE_V2) {
     queue = queue.slice(queue.length - MAX_QUEUE_V2);
   }
@@ -108,6 +75,48 @@ function enqueueV2(event: string, props: Record<string, unknown>): void {
   } else {
     scheduleFlushV2();
   }
+}
+
+function loadV2Runtime(): Promise<void> {
+  if (v2Loading === null) {
+    v2Loading = import("./v2/runtime").then(
+      (mod) => {
+        v2Runtime = mod;
+        const pending = v2Pending;
+        v2Pending = [];
+        for (const captured of pending) {
+          mod.enqueueEvent(queue, captured);
+        }
+        afterEnqueueV2();
+      },
+      () => {
+        v2Loading = null; // chunk failed (offline): retry on the next event
+      },
+    );
+  }
+  return v2Loading;
+}
+
+function enqueueV2(event: string, props: Record<string, unknown>): void {
+  const captured: CapturedEvent = {
+    event,
+    props,
+    ts: Date.now(),
+    path: typeof location === "undefined" ? "" : location.pathname,
+    referrer: typeof document === "undefined" ? "" : document.referrer,
+    host: typeof location === "undefined" ? "" : location.hostname,
+  };
+  if (v2Runtime !== null) {
+    v2Runtime.enqueueEvent(queue, captured);
+    afterEnqueueV2();
+    return;
+  }
+  v2Pending.push(captured);
+  if (v2Pending.length > MAX_QUEUE_V2) {
+    v2Pending.shift();
+  }
+  void loadV2Runtime();
+  scheduleFlushV2();
 }
 
 /** v2: record a page view for the current location (no-op unless v2 tracking is on). */
@@ -168,6 +177,14 @@ export function track<E extends AnalyticsEventName>(event: E, props: AnalyticsEv
  * browser accepted the beacon. Safe to call when the queue is empty or during SSR.
  */
 export function flush(): boolean {
+  if (process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1" && v2Pending.length > 0) {
+    // Runtime not loaded yet (e.g. tab hidden within ms of the first event): degrade to
+    // the v1 shape, which every server version accepts, rather than lose the events.
+    for (const captured of v2Pending) {
+      queue.push({ event: captured.event, props: captured.props, ts: captured.ts });
+    }
+    v2Pending = [];
+  }
   if (queue.length === 0) {
     return false;
   }
@@ -182,21 +199,13 @@ export function flush(): boolean {
     clearTimeout(flushTimer);
     flushTimer = null;
   }
+  const isV2Batch =
+    process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1" &&
+    v2Runtime !== null &&
+    batch.every((item) => "id" in item);
   let body: string;
-  if (process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1") {
-    const countsOnly = isCountsOnly();
-    if (countsOnly) {
-      forgetAnonId(); // opt-out rotates the visitor id; opting back in starts fresh
-    }
-    body = JSON.stringify(
-      buildBatchV2(batch as WireEventV2[], {
-        app: "customer",
-        legacySessionId: countsOnly ? null : getSessionId(),
-        anonId: countsOnly ? null : getAnonId(),
-        sessionId: countsOnly ? null : currentSessionId(),
-        countsOnly,
-      }),
-    );
+  if (isV2Batch && v2Runtime !== null) {
+    body = v2Runtime.buildBody(batch);
   } else {
     // Attach the opaque anonymous session id (never PII) so the server can stitch a
     // visitor's events — and link them to a user id once they authenticate.
@@ -219,10 +228,22 @@ export function __queueLength(): number {
 /** Test-only: reset the beacon queue. */
 export function __resetQueue(): void {
   queue = [];
+  v2Pending = [];
   if (flushTimer !== null) {
     clearTimeout(flushTimer);
     flushTimer = null;
   }
-  lastV2Key = "";
-  lastV2At = 0;
+  v2Runtime?.__resetRuntime();
+}
+
+/** Test-only: load the v2 runtime chunk now (it otherwise loads on the first v2 event). */
+export async function __loadV2RuntimeForTests(): Promise<void> {
+  await loadV2Runtime();
+}
+
+/** Test-only: forget the loaded v2 runtime (simulates the chunk not having loaded yet). */
+export function __unloadV2RuntimeForTests(): void {
+  v2Runtime = null;
+  v2Loading = null;
+  v2Pending = [];
 }
