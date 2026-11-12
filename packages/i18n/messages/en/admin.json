@@ -843,7 +843,7 @@
       "useDispatchBelow": "Shipping and delivery are recorded in Manual dispatch below.",
       "willChange": "This changes the order from {from} to {to}.",
       "irreversible": "This cancels the order and cannot be undone.",
-      "refundQueuedNotSent": "Payouts are off for the pilot, so the refund is recorded and queued. No money is sent yet."
+      "refundQueuedNotSent": "Payouts are off for the pilot. Cancelling flags this order for a refund decision in the audit log. No refund is created and no money is sent."
     },
     "escrow": {
       "title": "Manual escrow hold / release",

@@ -37,6 +37,11 @@ function digits(phone: string): string {
   return phone.replace(/[^\d]/g, "");
 }
 
+/** tel: target with only dial characters, so stored text can never alter the URL. */
+export function telHref(phone: string): string {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
+
 export function DeliveryCard({ locale, order, board }: Props) {
   const t = useTranslations("admin.orders.delivery");
   const dispatch = pickDispatch(order, board);
@@ -101,7 +106,7 @@ export function DeliveryCard({ locale, order, board }: Props) {
           {phone ? (
             <dd className="flex flex-wrap items-center gap-2">
               <a
-                href={`tel:${phone}`}
+                href={telHref(phone)}
                 className="inline-flex min-h-11 items-center font-mono text-sm text-primary underline-offset-2 hover:underline"
               >
                 {phone}

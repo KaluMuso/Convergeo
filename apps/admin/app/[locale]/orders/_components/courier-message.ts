@@ -19,12 +19,16 @@ export type ParsedCourierMessage = {
   contacts: string | null;
 };
 
-const GPS_RE = /\s*-?\s*GPS (https:\/\/maps\.google\.com\/\?q=-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?)/;
+// The server appends the GPS link as the LAST " - GPS <url>" part of a place line
+// (dispatch/message.py _place_line), so only a trailing match is trusted: a vendor
+// or customer landmark that itself contains "GPS https://maps.google.com/?q=..."
+// cannot swap in its own map pin. The URL shape is fixed (https + numeric lat,lng).
+const GPS_RE = /\s*-?\s*GPS (https:\/\/maps\.google\.com\/\?q=-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?)$/;
 
 function parsePlace(line: string | undefined): ParsedPlace | null {
   if (!line) return null;
   const match = GPS_RE.exec(line);
-  const text = (match ? line.replace(GPS_RE, "") : line).trim();
+  const text = (match ? line.slice(0, match.index) : line).trim();
   return { line, text, mapsUrl: match?.[1] ?? null };
 }
 

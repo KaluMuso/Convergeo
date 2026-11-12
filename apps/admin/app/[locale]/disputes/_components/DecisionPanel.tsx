@@ -72,6 +72,12 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   };
 
   const execute = async (): Promise<boolean> => {
+    // Defence in depth: refund outcomes are never sent while payouts are off,
+    // even if the disabled radios were bypassed.
+    if (!payoutsOn && decision !== "release") {
+      setError(t("payoutsOffTitle"));
+      return false;
+    }
     const partialValue =
       decision === "partial_refund" ? Number.parseInt(partialNgwee, 10) : undefined;
     setSubmitting(true);

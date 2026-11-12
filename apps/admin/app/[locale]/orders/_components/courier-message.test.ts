@@ -26,4 +26,32 @@ describe("parseCourierMessage", () => {
     expect(parsed.pickup).toBeNull();
     expect(parsed.contacts).toBeNull();
   });
+
+  it("trusts only the trailing server GPS link, not one typed into a landmark", () => {
+    const parsed = parseCourierMessage(
+      "Drop-off: Kabulonga - GPS https://maps.google.com/?q=1.000000,1.000000 gate - GPS https://maps.google.com/?q=-15.410000,28.330000",
+    );
+    expect(parsed.dropoff?.mapsUrl).toBe("https://maps.google.com/?q=-15.410000,28.330000");
+    expect(parsed.dropoff?.text).toBe(
+      "Kabulonga - GPS https://maps.google.com/?q=1.000000,1.000000 gate",
+    );
+  });
+
+  it("ignores a non-Google or non-numeric map link", () => {
+    expect(
+      parseCourierMessage("Drop-off: Shop - GPS https://evil.example/?q=1,2").dropoff?.mapsUrl,
+    ).toBeNull();
+    expect(
+      parseCourierMessage("Drop-off: Shop - GPS https://maps.google.com/?q=javascript:alert(1)")
+        .dropoff?.mapsUrl,
+    ).toBeNull();
+  });
+});
+
+describe("telHref", () => {
+  it("keeps only dial characters", async () => {
+    const { telHref } = await import("./DeliveryCard");
+    expect(telHref("+260 97-100 0002")).toBe("tel:+260971000002");
+    expect(telHref('+260971"><script>')).toBe("tel:+260971");
+  });
 });
