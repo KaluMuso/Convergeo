@@ -138,7 +138,8 @@
       "description": "Help us improve Convergeo by letting us see how you use it, such as which pages you visit.",
       "toggleLabel": "Share usage analytics",
       "on": "On: we can see which pages you visit and, after you sign in, link them to your account. Links are deleted after 30 days.",
-      "off": "Off: we keep only anonymous counts, such as how many people viewed a page. No journeys are recorded and nothing is linked to you."
+      "off": "Off: we keep only anonymous counts, such as how many people viewed a page. No journeys are recorded and nothing is linked to you.",
+      "gpc": "Your browser is sending Global Privacy Control, so analytics stays off. We respect that browser setting."
     },
     "export": {
       "title": "Export my data",

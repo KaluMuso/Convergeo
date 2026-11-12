@@ -153,4 +153,22 @@ describe("account privacy (DPA) page i18n", () => {
     const toggle = screen.getByRole("switch", { name: privacy.analytics.toggleLabel });
     await waitFor(() => expect(toggle).not.toBeChecked());
   });
+
+  it("under Global Privacy Control the switch is off, disabled, and explains why", async () => {
+    Object.defineProperty(navigator, "globalPrivacyControl", { configurable: true, value: true });
+    try {
+      renderPage();
+      const toggle = screen.getByRole("switch", { name: privacy.analytics.toggleLabel });
+      await waitFor(() => expect(screen.getByText(privacy.analytics.gpc)).toBeInTheDocument());
+      expect(toggle).not.toBeChecked();
+      expect(toggle).toBeDisabled();
+      expect(screen.queryByText(privacy.analytics.on)).not.toBeInTheDocument();
+      expect(setConsentSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, "globalPrivacyControl", {
+        configurable: true,
+        value: undefined,
+      });
+    }
+  });
 });

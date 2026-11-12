@@ -137,7 +137,8 @@
       "description": "Aidez-nous à améliorer Convergeo en nous laissant voir comment vous l'utilisez, par exemple les pages que vous visitez.",
       "toggleLabel": "Partager les statistiques d'utilisation",
       "on": "Activé : nous pouvons voir les pages que vous visitez et, après votre connexion, les relier à votre compte. Ces liens sont supprimés après 30 jours.",
-      "off": "Désactivé : nous ne conservons que des compteurs anonymes, par exemple le nombre de personnes ayant vu une page. Aucun parcours n'est enregistré et rien n'est relié à vous."
+      "off": "Désactivé : nous ne conservons que des compteurs anonymes, par exemple le nombre de personnes ayant vu une page. Aucun parcours n'est enregistré et rien n'est relié à vous.",
+      "gpc": "Votre navigateur envoie le signal Global Privacy Control, les statistiques restent donc désactivées. Nous respectons ce réglage du navigateur."
     },
     "export": {
       "title": "Exporter mes données",

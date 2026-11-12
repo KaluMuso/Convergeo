@@ -13,7 +13,7 @@
  * No fingerprinting: no UA, screen, IP, raw referrer or URL ever leaves the browser.
  */
 
-import { getAnalyticsConsent } from "../consent";
+import { getAnalyticsConsent, isGlobalPrivacyControlOn } from "../consent";
 
 export const ANON_KEY = "vg_anon_id";
 export const SESSION_KEY_V2 = "vg_sess2";
@@ -71,8 +71,7 @@ export function isCountsOnly(): boolean {
   if (getAnalyticsConsent() === "denied") {
     return true;
   }
-  const nav = typeof navigator === "undefined" ? undefined : navigator;
-  return (nav as { globalPrivacyControl?: boolean } | undefined)?.globalPrivacyControl === true;
+  return isGlobalPrivacyControlOn();
 }
 
 /** Visitor id, created on first use (seeded from the legacy v1 id). Null during SSR. */

@@ -1,6 +1,10 @@
 "use client";
 
-import { getAnalyticsConsent, setAnalyticsConsent } from "@vergeo/analytics/consent";
+import {
+  getAnalyticsConsent,
+  isGlobalPrivacyControlOn,
+  setAnalyticsConsent,
+} from "@vergeo/analytics/consent";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
@@ -71,14 +75,18 @@ function PrivacyIntro({ locale }: { locale: string }) {
 
 /**
  * Analytics opt-out (1A-09). Off keeps anonymous counts only: no visitor id, no journeys,
- * no sign-in link. Only an explicit "denied" turns it off; absent a choice it is on.
+ * no sign-in link. Only an explicit "denied" turns it off; absent a choice it is on. Global
+ * Privacy Control forces it off and locks the switch (the browser setting is respected).
  */
 function AnalyticsSection() {
   const t = useTranslations("account.privacy.analytics");
   const [enabled, setEnabled] = useState(true);
+  const [gpc, setGpc] = useState(false);
 
   useEffect(() => {
-    setEnabled(getAnalyticsConsent() !== "denied");
+    const gpcOn = isGlobalPrivacyControlOn();
+    setGpc(gpcOn);
+    setEnabled(!gpcOn && getAnalyticsConsent() !== "denied");
   }, []);
 
   const handleChange = (next: boolean) => {
@@ -97,11 +105,12 @@ function AnalyticsSection() {
       <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
       <Switch
         checked={enabled}
+        disabled={gpc}
         label={t("toggleLabel")}
         onChange={(event) => handleChange(event.target.checked)}
       />
       <p aria-live="polite" className="text-sm leading-relaxed text-muted">
-        {enabled ? t("on") : t("off")}
+        {gpc ? t("gpc") : enabled ? t("on") : t("off")}
       </p>
     </section>
   );
