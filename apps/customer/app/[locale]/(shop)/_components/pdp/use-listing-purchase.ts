@@ -96,11 +96,9 @@ export function useListingPurchase(
     if (!listing) {
       return;
     }
-    // Intentional identity deps (id / stock bounds) — avoid resetting on new object identity each render.
+    // Stock bounds or a refreshed listing object only re-clamp the quantity;
+    // the add-to-cart outcome stays visible (e.g. after a cart add refreshes stock).
     setQuantity(clampQuantity(getMinimumQuantity(listing), listing));
-    setAddError(null);
-    setAddedMessage(null);
-    setShowMissingOptions(false);
   }, [
     listing,
     listingId,
@@ -110,6 +108,13 @@ export function useListingPurchase(
     listingStockQty,
     listingInStock,
   ]);
+
+  useEffect(() => {
+    // A different listing starts with a clean purchase state.
+    setAddError(null);
+    setAddedMessage(null);
+    setShowMissingOptions(false);
+  }, [listingId]);
 
   const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
   const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
