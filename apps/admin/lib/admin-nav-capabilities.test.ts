@@ -40,6 +40,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => fixture.translate }));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("@vergeo/ui/src/theme-toggle", () => ({ ThemeToggle: () => null }));
+// The notification bell polls its own API; these suites assert permission-shell fetches only.
+vi.mock("../app/[locale]/_components/admin-notification-bell", () => ({
+  AdminNotificationBell: () => null,
+}));
 vi.mock("../app/[locale]/_components/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
@@ -386,6 +390,15 @@ describe("mounted current-permission shell", () => {
       expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
       expect(container.querySelector("[data-protected-route]")).toBeNull();
     }
+  });
+
+  it("lets any admin open their own /notifications page without a nav permission", async () => {
+    current = grants(["products.manage"]);
+    await renderRoute("/en/notifications");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector('[data-protected-route="/en/notifications"]')).not.toBeNull();
+    await renderRoute("/en/notifications/extra");
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
   });
 
   it("keeps mounted chrome/login/recovery transitions stable in both directions", async () => {
