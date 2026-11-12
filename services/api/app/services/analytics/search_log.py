@@ -216,7 +216,7 @@ def top_terms(
     """Most frequent normalized terms (search + ask) within the window."""
     safe_limit = max(1, min(int(limit), 200))
     script = f"""
-SELECT normalized_term, min(term) AS sample_term, count(*)::text
+SELECT normalized_term, normalized_term AS sample_term, count(*)::text
 FROM public.search_query_log
 WHERE {_window_predicate(days)}
 GROUP BY normalized_term
@@ -236,7 +236,7 @@ def zero_result_terms(
     """Most frequent zero-result terms within the window (merchandising gap mining)."""
     safe_limit = max(1, min(int(limit), 200))
     script = f"""
-SELECT normalized_term, min(term) AS sample_term, count(*)::text
+SELECT normalized_term, normalized_term AS sample_term, count(*)::text
 FROM public.search_query_log
 WHERE zero_result AND {_window_predicate(days)}
 GROUP BY normalized_term
