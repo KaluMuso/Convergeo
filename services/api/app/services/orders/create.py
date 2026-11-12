@@ -294,6 +294,27 @@ def _consume_reservations_sql(checkout_group_id: str) -> str:
     return f"DELETE FROM public.stock_reservations WHERE checkout_group_id = {group_sql};"
 
 
+def _clear_ordered_cart_lines_sql(cart_lines: list[CartLineInput], customer_sql: str) -> str:
+    """Take the lines that just became a COD order out of the buyer's cart.
+
+    A cash-on-delivery order is final the moment it is placed, so leaving its
+    lines in the cart let the buyer check the same goods out a second time.
+    Only the exact ordered rows go, and only from the buyer's own cart: a line
+    added in another tab after checkout started was never ordered and stays.
+    Prepaid checkouts keep their cart until the payment outcome is known.
+    """
+    if not cart_lines:
+        return ""
+    item_ids = ", ".join(sql_uuid(line.cart_item_id, "cart_item_id") for line in cart_lines)
+    return f"""
+DELETE FROM public.cart_items ci
+USING public.carts c
+WHERE ci.id IN ({item_ids})
+  AND c.id = ci.cart_id
+  AND c.user_id = {customer_sql};
+"""
+
+
 def _fetch_existing_by_idempotency_key(
     client: Any, *, idempotency_key: str, customer_id: str
 ) -> dict[str, Any] | None:
@@ -820,6 +841,8 @@ INSERT INTO public.notification_outbox (
             )
         )
     statements.append(_consume_reservations_sql(session_id))
+    if cod:
+        statements.append(_clear_ordered_cart_lines_sql(cart_lines, customer_sql))
     statements.append(
         f"""
 UPDATE public.checkout_groups
