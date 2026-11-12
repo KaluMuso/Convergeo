@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.writer import get_writer
 from app.services.orders.audit import run_sql_script, sql_literal
 
 logger = logging.getLogger(__name__)
@@ -82,7 +84,11 @@ def _insert_query_log(
     usd_micros: int,
     user_id: str | None,
 ) -> None:
-    """Best-effort insert; never raises."""
+    """Best-effort insert; never raises.
+
+    analytics_v2 (1A-05): with ``analytics_v2_collect`` ON the INSERT is handed to the
+    bounded off-request writer instead of running inline on the search request.
+    """
     script = f"""
 INSERT INTO public.search_query_log (
   kind, term, normalized_term, entity_counts, zero_result, usd_micros, user_id
@@ -96,6 +102,9 @@ INSERT INTO public.search_query_log (
   {_user_id_sql(user_id)}
 );
 """
+    if collect_v2_enabled():
+        get_writer().submit_sql(script, kind=f"{kind}_log")
+        return
     result = run_sql_script(script)
     if not result.ok:
         logger.debug("search_query_log insert failed (swallowed): %s", result.error)
