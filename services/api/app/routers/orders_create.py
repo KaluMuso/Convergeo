@@ -7,7 +7,16 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.routers.checkout import _ensure_session_active, _extract_data, _rederive_line_prices
+from app.routers.checkout import (
+    _ensure_session_active,
+    _extract_data,
+    _load_delivery_zones,
+    _load_free_delivery_threshold,
+    _rederive_line_prices,
+    compute_group_delivery_fee_ngwee,
+    load_zone_fees,
+    resolve_address_zone,
+)
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
 from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
@@ -21,6 +30,13 @@ from app.services.orders.create import (
     replay_if_completed,
 )
 from app.services.orders.events import emit_order_placed_funnel
+from app.services.orders.fulfilment import (
+    DeclaredGroup,
+    StoredChoice,
+    authoritative_vendor_groups,
+    needs_delivery,
+    parse_stored_choices,
+)
 from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
 from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
 from app.settings import Settings, get_settings
@@ -196,6 +212,85 @@ def _schedule_order_created_webhooks(
         )
 
 
+def _load_own_address(
+    service: ServiceRoleClient, *, address_id: str, customer_id: str
+) -> dict[str, Any]:
+    response = (
+        service.client.table("addresses")
+        .select("id, landmark, lat, lng")
+        .eq("id", address_id)
+        .eq("user_id", customer_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _extract_data(response)
+    if not isinstance(row, dict):
+        raise AppError(
+            code="checkout.address_invalid",
+            message="Delivery address was not found for this account",
+            http_status=422,
+            details={"field": "address_id"},
+        )
+    return row
+
+
+def _coord(value: object) -> float | None:
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _authoritative_groups(
+    service: ServiceRoleClient,
+    *,
+    customer_id: str,
+    address_id: str | None,
+    cart_lines: list[CartLineInput],
+    stored_choices: dict[str, StoredChoice],
+    declared: list[VendorGroupRequest],
+) -> list[VendorFulfilmentInput]:
+    """Re-price every vendor group from server state (see services/orders/fulfilment)."""
+    zone_fees: dict[str, int] = {}
+    free_threshold = 0
+    address_zone: str | None = None
+    if needs_delivery(stored_choices) and address_id is not None:
+        zones = _load_delivery_zones(service)
+        zone_fees = load_zone_fees(zones)
+        free_threshold = _load_free_delivery_threshold(service)
+        address = _load_own_address(service, address_id=address_id, customer_id=customer_id)
+        landmark = address.get("landmark")
+        address_zone = resolve_address_zone(
+            service,
+            zones,
+            lat=_coord(address.get("lat")),
+            lng=_coord(address.get("lng")),
+            landmark=landmark if isinstance(landmark, str) else None,
+        )
+
+    def compute_fee(subtotal_ngwee: int, zone_key: str | None) -> int:
+        return compute_group_delivery_fee_ngwee(
+            subtotal_ngwee=subtotal_ngwee,
+            zone_key=zone_key,
+            zone_fees=zone_fees,
+            free_delivery_threshold_ngwee=free_threshold,
+        )
+
+    return authoritative_vendor_groups(
+        cart_lines=cart_lines,
+        stored_choices=stored_choices,
+        declared_groups=[
+            DeclaredGroup(
+                vendor_id=group_req.vendor_id,
+                fulfilment=group_req.fulfilment,
+                delivery_zone=group_req.delivery_zone,
+                delivery_fee_ngwee=group_req.delivery_fee_ngwee,
+                subtotal_ngwee=group_req.subtotal_ngwee,
+            )
+            for group_req in declared
+        ],
+        address_zone=address_zone,
+        compute_fee=compute_fee,
+    )
+
+
 @router.post("", response_model=CreateOrderResponse)
 async def create_orders(
     body: CreateOrderRequest,
@@ -219,7 +314,7 @@ async def create_orders(
 
     group_response = (
         service.client.table("checkout_groups")
-        .select("subtotal_ngwee, delivery_fee_ngwee, total_ngwee")
+        .select("subtotal_ngwee, delivery_fee_ngwee, total_ngwee, fulfilment_choices")
         .eq("id", body.session_id)
         .eq("customer_id", current_user.id)
         .maybe_single()
@@ -245,7 +340,10 @@ async def create_orders(
         cod_cap_ngwee=cod_cap,
     )
 
-    if any(group_req.fulfilment == "delivery" for group_req in body.groups) and not body.address_id:
+    # Delivery vs pickup comes from what the fulfilment step recorded, never
+    # from the request body.
+    stored_choices = parse_stored_choices(group.get("fulfilment_choices"))
+    if needs_delivery(stored_choices) and not body.address_id:
         raise AppError(
             code="checkout.address_required",
             message="Delivery address is required when any group uses delivery",
@@ -317,16 +415,14 @@ async def create_orders(
             )
         )
 
-    vendor_groups = [
-        VendorFulfilmentInput(
-            vendor_id=group_req.vendor_id,
-            fulfilment=group_req.fulfilment,
-            delivery_zone=group_req.delivery_zone,
-            delivery_fee_ngwee=group_req.delivery_fee_ngwee,
-            subtotal_ngwee=group_req.subtotal_ngwee,
-        )
-        for group_req in body.groups
-    ]
+    vendor_groups = _authoritative_groups(
+        service,
+        customer_id=current_user.id,
+        address_id=body.address_id,
+        cart_lines=cart_lines,
+        stored_choices=stored_choices,
+        declared=body.groups,
+    )
 
     # D9 T1 first-order ≤K500: server-side, every payment method (not just COD).
     # Totals from cart lines (authoritative) + per-vendor delivery fee.

@@ -98,6 +98,7 @@ export type CartNotice = "reservation_expired" | "stock_unavailable";
 export type PlaceOrderFailure =
   | { kind: "return_to_cart"; notice: CartNotice }
   | { kind: "cod_ineligible" }
+  | { kind: "redo_fulfilment" }
   | { kind: "unavailable" };
 
 /** Codes where the cart is stale and only a fresh checkout can succeed. */
@@ -118,5 +119,13 @@ export function classifyPlaceOrderError(error: unknown): PlaceOrderFailure {
   const notice = RETURN_TO_CART[error.code];
   if (notice) return { kind: "return_to_cart", notice };
   if (error.code === "checkout.cod_ineligible") return { kind: "cod_ineligible" };
+  // The server re-prices from the delivery/pickup choices it recorded; when
+  // those are missing or no longer match, only redoing that step can succeed.
+  if (
+    error.code === "orders.fulfilment_not_confirmed" ||
+    error.code === "orders.fulfilment_mismatch"
+  ) {
+    return { kind: "redo_fulfilment" };
+  }
   return { kind: "unavailable" };
 }

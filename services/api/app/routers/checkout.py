@@ -422,6 +422,33 @@ def _load_fallback_delivery_zone(
     return None
 
 
+def resolve_address_zone(
+    service: ServiceRoleClient,
+    zones: dict[str, dict[str, Any]],
+    *,
+    lat: float | None,
+    lng: float | None,
+    landmark: str | None,
+) -> str | None:
+    """Delivery zone for an address, with the operator fallback for bare landmarks.
+
+    The fulfilment step and ``POST /orders`` both price delivery through this one
+    rule, so the zone an order is created with is the zone the buyer was quoted.
+    """
+    zone = resolve_delivery_zone(lat=lat, lng=lng, landmark=landmark)
+    if zone is None and lat is None and lng is None and not landmark_names_other_town(landmark):
+        zone = _load_fallback_delivery_zone(service, zones)
+    return zone
+
+
+def load_zone_fees(zones: dict[str, dict[str, Any]]) -> dict[str, int]:
+    return {
+        key: int(zone.get("fee_ngwee", 0))
+        for key, zone in zones.items()
+        if isinstance(zone.get("fee_ngwee"), int)
+    }
+
+
 def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> dict[str, str]:
     if not vendor_ids:
         return {}
@@ -1087,27 +1114,18 @@ async def validate_fulfilment_step(
         )
 
     zones = _load_delivery_zones(service)
-    zone_fees = {
-        key: int(zone.get("fee_ngwee", 0))
-        for key, zone in zones.items()
-        if isinstance(zone.get("fee_ngwee"), int)
-    }
+    zone_fees = load_zone_fees(zones)
 
     resolved_zone: str | None = None
     pickup_only = False
     if delivery_requested and body.address is not None:
-        resolved_zone = resolve_delivery_zone(
+        resolved_zone = resolve_address_zone(
+            service,
+            zones,
             lat=body.address.lat,
             lng=body.address.lng,
             landmark=body.address.landmark,
         )
-        if (
-            resolved_zone is None
-            and body.address.lat is None
-            and body.address.lng is None
-            and not landmark_names_other_town(body.address.landmark)
-        ):
-            resolved_zone = _load_fallback_delivery_zone(service, zones)
         if resolved_zone is None:
             pickup_only = True
             for choice in body.groups:
@@ -1167,6 +1185,16 @@ async def validate_fulfilment_step(
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": total_delivery_fee,
             "total_ngwee": total,
+            # POST /orders re-prices from these server-recorded choices; the
+            # groups a client sends there are only checked against them.
+            "fulfilment_choices": [
+                {
+                    "vendor_id": result.vendor_id,
+                    "fulfilment": result.fulfilment,
+                    "delivery_zone": result.delivery_zone,
+                }
+                for result in results
+            ],
         }
     ).eq("id", body.session_id).eq("status", "pending").execute()
 

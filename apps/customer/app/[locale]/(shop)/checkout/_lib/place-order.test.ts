@@ -91,6 +91,15 @@ describe("classifyPlaceOrderError", () => {
     });
   });
 
+  it.each(["orders.fulfilment_not_confirmed", "orders.fulfilment_mismatch"])(
+    "sends the buyer back to the fulfilment step on %s",
+    (code) => {
+      expect(classifyPlaceOrderError(new ApiError(code, "server detail", { status: 409 }))).toEqual({
+        kind: "redo_fulfilment",
+      });
+    },
+  );
+
   it("flags a cash-on-delivery rejection so the payment copy can explain it", () => {
     expect(
       classifyPlaceOrderError(
