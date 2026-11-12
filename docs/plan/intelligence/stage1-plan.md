@@ -330,15 +330,16 @@ There are no destructive changes to existing tables in 1A. The `search_query_log
 
 ### 1A.2a Implementation status (2026-11-12)
 
-Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04 → 05 → 06 → 07 → 04b`.
+Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04 → 05 → 06 → 07 → 04b → 06b`.
 
-| PR             | Status                | Notes                                                                                                                                                           |
-| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1A-01 to 1A-05 | done                  | As specified                                                                                                                                                    |
-| 1A-06          | done (redaction only) | Term redaction plus the zero-result log line. `surface` on impressions [P] is **not done**: it needs listing-card call-site threading and an optional API field |
-| 1A-07          | done                  | n8n retention was already UTC, so the v2 tick is chained after the v1 sweep                                                                                     |
-| 1A-04b         | done                  | Added during implementation (bundle budget, see §1A.2)                                                                                                          |
-| 1A-08, 1A-09   | not started [P]       | Blocked on OD-2 and OD-1                                                                                                                                        |
+| PR             | Status          | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1A-01 to 1A-05 | done            | As specified                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 1A-06          | done            | Term redaction plus the zero-result log line. `surface` and the vendor self-view exclusion landed as **1A-06b** (`feat/intel-1a-06b-listing-surface`), see below                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 1A-06b         | done            | Tracking ON: impressions send a slug-free `surface` taken from the page template at flush time (client dedup stays one per listing/session/day); PDP views send `surface=pdp` and, when signed in, the bearer via keepalive fetch. Collect ON: the API stores the surface (unknown values → `unknown`) and resolves the bearer in the background task to pass `p_viewer_user_id`, so a vendor's view of their own listing is not counted. Either flag OFF ⇒ the exact v1 payload and 4-arg SQL call. Deploy order: API before a tracking-ON build (the v1 API rejects the extra field) |
+| 1A-07          | done            | n8n retention was already UTC, so the v2 tick is chained after the v1 sweep                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 1A-04b         | done            | Added during implementation (bundle budget, see §1A.2)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 1A-08, 1A-09   | not started [P] | Blocked on OD-2 and OD-1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 **Verification:**
 
@@ -350,7 +351,7 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 
 **Before production tracking ON:**
 
-- The PDP first-load JS is at exactly **150.0 KB gz** (budget 150) with tracking ON. Any further PDP growth must be offset.
+- The PDP first-load JS is at exactly **150.0 KB gz** (budget 150) with tracking ON. Any further PDP growth must be offset. 1A-06b was trimmed to stay within it (bundle guard green with tracking ON and OFF).
 - FC-1 (Supabase plan) and OD-1 (opt-out semantics) are still open.
 
 ### 1A.3 Migration and rollback
@@ -440,6 +441,26 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 | 1B-05 | Admin UI: Overview, Search & Demand, Products & Funnel, Insights (deterministic flags)                                                                                                         | 04                               | E (Overview, Search) / P (Products tab polish) |
 | 1B-06 | Retire the v1 `product_view` projection and point `query_funnel` at rollups; v1 `analytics_events` gets a 180 d delete                                                                         | 01, 05 + 30 days of parallel run | P                                              |
 
+### 1B.2a Implementation status (2026-11-12)
+
+Stack order (continuing from 1A-06b): `1B-01 → 1B-02 → 1B-03 → 1B-04 → 1B-05`, branches `feat/intel-1b-0N-…`. Nothing is merged, deployed or enabled.
+
+| PR    | Status          | Notes                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1B-01 | done            | Migration `20261112130000_analytics_rollups.sql`; `analytics_rollup_day(day, idle_minutes=30)`; `POST /internal/analytics/rollup-tick` (rollups-gated, 60 s statement timeout per day, single-flight); `infra/n8n/analytics-rollup.json` (02:15 UTC, inactive). Bounce = a session with at most one interaction (events other than `session_start`); a session that spans UTC midnight counts on both days |
+| 1B-02 | done            | SQL `count(*) FILTER` for order-status and funnel tiles. Bug fix, not flag-gated (identical numbers below 1,000 rows)                                                                                                                                                                                                                                                                                      |
+| 1B-03 | done            | Migration `20261112140000_analytics_commercial.sql`: `analytics_commercial_daily(from, to)` is the only paid-order/GMV definition (orders, order_items, checkout_groups, payments). The rollup stores the same numbers plus `dq_payment_mismatch`. `services/analytics/metrics.py`                                                                                                                         |
+| 1B-04 | done            | `routers/admin_analytics.py` (admin/superadmin only; rollups-gated; k inside SQL, k ≥ 5; n ≥ 20 for rates; 60 s cache). `/admin/search-insights` no longer returns raw terms and omits below-k terms (privacy fix, not flag-gated; it had no UI consumer)                                                                                                                                                  |
+| 1B-05 | done            | Admin `/analytics` (Overview, Search & demand, Products & funnel, Insights placeholder). Nav entry hidden unless `/admin/analytics/status` reports the flag ON                                                                                                                                                                                                                                             |
+| 1B-06 | not started [P] | Needs 30 days of parallel run                                                                                                                                                                                                                                                                                                                                                                              |
+
+**Known limits:**
+
+- `search_query_log` has no session link, so `analytics_search_daily.sessions` is NULL and k counts searches, not distinct sessions. One person repeating a term 5 times passes k. Adding an anonymous session column to the search log is a follow-up (OD-8).
+- Day boundaries are UTC, which is 02:00 in Lusaka (OD-9).
+- `analytics_search_daily` keeps redacted, normalized terms (including below-k ones, never shown) with no expiry (OD-10).
+- Refunds and take-rate are not in 1B-03; they need the refund/payout ledger semantics confirmed.
+
 ### 1B.3 Migration and rollback
 
 - Additive tables and a function; the down drops them.
@@ -468,6 +489,9 @@ Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04
 
 - **OD-6:** k value (default 5) and minimum n (default 20).
 - **OD-7:** whether vendor-facing analytics adopt rollups now or stay on `listing_analytics` (recommended: stay; vendor intelligence is deferred).
+- **OD-8:** add an anonymous session id to `search_query_log` so the term k-threshold counts distinct sessions rather than searches.
+- **OD-9:** reporting day boundary: UTC (implemented) or Africa/Lusaka.
+- **OD-10:** retention for `analytics_search_daily` terms (for example, drop below-k terms after 180 days).
 
 ---
 
