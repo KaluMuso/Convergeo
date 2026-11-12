@@ -78,7 +78,8 @@
       "cancelled": "Iyi order yafumishiwapo. Tumineni support nga tamwalecitenekela.",
       "refunded": "Indalama yenu ileya ku mobile money wallet yenu."
     },
-    "now": "Nomba"
+    "now": "Nomba",
+    "completedCod": "Order yapwa"
   },
   "title": "Ama-order yenu",
   "pickup": {

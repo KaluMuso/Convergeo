@@ -87,7 +87,9 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       ready: t("timeline.ready"),
       shipped: t("timeline.shipped"),
       delivered: t("timeline.delivered"),
-      completed: t("timeline.completed"),
+      // COD: no money is held or released by the platform, so don't say "released".
+      completed:
+        order.payment_mode === "cod" ? t("timeline.completedCod") : t("timeline.completed"),
       cancelled: t("timeline.cancelled"),
       refunded: t("timeline.refunded"),
     },

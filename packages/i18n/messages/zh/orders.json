@@ -72,7 +72,8 @@
       "cancelled": "此订单已取消。如有疑问，请联系客服。",
       "refunded": "退款正在退回您的移动钱包。"
     },
-    "now": "当前"
+    "now": "当前",
+    "completedCod": "订单已完成"
   },
   "escrow": {
     "held": "在您收到订单之前，您的款项由 Convergeo 安全保管。",

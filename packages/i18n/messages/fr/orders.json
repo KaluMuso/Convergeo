@@ -72,7 +72,8 @@
       "cancelled": "Cette commande a été annulée. Contactez l'assistance si vous ne vous y attendiez pas.",
       "refunded": "Votre remboursement est en route vers votre portefeuille mobile money."
     },
-    "now": "En cours"
+    "now": "En cours",
+    "completedCod": "Commande terminée"
   },
   "escrow": {
     "held": "Votre paiement est conservé en toute sécurité par Convergeo jusqu'à ce que vous receviez votre commande.",

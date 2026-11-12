@@ -72,7 +72,8 @@
       "cancelled": "This order was cancelled. Contact support if you didn't expect this.",
       "refunded": "Your refund is on its way to your mobile money wallet."
     },
-    "now": "Now"
+    "now": "Now",
+    "completedCod": "Order complete"
   },
   "escrow": {
     "held": "Your payment is held safely by Convergeo until you receive your order.",

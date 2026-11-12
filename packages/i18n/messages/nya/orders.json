@@ -78,7 +78,8 @@
       "cancelled": "Order iyi yaletsedwa. Lankhulani ndi support ngati simunayembekezere.",
       "refunded": "Ndalama yanu ikubwerera ku mobile money wallet yanu."
     },
-    "now": "Pano"
+    "now": "Pano",
+    "completedCod": "Order yatha"
   },
   "title": "Ma-order anu",
   "pickup": {
