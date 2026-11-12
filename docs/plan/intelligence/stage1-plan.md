@@ -328,6 +328,31 @@ There are no destructive changes to existing tables in 1A. The `search_query_log
 | 1A-08  | `feat/intel-1a-08-identify`       | `POST /analytics/identify` + `analytics_session_links` + client call after sign-in                                                                                                                                                                                                                          | 03, 04, **OD-2**             | P                           |
 | 1A-09  | `feat/intel-1a-09-optout-ui`      | "Analytics" toggle on `/account/privacy` (calls `setAnalyticsConsent`), i18n keys en/bem/nya/fr                                                                                                                                                                                                             | 04, **OD-1**                 | P                           |
 
+### 1A.2a Implementation status (2026-11-12)
+
+Stack order (each branch is based on the previous one): `01 → 02 → 03 → 04 → 05 → 06 → 07 → 04b`.
+
+| PR             | Status                | Notes                                                                                                                                                           |
+| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1A-01 to 1A-05 | done                  | As specified                                                                                                                                                    |
+| 1A-06          | done (redaction only) | Term redaction plus the zero-result log line. `surface` on impressions [P] is **not done**: it needs listing-card call-site threading and an optional API field |
+| 1A-07          | done                  | n8n retention was already UTC, so the v2 tick is chained after the v1 sweep                                                                                     |
+| 1A-04b         | done                  | Added during implementation (bundle budget, see §1A.2)                                                                                                          |
+| 1A-08, 1A-09   | not started [P]       | Blocked on OD-2 and OD-1                                                                                                                                        |
+
+**Verification:**
+
+- **pytest:** the new and touched analytics suites are green.
+- **Full API suite:** no new failures versus `origin/staging`. The remaining failures are environment-only (local PG16 without Supabase roles) and identical on the base.
+- **RLS suite:** the same 10 pre-existing failures as the base; all new matrix and ACL cells pass.
+- **TypeScript:** vitest, tsc and eslint (new files) green; the i18n sweep is clean.
+- **Bundle guard:** green with tracking OFF and ON.
+
+**Before production tracking ON:**
+
+- The PDP first-load JS is at exactly **150.0 KB gz** (budget 150) with tracking ON. Any further PDP growth must be offset.
+- FC-1 (Supabase plan) and OD-1 (opt-out semantics) are still open.
+
 ### 1A.3 Migration and rollback
 
 - One additive migration (1A-02). It creates a new table, two indexes (PK + BRIN), three policies and inserts two flag rows. It does not touch any existing table.
