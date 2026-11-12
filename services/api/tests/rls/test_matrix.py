@@ -3030,6 +3030,35 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_insert_delete_only(),
         Persona.ADMIN: all_but_update_denied(),
     },
+    # #766 home feed / ads (20261108100000) and retention foundations
+    # (20261108110000): service-role-only tables. Every client grant is revoked,
+    # so every client verb is permission denied (RLS is also FORCEd).
+    "home_feed_sections": client_invisible(),
+    "ad_placements": client_invisible(),
+    "ad_placement_transitions": client_invisible(),
+    "ad_placement_daily_stats": client_invisible(),
+    "flash_deals": client_invisible(),
+    "product_questions": client_invisible(),
+    "product_answers": client_invisible(),
+    # #766 retention: owner-only rows (`user_id = auth.uid()` USING + WITH CHECK,
+    # no admin bypass). The DEFAULT VALUES insert probe has no owner and is
+    # rejected; WHERE-false update/delete probes match zero rows.
+    "saved_searches": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
+        Persona.ADMIN: malformed_write_probe(),
+    },
+    "listing_alert_subscriptions": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
+        Persona.ADMIN: malformed_write_probe(),
+    },
     # R02-P15. Vendor-curated storefront collections; public read when active.
     "vendor_storefront_collection_items": {
         Persona.ANON: {
