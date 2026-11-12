@@ -7124,11 +7124,7 @@ export type Database = {
         Returns: number
       }
       catalog_entity_set_status: {
-        Args: {
-          p_entity_id: string
-          p_kind: string
-          p_status: string
-        }
+        Args: { p_entity_id: string; p_kind: string; p_status: string }
         Returns: undefined
       }
       catalog_entity_status_for_update: {
