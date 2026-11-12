@@ -114,3 +114,15 @@ Until then, **bem** and **nya** stay routable but are **not** SEO-published (`no
 **PDP recommendation rails (2026-11-09):** `catalog.pdp.related.{storeHeading,similarHeading}` have AI-authored provisional Bemba/Nyanja wording (the `pdp` prefix is Phase-1 critical, so EN passthrough fails CI). Pending native-speaker review.
 **Follow feed (2026-11-09):** `account.nav.following` has AI-authored provisional Bemba/Nyanja wording (critical `nav` prefix); `account.following.*` is EN passthrough. Pending native review.
 **Delivery estimates (2026-11-09):** `catalog.delivery.*` (outside critical prefixes) is EN passthrough in bem/nya, pending native review.
+
+**Service packages (2026-11-13, `feat/clips-pilot-service-packages`):** `services.packages.*` (customer package comparison) and `services.vendor.packages.*` (vendor package editor). `services` is outside the Phase-1 critical prefixes. **AI-authored provisional drafts — pending native-speaker review, low confidence:**
+
+| Key                              | bem (draft)                     | nya (draft)                        |
+| -------------------------------- | ------------------------------- | ---------------------------------- |
+| `services.packages.heading`      | Saleni ipakeji                  | Sankhani phukusi                   |
+| `services.packages.cta`          | Lombeni iyi pakeji              | Pemphani phukusi ili               |
+| `services.packages.priceQuote`   | Umutengo ukalandwapo pa kulomba | Mtengo pofunsa                     |
+| `services.packages.compareHint`  | Kushinta ukulinganya amapakeji  | Sunthani kuti muyerekeze maphukusi |
+| `services.vendor.packages.title` | Amapakeji                       | Maphukusi                          |
+
+Every other key in both subtrees (tier names, delivery/revision ICU plurals, prefill template, no-payment note, vendor guidance and errors) is **English passthrough** for key parity: the prefill text is sent to the vendor verbatim and the no-payment note is trust copy, so a wrong vernacular guess costs more than English. Also EN passthrough in bem/nya: `vendor.clips.errors.notInPilot` / `paused` (Clips pilot).

@@ -63,15 +63,18 @@ code.
 
 ## 4. Kill-switch drill (run once before the flag is flipped)
 
-1. Set `clip_monthly_cap_usd` to a value **below** the current month's recorded
-   spend (a cap of `0` works).
+1. Trip the switch deterministically — see `docs/ops/clips-pilot-enablement.md`
+   §2.7. (Correction, 2026-11-13: a cap of `0` means _unbounded_ and never trips,
+   and lowering the cap alone does not trip until the next spend is recorded.)
 2. Attempt an upload from the vendor studio. Expect a clear, translated refusal —
    not a stack trace, not a silent failure.
 3. Load `/clips` as a customer. **Expect posters, captions, prices and a working
    add-to-cart.** If any of those are missing, stop and fix before launch.
 4. Load a shared clip page (`/clips/{id}`). Expect the poster and OG tags.
-5. Reset: restore the cap and call the reset action from the admin analytics page.
-   Confirm uploads work again.
+5. Reset: raise the cap above the recorded total **first**, then call the reset
+   action from the admin analytics page. Confirm uploads work again. (Since
+   `20261113030000` the guard re-arms after a reset: further spend at/over the cap
+   trips it again.)
 6. Check `audit_log` — every flip and reset should be there with an actor.
 
 The drill is cheap and answers the only question that matters about a kill

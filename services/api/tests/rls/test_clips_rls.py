@@ -193,6 +193,20 @@ def _cleanup_clip(db: PgConn, clip_id: str) -> None:
     db.run(f"BEGIN; DELETE FROM public.video_clips WHERE id = '{clip_id}'; COMMIT;")
 
 
+def _pilot_add(db: PgConn, vendor_id: str) -> None:
+    """Clips pilot (20261113030000): published clips are public only from
+    allowlisted vendors while the gate is enforced (the seeded default)."""
+    result = db.run(
+        f"BEGIN; INSERT INTO public.clip_pilot_vendors (vendor_id) VALUES ('{vendor_id}') "
+        "ON CONFLICT DO NOTHING; COMMIT;"
+    )
+    assert result.ok, result.error
+
+
+def _pilot_remove(db: PgConn, vendor_id: str) -> None:
+    db.run(f"BEGIN; DELETE FROM public.clip_pilot_vendors WHERE vendor_id = '{vendor_id}'; COMMIT;")
+
+
 # --- Public visibility ------------------------------------------------------
 @pytest.mark.parametrize("status", NON_PUBLIC_STATUSES)
 def test_anon_cannot_see_a_non_published_clip(
@@ -211,6 +225,7 @@ def test_anon_cannot_see_a_non_published_clip(
 
 
 def test_anon_can_see_a_published_clip(db: PgConn, as_anon: RoleSession) -> None:
+    _pilot_add(db, VENDOR_A)
     clip_id = _seed_clip(db, vendor_id=VENDOR_A, status="published")
     try:
         result = as_anon.execute(
@@ -220,12 +235,56 @@ def test_anon_can_see_a_published_clip(db: PgConn, as_anon: RoleSession) -> None
         assert result.rows == [clip_id]
     finally:
         _cleanup_clip(db, clip_id)
+        _pilot_remove(db, VENDOR_A)
+
+
+def test_a_published_clip_outside_the_pilot_is_hidden_from_anon(
+    db: PgConn, as_anon: RoleSession
+) -> None:
+    """The restrictive pilot policy: enforced gate + vendor not allowlisted."""
+    _pilot_remove(db, VENDOR_B)
+    clip_id = _seed_clip(db, vendor_id=VENDOR_B, status="published")
+    try:
+        result = as_anon.execute(
+            f"SELECT id FROM public.video_clips WHERE id = '{clip_id}'"
+        )
+        assert result.ok, result.error
+        assert result.rows == [], "a non-pilot vendor's clip was publicly visible"
+    finally:
+        _cleanup_clip(db, clip_id)
+
+
+def test_the_pilot_gate_fails_closed_without_its_config_row(db: PgConn) -> None:
+    result = db.run(
+        f"""
+        BEGIN;
+        DELETE FROM public.platform_config WHERE key = 'clip_pilot_allowlist_enforced';
+        SELECT public.clip_vendor_in_pilot('{VENDOR_B}'::uuid);
+        ROLLBACK;
+        """
+    )
+    assert result.ok, result.error
+    assert result.rows and not _as_bool(str(result.rows[-1]))
+
+
+def test_clip_pilot_vendors_has_no_client_write_grant(db: PgConn) -> None:
+    result = db.run(
+        """
+        SELECT count(*)::int FROM information_schema.role_table_grants
+         WHERE table_schema = 'public' AND table_name = 'clip_pilot_vendors'
+           AND grantee IN ('anon', 'authenticated')
+           AND privilege_type IN ('INSERT', 'UPDATE', 'DELETE');
+        """
+    )
+    assert result.ok, result.error
+    assert result.rows and str(result.rows[-1]) == "0"
 
 
 def test_takedown_hides_the_clip_immediately(
     db: PgConn, as_anon: RoleSession
 ) -> None:
     """Instant-hide: no cache to invalidate, the policy simply stops matching."""
+    _pilot_add(db, VENDOR_A)
     clip_id = _seed_clip(db, vendor_id=VENDOR_A, status="published")
     try:
         before = as_anon.execute(
@@ -246,6 +305,7 @@ def test_takedown_hides_the_clip_immediately(
         assert after.rows == [], "a taken-down clip was still publicly visible"
     finally:
         _cleanup_clip(db, clip_id)
+        _pilot_remove(db, VENDOR_A)
 
 
 # --- clip_products: the two DB-level invariants -----------------------------

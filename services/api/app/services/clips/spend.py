@@ -264,7 +264,14 @@ def raise_if_killed(service_client: ServiceRoleClient) -> None:
     this: the feed, the share page and the shoppable overlay must keep working
     when the switch is on.
     """
-    if is_killed(service_client):
+    try:
+        killed = is_killed(service_client)
+    except Exception:
+        # Fail closed: if we cannot read the month's guard we cannot know the
+        # upload is affordable. Uploads pause; the read path is unaffected.
+        logger.warning("clip spend guard unreadable; refusing upload")
+        killed = True
+    if killed:
         raise AppError(
             code="clip_cost_kill_switch",
             message="Clip uploads are paused for this month",

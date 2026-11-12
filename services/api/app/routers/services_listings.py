@@ -10,9 +10,11 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.service_packages import PublicPackageOut, to_public
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.listings.demo import fetch_demo_service_ids, has_non_genuine_media
 from app.services.moderation.prohibited import screen_listing
+from app.services.service_packages import state as package_state
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator, model_validator
 
@@ -133,6 +135,8 @@ class ServiceDetailResponse(StrictModel):
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
     provider: ProviderSummary
+    #: Active Basic/Standard/Premium packages, tier-ordered (docs/plan/service-packages.md).
+    packages: list[PublicPackageOut] = Field(default_factory=list)
 
 
 class ServiceSummary(StrictModel):
@@ -637,7 +641,11 @@ def get_service_detail(
 
     vendor_id = str(row.get("vendor_id") or "")
     tiers = _fetch_response_tiers(service_client.client, [vendor_id])
-    return _to_detail(row, response_time_tier_value=tiers.get(vendor_id))
+    detail = _to_detail(row, response_time_tier_value=tiers.get(vendor_id))
+    packages = package_state.list_active_for_services_safe(service_client, [service_id])
+    return detail.model_copy(
+        update={"packages": [to_public(p) for p in packages.get(service_id, [])]}
+    )
 
 
 @router.get("/vendor/services", response_model=ServiceVendorListResponse)

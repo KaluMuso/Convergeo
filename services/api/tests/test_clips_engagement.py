@@ -237,6 +237,10 @@ def store() -> Store:
     )
     st.rows("feature_flags").append({"flag": "clips_comments", "enabled": True})
     st.rows("feature_flags").append({"flag": "clips", "enabled": True})
+    # Post-pilot behaviour: the allowlist gate is covered in test_clips_pilot.py.
+    st.rows("platform_config").append(
+        {"key": "clip_pilot_allowlist_enforced", "value": False}
+    )
     for name in ("clip_likes", "clip_comments", "clip_reports", "clip_views", "audit_log"):
         st.rows(name)
     return st

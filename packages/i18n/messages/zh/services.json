@@ -88,6 +88,50 @@
       "saveFailed": "无法保存服务。",
       "titleInvalid": "请输入至少两个字符的标题。",
       "authRequired": "登录以管理您的服务。"
+    },
+    "packages": {
+      "title": "套餐",
+      "intro": "最多提供三个套餐，方便客户比较并就所需内容索取报价。",
+      "codNote": "客户选择套餐时不会在线付款——他们会向您发送报价请求，最终价格在对话中商定。",
+      "offer": "提供此套餐",
+      "notOffered": "未提供",
+      "archived": "已移除——保存即可重新提供",
+      "nameLabel": "套餐名称",
+      "nameHint": "简短明确，例如“仅标志”或“标志 + 名片”。",
+      "descriptionLabel": "简短说明（可选）",
+      "priceModeLabel": "定价方式",
+      "priceModeFixed": "固定价格",
+      "priceModeQuote": "按报价",
+      "priceLabel": "价格（K）",
+      "deliveryLabel": "交付时间（天）",
+      "revisionsLabel": "包含的修改次数",
+      "revisionsNA": "不适用",
+      "includesLabel": "包含内容",
+      "includesHint": "每行一项，最多 8 项。",
+      "save": "保存套餐",
+      "saving": "正在保存…",
+      "saved": "套餐已保存。",
+      "archive": "移除套餐",
+      "guidance": {
+        "order": "您的 {higher} 套餐比 {lower} 套餐便宜。客户通常认为更高档的套餐价格更高。",
+        "fromPrice": "提示：将服务的“起价”设为最便宜套餐的价格，以便搜索显示正确金额。"
+      },
+      "errors": {
+        "name": "请输入 2 到 40 个字符的名称。",
+        "description": "说明不得超过 300 个字符。",
+        "price": "请输入大于零的价格，最多两位小数。",
+        "delivery": "交付时间必须是 1 到 90 之间的整数天。",
+        "revisions": "修改次数必须是 0 到 10 之间的整数。",
+        "includes": "最多 8 项，每项不超过 120 个字符。",
+        "prohibited": "该套餐包含 Vergeo5 不允许的内容。",
+        "rateLimited": "修改过于频繁。请稍等一分钟后再试。",
+        "saveFailed": "无法保存套餐。",
+        "archiveFailed": "无法移除套餐。",
+        "loadFailed": "无法加载套餐。",
+        "invalidTransition": "无法以这种方式更改该套餐。",
+        "conflict": "该套餐刚刚被修改。请重新加载后再试。",
+        "notFound": "未找到套餐。"
+      }
     }
   },
   "postJob": {
@@ -297,5 +341,30 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "packages": {
+    "heading": "选择套餐",
+    "subheading": "比较每个套餐包含的内容，然后向 {vendor} 就您想要的套餐索取报价。",
+    "compareHint": "左右滑动以比较套餐",
+    "tier": {
+      "basic": "基础版",
+      "standard": "标准版",
+      "premium": "高级版"
+    },
+    "priceQuote": "价格面议",
+    "deliveryLabel": "交付时间",
+    "delivery": "{days, plural, other {# 天内交付}}",
+    "revisionsLabel": "修改次数",
+    "revisions": "{count, plural, =0 {不含修改} other {# 次修改}}",
+    "revisionsNA": "不适用修改",
+    "includeMarker": "✓",
+    "cta": "索取此套餐报价",
+    "dialogTitle": "索取报价：{name}",
+    "prefill": "我想要 {tier} 套餐（{name}）。标价：{price}。交付：{days} 天。\n\n我的需求：",
+    "prefillPriceQuote": "待报价",
+    "noPaymentNote": "选择套餐不会向您收费。最终价格由您与服务商在报价对话中商定。",
+    "errors": {
+      "unavailable": "该套餐已不可用。请刷新页面查看当前套餐。"
+    }
   }
 }

@@ -1300,6 +1300,38 @@
       "attributionNote": "Attribution is validated server-side: a clip only earns credit for a product it actually links.",
       "permissionDenied": "You do not have permission to view clip analytics.",
       "error": "Clip analytics could not be loaded."
+    },
+    "pilotLink": "Pilot vendors",
+    "pilot": {
+      "title": "Clips pilot vendors",
+      "intro": "While the pilot runs, only these shops can upload clips and only their published clips are shown to customers.",
+      "statusTitle": "Pilot status",
+      "posture": {
+        "off": "Clips is switched off. This list is preparation only — nothing is live.",
+        "pilot": "Pilot running: only the shops below can upload, and only their clips are visible.",
+        "open": "Pilot ended: every verified shop can upload and every active shop's clips are visible."
+      },
+      "commentsOff": "Comments stay off for the pilot.",
+      "commentsHeldOff": "The comments flag is on, but comments stay off until the pilot is ended.",
+      "listTitle": "{count, plural, one {# shop} other {# shops}} of {max}",
+      "empty": "No shops yet. Add one below.",
+      "notActive": "Shop status: {status} — its clips are hidden until it is active again.",
+      "remove": "Remove",
+      "addTitle": "Add a shop",
+      "vendorIdLabel": "Vendor ID",
+      "noteLabel": "Note (optional)",
+      "addHelp": "The shop must be active. Removing a shop hides its clips at once; nothing is deleted, so adding it back restores them.",
+      "add": "Add to pilot",
+      "loadFailed": "The pilot list could not be loaded.",
+      "errors": {
+        "invalidId": "Enter a vendor ID in UUID format.",
+        "noteTooLong": "Keep the note to 280 characters.",
+        "alreadyListed": "This shop is already in the pilot.",
+        "full": "The pilot list is full.",
+        "notActive": "Only an active shop can join the pilot.",
+        "addFailed": "The shop could not be added. Check that the ID is correct and the shop is active.",
+        "removeFailed": "The shop could not be removed."
+      }
     }
   },
   "rolesUi": {
@@ -1348,7 +1380,10 @@
     "loadFailed": "Could not load records.",
     "permissionDenied": "You do not have access to this overview.",
     "unknownStock": "Unknown",
-    "retry": "Try again"
+    "retry": "Try again",
+    "packages": "{count, plural, =0 {No packages} one {# package} other {# packages}}",
+    "packageLine": "{tier} · {name} · {price} · {days, plural, one {# day} other {# days}} · {status}",
+    "packagePriceQuote": "on request"
   },
   "homeFeed": {
     "title": "Home feed",

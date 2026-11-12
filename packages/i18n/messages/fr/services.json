@@ -88,6 +88,50 @@
       "saveFailed": "Impossible d'enregistrer le service.",
       "titleInvalid": "Saisissez un titre d'au moins deux caractères.",
       "authRequired": "Connectez-vous pour gérer vos services."
+    },
+    "packages": {
+      "title": "Formules",
+      "intro": "Proposez jusqu'à trois formules pour que les clients puissent les comparer et demander un devis précis.",
+      "codNote": "Aucun paiement n'est pris quand un client choisit une formule : il vous envoie une demande de devis et vous convenez du prix final dans la discussion.",
+      "offer": "Proposer cette formule",
+      "notOffered": "Non proposée",
+      "archived": "Retirée — enregistrez pour la proposer à nouveau",
+      "nameLabel": "Nom de la formule",
+      "nameHint": "Court et précis, par ex. « Logo seul » ou « Logo + cartes de visite ».",
+      "descriptionLabel": "Description courte (facultatif)",
+      "priceModeLabel": "Tarification",
+      "priceModeFixed": "Prix fixe",
+      "priceModeQuote": "Sur devis",
+      "priceLabel": "Prix (K)",
+      "deliveryLabel": "Délai de livraison (jours)",
+      "revisionsLabel": "Révisions incluses",
+      "revisionsNA": "Non applicable",
+      "includesLabel": "Ce qui est inclus",
+      "includesHint": "Un élément par ligne, 8 au maximum.",
+      "save": "Enregistrer la formule",
+      "saving": "Enregistrement…",
+      "saved": "Formule enregistrée.",
+      "archive": "Retirer la formule",
+      "guidance": {
+        "order": "Votre formule {higher} coûte moins cher que votre formule {lower}. Les clients s'attendent en général à ce que les formules supérieures coûtent plus.",
+        "fromPrice": "Astuce : indiquez comme « prix à partir de » le prix de votre formule la moins chère pour que la recherche affiche le bon montant."
+      },
+      "errors": {
+        "name": "Saisissez un nom de 2 à 40 caractères.",
+        "description": "La description ne doit pas dépasser 300 caractères.",
+        "price": "Saisissez un prix supérieur à zéro, avec au plus deux décimales.",
+        "delivery": "Le délai doit être un nombre entier de jours entre 1 et 90.",
+        "revisions": "Les révisions doivent être un nombre entier entre 0 et 10.",
+        "includes": "8 éléments au maximum, de 120 caractères chacun au plus.",
+        "prohibited": "Cette formule mentionne un élément non autorisé sur Vergeo5.",
+        "rateLimited": "Trop de modifications d'un coup. Patientez une minute puis réessayez.",
+        "saveFailed": "Impossible d'enregistrer la formule.",
+        "archiveFailed": "Impossible de retirer la formule.",
+        "loadFailed": "Impossible de charger les formules.",
+        "invalidTransition": "Cette formule ne peut pas être modifiée ainsi.",
+        "conflict": "Cette formule vient d'être modifiée. Rechargez puis réessayez.",
+        "notFound": "Formule introuvable."
+      }
     }
   },
   "postJob": {
@@ -297,5 +341,30 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "packages": {
+    "heading": "Choisissez une formule",
+    "subheading": "Comparez le contenu de chaque formule, puis demandez un devis à {vendor} pour celle qui vous convient.",
+    "compareHint": "Faites glisser pour comparer les formules",
+    "tier": {
+      "basic": "Essentielle",
+      "standard": "Standard",
+      "premium": "Premium"
+    },
+    "priceQuote": "Prix sur demande",
+    "deliveryLabel": "Délai de livraison",
+    "delivery": "{days, plural, one {Livré en # jour} other {Livré en # jours}}",
+    "revisionsLabel": "Révisions",
+    "revisions": "{count, plural, =0 {Aucune révision} one {# révision} other {# révisions}}",
+    "revisionsNA": "Révisions non applicables",
+    "includeMarker": "✓",
+    "cta": "Demander cette formule",
+    "dialogTitle": "Demander un devis : {name}",
+    "prefill": "Je souhaite la formule {tier} ({name}). Prix affiché : {price}. Délai : {days} jours.\n\nMes précisions : ",
+    "prefillPriceQuote": "à définir dans le devis",
+    "noPaymentNote": "Demander une formule ne vous débite rien. Vous convenez du prix final avec le prestataire dans la discussion du devis.",
+    "errors": {
+      "unavailable": "Cette formule n'est plus disponible. Actualisez la page pour voir les formules actuelles."
+    }
   }
 }

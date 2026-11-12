@@ -134,6 +134,10 @@ export function ClipComposer() {
       const code = (error as { code?: string })?.code ?? "";
       if (code === "clip_cap_exceeded") {
         fail("clips.errors.weeklyCap");
+      } else if (code === "clip_pilot_not_allowlisted") {
+        fail("clips.errors.notInPilot");
+      } else if (code === "clip_cost_kill_switch") {
+        fail("clips.errors.paused");
       } else if (code === "forbidden") {
         fail("clips.errors.notVerified");
       } else if (code === "rate_limited") {

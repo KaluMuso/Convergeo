@@ -116,6 +116,50 @@
       "titleInvalid": "Enter a title with at least two characters.",
       "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
       "authRequired": "Sign in to manage your services."
+    },
+    "packages": {
+      "title": "Packages",
+      "intro": "Offer up to three packages so customers can compare them and ask for a quote on exactly what they want.",
+      "codNote": "No payment is taken when a customer picks a package — they send you a quote request, and you agree the final price in the chat.",
+      "offer": "Offer this package",
+      "notOffered": "Not offered",
+      "archived": "Removed — save to offer it again",
+      "nameLabel": "Package name",
+      "nameHint": "Short and specific, e.g. \"Logo only\" or \"Logo + business cards\".",
+      "descriptionLabel": "Short description (optional)",
+      "priceModeLabel": "Pricing",
+      "priceModeFixed": "Fixed price",
+      "priceModeQuote": "Request a quote",
+      "priceLabel": "Price (K)",
+      "deliveryLabel": "Delivery time (days)",
+      "revisionsLabel": "Revisions included",
+      "revisionsNA": "Not applicable",
+      "includesLabel": "What's included",
+      "includesHint": "One item per line, up to 8.",
+      "save": "Save package",
+      "saving": "Saving…",
+      "saved": "Package saved.",
+      "archive": "Remove package",
+      "guidance": {
+        "order": "Your {higher} package costs less than your {lower} package. Customers usually expect higher tiers to cost more.",
+        "fromPrice": "Tip: set your service's \"from price\" to your lowest package price so search shows the right number."
+      },
+      "errors": {
+        "name": "Enter a name of 2 to 40 characters.",
+        "description": "Keep the description to 300 characters.",
+        "price": "Enter a price greater than zero, with at most two decimal places.",
+        "delivery": "Delivery time must be a whole number of days from 1 to 90.",
+        "revisions": "Revisions must be a whole number from 0 to 10.",
+        "includes": "Use at most 8 items of up to 120 characters each.",
+        "prohibited": "This package mentions something that isn't allowed on Vergeo5.",
+        "rateLimited": "Too many changes at once. Wait a minute and try again.",
+        "saveFailed": "Could not save the package.",
+        "archiveFailed": "Could not remove the package.",
+        "loadFailed": "Could not load packages.",
+        "invalidTransition": "This package can't be changed that way.",
+        "conflict": "This package was just changed. Reload and try again.",
+        "notFound": "Package not found."
+      }
     }
   },
   "postJob": {
@@ -344,5 +388,30 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "packages": {
+    "heading": "Choose a package",
+    "subheading": "Compare what each package includes, then ask {vendor} for a quote on the one you want.",
+    "compareHint": "Swipe to compare packages",
+    "tier": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "premium": "Premium"
+    },
+    "priceQuote": "Price on request",
+    "deliveryLabel": "Delivery time",
+    "delivery": "{days, plural, one {Delivered in # day} other {Delivered in # days}}",
+    "revisionsLabel": "Revisions",
+    "revisions": "{count, plural, =0 {No revisions} one {# revision} other {# revisions}}",
+    "revisionsNA": "Revisions not applicable",
+    "includeMarker": "✓",
+    "cta": "Request this package",
+    "dialogTitle": "Request a quote: {name}",
+    "prefill": "I'd like the {tier} package ({name}). Listed price: {price}. Delivery: {days} days.\n\nMy details: ",
+    "prefillPriceQuote": "to be quoted",
+    "noPaymentNote": "Requesting a package does not charge you. You agree the final price with the provider in the quote chat.",
+    "errors": {
+      "unavailable": "This package is no longer available. Refresh the page to see the current packages."
+    }
   }
 }

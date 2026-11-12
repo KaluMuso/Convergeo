@@ -33,6 +33,7 @@ export type RequestQuoteLabels = {
     ownListing: string;
     generic: string;
     signInRequired: string;
+    packageUnavailable?: string;
   };
 };
 
@@ -44,6 +45,10 @@ export type RequestQuoteButtonProps = {
   labels: RequestQuoteLabels;
   variant?: "primary" | "secondary";
   className?: string;
+  /** Service package this request is about; the textarea opens prefilled. */
+  packageId?: string;
+  initialDetails?: string;
+  ctaTestId?: string;
 };
 
 export function RequestQuoteButton({
@@ -54,6 +59,9 @@ export function RequestQuoteButton({
   labels,
   variant = "secondary",
   className,
+  packageId,
+  initialDetails,
+  ctaTestId = "pdp-request-quote-cta",
 }: RequestQuoteButtonProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -81,6 +89,7 @@ export function RequestQuoteButton({
     const ok = await submitRequest({
       listingId,
       serviceId,
+      packageId,
       details,
     });
     if (ok) {
@@ -90,7 +99,7 @@ export function RequestQuoteButton({
 
   const errorMessage =
     errorKey && errorKey in labels.errors
-      ? labels.errors[errorKey as keyof RequestQuoteLabels["errors"]]
+      ? (labels.errors[errorKey as keyof RequestQuoteLabels["errors"]] ?? labels.errors.generic)
       : null;
 
   return (
@@ -98,11 +107,14 @@ export function RequestQuoteButton({
       <Button
         type="button"
         variant={variant}
-        data-testid="pdp-request-quote-cta"
+        data-testid={ctaTestId}
         className={className ?? "w-full sm:w-auto"}
         loadingLabel={labels.submitting}
         onClick={() => {
           reset();
+          if (initialDetails && !details) {
+            setDetails(initialDetails);
+          }
           setOpen(true);
         }}
       >

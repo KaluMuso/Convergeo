@@ -627,6 +627,48 @@ describe("read-only oversight and moderation destinations", () => {
     expect(mutations()).toEqual([]);
   });
 
+  it("lists each service's packages read-only, with integer ngwee formatted", async () => {
+    overrides.push({
+      path: "/admin/services",
+      method: "GET",
+      response: Promise.resolve(
+        reply({
+          items: [
+            {
+              id: "fixture-service",
+              vendor_id: "fixture-vendor",
+              status: "active",
+              title: "Fixture logo design",
+              packages: [
+                {
+                  id: "p1",
+                  tier: "basic",
+                  name: "Logo only",
+                  price_ngwee: 75000,
+                  delivery_days: 3,
+                  status: "active",
+                },
+                {
+                  id: "p2",
+                  tier: "premium",
+                  name: "Full brand",
+                  price_ngwee: null,
+                  delivery_days: 14,
+                  status: "archived",
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    });
+    await standalone(<OversightList kind="services" />);
+    const block = container.querySelector('[data-testid="oversight-service-packages"]');
+    expect(block?.textContent).toContain("admin.oversightUi.packages");
+    expect(block?.querySelectorAll("span.block").length).toBe(2);
+    expect(mutations()).toEqual([]);
+  });
+
   it.each(["services", "inventory"] as const)(
     "makes no %s request without the matching read grant",
     async (kind) => {

@@ -21,6 +21,19 @@ export type RfqThread = {
   quoted_at: string | null;
   last_message_at: string | null;
   created_at: string;
+  package_id?: string | null;
+  package_snapshot?: RfqPackageSnapshot | null;
+};
+
+/** What the customer saw when they asked about a service package (money in ngwee). */
+export type RfqPackageSnapshot = {
+  package_id: string;
+  tier: string;
+  name: string;
+  price_ngwee: number | null;
+  delivery_days: number | null;
+  revisions: number | null;
+  includes: string[];
 };
 
 export type RfqMessage = {
@@ -40,6 +53,8 @@ export type CreateRfqResponse = {
 export type CreateRfqPayload = {
   listing_id?: string;
   service_id?: string;
+  /** Service package the customer picked (service RFQs only). */
+  package_id?: string;
   requested_details: string;
 };
 

@@ -2083,7 +2083,9 @@
       "notVerified": "Clips are for verified sellers. Finish your verification to start posting.",
       "linkNotOwned": "You can only link your own products.",
       "linkLimit": "A clip can link at most 3 products.",
-      "linkNotActive": "Only an active product can be linked."
+      "linkNotActive": "Only an active product can be linked.",
+      "notInPilot": "Clips is in a small pilot and your shop isn't part of it yet. We'll let you know when it opens.",
+      "paused": "Clip uploads are paused for the rest of this month. Your live clips are still showing."
     },
     "durationSeconds": "{seconds}s"
   }

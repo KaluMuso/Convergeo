@@ -180,7 +180,12 @@ class Store:
         row["clips_transcoded"] += max(0, int(params["p_clips"]))
         row["bytes_served"] += max(0, int(params["p_bytes"]))
         cap = int(params["p_cap_usd_micros"])
-        if cap > 0 and row["total_usd_micros"] >= cap and not row["killed_at"]:
+        # Mirrors 20261113030000: trip when the month is not currently closed —
+        # never tripped, or reset since the last trip (the guard re-arms).
+        reopened = bool(row["admin_reset_at"]) and str(row["admin_reset_at"]) >= str(
+            row["killed_at"] or ""
+        )
+        if cap > 0 and row["total_usd_micros"] >= cap and (not row["killed_at"] or reopened):
             row["killed_at"] = datetime.now(UTC).isoformat()
         return int(row["total_usd_micros"])
 
@@ -292,6 +297,52 @@ def test_the_reset_re_opens_the_month_without_erasing_the_trip(store: Store) -> 
     assert row["admin_reset_at"] is not None
 
 
+def test_a_reset_month_re_arms_and_trips_again_on_further_spend(store: Store) -> None:
+    """0079 used coalesce(killed_at, now()), so after one reset no later spend
+    could ever trip the month again. The guard must re-arm."""
+    store.rows("platform_config").append({"key": spend.CAP_KEY, "value": 1})
+    spend.clear_clip_spend_cache()
+    spend.record_spend(store, usd_micros=1_000_000, month_key=MONTH)
+    assert spend.reset_kill_switch(store, month_key=MONTH) is True
+    assert spend.is_killed(store, month_key=MONTH) is False
+
+    spend.record_spend(store, usd_micros=20_000, clips=1, month_key=MONTH)
+
+    assert spend.is_killed(store, month_key=MONTH) is True
+    row = store.rows("clip_spend_monthly")[0]
+    assert row["admin_reset_at"] is not None  # history kept
+    assert str(row["killed_at"]) >= str(row["admin_reset_at"])
+
+
+def test_the_migration_re_arms_the_sql_guard() -> None:
+    """The fake above models the SQL; pin the SQL itself so they cannot drift."""
+    from pathlib import Path
+
+    sql = (
+        Path(__file__).resolve().parents[3]
+        / "supabase/migrations/20261113030000_clip_pilot_allowlist.sql"
+    ).read_text()
+    body = sql.split("create or replace function public.clip_record_spend", 1)[1]
+    assert "set killed_at = now()" in body
+    assert "admin_reset_at >= killed_at" in body
+    assert "coalesce(killed_at" not in body
+
+
+def test_an_unreadable_guard_refuses_the_upload(store: Store) -> None:
+    """Fail closed: if the month's row cannot be read, uploads pause (503) —
+    not a 500, and never an open upload slot."""
+
+    class Broken:
+        @property
+        def client(self) -> Any:
+            raise RuntimeError("db down")
+
+    with pytest.raises(AppError) as excinfo:
+        spend.raise_if_killed(Broken())
+    assert excinfo.value.code == "clip_cost_kill_switch"
+    assert excinfo.value.http_status == 503
+
+
 def test_resetting_a_month_that_never_tripped_is_a_no_op(store: Store) -> None:
     assert spend.reset_kill_switch(store, month_key=MONTH) is False
 
@@ -364,6 +415,10 @@ def api(store: Store, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, 
     store.rows("vendor_listings")
     store.rows("audit_log")
     store.rows("feature_flags").append({"flag": "clips", "enabled": True})
+    # Post-pilot behaviour: the allowlist gate is covered in test_clips_pilot.py.
+    store.rows("platform_config").append(
+        {"key": "clip_pilot_allowlist_enforced", "value": False}
+    )
 
     with TestClient(create_app(), raise_server_exceptions=False) as client:
         yield client
