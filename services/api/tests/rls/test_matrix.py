@@ -3377,7 +3377,7 @@ EXPECTATIONS: TableExpectations = {
     "payment_collection_receipts": client_invisible(),
     "payment_collection_exceptions": client_invisible(),
     "cart_merge_receipts": client_invisible(),
-    # Notification center (20261113050000). Own-row SELECT; the only client UPDATE
+    # Notification center (20261113090000). Own-row SELECT; the only client UPDATE
     # grant is the (seen_at, read_at) column pair, so the generic
     # `SET created_at = created_at` probe is denied; no client INSERT/DELETE.
     "in_app_notifications": {
