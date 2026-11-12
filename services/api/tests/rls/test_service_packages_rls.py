@@ -1,4 +1,4 @@
-"""Service packages — RLS and database invariants (20261113040000).
+"""Service packages — RLS and database invariants (20261113045000).
 
 Live Postgres (``supabase db reset`` first), same harness as the other RLS suites.
 """

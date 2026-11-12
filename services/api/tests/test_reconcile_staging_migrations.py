@@ -79,7 +79,7 @@ PENDING_REPAIR_VERSIONS = {
     "20261109120000",
     # Clips pilot allowlist + service packages (feat/clips-pilot-service-packages).
     "20261113030000",
-    "20261113040000",
+    "20261113045000",
 }
 
 

@@ -23,7 +23,7 @@ package** instead of describing the job from scratch.
 
 ## Smallest coherent extension
 
-1. **`service_packages` table** (migration `20261113040000`): `service_id`, denormalised
+1. **`service_packages` table** (migration `20261113045000`): `service_id`, denormalised
    `vendor_id` (trigger-checked to equal the service's vendor), `tier`
    (`basic|standard|premium`, **UNIQUE per service ⇒ at most 3 by construction**),
    `name`, `description`, `price_ngwee` (bigint, `NULL` = request a quote; CHECK > 0),

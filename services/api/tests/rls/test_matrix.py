@@ -650,7 +650,7 @@ EXPECTATIONS: TableExpectations = {
         Persona.ADMIN: select_only(),
     },
     "service_packages": {
-        # 20261113040000: public read of active packages on active services;
+        # 20261113045000: public read of active packages on active services;
         # no client write grant — writes go through the vendor API (audited).
         Persona.ANON: select_only(),
         Persona.CUSTOMER: select_only(),

@@ -537,7 +537,7 @@ def test_package_write_routes_have_rate_limit_policies() -> None:
 
 # --- Migration pins -----------------------------------------------------------
 def test_the_migration_is_additive_with_rls_and_no_client_writes() -> None:
-    sql = (REPO_ROOT / "supabase/migrations/20261113040000_service_packages.sql").read_text()
+    sql = (REPO_ROOT / "supabase/migrations/20261113045000_service_packages.sql").read_text()
     lowered = sql.lower()
     assert "force row level security" in lowered
     assert "unique (service_id, tier)" in lowered
