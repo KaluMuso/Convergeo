@@ -649,6 +649,16 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    "service_packages": {
+        # 20261113040000: public read of active packages on active services;
+        # no client write grant — writes go through the vendor API (audited).
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "clip_pilot_vendors": {
         # Clips pilot allowlist (20261113030000). Admin-readable; NO client write
         # grant — the only write path is the audited admin API (service role).

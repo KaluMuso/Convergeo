@@ -20,6 +20,7 @@ from app.services.business.access import fetch_business_buyer
 from app.services.moderation.contact_strip import strip_contacts
 from app.services.moderation.prohibited import screen_listing
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.service_packages import state as package_state
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field, field_validator
 
@@ -29,7 +30,8 @@ Party = Literal["customer", "vendor"]
 
 THREAD_SELECT = (
     "id, customer_id, vendor_id, listing_id, service_id, requested_details, "
-    "status, quote_price_ngwee, quote_valid_until, quoted_at, last_message_at, created_at"
+    "status, quote_price_ngwee, quote_valid_until, quoted_at, last_message_at, created_at, "
+    "package_id, package_snapshot"
 )
 MESSAGE_SELECT = "id, thread_id, sender_role, body, created_at"
 
@@ -67,6 +69,8 @@ class _BodyMixin(StrictModel):
 class CreateRfqRequest(StrictModel):
     listing_id: str | None = None
     service_id: str | None = None
+    #: Service package the customer chose (service RFQs only). Validated server-side.
+    package_id: str | None = None
     requested_details: str = Field(min_length=1, max_length=MAX_DETAILS_CHARS)
 
     @field_validator("requested_details", mode="before")
@@ -96,6 +100,16 @@ class RfqMessageResponse(StrictModel):
     created_at: str
 
 
+class RfqPackageSnapshot(StrictModel):
+    package_id: str
+    tier: str
+    name: str
+    price_ngwee: int | None
+    delivery_days: int | None
+    revisions: int | None
+    includes: list[str]
+
+
 class RfqThreadResponse(StrictModel):
     id: str
     customer_id: str
@@ -109,6 +123,8 @@ class RfqThreadResponse(StrictModel):
     quoted_at: str | None
     last_message_at: str | None
     created_at: str
+    package_id: str | None = None
+    package_snapshot: RfqPackageSnapshot | None = None
 
 
 class CreateRfqResponse(StrictModel):
@@ -196,7 +212,18 @@ def _thread_to_response(row: dict[str, Any]) -> RfqThreadResponse:
         quoted_at=str(row["quoted_at"]) if row.get("quoted_at") else None,
         last_message_at=str(row["last_message_at"]) if row.get("last_message_at") else None,
         created_at=str(row["created_at"]),
+        package_id=str(row["package_id"]) if row.get("package_id") else None,
+        package_snapshot=_package_snapshot_out(row.get("package_snapshot")),
     )
+
+
+def _package_snapshot_out(raw: Any) -> RfqPackageSnapshot | None:
+    if not isinstance(raw, dict) or not raw.get("package_id"):
+        return None
+    try:
+        return RfqPackageSnapshot.model_validate(raw)
+    except ValueError:
+        return None
 
 
 def _message_to_response(row: dict[str, Any]) -> RfqMessageResponse:
@@ -292,6 +319,8 @@ def _resolve_listing_vendor(
 def _resolve_service_vendor(
     service_client: _ServiceRoleClient,
     service_id: str,
+    *,
+    allow_priced: bool = False,
 ) -> str:
     response = (
         service_client.client.table("services")
@@ -303,12 +332,43 @@ def _resolve_service_vendor(
     row = _single_row(response)
     if row is None or str(row.get("status") or "") != "active":
         raise _subject_not_found()
-    if row.get("from_price_ngwee") is not None:
+    # A fixed-price service is booked, not quoted — unless the customer picked a
+    # published package, which is itself the vendor's invitation to quote (SP-10).
+    if row.get("from_price_ngwee") is not None and not allow_priced:
         raise _subject_not_found()
     owner_vendor = row.get("vendor_id")
     if not owner_vendor:
         raise _subject_not_found()
     return str(owner_vendor)
+
+
+def _resolve_package(
+    service_client: _ServiceRoleClient, *, package_id: str, service_id: str
+) -> dict[str, Any]:
+    """The chosen package must be an ACTIVE package of THIS service.
+
+    Returns the thread columns to write. Any doubt is the same 409 so a stale page
+    (package archived since load) gets an actionable message, not a 500.
+    """
+    unavailable = AppError(
+        code="rfq.package_unavailable",
+        message="This package is no longer available",
+        http_status=409,
+        details={"message_key": "services.packages.errors.unavailable"},
+    )
+    if not _valid_uuid(package_id):
+        raise unavailable
+    row = _single_row(
+        service_client.client.table(package_state.TABLE)
+        .select(package_state.PACKAGE_COLUMNS)
+        .eq("id", package_id)
+        .eq("service_id", service_id)
+        .maybe_single()
+        .execute()
+    )
+    if row is None or str(row.get("status")) != package_state.ACTIVE:
+        raise unavailable
+    return {"package_id": package_id, "package_snapshot": package_state.snapshot(row)}
 
 
 def _vendor_owner_user_id(service_client: _ServiceRoleClient, vendor_id: str) -> str | None:
@@ -514,8 +574,23 @@ async def create_rfq(
         assert body.service_id is not None
         if not _valid_uuid(body.service_id):
             raise _subject_not_found()
-        vendor_id = _resolve_service_vendor(service_client, body.service_id)
+        vendor_id = _resolve_service_vendor(
+            service_client, body.service_id, allow_priced=body.package_id is not None
+        )
         subject_filter = {"listing_id": None, "service_id": body.service_id}
+
+    package_fields: dict[str, Any] = {}
+    if body.package_id is not None:
+        if not body.service_id:
+            raise AppError(
+                code="rfq.package_requires_service",
+                message="A package can only be requested on a service",
+                http_status=422,
+                details={"message_key": "services.packages.errors.unavailable"},
+            )
+        package_fields = _resolve_package(
+            service_client, package_id=body.package_id, service_id=body.service_id
+        )
 
     vendor_owner = _vendor_owner_user_id(service_client, vendor_id)
     if vendor_owner == current_user.id:
@@ -552,6 +627,7 @@ async def create_rfq(
             "quoted_at": None,
             "last_message_at": now,
             "created_at": now,
+            **package_fields,
         }
         try:
             service_client.client.table("rfq_threads").insert(thread_row).execute()
@@ -570,6 +646,13 @@ async def create_rfq(
                 reused = True
             else:
                 raise
+
+    if reused and package_fields:
+        # SP-6: one open thread per customer x service; the latest package choice
+        # is the one the vendor should quote against.
+        service_client.client.table("rfq_threads").update(package_fields).eq(
+            "id", thread_id
+        ).execute()
 
     message_row = _insert_message(
         service_client,
