@@ -31,6 +31,11 @@ _UUID_RE = re.compile(
     re.IGNORECASE,
 )
 _WHITESPACE_RE = re.compile(r"\s+")
+# Search-term redaction (plan §R-E): e-mails and any run holding >= 6 digits (phone,
+# MSISDN, NRC, account numbers) never reach the query log once analytics_v2 is on.
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_DIGIT_RUN_RE = re.compile(r"\+?\d[\d\s()./-]*\d")
+REDACTED_TERM_MAX_CHARS = 120
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +50,22 @@ class DailyAskCost:
     day: str
     usd_micros: int
     query_count: int
+
+
+def _mask_digit_run(match: re.Match[str]) -> str:
+    run = match.group(0)
+    return "#" if sum(ch.isdigit() for ch in run) >= 6 else run
+
+
+def redact_term(term: str) -> str:
+    """Strip contact/identity data from a free-text query (plan §R-E).
+
+    E-mail addresses become ``@`` and any digit run with 6+ digits becomes ``#``
+    (prices like "under 500" and models like "a54" survive). Capped at 120 chars.
+    """
+    redacted = _EMAIL_RE.sub("@", term)
+    redacted = _DIGIT_RUN_RE.sub(_mask_digit_run, redacted)
+    return redacted[:REDACTED_TERM_MAX_CHARS]
 
 
 def normalize_term(term: str) -> str:
@@ -89,6 +110,9 @@ def _insert_query_log(
     analytics_v2 (1A-05): with ``analytics_v2_collect`` ON the INSERT is handed to the
     bounded off-request writer instead of running inline on the search request.
     """
+    if collect_v2_enabled():
+        term = redact_term(term)
+        normalized = normalize_term(redact_term(normalized))
     script = f"""
 INSERT INTO public.search_query_log (
   kind, term, normalized_term, entity_counts, zero_result, usd_micros, user_id

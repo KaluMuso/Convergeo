@@ -8,7 +8,8 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
-from app.services.analytics.search_log import log_search_query
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.search_log import log_search_query, redact_term
 from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search.embedding_client import (
     fetch_query_embedding,
@@ -390,10 +391,13 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
 
 
 def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | None) -> None:
+    # analytics_v2 (1A-06): the raw query can carry a phone number or e-mail; once the
+    # collect flag is on, application logs get the redacted form too (plan §R-E).
+    logged_query = redact_term(query) if collect_v2_enabled() else query
     logger.info(
         "search_zero_result",
         extra={
-            "query": query,
+            "query": logged_query,
             "filters": filters,
             "kind": kind,
             "zero_result": True,
