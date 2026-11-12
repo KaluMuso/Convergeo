@@ -191,6 +191,23 @@ describe("buildKycChecklist", () => {
     expect(list.nextKey).toBe("selfie");
   });
 
+  it("asks for both photos again when the API names no specific document", () => {
+    const list = buildKycChecklist(
+      kycApp({
+        kyc_status: "rejected",
+        momo_phone: null,
+        nrc_path: "a",
+        selfie_path: "b",
+        rejected_docs: null,
+      }),
+    );
+    expect(list.items.find((i) => i.key === "nrc")?.state).toBe("rejected");
+    expect(list.items.find((i) => i.key === "selfie")?.state).toBe("rejected");
+    // Submitted applications always carried a MoMo number, even though
+    // /kyc/status does not echo it back.
+    expect(list.items.find((i) => i.key === "momo")?.state).toBe("submitted");
+  });
+
   it("never claims approval without an auditable KYC record", () => {
     const list = buildKycChecklist(
       kycApp({ kyc_status: "approved", kyc_record_id: null, nrc_path: "a", selfie_path: "b" }),

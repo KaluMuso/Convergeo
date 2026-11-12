@@ -54,9 +54,12 @@ function overallFor(input: ChecklistInput): KycChecklist["overall"] {
 
 export function buildKycChecklist(input: ChecklistInput): KycChecklist {
   const overall = overallFor(input);
-  const rejectedDocs = new Set<KycDocType>(
-    overall === "needs_fix" ? (input.rejected_docs ?? []) : [],
-  );
+  // The API does not track per-document rejection yet (rejected_docs is null)
+  // and a resubmit re-collects both photos — so without a specific list, both
+  // documents need re-taking.
+  const rejectedList: KycDocType[] =
+    input.rejected_docs && input.rejected_docs.length > 0 ? input.rejected_docs : ["nrc", "selfie"];
+  const rejectedDocs = new Set<KycDocType>(overall === "needs_fix" ? rejectedList : []);
 
   const fieldState = (present: boolean, rejected = false): KycChecklistItemState => {
     if (rejected) return "rejected";
@@ -86,7 +89,12 @@ export function buildKycChecklist(input: ChecklistInput): KycChecklist {
           Boolean(input.business_archetype || input.business_category),
       ),
     },
-    { key: "momo", state: fieldState(Boolean(input.momo_phone?.trim())) },
+    // The number is only persisted at submission (/kyc/status never echoes it),
+    // so any submitted application has one.
+    {
+      key: "momo",
+      state: fieldState(Boolean(input.momo_phone?.trim()) || input.kyc_status !== "draft"),
+    },
     { key: "nrc", state: fieldState(Boolean(input.nrc_path), rejectedDocs.has("nrc")) },
     { key: "selfie", state: fieldState(Boolean(input.selfie_path), rejectedDocs.has("selfie")) },
     { key: "review", state: reviewState },
