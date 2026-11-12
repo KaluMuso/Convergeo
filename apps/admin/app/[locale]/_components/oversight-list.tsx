@@ -1,5 +1,6 @@
 "use client";
 
+import { formatK } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -77,10 +78,50 @@ export function OversightList({ kind }: { kind: Kind }) {
                   ? ` · ${t("stock", { quantity: String(item.stock_qty ?? t("unknownStock")) })}`
                   : ""}
               </span>
+              {kind === "services" ? <PackageLines raw={item.packages} t={t} /> : null}
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+type ServicePackageRow = {
+  id: string;
+  tier: string;
+  name: string;
+  price_ngwee: number | null;
+  delivery_days: number | null;
+  status: string;
+};
+
+/** Service packages (docs/plan/service-packages.md) — read-only, every status. */
+function PackageLines({
+  raw,
+  t,
+}: {
+  raw: unknown;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  const rows = Array.isArray(raw) ? (raw as ServicePackageRow[]) : [];
+  return (
+    <span className="mt-1 block text-xs text-muted" data-testid="oversight-service-packages">
+      {t("packages", { count: rows.length })}
+      {rows.map((row) => (
+        <span key={row.id} className="block">
+          {t("packageLine", {
+            tier: row.tier,
+            name: row.name,
+            price:
+              typeof row.price_ngwee === "number" && Number.isInteger(row.price_ngwee)
+                ? formatK(row.price_ngwee)
+                : t("packagePriceQuote"),
+            days: row.delivery_days ?? 0,
+            status: row.status,
+          })}
+        </span>
+      ))}
+    </span>
   );
 }

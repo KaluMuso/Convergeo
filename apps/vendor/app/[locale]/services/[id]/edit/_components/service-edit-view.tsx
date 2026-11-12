@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ServiceForm } from "../../../_components/service-form";
+import { ServicePackagesEditor } from "../../../_components/service-packages-editor";
 import { createServicesClient, type ServiceSummary } from "../../../_lib/services-client";
 import { Spinner } from "../../../_lib/ui";
 
@@ -87,6 +88,14 @@ export function ServiceEditView({ locale, serviceId }: ServiceEditViewProps) {
   }
 
   return (
-    <ServiceForm locale={locale} mode="edit" serviceId={serviceId} initialService={load.service} />
+    <>
+      <ServiceForm
+        locale={locale}
+        mode="edit"
+        serviceId={serviceId}
+        initialService={load.service}
+      />
+      <ServicePackagesEditor serviceId={serviceId} />
+    </>
   );
 }
