@@ -309,3 +309,20 @@ describe("buildHomeTasks", () => {
     expect(tasks[0]?.key).toBe("catalogueEvents");
   });
 });
+
+describe("KYC review copy only promises what the system does", () => {
+  // KYC decisions have no WhatsApp template (services/api notifications/events.py
+  // maps kyc_approved / kyc_rejected to None), so the copy must not name WhatsApp.
+  it.each(["en", "fr", "zh", "bem", "nya"])(
+    "%s has no WhatsApp promise for KYC review",
+    async (locale) => {
+      const messages = (await import(`../../../../../packages/i18n/messages/${locale}/vendor.json`))
+        .default as {
+        onboarding: { checklist: { items: { review: { why: string } } } };
+        home: { tasks: { items: { kycPending: { body: string } } } };
+      };
+      expect(messages.onboarding.checklist.items.review.why).not.toMatch(/WhatsApp/);
+      expect(messages.home.tasks.items.kycPending.body).not.toMatch(/WhatsApp/);
+    },
+  );
+});

@@ -349,7 +349,7 @@
         },
         "review": {
           "title": "Check by Vergeo5",
-          "why": "Our team checks everything, usually within 1 working day. We'll message you on WhatsApp."
+          "why": "Our team checks everything, usually within 1 working day, and lets you know the result."
         }
       },
       "states": {
@@ -1207,7 +1207,7 @@
         },
         "kycPending": {
           "title": "Verification is being reviewed",
-          "body": "Nothing to do now. Our team usually replies within 1 working day on WhatsApp."
+          "body": "Nothing to do now. Our team usually replies within 1 working day."
         },
         "ordersWaiting": {
           "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",

@@ -335,7 +335,7 @@
         },
         "review": {
           "title": "Contrôle par Vergeo5",
-          "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré. Nous vous écrirons sur WhatsApp."
+          "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
         }
       },
       "states": {
@@ -1153,7 +1153,7 @@
         },
         "kycPending": {
           "title": "Votre vérification est en cours d'examen",
-          "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré sur WhatsApp."
+          "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
         },
         "ordersWaiting": {
           "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
