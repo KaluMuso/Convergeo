@@ -180,6 +180,12 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    # Convergeo Intelligence 1A-02: v2 raw event log — RLS FORCE, service_role only, no
+    # grant to anon/authenticated: select/insert/delete are permission-denied for every
+    # persona. The table has none of the generic update-probe columns (id/created_at/…),
+    # so the `UPDATE … WHERE false` probe errors on the column, not on privilege — the
+    # same harness limitation as intake_field_provenance, hence the noop-update shape.
+    "analytics_event_log": client_invisible_noop_update(),
     "ask_cache": client_invisible(),
     "ask_spend_monthly": {
         Persona.ANON: deny_all(),
