@@ -74,6 +74,8 @@ export default async function AccountAddressesPage({ params }: PageProps) {
           delete: t("addresses.delete"),
           deleteConfirmTitle: t("addresses.deleteConfirmTitle"),
           deleteConfirmBody: t("addresses.deleteConfirmBody"),
+          deleteBlocked: t("addresses.deleteBlocked"),
+          deleteFailed: t("addresses.deleteFailed"),
           saved: t("addresses.saved"),
         }}
       />
