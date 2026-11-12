@@ -16,6 +16,9 @@ INTERNAL_TRIGGER_GUARDS: tuple[str, ...] = (
     "rfq_threads_guard",
     "storefront_collection_items_guard",
     "guard_vendor_licence_status_update",
+    "guard_dispatch_requests_update",
+    "audit_dispatch_requests_status",
+    "guard_dispatch_request_events_append_only",
 )
 
 SERVICE_ROLE_ONLY_RPCS: tuple[tuple[str, str], ...] = (

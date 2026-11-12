@@ -1,4 +1,5 @@
 import { LOCALES } from "@vergeo/i18n";
+import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
 import { getAdminTranslator } from "../../../lib/admin-translator";
@@ -23,6 +24,12 @@ export default async function OrdersPage({ params }: PageProps) {
       <header className="space-y-1">
         <h1 className="font-serif text-xl text-text">{t("title")}</h1>
         <p className="text-sm text-muted">{t("subtitle")}</p>
+        <Link
+          href={`/${locale}/orders/dispatch`}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+        >
+          {t("openDispatchBoard")}
+        </Link>
       </header>
       <OrderSearch locale={locale} />
     </div>

@@ -389,6 +389,65 @@ def _validate_actor_id(actor_role: ActorRole, actor_id: str) -> None:
         raise ValueError("actor_id must be a valid UUID for non-system actors")
 
 
+def check_order_transition(
+    *,
+    order_id: str,
+    event: OrderEvent,
+    actor_role: ActorRole,
+    refund_path: bool = False,
+) -> tuple[OrderSnapshot, OrderStatus]:
+    """Validate a transition exactly as ``transition_order`` would, without writing.
+
+    Lets a caller that must change a SECOND aggregate first (e.g. a courier
+    dispatch claiming its single-use handover code) fail fast on every rule the
+    order state machine would reject, before it commits anything. Returns the
+    snapshot it validated against and the destination status.
+    """
+    snapshot = _fetch_order_snapshot(order_id)
+    if snapshot is None:
+        raise AppError(code="not_found", message="Order not found", http_status=404)
+    to_status = _validate_snapshot_transition(snapshot, event=event, actor_role=actor_role)
+    # Read-only fail-fast mirrors of the money rules ``transition_order`` enforces
+    # atomically in SQL. They can only refuse earlier; they never grant anything.
+    refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
+    if (
+        event in CANCELLATION_EVENTS
+        and is_order_paid(snapshot)
+        and not snapshot.cod
+        and not refund_authority
+    ):
+        raise RefundPathRequiredError()
+    if event in PREPAID_PAYMENT_REQUIRED_EVENTS and not snapshot.cod and not snapshot.paid:
+        raise PrepaidPaymentRequiredError(
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=actor_role.value,
+        )
+    return snapshot, to_status
+
+
+def _validate_snapshot_transition(
+    snapshot: OrderSnapshot,
+    *,
+    event: OrderEvent,
+    actor_role: ActorRole,
+) -> OrderStatus:
+    resolved = resolve_transition(
+        from_status=snapshot.status,
+        event=event,
+        actor_role=actor_role,
+        fulfilment=snapshot.fulfilment,
+    )
+    if not resolved.permitted or resolved.to_status is None:
+        raise OrderTransitionError(
+            resolved.reason or "Transition not permitted",
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=actor_role.value,
+        )
+    return resolved.to_status
+
+
 def transition_order(
     *,
     order_id: str,
@@ -411,22 +470,12 @@ def transition_order(
     if snapshot is None:
         raise AppError(code="not_found", message="Order not found", http_status=404)
 
-    resolved = resolve_transition(
-        from_status=snapshot.status,
-        event=event,
-        actor_role=actor_role,
-        fulfilment=snapshot.fulfilment,
-    )
-    if not resolved.permitted or resolved.to_status is None:
-        raise OrderTransitionError(
-            resolved.reason or "Transition not permitted",
-            from_status=snapshot.status.value,
-            event=event.value,
-            actor_role=actor_role.value,
-        )
+    # Money rules (refund authority, prepaid payment) are enforced atomically in
+    # the locked SQL below (release money design), not by a Python pre-check.
+    to_status_enum = _validate_snapshot_transition(snapshot, event=event, actor_role=actor_role)
 
     order_sql = sql_uuid(order_id, "order_id")
-    to_status = resolved.to_status.value
+    to_status = to_status_enum.value
     from_status = snapshot.status.value
     actor_sql = sql_uuid(actor_id, "actor_id")
     # Roles alone and a caller-supplied refund_path flag are not order authority.
@@ -559,7 +608,7 @@ COMMIT;
     return TransitionOutcome(
         order_id=order_id,
         from_status=snapshot.status,
-        to_status=resolved.to_status,
+        to_status=to_status_enum,
         event=event,
         actor_id=actor_id,
         note=note,

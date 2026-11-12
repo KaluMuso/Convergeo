@@ -959,6 +959,21 @@
       "invalidTransition": "That action is not available for this order.",
       "reasonRequired": "A reason is required when rejecting.",
       "trackingRequired": "A tracking note is required when shipping."
+    },
+    "courier": {
+      "heading": "Courier",
+      "courier": "Assigned courier",
+      "reference": "Courier reference: {ref}",
+      "statuses": {
+        "requested": "Requested",
+        "accepted": "Accepted",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "codDue": "Rider collects {amount} from the customer",
+      "handoverNote": "The customer confirms delivery with a code they give the rider."
     }
   },
   "home": {

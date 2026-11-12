@@ -68,6 +68,9 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     # n8n operational — founder/vendor alerts are transactional
     "payout_failure_alert": TemplateClass.TRANSACTIONAL,
     "low_stock_alert": TemplateClass.TRANSACTIONAL,
+    # Courier dispatch v1 — operational, never deferred by quiet hours.
+    "courier_dispatch_request": TemplateClass.TRANSACTIONAL,
+    "dispatch_stale_alert": TemplateClass.TRANSACTIONAL,
     # Engagement / nudge — quiet hours apply
     "review_request": TemplateClass.MARKETING,
     "abandoned_cart_recovery": TemplateClass.MARKETING,

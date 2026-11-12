@@ -11,6 +11,7 @@ import { InvoiceLinkBlock } from "../_components/invoice-link";
 import { OrderTimeline } from "../_components/order-timeline";
 import {
   createOrdersApiClient,
+  type CourierDelivery,
   type OrderDetail,
   type OrderItem,
   type OrderSummary,
@@ -18,6 +19,7 @@ import {
 import { PickupCredentialsBlock } from "../_components/pickup-credentials";
 
 import { ConfirmReceivedBlock } from "./_components/confirm-received";
+import { CourierDeliveryBlock } from "./_components/courier-delivery";
 import {
   buildDispatchStatusUpdates,
   DispatchTimeline,
@@ -97,6 +99,17 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     },
   };
 
+  // Courier dispatch v1 — owner-only endpoint; a failure here must never break
+  // the order page, so it degrades to the legacy dispatch timeline.
+  let courierDelivery: CourierDelivery | null = null;
+  if (order.fulfilment === "delivery") {
+    try {
+      courierDelivery = (await api.getDelivery(order.id)).dispatch;
+    } catch {
+      courierDelivery = null;
+    }
+  }
+
   const otherOrders = order.related_orders.filter(
     (related: OrderSummary) => related.id !== order.id,
   );
@@ -129,28 +142,54 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
 
       <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
 
-      <DispatchTimeline
-        fulfilment={order.fulfilment}
-        status={order.status}
-        courier={dispatchDetails.courier}
-        trackingNote={dispatchDetails.trackingNote}
-        statusUpdates={buildDispatchStatusUpdates(
-          order.timeline,
-          {
-            processing: t("timeline.processing"),
-            shipped: t("timeline.shipped"),
-            delivered: t("timeline.delivered"),
-          },
-          dispatchEvents,
-        )}
-        labels={{
-          title: t("dispatch.title"),
-          courier: t("dispatch.courier"),
-          tracking: t("dispatch.tracking"),
-          empty: t("dispatch.empty"),
-          statusUpdates: t("dispatch.statusUpdates"),
-        }}
-      />
+      {courierDelivery ? (
+        <CourierDeliveryBlock
+          delivery={courierDelivery}
+          labels={{
+            title: t("courier.title"),
+            courier: t("courier.courier"),
+            reference: t("courier.reference"),
+            statuses: {
+              requested: t("courier.statuses.requested"),
+              accepted: t("courier.statuses.accepted"),
+              picked_up: t("courier.statuses.picked_up"),
+              delivered: t("courier.statuses.delivered"),
+              failed: t("courier.statuses.failed"),
+              cancelled: t("courier.statuses.cancelled"),
+            },
+            codDue: (amount) => t("courier.codDue", { amount }),
+            handoverTitle: t("courier.handoverTitle"),
+            handoverBody: t("courier.handoverBody"),
+            handoverAria: (code) => t("courier.handoverAria", { code }),
+            failedBody: t("courier.failedBody"),
+          }}
+        />
+      ) : null}
+
+      {courierDelivery ? null : (
+        <DispatchTimeline
+          fulfilment={order.fulfilment}
+          status={order.status}
+          courier={dispatchDetails.courier}
+          trackingNote={dispatchDetails.trackingNote}
+          statusUpdates={buildDispatchStatusUpdates(
+            order.timeline,
+            {
+              processing: t("timeline.processing"),
+              shipped: t("timeline.shipped"),
+              delivered: t("timeline.delivered"),
+            },
+            dispatchEvents,
+          )}
+          labels={{
+            title: t("dispatch.title"),
+            courier: t("dispatch.courier"),
+            tracking: t("dispatch.tracking"),
+            empty: t("dispatch.empty"),
+            statusUpdates: t("dispatch.statusUpdates"),
+          }}
+        />
+      )}
 
       {order.pickup ? (
         <PickupCredentialsBlock

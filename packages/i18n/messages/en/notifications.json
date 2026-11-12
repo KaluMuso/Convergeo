@@ -41,6 +41,12 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo event \"{event_title}\" details have changed. Date: {event_date}. Venue: {venue}. Check your tickets in the app. Reply STOP to opt out."
+    },
+    "courier_dispatch_request": {
+      "body": "Convergeo delivery request {order_reference}. Pickup: {pickup_line}. Drop-off: {dropoff_line}. Items: {items_line}. Payment: {cod_line}. Contacts: {contacts_line}."
+    },
+    "dispatch_stale_alert": {
+      "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
     }
   },
   "sms": {
@@ -105,6 +111,14 @@
         "subject": "Your Convergeo vendor verification needs attention",
         "body": "<p>We could not approve your vendor verification.</p><p><strong>Reason:</strong> {reason}</p><p>Please resubmit your documents from the vendor app.</p>"
       }
+    },
+    "courier_dispatch_request": {
+      "subject": "Convergeo delivery request {order_id}",
+      "body": "<p>New delivery job from Convergeo.</p><p>{dispatch_message}</p>"
+    },
+    "dispatch_stale_alert": {
+      "subject": "Dispatch {order_id} not accepted",
+      "body": "<p>Dispatch for order {order_id} is still waiting for courier acceptance.</p>"
     }
   },
   "marketing": {
