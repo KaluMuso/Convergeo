@@ -9,10 +9,15 @@ import type { AdminNavItemKey } from "../app/[locale]/_components/admin-nav-conf
  */
 export type AdminNavCapabilities = Record<AdminNavItemKey, boolean>;
 
-/** All admin destinations are operational — no public-feature gating. */
+/**
+ * All admin destinations are operational — no public-feature gating — except
+ * `analytics` (Convergeo Intelligence 1B-05), which starts hidden and is revealed by
+ * the shell only when `/admin/analytics/status` reports the rollups flag ON.
+ */
 export function resolveAdminNavCapabilities(): AdminNavCapabilities {
   return {
     home: true,
+    analytics: false,
     kyc: true,
     moderation: true,
     disputes: true,

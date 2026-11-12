@@ -2,6 +2,7 @@ import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 
 export type AdminNavItemKey =
   | "home"
+  | "analytics"
   | "kyc"
   | "moderation"
   | "disputes"
@@ -31,7 +32,10 @@ export type AdminNavGroup = {
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     key: "overview",
-    items: [{ key: "home", href: "" }],
+    items: [
+      { key: "home", href: "" },
+      { key: "analytics", href: "analytics" },
+    ],
   },
   {
     key: "trust",

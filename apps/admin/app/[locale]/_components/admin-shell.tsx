@@ -15,6 +15,7 @@ import {
   resolveAdminActiveItem,
 } from "./admin-nav-config";
 import { SignOutButton } from "./sign-out-button";
+import { useAnalyticsNavEnabled } from "./use-analytics-nav";
 
 import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 
@@ -43,11 +44,16 @@ export function AdminShell({ locale, capabilities, children }: AdminShellProps) 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
+  const onLogin = rest === "/login" || rest.startsWith("/login/");
+  const analyticsEnabled = useAnalyticsNavEnabled(!onLogin);
+  if (onLogin) {
     return <>{children}</>;
   }
 
-  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
+  const navGroups = filterAdminNavGroups(
+    { ...capabilities, analytics: capabilities.analytics || analyticsEnabled },
+    ADMIN_NAV_GROUPS,
+  );
   const visibleItems = flattenAdminNavItems(navGroups);
 
   const activeKey = resolveAdminActiveItem(rest, visibleItems);

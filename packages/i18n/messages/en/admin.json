@@ -17,6 +17,7 @@
       "platform": "Platform"
     },
     "home": "Dashboard",
+    "analytics": "Analytics",
     "kyc": "KYC queue",
     "business": "Business",
     "moderation": "Moderation",
@@ -1273,6 +1274,107 @@
       "attributionNote": "Attribution is validated server-side: a clip only earns credit for a product it actually links.",
       "permissionDenied": "You do not have permission to view clip analytics.",
       "error": "Clip analytics could not be loaded."
+    }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Aggregated marketplace and shopper behaviour. No individual shoppers or raw search text are shown.",
+    "tabs": {
+      "label": "Analytics sections",
+      "overview": "Overview",
+      "search": "Search & demand",
+      "products": "Products & funnel",
+      "insights": "Insights"
+    },
+    "range": {
+      "label": "Date range",
+      "days": "Last {days} days"
+    },
+    "loading": "Loading analytics…",
+    "error": "Could not load analytics.",
+    "retry": "Retry",
+    "permissionDenied": "Only platform admins can view analytics.",
+    "disabled": {
+      "title": "Analytics is not enabled",
+      "body": "Daily rollups are switched off (feature flag analytics_v2_rollups). Nothing is collected or shown here until it is turned on."
+    },
+    "dataThrough": "Behaviour data through {day} (UTC). Orders and payments are live.",
+    "dataPending": "Behaviour data has not been rolled up yet. Orders and payments are live.",
+    "insufficient": "Not enough data (needs {n}+)",
+    "notAvailable": "—",
+    "empty": "No data for this range.",
+    "delta": {
+      "none": "No previous-period baseline",
+      "value": "{change} vs previous period"
+    },
+    "columns": {
+      "day": "Day",
+      "term": "Search term",
+      "product": "Product",
+      "page": "Page type"
+    },
+    "session": {
+      "rule": "A session ends after 30 minutes without activity.",
+      "activeSpan": "Average active span",
+      "estimatedEnd": "Session end is estimated from the last activity seen, so this is not time on site.",
+      "duration": "{minutes} min {seconds} s"
+    },
+    "overview": {
+      "commercialTitle": "Orders and payments",
+      "commercialHint": "From orders and payments only. Paid means a successful payment.",
+      "behaviourTitle": "Shopper behaviour",
+      "dailyTitle": "Paid GMV by day",
+      "reconciliation": {
+        "mismatch": "Payments do not reconcile with paid checkouts on: {days}. Check the payments before relying on these numbers."
+      },
+      "kpi": {
+        "gmvPaid": "Paid GMV",
+        "ordersPaid": "Paid orders",
+        "aov": "Average paid checkout",
+        "checkoutsStarted": "Checkouts started",
+        "ordersPlacedHint": "{placed} orders placed",
+        "sessions": "Sessions",
+        "visitorDays": "Visitor-days",
+        "bounceRate": "Bounce rate",
+        "searches": "Searches",
+        "zeroResultShare": "Searches with no results"
+      }
+    },
+    "search": {
+      "kNotice": "Terms searched fewer than {k} times in this range are grouped as “other” and never shown.",
+      "zeroResults": "No-result searches",
+      "zeroTitle": "Searched for but not found",
+      "zeroHint": "Demand the catalogue does not meet yet.",
+      "topTitle": "Top search terms",
+      "other": "Other: {terms} terms, {searches} searches"
+    },
+    "products": {
+      "funnelTitle": "Funnel",
+      "funnelHint": "Browsing steps come from sessions; checkout and order steps come from orders and payments.",
+      "shareOfSessions": "{share} of sessions",
+      "steps": {
+        "sessions": "Sessions",
+        "search_sessions": "Sessions with a search",
+        "product_view_sessions": "Sessions with a product view",
+        "cart_adds": "Cart adds",
+        "checkouts_started": "Checkouts started",
+        "orders_placed": "Orders placed",
+        "orders_paid": "Paid orders"
+      },
+      "topTitle": "Most viewed products",
+      "views": "Views",
+      "unnamed": "Unnamed product",
+      "pageViewsTitle": "Page views by page type",
+      "entryTitle": "Entry pages"
+    },
+    "insights": {
+      "placeholder": "Automated insights arrive in a later release. For now this lists data-quality checks.",
+      "none": "No data-quality issues in this range.",
+      "kinds": {
+        "payment_mismatch": "Payments do not reconcile with paid checkouts on {day}.",
+        "rollup_failed": "The daily rollup failed for {day}.",
+        "rollup_stale": "Rollups are behind (latest: {day})."
+      }
     }
   }
 }
