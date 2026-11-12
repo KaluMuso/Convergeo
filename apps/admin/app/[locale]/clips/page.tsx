@@ -1,4 +1,5 @@
 import { LOCALES } from "@vergeo/i18n";
+import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
 import { getAdminTranslator } from "../../../lib/admin-translator";
@@ -23,6 +24,13 @@ export default async function ClipReviewQueuePage({ params }: PageProps) {
       <header className="space-y-1">
         <h1 className="font-serif text-xl text-text">{t("title")}</h1>
         <p className="text-sm text-muted">{t("intro")}</p>
+        <Link
+          href={`/${locale}/clips/pilot`}
+          className="tap inline-flex min-h-11 items-center text-sm text-primary underline"
+          data-testid="admin-clips-pilot-link"
+        >
+          {t("pilotLink")}
+        </Link>
       </header>
       <ClipQueue locale={locale} />
     </div>
