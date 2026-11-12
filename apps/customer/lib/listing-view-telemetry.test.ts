@@ -165,16 +165,13 @@ describe("listing view telemetry", () => {
       expect(queueListingImpression(LISTING_ONE)).toBe(true);
       vi.runAllTimers();
       window.history.pushState({}, "", "/en");
-      // Same listing on a different surface is a distinct impression (dedup PK has surface).
-      expect(queueListingImpression(LISTING_ONE)).toBe(true);
+      expect(queueListingImpression(LISTING_TWO)).toBe(true);
+      // Client dedup stays per listing/session/day (surface = first sighting).
+      expect(queueListingImpression(LISTING_ONE)).toBe(false);
       vi.runAllTimers();
       expect(parsedBodies()).toEqual([
-        {
-          session_id: SESSION_ID,
-          listing_ids: [LISTING_ONE],
-          surface: "storefront",
-        },
-        { session_id: SESSION_ID, listing_ids: [LISTING_ONE], surface: "home" },
+        { session_id: SESSION_ID, listing_ids: [LISTING_ONE], surface: "storefront" },
+        { session_id: SESSION_ID, listing_ids: [LISTING_TWO], surface: "home" },
       ]);
     });
 

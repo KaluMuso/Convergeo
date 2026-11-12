@@ -11,49 +11,25 @@ type PendingImpression = {
   key: string;
   listingId: string;
   sessionId: string;
-  surface: ListingSurface | undefined;
-};
-
-/** Surfaces accepted by `record_listing_view` (migration 20260813160100). */
-export type ListingSurface = "home" | "plp" | "storefront" | "pdp" | "unknown";
-
-const LOCALE_PREFIX_RE = /^\/(en|bem|nya|fr|zh)(?=\/|$)/;
-const SURFACE_BY_SEGMENT: Record<string, ListingSurface> = {
-  c: "plp",
-  search: "plp",
-  categories: "plp",
-  supplies: "plp",
-  v: "storefront",
-  p: "pdp",
-  l: "pdp",
 };
 
 /**
- * analytics_v2 (plan 1A-06): `surface` is only sent when the build sets
- * NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1, so v1 builds keep byte-identical payloads
- * (the inlined env check lets the minifier drop this branch).
+ * analytics_v2 (plan 1A-06): a slug-free listing surface, sent only when the build sets
+ * NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1 (inlined, so v1 builds drop this and keep
+ * byte-identical payloads). Values match `record_listing_view` (home|plp|storefront|pdp|unknown).
  */
-function v2Tracking(): boolean {
-  return process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1";
-}
-
-/** Map a pathname to a listing surface — a template key, never the slug. */
-export function surfaceFromPath(pathname: string | null | undefined): ListingSurface {
-  if (!pathname) {
-    return "unknown";
+export function surfaceFromPath(pathname: string | null | undefined): string {
+  const segment = pathname?.replace(/^\/(en|bem|nya|fr|zh)(?=\/|$)/, "").split("/")[1];
+  if (!segment) {
+    return pathname ? "home" : "unknown";
   }
-  const segment = pathname.replace(LOCALE_PREFIX_RE, "").split("/").filter(Boolean)[0];
-  if (segment === undefined) {
-    return "home";
-  }
-  return SURFACE_BY_SEGMENT[segment] ?? "unknown";
-}
-
-function currentSurface(): ListingSurface | undefined {
-  if (!v2Tracking()) {
-    return undefined;
-  }
-  return surfaceFromPath(typeof window === "undefined" ? null : window.location.pathname);
+  return /^(c|search|categories|supplies)$/.test(segment)
+    ? "plp"
+    : segment === "v"
+      ? "storefront"
+      : /^[pl]$/.test(segment)
+        ? "pdp"
+        : "unknown";
 }
 
 let pendingImpressions = new Map<string, PendingImpression>();
@@ -106,8 +82,8 @@ function transmit(payload: Record<string, string | string[]>, viewerToken?: stri
   }
 
   const body = JSON.stringify(payload);
-  // A signed-in PDP view (v2 only) carries the bearer so the API can drop vendor
-  // self-views; beacons cannot set headers, so that one case uses keepalive fetch.
+  // v2 only: a signed-in PDP view carries the bearer so the API can drop vendor
+  // self-views. Beacons cannot set headers, so that case uses keepalive fetch.
   if (!viewerToken && typeof navigator.sendBeacon === "function") {
     try {
       const blob = new Blob([body], { type: "application/json" });
@@ -127,10 +103,7 @@ function transmit(payload: Record<string, string | string[]>, viewerToken?: stri
     void fetch(endpoint, {
       method: "POST",
       headers: viewerToken
-        ? {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${viewerToken}`,
-          }
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${viewerToken}` }
         : { "Content-Type": "application/json" },
       body,
       credentials: "omit",
@@ -145,9 +118,7 @@ function transmit(payload: Record<string, string | string[]>, viewerToken?: stri
 
 /**
  * Record one PDP view. The server remains the authoritative daily deduper.
- *
- * `viewerToken` (v2 builds only) lets the API exclude a vendor viewing their own
- * listing; it is used for that check only and never stored.
+ * `viewerToken` (v2 builds) is used by the API for the vendor self-view check only.
  */
 export function recordListingPdpView(listingId: string, viewerToken?: string | null): boolean {
   if (!isValidUuid(listingId) || !canSendTelemetry()) {
@@ -164,12 +135,13 @@ export function recordListingPdpView(listingId: string, viewerToken?: string | n
     return false;
   }
 
-  const accepted = v2Tracking()
-    ? transmit(
-        { session_id: sessionId, listing_id: listingId, surface: "pdp" },
-        viewerToken ?? undefined,
-      )
-    : transmit({ session_id: sessionId, listing_id: listingId });
+  const accepted =
+    process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1"
+      ? transmit(
+          { session_id: sessionId, listing_id: listingId, surface: "pdp" },
+          viewerToken ?? undefined,
+        )
+      : transmit({ session_id: sessionId, listing_id: listingId });
   if (accepted) {
     sentPdpViews.add(key);
   }
@@ -194,24 +166,26 @@ export function flushListingImpressions(): void {
 
   const bySession = new Map<string, PendingImpression[]>();
   for (const item of batch) {
-    const groupKey = `${item.sessionId}|${item.surface ?? ""}`;
-    const sessionBatch = bySession.get(groupKey) ?? [];
+    const sessionBatch = bySession.get(item.sessionId) ?? [];
     sessionBatch.push(item);
-    bySession.set(groupKey, sessionBatch);
+    bySession.set(item.sessionId, sessionBatch);
   }
 
-  for (const sessionBatch of bySession.values()) {
-    const { sessionId, surface } = sessionBatch[0]!;
+  for (const [sessionId, sessionBatch] of bySession) {
     for (let start = 0; start < sessionBatch.length; start += MAX_LISTING_IMPRESSION_BATCH) {
       const chunk = sessionBatch.slice(start, start + MAX_LISTING_IMPRESSION_BATCH);
-      const payload: Record<string, string | string[]> = {
-        session_id: sessionId,
-        listing_ids: chunk.map((item) => item.listingId),
-      };
-      if (surface !== undefined) {
-        payload.surface = surface;
-      }
-      const accepted = transmit(payload);
+      const accepted = transmit(
+        process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING === "1"
+          ? {
+              session_id: sessionId,
+              listing_ids: chunk.map((item) => item.listingId),
+              surface: surfaceFromPath(window.location.pathname),
+            }
+          : {
+              session_id: sessionId,
+              listing_ids: chunk.map((item) => item.listingId),
+            },
+      );
       if (accepted) {
         for (const item of chunk) {
           sentImpressions.add(item.key);
@@ -232,16 +206,12 @@ export function queueListingImpression(listingId: string): boolean {
     return false;
   }
 
-  const surface = currentSurface();
-  const key =
-    surface === undefined
-      ? dedupKey(sessionId, listingId)
-      : `${dedupKey(sessionId, listingId)}:${surface}`;
+  const key = dedupKey(sessionId, listingId);
   if (sentImpressions.has(key) || pendingImpressions.has(key)) {
     return false;
   }
 
-  pendingImpressions.set(key, { key, listingId, sessionId, surface });
+  pendingImpressions.set(key, { key, listingId, sessionId });
   if (pendingImpressions.size >= MAX_LISTING_IMPRESSION_BATCH) {
     flushListingImpressions();
   } else if (impressionBatchTimer === null) {
