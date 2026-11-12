@@ -65,6 +65,31 @@ begin
     return new;
   end if;
 
+  -- Lock the stock rows this release will touch in a fixed order (pooled
+  -- listings, then branches, then variants, each by id — variants in the same
+  -- order order creation locks them) so concurrent cancellations / placements
+  -- over overlapping listings queue instead of deadlocking.
+  perform 1 from public.vendor_listings vl
+  where vl.id in (
+    select c.listing_id from public.order_item_stock_consumption c
+    where c.order_id = new.id and c.released_at is null
+      and c.location_id is null and c.listing_qty > 0)
+  order by vl.id
+  for update;
+  perform 1 from public.listing_location_stock lls
+  where (lls.listing_id, lls.location_id) in (
+    select c.listing_id, c.location_id from public.order_item_stock_consumption c
+    where c.order_id = new.id and c.released_at is null
+      and c.location_id is not null and c.listing_qty > 0)
+  order by lls.listing_id, lls.location_id
+  for update;
+  perform 1 from public.vendor_listing_variants v
+  where v.id in (
+    select c.listing_variant_id from public.order_item_stock_consumption c
+    where c.order_id = new.id and c.released_at is null and c.variant_qty > 0)
+  order by v.id
+  for update;
+
   with released as (
     update public.order_item_stock_consumption c
     set released_at = timezone('utc', now())

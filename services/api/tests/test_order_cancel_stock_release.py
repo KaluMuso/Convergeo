@@ -2,7 +2,7 @@
 
 Real Postgres: order creation records per-line consumption and the
 ``orders_release_cancelled_stock`` trigger restores it inside the same
-transaction as the guarded status update (migration 20261113041000).
+transaction as the guarded status update (migration 20261113071000).
 """
 
 from __future__ import annotations

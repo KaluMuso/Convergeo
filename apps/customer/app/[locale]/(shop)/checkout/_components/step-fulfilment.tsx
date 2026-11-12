@@ -723,6 +723,17 @@ function IdentityCheckoutShell({
                 if (isCurrent()) router.push(`${cartPath}?notice=${failure.notice}`);
                 return;
               }
+              if (failure.kind === "redo_fulfilment") {
+                // Choices recorded before this release, or an address that no
+                // longer prices into the quoted zone: confirm fulfilment again.
+                if (isCurrent()) {
+                  setFulfilmentTotals(null);
+                  setPaymentSelection(null);
+                  setPaymentOptions(null);
+                  setStep(1);
+                }
+                return;
+              }
               throw new Error(
                 failure.kind === "cod_ineligible"
                   ? labels.payment.codRejected
