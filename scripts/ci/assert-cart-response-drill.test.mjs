@@ -1791,7 +1791,12 @@ function navigationFixture(options = {}) {
     mainFrame: () => frame,
     isClosed: () => closed,
     async goto(...args) {
-      assert.equal(args.length, 1);
+      // Only the cold first navigation may pass an explicit compile allowance.
+      assert.ok(args.length === 1 || args.length === 2);
+      if (args.length === 2) {
+        assert.deepEqual(Object.keys(args[1]), ["timeout"]);
+        assert.equal(args[1].timeout, 150_000);
+      }
       const [url] = args;
       assert.equal(url, target);
       if (options.goto) return options.goto(api);
@@ -1804,7 +1809,7 @@ function navigationFixture(options = {}) {
   };
   const snippets = [
     ...browserSource.matchAll(
-      /^  beginNavigation\(page, browser, `[^`]+`\);\n  try \{\n    await page\.goto\(`[^`]+`\);\n    settleNavigation\(undefined, false\);\n  \} catch \(error\) \{\n    settleNavigation\(error, true\);\n    throw error;\n  \}/gm,
+      /^  beginNavigation\(page, browser, `[^`]+`\);\n  try \{\n    await page\.goto\(`[^`]+`(?:, \{ timeout: 150_000 \})?\);\n    settleNavigation\(undefined, false\);\n  \} catch \(error\) \{\n    settleNavigation\(error, true\);\n    throw error;\n  \}/gm,
     ),
   ].map((match) => match[0]);
   assert.equal(snippets.length, 3);

@@ -894,9 +894,12 @@ try {
   });
   phase = "establish_guest";
   failureStage = "guest_navigation";
+  // The first visit triggers a cold dev-server compile of the PDP (20-60s on
+  // shared runners). Allow that on this navigation only; every later step keeps
+  // the 15s default, so the drill's assertions are unchanged.
   beginNavigation(page, browser, `${origin}/en/p/smartphone-x1`);
   try {
-    await page.goto(`${origin}/en/p/smartphone-x1`);
+    await page.goto(`${origin}/en/p/smartphone-x1`, { timeout: 150_000 });
     settleNavigation(undefined, false);
   } catch (error) {
     settleNavigation(error, true);
