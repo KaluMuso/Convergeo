@@ -625,9 +625,10 @@ async function waitForFirstDiscard(completion) {
 }
 
 const debugConsole = [];
+let debugPage;
 async function debugCloseCapture(page, error) {
   const dir = resolve(root, "e2e/results/cart-response-drill");
-  const out = { errorClass: error?.constructor?.name, errorMessage: String(error?.message ?? error).slice(0, 6000), console: debugConsole };
+  const out = { stage: failureStage, errorClass: error?.constructor?.name, errorMessage: String(error?.message ?? error).slice(0, 6000), console: debugConsole };
   try {
     out.dom = await page.evaluate(() => {
       const describe = (el) => {
@@ -647,6 +648,7 @@ async function debugCloseCapture(page, error) {
         let anc = []; for (let e = b; e; e = e.parentElement) anc.push(describe(e));
         res.buttons.push({ rect: [r.x, r.y, r.width, r.height], connected: b.isConnected, disabled: b.disabled, top: describe(document.elementFromPoint(cx, cy)), stack, ancestors: anc.slice(0, 10), anims: b.getAnimations({ subtree: false }).length, sheetAnims: (b.closest('[data-testid="mini-cart-drawer-sheet"]')?.getAnimations() ?? []).map((a) => `${a.animationName ?? a.constructor.name}:${a.playState}`) });
       }
+      res.pdp = ["pdp-add-to-cart", "pdp-add-to-cart-success", "pdp-add-to-cart-error", "mini-cart-live", "mini-cart-subtotal"].map((t) => [...document.querySelectorAll(`[data-testid="${t}"]`)].map((e) => `${t}: vis=${e.checkVisibility?.()} dis=${e.disabled} text=${(e.textContent ?? "").slice(0, 160)}`));
       res.portals = [...document.querySelectorAll("nextjs-portal")].map((p) => ({ html: (p.shadowRoot?.innerHTML ?? "").replace(/<style[\s\S]*?<\/style>/g, "").slice(0, 3000) }));
       res.dialogs = [...document.querySelectorAll("dialog")].map((d) => `${describe(d)} open=${d.open} modal=${d.matches(":modal")}`);
       res.fixedHighZ = [...document.querySelectorAll("body *")].filter((e) => { const cs = getComputedStyle(e); return (cs.position === "fixed" || cs.position === "sticky") && cs.zIndex !== "auto"; }).slice(0, 20).map((e) => `${describe(e)} rect=${JSON.stringify(e.getBoundingClientRect())}`);
@@ -722,6 +724,7 @@ try {
   const page = await context.newPage();
   failureStage = "browser_console_setup";
   page.on("console", observeBrowserDiagnostic);
+  debugPage = page;
   page.on("console", (m) => {
     if (m.type() === "error" || m.type() === "warning")
       debugConsole.push(`[${failureStage}] ${m.type()}: ${m.text().slice(0, 600)}`);
@@ -1023,7 +1026,6 @@ try {
   try {
     await page.getByTestId("mini-cart-close").click();
   } catch (error) {
-    await debugCloseCapture(page, error);
     throw error;
   }
   phase = "price_notice";
@@ -1139,7 +1141,8 @@ try {
   point("browser_subprocess_uid_covered");
   report.qualified = true;
   delete report.lastNativeObservation;
-} catch {
+} catch (debugError) {
+  if (debugPage) await debugCloseCapture(debugPage, debugError);
   report.failedPhase = phase;
   report.failureDiagnostic = cartFailureDiagnostic(
     failureStage,
