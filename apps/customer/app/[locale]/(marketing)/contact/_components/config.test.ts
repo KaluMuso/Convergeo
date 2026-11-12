@@ -7,17 +7,18 @@ afterEach(() => {
 });
 
 describe("support WhatsApp config", () => {
-  it("returns null in production when unset (no fake number)", () => {
+  it("falls back to the founder-confirmed support line in production (no fake number)", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SUPPORT_WHATSAPP", "");
-    expect(getSupportWhatsappNumber()).toBeNull();
-    expect(buildWhatsappLink()).toBeNull();
+    expect(getSupportWhatsappNumber()).toBe("260761359005");
+    expect(buildWhatsappLink()).toBe("https://wa.me/260761359005");
+    expect(buildWhatsappLink()).not.toContain("260970000000");
   });
 
-  it("uses a dev fallback outside production", () => {
+  it("uses the same confirmed line outside production", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("NEXT_PUBLIC_SUPPORT_WHATSAPP", "");
-    expect(buildWhatsappLink()).toBe("https://wa.me/260970000000");
+    expect(buildWhatsappLink()).toBe("https://wa.me/260761359005");
   });
 
   it("uses the configured number (digits only) with prefill in production", () => {

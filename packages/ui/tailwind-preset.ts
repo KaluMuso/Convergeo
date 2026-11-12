@@ -42,7 +42,11 @@ export function buildTailwindTheme(): NonNullable<Config["theme"]> {
         deep: colors.primaryDeep,
         tint: colors.primaryTint,
       },
-      accent: colors.accent,
+      accent: {
+        DEFAULT: colors.accent,
+        deep: colors.accentDeep,
+        tint: colors.accentTint,
+      },
       success: colors.success,
       danger: colors.danger,
       warning: colors.warning,

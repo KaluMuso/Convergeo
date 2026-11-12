@@ -39,19 +39,19 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("tokens", () => {
-  it("matches the audited reference identity", () => {
+  it("matches the Copperbelt identity", () => {
     expect(tokens.colors).toMatchObject({
-      bg: "#FAF7F2",
-      panel: "#1C1308",
-      text: "#2A1F0E",
-      primary: "#4C5470",
-      primaryDeep: "#363C52",
-      primaryTint: "#D0D4E8",
-      accent: "#2D4A7A",
+      bg: "#F7F6F2",
+      panel: "#0F2A21",
+      text: "#15201B",
+      primary: "#0B5D45",
+      primaryDeep: "#08473A",
+      primaryTint: "#E3F0EA",
+      accent: "#A4501C",
     });
-    expect(tokens.fonts.display).toContain("Cormorant Garamond");
-    expect(tokens.fontSize.hero).toBe("clamp(2.4rem, 4vw, 3.9rem)");
-    expect(tokens.fontSize.h2).toBe("clamp(1.5rem, 2.4vw, 2.1rem)");
+    expect(tokens.fonts.display).toContain("Bricolage Grotesque");
+    expect(tokens.fontSize.hero).toBe("clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem)");
+    expect(tokens.fontSize.h2).toBe("clamp(1.375rem, 1.15rem + 1vw, 1.875rem)");
     expect(tokens.transitionDuration.page).toBe("300ms");
   });
 

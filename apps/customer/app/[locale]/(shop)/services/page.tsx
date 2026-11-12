@@ -1,7 +1,9 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { PanelHero } from "@vergeo/ui/src/panel-hero";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -10,7 +12,10 @@ import { Suspense } from "react";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 
-import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
+import {
+  ServiceGrid,
+  type ServiceBrowseItem,
+} from "./_components/service-grid";
 import { SERVICE_VERTICALS } from "./_components/service-verticals";
 import { VerticalFilterChips } from "./_components/vertical-filter-chips";
 
@@ -46,10 +51,15 @@ function parseCategory(value: string | undefined): string | null {
   return null;
 }
 
-async function getServicesTranslator(locale: string): Promise<ServicesTranslator> {
+async function getServicesTranslator(
+  locale: string,
+): Promise<ServicesTranslator> {
   const baseMessages = await getMessages();
   const servicesMessages = await loadNamespace(locale as Locale, "services");
-  const messages = { ...baseMessages, services: servicesMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    services: servicesMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -92,7 +102,10 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const query = await searchParams;
   const t = await getServicesTranslator(locale);
@@ -113,7 +126,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   };
 }
 
-export default async function ServicesPage({ params, searchParams }: PageProps) {
+export default async function ServicesPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale } = await params;
   const query = await searchParams;
   setRequestLocale(locale);
@@ -151,27 +167,22 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 pb-8">
-      <PanelHero
-        title={t("browse.title")}
-        subtitle={t("browse.subtitle")}
-        cta={{
-          href: `/${locale}/sell`,
-          label: t("browse.providerCta"),
-          pitch: t("browse.providerPitch"),
-          LinkComponent: Link,
-        }}
-      />
-
-      <section className="flex flex-col gap-6" aria-labelledby="services-results-heading">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-8">
+      <section
+        className="flex flex-col gap-4"
+        aria-labelledby="services-results-heading"
+      >
         <div className="space-y-1">
-          <h2 id="services-results-heading" className="font-display text-h2 text-display-ink">
+          <h1
+            id="services-results-heading"
+            className="m-0 font-display text-h1 font-bold text-display-ink"
+          >
             {t("browse.title")}
-          </h2>
-          <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
+          </h1>
+          <p className="m-0 text-sm text-text-2">{t("browse.subtitle")}</p>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-1 md:p-6">
+        <div>
           <Suspense fallback={null}>
             <VerticalFilterChips
               locale={locale}
@@ -184,7 +195,10 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
         </div>
 
         {items.length === 0 ? (
-          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+          <EmptyState
+            title={t("browse.emptyTitle")}
+            body={t("browse.emptyBody")}
+          />
         ) : (
           <>
             <ServiceGrid
@@ -212,10 +226,15 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
         aria-labelledby="services-provider-cta"
       >
         <div className="max-w-2xl space-y-2">
-          <h2 id="services-provider-cta" className="font-display text-h2 text-panel-text">
+          <h2
+            id="services-provider-cta"
+            className="font-display text-h2 text-panel-text"
+          >
             {t("browse.providerCta")}
           </h2>
-          <p className="text-sm leading-relaxed text-panel-muted">{t("browse.providerPitch")}</p>
+          <p className="text-sm leading-relaxed text-panel-muted">
+            {t("browse.providerPitch")}
+          </p>
         </div>
         <Link
           href={`/${locale}/sell`}

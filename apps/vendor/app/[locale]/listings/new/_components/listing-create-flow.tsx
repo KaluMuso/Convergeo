@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { notify } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -172,15 +173,16 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     mode: FlowTab,
     requiresEvidence: boolean,
   ) => {
-    if (requiresEvidence) {
-      setSuccessMessage(t("listings.success.evidence"));
-    } else if (mode === "new_canonical") {
-      setSuccessMessage(t("listings.success.moderation"));
-    } else if (response.status === "draft") {
-      setSuccessMessage(t("listings.success.draft"));
-    } else {
-      setSuccessMessage(t("listings.success.live"));
-    }
+    const message = requiresEvidence
+      ? t("listings.success.evidence")
+      : mode === "new_canonical"
+        ? t("listings.success.moderation")
+        : response.status === "draft"
+          ? t("listings.success.draft")
+          : t("listings.success.live");
+    setSuccessMessage(message);
+    // The toast outlives the redirect to the listings page.
+    notify.success(message);
     setError(null);
     window.setTimeout(() => {
       router.push(

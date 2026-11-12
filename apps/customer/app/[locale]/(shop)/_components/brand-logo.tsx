@@ -7,11 +7,18 @@ type BrandLogoProps = {
   className?: string;
 };
 
-/** Convergeo pinwheel wordmark — light and dark variants swap via `data-theme`. */
+/**
+ * Founder artwork wordmark (`public/brand/`): high-contrast serif CONVERGEO
+ * with the glass pinwheel as the "O". The supplied files are opaque (black on
+ * white / white on black), so a blend mode drops the solid ground onto any
+ * surface: `multiply` erases white on light themes, `screen` erases black on
+ * dark. next/image serves a resized WebP, so the header pays a few KB.
+ */
 export function BrandLogo({ appName, compact = false, className }: BrandLogoProps) {
-  const imgClass = compact
-    ? "h-5 w-auto max-w-[8.5rem] object-contain object-left sm:h-[1.35rem] sm:max-w-[9.5rem]"
-    : "h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem]";
+  // Artwork ratio ≈ 5.85:1 (1024×175).
+  const height = compact ? 22 : 26;
+  const width = Math.round(height * 5.85);
+  const imgClass = "h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem]";
 
   return (
     <span
@@ -19,20 +26,22 @@ export function BrandLogo({ appName, compact = false, className }: BrandLogoProp
       data-testid="brand-logo"
     >
       <Image
-        src="/brand-logo-light.webp"
+        src="/brand/convergeo-wordmark-on-light.webp"
         alt={appName}
-        width={compact ? 103 : 132}
-        height={compact ? 18 : 23}
+        width={width}
+        height={height}
         priority
-        className={`${imgClass} dark:hidden`}
+        className={`${imgClass} mix-blend-multiply dark:hidden`}
+        style={{ height }}
       />
       <Image
-        src="/brand-logo-dark.webp"
+        src="/brand/convergeo-wordmark-on-dark.webp"
         alt={appName}
-        width={compact ? 99 : 126}
-        height={compact ? 18 : 23}
+        width={width}
+        height={height}
         loading="lazy"
-        className={`${imgClass} hidden dark:block`}
+        className={`${imgClass} hidden mix-blend-screen dark:block`}
+        style={{ height }}
       />
     </span>
   );

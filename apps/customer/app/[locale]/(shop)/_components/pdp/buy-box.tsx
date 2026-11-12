@@ -5,9 +5,18 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
+import { emitToastKey } from "@vergeo/ui/src/toast";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 
 import {
   catalogSaleUnitLabels,
@@ -20,10 +29,19 @@ import {
 } from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
-import { PickupLocationPicker, type PickupLocationPickerLabels } from "./pickup-location-picker";
+import {
+  PickupLocationPicker,
+  type PickupLocationPickerLabels,
+} from "./pickup-location-picker";
 import { usePickupLocationSelection } from "./use-pickup-location-selection";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
+
+// Only out-of-stock listings need it; keep it off the in-stock first load.
+const NotifyBackInStock = dynamic(
+  () => import("./notify-back-in-stock").then((mod) => mod.NotifyBackInStock),
+  { ssr: false, loading: () => null },
+);
 
 export type BuyBoxListing = {
   id: string;
@@ -133,14 +151,20 @@ export function clampQuantity(value: number, listing: BuyBoxListing): number {
 
 export function getStockLabel(
   listing: BuyBoxListing,
-  labels: Pick<BuyBoxLabels, "inStockLabel" | "outOfStockLabel" | "alwaysAvailableLabel"> & {
+  labels: Pick<
+    BuyBoxLabels,
+    "inStockLabel" | "outOfStockLabel" | "alwaysAvailableLabel"
+  > & {
     lowStockLabel: (count: number) => string;
   },
 ): string {
   if (!listing.inStock) {
     return labels.outOfStockLabel;
   }
-  if (listing.productClass === "E" || (listing.leadTimeDays != null && listing.leadTimeDays > 0)) {
+  if (
+    listing.productClass === "E" ||
+    (listing.leadTimeDays != null && listing.leadTimeDays > 0)
+  ) {
     return labels.alwaysAvailableLabel;
   }
   if (listing.stockMode === "always_available") {
@@ -184,10 +208,15 @@ export function BuyBox({
   const [addError, setAddError] = useState<string | null>(null);
   // Only used when `purchase` is not supplied (standalone-listing path) —
   // when it is, the caller's useListingPurchase() already owns this state.
-  const internalPickup = usePickupLocationSelection(purchase ? null : listing.id);
+  const internalPickup = usePickupLocationSelection(
+    purchase ? null : listing.id,
+  );
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
-  const unitLabels: SaleUnitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
+  const unitLabels: SaleUnitLabels = useMemo(
+    () => catalogSaleUnitLabels(t),
+    [t],
+  );
   const saleUnit = resolveSaleUnit(listing.saleUnit);
   const formattedQuantity = formatListingQuantity(
     purchase?.quantity ?? quantity,
@@ -234,9 +263,12 @@ export function BuyBox({
       : listing.condition === "used"
         ? labels.conditionUsedLabel
         : labels.conditionRefurbishedLabel;
-  const showAuthenticityBadge = listing.productClass === "D" || listing.condition === "used";
+  const showAuthenticityBadge =
+    listing.productClass === "D" || listing.condition === "used";
   const leadTimeDays =
-    listing.leadTimeDays != null && listing.leadTimeDays > 0 ? listing.leadTimeDays : null;
+    listing.leadTimeDays != null && listing.leadTimeDays > 0
+      ? listing.leadTimeDays
+      : null;
 
   const decrease = useCallback(() => {
     setQuantity((current) => clampQuantity(current - 1, listing));
@@ -253,7 +285,10 @@ export function BuyBox({
     // Same fail-closed gate as useListingPurchase's handleAddToCart — never
     // send add-to-cart while branch-tracking status is unknown or a
     // required branch hasn't been chosen yet.
-    if (internalPickup.branchTracked !== false && !internalPickup.selectedLocationId) {
+    if (
+      internalPickup.branchTracked !== false &&
+      !internalPickup.selectedLocationId
+    ) {
       setAddError(t("pdp.buyBox.pickup.required"));
       return;
     }
@@ -271,15 +306,20 @@ export function BuyBox({
         quantity,
         undefined,
         internalPickup.selectedLocationId
-          ? { pickupLocationId: internalPickup.selectedLocationId, fulfilment: "pickup" }
+          ? {
+              pickupLocationId: internalPickup.selectedLocationId,
+              fulfilment: "pickup",
+            }
           : undefined,
       );
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
+      emitToastKey("addedToCart", { type: "cart" });
       onAddedToCart?.();
     } catch {
       setAddError(labels.addToCartErrorLabel);
+      emitToastKey("addToCartFailed", { type: "error" });
     } finally {
       addingRef.current = false;
       setAdding(false);
@@ -300,19 +340,25 @@ export function BuyBox({
   const onDecrease = purchase?.decrease ?? decrease;
   const onIncrease = purchase?.increase ?? increase;
   const atMin = purchase?.atMin ?? quantity <= getMinimumQuantity(listing);
-  const atMax = purchase?.atMax ?? (maxQuantity !== null && quantity >= maxQuantity);
+  const atMax =
+    purchase?.atMax ?? (maxQuantity !== null && quantity >= maxQuantity);
   const isAdding = purchase?.adding ?? adding;
   const errorMessage = purchase?.addError ?? addError;
   const successMessage = purchase?.addedMessage ?? addedMessage;
-  const pickupBranchTracked = purchase?.pickupBranchTracked ?? internalPickup.branchTracked;
+  const pickupBranchTracked =
+    purchase?.pickupBranchTracked ?? internalPickup.branchTracked;
   const pickupLocations = purchase?.pickupLocations ?? internalPickup.locations;
-  const pickupLocationsLoading = purchase?.pickupLocationsLoading ?? internalPickup.loading;
-  const pickupLocationsLoadError = purchase?.pickupLocationsLoadError ?? internalPickup.loadError;
+  const pickupLocationsLoading =
+    purchase?.pickupLocationsLoading ?? internalPickup.loading;
+  const pickupLocationsLoadError =
+    purchase?.pickupLocationsLoadError ?? internalPickup.loadError;
   const selectedPickupLocationId =
     purchase?.selectedPickupLocationId ?? internalPickup.selectedLocationId;
-  const onSelectPickupLocation = purchase?.selectPickupLocation ?? internalPickup.selectLocation;
+  const onSelectPickupLocation =
+    purchase?.selectPickupLocation ?? internalPickup.selectLocation;
   const pickupSelectionSatisfied =
-    pickupBranchTracked === false || (pickupBranchTracked === true && !!selectedPickupLocationId);
+    pickupBranchTracked === false ||
+    (pickupBranchTracked === true && !!selectedPickupLocationId);
   const stockLabel = purchase?.stockLabel || localStockLabel;
   const onAdd = purchase?.handleAddToCart ?? (() => void handleAddToCart());
 
@@ -328,7 +374,11 @@ export function BuyBox({
       <div className="flex flex-wrap items-center gap-2">
         <ConditionBadge condition={listing.condition} label={conditionLabel} />
         {showAuthenticityBadge ? (
-          <Badge variant="featured" label={labels.conditionAuthenticityLabel} className="text-xs" />
+          <Badge
+            variant="featured"
+            label={labels.conditionAuthenticityLabel}
+            className="text-xs"
+          />
         ) : null}
         {singleVendor ? (
           <p className="text-sm text-text-2" data-testid="pdp-single-vendor">
@@ -341,7 +391,9 @@ export function BuyBox({
         <p className="text-sm text-text-2">
           {saleUnit === "each"
             ? labels.priceLabel
-            : t("pdp.buyBox.pricePerIncrement", { quantity: formattedIncrement })}
+            : t("pdp.buyBox.pricePerIncrement", {
+                quantity: formattedIncrement,
+              })}
         </p>
         <PriceBlock ngwee={listing.priceNgwee} className="mt-0.5" />
         {compareAtNgwee != null && compareAtNgwee > listing.priceNgwee ? (
@@ -351,7 +403,10 @@ export function BuyBox({
           </p>
         ) : null}
         {priceContextLabel ? (
-          <p className="mt-1 text-xs font-medium text-text-2" data-testid="pdp-price-context">
+          <p
+            className="mt-1 text-xs font-medium text-text-2"
+            data-testid="pdp-price-context"
+          >
             {priceContextLabel}
           </p>
         ) : null}
@@ -364,12 +419,19 @@ export function BuyBox({
       {seller ? (
         <div data-testid="pdp-buy-box-seller" className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium text-text">{seller.displayName}</p>
+            <p className="text-sm font-medium text-text">
+              {seller.displayName}
+            </p>
             {seller.preferred && preferredBadgeLabel ? (
-              <CornerRibbon trust="preferred" trustLabel={preferredBadgeLabel} />
+              <CornerRibbon
+                trust="preferred"
+                trustLabel={preferredBadgeLabel}
+              />
             ) : null}
           </div>
-          {seller.ratingLabel ? <p className="text-xs text-text-2">{seller.ratingLabel}</p> : null}
+          {seller.ratingLabel ? (
+            <p className="text-xs text-text-2">{seller.ratingLabel}</p>
+          ) : null}
         </div>
       ) : null}
 
@@ -381,7 +443,10 @@ export function BuyBox({
       </p>
 
       {leadTimeDays != null ? (
-        <p className="text-sm font-medium text-text-2" data-testid="pdp-lead-time">
+        <p
+          className="text-sm font-medium text-text-2"
+          data-testid="pdp-lead-time"
+        >
           {t("pdp.leadTime", { days: leadTimeDays })}
         </p>
       ) : null}
@@ -390,7 +455,9 @@ export function BuyBox({
         <p className="text-sm text-text-2" data-testid="pdp-moq">
           {saleUnit === "each"
             ? t("pdp.buyBox.moq", { count: getMinimumQuantity(listing) })
-            : t("pdp.buyBox.minimumOrderQuantity", { quantity: formattedMinimum })}
+            : t("pdp.buyBox.minimumOrderQuantity", {
+                quantity: formattedMinimum,
+              })}
         </p>
       ) : null}
 
@@ -407,57 +474,76 @@ export function BuyBox({
         />
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-text">{labels.quantityLabel}</span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={labels.decreaseLabel}
-            data-testid="pdp-qty-decrease"
-            onClick={onDecrease}
-            disabled={!listing.inStock || atMin || isAdding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span aria-hidden="true">{labels.decreaseSymbol}</span>
-          </button>
-          <output
-            data-testid="pdp-qty-value"
-            className="min-w-12 text-center font-mono text-lg"
-            aria-live="polite"
-            aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
-          >
-            {formattedQuantity}
-          </output>
-          <button
-            type="button"
-            aria-label={labels.increaseLabel}
-            data-testid="pdp-qty-increase"
-            onClick={onIncrease}
-            disabled={!listing.inStock || atMax || isAdding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span aria-hidden="true">{labels.increaseSymbol}</span>
-          </button>
+      {listing.inStock ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-text">
+            {labels.quantityLabel}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label={labels.decreaseLabel}
+              data-testid="pdp-qty-decrease"
+              onClick={onDecrease}
+              disabled={!listing.inStock || atMin || isAdding}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span aria-hidden="true">{labels.decreaseSymbol}</span>
+            </button>
+            <output
+              data-testid="pdp-qty-value"
+              className="min-w-12 text-center font-display text-lg font-semibold tabular-nums"
+              aria-live="polite"
+              aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
+            >
+              {formattedQuantity}
+            </output>
+            <button
+              type="button"
+              aria-label={labels.increaseLabel}
+              data-testid="pdp-qty-increase"
+              onClick={onIncrease}
+              disabled={!listing.inStock || atMax || isAdding}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span aria-hidden="true">{labels.increaseSymbol}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="flex items-stretch gap-2">
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="min-w-0 flex-1"
-          disabled={!listing.inStock || isAdding || !pickupSelectionSatisfied}
-          loading={isAdding}
-          loadingLabel={labels.addingToCartLabel}
-          data-testid="pdp-add-to-cart"
-          aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
-          onClick={onAdd}
-        >
-          {labels.addToCartLabel}
-        </Button>
-        {wishlistSlot}
-      </div>
+      {listing.inStock ? (
+        <div className="flex items-stretch gap-2">
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="min-w-0 flex-1"
+            disabled={!listing.inStock || isAdding || !pickupSelectionSatisfied}
+            loading={isAdding}
+            loadingLabel={labels.addingToCartLabel}
+            data-testid="pdp-add-to-cart"
+            aria-label={
+              listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel
+            }
+            onClick={onAdd}
+          >
+            {labels.addToCartLabel}
+          </Button>
+          {wishlistSlot}
+        </div>
+      ) : (
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <NotifyBackInStock
+              listingId={listing.id}
+              locale={locale}
+              similarHref="#pdp-related"
+            />
+          </div>
+          {wishlistSlot}
+        </div>
+      )}
 
       {compareHref && compareLabel ? (
         <Link
@@ -473,12 +559,19 @@ export function BuyBox({
         {successMessage}
       </p>
       {errorMessage ? (
-        <p className="text-sm text-danger" role="alert" data-testid="pdp-add-to-cart-error">
+        <p
+          className="text-sm text-danger"
+          role="alert"
+          data-testid="pdp-add-to-cart-error"
+        >
           {errorMessage}
         </p>
       ) : null}
       {successMessage ? (
-        <p className="text-sm font-medium text-success" data-testid="pdp-add-to-cart-success">
+        <p
+          className="text-sm font-medium text-success"
+          data-testid="pdp-add-to-cart-success"
+        >
           {successMessage}
         </p>
       ) : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -29,14 +30,20 @@ export function DeliveryZoneEditor() {
   }, [load]);
 
   const saveRow = async (zone: DeliveryZone) => {
-    await configApi.request(`/admin/config/delivery-zones/${zone.zone_key}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        label: zone.label,
-        fee_ngwee: zone.fee_ngwee,
-        active: zone.active,
-      }),
-    });
+    try {
+      await configApi.request(`/admin/config/delivery-zones/${zone.zone_key}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          label: zone.label,
+          fee_ngwee: zone.fee_ngwee,
+          active: zone.active,
+        }),
+      });
+    } catch (caught) {
+      emitToastKey("actionFailed", { type: "error" });
+      throw caught;
+    }
+    emitToastKey("configSaved", { type: "success" });
     await load();
   };
 

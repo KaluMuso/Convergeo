@@ -1,42 +1,33 @@
-import { Cormorant_Garamond, DM_Sans, DM_Serif_Display, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from "next/font/google";
 
-/** Body / UI — active default. */
+/** Body / UI — highly legible grotesk, retained from the audited reference. */
 export const fontBody = DM_Sans({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
 });
 
-/** Display serif — active default from the audited design reference. */
-export const fontDisplay = Cormorant_Garamond({
+/**
+ * Display — Bricolage Grotesque (variable wght axis only, latin subset).
+ * Characterful ink-trapped grotesk for headlines, prices and section titles;
+ * replaces the hairline Cormorant serif, which broke down at 360px.
+ */
+export const fontDisplay = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
+  adjustFontFallback: true,
 });
 
-/** Order IDs, OTP, tabular amounts. */
+/** Order IDs, OTP, tabular amounts. Not preloaded — rare on first paint. */
 export const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
+  preload: false,
 });
 
-/** Backwards-compatible name for consumers that selected Cormorant explicitly. */
-export const fontDisplayCormorant = fontDisplay;
-
-/** Optional legacy display preset; Cormorant remains the application default. */
-export const fontDisplayDmSerif = DM_Serif_Display({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-/** Class names to apply on `<html>` or `<body>` for active font CSS variables. */
-export function fontVariables(activeDisplay: "dm-serif" | "cormorant" = "cormorant"): string {
-  const displayVar =
-    activeDisplay === "dm-serif" ? fontDisplayDmSerif.variable : fontDisplay.variable;
-  return [fontBody.variable, displayVar, fontMono.variable].join(" ");
+/** Class names to apply on `<html>` for the active font CSS variables. */
+export function fontVariables(): string {
+  return [fontBody.variable, fontDisplay.variable, fontMono.variable].join(" ");
 }

@@ -12,6 +12,7 @@ import { SeasonalThemeStyle } from "@vergeo/ui/src/seasonal-theme";
 import { getMetadataBase } from "@vergeo/ui/src/seo/metadata";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
+import { ToastProvider } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -26,9 +27,11 @@ import { SentryInit } from "../sentry-init";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
+import { LazyFloatingActions } from "./_components/lazy-floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
+import type { FloatingActionsLabels } from "./_components/floating-actions";
 import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
@@ -75,11 +78,10 @@ export async function generateMetadata({
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
-        { url: "/icon.svg", type: "image/svg+xml" },
-        { url: "/icon-192.webp", sizes: "192x192", type: "image/webp" },
-        { url: "/icon-512.webp", sizes: "512x512", type: "image/webp" },
+        { url: "/brand/convergeo-icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/brand/convergeo-icon-512.png", sizes: "512x512", type: "image/png" },
       ],
-      apple: [{ url: "/icon-192.webp", sizes: "192x192", type: "image/webp" }],
+      apple: [{ url: "/brand/convergeo-icon-180.png", sizes: "180x180", type: "image/png" }],
       shortcut: "/favicon.ico",
     },
     openGraph: {
@@ -141,6 +143,25 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     namespace: "checkout",
   });
   const year = new Date().getFullYear();
+  const fabCopy = ((messages.common as AbstractIntlMessages | undefined)?.fab ??
+    {}) as Record<string, string>;
+  const fabLabels: FloatingActionsLabels = {
+    ask: fabCopy.ask ?? "",
+    askTitle: fabCopy.askTitle ?? "",
+    askHint: fabCopy.askHint ?? "",
+    askPlaceholder: fabCopy.askPlaceholder ?? "",
+    send: fabCopy.send ?? "",
+    voiceStart: fabCopy.voiceStart ?? "",
+    voiceStop: fabCopy.voiceStop ?? "",
+    listening: fabCopy.listening ?? "",
+    voiceUnsupported: fabCopy.voiceUnsupported ?? "",
+    close: fabCopy.close ?? "",
+    showFooter: fabCopy.showFooter ?? "",
+    hideFooter: fabCopy.hideFooter ?? "",
+  };
+  // Translated toast copy for emitToastKey() call sites (no i18n hook needed there).
+  const toastCopy = ((messages.common as AbstractIntlMessages | undefined)
+    ?.toast ?? {}) as Record<string, unknown>;
   const appName = tCommon("app.name");
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
@@ -226,60 +247,77 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
       <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
-            {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
-            <SentryInit />
-            {/* Probe `/sw.js` before registering — never register a missing worker. */}
-            <ServiceWorkerRegister />
-            {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
+            <ToastProvider
+              dismissLabel={tCommon("toast.dismiss")}
+              copy={toastCopy}
+            >
+              {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+              <SentryInit />
+              {/* Probe `/sw.js` before registering — never register a missing worker. */}
+              <ServiceWorkerRegister />
+              {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
                 only on consent — the anonymized server log is the source of truth. */}
-            <AnalyticsProvider
-              measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
-            />
-            <CustomerAuthBarrier
-              labels={{
-                title: tCheckout("cart.mergeRecoveryTitle"),
-                body: tCheckout("cart.mergeRecoveryBody"),
-                conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
-                priceLine: String(tCheckout.raw("cart.mergePriceLine")),
-                unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
-                wholesaleTerms: String(tCheckout.raw("cart.mergeWholesaleTerms")),
-                priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
-                accountChoice: tCheckout("cart.mergeAccountChoice"),
-                guestChoice: tCheckout("cart.mergeGuestChoice"),
-                apply: tCheckout("cart.mergeApply"),
-                retry: tCheckout("cart.mergeRetry"),
-                signOut: tCheckout("cart.mergeSignOut"),
-                failure: tCheckout("cart.mergeFailure"),
-              }}
-            />
-            <div className="flex flex-1 flex-col">{children}</div>
-            <Footer
-              appName={appName}
-              copyright={tLegal("footer.copyright", { year, appName })}
-              columns={footerColumns}
-              paymentNote={tLegal("footer.paymentNote")}
-              LinkComponent={Link}
-              trailing={
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                  <LocaleSwitcher
-                    locale={locale}
-                    labels={localeSwitcherLabels}
+              <AnalyticsProvider
+                measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
+              />
+              <CustomerAuthBarrier
+                labels={{
+                  title: tCheckout("cart.mergeRecoveryTitle"),
+                  body: tCheckout("cart.mergeRecoveryBody"),
+                  conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
+                  priceLine: String(tCheckout.raw("cart.mergePriceLine")),
+                  unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
+                  wholesaleTerms: String(
+                    tCheckout.raw("cart.mergeWholesaleTerms"),
+                  ),
+                  priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
+                  accountChoice: tCheckout("cart.mergeAccountChoice"),
+                  guestChoice: tCheckout("cart.mergeGuestChoice"),
+                  apply: tCheckout("cart.mergeApply"),
+                  retry: tCheckout("cart.mergeRetry"),
+                  signOut: tCheckout("cart.mergeSignOut"),
+                  failure: tCheckout("cart.mergeFailure"),
+                }}
+              />
+              <div className="flex flex-1 flex-col">{children}</div>
+              {/* Footer inline on most pages; on home it becomes an overlay sheet
+                behind the floating toggle (keeps the infinite feed clear). */}
+              <LazyFloatingActions
+                locale={locale}
+                labels={fabLabels}
+                footer={
+                  <Footer
+                    appName={appName}
+                    copyright={tLegal("footer.copyright", { year, appName })}
+                    columns={footerColumns}
+                    paymentNote={tLegal("footer.paymentNote")}
+                    tagline={tCommon("meta.defaultDescription")}
+                    sealLabel={tCheckout("checkout.review.escrowStep2")}
+                    LinkComponent={Link}
+                    trailing={
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        <LocaleSwitcher
+                          locale={locale}
+                          labels={localeSwitcherLabels}
+                        />
+                        <p
+                          className="m-0 text-micro"
+                          style={{ color: "var(--panel-muted)" }}
+                        >
+                          <Link
+                            href={`/${locale}/account/preferences`}
+                            className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+                            style={{ color: "var(--panel-muted)" }}
+                          >
+                            {tCommon("theme.displayPreferences")}
+                          </Link>
+                        </p>
+                      </div>
+                    }
                   />
-                  <p
-                    className="m-0 text-micro"
-                    style={{ color: "var(--panel-muted)" }}
-                  >
-                    <Link
-                      href={`/${locale}/account/preferences`}
-                      className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
-                      style={{ color: "var(--panel-muted)" }}
-                    >
-                      {tCommon("theme.displayPreferences")}
-                    </Link>
-                  </p>
-                </div>
-              }
-            />
+                }
+              />
+            </ToastProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

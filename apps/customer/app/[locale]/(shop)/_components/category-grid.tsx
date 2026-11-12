@@ -2,6 +2,8 @@ import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-sta
 import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
 
+import { defaultCategoryImage } from "./category-imagery";
+
 import type { CategoryRow, MerchSlotRow } from "./merch-data";
 
 type CatalogTranslator = {
@@ -94,7 +96,7 @@ function CategoryFallbackMark({ index }: { index: number }) {
   return (
     <span
       aria-hidden
-      className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface/35 text-text"
+      className="absolute inset-0 m-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface/50 text-text"
       data-testid="category-fallback-icon"
     >
       <svg
@@ -135,50 +137,45 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
       <Rail
         as="ul"
         snap
-        className="flex list-none gap-2 p-0 pb-1 md:grid md:grid-cols-4 md:gap-2.5 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-6 xl:grid-cols-8 xl:gap-3"
+        className="flex list-none gap-3 p-0 pb-1 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-6 xl:grid-cols-8"
         data-testid="home-category-grid"
       >
         {categories.map((category, index) => {
           const isWide = index === wideIndex;
           const fill = pastelForIndex(index);
-          const imagePublicId = imageMap.get(category.slug);
+          const imagePublicId = imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
 
           return (
             <li
               key={category.id}
-              className={`min-w-[7.75rem] snap-start md:min-w-0 ${isWide ? "md:col-span-2" : ""}`}
+              className={`w-[6.75rem] shrink-0 snap-start md:w-auto ${isWide ? "md:col-span-2" : ""}`}
             >
               <Link
                 href={`/${locale}/c/${category.slug}`}
                 aria-label={t("home.categories.browseLabel", { category: category.name })}
-                className="group relative flex min-h-11 flex-col justify-end overflow-hidden rounded-[var(--r-lg)] p-3 text-text shadow-1 transition-[transform,box-shadow] duration-[250ms] ease-std hover:-translate-y-1 hover:shadow-2 focus-visible:outline-none focus-visible:shadow-focusRing motion-reduce:transform-none motion-reduce:transition-none"
-                style={{
-                  backgroundColor: fill,
-                  minHeight: isWide ? "5.5rem" : "4.5rem",
-                }}
+                className="group flex min-h-11 flex-col gap-2 rounded-lg text-text focus-visible:outline-none focus-visible:shadow-focusRing"
                 data-testid={`home-category-${category.slug}`}
               >
-                {imagePublicId ? (
-                  <span className="absolute inset-0" data-testid="category-image">
-                    <CloudinaryImageStatic
-                      publicId={imagePublicId}
-                      alt=""
-                      width={480}
-                      ratio="4/3"
-                      sizes="(max-width: 768px) 42vw, 25vw"
-                      className="h-full w-full object-cover opacity-90 transition-transform duration-slow ease-std group-hover:scale-105 motion-reduce:transition-none"
-                    />
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent"
-                    />
-                  </span>
-                ) : (
-                  <CategoryFallbackMark index={index} />
-                )}
                 <span
-                  className={`relative font-display text-sm font-semibold leading-snug sm:text-base ${imagePublicId ? "text-surface" : ""}`}
+                  className={`relative block overflow-hidden rounded-lg border border-border ${isWide ? "aspect-square md:aspect-[2/1]" : "aspect-square"}`}
+                  style={{ backgroundColor: fill }}
                 >
+                  {imagePublicId ? (
+                    <span className="absolute inset-0" data-testid="category-image">
+                      <CloudinaryImageStatic
+                        publicId={imagePublicId}
+                        alt=""
+                        width={360}
+                        ratio="1/1"
+                        sizes="(max-width: 768px) 28vw, (max-width: 1280px) 16vw, 12vw"
+                        className="h-full w-full object-cover transition-transform duration-slow ease-std group-hover:scale-105 motion-reduce:transition-none"
+                      />
+                    </span>
+                  ) : (
+                    <CategoryFallbackMark index={index} />
+                  )}
+                </span>
+                <span className="px-0.5 text-sm font-semibold leading-snug text-text group-hover:text-primary">
                   {category.name}
                 </span>
               </Link>

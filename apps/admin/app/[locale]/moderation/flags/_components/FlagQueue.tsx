@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -63,6 +64,7 @@ export function FlagQueue({ locale }: FlagQueueProps) {
   const handleComplete = async () => {
     setPending(null);
     setMessage(t("success"));
+    notify.success(t("success"));
     await load();
   };
 

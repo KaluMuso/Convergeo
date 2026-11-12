@@ -1,7 +1,9 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { PanelHero } from "@vergeo/ui/src/panel-hero";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -52,7 +54,10 @@ type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-function readParam(params: Record<string, string | string[] | undefined>, key: string): string {
+function readParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string {
   const value = params[key];
   if (Array.isArray(value)) {
     return value[0] ?? "";
@@ -60,10 +65,15 @@ function readParam(params: Record<string, string | string[] | undefined>, key: s
   return value ?? "";
 }
 
-async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
-  const messages = { ...baseMessages, directory: directoryMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    directory: directoryMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -72,7 +82,9 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchDirectory(query: Record<string, string>): Promise<DirectoryApiResponse | null> {
+async function fetchDirectory(
+  query: Record<string, string>,
+): Promise<DirectoryApiResponse | null> {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value) {
@@ -101,25 +113,30 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getDirectoryTranslator(locale);
   return {
     title: t("index.title"),
     description: t("index.subtitle"),
-    alternates: buildCanonicalAlternates(locale, "directory"),
+    alternates: buildCanonicalAlternates(locale, "vendors"),
     openGraph: {
       title: t("index.title"),
       description: t("index.subtitle"),
       type: "website",
       locale,
-      url: buildLocaleCanonical(locale, "directory"),
+      url: buildLocaleCanonical(locale, "vendors"),
     },
     robots: { index: true, follow: true },
   };
 }
 
-export default async function DirectoryPage({ params, searchParams }: PageProps) {
+export default async function DirectoryPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale } = await params;
   const resolvedSearchParams = await searchParams;
 
@@ -143,7 +160,11 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
 
   const directory = await fetchDirectory({ q, category, location, badges });
   const vendors = directory?.items ?? [];
-  const facets = directory?.facets ?? { categories: [], locations: [], badges: [] };
+  const facets = directory?.facets ?? {
+    categories: [],
+    locations: [],
+    badges: [],
+  };
   const total = directory?.total ?? 0;
 
   const categoryLabels = {
@@ -160,7 +181,8 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
   const categoryOptions = facets.categories.map((facet) => ({
     value: facet.value,
     label: formatFacetLabel(
-      categoryLabels[facet.value as keyof typeof categoryLabels] ?? facet.value.replace(/-/g, " "),
+      categoryLabels[facet.value as keyof typeof categoryLabels] ??
+        facet.value.replace(/-/g, " "),
       facet.count,
     ),
   }));
@@ -171,19 +193,27 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
   }));
 
   return (
-    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-6xl">
-      <PanelHero
-        title={t("index.title")}
-        subtitle={t("index.subtitle")}
-        cta={{
-          href: `/${locale}/sell`,
-          label: t("index.becomeVendor"),
-          pitch: t("index.heroPitch"),
-          LinkComponent: Link,
-        }}
-      >
-        <p className="text-sm text-panel-muted">{t("index.results", { count: total })}</p>
-      </PanelHero>
+    <div className="space-y-4 lg:mx-auto lg:w-full lg:max-w-6xl">
+      {/* Compact title row: the grid is the hero, not a marketing panel. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
+            {t("index.title")}
+          </h1>
+          <p className="m-0 mt-1 flex flex-wrap gap-x-3 text-sm text-text-2">
+            <span>{t("index.subtitle")}</span>
+            <span className="font-semibold text-text">
+              {t("index.results", { count: total })}
+            </span>
+          </p>
+        </div>
+        <Link
+          href={`/${locale}/sell`}
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+        >
+          {t("index.becomeVendor")}
+        </Link>
+      </div>
 
       <Suspense fallback={null}>
         <FilterBar
@@ -211,7 +241,11 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
       </Suspense>
 
       {vendors.length === 0 ? (
-        <EmptyState title={t("empty.title")} body={t("empty.body")} data-testid="directory-empty" />
+        <EmptyState
+          title={t("empty.title")}
+          body={t("empty.body")}
+          data-testid="directory-empty"
+        />
       ) : (
         <>
           <VendorCardGrid

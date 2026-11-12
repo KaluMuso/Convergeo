@@ -13,13 +13,14 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const COLORS = {
-  bg: "#FAF7F2",
-  bg2: "#F3EDE3",
-  primary: "#2D4A7A",
-  primaryTint: "#E8F0FA",
-  displayInk: "#23324E",
-  accent: "#C8861A",
-  text2: "#6B5A3E",
+  // Mirrors packages/ui tokens (Copperbelt) — inlined to keep the edge worker tiny.
+  bg: "#F7F6F2",
+  bg2: "#EEEDE8",
+  primary: "#0B5D45",
+  primaryTint: "#E3F0EA",
+  displayInk: "#0F2A21",
+  accent: "#A4501C",
+  text2: "#4A5550",
 } as const;
 
 type ImageProps = {

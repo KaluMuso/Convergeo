@@ -144,6 +144,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
               jobs: t("nav.jobs"),
               quotes: t("nav.quotes"),
               saved: t("nav.saved"),
+              following: t("nav.following"),
               addresses: t("nav.addresses"),
               preferences: t("nav.preferences"),
               profile: t("nav.profile"),

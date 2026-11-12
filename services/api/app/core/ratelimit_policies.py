@@ -118,6 +118,16 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "DELETE /admin/translations/overrides": ADMIN_WRITE,
     "DELETE /cart/items/{listing_id}": STANDARD_WRITE,
     "DELETE /merch/slots/{slot_id}": ADMIN_WRITE,
+    # Admin-governed home feed + advertising (admin sub-router, un-prefixed keys).
+    "POST /home-feed/sections": ADMIN_WRITE,
+    "PATCH /home-feed/sections/{section_id}": ADMIN_WRITE,
+    "DELETE /home-feed/sections/{section_id}": ADMIN_WRITE,
+    "POST /home-feed/sections/reorder": ADMIN_WRITE,
+    "POST /ads/placements": ADMIN_WRITE,
+    "PATCH /ads/placements/{placement_id}": ADMIN_WRITE,
+    "POST /ads/placements/{placement_id}/transition": ADMIN_WRITE,
+    # Public ad impression/click beacon; fail-open, enforced in routers/home_feed.py.
+    "POST /home/ads/events": TELEMETRY_VIEWS,
     "DELETE /organiser/ticket-types/{ticket_type_id}": STANDARD_WRITE,
     "DELETE /vendor/listings/{listing_id}": STANDARD_WRITE,
     "DELETE /vendor/listings/{listing_id}/images/{image_id}": STANDARD_WRITE,
@@ -240,6 +250,21 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/reconciliation/webhook-drain-tick": INTERNAL_CRON,
     "POST /internal/release-job/tick": INTERNAL_CRON,
     "POST /internal/review-aggregate/tick": INTERNAL_CRON,
+    "POST /internal/retention/alerts-tick": INTERNAL_CRON,
+    # Retention (customer-owned saved searches / listing alerts; enforced in-router).
+    "POST /me/saved-searches": STANDARD_WRITE,
+    "PATCH /me/saved-searches/{search_id}": STANDARD_WRITE,
+    "DELETE /me/saved-searches/{search_id}": STANDARD_WRITE,
+    "POST /me/listing-alerts": STANDARD_WRITE,
+    "DELETE /me/listing-alerts/{alert_id}": STANDARD_WRITE,
+    # Product Q&A free text — SENSITIVE like comments.
+    "POST /products/{slug}/questions": SENSITIVE_WRITE,
+    "POST /questions/{question_id}/answers": SENSITIVE_WRITE,
+    "POST /qa/{kind}/{item_id}/flag": SENSITIVE_WRITE,
+    # Admin flash deals + Q&A moderation (admin sub-router, un-prefixed keys).
+    "POST /flash-deals": ADMIN_WRITE,
+    "PATCH /flash-deals/{deal_id}": ADMIN_WRITE,
+    "POST /qa/{kind}/{item_id}/moderate": ADMIN_WRITE,
     "POST /internal/sentry-test": INTERNAL_CRON,
     "POST /internal/stock-sweeper/tick": INTERNAL_CRON,
     "POST /internal/sweepers/cart-reservations": INTERNAL_CRON,

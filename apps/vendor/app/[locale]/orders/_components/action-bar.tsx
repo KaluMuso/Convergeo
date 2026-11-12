@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -179,6 +180,7 @@ export function OrderActionBar({
       } else {
         onError(t("orders.errors.actionFailed"));
       }
+      notify.error(t("orders.errors.actionFailed"));
     } finally {
       setPendingAction(null);
     }
@@ -377,6 +379,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
               : "ready"
     }` as const;
     setSuccess(t(successKey));
+    notify.success(t(successKey));
     setError(null);
     void loadOrder();
   };

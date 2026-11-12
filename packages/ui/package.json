@@ -20,6 +20,8 @@
     "./styles/theme.css": "./src/styles/theme.css",
     "./src/theme-presets": "./src/theme-presets.ts",
     "./src/seo/metadata": "./src/seo/metadata.ts",
+    "./src/brand-theme": "./src/brand-theme.ts",
+    "./src/media/cloudinary-url": "./src/media/cloudinary-url.ts",
     "./src/*": "./src/*.tsx"
   },
   "dependencies": {

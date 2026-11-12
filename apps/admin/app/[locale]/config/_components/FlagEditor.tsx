@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -29,10 +30,16 @@ export function FlagEditor() {
   }, [load]);
 
   const toggle = async (flag: string, enabled: boolean) => {
-    await configApi.request(`/admin/config/flags/${flag}`, {
-      method: "PATCH",
-      body: JSON.stringify({ enabled }),
-    });
+    try {
+      await configApi.request(`/admin/config/flags/${flag}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      });
+    } catch (caught) {
+      emitToastKey("actionFailed", { type: "error" });
+      throw caught;
+    }
+    emitToastKey("configSaved", { type: "success" });
     await load();
   };
 

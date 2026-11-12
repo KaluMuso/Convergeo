@@ -44,6 +44,7 @@ const navLabels = {
   jobs: accountMessages.nav.jobs,
   quotes: accountMessages.nav.quotes,
   saved: accountMessages.nav.saved,
+  following: accountMessages.nav.following,
   addresses: accountMessages.nav.addresses,
   preferences: accountMessages.nav.preferences,
   profile: accountMessages.nav.profile,

@@ -96,16 +96,17 @@ export function CloudinaryImageStatic({
           padding: "var(--sp-4)",
         }}
         data-testid="cloudinary-image-fallback"
+        data-image-stage
         role="img"
         aria-label={fallbackLabel ?? alt}
-      >
-        <span style={{ fontSize: "0.875rem", lineHeight: 1.4 }}>{fallbackLabel ?? alt}</span>
-      </div>
+      />
     );
   }
 
   return (
-    <div className={className} style={containerStyle} data-testid="cloudinary-image-box">
+    // `data-image-stage` paints a neutral stage + glyph behind the image and
+    // hides alt text if the request fails (see base.css), without client JS.
+    <div className={className} style={containerStyle} data-testid="cloudinary-image-box" data-image-stage>
       <img
         src={src}
         srcSet={cldSrcSet(publicId, { cloudName })}

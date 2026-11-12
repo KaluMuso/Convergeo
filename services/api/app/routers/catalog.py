@@ -24,7 +24,9 @@ DEFAULT_PAGE_SIZE = 24
 MAX_PAGE_SIZE = 50
 EARTH_RADIUS_M = 6_371_000
 
-CatalogSort = Literal["relevance", "cheapest", "nearest", "newest"]
+CatalogSort = Literal[
+    "relevance", "cheapest", "nearest", "newest", "price_asc", "verified", "bundle", "best"
+]
 ConditionFilter = Literal["new", "refurbished", "used"]
 AvailabilityFilter = Literal["in_stock", "out_of_stock"]
 ProductClass = Literal["A", "B", "C", "D", "E"]
@@ -582,7 +584,8 @@ _LISTING_ENRICHED_SELECT = (
     "id,vendor_id,product_id,condition,product_class,sale_unit,unit_step_milli,min_steps,"
     "fulfilment_mode,lead_time_days,vendor_capacity_per_week,stock_mode,stock_qty,moq,"
     "created_at,status,wholesale,compare_at_ngwee,"
-    "vendors!inner(id,slug,display_name,status,vendor_locations(landmark,created_at)),"
+    "vendors!inner(id,slug,display_name,status,kyc_tier,preferred_badge,"
+    "vendor_locations(landmark,created_at)),"
     "products(id,slug,name,status),"
     "listing_images(cloudinary_public_id,position)"
 )
@@ -724,6 +727,9 @@ class _CatalogCandidate(BaseModel):
     review_count: int
     in_stock: bool
     distance_m: float | None = None
+
+
+CatalogCandidate = _CatalogCandidate
 
 
 def _matches_filters(
@@ -885,6 +891,28 @@ def compute_facet_counts(
     )
 
 
+def is_bundle_candidate(row: _CatalogCandidate) -> bool:
+    listing = row.listing
+    return (
+        bool(listing.wholesale)
+        or listing.moq > 1
+        or listing.min_steps > 1
+        or listing.sale_unit != "each"
+    )
+
+
+def best_score(row: _CatalogCandidate) -> tuple[float, int, int, str]:
+    """Relevance/rating blend: Bayesian-damped rating + trust + stock signals.
+
+    ``(rating * reviews + 3.5 * 5) / (reviews + 5)`` keeps one 5-star review from
+    outranking an established 4.6 — no floats ever touch money here.
+    """
+    damped = (row.rating * row.review_count + 3.5 * 5) / (row.review_count + 5)
+    boost = row.search_doc.boost_signals
+    trust = (1 if boost.get("verified") else 0) + (1 if row.vendor.get("preferred_badge") else 0)
+    return (round(damped, 4), trust, 1 if row.in_stock else 0, row.search_doc.updated_at or "")
+
+
 def _sort_candidates(
     candidates: list[_CatalogCandidate],
     *,
@@ -892,11 +920,39 @@ def _sort_candidates(
     lat: float | None,
     lng: float | None,
 ) -> list[_CatalogCandidate]:
-    if sort == "cheapest":
+    if sort in ("cheapest", "price_asc"):
         return sorted(
             candidates,
             key=lambda row: (row.search_doc.price_min_ngwee or 0, row.search_doc.title),
         )
+
+    if sort == "verified":
+        # Preferred badge, then KYC tier, then the regular relevance order.
+        return sorted(
+            candidates,
+            key=lambda row: (
+                1 if row.vendor.get("preferred_badge") else 0,
+                int(row.vendor.get("kyc_tier") or 0),
+                _relevance_score(row.search_doc.boost_signals, row.search_doc.updated_at),
+                row.search_doc.title,
+            ),
+            reverse=True,
+        )
+
+    if sort == "bundle":
+        # Multi-unit / pack listings (MOQ or min steps > 1, non-"each" units) first,
+        # cheapest within each group.
+        return sorted(
+            candidates,
+            key=lambda row: (
+                0 if is_bundle_candidate(row) else 1,
+                row.search_doc.price_min_ngwee or 0,
+                row.search_doc.title,
+            ),
+        )
+
+    if sort == "best":
+        return sorted(candidates, key=best_score, reverse=True)
 
     if sort == "newest":
         return sorted(
@@ -1080,6 +1136,51 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
     )
 
 
+def catalog_item_from_candidate(row: _CatalogCandidate) -> CatalogListingItem:
+    """Project an enriched catalogue candidate onto the public wire item."""
+    logistics = _listing_logistics_fields(row)
+    return CatalogListingItem(
+        id=row.listing.id,
+        title=row.search_doc.title,
+        product_slug=str(row.product["slug"]) if row.product else None,
+        vendor_name=str(row.vendor["display_name"]),
+        vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
+        price_ngwee=row.search_doc.price_min_ngwee or 0,
+        compare_at_ngwee=row.listing.compare_at_ngwee,
+        condition=row.listing.condition,
+        product_class=row.listing.product_class,
+        sale_unit=row.listing.sale_unit,
+        unit_step_milli=row.listing.unit_step_milli,
+        min_steps=row.listing.min_steps,
+        fulfilment_mode=row.listing.fulfilment_mode,
+        lead_time_days=row.listing.lead_time_days,
+        in_stock=row.in_stock,
+        image_public_id=row.image_public_id,
+        rating=row.rating,
+        review_count=row.review_count,
+        lat=row.search_doc.lat,
+        lng=row.search_doc.lng,
+        distance_m=row.distance_m,
+        landmark=row.landmark,
+        below_median=logistics["below_median"],
+        delivery_available=logistics["delivery_available"],
+        pickup_available=logistics["pickup_available"],
+    )
+
+
+def build_catalog_candidates(
+    client: Any,
+    category_path: str | None = None,
+    *,
+    include_wholesale: bool = False,
+) -> list[_CatalogCandidate]:
+    """Public seam for discovery surfaces (home feed, recommendations)."""
+    candidates = _build_candidates(client, category_path)
+    if include_wholesale:
+        return candidates
+    return [row for row in candidates if not row.listing.wholesale]
+
+
 def list_catalog(
     client: Any,
     filters: PlpFilterState,
@@ -1106,42 +1207,9 @@ def list_catalog(
     end = start + filters.limit
     page_rows = sorted_rows[start:end]
     if filters.lat is not None and filters.lng is not None:
-        page_rows = [
-            _with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows
-        ]
+        page_rows = [_with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows]
 
-    items: list[CatalogListingItem] = []
-    for row in page_rows:
-        logistics = _listing_logistics_fields(row)
-        items.append(
-            CatalogListingItem(
-                id=row.listing.id,
-                title=row.search_doc.title,
-                product_slug=str(row.product["slug"]) if row.product else None,
-                vendor_name=str(row.vendor["display_name"]),
-                vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
-                price_ngwee=row.search_doc.price_min_ngwee or 0,
-                compare_at_ngwee=row.listing.compare_at_ngwee,
-                condition=row.listing.condition,
-                product_class=row.listing.product_class,
-                sale_unit=row.listing.sale_unit,
-                unit_step_milli=row.listing.unit_step_milli,
-                min_steps=row.listing.min_steps,
-                fulfilment_mode=row.listing.fulfilment_mode,
-                lead_time_days=row.listing.lead_time_days,
-                in_stock=row.in_stock,
-                image_public_id=row.image_public_id,
-                rating=row.rating,
-                review_count=row.review_count,
-                lat=row.search_doc.lat,
-                lng=row.search_doc.lng,
-                distance_m=row.distance_m,
-                landmark=row.landmark,
-                below_median=logistics["below_median"],
-                delivery_available=logistics["delivery_available"],
-                pickup_available=logistics["pickup_available"],
-            )
-        )
+    items = [catalog_item_from_candidate(row) for row in page_rows]
 
     next_cursor = encode_plp_cursor(end) if end < total else None
     return CatalogListResponse(items=items, facets=facets, total=total, next_cursor=next_cursor)

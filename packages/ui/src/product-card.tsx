@@ -113,20 +113,14 @@ export function ProductCard({
   return (
     <Component
       className={cx(
-        "v-card group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        "v-card v-card--product group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface",
         unavailable && "opacity-80",
         className,
       )}
       data-testid="product-card"
       data-density={density}
       data-unavailable={unavailable ? "true" : "false"}
-      style={
-        categoryColor
-          ? {
-              background: `linear-gradient(180deg, ${categoryColor}22 0%, var(--surface) 48px)`,
-            }
-          : undefined
-      }
+      data-category-color={categoryColor ? "true" : undefined}
     >
       <div className="v-card__media relative aspect-[4/3] bg-bg-2">
         {media ?? (
@@ -148,10 +142,7 @@ export function ProductCard({
             )}
           >
             {discountLabel ? (
-              <span
-                className="inline-block rounded-pill bg-[var(--discount)] px-2 py-0.5 text-micro font-bold uppercase tracking-wide text-[var(--on-danger)] shadow-1"
-                data-testid="product-card-discount"
-              >
+              <span className="v-card__discount" data-testid="product-card-discount">
                 {discountLabel}
               </span>
             ) : null}
@@ -212,17 +203,10 @@ export function ProductCard({
           compact ? "gap-1 p-[var(--sp-2)]" : "gap-1.5 p-[var(--sp-2)] sm:p-[var(--sp-3)]",
         )}
       >
-        <p className={cx("m-0 truncate text-text-2", compact ? "text-xs" : "text-sm")}>
-          {vendorLabel}
-        </p>
-        <h3
-          className={cx(
-            "m-0 line-clamp-2 font-semibold leading-snug text-text",
-            compact ? "text-sm" : "text-h3",
-          )}
-        >
+        <h3 className={cx("v-card__title m-0 line-clamp-2", compact && "v-card__title--compact")}>
           {title}
         </h3>
+        <p className="v-card__vendor m-0 truncate">{vendorLabel}</p>
         {!compact ? (
           <StarRating
             value={rating}

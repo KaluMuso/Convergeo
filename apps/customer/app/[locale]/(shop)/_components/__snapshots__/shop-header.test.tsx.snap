@@ -2,68 +2,63 @@
 
 exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`] = `
 <header
-  class="sticky top-0 z-50 border-b border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/90"
-  data-compact="false"
+  class="v-shop-header sticky top-0 z-50 w-full"
+  data-scrolled="false"
   data-testid="shop-header"
-  data-variant="shop"
-  style="box-shadow: none; transition: box-shadow var(--dur) var(--ease-std), background-color var(--dur) var(--ease-std);"
 >
   <a
-    class="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
+    class="sr-only rounded bg-primary text-sm font-medium text-[var(--primary-btn-fg)] focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4"
     href="#shop-main"
   >
     Skip to content
   </a>
   <nav
     aria-label="Shop navigation"
-    class="mx-auto flex w-full max-w-container flex-col gap-3 px-4 py-3 lg:hidden"
+    class="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden"
   >
     <div
-      class="flex w-full items-center justify-between gap-3"
+      class="flex items-center justify-between gap-2"
     >
-      <div
-        class="min-w-0 shrink-0 [&_a]:text-lg [&_a]:leading-none"
+      <a
+        aria-label="Convergeo"
+        class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+        href="/en"
       >
-        <a
-          aria-label="Convergeo"
-          class="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
-          href="/en"
+        <span
+          class="inline-flex items-center"
+          data-testid="brand-logo"
         >
-          <span
-            class="inline-flex items-center"
-            data-testid="brand-logo"
-          >
-            <img
-              alt="Convergeo"
-              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
-              data-nimg="1"
-              decoding="async"
-              height="23"
-              src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
-              srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
-              style="color: transparent;"
-              width="132"
-            />
-            <img
-              alt="Convergeo"
-              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
-              data-nimg="1"
-              decoding="async"
-              height="23"
-              loading="lazy"
-              src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
-              srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
-              style="color: transparent;"
-              width="126"
-            />
-          </span>
-        </a>
-      </div>
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
+            data-nimg="1"
+            decoding="async"
+            height="26"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
+          <img
+            alt="Convergeo"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
+            data-nimg="1"
+            decoding="async"
+            height="26"
+            loading="lazy"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
+          />
+        </span>
+      </a>
       <div
-        class="flex shrink-0 items-center gap-1"
+        class="flex items-center gap-0.5"
       >
         <a
-          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          aria-label="Account"
+          class="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing px-2"
           href="/en/account"
         >
           <svg
@@ -86,13 +81,10 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
               d="M5 19.5c1.6-3.2 4-4.5 7-4.5s5.4 1.3 7 4.5"
             />
           </svg>
-          <span>
-            Account
-          </span>
         </a>
         <button
           aria-label="Open cart"
-          class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
+          class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing px-2"
           data-testid="cart-nav-trigger"
           type="button"
         >
@@ -121,26 +113,20 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
               r="1.25"
             />
           </svg>
-          <span
-            class="sr-only lg:not-sr-only lg:ml-1.5"
-          >
-            Cart
-          </span>
         </button>
       </div>
     </div>
   </nav>
   <nav
     aria-label="Primary navigation"
-    class="mx-auto hidden w-full max-w-container items-center gap-4 px-7 transition-[height] duration-fast ease-std motion-reduce:transition-none lg:flex"
-    style="height: 4rem;"
+    class="hidden flex-wrap items-center gap-x-2 px-4 md:flex lg:h-16 lg:flex-nowrap lg:gap-x-3 lg:px-6 xl:px-8"
   >
     <div
-      class="shrink-0 [&_a]:text-2xl [&_a]:leading-none [&_a]:transition-transform [&_a]:duration-fast [&_a]:ease-std"
+      class="order-1 flex h-16 items-center"
     >
       <a
         aria-label="Convergeo"
-        class="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
+        class="inline-flex shrink-0 items-center rounded-sm transition-opacity duration-fast ease-std hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
         href="/en"
       >
         <span
@@ -149,87 +135,49 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         >
           <img
             alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] mix-blend-multiply dark:hidden"
             data-nimg="1"
             decoding="async"
-            height="23"
-            src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
-            style="color: transparent;"
-            width="132"
+            height="26"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-light.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
           />
           <img
             alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
+            class="h-auto w-auto max-w-[9.5rem] sm:max-w-[10.5rem] hidden mix-blend-screen dark:block"
             data-nimg="1"
             decoding="async"
-            height="23"
+            height="26"
             loading="lazy"
-            src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
-            srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
-            style="color: transparent;"
-            width="126"
+            src="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand%2Fconvergeo-wordmark-on-dark.webp&w=384&q=75 2x"
+            style="color: transparent; height: 26px;"
+            width="152"
           />
         </span>
       </a>
     </div>
     <div
-      class="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
+      class="order-2 mx-1 min-w-0 flex-1 lg:order-3 lg:mx-2 lg:max-w-xl xl:max-w-2xl"
     >
       <div
         role="search"
       >
         Search
+        <button
+          aria-label="Ask Vergeo"
+          data-testid="search-ask-vergeo"
+          type="button"
+        />
       </div>
     </div>
-    <ul
-      class="flex shrink-0 list-none items-center gap-0.5 p-0"
-    >
-      <li>
-        <button
-          type="button"
-        >
-          All Categories
-        </button>
-      </li>
-      <li>
-        <a
-          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          href="/en/directory"
-        >
-          Directory
-        </a>
-      </li>
-      <li>
-        <a
-          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          href="/en/services"
-        >
-          Services
-        </a>
-      </li>
-      <li>
-        <a
-          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          href="/en/events"
-        >
-          Events
-        </a>
-      </li>
-      <li>
-        <a
-          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          href="/en/ask"
-        >
-          Ask Vergeo
-        </a>
-      </li>
-    </ul>
     <div
-      class="ml-auto flex shrink-0 items-center gap-1"
+      class="order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-5 lg:ml-0"
     >
       <a
-        class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        class="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing "
         href="/en/account"
       >
         <svg
@@ -258,7 +206,7 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
       </a>
       <button
         aria-label="Open cart"
-        class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
+        class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing "
         data-testid="cart-nav-trigger"
         type="button"
       >
@@ -287,12 +235,54 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
             r="1.25"
           />
         </svg>
-        <span
-          class="sr-only lg:not-sr-only lg:ml-1.5"
-        >
-          Cart
-        </span>
       </button>
+    </div>
+    <div
+      class="order-4 flex basis-full items-center gap-1 overflow-x-auto pb-2 [scrollbar-width:none] lg:contents"
+    >
+      <div
+        class="shrink-0 lg:order-2"
+      >
+        <button
+          type="button"
+        >
+          All Categories
+        </button>
+      </div>
+      <ul
+        class="m-0 flex list-none items-center gap-1 p-0 lg:order-4 lg:gap-0.5"
+      >
+        <li
+          class="shrink-0"
+        >
+          <a
+            class="inline-flex min-h-11 items-center rounded-pill border border-border px-3.5 text-sm font-medium text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing lg:rounded lg:border-transparent lg:px-3 lg:hover:border-transparent lg:hover:bg-bg-2 lg:hover:text-text"
+            href="/en/vendors"
+          >
+            Vendors
+          </a>
+        </li>
+        <li
+          class="shrink-0"
+        >
+          <a
+            class="inline-flex min-h-11 items-center rounded-pill border border-border px-3.5 text-sm font-medium text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing lg:rounded lg:border-transparent lg:px-3 lg:hover:border-transparent lg:hover:bg-bg-2 lg:hover:text-text"
+            href="/en/services"
+          >
+            Services
+          </a>
+        </li>
+        <li
+          class="shrink-0"
+        >
+          <a
+            class="inline-flex min-h-11 items-center rounded-pill border border-border px-3.5 text-sm font-medium text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing lg:rounded lg:border-transparent lg:px-3 lg:hover:border-transparent lg:hover:bg-bg-2 lg:hover:text-text"
+            href="/en/events"
+          >
+            Events
+          </a>
+        </li>
+      </ul>
     </div>
   </nav>
 </header>

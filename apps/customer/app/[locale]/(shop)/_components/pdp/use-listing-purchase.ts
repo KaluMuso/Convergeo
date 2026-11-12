@@ -1,6 +1,7 @@
 "use client";
 
 import { ApiError } from "@vergeo/config";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -201,11 +202,13 @@ export function useListingPurchase(
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
+      emitToastKey("addedToCart", { type: "cart" });
     })()
       .catch((error: unknown) => {
         const variantErrorKey =
           error instanceof ApiError ? VARIANT_ERROR_KEYS[error.code] : undefined;
         setAddError(variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel);
+        emitToastKey("addToCartFailed", { type: "error" });
       })
       .finally(() => {
         addingRef.current = false;

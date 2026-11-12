@@ -2,6 +2,7 @@ import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
+import { cldUrl } from "@vergeo/ui/src/media/cloudinary-url";
 import {
   buildBreadcrumbListJsonLd,
   buildCanonicalAlternates,
@@ -11,7 +12,10 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
-import { buildOgImageUrl, buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
+import {
+  buildOgImageUrl,
+  buildSocialMetadata,
+} from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -27,6 +31,7 @@ import {
   type Listing,
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
+import { LazyProductQuestions } from "../../_components/pdp/lazy-product-questions";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import {
@@ -35,7 +40,10 @@ import {
 } from "../../_components/pdp/pdp-interactive-body";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
-import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+import {
+  specRowsFromJson,
+  SpecsTable,
+} from "../../_components/pdp/specs-table";
 
 import {
   productAggregateRatingForJsonLd,
@@ -90,10 +98,15 @@ type ComparisonApiResponse = {
   listings: ComparisonApiListing[];
 };
 
-async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -105,7 +118,10 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
 async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const navMessages = await loadNamespace(locale as Locale, "nav");
-  const messages = { ...baseMessages, nav: navMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    nav: navMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -114,9 +130,13 @@ async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
   }) as unknown as CatalogTranslator;
 }
 
-async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
+async function fetchComparison(
+  slug: string,
+): Promise<ComparisonApiResponse | null> {
   try {
-    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/comparison`);
+    const url = absoluteApiUrl(
+      `/products/${encodeURIComponent(slug)}/comparison`,
+    );
     if (!url) {
       return null;
     }
@@ -155,7 +175,9 @@ async function fetchProductReviews(productId: string): Promise<{
   aggregate: ProductReviewAggregate;
 } | null> {
   try {
-    const url = absoluteApiUrl(`/reviews?product_id=${encodeURIComponent(productId)}`);
+    const url = absoluteApiUrl(
+      `/reviews?product_id=${encodeURIComponent(productId)}`,
+    );
     if (!url) {
       return null;
     }
@@ -170,7 +192,8 @@ async function fetchProductReviews(productId: string): Promise<{
       return null;
     }
 
-    const payload = (await response.json()) as ProductReviewsApiResponse | ReviewRow[];
+    const payload = (await response.json()) as
+      ProductReviewsApiResponse | ReviewRow[];
     // Prefer wrapped ProductReviewsResponse (rating_avg / rating_count).
     // Tolerate a legacy bare array during rollout — never invent aggregates.
     if (Array.isArray(payload)) {
@@ -183,7 +206,8 @@ async function fetchProductReviews(productId: string): Promise<{
       items: payload.items ?? [],
       aggregate: {
         rating_avg: payload.rating_avg ?? null,
-        rating_count: typeof payload.rating_count === "number" ? payload.rating_count : 0,
+        rating_count:
+          typeof payload.rating_count === "number" ? payload.rating_count : 0,
       },
     };
   } catch {
@@ -224,7 +248,10 @@ async function ReviewsPanel({
   );
 }
 
-function selectListing(listings: Listing[], listingId?: string): Listing | null {
+function selectListing(
+  listings: Listing[],
+  listingId?: string,
+): Listing | null {
   if (listings.length === 0) {
     return null;
   }
@@ -253,7 +280,9 @@ function galleryImages(
   alt: string,
 ): Array<{ publicId: string; alt: string }> {
   const source =
-    selectedListing && selectedListing.images.length > 0 ? selectedListing.images : product.images;
+    selectedListing && selectedListing.images.length > 0
+      ? selectedListing.images
+      : product.images;
 
   return source.map((image) => ({
     publicId: image.public_id,
@@ -363,7 +392,9 @@ function toComparisonListings(
 }
 
 function productImageUrls(product: ProductDetail): string[] {
-  return resolveCloudinaryImageUrls(product.images.map((image) => image.public_id));
+  return resolveCloudinaryImageUrls(
+    product.images.map((image) => image.public_id),
+  );
 }
 
 function lowestListingPriceNgwee(listings: Listing[]): number | null {
@@ -385,7 +416,9 @@ export function generateStaticParams() {
   return LOCALES.flatMap((locale) => [{ locale, slug: "itel-a70" }]);
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const t = await getCatalogTranslator(locale);
   const result = await fetchProduct(slug);
@@ -393,7 +426,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (result.kind !== "product") {
     return {
       title:
-        result.kind === "unavailable" ? t("pdp.unavailableTitle") : t("pdp.meta.notFoundTitle"),
+        result.kind === "unavailable"
+          ? t("pdp.unavailableTitle")
+          : t("pdp.meta.notFoundTitle"),
       robots: { index: false, follow: false },
     };
   }
@@ -428,7 +463,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       locale,
       url: canonicalPath,
-      imageUrl: ogImageUrl,
+      // Real product photo first (WhatsApp picks the first), then the
+      // generated name + price card.
+      imageUrls: [
+        ...(product.images[0]?.public_id
+          ? [cldUrl(product.images[0].public_id, { width: 1200 })]
+          : []),
+        ogImageUrl,
+      ].filter((url) => url.length > 0),
     }),
     robots: {
       index: indexable,
@@ -496,7 +538,9 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const images = galleryImages(product, selectedListing, product.name);
   // Authoritative product aggregate from GET /reviews (rating_avg / rating_count),
   // not a limited UI sample — same pattern as vendor LocalBusiness JSON-LD.
-  const reviewAggregate = productAggregateRatingForJsonLd(reviewsForSeo?.aggregate);
+  const reviewAggregate = productAggregateRatingForJsonLd(
+    reviewsForSeo?.aggregate,
+  );
   const productJsonLdInput = {
     name: product.name,
     slug: product.slug,
@@ -561,8 +605,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             reasons: [
               { value: "spam", label: t("reviews.report.reasons.spam") },
               { value: "abuse", label: t("reviews.report.reasons.abuse") },
-              { value: "private_info", label: t("reviews.report.reasons.privateInfo") },
-              { value: "not_relevant", label: t("reviews.report.reasons.notRelevant") },
+              {
+                value: "private_info",
+                label: t("reviews.report.reasons.privateInfo"),
+              },
+              {
+                value: "not_relevant",
+                label: t("reviews.report.reasons.notRelevant"),
+              },
             ],
           },
         }}
@@ -574,6 +624,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const hasOffers = productListings.length > 0;
   const relatedCardLabels = {
     vendorHeading: t("pdp.related.vendorHeading", { vendor: "{vendor}" }),
+    storeHeading: t("pdp.related.storeHeading"),
+    similarHeading: t("pdp.related.similarHeading"),
     categoryHeading: t("pdp.related.categoryHeading"),
     loading: t("pdp.related.loading"),
     unavailable: t("pdp.related.unavailable"),
@@ -585,9 +637,34 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     mediaEmpty: t("pdp.gallery.empty"),
   };
 
+  const pdpHeader = (
+    <header className="flex flex-col gap-1.5" data-testid="pdp-header">
+      {product.brand ? (
+        <p className="m-0 text-sm font-medium text-text-2">{product.brand}</p>
+      ) : null}
+      <h1 className="m-0 font-display text-2xl font-bold leading-tight text-text lg:text-[1.75rem]">
+        {product.name}
+      </h1>
+      {product.listing_count > 0 ? (
+        <p className="text-sm text-text-2" data-testid="pdp-seller-count">
+          {t("pdp.sellerCount", { count: product.listing_count })}
+        </p>
+      ) : null}
+      {product.listing_count > 1 ? (
+        <Link
+          href={`/${locale}/compare?product=${encodeURIComponent(product.slug)}`}
+          className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+          data-testid="pdp-compare-entry"
+        >
+          {t("comparePage.entryCta")}
+        </Link>
+      ) : null}
+    </header>
+  );
+
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-6 motion-rise lg:max-w-6xl">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4">
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker
@@ -608,38 +685,21 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             >
               {tNav("shop.home")}
             </Link>
-            <span className="shrink-0 text-text-3 before:content-['/']" aria-hidden />
+            <span
+              className="shrink-0 text-text-3 before:content-['/']"
+              aria-hidden
+            />
           </li>
           <li className="flex min-w-0 items-center gap-1">
-            <span className="truncate font-medium text-text" aria-current="page">
+            <span
+              className="truncate font-medium text-text"
+              aria-current="page"
+            >
               {product.name}
             </span>
           </li>
         </ol>
       </nav>
-
-      <header className="flex flex-col gap-2" data-testid="pdp-header">
-        {product.brand ? (
-          <p className="text-sm font-medium uppercase tracking-wide text-text-2">{product.brand}</p>
-        ) : null}
-        <h1 className="font-display text-2xl font-semibold text-text lg:text-3xl">
-          {product.name}
-        </h1>
-        {product.listing_count > 0 ? (
-          <p className="text-sm text-text-2" data-testid="pdp-seller-count">
-            {t("pdp.sellerCount", { count: product.listing_count })}
-          </p>
-        ) : null}
-        {product.listing_count > 1 ? (
-          <Link
-            href={`/${locale}/compare?product=${encodeURIComponent(product.slug)}`}
-            className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
-            data-testid="pdp-compare-entry"
-          >
-            {t("comparePage.entryCta")}
-          </Link>
-        ) : null}
-      </header>
 
       {hasOffers ? (
         <PdpInteractiveBody
@@ -793,22 +853,35 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             error: t("pdp.reportListing.error"),
             rateLimited: t("pdp.reportListing.rateLimited"),
             reasons: [
-              { value: "counterfeit", label: t("pdp.reportListing.reasons.counterfeit") },
-              { value: "prohibited", label: t("pdp.reportListing.reasons.prohibited") },
+              {
+                value: "counterfeit",
+                label: t("pdp.reportListing.reasons.counterfeit"),
+              },
+              {
+                value: "prohibited",
+                label: t("pdp.reportListing.reasons.prohibited"),
+              },
               { value: "scam", label: t("pdp.reportListing.reasons.scam") },
-              { value: "misleading", label: t("pdp.reportListing.reasons.misleading") },
+              {
+                value: "misleading",
+                label: t("pdp.reportListing.reasons.misleading"),
+              },
               { value: "other", label: t("pdp.reportListing.reasons.other") },
             ],
           }}
           comparePageLabel={t("comparePage.entryCta")}
+          headerSlot={pdpHeader}
         />
       ) : (
-        <NoSellersPanel
-          title={t("pdp.noSellers.title")}
-          body={t("pdp.noSellers.body")}
-          browseLabel={t("pdp.noSellers.browseCta")}
-          browseHref={`/${locale}/c/all`}
-        />
+        <>
+          {pdpHeader}
+          <NoSellersPanel
+            title={t("pdp.noSellers.title")}
+            body={t("pdp.noSellers.body")}
+            browseLabel={t("pdp.noSellers.browseCta")}
+            browseHref={`/${locale}/c/all`}
+          />
+        </>
       )}
 
       <PdpDetailsTabs
@@ -836,6 +909,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }
         reviewsPanel={reviewsPanel}
       />
+
+      <LazyProductQuestions productSlug={product.slug} locale={locale} />
     </div>
   );
 }

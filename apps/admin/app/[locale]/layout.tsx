@@ -2,6 +2,7 @@ import { LOCALES, loadMessages, type Locale } from "@vergeo/i18n";
 import { fontVariables } from "@vergeo/ui/fonts";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
+import { ToastProvider } from "@vergeo/ui/src/toast";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -55,6 +56,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     services: adminBundle.services,
   };
 
+  // Translated toast copy for emitToastKey() call sites (common.toast).
+  const toastCopy = (
+    (commonMessages as Record<string, unknown>).common as Record<string, unknown> | undefined
+  )?.toast as Record<string, unknown> | undefined;
+  const toastDismiss = typeof toastCopy?.dismiss === "string" ? toastCopy.dismiss : undefined;
+
   return (
     <html lang={locale} className={fontVariables()}>
       <head>
@@ -67,7 +74,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
             {/* Authenticated chrome; renders bare children on the login route. */}
-            <AdminShell locale={locale}>{children}</AdminShell>
+            <ToastProvider dismissLabel={toastDismiss} copy={toastCopy}>
+              <AdminShell locale={locale}>{children}</AdminShell>
+            </ToastProvider>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

@@ -118,6 +118,23 @@ class EventBrowseItem(BaseModel):
     organiser: EventOrganiserResponse
 
 
+EventSort = Literal["soonest", "price_asc", "popular", "verified"]
+
+
+def sort_events(items: list[EventBrowseItem], sort: str) -> list[EventBrowseItem]:
+    """Post-sort of browse results; ``soonest`` keeps the existing order."""
+    if sort == "price_asc":
+        return sorted(
+            items,
+            key=lambda item: (0 if item.is_free else 1, item.min_price_ngwee or 0),
+        )
+    if sort == "popular":
+        return sorted(items, key=lambda item: item.spots_sold, reverse=True)
+    if sort == "verified":
+        return sorted(items, key=lambda item: not item.organiser.preferred_badge)
+    return list(items)
+
+
 class EventBrowseResponse(BaseModel):
     items: list[EventBrowseItem]
     total: int
@@ -882,8 +899,9 @@ def list_events(
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float, Query(gt=0, le=200)] = NEAR_ME_DEFAULT_KM,
+    sort: Annotated[EventSort, Query()] = "soonest",
 ) -> EventBrowseResponse:
-    return build_browse_response(
+    response = build_browse_response(
         supabase.client,
         date_window=date_window,
         category=category,
@@ -894,6 +912,7 @@ def list_events(
         near_lng=lng,
         radius_km=radius_km,
     )
+    return response.model_copy(update={"items": sort_events(response.items, sort)})
 
 
 @router.post("/{slug}/access/unlock", response_model=EventAccessUnlockResponse)

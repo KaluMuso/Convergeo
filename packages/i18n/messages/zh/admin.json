@@ -16,7 +16,9 @@
     "merch": "商品运营",
     "translations": "翻译",
     "support": "客服",
-    "events": "高价值活动"
+    "events": "高价值活动",
+    "homeFeed": "Home feed",
+    "advertising": "Advertising"
   },
   "hubs": {
     "moderation": {
@@ -969,6 +971,192 @@
     },
     "errors": {
       "rateLimited": "客服消息发送过于频繁——请稍后重试。"
+    }
+  },
+  "homeFeed": {
+    "title": "Home feed",
+    "subtitle": "Order, schedule and target the sections of the customer home page. Empty sections are hidden automatically.",
+    "loading": "Loading sections…",
+    "loadError": "Could not load feed sections.",
+    "retry": "Retry",
+    "create": "New section",
+    "preview": "Preview as guest",
+    "saveOrder": "Save order",
+    "orderSaved": "Order saved",
+    "hint": "Times use your browser clock; the feed is evaluated in UTC and shown in Africa/Lusaka.",
+    "columns": {
+      "order": "Order",
+      "key": "Section",
+      "type": "Type",
+      "schedule": "Schedule",
+      "status": "Status"
+    },
+    "moveUp": "Move {key} up",
+    "moveDown": "Move {key} down",
+    "arrowUp": "Up",
+    "arrowDown": "Down",
+    "scheduleOpen": "Always on",
+    "scheduleRange": "{from} → {to}",
+    "live": "Live",
+    "scheduled": "Scheduled",
+    "disabled": "Disabled",
+    "edit": "Edit",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "confirmDelete": "Delete this section? This cannot be undone.",
+    "saved": "Section saved",
+    "saveError": "Could not save. Check the fields and try again.",
+    "editTitle": "Edit section",
+    "createTitle": "New section",
+    "save": "Save",
+    "cancel": "Cancel",
+    "previewError": "Could not build the preview.",
+    "previewTitle": "Guest preview (first page)",
+    "previewEmpty": "No section resolves to data right now.",
+    "previewCarousel": "{count} sponsored carousel slides live",
+    "previewAd": "sponsored by {advertiser}",
+    "previewCount": "{count} items",
+    "errors": {
+      "invalidPrice": "Enter a kwacha amount such as 100 or 99.50."
+    },
+    "fields": {
+      "key": "Key (snake_case)",
+      "type": "Type",
+      "layout": "Layout",
+      "titleKey": "Title message key (optional)",
+      "titleEn": "Title (English)",
+      "titleFr": "Title (French)",
+      "limit": "Max items",
+      "viewAll": "View-all link (internal path)",
+      "categoryPath": "Category path",
+      "listingIds": "Listing IDs (one per line)",
+      "withinDays": "Upcoming within days",
+      "rulePaths": "Category paths (comma separated)",
+      "rulePriceMax": "Max price (K)",
+      "ruleSort": "Sort",
+      "ruleKeywords": "Title keywords (comma separated)",
+      "ruleNewDays": "Listed within days",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "audience": "Audience",
+      "enabled": "Enabled"
+    },
+    "types": {
+      "category": "Category",
+      "collection": "Manual collection",
+      "rule": "Rule",
+      "services": "Services",
+      "events": "Events",
+      "vendors": "Top vendors",
+      "for_you": "For you",
+      "ad_slot": "Ad slot"
+    },
+    "layouts": {
+      "rail": "Rail",
+      "grid": "Grid",
+      "banner": "Banner",
+      "ad": "Ad"
+    },
+    "sorts": {
+      "relevance": "Relevance",
+      "newest": "Newest",
+      "cheapest": "Cheapest",
+      "top_rated": "Top rated",
+      "trending": "Trending by views"
+    },
+    "audiences": {
+      "all": "Everyone",
+      "guest": "Guests only",
+      "signed_in": "Signed-in only"
+    },
+    "placeholders": {
+      "path": "/c/electronics",
+      "paths": "electronics, fashion/mens-clothing"
+    }
+  },
+  "advertising": {
+    "title": "Advertising",
+    "subtitle": "Sponsored feed slots and carousel slides. Only enabled placements inside their window appear on the site.",
+    "loading": "Loading placements…",
+    "loadError": "Could not load placements.",
+    "retry": "Retry",
+    "create": "New placement",
+    "hint": "Payments are recorded only — no money moves here.",
+    "empty": "No placements yet.",
+    "created": "Placement created as draft",
+    "saveError": "Could not save. Check the fields and try again.",
+    "transitionError": "That status change is not allowed.",
+    "confirmEnd": "End this placement? Ended placements cannot be restarted.",
+    "columns": {
+      "creative": "Creative",
+      "window": "Window",
+      "paid": "Paid",
+      "status": "Status",
+      "performance": "Last 30 days"
+    },
+    "windowRange": "{from} → {to}",
+    "performance": "{impressions} views · {clicks} clicks · CTR {ctr}",
+    "enable": "Enable",
+    "disable": "Disable",
+    "createTitle": "New placement",
+    "save": "Save draft",
+    "cancel": "Cancel",
+    "ctaHint": "Internal path (e.g. /c/electronics) or an https link on an approved advertiser domain.",
+    "errors": {
+      "invalidAmount": "Enter a kwacha amount such as 1500 or 99.50.",
+      "invalidWindow": "End must be after start."
+    },
+    "kinds": {
+      "vendor": "Vendor",
+      "business": "Business",
+      "external": "External company"
+    },
+    "types": {
+      "feed_slot": "Feed slot",
+      "carousel_slide": "Carousel slide"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "effective": {
+      "live": "Live now",
+      "upcoming": "Starts later",
+      "expired": "Window over",
+      "disabled": "Disabled",
+      "draft": "Not published",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "actions": {
+      "scheduled": "Schedule",
+      "active": "Activate",
+      "paused": "Pause",
+      "draft": "Back to draft",
+      "ended": "End"
+    },
+    "fields": {
+      "advertiserKind": "Advertiser type",
+      "advertiserName": "Advertiser name",
+      "vendorId": "Vendor ID",
+      "placementType": "Placement",
+      "imagePublicId": "Cloudinary public ID",
+      "headline": "Headline",
+      "ctaLabel": "Button label",
+      "body": "Supporting text",
+      "ctaHref": "Link",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "paidAmount": "Amount paid (K)",
+      "paymentReference": "Payment reference",
+      "priority": "Priority (higher first)"
+    },
+    "placeholders": {
+      "path": "/c/electronics"
     }
   }
 }

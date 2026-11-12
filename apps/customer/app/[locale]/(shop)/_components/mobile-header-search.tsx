@@ -11,6 +11,7 @@ type MobileHeaderSearchProps = {
   labels: SearchInputLabels;
   sheetTitle: string;
   triggerLabel: string;
+  askLabel?: string;
 };
 
 /**
@@ -22,6 +23,7 @@ export function MobileHeaderSearch({
   labels,
   sheetTitle,
   triggerLabel,
+  askLabel,
 }: MobileHeaderSearchProps) {
   const [open, setOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export function MobileHeaderSearch({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-full max-w-md items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+        className="flex h-11 w-full items-center gap-2 rounded-pill border border-border bg-bg/80 px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
         aria-label={triggerLabel}
         data-testid="mobile-header-search-trigger"
       >
@@ -51,7 +53,7 @@ export function MobileHeaderSearch({
               itself on mount wins the race for `document.activeElement`, so the
               trap records it — not the trigger — as the element to restore to,
               and dismissing the sheet drops focus to <body>. */}
-          <SearchInput locale={locale} labels={labels} />
+          <SearchInput locale={locale} labels={labels} askLabel={askLabel} />
         </div>
       </BottomSheet>
     </>

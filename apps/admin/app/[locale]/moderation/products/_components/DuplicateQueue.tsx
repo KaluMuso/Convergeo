@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -57,6 +58,7 @@ export function DuplicateQueue() {
   const handleMerged = async (idempotent: boolean) => {
     closeMerge();
     setMessage(idempotent ? t("idempotent") : t("success"));
+    notify.success(idempotent ? t("idempotent") : t("success"));
     await load();
   };
 
