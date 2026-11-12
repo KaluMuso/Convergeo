@@ -3,10 +3,11 @@ from __future__ import annotations
 import threading
 import uuid
 from collections.abc import Generator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock
+from zoneinfo import ZoneInfo
 
 import pytest
 from app.errors import AppError
@@ -23,6 +24,13 @@ from app.services.ask.spend import (
     reset_kill_switch,
     tokens_to_usd_micros,
 )
+
+LUSAKA = ZoneInfo("Africa/Lusaka")
+
+
+def lusaka_day_key(now: datetime | None = None) -> str:
+    """Mirror of ``public.ask_current_day_key()`` (Africa/Lusaka calendar day)."""
+    return (now or datetime.now(UTC)).astimezone(LUSAKA).date().isoformat()
 
 
 class FakeQuery:
@@ -122,6 +130,7 @@ class FakeSupabaseClient:
             "platform_config": FakeTable(),
             "ask_usage": FakeTable(),
             "ask_spend_monthly": FakeTable(),
+            "ask_user_tiers": FakeTable(),
             "rate_counters": FakeTable(),
         }
         self.rpc_calls: list[tuple[str, dict[str, Any]]] = []
@@ -133,6 +142,9 @@ class FakeSupabaseClient:
             [
                 {"key": "ai_guest_quota", "value": 3},
                 {"key": "ai_free_monthly_quota", "value": 25},
+                {"key": "ai_guest_daily_quota", "value": 3},
+                {"key": "ai_free_daily_quota", "value": 10},
+                {"key": "ai_premium_daily_quota", "value": 100},
                 {"key": "ai_monthly_cap_usd", "value": 15},
                 {
                     "key": "ai_model_rates",
@@ -173,6 +185,12 @@ class FakeSupabaseClient:
     def _handle_rpc(self, fn: str, params: dict[str, Any]) -> list[Any]:
         if fn == "reserve_ask_quota":
             return [self._reserve_ask_quota(params)]
+        if fn == "reserve_ask_quota_daily":
+            return [self._reserve_ask_quota_daily(params)]
+        if fn == "ask_quota_status":
+            return [self._ask_quota_status(params)]
+        if fn == "release_ask_reservation":
+            return [self._release_ask_reservation(params)]
         if fn == "finalize_ask_answer":
             return [self._finalize_ask_answer(params)]
         if fn == "reset_ask_kill_switch":
@@ -231,6 +249,118 @@ class FakeSupabaseClient:
                 }
             )
             return {"allowed": True, "reason": "ok", "reservation_id": reservation_id}
+
+    # --- Daily quota RPCs (20261109120000_ask_vergeo_daily_quota.sql) ---------------
+
+    def _tier(self, user_id: str | None) -> str:
+        if user_id is None:
+            return "guest"
+        for row in self.tables["ask_user_tiers"].rows:
+            if row.get("user_id") == user_id and row.get("tier") == "premium":
+                expires = row.get("expires_at")
+                if expires is None or str(expires) > datetime.now(UTC).isoformat():
+                    return "premium"
+        return "free"
+
+    def _daily_limit(self, tier: str) -> int:
+        if tier == "guest":
+            return self._config_int("ai_guest_daily_quota", 3)
+        if tier == "premium":
+            return self._config_int("ai_premium_daily_quota", 100)
+        return self._config_int("ai_free_daily_quota", 10)
+
+    def _daily_used(
+        self, user_id: str | None, guest_key: str | None, client_ip: str | None
+    ) -> int:
+        day = lusaka_day_key()
+        rows = [
+            row
+            for row in self.tables["ask_usage"].rows
+            if row.get("day_key") == day and row.get("status") in {"reserved", "answered"}
+        ]
+        if user_id is not None:
+            return sum(1 for row in rows if row.get("user_id") == user_id)
+        return sum(
+            1
+            for row in rows
+            if row.get("user_id") is None
+            and (
+                (guest_key and row.get("guest_key") == guest_key)
+                or (client_ip and row.get("client_ip") == client_ip)
+            )
+        )
+
+    def _reserve_ask_quota_daily(self, params: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            user_id = params.get("p_user_id")
+            guest_key = params.get("p_guest_key")
+            client_ip = params.get("p_client_ip")
+            tier = self._tier(user_id)
+            limit = self._daily_limit(tier)
+            used = self._daily_used(user_id, guest_key, client_ip)
+            if used >= limit:
+                return {
+                    "allowed": False,
+                    "reason": "guest_exceeded" if tier == "guest" else "daily_exceeded",
+                    "reservation_id": None,
+                    "tier": tier,
+                    "daily_limit": limit,
+                    "used": used,
+                    "remaining": 0,
+                }
+            reservation_id = str(uuid.uuid4())
+            self.tables["ask_usage"].rows.append(
+                {
+                    "id": reservation_id,
+                    "user_id": user_id,
+                    "guest_key": guest_key,
+                    "client_ip": client_ip,
+                    "question_hash": params.get("p_question_hash"),
+                    "tokens": 0,
+                    "usd_micros": 0,
+                    "model": None,
+                    "month_key": current_month_key(),
+                    "day_key": lusaka_day_key(),
+                    "status": "reserved",
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "answered_at": None,
+                }
+            )
+            return {
+                "allowed": True,
+                "reason": "ok",
+                "reservation_id": reservation_id,
+                "tier": tier,
+                "daily_limit": limit,
+                "used": used + 1,
+                "remaining": max(limit - used - 1, 0),
+            }
+
+    def _ask_quota_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        user_id = params.get("p_user_id")
+        tier = self._tier(user_id)
+        limit = self._daily_limit(tier)
+        used = self._daily_used(user_id, params.get("p_guest_key"), params.get("p_client_ip"))
+        return {
+            "tier": tier,
+            "daily_limit": limit,
+            "used": used,
+            "remaining": max(limit - used, 0),
+        }
+
+    def _release_ask_reservation(self, params: dict[str, Any]) -> bool:
+        with self._lock:
+            rows = self.tables["ask_usage"].rows
+            before = len(rows)
+            self.tables["ask_usage"].rows = [
+                row
+                for row in rows
+                if not (
+                    row.get("id") == params["p_reservation_id"]
+                    and row.get("status") == "reserved"
+                )
+            ]
+            return len(self.tables["ask_usage"].rows) < before
 
     def _finalize_ask_answer(self, params: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
@@ -386,21 +516,24 @@ class TestGuestQuotaBoundary:
             )
 
         assert exc.value.code == "ai_quota_guest_exceeded"
-        assert exc.value.message == "ai.quota.guestExceeded"
+        assert exc.value.message == "ai.quota.guestDailyExceeded"
 
 
-class TestFreeMonthlyQuotaBoundary:
-    def test_twenty_fifth_free_question_allowed_twenty_sixth_blocked(
+class TestFreeDailyQuotaBoundary:
+    def test_tenth_free_question_allowed_eleventh_blocked(
         self, fake_client: FakeSupabaseClient, allow_rate_limits: None
     ) -> None:
         user_id = "user-free-001"
 
-        for index in range(25):
+        for index in range(10):
             reservation = check_and_reserve(
                 client=fake_client,
                 user_id=user_id,
                 question=f"Show phones under K2000 variant {index}",
             )
+            assert reservation.status is not None
+            assert reservation.status.tier == "free"
+            assert reservation.status.remaining == 9 - index
             record_answer(
                 client=fake_client,
                 reservation=reservation,
@@ -412,21 +545,24 @@ class TestFreeMonthlyQuotaBoundary:
             check_and_reserve(
                 client=fake_client,
                 user_id=user_id,
-                question="Twenty-sixth monthly question should be blocked",
+                question="Eleventh daily question should be blocked",
             )
 
-        assert exc.value.code == "ai_quota_monthly_exceeded"
-        assert exc.value.message == "ai.quota.monthlyExceeded"
+        assert exc.value.code == "ai_quota_daily_exceeded"
+        assert exc.value.message == "ai.quota.dailyExceeded"
+        assert exc.value.details is not None
+        assert exc.value.details["remaining"] == 0
+        assert exc.value.details["daily_limit"] == 10
 
 
-class TestMonthRollover:
-    def test_previous_month_usage_does_not_count_against_new_month(
+class TestDayRollover:
+    def test_yesterday_usage_does_not_count_against_today(
         self, fake_client: FakeSupabaseClient, allow_rate_limits: None
     ) -> None:
         user_id = "user-rollover"
-        previous_month = "2026-06"
+        yesterday = datetime.now(UTC) - timedelta(days=1)
 
-        for index in range(25):
+        for index in range(10):
             fake_client.tables["ask_usage"].rows.append(
                 {
                     "id": str(uuid.uuid4()),
@@ -437,17 +573,18 @@ class TestMonthRollover:
                     "tokens": 10,
                     "usd_micros": 1,
                     "model": "test-model",
-                    "month_key": previous_month,
+                    "month_key": current_month_key(yesterday),
+                    "day_key": lusaka_day_key(yesterday),
                     "status": "answered",
-                    "created_at": datetime(2026, 6, 15, tzinfo=UTC).isoformat(),
-                    "answered_at": datetime(2026, 6, 15, tzinfo=UTC).isoformat(),
+                    "created_at": yesterday.isoformat(),
+                    "answered_at": yesterday.isoformat(),
                 }
             )
 
         reservation = check_and_reserve(
             client=fake_client,
             user_id=user_id,
-            question="New month question should be allowed",
+            question="New day question should be allowed",
         )
         record_answer(
             client=fake_client,
@@ -456,14 +593,14 @@ class TestMonthRollover:
             model="test-model",
         )
 
-        current_count = sum(
+        today_count = sum(
             1
             for row in fake_client.tables["ask_usage"].rows
             if row.get("user_id") == user_id
-            and row.get("month_key") == current_month_key()
+            and row.get("day_key") == lusaka_day_key()
             and row.get("status") in {"reserved", "answered"}
         )
-        assert current_count == 1
+        assert today_count == 1
 
 
 class TestKillSwitch:

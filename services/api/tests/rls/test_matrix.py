@@ -198,6 +198,15 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    # Ask Vergeo premium flag: own-row (or admin) SELECT; no client write grants.
+    "ask_user_tiers": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "audit_log": {
         Persona.ANON: {
             "select": "deny",
