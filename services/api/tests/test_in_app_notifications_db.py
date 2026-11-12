@@ -55,7 +55,10 @@ def db() -> Iterator[PgConn]:
     # public-only reset would replay into leftovers.
     dbname = parsed.path.lstrip("/")
     admin = PgConn(DATABASE_URL.replace(parsed.path, "/postgres", 1))
-    for statement in (f"DROP DATABASE IF EXISTS {dbname} WITH (FORCE)", f"CREATE DATABASE {dbname}"):
+    for statement in (
+        f"DROP DATABASE IF EXISTS {dbname} WITH (FORCE)",
+        f"CREATE DATABASE {dbname}",
+    ):
         recreated = admin.run(statement)
         assert recreated.ok, recreated.error
     conn = PgConn(DATABASE_URL)
@@ -67,9 +70,11 @@ def db() -> Iterator[PgConn]:
           (id, recipient_user_id, audience, type, i18n_key, params, link_path, dedupe_key)
         VALUES
           ('{SEEDED_A}', '{CUSTOMER_A}', 'customer', 'order_shipped',
-           'notifications.inApp.order_shipped', '{{"ref":"AAAA0000"}}', '/account/orders/x', 'seed:a'),
+           'notifications.inApp.order_shipped', '{{"ref":"AAAA0000"}}',
+           '/account/orders/x', 'seed:a'),
           ('{SEEDED_B}', '{CUSTOMER_B}', 'customer', 'order_shipped',
-           'notifications.inApp.order_shipped', '{{"ref":"BBBB0000"}}', '/account/orders/y', 'seed:b');
+           'notifications.inApp.order_shipped', '{{"ref":"BBBB0000"}}',
+           '/account/orders/y', 'seed:b');
         INSERT INTO public.web_push_subscriptions (user_id, audience, endpoint, p256dh, auth_secret)
         VALUES ('{CUSTOMER_A}', 'customer', 'https://push.example.test/a',
                 'p256dh-key-material-aaaa', 'auth-aaaa');
@@ -257,10 +262,16 @@ def _as(db: PgConn, user_id: str, sql: str) -> tuple[bool, list[str], str | None
 
 
 def test_user_reads_only_own_rows(db: PgConn) -> None:
-    ok, rows, error = _as(db, CUSTOMER_A, "SELECT string_agg(id::text, ',') FROM public.in_app_notifications;")
+    ok, rows, error = _as(
+        db, CUSTOMER_A, "SELECT string_agg(id::text, ',') FROM public.in_app_notifications;"
+    )
     assert ok, error
     assert rows == [SEEDED_A]
-    ok, rows, error = _as(db, CUSTOMER_B, f"SELECT count(*) FROM public.in_app_notifications WHERE id = '{SEEDED_A}';")
+    ok, rows, error = _as(
+        db,
+        CUSTOMER_B,
+        f"SELECT count(*) FROM public.in_app_notifications WHERE id = '{SEEDED_A}';",
+    )
     assert ok, error
     assert rows == ["0"]
 
