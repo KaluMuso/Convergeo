@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -194,6 +195,106 @@ def landmark_names_other_town(landmark: str | None) -> bool:
     return any(token in lower for token in OTHER_TOWN_TOKENS)
 
 
+def _keyword_pattern(keywords: tuple[str, ...]) -> re.Pattern[str]:
+    ordered = sorted(keywords, key=lambda word: (-len(word), word))
+    alternation = "|".join(
+        r"\s+".join(re.escape(part) for part in word.split()) for word in ordered
+    )
+    return re.compile(rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])")
+
+
+# Explicit band words a customer or operator types. Checked first, in this order.
+_EXPLICIT_BAND_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("lusaka_a", ("band a", "central", "cbd")),
+    ("lusaka_b", ("band b", "mid-ring")),
+    ("lusaka_c", ("band c", "outer")),
+)
+# Area names by band (docs/ops/lusaka-delivery-reference-prices.md section 4/5).
+# Bare "garden" and "levy" are left out on purpose: they false-match inside other names.
+_AREA_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "lusaka_a": (
+        "kabulonga",
+        "woodlands",
+        "east park",
+        "cairo road",
+        "longacres",
+        "rhodes park",
+        "northmead",
+        "fairview",
+        "kabwata",
+        "olympia",
+        "roma",
+        "kalingalinga",
+        "emmasdale",
+        "manda hill",
+        "arcades",
+        "levy junction",
+        "levy mall",
+        "thorn park",
+        "thornpark",
+        "uth",
+        "unza",
+    ),
+    "lusaka_b": (
+        "chilenje",
+        "makeni",
+        "matero",
+        "mtendere",
+        "ibex hill",
+        "chelston",
+        "chelstone",
+        "chainda",
+        "libala",
+        "kamwala",
+        "kalundu",
+        "lilayi",
+        "chawama",
+        "ngombe",
+        "john laing",
+        "chaisa",
+        "bauleni",
+        "kabanana",
+    ),
+    "lusaka_c": (
+        "chalala",
+        "chilanga",
+        "airport",
+        "kkia",
+        "chongwe",
+        "kafue road",
+        "kanyama",
+        "leopards hill",
+        "foxdale",
+    ),
+}
+_EXPLICIT_BAND_PATTERNS = tuple(
+    (zone, _keyword_pattern(words)) for zone, words in _EXPLICIT_BAND_KEYWORDS
+)
+# One pattern over every area name so the longest phrase wins wherever it appears.
+_AREA_ZONE_BY_KEYWORD = {word: zone for zone, words in _AREA_KEYWORDS.items() for word in words}
+_AREA_PATTERN = _keyword_pattern(tuple(_AREA_ZONE_BY_KEYWORD))
+_LUSAKA_PATTERN = _keyword_pattern(("lusaka",))
+
+
+def _normalise_landmark(landmark: str) -> str:
+    lowered = landmark.lower().replace("\u2019", "").replace("'", "")
+    return " ".join(lowered.split())
+
+
+def _match_landmark_zone(landmark: str) -> str | None:
+    """Zone for a typed landmark with no GPS; whole-word, longest area phrase first."""
+    text = _normalise_landmark(landmark)
+    for zone_key, pattern in _EXPLICIT_BAND_PATTERNS:
+        if pattern.search(text):
+            return zone_key
+    found = [re.sub(r"\s+", " ", m.group(0)) for m in _AREA_PATTERN.finditer(text)]
+    if found:
+        return _AREA_ZONE_BY_KEYWORD[max(found, key=len)]
+    if _LUSAKA_PATTERN.search(text):
+        return "lusaka_a"
+    return None
+
+
 def resolve_delivery_zone(
     *,
     lat: float | None,
@@ -209,17 +310,11 @@ def resolve_delivery_zone(
         return None
 
     if landmark:
-        lower = landmark.lower()
         if landmark_names_other_town(landmark):
             return None
-        if "band a" in lower or "central" in lower or "cbd" in lower:
-            return "lusaka_a"
-        if "band b" in lower or "mid-ring" in lower or "kabulonga" in lower:
-            return "lusaka_b"
-        if "band c" in lower or "outer" in lower:
-            return "lusaka_c"
-        if "lusaka" in lower or "woodlands" in lower or "east park" in lower:
-            return "lusaka_a"
+        zone = _match_landmark_zone(landmark)
+        if zone is not None:
+            return zone
 
     return None
 

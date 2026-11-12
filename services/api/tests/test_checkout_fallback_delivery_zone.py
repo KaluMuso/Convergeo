@@ -1,7 +1,7 @@
 """A typed Lusaka landmark the matcher cannot place must not read as "outside Lusaka".
 
 The fulfilment form sends a free-text landmark and no GPS. The matcher knows a
-few area names, so "Kabwata market, near the clinic" was refused with
+few area names, so "Plot 12, behind the blue gate" was refused with
 ``checkout.outside_delivery_zone``. The zone such an address gets is a pricing
 choice, so it comes from ``platform_config.delivery_fallback_zone``; with the key
 unset the strict refusal is unchanged.
@@ -103,7 +103,7 @@ def post_fulfilment() -> Generator[Any, None, None]:
     yield call
 
 
-UNMATCHED = {"landmark": "Kabwata market, near the clinic"}
+UNMATCHED = {"landmark": "Plot 12, behind the blue gate, near the clinic"}
 
 
 def test_unmatched_landmark_is_still_refused_when_no_fallback_is_configured(
@@ -144,7 +144,7 @@ def test_a_matched_landmark_keeps_its_own_zone(post_fulfilment: Any) -> None:
     [
         {"landmark": "Ndola city centre"},
         # GPS that is genuinely out of range is never overridden by the fallback.
-        {"landmark": "Kabwata market", "lat": -12.97, "lng": 28.63},
+        {"landmark": "Plot 12, behind the blue gate", "lat": -12.97, "lng": 28.63},
     ],
 )
 def test_fallback_never_delivers_outside_lusaka(
@@ -165,5 +165,5 @@ def test_fallback_must_name_an_active_zone(value: Any) -> None:
 
 def test_other_town_detection() -> None:
     assert landmark_names_other_town("Kitwe, Parklands")
-    assert not landmark_names_other_town("Kabwata market")
+    assert not landmark_names_other_town("Plot 12, behind the blue gate")
     assert not landmark_names_other_town(None)
