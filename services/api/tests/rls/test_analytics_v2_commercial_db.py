@@ -9,7 +9,7 @@ reconciliation flag fires when payments and checkout totals disagree.
 from __future__ import annotations
 
 from collections.abc import Generator
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from app.services.analytics.metrics import average_ngwee, commercial_daily, commercial_summary
@@ -129,12 +129,31 @@ def test_commercial_day_exact_ngwee(live: PgConn) -> None:
     assert not day.payment_mismatch
 
 
+def test_orders_at_2330_utc_belong_to_the_next_lusaka_day(live: PgConn) -> None:
+    """OD-9: an order/checkout at 23:30 UTC on DAY-1 is 01:30 CAT on DAY."""
+    _seed(live)
+    prev = DAY - timedelta(days=1)
+    moved = live.run_script(
+        "BEGIN;\n" + SERVICE + f"UPDATE public.orders SET created_at = '{prev} 23:30:00+00' "
+        f"WHERE id::text LIKE '{ORD}%';\n"
+        f"UPDATE public.checkout_groups SET created_at = '{prev} 23:30:00+00' "
+        f"WHERE id::text LIKE '{G}%';\n"
+        "COMMIT;\n"
+    )
+    assert moved.ok, moved.error
+    before, day = commercial_daily(prev, DAY)
+    assert (before.orders_placed, before.checkouts_started) == (0, 0)
+    assert (day.orders_placed, day.checkouts_started) == (5, 4)
+    assert day.gmv_paid_ngwee == 25_550 + 1_006
+
+
 def test_paid_orders_reconcile_to_payments_by_direct_sql(live: PgConn) -> None:
     _seed(live)
     (day,) = commercial_daily(DAY, DAY)
     window = (
-        f"o.created_at >= '{DAY.isoformat()}'::date AND "
-        f"o.created_at < '{DAY.isoformat()}'::date + 1 AND o.id::text LIKE '{ORD}%'"
+        f"o.created_at >= ('{DAY.isoformat()}'::date)::timestamp AT TIME ZONE 'Africa/Lusaka' "
+        f"AND o.created_at < ('{DAY.isoformat()}'::date + 1)::timestamp AT TIME ZONE "
+        f"'Africa/Lusaka' AND o.id::text LIKE '{ORD}%'"
     )
     paid = (
         "EXISTS (SELECT 1 FROM public.payments p WHERE p.checkout_group_id = o.checkout_group_id "

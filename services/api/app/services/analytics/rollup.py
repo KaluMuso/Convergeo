@@ -1,7 +1,8 @@
 """Convergeo Intelligence 1B-01: daily analytics rollup tick.
 
-``POST /internal/analytics/rollup-tick`` (n8n, daily 02:15 UTC) calls :func:`run_rollup_tick`
-when the ``analytics_v2_rollups`` flag is ON. For every UTC day that has no successful run
+``POST /internal/analytics/rollup-tick`` (n8n, daily 02:15 UTC = 04:15 CAT) calls
+:func:`run_rollup_tick` when the ``analytics_v2_rollups`` flag is ON. Days are
+**Africa/Lusaka** reporting days (OD-9). For every day that has no successful run
 in the last :data:`CATCH_UP_DAYS` days — plus yesterday, which is always recomputed so
 late beacons are folded in — it runs ``public.analytics_rollup_day(day)``.
 
@@ -22,9 +23,10 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Final
 
+from app.services.analytics.reporting_day import reporting_today
 from app.services.orders.audit import run_sql_script, sql_literal
 
 logger = logging.getLogger(__name__)
@@ -67,10 +69,6 @@ class RollupTickResult:
         }
 
 
-def _utc_today(now: datetime | None) -> date:
-    return (now or datetime.now(UTC)).astimezone(UTC).date()
-
-
 def _successful_days(since: date) -> set[date]:
     result = run_sql_script(
         "SELECT DISTINCT day::text FROM public.analytics_rollup_runs "
@@ -83,7 +81,7 @@ def _successful_days(since: date) -> set[date]:
 
 def days_to_roll(now: datetime | None = None) -> list[date]:
     """Missing days in the catch-up window, plus yesterday (always), oldest first."""
-    today = _utc_today(now)
+    today = reporting_today(now)
     yesterday = today - timedelta(days=1)
     window = [today - timedelta(days=offset) for offset in range(CATCH_UP_DAYS, 0, -1)]
     done = _successful_days(window[0])
@@ -130,7 +128,7 @@ def run_rollup_tick(
         return RollupTickResult(busy=True)
     try:
         if day is not None:
-            if day > _utc_today(now):
+            if day > reporting_today(now):
                 raise ValueError("cannot roll up a future day")
             targets = [day]
         else:

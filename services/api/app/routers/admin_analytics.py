@@ -22,7 +22,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any, Final
 
 from anyio import to_thread
@@ -35,6 +35,7 @@ from app.services.analytics.metrics import (
     commercial_summary,
     previous_period,
 )
+from app.services.analytics.reporting_day import reporting_today
 from app.services.orders.audit import run_sql_script, sql_literal
 from fastapi import APIRouter, Depends, Query
 
@@ -64,8 +65,12 @@ SEARCH_K_MEASURE_SQL: Final = (
 _cache: dict[tuple[str, str, str], tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.Lock()
 
-FromQuery = Annotated[date | None, Query(alias="from", description="First UTC day (inclusive).")]
-ToQuery = Annotated[date | None, Query(alias="to", description="Last UTC day (inclusive).")]
+FromQuery = Annotated[
+    date | None, Query(alias="from", description="First Lusaka reporting day (inclusive).")
+]
+ToQuery = Annotated[
+    date | None, Query(alias="to", description="Last Lusaka reporting day (inclusive).")
+]
 
 
 def clear_analytics_cache() -> None:
@@ -80,7 +85,7 @@ def clear_analytics_cache() -> None:
 
 
 def _today() -> date:
-    return datetime.now(UTC).date()
+    return reporting_today()
 
 
 def _resolve_window(start: date | None, end: date | None) -> tuple[date, date]:

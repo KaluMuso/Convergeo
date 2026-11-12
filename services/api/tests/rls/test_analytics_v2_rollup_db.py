@@ -1,14 +1,17 @@
 """Convergeo Intelligence 1B-01: daily rollup on a live DB (exact values).
 
-Seeds one fixed, past UTC day with known events and asserts the rollup exactly:
+Seeds one fixed, past reporting day with known events and asserts the rollup exactly:
 sessionisation by the 30-minute idle rule (29 min = same session, 31 min = new one),
 bounce, active span, page/entry/product breakdowns, search demand and idempotency.
+
+Reporting days are Africa/Lusaka days (OD-9, CAT = UTC+2): DAY covers
+[DAY-1 22:00 UTC, DAY 22:00 UTC). Seeded clock times are UTC.
 """
 
 from __future__ import annotations
 
 from collections.abc import Generator
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from app.services.analytics.rollup import rollup_day, run_rollup_tick
@@ -16,6 +19,7 @@ from app.services.db import reset_pools
 from tests.rls.conftest import PgConn
 
 DAY = date(2026, 1, 15)
+PREV = DAY - timedelta(days=1)
 EV = "1b01e000-0000-4000-8000-"
 S1 = "1b01a000-0000-4000-8000-000000000001"
 S2 = "1b01a000-0000-4000-8000-000000000002"
@@ -28,7 +32,7 @@ def _cleanup(db: PgConn) -> None:
     db.run(f"DELETE FROM public.analytics_event_log WHERE event_id::text LIKE '{EV}%'")
     db.run("DELETE FROM public.search_query_log WHERE normalized_term LIKE 'zz1b01 %'")
     for table in ("analytics_daily_rollup", "analytics_search_daily", "analytics_rollup_runs"):
-        db.run(f"DELETE FROM public.{table} WHERE day = '{DAY.isoformat()}'")
+        db.run(f"DELETE FROM public.{table} WHERE day IN ('{DAY}', '{PREV}')")
 
 
 @pytest.fixture
@@ -50,8 +54,9 @@ def _event(
     page: str | None = None,
     entity: str | None = None,
     props: str = "{}",
+    on: date = DAY,
 ) -> str:
-    ts = f"'{DAY.isoformat()} {clock}+00'"
+    ts = f"'{on.isoformat()} {clock}+00'"
     sid = f"'{session}'" if session else "NULL"
     aid = f"'{anon}'" if anon else "NULL"
     pk = f"'{page}'" if page else "NULL"
@@ -103,10 +108,10 @@ def _seed(db: PgConn) -> None:
     assert result.ok, result.error
 
 
-def _rollup(db: PgConn) -> dict[tuple[str, str, str], tuple[int, int]]:
+def _rollup(db: PgConn, day: date = DAY) -> dict[tuple[str, str, str], tuple[int, int]]:
     result = db.run(
         "SELECT metric || '|' || dim_key || '|' || dim_value || '|' || value || '|' || sample_n "
-        f"FROM public.analytics_daily_rollup WHERE day = '{DAY.isoformat()}' "
+        f"FROM public.analytics_daily_rollup WHERE day = '{day.isoformat()}' "
         "AND metric NOT IN ('funnel_cart_adds') ORDER BY 1"
     )
     assert result.ok, result.error
@@ -117,12 +122,12 @@ def _rollup(db: PgConn) -> dict[tuple[str, str, str], tuple[int, int]]:
     return out
 
 
-def _search(db: PgConn) -> list[str]:
+def _search(db: PgConn, day: date = DAY) -> list[str]:
     result = db.run(
         "SELECT normalized_term || '|' || searches || '|' || zero_results || '|' || "
         "coalesce(sessions::text, 'null') || '|' || unsessioned_searches "
         "FROM public.analytics_search_daily "
-        f"WHERE day = '{DAY.isoformat()}' AND normalized_term LIKE 'zz1b01 %' ORDER BY 1"
+        f"WHERE day = '{day.isoformat()}' AND normalized_term LIKE 'zz1b01 %' ORDER BY 1"
     )
     assert result.ok, result.error
     return result.rows
@@ -159,17 +164,38 @@ def test_rollup_day_exact_values(live: PgConn) -> None:
 
 
 def test_29_minutes_is_one_session_31_minutes_is_two(live: PgConn) -> None:
+    # Both gaps straddle UTC midnight but sit inside ONE Lusaka day (01:4x-02:1x CAT on
+    # DAY), so the 30-minute rule — not the day boundary — decides the split (OD-9).
     statements = [
-        _event(11, "15:00:00", "page_view", session=S1, anon=A1, page="home"),
-        _event(12, "15:29:00", "page_view", session=S1, anon=A1, page="plp"),
-        _event(21, "15:00:00", "page_view", session=S2, anon=A2, page="home"),
-        _event(22, "15:31:00", "page_view", session=S2, anon=A2, page="plp"),
+        _event(11, "23:45:00", "page_view", session=S1, anon=A1, page="home", on=PREV),
+        _event(12, "00:14:00", "page_view", session=S1, anon=A1, page="plp"),
+        _event(21, "23:40:00", "page_view", session=S2, anon=A2, page="home", on=PREV),
+        _event(22, "00:11:00", "page_view", session=S2, anon=A2, page="plp"),
     ]
     assert live.run_script("BEGIN;\n" + "\n".join(statements) + "\nCOMMIT;\n").ok
     assert rollup_day(DAY).ok
     r = _rollup(live)
     assert r[("sessions", "", "")] == (3, 3)
     assert r[("active_span_seconds_total", "", "")] == (29 * 60, 3)
+
+
+def test_2330_utc_belongs_to_the_next_lusaka_day(live: PgConn) -> None:
+    """OD-9 boundary: 23:30 UTC on PREV is 01:30 CAT on DAY."""
+    statements = [
+        _event(31, "21:59:00", "page_view", session=S1, anon=A1, page="home", on=PREV),
+        _event(32, "23:30:00", "page_view", session=S2, anon=A2, page="plp", on=PREV),
+        "INSERT INTO public.search_query_log (kind, term, normalized_term, created_at) VALUES "
+        f"('search', 'zz1b01 late', 'zz1b01 late', '{PREV.isoformat()} 23:30:00+00');",
+    ]
+    assert live.run_script("BEGIN;\n" + "\n".join(statements) + "\nCOMMIT;\n").ok
+    assert rollup_day(PREV).ok and rollup_day(DAY).ok
+    prev, day = _rollup(live, PREV), _rollup(live, DAY)
+    assert prev[("page_views", "page_key", "home")] == (1, 1)  # 23:59 CAT on PREV
+    assert ("page_views", "page_key", "plp") not in prev
+    assert day[("page_views", "page_key", "plp")] == (1, 1)
+    assert ("page_views", "page_key", "home") not in day
+    assert _search(live, PREV) == []
+    assert _search(live, DAY) == ["zz1b01 late|1|0|0|1"]
 
 
 def test_rollup_is_idempotent(live: PgConn) -> None:
@@ -191,7 +217,8 @@ def test_explicit_day_tick_and_future_day_rejected(live: PgConn) -> None:
     _seed(live)
     tick = run_rollup_tick(day=DAY).as_dict()
     assert tick["ok"] is True
-    future = live.run("SELECT public.analytics_rollup_day(current_date + 1)")
+    # +2: the Lusaka day runs ahead of the server's UTC current_date from 22:00 UTC.
+    future = live.run("SELECT public.analytics_rollup_day(current_date + 2)")
     assert not future.ok and "future" in (future.error or "")
 
 

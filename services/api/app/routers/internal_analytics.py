@@ -129,7 +129,9 @@ async def analytics_storage() -> dict[str, Any]:
     dependencies=[Depends(require_internal_analytics_token)],
 )
 async def analytics_rollup_tick(
-    day: Annotated[date | None, Query(description="Recompute one UTC day (YYYY-MM-DD).")] = None,
+    day: Annotated[
+        date | None, Query(description="Recompute one Lusaka reporting day (YYYY-MM-DD).")
+    ] = None,
 ) -> dict[str, Any]:
     """Daily rollups (1B-01): no-op unless ``analytics_v2_rollups`` is ON.
 

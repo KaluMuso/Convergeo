@@ -84,6 +84,30 @@ def test_days_to_roll_catches_up_missing_days_and_always_redoes_yesterday(
     ]
 
 
+def test_days_to_roll_uses_lusaka_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    """OD-9: at 22:30 UTC on the 19th it is already the 20th in Lusaka."""
+    monkeypatch.setattr(rollup, "run_sql_script", lambda _s: SqlResult(ok=True, rows=[]))
+    days = rollup.days_to_roll(datetime(2026, 11, 19, 22, 30, tzinfo=UTC))
+    assert days[0] == date(2026, 11, 13) and days[-1] == date(2026, 11, 19)
+
+
+def test_reporting_today_is_lusaka() -> None:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    from app.services.analytics.reporting_day import REPORTING_TZ, reporting_today
+
+    assert reporting_today(datetime(2026, 11, 19, 21, 59, tzinfo=UTC)) == date(2026, 11, 19)
+    assert reporting_today(datetime(2026, 11, 19, 22, 0, tzinfo=UTC)) == date(2026, 11, 20)
+    assert reporting_today(datetime(2026, 11, 19, 23, 30, tzinfo=UTC)) == date(2026, 11, 20)
+    try:
+        lusaka = ZoneInfo("Africa/Lusaka")
+    except ZoneInfoNotFoundError:  # pragma: no cover - slim image without tzdata
+        return
+    for month in (1, 7):  # no DST: the fixed +2 offset matches all year
+        moment = datetime(2026, month, 15, 12, tzinfo=UTC)
+        assert moment.astimezone(lusaka).utcoffset() == moment.astimezone(REPORTING_TZ).utcoffset()
+
+
 def test_rollup_day_runs_under_statement_timeout_and_records_errors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

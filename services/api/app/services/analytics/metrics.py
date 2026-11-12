@@ -5,7 +5,7 @@ Paid orders, payments and GMV come ONLY from ``orders``, ``order_items``,
 ``public.analytics_commercial_daily(from, to)`` — the same definition the daily rollup
 stores. Nothing here reads ``analytics_event_log`` or ``funnel_events`` snapshots.
 
-Definitions (UTC days):
+Definitions (Africa/Lusaka reporting days, OD-9; timestamps stored in UTC):
 
 * **orders placed** — orders created that day (any status).
 * **orders paid** — orders whose checkout group has a payment with ``status='success'``.
@@ -89,7 +89,7 @@ def _validate_range(start: date, end: date) -> None:
 
 
 def commercial_daily(start: date, end: date) -> list[CommercialDay]:
-    """One row per UTC day in ``[start, end]`` (zero-filled)."""
+    """One row per Lusaka reporting day in ``[start, end]`` (zero-filled)."""
     _validate_range(start, end)
     script = (
         "BEGIN;\n"
