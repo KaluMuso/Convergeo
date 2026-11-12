@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Protocol
 
+from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -202,8 +203,8 @@ def admin_confirm_cod_collection(
     order_id: str,
     body: CodNoteRequest,
     user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> CodCollectionResponse:
-    _ = user
     try:
         result = confirm_cod_collection(
             order_id=order_id,
@@ -220,6 +221,23 @@ def admin_confirm_cod_collection(
             details=exc.details,
         ) from exc
 
+    # The ledger legs and the order transition are booked as SYSTEM, so without this
+    # row nothing ties the administrator to the cash confirmation. Recorded after the
+    # money has posted; a failed insert returns 500 and the idempotent retry records it.
+    recorder.record(
+        action="admin.cod.confirm_collection",
+        entity_type="order",
+        entity_id=result.order_id,
+        before=None,
+        after={
+            "collectable_ngwee": result.collectable_ngwee,
+            "commission_ngwee": result.commission_ngwee,
+            "net_vendor_ngwee": result.net_vendor_ngwee,
+            "transaction_ids": list(result.transaction_ids),
+            "idempotent_replay": not result.created,
+            "note": body.note,
+        },
+    )
     return CodCollectionResponse(
         order_id=result.order_id,
         collectable_ngwee=result.collectable_ngwee,
@@ -235,6 +253,7 @@ def admin_refuse_cod_collection(
     order_id: str,
     body: CodNoteRequest,
     user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> CodRefusalResponse:
     try:
         result = refuse_cod_collection(
@@ -253,6 +272,19 @@ def admin_refuse_cod_collection(
             details=exc.details,
         ) from exc
 
+    recorder.record(
+        action="admin.cod.refuse_collection",
+        entity_type="order",
+        entity_id=result.order_id,
+        before={"status": result.from_status},
+        after={
+            "status": result.to_status,
+            "collectable_ngwee": result.collectable_ngwee,
+            "reversal_transaction_id": result.reversal_transaction_id,
+            "idempotent_replay": not result.created,
+            "note": body.note,
+        },
+    )
     return CodRefusalResponse(
         order_id=result.order_id,
         collectable_ngwee=result.collectable_ngwee,
