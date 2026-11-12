@@ -74,6 +74,26 @@ def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
     return {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
 
 
+def service_write_money_table() -> PersonaExpectations:
+    """Ledger, payments, payouts and refunds: clients read their own rows, nobody writes.
+
+    20261113100000 (2026-11 RBAC audit, S1) replaced the M03 `<table>_admin_all` policy
+    with an admin SELECT policy and revoked INSERT/UPDATE/DELETE from anon and
+    authenticated. Before it, ADMIN was `all_permit()` — an admin browser token could
+    fabricate ledger postings through PostgREST — and the other authenticated personas
+    reached `UPDATE/DELETE ... WHERE false` as RLS-filtered no-ops. Every client write is
+    now a hard permission denial; the API writes as service_role.
+    """
+    return {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    }
+
+
 def public_read_admin_write() -> PersonaExpectations:
     return {
         Persona.ANON: select_only(),
@@ -1569,120 +1589,9 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
-    "ledger_accounts": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "ledger_postings": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "ledger_transactions": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    "ledger_accounts": service_write_money_table(),
+    "ledger_postings": service_write_money_table(),
+    "ledger_transactions": service_write_money_table(),
     # R02-P15. Vendor-scoped listing view aggregates; service-role write only.
     "listing_analytics": {
         Persona.ANON: deny_all(),
@@ -2127,82 +2036,8 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
-    "payments": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "payouts": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    "payments": service_write_money_table(),
+    "payouts": service_write_money_table(),
     "platform_config": {
         Persona.ANON: {
             "select": "deny",
@@ -2430,44 +2265,7 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: admin_read_orphan_write_grants(),
         Persona.ADMIN: admin_read_orphan_write_grants(),
     },
-    "refunds": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    "refunds": service_write_money_table(),
     "returns": {
         Persona.ANON: {
             "select": "deny",
