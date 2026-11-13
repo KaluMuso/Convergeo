@@ -13,7 +13,8 @@
     "./track": "./src/track.ts",
     "./session": "./src/session.ts",
     "./search-session": "./src/search-session.ts",
-    "./provider": "./src/analytics-provider.ts"
+    "./provider": "./src/analytics-provider.ts",
+    "./identify": "./src/v2/identify.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

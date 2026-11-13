@@ -135,6 +135,14 @@
     "deletePhraseLabel": "Phrase de confirmation",
     "deletePhrasePlaceholder": "SUPPRIMER MES DONNÉES",
     "retentionNote": "Les commandes, les paiements et les documents fiscaux sont conservés sous forme anonymisée pendant au moins sept ans, comme l'exige la loi zambienne. Les écritures comptables ne sont jamais supprimées.",
+    "analytics": {
+      "title": "Statistiques d'utilisation",
+      "description": "Aidez-nous à améliorer Convergeo en nous laissant voir comment vous l'utilisez, par exemple les pages que vous visitez.",
+      "toggleLabel": "Partager les statistiques d'utilisation",
+      "on": "Activé : nous pouvons voir les pages que vous visitez et, après votre connexion, les relier à votre compte. Ces liens sont supprimés après 30 jours.",
+      "off": "Désactivé : nous ne conservons que des compteurs anonymes, par exemple le nombre de personnes ayant vu une page. Aucun parcours n'est enregistré et rien n'est relié à vous.",
+      "gpc": "Votre navigateur envoie le signal Global Privacy Control, les statistiques restent donc désactivées. Nous respectons ce réglage du navigateur."
+    },
     "export": {
       "title": "Exporter mes données",
       "description": "Téléchargez une copie des données personnelles que Convergeo détient à votre sujet — votre profil, vos adresses, vos commandes, vos billets et vos avis — sous forme de fichier JSON, comme le prévoit la loi zambienne sur la protection des données.",

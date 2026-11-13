@@ -42,12 +42,14 @@ def test_tick_runs_when_rollups_flag_on(
         "sweep_v2_retention",
         MagicMock(return_value=V2RetentionResult(5, 7, 1, complete=True, search_daily_purged=4)),
     )
+    monkeypatch.setattr(mod, "purge_expired_links", MagicMock(return_value=(2, True)))
     resp = client.post("/internal/analytics/v2-retention-tick", headers=TOKEN)
     assert resp.json() == {
         "event_log_deleted": 5,
         "listing_dedup_purged": 7,
         "search_terms_scrubbed": 1,
         "search_daily_purged": 4,
+        "session_links_purged": 2,
         "complete": True,
     }
 
