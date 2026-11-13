@@ -451,7 +451,9 @@ async def poll_non_terminal_payments(
                 actor_id=SYSTEM_ACTOR_ID,
                 note="Reconciliation poller re-query",
                 observation=(
-                    collection_observation_from_query(query_result, source="poller")
+                    collection_observation_from_query(
+                        query_result, source="poller"
+                    )
                     if incoming in (PaymentStatus.SUCCESS, PaymentStatus.FAILED)
                     else None
                 ),
@@ -703,7 +705,9 @@ async def run_daily_reconciliation_report(
             discrepancies=existing_discrepancies,
             clean=not _has_discrepancies(existing_discrepancies),
             certifiable=bool(existing_summary.get("certifiable", False)),
-            input_fingerprint=cast(str | None, existing_summary.get("input_fingerprint")),
+            input_fingerprint=cast(
+                str | None, existing_summary.get("input_fingerprint")
+            ),
         )
 
     if fetch_account is None and fetch_transactions is None:
@@ -766,7 +770,9 @@ async def run_daily_reconciliation_report(
             "report_date": target_date.isoformat(),
             "cutoff_utc": cutoff.isoformat(),
             "account_response_sha256": provider_evidence.account_response_sha256,
-            "transaction_response_sha256s": list(provider_evidence.transaction_response_sha256s),
+            "transaction_response_sha256s": list(
+                provider_evidence.transaction_response_sha256s
+            ),
             "provider_evidence_origins": provider_origins,
             "provider_query_from": provider_evidence.query_from.isoformat(),
             "provider_query_to": provider_evidence.query_to.isoformat(),
@@ -777,7 +783,9 @@ async def run_daily_reconciliation_report(
             "runtime_role": local_evidence.runtime_role,
         }
         movement_reconciliation_clean = (
-            provider_collection.complete and match_report.exact and not local_evidence.unresolved
+            provider_collection.complete
+            and match_report.exact
+            and not local_evidence.unresolved
         )
         summary = {
             "report_version": "f3-reconciliation-report-v1",
@@ -789,7 +797,9 @@ async def run_daily_reconciliation_report(
             "cutoff_utc": cutoff.isoformat(),
             "configured_account_id": provider_evidence.account.account_id,
             "currency": provider_evidence.account.currency,
-            "provider_available_balance_ngwee": (provider_evidence.account.available_balance_ngwee),
+            "provider_available_balance_ngwee": (
+                provider_evidence.account.available_balance_ngwee
+            ),
             "provider_ledger_balance_ngwee": provider_evidence.account.ledger_balance_ngwee,
             "provider_movement_count": len(provider_collection.movements),
             "provider_late_movement_count": len(provider_collection.late_movements),
@@ -807,7 +817,9 @@ async def run_daily_reconciliation_report(
             "page_numbers": list(provider_collection.observed_page_numbers),
             "page_stop_reason": provider_collection.stop_reason,
             "account_response_sha256": provider_evidence.account_response_sha256,
-            "transaction_response_sha256s": list(provider_evidence.transaction_response_sha256s),
+            "transaction_response_sha256s": list(
+                provider_evidence.transaction_response_sha256s
+            ),
             "local_source_sha256": local_evidence.source_sha256,
             "local_row_counts": local_evidence.row_counts,
             "runtime_role": local_evidence.runtime_role,
@@ -854,8 +866,7 @@ async def run_daily_reconciliation_report(
             "terminal_transfers": list(local_evidence.terminal_transfers),
         }
         persisted = ReconciliationReportStore(
-            service_client,
-            runtime_role=local_evidence.runtime_role,
+            service_client, runtime_role=local_evidence.runtime_role,
         ).append(
             account_id=provider_evidence.account.account_id,
             currency=provider_evidence.account.currency,
@@ -900,7 +911,9 @@ async def run_daily_reconciliation_report(
         ledger_rows=ledger_rows,
     )
 
-    release_accounting = build_release_accounting_day_totals(report_date=target_date.isoformat())
+    release_accounting = build_release_accounting_day_totals(
+        report_date=target_date.isoformat()
+    )
     legacy_summary: dict[str, Any] = {
         "report_date": target_date.isoformat(),
         "lenco_balance_ngwee": lenco_account.available_balance_ngwee,
@@ -913,7 +926,9 @@ async def run_daily_reconciliation_report(
         # ngwee. commission + delivery fee + vendor_released should equal gross for
         # fully settled orders on the day (refunds excluded from these totals).
         "release_gross_collected_ngwee": release_accounting["gross_collected_ngwee"],
-        "release_commission_captured_ngwee": release_accounting["commission_captured_ngwee"],
+        "release_commission_captured_ngwee": release_accounting[
+            "commission_captured_ngwee"
+        ],
         "release_vendor_net_ngwee": release_accounting["vendor_released_ngwee"],
         "release_delivery_fee_captured_ngwee": release_accounting.get(
             "delivery_fee_captured_ngwee", 0

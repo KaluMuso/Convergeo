@@ -303,7 +303,9 @@ async def redeem_invite(
     # Flag flip opens the gate with no deploy: when public_launch is ON the gate
     # is a no-op and no code is required.
     if is_public_launch(service_client):
-        return RedeemResult(outcome="public", granted=True, remaining=0, invite_required=False)
+        return RedeemResult(
+            outcome="public", granted=True, remaining=0, invite_required=False
+        )
 
     _rate_limit_beta(
         request,

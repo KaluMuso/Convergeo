@@ -105,13 +105,21 @@ def _proximity_score(service_area: str | None, requested_area: str) -> float:
 
 
 def _vendor_average_rating(client: Any, vendor_id: str) -> float | None:
-    orders_response = client.table("orders").select("id").eq("vendor_id", vendor_id).execute()
+    orders_response = (
+        client.table("orders")
+        .select("id")
+        .eq("vendor_id", vendor_id)
+        .execute()
+    )
     order_ids = [str(row["id"]) for row in _rows(orders_response) if row.get("id")]
     if not order_ids:
         return None
 
     items_response = (
-        client.table("order_items").select("id, order_id").in_("order_id", order_ids).execute()
+        client.table("order_items")
+        .select("id, order_id")
+        .in_("order_id", order_ids)
+        .execute()
     )
     order_id_by_item = {
         str(item["id"]): str(item["order_id"])
@@ -122,7 +130,10 @@ def _vendor_average_rating(client: Any, vendor_id: str) -> float | None:
         return None
 
     reviews_response = (
-        client.table("reviews").select("rating, order_item_id").eq("status", "published").execute()
+        client.table("reviews")
+        .select("rating, order_item_id")
+        .eq("status", "published")
+        .execute()
     )
     ratings: list[int] = []
     for review in _rows(reviews_response):
@@ -136,10 +147,10 @@ def _vendor_average_rating(client: Any, vendor_id: str) -> float | None:
 
 
 def _rank_provider(
-    *,
-    preferred_badge: bool,
-    average_rating: float | None,
-    proximity: float,
+  *,
+  preferred_badge: bool,
+  average_rating: float | None,
+  proximity: float,
 ) -> float:
     badge_score = 1000.0 if preferred_badge else 0.0
     rating_score = (average_rating or 0.0) * 100.0
@@ -179,7 +190,9 @@ def match_providers(
         .eq("status", "active")
         .execute()
     )
-    vendors_by_id = {str(row["id"]): row for row in _rows(vendors_response) if row.get("id")}
+    vendors_by_id = {
+        str(row["id"]): row for row in _rows(vendors_response) if row.get("id")
+    }
 
     candidates: list[MatchedProvider] = []
     seen_vendors: set[str] = set()

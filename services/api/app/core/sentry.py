@@ -123,7 +123,9 @@ def before_send(event: dict[str, Any], _hint: dict[str, Any] | None = None) -> d
     return scrub(event)  # type: ignore[no-any-return]
 
 
-def before_breadcrumb(crumb: dict[str, Any], _hint: dict[str, Any] | None = None) -> dict[str, Any]:
+def before_breadcrumb(
+    crumb: dict[str, Any], _hint: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Sentry `before_breadcrumb` hook — scrub each breadcrumb (message + data)."""
     return scrub(crumb)  # type: ignore[no-any-return]
 

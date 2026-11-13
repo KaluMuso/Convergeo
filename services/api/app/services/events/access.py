@@ -76,11 +76,9 @@ class EventAccessProof:
 
 
 def _proof_secret(secret: str | None = None) -> bytes:
-    value = (
-        secret
-        or os.environ.get("EVENT_ACCESS_SIGNING_SECRET")
-        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-    ).strip()
+    value = (secret or os.environ.get("EVENT_ACCESS_SIGNING_SECRET") or os.environ.get(
+        "SUPABASE_SERVICE_ROLE_KEY", ""
+    )).strip()
     if not value:
         raise RuntimeError("EVENT_ACCESS_SIGNING_SECRET is required for private-event access")
     return value.encode("utf-8")
@@ -117,7 +115,9 @@ def issue_event_access_proof(
     }
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
     encoded = _b64_encode(payload_json)
-    signature = hmac.new(_proof_secret(secret), encoded.encode("ascii"), hashlib.sha256).hexdigest()
+    signature = hmac.new(
+        _proof_secret(secret), encoded.encode("ascii"), hashlib.sha256
+    ).hexdigest()
     return f"{encoded}.{signature}"
 
 

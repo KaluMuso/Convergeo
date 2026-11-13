@@ -402,9 +402,9 @@ def _insert_message(
         "created_at": now,
     }
     service_client.client.table("rfq_messages").insert(payload).execute()
-    service_client.client.table("rfq_threads").update({"last_message_at": now}).eq(
-        "id", thread_id
-    ).execute()
+    service_client.client.table("rfq_threads").update(
+        {"last_message_at": now}
+    ).eq("id", thread_id).execute()
     return payload
 
 
@@ -767,7 +767,9 @@ async def issue_quote(
         "quoted_at": now,
         "last_message_at": now,
     }
-    service_client.client.table("rfq_threads").update(update_payload).eq("id", thread_id).execute()
+    service_client.client.table("rfq_threads").update(update_payload).eq(
+        "id", thread_id
+    ).execute()
 
     if body.message:
         _screen_body(body.message)

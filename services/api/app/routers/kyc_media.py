@@ -33,7 +33,6 @@ class _StorageServiceClient(Protocol):
     @property
     def client(self) -> Any: ...
 
-
 MAX_KYC_DOC_BYTES = 10_485_760  # 10 MiB — matches the config.toml bucket limit.
 
 

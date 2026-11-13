@@ -182,7 +182,8 @@ def assert_restore_target_safe(
 
     if is_production_restore_target(db_url=target_db_url, project_ref=target_project_ref):
         raise RecoveryGuardError(
-            f"RESTORE_FAILED: refusing production restore target ({PROD_SUPABASE_PROJECT_REF})"
+            f"RESTORE_FAILED: refusing production restore target "
+            f"({PROD_SUPABASE_PROJECT_REF})"
         )
 
     if not (source_db_url or "").strip():
@@ -190,7 +191,8 @@ def assert_restore_target_safe(
 
     if source_db_url.strip() == target_db_url.strip():
         raise RecoveryGuardError(
-            "RESTORE_FAILED: source and target URLs are identical — refusing to clobber the source"
+            "RESTORE_FAILED: source and target URLs are identical — "
+            "refusing to clobber the source"
         )
 
     source_ref = (

@@ -70,8 +70,8 @@ def list_service_obligations(client: Any, *, order_id: str) -> list[ServiceOblig
         latest = payments[0] if payments else None
         if ob["job_id"] not in acknowledgement:
             acknowledgement[ob["job_id"]] = (
-                client.rpc("service_buyer_acknowledged", {"p_job_id": ob["job_id"]}).execute().data
-                is True
+                client.rpc("service_buyer_acknowledged", {"p_job_id": ob["job_id"]})
+                .execute().data is True
             )
         ready = ob["leg"] == "deposit" or (
             ob["work_acknowledged_at"] is not None and acknowledgement[ob["job_id"]]

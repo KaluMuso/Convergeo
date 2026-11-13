@@ -56,7 +56,6 @@ def _notifications_i18n_dir() -> Path | None:
             return candidate
     return None
 
-
 _STOP_KEYWORDS = frozenset({"stop", "unsubscribe", "cancel", "end", "quit"})
 _START_KEYWORDS = frozenset({"start", "subscribe", "unstop"})
 

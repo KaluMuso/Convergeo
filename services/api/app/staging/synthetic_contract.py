@@ -60,7 +60,9 @@ STOCK_MODES = frozenset({"tracked", "always_available"})
 # 20260813063754_event_strategy_completion_foundation.sql). Kept as frozensets so
 # assert_contract_valid() fails here rather than at INSERT time on staging.
 EVENT_STATUSES = frozenset({"draft", "published", "cancelled", "completed"})
-EVENT_TYPES = frozenset({"standard", "single", "multi_day", "recurring", "free_rsvp", "private"})
+EVENT_TYPES = frozenset(
+    {"standard", "single", "multi_day", "recurring", "free_rsvp", "private"}
+)
 EVENT_VISIBILITIES = frozenset({"public", "unlisted", "private"})
 EVENT_FEE_PAYERS = frozenset({"organiser", "buyer"})
 EVENT_INSTANCE_STATUSES = frozenset({"scheduled", "cancelled", "completed"})
@@ -543,7 +545,6 @@ CATALOG_FIXTURES: tuple[ProductFixture, ...] = (
     ),
 )
 
-
 def product_fixture(key: ProductKey | str) -> ProductFixture:
     for product in CATALOG_FIXTURES:
         if product.key == key:
@@ -593,7 +594,8 @@ FIXTURES: list[dict[str, Any]] = [
         ),
     }
     for p in PERSONAS
-    if p.key not in {"BUSINESS_BUYER"}  # business buyer is a profile + business_buyers row
+    if p.key
+    not in {"BUSINESS_BUYER"}  # business buyer is a profile + business_buyers row
 ]
 
 KYC_FIXTURES_LEGACY: list[dict[str, Any]] = [
@@ -614,7 +616,9 @@ def all_synthetic_user_ids() -> frozenset[str]:
 
 
 def all_synthetic_vendor_ids() -> frozenset[str]:
-    return frozenset(p.vendor_id for p in PERSONAS if p.vendor_id is not None)
+    return frozenset(
+        p.vendor_id for p in PERSONAS if p.vendor_id is not None
+    )
 
 
 def all_synthetic_listing_ids() -> frozenset[str]:
@@ -634,7 +638,9 @@ def all_synthetic_event_ids() -> frozenset[str]:
 
 
 def all_synthetic_ticket_ids() -> frozenset[str]:
-    return frozenset(ticket.ticket_id for event in EVENTS for ticket in event.tickets)
+    return frozenset(
+        ticket.ticket_id for event in EVENTS for ticket in event.tickets
+    )
 
 
 def all_contract_uuid_literals() -> frozenset[str]:
@@ -701,7 +707,9 @@ def assert_contract_valid() -> None:
         blob = " ".join(str(getattr(persona, f.name)) for f in fields(persona))
         _assert_no_production_markers(blob)
         if SEED_PREFIX not in persona.handle:
-            raise StagingIsolationError(f"fixture handle missing seed prefix: {persona.handle}")
+            raise StagingIsolationError(
+                f"fixture handle missing seed prefix: {persona.handle}"
+            )
         if persona.vendor_id is not None:
             status = persona.vendor_status
             if status not in VENDOR_STATUSES:
@@ -769,10 +777,14 @@ def assert_contract_valid() -> None:
         raise StagingIsolationError("product A requires multiseller listings")
 
     for event in EVENTS:
-        blob = " ".join(str(v) for v in (event.slug, event.title, event.venue, event.landmark))
+        blob = " ".join(
+            str(v) for v in (event.slug, event.title, event.venue, event.landmark)
+        )
         _assert_no_production_markers(blob)
         if SEED_PREFIX not in event.slug:
-            raise StagingIsolationError(f"synthetic event slug missing seed prefix: {event.slug}")
+            raise StagingIsolationError(
+                f"synthetic event slug missing seed prefix: {event.slug}"
+            )
         organiser = persona_by_key(event.organiser_key)
         if organiser.vendor_id not in vendor_ids:
             raise StagingIsolationError("event organiser is not a seeded vendor")
@@ -797,7 +809,9 @@ def assert_contract_valid() -> None:
 
         type_ids = {t.ticket_type_id for t in event.ticket_types}
         if sum(t.allocation for t in event.ticket_types) > event.capacity:
-            raise StagingIsolationError("ticket type allocations exceed instance capacity")
+            raise StagingIsolationError(
+                "ticket type allocations exceed instance capacity"
+            )
         for ticket_type in event.ticket_types:
             if ticket_type.kind not in TICKET_TYPE_KINDS:
                 raise StagingIsolationError("invalid synthetic ticket type kind")
@@ -872,7 +886,11 @@ def canonical_contract_document() -> dict[str, Any]:
         "kycRecords": [_asdict(k) for k in KYC_FIXTURES],
         "events": [
             {
-                **{k: v for k, v in _asdict(e).items() if k not in {"ticket_types", "tickets"}},
+                **{
+                    k: v
+                    for k, v in _asdict(e).items()
+                    if k not in {"ticket_types", "tickets"}
+                },
                 "ticket_types": [_asdict(t) for t in e.ticket_types],
                 "tickets": [_asdict(t) for t in e.tickets],
             }
@@ -948,7 +966,9 @@ def guard_seed_targets(
 
     staging_id = staging_project_id.strip().lower()
     if staging_id == PROD_SUPABASE_PROJECT_REF:
-        raise StagingIsolationError("STAGING_SUPABASE_PROJECT_ID equals production project ref")
+        raise StagingIsolationError(
+            "STAGING_SUPABASE_PROJECT_ID equals production project ref"
+        )
     if require_exact_project:
         assert_staging_project_target(
             staging_id or ref,

@@ -192,7 +192,10 @@ def materialize_recurrence_instances(
         raise RecurrenceError("seed end must be after seed start")
     duration = seed_ends_at - seed_starts_at
     existing_response = (
-        client.table("event_instances").select("recurrence_key").eq("event_id", event_id).execute()
+        client.table("event_instances")
+        .select("recurrence_key")
+        .eq("event_id", event_id)
+        .execute()
     )
     existing = {
         str(row.get("recurrence_key"))

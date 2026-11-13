@@ -184,10 +184,15 @@ def collect_provider_pages(
         issues.append(f"provider pages are missing, repeated, or out of order: {page_numbers!r}")
 
     missing_page_meta = [
-        page.page_number for page in pages if page.page_count is None or page.total is None
+        page.page_number
+        for page in pages
+        if page.page_count is None or page.total is None
     ]
     if missing_page_meta:
-        issues.append(f"provider pagination metadata missing for pages {missing_page_meta!r}")
+        issues.append(
+            "provider pagination metadata missing for pages "
+            f"{missing_page_meta!r}"
+        )
 
     declared_counts = {page.page_count for page in pages if page.page_count is not None}
     if len(declared_counts) > 1:
@@ -207,7 +212,9 @@ def collect_provider_pages(
     )
     if has_cursor_evidence:
         cursors = [page.cursor for page in pages if page.cursor is not None]
-        repeated_cursors = sorted(value for value, count in Counter(cursors).items() if count > 1)
+        repeated_cursors = sorted(
+            value for value, count in Counter(cursors).items() if count > 1
+        )
         if repeated_cursors:
             issues.append(f"provider cursor repeated: {repeated_cursors!r}")
 

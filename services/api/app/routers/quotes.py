@@ -278,11 +278,13 @@ def _expire_stale_quotes(client: Any, *, job_id: str) -> None:
         .execute()
     )
     for row in _rows(response):
-        expires_at = _parse_timestamp(str(row["expires_at"]) if row.get("expires_at") else None)
+        expires_at = _parse_timestamp(
+            str(row["expires_at"]) if row.get("expires_at") else None
+        )
         if expires_at is not None and expires_at <= now:
-            client.table("job_quotes").update({"status": "expired"}).eq("id", str(row["id"])).eq(
-                "status", "submitted"
-            ).execute()
+            client.table("job_quotes").update({"status": "expired"}).eq(
+                "id", str(row["id"])
+            ).eq("status", "submitted").execute()
 
 
 def _quote_is_compare_visible(row: dict[str, Any], *, now: datetime | None = None) -> bool:
@@ -473,7 +475,10 @@ async def list_matched_jobs(
     )
 
     quotes_response = (
-        client.table("job_quotes").select("*").eq("provider_vendor_id", vendor_id).execute()
+        client.table("job_quotes")
+        .select("*")
+        .eq("provider_vendor_id", vendor_id)
+        .execute()
     )
     own_quotes_by_job = {
         str(row["job_id"]): _serialize_quote_row(row) for row in _rows(quotes_response)

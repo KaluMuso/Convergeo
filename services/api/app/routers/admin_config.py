@@ -329,7 +329,10 @@ async def list_commission_rates(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CommissionRateOut]:
     response = (
-        _table(service_client, "commission_rates").select("*").order("category_key").execute()
+        _table(service_client, "commission_rates")
+        .select("*")
+        .order("category_key")
+        .execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     return [CommissionRateOut.model_validate(row) for row in rows]
@@ -425,7 +428,10 @@ async def update_delivery_zone(
         )
 
     response = (
-        _table(service_client, "delivery_zones").update(patch).eq("zone_key", zone_key).execute()
+        _table(service_client, "delivery_zones")
+        .update(patch)
+        .eq("zone_key", zone_key)
+        .execute()
     )
     after_row = _single_row(response.data, entity="delivery_zone", key=zone_key)
 
@@ -564,7 +570,9 @@ async def update_feature_flag(
 def _load_categories(service_client: Any) -> list[dict[str, Any]]:
     response = (
         _table(service_client, "categories")
-        .select("id,parent_id,name,slug,path,commission_key,prohibited,position")
+        .select(
+            "id,parent_id,name,slug,path,commission_key,prohibited,position"
+        )
         .order("position")
         .execute()
     )

@@ -104,7 +104,8 @@ def _load_flag_row(service_client: ServiceRoleClient, flag_id: str) -> dict[str,
     row = _single_row(
         _table(service_client, "flags")
         .select(
-            "id, entity_type, entity_id, reason, reporter_user_id, status, created_at, updated_at"
+            "id, entity_type, entity_id, reason, reporter_user_id, status, "
+            "created_at, updated_at"
         )
         .eq("id", flag_id)
         .maybe_single()
@@ -859,7 +860,10 @@ async def escalate_suspend_vendor(
         .execute()
     )
     order_rows = _rows(
-        _table(service_client, "orders").select("id, status").eq("vendor_id", vendor_id).execute()
+        _table(service_client, "orders")
+        .select("id, status")
+        .eq("vendor_id", vendor_id)
+        .execute()
     )
     payout_rows = _rows(
         _table(service_client, "payouts").select("id, status").eq("vendor_id", vendor_id).execute()
@@ -883,7 +887,10 @@ async def escalate_suspend_vendor(
         .execute()
     )
     orders_after = _rows(
-        _table(service_client, "orders").select("id, status").eq("vendor_id", vendor_id).execute()
+        _table(service_client, "orders")
+        .select("id, status")
+        .eq("vendor_id", vendor_id)
+        .execute()
     )
     payouts_after = _rows(
         _table(service_client, "payouts").select("id, status").eq("vendor_id", vendor_id).execute()

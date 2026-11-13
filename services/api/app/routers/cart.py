@@ -1364,8 +1364,7 @@ def _price_proposal_terms(
         ),
         "location_stock": sorted(
             (
-                row
-                for row in authority.get("location_stock", [])
+                row for row in authority.get("location_stock", [])
                 if str(row.get("listing_id")) == listing_id
             ),
             key=lambda row: str(row.get("location_id")),
@@ -1383,7 +1382,9 @@ def _price_proposal_terms(
         "currency": "ZMW",
         "lines": lines,
         "quantity": sum(int(item["qty"]) for item in lines),
-        "previous_unit_prices_ngwee": sorted({int(item["unit_price_ngwee"]) for item in lines}),
+        "previous_unit_prices_ngwee": sorted(
+            {int(item["unit_price_ngwee"]) for item in lines}
+        ),
         "current_unit_price_ngwee": int(conflict.details["current_unit_price_ngwee"]),
         "wholesale": bool(listing and listing.get("wholesale")),
         "moq": int(listing.get("moq", 1)) if listing else 1,
@@ -1407,8 +1408,7 @@ def _price_conflicts_with_proposals(
     for conflict in conflicts:
         listing = next(
             (
-                row
-                for row in authority.get("listings", [])
+                row for row in authority.get("listings", [])
                 if str(row.get("id")) == conflict.listing_id
             ),
             None,
@@ -1416,14 +1416,12 @@ def _price_conflicts_with_proposals(
         title = listing.get("display_name") if listing else None
         name = title if isinstance(title, str) and title.strip() else None
         if conflict.code != "cart.price_changed":
-            result.append(
-                MergeConflict(
-                    listing_id=conflict.listing_id,
-                    code=conflict.code,
-                    message_key=conflict.message_key,
-                    details={**conflict.details, "item_name": name},
-                )
-            )
+            result.append(MergeConflict(
+                listing_id=conflict.listing_id,
+                code=conflict.code,
+                message_key=conflict.message_key,
+                details={**conflict.details, "item_name": name},
+            ))
             continue
         terms = _price_proposal_terms(
             conflict,
@@ -1458,9 +1456,7 @@ def _price_conflicts_with_proposals(
                         {"typ": "cart_price_proposal", "terms": terms},
                         settings.supabase_service_role_key,
                         algorithm="HS256",
-                    )
-                    if can_accept
-                    else None,
+                    ) if can_accept else None,
                 },
             )
         )
@@ -1505,11 +1501,8 @@ def _validate_merge_resolution(
     invalid_proposals = set(body.accepted_price_proposals).difference(accept_price_changes)
     for listing_id in accept_price_changes:
         price_conflict = next(
-            (
-                conflict
-                for conflict in conflicts_by_listing.get(listing_id, [])
-                if conflict.code == "cart.price_changed"
-            ),
+            (conflict for conflict in conflicts_by_listing.get(listing_id, [])
+             if conflict.code == "cart.price_changed"),
             None,
         )
         if price_conflict is None:
@@ -1590,7 +1583,9 @@ async def merge_cart_on_login(
         guest_items = []
         for item in source_guest_items:
             listing_key = str(item["listing_id"])
-            if listing_key in user_variants and user_variants[listing_key] != line_variant_id(item):
+            if listing_key in user_variants and user_variants[listing_key] != line_variant_id(
+                item
+            ):
                 variant_conflicts.append(
                     MergeConflict(
                         listing_id=listing_key,

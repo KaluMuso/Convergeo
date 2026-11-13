@@ -49,7 +49,7 @@ def claim_ticket(
     instance row plus a conditional insert. Allocation is read inside the same locked
     transaction and gated against the live per-(instance, type) issued count, so it is
     drift-free and cannot oversell.
-    """
+  """
     del service_client  # reserved for future metadata lookups; claim is SQL-atomic
     _validate_uuid(instance_id, "instance_id")
     _validate_uuid(ticket_type_id, "ticket_type_id")

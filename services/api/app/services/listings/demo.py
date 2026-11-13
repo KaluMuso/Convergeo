@@ -56,7 +56,11 @@ def is_demo_public_id(public_id: str | None) -> bool:
     normalized = public_id.strip().lstrip("/").lower()
     if not normalized:
         return False
-    return normalized == "demo" or normalized.startswith("demo/") or "/demo/" in normalized
+    return (
+        normalized == "demo"
+        or normalized.startswith("demo/")
+        or "/demo/" in normalized
+    )
 
 
 def is_staging_synthetic_public_id(public_id: str | None) -> bool:
@@ -217,7 +221,10 @@ def fetch_demo_service_ids(
         return set()
     unique_ids = list(dict.fromkeys(service_ids))
     response = (
-        client.table("services").select("id, portfolio_images").in_("id", unique_ids).execute()
+        client.table("services")
+        .select("id, portfolio_images")
+        .in_("id", unique_ids)
+        .execute()
     )
     excluded_ids: set[str] = set()
     for row in _rows(response):
@@ -232,7 +239,12 @@ def fetch_demo_event_ids(client: Any, event_ids: list[str], *, env: str | None =
     if not event_ids:
         return set()
     unique_ids = list(dict.fromkeys(event_ids))
-    response = client.table("events").select("id, images").in_("id", unique_ids).execute()
+    response = (
+        client.table("events")
+        .select("id, images")
+        .in_("id", unique_ids)
+        .execute()
+    )
     excluded_ids: set[str] = set()
     for row in _rows(response):
         event_id = row.get("id")
@@ -252,11 +264,21 @@ def drop_demo_listing_hits(client: Any, hits: list[Any], *, env: str | None = No
     if not hits:
         return hits
 
-    listing_ids = [hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "listing"]
-    product_ids = [hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "product"]
-    vendor_ids = [hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "vendor"]
-    service_ids = [hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "service"]
-    event_ids = [hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "event"]
+    listing_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "listing"
+    ]
+    product_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "product"
+    ]
+    vendor_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "vendor"
+    ]
+    service_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "service"
+    ]
+    event_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "event"
+    ]
 
     non_genuine_listing_ids = fetch_demo_listing_ids(client, listing_ids, env=env)
     non_genuine_product_ids = fetch_demo_only_product_ids(client, product_ids, env=env)

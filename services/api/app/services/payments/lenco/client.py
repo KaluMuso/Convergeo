@@ -225,7 +225,9 @@ class LencoClient:
                         method, path, headers=headers, content=content, follow_redirects=False
                     )
                 else:
-                    response = await client.request(method, path, headers=headers, content=content)
+                    response = await client.request(
+                        method, path, headers=headers, content=content
+                    )
             except httpx.TimeoutException as exc:
                 last_exc = exc
                 if allow_retry and attempt < attempts - 1:

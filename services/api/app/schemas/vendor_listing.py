@@ -84,7 +84,9 @@ class VendorListing(StrictModel):
 
             minimum_qty = max(self.min_steps, self.moq)
             if self.vendor_capacity_per_week < minimum_qty:
-                raise ValueError("Class E weekly capacity must cover the minimum purchase quantity")
+                raise ValueError(
+                    "Class E weekly capacity must cover the minimum purchase quantity"
+                )
 
         if self.product_class != "E" and self.vendor_capacity_per_week is not None:
             raise ValueError("vendor_capacity_per_week is only valid for Class E listings")

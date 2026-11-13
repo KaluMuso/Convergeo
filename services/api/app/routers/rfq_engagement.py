@@ -34,7 +34,9 @@ class AcceptQuoteResponse(StrictModel):
     replayed: bool
 
 
-def _rate_limit_accept(request: Request, user_id: str, service_client: _ServiceRoleClient) -> None:
+def _rate_limit_accept(
+    request: Request, user_id: str, service_client: _ServiceRoleClient
+) -> None:
     ip = get_client_ip(request)
     allowed_ip, retry_ip = bump_rate_counter(
         scope="rfq_accept_ip",

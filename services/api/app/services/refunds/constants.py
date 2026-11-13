@@ -13,4 +13,6 @@ ACTIVE_REFUND_STATUSES = frozenset(
     }
 )
 TERMINAL_REFUND_STATUSES = frozenset({"completed", "failed"})
-AWAITING_PROVIDER_STATUSES = frozenset({"awaiting_payout", "needs_destination", "manual_review"})
+AWAITING_PROVIDER_STATUSES = frozenset(
+    {"awaiting_payout", "needs_destination", "manual_review"}
+)

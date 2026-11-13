@@ -134,7 +134,9 @@ async def verify_business_buyer(
         verified_at=datetime.now(UTC).isoformat(),
         reviewer_notes=body.reviewer_notes,
     )
-    notified = _enqueue_business_notification(service, buyer=after, template="business_verified")
+    notified = _enqueue_business_notification(
+        service, buyer=after, template="business_verified"
+    )
     recorder.record(
         action="business.verify",
         entity_type="business_buyer",

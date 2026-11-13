@@ -139,7 +139,9 @@ def record_event(
         _validate_uuid(customer_id, "customer_id")
 
     group_sql = (
-        "null" if checkout_group_id is None else sql_uuid(checkout_group_id, "checkout_group_id")
+        "null"
+        if checkout_group_id is None
+        else sql_uuid(checkout_group_id, "checkout_group_id")
     )
     customer_sql = "null" if customer_id is None else sql_uuid(customer_id, "customer_id")
     snapshot_sql = _sql_json(snapshot)
@@ -262,7 +264,9 @@ WHERE checkout_group_id = {group_sql};
         for row in lines_result.rows:
             line_parts = row.split("|")
             if len(line_parts) == 2:
-                snapshot["lines"].append({"listing_id": line_parts[0], "qty": int(line_parts[1])})
+                snapshot["lines"].append(
+                    {"listing_id": line_parts[0], "qty": int(line_parts[1])}
+                )
     return snapshot
 
 

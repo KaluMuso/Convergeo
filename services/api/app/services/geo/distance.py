@@ -39,7 +39,9 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return haversine_km(lat1, lng1, lat2, lng2) * 1000.0
 
 
-def bounding_box(lat: float, lng: float, radius_km: float) -> tuple[float, float, float, float]:
+def bounding_box(
+    lat: float, lng: float, radius_km: float
+) -> tuple[float, float, float, float]:
     """Return ``(min_lat, max_lat, min_lng, max_lng)`` for a square prefilter."""
     if radius_km <= 0:
         raise ValueError("radius_km must be positive")

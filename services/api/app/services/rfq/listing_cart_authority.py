@@ -12,7 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-THREAD_SELECT = "id, customer_id, listing_id, status, quote_price_ngwee, quote_valid_until"
+THREAD_SELECT = (
+    "id, customer_id, listing_id, status, quote_price_ngwee, quote_valid_until"
+)
 
 
 def is_rfq_pinned_line(item: dict[str, Any]) -> bool:
@@ -39,7 +41,10 @@ def fetch_rfq_threads_for_items(
         return {}
 
     response = (
-        service_client.table("rfq_threads").select(THREAD_SELECT).in_("id", thread_ids).execute()
+        service_client.table("rfq_threads")
+        .select(THREAD_SELECT)
+        .in_("id", thread_ids)
+        .execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     threads: dict[str, dict[str, Any]] = {}
@@ -64,8 +69,8 @@ def validate_rfq_pinned_line_authority(
 ) -> tuple[RfqPinnedAuthority | None, str | None, dict[str, Any]]:
     """Validate an RFQ-pinned cart line against the authoritative thread row.
 
-      Returns ``(authority, conflict_code, conflict_details)``. ``conflict_code`` is
-    None when the line is authorized. Details are empty when not applicable.
+    Returns ``(authority, conflict_code, conflict_details)``. ``conflict_code`` is
+  None when the line is authorized. Details are empty when not applicable.
     """
     if thread is None:
         return None, "rfq.not_found", {"rfq_thread_id": rfq_thread_id}
@@ -75,25 +80,17 @@ def validate_rfq_pinned_line_authority(
 
     thread_listing = thread.get("listing_id")
     if thread_listing is None or str(thread_listing) != listing_id:
-        return (
-            None,
-            "rfq.listing_mismatch",
-            {
-                "rfq_thread_id": rfq_thread_id,
-                "listing_id": listing_id,
-            },
-        )
+        return None, "rfq.listing_mismatch", {
+            "rfq_thread_id": rfq_thread_id,
+            "listing_id": listing_id,
+        }
 
     status = str(thread.get("status"))
     if status != "accepted":
-        return (
-            None,
-            "rfq.not_accepted",
-            {
-                "rfq_thread_id": rfq_thread_id,
-                "status": status,
-            },
-        )
+        return None, "rfq.not_accepted", {
+            "rfq_thread_id": rfq_thread_id,
+            "status": status,
+        }
 
     quote_raw = thread.get("quote_price_ngwee")
     if quote_raw is None or int(quote_raw) <= 0:
@@ -101,13 +98,9 @@ def validate_rfq_pinned_line_authority(
 
     authoritative = int(quote_raw)
     if stored_unit_price_ngwee != authoritative:
-        return (
-            None,
-            "cart.price_changed",
-            {
-                "previous_unit_price_ngwee": stored_unit_price_ngwee,
-                "current_unit_price_ngwee": authoritative,
-            },
-        )
+        return None, "cart.price_changed", {
+            "previous_unit_price_ngwee": stored_unit_price_ngwee,
+            "current_unit_price_ngwee": authoritative,
+        }
 
     return RfqPinnedAuthority(quote_price_ngwee=authoritative), None, {}

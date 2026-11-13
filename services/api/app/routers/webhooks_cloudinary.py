@@ -137,7 +137,9 @@ def _extract_poster(payload: dict[str, Any]) -> str | None:
     return None
 
 
-def _reject(service_client: ServiceRoleClient, *, clip_id: str, reason: str) -> Response:
+def _reject(
+    service_client: ServiceRoleClient, *, clip_id: str, reason: str
+) -> Response:
     """Refuse the clip through the guarded transition, so it is audited."""
     logger.info("clip transcode rejected", extra={"clip_id": clip_id, "reason": reason})
     try:

@@ -290,7 +290,9 @@ def sign_kyc_documents(
             result = bucket.create_signed_url(path, SIGNED_URL_TTL_SECONDS)
             if isinstance(result, dict):
                 signed_url = (
-                    result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
+                    result.get("signedURL")
+                    or result.get("signedUrl")
+                    or result.get("signed_url")
                 )
                 expires_in = result.get("expires_in") or result.get("expiresIn")
                 if isinstance(expires_in, int | float):
@@ -322,7 +324,9 @@ def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchOut | 
         phone=str(payload.get("phone", "")),
         operator=str(payload.get("operator", "")),
         resolved_name=(
-            str(payload["resolved_name"]) if isinstance(payload.get("resolved_name"), str) else None
+            str(payload["resolved_name"])
+            if isinstance(payload.get("resolved_name"), str)
+            else None
         ),
         legal_name=str(payload.get("legal_name", "")),
         match_score=float(payload.get("match_score", 0.0)),
@@ -531,7 +535,12 @@ def _upsert_verified_licence_on_approve(
         "reviewer_notes": body.reviewer_notes,
     }
     if row is not None:
-        (_table(service_client, "vendor_licences").update(payload).eq("id", row["id"]).execute())
+        (
+            _table(service_client, "vendor_licences")
+            .update(payload)
+            .eq("id", row["id"])
+            .execute()
+        )
     else:
         _table(service_client, "vendor_licences").insert(payload).execute()
 

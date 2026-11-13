@@ -294,8 +294,12 @@ def get_collection(
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> CollectionOut:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    row = _own_collection(service_client, collection_id=collection_id, vendor_id=str(vendor["id"]))
-    return _to_collection_out(row, items=_load_items(service_client, collection_id=collection_id))
+    row = _own_collection(
+        service_client, collection_id=collection_id, vendor_id=str(vendor["id"])
+    )
+    return _to_collection_out(
+        row, items=_load_items(service_client, collection_id=collection_id)
+    )
 
 
 @router.patch("/{collection_id}", response_model=CollectionOut)

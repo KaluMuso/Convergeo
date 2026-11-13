@@ -93,7 +93,9 @@ def explain(clip: dict[str, Any], *, now: datetime | None = None) -> ScoreBreakd
     """Score one clip and show the working."""
     reference = now or datetime.now(UTC)
     stamp = _parse_timestamp(clip.get("published_at"))
-    age_hours = max(0.0, (reference - stamp).total_seconds() / 3600.0) if stamp else float("inf")
+    age_hours = (
+        max(0.0, (reference - stamp).total_seconds() / 3600.0) if stamp else float("inf")
+    )
 
     likes = max(0, int(clip.get("like_count") or 0))
     orders = max(0, int(clip.get("orders_attributed") or 0))
@@ -160,11 +162,9 @@ def rank(
             alternative = _next_eligible(
                 scored, taken, per_vendor, max_per_vendor, avoid_category=category
             )
-            if (
-                alternative is not None
-                and scores.get(str(alternative.get("id") or ""), 0.0)
-                >= scores.get(str(chosen.get("id") or ""), 0.0) * CATEGORY_SPREAD_PENALTY
-            ):
+            if alternative is not None and scores.get(
+                str(alternative.get("id") or ""), 0.0
+            ) >= scores.get(str(chosen.get("id") or ""), 0.0) * CATEGORY_SPREAD_PENALTY:
                 chosen = alternative
                 category = _category_of(chosen)
 
@@ -177,7 +177,9 @@ def rank(
     # Everything not placed on this page follows, still in score order. Nothing is
     # discarded and nothing appears twice: a vendor's third clip is *deferred*,
     # and a clip skipped by the category nudge is picked up on the next pass.
-    return page + [clip for _breakdown, clip in scored if str(clip.get("id") or "") not in taken]
+    return page + [
+        clip for _breakdown, clip in scored if str(clip.get("id") or "") not in taken
+    ]
 
 
 def _category_of(clip: dict[str, Any]) -> str | None:

@@ -106,7 +106,11 @@ def _read_platform_config_int(client: ServiceClient, key: str, default: int) -> 
 
     try:
         response = (
-            client.table("platform_config").select("value").eq("key", key).maybe_single().execute()
+            client.table("platform_config")
+            .select("value")
+            .eq("key", key)
+            .maybe_single()
+            .execute()
         )
         raw_value = _single_row(response)
         parsed = _parse_config_int(raw_value.get("value") if raw_value else None, default)

@@ -29,7 +29,10 @@ def _resolve_vendor_ids(client: Any, hits: list[SearchHit]) -> dict[str, str]:
     listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
     if listing_ids:
         response = (
-            client.table("vendor_listings").select("id, vendor_id").in_("id", listing_ids).execute()
+            client.table("vendor_listings")
+            .select("id, vendor_id")
+            .in_("id", listing_ids)
+            .execute()
         )
         for row in _rows(response):
             listing_id = row.get("id")
@@ -39,7 +42,9 @@ def _resolve_vendor_ids(client: Any, hits: list[SearchHit]) -> dict[str, str]:
 
     service_ids = [hit.entity_id for hit in hits if hit.entity_kind == "service"]
     if service_ids:
-        response = client.table("services").select("id, vendor_id").in_("id", service_ids).execute()
+        response = (
+            client.table("services").select("id, vendor_id").in_("id", service_ids).execute()
+        )
         for row in _rows(response):
             service_id = row.get("id")
             vendor_id = row.get("vendor_id")
@@ -64,7 +69,9 @@ def _resolve_vendor_ids(client: Any, hits: list[SearchHit]) -> dict[str, str]:
 
     event_ids = [hit.entity_id for hit in hits if hit.entity_kind == "event"]
     if event_ids:
-        response = client.table("events").select("id, vendor_id").in_("id", event_ids).execute()
+        response = (
+            client.table("events").select("id, vendor_id").in_("id", event_ids).execute()
+        )
         for row in _rows(response):
             event_id = row.get("id")
             vendor_id = row.get("vendor_id")

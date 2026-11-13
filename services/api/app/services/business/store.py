@@ -64,7 +64,10 @@ def upsert_application(
         "verified_at": None,
     }
     response = (
-        service.client.table("business_buyers").update(update_row).eq("user_id", user_id).execute()
+        service.client.table("business_buyers")
+        .update(update_row)
+        .eq("user_id", user_id)
+        .execute()
     )
     row = _row_from_response(response)
     return row if row is not None else {**existing, **update_row}
@@ -107,7 +110,10 @@ def set_decision(
         "reviewer_notes": reviewer_notes,
     }
     response = (
-        service.client.table("business_buyers").update(update_row).eq("id", buyer_id).execute()
+        service.client.table("business_buyers")
+        .update(update_row)
+        .eq("id", buyer_id)
+        .execute()
     )
     row = _row_from_response(response)
     if row is None:

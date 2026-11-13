@@ -10,10 +10,10 @@ from app.settings import Settings, get_settings
 class SupabaseServiceClient:
     """Server-side Supabase client wrapper.
 
-      **SECURITY:** This client uses the Supabase **service-role** key. It is server-only,
-    must never be exposed to browsers or mobile clients, and bypasses Row Level Security.
-    Every caller is responsible for performing its own authorization checks before reading
-    or mutating data.
+    **SECURITY:** This client uses the Supabase **service-role** key. It is server-only,
+  must never be exposed to browsers or mobile clients, and bypasses Row Level Security.
+  Every caller is responsible for performing its own authorization checks before reading
+  or mutating data.
     """
 
     def __init__(self, client: Client) -> None:

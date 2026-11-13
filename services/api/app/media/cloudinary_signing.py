@@ -20,9 +20,7 @@ def parse_cloudinary_url(url: str) -> tuple[str, str, str]:
     """Parse cloudinary://<api_key>:<api_secret>@<cloud_name> into credentials."""
     match = CLOUDINARY_URL_PATTERN.match(url.strip())
     if not match:
-        raise CloudinaryUrlError(
-            "CLOUDINARY_URL must match cloudinary://<api_key>:<api_secret>@<cloud_name>"
-        )
+        raise CloudinaryUrlError("CLOUDINARY_URL must match cloudinary://<api_key>:<api_secret>@<cloud_name>")
 
     cloud_name = unquote(match.group("cloud_name"))
     api_key = unquote(match.group("api_key"))
@@ -36,7 +34,9 @@ def parse_cloudinary_url(url: str) -> tuple[str, str, str]:
 def sign_upload_parameters(params: dict[str, Any], api_secret: str) -> str:
     """Compute Cloudinary's SHA-1 upload signature for the given parameters."""
     serialized = [
-        f"{key}={value}" for key, value in params.items() if value is not None and value != ""
+        f"{key}={value}"
+        for key, value in params.items()
+        if value is not None and value != ""
     ]
     to_sign = "&".join(sorted(serialized)) + api_secret
     return hashlib.sha1(to_sign.encode("utf-8")).hexdigest()

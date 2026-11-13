@@ -400,7 +400,10 @@ def _fetch_response_tiers(
         return {}
 
     vendors_response = (
-        client.table("vendors").select("id, caps_snapshot").in_("id", vendor_ids).execute()
+        client.table("vendors")
+        .select("id, caps_snapshot")
+        .in_("id", vendor_ids)
+        .execute()
     )
     caps_by_vendor: dict[str, dict[str, Any] | None] = {}
     for row in _rows(vendors_response):
@@ -419,7 +422,9 @@ def _fetch_response_tiers(
 
     jobs_by_id: dict[str, dict[str, Any]] = {}
     if job_ids:
-        jobs_response = client.table("jobs").select("id, created_at").in_("id", job_ids).execute()
+        jobs_response = (
+            client.table("jobs").select("id, created_at").in_("id", job_ids).execute()
+        )
         for row in _rows(jobs_response):
             jobs_by_id[str(row["id"])] = row
 
@@ -565,7 +570,9 @@ def build_browse_response(
     service_ids = [str(row.get("id")) for row in rows if row.get("id")]
     demo_service_ids = fetch_demo_service_ids(client, service_ids)
     public_rows = [row for row in rows if str(row.get("id") or "") not in demo_service_ids]
-    vendor_ids = list({str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")})
+    vendor_ids = list(
+        {str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")}
+    )
     tiers = _fetch_response_tiers(client, vendor_ids)
 
     items = [
@@ -661,7 +668,9 @@ def create_vendor_service(
 ) -> ServiceMutationResponse:
     vendor = _load_vendor_for_owner(service_client, user.id)
     title = _validated_title(payload.title)
-    guard = screen_listing(title=title, description=payload.description, category=payload.category)
+    guard = screen_listing(
+        title=title, description=payload.description, category=payload.category
+    )
     if not guard.allowed:
         raise AppError(
             code="prohibited_listing",
@@ -745,7 +754,10 @@ def update_vendor_service(
         )
 
     response = (
-        service_client.client.table("services").update(updates).eq("id", service_id).execute()
+        service_client.client.table("services")
+        .update(updates)
+        .eq("id", service_id)
+        .execute()
     )
     row = _single_row(response)
     if row is None:

@@ -91,7 +91,7 @@ INSERT INTO public.search_query_log (
   {sql_literal(term)},
   {sql_literal(normalized)},
   {_sql_json(entity_counts)},
-  {"true" if zero_result else "false"},
+  {'true' if zero_result else 'false'},
   {max(0, int(usd_micros))},
   {_user_id_sql(user_id)}
 );
@@ -170,7 +170,10 @@ SELECT count(*)::text FROM trimmed;
 
 
 def _window_predicate(days: int) -> str:
-    return f"created_at >= timezone('utc', now()) - (interval '1 day' * {_clamp_window_days(days)})"
+    return (
+        "created_at >= timezone('utc', now()) - "
+        f"(interval '1 day' * {_clamp_window_days(days)})"
+    )
 
 
 def top_terms(

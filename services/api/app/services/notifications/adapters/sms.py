@@ -186,7 +186,11 @@ class AfricasTalkingSmsAdapter:
                     message=f"AT HTTP {response.status_code}",
                 )
 
-            recipients = parsed.get("SMSMessageData", {}).get("Recipients", []) if parsed else []
+            recipients = (
+                parsed.get("SMSMessageData", {}).get("Recipients", [])
+                if parsed
+                else []
+            )
             if isinstance(recipients, list) and recipients:
                 first = recipients[0]
                 if isinstance(first, dict):

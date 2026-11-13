@@ -101,7 +101,9 @@ def _reserved_payout_ngwee(service_client: ServiceRoleClient, vendor_id: str) ->
     )
     rows = _rows(response)
     return sum(
-        int(row.get("amount_ngwee", 0)) for row in rows if _payout_reserves_vendor_balance(row)
+        int(row.get("amount_ngwee", 0))
+        for row in rows
+        if _payout_reserves_vendor_balance(row)
     )
 
 

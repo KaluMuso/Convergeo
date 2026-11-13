@@ -483,7 +483,9 @@ def _enqueue_items(
     return enqueued, skipped
 
 
-def _enqueue_low_stock_items(client: Any, items: list[dict[str, Any]]) -> tuple[int, int, int]:
+def _enqueue_low_stock_items(
+    client: Any, items: list[dict[str, Any]]
+) -> tuple[int, int, int]:
     """Continue past individual insert failures, retaining the outbox dedupe gate."""
     enqueued = skipped = failed = 0
     for index, item in enumerate(items):

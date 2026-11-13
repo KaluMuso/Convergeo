@@ -79,7 +79,9 @@ def verify_invoice_token(token: str, *, order_id: str) -> tuple[str, str]:
     try:
         payload = base64.urlsafe_b64decode(encoded + padding).decode("utf-8")
     except (ValueError, UnicodeDecodeError) as exc:
-        raise AppError(code="forbidden", message="Invalid download token", http_status=403) from exc
+        raise AppError(
+            code="forbidden", message="Invalid download token", http_status=403
+        ) from exc
     expected = hmac.new(
         _signing_secret().encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
     ).hexdigest()
@@ -94,7 +96,9 @@ def verify_invoice_token(token: str, *, order_id: str) -> tuple[str, str]:
     try:
         expires_at = int(expires_raw)
     except ValueError as exc:
-        raise AppError(code="forbidden", message="Invalid download token", http_status=403) from exc
+        raise AppError(
+            code="forbidden", message="Invalid download token", http_status=403
+        ) from exc
     if expires_at < int(time.time()):
         raise AppError(code="forbidden", message="Download link expired", http_status=403)
     return subject_id, role
@@ -164,7 +168,9 @@ def _load_invoice_snapshot(
     kind: str | None,
 ) -> dict[str, Any]:
     query = (
-        service.client.table("invoices").select("id, series, no, snapshot").eq("order_id", order_id)
+        service.client.table("invoices")
+        .select("id, series, no, snapshot")
+        .eq("order_id", order_id)
     )
     if kind is not None:
         series = _KIND_TO_SERIES.get(kind)

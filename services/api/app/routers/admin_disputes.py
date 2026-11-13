@@ -230,7 +230,9 @@ def sign_evidence_documents(
             result = bucket.create_signed_url(path, SIGNED_URL_TTL_SECONDS)
             if isinstance(result, dict):
                 signed_url = (
-                    result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
+                    result.get("signedURL")
+                    or result.get("signedUrl")
+                    or result.get("signed_url")
                 )
                 expires_in = result.get("expires_in") or result.get("expiresIn")
                 if isinstance(expires_in, int | float):
@@ -333,7 +335,10 @@ def _build_order_context(
     profile = _load_profile_row(service_client, str(order_row["customer_id"]))
 
     items_response = (
-        _table(service_client, "order_items").select("*").eq("order_id", order_id).execute()
+        _table(service_client, "order_items")
+        .select("*")
+        .eq("order_id", order_id)
+        .execute()
     )
     items = [
         OrderItemOut(

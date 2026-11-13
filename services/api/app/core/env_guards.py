@@ -100,15 +100,18 @@ def assert_staging_project_target(
 ) -> None:
     """Refuse production and, when required, any non-canonical staging project ref.
 
-    Synthetic seed/cleanup must only run against ``STAGING_SUPABASE_PROJECT_REF``.
-    There is intentionally no generic ``ALLOW_*`` override environment variable.
+  Synthetic seed/cleanup must only run against ``STAGING_SUPABASE_PROJECT_REF``.
+  There is intentionally no generic ``ALLOW_*`` override environment variable.
     """
     if not project_ref:
-        raise StagingIsolationError("staging project ref is required for synthetic seed/cleanup")
+        raise StagingIsolationError(
+            "staging project ref is required for synthetic seed/cleanup"
+        )
     normalized = project_ref.strip().lower()
     if normalized == PROD_SUPABASE_PROJECT_REF:
         raise StagingIsolationError(
-            f"refusing production Supabase project ref ({PROD_SUPABASE_PROJECT_REF})"
+            "refusing production Supabase project ref "
+            f"({PROD_SUPABASE_PROJECT_REF})"
         )
     if require_exact and normalized != STAGING_SUPABASE_PROJECT_REF:
         raise StagingIsolationError(

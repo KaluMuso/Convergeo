@@ -173,7 +173,10 @@ def _existing(
 
 def _count(service_client: ServiceRoleClient, session_id: str) -> int:
     response = (
-        service_client.client.table(MEDIA_TABLE).select("id").eq("session_id", session_id).execute()
+        service_client.client.table(MEDIA_TABLE)
+        .select("id")
+        .eq("session_id", session_id)
+        .execute()
     )
     return len(_rows(response))
 

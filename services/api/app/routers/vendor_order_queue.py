@@ -177,7 +177,10 @@ def compute_takings_ngwee(
 def _load_vendor_orders(service_client: _ServiceRoleClient, vendor_id: str) -> list[dict[str, Any]]:
     response = (
         service_client.client.table("orders")
-        .select("id, status, fulfilment, delivery_fee_ngwee, created_at, cod, checkout_group_id")
+        .select(
+            "id, status, fulfilment, delivery_fee_ngwee, created_at, "
+            "cod, checkout_group_id"
+        )
         .eq("vendor_id", vendor_id)
         .order("created_at", desc=True)
         .execute()
@@ -249,7 +252,9 @@ def _build_queue_item(
     fulfilment = str(order_row["fulfilment"])
     cod = bool(order_row.get("cod"))
     checkout_group_id = str(order_row.get("checkout_group_id") or "")
-    paid = cod or (checkout_group_id in (paid_checkout_ids or set()))
+    paid = cod or (
+        checkout_group_id in (paid_checkout_ids or set())
+    )
     return OrderQueueItem(
         id=order_id,
         status=status,

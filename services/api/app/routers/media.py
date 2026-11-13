@@ -187,7 +187,9 @@ async def sign_upload(
         eager=str(signed["eager"]) if signed.get("eager") else None,
         eager_async=str(signed["eager_async"]) if signed.get("eager_async") else None,
         eager_notification_url=(
-            str(signed["eager_notification_url"]) if signed.get("eager_notification_url") else None
+            str(signed["eager_notification_url"])
+            if signed.get("eager_notification_url")
+            else None
         ),
         notification_url=(
             str(signed["notification_url"]) if signed.get("notification_url") else None

@@ -675,7 +675,10 @@ async def submit_vendor_reply(
         "vendor_reply_at": _iso(now),
     }
     update_response = (
-        service_client.client.table("reviews").update(update_payload).eq("id", review_id).execute()
+        service_client.client.table("reviews")
+        .update(update_payload)
+        .eq("id", review_id)
+        .execute()
     )
     updated_rows = _rows(update_response)
     if not updated_rows:

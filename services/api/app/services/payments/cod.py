@@ -152,7 +152,9 @@ LIMIT 1;
     return result.rows[0]
 
 
-def _cod_receivable_opened_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
+def _cod_receivable_opened_template(
+    *, receivable_ngwee: int, vendor_id: str
+) -> TemplateResult:
     """Order-time COD receivable paired with escrow (prepaid pipeline without Lenco).
 
     Debit cod_receivable (vendor) (+receivable).
@@ -168,7 +170,9 @@ def _cod_receivable_opened_template(*, receivable_ngwee: int, vendor_id: str) ->
     return TemplateResult(kind=COD_RECEIVABLE_OPENED, legs=legs)
 
 
-def _cod_receivable_reversed_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
+def _cod_receivable_reversed_template(
+    *, receivable_ngwee: int, vendor_id: str
+) -> TemplateResult:
     """Reverse an open COD receivable on refused/uncollected delivery.
 
     Debit escrow (+receivable).
