@@ -16,6 +16,7 @@ from app.services.vendors.hours import (
     is_open_at,
     next_open_at,
     parse_span,
+    weekly_schedule,
 )
 
 # Monday 2026-08-03, in Africa/Lusaka.
@@ -143,3 +144,42 @@ class TestNextOpenAt:
         'hours not published' rather than promise an opening."""
         assert next_open_at(None, MON) is None
         assert next_open_at({"mon": "garbage"}, MON) is None
+
+
+class TestEditorObjectShape:
+    """Business Home: the vendor profile editor saves {open, close, closed}."""
+
+    def test_object_span_is_parsed(self) -> None:
+        assert parse_span({"open": "09:00", "close": "17:00", "closed": False}) == (
+            datetime(2026, 1, 1, 9, 0).time(),
+            datetime(2026, 1, 1, 17, 0).time(),
+        )
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            {"open": "09:00", "close": "17:00", "closed": True},
+            {"open": "09:00"},
+            {"open": 9, "close": 17},
+            {},
+        ],
+    )
+    def test_closed_or_incomplete_object_fails_closed(self, raw: object) -> None:
+        assert parse_span(raw) is None
+
+    def test_object_shape_drives_open_now(self) -> None:
+        hours = {"mon": {"open": "09:00", "close": "17:00", "closed": False}}
+        assert is_open_at(hours, MON) is True
+
+    def test_weekly_schedule_normalises_both_shapes_in_week_order(self) -> None:
+        hours = {
+            "sat": "09:00-13:00",
+            "mon": {"open": "08:00", "close": "24:00", "closed": False},
+            "tue": {"open": "08:00", "close": "17:00", "closed": True},
+            "wed": "junk",
+        }
+        assert weekly_schedule(hours) == [
+            ("mon", "08:00", "24:00"),
+            ("sat", "09:00", "13:00"),
+        ]
+        assert weekly_schedule(None) == []

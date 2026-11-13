@@ -496,9 +496,7 @@ class TestVendorProfile:
         response = client.get("/directory/tech-hub-lusaka")
 
         assert response.status_code == 200
-        listing = next(
-            item for item in response.json()["listings"] if item["id"] == standalone_id
-        )
+        listing = next(item for item in response.json()["listings"] if item["id"] == standalone_id)
         assert listing["title"] == "Custom chitenge curtains"
         assert listing["product_slug"] is None
         assert listing["product_class"] == "E"
@@ -847,3 +845,184 @@ class TestOpenNowFilter:
     def test_no_branches_is_not_open(self) -> None:
         assert directory_module._any_branch_open_now({"vendor_locations": []}) is False
         assert directory_module._any_branch_open_now({}) is False
+
+
+class TestBusinessHome:
+    """Business Home (/v/[slug]): customer-first fields on the vendor profile."""
+
+    def _other_shop_listing(
+        self,
+        *,
+        listing_id: str,
+        vendor_id: str = OTHER_VENDOR_UUID,
+        price_ngwee: int,
+        vendor_status: str = "active",
+        wholesale: bool = False,
+    ) -> dict[str, Any]:
+        return {
+            "id": listing_id,
+            "vendor_id": vendor_id,
+            "product_id": PRODUCT_A,
+            "price_ngwee": price_ngwee,
+            "status": "active",
+            "wholesale": wholesale,
+            "vendors": {"status": vendor_status},
+        }
+
+    def test_listing_reports_other_shops_and_lowest_price(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendor_listings[0]["vendors"] = {"status": "active"}
+        store.vendor_listings += [
+            self._other_shop_listing(listing_id="o-1", price_ngwee=430_000),
+            self._other_shop_listing(listing_id="o-2", price_ngwee=470_000),
+            # Suspended shop and wholesale-only offers never count for a guest.
+            self._other_shop_listing(
+                listing_id="o-3",
+                vendor_id=SUSPENDED_VENDOR_ID,
+                price_ngwee=100_000,
+                vendor_status="suspended",
+            ),
+            self._other_shop_listing(
+                listing_id="o-4",
+                vendor_id="dddddddd-dddd-dddd-dddd-dddddddddddd",
+                price_ngwee=90_000,
+                wholesale=True,
+            ),
+        ]
+
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        listing = next(item for item in payload["listings"] if item["id"] == LISTING_A)
+        assert listing["other_offers_count"] == 1
+        assert listing["other_min_price_ngwee"] == 430_000
+
+    def test_own_listing_alone_has_no_compare_offers(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        assert payload["listings"][0]["other_offers_count"] == 0
+        assert payload["listings"][0]["other_min_price_ngwee"] is None
+
+    def test_lusaka_branch_offers_delivery_and_pickup(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        listing = client.get("/directory/tech-hub-lusaka").json()["listings"][0]
+        assert listing["delivery_available"] is True
+        assert listing["pickup_available"] is True
+
+    def test_out_of_metro_branch_is_pickup_only(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors = [_vendor_row(landmark="Kitwe Market", lat=-12.8, lng=28.2)]
+        listing = client.get("/directory/tech-hub-lusaka").json()["listings"][0]
+        assert listing["delivery_available"] is False
+        assert listing["pickup_available"] is True
+
+    def test_branch_schedule_is_normalised_for_display(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors[0]["vendor_locations"][0]["hours"] = {
+            "tue": {"open": "08:00", "close": "17:00", "closed": False},
+            "sun": {"open": "08:00", "close": "17:00", "closed": True},
+            "mon": "09:00-17:00",
+        }
+        location = client.get("/directory/tech-hub-lusaka").json()["vendor"]["location"]
+        assert location["schedule"] == [
+            {"day": "mon", "opens": "09:00", "closes": "17:00"},
+            {"day": "tue", "opens": "08:00", "closes": "17:00"},
+        ]
+
+    def test_clips_and_offers_hidden_while_flags_off(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.video_clips = [  # type: ignore[attr-defined]
+            {
+                "id": "clip-1",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "status": "published",
+                "poster_url": "https://res.cloudinary.com/x/poster.jpg",
+                "caption": "New stock",
+                "duration_s": 20,
+                "published_at": "2026-11-01T00:00:00Z",
+            }
+        ]
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        assert payload["clips"] == []
+        assert payload["offers_enabled"] is False
+
+    def test_clips_row_shows_only_published_clips_when_flag_on(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.feature_flags = [  # type: ignore[attr-defined]
+            {"flag": "clips", "enabled": True},
+            {"flag": "business_offers", "enabled": True},
+        ]
+        store.video_clips = [  # type: ignore[attr-defined]
+            {
+                "id": "clip-1",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "status": "published",
+                "poster_url": "https://res.cloudinary.com/x/poster.jpg",
+                "caption": "New stock",
+                "duration_s": 20,
+                "published_at": "2026-11-01T00:00:00Z",
+            },
+            {
+                "id": "clip-draft",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "status": "pending_review",
+                "published_at": None,
+            },
+            {
+                "id": "clip-other",
+                "vendor_id": OTHER_VENDOR_UUID,
+                "status": "published",
+                "published_at": "2026-11-02T00:00:00Z",
+            },
+        ]
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        assert [clip["id"] for clip in payload["clips"]] == ["clip-1"]
+        assert payload["offers_enabled"] is True
+
+    def test_services_carry_fixed_booking_price_only_when_bookable(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.services = [
+            {
+                "id": "svc-1",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title": "Phone screen repair",
+                "category": "repairs",
+                "from_price_ngwee": 25_000,
+                "portfolio_images": [],
+                "status": "active",
+                "service_area": "Lusaka",
+                "bookable": True,
+                "booking_price_ngwee": 30_000,
+            },
+            {
+                "id": "svc-2",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title": "Data recovery",
+                "category": "repairs",
+                "from_price_ngwee": None,
+                "portfolio_images": [],
+                "status": "active",
+                "bookable": False,
+                "booking_price_ngwee": 99_000,
+            },
+        ]
+        services = {s["id"]: s for s in client.get("/directory/tech-hub-lusaka").json()["services"]}
+        assert services["svc-1"]["bookable"] is True
+        assert services["svc-1"]["booking_price_ngwee"] == 30_000
+        assert services["svc-1"]["service_area"] == "Lusaka"
+        assert services["svc-2"]["bookable"] is False
+        assert services["svc-2"]["booking_price_ngwee"] is None

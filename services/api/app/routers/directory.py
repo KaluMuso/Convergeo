@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.routers.comparison import is_lusaka_delivery_available
 from app.services.brand_theme import read_brand_theme
 from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
@@ -14,7 +15,12 @@ from app.services.listings.demo import (
     fetch_demo_listing_ids,
     fetch_demo_only_vendor_ids,
 )
-from app.services.vendors.hours import LUSAKA_TZ, is_open_at, next_open_at
+from app.services.vendors.hours import (
+    LUSAKA_TZ,
+    is_open_at,
+    next_open_at,
+    weekly_schedule,
+)
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -81,6 +87,12 @@ class DirectoryListResponse(BaseModel):
     page_size: int
 
 
+class DaySchedule(BaseModel):
+    day: Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+    opens: str
+    closes: str
+
+
 class VendorLocationDetail(BaseModel):
     landmark: str
     lat: float
@@ -91,6 +103,9 @@ class VendorLocationDetail(BaseModel):
     # hours — distinct from `False`, which means it is genuinely shut now.
     open_now: bool | None = None
     next_open_at: datetime | None = None
+    #: Business Home: normalised open days (Mon→Sun) whatever shape `hours` is
+    #: stored in, so the storefront never renders raw JSON.
+    schedule: list[DaySchedule] = Field(default_factory=list)
 
 
 class DirectoryListingItem(BaseModel):
@@ -110,6 +125,15 @@ class DirectoryListingItem(BaseModel):
     #: Storefront category chips; None for standalone (non-canonical) listings.
     category_slug: str | None = None
     category_name: str | None = None
+    #: Business Home (customer-first): same rule as the comparison/PLP paths —
+    #: Lusaka-metro delivery from the shop's first branch, pickup when the shop
+    #: has a mappable branch.
+    delivery_available: bool = False
+    pickup_available: bool = False
+    #: Other active shops selling the same canonical product ("Compare with
+    #: other shops"). Zero for standalone listings.
+    other_offers_count: int = 0
+    other_min_price_ngwee: int | None = None
 
 
 class ReviewsSummary(BaseModel):
@@ -143,6 +167,10 @@ class VendorServiceItem(BaseModel):
     category: str | None = None
     from_price_ngwee: int | None = None
     image_public_id: str | None = None
+    service_area: str | None = None
+    #: Fixed-price "book now" services (0055); otherwise quote-based.
+    bookable: bool = False
+    booking_price_ngwee: int | None = None
 
 
 class VendorEventItem(BaseModel):
@@ -152,12 +180,24 @@ class VendorEventItem(BaseModel):
     image_public_id: str | None = None
 
 
+class VendorClipItem(BaseModel):
+    id: str
+    poster_url: str | None = None
+    caption: str | None = None
+    duration_s: int | None = None
+
+
 class VendorProfileResponse(BaseModel):
     vendor: VendorProfileDetail
     listings: list[DirectoryListingItem] = Field(default_factory=list)
     services: list[VendorServiceItem] = Field(default_factory=list)
     events: list[VendorEventItem] = Field(default_factory=list)
     reviews_summary: ReviewsSummary
+    #: Business Home clips row — always empty while the `clips` flag is off.
+    clips: list[VendorClipItem] = Field(default_factory=list)
+    #: Business Home offers block. No coupons table exists yet, so this only
+    #: reflects the `business_offers` flag (default off) and `offers` stays [].
+    offers_enabled: bool = False
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -251,6 +291,10 @@ def _parse_locations(row: dict[str, Any]) -> list[VendorLocationDetail]:
                 # the data cannot support.
                 open_now=is_open_at(hours, now) if has_hours else None,
                 next_open_at=next_open_at(hours, now) if has_hours else None,
+                schedule=[
+                    DaySchedule(day=cast(Any, day), opens=opens, closes=closes)
+                    for day, opens, closes in weekly_schedule(hours)
+                ],
             )
         )
     return parsed
@@ -679,7 +723,10 @@ def _resolve_previous_slug(client: Any, slug: str) -> str | None:
 def _fetch_vendor_services(client: Any, vendor_id: str) -> list[VendorServiceItem]:
     response = (
         client.table("services")
-        .select("id, title, category, from_price_ngwee, portfolio_images, status")
+        .select(
+            "id, title, category, from_price_ngwee, portfolio_images, status, "
+            "service_area, bookable, booking_price_ngwee"
+        )
         .eq("vendor_id", vendor_id)
         .eq("status", "active")
         .execute()
@@ -698,9 +745,115 @@ def _fetch_vendor_services(client: Any, vendor_id: str) -> list[VendorServiceIte
                 category=(str(row.get("category")) if row.get("category") else None),
                 from_price_ngwee=(int(price) if price is not None else None),
                 image_public_id=(str(image) if isinstance(image, str) and image else None),
+                service_area=(str(row["service_area"]) if row.get("service_area") else None),
+                bookable=bool(row.get("bookable")),
+                booking_price_ngwee=(
+                    int(row["booking_price_ngwee"])
+                    if row.get("bookable") and row.get("booking_price_ngwee") is not None
+                    else None
+                ),
             )
         )
     return items
+
+
+def _feature_flag_enabled(client: Any, flag: str) -> bool:
+    """Fail-closed read of `feature_flags` (same posture as services/clips/flags.py)."""
+    try:
+        response = (
+            client.table("feature_flags")
+            .select("enabled")
+            .eq("flag", flag)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return False
+    data = getattr(response, "data", None)
+    if isinstance(data, list):
+        data = data[0] if data else None
+    return bool(isinstance(data, dict) and data.get("enabled"))
+
+
+CLIPS_ROW_LIMIT = 6
+
+
+def _fetch_vendor_clips(client: Any, vendor_id: str) -> list[VendorClipItem]:
+    """Published clips for the Business Home row — only when `clips` is on."""
+    if not _feature_flag_enabled(client, "clips"):
+        return []
+    try:
+        response = (
+            client.table("video_clips")
+            .select("id, poster_url, caption, duration_s, status")
+            .eq("vendor_id", vendor_id)
+            .eq("status", "published")
+            .order("published_at", desc=True)
+            .limit(CLIPS_ROW_LIMIT)
+            .execute()
+        )
+    except Exception:
+        return []
+    clips: list[VendorClipItem] = []
+    for row in response.data or []:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        duration = row.get("duration_s")
+        clips.append(
+            VendorClipItem(
+                id=str(row["id"]),
+                poster_url=(str(row["poster_url"]) if row.get("poster_url") else None),
+                caption=(str(row["caption"]) if row.get("caption") else None),
+                duration_s=int(duration) if isinstance(duration, int) else None,
+            )
+        )
+    return clips
+
+
+def _other_offers_by_product(
+    client: Any,
+    vendor_id: str,
+    product_ids: list[str],
+    *,
+    include_wholesale: bool,
+) -> dict[str, tuple[int, int]]:
+    """{product_id: (other_shop_count, lowest_other_price_ngwee)}.
+
+    "Never trap the customer on one shop": counts other *active* shops' active
+    listings of the same canonical product, with the same wholesale and demo
+    gating as the comparison endpoint.
+    """
+    if not product_ids:
+        return {}
+    response = (
+        client.table("vendor_listings")
+        .select("id, product_id, vendor_id, price_ngwee, wholesale, vendors!inner(status)")
+        .in_("product_id", product_ids)
+        .eq("status", "active")
+        .execute()
+    )
+    rows = [
+        row
+        for row in (response.data or [])
+        if isinstance(row, dict)
+        and str(row.get("vendor_id") or "") != vendor_id
+        and (include_wholesale or not row.get("wholesale"))
+        and isinstance(row.get("vendors"), dict)
+        and row["vendors"].get("status") == "active"
+    ]
+    demo_ids = fetch_demo_listing_ids(client, [str(row["id"]) for row in rows if row.get("id")])
+    shops: dict[str, set[str]] = {}
+    lowest: dict[str, int] = {}
+    for row in rows:
+        if str(row.get("id") or "") in demo_ids:
+            continue
+        product_id = str(row.get("product_id") or "")
+        price = row.get("price_ngwee")
+        if not product_id or not isinstance(price, int):
+            continue
+        shops.setdefault(product_id, set()).add(str(row.get("vendor_id")))
+        lowest[product_id] = min(price, lowest.get(product_id, price))
+    return {pid: (len(vendors), lowest[pid]) for pid, vendors in shops.items()}
 
 
 def _fetch_vendor_events(client: Any, vendor_id: str) -> list[VendorEventItem]:
@@ -811,6 +964,20 @@ def get_vendor_profile(
                 if isinstance(public_id, str) and public_id:
                     images_by_listing[listing_id] = public_id
 
+    first_branch = locations[0] if locations else None
+    delivery_available = bool(
+        first_branch and is_lusaka_delivery_available(first_branch.lat, first_branch.lng)
+    )
+    pickup_available = first_branch is not None
+    other_offers = _other_offers_by_product(
+        client,
+        vendor_id,
+        sorted(
+            {str(item["product_id"]) for item in listing_rows if item.get("product_id") is not None}
+        ),
+        include_wholesale=include_wholesale,
+    )
+
     listings: list[DirectoryListingItem] = []
     for listing_row in listing_rows:
         product = listing_row.get("products")
@@ -833,6 +1000,7 @@ def get_vendor_profile(
             str(category["name"]) if isinstance(category, dict) and category.get("name") else None
         )
         fulfilment_mode = str(listing_row.get("fulfilment_mode") or "stocked")
+        other = other_offers.get(str(listing_row.get("product_id") or ""))
         listings.append(
             DirectoryListingItem(
                 id=str(listing_row["id"]),
@@ -866,6 +1034,10 @@ def get_vendor_profile(
                     ),
                 ),
                 image_public_id=images_by_listing.get(str(listing_row["id"])),
+                delivery_available=delivery_available,
+                pickup_available=pickup_available,
+                other_offers_count=other[0] if other else 0,
+                other_min_price_ngwee=other[1] if other else None,
             )
         )
 
@@ -902,6 +1074,8 @@ def get_vendor_profile(
         services=services,
         events=events,
         reviews_summary=ReviewsSummary(rating_avg=rating_avg, rating_count=rating_count),
+        clips=_fetch_vendor_clips(client, vendor_id),
+        offers_enabled=_feature_flag_enabled(client, "business_offers"),
     )
 
 
