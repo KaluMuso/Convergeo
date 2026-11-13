@@ -343,6 +343,52 @@ def capture_order_delivery_fee(*, order_id: str, delivery_fee_ngwee: int) -> str
     return posted.id
 
 
+def delivery_funding_idempotency_key(order_id: str) -> str:
+    """One funding leg per order, shared by the prepaid release and COD paths."""
+    return f"delivery-funding-{order_id}"
+
+
+def post_order_delivery_funding(*, order_id: str) -> str | None:
+    """Book a vendor- or platform-funded delivery fee to delivery_revenue (idempotent).
+
+    Logistics phase 1: when the customer paid no delivery fee because the vendor
+    offered free delivery (``delivery_funding='vendor'``) the fee is charged to
+    the vendor payable; when the automatic rule waived it
+    (``'platform'``) it is reclassified out of commission revenue. Either way the
+    ledger stays balanced and delivery_revenue carries the full delivery cost.
+    ``customer`` / ``vendor_self`` orders post nothing. Ledger or lookup errors
+    raise (fail closed: the caller must not report the release as complete).
+    """
+    order_sql = _sql_uuid(order_id)
+    result = run_sql_script(
+        "SELECT delivery_funding || '|' || delivery_funded_ngwee::text || '|' || "
+        "vendor_id::text || '|' || fulfilment "
+        f"FROM public.orders WHERE id = {order_sql};"
+    )
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError("delivery_funding_lookup_failed")
+    funding, funded_raw, vendor_id, fulfilment = result.rows[0].split("|")
+    funded = int(funded_raw)
+    if fulfilment != "delivery" or funded <= 0 or funding not in {"vendor", "platform"}:
+        return None
+    if funding == "vendor":
+        posted = post_transaction(
+            idempotency_key=delivery_funding_idempotency_key(order_id),
+            template=LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE,
+            order_id=order_id,
+            funded_ngwee=funded,
+            vendor_id=vendor_id,
+        )
+    else:
+        posted = post_transaction(
+            idempotency_key=delivery_funding_idempotency_key(order_id),
+            template=LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY,
+            order_id=order_id,
+            funded_ngwee=funded,
+        )
+    return posted.id
+
+
 def order_has_refund_remainder(order_id: str) -> bool:
     """True when a partial PRE_RELEASE refund left escrow for the vendor.
 

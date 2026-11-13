@@ -433,6 +433,7 @@ def confirm_cod_collection(
         ReleaseAccountingError,
         capture_order_delivery_fee,
         compute_release_amounts,
+        post_order_delivery_funding,
         release_blocked_reason,
     )
 
@@ -542,6 +543,10 @@ def confirm_cod_collection(
     )
     if delivery_txn is not None:
         txn_ids.append(delivery_txn)
+
+    funding_txn = post_order_delivery_funding(order_id=order_id)
+    if funding_txn is not None:
+        txn_ids.append(funding_txn)
 
     if amounts.net_ngwee > 0:
         released = post_transaction(

@@ -96,6 +96,10 @@ def _build_template_args(
             return {"delivery_fee_ngwee": gross}
         case LedgerTemplate.COD_COLLECTED_BY_VENDOR:
             return {"collected_ngwee": gross, "vendor_id": VENDOR_A}
+        case LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE:
+            return {"funded_ngwee": gross, "vendor_id": VENDOR_A}
+        case LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY:
+            return {"funded_ngwee": gross}
         case _:
             raise AssertionError(f"unhandled template {template}")
 

@@ -23,6 +23,7 @@ from app.services.escrow.release_accounting import (
     delivery_fee_refunded_ngwee,
     order_has_open_dispute,
     order_has_refund_remainder,
+    post_order_delivery_funding,
     release_blocked_reason,
     remaining_escrow_ngwee,
     scale_commission_snapshot_for_gross,
@@ -593,6 +594,9 @@ def evaluate_and_release(
         order_id=order_id,
         delivery_fee_ngwee=delivery_capture_ngwee,
     )
+    # Vendor "free delivery" / automatic free delivery: book the fee the
+    # customer did not pay to delivery_revenue (vendor payable or commission).
+    post_order_delivery_funding(order_id=order_id)
     transaction_id = (
         _post_release(
             order_id=order_id,

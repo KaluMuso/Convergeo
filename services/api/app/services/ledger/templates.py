@@ -28,6 +28,8 @@ class LedgerTemplate(StrEnum):
     LENCO_FEE = "lenco_fee"
     DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
     COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
+    DELIVERY_FEE_VENDOR_CHARGE = "delivery_fee_vendor_charge"
+    DELIVERY_FEE_PLATFORM_SUBSIDY = "delivery_fee_platform_subsidy"
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,6 +333,50 @@ def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> Template
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
 
 
+def delivery_fee_vendor_charge(*, funded_ngwee: int, vendor_id: str) -> TemplateResult:
+    """Vendor-funded "free delivery" on a platform courier (logistics phase 1).
+
+    The customer paid no delivery fee; the vendor promised free delivery, so the
+    zone fee is charged against what the platform owes the vendor and booked as
+    delivery income that pays the rider.
+
+    Debit vendor_payable (vendor) (+fee).
+    Credit delivery_revenue (−fee).
+    """
+    fee = parse_ngwee(funded_ngwee)
+    if fee <= 0:
+        msg = "funded_ngwee must be positive"
+        raise ValueError(msg)
+    legs = (
+        PostingLeg(AccountRef("vendor_payable", vendor_id), fee),
+        PostingLeg(AccountRef("delivery_revenue"), -fee),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE, legs=legs)
+
+
+def delivery_fee_platform_subsidy(*, funded_ngwee: int) -> TemplateResult:
+    """Automatic free delivery funded from commission (logistics phase 1).
+
+    Reclassifies part of the commission the platform earned into delivery
+    income, so every delivered order books its whole delivery cost as
+    delivery_revenue (which pays the rider) and the subsidy is visible.
+
+    Debit commission_revenue (+fee).
+    Credit delivery_revenue (−fee).
+    """
+    fee = parse_ngwee(funded_ngwee)
+    if fee <= 0:
+        msg = "funded_ngwee must be positive"
+        raise ValueError(msg)
+    legs = (
+        PostingLeg(AccountRef("commission_revenue"), fee),
+        PostingLeg(AccountRef("delivery_revenue"), -fee),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -358,6 +404,8 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.LENCO_FEE: lenco_fee,
     LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
     LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
+    LedgerTemplate.DELIVERY_FEE_VENDOR_CHARGE: delivery_fee_vendor_charge,
+    LedgerTemplate.DELIVERY_FEE_PLATFORM_SUBSIDY: delivery_fee_platform_subsidy,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)
