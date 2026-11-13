@@ -38,7 +38,8 @@
 -- because ledger_postings references accounts ON DELETE RESTRICT):
 --   DELETE FROM public.platform_config WHERE key IN (
 --     'event_verified_organiser_advance_bps', 'event_advance_min_kyc_tier',
---     'event_advance_repayment_days');
+--     'event_advance_repayment_days', 'event_advance_min_successful_events');
+--   DELETE FROM public.feature_flags WHERE flag = 'event_organiser_advance';
 --   DROP TABLE IF EXISTS public.organiser_advance_debts;
 --   DROP TABLE IF EXISTS public.organiser_advance_undertakings;
 --   DELETE FROM public.ledger_accounts la WHERE la.kind = 'organiser_receivable'
@@ -191,8 +192,10 @@ create trigger event_promo_redemptions_enforce_limit
 -- 3. Tiered organiser advance policy + organiser receivable
 -- ---------------------------------------------------------------------------
 -- Unverified organisers: 100% of ticket money held until after the event.
+-- Gated by feature_flags.event_organiser_advance (default OFF).
 -- Verified organisers (approved KYC tier >= event_advance_min_kyc_tier, active,
--- signed the advance undertaking, no unpaid/blacklisted advance debt): up to
+-- track record >= event_advance_min_successful_events, signed the advance
+-- undertaking, no unpaid/blacklisted advance debt): up to
 -- event_verified_organiser_advance_bps released 7 days before the event.
 -- If such an event is cancelled, the released advance (plus the platform's
 -- captured commission/fee) is put back into the order's escrow so buyers are
@@ -292,5 +295,23 @@ insert into public.platform_config (key, value, description) values
     '14'::jsonb,
     'Days an organiser has to repay a recovered advance before automatic suspension, '
     'blacklisting and a legal follow-up flag.'
+  ),
+  (
+    'event_advance_min_successful_events',
+    '2'::jsonb,
+    'Track record: completed events with at least one successful paid ticket sale an '
+    'organiser needs before qualifying for a pre-event advance. 0 = KYC tier only.'
   )
 on conflict (key) do nothing;
+
+-- Kill switch for the whole tiered advance (default OFF): while off, every
+-- organiser is held 100% until after the event regardless of the config above.
+insert into public.feature_flags (flag, enabled, description) values
+  (
+    'event_organiser_advance',
+    false,
+    'Tiered organiser pre-event advance for verified organisers with a track record '
+    '(event_verified_organiser_advance_bps, 7 days before the event, repayable if the '
+    'event is cancelled). Default OFF = everyone is paid after the event.'
+  )
+on conflict (flag) do nothing;

@@ -45,7 +45,15 @@ INT_PLATFORM_KEYS = frozenset(
         *AI_DAILY_QUOTA_BOUNDS,
     }
 )
-EDITABLE_PLATFORM_KEYS = NGWEE_PLATFORM_KEYS | INT_PLATFORM_KEYS
+# Tiered organiser pre-event advance (services/events/advance_policy.py). The whole
+# feature stays behind feature_flags.event_organiser_advance (default OFF).
+EVENT_ADVANCE_BOUNDS: dict[str, tuple[int, int]] = {
+    "event_verified_organiser_advance_bps": (0, 5_000),
+    "event_advance_min_kyc_tier": (1, 3),
+    "event_advance_min_successful_events": (0, 50),
+    "event_advance_repayment_days": (1, 90),
+}
+EDITABLE_PLATFORM_KEYS = NGWEE_PLATFORM_KEYS | INT_PLATFORM_KEYS | frozenset(EVENT_ADVANCE_BOUNDS)
 
 config_router = APIRouter(prefix="/config", tags=["admin-config"])
 
@@ -150,8 +158,8 @@ def validate_platform_value(key: str, value: int) -> None:
             )
         return
 
-    if key in AI_DAILY_QUOTA_BOUNDS:
-        low, high = AI_DAILY_QUOTA_BOUNDS[key]
+    if key in AI_DAILY_QUOTA_BOUNDS or key in EVENT_ADVANCE_BOUNDS:
+        low, high = AI_DAILY_QUOTA_BOUNDS.get(key) or EVENT_ADVANCE_BOUNDS[key]
         if value < low or value > high:
             raise AppError(
                 code="validation_error",

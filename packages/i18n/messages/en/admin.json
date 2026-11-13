@@ -191,6 +191,10 @@
       "aiCapUsd": "AI monthly cap (USD)",
       "releaseDelivered": "Auto-release after delivered (hours)",
       "releaseShipped": "Auto-release after shipped (days)",
+      "advanceBps": "Verified organiser pre-event advance (bps, max 5000)",
+      "advanceMinKycTier": "Pre-event advance: minimum KYC tier",
+      "advanceMinEvents": "Pre-event advance: minimum successful past events",
+      "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
       "dangerousHint": "COD cap changes affect new checkout eligibility only."
     },
     "flags": {

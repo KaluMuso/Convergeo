@@ -53,8 +53,28 @@ def _scalar(db: PgConn, sql: str) -> str:
     return result.rows[0] if result.rows else ""
 
 
+def _set_flag(db: PgConn, enabled: bool) -> None:
+    assert db.run(
+        "INSERT INTO public.feature_flags (flag, enabled) VALUES "
+        f"('{ap.ADVANCE_FLAG}', {str(enabled).lower()}) "
+        "ON CONFLICT (flag) DO UPDATE SET enabled = EXCLUDED.enabled;"
+    ).ok
+
+
 @pytest.fixture
-def verified_organiser(db: PgConn, db_url_env: None) -> Generator[str, None, None]:
+def advance_enabled(db: PgConn, db_url_env: None) -> Generator[None, None, None]:
+    """Flag ON and no track-record minimum; restored to the shipped defaults after."""
+    _set_flag(db, True)
+    _set_config(db, ap.MIN_SUCCESSFUL_EVENTS_KEY, "0")
+    yield
+    _set_flag(db, False)
+    _set_config(db, ap.MIN_SUCCESSFUL_EVENTS_KEY, "2")
+
+
+@pytest.fixture
+def verified_organiser(
+    db: PgConn, db_url_env: None, advance_enabled: None
+) -> Generator[str, None, None]:
     """VENDOR_B: active, approved KYC tier 2, ledger accounts, signed undertaking."""
     kyc_id = str(uuid.uuid4())
     assert db.run(
@@ -151,7 +171,9 @@ def _ledger_globally_balanced(db: PgConn) -> bool:
 
 
 class TestAdvanceDecision:
-    def test_unverified_organiser_gets_no_advance(self, db: PgConn, db_url_env: None) -> None:
+    def test_unverified_organiser_gets_no_advance(
+        self, db: PgConn, db_url_env: None, advance_enabled: None
+    ) -> None:
         # VENDOR_A has no approved KYC record (orphaned kyc_tier stays T1).
         decision = ap.organiser_advance_decision("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
         assert decision.bps == 0
@@ -171,6 +193,50 @@ class TestAdvanceDecision:
         _set_config(db, ap.VERIFIED_ADVANCE_BPS_KEY, '"junk"')
         assert resolve_advance_bps(verified_organiser) == 5_000
         _set_config(db, ap.VERIFIED_ADVANCE_BPS_KEY, "5000")
+
+    def test_flag_off_by_default_holds_everyone(self, db: PgConn, db_url_env: None) -> None:
+        # Shipped default: the migration seeds the flag OFF.
+        assert _scalar(
+            db, f"SELECT enabled::text FROM public.feature_flags WHERE flag = '{ap.ADVANCE_FLAG}';"
+        ) in {"f", "false"}
+        assert ap.is_advance_enabled() is False
+
+    def test_flag_off_disables_advance_for_verified_organiser(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        assert resolve_advance_bps(verified_organiser) == 5_000
+        _set_flag(db, False)
+        decision = ap.organiser_advance_decision(verified_organiser)
+        assert (decision.bps, decision.reason) == (0, "advances_disabled")
+        _set_flag(db, True)
+
+    def test_missing_flag_row_fails_closed(self, db: PgConn, verified_organiser: str) -> None:
+        assert db.run(f"DELETE FROM public.feature_flags WHERE flag = '{ap.ADVANCE_FLAG}';").ok
+        try:
+            assert resolve_advance_bps(verified_organiser) == 0
+        finally:
+            _set_flag(db, True)
+
+    def test_track_record_is_required(self, db: PgConn, verified_organiser: str) -> None:
+        # VENDOR_B has no completed paid event in this fixture set.
+        _set_config(db, ap.MIN_SUCCESSFUL_EVENTS_KEY, "1")
+        decision = ap.organiser_advance_decision(verified_organiser)
+        assert (decision.bps, decision.reason) == (0, "insufficient_track_record")
+        _set_config(db, ap.MIN_SUCCESSFUL_EVENTS_KEY, None)  # default 2 also applies
+        assert ap.organiser_advance_decision(verified_organiser).reason == (
+            "insufficient_track_record"
+        )
+
+    def test_track_record_met_unlocks_advance(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.events import gmv_cap
+
+        _set_config(db, ap.MIN_SUCCESSFUL_EVENTS_KEY, "2")
+        monkeypatch.setattr(gmv_cap, "organiser_successful_paid_event_count", lambda _v: 2)
+        assert resolve_advance_bps(verified_organiser) == 5_000
+        monkeypatch.setattr(gmv_cap, "organiser_successful_paid_event_count", lambda _v: 1)
+        assert resolve_advance_bps(verified_organiser) == 0
 
     def test_no_undertaking_means_no_advance(self, db: PgConn, verified_organiser: str) -> None:
         assert db.run(

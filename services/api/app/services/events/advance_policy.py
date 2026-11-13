@@ -1,16 +1,22 @@
 """Tiered organiser pre-event advance policy + advance debt recovery/enforcement.
 
-Policy (platform_config, all integer):
+Kill switch: ``feature_flags.event_organiser_advance`` (default OFF). While it is
+off every organiser is held 100% until after the event, whatever the config says.
+
+Policy (platform_config, all integer, admin-editable via /admin/config/platform):
 
 * ``event_verified_organiser_advance_bps`` (default 5000, capped 5000) — the share of a
   ticket order bought >14 days ahead that a VERIFIED organiser receives 7 days before
   the event. Everyone else gets 0: 100% held until after the event ends.
 * ``event_advance_min_kyc_tier`` (default 2) — minimum approved KYC tier.
+* ``event_advance_min_successful_events`` (default 2) — track record: completed events
+  with at least one successful paid ticket sale (same count as the GMV-cap uncap rule).
 * ``event_advance_repayment_days`` (default 14) — repayment window for a recovered
   advance before automatic suspension, blacklisting and a legal follow-up flag.
 
 Verified = vendor ``active`` + approved KYC tier >= min tier (auditable approval only;
-orphaned ``vendors.kyc_tier`` stays T1) + an unrevoked advance undertaking at the
+orphaned ``vendors.kyc_tier`` stays T1) + track record >= min successful events + an
+unrevoked advance undertaking at the
 current ``ADVANCE_TERMS_VERSION`` + no open or blacklisted advance debt. Any lookup
 failure fails closed (no advance).
 
@@ -50,13 +56,16 @@ from app.services.orders.state import SYSTEM_ACTOR_ID
 logger = logging.getLogger(__name__)
 
 ADVANCE_TERMS_VERSION = "2026-11-v1"
+ADVANCE_FLAG = "event_organiser_advance"
 VERIFIED_ADVANCE_BPS_KEY = "event_verified_organiser_advance_bps"
 MIN_KYC_TIER_KEY = "event_advance_min_kyc_tier"
 REPAYMENT_DAYS_KEY = "event_advance_repayment_days"
+MIN_SUCCESSFUL_EVENTS_KEY = "event_advance_min_successful_events"
 DEFAULT_VERIFIED_ADVANCE_BPS = 5_000
 MAX_ADVANCE_BPS = 5_000
 DEFAULT_MIN_KYC_TIER = 2
 DEFAULT_REPAYMENT_DAYS = 14
+DEFAULT_MIN_SUCCESSFUL_EVENTS = 2
 
 AUDIT_UNDERTAKING_ACCEPTED = "event_advance.undertaking_accepted"
 AUDIT_RECEIVABLE_OPENED = "event_advance.receivable_opened"
@@ -96,6 +105,21 @@ def load_verified_advance_bps() -> int:
 def load_min_kyc_tier() -> int:
     value = _config_int(MIN_KYC_TIER_KEY, DEFAULT_MIN_KYC_TIER)
     return value if value >= 1 else DEFAULT_MIN_KYC_TIER
+
+
+def load_min_successful_events() -> int:
+    value = _config_int(MIN_SUCCESSFUL_EVENTS_KEY, DEFAULT_MIN_SUCCESSFUL_EVENTS)
+    return value if value >= 0 else DEFAULT_MIN_SUCCESSFUL_EVENTS
+
+
+def is_advance_enabled() -> bool:
+    """``feature_flags.event_organiser_advance`` (default OFF). Fails closed."""
+    result = run_sql_script(
+        f"SELECT enabled::text FROM public.feature_flags WHERE flag = {sql_literal(ADVANCE_FLAG)};"
+    )
+    if not result.ok or not result.rows:
+        return False
+    return result.rows[0].strip().lower() in {"t", "true"}
 
 
 def load_repayment_days() -> int:
@@ -151,6 +175,8 @@ WHERE vendor_id = {_uuid_sql(vendor_id)}
 
 def organiser_advance_decision(vendor_id: str) -> AdvanceDecision:
     """Pre-event advance share for an organiser right now. Fails closed to 0."""
+    if not is_advance_enabled():
+        return AdvanceDecision(0, "advances_disabled")
     configured = load_verified_advance_bps()
     if configured <= 0:
         return AdvanceDecision(0, "advances_disabled")
@@ -160,10 +186,14 @@ def organiser_advance_decision(vendor_id: str) -> AdvanceDecision:
             return AdvanceDecision(0, "organiser_not_active")
         if tier < load_min_kyc_tier():
             return AdvanceDecision(0, "organiser_unverified")
-        if not has_current_undertaking(vendor_id):
-            return AdvanceDecision(0, "undertaking_missing")
         if _has_blocking_debt(vendor_id):
             return AdvanceDecision(0, "advance_debt_outstanding")
+        from app.services.events.gmv_cap import organiser_successful_paid_event_count
+
+        if organiser_successful_paid_event_count(vendor_id) < load_min_successful_events():
+            return AdvanceDecision(0, "insufficient_track_record")
+        if not has_current_undertaking(vendor_id):
+            return AdvanceDecision(0, "undertaking_missing")
     except (RuntimeError, AppError):
         logger.exception("advance policy lookup failed", extra={"vendor_id": vendor_id})
         return AdvanceDecision(0, "policy_lookup_failed")

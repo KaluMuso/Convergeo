@@ -4,6 +4,12 @@ Founder policy (2026-11-13). Code: `services/api/app/services/escrow/event_relea
 `services/api/app/services/events/advance_policy.py`. Schema: migration
 `20261113174500_event_ticket_integrity.sql`.
 
+## Kill switch
+
+The whole advance is behind `feature_flags.event_organiser_advance`, **default OFF**
+(admin: Config → Flags). While it is off every organiser is treated as unverified:
+100% held until after the event, whatever the config below says.
+
 ## Who gets money when
 
 | Organiser            | Before the event                                                                                                                        | After the event                        |
@@ -12,20 +18,23 @@ Founder policy (2026-11-13). Code: `services/api/app/services/escrow/event_relea
 | Verified             | Up to `event_verified_organiser_advance_bps` (default 5000 = 50%) of each order bought more than 14 days ahead, 7 days before the event | Remainder 1 day after the event ends   |
 
 Verified means all of: vendor `active`; an **approved** KYC record at tier
-`event_advance_min_kyc_tier` or higher (default 2); the advance undertaking accepted at
+`event_advance_min_kyc_tier` or higher (default 2); a track record of at least
+`event_advance_min_successful_events` (default 2) completed events with a successful
+paid ticket sale; the advance undertaking accepted at
 the current terms version (`POST /organiser/advance/undertaking`); no open advance debt;
 never blacklisted. Any lookup failure means no advance.
 
 No release is ever made for an event that is cancelled, unpublished (draft / moderation
 hold) or whose order escrow is not funded.
 
-## Config (`platform_config`, integers)
+## Config (`platform_config`, integers; editable in admin Config → Platform, audited)
 
 | Key                                    | Default | Meaning                                                                                  |
 | -------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
 | `event_verified_organiser_advance_bps` | 5000    | Advance share for verified organisers, capped at 5000. 0 turns advances off for everyone |
 | `event_advance_min_kyc_tier`           | 2       | Minimum approved KYC tier                                                                |
-| `event_advance_repayment_days`         | 14      | Days to repay a recovered advance                                                        |
+| `event_advance_repayment_days`         | 14      | Days to repay a recovered advance (1–90)                                                 |
+| `event_advance_min_successful_events`  | 2       | Track record: completed paid events required (0–50)                                      |
 
 ## If an event with an advance is cancelled
 

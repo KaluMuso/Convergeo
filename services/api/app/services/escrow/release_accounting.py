@@ -507,16 +507,19 @@ WHERE la.kind = 'escrow'
         "commission_captured_ngwee": 0,
         "vendor_released_ngwee": 0,
         "delivery_fee_captured_ngwee": 0,
+        "advance_recovered_ngwee": 0,
     }
     result = run_sql_script(script)
     if not result.ok or not result.rows:
         return empty
     parts = result.rows[0].split("|")
-    if len(parts) != 4:
+    if len(parts) != 5:
         return empty
     return {
         "gross_collected_ngwee": int(parts[0]),
         "commission_captured_ngwee": int(parts[1]),
         "vendor_released_ngwee": int(parts[2]),
         "delivery_fee_captured_ngwee": int(parts[3]),
+        # Escrow refilled by event_advance_recovery (cancelled event after an advance).
+        "advance_recovered_ngwee": int(parts[4]),
     }

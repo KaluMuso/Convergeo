@@ -16,6 +16,10 @@ const PLATFORM_LABEL_KEYS: Record<string, string> = {
   ai_monthly_cap_usd: "platform.aiCapUsd",
   release_after_delivered_hours: "platform.releaseDelivered",
   release_after_shipped_days: "platform.releaseShipped",
+  event_verified_organiser_advance_bps: "platform.advanceBps",
+  event_advance_min_kyc_tier: "platform.advanceMinKycTier",
+  event_advance_min_successful_events: "platform.advanceMinEvents",
+  event_advance_repayment_days: "platform.advanceRepaymentDays",
 };
 
 const DANGEROUS_KEYS = new Set(["cod_cap_ngwee"]);

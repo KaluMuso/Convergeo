@@ -169,6 +169,10 @@
       "aiCapUsd": "Plafond IA mensuel (USD)",
       "releaseDelivered": "Libération automatique après livraison (heures)",
       "releaseShipped": "Libération automatique après expédition (jours)",
+      "advanceBps": "Avance avant l'événement pour organisateurs vérifiés (pb, max 5000)",
+      "advanceMinKycTier": "Avance avant l'événement : niveau KYC minimum",
+      "advanceMinEvents": "Avance avant l'événement : nombre minimum d'événements réussis",
+      "advanceRepaymentDays": "Avance avant l'événement : délai de remboursement (jours)",
       "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
     },
     "flags": {

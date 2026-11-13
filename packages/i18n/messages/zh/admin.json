@@ -169,6 +169,10 @@
       "aiCapUsd": "AI 每月上限（USD）",
       "releaseDelivered": "送达后自动释放（小时）",
       "releaseShipped": "发货后自动释放（天）",
+      "advanceBps": "已验证主办方活动前预付比例（基点，最多 5000）",
+      "advanceMinKycTier": "活动前预付：最低 KYC 等级",
+      "advanceMinEvents": "活动前预付：最少成功举办的活动数",
+      "advanceRepaymentDays": "活动前预付：还款期限（天）",
       "dangerousHint": "货到付款上限的更改仅影响新的结账资格。"
     },
     "flags": {
