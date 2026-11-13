@@ -80,3 +80,13 @@ Delivery cash counts as Convergeo’s money until it’s actually deposited. Thi
 - Events: is scanner/ticketing working? Hold policy: tiered — verified organisers may get early release backed by repayment obligation / blacklist / legal; insurance option.
 - APPROVED growth items: Ads (fixed packages via Lenco → Boost → bidding at ~20 advertisers; AI approves or escalates, never rejects); Clips (free, followable, clickable; staged opening; OpenAI moderation; ffmpeg + Cloudflare R2); Coupons + gift orders first (no cash gift cards until lawyer clears); COD pay-at-door via Lenco MoMo prompt, handover code after payment, capped cash fallback, instant payout with reserve; Delivery pricing area-pair table + time bands + rain switch, Google only for dispatcher, "Order before 2 pm, get it today", Home/Work addresses; Business Home — BUT the customer has higher priority than vendors: customers want optionality to decide for themselves.
 - "For the 24 questions I will go with your recommendations" — all 24 approval items in the Growth Features Blueprint approved as recommended.
+
+## 16:22 decisions (King)
+- #790 release: approved with waiver (bundle-regression + staging-certification gates). Bypass merge must be clicked by King (token cannot bypass).
+- Logistics questions 1–5: approved as suggested. On the 5% item: the customer also does not get the full price back, because of the inconvenience caused.
+- Home trust strip (#789): approved — "Order on your phone → The seller sends it → Pay when it arrives" while cash-only; revert when online payments go live.
+- Business Home: approved. Hide products/services/events/offers/Clips until feature on AND ≥1 live item. Related items from OTHER shops under every product/service/event.
+- Customer clips (future): customers can post their own clips (TikTok-style) linking to a personal creator profile; later share ad revenue with influencers.
+- Vendor app ≠ customer app (Alibaba vs AliExpress): vendor app shows NO retail prices; focuses on wholesale prices, discounted bulk stock, and B2B services businesses need.
+- Vendor-page scout: must run on n8n (production) with AI agents using Kimi K2, not a Claude scheduled task.
+- Strategy question raised: path to multi-million revenue beyond commission (answered in chat).
