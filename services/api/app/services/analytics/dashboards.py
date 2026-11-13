@@ -10,9 +10,12 @@ Definitions (also the export column meanings):
   deleted. **New customer** — that role granted on the day.
 * **registered vendor** — a row in ``vendors`` (any status). **Active vendor** —
   ``vendors.status = 'active'``. **Selling vendor** — a vendor with a paid order in range.
-* **paid order** — an order, not cancelled, whose checkout group has a payment with
-  ``status = 'success'`` (the same rule as ``analytics_commercial_daily``).
-* **paid order value** — items + delivery fee of paid orders. It is *not* revenue.
+* **paid order** — an order whose checkout group has a payment with ``status = 'success'``
+  (``analytics_commercial_daily``, the single shared definition; a paid order cancelled
+  later is still counted as paid and also reported as ``paid_then_cancelled``). Cohorts,
+  selling vendors and vendor sales use paid orders that are *not* cancelled.
+* **paid order value** — items + delivery fee of paid, not cancelled orders. It is *not*
+  revenue.
 * **platform revenue** — what the ledger credited to the platform's own accounts in the
   range: ``commission_revenue`` + ``delivery_revenue`` (credits are negative postings, so
   revenue is the negated net; refund debits reduce it). Payment processing fees
@@ -129,7 +132,8 @@ def lusaka_day(column: str) -> str:
 
 
 def _rows(sql: str) -> list[list[str]]:
-    script = f"BEGIN;\nSET LOCAL statement_timeout = '{STATEMENT_TIMEOUT}';\n{sql}\nCOMMIT;\n"
+    body = sql.rstrip().rstrip(";")
+    script = f"BEGIN;\nSET LOCAL statement_timeout = '{STATEMENT_TIMEOUT}';\n{body};\nCOMMIT;\n"
     result = run_sql_script(script)
     if not result.ok:
         raise RuntimeError(f"analytics dashboard read failed: {result.error}")
