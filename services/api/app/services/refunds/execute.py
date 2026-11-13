@@ -19,6 +19,11 @@ from app.services.escrow.release_accounting import (
 )
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
+from app.services.payouts.gate import (
+    REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+    assert_customer_refund_allowed,
+    payouts_enabled,
+)
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
 from app.services.refunds.config import load_restocking_fee_bps
 from app.services.refunds.constants import ACTIVE_REFUND_STATUSES, AWAITING_PROVIDER_STATUSES
@@ -176,6 +181,38 @@ def _find_existing_refund(
     if row.get("status") in ACTIVE_REFUND_STATUSES:
         return row
     return None
+
+
+def _is_pure_replay(existing: dict[str, Any] | None) -> bool:
+    """True when a retry would only return an existing refund and write nothing."""
+    if existing is None:
+        return False
+    status = str(existing.get("status") or "")
+    return status == "completed" or status in AWAITING_PROVIDER_STATUSES
+
+
+def ensure_refund_allowed(
+    service_client: ServiceRoleClient,
+    *,
+    order_id: str,
+    idempotency_key: str | None,
+    surface: str,
+    code: str = REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+) -> None:
+    """Payout-gate pre-check for refund callers — run BEFORE any write.
+
+    With payouts enabled this is a no-op. With payouts disabled it refuses, except
+    for a pure idempotent replay of a refund that already exists in a completed /
+    awaiting-provider state (those return the stored result and write nothing), so
+    retry semantics are unchanged. A ``processing``/``pending`` resume would post
+    ledger legs or create the payout row, so it is refused like a new refund.
+    """
+    if payouts_enabled():
+        return
+    source_key = _refund_source_key(idempotency_key, order_id)
+    if _is_pure_replay(_find_existing_refund(service_client, source_key=source_key)):
+        return
+    assert_customer_refund_allowed(code=code, surface=surface, details={"order_id": order_id})
 
 
 def _result_from_existing(row: dict[str, Any]) -> RefundExecutionResult:
@@ -516,6 +553,11 @@ def execute_refund(
             return _result_from_existing(existing)
         if status in AWAITING_PROVIDER_STATUSES:
             return _result_from_existing(existing)
+    # Payout kill switch backstop (every caller): nothing below may write ledger
+    # legs, a refund row or a customer payout row while payouts are disabled.
+    assert_customer_refund_allowed(surface="execute_refund", details={"order_id": order_id})
+    if existing is not None:
+        status = str(existing.get("status") or "")
         if status in {"processing", "pending"}:
             return _resume_processing_refund(
                 service_client=service_client,

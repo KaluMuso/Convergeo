@@ -45,6 +45,15 @@ CUSTOMER_MOMO = "260971234567"
 GROSS_NGEWEE = 200_000
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class _ServiceWrapper:
     client: Any = None
 
