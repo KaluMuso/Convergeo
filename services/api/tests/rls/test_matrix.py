@@ -69,8 +69,18 @@ def admin_read_noop_update() -> PersonaExpectations:
     authenticated: SELECT grant + admin-only policy (non-admins see zero rows → permit),
     no write grant (insert/delete → deny). anon: no grant. The update probe is a no-op.
     """
-    authenticated = {"select": "permit", "insert": "deny", "update": "permit", "delete": "deny"}
-    anon = {"select": "deny", "insert": "deny", "update": "permit", "delete": "deny"}
+    authenticated: dict[Verb, Outcome] = {
+        "select": "permit",
+        "insert": "deny",
+        "update": "permit",
+        "delete": "deny",
+    }
+    anon: dict[Verb, Outcome] = {
+        "select": "deny",
+        "insert": "deny",
+        "update": "permit",
+        "delete": "deny",
+    }
     return {
         persona: dict(anon if persona is Persona.ANON else authenticated) for persona in Persona
     }

@@ -1,30 +1,26 @@
--- Convergeo Intelligence 1B-03: authoritative commercial metrics (docs/plan/intelligence/stage1-plan.md §R-I).
+-- Convergeo Intelligence 1B-06 / founder decision OD-9 (12 Nov 2026): the analytics
+-- reporting day is the Africa/Lusaka calendar day (CAT, UTC+2, no DST), not the UTC day.
+-- (docs/plan/intelligence/stage1-plan.md, Stage 1B decisions.)
 --
--- Additive: one new function, analytics_commercial_daily(from, to), and a CREATE OR REPLACE
--- of analytics_rollup_day (1B-01, same signature) that additionally stores the day's
--- commercial metrics. Nothing calls either function until `analytics_v2_rollups` is ON.
+-- CREATE OR REPLACE of two functions with unchanged signatures; no table changes.
+-- Stored timestamps stay timestamptz/UTC. Only day attribution moves: an event, search,
+-- order or checkout at 23:30 UTC belongs to the NEXT Lusaka day (01:30 CAT).
+--   * analytics_rollup_day(day): window [day 00:00 CAT, day+1 00:00 CAT); future-day
+--     guard uses today in Lusaka. Includes the OD-8 distinct-session search demand.
+--   * analytics_commercial_daily(from, to): orders and checkouts attributed to their
+--     Lusaka day (the single definition shared by the rollup and the admin API).
+-- Rollup rows already computed on UTC days are simply recomputed by the next tick for
+-- the 7-day catch-up window (or an explicit ?day= re-run); there is no prod data yet
+-- (analytics_v2_rollups is OFF).
 --
--- Paid orders and GMV are derived ONLY from orders, order_items, checkout_groups and
--- payments — never from analytics events or funnel_events snapshots. Money is integer
--- ngwee (bigint sums of qty * unit_price_ngwee + delivery_fee_ngwee).
---
--- Down (manual, after analytics_v2_rollups is OFF and the 1B-03 code is reverted):
---   re-run the analytics_rollup_day definition from 20261113200100_analytics_rollups.sql;
---   drop function if exists public.analytics_commercial_daily(date, date);
+-- Down (manual, after analytics_v2_rollups is OFF and the 1B-06 code is reverted):
+--   re-run the analytics_rollup_day definition from 20261113235300_analytics_search_sessions.sql
+--   and the analytics_commercial_daily definition from 20261113235200_analytics_commercial.sql,
+--   then recompute affected days.
 
 -- ---------------------------------------------------------------------------
--- Authoritative commercial metrics (plan §R-I)
+-- Authoritative commercial metrics on Lusaka days (plan §R-I)
 -- ---------------------------------------------------------------------------
---
--- Attribution: an order belongs to the UTC day of orders.created_at; a checkout belongs
--- to the UTC day of checkout_groups.created_at. A checkout group is PAID when it has a
--- payment with status 'success' (payments.status is the authoritative, terminal-winning
--- state, see services/payments/state.py). An order is paid when its checkout group is.
---
--- Reconciliation (data quality, never "fixed" here): for the checkout groups whose orders
--- were placed that day, the number of successful payments must equal the number of paid
--- groups (one success per group) and the sum of successful payment amounts must equal the
--- sum of those groups' total_ngwee.
 
 create or replace function public.analytics_commercial_daily(p_from date, p_to date)
 returns table (
@@ -50,7 +46,7 @@ as $$
   ),
   order_rows as (
     select
-      (o.created_at at time zone 'UTC')::date as day,
+      (o.created_at at time zone 'Africa/Lusaka')::date as day,
       o.id,
       o.checkout_group_id,
       o.status,
@@ -61,8 +57,8 @@ as $$
           where oi.order_id = o.id
         ), 0) as order_total_ngwee
     from public.orders o
-    where o.created_at >= (p_from::timestamp at time zone 'UTC')
-      and o.created_at < ((p_to + 1)::timestamp at time zone 'UTC')
+    where o.created_at >= (p_from::timestamp at time zone 'Africa/Lusaka')
+      and o.created_at < ((p_to + 1)::timestamp at time zone 'Africa/Lusaka')
   ),
   group_pay as (
     select
@@ -104,10 +100,10 @@ as $$
     group by r.day
   ),
   checkout_agg as (
-    select (cg.created_at at time zone 'UTC')::date as day, count(*) as checkouts_started
+    select (cg.created_at at time zone 'Africa/Lusaka')::date as day, count(*) as checkouts_started
     from public.checkout_groups cg
-    where cg.created_at >= (p_from::timestamp at time zone 'UTC')
-      and cg.created_at < ((p_to + 1)::timestamp at time zone 'UTC')
+    where cg.created_at >= (p_from::timestamp at time zone 'Africa/Lusaka')
+      and cg.created_at < ((p_to + 1)::timestamp at time zone 'Africa/Lusaka')
     group by 1
   )
   select
@@ -129,7 +125,7 @@ as $$
 $$;
 
 comment on function public.analytics_commercial_daily(date, date) is
-  'Convergeo Intelligence 1B-03: per-UTC-day checkouts, orders, paid orders, successful '
+  'Convergeo Intelligence 1B-03/OD-9: per-Africa/Lusaka-day checkouts, orders, paid orders, successful '
   'payments and paid GMV (integer ngwee) from orders/order_items/checkout_groups/payments '
   'only. The single definition shared by the rollup and the admin API.';
 
@@ -137,7 +133,7 @@ revoke all on function public.analytics_commercial_daily(date, date) from public
 grant execute on function public.analytics_commercial_daily(date, date) to service_role;
 
 -- ---------------------------------------------------------------------------
--- Daily rollup, now including commercial metrics (same signature as 1B-01)
+-- Daily rollup on Lusaka days (same signature as 1B-01)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.analytics_rollup_day(p_day date, p_idle_minutes integer default 30)
@@ -156,15 +152,18 @@ begin
   if p_day is null then
     raise exception 'analytics_rollup_day: day is required';
   end if;
-  if p_day > timezone('utc', now())::date then
+  if p_day > (now() at time zone 'Africa/Lusaka')::date then
     raise exception 'analytics_rollup_day: % is in the future', p_day;
   end if;
   if p_idle_minutes is null or p_idle_minutes < 1 or p_idle_minutes > 240 then
     raise exception 'analytics_rollup_day: idle minutes out of range';
   end if;
 
-  v_from := p_day::timestamp at time zone 'UTC';
-  v_to := (p_day + 1)::timestamp at time zone 'UTC';
+  -- OD-9: the reporting day is the Africa/Lusaka calendar day (CAT, UTC+2, no DST):
+  -- [p_day 00:00 CAT, p_day+1 00:00 CAT) = [p_day-1 22:00 UTC, p_day 22:00 UTC).
+  -- Stored timestamps stay UTC; only the day boundary moves.
+  v_from := p_day::timestamp at time zone 'Africa/Lusaka';
+  v_to := (p_day + 1)::timestamp at time zone 'Africa/Lusaka';
 
   -- One recompute per day at a time (two API workers / a manual re-run).
   perform pg_advisory_xact_lock(hashtext('analytics_rollup_day'), p_day - date '2000-01-01');
@@ -353,13 +352,19 @@ begin
   v_rows := v_rows + v_n;
 
   -- Search demand per redacted, normalized term (search_query_log, kind = 'search').
-  insert into public.analytics_search_daily (day, normalized_term, searches, zero_results, sessions)
+  -- OD-8: sessions = DISTINCT anonymous analytics sessions; rows without a session
+  -- (legacy, no-JS, counts-only) are counted in unsessioned_searches and readers treat
+  -- them as at most ONE session, so one person can never pass k by repeating a term.
+  insert into public.analytics_search_daily (
+    day, normalized_term, searches, zero_results, sessions, unsessioned_searches
+  )
   select
     p_day,
     left(q.normalized_term, 120),
     count(*)::int,
     count(*) filter (where q.zero_result)::int,
-    null::int
+    count(distinct q.analytics_session_id)::int,
+    count(*) filter (where q.analytics_session_id is null)::int
   from public.search_query_log q
   where q.kind = 'search'
     and q.created_at >= v_from and q.created_at < v_to
@@ -376,7 +381,7 @@ end;
 $$;
 
 comment on function public.analytics_rollup_day(date, integer) is
-  'Convergeo Intelligence 1B-01/1B-03: idempotent recompute of one UTC day of analytics rollups '
+  'Convergeo Intelligence 1B-01/1B-03/OD-8/OD-9: idempotent recompute of one Africa/Lusaka day of analytics rollups '
   '(delete + insert under a per-day advisory lock). Sessionises by a > p_idle_minutes idle '
   'gap; session end is an estimate (last_seen). Run by the flag-gated API rollup tick with '
   'SET LOCAL statement_timeout.';

@@ -69,13 +69,13 @@ REVIEWED_SUFFIX = (
     "20261113163000_admin_direct_writes_read_only.sql",
     "20261113163100_admin_governance_audit_consent.sql",
     # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
-    "20261113200000_analytics_v2_foundation.sql",
-    "20261113200100_analytics_rollups.sql",
-    "20261113200200_analytics_commercial.sql",
-    "20261113200300_analytics_search_sessions.sql",
-    "20261113200400_analytics_lusaka_day.sql",
-    "20261113200500_analytics_search_daily_retention.sql",
-    "20261113200600_analytics_session_links.sql",
+    "20261113235000_analytics_v2_foundation.sql",
+    "20261113235100_analytics_rollups.sql",
+    "20261113235200_analytics_commercial.sql",
+    "20261113235300_analytics_search_sessions.sql",
+    "20261113235400_analytics_lusaka_day.sql",
+    "20261113235500_analytics_search_daily_retention.sql",
+    "20261113235600_analytics_session_links.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

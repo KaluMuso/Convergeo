@@ -1,139 +1,57 @@
--- Convergeo Intelligence 1B-06 / founder decision OD-9 (12 Nov 2026): the analytics
--- reporting day is the Africa/Lusaka calendar day (CAT, UTC+2, no DST), not the UTC day.
--- (docs/plan/intelligence/stage1-plan.md, Stage 1B decisions.)
+-- Convergeo Intelligence 1B-06 / founder decisions OD-6 + OD-8 (12 Nov 2026):
+-- the search-term k-threshold counts DISTINCT anonymous sessions, not searches.
+-- (docs/plan/intelligence/stage1-plan.md §R-E, Stage 1B decisions.)
 --
--- CREATE OR REPLACE of two functions with unchanged signatures; no table changes.
--- Stored timestamps stay timestamptz/UTC. Only day attribution moves: an event, search,
--- order or checkout at 23:30 UTC belongs to the NEXT Lusaka day (01:30 CAT).
---   * analytics_rollup_day(day): window [day 00:00 CAT, day+1 00:00 CAT); future-day
---     guard uses today in Lusaka. Includes the OD-8 distinct-session search demand.
---   * analytics_commercial_daily(from, to): orders and checkouts attributed to their
---     Lusaka day (the single definition shared by the rollup and the admin API).
--- Rollup rows already computed on UTC days are simply recomputed by the next tick for
--- the 7-day catch-up window (or an explicit ?day= re-run); there is no prod data yet
--- (analytics_v2_rollups is OFF).
+-- Additive only:
+--   * search_query_log.analytics_session_id uuid NULL — the same rotating, anonymous v2
+--     session id the analytics client already sends (localStorage `vg_sess2`, 30-minute
+--     idle rotation, packages/analytics/src/v2/ids.ts). No PII and no user id. It is
+--     written by the search API only when analytics_v2_collect is ON and the client
+--     sends `X-Analytics-Session`; it is never used for authorization. The 30-day
+--     search-log PII trim NULLs it together with user_id.
+--   * analytics_search_daily.unsessioned_searches integer NOT NULL DEFAULT 0 — searches
+--     of the term/day that carried no session id.
+--   * analytics_rollup_day redefined (same signature): sessions is now
+--     count(DISTINCT analytics_session_id) (0 when none) instead of NULL.
+--
+-- k rule (admin API, analytics_search_daily_purge): a term's session count over a window
+-- is greatest(sum(sessions), 1 if any row has unsessioned searches or a legacy NULL
+-- sessions value else 0). One person repeating a term 5 times = 1 session < k = 5, and
+-- session-less rows can never contribute more than one session in total.
+--
+-- RLS: no new table. search_query_log and analytics_search_daily keep FORCE RLS with
+-- admin-select / service_role-all policies, so the new columns inherit them; anon has no
+-- grant on either table.
 --
 -- Down (manual, after analytics_v2_rollups is OFF and the 1B-06 code is reverted):
---   re-run the analytics_rollup_day definition from 20261113200300_analytics_search_sessions.sql
---   and the analytics_commercial_daily definition from 20261113200200_analytics_commercial.sql,
---   then recompute affected days.
+--   re-run the analytics_rollup_day definition from 20261113235200_analytics_commercial.sql;
+--   alter table public.analytics_search_daily drop column if exists unsessioned_searches;
+--   alter table public.search_query_log drop column if exists analytics_session_id;
+-- Dropping the columns loses only the session attribution (aggregates stay valid; the
+-- admin k rule then treats every row as session-less, i.e. stricter).
+
+alter table public.search_query_log
+  add column if not exists analytics_session_id uuid;
+
+comment on column public.search_query_log.analytics_session_id is
+  'Anonymous rotating analytics_v2 session id (30-min idle, client-generated, no PII). '
+  'Only set when analytics_v2_collect is ON and the client sends it; never used for '
+  'authz. NULLed after 30 days by the search-log PII trim. Used for the distinct-session '
+  'k-threshold (OD-8).';
+
+alter table public.analytics_search_daily
+  add column if not exists unsessioned_searches integer not null default 0
+    check (unsessioned_searches >= 0);
+
+comment on column public.analytics_search_daily.sessions is
+  'Distinct anonymous analytics sessions that searched the term that day (OD-8). NULL '
+  'only on rows computed before 20261113235300 (treated as session-less by readers).';
+comment on column public.analytics_search_daily.unsessioned_searches is
+  'Searches of the term that day without a session id. Readers count all of them, across '
+  'the whole window, as at most ONE session (OD-8), so one person cannot pass k.';
 
 -- ---------------------------------------------------------------------------
--- Authoritative commercial metrics on Lusaka days (plan §R-I)
--- ---------------------------------------------------------------------------
-
-create or replace function public.analytics_commercial_daily(p_from date, p_to date)
-returns table (
-  day date,
-  checkouts_started bigint,
-  orders_placed bigint,
-  orders_cancelled bigint,
-  orders_paid bigint,
-  paid_checkouts bigint,
-  payments_succeeded bigint,
-  payments_succeeded_ngwee bigint,
-  paid_checkout_total_ngwee bigint,
-  gmv_paid_ngwee bigint
-)
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  with days as (
-    select d::date as day
-    from generate_series(p_from, p_to, interval '1 day') as d
-  ),
-  order_rows as (
-    select
-      (o.created_at at time zone 'Africa/Lusaka')::date as day,
-      o.id,
-      o.checkout_group_id,
-      o.status,
-      o.delivery_fee_ngwee
-        + coalesce((
-          select sum(oi.qty::bigint * oi.unit_price_ngwee)
-          from public.order_items oi
-          where oi.order_id = o.id
-        ), 0) as order_total_ngwee
-    from public.orders o
-    where o.created_at >= (p_from::timestamp at time zone 'Africa/Lusaka')
-      and o.created_at < ((p_to + 1)::timestamp at time zone 'Africa/Lusaka')
-  ),
-  group_pay as (
-    select
-      p.checkout_group_id,
-      count(*) as successes,
-      sum(p.amount_ngwee) as success_ngwee
-    from public.payments p
-    where p.status = 'success'
-      and p.checkout_group_id in (select checkout_group_id from order_rows)
-    group by p.checkout_group_id
-  ),
-  day_groups as (
-    select distinct r.day, r.checkout_group_id
-    from order_rows r
-  ),
-  paid_groups as (
-    select
-      dg.day,
-      count(*) as paid_checkouts,
-      sum(gp.successes) as payments_succeeded,
-      sum(gp.success_ngwee) as payments_succeeded_ngwee,
-      sum(cg.total_ngwee) as paid_checkout_total_ngwee
-    from day_groups dg
-    join group_pay gp on gp.checkout_group_id = dg.checkout_group_id
-    join public.checkout_groups cg on cg.id = dg.checkout_group_id
-    group by dg.day
-  ),
-  order_agg as (
-    select
-      r.day,
-      count(*) as orders_placed,
-      count(*) filter (where r.status = 'cancelled') as orders_cancelled,
-      count(*) filter (where gp.checkout_group_id is not null) as orders_paid,
-      coalesce(sum(r.order_total_ngwee) filter (
-        where gp.checkout_group_id is not null and r.status <> 'cancelled'
-      ), 0) as gmv_paid_ngwee
-    from order_rows r
-    left join group_pay gp on gp.checkout_group_id = r.checkout_group_id
-    group by r.day
-  ),
-  checkout_agg as (
-    select (cg.created_at at time zone 'Africa/Lusaka')::date as day, count(*) as checkouts_started
-    from public.checkout_groups cg
-    where cg.created_at >= (p_from::timestamp at time zone 'Africa/Lusaka')
-      and cg.created_at < ((p_to + 1)::timestamp at time zone 'Africa/Lusaka')
-    group by 1
-  )
-  select
-    d.day,
-    coalesce(c.checkouts_started, 0)::bigint,
-    coalesce(oa.orders_placed, 0)::bigint,
-    coalesce(oa.orders_cancelled, 0)::bigint,
-    coalesce(oa.orders_paid, 0)::bigint,
-    coalesce(pg.paid_checkouts, 0)::bigint,
-    coalesce(pg.payments_succeeded, 0)::bigint,
-    coalesce(pg.payments_succeeded_ngwee, 0)::bigint,
-    coalesce(pg.paid_checkout_total_ngwee, 0)::bigint,
-    coalesce(oa.gmv_paid_ngwee, 0)::bigint
-  from days d
-  left join checkout_agg c on c.day = d.day
-  left join order_agg oa on oa.day = d.day
-  left join paid_groups pg on pg.day = d.day
-  order by d.day;
-$$;
-
-comment on function public.analytics_commercial_daily(date, date) is
-  'Convergeo Intelligence 1B-03/OD-9: per-Africa/Lusaka-day checkouts, orders, paid orders, successful '
-  'payments and paid GMV (integer ngwee) from orders/order_items/checkout_groups/payments '
-  'only. The single definition shared by the rollup and the admin API.';
-
-revoke all on function public.analytics_commercial_daily(date, date) from public, anon, authenticated;
-grant execute on function public.analytics_commercial_daily(date, date) to service_role;
-
--- ---------------------------------------------------------------------------
--- Daily rollup on Lusaka days (same signature as 1B-01)
+-- Daily rollup with distinct-session search demand (same signature as 1B-01)
 -- ---------------------------------------------------------------------------
 
 create or replace function public.analytics_rollup_day(p_day date, p_idle_minutes integer default 30)
@@ -152,18 +70,15 @@ begin
   if p_day is null then
     raise exception 'analytics_rollup_day: day is required';
   end if;
-  if p_day > (now() at time zone 'Africa/Lusaka')::date then
+  if p_day > timezone('utc', now())::date then
     raise exception 'analytics_rollup_day: % is in the future', p_day;
   end if;
   if p_idle_minutes is null or p_idle_minutes < 1 or p_idle_minutes > 240 then
     raise exception 'analytics_rollup_day: idle minutes out of range';
   end if;
 
-  -- OD-9: the reporting day is the Africa/Lusaka calendar day (CAT, UTC+2, no DST):
-  -- [p_day 00:00 CAT, p_day+1 00:00 CAT) = [p_day-1 22:00 UTC, p_day 22:00 UTC).
-  -- Stored timestamps stay UTC; only the day boundary moves.
-  v_from := p_day::timestamp at time zone 'Africa/Lusaka';
-  v_to := (p_day + 1)::timestamp at time zone 'Africa/Lusaka';
+  v_from := p_day::timestamp at time zone 'UTC';
+  v_to := (p_day + 1)::timestamp at time zone 'UTC';
 
   -- One recompute per day at a time (two API workers / a manual re-run).
   perform pg_advisory_xact_lock(hashtext('analytics_rollup_day'), p_day - date '2000-01-01');
@@ -381,7 +296,7 @@ end;
 $$;
 
 comment on function public.analytics_rollup_day(date, integer) is
-  'Convergeo Intelligence 1B-01/1B-03/OD-8/OD-9: idempotent recompute of one Africa/Lusaka day of analytics rollups '
+  'Convergeo Intelligence 1B-01/1B-03/OD-8: idempotent recompute of one UTC day of analytics rollups '
   '(delete + insert under a per-day advisory lock). Sessionises by a > p_idle_minutes idle '
   'gap; session end is an estimate (last_seen). Run by the flag-gated API rollup tick with '
   'SET LOCAL statement_timeout.';

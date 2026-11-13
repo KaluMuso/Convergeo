@@ -107,7 +107,7 @@ def test_sessionless_rows_over_five_days_count_as_one_session(live: PgConn) -> N
 
 
 def test_legacy_rows_with_null_sessions_are_conservative(live: PgConn) -> None:
-    # Rows written before 20261113200300 carry sessions = NULL: never more than one.
+    # Rows written before 20261113235300 carry sessions = NULL: never more than one.
     for day in DAYS:
         assert live.run(
             "INSERT INTO public.analytics_search_daily (day, normalized_term, searches, "
