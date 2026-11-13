@@ -180,8 +180,6 @@ describe("mounted mini-cart identity barrier", () => {
       </>,
     );
     await waitFor(() => expect(mocks.getSession).toHaveBeenCalledOnce());
-    authEvent("SIGNED_IN", session("account-a"));
-    await customer.getReadyCustomerSession();
     const late = deferred<ReturnType<typeof response>>();
     mocks.fetch.mockImplementation((url: string, init?: RequestInit) => {
       if (String(url).endsWith("/cart/items")) return late.promise;
@@ -190,6 +188,13 @@ describe("mounted mini-cart identity barrier", () => {
         : "account-a";
       return Promise.resolve(response(cart(account)));
     });
+    authEvent("SIGNED_IN", session("account-a"));
+    await customer.getReadyCustomerSession();
+    // Let the host's post-sign-in cart refresh land first. On a slow runner an
+    // add issued while that refresh is in flight fails closed with
+    // cart.session_changed (by design) before ever reaching /cart/items, which
+    // is not the late-response race this test is about.
+    await waitFor(() => expect(screen.getByTestId("cart-name")).toHaveTextContent("account-a"));
     const add = mini.addCartItem("listing-a", 1);
     await waitFor(() =>
       expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/cart/items"))).toBe(

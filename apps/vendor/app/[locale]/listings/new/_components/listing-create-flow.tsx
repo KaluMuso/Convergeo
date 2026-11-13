@@ -130,7 +130,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     () => ({
       heading: t("listings.commission.heading"),
       body: t("listings.commission.body"),
-      rate: t("listings.commission.rate"),
+      rate: String(t.raw("listings.commission.rate")),
     }),
     [t],
   );

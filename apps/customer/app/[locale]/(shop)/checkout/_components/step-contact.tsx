@@ -301,14 +301,17 @@ export function StepContact({ labels, onComplete, showIntro = true }: StepContac
             requiredMarker="*"
             asGroup
           >
-            <div className="flex gap-2">
-              <Input
-                size="lg"
-                className="w-24 shrink-0 text-center font-mono"
-                value={countryCode}
-                readOnly
-                aria-label={labels.countryCode}
-              />
+            {/* Size the prefix via a wrapper: field styles' `w-full` beats `w-24`. */}
+            <div className="flex min-w-0 gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  size="lg"
+                  className="text-center font-mono"
+                  value={countryCode}
+                  readOnly
+                  aria-label={labels.countryCode}
+                />
+              </div>
               <Input
                 size="lg"
                 className="min-w-0 flex-1 font-mono"

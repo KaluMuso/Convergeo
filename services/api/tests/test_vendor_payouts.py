@@ -491,3 +491,39 @@ def test_vendor_escrow_and_paid_out_sql_seams() -> None:
     ):
         assert vendor_escrow_held_ngwee(VENDOR_A_ID) == 150_000
         assert vendor_paid_out_ngwee(VENDOR_A_ID) == 90_000
+
+
+@pytest.mark.parametrize(
+    ("env_value", "expected_paused"),
+    [(None, True), ("false", True), ("true", False)],
+)
+def test_balances_say_when_payouts_are_switched_off(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    env_value: str | None,
+    expected_paused: bool,
+) -> None:
+    """The kill switch defaults to off; the vendor must be told, not left guessing."""
+    if env_value is None:
+        monkeypatch.delenv("PAYOUTS_ENABLED", raising=False)
+    else:
+        monkeypatch.setenv("PAYOUTS_ENABLED", env_value)
+    with (
+        patch("app.routers.vendor_payouts.vendor_escrow_held_ngwee", return_value=0),
+        patch("app.routers.vendor_payouts.vendor_paid_out_ngwee", return_value=0),
+        patch(
+            "app.routers.vendor_payouts.compute_eligibility",
+            return_value=MagicMock(available_ngwee=40_000),
+        ),
+    ):
+        balances = compute_vendor_balances(
+            cast(Any, fake_client),
+            vendor_id=VENDOR_A_ID,
+            payout_msisdn=None,
+            payout_rail=None,
+            payout_hold_until=None,
+        )
+
+    assert balances.payouts_paused is expected_paused
+    # The per-vendor 24h hold is a separate condition and stays independent.
+    assert balances.payouts_blocked is False
