@@ -1,4 +1,5 @@
 import { ShopLocaleSwitcher } from "../../(shop)/_components/shop-locale-switcher";
+import { NotificationBellIsland } from "../../_components/notification-bell-island";
 
 import { AccountAppHeaderClient, type AccountHeaderClientLabels } from "./account-header-client";
 
@@ -14,5 +15,12 @@ type AccountAppHeaderProps = {
 export function AccountAppHeader({ locale, labels, localeSwitcherLabels }: AccountAppHeaderProps) {
   const localeSwitcher = <ShopLocaleSwitcher locale={locale} labels={localeSwitcherLabels} />;
 
-  return <AccountAppHeaderClient locale={locale} labels={labels} localeSwitcher={localeSwitcher} />;
+  return (
+    <AccountAppHeaderClient
+      locale={locale}
+      labels={labels}
+      localeSwitcher={localeSwitcher}
+      notificationSlot={<NotificationBellIsland locale={locale} />}
+    />
+  );
 }

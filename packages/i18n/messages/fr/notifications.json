@@ -109,5 +109,62 @@
     "payout_failure_alert": {
       "body": "Alerte d'échec de versement : {vendor_name} — {amount} (réf {lenco_reference}). Vérifiez dans l'admin."
     }
+  },
+  "center": {
+    "bell": "Notifications",
+    "bellUnread": "{count, plural, one {# notification non lue} other {# notifications non lues}}",
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "seeAll": "Voir toutes les notifications",
+    "empty": "Vous êtes à jour. Les nouvelles mises à jour apparaîtront ici.",
+    "loading": "Chargement…",
+    "loadError": "Impossible de charger les notifications.",
+    "retry": "Réessayer",
+    "loadMore": "Charger plus",
+    "unreadDot": "Non lue",
+    "view": "Voir",
+    "close": "Fermer",
+    "pageDescription": "Mises à jour de vos commandes, paiements et compte.",
+    "push": {
+      "enable": "Activer les alertes sur ce téléphone",
+      "enabled": "Les alertes sont activées",
+      "denied": "Les alertes sont bloquées dans les réglages du navigateur.",
+      "hint": "Recevez une alerte sur ce téléphone même lorsque l'application est fermée.",
+      "unavailable": "Les alertes ne sont pas encore disponibles.",
+      "failed": "Impossible d'activer les alertes. Réessayez."
+    },
+    "errors": {
+      "forbidden": "Vous ne pouvez pas voir ces notifications.",
+      "rateLimited": "Trop de demandes. Patientez un instant.",
+      "invalidCursor": "Ce lien de page a expiré. Rechargez pour continuer."
+    }
+  },
+  "inApp": {
+    "fallback": "Vous avez une nouvelle mise à jour.",
+    "customer": {
+      "order_placed": "Commande {ref} passée. Nous vous préviendrons quand le vendeur la confirmera.",
+      "order_confirmed": "La commande {ref} a été confirmée par le vendeur.",
+      "order_rejected": "La commande {ref} a été refusée par le vendeur. Tout paiement vous sera rendu.",
+      "order_packed": "La commande {ref} est en cours d'emballage.",
+      "order_shipped": "La commande {ref} est en route.",
+      "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
+      "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
+      "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
+      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+    },
+    "vendor": {
+      "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",
+      "order_delivered": "La commande {ref} a été livrée.",
+      "kyc_submitted": "Nous avons reçu vos documents de vérification. Nous les examinerons bientôt.",
+      "kyc_approved": "Votre boutique est vérifiée. Vous pouvez maintenant recevoir des paiements.",
+      "kyc_rejected": "Votre vérification nécessite des modifications. Ouvrez-la pour en savoir plus.",
+      "rfq_received": "Un client vous a demandé un devis.",
+      "job_matched": "Une nouvelle mission correspond à vos services.",
+      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre."
+    },
+    "admin": {
+      "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",
+      "dispute_opened": "Nouveau litige ouvert sur la commande {ref}."
+    }
   }
 }

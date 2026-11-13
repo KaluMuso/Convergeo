@@ -50,6 +50,8 @@ type ShopHeaderProps = {
   localeSwitcher?: React.ReactNode;
   /** Mobile search affordance — typically `MobileHeaderSearch` from the layout. */
   mobileSearchSlot?: ReactNode;
+  /** Notification bell island (renders nothing for guests). */
+  notificationSlot?: ReactNode;
 };
 
 /** Pill chip on tablet's scroller row, plain nav link on desktop. */
@@ -66,7 +68,12 @@ const actionClassName =
  * · search (with Ask Vergeo sparkle) · Directory · Services · Events · Account
  * · Cart. Cart/account show icon + label side by side, count on the icon.
  */
-export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps) {
+export function ShopHeader({
+  locale,
+  labels,
+  mobileSearchSlot,
+  notificationSlot,
+}: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
   const eligibleForSupplies = useBusinessEligibility();
@@ -209,11 +216,15 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
       </a>
 
       {/* Phones (< md): logo + actions, then a full-width search row. */}
-      <nav aria-label={labels.navAriaLabel} className="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden">
+      <nav
+        aria-label={labels.navAriaLabel}
+        className="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden"
+      >
         <div className="flex items-center justify-between gap-2">
           {logo}
           <div className="flex items-center gap-0.5">
             {themeToggle}
+            {notificationSlot}
             {accountLink(false)}
             {cartTrigger(false)}
           </div>
@@ -239,6 +250,7 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
         </div>
         <div className="order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-5 lg:ml-0">
           {themeToggle}
+          {notificationSlot}
           {accountLink(true)}
           {cartTrigger(true)}
         </div>
