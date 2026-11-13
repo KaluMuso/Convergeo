@@ -1,4 +1,4 @@
-"""Vendor plans + canonical photos at the database (migrations 20261113235000/235100).
+"""Vendor plans + canonical photos at the database (migrations 20261114030000/235100).
 
 Row isolation (a vendor never sees another vendor's plan assignment or override),
 client write denial, and the listing admission trigger's least(KYC, plan) cap.

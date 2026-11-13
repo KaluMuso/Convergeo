@@ -86,9 +86,9 @@ PENDING_REPAIR_VERSIONS = {
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
     # Vendor listing plans: plan tables, cap resolver, admission guard least(KYC, plan) (additive, reversible).
-    "20261113235000",
+    "20261114030000",
     # Shared canonical product photos + listing_images.content_sha256 dedup (additive, reversible).
-    "20261113235100",
+    "20261114030100",
 }
 
 

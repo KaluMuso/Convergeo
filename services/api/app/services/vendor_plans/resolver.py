@@ -1,7 +1,7 @@
 """Effective vendor plan resolution (flag ``vendor_plans``, default off).
 
 One rule, mirrored by the SQL function ``public.vendor_plan_listing_cap``
-(migration 20261113235000) which the listing admission trigger uses:
+(migration 20261114030000) which the listing admission trigger uses:
 
 1. Flag off (or unreadable) -> no plan applies; behaviour is exactly pre-plans.
 2. A non-expired override wins for the fields it sets (``unlimited_listings``,

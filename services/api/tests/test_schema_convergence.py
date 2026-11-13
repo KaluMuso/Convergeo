@@ -99,9 +99,9 @@ POST_REPAIR_PENDING_VERSIONS = [
     # In-app notification center (additive, reversible).
     "20261113130000",
     # Vendor listing plans (additive, reversible).
-    "20261113235000",
+    "20261114030000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
-    "20261113235100",
+    "20261114030100",
 ]
 
 def _module() -> Any:
@@ -166,7 +166,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
-    capacity_plans_photos = ["20261113235000", "20261113235100"]
+    capacity_plans_photos = ["20261114030000", "20261114030100"]
     assert actual_versions[-21:] == (
         repairs
         + post_repair
