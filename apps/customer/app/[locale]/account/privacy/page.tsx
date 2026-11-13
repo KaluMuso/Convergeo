@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { clearUserCaches } from "../../../../lib/clear-user-caches";
 
 const API_BASE_URL = getApiBaseUrl();
 const DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT";
@@ -210,6 +211,7 @@ function DeleteSection({ locale }: { locale: string }) {
       setDone(true);
       const supabase = await getBrowserClient();
       await supabase.auth.signOut();
+      await clearUserCaches();
     } catch {
       setError(t("error"));
     } finally {

@@ -81,6 +81,12 @@ export type PaymentOptions = {
   total_ngwee: number;
   cod_cap_ngwee: number;
   cod_eligible: boolean;
+  /**
+   * Methods the API will accept right now: momo/card only while the payment
+   * kill switch is on, cod only when the total is within the cap. Absent on an
+   * older API, in which case every method is shown as before.
+   */
+  available_methods?: PaymentMethod[];
 };
 
 export type ValidatedPayment = {
@@ -145,8 +151,13 @@ export function StepPayment({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(!preset);
-  const offers = (candidate: PaymentMethod) =>
-    preset ? (preset.methods as ReadonlyArray<PaymentMethod>).includes(candidate) : true;
+  // Never offer a method the API has said it will refuse: with online payments
+  // switched off a buyer must not be walked through a MoMo or card form first.
+  const offered: ReadonlyArray<PaymentMethod> | null = preset
+    ? (preset.methods as ReadonlyArray<PaymentMethod>)
+    : (options?.available_methods ?? null);
+  const offers = (candidate: PaymentMethod) => (offered ? offered.includes(candidate) : true);
+  const nothingOffered = offered !== null && offered.length === 0;
 
   useEffect(() => {
     if (preset) {
@@ -165,7 +176,13 @@ export function StepPayment({
         );
         if (!cancelled) {
           setOptions(response);
-          if (!response.cod_eligible && method === "cod") {
+          const available = response.available_methods;
+          if (available) {
+            const first = available[0];
+            if (first && !available.includes(method)) {
+              setMethod(first);
+            }
+          } else if (!response.cod_eligible && method === "cod") {
             setMethod("momo");
           }
         }
@@ -445,7 +462,7 @@ export function StepPayment({
         )}
       </div>
 
-      {method === "momo" ? (
+      {method === "momo" && offers("momo") ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={labels.momo}>
             <PaymentRailChoice
@@ -507,7 +524,7 @@ export function StepPayment({
         </div>
       ) : null}
 
-      {method === "card" ? (
+      {method === "card" && offers("card") ? (
         <div className="rounded-card border border-border bg-bg-2 px-4 py-3">
           <p className="font-body text-sm text-text-2">{labels.cardExplainer}</p>
         </div>
@@ -528,7 +545,7 @@ export function StepPayment({
         <span ref={errorRef} className="sr-only" aria-hidden="true" />
       ) : null}
 
-      {preset && preset.methods.length === 0 ? (
+      {nothingOffered ? (
         <p
           role="alert"
           className="font-body text-sm text-danger"

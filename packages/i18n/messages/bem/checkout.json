@@ -109,6 +109,7 @@
     "emptyCart": "Cart yenu iyapwa.",
     "error": "Icintu caciluka. Wesheni limbi.",
     "loading": "Iletampa checkout…",
+    "overCodCap": "Order yenu yacila pali {cap}, ifyo cash on delivery ingasuma. Payment ya online teyaisa nomba. Fumyeni fimo mu cart pa kuti mupwishe ukushita.",
     "pageTitle": "Ukushita",
     "contact": {
       "title": "Amashiwi yenu",

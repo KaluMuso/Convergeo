@@ -9,7 +9,7 @@ from enum import StrEnum
 from app.schemas.base import parse_ngwee
 
 PLATFORM_ACCOUNT_KINDS = frozenset(
-    {"platform_cash", "escrow", "commission_revenue", "fees"}
+    {"platform_cash", "escrow", "commission_revenue", "fees", "delivery_revenue"}
 )
 VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable"})
 
@@ -26,6 +26,8 @@ class LedgerTemplate(StrEnum):
     CLAWBACK = "clawback"
     REFUND_REVERSAL = "refund_reversal"
     LENCO_FEE = "lenco_fee"
+    DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
+    COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,17 +231,26 @@ def cod_collected(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED, legs=legs)
 
 
-def clawback(*, clawback_ngwee: int, vendor_id: str) -> TemplateResult:
+def clawback(*, clawback_ngwee: int, vendor_id: str, delivery_fee_ngwee: int = 0) -> TemplateResult:
     """Post-release refund clawback — recover funds from vendor payable.
 
-    Debit vendor_payable (vendor) (+clawback).
+    Debit vendor_payable (vendor) (+clawback − delivery_fee).
+    Debit delivery_revenue (+delivery_fee) — the refunded delivery fee the platform
+    captured at release (never vendor money, so never clawed from the vendor).
     Credit platform_cash (−clawback).
     """
     amount = parse_ngwee(clawback_ngwee)
-    legs = (
-        PostingLeg(AccountRef("vendor_payable", vendor_id), amount),
-        PostingLeg(AccountRef("platform_cash"), -amount),
-    )
+    fee = 0 if delivery_fee_ngwee == 0 else parse_ngwee(delivery_fee_ngwee)
+    if fee > amount:
+        msg = "delivery_fee_ngwee must not exceed clawback_ngwee"
+        raise ValueError(msg)
+    vendor_part = amount - fee
+    debit_legs: list[PostingLeg] = []
+    if vendor_part > 0:
+        debit_legs.append(PostingLeg(AccountRef("vendor_payable", vendor_id), vendor_part))
+    if fee > 0:
+        debit_legs.append(PostingLeg(AccountRef("delivery_revenue"), fee))
+    legs = (*debit_legs, PostingLeg(AccountRef("platform_cash"), -amount))
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.CLAWBACK, legs=legs)
 
@@ -280,6 +291,46 @@ def lenco_fee(*, fee_ngwee: int) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.LENCO_FEE, legs=legs)
 
 
+def delivery_fee_capture(*, delivery_fee_ngwee: int) -> TemplateResult:
+    """Move the customer's delivery fee out of escrow to platform delivery revenue.
+
+    The platform books and pays the courier (D16), so the fee is platform income,
+    never part of the vendor's release.
+
+    Debit escrow (+fee).
+    Credit delivery_revenue (−fee).
+    """
+    fee = parse_ngwee(delivery_fee_ngwee)
+    if fee <= 0:
+        msg = "delivery_fee_ngwee must be positive"
+        raise ValueError(msg)
+    legs = (
+        PostingLeg(AccountRef("escrow"), fee),
+        PostingLeg(AccountRef("delivery_revenue"), -fee),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DELIVERY_FEE_CAPTURE, legs=legs)
+
+
+def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
+    """COD cash taken by the vendor at its own counter (pickup) — never platform cash.
+
+    The vendor already holds the cash, so it is booked against what the platform
+    owes the vendor: after the usual capture + release the vendor's payable shows
+    the commission (and any delivery fee) the vendor owes the platform.
+
+    Debit vendor_payable (vendor) (+collected).
+    Credit cod_receivable (vendor) (−collected).
+    """
+    collected = parse_ngwee(collected_ngwee)
+    legs = (
+        PostingLeg(AccountRef("vendor_payable", vendor_id), collected),
+        PostingLeg(AccountRef("cod_receivable", vendor_id), -collected),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -305,6 +356,8 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.CLAWBACK: clawback,
     LedgerTemplate.REFUND_REVERSAL: refund_reversal,
     LedgerTemplate.LENCO_FEE: lenco_fee,
+    LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
+    LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

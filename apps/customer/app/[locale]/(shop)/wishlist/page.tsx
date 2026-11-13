@@ -65,13 +65,13 @@ export default async function WishlistPage({ params }: PageProps) {
           loading: t("saved.loading"),
           loadError: t("saved.loadError"),
           remove: t("saved.remove"),
-          removeLabel: t("saved.removeLabel"),
+          removeLabel: String(t.raw("saved.removeLabel")),
           moveToCart: t("saved.moveToCart"),
           movingToCart: t("saved.movingToCart"),
           viewProduct: t("saved.viewProduct"),
           unavailable: t("saved.unavailable"),
           outOfStock: t("saved.outOfStock"),
-          fromPrice: t("saved.fromPrice"),
+          fromPrice: String(t.raw("saved.fromPrice")),
           signedOutNote: t("saved.signedOutNote"),
         }}
       />

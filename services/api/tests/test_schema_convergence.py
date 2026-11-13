@@ -90,6 +90,12 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261108120000",
     "20261109100000",
     "20261109120000",
+    # #777 pilot fixes (additive): Band B fallback, fulfilment choices, cancel stock release.
+    "20261113060000",
+    "20261113070000",
+    "20261113071000",
+    # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+    "20261113120500",
 ]
 
 def _module() -> Any:
@@ -132,11 +138,11 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 153
+    assert len(sql_files) == len(migrations) == 157
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
-    # then the 2026-11 queued features (#764-#768) in filename order.
+    # then the 2026-11 queued features (#764-#768) and #777 pilot fixes in filename order.
     post_repair = [
         "20261107120000",
         "20261107130000",
@@ -151,7 +157,11 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         "20261109100000",
         "20261109120000",
     ]
-    assert actual_versions[-14:] == repairs + post_repair + queued_features
+    pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
+    money_dispatch = ["20261113120500"]
+    assert actual_versions[-18:] == (
+        repairs + post_repair + queued_features + pilot_fixes + money_dispatch
+    )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
     assert schema.manifest_digest(migrations, _manifest()) == schema.manifest_digest(

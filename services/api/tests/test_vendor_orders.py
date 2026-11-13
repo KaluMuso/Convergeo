@@ -454,6 +454,36 @@ def test_ship_passes_tracking_note_to_transition(
     assert mock_transition.call_args.kwargs["note"] == "Yango driver John 0977123456"
 
 
+def test_available_actions_hide_ship_when_courier_dispatch_ships() -> None:
+    actions = _available_vendor_actions(
+        status="processing", fulfilment="delivery", courier_dispatch=True
+    )
+    assert "ship" not in actions
+
+
+@patch("app.routers.vendor_orders.courier_dispatch_owns_shipping", return_value=True)
+@patch("app.routers.vendor_orders.transition_order")
+def test_ship_refused_while_courier_dispatch_ships_the_order(
+    mock_transition: MagicMock,
+    _mock_owns: MagicMock,
+    orders_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    for row in fake_client.tables["orders"].rows:
+        if row["id"] == ORDER_A_ID:
+            row["status"] = "processing"
+
+    response = orders_client.post(
+        f"/vendor/orders/{ORDER_A_ID}/ship",
+        headers=_auth_headers(),
+        json={"tracking_note": "My cousin's boda boda"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "orders.courier_dispatch_ships"
+    mock_transition.assert_not_called()
+
+
 def test_action_event_map_covers_all_vendor_actions() -> None:
     assert set(ACTION_EVENT_MAP) == {
         "confirm",

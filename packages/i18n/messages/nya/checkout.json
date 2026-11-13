@@ -109,6 +109,7 @@
     "emptyCart": "Cart yanu ndi yopanda kanthu.",
     "error": "China chake chalakwika. Yesaninso.",
     "loading": "Ikuyamba checkout…",
+    "overCodCap": "Order yanu yaposa {cap}, ndalama zomwe cash on delivery ingalipire. Payment ya online silipo pano. Chotsani zinthu zina mu cart kuti mumalize kugula.",
     "pageTitle": "Kugula",
     "contact": {
       "title": "Zambiri zanu",

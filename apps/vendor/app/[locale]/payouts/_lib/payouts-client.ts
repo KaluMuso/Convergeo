@@ -7,6 +7,8 @@ export type PayoutBalances = {
   released_available_ngwee: number;
   paid_out_ngwee: number;
   payouts_blocked: boolean;
+  /** Platform payout switch is off: nothing is being paid out to anyone yet. */
+  payouts_paused?: boolean;
   payout_hold_until: string | null;
   payout_msisdn: string | null;
   payout_rail: string | null;

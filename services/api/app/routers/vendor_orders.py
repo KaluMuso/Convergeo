@@ -9,6 +9,7 @@ from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.listings.variants import snapshot_options
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
     PREPAID_PAYMENT_REQUIRED_EVENTS,
@@ -187,17 +188,43 @@ def _is_paid_order(service_client: _ServiceRoleClient, order_row: dict[str, Any]
     return _order_has_successful_payment(service_client, checkout_group_id)
 
 
+def courier_dispatch_owns_shipping(order_id: str | None = None) -> bool:
+    """True when Vergeo5 courier dispatch, not the vendor, ships delivery orders.
+
+    The ``courier_dispatch`` flag puts every delivery order on the platform's
+    dispatch board, and an order with an in-flight dispatch is being carried by a
+    courier. In both cases a vendor ``ship`` would be a second shipping path: the
+    order would leave the board (``create_dispatch`` refuses ``shipped``) with no
+    handover code, and the courier's ``picked_up`` could no longer ship it.
+    """
+    from app.services.dispatch.service import is_courier_dispatch_enabled
+
+    if is_courier_dispatch_enabled():
+        return True
+    if order_id is None:
+        return False
+    result = run_sql_script(
+        "SELECT count(*)::text FROM public.dispatch_requests "
+        f"WHERE order_id = {sql_literal(order_id)}::uuid "
+        "AND status IN ('requested', 'accepted', 'picked_up');"
+    )
+    return bool(result.ok and result.rows and result.rows[0] != "0")
+
+
 def _available_vendor_actions(
     *,
     status: str,
     fulfilment: str,
     paid: bool = True,
     cod: bool = False,
+    courier_dispatch: bool = False,
 ) -> list[VendorActionName]:
     actions: list[VendorActionName] = []
     prepaid_unpaid = (not cod) and (not paid)
     for action_name, event in ACTION_EVENT_MAP.items():
         if prepaid_unpaid and event in PREPAID_PAYMENT_REQUIRED_EVENTS:
+            continue
+        if courier_dispatch and event == OrderEvent.SHIP:
             continue
         result = resolve_transition(
             from_status=OrderStatus(status),
@@ -346,6 +373,7 @@ def _build_order_detail(
             fulfilment=fulfilment,
             paid=paid,
             cod=cod,
+            courier_dispatch=fulfilment == "delivery" and courier_dispatch_owns_shipping(order_id),
         ),
     )
 
@@ -411,6 +439,7 @@ def _execute_vendor_action(
             fulfilment=fulfilment,
             paid=paid,
             cod=cod,
+            courier_dispatch=fulfilment == "delivery" and courier_dispatch_owns_shipping(order_id),
         ),
     )
 
@@ -495,6 +524,15 @@ def ship_vendor_order(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     order_row = _load_order_row(service_client, order_id)
     _assert_vendor_owns_order(vendor_id=str(vendor["id"]), order_row=order_row)
+    if str(order_row.get("fulfilment")) == "delivery" and courier_dispatch_owns_shipping(
+        str(order_row["id"])
+    ):
+        raise AppError(
+            code="orders.courier_dispatch_ships",
+            message="Vergeo5 courier dispatch ships this order; hand the parcel to the rider",
+            http_status=409,
+            details={"message_key": "vendor.orders.courierDispatchShips"},
+        )
     return _execute_vendor_action(
         service_client=service_client,
         vendor_id=str(vendor["id"]),

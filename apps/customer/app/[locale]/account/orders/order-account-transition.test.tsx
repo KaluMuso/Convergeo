@@ -68,8 +68,12 @@ vi.mock("next-intl/server", () => ({
   setRequestLocale: () => undefined,
 }));
 vi.mock("next-intl", () => ({
-  createTranslator: () => (key: string, values?: Record<string, string | number>) =>
-    `${key}${values ? ` ${Object.values(values).join(" ")}` : ""}`,
+  createTranslator: () =>
+    Object.assign(
+      (key: string, values?: Record<string, string | number>) =>
+        `${key}${values ? ` ${Object.values(values).join(" ")}` : ""}`,
+      { raw: (key: string) => key },
+    ),
 }));
 vi.mock("./_components/orders-api", () => ({
   createOrdersApiClient: (getToken: () => string) => ({

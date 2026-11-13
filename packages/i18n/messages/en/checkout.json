@@ -163,6 +163,7 @@
     "emptyCart": "Your cart is empty.",
     "retry": "Try again",
     "backToCart": "Back to cart",
+    "overCodCap": "Your order is over {cap}, the most you can pay cash on delivery, and online payment isn't available right now. Remove some items from your cart to check out.",
     "loading": "Starting checkout…",
     "error": "Something went wrong. Try again.",
     "payment": {
