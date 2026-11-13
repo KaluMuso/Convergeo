@@ -53,7 +53,8 @@ escrow_rem AS (
     coalesce(sum(CASE WHEN lt.kind IN (
         'charge_received', 'escrow_hold', 'cod_receivable_opened'
       ) THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS charged,
-    coalesce(sum(CASE WHEN lt.kind = 'commission_capture'
+    -- Platform captures: commission and the delivery fee (delivery_revenue).
+    coalesce(sum(CASE WHEN lt.kind IN ('commission_capture', 'delivery_fee_capture')
       THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS commission,
     coalesce(sum(CASE WHEN lt.kind = '{RELEASE_LEDGER_KIND}'
       THEN abs(lp.amount_ngwee) ELSE 0 END), 0) AS released,

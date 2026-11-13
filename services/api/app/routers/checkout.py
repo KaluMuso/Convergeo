@@ -54,8 +54,44 @@ ZONE_BANDS_KM: tuple[tuple[str, float], ...] = (
     ("lusaka_c", 25.0),
 )
 DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000
-# Towns a typed landmark can name that are definitely not Lusaka delivery.
-OTHER_TOWN_TOKENS: tuple[str, ...] = ("ndola", "kitwe", "livingstone", "chipata")
+# Towns a typed landmark can name that are definitely not Lusaka delivery
+# (beyond the 25 km Band C ring): provincial and district towns of Zambia.
+# Near-Lusaka places stay with the landmark bands instead: Chongwe, Chilanga
+# and "Kafue Road" are Band C keywords below. Kafue *town* (~45 km) and
+# Chisamba (~50 km) are outside. Matched whole-word; a town name used as a
+# Lusaka street or landmark ("Kabwe Roundabout", "Mumbwa Road") is not a town.
+# fmt: off
+OTHER_TOWN_TOKENS: tuple[str, ...] = (
+    # Copperbelt
+    "ndola", "kitwe", "chingola", "mufulira", "luanshya", "chililabombwe",
+    "kalulushi", "masaiti", "mpongwe", "lufwanyama",
+    # Central (outside the Lusaka ring)
+    "kabwe", "kapiri mposhi", "kapiri", "mkushi", "serenje", "mumbwa",
+    "chibombo", "chisamba", "itezhi tezhi", "itezhi-tezhi",
+    # Southern
+    "livingstone", "choma", "mazabuka", "monze", "kalomo", "namwala",
+    "siavonga", "sinazongwe", "gwembe", "kazungula", "chirundu",
+    # Lusaka Province towns outside the ring
+    "kafue", "luangwa", "rufunsa",
+    # Eastern
+    "chipata", "petauke", "katete", "lundazi", "chadiza", "nyimba", "sinda",
+    # Northern / Muchinga
+    "kasama", "mbala", "mpulungu", "mporokoso", "luwingu", "mpika", "chinsali",
+    "nakonde", "isoka",
+    # Luapula
+    "mansa", "samfya", "kawambwa", "nchelenge", "mwense",
+    # North-Western
+    "solwezi", "mwinilunga", "kasempa", "kabompo", "zambezi", "chavuma",
+    # Western
+    "mongu", "senanga", "sesheke", "kaoma", "kalabo", "lukulu", "shangombo",
+)
+# Words after a town name that make it a Lusaka street / landmark, not a town.
+_LUSAKA_STREET_SUFFIXES: tuple[str, ...] = (
+    "road", "rd", "roundabout", "round about", "r/a", "rdbt", "rbt", "street", "st",
+    "avenue", "ave", "drive", "close", "compound", "cmpd", "overspill", "turn off",
+    "turnoff", "turn-off",
+)
+# fmt: on
 # platform_config key naming the delivery zone for a typed Lusaka landmark the
 # keyword matcher cannot place. Unset (the default) keeps the strict behaviour.
 FALLBACK_DELIVERY_ZONE_KEY = "delivery_fallback_zone"
@@ -190,9 +226,32 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * radius_km * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def _other_town_pattern() -> re.Pattern[str]:
+    ordered = sorted(OTHER_TOWN_TOKENS, key=lambda word: (-len(word), word))
+    alternation = "|".join(
+        r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word)) for word in ordered
+    )
+    suffixes = "|".join(
+        r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word))
+        for word in sorted(_LUSAKA_STREET_SUFFIXES, key=lambda word: (-len(word), word))
+    )
+    # "Kafue-Road" / "Kabwe R/A" / "Chipata Overspill" are Lusaka places too.
+    return re.compile(
+        rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])(?![\s-]+(?:{suffixes})(?![a-z0-9]))"
+    )
+
+
+_OTHER_TOWN_PATTERN = _other_town_pattern()
+
+
 def landmark_names_other_town(landmark: str | None) -> bool:
-    lower = (landmark or "").lower()
-    return any(token in lower for token in OTHER_TOWN_TOKENS)
+    """True when a typed landmark names a town outside Lusaka delivery.
+
+    Whole-word, so "Kafue Road" (Lusaka, Band C) and "Kabwe Roundabout" are not
+    towns, while "Kafue town" or "Plot 4, Kabwe" are.
+    """
+    text = " ".join((landmark or "").lower().replace("\u2019", "").replace("'", "").split())
+    return bool(_OTHER_TOWN_PATTERN.search(text))
 
 
 def _keyword_pattern(keywords: tuple[str, ...]) -> re.Pattern[str]:
@@ -438,6 +497,17 @@ def resolve_address_zone(
     zone = resolve_delivery_zone(lat=lat, lng=lng, landmark=landmark)
     if zone is None and lat is None and lng is None and not landmark_names_other_town(landmark):
         zone = _load_fallback_delivery_zone(service, zones)
+        if zone is not None:
+            # Ops review these daily to grow the area keywords / town list.
+            # Landmark is truncated: it is address text (Zambia DPA minimisation).
+            logger.warning(
+                "checkout.delivery_fallback_zone_used",
+                extra={
+                    "event": "delivery_fallback_zone_used",
+                    "fallback_zone": zone,
+                    "landmark_excerpt": _normalise_landmark(landmark or "")[:60],
+                },
+            )
     return zone
 
 

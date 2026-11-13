@@ -234,3 +234,66 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
         vendor_id=VENDOR_ID,
         net_ngwee=92_000,
     )
+
+
+@pytest.mark.parametrize(
+    ("refunded_fee", "remaining", "expected_fee_capture", "expected_gross"),
+    [
+        # Lane-1 item return already refunded item + fee: the fee is gone from
+        # escrow, so nothing is captured and the kept items reach the vendor.
+        (4_500, 105_000, 0, 105_000),
+        # No fee refunded (e.g. lane 2): the fee is still in escrow for the platform.
+        (0, 109_500, 4_500, 105_000),
+    ],
+)
+def test_release_after_partial_refund_never_captures_a_refunded_fee(
+    refunded_fee: int, remaining: int, expected_fee_capture: int, expected_gross: int
+) -> None:
+    now = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+    context = _OrderContext(
+        order_id=ORDER_ID,
+        status="delivered",
+        vendor_id=VENDOR_ID,
+        checkout_group_id="c1000000-0000-0000-0000-000000000099",
+        cod=False,
+        commission_snapshot=_snapshot(),
+        gross_ngwee=205_000,
+        has_open_dispute=False,
+        already_released=False,
+        buyer_confirmed=True,
+        delivered_at=now - timedelta(hours=1),
+        shipped_at=now - timedelta(hours=2),
+        has_escrow_evidence=True,
+        delivery_fee_ngwee=4_500,
+    )
+    captured: dict[str, int] = {}
+
+    def fake_compute(
+        *, order_id: str, gross_ngwee: int, commission_snapshot: dict[str, Any]
+    ) -> MagicMock:
+        _ = (order_id, commission_snapshot)
+        captured["gross"] = gross_ngwee
+        result = MagicMock()
+        result.net_ngwee = gross_ngwee - 1_000
+        result.commission_ngwee = 1_000
+        result.gross_ngwee = gross_ngwee
+        return result
+
+    with (
+        patch("app.services.escrow.release._load_order_context", return_value=context),
+        patch("app.services.escrow.release.release_blocked_reason", return_value=None),
+        patch("app.services.escrow.release.delivery_fee_already_captured", return_value=False),
+        patch("app.services.escrow.release.delivery_fee_refunded_ngwee", return_value=refunded_fee),
+        patch("app.services.escrow.release.order_has_refund_remainder", return_value=True),
+        patch("app.services.escrow.release.remaining_escrow_ngwee", return_value=remaining),
+        patch("app.services.escrow.release.compute_release_amounts", side_effect=fake_compute),
+        patch("app.services.escrow.release.claim_release_gate"),
+        patch("app.services.escrow.release.capture_order_commission"),
+        patch("app.services.escrow.release.capture_order_delivery_fee") as capture_fee,
+        patch("app.services.escrow.release._post_release", return_value="txn-1"),
+    ):
+        result = evaluate_and_release(MagicMock(), ORDER_ID, now=now)
+
+    assert result.outcome == "released"
+    assert captured["gross"] == expected_gross
+    capture_fee.assert_called_once_with(order_id=ORDER_ID, delivery_fee_ngwee=expected_fee_capture)
