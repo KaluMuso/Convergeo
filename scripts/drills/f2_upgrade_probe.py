@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -34,6 +35,22 @@ def fingerprint(order: str, payment: str) -> list[str]:
       'postings',(SELECT jsonb_agg(to_jsonb(lp) ORDER BY lp.id)
         FROM public.ledger_postings lp JOIN public.ledger_transactions t
         ON t.id=lp.transaction_id WHERE t.order_id='{order}'))::text;""")
+
+
+def without_additive_nulls(after: Any, before: Any) -> Any:
+    """Drop columns a reviewed additive migration introduced as NULL.
+
+    A forward migration may add a nullable column (e.g. 20261113070000
+    checkout_groups.fulfilment_choices) without backfilling legacy rows. Such a
+    key is absent from the pre-upgrade snapshot and NULL afterwards. Every column
+    that existed before must still match exactly, and a new column carrying any
+    non-NULL value still counts as changed legacy evidence.
+    """
+    if isinstance(after, dict) and isinstance(before, dict):
+        return {k: v for k, v in after.items() if k in before or v is not None}
+    if isinstance(after, list) and isinstance(before, list) and len(after) == len(before):
+        return [without_additive_nulls(a, b) for a, b in zip(after, before, strict=True)]
+    return after
 
 
 def main() -> None:
@@ -144,6 +161,8 @@ def main() -> None:
             # order/item/checkout data and any foreign balance remain identical.
             if spine["balance_checkout"] is None:
                 after_spine["balance_checkout"] = None
+            after_spine = {key: without_additive_nulls(value, spine.get(key))
+                           for key, value in after_spine.items()}
             if after_spine != spine:
                 raise RuntimeError(f"legacy order/checkout evidence changed: {fixture['kind']}")
             if sql(
