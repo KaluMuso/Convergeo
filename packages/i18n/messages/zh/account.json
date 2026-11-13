@@ -94,6 +94,8 @@
     "delete": "删除地址",
     "deleteConfirmTitle": "删除此地址？",
     "deleteConfirmBody": "此地址将从您的账户中移除。已提交的订单不受影响。",
+    "deleteBlocked": "此地址关联的订单尚未送达。订单完成后即可删除。",
+    "deleteFailed": "无法删除地址。请重试。",
     "cancel": "取消",
     "requiredLandmark": "地标指引为必填项。",
     "error": "无法保存地址。请重试。"

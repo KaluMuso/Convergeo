@@ -7,8 +7,10 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../../_components/async-state";
+import { ListSkeleton } from "../../../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
+import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/listing-guide";
 import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
@@ -18,7 +20,7 @@ import {
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
 import { milliToUnitInput } from "../../../new/_lib/measure";
-import { Badge, Button, FormField, Input, Spinner, Switch } from "../../../new/_lib/ui";
+import { Badge, Button, FormField, Input, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
 
@@ -364,11 +366,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   };
 
   if (sessionLoading || loading) {
-    return (
-      <div className="flex min-h-40 items-center justify-center">
-        <Spinner label={t("listings.manage.loading")} />
-      </div>
-    );
+    return <ListSkeleton label={t("listings.manage.loading")} rows={4} />;
   }
 
   if (!session) {
@@ -425,7 +423,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
             label={statusLabel}
           />
         </div>
+        <ListingVisibilityHint status={listing.status} />
       </header>
+
+      <ListingTipsPanel />
 
       {error ? (
         <p className="text-sm text-danger" role="alert">

@@ -3,106 +3,177 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { ConfirmModal } from "../../_components/ConfirmModal";
+
 import { type OrderDetail, type OrderEvent, ordersApi } from "./api";
+import {
+  allowedAdminActions,
+  CANCELLATION_EVENTS,
+  isDispatchEvent,
+  isPrepaidUnpaid,
+  needsRefundPath,
+  type OrderGuardInput,
+} from "./order-transitions";
 
 type InterventionPanelProps = {
   order: OrderDetail;
+  guard: OrderGuardInput;
+  payoutsOn: boolean;
   onSuccess: () => void;
 };
 
-const INTERVENTION_EVENTS: OrderEvent[] = [
-  "confirm",
-  "reject",
-  "cancel",
-  "start_processing",
-  "ready_for_pickup",
-  "ship",
-  "verify_pickup",
-  "mark_delivered",
-  "confirm_received",
-];
-
-export function InterventionPanel({ order, onSuccess }: InterventionPanelProps) {
+export function InterventionPanel({ order, guard, payoutsOn, onSuccess }: InterventionPanelProps) {
   const t = useTranslations("admin.orders.intervention");
-  const [event, setEvent] = useState<OrderEvent>("confirm");
+  // Ship / mark-delivered carry courier details, so they live in the dispatch panel.
+  const actions = allowedAdminActions(guard).filter((action) => !isDispatchEvent(action.event));
+  const dispatchOffered = allowedAdminActions(guard).some((action) =>
+    isDispatchEvent(action.event),
+  );
+  const [pending, setPending] = useState<OrderEvent | null>(null);
   const [reason, setReason] = useState("");
   const [refundPath, setRefundPath] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const submit = async () => {
-    setSubmitting(true);
+  const target = pending ? actions.find((action) => action.event === pending) : undefined;
+  const destructive = pending ? CANCELLATION_EVENTS.includes(pending) : false;
+  const refundRequired = pending ? needsRefundPath(guard, pending) : false;
+
+  const close = () => {
+    setPending(null);
+    setReason("");
+    setRefundPath(false);
     setError(null);
-    setSuccess(false);
+  };
+
+  const submit = async (): Promise<boolean> => {
+    if (!pending) return false;
+    setError(null);
     try {
       await ordersApi.request(`/admin/orders/${order.id}/intervene`, {
         method: "POST",
         body: JSON.stringify({
-          event,
-          reason,
-          refund_path: refundPath,
+          event: pending,
+          reason: reason.trim(),
+          refund_path: refundRequired ? refundPath : false,
         }),
       });
       setSuccess(true);
       onSuccess();
+      return true;
     } catch {
       setError(t("failure"));
-    } finally {
-      setSubmitting(false);
+      return false;
     }
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-border p-4">
-      <h2 className="font-medium text-text">{t("title")}</h2>
-      <p className="text-sm text-muted">{t("subtitle", { status: order.status })}</p>
+    <section
+      aria-labelledby="next-actions-heading"
+      className="space-y-3 rounded-lg border border-border bg-surface p-4"
+      data-testid="next-actions"
+    >
+      <h2 id="next-actions-heading" className="font-medium text-text">
+        {t("title")}
+      </h2>
+      <p className="text-sm text-muted">
+        {t("subtitle", { status: t(`statuses.${order.status}`) })}
+      </p>
 
-      <label className="block space-y-1 text-sm">
-        <span className="text-muted">{t("event")}</span>
-        <select
-          className="min-h-11 w-full rounded-md border border-border px-3"
-          value={event}
-          onChange={(event) => setEvent(event.target.value as OrderEvent)}
+      {isPrepaidUnpaid(guard) ? (
+        <p
+          role="note"
+          className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm text-text"
         >
-          {INTERVENTION_EVENTS.map((value) => (
-            <option key={value} value={value}>
-              {t(`events.${value}`)}
-            </option>
-          ))}
-        </select>
-      </label>
+          {t("prepaidUnpaid")}
+        </p>
+      ) : null}
 
-      <label className="block space-y-1 text-sm">
-        <span className="text-muted">{t("reason")}</span>
-        <textarea
-          className="min-h-20 w-full rounded-md border border-border px-3 py-2"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          placeholder={t("reasonPlaceholder")}
-        />
-      </label>
+      {actions.length === 0 && !dispatchOffered ? (
+        <p className="text-sm text-muted" data-testid="no-actions">
+          {t("terminal")}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {actions.map((action) => {
+            const cancels = CANCELLATION_EVENTS.includes(action.event);
+            return (
+              <button
+                key={action.event}
+                type="button"
+                data-testid={`action-${action.event}`}
+                onClick={() => {
+                  setSuccess(false);
+                  setPending(action.event);
+                }}
+                className={`inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
+                  cancels
+                    ? "border border-danger text-danger"
+                    : "bg-primary text-[var(--primary-btn-fg)]"
+                }`}
+              >
+                {t(`events.${action.event}`)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {dispatchOffered ? <p className="text-xs text-muted">{t("useDispatchBelow")}</p> : null}
+      {success ? (
+        <p role="status" className="text-sm text-success">
+          {t("success")}
+        </p>
+      ) : null}
 
-      <label className="flex min-h-11 items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={refundPath}
-          onChange={(event) => setRefundPath(event.target.checked)}
-        />
-        <span>{t("refundPath")}</span>
-      </label>
-
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
-      {success ? <p className="text-sm text-success">{t("success")}</p> : null}
-
-      <button
-        type="button"
-        className="inline-flex min-h-11 items-center rounded-md border border-danger px-4 text-sm font-medium text-danger disabled:opacity-60"
-        disabled={submitting || !reason.trim()}
-        onClick={() => void submit()}
+      <ConfirmModal
+        open={pending !== null}
+        title={pending ? t(`events.${pending}`) : ""}
+        destructive={destructive}
+        confirmLabel={pending ? t(`events.${pending}`) : ""}
+        canConfirm={reason.trim().length > 0 && (!refundRequired || refundPath)}
+        onConfirm={submit}
+        onClose={close}
+        error={error}
+        data-testid="intervention-confirm"
+        summary={
+          target ? (
+            <div className="space-y-2">
+              <p>
+                {t("willChange", {
+                  from: t(`statuses.${order.status}`),
+                  to: t(`statuses.${target.to}`),
+                })}
+              </p>
+              {destructive ? <p className="font-medium text-danger">{t("irreversible")}</p> : null}
+              {refundRequired && !payoutsOn ? (
+                <p className="text-warning">{t("refundQueuedNotSent")}</p>
+              ) : null}
+            </div>
+          ) : null
+        }
       >
-        {submitting ? t("submitting") : t("submit")}
-      </button>
+        <label className="block space-y-1 text-sm">
+          <span className="text-text-2">{t("reason")}</span>
+          <textarea
+            className="min-h-20 w-full rounded-md border border-border bg-surface px-3 py-2"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder={t("reasonPlaceholder")}
+            required
+          />
+        </label>
+        {refundRequired ? (
+          <label className="flex min-h-11 items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4"
+              checked={refundPath}
+              onChange={(event) => setRefundPath(event.target.checked)}
+            />
+            <span>{t("refundPath")}</span>
+          </label>
+        ) : null}
+      </ConfirmModal>
     </section>
   );
 }

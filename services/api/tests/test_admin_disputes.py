@@ -597,3 +597,53 @@ def test_compute_order_total_ngwee(fake_client: FakeSupabaseClient) -> None:
     order_row = fake_client.tables["orders"].rows[0]
     total = compute_order_total_ngwee(service_wrapper, order_row)
     assert total == ORDER_TOTAL_NGEWEE
+
+
+@pytest.mark.parametrize(
+    ("decision", "partial"),
+    [("full_refund", None), ("partial_refund", 50_000)],
+)
+def test_decide_refund_refused_409_when_payouts_disabled(
+    admin_disputes_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    decision: str,
+    partial: int | None,
+) -> None:
+    """Real resolve() path: with PAYOUTS_ENABLED off a refund decision is refused with
+    a stable code before any ledger / refund / payout row or admin audit is written."""
+    monkeypatch.delenv("PAYOUTS_ENABLED", raising=False)
+    for name in ("refunds", "payouts"):
+        fake_client.tables[name] = FakeTable()
+    _seed_order_bundle(fake_client, order_id=ORDER_ID, checkout_group_id=CHECKOUT_GROUP_ID)
+    _seed_dispute(fake_client, dispute_id=DISPUTE_ID, order_id=ORDER_ID)
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {ADMIN_ID: frozenset({"admin"})})
+    audit_rows = _mock_audit_insert(monkeypatch)
+    post_transaction = MagicMock()
+    monkeypatch.setattr("app.services.refunds.execute.post_transaction", post_transaction)
+    monkeypatch.setattr("app.services.disputes.service.load_restocking_fee_bps", lambda _c: 1000)
+    ledger_before = len(fake_client.tables["ledger_transactions"].rows)
+
+    payload: dict[str, Any] = {
+        "decision": decision,
+        "note": "Refund the customer.",
+        "customer_momo": CUSTOMER_MOMO,
+        "customer_rail": "mtn",
+    }
+    if partial is not None:
+        payload["partial_refund_ngwee"] = partial
+    response = admin_disputes_client.post(
+        f"/admin/disputes/{DISPUTE_ID}/decide", headers=_auth_headers(), json=payload
+    )
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["error"]["code"] == "dispute.refund_unavailable_payouts_disabled"
+    assert body["error"]["details"]["reason"] == "payouts_disabled"
+    post_transaction.assert_not_called()
+    assert fake_client.tables["refunds"].rows == []
+    assert fake_client.tables["payouts"].rows == []
+    assert len(fake_client.tables["ledger_transactions"].rows) == ledger_before
+    assert fake_client.tables["disputes"].rows[0]["status"] == "under_review"
+    assert audit_rows == []

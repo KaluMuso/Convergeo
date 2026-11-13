@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { LUSAKA_CUTOFF_HOUR, lusakaHour } from "../../../../../lib/delivery-estimate";
 
 import { ReservationCountdown } from "./reservation-countdown";
 
@@ -82,7 +83,7 @@ export function StepFulfilment({
     setErrorMessage(null);
     const deliveryNeeded = choices.some((choice) => choice.fulfilment === "delivery");
     if (deliveryNeeded && !landmark.trim()) {
-      setErrorMessage(labels.landmarkLabel);
+      setErrorMessage(labels.guide?.landmarkRequired ?? labels.landmarkLabel);
       return;
     }
 
@@ -125,6 +126,7 @@ export function StepFulfilment({
         total_ngwee: response.total_ngwee,
         groups: response.groups ?? [],
         addressId,
+        landmark: deliveryNeeded ? landmark.trim() : null,
       };
       setTotals(nextTotals);
       onComplete?.(nextTotals);
@@ -148,6 +150,13 @@ export function StepFulfilment({
   const displaySubtotal = totals?.subtotal_ngwee ?? session.subtotal_ngwee;
   const displayDelivery = totals?.delivery_fee_ngwee ?? 0;
   const displayTotal = totals?.total_ngwee ?? session.subtotal_ngwee;
+  const guide = labels.guide;
+  const deliverySelected = choices.some((choice) => choice.fulfilment === "delivery");
+  const hasMadeToOrder = session.vendor_groups.some((group) =>
+    group.items.some((item) => item.fulfilment_mode === "made_to_order"),
+  );
+  // Lusaka clock, read once per render; the copy is advisory (vendor confirms dispatch).
+  const afterCutoff = lusakaHour(new Date()) >= LUSAKA_CUTOFF_HOUR;
 
   return (
     <div className="space-y-5">
@@ -162,26 +171,57 @@ export function StepFulfilment({
       <div className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-        <p className="font-body text-xs text-text-3">{labels.mixedHint}</p>
+        <p className="font-body text-xs text-text-3">{guide?.groupHint ?? labels.mixedHint}</p>
       </div>
 
-      {choices.some((choice) => choice.fulfilment === "delivery") ? (
-        <FormField
-          label={labels.landmarkLabel}
-          helpText={labels.landmarkHelp}
-          required
-          requiredMarker="*"
+      {guide ? (
+        <div
+          className="space-y-1 rounded-card border border-border bg-bg-2 px-4 py-3"
+          data-testid="checkout-dispatch-cutoff"
         >
-          <Input
-            size="lg"
-            value={landmark}
-            placeholder={labels.landmarkPlaceholder}
-            onChange={(event) => {
-              setLandmark(event.target.value);
-              setTotals(null);
-            }}
-          />
-        </FormField>
+          <p className="font-body text-sm font-semibold text-text">{guide.cutoffTitle}</p>
+          <p className="font-body text-sm text-text-2">
+            {afterCutoff ? guide.cutoffAfter : guide.cutoffBefore}
+          </p>
+          {hasMadeToOrder ? (
+            <p className="font-body text-xs text-text-3">{guide.cutoffMadeToOrder}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {deliverySelected ? (
+        <div className="space-y-3">
+          <FormField
+            label={labels.landmarkLabel}
+            helpText={labels.landmarkHelp}
+            required
+            requiredMarker="*"
+          >
+            <Input
+              size="lg"
+              value={landmark}
+              placeholder={labels.landmarkPlaceholder}
+              autoComplete="street-address"
+              onChange={(event) => {
+                setLandmark(event.target.value);
+                setTotals(null);
+              }}
+            />
+          </FormField>
+          {guide ? (
+            <div
+              className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
+              data-testid="checkout-landmark-tips"
+            >
+              <p className="font-body text-sm font-semibold text-text">{guide.tipsTitle}</p>
+              <ul className="list-disc space-y-1 pl-5 font-body text-sm text-text-2">
+                <li>{guide.tip1}</li>
+                <li>{guide.tip2}</li>
+                <li>{guide.tip3}</li>
+              </ul>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="space-y-4">
@@ -203,23 +243,49 @@ export function StepFulfilment({
               </div>
 
               <div className="flex flex-col gap-2">
-                <Radio
-                  name={`fulfilment-${group.vendor_id}`}
-                  label={labels.delivery}
-                  checked={fulfilment === "delivery"}
-                  disabled={!group.delivery_eligible}
-                  onChange={() => {
-                    setGroupFulfilment(group.vendor_id, "delivery");
-                  }}
-                />
-                <Radio
-                  name={`fulfilment-${group.vendor_id}`}
-                  label={labels.pickup}
-                  checked={fulfilment === "pickup"}
-                  onChange={() => {
-                    setGroupFulfilment(group.vendor_id, "pickup");
-                  }}
-                />
+                <div>
+                  <Radio
+                    name={`fulfilment-${group.vendor_id}`}
+                    label={labels.delivery}
+                    checked={fulfilment === "delivery"}
+                    disabled={!group.delivery_eligible}
+                    aria-describedby={
+                      guide ? `fulfilment-help-delivery-${group.vendor_id}` : undefined
+                    }
+                    onChange={() => {
+                      setGroupFulfilment(group.vendor_id, "delivery");
+                    }}
+                  />
+                  {guide ? (
+                    <p
+                      id={`fulfilment-help-delivery-${group.vendor_id}`}
+                      className="pl-8 font-body text-xs text-text-3"
+                    >
+                      {guide.deliveryHelp}
+                    </p>
+                  ) : null}
+                </div>
+                <div>
+                  <Radio
+                    name={`fulfilment-${group.vendor_id}`}
+                    label={labels.pickup}
+                    checked={fulfilment === "pickup"}
+                    aria-describedby={
+                      guide ? `fulfilment-help-pickup-${group.vendor_id}` : undefined
+                    }
+                    onChange={() => {
+                      setGroupFulfilment(group.vendor_id, "pickup");
+                    }}
+                  />
+                  {guide ? (
+                    <p
+                      id={`fulfilment-help-pickup-${group.vendor_id}`}
+                      className="pl-8 font-body text-xs text-text-3"
+                    >
+                      {guide.pickupHelp}
+                    </p>
+                  ) : null}
+                </div>
               </div>
 
               {fulfilment === "pickup" && pickup ? (
@@ -231,8 +297,8 @@ export function StepFulfilment({
                 </div>
               ) : null}
 
-              {fulfilment === "delivery" && !group.delivery_eligible ? (
-                <p className="text-xs text-warning">{labels.outsideZone}</p>
+              {!group.delivery_eligible ? (
+                <p className="font-body text-xs text-text-2">{labels.outsideZone}</p>
               ) : null}
             </section>
           );

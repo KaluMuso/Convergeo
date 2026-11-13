@@ -39,6 +39,8 @@ type PageProps = {
 
 type ServicesTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
 };
 
 function parseCategory(value: string | undefined): string | null {
@@ -206,7 +208,7 @@ export default async function ServicesPage({
               locale={locale}
               labels={{
                 viewService: t("browse.viewService"),
-                fromPrice: t("browse.fromPrice"),
+                fromPrice: String(t.raw("browse.fromPrice")),
                 askForQuote: t("browse.askForQuote"),
                 badges: {
                   fast: t("badges.fast"),

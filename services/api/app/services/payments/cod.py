@@ -5,10 +5,18 @@ Cash model (platform-collect):
   ``platform_cash``; the vendor's net share is credited to ``vendor_payable`` for
   later payout. Commission is captured from the escrow pipeline opened at order time.
 
-Vendor-remit (not the default path here):
-  If the vendor keeps physical cash, only the commission portion would sit in
-  ``cod_receivable``; reconciliation would net commission owed via vendor payable
-  debits instead of a full collectable receivable. Zambia launch uses platform-collect.
+Who holds the cash is decided by the order's fulfilment, never by who clicks:
+  * ``delivery`` — the platform's rider collects items + fee and remits to the
+    platform (platform-collect, above). Only ops (admin) may confirm it, after
+    the remittance arrives; a vendor confirmation is refused.
+  * ``pickup`` — the vendor takes the cash at its own counter. Collection posts
+    ``cod_collected_by_vendor`` (debit vendor_payable, credit cod_receivable),
+    never ``platform_cash``: after commission capture + release the vendor's
+    payable nets to the commission the vendor owes the platform, so a later
+    payout cannot pay the vendor a second time. Vendor or admin may confirm.
+
+Every first confirmation writes an ``audit_log`` row (``cod.collection_confirmed``)
+naming the confirming actor and who holds the cash.
 """
 
 from __future__ import annotations
@@ -57,6 +65,12 @@ COD_RECEIVABLE_OPENED = "cod_receivable_opened"
 COD_RECEIVABLE_REVERSED = "cod_receivable_reversed"
 
 _COLLECTABLE_STATUSES = frozenset({OrderStatus.DELIVERED.value})
+# A customer can confirm receipt (delivered → completed) before ops books the
+# cash. Collection stays possible on such a completed order while no
+# ``cod-collect-*`` transaction exists, so the cash can always be booked. No
+# order transition is needed there (the order is already completed); the ledger
+# post is idempotent and the confirmation is audited like any other.
+_COMPLETED_UNCOLLECTED_STATUSES = frozenset({OrderStatus.COMPLETED.value})
 _REFUSAL_STATUSES = frozenset({OrderStatus.SHIPPED.value})
 
 
@@ -71,8 +85,13 @@ class CodOrderContext:
     status: str
     cod: bool
     fulfilment: str
+    # What the customer pays in cash: items + delivery fee.
     collectable_ngwee: int
     commission_snapshot: dict[str, Any]
+    # Vendor release is computed on items only; the delivery fee is platform
+    # revenue (the platform pays the courier, D16).
+    items_ngwee: int = 0
+    delivery_fee_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,6 +313,8 @@ WHERE o.id = {order_sql};
         fulfilment=parts[4],
         collectable_ngwee=subtotal + delivery_fee,
         commission_snapshot=snapshot,
+        items_ngwee=subtotal,
+        delivery_fee_ngwee=delivery_fee,
     )
 
 
@@ -346,11 +367,57 @@ def record_cod_receivable(*, order_id: str) -> CodReceivableResult:
     )
 
 
+COLLECTED_BY_PLATFORM = "platform_courier"
+COLLECTED_BY_VENDOR = "vendor"
+
+
+def cod_cash_holder(fulfilment: str) -> str:
+    """Who physically takes the customer's COD cash for this fulfilment."""
+    return COLLECTED_BY_VENDOR if fulfilment == "pickup" else COLLECTED_BY_PLATFORM
+
+
+def _record_collection_audit(
+    *,
+    ctx: CodOrderContext,
+    actor_id: str,
+    actor_role: ActorRole,
+    collected_by: str,
+    transaction_id: str,
+    net_vendor_ngwee: int,
+) -> None:
+    after = json.dumps(
+        {
+            "collected_by": collected_by,
+            "actor_role": actor_role.value,
+            "collectable_ngwee": ctx.collectable_ngwee,
+            "delivery_fee_ngwee": ctx.delivery_fee_ngwee,
+            "net_vendor_ngwee": net_vendor_ngwee,
+            "transaction_id": transaction_id,
+        }
+    )
+    actor_sql = _sql_uuid(actor_id, "actor_id") if _UUID_RE.match(actor_id) else "NULL"
+    script = f"""
+INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+VALUES (
+  {actor_sql},
+  'cod.collection_confirmed',
+  'order',
+  {_sql_uuid(ctx.order_id, "order_id")},
+  {sql_literal(json.dumps({"status": ctx.status}))}::jsonb,
+  {sql_literal(after)}::jsonb
+);
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise LedgerError(f"cod collection audit failed: {result.error}")
+
+
 def confirm_cod_collection(
     *,
     order_id: str,
     actor_id: str,
     note: str,
+    actor_role: ActorRole = ActorRole.ADMIN,
 ) -> CodCollectionResult:
     """Confirm COD cash collected at delivery — ledger + commission + vendor net.
 
@@ -364,23 +431,41 @@ def confirm_cod_collection(
     )
     from app.services.escrow.release_accounting import (
         ReleaseAccountingError,
+        capture_order_delivery_fee,
         compute_release_amounts,
         release_blocked_reason,
     )
 
-    _ = actor_id
     ctx = _load_cod_order(order_id)
     _assert_cod_order(ctx)
+
+    collected_by = cod_cash_holder(ctx.fulfilment)
+    if actor_role == ActorRole.VENDOR and collected_by != COLLECTED_BY_VENDOR:
+        # The rider collects delivery COD for the platform: only ops may book
+        # it, once the remittance arrives (otherwise platform_cash is invented).
+        raise CodError(
+            code="cod_platform_collects",
+            message="Cash for delivered COD orders is confirmed by Vergeo5 operations",
+            http_status=403,
+            details={"fulfilment": ctx.fulfilment, "collected_by": collected_by},
+        )
+    if actor_role not in (ActorRole.VENDOR, ActorRole.ADMIN):
+        raise CodError(
+            code="forbidden",
+            message="Only operations or the collecting vendor may confirm COD cash",
+            http_status=403,
+        )
 
     collect_key = collection_idempotency_key(order_id)
     existing_collect = _fetch_transaction_by_idempotency_key(collect_key)
 
-    if existing_collect is None and ctx.status not in _COLLECTABLE_STATUSES:
+    allowed = _COLLECTABLE_STATUSES | _COMPLETED_UNCOLLECTED_STATUSES
+    if existing_collect is None and ctx.status not in allowed:
         raise CodError(
             code="cod_invalid_status",
             message="COD collection requires a delivered order",
             http_status=409,
-            details={"status": ctx.status, "required": sorted(_COLLECTABLE_STATUSES)},
+            details={"status": ctx.status, "required": sorted(allowed)},
         )
 
     blocked = release_blocked_reason(status=ctx.status, order_id=order_id)
@@ -395,7 +480,7 @@ def confirm_cod_collection(
     try:
         amounts = compute_release_amounts(
             order_id=order_id,
-            gross_ngwee=ctx.collectable_ngwee,
+            gross_ngwee=ctx.items_ngwee,
             commission_snapshot=ctx.commission_snapshot,
         )
     except ReleaseAccountingError as exc:
@@ -424,12 +509,25 @@ def confirm_cod_collection(
 
     collected = post_transaction(
         idempotency_key=collect_key,
-        template=LedgerTemplate.COD_COLLECTED,
+        template=(
+            LedgerTemplate.COD_COLLECTED_BY_VENDOR
+            if collected_by == COLLECTED_BY_VENDOR
+            else LedgerTemplate.COD_COLLECTED
+        ),
         order_id=order_id,
         collected_ngwee=ctx.collectable_ngwee,
         vendor_id=ctx.vendor_id,
     )
     txn_ids.append(collected.id)
+    if collected.created:
+        _record_collection_audit(
+            ctx=ctx,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            collected_by=collected_by,
+            transaction_id=collected.id,
+            net_vendor_ngwee=amounts.net_ngwee,
+        )
 
     captured = capture_order_commission(
         order_id=order_id,
@@ -437,6 +535,13 @@ def confirm_cod_collection(
         idempotency_key_prefix=f"cod-commission-{order_id}",
     )
     txn_ids.extend(captured.posted_transaction_ids)
+
+    delivery_txn = capture_order_delivery_fee(
+        order_id=order_id,
+        delivery_fee_ngwee=ctx.delivery_fee_ngwee,
+    )
+    if delivery_txn is not None:
+        txn_ids.append(delivery_txn)
 
     if amounts.net_ngwee > 0:
         released = post_transaction(
@@ -545,10 +650,14 @@ def commission_ngwee_for_collectable(
     *,
     collectable_ngwee: int,
     commission_snapshot: Mapping[str, Any],
+    delivery_fee_ngwee: int = 0,
 ) -> tuple[int, int]:
-    """Return (commission_ngwee, net_vendor_ngwee) from a purchase-time snapshot."""
+    """Return (commission_ngwee, net_vendor_ngwee) from a purchase-time snapshot.
+
+    The delivery fee inside ``collectable_ngwee`` is platform revenue, never vendor net.
+    """
     commission = compute_order_commission(commission_snapshot).commission_ngwee
-    return commission, collectable_ngwee - commission
+    return commission, collectable_ngwee - delivery_fee_ngwee - commission
 
 
 def expected_collection_posting_legs(
@@ -556,19 +665,31 @@ def expected_collection_posting_legs(
     collectable_ngwee: int,
     commission_bps: int,
     vendor_id: str,
+    delivery_fee_ngwee: int = 0,
 ) -> tuple[tuple[str, str | None, int], ...]:
-    """Return signed legs for collection confirm (cash + commission + vendor net)."""
+    """Return signed legs for collection confirm (cash + commission + fee + vendor net).
+
+    ``collectable_ngwee`` is items + delivery fee; commission and the vendor's
+    net are computed on items only, the fee goes to ``delivery_revenue``.
+    """
+    items = collectable_ngwee - delivery_fee_ngwee
     commission = commission_ngwee_from_bps(
-        gross_ngwee=collectable_ngwee,
+        gross_ngwee=items,
         commission_bps=commission_bps,
     )
-    net = collectable_ngwee - commission
+    net = items - commission
     legs: list[tuple[str, str | None, int]] = [
         ("platform_cash", None, collectable_ngwee),
         ("cod_receivable", vendor_id, -collectable_ngwee),
         ("escrow", None, commission),
         ("commission_revenue", None, -commission),
-        ("escrow", None, net),
-        ("vendor_payable", vendor_id, -net),
     ]
+    if delivery_fee_ngwee > 0:
+        legs.extend(
+            [
+                ("escrow", None, delivery_fee_ngwee),
+                ("delivery_revenue", None, -delivery_fee_ngwee),
+            ]
+        )
+    legs.extend([("escrow", None, net), ("vendor_payable", vendor_id, -net)])
     return tuple(legs)

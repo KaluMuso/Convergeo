@@ -105,5 +105,9 @@
     "close": "Close",
     "showFooter": "Show site links",
     "hideFooter": "Hide site links"
+  },
+  "paymentTrust": {
+    "footerSeal": "Lipirani mu cash order ikafika",
+    "footerPaymentNote": "Cash on delivery · Kulipira pa intaneti kukubwera posachedwa"
   }
 }

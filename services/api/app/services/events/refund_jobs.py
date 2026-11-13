@@ -15,6 +15,7 @@ from typing import Any, Literal, Protocol, cast
 
 from app.errors import AppError
 from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.payouts.gate import REFUND_UNAVAILABLE_PAYOUTS_DISABLED, payouts_enabled
 from app.services.refunds.execute import RefundExecutionResult, execute_refund
 from app.services.refunds.execute import ServiceRoleClient as RefundServiceClient
 from app.services.refunds.payout_port import CustomerRail
@@ -450,6 +451,12 @@ def process_event_refund_job(
     if next_retry is not None and effective_now < next_retry:
         return EventRefundJobProcessResult(job_id, "skipped", "backoff")
 
+    # Payout kill switch: executing the job writes refund ledger legs and a pending
+    # customer payout. Leave the job untouched (queued, attempts not bumped) so it
+    # runs once payouts are enabled — never park it in manual_review/dead for this.
+    if not payouts_enabled():
+        return EventRefundJobProcessResult(job_id, "skipped", "payouts_disabled")
+
     if status == "queued":
         if not _claim_job(job_id, now=effective_now):
             return EventRefundJobProcessResult(job_id, "skipped", "claim_failed")
@@ -495,6 +502,11 @@ def process_event_refund_job(
         if code in {"partial_release_refund_blocked", "cod_not_collected"}:
             _update_job(job_id, status="manual_review", last_error=code)
             return EventRefundJobProcessResult(job_id, "manual_review", code)
+        if code == REFUND_UNAVAILABLE_PAYOUTS_DISABLED:
+            # Switch flipped off between the pre-check and execute: re-queue for a
+            # later sweep (no ledger/refund/payout rows were written).
+            _update_job(job_id, status="queued", last_error=code)
+            return EventRefundJobProcessResult(job_id, "skipped", "payouts_disabled")
         if code == "release_in_progress":
             attempts = int(job.get("attempts") or "0")
             if attempts >= MAX_JOB_ATTEMPTS:

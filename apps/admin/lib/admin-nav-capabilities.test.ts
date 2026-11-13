@@ -188,7 +188,7 @@ beforeEach(() => {
       if (input === "/admin/orders/local-order") {
         return reply({
           id: "local-order",
-          status: "confirmed",
+          status: "processing",
           fulfilment: "delivery",
           cod: false,
           delivery_fee_ngwee: 0,
@@ -201,7 +201,16 @@ beforeEach(() => {
           customer_display_name: null,
           created_at: "2026-10-12T00:00:00Z",
           items: [],
-          payments: [],
+          payments: [
+            {
+              id: "local-payment",
+              rail: "mtn",
+              amount_ngwee: 0,
+              status: "success",
+              lenco_reference: "pay-local",
+              created_at: "2026-10-12T00:00:00Z",
+            },
+          ],
           ledger: [],
           timeline: [],
         });
@@ -367,7 +376,9 @@ describe("mounted current-permission shell", () => {
     expect(container.textContent).toContain("local-order");
     expect(container.querySelector('[data-testid="dispatch-courier"]')).toBeNull();
     expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
-    expect(container.querySelectorAll("main input, main select, main button")).toHaveLength(0);
+    expect(
+      container.querySelectorAll("main input, main select, main button:not([data-copy-button])"),
+    ).toHaveLength(0);
     current = grants([], true);
     await refocus();
     expect(container.querySelector('[data-testid="dispatch-courier"]')).not.toBeNull();

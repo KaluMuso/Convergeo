@@ -126,7 +126,15 @@ async function start() {
 it("persists accepted contact before creating checkout across the real auth-store remount", async () => {
   await start();
   await screen.findByText("Fixture vendor");
-  expect(events).toEqual(["verify", "/cart/merge", "/checkout/steps/contact", "/checkout/session"]);
+  // Then the advisory payment-options read behind the over-COD-cap notice.
+  await waitFor(() => expect(events).toContain("/checkout/steps/payment-options"));
+  expect(events).toEqual([
+    "verify",
+    "/cart/merge",
+    "/checkout/steps/contact",
+    "/checkout/session",
+    "/checkout/steps/payment-options",
+  ]);
   expect(screen.getAllByRole("radio")).toHaveLength(2);
   const contact = mocks.fetch.mock.calls.find(([url]) => String(url).endsWith("/steps/contact"));
   expect(JSON.parse(contact![1].body)).toEqual({ phone: account.user.phone });

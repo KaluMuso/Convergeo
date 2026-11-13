@@ -14,6 +14,8 @@ import { GmvTile } from "./GmvTile";
 import { OrdersStatusTile } from "./OrdersStatusTile";
 import { PayoutLiabilitiesTile } from "./PayoutLiabilitiesTile";
 import { ReconciliationTile } from "./ReconciliationTile";
+import { LoadingBlock } from "./StateBlocks";
+import { TodayBoard } from "./TodayBoard";
 
 type DashboardBoardProps = {
   locale: string;
@@ -51,38 +53,57 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
     void load();
   }, [load]);
 
+  const today = (
+    <TodayBoard
+      locale={locale}
+      placedCount={data ? data.orders_by_status.placed : null}
+      placedLoading={loading}
+    />
+  );
+
   if (loading) {
-    return <p className="text-sm text-muted">{t("loading")}</p>;
+    return (
+      <div className="space-y-6">
+        {today}
+        <LoadingBlock label={t("loading")} />
+      </div>
+    );
   }
 
   if (permissionDenied) {
     return (
-      <div className="space-y-2 rounded-md border border-warning/40 bg-warning/5 p-4">
-        <p className="text-sm font-medium text-warning">{t("permissionDenied")}</p>
-        <p className="text-xs text-muted">{t("permissionDeniedHint")}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
+      <div className="space-y-6">
+        {today}
+        <div className="space-y-2 rounded-md border border-warning/40 bg-warning/5 p-4">
+          <p className="text-sm font-medium text-warning">{t("permissionDenied")}</p>
+          <p className="text-xs text-muted">{t("permissionDeniedHint")}</p>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
+            onClick={() => void load()}
+          >
+            {t("retry")}
+          </button>
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error ?? t("error")}</p>
-        <p className="text-xs text-muted">{t("errorHint")}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
+      <div className="space-y-6">
+        {today}
+        <div className="space-y-2" role="alert">
+          <p className="text-sm text-danger">{error ?? t("error")}</p>
+          <p className="text-xs text-muted">{t("errorHint")}</p>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
+            onClick={() => void load()}
+          >
+            {t("retry")}
+          </button>
+        </div>
       </div>
     );
   }
@@ -91,6 +112,7 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
 
   return (
     <div className="space-y-6">
+      {today}
       <p className="text-xs text-muted">
         {t("cachedAt", { at: new Date(data.cached_at).toLocaleString(locale) })}
       </p>

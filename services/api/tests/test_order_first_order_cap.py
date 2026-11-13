@@ -82,6 +82,9 @@ def _mock_service(*, session_id: str, total_ngwee: int) -> MagicMock:
                     "subtotal_ngwee": total_ngwee,
                     "delivery_fee_ngwee": 0,
                     "total_ngwee": total_ngwee,
+                    "fulfilment_choices": [
+                        {"vendor_id": VENDOR_ID, "fulfilment": "pickup", "delivery_zone": None}
+                    ],
                     "status": "pending",
                     "created_at": "2099-01-01T00:00:00+00:00",
                 }

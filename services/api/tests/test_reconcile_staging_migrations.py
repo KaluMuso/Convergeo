@@ -77,6 +77,12 @@ PENDING_REPAIR_VERSIONS = {
     "20261108120000",
     "20261109100000",
     "20261109120000",
+    # #777 pilot fixes (additive): Band B fallback, fulfilment choices, cancel stock release.
+    "20261113060000",
+    "20261113070000",
+    "20261113071000",
+    # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+    "20261113120500",
 }
 
 

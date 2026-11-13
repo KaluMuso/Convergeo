@@ -105,7 +105,9 @@ export function VendorCardGrid({
         const ratingValue =
           vendor.ratingAvg !== null && vendor.ratingCount > 0
             ? labels.rating
-                .replace("{rating}", vendor.ratingAvg.toFixed(1))
+                // The message declares `{rating, number, ::.1}`; match the whole
+                // argument, not just the bare name.
+                .replace(/\{rating[^}]*\}/, vendor.ratingAvg.toFixed(1))
                 .replace("{count}", String(vendor.ratingCount))
             : labels.noReviews;
         const verifiedLabel = labels.verifiedSince.replace(

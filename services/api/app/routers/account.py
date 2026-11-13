@@ -365,6 +365,16 @@ async def patch_address(
     return _parse_address_row({**existing, **updates})
 
 
+# Order states in which the delivery address is still needed to hand goods over.
+_ADDRESS_LOCKING_ORDER_STATUSES: tuple[str, ...] = (
+    "placed",
+    "confirmed",
+    "processing",
+    "ready",
+    "shipped",
+)
+
+
 @router.delete("/addresses/{address_id}", status_code=204)
 async def delete_address(
     address_id: str,
@@ -386,6 +396,25 @@ async def delete_address(
             http_status=404,
         )
     _ensure_address_owner(existing, current_user.id)
+    # orders.address_id is ON DELETE SET NULL and the courier reads the drop-off
+    # live from this row, so deleting it would strip the destination from an
+    # order that is still on its way.
+    in_flight = (
+        client.table("orders")
+        .select("id")
+        .eq("address_id", address_id)
+        .in_("status", list(_ADDRESS_LOCKING_ORDER_STATUSES))
+        .limit(1)
+        .execute()
+    )
+    in_flight_rows = _extract_data(in_flight)
+    if isinstance(in_flight_rows, list) and in_flight_rows:
+        raise AppError(
+            code="account.address_in_use",
+            message="This address is on an order that has not been delivered yet",
+            http_status=409,
+            details={"address_id": address_id},
+        )
     client.table("addresses").delete().eq("id", address_id).execute()
 
 
