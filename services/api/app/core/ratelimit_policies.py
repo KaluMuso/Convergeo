@@ -157,6 +157,8 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /logistics/cash/remittances": PAYMENT_WRITE,
     "PATCH /logistics/rain-mode": ADMIN_WRITE,
     "PATCH /logistics/area-pricing": ADMIN_WRITE,
+    "PUT /logistics/area-pricing/settings": ADMIN_WRITE,
+    "PATCH /logistics/area-distances/{from_area}/{to_area}": ADMIN_WRITE,
     "PATCH /config/platform/{key}": ADMIN_WRITE,
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,

@@ -4,7 +4,7 @@ import { getAdminTranslator } from "../../../../lib/admin-translator";
 
 type ConfigPageShellProps = {
   locale: string;
-  active: "commissions" | "delivery-zones" | "platform" | "flags" | "categories";
+  active: "commissions" | "delivery-zones" | "area-pricing" | "platform" | "flags" | "categories";
   titleKey: string;
   subtitleKey: string;
   children: React.ReactNode;
@@ -13,6 +13,7 @@ type ConfigPageShellProps = {
 const TABS = [
   { slug: "commissions", key: "commissions" },
   { slug: "delivery-zones", key: "deliveryZones" },
+  { slug: "area-pricing", key: "areaPricing" },
   { slug: "platform", key: "platform" },
   { slug: "flags", key: "flags" },
   { slug: "categories", key: "categories" },

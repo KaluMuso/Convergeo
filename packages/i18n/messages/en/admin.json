@@ -136,6 +136,7 @@
     "nav": {
       "commissions": "Commissions",
       "deliveryZones": "Delivery zones",
+      "areaPricing": "Area pricing",
       "platform": "Platform knobs",
       "flags": "Feature flags",
       "categories": "Category tree"
@@ -179,6 +180,35 @@
       "zoneKey": "Zone",
       "feeNgwee": "Fee (ngwee)",
       "active": "Active"
+    },
+    "areaPricing": {
+      "title": "Area pricing",
+      "subtitle": "Delivery fee by area pair: the formula, time bands and the road-distance table.",
+      "formulaTitle": "Price formula",
+      "formulaHint": "Fee = per-km rate × road km × time band × rain + stop fee per shop, rounded up to K5. Money is in ngwee (K1 = 100), multipliers in basis points (10000 = ×1.0).",
+      "basePerKm": "Rate per km (ngwee)",
+      "stopFee": "Stop fee per shop (ngwee)",
+      "minFee": "Minimum fee (ngwee)",
+      "maxFee": "Maximum fee per shop (ngwee)",
+      "intraArea": "Same-area trip (metres)",
+      "rainMultiplier": "Rain multiplier (bps)",
+      "quoteTtl": "Quoted fee holds for (minutes)",
+      "zoneBounds": "Keep fees between the cheapest and dearest zone fee",
+      "bandsTitle": "Time bands (Lusaka time)",
+      "bandStart": "From",
+      "bandEnd": "To",
+      "bandMultiplier": "Multiplier (bps)",
+      "addBand": "Add band",
+      "removeBand": "Remove",
+      "distancesTitle": "Road distances",
+      "distancesHint": "From the shop's area to the customer's area. A saved row is marked manual and survives a distance refresh.",
+      "fromArea": "Shop area",
+      "toArea": "Customer area",
+      "roadKm": "Road km",
+      "minutes": "Minutes",
+      "source": "Source",
+      "manual": "Manual edit",
+      "bothWays": "Save both directions"
     },
     "platform": {
       "title": "Platform settings",
