@@ -66,8 +66,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 3 reviewed pilot-fix migrations (#777).
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
         # + 2 reviewed: logistics phase 1 + intercity reference rate cards (additive).
-        self.assertEqual(len(runner.FORWARD), 32)
-        self.assertEqual(len(set(runner.FORWARD)), 32)
+        # + 2 reviewed: area-pair delivery pricing schema + area seed (additive).
+        self.assertEqual(len(runner.FORWARD), 34)
+        self.assertEqual(len(set(runner.FORWARD)), 34)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)
