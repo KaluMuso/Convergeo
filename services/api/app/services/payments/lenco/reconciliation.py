@@ -185,9 +185,7 @@ class LencoReconciliationAdapter:
         envelope = cast(dict[str, Any], body)
         if envelope.get("status") is not True:
             message = envelope.get("message")
-            raise LencoReconciliationError(
-                f"Lenco GET {path} was not successful: {message!s}"
-            )
+            raise LencoReconciliationError(f"Lenco GET {path} was not successful: {message!s}")
         return envelope
 
     @staticmethod
@@ -223,12 +221,8 @@ class LencoReconciliationAdapter:
         provider_reference = _reference_from_documented_narration(narration)
         return ProviderMovement(
             movement_id=_required_text(row.get("id"), field_name="transaction.id"),
-            account_id=_required_text(
-                row.get("accountId"), field_name="transaction.accountId"
-            ),
-            currency=_required_text(
-                row.get("currency"), field_name="transaction.currency"
-            ),
+            account_id=_required_text(row.get("accountId"), field_name="transaction.accountId"),
+            currency=_required_text(row.get("currency"), field_name="transaction.currency"),
             amount_ngwee=abs(
                 major_str_to_ngwee(
                     _required_text(row.get("amount"), field_name="transaction.amount")
@@ -256,15 +250,9 @@ class LencoReconciliationAdapter:
         if not isinstance(meta, dict):
             raise ValueError("transaction envelope is missing meta")
         typed = cast(dict[str, Any], meta)
-        current = _required_nonnegative_int(
-            typed.get("currentPage"), field_name="meta.currentPage"
-        )
-        page_count = _required_nonnegative_int(
-            typed.get("pageCount"), field_name="meta.pageCount"
-        )
-        per_page = _required_nonnegative_int(
-            typed.get("perPage"), field_name="meta.perPage"
-        )
+        current = _required_nonnegative_int(typed.get("currentPage"), field_name="meta.currentPage")
+        page_count = _required_nonnegative_int(typed.get("pageCount"), field_name="meta.pageCount")
+        per_page = _required_nonnegative_int(typed.get("perPage"), field_name="meta.perPage")
         total = _required_nonnegative_int(typed.get("total"), field_name="meta.total")
         if current < 1 or page_count < 1 or per_page < 1:
             raise ValueError("transaction pagination values must be positive")

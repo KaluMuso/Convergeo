@@ -30,11 +30,7 @@ def _single_row(response: Any) -> dict[str, Any] | None:
 
 def _resolve_vendor_owner(client: Any, vendor_id: str) -> str | None:
     response = (
-        client.table("vendors")
-        .select("owner_user_id")
-        .eq("id", vendor_id)
-        .maybe_single()
-        .execute()
+        client.table("vendors").select("owner_user_id").eq("id", vendor_id).maybe_single().execute()
     )
     row = _single_row(response)
     if row is None:

@@ -257,11 +257,7 @@ def resolve_slots_for_display(
 
     resolved: list[ResolvedMerchSlotOut] = []
     for slot_key, candidates in by_key.items():
-        in_window = [
-            row
-            for row in candidates
-            if is_slot_in_schedule(row, now=reference)
-        ]
+        in_window = [row for row in candidates if is_slot_in_schedule(row, now=reference)]
         in_window.sort(key=lambda row: int(row.get("position", 0)))
 
         non_default_in_window = [row for row in in_window if not _is_default_slot(row)]
@@ -492,10 +488,7 @@ async def update_merch_slot(
         return before_out
 
     response = (
-        _table(service_client, "merch_slots")
-        .update(update_fields)
-        .eq("id", str(slot_id))
-        .execute()
+        _table(service_client, "merch_slots").update(update_fields).eq("id", str(slot_id)).execute()
     )
     data = response.data
     if not isinstance(data, list) or not data:
@@ -601,10 +594,7 @@ async def publish_merch_draft(
     update_fields["payload"] = published_payload
 
     response = (
-        _table(service_client, "merch_slots")
-        .update(update_fields)
-        .eq("id", str(slot_id))
-        .execute()
+        _table(service_client, "merch_slots").update(update_fields).eq("id", str(slot_id)).execute()
     )
     data = response.data
     if not isinstance(data, list) or not data:

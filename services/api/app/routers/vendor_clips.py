@@ -131,9 +131,7 @@ def _rate_limit(service_client: ServiceRoleClient, *, scope: str, key: str) -> N
         )
 
 
-def _own_clip(
-    service_client: ServiceRoleClient, *, clip_id: str, vendor_id: str
-) -> dict[str, Any]:
+def _own_clip(service_client: ServiceRoleClient, *, clip_id: str, vendor_id: str) -> dict[str, Any]:
     """Load a clip that belongs to this vendor, or 404.
 
     404 rather than 403 for someone else's clip: telling a vendor "that clip

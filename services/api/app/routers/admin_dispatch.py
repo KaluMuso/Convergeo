@@ -206,6 +206,14 @@ class ReadyOrderOut(StrictModel):
     deliver_together: bool = True
     pickup_label: str | None = None
     pickup_area: str | None = None
+    # Area-pair pricing: coordinates for the dispatcher's Google Maps link-out
+    # (no map API is called by Convergeo; the link opens Google Maps itself).
+    pickup_lat: float | None = None
+    pickup_lng: float | None = None
+    dropoff_area: str | None = None
+    dropoff_lat: float | None = None
+    dropoff_lng: float | None = None
+    address_type: Literal["home", "work"] = "home"
     multi_branch: bool = False
     delivery_attempts: int = 0
 
@@ -326,6 +334,12 @@ def _dispatch_out(
     )
 
 
+def _coord(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
 def _opt(value: Any) -> str | None:
     return str(value) if value is not None else None
 
@@ -407,6 +421,12 @@ def get_board(
                 deliver_together=row.get("deliver_together") is not False,
                 pickup_label=_opt(row.get("pickup_label")),
                 pickup_area=_opt(row.get("pickup_area")),
+                pickup_lat=_coord(row.get("pickup_lat")),
+                pickup_lng=_coord(row.get("pickup_lng")),
+                dropoff_area=_opt(row.get("dropoff_area")),
+                dropoff_lat=_coord(row.get("dropoff_lat")),
+                dropoff_lng=_coord(row.get("dropoff_lng")),
+                address_type="work" if row.get("address_type") == "work" else "home",
                 multi_branch=int(row.get("pickup_branch_count") or 0) > 1,
                 delivery_attempts=int(row.get("delivery_attempts") or 0),
             )

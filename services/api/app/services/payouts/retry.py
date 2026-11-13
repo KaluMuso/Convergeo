@@ -60,10 +60,17 @@ def _has_never_sent_provenance(snapshot: dict[str, Any]) -> bool:
         and isinstance(attempts, int)
         and not isinstance(attempts, bool)
         and attempts == 0
-        and not any(snapshot.get(key) for key in (
-            "provider_reference", "provider_status", "transfer_status",
-            "last_error", "last_query_error", "verified_transfer",
-        ))
+        and not any(
+            snapshot.get(key)
+            for key in (
+                "provider_reference",
+                "provider_status",
+                "transfer_status",
+                "last_error",
+                "last_query_error",
+                "verified_transfer",
+            )
+        )
     )
 
 
@@ -474,8 +481,7 @@ async def retry_payout_row(
     if result.outcome == ProviderOutcome.PENDING:
         merged = {
             **snapshot,
-            "provider_reference": result.provider_reference
-            or snapshot.get("provider_reference"),
+            "provider_reference": result.provider_reference or snapshot.get("provider_reference"),
             "provider_status": result.status,
             "next_retry_at": (
                 clock + timedelta(seconds=compute_retry_backoff_seconds(1))

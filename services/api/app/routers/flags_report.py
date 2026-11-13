@@ -24,9 +24,7 @@ USER_REPORT_LIMIT = 10
 IP_REPORT_LIMIT = 30
 REPORT_WINDOW = timedelta(minutes=1)
 
-ListingReportReasonLiteral = Literal[
-    "counterfeit", "prohibited", "scam", "misleading", "other"
-]
+ListingReportReasonLiteral = Literal["counterfeit", "prohibited", "scam", "misleading", "other"]
 
 
 class ServiceRoleClient(Protocol):

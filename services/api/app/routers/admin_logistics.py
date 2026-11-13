@@ -17,11 +17,12 @@ from app.core.admin_audit import (
     get_admin_audit_recorder,
 )
 from app.core.auth import CurrentUser, require_role
+from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.schemas.base import StrictModel
 from app.services.dispatch.state import json_rows
-from app.services.logistics import custody, reports
+from app.services.logistics import area_pricing, custody, reports
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
@@ -149,6 +150,91 @@ ORDER BY destination_town, carrier_name;
         context="intercity rate cards",
     )
     return {"rates": rows}
+
+
+class PricingSwitchesOut(StrictModel):
+    rain_mode: bool
+    area_pricing_shadow: bool
+    area_pricing_live: bool
+
+
+class RainModeIn(StrictModel):
+    enabled: bool
+
+
+class AreaPricingIn(StrictModel):
+    shadow: bool | None = None
+    live: bool | None = None
+
+
+def _switches_out(client: Any) -> PricingSwitchesOut:
+    switches = area_pricing.load_switches(client)
+    return PricingSwitchesOut(
+        rain_mode=switches.rain,
+        area_pricing_shadow=switches.shadow,
+        area_pricing_live=switches.live,
+    )
+
+
+def _set_config_bool(client: Any, key: str, value: bool) -> None:
+    client.table("platform_config").upsert(
+        {"key": key, "value": value}, on_conflict="key"
+    ).execute()
+
+
+@logistics_router.get("/pricing-switches", response_model=PricingSwitchesOut)
+def get_pricing_switches(
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service: Annotated[Any, Depends(get_supabase_client)],
+) -> PricingSwitchesOut:
+    """Rain mode and the area-pair pricing rollout switches (operations screen)."""
+    return _switches_out(service.client)
+
+
+@logistics_router.patch("/rain-mode", response_model=PricingSwitchesOut)
+def patch_rain_mode(
+    body: RainModeIn,
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    service: Annotated[Any, Depends(get_supabase_client)],
+) -> PricingSwitchesOut:
+    """Rain switch: multiplies area-pair fees and widens promised windows by 30 min."""
+    before = _switches_out(service.client)
+    _set_config_bool(service.client, area_pricing.RAIN_KEY, body.enabled)
+    recorder.record(
+        action="admin.logistics.rain_mode.update",
+        entity_type="platform_config",
+        entity_id=area_pricing.RAIN_KEY,
+        before={"value": before.rain_mode},
+        after={"value": body.enabled},
+    )
+    return _switches_out(service.client)
+
+
+@logistics_router.patch("/area-pricing", response_model=PricingSwitchesOut)
+def patch_area_pricing(
+    body: AreaPricingIn,
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    service: Annotated[Any, Depends(get_supabase_client)],
+) -> PricingSwitchesOut:
+    """Full admins only: shadow (log next to the zone fee) and live (charge it)."""
+    if body.shadow is None and body.live is None:
+        raise AppError(code="validation_error", message="Nothing to change", http_status=422)
+    before = _switches_out(service.client)
+    if body.shadow is not None:
+        _set_config_bool(service.client, area_pricing.SHADOW_KEY, body.shadow)
+    if body.live is not None:
+        _set_config_bool(service.client, area_pricing.LIVE_KEY, body.live)
+    after = _switches_out(service.client)
+    recorder.record(
+        action="admin.logistics.area_pricing.update",
+        entity_type="platform_config",
+        entity_id="area_pricing",
+        before={"shadow": before.area_pricing_shadow, "live": before.area_pricing_live},
+        after={"shadow": after.area_pricing_shadow, "live": after.area_pricing_live},
+    )
+    return after
 
 
 admin_router.include_router(logistics_router)

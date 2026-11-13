@@ -105,9 +105,7 @@ def suggest_matches(
 
 def load_active_candidates(client: _TableClient) -> list[CanonicalCandidate]:
     """Load active canonical products for matching (small catalog at launch)."""
-    response = (
-        client.table("products").select("id, name, aliases").eq("status", "active").execute()
-    )
+    response = client.table("products").select("id, name, aliases").eq("status", "active").execute()
     data = getattr(response, "data", None)
     rows = data if isinstance(data, list) else []
 
@@ -125,7 +123,5 @@ def load_active_candidates(client: _TableClient) -> list[CanonicalCandidate]:
             if isinstance(aliases_raw, list)
             else ()
         )
-        candidates.append(
-            CanonicalCandidate(product_id=product_id, name=name, aliases=aliases)
-        )
+        candidates.append(CanonicalCandidate(product_id=product_id, name=name, aliases=aliases))
     return candidates

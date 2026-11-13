@@ -94,9 +94,7 @@ def _write_audit(
     ).execute()
 
 
-def _load_refund_row(
-    service_client: ServiceRoleClient, refund_id: str
-) -> dict[str, Any] | None:
+def _load_refund_row(service_client: ServiceRoleClient, refund_id: str) -> dict[str, Any] | None:
     response = (
         service_client.client.table("refunds")
         .select("id, order_id, status, payout_ref, breakdown")
@@ -182,9 +180,9 @@ def complete_refund_from_provider_payout(
     if current not in AWAITING_PROVIDER_STATUSES:
         return False
 
-    service_client.client.table("refunds").update(
-        {"status": RefundStatus.COMPLETED.value}
-    ).eq("id", refund_id).execute()
+    service_client.client.table("refunds").update({"status": RefundStatus.COMPLETED.value}).eq(
+        "id", refund_id
+    ).execute()
     _write_audit(
         service_client,
         refund_id=refund_id,
@@ -276,9 +274,7 @@ def fail_refund_from_provider_payout(
     # C5: only a provider-confirmed failure is definitive (no money left Lenco).
     # Exhausted retries after send exceptions are ambiguous — the transfer may
     # have gone through — so those are left for manual reconciliation.
-    is_definitive = (
-        definitive if definitive is not None else reason == DEFINITIVE_FAILURE_REASON
-    )
+    is_definitive = definitive if definitive is not None else reason == DEFINITIVE_FAILURE_REASON
     if current == RefundStatus.FAILED.value:
         if is_definitive:
             # Re-delivery of a failure notice: make sure the reversal landed
@@ -344,9 +340,7 @@ WHERE order_id = {order_sql}
 
 def refund_awaiting_provider(order_id: str) -> bool:
     """True when a refund is in-flight waiting on Lenco customer payout."""
-    statuses_sql = ", ".join(
-        sql_literal(status) for status in sorted(AWAITING_PROVIDER_STATUSES)
-    )
+    statuses_sql = ", ".join(sql_literal(status) for status in sorted(AWAITING_PROVIDER_STATUSES))
     order_sql = sql_literal(order_id) + "::uuid"
     script = f"""
 SELECT count(*)::text

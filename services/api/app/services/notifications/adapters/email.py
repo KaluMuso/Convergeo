@@ -190,10 +190,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "subject_key": "notifications.email.courier_dispatch_request.subject",
             "subject": "Vergeo5 delivery request {order_id}",
             "body_key": "notifications.email.courier_dispatch_request.body",
-            "body": (
-                "<p>New delivery job from Vergeo5.</p>"
-                "<p>{dispatch_message}</p>"
-            ),
+            "body": ("<p>New delivery job from Vergeo5.</p><p>{dispatch_message}</p>"),
         },
     },
     "dispatch_stale_alert": {
@@ -202,8 +199,7 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "subject": "Dispatch {order_id} not accepted",
             "body_key": "notifications.email.dispatch_stale_alert.body",
             "body": (
-                "<p>Dispatch for order {order_id} is still waiting for courier "
-                "acceptance.</p>"
+                "<p>Dispatch for order {order_id} is still waiting for courier acceptance.</p>"
             ),
         },
     },

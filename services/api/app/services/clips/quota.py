@@ -143,9 +143,7 @@ def enforce_clip_weekly_cap(
     on. Mirrors ``caps._raise_cap_error``'s shape (``message_key`` + details) so
     the client renders it the same way as the listing cap.
     """
-    remaining, cap = remaining_quota(
-        service_client, vendor_id=vendor_id, tier=tier, now=now
-    )
+    remaining, cap = remaining_quota(service_client, vendor_id=vendor_id, tier=tier, now=now)
     if remaining > 0:
         return
     raise AppError(

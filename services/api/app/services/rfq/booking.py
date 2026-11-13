@@ -158,6 +158,4 @@ COMMIT;
         )
 
     # Reuse the RFQ deposit money spine unchanged.
-    return accept_quote(
-        service_client, job_id=job_id, quote_id=quote_id, customer_id=customer_id
-    )
+    return accept_quote(service_client, job_id=job_id, quote_id=quote_id, customer_id=customer_id)
