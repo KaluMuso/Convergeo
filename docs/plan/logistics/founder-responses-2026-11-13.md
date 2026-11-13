@@ -90,3 +90,15 @@ Delivery cash counts as Convergeo’s money until it’s actually deposited. Thi
 - Vendor app ≠ customer app (Alibaba vs AliExpress): vendor app shows NO retail prices; focuses on wholesale prices, discounted bulk stock, and B2B services businesses need.
 - Vendor-page scout: must run on n8n (production) with AI agents using Kimi K2, not a Claude scheduled task.
 - Strategy question raised: path to multi-million revenue beyond commission (answered in chat).
+
+## 22:23 decisions (King)
+- #790 merged by King (master ff81226c). Production migrations + deploy next.
+- Business Home (#793) approved.
+- Customer/creator clips: continue (build after Clips staged opening).
+- Wholesale prices: VENDOR APP ONLY. Customer app is retail-only for everyone (supersedes D28/D36 storefront-wholesale; Business Home must drop the verified-wholesale view).
+- "Order before 2 pm, get it today" applies only in Lusaka.
+- Factor free services/events (public events, business seminars, religious events): free listings/tickets must be supported (zero-price tickets/RSVP, no commission, ads/boost still sellable).
+- Analytics money model: Lenco fee counted only when booked; courier cost = dispatch quote (for now).
+- OpenRouter credits paid (AI features can use it once flags are on).
+- Plan limits = per distinct listing, never stock quantity.
+- Asked for revenue model ($1M/$5M/$10M: sellers, orders, active users).
