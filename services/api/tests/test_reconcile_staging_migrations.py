@@ -83,6 +83,10 @@ PENDING_REPAIR_VERSIONS = {
     "20261113071000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
+    # intercity reference rate cards (additive).
+    "20261113150000",
+    "20261113151000",
 }
 
 
