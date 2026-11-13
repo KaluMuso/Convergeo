@@ -230,5 +230,30 @@
     "beforeDispatch": "Envie de modifier ou d'annuler ? Contactez l'assistance avec votre numéro de commande avant l'expédition.",
     "afterDispatch": "Un problème avec votre commande ? Contactez l'assistance avec votre numéro de commande.",
     "contactCta": "Contacter l'assistance"
+  },
+  "doorPay": {
+    "title": "Payer à la porte",
+    "intro": "Payez {amount} par mobile money quand le livreur est à votre porte, après avoir vérifié vos articles.",
+    "amountDue": "Payez {amount} par mobile money à la porte, après avoir vérifié vos articles.",
+    "waitingRider": "Le bouton de paiement apparaît ici quand le livreur signale son arrivée.",
+    "payNow": "Payer maintenant sur mon téléphone",
+    "sending": "Envoi de la demande de paiement…",
+    "otherNumber": "Payer avec un autre numéro",
+    "phoneLabel": "Numéro MTN ou Airtel",
+    "phoneHelp": "La demande est envoyée à ce numéro. Les numéros Zamtel ne peuvent pas encore la recevoir.",
+    "pending": "Regardez votre téléphone et saisissez votre code PIN pour approuver le paiement.",
+    "checkStatus": "Vérifier le paiement",
+    "checking": "Vérification…",
+    "failed": "Le paiement n'a pas abouti. Vous pouvez réessayer ou utiliser un autre numéro.",
+    "attemptsLeft": "{count, plural, one {# essai restant} other {# essais restants}}",
+    "noAttemptsLeft": "Plus d'essais possibles. Le livreur peut accepter des espèces, dans la limite autorisée.",
+    "paid": "Payé. Votre code de remise est affiché ci-dessus. Donnez-le au livreur.",
+    "cash": "Payez {amount} en espèces au livreur, puis donnez-lui votre code de remise.",
+    "errors": {
+      "invalidPhone": "Saisissez un numéro MTN ou Airtel zambien.",
+      "operatorUnsupported": "Ce numéro ne peut pas recevoir la demande. Utilisez un numéro MTN ou Airtel.",
+      "inFlight": "Une demande est déjà sur votre téléphone. Approuvez-la ou patientez un instant.",
+      "generic": "Une erreur s'est produite. Vérifiez votre connexion et réessayez."
+    }
   }
 }

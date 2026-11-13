@@ -230,5 +230,30 @@
     "beforeDispatch": "想修改或取消？请在发货前凭订单号联系客服。",
     "afterDispatch": "订单有问题？请凭订单号联系客服。",
     "contactCta": "联系客服"
+  },
+  "doorPay": {
+    "title": "送货上门付款",
+    "intro": "骑手到达门口、您检查商品后，用手机钱包支付 {amount}。",
+    "amountDue": "检查商品后，在门口用手机钱包支付 {amount}。",
+    "waitingRider": "骑手报告到达后，付款按钮会出现在这里。",
+    "payNow": "立即在手机上付款",
+    "sending": "正在发送付款提示…",
+    "otherNumber": "使用其他号码付款",
+    "phoneLabel": "MTN 或 Airtel 号码",
+    "phoneHelp": "付款提示将发送到此号码。Zamtel 号码暂不支持。",
+    "pending": "请查看手机并输入 PIN 码确认付款。",
+    "checkStatus": "查看付款状态",
+    "checking": "正在查询…",
+    "failed": "付款未成功。您可以重试或使用其他号码。",
+    "attemptsLeft": "{count, plural, other {还可尝试 # 次}}",
+    "noAttemptsLeft": "已无尝试次数。骑手可在现金限额内收取现金。",
+    "paid": "已付款。您的交接码已显示在上方，请交给骑手。",
+    "cash": "请向骑手支付现金 {amount}，然后告诉骑手您的交接码。",
+    "errors": {
+      "invalidPhone": "请输入赞比亚 MTN 或 Airtel 号码。",
+      "operatorUnsupported": "此号码无法接收付款提示，请使用 MTN 或 Airtel 号码。",
+      "inFlight": "您的手机上已有付款提示。请确认，或稍候再试。",
+      "generic": "出现问题。请检查网络连接后重试。"
+    }
   }
 }

@@ -1779,6 +1779,39 @@
         "permission": "You do not have permission to manage couriers."
       },
       "zonePriceLine": "{label} {price}"
+    },
+    "doorPayment": {
+      "title": "Pay at the door",
+      "states": {
+        "arrived": "Rider at the door: awaiting payment",
+        "pending": "Payment prompt on the customer's phone",
+        "paid": "Paid by mobile money: code released",
+        "cash": "Cash fallback: code released",
+        "failed": "Payment failed or timed out",
+        "exception": "Payment exception: check the queue"
+      },
+      "actions": {
+        "arrived": "Rider arrived",
+        "request": "Request payment",
+        "poll": "Check payment",
+        "cash": "Take cash instead"
+      },
+      "done": {
+        "arrived": "Arrival recorded",
+        "request": "Payment prompt sent",
+        "poll": "Status refreshed",
+        "cash": "Cash fallback recorded"
+      },
+      "errors": {
+        "inFlight": "A prompt is still live on the customer's phone. Check its status first.",
+        "attemptsExhausted": "No prompts left. Use the cash fallback or return the parcel.",
+        "cashOverCap": "Order total is above the cash limit.",
+        "alreadySettled": "This order is already paid.",
+        "orderNotPayable": "This order can no longer be paid.",
+        "invalidPhone": "Enter a Zambian mobile number.",
+        "operatorUnsupported": "Only MTN and Airtel numbers can receive the prompt.",
+        "required": "The order must be paid before handover."
+      }
     }
   },
   "common": {

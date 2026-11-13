@@ -107,5 +107,30 @@
     "beforeDispatch": "Mulefwaya ukwaluka nangu ukufumyapo? Tumineni support na namba ya order ilyo tailatumwa.",
     "afterDispatch": "Kwaliba ubwafya na order yenu? Tumineni support na namba ya order.",
     "contactCta": "Tumineni support"
+  },
+  "doorPay": {
+    "title": "Lipileni pa mwinshi",
+    "intro": "Lipileni {amount} na mobile money ilyo rider ali pa mwinshi, napo mwapwisha ukumona ifintu fyenu.",
+    "amountDue": "Lipileni {amount} na mobile money pa mwinshi, napo mwapwisha ukumona ifintu fyenu.",
+    "waitingRider": "Akabatani ka kulipila kalaboneka apa ilyo rider aleta amashiwi ukuti afika.",
+    "payNow": "Lipileni nomba pa foni",
+    "sending": "Tulletuma ukulomba kwa malipilo…",
+    "otherNumber": "Lipileni ukufuma pa nambala imbi",
+    "phoneLabel": "Nambala ya MTN nangu Airtel",
+    "phoneHelp": "Ukulomba kukaya kuli iyi nambala. Inambala sha Zamtel tashilapokelela nomba.",
+    "pending": "Moneni pa foni yenu no kwingisha PIN pa kusumina ukulipila.",
+    "checkStatus": "Moneni nga mwalipila",
+    "checking": "Tulemona…",
+    "failed": "Ukulipila takwapitile. Kuti mwaesha na kabili nangu ukubomfya nambala imbi.",
+    "attemptsLeft": "{count, plural, one {Ukwesha # kwashala} other {Ukwesha # kwashala}}",
+    "noAttemptsLeft": "Tapali ukwesha na kumbi. Rider kuti apokelela indalama sha cash, ukufika pa mupaka.",
+    "paid": "Mwalipila. Ikodi yenu ya kupeela yaboneka pa muulu. Peeleni rider.",
+    "cash": "Lipileni rider {amount} mu cash, elyo mumupeele ikodi yenu ya kupeela.",
+    "errors": {
+      "invalidPhone": "Ingisheni nambala ya MTN nangu Airtel iya mu Zambia.",
+      "operatorUnsupported": "Iyi nambala taipokelela ukulomba. Bomfyeni nambala ya MTN nangu Airtel.",
+      "inFlight": "Ukulomba kwaliko kale pa foni yenu. Suminisheni nangu linda panono.",
+      "generic": "Pali icalubile. Moneni intaneti yenu elyo eseni na kabili."
+    }
   }
 }

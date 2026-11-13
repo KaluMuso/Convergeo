@@ -1158,5 +1158,40 @@
     "placeholders": {
       "path": "/c/electronics"
     }
+  },
+  "dispatch": {
+    "doorPayment": {
+      "title": "Paiement à la porte",
+      "states": {
+        "arrived": "Livreur à la porte : paiement en attente",
+        "pending": "Demande de paiement sur le téléphone du client",
+        "paid": "Payé par mobile money : code libéré",
+        "cash": "Repli espèces : code libéré",
+        "failed": "Paiement échoué ou expiré",
+        "exception": "Exception de paiement : voir la file"
+      },
+      "actions": {
+        "arrived": "Livreur arrivé",
+        "request": "Demander le paiement",
+        "poll": "Vérifier le paiement",
+        "cash": "Prendre des espèces"
+      },
+      "done": {
+        "arrived": "Arrivée enregistrée",
+        "request": "Demande de paiement envoyée",
+        "poll": "Statut actualisé",
+        "cash": "Repli espèces enregistré"
+      },
+      "errors": {
+        "inFlight": "Une demande est encore active sur le téléphone du client. Vérifiez d'abord son statut.",
+        "attemptsExhausted": "Plus de demandes possibles. Utilisez les espèces ou retournez le colis.",
+        "cashOverCap": "Le total dépasse la limite en espèces.",
+        "alreadySettled": "Cette commande est déjà payée.",
+        "orderNotPayable": "Cette commande ne peut plus être payée.",
+        "invalidPhone": "Saisissez un numéro mobile zambien.",
+        "operatorUnsupported": "Seuls les numéros MTN et Airtel peuvent recevoir la demande.",
+        "required": "La commande doit être payée avant la remise."
+      }
+    }
   }
 }

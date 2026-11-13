@@ -172,6 +172,7 @@ class DeliveryZoneOut(StrictModel):
 
 class BoardOut(StrictModel):
     flag_enabled: bool
+    door_payment_enabled: bool = False
     ready_orders: list[ReadyOrderOut]
     dispatches: list[DispatchOut]
     couriers: list[CourierOut]
@@ -321,13 +322,15 @@ def get_board(
     _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
 ) -> BoardOut:
     snapshot = dispatch_service.board_snapshot()
+    door_enabled = door_payments.is_pay_at_door_enabled()
     door_states = (
         door_payments.board_states([item["dispatch"].id for item in snapshot["dispatches"]])
-        if door_payments.is_pay_at_door_enabled()
+        if door_enabled
         else {}
     )
     return BoardOut(
         flag_enabled=dispatch_service.is_courier_dispatch_enabled(),
+        door_payment_enabled=door_enabled,
         ready_orders=[
             ReadyOrderOut(
                 order_id=str(row["order_id"]),

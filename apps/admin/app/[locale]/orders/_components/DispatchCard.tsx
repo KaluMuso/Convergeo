@@ -14,6 +14,7 @@ import {
   classifyHandoverError,
   type Dispatch,
   type DispatchAction,
+  doorPaymentActions,
   isHandoverCodeWellFormed,
   isPodPublicIdWellFormed,
   isStale,
@@ -25,12 +26,29 @@ import {
 type DispatchCardProps = {
   dispatch: Dispatch;
   flagEnabled: boolean;
+  doorPaymentEnabled?: boolean;
   onChanged: () => void;
+};
+
+const DOOR_ERROR_KEYS: Record<string, string> = {
+  door_payment_in_flight: "inFlight",
+  door_payment_attempts_exhausted: "attemptsExhausted",
+  door_payment_cash_over_cap: "cashOverCap",
+  door_payment_already_settled: "alreadySettled",
+  door_payment_order_not_payable: "orderNotPayable",
+  door_payment_invalid_phone: "invalidPhone",
+  door_payment_operator_unsupported: "operatorUnsupported",
+  door_payment_required: "required",
 };
 
 type MessageState = { text: string; whatsappTo: string | null } | null;
 
-export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardProps) {
+export function DispatchCard({
+  dispatch,
+  flagEnabled,
+  doorPaymentEnabled = false,
+  onChanged,
+}: DispatchCardProps) {
   const t = useTranslations("admin.dispatch");
   const [openAction, setOpenAction] = useState<DispatchAction | null>(null);
   const [courierRef, setCourierRef] = useState(dispatch.courier_reference ?? "");
@@ -48,6 +66,10 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
   const fail = (err: unknown) => {
     if (err instanceof ApiError && err.code === "dispatch_invalid_transition") {
       setError(t("errors.invalidTransition"));
+      return;
+    }
+    if (err instanceof ApiError && err.code in DOOR_ERROR_KEYS) {
+      setError(t(`doorPayment.errors.${DOOR_ERROR_KEYS[err.code]}`));
       return;
     }
     if (err instanceof ApiError && err.code === "feature_disabled") {
@@ -247,7 +269,46 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
             <p className="text-warning">{t("active.locked")}</p>
           </div>
         ) : null}
+        {doorPaymentEnabled && dispatch.door_payment_state ? (
+          <div>
+            <p
+              className={
+                dispatch.door_payment_state === "paid" || dispatch.door_payment_state === "cash"
+                  ? "text-success"
+                  : dispatch.door_payment_state === "exception" ||
+                      dispatch.door_payment_state === "failed"
+                    ? "text-warning"
+                    : "text-muted"
+              }
+              data-testid="door-payment-state"
+            >
+              {t(`doorPayment.states.${dispatch.door_payment_state}`)}
+            </p>
+          </div>
+        ) : null}
       </div>
+
+      {flagEnabled && doorPaymentEnabled && doorPaymentActions(dispatch).length > 0 ? (
+        <div className="flex flex-wrap gap-2" aria-label={t("doorPayment.title")}>
+          {doorPaymentActions(dispatch).map((action) => (
+            <button
+              key={action}
+              type="button"
+              className="rounded border border-border px-3 py-1 text-sm"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  `/admin/dispatch/requests/${dispatch.id}/door-payment/${action}`,
+                  {},
+                  t(`doorPayment.done.${action}`),
+                )
+              }
+            >
+              {t(`doorPayment.actions.${action}`)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {flagEnabled && canNotify(dispatch) ? (
         <div className="flex flex-wrap gap-2">

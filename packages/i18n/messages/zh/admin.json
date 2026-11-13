@@ -1158,5 +1158,40 @@
     "placeholders": {
       "path": "/c/electronics"
     }
+  },
+  "dispatch": {
+    "doorPayment": {
+      "title": "上门付款",
+      "states": {
+        "arrived": "骑手已到门口：等待付款",
+        "pending": "付款提示已发送到客户手机",
+        "paid": "已通过手机钱包付款：交接码已发放",
+        "cash": "改用现金：交接码已发放",
+        "failed": "付款失败或超时",
+        "exception": "付款异常：请查看队列"
+      },
+      "actions": {
+        "arrived": "骑手已到达",
+        "request": "请求付款",
+        "poll": "查询付款",
+        "cash": "改收现金"
+      },
+      "done": {
+        "arrived": "已记录到达",
+        "request": "已发送付款提示",
+        "poll": "状态已刷新",
+        "cash": "已记录现金收款"
+      },
+      "errors": {
+        "inFlight": "客户手机上仍有有效的付款提示，请先查询状态。",
+        "attemptsExhausted": "付款提示次数已用完。请改收现金或退回包裹。",
+        "cashOverCap": "订单金额超过现金限额。",
+        "alreadySettled": "此订单已付款。",
+        "orderNotPayable": "此订单已无法付款。",
+        "invalidPhone": "请输入赞比亚手机号码。",
+        "operatorUnsupported": "只有 MTN 和 Airtel 号码可以接收付款提示。",
+        "required": "交接前必须完成付款。"
+      }
+    }
   }
 }

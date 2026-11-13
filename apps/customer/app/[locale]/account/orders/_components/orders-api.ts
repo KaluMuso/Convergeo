@@ -86,6 +86,29 @@ export type CourierDelivery = {
   handover_code: string | null;
 };
 
+/** Pay at the door (flag `pay_at_door`). Never carries phone numbers or Lenco references. */
+export type DoorPaymentState =
+  | "not_applicable"
+  | "not_at_door"
+  | "awaiting_arrival"
+  | "awaiting_payment"
+  | "pending"
+  | "failed"
+  | "paid"
+  | "cash";
+
+export type DoorPayment = {
+  enabled: boolean;
+  state: DoorPaymentState;
+  amount_ngwee: number;
+  arrived: boolean;
+  settled_via: "mobile_money" | "cash" | null;
+  attempts_used: number;
+  attempts_allowed: number;
+  latest_failure_reason: string | null;
+  can_request: boolean;
+};
+
 export type OrderDeliveryResponse = {
   enabled: boolean;
   dispatch: CourierDelivery | null;
@@ -113,5 +136,7 @@ export function createOrdersApiClient(getToken: () => string | null | Promise<st
     getOrder: (orderId: string) => client.request<OrderDetail>(`/account/orders/${orderId}`),
     getDelivery: (orderId: string) =>
       client.request<OrderDeliveryResponse>(`/account/orders/${orderId}/delivery`),
+    getDoorPayment: (orderId: string) =>
+      client.request<DoorPayment>(`/account/orders/${orderId}/door-payment`),
   };
 }
