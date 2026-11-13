@@ -381,3 +381,73 @@ class TestEscrowSummaryCountsDeliveryCapture:
         assert summary.balanced is True
         assert remaining_escrow_ngwee(order_id) == 0
         claim_release_gate(order_id)  # idempotent re-claim still ok
+
+
+# ---------------------------------------------------------------------------
+# Finding 4 — prepaid shipped-timer release must respect the courier dispatch
+# ---------------------------------------------------------------------------
+
+
+def _insert_dispatch(conn: PgConn, order_id: str, status: str) -> None:
+    partner_id = str(uuid.uuid4())
+    result = conn.run_script(
+        f"""
+        INSERT INTO public.courier_partners (id, name, contact_email)
+        VALUES ('{partner_id}', 'Pilot riders {partner_id[:8]}', 'riders@example.com');
+        INSERT INTO public.dispatch_requests (order_id, courier_partner_id, status)
+        VALUES ('{order_id}', '{partner_id}', '{status}');
+        """
+    )
+    assert result.ok, result.error
+
+
+class TestAutoReleaseRespectsDispatch:
+    def _shipped_prepaid_order(self, db: PgConn, *, days_ago: int = 8) -> str:
+        from app.services.ledger.engine import post_transaction
+        from app.services.ledger.templates import LedgerTemplate
+
+        order_id = _insert_order(db, status="shipped", cod=False)
+        _insert_event(db, order_id, "shipped", datetime.now(UTC) - timedelta(days=days_ago))
+        post_transaction(
+            idempotency_key=f"escrow-hold-{order_id}",
+            template=LedgerTemplate.ESCROW_HOLD,
+            order_id=order_id,
+            order_amount_ngwee=ITEMS_NGWEE + FEE_NGWEE,
+        )
+        return order_id
+
+    @pytest.mark.parametrize("dispatch_status", ["failed", "cancelled"])
+    def test_failed_or_cancelled_dispatch_blocks_shipped_fallback(
+        self, db: PgConn, dispatch_status: str
+    ) -> None:
+        from app.routers.internal_order_jobs import _list_auto_release_candidates
+        from app.services.escrow.release import evaluate_and_release
+
+        order_id = self._shipped_prepaid_order(db)
+        _insert_dispatch(db, order_id, dispatch_status)
+
+        candidates = _list_auto_release_candidates(limit=200, cursor=None, now=datetime.now(UTC))
+        result = evaluate_and_release(None, order_id)  # type: ignore[arg-type]
+
+        assert order_id not in candidates
+        assert result.outcome == "held"
+        assert result.reason == f"dispatch_{dispatch_status}"
+        assert _scalar(
+            db,
+            "SELECT count(*)::text FROM public.ledger_transactions "
+            f"WHERE idempotency_key = 'release-{order_id}';",
+        ) == "0"
+
+    def test_in_flight_dispatch_still_releases_on_the_shipped_timer(self, db: PgConn) -> None:
+        from app.routers.internal_order_jobs import _list_auto_release_candidates
+        from app.services.escrow.release import evaluate_and_release
+
+        order_id = self._shipped_prepaid_order(db)
+        _insert_dispatch(db, order_id, "picked_up")
+
+        candidates = _list_auto_release_candidates(limit=200, cursor=None, now=datetime.now(UTC))
+        result = evaluate_and_release(None, order_id)  # type: ignore[arg-type]
+
+        assert order_id in candidates
+        assert result.outcome == "released"
+        assert result.rule == "shipped_fallback"

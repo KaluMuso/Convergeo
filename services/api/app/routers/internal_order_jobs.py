@@ -208,6 +208,15 @@ WHERE o.status = 'shipped'
     FROM public.ledger_transactions lt
     WHERE lt.idempotency_key = ({release_key_prefix} || o.id::text)
   )
+  -- Never release on the shipped timer when the latest courier dispatch ended
+  -- without delivery (evaluate_and_release holds these too).
+  AND coalesce((
+    SELECT dr.status
+    FROM public.dispatch_requests dr
+    WHERE dr.order_id = o.id
+    ORDER BY dr.created_at DESC, dr.id DESC
+    LIMIT 1
+  ), '') NOT IN ('failed', 'cancelled')
   {cursor_filter}
 ORDER BY o.id ASC
 LIMIT {int(limit)};

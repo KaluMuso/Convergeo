@@ -35,6 +35,9 @@ DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48
 DEFAULT_RELEASE_AFTER_SHIPPED_DAYS = 7
 
 RELEASE_ELIGIBLE_STATUSES = frozenset({"shipped", "delivered", "completed"})
+# A shipped order whose latest courier dispatch ended without delivery never
+# reaches the vendor on a timer: the parcel is lost, refused or back at the shop.
+UNDELIVERED_DISPATCH_STATUSES = frozenset({"failed", "cancelled"})
 
 
 class ServiceRoleClient(Protocol):
@@ -234,6 +237,28 @@ def _event_timestamps(
             buyer_confirmed = True
 
     return delivered_at, shipped_at, buyer_confirmed
+
+
+def latest_dispatch_status(order_id: str) -> str | None:
+    """Status of the order's most recent courier dispatch, or None if it has none.
+
+    Raises ``ReleaseAccountingError`` when the lookup fails (callers hold).
+    """
+    order_sql = _sql_uuid(order_id, "order_id")
+    script = f"""
+SELECT coalesce((
+  SELECT dr.status
+  FROM public.dispatch_requests dr
+  WHERE dr.order_id = {order_sql}
+  ORDER BY dr.created_at DESC, dr.id DESC
+  LIMIT 1
+), 'none');
+"""
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError("dispatch_lookup_failed")
+    status = result.rows[0]
+    return None if status == "none" else status
 
 
 def _has_open_dispute(order_id: str) -> bool | None:
@@ -456,6 +481,22 @@ def evaluate_and_release(
             reason=reason,
             rule=rule,
         )
+
+    if context.status == "shipped":
+        try:
+            dispatch_status = latest_dispatch_status(order_id)
+        except ReleaseAccountingError:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="held",
+                reason="dispatch_lookup_failed",
+            )
+        if dispatch_status in UNDELIVERED_DISPATCH_STATUSES:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="held",
+                reason=f"dispatch_{dispatch_status}",
+            )
 
     # Partial item PRE_RELEASE refunds drain only the returned slice; release the
     # remaining escrow (never the original full-order gross) so kept items reach
