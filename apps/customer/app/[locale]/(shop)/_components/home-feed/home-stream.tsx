@@ -11,7 +11,7 @@ import {
   type HomeStreamPage,
   type StreamLabels,
 } from "./feed-types";
-import { HomeStreamClient } from "./home-stream-client";
+import { HomeStreamClient } from "./home-stream-client-lazy";
 
 const EMPTY_STREAM: HomeStreamPage = { items: [], next_cursor: null };
 
