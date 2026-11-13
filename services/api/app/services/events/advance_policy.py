@@ -72,6 +72,7 @@ AUDIT_RECEIVABLE_OPENED = "event_advance.receivable_opened"
 AUDIT_RECEIVABLE_OFFSET = "event_advance.receivable_offset"
 AUDIT_RECEIVABLE_REPAID = "event_advance.receivable_repaid"
 AUDIT_DEBT_OVERDUE = "event_advance.debt_overdue_suspended"
+SUSPEND_REASON = "event_advance_debt_overdue"
 
 
 def _uuid_sql(value: str) -> str:
@@ -492,9 +493,12 @@ class OverdueEnforcementResult:
 def enforce_overdue_advance_debts(*, now: datetime | None = None) -> OverdueEnforcementResult:
     """Unpaid past due: suspend the organiser, blacklist the debt, flag legal follow-up.
 
-    One transaction: flag debts, suspend the vendor (active -> suspended, so no new
-    publishing or sales), and write one audit row per vendor. Idempotent (already
-    flagged debts are skipped).
+    One transaction: flag debts, suspend each affected vendor through the guarded
+    ``public.transition_vendor_suspend`` (active -> suspended only, row-locked, writes
+    its own ``vendor.suspended`` audit row; never a raw status UPDATE), and write one
+    ``event_advance.debt_overdue_suspended`` audit row per vendor. Idempotent (already
+    flagged debts are skipped). A debt fully repaid before ``due_at`` is ``settled``
+    and never reaches this sweep.
     """
     instant = (now or datetime.now(UTC)).astimezone(UTC)
     now_sql = f"{sql_literal(instant.isoformat())}::timestamptz"
@@ -502,6 +506,9 @@ def enforce_overdue_advance_debts(*, now: datetime | None = None) -> OverdueEnfo
     result = run_sql_script(
         f"""
 BEGIN;
+CREATE TEMP TABLE _advance_overdue (
+  vendor_id uuid NOT NULL, id uuid NOT NULL, outstanding bigint NOT NULL
+) ON COMMIT DROP;
 WITH overdue AS (
   UPDATE public.organiser_advance_debts
   SET suspended_at = {now_sql},
@@ -511,35 +518,37 @@ WITH overdue AS (
     AND due_at <= {now_sql}
     AND blacklisted_at IS NULL
   RETURNING vendor_id, id, amount_ngwee - recovered_ngwee AS outstanding
-),
-per_vendor AS (
-  SELECT vendor_id, sum(outstanding)::bigint AS outstanding,
-         array_agg(id::text ORDER BY id) AS debt_ids
-  FROM overdue GROUP BY vendor_id
-),
-suspended AS (
-  UPDATE public.vendors v
-  SET status = 'suspended', updated_at = timezone('utc', now())
-  FROM per_vendor p
-  WHERE v.id = p.vendor_id AND v.status = 'active'
-  RETURNING v.id
-),
-audited AS (
-  INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
-  SELECT {actor_sql}, {sql_literal(AUDIT_DEBT_OVERDUE)}, 'vendor', p.vendor_id,
-         NULL,
-         jsonb_build_object(
-           'outstanding_ngwee', p.outstanding,
-           'debt_ids', to_jsonb(p.debt_ids),
-           'suspended', EXISTS (SELECT 1 FROM suspended s WHERE s.id = p.vendor_id),
-           'blacklisted', true,
-           'legal_followup', true
-         )
-  FROM per_vendor p
-  RETURNING id
 )
-SELECT (SELECT count(*) FROM overdue)::text || '|' || (SELECT count(*) FROM suspended)::text
-  || '|' || (SELECT count(*) FROM audited)::text;
+INSERT INTO _advance_overdue (vendor_id, id, outstanding)
+SELECT vendor_id, id, outstanding FROM overdue;
+CREATE TEMP TABLE _advance_overdue_vendors ON COMMIT DROP AS
+SELECT vendor_id, sum(outstanding)::bigint AS outstanding,
+       array_agg(id::text ORDER BY id) AS debt_ids
+FROM _advance_overdue GROUP BY vendor_id;
+CREATE TEMP TABLE _advance_suspensions ON COMMIT DROP AS
+SELECT p.vendor_id,
+       public.transition_vendor_suspend(
+         p.vendor_id, {actor_sql}, {sql_literal(SUSPEND_REASON)},
+         jsonb_build_object('debt_ids', to_jsonb(p.debt_ids),
+                            'outstanding_ngwee', p.outstanding)
+       ) AS outcome
+FROM _advance_overdue_vendors p
+ORDER BY p.vendor_id;
+INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+SELECT {actor_sql}, {sql_literal(AUDIT_DEBT_OVERDUE)}, 'vendor', p.vendor_id,
+       NULL,
+       jsonb_build_object(
+         'outstanding_ngwee', p.outstanding,
+         'debt_ids', to_jsonb(p.debt_ids),
+         'suspended', s.outcome = 'suspended',
+         'suspension_outcome', s.outcome,
+         'blacklisted', true,
+         'legal_followup', true
+       )
+FROM _advance_overdue_vendors p
+JOIN _advance_suspensions s ON s.vendor_id = p.vendor_id;
+SELECT (SELECT count(*) FROM _advance_overdue)::text || '|'
+  || (SELECT count(*) FROM _advance_suspensions WHERE outcome = 'suspended')::text;
 COMMIT;
 """
     )
@@ -547,3 +556,84 @@ COMMIT;
         raise RuntimeError(f"overdue advance enforcement failed: {result.error}")
     parts = result.rows[-1].split("|")
     return OverdueEnforcementResult(debts_flagged=int(parts[0]), vendors_suspended=int(parts[1]))
+
+
+DEBT_STATUSES = ("open", "settled", "written_off")
+
+
+@dataclass(frozen=True, slots=True)
+class AdvanceDebtRow:
+    id: str
+    vendor_id: str
+    vendor_name: str
+    event_id: str
+    event_title: str
+    order_id: str
+    amount_ngwee: int
+    recovered_ngwee: int
+    status: str
+    due_at: str
+    suspended_at: str | None
+    blacklisted_at: str | None
+    legal_followup_at: str | None
+    created_at: str
+
+    @property
+    def outstanding_ngwee(self) -> int:
+        return self.amount_ngwee - self.recovered_ngwee
+
+
+def list_advance_debts(
+    *, status: str | None = None, vendor_id: str | None = None, limit: int = 100
+) -> list[AdvanceDebtRow]:
+    """Admin view of advance debts, newest first; optional status / organiser filters."""
+    if status is not None and status not in DEBT_STATUSES:
+        raise AppError(code="validation_error", message="unknown debt status", http_status=422)
+    clauses = ["TRUE"]
+    if status is not None:
+        clauses.append(f"d.status = {sql_literal(status)}")
+    if vendor_id is not None:
+        clauses.append(f"d.vendor_id = {_uuid_sql(vendor_id)}")
+    bounded = max(1, min(int(limit), 200))
+    result = run_sql_script(
+        f"""
+SELECT json_build_object(
+  'id', d.id, 'vendor_id', d.vendor_id, 'vendor_name', coalesce(v.display_name, ''),
+  'event_id', d.event_id, 'event_title', coalesce(e.title, ''), 'order_id', d.order_id,
+  'amount_ngwee', d.amount_ngwee, 'recovered_ngwee', d.recovered_ngwee,
+  'status', d.status, 'due_at', d.due_at, 'suspended_at', d.suspended_at,
+  'blacklisted_at', d.blacklisted_at, 'legal_followup_at', d.legal_followup_at,
+  'created_at', d.created_at
+)::text
+FROM public.organiser_advance_debts d
+LEFT JOIN public.vendors v ON v.id = d.vendor_id
+LEFT JOIN public.events e ON e.id = d.event_id
+WHERE {" AND ".join(clauses)}
+ORDER BY d.created_at DESC, d.id
+LIMIT {bounded};
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"advance debt listing failed: {result.error}")
+    rows: list[AdvanceDebtRow] = []
+    for raw in result.rows:
+        item = json.loads(raw)
+        rows.append(
+            AdvanceDebtRow(
+                id=str(item["id"]),
+                vendor_id=str(item["vendor_id"]),
+                vendor_name=str(item["vendor_name"]),
+                event_id=str(item["event_id"]),
+                event_title=str(item["event_title"]),
+                order_id=str(item["order_id"]),
+                amount_ngwee=int(item["amount_ngwee"]),
+                recovered_ngwee=int(item["recovered_ngwee"]),
+                status=str(item["status"]),
+                due_at=str(item["due_at"]),
+                suspended_at=item.get("suspended_at"),
+                blacklisted_at=item.get("blacklisted_at"),
+                legal_followup_at=item.get("legal_followup_at"),
+                created_at=str(item["created_at"]),
+            )
+        )
+    return rows

@@ -7672,6 +7672,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      transition_vendor_suspend: {
+        Args: {
+          p_actor: string
+          p_details?: Json
+          p_reason: string
+          p_vendor_id: string
+        }
+        Returns: string
+      }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {
         Args: { p_class: string; p_vendor_id: string }

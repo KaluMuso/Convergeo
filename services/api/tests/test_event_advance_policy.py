@@ -411,3 +411,168 @@ class TestVerifiedAdvanceLifecycle:
             )
             == 0
         )
+
+
+def _seed_overdue_debt(db: PgConn, organiser: str) -> tuple[str, int]:
+    """Verified organiser gets an advance, is paid out, then the event is cancelled."""
+    from app.services.payouts.eligibility import released_balance_ngwee
+
+    event_id, order_id, starts_at = _seed_early_order(db, organiser)
+    advance = evaluate_event_release(
+        _SERVICE, order_id, now=starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+    ).net_ngwee
+    owed = released_balance_ngwee(organiser)
+    post_transaction(
+        idempotency_key=f"test-payout-{order_id}",
+        template=LedgerTemplate.PAYOUT_EXECUTED,
+        amount_ngwee=owed,
+        vendor_id=organiser,
+    )
+    assert db.run(f"UPDATE public.events SET status = 'cancelled' WHERE id = '{event_id}';").ok
+    evaluate_event_release(_SERVICE, order_id, now=starts_at - timedelta(days=5))
+    assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+    return order_id, advance
+
+
+def _late() -> datetime:
+    return datetime.now(UTC) + timedelta(days=ap.DEFAULT_REPAYMENT_DAYS + 1)
+
+
+def _audit_count(db: PgConn, vendor_id: str, action: str) -> int:
+    return int(
+        _scalar(
+            db,
+            "SELECT count(*)::text FROM public.audit_log "
+            f"WHERE entity_id = '{vendor_id}' AND action = '{action}';",
+        )
+    )
+
+
+class TestGuardedSuspension:
+    def test_overdue_suspension_uses_guarded_transition_with_audit(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        _seed_overdue_debt(db, verified_organiser)
+        before = _audit_count(db, verified_organiser, "vendor.suspended")
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 1
+        assert _scalar(
+            db, f"SELECT status FROM public.vendors WHERE id = '{verified_organiser}';"
+        ) == ("suspended")
+        assert _audit_count(db, verified_organiser, "vendor.suspended") == before + 1
+        reason = _scalar(
+            db,
+            "SELECT after ->> 'reason' FROM public.audit_log "
+            f"WHERE entity_id = '{verified_organiser}' AND action = 'vendor.suspended' "
+            "ORDER BY at DESC, id DESC LIMIT 1;",
+        )
+        assert reason == ap.SUSPEND_REASON
+
+    def test_non_active_vendor_is_never_forced_to_suspended(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        assert db.run(
+            f"UPDATE public.vendors SET status = 'pending_kyc' WHERE id = '{verified_organiser}';"
+        ).ok
+        before = _audit_count(db, verified_organiser, "vendor.suspended")
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        # Debt is still blacklisted and flagged; the vendor status is left alone.
+        assert result.debts_flagged >= 1
+        assert result.vendors_suspended == 0
+        assert _debt(db, order_id) == f"open|{advance}|0|true|true"
+        assert _scalar(
+            db, f"SELECT status FROM public.vendors WHERE id = '{verified_organiser}';"
+        ) == ("pending_kyc")
+        assert _audit_count(db, verified_organiser, "vendor.suspended") == before
+        outcome = _scalar(
+            db,
+            "SELECT after ->> 'suspension_outcome' FROM public.audit_log "
+            f"WHERE entity_id = '{verified_organiser}' AND action = '{ap.AUDIT_DEBT_OVERDUE}' "
+            "ORDER BY at DESC, id DESC LIMIT 1;",
+        )
+        assert outcome == "not_active"
+
+    def test_guarded_transition_rejects_unknown_vendor_and_blank_reason(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        missing = db.run(
+            "SELECT public.transition_vendor_suspend("
+            f"'{uuid.uuid4()}'::uuid, '{VENDOR_B_OWNER_ID}'::uuid, 'x', '{{}}'::jsonb);"
+        )
+        assert not missing.ok
+        assert "vendor_not_found" in (missing.error or "")
+        blank = db.run(
+            "SELECT public.transition_vendor_suspend("
+            f"'{VENDOR_B}'::uuid, '{VENDOR_B_OWNER_ID}'::uuid, ' ', '{{}}'::jsonb);"
+        )
+        assert not blank.ok
+        assert "reason is required" in (blank.error or "")
+
+    def test_guarded_transition_not_callable_by_clients(self, db: PgConn, db_url_env: None) -> None:
+        for role in ("anon", "authenticated"):
+            allowed = _scalar(
+                db,
+                f"SELECT has_function_privilege('{role}', "
+                "'public.transition_vendor_suspend(uuid, uuid, text, jsonb)', 'EXECUTE')::text;",
+            )
+            assert allowed in {"f", "false"}
+
+    def test_sweeper_source_has_no_raw_vendor_status_update(self) -> None:
+        import inspect
+        import re
+
+        source = inspect.getsource(ap)
+        assert not re.search(r"UPDATE\s+public\.vendors", source, re.IGNORECASE)
+
+
+class TestRepaymentBeforeDue:
+    def test_full_repayment_before_due_stops_suspension_and_blacklist(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        ap.record_organiser_repayment(
+            vendor_id=verified_organiser,
+            amount_ngwee=advance,
+            actor_user_id=VENDOR_B_OWNER_ID,
+            reference=f"momo-{order_id[:8]}",
+        )
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        assert _scalar(
+            db, f"SELECT status FROM public.vendors WHERE id = '{verified_organiser}';"
+        ) == ("active")
+        assert _receivable(verified_organiser) == 0
+        assert _ledger_globally_balanced(db)
+
+    def test_partial_repayment_is_still_enforced_when_overdue(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        ap.record_organiser_repayment(
+            vendor_id=verified_organiser,
+            amount_ngwee=advance - 1,
+            actor_user_id=VENDOR_B_OWNER_ID,
+            reference=f"part-{order_id[:8]}",
+        )
+        assert _debt(db, order_id) == f"open|{advance}|{advance - 1}|false|false"
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 1
+        assert _debt(db, order_id) == f"open|{advance}|{advance - 1}|true|true"
+
+    def test_admin_listing_filters_by_status_and_organiser(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        mine = ap.list_advance_debts(vendor_id=verified_organiser, status="open")
+        row = next(r for r in mine if r.order_id == order_id)
+        assert (row.amount_ngwee, row.outstanding_ngwee) == (advance, advance)
+        assert all(r.vendor_id == verified_organiser and r.status == "open" for r in mine)
+        assert not any(
+            r.order_id == order_id
+            for r in ap.list_advance_debts(vendor_id=verified_organiser, status="settled")
+        )
+        with pytest.raises(Exception):  # noqa: B017 - unknown status refused
+            ap.list_advance_debts(status="bogus")

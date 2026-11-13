@@ -30,6 +30,8 @@
 --
 -- 3. Tiered organiser advance policy + organiser receivable (section 3 below).
 --
+-- 4. Guarded vendor suspension function used by the overdue-advance sweeper.
+--
 -- Additive only (function body replaced in place, new triggers/functions/tables,
 -- ledger kind checks widened to a strict superset, config rows on conflict do
 -- nothing).
@@ -40,6 +42,7 @@
 --     'event_verified_organiser_advance_bps', 'event_advance_min_kyc_tier',
 --     'event_advance_repayment_days', 'event_advance_min_successful_events');
 --   DELETE FROM public.feature_flags WHERE flag = 'event_organiser_advance';
+--   DROP FUNCTION IF EXISTS public.transition_vendor_suspend(uuid, uuid, text, jsonb);
 --   DROP TABLE IF EXISTS public.organiser_advance_debts;
 --   DROP TABLE IF EXISTS public.organiser_advance_undertakings;
 --   DELETE FROM public.ledger_accounts la WHERE la.kind = 'organiser_receivable'
@@ -315,3 +318,75 @@ insert into public.feature_flags (flag, enabled, description) values
     'event is cancelled). Default OFF = everyone is paid after the event.'
   )
 on conflict (flag) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- 4. Guarded vendor suspension (CLAUDE.md rule 4: no raw status UPDATEs)
+-- ---------------------------------------------------------------------------
+-- The only server-side path that suspends a vendor for an overdue advance debt.
+-- Locks the vendor row, allows exactly active -> suspended, and writes the
+-- audit_log row in the same transaction as the status change. Outcomes:
+--   'suspended'          the vendor was active and is now suspended (audited);
+--   'already_suspended'  no change, no audit row;
+--   'not_active'         any other status (draft, pending_kyc, suspended_compliance,
+--                        ...): no change, no audit row — never forced.
+-- An unknown vendor raises vendor_not_found (SQLSTATE P0002).
+-- Rollback: DROP FUNCTION public.transition_vendor_suspend(uuid, uuid, text, jsonb);
+create or replace function public.transition_vendor_suspend(
+  p_vendor_id uuid,
+  p_actor uuid,
+  p_reason text,
+  p_details jsonb default '{}'::jsonb
+)
+returns text
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_status text;
+begin
+  if p_reason is null or btrim(p_reason) = '' then
+    raise exception 'suspension reason is required' using errcode = '22023';
+  end if;
+
+  select status into v_status
+  from public.vendors
+  where id = p_vendor_id
+  for update;
+
+  if not found then
+    raise exception 'vendor_not_found' using errcode = 'P0002';
+  end if;
+
+  if v_status = 'suspended' then
+    return 'already_suspended';
+  end if;
+  if v_status <> 'active' then
+    return 'not_active';
+  end if;
+
+  update public.vendors
+  set status = 'suspended', updated_at = timezone('utc', now())
+  where id = p_vendor_id and status = 'active';
+
+  insert into public.audit_log (actor, action, entity_type, entity_id, before, after)
+  values (
+    p_actor,
+    'vendor.suspended',
+    'vendor',
+    p_vendor_id,
+    jsonb_build_object('status', v_status),
+    jsonb_build_object('status', 'suspended', 'reason', p_reason)
+      || coalesce(p_details, '{}'::jsonb)
+  );
+  return 'suspended';
+end;
+$$;
+
+comment on function public.transition_vendor_suspend(uuid, uuid, text, jsonb) is
+  'Guarded vendor transition active -> suspended with audit_log row (server only).';
+
+revoke all on function public.transition_vendor_suspend(uuid, uuid, text, jsonb) from public;
+revoke execute on function public.transition_vendor_suspend(uuid, uuid, text, jsonb)
+  from anon, authenticated;
+grant execute on function public.transition_vendor_suspend(uuid, uuid, text, jsonb)
+  to service_role;

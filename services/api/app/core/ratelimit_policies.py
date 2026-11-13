@@ -177,6 +177,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "DELETE /admin/roles/{key}/users/{user_id}": ADMIN_WRITE,
     "POST /admin/events/{event_id}/high-value-verify": ADMIN_WRITE,
+    "POST /admin/event-advance-debts/repayments": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/confirm-collection": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/refuse-collection": PAYMENT_WRITE,
     "POST /analytics/collect": PUBLIC_BEACON,

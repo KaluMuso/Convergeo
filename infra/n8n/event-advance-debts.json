@@ -1,0 +1,106 @@
+{
+  "name": "Event Advance Debts Overdue Tick",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Six Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/event-advance-debts/tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_EVENT_ADVANCE_DEBTS_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "event-advance-debts-tick",
+      "name": "Enforce Overdue Advance Debts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Event Advance Debts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const src = ($input.first() && $input.first().json) || {};\nconst flagged = Number(src.debts_flagged);\nconst suspended = Number(src.vendors_suspended);\nif (!Number.isInteger(flagged) || flagged < 0) {\n  throw new Error('Advance debts tick returned invalid debts_flagged counter');\n}\nif (!Number.isInteger(suspended) || suspended < 0 || suspended > flagged) {\n  throw new Error('Advance debts tick returned invalid vendors_suspended counter');\n}\nif (flagged > 0) {\n  throw new Error(`Advance debts overdue: ${flagged} debt(s) blacklisted, ${suspended} organiser(s) suspended; legal follow-up flagged`);\n}\nreturn $input.all();"
+      },
+      "id": "assert-advance-debts-outcome",
+      "name": "Alert On Overdue Advance Debts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Every Six Hours": {
+      "main": [
+        [
+          {
+            "node": "Enforce Overdue Advance Debts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enforce Overdue Advance Debts": {
+      "main": [
+        [
+          {
+            "node": "Alert On Overdue Advance Debts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 120
+  },
+  "versionId": "event-advance-debts-tick",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M10",
+      "createdAt": "2026-11-13T00:00:00.000Z",
+      "updatedAt": "2026-11-13T00:00:00.000Z"
+    }
+  ]
+}
