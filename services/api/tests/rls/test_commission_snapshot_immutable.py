@@ -6,8 +6,9 @@ release/payout math. It is written once on the order INSERT and never updated. T
 admin included) so the commission basis can never be silently rewritten; only the DB
 owner / superuser keeps an escape hatch.
 
-`admin` is the only persona with an UPDATE policy on orders (orders_admin_all), so it
-is the lever that proves the guard fires even for a privileged app role.
+Since 20261113163000 (2026-11 RBAC D1) no browser token can UPDATE orders at all —
+`admin` lost orders_admin_all and the dead UPDATE grant — so the trigger is proved
+with the API's own writer, `service_role`, and admin is checked at the privilege layer.
 
 DB-backed (mirrors the RLS matrix harness); skips when Postgres is unavailable.
 """
@@ -34,15 +35,26 @@ def test_commission_snapshot_is_immutable_for_app_roles(
     assert original is not None, "fixture order should exist"
 
     try:
-        # Admin holds orders_admin_all (the only persona that can UPDATE orders), yet the
-        # 0069 guard rejects any change to the commission basis — even for admin.
+        # D1: an admin browser token holds no UPDATE on orders at all.
         tamper = as_admin.execute(
             f"UPDATE public.orders SET commission_snapshot = '{{\"tampered\": true}}'::jsonb "
             f"WHERE id = '{order_id}'"
         )
         assert not tamper.ok, "admin must not be able to rewrite commission_snapshot"
-        assert "immutable" in (tamper.error or ""), tamper.error
+        assert tamper.sqlstate == "42501", tamper.error
         assert _snapshot(db, order_id) == original, "snapshot must be unchanged after the block"
+
+        # The 0069 guard still fires for the privileged app writer (service_role).
+        service = db.run(
+            "BEGIN; SET LOCAL ROLE service_role; "
+            "DO $$ BEGIN PERFORM set_config('request.jwt.claims', "
+            '\'{"role": "service_role"}\', true); END $$; '
+            f"UPDATE public.orders SET commission_snapshot = '{{\"tampered\": true}}'::jsonb "
+            f"WHERE id = '{order_id}'; ROLLBACK;"
+        )
+        assert not service.ok, "service_role must not be able to rewrite commission_snapshot"
+        assert "immutable" in (service.error or ""), service.error
+        assert _snapshot(db, order_id) == original
 
         # The DB owner / superuser keeps an escape hatch (migrations, audited fixes).
         owner_fix = db.run(
