@@ -68,9 +68,9 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
-    # Vendor listing plans: plan tables, cap resolver, admission guard least(KYC, plan) (additive, reversible).
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261114030000_vendor_plans.sql",
-    # Shared canonical product photos + listing_images.content_sha256 dedup (additive, reversible).
+    # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261114030100_shared_canonical_photos.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"

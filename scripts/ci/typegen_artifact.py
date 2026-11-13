@@ -47,9 +47,9 @@ POST_REPAIR_ORDER = [
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
-    # Vendor listing plans: plan tables, cap resolver, admission guard least(KYC, plan) (additive, reversible).
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261114030000",
-    # Shared canonical product photos + listing_images.content_sha256 dedup (additive, reversible).
+    # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261114030100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
