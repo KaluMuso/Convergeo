@@ -283,6 +283,49 @@ WHERE idempotency_key = {key_sql};
     return _require_count_row(result, error_code="ledger_lookup_failed") > 0
 
 
+def delivery_fee_refunded_ngwee(order_id: str) -> int:
+    """Delivery fee already handed back to the customer by PRE_RELEASE lane-1 refunds.
+
+    A lane-1 item return refunds the item plus the delivery fee out of escrow, so
+    that fee is no longer in escrow for ``delivery_revenue``. Failed refunds were
+    reversed (fee back in escrow) and are not counted. Lane 2 never refunds the
+    fee. Raises ``ReleaseAccountingError`` when the lookup fails (callers hold).
+    """
+    order_sql = _sql_uuid(order_id)
+    statuses_sql = ", ".join(sql_literal(status) for status in sorted(ACTIVE_REFUND_STATUSES))
+    script = f"""
+SELECT coalesce(sum(
+  CASE WHEN (breakdown->>'delivery_fee_ngwee') ~ '^[0-9]+$'
+    THEN (breakdown->>'delivery_fee_ngwee')::bigint ELSE 0 END
+), 0)::text
+FROM public.refunds
+WHERE order_id = {order_sql}
+  AND lane = 1
+  AND coalesce(breakdown->>'phase', '') = 'pre_release'
+  AND status IN ({statuses_sql});
+"""
+    result = run_sql_script(script)
+    return _require_count_row(result, error_code="refund_lookup_failed")
+
+
+def delivery_revenue_held_ngwee(order_id: str) -> int:
+    """Delivery fee this order still holds in ``delivery_revenue`` (captured − refunded).
+
+    Raises ``ReleaseAccountingError`` when the ledger cannot be queried.
+    """
+    order_sql = _sql_uuid(order_id)
+    script = f"""
+SELECT (-coalesce(sum(lp.amount_ngwee), 0))::text
+FROM public.ledger_transactions lt
+INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
+INNER JOIN public.ledger_accounts la ON la.id = lp.account_id
+WHERE lt.order_id = {order_sql}
+  AND la.kind = 'delivery_revenue';
+"""
+    result = run_sql_script(script)
+    return max(0, _require_count_row(result, error_code="ledger_lookup_failed"))
+
+
 def capture_order_delivery_fee(*, order_id: str, delivery_fee_ngwee: int) -> str | None:
     """Post escrow → delivery_revenue for the order's delivery fee (idempotent).
 

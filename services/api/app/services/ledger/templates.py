@@ -231,17 +231,26 @@ def cod_collected(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED, legs=legs)
 
 
-def clawback(*, clawback_ngwee: int, vendor_id: str) -> TemplateResult:
+def clawback(*, clawback_ngwee: int, vendor_id: str, delivery_fee_ngwee: int = 0) -> TemplateResult:
     """Post-release refund clawback — recover funds from vendor payable.
 
-    Debit vendor_payable (vendor) (+clawback).
+    Debit vendor_payable (vendor) (+clawback − delivery_fee).
+    Debit delivery_revenue (+delivery_fee) — the refunded delivery fee the platform
+    captured at release (never vendor money, so never clawed from the vendor).
     Credit platform_cash (−clawback).
     """
     amount = parse_ngwee(clawback_ngwee)
-    legs = (
-        PostingLeg(AccountRef("vendor_payable", vendor_id), amount),
-        PostingLeg(AccountRef("platform_cash"), -amount),
-    )
+    fee = 0 if delivery_fee_ngwee == 0 else parse_ngwee(delivery_fee_ngwee)
+    if fee > amount:
+        msg = "delivery_fee_ngwee must not exceed clawback_ngwee"
+        raise ValueError(msg)
+    vendor_part = amount - fee
+    debit_legs: list[PostingLeg] = []
+    if vendor_part > 0:
+        debit_legs.append(PostingLeg(AccountRef("vendor_payable", vendor_id), vendor_part))
+    if fee > 0:
+        debit_legs.append(PostingLeg(AccountRef("delivery_revenue"), fee))
+    legs = (*debit_legs, PostingLeg(AccountRef("platform_cash"), -amount))
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.CLAWBACK, legs=legs)
 

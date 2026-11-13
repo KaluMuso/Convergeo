@@ -510,6 +510,10 @@ class TestKeyDerivation:
                 "app.services.refunds.execute.summarize_order_release_ledger",
                 return_value=full_release,
             ),
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=0,
+            ),
         ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                                     customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)

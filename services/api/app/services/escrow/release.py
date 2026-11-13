@@ -20,6 +20,7 @@ from app.services.escrow.release_accounting import (
     capture_order_delivery_fee,
     compute_release_amounts,
     delivery_fee_already_captured,
+    delivery_fee_refunded_ngwee,
     order_has_open_dispute,
     order_has_refund_remainder,
     release_blocked_reason,
@@ -524,6 +525,18 @@ def evaluate_and_release(
             )
         # The uncaptured delivery fee is still in escrow; it is platform revenue,
         # so take it out of the remainder before the vendor's share is computed.
+        # A lane-1 item return already refunded the fee to the customer: that
+        # part is gone from escrow and must not be captured out of the vendor's items.
+        if delivery_capture_ngwee > 0:
+            try:
+                refunded_fee = delivery_fee_refunded_ngwee(order_id)
+            except ReleaseAccountingError:
+                return ReleaseResult(
+                    order_id=order_id,
+                    outcome="held",
+                    reason="refund_lookup_failed",
+                )
+            delivery_capture_ngwee = max(0, delivery_capture_ngwee - refunded_fee)
         delivery_capture_ngwee = min(delivery_capture_ngwee, remaining)
         release_gross_ngwee = remaining - delivery_capture_ngwee
         release_snapshot = scale_commission_snapshot_for_gross(

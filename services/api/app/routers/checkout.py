@@ -87,8 +87,9 @@ OTHER_TOWN_TOKENS: tuple[str, ...] = (
 )
 # Words after a town name that make it a Lusaka street / landmark, not a town.
 _LUSAKA_STREET_SUFFIXES: tuple[str, ...] = (
-    "road", "rd", "roundabout", "street", "st", "avenue", "ave", "drive", "close",
-    "compound",
+    "road", "rd", "roundabout", "round about", "r/a", "rdbt", "rbt", "street", "st",
+    "avenue", "ave", "drive", "close", "compound", "cmpd", "overspill", "turn off",
+    "turnoff", "turn-off",
 )
 # fmt: on
 # platform_config key naming the delivery zone for a typed Lusaka landmark the
@@ -230,9 +231,13 @@ def _other_town_pattern() -> re.Pattern[str]:
     alternation = "|".join(
         r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word)) for word in ordered
     )
-    suffixes = "|".join(_LUSAKA_STREET_SUFFIXES)
+    suffixes = "|".join(
+        r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word))
+        for word in sorted(_LUSAKA_STREET_SUFFIXES, key=lambda word: (-len(word), word))
+    )
+    # "Kafue-Road" / "Kabwe R/A" / "Chipata Overspill" are Lusaka places too.
     return re.compile(
-        rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])(?!\s+(?:{suffixes})(?![a-z0-9]))"
+        rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])(?![\s-]+(?:{suffixes})(?![a-z0-9]))"
     )
 
 

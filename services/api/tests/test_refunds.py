@@ -435,6 +435,11 @@ class TestExecuteRefundPaths:
                 "app.services.refunds.execute.summarize_order_release_ledger",
                 return_value=full_release,
             ),
+            # Released before the delivery-fee capture existed: the vendor got the fee.
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=0,
+            ),
         ):
             result = execute_refund(
                 service_client=service,
@@ -446,6 +451,7 @@ class TestExecuteRefundPaths:
         assert result.phase == RefundPhase.POST_RELEASE
         mock_post.assert_called_once()
         call = mock_post.call_args.kwargs
+        assert call["delivery_fee_ngwee"] == 0
         assert call["template"] == LedgerTemplate.CLAWBACK
         assert call["clawback_ngwee"] == 105_000
 
@@ -477,6 +483,10 @@ class TestExecuteRefundPaths:
                 "app.services.refunds.execute.summarize_order_release_ledger",
                 return_value=released_with_fee,
             ),
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=5_000,
+            ),
         ):
             result = execute_refund(
                 service_client=service,
@@ -487,6 +497,12 @@ class TestExecuteRefundPaths:
 
         assert result.phase == RefundPhase.POST_RELEASE
         mock_post.assert_called_once()
+        # Customer gets items + fee; the fee comes back out of delivery_revenue,
+        # only the items are clawed from the vendor (who never received the fee).
+        call = mock_post.call_args.kwargs
+        assert call["template"] == LedgerTemplate.CLAWBACK
+        assert call["clawback_ngwee"] == 105_000
+        assert call["delivery_fee_ngwee"] == 5_000
 
     @patch("app.services.refunds.execute.post_transaction")
     def test_partial_event_release_blocks_full_clawback(

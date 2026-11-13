@@ -12,7 +12,11 @@ from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     decide_refund_phase_under_gate,
 )
-from app.services.escrow.release_accounting import summarize_order_release_ledger
+from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
+    delivery_revenue_held_ngwee,
+    summarize_order_release_ledger,
+)
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
@@ -270,7 +274,24 @@ def _post_post_release_clawback(
     order_id: str,
     vendor_id: str,
     clawback_ngwee: int,
+    refunded_delivery_fee_ngwee: int = 0,
 ) -> str:
+    # The delivery fee went to delivery_revenue at release (never to the vendor):
+    # refund it from there, and claw only the rest back from the vendor. Orders
+    # released before that capture existed paid the fee to the vendor, so the
+    # whole amount is still clawed from vendor_payable for them.
+    platform_fee_ngwee = 0
+    if refunded_delivery_fee_ngwee > 0:
+        try:
+            held = delivery_revenue_held_ngwee(order_id)
+        except ReleaseAccountingError as exc:
+            raise AppError(
+                "refund_ledger_lookup_failed",
+                "Could not read the order's delivery revenue; retry the refund",
+                503,
+                {"order_id": order_id},
+            ) from exc
+        platform_fee_ngwee = min(refunded_delivery_fee_ngwee, held, clawback_ngwee)
     posted = post_transaction(
         idempotency_key=f"{ledger_key_base}-clawback",
         template=LedgerTemplate.CLAWBACK,
@@ -278,6 +299,7 @@ def _post_post_release_clawback(
         refund_id=refund_id,
         clawback_ngwee=clawback_ngwee,
         vendor_id=vendor_id,
+        delivery_fee_ngwee=platform_fee_ngwee,
     )
     return posted.id
 
@@ -354,6 +376,9 @@ def _complete_refund_money_path(
                 order_id=order_id,
                 vendor_id=vendor_id,
                 clawback_ngwee=refund_amount,
+                refunded_delivery_fee_ngwee=(
+                    lane1.delivery_fee_ngwee if lane == 1 and lane1 is not None else 0
+                ),
             )
         )
 

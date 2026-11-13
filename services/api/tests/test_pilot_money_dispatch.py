@@ -484,3 +484,83 @@ class TestCourierDispatchOwnsShipping:
             db.run(
                 "UPDATE public.feature_flags SET enabled = false WHERE flag = 'courier_dispatch';"
             )
+
+
+# ---------------------------------------------------------------------------
+# Review fixes — refunds after the delivery fee became platform revenue
+# ---------------------------------------------------------------------------
+
+
+def _insert_refund(
+    conn: PgConn, order_id: str, *, lane: int, status: str, breakdown: dict[str, Any]
+) -> str:
+    refund_id = str(uuid.uuid4())
+    payload = json.dumps(breakdown).replace("'", "''")
+    result = conn.run(
+        "INSERT INTO public.refunds (id, order_id, source_key, lane, breakdown, amount_ngwee, "
+        f"status) VALUES ('{refund_id}', '{order_id}', 'review-{refund_id}', {lane}, "
+        f"'{payload}'::jsonb, 1000, '{status}');"
+    )
+    assert result.ok, result.error
+    return refund_id
+
+
+class TestRefundDeliveryFee:
+    def test_post_release_lane1_refund_takes_fee_from_delivery_revenue(self, db: PgConn) -> None:
+        from app.services.refunds.execute import _post_post_release_clawback
+        from app.services.refunds.state import reverse_refund_ledger
+
+        order_id = _insert_order(db, status="delivered", cod=True)
+        confirm_cod_collection(order_id=order_id, actor_id=ADMIN_ID, note="Cash in")
+        payable_id = _account_id(db, "vendor_payable", VENDOR_A)
+        payable_before = account_balance_ngwee(payable_id)
+        delivery_before = account_balance_ngwee(DELIVERY_REVENUE_ID)
+        cash_before = account_balance_ngwee(PLATFORM_CASH_ID)
+        refund_id = _insert_refund(
+            db, order_id, lane=1, status="processing", breakdown={"phase": "post_release"}
+        )
+
+        _post_post_release_clawback(
+            refund_id=refund_id,
+            ledger_key_base=f"review-{refund_id}",
+            order_id=order_id,
+            vendor_id=VENDOR_A,
+            clawback_ngwee=ITEMS_NGWEE + FEE_NGWEE,
+            refunded_delivery_fee_ngwee=FEE_NGWEE,
+        )
+
+        # The vendor never received the fee, so only the items are clawed back.
+        assert account_balance_ngwee(payable_id) == payable_before + ITEMS_NGWEE
+        assert account_balance_ngwee(DELIVERY_REVENUE_ID) == delivery_before + FEE_NGWEE
+        assert account_balance_ngwee(PLATFORM_CASH_ID) == cash_before - ITEMS_NGWEE - FEE_NGWEE
+        assert _order_postings_sum(db, order_id) == 0
+
+        # A definitive payout failure reverses every leg, fee included.
+        reverse_refund_ledger(refund_id=refund_id, order_id=order_id)
+        assert account_balance_ngwee(payable_id) == payable_before
+        assert account_balance_ngwee(DELIVERY_REVENUE_ID) == delivery_before
+        assert account_balance_ngwee(PLATFORM_CASH_ID) == cash_before
+
+    def test_refunded_fee_counts_only_live_pre_release_lane1_refunds(self, db: PgConn) -> None:
+        from app.services.escrow.release_accounting import delivery_fee_refunded_ngwee
+
+        order_id = _insert_order(db, status="delivered", cod=False)
+        fee_part = {"phase": "pre_release", "delivery_fee_ngwee": FEE_NGWEE}
+        _insert_refund(db, order_id, lane=1, status="completed", breakdown=fee_part)
+        _insert_refund(db, order_id, lane=1, status="failed", breakdown=fee_part)
+        _insert_refund(
+            db,
+            order_id,
+            lane=1,
+            status="completed",
+            breakdown={"phase": "post_release", "delivery_fee_ngwee": FEE_NGWEE},
+        )
+        _insert_refund(
+            db,
+            order_id,
+            lane=2,
+            status="completed",
+            breakdown={"phase": "pre_release", "outbound_delivery_ngwee": FEE_NGWEE},
+        )
+
+        assert delivery_fee_refunded_ngwee(order_id) == FEE_NGWEE
