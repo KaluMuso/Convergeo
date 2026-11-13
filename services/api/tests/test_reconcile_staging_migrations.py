@@ -85,6 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261113183000",
 }
 
 

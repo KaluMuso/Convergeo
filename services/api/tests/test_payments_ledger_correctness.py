@@ -328,6 +328,8 @@ def _seed_migration_sql() -> str:
             "20261107130000_seed_ledger_accounts.sql",
             # Platform delivery revenue (pilot money fix): the fee is not vendor money.
             "20261113120500_delivery_revenue_ledger_account.sql",
+            # Pay at the door: suspense for money that cannot settle an order.
+            "20261113183000_pay_at_door.sql",
         )
     )
 

@@ -1442,6 +1442,205 @@ export type Database = {
           },
         ]
       }
+      door_payment_attempts: {
+        Row: {
+          amount_ngwee: number
+          completed_at: string | null
+          created_at: string
+          dispatch_request_id: string
+          failure_reason: string | null
+          id: string
+          initiated_by: string | null
+          initiated_role: string
+          lenco_reference: string
+          observation_source: string | null
+          observed_amount_ngwee: number | null
+          operator: string
+          order_id: string
+          phone_e164: string
+          provider_reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          completed_at?: string | null
+          created_at?: string
+          dispatch_request_id: string
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          initiated_role: string
+          lenco_reference: string
+          observation_source?: string | null
+          observed_amount_ngwee?: number | null
+          operator: string
+          order_id: string
+          phone_e164: string
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          completed_at?: string | null
+          created_at?: string
+          dispatch_request_id?: string
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          initiated_role?: string
+          lenco_reference?: string
+          observation_source?: string | null
+          observed_amount_ngwee?: number | null
+          operator?: string
+          order_id?: string
+          phone_e164?: string
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_payment_attempts_dispatch_request_id_fkey"
+            columns: ["dispatch_request_id"]
+            isOneToOne: false
+            referencedRelation: "door_payment_sessions"
+            referencedColumns: ["dispatch_request_id"]
+          },
+          {
+            foreignKeyName: "door_payment_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      door_payment_exceptions: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          expected_amount_ngwee: number
+          id: string
+          ledger_transaction_id: string | null
+          observed_amount_ngwee: number | null
+          order_id: string
+          reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          expected_amount_ngwee: number
+          id?: string
+          ledger_transaction_id?: string | null
+          observed_amount_ngwee?: number | null
+          order_id: string
+          reason: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          expected_amount_ngwee?: number
+          id?: string
+          ledger_transaction_id?: string | null
+          observed_amount_ngwee?: number | null
+          order_id?: string
+          reason?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_payment_exceptions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "door_payment_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "door_payment_exceptions_ledger_transaction_id_fkey"
+            columns: ["ledger_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "door_payment_exceptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      door_payment_sessions: {
+        Row: {
+          amount_ngwee: number
+          arrived_at: string | null
+          arrived_by: string | null
+          created_at: string
+          dispatch_request_id: string
+          order_id: string
+          settled_at: string | null
+          settled_attempt_id: string | null
+          settled_by: string | null
+          settled_via: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          arrived_at?: string | null
+          arrived_by?: string | null
+          created_at?: string
+          dispatch_request_id: string
+          order_id: string
+          settled_at?: string | null
+          settled_attempt_id?: string | null
+          settled_by?: string | null
+          settled_via?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          arrived_at?: string | null
+          arrived_by?: string | null
+          created_at?: string
+          dispatch_request_id?: string
+          order_id?: string
+          settled_at?: string | null
+          settled_attempt_id?: string | null
+          settled_by?: string | null
+          settled_via?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "door_payment_sessions_dispatch_request_id_fkey"
+            columns: ["dispatch_request_id"]
+            isOneToOne: true
+            referencedRelation: "dispatch_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "door_payment_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       embedding_jobs: {
         Row: {
           attempts: number

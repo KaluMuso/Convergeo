@@ -562,7 +562,8 @@
     "20261113070000_checkout_fulfilment_choices.sql": "d7956ba99d13659f5b78d6886dd2b18f3dc37f3b6ff800023d8971d50a378b92",
     "20261113071000_order_cancel_stock_release.sql": "6a707332ff7839e8afbd4fb36c4fc9852fad74c4a19492037d6aeb477c3e4350",
     "20261113120500_delivery_revenue_ledger_account.sql": "76144826d81dac54f17d1a47330939751ae314acd0ae750af8bd82b63327ce72",
-    "20261113130000_in_app_notifications.sql": "911bd1b5b18bcc7d02fb0ef6a48a995a79a788613fcbe995cc3ad1826c29aefa"
+    "20261113130000_in_app_notifications.sql": "911bd1b5b18bcc7d02fb0ef6a48a995a79a788613fcbe995cc3ad1826c29aefa",
+    "20261113183000_pay_at_door.sql": "376483e006586a5e3f2f13ca3636fab0e3b4c7a69b613f35ee9c6deba7fc5ce7"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -578,7 +579,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
-    "scripts/ci/run_financial_real_stack.py": "8db9a7439199a3747aad895b503c2f967b9d59fefafe528e38bcd33e1bb9cdae",
+    "scripts/ci/run_financial_real_stack.py": "c217ca9899fdcf3f77d7d2b934748fffc6e698c2ca94e99577b32ddb4eccbab5",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "b3a4217b38cee19d68d6de336fc2fbe1cdf12dcc3e2f5b87ad9eb5a780306e91",
@@ -594,7 +595,7 @@
     "services/api/tests/rls/test_force_rls_d32.py": "e048db6d6377bc08baadc7e7315972cf865399644b2b7381c7752ff6ea9be76a",
     "services/api/tests/rls/test_intake_force_rls.py": "5538c60345b6298dd4cd2dfc3822f1bfe0fec3782f7642dfbfd7ea5943d48dc3",
     "services/api/tests/rls/test_launch_table_access.py": "67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f",
-    "services/api/tests/rls/test_matrix.py": "8141b9506ed541e0adeba2dde44b0de1ca820e71126d8ff3bb8852167f58c5c1",
+    "services/api/tests/rls/test_matrix.py": "c0dcbf4c739ddbb6798d81ec255234638d8bb87ba5389d010368b094f0545dcc",
     "services/api/tests/rls/test_no_untested_tables.py": "0b98732ac77e83dbcb94db6b968d2cd7c30da6c8b91f882134f311d27d3abaa1",
     "services/api/tests/rls/test_privileged_function_grants.py": "edbe0a48370bd2c0d262cbe923ea34f4f842bd28ec4a2327a529f34e09d7643b",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",

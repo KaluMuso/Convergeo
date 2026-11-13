@@ -228,6 +228,12 @@ def db() -> Generator[PgConn, None, None]:
     if not conn.run("SELECT 1 FROM public.door_payment_sessions LIMIT 1").ok:
         pytest.skip("pay-at-door migration not applied to this database")
     seed_matrix_fixtures(conn)
+    # The seed migration backfills vendor ledger accounts only for vendors that
+    # existed when it ran; fixture vendors are inserted afterwards, so create
+    # their accounts the way KYC approval does (otherwise this module depends on
+    # another module having seeded them first).
+    _seeded = conn.run("SELECT public.ensure_vendor_ledger_accounts(id) FROM public.vendors")
+    assert _seeded.ok, _seeded.error
     yield conn
 
 
@@ -614,6 +620,24 @@ class TestPayAtDoor:
         assert updates[-1].get("quarantine_reason") == "untrusted_webhook_evidence"
         assert door.load_session(dispatch_id).settled_via is None  # type: ignore[union-attr]
 
+    async def test_door_rows_are_admin_only_under_rls(self, db: PgConn, lenco: FakeLenco) -> None:
+        order_id, dispatch_id = _at_door(db)
+        door.mark_arrived(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+        await _request(dispatch_id, lenco)
+        where = f"WHERE order_id = '{order_id}'"
+        for table in ("door_payment_sessions", "door_payment_attempts"):
+            count = f"SELECT count(*) FROM public.{table} {where};"
+            # The paying customer cannot read the payer phone or provider references.
+            own = db.run_as("authenticated", count, user_id=CUSTOMER_ID)
+            assert own.ok and own.rows == ["0"], (table, own)
+            admin = db.run_as("authenticated", count, user_id=ADMIN_ID)
+            assert admin.ok and admin.rows == ["1"], (table, admin)
+            assert not db.run_as("anon", count).ok, table
+            write = db.run_as(
+                "authenticated", f"DELETE FROM public.{table} {where};", user_id=ADMIN_ID
+            )
+            assert not write.ok, table
+
 
 # ---------------------------------------------------------------------------
 # Failure paths
@@ -708,6 +732,27 @@ class TestDoorFailures:
         # Nothing settled: no collection was booked against the order.
         assert "door_payment_collected" not in {t for t, _a, _n in _postings(db, order_id)}
         assert set(totals) == {"platform_cash", "door_payment_suspense"}
+        view = dispatch_service.party_dispatch_view(order_id, include_handover_code=True)
+        assert view is not None and view["handover_code"] is None
+
+    async def test_foreign_currency_never_settles_or_books_ngwee(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        data = _webhook("collection.successful", reference, TOTAL_NGWEE, "successful")["data"]
+        data["currency"] = "USD"
+        outcome = door.apply_webhook(event_name="collection.successful", data=data)
+        assert outcome is not None and outcome.settled is False
+        assert outcome.exception_reason == "currency_mismatch"
+        # A foreign amount is never read as ngwee: no suspense or collection posting.
+        assert _postings(db, order_id) == []
+        assert door.load_session(dispatch_id).settled_via is None  # type: ignore[union-attr]
+        # Replaying the same event converges on the same exception, still unbooked.
+        again = door.apply_webhook(event_name="collection.successful", data=data)
+        assert again is not None and again.exception_reason == "currency_mismatch"
+        assert _postings(db, order_id) == []
         view = dispatch_service.party_dispatch_view(order_id, include_handover_code=True)
         assert view is not None and view["handover_code"] is None
 
