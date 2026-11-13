@@ -5,6 +5,8 @@ import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { clearUserCaches } from "../../../../lib/clear-user-caches";
+
 type Props = {
   locale: string;
   label: string;
@@ -31,6 +33,7 @@ export function SignOutButton({ locale, label, loadingLabel }: Props) {
             const { createBrowserClient } = await import("@vergeo/auth/browser-client");
             const supabase = createBrowserClient();
             await supabase.auth.signOut();
+            await clearUserCaches();
             emitToastKey("signedOut", { type: "success" });
             router.replace(`/${locale}/login`);
             router.refresh();

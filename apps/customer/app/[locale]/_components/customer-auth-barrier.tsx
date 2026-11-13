@@ -7,10 +7,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { Modal } from "@vergeo/ui/src/modal";
 import { useMemo, useState } from "react";
 
-import {
-  type CartMergeResolution,
-  useSession,
-} from "../../../lib/customer-session";
+import { type CartMergeResolution, useSession } from "../../../lib/customer-session";
+import { clearUserCaches } from "../../../lib/clear-user-caches";
 
 type MergeConflict = {
   listing_id: string;
@@ -36,11 +34,7 @@ type CustomerAuthBarrierLabels = {
 
 const keepBarrierOpen = () => undefined;
 
-function formatConflictLine(
-  pattern: string,
-  listing: string,
-  code: string,
-): string {
+function formatConflictLine(pattern: string, listing: string, code: string): string {
   return pattern.replace("{listing}", listing).replace("{code}", code);
 }
 
@@ -64,8 +58,7 @@ function priceConflictLine(pattern: string, conflict: MergeConflict, item: strin
 }
 
 function mergeConflicts(error: unknown): MergeConflict[] {
-  if (!(error instanceof ApiError) || error.code !== "cart.merge_conflict")
-    return [];
+  if (!(error instanceof ApiError) || error.code !== "cart.merge_conflict") return [];
   const conflicts = error.details.conflicts;
   if (!Array.isArray(conflicts)) return [];
   return conflicts.filter((value): value is MergeConflict => {
@@ -93,12 +86,7 @@ function resolutionFor(
 
   const removeListingIds = new Set<string>();
   for (const [listingId, codes] of codesByListing) {
-    if (
-      [...codes].some(
-        (code) =>
-          !["cart.price_changed", "cart.pickup_conflict"].includes(code),
-      )
-    ) {
+    if ([...codes].some((code) => !["cart.price_changed", "cart.pickup_conflict"].includes(code))) {
       removeListingIds.add(listingId);
     }
   }
@@ -119,12 +107,9 @@ function resolutionFor(
     }
     if (conflict.code === "cart.pickup_conflict") {
       const key =
-        pickupChoice === "account"
-          ? "user_pickup_location_id"
-          : "guest_pickup_location_id";
+        pickupChoice === "account" ? "user_pickup_location_id" : "guest_pickup_location_id";
       const selected = conflict.details[key];
-      pickupLocationChoices[conflict.listing_id] =
-        typeof selected === "string" ? selected : null;
+      pickupLocationChoices[conflict.listing_id] = typeof selected === "string" ? selected : null;
     }
   }
 
@@ -136,18 +121,12 @@ function resolutionFor(
   };
 }
 
-export function CustomerAuthBarrier({
-  labels,
-}: {
-  labels: CustomerAuthBarrierLabels;
-}) {
+export function CustomerAuthBarrier({ labels }: { labels: CustomerAuthBarrierLabels }) {
   const { error, retry } = useSession();
   const [busy, setBusy] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
   const conflicts = useMemo(() => mergeConflicts(error), [error]);
-  const hasPickupConflict = conflicts.some(
-    (conflict) => conflict.code === "cart.pickup_conflict",
-  );
+  const hasPickupConflict = conflicts.some((conflict) => conflict.code === "cart.pickup_conflict");
 
   if (!error) return null;
 
@@ -168,6 +147,7 @@ export function CustomerAuthBarrier({
     try {
       const client = await getBrowserClient();
       await client.auth.signOut();
+      await clearUserCaches();
     } finally {
       setBusy(false);
     }
@@ -183,9 +163,7 @@ export function CustomerAuthBarrier({
       titleId="cart-merge-recovery-title"
     >
       <div className="space-y-4">
-        {conflicts.length ? (
-          <p className="font-body text-sm text-text-2">{labels.body}</p>
-        ) : null}
+        {conflicts.length ? <p className="font-body text-sm text-text-2">{labels.body}</p> : null}
 
         {conflicts.length ? (
           <>
@@ -193,19 +171,23 @@ export function CustomerAuthBarrier({
               {conflicts.map((conflict) => (
                 <li key={`${conflict.listing_id}:${conflict.code}`}>
                   {(() => {
-                    const name = typeof conflict.details.item_name === "string"
-                      ? conflict.details.item_name
-                      : labels.unnamedItem.replace("{id}", conflict.listing_id.slice(0, 8));
-                    const price = conflict.code === "cart.price_changed"
-                      ? priceConflictLine(labels.priceLine, conflict, name)
-                      : null;
+                    const name =
+                      typeof conflict.details.item_name === "string"
+                        ? conflict.details.item_name
+                        : labels.unnamedItem.replace("{id}", conflict.listing_id.slice(0, 8));
+                    const price =
+                      conflict.code === "cart.price_changed"
+                        ? priceConflictLine(labels.priceLine, conflict, name)
+                        : null;
                     if (price) {
-                      const wholesale = conflict.details.wholesale === true
-                        ? ` ${labels.wholesaleTerms.replace("{moq}", String(conflict.details.moq ?? 1))}`
-                        : "";
-                      const review = typeof conflict.details.proposal_token === "string"
-                        ? ""
-                        : ` ${labels.priceNeedsReview}`;
+                      const wholesale =
+                        conflict.details.wholesale === true
+                          ? ` ${labels.wholesaleTerms.replace("{moq}", String(conflict.details.moq ?? 1))}`
+                          : "";
+                      const review =
+                        typeof conflict.details.proposal_token === "string"
+                          ? ""
+                          : ` ${labels.priceNeedsReview}`;
                       return `${price}${wholesale}${review}`;
                     }
                     return formatConflictLine(labels.conflictLine, name, conflict.code);
@@ -213,9 +195,7 @@ export function CustomerAuthBarrier({
                 </li>
               ))}
             </ul>
-            <p className="font-body text-sm font-medium text-display-ink">
-              {labels.apply}
-            </p>
+            <p className="font-body text-sm font-medium text-display-ink">{labels.apply}</p>
           </>
         ) : null}
 
@@ -232,9 +212,7 @@ export function CustomerAuthBarrier({
                 type="button"
                 loading={busy}
                 loadingLabel={labels.retry}
-                onClick={() =>
-                  void runRetry(resolutionFor(conflicts, "account"))
-                }
+                onClick={() => void runRetry(resolutionFor(conflicts, "account"))}
               >
                 {hasPickupConflict ? labels.accountChoice : labels.apply}
               </Button>
@@ -244,9 +222,7 @@ export function CustomerAuthBarrier({
                   variant="secondary"
                   disabled={busy}
                   loadingLabel={labels.retry}
-                  onClick={() =>
-                    void runRetry(resolutionFor(conflicts, "guest"))
-                  }
+                  onClick={() => void runRetry(resolutionFor(conflicts, "guest"))}
                 >
                   {labels.guestChoice}
                 </Button>
