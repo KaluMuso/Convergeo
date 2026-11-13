@@ -17,6 +17,7 @@ import {
 } from "../../../../../lib/customer-session";
 import { classifyPlaceOrderError, placeOrder } from "../_lib/place-order";
 
+import { CheckoutExtras, type CheckoutExtrasLabels } from "./checkout-extras";
 import {
   ContactStepIntro,
   ContactStepSkeleton,
@@ -207,6 +208,7 @@ export type CheckoutShellLabels = {
     nextCard: string;
     nextCod: string;
     codGuide?: ReviewStepLabels["codGuide"];
+    discount?: string;
   };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
@@ -217,6 +219,8 @@ export type CheckoutShellLabels = {
   backToCart: string;
   /** `{cap}` — shown at checkout start when no payment method can take this total. */
   overCodCapTemplate?: string;
+  /** Coupon + gift disclosures (only rendered when their flags are on). */
+  extras?: CheckoutExtrasLabels;
 };
 
 function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -243,6 +247,7 @@ type ResolvedCheckoutLabels = {
   retry: string;
   backToCart: string;
   overCodCap: ((cap: string) => string) | null;
+  extras?: CheckoutExtrasLabels;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -367,7 +372,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       nextCard: messages.review.nextCard,
       nextCod: messages.review.nextCod,
       codGuide: messages.review.codGuide,
+      discount: messages.review.discount,
     },
+    extras: messages.extras,
     countdown: {
       label: messages.countdown.label,
       expired: messages.countdown.expired,
@@ -716,6 +723,24 @@ function IdentityCheckoutShell({
             landmark: fulfilmentTotals.landmark ?? null,
           }}
           labels={labels.review}
+          extras={
+            labels.extras ? (
+              <CheckoutExtras
+                locale={locale}
+                sessionId={checkoutSession.session_id}
+                accessToken={session.access_token}
+                labels={labels.extras}
+                isCod={paymentSelection.method === "cod"}
+                hasPickup={fulfilmentTotals.groups.some((group) => group.fulfilment === "pickup")}
+                initialCouponCode={paymentOptions.coupon_code ?? null}
+                initialDiscountNgwee={paymentOptions.discount_ngwee ?? 0}
+                onTotals={(totals) => {
+                  if (!isCurrent()) return;
+                  setPaymentOptions((current) => (current ? { ...current, ...totals } : current));
+                }}
+              />
+            ) : null
+          }
           onPlaceOrder={async () => {
             if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
             if (!fulfilmentTotals.groups.length) {

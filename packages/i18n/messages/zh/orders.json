@@ -33,7 +33,8 @@
     "requestReturn": "申请退货",
     "openDispute": "发起或查看纠纷",
     "variantOption": "{group}：{value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "优惠券折扣"
   },
   "status": {
     "placed": "已下单",
@@ -230,5 +231,16 @@
     "beforeDispatch": "想修改或取消？请在发货前凭订单号联系客服。",
     "afterDispatch": "订单有问题？请凭订单号联系客服。",
     "contactCta": "联系客服"
+  },
+  "gift": {
+    "title": "这是一份礼物",
+    "body": "您是买家，退款将退还给您。",
+    "receiptLink": "打开礼物收据（不含价格）",
+    "receiptTitle": "礼物收据",
+    "for": "送给 {name}",
+    "from": "来自 {shop}",
+    "qty": "× {qty}",
+    "noPrices": "礼物收据从不显示价格。",
+    "pinSentToRecipient": "取货 PIN 码已发送给收礼人。"
   }
 }

@@ -18,7 +18,8 @@
     "support": "Support",
     "events": "Événements à haute valeur",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "coupons": "Coupons"
   },
   "hubs": {
     "moderation": {
@@ -1157,6 +1158,69 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "Coupons de la plateforme",
+      "intro": "Codes payés par Convergeo. Les boutiques reçoivent leur prix complet.",
+      "fundingNote": "Chaque remise de la plateforme est prise sur le budget promotions mensuel. Une fois épuisé, les coupons de la plateforme s'arrêtent jusqu'au mois suivant.",
+      "createTitle": "Nouveau coupon",
+      "code": "Code",
+      "codeHelp": "3 à 32 lettres, chiffres ou tirets, ex. SAVE20.",
+      "kind": "Type de remise",
+      "kindPercent": "Pourcentage",
+      "kindFixed": "Montant en kwacha",
+      "percent": "Pourcentage (ex. 10)",
+      "amount": "Montant en kwacha (ex. 20)",
+      "maxDiscount": "Remise maximale (K, facultatif)",
+      "maxDiscountHelp": "Plafonne un coupon en pourcentage sur les gros paniers.",
+      "minSpend": "Achat minimum (K, facultatif)",
+      "minSpendHelp": "Calculé sur les articles couverts.",
+      "scope": "S'applique à",
+      "scopeAll": "Tout",
+      "scopeShop": "Toute ma boutique",
+      "scopeVendor": "Une boutique",
+      "scopeCategory": "Une catégorie",
+      "scopeListing": "Une annonce",
+      "scopeId": "Identifiant",
+      "scopeIdHelp": "Copiez l'identifiant depuis la page de la boutique, de la catégorie ou de l'annonce.",
+      "startsOn": "Début",
+      "endsOn": "Fin (facultatif)",
+      "endsOnHelp": "Le code fonctionne jusqu'à la fin de ce jour, heure de Lusaka.",
+      "totalLimit": "Utilisations totales (facultatif)",
+      "totalLimitHelp": "Laissez vide pour aucune limite.",
+      "perUserLimit": "Utilisations par client",
+      "create": "Créer le coupon",
+      "creating": "Création…",
+      "created": "Coupon créé.",
+      "listTitle": "Coupons de la plateforme",
+      "empty": "Aucun coupon.",
+      "loading": "Chargement…",
+      "usage": "{used} utilisé(s)",
+      "usageLimited": "{used} sur {limit} utilisé(s)",
+      "summaryOff": "{value} de remise",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Actif",
+      "statusPaused": "En pause",
+      "statusArchived": "Terminé",
+      "pause": "Mettre en pause",
+      "resume": "Reprendre",
+      "archive": "Terminer",
+      "errors": {
+        "generic": "Une erreur est survenue. Réessayez.",
+        "disabled": "Les coupons ne sont pas encore activés.",
+        "forbidden": "Seuls les administrateurs gèrent les coupons de la plateforme.",
+        "code": "Utilisez 3 à 32 lettres, chiffres ou tirets.",
+        "codeTaken": "Ce code est déjà pris.",
+        "percent": "Indiquez un pourcentage entre 1 et 100.",
+        "percentTooHigh": "Ce pourcentage dépasse le maximum autorisé.",
+        "amount": "Indiquez un montant comme 20 ou 12.50.",
+        "dates": "La date de fin doit suivre la date de début et ne pas être passée.",
+        "scope": "Choisissez la cible du coupon et collez son identifiant.",
+        "listing": "Cette annonce n'est pas dans votre boutique.",
+        "archived": "Un coupon terminé ne peut pas reprendre. Créez-en un nouveau."
+      }
     }
   }
 }

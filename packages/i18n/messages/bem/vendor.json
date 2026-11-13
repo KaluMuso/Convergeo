@@ -2137,7 +2137,8 @@
       "reviews": "Reviews",
       "payouts": "Payouts",
       "disputes": "Disputes",
-      "intake": "Ama-draft ya WhatsApp"
+      "intake": "Ama-draft ya WhatsApp",
+      "coupons": "Amakuponi"
     }
   },
   "intake": {
@@ -2325,5 +2326,72 @@
       "linkNotActive": "Only an active product can be linked."
     },
     "durationSeconds": "{seconds}s"
+  },
+  "coupons": {
+    "meta": {
+      "title": "Coupons — Convergeo Vendor",
+      "description": "Create discount codes for your shop."
+    },
+    "manager": {
+      "title": "Amakuponi",
+      "intro": "Give your customers a code for money off your items.",
+      "fundingNote": "You pay for the discount: it comes off what you earn on that order, and commission is charged on the lower price.",
+      "createTitle": "New coupon",
+      "code": "Code",
+      "codeHelp": "3–32 letters, numbers or dashes, e.g. SAVE20.",
+      "kind": "Discount type",
+      "kindPercent": "Percent off",
+      "kindFixed": "Kwacha off",
+      "percent": "Percent (e.g. 10)",
+      "amount": "Amount in Kwacha (e.g. 20)",
+      "maxDiscount": "Largest discount (K, optional)",
+      "maxDiscountHelp": "Caps a percent coupon on big baskets.",
+      "minSpend": "Minimum spend (K, optional)",
+      "minSpendHelp": "Counted on the items the coupon covers.",
+      "scope": "Works on",
+      "scopeAll": "Everything",
+      "scopeShop": "My whole shop",
+      "scopeVendor": "One shop",
+      "scopeCategory": "One category",
+      "scopeListing": "One listing",
+      "scopeId": "ID",
+      "scopeIdHelp": "Copy the ID from the shop, category or listing page.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on (optional)",
+      "endsOnHelp": "The code works until the end of this day, Lusaka time.",
+      "totalLimit": "Total uses (optional)",
+      "totalLimitHelp": "Leave empty for no total limit.",
+      "perUserLimit": "Uses per customer",
+      "create": "Create coupon",
+      "creating": "Creating…",
+      "created": "Coupon created.",
+      "listTitle": "Your coupons",
+      "empty": "No coupons yet.",
+      "loading": "Loading…",
+      "usage": "{used} used",
+      "usageLimited": "{used} of {limit} used",
+      "summaryOff": "{value} off",
+      "summaryMin": "min. {amount}",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusArchived": "Ended",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "End coupon",
+      "errors": {
+        "generic": "Something went wrong. Try again.",
+        "disabled": "Coupons aren't switched on yet.",
+        "forbidden": "Only admins can manage platform coupons.",
+        "code": "Use 3–32 letters, numbers or dashes.",
+        "codeTaken": "That code is already taken.",
+        "percent": "Enter a percent between 1 and 100.",
+        "percentTooHigh": "That percent is above the allowed maximum.",
+        "amount": "Enter an amount like 20 or 12.50.",
+        "dates": "The end date must be on or after the start date, and not in the past.",
+        "scope": "Choose what the coupon works on and paste its ID.",
+        "listing": "That listing isn't in your shop.",
+        "archived": "Ended coupons can't be restarted. Create a new one."
+      }
+    }
   }
 }

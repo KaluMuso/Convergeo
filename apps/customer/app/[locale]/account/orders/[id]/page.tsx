@@ -238,6 +238,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             pinLabel: t("pickup.pinLabel"),
             stubBody: t("pickup.stubBody"),
             pinAria: String(t.raw("pickup.pinAria")),
+            sentToRecipient: t("gift.pinSentToRecipient"),
           }}
         />
       ) : null}
@@ -277,12 +278,31 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             <dt className="text-text-2">{t("detail.deliveryFee")}</dt>
             <dd className="font-mono text-display-ink">{formatK(order.delivery_fee_ngwee)}</dd>
           </div>
+          {order.discount_ngwee && order.discount_ngwee > 0 ? (
+            <div className="flex justify-between gap-3 text-success">
+              <dt>{t("detail.discount")}</dt>
+              <dd className="font-mono">−{formatK(order.discount_ngwee)}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-3 font-medium">
             <dt className="text-display-ink">{t("detail.total")}</dt>
             <dd className="font-mono text-display-ink">{formatK(order.total_ngwee)}</dd>
           </div>
         </dl>
       </section>
+
+      {order.is_gift ? (
+        <section className="space-y-2 rounded border border-border bg-surface p-4">
+          <h3 className="font-display text-h3 text-display-ink">{t("gift.title")}</h3>
+          <p className="text-sm text-text-2">{t("gift.body")}</p>
+          <Link
+            href={`/${locale}/account/orders/${order.id}/gift-receipt`}
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+          >
+            {t("gift.receiptLink")}
+          </Link>
+        </section>
+      ) : null}
 
       <InvoiceLinkBlock
         invoice={order.invoice}

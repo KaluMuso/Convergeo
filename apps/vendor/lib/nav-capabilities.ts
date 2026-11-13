@@ -1,5 +1,9 @@
 import { probeApiRoute } from "./api-route-probe";
-import { isClipsRouteAccessible, isIntakeRouteAccessible } from "./route-capabilities";
+import {
+  isClipsRouteAccessible,
+  isCouponsRouteAccessible,
+  isIntakeRouteAccessible,
+} from "./route-capabilities";
 
 import type { VendorNavItemKey } from "../app/[locale]/_components/vendor-nav-config";
 
@@ -38,6 +42,7 @@ function coreCapabilities(): VendorNavCapabilities {
     payouts: false,
     disputes: true,
     intake: false,
+    coupons: false,
   };
 }
 
@@ -53,13 +58,14 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
   const caps = coreCapabilities();
 
   try {
-    const [clips, intake, rfq, jobs, payouts, scan] = await Promise.all([
+    const [clips, intake, rfq, jobs, payouts, scan, coupons] = await Promise.all([
       isClipsRouteAccessible(),
       isIntakeRouteAccessible(),
       probeApiRoute("/rfq"),
       probeApiRoute("/jobs"),
       probeApiRoute("/vendor/payouts"),
       probeApiRoute("/vendor/pickup/verify"),
+      isCouponsRouteAccessible(),
     ]);
 
     caps.clips = clips;
@@ -68,6 +74,7 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
     caps.jobs = jobs;
     caps.payouts = payouts;
     caps.scan = scan;
+    caps.coupons = coupons;
 
     for (const key of CORE_VISIBLE) {
       caps[key] = true;

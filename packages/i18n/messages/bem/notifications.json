@@ -41,6 +41,15 @@
     },
     "event_schedule_changed": {
       "body": "Amashiwi ya event ya Convergeo \"{event_title}\" yaluka. Usiku: {event_date}. Venue: {venue}. Loleni tickets shenu mu app. Lemeni STOP ukuleka."
+    },
+    "gift_recipient_notice": {
+      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Convergeo. We'll only message you about this gift. Reply STOP to opt out."
+    },
+    "gift_ready_pickup": {
+      "body": "Your gift from {shop_name} is ready to collect. Pickup PIN: {pickup_pin}. Don't share it."
+    },
+    "birthday_greeting": {
+      "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     }
   },
   "sms": {
@@ -164,7 +173,8 @@
       "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
       "order_delivered": "Order {ref} yafika. Cali shani?",
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
-      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
+      "birthday_greeting": "Ubushiku busuma ubwa kufyalwa! Bomfyeni kuponi {code} mu nshiku {valid_days}."
     },
     "vendor": {
       "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",

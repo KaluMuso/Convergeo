@@ -176,12 +176,22 @@ LIMIT 1;
 
 
 def _order_gross_ngwee(order_id: str) -> int:
-    """Item subtotal the vendor's release is computed on (never the delivery fee)."""
+    """Item subtotal the vendor's release is computed on (never the delivery fee).
+
+    A vendor-funded coupon makes the order smaller: the vendor's gross is items −
+    discount (commission was snapshotted on the discounted lines). A
+    platform-funded discount is topped up into escrow at collection, so the
+    vendor's gross stays the full item price.
+    """
     order_sql = _sql_uuid(order_id, "order_id")
     script = f"""
-SELECT coalesce(sum(qty * unit_price_ngwee), 0)::text
-FROM public.order_items
-WHERE order_id = {order_sql};
+SELECT (
+  coalesce((SELECT sum(qty * unit_price_ngwee) FROM public.order_items
+            WHERE order_id = {order_sql}), 0)
+  - coalesce((SELECT CASE WHEN o.coupon_funder = 'vendor'
+                       THEN o.coupon_discount_ngwee ELSE 0 END
+              FROM public.orders o WHERE o.id = {order_sql}), 0)
+)::text;
 """
     result = run_sql_script(script)
     return int(result.rows[0]) if result.ok and result.rows else 0

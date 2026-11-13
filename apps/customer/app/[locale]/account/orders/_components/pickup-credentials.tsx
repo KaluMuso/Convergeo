@@ -6,6 +6,8 @@ export type PickupCredentialsLabels = {
   pinLabel: string;
   stubBody: string;
   pinAria: string;
+  /** Gift orders: "We sent the pickup PIN to the person you're gifting." */
+  sentToRecipient?: string;
 };
 
 type PickupCredentialsBlockProps = {
@@ -23,7 +25,9 @@ export function PickupCredentialsBlock({ pickup, labels }: PickupCredentialsBloc
         {labels.title}
       </h3>
 
-      {pickup.stub ? (
+      {pickup.sent_to_recipient ? (
+        <p className="text-sm text-text-2">{labels.sentToRecipient}</p>
+      ) : pickup.stub ? (
         <p className="text-sm text-text-2">{labels.stubBody}</p>
       ) : (
         <div className="space-y-4">

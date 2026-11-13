@@ -117,6 +117,31 @@ def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
     return f"Vergeo5 ops: {ref} with {courier} not accepted after {minutes} min."
 
 
+def _gift_recipient_notice(p: Mapping[str, Any]) -> str:
+    sender = _text(p, "sender_name", "A friend")
+    shop = _text(p, "shop_name", "a shop")
+    return (
+        f"Vergeo5: {sender} sent you a gift from {shop}. We will message you about "
+        "delivery or pickup only. Reply STOP to opt out."
+    )
+
+
+def _gift_ready_pickup(p: Mapping[str, Any]) -> str:
+    shop = _text(p, "shop_name", "the shop")
+    pin = _text(p, "pickup_pin")
+    return f"Vergeo5: your gift is ready to collect at {shop}. Pickup PIN {pin}. Do not share it."
+
+
+def _birthday_greeting(p: Mapping[str, Any]) -> str:
+    code = _text(p, "coupon_code")
+    days = _text(p, "valid_days", "14")
+    return (
+        f"Happy birthday from Vergeo5! Use code {code} for K{_amount(p, 'amount_ngwee')} off "
+        f"orders of K{_amount(p, 'min_spend_ngwee')} or more, valid {days} days. "
+        "Reply STOP to opt out."
+    )
+
+
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_confirmed": _order_confirmed,
     "payment_received": _payment_received,
@@ -130,6 +155,9 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "event_schedule_changed": _event_schedule_changed,
     "courier_dispatch_request": _courier_dispatch_request,
     "dispatch_stale_alert": _dispatch_stale_alert,
+    "gift_recipient_notice": _gift_recipient_notice,
+    "gift_ready_pickup": _gift_ready_pickup,
+    "birthday_greeting": _birthday_greeting,
 }
 
 

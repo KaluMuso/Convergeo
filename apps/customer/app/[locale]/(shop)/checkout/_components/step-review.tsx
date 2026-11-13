@@ -3,7 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
@@ -29,6 +29,8 @@ export type ReviewStepLabels = {
   subtotal: string;
   deliveryFees: string;
   total: string;
+  /** "Coupon {code}" — shown as a negative line when a coupon is applied. */
+  discount?: string;
   paymentMethod: string;
   methodMomo: string;
   methodCard: string;
@@ -84,6 +86,8 @@ type StepReviewProps = {
   labels: ReviewStepLabels;
   fulfilment?: ReviewFulfilment;
   onPlaceOrder?: () => void | Promise<void>;
+  /** Coupon / gift disclosures, rendered just above the totals. */
+  extras?: ReactNode;
 };
 
 function lineTitle(item: CheckoutSession["vendor_groups"][number]["items"][number]): string {
@@ -98,6 +102,7 @@ export function StepReview({
   labels,
   fulfilment,
   onPlaceOrder,
+  extras,
 }: StepReviewProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const submittingRef = useRef(false);
@@ -265,6 +270,8 @@ export function StepReview({
         ))}
       </section>
 
+      {extras}
+
       <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
         <div className="flex justify-between gap-3">
           <span>{labels.subtotal}</span>
@@ -274,6 +281,12 @@ export function StepReview({
           <span>{labels.deliveryFees}</span>
           <span>{formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}</span>
         </div>
+        {totals.discount_ngwee && totals.discount_ngwee > 0 ? (
+          <div className="flex justify-between gap-3 text-success" data-testid="review-discount">
+            <span>{(labels.discount ?? "{code}").replace("{code}", totals.coupon_code ?? "")}</span>
+            <span>−{formatK(totals.discount_ngwee, { locale: amountLocale })}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-3 font-semibold text-text">
           <span>{labels.total}</span>
           <span>{formatK(totals.total_ngwee, { locale: amountLocale })}</span>

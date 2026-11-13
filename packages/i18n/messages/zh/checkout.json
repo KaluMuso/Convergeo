@@ -241,7 +241,8 @@
         "deliveryNoLandmark": "卢萨卡送货",
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
-      }
+      },
+      "discount": "优惠券 {code}"
     },
     "pending": {
       "pageTitle": "批准付款",
@@ -309,6 +310,61 @@
       "widgetUnavailable": "银行卡付款暂时不可用。请尝试移动支付或稍后重试。",
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
+    },
+    "coupon": {
+      "toggle": "有优惠码吗？",
+      "label": "优惠码",
+      "apply": "使用",
+      "applying": "正在验证…",
+      "remove": "移除",
+      "applied": "已使用 {code}：优惠 {amount}",
+      "paidByPlatform": "此优惠由 Convergeo 承担，店铺仍收到全价。",
+      "paidByShop": "此优惠由店铺提供。",
+      "prepaidOnly": "优惠券仅适用于移动支付或银行卡，不适用于货到付款。",
+      "errors": {
+        "generic": "该优惠码无效，请检查后重试。",
+        "not_found": "找不到该优惠码。",
+        "inactive": "该优惠码已暂停。",
+        "not_started": "该优惠码尚未生效。",
+        "expired": "该优惠码已过期。",
+        "min_spend": "适用商品金额未达到最低消费。",
+        "not_applicable": "购物车中没有适用该优惠码的商品。",
+        "limit_reached": "该优惠码已被用完。",
+        "already_used": "您已使用过该优惠码。",
+        "budget_exhausted": "本月活动已结束。",
+        "changed": "购物车已变化，请重新使用优惠码。",
+        "cod_not_allowed": "优惠券需使用移动支付或银行卡。",
+        "tooManyAttempts": "尝试次数过多，请稍后再试。",
+        "featureUnavailable": "优惠券功能尚未开放。"
+      }
+    },
+    "gift": {
+      "toggle": "作为礼物发送",
+      "intro": "我们会送到收礼人手中。您仍是买家，退款将退还给您。",
+      "recipientName": "收礼人姓名",
+      "recipientPhone": "收礼人电话",
+      "recipientPhoneHelp": "赞比亚手机号码。我们只会就礼物给对方发送一条消息。",
+      "message": "礼物留言（可选）",
+      "messageHelp": "最多 200 个字符，不含链接。",
+      "consent": "对方已同意为此礼物向 Convergeo 提供电话（以及送货地址）。",
+      "pickupNote": "自取：取货 PIN 码发送给收礼人，而不是您。",
+      "deliveryNote": "送货：请在送货步骤填写收礼人的地标。",
+      "privacyNote": "对方信息仅用于此礼物，完成后删除。对方的收据不显示价格。",
+      "save": "保存礼物信息",
+      "saving": "正在保存…",
+      "remove": "不是礼物",
+      "saved": "送给 {name}（{phone}）的礼物",
+      "prepaidOnly": "礼物需使用移动支付或银行卡。",
+      "errors": {
+        "generic": "无法保存礼物信息，请重试。",
+        "consent": "请勾选以确认对方已同意。",
+        "name": "请输入对方姓名。",
+        "phone": "请输入赞比亚手机号码，例如 097 123 4567。",
+        "message": "礼物留言不能包含链接。",
+        "codNotAllowed": "礼物需使用移动支付或银行卡。",
+        "tooMany": "修改次数过多，请稍后再试。",
+        "featureUnavailable": "礼物功能尚未开放。"
+      }
     }
   },
   "variant": {

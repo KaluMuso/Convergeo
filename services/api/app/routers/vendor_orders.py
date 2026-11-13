@@ -139,6 +139,68 @@ def _load_vendor_for_owner(
     return row
 
 
+def _gift_recipient_for_order(
+    service_client: _ServiceRoleClient, order_id: str
+) -> dict[str, Any] | None:
+    """Recipient of a gift order (None for ordinary orders or redacted gifts)."""
+    order = _single_row(
+        service_client.client.table("orders")
+        .select("checkout_group_id, is_gift, vendor_id")
+        .eq("id", order_id)
+        .maybe_single()
+        .execute()
+    )
+    if order is None or not order.get("is_gift"):
+        return None
+    gift = _single_row(
+        service_client.client.table("gift_details")
+        .select("recipient_name, recipient_phone, redacted_at")
+        .eq("checkout_group_id", str(order["checkout_group_id"]))
+        .maybe_single()
+        .execute()
+    )
+    if gift is None or gift.get("redacted_at") or not gift.get("recipient_phone"):
+        return None
+    vendor = _single_row(
+        service_client.client.table("vendors")
+        .select("display_name")
+        .eq("id", str(order["vendor_id"]))
+        .maybe_single()
+        .execute()
+    )
+    return {
+        "recipient_name": str(gift["recipient_name"]),
+        "recipient_phone": str(gift["recipient_phone"]),
+        "shop_name": str(vendor.get("display_name") or "Vergeo5") if vendor else "Vergeo5",
+    }
+
+
+def _enqueue_gift_pickup_pin(
+    service_client: _ServiceRoleClient,
+    *,
+    order_id: str,
+    gift: dict[str, Any],
+    pin: str,
+    version: int,
+) -> None:
+    from app.services.notifications.dedupe import enqueue_outbox_row
+
+    enqueue_outbox_row(
+        service_client.client,
+        event_type="gift_ready_pickup",
+        entity_id=f"{order_id}:v{version}",
+        channel="whatsapp",
+        template="gift_ready_pickup",
+        payload={
+            "order_id": order_id,
+            "to": gift["recipient_phone"],
+            "phone": gift["recipient_phone"],
+            "shop_name": gift["shop_name"],
+            "pickup_pin": pin,
+        },
+    )
+
+
 def _load_order_row(service_client: _ServiceRoleClient, order_id: str) -> dict[str, Any]:
     response = (
         service_client.client.table("orders")
@@ -567,20 +629,38 @@ def ready_for_pickup_vendor_order(
     if str(order_row.get("fulfilment")) == "pickup":
         try:
             issue_result = issue_pickup_tokens(order_id=order_id)
-            emit_order_lifecycle(
-                service_client.client,
-                event="order_ready_pickup",
-                order_row=order_row,
-                # `pickup_details` is the template's dynamic slot ({{2}} — "pickup
-                # details / QR link"); it MUST be present or the WhatsApp render
-                # raises. Carry the single-use PIN so the customer receives it;
-                # pin/qr also kept for the in-app (M09-P05) + email paths.
-                extra={
-                    "pickup_details": f"PIN {issue_result.pin}",
-                    "pickup_pin": issue_result.pin,
-                    "pickup_qr_token": issue_result.qr_token,
-                },
-            )
+            gift = _gift_recipient_for_order(service_client, order_id)
+            if gift is not None:
+                # Gift: the RECIPIENT collects, so only they get the PIN. The
+                # payer (customer of record) is told it was sent, never the PIN.
+                _enqueue_gift_pickup_pin(
+                    service_client,
+                    order_id=order_id,
+                    gift=gift,
+                    pin=issue_result.pin,
+                    version=issue_result.token_version,
+                )
+                emit_order_lifecycle(
+                    service_client.client,
+                    event="order_ready_pickup",
+                    order_row=order_row,
+                    extra={"pickup_details": f"PIN sent to {gift['recipient_name']}"},
+                )
+            else:
+                emit_order_lifecycle(
+                    service_client.client,
+                    event="order_ready_pickup",
+                    order_row=order_row,
+                    # `pickup_details` is the template's dynamic slot ({{2}} — "pickup
+                    # details / QR link"); it MUST be present or the WhatsApp render
+                    # raises. Carry the single-use PIN so the customer receives it;
+                    # pin/qr also kept for the in-app (M09-P05) + email paths.
+                    extra={
+                        "pickup_details": f"PIN {issue_result.pin}",
+                        "pickup_pin": issue_result.pin,
+                        "pickup_qr_token": issue_result.qr_token,
+                    },
+                )
         except Exception:
             logger.warning(
                 "Pickup token issuance / notification failed after ready transition",

@@ -26,6 +26,9 @@ WhatsAppTemplateId = Literal[
     "event_schedule_changed",
     "courier_dispatch_request",
     "dispatch_stale_alert",
+    "gift_recipient_notice",
+    "gift_ready_pickup",
+    "birthday_greeting",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -268,6 +271,33 @@ def _map_dispatch_stale_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _map_gift_recipient_notice(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # One message to the gift recipient (ECT Act s.65: a single unsolicited
+    # message, naming the sender). The Meta template carries the opt-out line.
+    return (
+        _require_str(payload, "recipient_name"),
+        _require_str(payload, "sender_name"),
+        _require_str(payload, "shop_name"),
+    )
+
+
+def _map_gift_ready_pickup(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Sent to the RECIPIENT's phone only; the payer never receives the PIN.
+    return (
+        _require_str(payload, "shop_name"),
+        _require_str(payload, "pickup_pin"),
+    )
+
+
+def _map_birthday_greeting(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "coupon_code"),
+        format_k(_require_int(payload, "amount_ngwee")),
+        format_k(_require_int(payload, "min_spend_ngwee")),
+        str(_require_int(payload, "valid_days")),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -362,6 +392,22 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="dispatch_stale_alert",
         meta_template_name="dispatch_stale_alert",
         map_variables=_map_dispatch_stale_alert,
+    ),
+    "gift_recipient_notice": WhatsAppTemplateDefinition(
+        template_id="gift_recipient_notice",
+        meta_template_name="gift_recipient_notice",
+        map_variables=_map_gift_recipient_notice,
+    ),
+    "gift_ready_pickup": WhatsAppTemplateDefinition(
+        template_id="gift_ready_pickup",
+        meta_template_name="gift_ready_pickup",
+        map_variables=_map_gift_ready_pickup,
+    ),
+    "birthday_greeting": WhatsAppTemplateDefinition(
+        template_id="birthday_greeting",
+        meta_template_name="birthday_greeting",
+        map_variables=_map_birthday_greeting,
+        has_copy_code_button=True,
     ),
 }
 

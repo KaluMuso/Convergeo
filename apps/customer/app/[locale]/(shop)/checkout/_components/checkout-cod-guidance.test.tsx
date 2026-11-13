@@ -198,4 +198,22 @@ describe("COD guidance — review step", () => {
     expect(screen.queryByTestId("checkout-review-cod-steps")).not.toBeInTheDocument();
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(c.review.placeOrder);
   });
+
+  it("shows an applied coupon as a clear negative line above the total", () => {
+    render(
+      <StepReview
+        locale="en"
+        session={session}
+        totals={{ ...eligible, discount_ngwee: 2_000, total_ngwee: 40_500, coupon_code: "SAVE20" }}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260970000001" }}
+        labels={{ ...reviewLabels, discount: c.review.discount }}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+
+    const line = screen.getByTestId("review-discount");
+    expect(line).toHaveTextContent("Coupon SAVE20");
+    expect(line).toHaveTextContent("−K20.00");
+    expect(screen.getByText("K405.00")).toBeInTheDocument();
+  });
 });

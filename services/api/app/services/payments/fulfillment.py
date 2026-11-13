@@ -41,6 +41,9 @@ class CheckoutOrderRow:
     order_id: str
     gross_ngwee: int
     platform_fee_ngwee: int = 0
+    #: Platform-funded coupon discount already netted out of ``gross_ngwee``;
+    #: escrow is topped up by this amount from marketing_expense.
+    platform_discount_ngwee: int = 0
 
     @property
     def collected_ngwee(self) -> int:
@@ -64,6 +67,10 @@ def platform_fee_hold_idempotency_key(order_id: str) -> str:
     return f"escrow-hold-fee-{order_id}"
 
 
+def coupon_funding_idempotency_key(order_id: str) -> str:
+    return f"coupon-funding-{order_id}"
+
+
 def _sql_uuid(value: str, field: str) -> str:
     if not _UUID_RE.match(value):
         msg = f"{field} must be a valid UUID"
@@ -81,10 +88,13 @@ SELECT
       FROM public.order_items oi
       WHERE oi.order_id = o.id
     ), 0) + o.delivery_fee_ngwee
+    - coalesce((to_jsonb(o) ->> 'coupon_discount_ngwee')::bigint, 0)
   )::text
   -- to_jsonb read tolerates databases that predate the platform_fee_ngwee
   -- column (20260816220000): the fee reads as 0 there instead of erroring.
   || '|' || coalesce((to_jsonb(o) ->> 'platform_fee_ngwee')::bigint, 0)::text
+  || '|' || CASE WHEN to_jsonb(o) ->> 'coupon_funder' = 'platform'
+       THEN coalesce((to_jsonb(o) ->> 'coupon_discount_ngwee')::bigint, 0) ELSE 0 END::text
 FROM public.orders o
 WHERE o.checkout_group_id = {cg_sql}
   AND o.status <> 'cancelled'
@@ -102,14 +112,22 @@ ORDER BY o.id ASC;
         try:
             gross = int(parts[1])
             fee = int(parts[2]) if len(parts) > 2 and parts[2] else 0
+            promo = int(parts[3]) if len(parts) > 3 and parts[3] else 0
         except (IndexError, ValueError):
             continue
         if fee < 0:
             raise LedgerError(f"negative platform fee on order {order_id}")
-        if gross + fee <= 0:
+        if promo < 0 or gross < 0:
+            raise LedgerError(f"invalid coupon discount on order {order_id}")
+        if gross + fee + promo <= 0:
             continue
         rows.append(
-            CheckoutOrderRow(order_id=order_id, gross_ngwee=gross, platform_fee_ngwee=fee)
+            CheckoutOrderRow(
+                order_id=order_id,
+                gross_ngwee=gross,
+                platform_fee_ngwee=fee,
+                platform_discount_ngwee=promo,
+            )
         )
     return rows
 
@@ -123,8 +141,8 @@ def fulfill_prepaid_checkout_escrow(
 ) -> EscrowFulfillmentResult:
     """Post per-order ``escrow_hold`` rows for a successful prepaid collection.
 
-  Idempotent per ``order_id``. When the checkout has no orders, posts a single
-  checkout-scoped ``CHARGE_RECEIVED`` instead (test fixtures / edge cases).
+    Idempotent per ``order_id``. When the checkout has no orders, posts a single
+    checkout-scoped ``CHARGE_RECEIVED`` instead (test fixtures / edge cases).
     """
     _ = service_client
     orders = _fetch_checkout_orders(checkout_group_id)
@@ -181,6 +199,18 @@ def fulfill_prepaid_checkout_escrow(
             )
             txn_ids.append(fee_posted.id)
             if fee_posted.created:
+                created += 1
+        if row.platform_discount_ngwee > 0:
+            promo_posted = post_transaction(
+                idempotency_key=coupon_funding_idempotency_key(row.order_id),
+                template=LedgerTemplate.COUPON_FUNDING,
+                checkout_group_id=checkout_group_id,
+                order_id=row.order_id,
+                payment_id=payment_id,
+                discount_ngwee=row.platform_discount_ngwee,
+            )
+            txn_ids.append(promo_posted.id)
+            if promo_posted.created:
                 created += 1
 
     return EscrowFulfillmentResult(

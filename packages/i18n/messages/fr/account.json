@@ -246,5 +246,47 @@
     "retry": "Réessayer",
     "loadMore": "Afficher plus",
     "viewFeed": "Voir les nouveautés des boutiques suivies"
+  },
+  "birthday": {
+    "title": "Votre anniversaire (facultatif)",
+    "intro": "Indiquez votre anniversaire pour recevoir une surprise chaque année. Le jour et le mois suffisent.",
+    "day": "Jour",
+    "month": "Mois",
+    "year": "Année (facultatif)",
+    "yearHelp": "Laissez vide si vous préférez. Elle n'est jamais affichée.",
+    "months": [
+      "janvier",
+      "février",
+      "mars",
+      "avril",
+      "mai",
+      "juin",
+      "juillet",
+      "août",
+      "septembre",
+      "octobre",
+      "novembre",
+      "décembre"
+    ],
+    "consent": "Oui, envoyez-moi une surprise d'anniversaire chaque année. Je peux arrêter à tout moment.",
+    "adult": "J'ai 18 ans ou plus.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré. Une surprise vous attend le jour J.",
+    "current": "Votre anniversaire : {date}",
+    "changeFrom": "Vous pourrez changer la date à partir du {date}.",
+    "remove": "Supprimer mon anniversaire",
+    "removed": "Supprimé. Nous n'enverrons pas de message d'anniversaire.",
+    "privacy": "Chaque message d'anniversaire permet de se désabonner.",
+    "errors": {
+      "generic": "Impossible d'enregistrer. Réessayez.",
+      "consent": "Cochez la première case pour recevoir une surprise.",
+      "adult": "Les surprises d'anniversaire sont réservées aux 18 ans et plus.",
+      "minor": "Les surprises d'anniversaire sont réservées aux 18 ans et plus.",
+      "invalid": "Choisissez une date valide.",
+      "changeLocked": "Vous avez changé votre anniversaire récemment. Réessayez plus tard.",
+      "tooMany": "Trop de modifications. Réessayez plus tard.",
+      "featureUnavailable": "Les surprises d'anniversaire ne sont pas encore disponibles."
+    }
   }
 }

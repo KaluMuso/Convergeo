@@ -81,6 +81,9 @@ export type PaymentOptions = {
   total_ngwee: number;
   cod_cap_ngwee: number;
   cod_eligible: boolean;
+  /** Coupon discount already taken off total_ngwee (items only). */
+  discount_ngwee?: number;
+  coupon_code?: string | null;
   /**
    * Methods the API will accept right now: momo/card only while the payment
    * kill switch is on, cod only when the total is within the cap. Absent on an

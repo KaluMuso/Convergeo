@@ -12,7 +12,8 @@
     "deliveryFee": "Fee ya delivery",
     "relatedTitle": "Abashitisha bambi mu checkout iyi",
     "variantOption": "{group}: {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Ukucefyako kwa kuponi"
   },
   "empty": {
     "body": "Ilyo mwashita ukufuma ku basellers ba Convergeo, ama-order no tracking fyaisa apa.",
@@ -107,5 +108,16 @@
     "beforeDispatch": "Mulefwaya ukwaluka nangu ukufumyapo? Tumineni support na namba ya order ilyo tailatumwa.",
     "afterDispatch": "Kwaliba ubwafya na order yenu? Tumineni support na namba ya order.",
     "contactCta": "Tumineni support"
+  },
+  "gift": {
+    "title": "Ici cabupe",
+    "body": "You're the buyer. Refunds come back to you.",
+    "receiptLink": "Open the gift receipt (no prices)",
+    "receiptTitle": "Risiti ya cabupe",
+    "for": "For {name}",
+    "from": "From {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Gift receipts never show prices.",
+    "pinSentToRecipient": "We sent the pickup PIN to the person you're gifting."
   }
 }

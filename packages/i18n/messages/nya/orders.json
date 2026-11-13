@@ -12,7 +12,8 @@
     "deliveryFee": "Fee ya delivery",
     "relatedTitle": "Ogulitsa ena mu checkout iyi",
     "variantOption": "{group}: {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Kuchotsera kwa kuponi"
   },
   "empty": {
     "body": "Mukagula kuchokera kwa ogulitsa a Convergeo, ma-order ndi tracking zidzaonekera apa.",
@@ -107,5 +108,16 @@
     "beforeDispatch": "Mukufuna kusintha kapena kuletsa? Lankhulani ndi support ndi nambala ya order isanatumizidwe.",
     "afterDispatch": "Pali vuto ndi order yanu? Lankhulani ndi support ndi nambala ya order.",
     "contactCta": "Lankhulani ndi support"
+  },
+  "gift": {
+    "title": "Iyi ndi mphatso",
+    "body": "You're the buyer. Refunds come back to you.",
+    "receiptLink": "Open the gift receipt (no prices)",
+    "receiptTitle": "Risiti ya mphatso",
+    "for": "For {name}",
+    "from": "From {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Gift receipts never show prices.",
+    "pinSentToRecipient": "We sent the pickup PIN to the person you're gifting."
   }
 }

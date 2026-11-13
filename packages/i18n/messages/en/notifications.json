@@ -47,6 +47,15 @@
     },
     "dispatch_stale_alert": {
       "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
+    },
+    "gift_recipient_notice": {
+      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Convergeo. We'll only message you about this gift. Reply STOP to opt out."
+    },
+    "gift_ready_pickup": {
+      "body": "Your gift from {shop_name} is ready to collect. Pickup PIN: {pickup_pin}. Don't share it."
+    },
+    "birthday_greeting": {
+      "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     }
   },
   "sms": {
@@ -178,7 +187,8 @@
       "order_ready_pickup": "Order {ref} is ready for pickup. Open it to see your pickup code.",
       "order_delivered": "Order {ref} was delivered. How did it go?",
       "quote_received": "You received a new quote. Compare and accept it in the app.",
-      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate."
+      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate.",
+      "birthday_greeting": "Happy birthday! Use code {code} for a treat in the next {valid_days} days."
     },
     "vendor": {
       "order_placed": "New order {ref}. Confirm it to start.",

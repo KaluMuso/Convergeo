@@ -1,8 +1,10 @@
 import { LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
-import { createAccountApiClient } from "../_components/account-api";
+import { fetchStorefrontConfig } from "../../../../lib/storefront-config";
+import { createAccountApiClient, type Birthday } from "../_components/account-api";
 import { getAccountAccessToken, getAccountTranslator } from "../_components/account-server";
+import { BirthdayForm, type BirthdayLabels } from "../_components/birthday-form";
 import { ProfileForm } from "../_components/profile-form";
 
 type PageProps = {
@@ -25,6 +27,16 @@ export default async function AccountProfilePage({ params }: PageProps) {
   const t = await getAccountTranslator(locale);
   const api = createAccountApiClient(() => accessToken);
   const profile = await api.getProfile();
+  // Optional birthday treat (flag `birthday_greetings`). A stored birthday stays
+  // visible even with the flag off so the customer can always remove it.
+  const config = await fetchStorefrontConfig();
+  let birthday: Birthday | null = null;
+  try {
+    birthday = await api.getBirthday();
+  } catch {
+    birthday = null;
+  }
+  const showBirthday = config.birthdays || Boolean(birthday?.consented);
 
   return (
     <section className="space-y-4">
@@ -54,6 +66,13 @@ export default async function AccountProfilePage({ params }: PageProps) {
           },
         }}
       />
+      {showBirthday ? (
+        <BirthdayForm
+          accessToken={accessToken}
+          initial={birthday}
+          labels={t.raw("birthday") as BirthdayLabels}
+        />
+      ) : null}
     </section>
   );
 }
