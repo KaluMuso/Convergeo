@@ -38,6 +38,9 @@ from app.services.dispatch.state import (
     fetch_dispatch_events,
 )
 from app.services.orders.events import emit_order_lifecycle
+from app.services.payments import door as door_payments
+from app.services.payments.registry import LENCO_PROVIDER
+from app.services.payments.registry import get as get_payment_strategy
 from fastapi import APIRouter, Depends
 from pydantic import Field
 
@@ -142,6 +145,8 @@ class DispatchOut(StrictModel):
     order_status: str = ""
     delivery_zone: str | None = None
     handover_locked: bool = False
+    # Pay at the door (flag): arrived | pending | paid | cash | failed | exception.
+    door_payment_state: str | None = None
 
 
 class ReadyOrderOut(StrictModel):
@@ -238,6 +243,7 @@ def _dispatch_out(
     order_status: str = "",
     delivery_zone: str | None = None,
     handover_locked: bool = False,
+    door_payment_state: str | None = None,
 ) -> DispatchOut:
     return DispatchOut(
         id=dispatch.id,
@@ -265,6 +271,7 @@ def _dispatch_out(
         order_status=order_status,
         delivery_zone=delivery_zone,
         handover_locked=handover_locked,
+        door_payment_state=door_payment_state,
     )
 
 
@@ -314,6 +321,11 @@ def get_board(
     _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
 ) -> BoardOut:
     snapshot = dispatch_service.board_snapshot()
+    door_states = (
+        door_payments.board_states([item["dispatch"].id for item in snapshot["dispatches"]])
+        if door_payments.is_pay_at_door_enabled()
+        else {}
+    )
     return BoardOut(
         flag_enabled=dispatch_service.is_courier_dispatch_enabled(),
         ready_orders=[
@@ -341,6 +353,9 @@ def get_board(
                 order_status=item["order_status"],
                 delivery_zone=item["delivery_zone"],
                 handover_locked=item["handover_locked"],
+                door_payment_state=door_payments.board_state_label(
+                    door_states.get(item["dispatch"].id)
+                ),
             )
             for item in snapshot["dispatches"]
         ],
@@ -594,6 +609,216 @@ def verify_handover(
     return TransitionOut(
         dispatch=_dispatch_detail_out(str(dispatch_id)),
         order_status=result.order_status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Pay at the door (flag ``pay_at_door``) — ops act for the rider
+# ---------------------------------------------------------------------------
+
+
+class DoorPaymentRequestIn(StrictModel):
+    phone: str | None = Field(default=None, min_length=9, max_length=20)
+
+
+class DoorPaymentAdminOut(StrictModel):
+    dispatch_id: str
+    state: str
+    amount_ngwee: int
+    arrived: bool
+    settled_via: str | None
+    attempts_used: int
+    attempts_allowed: int
+    latest_attempt_status: str | None
+    latest_failure_reason: str | None
+    can_request: bool
+    cash_allowed: bool
+    exception_open: bool
+
+
+class DoorExceptionOut(StrictModel):
+    id: str
+    attempt_id: str
+    order_id: str
+    order_reference: str
+    reason: str
+    expected_amount_ngwee: int
+    observed_amount_ngwee: int | None
+    ledger_transaction_id: str | None
+    created_at: str
+
+
+class ResolveExceptionIn(StrictModel):
+    note: str = Field(min_length=3, max_length=1000)
+
+
+def _door_admin_out(dispatch_id: str, status: door_payments.DoorStatus) -> DoorPaymentAdminOut:
+    return DoorPaymentAdminOut(
+        dispatch_id=dispatch_id,
+        state=status.state,
+        amount_ngwee=status.amount_ngwee,
+        arrived=status.arrived,
+        settled_via=status.settled_via,
+        attempts_used=status.attempts_used,
+        attempts_allowed=status.attempts_allowed,
+        latest_attempt_status=status.latest_attempt_status,
+        latest_failure_reason=status.latest_failure_reason,
+        can_request=status.can_request,
+        cash_allowed=status.cash_allowed,
+        exception_open=status.exception_open,
+    )
+
+
+def _require_door_flags() -> None:
+    dispatch_service.require_courier_dispatch_enabled()
+    door_payments.require_pay_at_door_enabled()
+
+
+@dispatch_router.get("/requests/{dispatch_id}/door-payment", response_model=DoorPaymentAdminOut)
+def get_door_payment(
+    dispatch_id: UUID,
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+) -> DoorPaymentAdminOut:
+    _require_door_flags()
+    return _door_admin_out(
+        str(dispatch_id), door_payments.door_status(fetch_dispatch(str(dispatch_id)))
+    )
+
+
+@dispatch_router.post(
+    "/requests/{dispatch_id}/door-payment/arrived", response_model=DoorPaymentAdminOut
+)
+def mark_door_arrived(
+    dispatch_id: UUID,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> DoorPaymentAdminOut:
+    """The rider reports they are at the door: the customer's "Pay now" appears."""
+    _require_door_flags()
+    door_payments.mark_arrived(dispatch_id=str(dispatch_id), actor_id=admin.id)
+    recorder.record(
+        action="admin.dispatch.door_payment.arrived",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before=None,
+        after={"arrived": True},
+    )
+    return _door_admin_out(
+        str(dispatch_id), door_payments.door_status(fetch_dispatch(str(dispatch_id)))
+    )
+
+
+@dispatch_router.post(
+    "/requests/{dispatch_id}/door-payment/request", response_model=DoorPaymentAdminOut
+)
+async def request_door_payment(
+    dispatch_id: UUID,
+    body: DoorPaymentRequestIn,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> DoorPaymentAdminOut:
+    """Send the mobile-money prompt for the order total (amount is server-computed)."""
+    _require_door_flags()
+    status = await door_payments.request_door_payment(
+        dispatch_id=str(dispatch_id),
+        actor_id=admin.id,
+        actor_role="admin",
+        phone=body.phone,
+        strategy=get_payment_strategy(LENCO_PROVIDER),
+    )
+    # The phone number is personal data: never written to the admin audit log.
+    recorder.record(
+        action="admin.dispatch.door_payment.request",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before=None,
+        after={"state": status.state, "attempts_used": status.attempts_used},
+    )
+    return _door_admin_out(str(dispatch_id), status)
+
+
+@dispatch_router.post(
+    "/requests/{dispatch_id}/door-payment/poll", response_model=DoorPaymentAdminOut
+)
+async def poll_door_payment(
+    dispatch_id: UUID,
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+) -> DoorPaymentAdminOut:
+    """Re-check with Lenco (rider lost network at the door, or no webhook yet)."""
+    _require_door_flags()
+    status = await door_payments.poll_door_payment(
+        dispatch_id=str(dispatch_id), strategy=get_payment_strategy(LENCO_PROVIDER)
+    )
+    return _door_admin_out(str(dispatch_id), status)
+
+
+@dispatch_router.post(
+    "/requests/{dispatch_id}/door-payment/cash", response_model=DoorPaymentAdminOut
+)
+def settle_door_with_cash(
+    dispatch_id: UUID,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> DoorPaymentAdminOut:
+    """Cash fallback (within ``cod_cap_ngwee``): releases the handover code.
+
+    The cash is booked later through the usual COD confirmation after remittance.
+    """
+    _require_door_flags()
+    status = door_payments.settle_with_cash(dispatch_id=str(dispatch_id), actor_id=admin.id)
+    recorder.record(
+        action="admin.dispatch.door_payment.cash",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before=None,
+        after={"settled_via": "cash", "amount_ngwee": status.amount_ngwee},
+    )
+    return _door_admin_out(str(dispatch_id), status)
+
+
+@dispatch_router.get("/door-payment/exceptions", response_model=list[DoorExceptionOut])
+def list_door_exceptions(
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+) -> list[DoorExceptionOut]:
+    """Money Lenco confirmed that could not settle its order (refund by payout)."""
+    return [
+        DoorExceptionOut(
+            id=str(row["id"]),
+            attempt_id=str(row["attempt_id"]),
+            order_id=str(row["order_id"]),
+            order_reference=order_reference(str(row["order_id"])),
+            reason=str(row["reason"]),
+            expected_amount_ngwee=int(row["expected_amount_ngwee"]),
+            observed_amount_ngwee=(
+                int(row["observed_amount_ngwee"])
+                if row.get("observed_amount_ngwee") is not None
+                else None
+            ),
+            ledger_transaction_id=(
+                str(row["ledger_transaction_id"]) if row.get("ledger_transaction_id") else None
+            ),
+            created_at=str(row["created_at"]),
+        )
+        for row in door_payments.list_open_exceptions()
+    ]
+
+
+@dispatch_router.post("/door-payment/exceptions/{exception_id}/resolve", status_code=204)
+def resolve_door_exception(
+    exception_id: UUID,
+    body: ResolveExceptionIn,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> None:
+    door_payments.resolve_exception(
+        exception_id=str(exception_id), actor_id=admin.id, note=body.note
+    )
+    recorder.record(
+        action="admin.dispatch.door_payment.exception_resolved",
+        entity_type="door_payment_exception",
+        entity_id=str(exception_id),
+        before={"status": "open"},
+        after={"status": "resolved"},
     )
 
 

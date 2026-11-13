@@ -72,6 +72,22 @@ async def reconciliation_poll_tick() -> dict[str, int]:
 
 
 @router.post(
+    "/door-poll-tick",
+    dependencies=[Depends(require_internal_reconciliation_token)],
+)
+async def door_payment_poll_tick() -> dict[str, int]:
+    """Pay at the door: re-query open mobile-money prompts (webhook gap / lost network).
+
+    Runs regardless of the ``pay_at_door`` flag: money already requested must
+    still reach its outcome after the flag is switched off.
+    """
+    from app.services.payments import door as door_payments
+
+    scanned = await door_payments.poll_open_attempts(get("lenco"))
+    return {"scanned": scanned}
+
+
+@router.post(
     "/webhook-drain-tick",
     dependencies=[Depends(require_internal_reconciliation_token)],
 )

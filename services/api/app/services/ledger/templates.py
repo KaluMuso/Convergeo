@@ -9,7 +9,14 @@ from enum import StrEnum
 from app.schemas.base import parse_ngwee
 
 PLATFORM_ACCOUNT_KINDS = frozenset(
-    {"platform_cash", "escrow", "commission_revenue", "fees", "delivery_revenue"}
+    {
+        "platform_cash",
+        "escrow",
+        "commission_revenue",
+        "fees",
+        "delivery_revenue",
+        "door_payment_suspense",
+    }
 )
 VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable"})
 
@@ -28,6 +35,8 @@ class LedgerTemplate(StrEnum):
     LENCO_FEE = "lenco_fee"
     DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
     COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
+    DOOR_PAYMENT_COLLECTED = "door_payment_collected"
+    DOOR_PAYMENT_EXCEPTION = "door_payment_exception"
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,6 +340,45 @@ def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> Template
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
 
 
+def door_payment_collected(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
+    """Pay at the door: mobile money confirmed by Lenco at delivery.
+
+    Same legs as ``cod_collected`` (the money reaches Convergeo's Lenco account,
+    not a rider's pocket), with its own kind so reconciliation can tell mobile
+    money from remitted cash. Posted under the order's ``cod-collect-*`` key, so
+    cash and mobile money can never both settle one order.
+
+    Debit platform_cash (+collected).
+    Credit cod_receivable (vendor) (−collected).
+    """
+    collected = parse_ngwee(collected_ngwee)
+    legs = (
+        PostingLeg(AccountRef("platform_cash"), collected),
+        PostingLeg(AccountRef("cod_receivable", vendor_id), -collected),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DOOR_PAYMENT_COLLECTED, legs=legs)
+
+
+def door_payment_exception(*, received_ngwee: int) -> TemplateResult:
+    """Pay at the door: money received that cannot settle its order.
+
+    Order cancelled, already settled, or a wrong amount. The money is real (it
+    is in the Lenco account), so it is booked, but to a suspense account until
+    ops refunds it by payout. It never touches escrow or the vendor.
+
+    Debit platform_cash (+received).
+    Credit door_payment_suspense (−received).
+    """
+    received = parse_ngwee(received_ngwee)
+    legs = (
+        PostingLeg(AccountRef("platform_cash"), received),
+        PostingLeg(AccountRef("door_payment_suspense"), -received),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DOOR_PAYMENT_EXCEPTION, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -358,6 +406,8 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.LENCO_FEE: lenco_fee,
     LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
     LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
+    LedgerTemplate.DOOR_PAYMENT_COLLECTED: door_payment_collected,
+    LedgerTemplate.DOOR_PAYMENT_EXCEPTION: door_payment_exception,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

@@ -10,6 +10,11 @@ Authorization is checked against the order row before any dispatch data is
 read; a non-owner gets the same 404 as a missing order (no existence oracle).
 Both return ``enabled=false`` with no dispatch while the ``courier_dispatch``
 flag is off.
+
+Pay at the door (flag ``pay_at_door``): with the flag on, a COD order's
+handover code is withheld until the order is paid. ``/door-payment`` lets the
+order owner see the state, send the mobile-money prompt to their phone once the
+rider is at the door, and re-check the status.
 """
 
 from __future__ import annotations
@@ -20,8 +25,13 @@ from app.core.auth import CurrentUser, get_current_user, require_role
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.dispatch import service as dispatch_service
+from app.services.dispatch.state import DispatchRow, fetch_latest_dispatch_for_order
 from app.services.orders.state import sql_uuid
+from app.services.payments import door as door_payments
+from app.services.payments.registry import LENCO_PROVIDER
+from app.services.payments.registry import get as get_payment_strategy
 from fastapi import APIRouter, Depends
+from pydantic import Field
 
 router = APIRouter(tags=["order-delivery"])
 
@@ -127,3 +137,99 @@ def get_vendor_order_delivery(
             timeline=_timeline(view),
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Pay at the door (flag ``pay_at_door``, default OFF)
+# ---------------------------------------------------------------------------
+
+
+class DoorPaymentOut(StrictModel):
+    """Customer projection. Never includes phone numbers or Lenco references."""
+
+    enabled: bool
+    state: str
+    amount_ngwee: int
+    arrived: bool
+    settled_via: str | None
+    attempts_used: int
+    attempts_allowed: int
+    latest_failure_reason: str | None
+    can_request: bool
+
+
+class DoorPaymentRequestIn(StrictModel):
+    # Optional: another MTN/Airtel number (wrong number, Zamtel, someone else pays).
+    phone: str | None = Field(default=None, min_length=9, max_length=20)
+
+
+def _door_out(status: door_payments.DoorStatus) -> DoorPaymentOut:
+    return DoorPaymentOut(
+        enabled=status.enabled,
+        state=status.state,
+        amount_ngwee=status.amount_ngwee,
+        arrived=status.arrived,
+        settled_via=status.settled_via,
+        attempts_used=status.attempts_used,
+        attempts_allowed=status.attempts_allowed,
+        latest_failure_reason=status.latest_failure_reason,
+        can_request=status.can_request,
+    )
+
+
+def _owned_door_dispatch(order_id: str, user_id: str) -> DispatchRow | None:
+    owners = dispatch_service.order_owner_and_vendor(_validated_order_id(order_id))
+    if owners is None or owners[0] != user_id:
+        raise _not_found()
+    if not (
+        dispatch_service.is_courier_dispatch_enabled() and door_payments.is_pay_at_door_enabled()
+    ):
+        return None
+    return fetch_latest_dispatch_for_order(order_id)
+
+
+@router.get("/account/orders/{order_id}/door-payment", response_model=DoorPaymentOut)
+def get_door_payment(
+    order_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> DoorPaymentOut:
+    dispatch = _owned_door_dispatch(order_id, current_user.id)
+    if dispatch is None:
+        return _door_out(door_payments.disabled_status(enabled=False))
+    return _door_out(door_payments.door_status(dispatch))
+
+
+@router.post("/account/orders/{order_id}/door-payment", response_model=DoorPaymentOut)
+async def request_door_payment(
+    order_id: str,
+    body: DoorPaymentRequestIn,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> DoorPaymentOut:
+    """Pay now on your phone: prompt for the order total once the rider is at the door."""
+    dispatch = _owned_door_dispatch(order_id, current_user.id)
+    if dispatch is None:
+        door_payments.require_pay_at_door_enabled()
+        raise _not_found()
+    status = await door_payments.request_door_payment(
+        dispatch_id=dispatch.id,
+        actor_id=current_user.id,
+        actor_role="customer",
+        phone=body.phone,
+        strategy=get_payment_strategy(LENCO_PROVIDER),
+    )
+    return _door_out(status)
+
+
+@router.post("/account/orders/{order_id}/door-payment/poll", response_model=DoorPaymentOut)
+async def poll_door_payment(
+    order_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> DoorPaymentOut:
+    """Ask Lenco for the latest status (safe to repeat after a dropped connection)."""
+    dispatch = _owned_door_dispatch(order_id, current_user.id)
+    if dispatch is None:
+        return _door_out(door_payments.disabled_status(enabled=False))
+    status = await door_payments.poll_door_payment(
+        dispatch_id=dispatch.id, strategy=get_payment_strategy(LENCO_PROVIDER)
+    )
+    return _door_out(status)

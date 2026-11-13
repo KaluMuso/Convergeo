@@ -149,6 +149,15 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /dispatch/requests/{dispatch_id}/handover": SENSITIVE_WRITE,
     "POST /dispatch/requests/{dispatch_id}/notify": ADMIN_WRITE,
     "POST /dispatch/requests/{dispatch_id}/transition": ADMIN_WRITE,
+    # Pay at the door (flag pay_at_door). Prompts move money: PAYMENT_WRITE, plus
+    # the per-dispatch attempt cap (pay_at_door_max_attempts) in the service.
+    "POST /dispatch/requests/{dispatch_id}/door-payment/arrived": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/request": PAYMENT_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/poll": ADMIN_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/door-payment/cash": SENSITIVE_WRITE,
+    "POST /dispatch/door-payment/exceptions/{exception_id}/resolve": SENSITIVE_WRITE,
+    "POST /account/orders/{order_id}/door-payment": PAYMENT_WRITE,
+    "POST /account/orders/{order_id}/door-payment/poll": PAYMENT_WRITE,
     "PATCH /config/platform/{key}": ADMIN_WRITE,
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,
@@ -228,6 +237,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
+    "POST /internal/reconciliation/door-poll-tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
     "POST /internal/event-refund-jobs/tick": INTERNAL_CRON,
