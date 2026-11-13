@@ -7,8 +7,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { Modal } from "@vergeo/ui/src/modal";
 import { useMemo, useState } from "react";
 
-import { type CartMergeResolution, useSession } from "../../../lib/customer-session";
 import { clearUserCaches } from "../../../lib/clear-user-caches";
+import { type CartMergeResolution, useSession } from "../../../lib/customer-session";
 
 type MergeConflict = {
   listing_id: string;

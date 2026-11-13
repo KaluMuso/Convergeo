@@ -801,6 +801,7 @@ export type Database = {
           created_at: string
           customer_id: string
           delivery_fee_ngwee: number
+          fulfilment_choices: Json | null
           id: string
           idempotency_key: string
           platform_fee_ngwee: number
@@ -813,6 +814,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           delivery_fee_ngwee: number
+          fulfilment_choices?: Json | null
           id?: string
           idempotency_key: string
           platform_fee_ngwee?: number
@@ -825,6 +827,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           delivery_fee_ngwee?: number
+          fulfilment_choices?: Json | null
           id?: string
           idempotency_key?: string
           platform_fee_ngwee?: number
@@ -4027,6 +4030,67 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "job_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_stock_consumption: {
+        Row: {
+          created_at: string
+          listing_id: string
+          listing_qty: number
+          listing_variant_id: string | null
+          location_id: string | null
+          order_id: string
+          order_item_id: string
+          released_at: string | null
+          variant_qty: number
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          listing_qty?: number
+          listing_variant_id?: string | null
+          location_id?: string | null
+          order_id: string
+          order_item_id: string
+          released_at?: string | null
+          variant_qty?: number
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          listing_qty?: number
+          listing_variant_id?: string | null
+          location_id?: string | null
+          order_id?: string
+          order_item_id?: string
+          released_at?: string | null
+          variant_qty?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_stock_consumption_listing_id_fkey"
+            columns: ["listing_id"]
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_stock_consumption_listing_variant_id_fkey"
+            columns: ["listing_variant_id"]
+            referencedRelation: "vendor_listing_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_stock_consumption_order_id_fkey"
+            columns: ["order_id"]
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_stock_consumption_order_item_id_fkey"
+            columns: ["order_item_id"]
+            referencedRelation: "order_items"
             referencedColumns: ["id"]
           },
         ]
