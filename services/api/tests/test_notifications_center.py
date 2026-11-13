@@ -21,6 +21,12 @@ from fastapi.testclient import TestClient
 USER_A = "11111111-1111-4111-8111-111111111111"
 USER_B = "22222222-2222-4222-8222-222222222222"
 VENDOR_USER = "33333333-3333-4333-8333-333333333333"
+ADMIN_ROLE_USERS = {
+    "44444444-4444-4444-8444-444444444441": "admin",
+    "44444444-4444-4444-8444-444444444442": "superadmin",
+    "44444444-4444-4444-8444-444444444443": "moderator",
+    "44444444-4444-4444-8444-444444444444": "rbac_finance",
+}
 
 _OR_RE = re.compile(
     r'^created_at\.lt\."(?P<ts>[^"]+)",and\(created_at\.eq\."(?P=ts)",id\.lt\.(?P<id>[0-9a-f-]+)\)$'
@@ -185,7 +191,11 @@ def api(store: Store, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, 
     monkeypatch.setattr(
         "app.core.auth._load_user_roles",
         lambda user_id, service_client: frozenset(
-            {"customer", "vendor"} if user_id == VENDOR_USER else {"customer"}
+            {"customer", "vendor"}
+            if user_id == VENDOR_USER
+            else {"customer", ADMIN_ROLE_USERS[user_id]}
+            if user_id in ADMIN_ROLE_USERS
+            else {"customer"}
         ),
     )
     with TestClient(create_app(), raise_server_exceptions=False) as client:
@@ -247,8 +257,9 @@ def test_cursor_round_trip_and_tampered_cursor_rejected(api: TestClient) -> None
 def test_vendor_feed_requires_vendor_role(api: TestClient) -> None:
     assert api.get("/me/notifications?audience=vendor", headers=_h(USER_A)).status_code == 403
     assert (
-        api.get("/me/notifications/unseen-count?audience=admin", headers=_h(VENDOR_USER))
-        .status_code
+        api.get(
+            "/me/notifications/unseen-count?audience=admin", headers=_h(VENDOR_USER)
+        ).status_code
         == 403
     )
     body = api.get("/me/notifications?audience=vendor", headers=_h(VENDOR_USER)).json()
@@ -280,15 +291,11 @@ def test_mark_seen_rejects_non_uuid_ids(api: TestClient) -> None:
 
 def test_mark_read_own_row_sets_seen_and_read(api: TestClient, store: Store) -> None:
     row_id = _row(2, USER_A)["id"]
-    assert api.post(f"/me/notifications/{row_id}/read", headers=_h(USER_A)).json() == {
-        "updated": 1
-    }
+    assert api.post(f"/me/notifications/{row_id}/read", headers=_h(USER_A)).json() == {"updated": 1}
     row = next(r for r in _rows(store) if r["id"] == row_id)
     assert row["read_at"] is not None and row["seen_at"] is not None
     # Idempotent second tap.
-    assert api.post(f"/me/notifications/{row_id}/read", headers=_h(USER_A)).json() == {
-        "updated": 0
-    }
+    assert api.post(f"/me/notifications/{row_id}/read", headers=_h(USER_A)).json() == {"updated": 0}
 
 
 def test_mark_read_other_users_row_is_404(api: TestClient, store: Store) -> None:
@@ -354,3 +361,24 @@ def test_push_subscribe_when_enabled_moves_device_to_caller(
     )
     assert removed.status_code == 204
     assert subs == []
+
+
+@pytest.mark.parametrize("admin_user", sorted(ADMIN_ROLE_USERS))
+def test_every_admin_panel_role_can_read_the_admin_feed(api: TestClient, admin_user: str) -> None:
+    """superadmin / moderator / restricted rbac_* accounts no longer 403 (bell stays visible)."""
+    for path in (
+        "/me/notifications?audience=admin",
+        "/me/notifications/unseen-count?audience=admin",
+    ):
+        assert api.get(path, headers=_h(admin_user)).status_code == 200
+    assert (
+        api.post(
+            "/me/notifications/seen?audience=admin", json={}, headers=_h(admin_user)
+        ).status_code
+        == 200
+    )
+
+
+def test_admin_feed_still_rejects_non_admin_roles(api: TestClient) -> None:
+    assert api.get("/me/notifications?audience=admin", headers=_h(USER_A)).status_code == 403
+    assert api.get("/me/notifications?audience=admin", headers=_h(VENDOR_USER)).status_code == 403

@@ -16,8 +16,13 @@
 --
 -- Rows hold an i18n key + allow-listed params, never rendered text. Pickup
 -- PINs, QR tokens, phone numbers, notes and amounts present in outbox payloads
--- are NOT copied. Admin notifications are fanned out per admin user (role
--- 'admin' in user_roles) so seen/read state is per person.
+-- are NOT copied. Admin notifications are fanned out per admin-panel user so
+-- seen/read state is per person. Recipients are every user whose roles grant
+-- the permission that opens the relevant admin queue (same model as
+-- app.core.auth.load_admin_permissions): admin and superadmin hold all
+-- permissions, moderator holds products.manage + vendors.manage, and
+-- restricted rbac_* roles hold what public.admin_roles.permissions lists
+-- (KYC -> vendors.manage, disputes -> finance.read).
 --
 -- A writer failure is downgraded to a WARNING: a notification bug must never
 -- roll back an order, payment or KYC transition.
@@ -204,7 +209,31 @@ begin
 end;
 $$;
 
+-- Users who can open an admin queue gated by `p_permission`. Mirrors
+-- app.core.auth.load_admin_permissions; user_roles stays the assignment source.
+create or replace function private.admin_notification_recipients(p_permission text)
+returns table (user_id uuid)
+language sql
+stable
+security definer
+set search_path = public, private
+as $$
+  select distinct ur.user_id
+  from public.user_roles ur
+  join auth.users u on u.id = ur.user_id
+  where ur.role in ('admin', 'superadmin')
+     or (ur.role = 'moderator' and p_permission in ('products.manage', 'vendors.manage'))
+     or (
+       ur.role like 'rbac\_%'
+       and exists (
+         select 1 from public.admin_roles ar
+         where ar.key = ur.role and p_permission = any (ar.permissions)
+       )
+     )
+$$;
+
 create or replace function private.enqueue_admin_in_app_notification(
+  p_permission text,
   p_type text,
   p_params jsonb,
   p_link_path text,
@@ -219,11 +248,9 @@ begin
   insert into public.in_app_notifications (
     recipient_user_id, audience, type, i18n_key, params, link_path, dedupe_key
   )
-  select ur.user_id, 'admin', p_type, 'notifications.inApp.admin.' || p_type,
+  select r.user_id, 'admin', p_type, 'notifications.inApp.admin.' || p_type,
          coalesce(p_params, '{}'::jsonb), p_link_path, p_dedupe_key
-  from public.user_roles ur
-  join auth.users u on u.id = ur.user_id
-  where ur.role = 'admin'
+  from private.admin_notification_recipients(p_permission) r
   on conflict (recipient_user_id, audience, dedupe_key) do nothing;
 end;
 $$;
@@ -238,12 +265,14 @@ as $$ select upper(left(p_id::text, 8)) $$;
 
 revoke all on function private.enqueue_in_app_notification(uuid, text, text, jsonb, text, text)
   from public, anon, authenticated;
-revoke all on function private.enqueue_admin_in_app_notification(text, jsonb, text, text)
+revoke all on function private.admin_notification_recipients(text)
+  from public, anon, authenticated;
+revoke all on function private.enqueue_admin_in_app_notification(text, text, jsonb, text, text)
   from public, anon, authenticated;
 revoke all on function private.in_app_short_ref(uuid) from public, anon, authenticated;
 grant execute on function private.enqueue_in_app_notification(uuid, text, text, jsonb, text, text)
   to service_role;
-grant execute on function private.enqueue_admin_in_app_notification(text, jsonb, text, text)
+grant execute on function private.enqueue_admin_in_app_notification(text, text, jsonb, text, text)
   to service_role;
 
 -- Safe uuid cast (outbox payloads are jsonb written by many paths).
@@ -435,7 +464,7 @@ begin
     v_owner, 'vendor', 'kyc_submitted', '{}'::jsonb, '/onboarding/status', v_dedupe
   );
   perform private.enqueue_admin_in_app_notification(
-    'kyc_submitted', '{}'::jsonb, '/kyc/' || new.id::text, v_dedupe
+    'vendors.manage', 'kyc_submitted', '{}'::jsonb, '/kyc/' || new.id::text, v_dedupe
   );
   return null;
 exception
@@ -471,7 +500,7 @@ begin
     '/disputes/' || new.id::text, 'dispute_opened:' || new.id::text
   );
   perform private.enqueue_admin_in_app_notification(
-    'dispute_opened', v_params, '/disputes/' || new.id::text,
+    'finance.read', 'dispute_opened', v_params, '/disputes/' || new.id::text,
     'dispute_opened:' || new.id::text
   );
   return null;
@@ -533,7 +562,8 @@ create trigger tickets_in_app
 -- drop function if exists private.in_app_for_order(uuid, text, boolean, boolean);
 -- drop function if exists private.in_app_try_uuid(text);
 -- drop function if exists private.in_app_short_ref(uuid);
--- drop function if exists private.enqueue_admin_in_app_notification(text, jsonb, text, text);
+-- drop function if exists private.enqueue_admin_in_app_notification(text, text, jsonb, text, text);
+-- drop function if exists private.admin_notification_recipients(text);
 -- drop function if exists private.enqueue_in_app_notification(uuid, text, text, jsonb, text, text);
 -- drop table if exists public.web_push_subscriptions;
 -- drop table if exists public.in_app_notifications;

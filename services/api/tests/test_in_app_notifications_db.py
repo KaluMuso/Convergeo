@@ -227,6 +227,86 @@ def test_kyc_decision_from_outbox_reaches_vendor_owner(db: PgConn) -> None:
     assert rows == [f"{VENDOR_A_OWNER}|vendor"]
 
 
+# Distinct accounts per admin-panel role shape; created inside each rolled-back
+# transaction so the shared fixtures stay untouched.
+SUPERADMIN = "77000000-0000-4000-8000-000000000001"
+MODERATOR = "77000000-0000-4000-8000-000000000002"
+RBAC_FINANCE = "77000000-0000-4000-8000-000000000003"
+RBAC_VENDORS = "77000000-0000-4000-8000-000000000004"
+RBAC_ANALYTICS = "77000000-0000-4000-8000-000000000005"
+
+_ADMIN_FANOUT_SETUP = f"""
+INSERT INTO auth.users (id, email, created_at) VALUES
+  ('{SUPERADMIN}', 'sa@example.test', now()),
+  ('{MODERATOR}', 'mod@example.test', now()),
+  ('{RBAC_FINANCE}', 'fin@example.test', now()),
+  ('{RBAC_VENDORS}', 'ven@example.test', now()),
+  ('{RBAC_ANALYTICS}', 'ana@example.test', now());
+INSERT INTO public.admin_roles (key, name, permissions) VALUES
+  ('rbac_finance', 'Finance', ARRAY['finance.read']),
+  ('rbac_vendors', 'Vendor reviewers', ARRAY['vendors.manage']),
+  ('rbac_analytics', 'Analytics', ARRAY['analytics.read']);
+INSERT INTO public.user_roles (user_id, role) VALUES
+  ('{SUPERADMIN}', 'superadmin'),
+  ('{MODERATOR}', 'moderator'),
+  ('{RBAC_FINANCE}', 'rbac_finance'),
+  ('{RBAC_VENDORS}', 'rbac_vendors'),
+  ('{RBAC_ANALYTICS}', 'rbac_analytics');
+"""
+
+
+def _admin_recipients(db: PgConn, action_sql: str, notification_type: str) -> str:
+    rows = _tx(
+        db,
+        _ADMIN_FANOUT_SETUP
+        + action_sql
+        + f"""
+        SELECT string_agg(recipient_user_id::text, ',' ORDER BY recipient_user_id)
+        FROM public.in_app_notifications
+        WHERE type = '{notification_type}' AND audience = 'admin';
+        """,
+    )
+    return rows[-1]
+
+
+def test_kyc_submitted_fans_out_to_every_kyc_capable_admin_role(db: PgConn) -> None:
+    got = _admin_recipients(
+        db,
+        f"INSERT INTO public.kyc_records (vendor_id, tier, status) "
+        f"VALUES ('{VENDOR_A}', 1, 'submitted');",
+        "kyc_submitted",
+    )
+    # admin + superadmin + moderator + vendors.manage rbac; NOT finance/analytics-only.
+    assert set(got.split(",")) == {ADMIN, SUPERADMIN, MODERATOR, RBAC_VENDORS}
+
+
+def test_dispute_opened_fans_out_to_every_dispute_capable_admin_role(db: PgConn) -> None:
+    got = _admin_recipients(
+        db,
+        f"INSERT INTO public.disputes (order_id, opener_user_id) "
+        f"VALUES ('{ORDER_PAID}', '{CUSTOMER_A}');",
+        "dispute_opened",
+    )
+    # admin + superadmin + finance.read rbac; moderator has no finance.read.
+    assert set(got.split(",")) == {ADMIN, SUPERADMIN, RBAC_FINANCE}
+
+
+def test_admin_fanout_is_deduped_for_multi_role_users(db: PgConn) -> None:
+    rows = _tx(
+        db,
+        _ADMIN_FANOUT_SETUP
+        + f"""
+        INSERT INTO public.user_roles (user_id, role) VALUES ('{SUPERADMIN}', 'admin');
+        INSERT INTO public.disputes (order_id, opener_user_id)
+        VALUES ('{ORDER_PAID}', '{CUSTOMER_A}');
+        SELECT count(*) FROM public.in_app_notifications
+        WHERE type = 'dispute_opened' AND audience = 'admin'
+          AND recipient_user_id = '{SUPERADMIN}';
+        """,
+    )
+    assert rows[-1] == "1"
+
+
 def test_dispute_opened_notifies_admins_and_vendor(db: PgConn) -> None:
     rows = _tx(
         db,

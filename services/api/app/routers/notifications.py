@@ -146,9 +146,23 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+ADMIN_PANEL_ROLES = frozenset({"admin", "superadmin", "moderator"})
+
+
+def _is_admin_panel_user(current_user: CurrentUser) -> bool:
+    """Any admin-panel role: admin, superadmin, moderator or a restricted rbac_* role."""
+    return bool(current_user.roles & ADMIN_PANEL_ROLES) or any(
+        role.startswith("rbac_") for role in current_user.roles
+    )
+
+
 def _require_audience(current_user: CurrentUser, audience: str) -> None:
     """Vendor/admin feeds need the matching role; the customer feed is anyone's own."""
-    if audience in {"vendor", "admin"} and audience not in current_user.roles:
+    if audience == "admin":
+        allowed = _is_admin_panel_user(current_user)
+    else:
+        allowed = audience != "vendor" or audience in current_user.roles
+    if not allowed:
         raise AppError(
             code="forbidden",
             message="Not allowed for this audience",
