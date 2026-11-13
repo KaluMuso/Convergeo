@@ -62,8 +62,8 @@ Tap targets ≥ 44px. Errors always say what to do next.
   review". Rewrite as short plain lines.
 - **Icon-only header buttons (360px):** a monitor icon (theme), a person icon and a cart icon
   with no words. The monitor icon means nothing to most people. Account is already a labelled
-  tab in the bottom bar; display settings are in the footer. **Fix:** on phones, show only the
-  cart, with the word "Cart" under the icon.
+  tab in the bottom bar; display settings are in the footer. **Fix:** keep every action and put
+  a short word under each icon ("Theme", "Account", "Cart").
 - **Too many choices above the fold:** social icons + language + three icons + search + strip +
   carousel with five slides + two buttons. Recommend (not done here — design change): keep
   search and one hero.
@@ -252,8 +252,8 @@ Tap targets ≥ 44px. Errors always say what to do next.
   review (bem/nya JSON untouched).
 - Product page pickup branch: **not** pre-selected. `use-pickup-location-selection.test.tsx`
   locks "never auto-selects" as a contract, so this needs a product decision first.
-- Phone header: cart shows the word "Cart"; duplicate theme and account icons hidden on
-  phones (still in the bottom bar and footer; still in the header on tablet and desktop).
+- Phone header: theme, account and cart each show a word under the icon (see founder
+  correction below; nothing is hidden).
 - No API, money, state-machine or business-rule changes.
 
 ## Notes from implementation
@@ -273,3 +273,24 @@ Tap targets ≥ 44px. Errors always say what to do next.
   copy of the old English (passthrough), so they stay in sync with English; loanword values
   ("Pickup", "Courier", "Zone") were left as they were. Vernacular drafts of the glossary are in
   `packages/i18n/messages/PHASE1_NATIVE_REVIEW.md` for native review.
+
+## Founder correction (2026-11-13): simple, not stripped
+
+"Easy to understand and use without being complex — don't butcher functionality." Applied as:
+
+- **Nothing removed or hidden.** Phone header keeps theme, notifications, account and cart;
+  each icon now has a word under it. Theme sits on the search row so the signed-in row fits at
+  360px.
+- **Precise terms kept beside plain ones** where people rely on them: "Pay when it arrives
+  (cash on delivery)", "Check your ID (T1 verification)", "Finish your ID check (KYC)", "SKU
+  (item code)", "Minimum order quantity (MOQ)", "Lead time — days to make it", "Fulfilment —
+  do you have it now?", "Wholesale tiers (bulk prices)", "Waiting for delivery (held in
+  escrow)", "Payouts", "Disputes", "Quote requests", "Preferred shop", "Verified seller".
+- **Details restored** that the first pass dropped: Lusaka time on cut-offs, zone fees below
+  the free-delivery amount, PCI note, product-detail limits, 3-decimal increments, ledger note,
+  CSV availability, sign-up wording that does not reveal whether an email has an account.
+- **Vendor forms:** no field was removed. If fields are later reduced, use "More options"
+  (progressive disclosure), never deletion.
+- **Pending founder approval:** the home trust ladder "Order on your phone → The seller sends
+  it → Pay when it arrives" (replaces "You pay → Held by Convergeo → Released on delivery"
+  during the cash-only pilot).

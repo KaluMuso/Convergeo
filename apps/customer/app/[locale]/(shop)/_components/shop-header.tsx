@@ -227,9 +227,10 @@ export function ShopHeader({
         <div className="flex items-center justify-between gap-2">
           {logo}
           {/* Simple-UX: every phone action keeps its icon and gets a short
-              word under it, so nothing is a bare icon and nothing is removed. */}
+              word under it, so nothing is a bare icon and nothing is removed.
+              The theme switch sits on the search row so the signed-in row
+              (bell + account + cart) still fits at 360px. */}
           <div className="flex items-center gap-0.5">
-            {labels.theme ? <HeaderThemeToggle labels={labels.theme} caption /> : null}
             {notificationSlot}
             <Link href={accountHref} className={stackedActionClassName}>
               <IconAccount aria-hidden />
@@ -243,7 +244,12 @@ export function ShopHeader({
             />
           </div>
         </div>
-        {mobileSearchSlot ? <div className="w-full min-w-0">{mobileSearchSlot}</div> : null}
+        {mobileSearchSlot || labels.theme ? (
+          <div className="flex w-full min-w-0 items-center gap-1">
+            {mobileSearchSlot ? <div className="min-w-0 flex-1">{mobileSearchSlot}</div> : null}
+            {labels.theme ? <HeaderThemeToggle labels={labels.theme} caption /> : null}
+          </div>
+        ) : null}
       </nav>
 
       {/* Tablet + desktop (md+), full-bleed. Desktop is one row:
