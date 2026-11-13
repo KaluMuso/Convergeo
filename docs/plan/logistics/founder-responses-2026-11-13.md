@@ -72,3 +72,11 @@ We can also implement this (Left for after the pilot:
 Each returned item refunds the full delivery fee again. This was already the case before today and is capped by the money held.
 On some returns, both the vendor and Convergeo keep the outbound delivery fee. That’s a policy choice for you, not an accounting error.
 Delivery cash counts as Convergeo’s money until it’s actually deposited. This was also already the case.)
+---
+## 11:00 follow-up (13 Nov 2026)
+- Simple UX: easy to understand without being too simple; never remove functionality.
+- Vercel Pro: will upgrade when promoting widely; suggest cheaper alternatives (AWS or local).
+- Capacity: limit free listings per vendor (upgrade for more); account for shared canonical product images; CDN for Zambia.
+- Events: is scanner/ticketing working? Hold policy: tiered — verified organisers may get early release backed by repayment obligation / blacklist / legal; insurance option.
+- APPROVED growth items: Ads (fixed packages via Lenco → Boost → bidding at ~20 advertisers; AI approves or escalates, never rejects); Clips (free, followable, clickable; staged opening; OpenAI moderation; ffmpeg + Cloudflare R2); Coupons + gift orders first (no cash gift cards until lawyer clears); COD pay-at-door via Lenco MoMo prompt, handover code after payment, capped cash fallback, instant payout with reserve; Delivery pricing area-pair table + time bands + rain switch, Google only for dispatcher, "Order before 2 pm, get it today", Home/Work addresses; Business Home — BUT the customer has higher priority than vendors: customers want optionality to decide for themselves.
+- "For the 24 questions I will go with your recommendations" — all 24 approval items in the Growth Features Blueprint approved as recommended.
