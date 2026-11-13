@@ -113,8 +113,20 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
           <p className="text-xs text-muted">{t("priorityHint")}</p>
         </header>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <ReconciliationTile reconciliation={data.reconciliation} locale={locale} />
-          <PayoutLiabilitiesTile liabilities={data.payout_liabilities} locale={locale} />
+          {data.reconciliation && data.payout_liabilities ? (
+            <>
+              <ReconciliationTile reconciliation={data.reconciliation} locale={locale} />
+              <PayoutLiabilitiesTile liabilities={data.payout_liabilities} locale={locale} />
+            </>
+          ) : (
+            <div
+              className="space-y-1 rounded-md border border-border bg-bg p-4 sm:col-span-2"
+              data-testid="dashboard-finance-withheld"
+            >
+              <p className="text-sm font-medium text-text">{t("financeWithheldTitle")}</p>
+              <p className="text-xs text-muted">{t("financeWithheldBody")}</p>
+            </div>
+          )}
           <OrdersStatusTile ordersByStatus={data.orders_by_status} locale={locale} />
         </div>
       </section>
@@ -134,11 +146,13 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
         </div>
       </section>
 
-      <p className="font-mono text-xs text-muted">
-        {t("liabilitiesTotal", {
-          amount: formatK(data.payout_liabilities.total_ngwee, { locale }),
-        })}
-      </p>
+      {data.payout_liabilities ? (
+        <p className="font-mono text-xs text-muted">
+          {t("liabilitiesTotal", {
+            amount: formatK(data.payout_liabilities.total_ngwee, { locale }),
+          })}
+        </p>
+      ) : null}
     </div>
   );
 }

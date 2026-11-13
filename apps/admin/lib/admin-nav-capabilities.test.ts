@@ -82,6 +82,12 @@ describe("admin navigation from current API permissions", () => {
     ["analytics.read", ["home"]],
     ["services.read", ["services"]],
     ["inventory.read", ["inventory"]],
+    // 2026-11 governance permissions.
+    ["finance.operate", ["disputes", "orders"]],
+    ["support.manage", ["disputes", "support"]],
+    ["services.manage", ["services"]],
+    ["audit.read", ["auditLog"]],
+    ["logistics.manage", []],
   ])("bounds %s to its current destinations", (permission, expected) => {
     expect(visible([permission as string])).toEqual(expected);
   });
@@ -110,6 +116,15 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toHaveLength(18);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
+  });
+
+  it("never shows the audit log to unrestricted admins without audit.read", () => {
+    expect(visible([], true)).not.toContain("auditLog");
+    expect(visible([], true)).not.toContain("accounts");
+    const superadmin = visible(["audit.read"], true, true);
+    expect(superadmin).toContain("auditLog");
+    expect(superadmin).toContain("accounts");
+    expect(superadmin).toContain("roles");
   });
 
   it("removes previously visible items on role update and revocation", () => {

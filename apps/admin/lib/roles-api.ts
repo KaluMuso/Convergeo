@@ -13,6 +13,8 @@ export const rolesApi = createApiClient({
 });
 
 export type AdminPermissions = {
+  /** The signed-in operator; used only to hide self-deactivation in the UI. */
+  user_id?: string;
   permissions: string[];
   can_manage_roles: boolean;
   unrestricted: boolean;
@@ -23,13 +25,18 @@ export type AdminRoleAssignment = { user_id: string; role: string };
 
 const PERMISSIONS = new Set([
   "finance.read",
+  "finance.operate",
   "events.manage",
   "products.manage",
   "services.read",
+  "services.manage",
   "vendors.manage",
   "ads.manage",
   "analytics.read",
   "inventory.read",
+  "support.manage",
+  "logistics.manage",
+  "audit.read",
 ]);
 
 export async function loadAdminPermissions(): Promise<AdminPermissions> {

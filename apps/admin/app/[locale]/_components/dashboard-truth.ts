@@ -60,6 +60,6 @@ export function isAnalyticsTrafficEmpty(data: DashboardData): boolean {
     data.gmv_ngwee === 0 &&
     isOrdersPipelineEmpty(data.orders_by_status) &&
     isFunnelEmpty(data.funnel) &&
-    isPayoutLiabilitiesEmpty(data.payout_liabilities)
+    (data.payout_liabilities === null || isPayoutLiabilitiesEmpty(data.payout_liabilities))
   );
 }

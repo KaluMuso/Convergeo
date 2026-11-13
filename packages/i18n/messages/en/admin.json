@@ -37,7 +37,9 @@
     "services": "Services",
     "inventory": "Inventory",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "Admin accounts",
+    "auditLog": "Audit log"
   },
   "hubs": {
     "moderation": {
@@ -850,9 +852,9 @@
     "metricsHeading": "Platform metrics",
     "metricsHint": "Catalog health, AI usage, and funnel snapshot.",
     "gmv": {
-      "title": "GMV",
-      "subtitle": "Gross merchandise value (non-cancelled orders)",
-      "empty": "K0.00 — no non-cancelled orders in the ledger-backed aggregate yet."
+      "title": "Order value (not cancelled)",
+      "subtitle": "Items plus delivery for every order that is not cancelled, paid or not. This is not money received or platform revenue.",
+      "empty": "K0.00 — no orders that are not cancelled yet."
     },
     "payoutLiabilities": {
       "title": "Payout liabilities",
@@ -935,7 +937,9 @@
       },
       "conversion": "{pct}%",
       "conversionAria": "{pct}% of checkouts started"
-    }
+    },
+    "financeWithheldTitle": "Finance figures hidden",
+    "financeWithheldBody": "Escrow held, payout liabilities and reconciliation need the finance.read permission. Ask a superadmin if your work needs them."
   },
   "disputes": {
     "title": "Disputes console",
@@ -1336,7 +1340,9 @@
     "emptyRoles": "No custom roles found.",
     "emptyAssignments": "No role assignments found.",
     "retry": "Try again",
-    "invalid": "Check the role key, name, permissions, and account UUID."
+    "invalid": "Check the role key, name, permissions, and account UUID.",
+    "deactivateHelp": "To deactivate an administrator, revoke all of their roles (or use Admin accounts → Deactivate). It takes effect on their next request. Their login is not deleted: they keep any customer or vendor access.",
+    "permissionsHelp": "finance.operate moves money (refunds, escrow, dispute decisions, cash on delivery). support.manage sees customers with masked phone numbers. audit.read is never implied by the admin role."
   },
   "oversightUi": {
     "services": "Services",
@@ -1679,5 +1685,58 @@
       },
       "zonePriceLine": "{label} {price}"
     }
+  },
+  "auditLogUi": {
+    "title": "Audit log",
+    "subtitle": "Every recorded admin action, newest first. Read-only: entries cannot be edited or deleted.",
+    "permissionDenied": "You need the audit.read permission to read the audit log.",
+    "filters": "Audit log filters",
+    "actor": "Actor account ID",
+    "action": "Action (end with a dot for a family, e.g. admin.orders.)",
+    "resource": "Resource type",
+    "resourceId": "Resource ID",
+    "outcome": "Outcome",
+    "outcomeAny": "Any outcome",
+    "outcomeSuccess": "Succeeded",
+    "outcomeDenied": "Refused",
+    "outcomeFailed": "Failed",
+    "from": "From date",
+    "to": "To date",
+    "apply": "Apply filters",
+    "reset": "Clear filters",
+    "maskingNote": "Phone numbers, emails, names, addresses and codes are masked.",
+    "loading": "Loading audit entries…",
+    "empty": "No audit entries match these filters.",
+    "loadFailed": "The audit log could not be loaded.",
+    "invalid": "Check the filters: IDs must be full account or record IDs.",
+    "when": "When: {at}",
+    "who": "Who: {actor} ({roles})",
+    "system": "system",
+    "noRoles": "no roles recorded",
+    "what": "What: {resource} {id}",
+    "reason": "Reason: {reason}",
+    "requestId": "Request {id}",
+    "details": "Before and after",
+    "more": "Load older entries"
+  },
+  "accountsUi": {
+    "title": "Admin accounts",
+    "subtitle": "Everyone who holds an admin role, with their name and email.",
+    "deactivateHelp": "Deactivate removes every admin role from the account at once and records your reason in the audit log. It works on their next request. The last superadmin cannot be removed, and you cannot deactivate yourself.",
+    "manageRolesLink": "Assign or revoke a single role",
+    "permissionDenied": "Only a superadmin can manage admin accounts.",
+    "loading": "Loading admin accounts…",
+    "loadFailed": "Admin accounts could not be loaded.",
+    "mutationFailed": "The account was not deactivated. Try again.",
+    "lastSuperadmin": "This is the last superadmin, so it cannot be deactivated.",
+    "retry": "Retry",
+    "empty": "No account holds an admin role.",
+    "noName": "No name on profile",
+    "noEmail": "No email on file",
+    "roles": "Roles: {roles}",
+    "selfNote": "This is your account.",
+    "reason": "Reason for deactivating (required)",
+    "deactivate": "Deactivate",
+    "confirmDeactivate": "Deactivate {name}? This removes these roles: {roles}."
   }
 }

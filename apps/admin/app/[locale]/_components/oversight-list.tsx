@@ -15,7 +15,11 @@ type Snapshot = {
 export function OversightList({ kind }: { kind: Kind }) {
   const t = useTranslations("admin.oversightUi");
   const grants = useAdminPermissions();
-  const allowed = !!grants && (grants.unrestricted || grants.permissions.includes(`${kind}.read`));
+  const allowed =
+    !!grants &&
+    (grants.unrestricted ||
+      grants.permissions.includes(`${kind}.read`) ||
+      (kind === "services" && grants.permissions.includes("services.manage")));
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [attempt, setAttempt] = useState(0);
 

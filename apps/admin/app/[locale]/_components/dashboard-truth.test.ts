@@ -124,4 +124,14 @@ describe("dashboard-truth", () => {
     expect(isAnalyticsTrafficEmpty(baseDashboard())).toBe(true);
     expect(isAnalyticsTrafficEmpty(baseDashboard({ gmv_ngwee: 5000 }))).toBe(false);
   });
+
+  it("treats withheld finance tiles (D3) as unknown, not as non-empty traffic", () => {
+    const withheld = baseDashboard({
+      payout_liabilities: null,
+      reconciliation: null,
+      finance_visible: false,
+    });
+    expect(isAnalyticsTrafficEmpty(withheld)).toBe(true);
+    expect(isAnalyticsTrafficEmpty({ ...withheld, gmv_ngwee: 1 })).toBe(false);
+  });
 });

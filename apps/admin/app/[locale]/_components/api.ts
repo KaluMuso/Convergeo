@@ -69,8 +69,11 @@ export type FunnelSnapshot = {
 export type DashboardData = {
   gmv_ngwee: number;
   orders_by_status: OrdersByStatus;
-  payout_liabilities: PayoutLiabilities;
-  reconciliation: ReconciliationTile;
+  /** Null when the caller lacks finance.read / finance.operate (D3). */
+  payout_liabilities: PayoutLiabilities | null;
+  reconciliation: ReconciliationTile | null;
+  /** False when the finance tiles were withheld for this caller. */
+  finance_visible?: boolean;
   counts: CatalogCounts;
   ai_usage: AiUsageTile;
   funnel: FunnelSnapshot;
