@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, act } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   emitToastKey,
+  loadToastView,
   TOAST_DEFAULT_DURATION_MS,
   TOAST_MAX_QUEUE,
   ToastProvider,
@@ -37,6 +38,11 @@ function MultiToastHarness({ count }: { count: number }) {
     </button>
   );
 }
+
+// The toast markup is an async chunk in production; resolve it once up front.
+beforeAll(async () => {
+  await loadToastView();
+});
 
 afterEach(() => {
   cleanup();
