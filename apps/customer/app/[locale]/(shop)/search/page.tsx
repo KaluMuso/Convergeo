@@ -388,7 +388,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     wishlistRemove: tCatalog("plp.card.wishlistRemove"),
     mediaEmpty: tCatalog("plp.card.mediaEmpty"),
     noReviews: tCatalog("plp.card.noReviews"),
-    reviewCount: tCatalog("plp.card.reviewCount"),
+    reviewCount: String(tCatalog.raw("plp.card.reviewCount")),
     productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),

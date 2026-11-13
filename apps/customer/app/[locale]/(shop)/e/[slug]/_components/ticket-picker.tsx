@@ -1,6 +1,5 @@
 "use client";
 
-import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
@@ -13,6 +12,8 @@ import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_li
 import { isPastEventInstance } from "../_lib/instance-time";
 import { buyerPlatformFeeNgwee, parsePlatformFeeBps } from "../_lib/platform-fee";
 import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
+
+import { ticketPurchaseErrorKey } from "./ticket-purchase-error";
 
 export type TicketPickerInstance = {
   id: string;
@@ -255,17 +256,7 @@ export function TicketPicker({
             "string"
             ? (payload as { error: { code: string; message: string } }).error
             : null;
-        if (apiError?.code === "tickets.oversell") {
-          setError(t("errors.oversell"));
-        } else if (apiError?.code === "tickets.attendee_names_required") {
-          setError(t("errors.attendeeNamesRequired"));
-        } else if (apiError?.code === "tickets.attendee_names_mismatch") {
-          setError(t("errors.attendeeNamesMismatch"));
-        } else if (apiError?.code === "promo_not_found") {
-          setError(t("errors.promoInvalid"));
-        } else {
-          setError(apiError?.message ?? t("errors.generic"));
-        }
+        setError(t(`errors.${ticketPurchaseErrorKey(apiError?.code)}`));
         return;
       }
 
@@ -281,12 +272,8 @@ export function TicketPicker({
       if (redirectTo) {
         window.location.assign(`/${locale}${redirectTo}`);
       }
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError(t("errors.generic"));
-      }
+    } catch {
+      setError(t("errors.generic"));
     } finally {
       setLoading(false);
     }

@@ -94,7 +94,7 @@
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
-      "message": "Lusaka delivery · Nationwide pickup · Escrow when you pay online"
+      "message": "Cash on delivery · Lusaka delivery · Nationwide pickup"
     },
     "merchPreview": {
       "banner": "Draft preview — merchandising changes are not live until you publish in admin."
@@ -237,6 +237,11 @@
         "newArrivals": "New arrivals",
         "trending": "Trending now",
         "topVendors": "Top vendors"
+      },
+      "stream": {
+        "title": "Popular now",
+        "loadMore": "Load more",
+        "moreLoaded": "{count} more items loaded."
       }
     }
   },

@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol, cast
 
 from app.errors import AppError
+from app.services.payouts.gate import assert_customer_refund_allowed
 from app.services.refunds.config import load_restocking_fee_bps
 from app.services.refunds.execute import RefundExecutionResult, execute_refund
 from app.services.refunds.math import compute_lane2_refund, normalize_restocking_fee_bps
@@ -366,6 +367,13 @@ def create_lane2_return(
             "customer_momo is required to execute lane-2 refund",
             422,
         )
+
+    # Payout kill switch: a lane-2 return immediately executes a customer refund.
+    # Refuse after read-only validation but before ANY write (return row, ledger,
+    # refund row, payout row).
+    assert_customer_refund_allowed(
+        surface="returns_lane2_create", details={"order_item_id": order_item_id}
+    )
 
     return_id = str(uuid.uuid4())
     fee_breakdown = breakdown.as_dict()

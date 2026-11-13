@@ -12,6 +12,7 @@ from app.routers.vendor_orders import (
     VendorActionName,
     _available_vendor_actions,
     _load_vendor_for_owner,
+    courier_dispatch_owns_shipping,
 )
 from app.schemas.base import StrictModel
 from fastapi import APIRouter, Depends, Query
@@ -244,6 +245,7 @@ def _build_queue_item(
     items: list[dict[str, Any]],
     now: datetime,
     paid_checkout_ids: set[str] | None = None,
+    courier_dispatch: bool = False,
 ) -> OrderQueueItem:
     order_id = str(order_row["id"])
     status = str(order_row["status"])
@@ -269,6 +271,7 @@ def _build_queue_item(
             fulfilment=fulfilment,
             paid=paid,
             cod=cod,
+            courier_dispatch=courier_dispatch and fulfilment == "delivery",
         ),
         urgency=compute_urgency(
             status=status,
@@ -327,12 +330,14 @@ def _build_dashboard(
         [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
     )
 
+    courier_dispatch = courier_dispatch_owns_shipping()
     queue_items = [
         _build_queue_item(
             order_row=row,
             items=items_by_order.get(str(row["id"]), []),
             now=now,
             paid_checkout_ids=paid_checkout_ids,
+            courier_dispatch=courier_dispatch,
         )
         for row in order_rows
     ]
@@ -389,10 +394,7 @@ def list_vendor_orders_queue(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     all_orders_response = (
         service_client.client.table("orders")
-        .select(
-            "id, status, fulfilment, delivery_fee_ngwee, created_at, "
-            "cod, checkout_group_id"
-        )
+        .select("id, status, fulfilment, delivery_fee_ngwee, created_at, cod, checkout_group_id")
         .eq("vendor_id", str(vendor["id"]))
         .order("created_at", desc=True)
         .execute()
@@ -405,12 +407,14 @@ def list_vendor_orders_queue(
         [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
     )
     now = datetime.now(tz=UTC)
+    courier_dispatch = courier_dispatch_owns_shipping()
     queue_items = [
         _build_queue_item(
             order_row=row,
             items=items_by_order.get(str(row["id"]), []),
             now=now,
             paid_checkout_ids=paid_checkout_ids,
+            courier_dispatch=courier_dispatch,
         )
         for row in order_rows
     ]

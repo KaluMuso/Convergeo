@@ -61,7 +61,7 @@
     },
     "serviceBar": {
       "ariaLabel": "Zambiri za delivery ndi pickup",
-      "message": "Delivery ku Lusaka · Pickup nationwide · Escrow mukalipira online"
+      "message": "Cash on delivery · Delivery ku Lusaka · Pickup nationwide"
     },
     "rails": {
       "departmentTitle": "Zatsopano mu {category}",
@@ -127,6 +127,11 @@
         "newArrivals": "New arrivals",
         "trending": "Trending now",
         "topVendors": "Top vendors"
+      },
+      "stream": {
+        "title": "Popular now",
+        "loadMore": "Load more",
+        "moreLoaded": "{count} more items loaded."
       }
     }
   },

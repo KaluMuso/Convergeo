@@ -6,16 +6,18 @@ import {
   NetworkOnly,
   StaleWhileRevalidate,
 } from "serwist";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   cacheRules,
   isNeverCacheRoute,
+  isPublicApiRequest,
   isWalletApi,
   isWalletPage,
   runtimeCaching,
   SW_UPDATE_POLICY,
 } from "./sw";
+import { CLEAR_USER_CACHES_MESSAGE, USER_CACHE_NAMES } from "./lib/clear-user-caches";
 
 const APP_ORIGIN = "https://vergeo5.com";
 const API_ORIGIN = "https://api.vergeo5.com";
@@ -27,6 +29,7 @@ beforeAll(() => {
 
 type MatchOpts = {
   origin?: string;
+  headers?: Record<string, string>;
   destination?: string;
   method?: string;
   sameOrigin?: boolean;
@@ -38,9 +41,10 @@ function matchingRules(pathname: string, opts: MatchOpts = {}) {
     destination = "",
     method = "GET",
     sameOrigin = origin === APP_ORIGIN,
+    headers = {},
   } = opts;
   const url = new URL(pathname, origin);
-  const request = { destination, method } as unknown as Request;
+  const request = { destination, method, headers: new Headers(headers) } as unknown as Request;
   const param = { url, request, sameOrigin } as unknown as Parameters<
     (typeof cacheRules)[number]["matcher"]
   >[0];
@@ -169,5 +173,83 @@ describe("service-worker runtime-cache rules", () => {
   it("SAFE update lifecycle: no silent skip-waiting / clients-claim", () => {
     expect(SW_UPDATE_POLICY.skipWaiting).toBe(false);
     expect(SW_UPDATE_POLICY.clientsClaim).toBe(false);
+  });
+
+  describe("privacy: per-user API responses are never cached", () => {
+    it("per-user API GETs match only the NetworkOnly api-private rule", () => {
+      for (const path of [
+        "/me/profile",
+        "/cart",
+        "/orders",
+        "/account/orders",
+        "/wishlist",
+        "/notifications",
+        "/notifications/unread-count",
+        "/support/tickets",
+      ]) {
+        const matched = matchingRules(path, { origin: API_ORIGIN });
+        expect(matched.map((r) => r.name)).toEqual(["api-private"]);
+        expect(matched[0]?.handler).toBeInstanceOf(NetworkOnly);
+      }
+    });
+
+    it("allowlisted public GETs stay cacheable (api, NetworkFirst) when anonymous", () => {
+      for (const path of [
+        "/catalog/listings?limit=3",
+        "/search?q=phone",
+        "/search/suggest?q=ite",
+        "/categories",
+        "/directory",
+        "/discovery/trending",
+        "/public/config/storefront",
+        "/home/feed",
+      ]) {
+        expect(firstRuleName(path, { origin: API_ORIGIN })).toBe("api");
+      }
+      expect(ruleByName("api").handler).toBeInstanceOf(NetworkFirst);
+    });
+
+    it("an Authorization header or wholesale flag forces NetworkOnly even on public paths", () => {
+      const auth = { origin: API_ORIGIN, headers: { Authorization: "Bearer x" } };
+      expect(firstRuleName("/home/feed", auth)).toBe("api-private");
+      expect(firstRuleName("/catalog/listings", auth)).toBe("api-private");
+      expect(firstRuleName("/catalog/listings?wholesale=true", { origin: API_ORIGIN })).toBe(
+        "api-private",
+      );
+    });
+
+    it("non-GET API calls are never routed to the cache rule", () => {
+      expect(firstRuleName("/catalog/listings", { origin: API_ORIGIN, method: "POST" })).not.toBe(
+        "api",
+      );
+      expect(
+        isPublicApiRequest(new URL("/search", API_ORIGIN), {
+          method: "POST",
+          headers: new Headers(),
+        }),
+      ).toBe(false);
+    });
+
+    it("sign-out purges every per-user cache name", async () => {
+      expect([...USER_CACHE_NAMES]).toEqual(
+        expect.arrayContaining(["api-v1", "ticket-wallet-api-v1", "ticket-wallet-pages-v1"]),
+      );
+      const deleted: string[] = [];
+      const posted: unknown[] = [];
+      vi.stubGlobal("caches", {
+        delete: async (name: string) => {
+          deleted.push(name);
+          return true;
+        },
+      });
+      vi.stubGlobal("navigator", {
+        serviceWorker: { controller: { postMessage: (m: unknown) => posted.push(m) } },
+      });
+      const { clearUserCaches } = await import("./lib/clear-user-caches");
+      await clearUserCaches();
+      expect(deleted.sort()).toEqual([...USER_CACHE_NAMES].sort());
+      expect(posted).toEqual([{ type: CLEAR_USER_CACHES_MESSAGE }]);
+      vi.unstubAllGlobals();
+    });
   });
 });

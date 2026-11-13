@@ -11,6 +11,7 @@ import { VendorErrorState } from "../../../_components/async-state";
 import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
+import { ListingTipsPanel } from "../../_components/listing-guide";
 import { createListingClient } from "../_lib/listing-client";
 import { Spinner, Switch, Tabs } from "../_lib/ui";
 
@@ -129,7 +130,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     () => ({
       heading: t("listings.commission.heading"),
       body: t("listings.commission.body"),
-      rate: t("listings.commission.rate"),
+      rate: String(t.raw("listings.commission.rate")),
     }),
     [t],
   );
@@ -360,6 +361,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <h1 className="font-display text-h3 text-display-ink">{t("listings.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
+
+      <ListingTipsPanel defaultOpen />
 
       {!kycApproved ? (
         <div

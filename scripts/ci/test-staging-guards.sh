@@ -1027,8 +1027,12 @@ fi
 # The moment a spec DOES navigate the admin origin, this guard demands the
 # matching preflight rather than letting admin ride along unproven.
 if grep -rqE '\bADMIN_BASE_URL\b' e2e/specs; then
-  if grep -q 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml; then
-    ok "a spec navigates the admin origin and the admin preflight exists"
+  e2e_probe_admin_line="$(grep -n 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+  if [[ -n "${e2e_probe_admin_line}" && -n "${e2e_install_line}" \
+    && "${e2e_probe_admin_line}" -lt "${e2e_install_line}" ]]; then
+    ok "a spec navigates the admin origin and the admin preflight runs before Playwright install"
+  elif [[ -n "${e2e_probe_admin_line}" ]]; then
+    bad "the admin preflight must run before the Playwright install step"
   else
     bad "a spec now navigates ADMIN_BASE_URL — add an admin preflight to e2e.yml and PORTALS"
   fi
@@ -1060,9 +1064,14 @@ else
   bad "requireVendorBaseUrl must fail closed when E2E_VENDOR_BASE_URL is unset or collapses onto the customer origin"
 fi
 
-# The probe registry stays limited to portals a spec actually navigates.
-if grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs; then
+# The probe registry stays limited to portals a spec actually navigates:
+# admin is registered if and only if a spec navigates the admin origin.
+admin_navigated=false
+if grep -rqE '\bADMIN_BASE_URL\b' e2e/specs; then admin_navigated=true; fi
+if grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs && [[ "${admin_navigated}" != true ]]; then
   bad "e2e-staging-probe registers an admin portal that nothing navigates"
+elif [[ "${admin_navigated}" == true ]] && ! grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs; then
+  bad "a spec navigates ADMIN_BASE_URL but e2e-staging-probe has no admin portal"
 elif grep -q 'customer:' scripts/ci/e2e-staging-probe.mjs \
   && grep -q 'vendor:' scripts/ci/e2e-staging-probe.mjs; then
   ok "e2e-staging-probe registers exactly the directly-navigated portals"

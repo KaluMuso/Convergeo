@@ -2003,6 +2003,10 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # 20261113071000: per-item stock consumption ledger for cancel-time release.
+    # REVOKE ALL from anon/authenticated, service_role only; written by the
+    # SECURITY DEFINER release_cancelled_order_stock() trigger and the order path.
+    "order_item_stock_consumption": client_invisible(),
     "order_item_tickets": {
         Persona.ANON: {
             "select": "deny",

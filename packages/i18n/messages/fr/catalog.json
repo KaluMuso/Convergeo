@@ -94,7 +94,7 @@
     },
     "serviceBar": {
       "ariaLabel": "Informations sur la livraison et le retrait",
-      "message": "Livraison à Lusaka · Retrait national · Séquestre lorsque vous payez en ligne"
+      "message": "Paiement à la livraison · Livraison à Lusaka · Retrait national"
     },
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
@@ -234,6 +234,11 @@
         "newArrivals": "Nouveautés",
         "trending": "Tendances",
         "topVendors": "Meilleurs vendeurs"
+      },
+      "stream": {
+        "title": "Populaire en ce moment",
+        "loadMore": "Voir plus",
+        "moreLoaded": "{count} articles de plus chargés."
       }
     }
   },

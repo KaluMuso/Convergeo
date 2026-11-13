@@ -6,6 +6,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -52,7 +53,26 @@ export type PaymentStepLabels = {
   error: string;
   /** Shown when the API payment kill-switch blocks momo/card initiation. */
   paymentsDisabled: string;
+  /** UX pass 4 — plain-language COD explainer. Templates use {amount} / {cap} / {total}. */
+  codGuide?: PaymentCodGuideLabels;
 };
+
+export type PaymentCodGuideLabels = {
+  title: string;
+  step1: string;
+  step2: string;
+  step3: string;
+  capNote: string;
+  overCap: string;
+  editCart: string;
+};
+
+function fill(template: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.split(`{${key}}`).join(value),
+    template,
+  );
+}
 
 export type PaymentOptions = {
   session_id: string;
@@ -61,6 +81,12 @@ export type PaymentOptions = {
   total_ngwee: number;
   cod_cap_ngwee: number;
   cod_eligible: boolean;
+  /**
+   * Methods the API will accept right now: momo/card only while the payment
+   * kill switch is on, cod only when the total is within the cap. Absent on an
+   * older API, in which case every method is shown as before.
+   */
+  available_methods?: PaymentMethod[];
 };
 
 export type ValidatedPayment = {
@@ -125,8 +151,13 @@ export function StepPayment({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(!preset);
-  const offers = (candidate: PaymentMethod) =>
-    preset ? (preset.methods as ReadonlyArray<PaymentMethod>).includes(candidate) : true;
+  // Never offer a method the API has said it will refuse: with online payments
+  // switched off a buyer must not be walked through a MoMo or card form first.
+  const offered: ReadonlyArray<PaymentMethod> | null = preset
+    ? (preset.methods as ReadonlyArray<PaymentMethod>)
+    : (options?.available_methods ?? null);
+  const offers = (candidate: PaymentMethod) => (offered ? offered.includes(candidate) : true);
+  const nothingOffered = offered !== null && offered.length === 0;
 
   useEffect(() => {
     if (preset) {
@@ -145,7 +176,13 @@ export function StepPayment({
         );
         if (!cancelled) {
           setOptions(response);
-          if (!response.cod_eligible && method === "cod") {
+          const available = response.available_methods;
+          if (available) {
+            const first = available[0];
+            if (first && !available.includes(method)) {
+              setMethod(first);
+            }
+          } else if (!response.cod_eligible && method === "cod") {
             setMethod("momo");
           }
         }
@@ -288,6 +325,8 @@ export function StepPayment({
   const codCapFormatted = formatK(options.cod_cap_ngwee, {
     locale: `${locale}-ZM`,
   });
+  const totalFormatted = formatK(options.total_ngwee, { locale: `${locale}-ZM` });
+  const codGuide = labels.codGuide;
 
   return (
     <div className="space-y-5">
@@ -367,22 +406,53 @@ export function StepPayment({
               ) : null}
             </div>
             <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.codHelp}</p>
+            {codGuide && method === "cod" ? (
+              <div
+                className="mt-3 space-y-2 rounded-md bg-bg-2 px-3 py-3"
+                data-testid="checkout-cod-guide"
+              >
+                <p className="font-body text-sm font-semibold text-text">{codGuide.title}</p>
+                <ul className="list-disc space-y-1 pl-5 font-body text-sm text-text-2">
+                  <li>{codGuide.step1}</li>
+                  <li>{fill(codGuide.step2, { amount: totalFormatted })}</li>
+                  <li>{codGuide.step3}</li>
+                </ul>
+                <p className="font-body text-xs text-text-3">
+                  {fill(codGuide.capNote, { cap: codCapFormatted })}
+                </p>
+              </div>
+            ) : null}
           </MethodOption>
         ) : (
           <div
             className="rounded-card border border-dashed border-border bg-bg-2 p-4"
             data-testid="checkout-cod-unavailable"
-            aria-disabled="true"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-body text-sm font-semibold text-text-3">{labels.cod}</p>
                 <p className="mt-1 font-body text-sm font-medium text-text">
                   {labels.codUnavailableTitle}
                 </p>
-                <p className="mt-1 font-body text-sm text-text-3">
+                <p className="mt-1 font-body text-sm text-text-2">
                   {labels.codIneligible(codCapFormatted)}
                 </p>
+                {codGuide ? (
+                  <>
+                    <p className="mt-2 font-body text-sm text-text-2">
+                      {fill(codGuide.overCap, {
+                        total: totalFormatted,
+                        cap: codCapFormatted,
+                      })}
+                    </p>
+                    <Link
+                      href={`/${locale}/cart`}
+                      className="mt-1 inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+                    >
+                      {codGuide.editCart}
+                    </Link>
+                  </>
+                ) : null}
               </div>
               <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-text-3">
                 {labels.unavailable}
@@ -392,7 +462,7 @@ export function StepPayment({
         )}
       </div>
 
-      {method === "momo" ? (
+      {method === "momo" && offers("momo") ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={labels.momo}>
             <PaymentRailChoice
@@ -422,14 +492,18 @@ export function StepPayment({
             requiredMarker="*"
             asGroup
           >
-            <div className="flex gap-2">
-              <Input
-                size="lg"
-                className="w-24 shrink-0 text-center font-mono"
-                value={DEFAULT_COUNTRY_CODE}
-                readOnly
-                aria-label={labels.countryCode}
-              />
+            {/* Input carries `w-full` from field styles, which beats `w-24` in the
+                generated CSS — size the prefix via a wrapper so the row fits 360px. */}
+            <div className="flex min-w-0 gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  size="lg"
+                  className="text-center font-mono"
+                  value={DEFAULT_COUNTRY_CODE}
+                  readOnly
+                  aria-label={labels.countryCode}
+                />
+              </div>
               <Input
                 size="lg"
                 className="min-w-0 flex-1 font-mono"
@@ -450,7 +524,7 @@ export function StepPayment({
         </div>
       ) : null}
 
-      {method === "card" ? (
+      {method === "card" && offers("card") ? (
         <div className="rounded-card border border-border bg-bg-2 px-4 py-3">
           <p className="font-body text-sm text-text-2">{labels.cardExplainer}</p>
         </div>
@@ -471,7 +545,7 @@ export function StepPayment({
         <span ref={errorRef} className="sr-only" aria-hidden="true" />
       ) : null}
 
-      {preset && preset.methods.length === 0 ? (
+      {nothingOffered ? (
         <p
           role="alert"
           className="font-body text-sm text-danger"

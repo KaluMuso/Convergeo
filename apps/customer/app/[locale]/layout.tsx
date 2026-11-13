@@ -290,9 +290,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                     appName={appName}
                     copyright={tLegal("footer.copyright", { year, appName })}
                     columns={footerColumns}
-                    paymentNote={tLegal("footer.paymentNote")}
+                    paymentNote={tCommon("paymentTrust.footerPaymentNote")}
                     tagline={tCommon("meta.defaultDescription")}
-                    sealLabel={tCheckout("checkout.review.escrowStep2")}
+                    // Pilot is cash on delivery only: no escrow claim site-wide.
+                    sealLabel={tCommon("paymentTrust.footerSeal")}
                     LinkComponent={Link}
                     trailing={
                       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">

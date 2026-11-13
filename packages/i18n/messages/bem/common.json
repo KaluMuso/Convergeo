@@ -105,5 +105,9 @@
     "close": "Close",
     "showFooter": "Show site links",
     "hideFooter": "Hide site links"
+  },
+  "paymentTrust": {
+    "footerSeal": "Lipileni mu cash ilyo order yafika",
+    "footerPaymentNote": "Cash on delivery · Ukulipila pa intaneti kukesa"
   }
 }

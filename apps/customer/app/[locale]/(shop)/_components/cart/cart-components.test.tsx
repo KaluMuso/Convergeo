@@ -95,7 +95,9 @@ describe("checkout.cart i18n", () => {
     expect(checkoutMessages.cart.title).toBeTruthy();
     expect(checkoutMessages.cart.noticePriceChanged).toContain("{oldPrice}");
     expect(checkoutMessages.cart.freeDeliveryProgress).toContain("{threshold}");
-    expect(checkoutMessages.cart.emptyTrustEscrow).toContain("Convergeo");
+    // Pilot is COD-first: never claim online payment/escrow is active here.
+    expect(checkoutMessages.cart.emptyTrustEscrow).toMatch(/cash/i);
+    expect(checkoutMessages.cart.emptyTrustEscrow).not.toMatch(/held by/i);
     expect(checkoutMessages.cart.emptyTrustDelivery.toLowerCase()).toContain("lusaka");
     expect(checkoutMessages.cart.emptyTrustPickup.toLowerCase()).toContain("pickup");
   });
@@ -311,7 +313,8 @@ describe("cart presentation i18n", () => {
     expect(checkoutMessages.cart.loadErrorTitle).toBeTruthy();
     expect(checkoutMessages.cart.loadErrorRetry).toBeTruthy();
     expect(checkoutMessages.cart.multiSellerNote.toLowerCase()).toContain("different");
-    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).toContain("holds");
+    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).toContain("cash on delivery");
+    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).not.toContain("holds");
     expect(checkoutMessages.cart.summaryHeading).toBeTruthy();
   });
 });

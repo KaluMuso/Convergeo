@@ -29,10 +29,13 @@ export function HomeFeedLoader({
   initialCursor,
   locale,
   labels,
+  hideEnd = false,
 }: {
   initialCursor: string | null;
   locale: string;
   labels: FeedLabels;
+  /** True when a listing stream follows: it owns the single end-of-feed message. */
+  hideEnd?: boolean;
 }) {
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [sections, setSections] = useState<FeedSection[]>([]);
@@ -119,7 +122,7 @@ export function HomeFeedLoader({
             </button>
           </div>
         ) : null}
-        {status === "done" ? (
+        {status === "done" && !hideEnd ? (
           <p className="py-4 text-center text-sm text-muted" data-testid="home-feed-end">
             {labels.end}
           </p>

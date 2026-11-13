@@ -50,6 +50,8 @@ type PageProps = {
 
 type SuppliesTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
 };
 
 async function getSuppliesTranslator(locale: string): Promise<SuppliesTranslator> {
@@ -257,7 +259,7 @@ export default async function SuppliesPage({ params, searchParams }: PageProps) 
   );
 
   const labels = {
-    vendor: t("card.vendor"),
+    vendor: String(t.raw("card.vendor")),
     quantityLabel: t("card.quantityLabel"),
     decrease: t("card.decrease"),
     increase: t("card.increase"),
@@ -267,9 +269,9 @@ export default async function SuppliesPage({ params, searchParams }: PageProps) 
     viewListing: t("card.viewListing"),
     tierQuantityHeader: t("tier.quantityHeader"),
     tierPriceHeader: t("tier.priceHeader"),
-    moqBadge: t("moq.badge"),
+    moqBadge: String(t.raw("moq.badge")),
     moqTableLabel: t("moq.tableLabel"),
-    previewLine: t("preview.line"),
+    previewLine: String(t.raw("preview.line")),
   };
 
   return (

@@ -19,8 +19,8 @@ By querying Postgres directly afterwards it asserts the container:
   HTTP request body all the way to the trigger, so a correct assertion proves the
   whole path end-to-end inside the container;
 * **required ledger/commission entries posted** — ``cod_collected`` +
-  ``commission_capture`` + ``release_to_vendor`` (preceded by the order-time COD
-  receivable), each double-entry balanced;
+  ``commission_capture`` + ``delivery_fee_capture`` + ``release_to_vendor``
+  (preceded by the order-time COD receivable), each double-entry balanced;
 * **order/escrow state consistent** — escrow nets back to zero and the order is
   ``completed``.
 
@@ -85,6 +85,8 @@ COMMISSION_ID = "c3000000-0000-0000-0000-000000000003"
 FEES_ID = "c4000000-0000-0000-0000-000000000004"
 VENDOR_PAYABLE_ID = "c5000000-0000-0000-0000-000000000005"
 COD_RECEIVABLE_ID = "c6000000-0000-0000-0000-000000000006"
+# Seeded by migration 20261113120500 (deterministic platform account id).
+DELIVERY_REVENUE_ID = "c7000000-0000-0000-0000-000000000007"
 
 CHECKOUT_GROUP_ID = "c0000000-0000-0000-0000-0000000000c0"
 ORDER_ID = "0d000000-0000-0000-0000-00000000000d"
@@ -101,7 +103,9 @@ DELIVERY_FEE_NGWEE = 20_000
 COLLECTABLE_NGWEE = SUBTOTAL_NGWEE + DELIVERY_FEE_NGWEE  # 200_000
 RATE_BPS = 500
 COMMISSION_NGWEE = (SUBTOTAL_NGWEE * RATE_BPS) // 10_000  # 9_000
-NET_VENDOR_NGWEE = COLLECTABLE_NGWEE - COMMISSION_NGWEE  # 191_000
+# The delivery fee is platform revenue (the platform books and pays the courier),
+# so the vendor nets the items less commission only.
+NET_VENDOR_NGWEE = COLLECTABLE_NGWEE - COMMISSION_NGWEE - DELIVERY_FEE_NGWEE  # 171_000
 
 # Distinctive note so the assertion proves it round-trips: HTTP body -> app.order_note
 # GUC -> 0014 audit trigger -> order_events.note, all inside the container transaction.
@@ -603,6 +607,7 @@ def assert_persisted_outcome(dsn: str) -> None:
         "vendor_payable": (VENDOR_PAYABLE_ID, -NET_VENDOR_NGWEE),
         "cod_receivable": (COD_RECEIVABLE_ID, 0),
         "escrow": (ESCROW_ID, 0),
+        "delivery_revenue": (DELIVERY_REVENUE_ID, -DELIVERY_FEE_NGWEE),
     }
     for label, (account_id, want) in balances.items():
         got = int(
@@ -617,7 +622,8 @@ def assert_persisted_outcome(dsn: str) -> None:
     log(
         "ledger balances correct: platform_cash +"
         f"{COLLECTABLE_NGWEE}, commission_revenue -{COMMISSION_NGWEE}, "
-        f"vendor_payable -{NET_VENDOR_NGWEE}, cod_receivable 0"
+        f"vendor_payable -{NET_VENDOR_NGWEE}, delivery_revenue -{DELIVERY_FEE_NGWEE}, "
+        "cod_receivable 0"
     )
 
     # 4) order/escrow state consistent: escrow nets to zero (asserted above), order done.

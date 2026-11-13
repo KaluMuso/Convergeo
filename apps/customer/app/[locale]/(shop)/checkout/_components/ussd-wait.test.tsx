@@ -121,6 +121,7 @@ const pendingLabels: PendingLabels = {
   ticketUnavailableBody: pendingMessages.ticketUnavailableBody,
   ussd: ussdLabels,
   failed: failedLabels,
+  codConfirmation: pendingMessages.cod,
 };
 
 function statusPayload(overrides: Partial<PaymentStatusPayload> = {}): PaymentStatusPayload {
@@ -297,7 +298,33 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
 
     await screen.findByTestId("payment-cod");
     expect(screen.queryByTestId("payment-confirming")).toBeNull();
-    // The COD hand-off is the pre-existing 2.5s timer, not an immediate jump.
+    // UX pass 4: COD stays on its confirmation (no auto-redirect) so the buyer
+    // can read the order number and next steps.
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("COD confirmation shows the order number, amount due and what happens next", async () => {
+    const { replace } = renderPendingShell(
+      statusPayload({
+        status: "pending",
+        cod: true,
+        order_id: "a1b2c3d4-0000-0000-0000-000000000000",
+      }),
+    );
+
+    await screen.findByTestId("payment-cod");
+    expect(screen.getByTestId("payment-cod-order-number")).toHaveTextContent("A1B2C3D4");
+    const steps = screen.getByTestId("payment-cod-next-steps");
+    expect(steps).toHaveTextContent(pendingMessages.cod.step1Title);
+    expect(steps).toHaveTextContent(pendingMessages.cod.step2Title);
+    expect(steps).toHaveTextContent(pendingMessages.cod.step3Body.replace("{amount}", "K250.00"));
+    expect(screen.getByRole("link", { name: pendingMessages.cod.contactCta })).toHaveAttribute(
+      "href",
+      "/en/contact",
+    );
+    // Honesty: COD never claims an online payment happened.
+    expect(screen.queryByText(/you paid|held by/i)).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 2700));
     expect(replace).not.toHaveBeenCalled();
   });
 

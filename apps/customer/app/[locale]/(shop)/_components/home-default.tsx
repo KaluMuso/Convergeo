@@ -12,7 +12,7 @@ import {
   vendorTrustForCard,
   type VendorLadderLabels,
 } from "./directory/vendor-ladder-labels";
-import { HomeHeroCarousel } from "./home-hero-carousel";
+import { HomeHeroCarousel } from "./home-hero-carousel-lazy";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { AdCreative } from "./home-feed/feed-types";

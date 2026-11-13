@@ -73,6 +73,29 @@ export default async function OtpPage({ params, searchParams }: PageProps) {
         nextParam={next}
       />
 
+      <details
+        className="group rounded-card border border-border bg-surface px-4 py-3"
+        data-testid="otp-help"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center font-body text-sm font-semibold text-text focus-visible:outline-none focus-visible:shadow-focusRing">
+          {t("otp.help.title")}
+        </summary>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 font-body text-sm text-text-2">
+          <li>{t("otp.help.checkNumber")}</li>
+          <li>{t("otp.help.wait")}</li>
+          <li>{t("otp.help.resend")}</li>
+          <li>
+            {t("otp.help.support")}{" "}
+            <Link
+              href={`/${locale}/contact`}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {t("otp.help.supportCta")}
+            </Link>
+          </li>
+        </ul>
+      </details>
+
       <Link href={`/${locale}/login`} className="sr-only">
         {t("otp.changePhone")}
       </Link>
