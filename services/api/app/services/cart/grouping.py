@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+# Retired 2026-11-13 (logistics phase 1): per-vendor "free delivery above K200"
+# is no longer applied anywhere. Kept only for imports; group_by_vendor defaults
+# to no per-vendor free delivery. See app.services.logistics.delivery_pricing.
 FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000
 
 
@@ -42,7 +45,7 @@ class VendorGroupView:
 def group_by_vendor(
     lines: list[CartLineView],
     *,
-    free_delivery_threshold_ngwee: int = FREE_DELIVERY_THRESHOLD_NGEWEE,
+    free_delivery_threshold_ngwee: int | None = None,
 ) -> list[VendorGroupView]:
     """Group cart lines by vendor with per-group subtotal and delivery eligibility."""
     by_vendor: dict[str, list[CartLineView]] = {}
@@ -58,7 +61,11 @@ def group_by_vendor(
                 vendor_id=vendor_id,
                 items=items,
                 subtotal_ngwee=subtotal,
-                delivery_eligible=subtotal >= free_delivery_threshold_ngwee,
+                delivery_eligible=(
+                    free_delivery_threshold_ngwee is not None
+                    and free_delivery_threshold_ngwee > 0
+                    and subtotal >= free_delivery_threshold_ngwee
+                ),
             )
         )
     return groups

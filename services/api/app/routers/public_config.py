@@ -17,8 +17,8 @@ from decimal import Decimal
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
-from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
 from app.schemas.base import StrictModel
+from app.services.logistics.delivery_pricing import DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
 from fastapi import APIRouter, Depends, Response
 from pydantic import Field
 
@@ -108,6 +108,7 @@ async def get_public_commission_rates(
 
 PUBLIC_STOREFRONT_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=60"
 FREE_DELIVERY_THRESHOLD_KEY = "free_delivery_threshold_ngwee"
+AUTO_FREE_DELIVERY_THRESHOLD_KEY = "auto_free_delivery_threshold_ngwee"
 LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
 # Mirrors the default used by the low-stock n8n job (internal_n8n.py).
 DEFAULT_LOW_STOCK_THRESHOLD = 5
@@ -115,6 +116,8 @@ DEFAULT_LOW_STOCK_THRESHOLD = 5
 
 class PublicStorefrontConfigResponse(StrictModel):
     free_delivery_threshold_ngwee: int = Field(ge=0)
+    #: Retail basket at/above which delivery is free automatically (< 500 kg).
+    auto_free_delivery_threshold_ngwee: int = Field(ge=0)
     low_stock_threshold: int = Field(ge=0)
 
 
@@ -143,8 +146,11 @@ async def get_public_storefront_config(
     client = service_client.client
     response.headers["Cache-Control"] = PUBLIC_STOREFRONT_CACHE_CONTROL
     return PublicStorefrontConfigResponse(
-        free_delivery_threshold_ngwee=_read_config_int(
-            client, FREE_DELIVERY_THRESHOLD_KEY, DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+        # Per-vendor "free delivery above K200" is retired (logistics phase 1):
+        # 0 tells the cart to show no per-vendor free-delivery progress.
+        free_delivery_threshold_ngwee=0,
+        auto_free_delivery_threshold_ngwee=_read_config_int(
+            client, AUTO_FREE_DELIVERY_THRESHOLD_KEY, DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
         ),
         low_stock_threshold=_read_config_int(
             client, LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD

@@ -223,25 +223,36 @@ def test_storefront_config_returns_platform_config_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client = _storefront_client(
-        monkeypatch, {"free_delivery_threshold_ngwee": 35_000, "low_stock_threshold": "8"}
+        monkeypatch,
+        {
+            "free_delivery_threshold_ngwee": 35_000,
+            "auto_free_delivery_threshold_ngwee": 2_000_000,
+            "low_stock_threshold": "8",
+        },
     )
     response = client.get("/public/config/storefront")
 
     assert response.status_code == 200
-    assert response.json() == {"free_delivery_threshold_ngwee": 35_000, "low_stock_threshold": 8}
+    # The per-vendor K200 rule is retired: a stale config row never re-enables it.
+    assert response.json() == {
+        "free_delivery_threshold_ngwee": 0,
+        "auto_free_delivery_threshold_ngwee": 2_000_000,
+        "low_stock_threshold": 8,
+    }
     assert "s-maxage" in response.headers.get("cache-control", "")
 
 
 def test_storefront_config_defaults_match_server_enforcement(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
     from app.routers.internal_n8n import _DEFAULT_LOW_STOCK_THRESHOLD
+    from app.services.logistics.delivery_pricing import DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
 
     client = _storefront_client(monkeypatch, {})
     body = client.get("/public/config/storefront").json()
 
-    assert body["free_delivery_threshold_ngwee"] == DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+    assert body["free_delivery_threshold_ngwee"] == 0
+    assert body["auto_free_delivery_threshold_ngwee"] == DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
     assert body["low_stock_threshold"] == _DEFAULT_LOW_STOCK_THRESHOLD
 
 
@@ -251,4 +262,8 @@ def test_storefront_config_ignores_malformed_values(monkeypatch: pytest.MonkeyPa
     )
     body = client.get("/public/config/storefront").json()
 
-    assert body == {"free_delivery_threshold_ngwee": 20_000, "low_stock_threshold": 5}
+    assert body == {
+        "free_delivery_threshold_ngwee": 0,
+        "auto_free_delivery_threshold_ngwee": 1_500_000,
+        "low_stock_threshold": 5,
+    }

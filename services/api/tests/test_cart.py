@@ -790,7 +790,7 @@ class TestCartReadPathWholesaleVisibility:
 
 
 class TestGroupingAndTotals:
-    def test_group_delivery_eligible_at_threshold(self) -> None:
+    def test_group_delivery_eligible_only_with_explicit_threshold(self) -> None:
         line = CartLineView(
             id="line-1",
             listing_id=LISTING_RETAIL,
@@ -803,8 +803,13 @@ class TestGroupingAndTotals:
         )
         groups = group_by_vendor([line])
         assert len(groups) == 1
-        assert groups[0].delivery_eligible is True
+        # Per-vendor free delivery is retired: the cart never promises it by default.
+        assert groups[0].delivery_eligible is False
         assert groups[0].subtotal_ngwee == FREE_DELIVERY_THRESHOLD_NGEWEE
+        explicit = group_by_vendor(
+            [line], free_delivery_threshold_ngwee=FREE_DELIVERY_THRESHOLD_NGEWEE
+        )
+        assert explicit[0].delivery_eligible is True
 
     def test_cart_subtotal_integer_ngwee(self) -> None:
         assert cart_subtotal_ngwee([(2, 10_000), (3, 5_000)]) == 35_000

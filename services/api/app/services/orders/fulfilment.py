@@ -16,6 +16,7 @@ from typing import Any
 
 from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
+from app.services.logistics.delivery_pricing import GroupDeliveryPrice
 from app.services.orders.create import CartLineInput, Fulfilment, VendorFulfilmentInput
 
 FULFILMENT_NOT_CONFIRMED = "orders.fulfilment_not_confirmed"
@@ -95,12 +96,15 @@ def authoritative_vendor_groups(
     declared_groups: Sequence[DeclaredGroup],
     address_zone: str | None,
     compute_fee: Callable[[int, str | None], int],
+    pricing: Mapping[str, GroupDeliveryPrice] | None = None,
 ) -> list[VendorFulfilmentInput]:
     """Recompute every vendor group server-side; refuse a request that disagrees.
 
     ``address_zone`` is the zone of the order's delivery address under today's
     rules (``None`` when no delivery group exists). ``compute_fee`` prices one
-    group from its cart-derived subtotal and zone.
+    group from its cart-derived subtotal and zone. ``pricing`` (logistics
+    phase 1) carries who pays delivery per vendor; when given, the customer fee
+    and funding come from it so both checkout steps agree byte for byte.
     """
     subtotals: dict[str, int] = {}
     for line in cart_lines:
@@ -129,10 +133,12 @@ def authoritative_vendor_groups(
                 # The saved address no longer prices into the zone the buyer was quoted.
                 raise _mismatch(vendor_id, "delivery_zone")
             zone: str | None = address_zone
-            fee = compute_fee(subtotal, zone)
+            price = pricing.get(vendor_id) if pricing is not None else None
+            fee = price.customer_fee_ngwee if price is not None else compute_fee(subtotal, zone)
         else:
             zone = None
             fee = 0
+            price = None
         claim = declared[vendor_id]
         if claim.fulfilment != choice.fulfilment:
             raise _mismatch(vendor_id, "fulfilment")
@@ -155,6 +161,8 @@ def authoritative_vendor_groups(
                 delivery_zone=zone,
                 delivery_fee_ngwee=fee,
                 subtotal_ngwee=subtotal,
+                delivery_funding=price.funding if price is not None else "customer",
+                delivery_funded_ngwee=price.funded_ngwee if price is not None else 0,
             )
         )
     return authoritative

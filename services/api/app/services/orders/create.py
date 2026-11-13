@@ -53,6 +53,10 @@ class VendorFulfilmentInput:
     delivery_zone: str | None
     delivery_fee_ngwee: int
     subtotal_ngwee: int
+    #: Who pays delivery (logistics phase 1): customer | vendor | vendor_self | platform.
+    delivery_funding: str = "customer"
+    #: Fee booked to delivery_revenue from the vendor payable / commission (ngwee).
+    delivery_funded_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -805,6 +809,26 @@ def _validate_vendor_groups(
     return by_vendor
 
 
+_DELIVERY_FUNDINGS = frozenset({"customer", "vendor", "vendor_self", "platform"})
+
+
+def _delivery_funding_for(group: VendorFulfilmentInput) -> tuple[str, int]:
+    """Validated (funding, funded_ngwee) for one vendor order (fail closed)."""
+    funding = group.delivery_funding
+    funded = group.delivery_funded_ngwee
+    if funding not in _DELIVERY_FUNDINGS:
+        raise ValueError("unknown delivery funding")
+    if isinstance(funded, bool) or not isinstance(funded, int) or funded < 0:
+        raise TypeError("delivery_funded_ngwee must be non-negative integer ngwee")
+    if group.fulfilment != "delivery":
+        return "customer", 0
+    if funding != "customer" and group.delivery_fee_ngwee != 0:
+        raise ValueError("a vendor- or platform-funded delivery charges the customer nothing")
+    if funding not in {"vendor", "platform"} and funded != 0:
+        raise ValueError("only vendor or platform funding books an amount")
+    return funding, funded
+
+
 def create_orders_atomic(
     *,
     client: Any,
@@ -941,15 +965,18 @@ def create_orders_atomic(
         zone_sql = sql_literal(order.delivery_zone) if order.delivery_zone is not None else "NULL"
         address_sql = sql_uuid(address_id, "address_id") if address_id is not None else "NULL"
         snapshot_sql = _sql_json(order.commission_snapshot)
+        funding, funded_ngwee = _delivery_funding_for(groups_by_vendor[order.vendor_id])
         statements.append(
             f"""
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
-  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot
+  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot,
+  delivery_funding, delivery_funded_ngwee
 ) VALUES (
   {order_sql}, {session_sql}, {vendor_sql}, {customer_sql}, '{status_placed}',
   '{order.fulfilment}', {zone_sql}, {address_sql}, {order.delivery_fee_ngwee},
-  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb
+  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb,
+  '{funding}', {funded_ngwee}
 );
 """
         )

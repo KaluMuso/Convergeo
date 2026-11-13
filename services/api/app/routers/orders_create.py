@@ -11,7 +11,6 @@ from app.routers.checkout import (
     _ensure_session_active,
     _extract_data,
     _load_delivery_zones,
-    _load_free_delivery_threshold,
     _rederive_line_prices,
     compute_group_delivery_fee_ngwee,
     load_zone_fees,
@@ -22,6 +21,7 @@ from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.logistics.delivery_pricing import RawLine, price_checkout_delivery
 from app.services.orders.create import (
     CartLineInput,
     CreateOrdersResult,
@@ -246,15 +246,14 @@ def _authoritative_groups(
     cart_lines: list[CartLineInput],
     stored_choices: dict[str, StoredChoice],
     declared: list[VendorGroupRequest],
+    wholesale_by_cart_item: dict[str, bool] | None = None,
 ) -> list[VendorFulfilmentInput]:
     """Re-price every vendor group from server state (see services/orders/fulfilment)."""
     zone_fees: dict[str, int] = {}
-    free_threshold = 0
     address_zone: str | None = None
     if needs_delivery(stored_choices) and address_id is not None:
         zones = _load_delivery_zones(service)
         zone_fees = load_zone_fees(zones)
-        free_threshold = _load_free_delivery_threshold(service)
         address = _load_own_address(service, address_id=address_id, customer_id=customer_id)
         landmark = address.get("landmark")
         address_zone = resolve_address_zone(
@@ -270,8 +269,27 @@ def _authoritative_groups(
             subtotal_ngwee=subtotal_ngwee,
             zone_key=zone_key,
             zone_fees=zone_fees,
-            free_delivery_threshold_ngwee=free_threshold,
         )
+
+    wholesale = wholesale_by_cart_item or {}
+    pricing = price_checkout_delivery(
+        service.client,
+        raw_lines=[
+            RawLine(
+                vendor_id=line.vendor_id,
+                listing_id=line.listing_id,
+                qty=line.qty,
+                unit_price_ngwee=line.unit_price_ngwee,
+                wholesale=wholesale.get(line.cart_item_id, False),
+            )
+            for line in cart_lines
+        ],
+        delivery_zones={
+            vendor_id: (address_zone if choice.fulfilment == "delivery" else None)
+            for vendor_id, choice in stored_choices.items()
+        },
+        zone_fees=zone_fees,
+    )
 
     return authoritative_vendor_groups(
         cart_lines=cart_lines,
@@ -288,6 +306,7 @@ def _authoritative_groups(
         ],
         address_zone=address_zone,
         compute_fee=compute_fee,
+        pricing=pricing,
     )
 
 
@@ -422,15 +441,18 @@ async def create_orders(
         cart_lines=cart_lines,
         stored_choices=stored_choices,
         declared=body.groups,
+        wholesale_by_cart_item={
+            str(item["id"]): item.get("wholesale") is True
+            for item in items
+            if isinstance(item, dict) and "id" in item
+        },
     )
 
     # D9 T1 first-order ≤K500: server-side, every payment method (not just COD).
     # Totals from cart lines (authoritative) + per-vendor delivery fee.
     per_vendor_subtotal: dict[str, int] = defaultdict(int)
     for line in cart_lines:
-        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(
-            line.qty, line.unit_price_ngwee
-        )
+        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(line.qty, line.unit_price_ngwee)
     delivery_by_vendor = {group.vendor_id: group.delivery_fee_ngwee for group in vendor_groups}
     vendor_order_totals = {
         vendor_id: subtotal + delivery_by_vendor.get(vendor_id, 0)

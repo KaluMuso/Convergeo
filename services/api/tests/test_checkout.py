@@ -412,14 +412,17 @@ class TestFeeMath:
         )
         assert fee == 6500
 
-    def test_free_delivery_at_threshold(self) -> None:
-        fee = compute_group_delivery_fee_ngwee(
-            subtotal_ngwee=20_000,
-            zone_key="lusaka_a",
-            zone_fees={"lusaka_a": 3000},
-            free_delivery_threshold_ngwee=20_000,
-        )
-        assert fee == 0
+    def test_retired_per_vendor_threshold_never_waives_the_fee(self) -> None:
+        # Logistics phase 1: "free delivery above K200 per vendor" is switched off;
+        # a stale threshold argument (or config row) must not waive the zone fee.
+        for subtotal in (20_000, 20_001, 5_000_000):
+            fee = compute_group_delivery_fee_ngwee(
+                subtotal_ngwee=subtotal,
+                zone_key="lusaka_a",
+                zone_fees={"lusaka_a": 3000},
+                free_delivery_threshold_ngwee=20_000,
+            )
+            assert fee == 3000
 
     def test_pickup_has_zero_fee(self) -> None:
         fee = compute_group_delivery_fee_ngwee(
