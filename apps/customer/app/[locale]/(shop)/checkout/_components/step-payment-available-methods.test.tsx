@@ -16,9 +16,17 @@ vi.mock("@vergeo/config", () => ({
   }),
 }));
 
+// codGuide is a nested group of COD explainer strings (step1..3, capNote, overCap).
+const codGuide = new Proxy({} as Record<string, string>, {
+  get: (_target, key: string) => `codGuide:${key}`,
+});
+
 const labels = new Proxy({} as Record<string, unknown>, {
-  get: (_target, key: string) =>
-    key === "codIneligible" ? (cap: string) => `codIneligible ${cap}` : `label:${key}`,
+  get: (_target, key: string) => {
+    if (key === "codIneligible") return (cap: string) => `codIneligible ${cap}`;
+    if (key === "codGuide") return codGuide;
+    return `label:${key}`;
+  },
 }) as unknown as PaymentStepLabels;
 
 const totals = {
