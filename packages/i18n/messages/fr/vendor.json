@@ -825,9 +825,9 @@
     },
     "fields": {
       "displayNameLabel": "Nom affiché",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Dites aux acheteurs ce que vous vendez et pourquoi vous choisir…",
-      "descriptionHelp": "Visez au moins 50 caractères — cela aide les acheteurs à faire confiance à votre boutique.",
+      "descriptionLabel": "Votre histoire",
+      "descriptionPlaceholder": "Qui vous êtes, depuis quand, et ce pour quoi les clients vous connaissent…",
+      "descriptionHelp": "Restez bref — environ 60 mots. Ce texte apparaît en haut de votre page boutique sous « Notre histoire ».",
       "whatsappLabel": "Numéro WhatsApp",
       "whatsappPlaceholder": "ex. 0977 123456",
       "whatsappHelp": "Facultatif. Les acheteurs peuvent vous contacter directement — affiché sous forme de bouton « Discuter sur WhatsApp » sur votre vitrine.",

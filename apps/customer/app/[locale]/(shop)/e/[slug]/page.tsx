@@ -11,9 +11,11 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
+import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import {
   EventJsonLd,
@@ -507,6 +509,18 @@ export default async function EventDetailPage({ params }: PageProps) {
           </section>
         </aside>
       </div>
+
+      {/* Founder rule: related items from OTHER shops, not only this one. */}
+      {event.organiser.slug && event.visibility !== "private" ? (
+        <Suspense fallback={null}>
+          <OtherShopsRail
+            locale={locale}
+            vendorSlug={event.organiser.slug}
+            lead="event"
+            excludeIds={[event.id]}
+          />
+        </Suspense>
+      ) : null}
     </article>
   );
 }

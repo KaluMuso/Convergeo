@@ -16,6 +16,22 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { ShareLinkButton } from "../../../_components/share-link-button";
+import { buildStorefrontCompare } from "../../_components/directory/business-home/compare-other-shops";
+import {
+  ClipsRow,
+  directionsHref,
+  FindUsSection,
+  OffersSection,
+  ReviewsSection,
+  servicePriceLine,
+  StorySection,
+  type BusinessBranch,
+  type ServiceLabels,
+} from "../../_components/directory/business-home/sections";
+import {
+  visibleSections,
+  type BusinessSectionKey,
+} from "../../_components/directory/business-home/visible-sections";
 import { FollowVendorButton } from "../../_components/directory/follow-vendor-button";
 import {
   StorefrontProducts,
@@ -26,9 +42,9 @@ import {
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
 import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
+import { catalogLogisticsLabels } from "../../_components/plp/logistics-pills";
 
-
-
+import type { DaySchedule } from "../../_components/directory/business-home/open-status";
 import type { Metadata } from "next";
 
 export const revalidate = 3600;
@@ -37,7 +53,9 @@ type VendorLocation = {
   landmark: string;
   lat: number;
   lng: number;
-  hours: Record<string, string>;
+  hours: Record<string, unknown>;
+  /** Normalised open days (API); absent on older API builds. */
+  schedule?: DaySchedule[];
 };
 
 type VendorProfileApiResponse = {
@@ -75,6 +93,10 @@ type VendorProfileApiResponse = {
     lead_time_days: number | null;
     category_slug?: string | null;
     category_name?: string | null;
+    delivery_available?: boolean;
+    pickup_available?: boolean;
+    other_offers_count?: number;
+    other_min_price_ngwee?: number | null;
   }>;
   services: Array<{
     id: string;
@@ -82,6 +104,9 @@ type VendorProfileApiResponse = {
     category: string | null;
     from_price_ngwee: number | null;
     image_public_id: string | null;
+    service_area?: string | null;
+    bookable?: boolean;
+    booking_price_ngwee?: number | null;
   }>;
   events: Array<{
     id: string;
@@ -93,6 +118,15 @@ type VendorProfileApiResponse = {
     rating_avg: number | null;
     rating_count: number;
   };
+  clips?: Array<{
+    id: string;
+    poster_url: string | null;
+    caption: string | null;
+  }>;
+  offers?: Array<{ id: string; title: string; ends_at: string | null }>;
+  offers_enabled?: boolean;
+  /** Flag ON and ≥1 live item, per section (API). Absent on older API builds. */
+  sections?: Partial<Record<BusinessSectionKey, boolean>>;
 };
 
 type PageProps = {
@@ -104,9 +138,7 @@ type DirectoryTranslator = {
   raw: (key: string) => unknown;
 };
 
-async function getDirectoryTranslator(
-  locale: string,
-): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
   const messages = {
@@ -121,9 +153,7 @@ async function getDirectoryTranslator(
   }) as unknown as DirectoryTranslator;
 }
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<DirectoryTranslator> {
+async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -138,9 +168,7 @@ async function getCatalogTranslator(
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(
-  slug: string,
-): Promise<VendorProfileApiResponse | null> {
+async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
     if (!url) {
@@ -185,9 +213,7 @@ function buildVendorJsonLd(
   });
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
@@ -214,13 +240,16 @@ export async function generateMetadata({
       type: "website",
       locale,
       url: canonicalPath,
+      // The business's own sign comes first on a shared link (§8.5).
       images: profile.vendor.logo_url
         ? [profile.vendor.logo_url]
-        : [
-            {
-              url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
-            },
-          ],
+        : profile.vendor.cover_url
+          ? [profile.vendor.cover_url]
+          : [
+              {
+                url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
+              },
+            ],
     },
     twitter: {
       card: "summary_large_image",
@@ -234,11 +263,11 @@ export async function generateMetadata({
 function VendorServicesGrid({
   locale,
   services,
-  fromLabel,
+  labels,
 }: {
   locale: string;
   services: VendorProfileApiResponse["services"];
-  fromLabel: string;
+  labels: ServiceLabels;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
@@ -260,16 +289,12 @@ function VendorServicesGrid({
             ) : null}
           </div>
           <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-text">
-              {service.title}
+            <p className="truncate text-sm font-medium text-text">{service.title}</p>
+            <p className="text-sm font-semibold text-text" data-testid="service-price">
+              {servicePriceLine(service, labels)}
             </p>
-            {service.from_price_ngwee !== null ? (
-              <p className="text-sm text-text-2">
-                {fromLabel.replace(
-                  "{price}",
-                  formatK(service.from_price_ngwee),
-                )}
-              </p>
+            {service.service_area ? (
+              <p className="truncate text-xs text-text-2">{labels.area(service.service_area)}</p>
             ) : null}
           </div>
         </Link>
@@ -305,9 +330,7 @@ function VendorEventsGrid({
             ) : null}
           </div>
           <div className="p-3">
-            <p className="truncate text-sm font-medium text-text">
-              {event.title}
-            </p>
+            <p className="truncate text-sm font-medium text-text">{event.title}</p>
           </div>
         </Link>
       ))}
@@ -339,18 +362,30 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const {
-    vendor,
-    listings,
-    services,
-    events,
-    reviews_summary: reviews,
-  } = profile;
+  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
+  const clips = profile.clips ?? [];
+  const offers = profile.offers ?? [];
+  const show = visibleSections({
+    counts: {
+      products: listings.length,
+      services: services.length,
+      events: events.length,
+      offers: offers.length,
+      clips: clips.length,
+    },
+    sections: profile.sections,
+    offersEnabled: profile.offers_enabled,
+  });
   const ladderLabels = buildVendorLadderLabels(t);
   const trustRibbon = vendorTrustRibbon(
     { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
     ladderLabels,
   );
+  const compareLabels = {
+    count: (count: number) => t("profile.home.compareOthers", { count }),
+    from: (priceNgwee: number) => t("profile.home.compareFrom", { price: formatK(priceNgwee) }),
+    aria: (title: string) => t("profile.home.compareAria", { title }),
+  };
   // Commercial tier (Bronze…Platinum) is a vendor plan — never shown to buyers.
   const listingsForGrid: StorefrontListing[] = listings.map((listing) => ({
     categorySlug: listing.category_slug ?? null,
@@ -367,22 +402,31 @@ export default async function VendorProfilePage({ params }: PageProps) {
     reviewCount: reviews.rating_count,
     distanceM: null,
     belowMedian: false,
-    deliveryAvailable: false,
-    pickupAvailable: false,
+    deliveryAvailable: listing.delivery_available ?? false,
+    pickupAvailable: listing.pickup_available ?? false,
     saleUnit: listing.sale_unit,
     unitStepMilli: listing.unit_step_milli,
     minSteps: listing.min_steps,
     productClass: listing.product_class,
     fulfilmentMode: listing.fulfilment_mode,
     leadTimeDays: listing.lead_time_days,
+    compare: buildStorefrontCompare({
+      locale,
+      productSlug: listing.product_slug,
+      title: listing.title,
+      otherOffersCount: listing.other_offers_count ?? 0,
+      otherMinPriceNgwee: listing.other_min_price_ngwee ?? null,
+      labels: compareLabels,
+    }),
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
 
-  // Offerings shown as tabs when the vendor has more than one type; a single type
-  // renders as a plain section (no tab bar for one tab).
+  // One home, many kinds of selling (§8.5.6): only the tabs this business uses.
+  // Inactive panels stay mounted (hidden) so services and events are in the
+  // crawlable HTML, not only the first tab.
   const offeringTabs: TabItem[] = [];
-  if (listingsForGrid.length > 0) {
+  if (show.products) {
     offeringTabs.push({
       key: "products",
       label: t("profile.tabProducts"),
@@ -405,13 +449,14 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionNew: t("listings.conditionNew"),
             conditionRefurbished: t("listings.conditionRefurbished"),
             conditionUsed: tCatalog("plp.card.conditionUsed"),
+            logistics: catalogLogisticsLabels(tCatalog),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),
     });
   }
-  if (services.length > 0) {
+  if (show.services) {
     offeringTabs.push({
       key: "services",
       label: t("profile.tabServices"),
@@ -419,12 +464,17 @@ export default async function VendorProfilePage({ params }: PageProps) {
         <VendorServicesGrid
           locale={locale}
           services={services}
-          fromLabel={String(t.raw("profile.serviceFrom"))}
+          labels={{
+            from: (price) => t("profile.serviceFrom", { price }),
+            book: (price) => t("profile.home.serviceBook", { price }),
+            quote: t("profile.home.serviceQuote"),
+            area: (area) => t("profile.home.serviceArea", { area }),
+          }}
         />
       ),
     });
   }
-  if (events.length > 0) {
+  if (show.events) {
     offeringTabs.push({
       key: "events",
       label: t("profile.tabEvents"),
@@ -441,69 +491,24 @@ export default async function VendorProfilePage({ params }: PageProps) {
       }).format(new Date(vendor.created_at))
     : null;
 
-  const hoursEntries =
-    vendor.locations.length > 0
-      ? vendor.locations
-      : vendor.location
-        ? [vendor.location]
-        : [];
-  const aboutPanel =
-    vendor.description || hoursEntries.length > 0 ? (
-      <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
-        {vendor.description ? (
-          <p className="m-0 max-w-prose whitespace-pre-line text-body text-text-2">
-            {vendor.description}
-          </p>
-        ) : null}
-        {hoursEntries.length > 0 ? (
-          <dl className="m-0 space-y-3 text-sm">
-            {hoursEntries.map((branch, index) => (
-              <div key={`${branch.landmark}-${index}`} className="space-y-1">
-                <dt className="font-semibold text-text">{branch.landmark}</dt>
-                {Object.entries(branch.hours ?? {}).map(([day, hours]) => (
-                  <dd key={day} className="m-0 text-text-2">
-                    {t("profile.hoursLine", { day, hours })}
-                  </dd>
-                ))}
-              </div>
-            ))}
-          </dl>
-        ) : null}
-      </div>
-    ) : null;
-
-  const reviewsPanel = (
-    <div className="flex flex-wrap items-center gap-3 text-body text-text-2">
-      {hasRating ? (
-        <>
-          <span className="font-display text-h2 font-bold text-display-ink">
-            {reviews.rating_avg?.toFixed(1)}
-          </span>
-          <span>
-            {t("profile.reviewsSummary", {
-              rating: reviews.rating_avg ?? 0,
-              count: reviews.rating_count,
-            })}
-          </span>
-        </>
-      ) : (
-        <span>{t("profile.noReviews")}</span>
-      )}
-    </div>
-  );
-
-  if (aboutPanel) {
-    offeringTabs.push({
-      key: "about",
-      label: t("profile.tabAbout"),
-      panel: aboutPanel,
-    });
-  }
-  offeringTabs.push({
-    key: "reviews",
-    label: t("profile.tabReviews"),
-    panel: reviewsPanel,
-  });
+  const branchSource =
+    vendor.locations.length > 0 ? vendor.locations : vendor.location ? [vendor.location] : [];
+  const branches: BusinessBranch[] = branchSource.map((branch) => ({
+    landmark: branch.landmark,
+    lat: branch.lat,
+    lng: branch.lng,
+    schedule: branch.schedule ?? [],
+  }));
+  const firstBranch = branches[0] ?? null;
+  const dayKey = {
+    mon: "dayMon",
+    tue: "dayTue",
+    wed: "dayWed",
+    thu: "dayThu",
+    fri: "dayFri",
+    sat: "daySat",
+    sun: "daySun",
+  } as const;
 
   // Vendor colours re-skin this storefront subtree only (AA-clamped again here).
   const brandStyle = brandThemeStyle(vendor.brand_theme ?? null);
@@ -514,21 +519,25 @@ export default async function VendorProfilePage({ params }: PageProps) {
     .filter(Boolean)
     .join(" ");
 
+  const secondaryButton =
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded border border-border bg-surface px-4 text-sm font-semibold text-text no-underline hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing";
+
   return (
     <div
       className={`space-y-5 lg:mx-auto lg:w-full lg:max-w-6xl ${brandClass}`}
       style={brandStyle as React.CSSProperties | undefined}
       data-brand-theme={brandStyle ? "vendor" : undefined}
+      data-testid="business-home"
     >
       <JsonLdScript data={jsonLd} />
 
-      {/* Compact store header (eBay/Etsy pattern): slim cover, logo tile, name,
-          trust, one meta line, actions. No plan tier, no zero-stat table. */}
+      {/* The sign (§8.3): the business's own cover, logo and name come first;
+          Convergeo is the street, not the shop sign. */}
       <header className="relative">
         {vendor.cover_url ? (
           <div
             aria-hidden
-            className="h-24 rounded-lg bg-panel bg-cover bg-center sm:h-36"
+            className="h-28 rounded-lg bg-panel bg-cover bg-center sm:h-40"
             style={{ backgroundImage: `url(${vendor.cover_url})` }}
           />
         ) : (
@@ -556,18 +565,14 @@ export default async function VendorProfilePage({ params }: PageProps) {
               <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
                 {vendor.display_name}
               </h1>
-              <CornerRibbon
-                trust={trustRibbon.trust}
-                trustLabel={trustRibbon.trustLabel}
-              />
+              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
             </div>
             <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-2">
               {hasRating ? (
                 <span className="font-semibold text-text">
                   ★ {reviews.rating_avg?.toFixed(1)}{" "}
                   <span className="font-normal text-text-2">
-                    ({reviews.rating_count}{" "}
-                    {t("profile.statReviews").toLowerCase()})
+                    ({reviews.rating_count} {t("profile.statReviews").toLowerCase()})
                   </span>
                 </span>
               ) : null}
@@ -576,12 +581,12 @@ export default async function VendorProfilePage({ params }: PageProps) {
                   {vendor.order_count} {t("profile.statOrders").toLowerCase()}
                 </span>
               ) : null}
-              {listings.length > 0 ? (
+              {show.products ? (
                 <span>
                   {listings.length} {t("profile.statListings").toLowerCase()}
                 </span>
               ) : null}
-              {vendor.location ? <span>{vendor.location.landmark}</span> : null}
+              {firstBranch ? <span>{firstBranch.landmark}</span> : null}
               {!hasAnyStat ? (
                 <span
                   className="rounded-pill bg-accent-tint px-2.5 py-0.5 text-sm font-semibold text-accent-deep"
@@ -594,6 +599,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
               ) : null}
             </p>
           </div>
+          {/* Three buttons (§8.3): Follow, WhatsApp, Directions — plus Share. */}
           <div className="flex shrink-0 flex-wrap gap-2">
             <FollowVendorButton
               vendorId={vendor.id}
@@ -625,12 +631,94 @@ export default async function VendorProfilePage({ params }: PageProps) {
                 {t("profile.whatsappCta")}
               </a>
             ) : null}
+            {firstBranch ? (
+              <a
+                className={secondaryButton}
+                href={directionsHref(firstBranch)}
+                rel="noopener noreferrer"
+                target="_blank"
+                aria-label={t("profile.home.directionsTo", {
+                  place: firstBranch.landmark,
+                })}
+                data-testid="bh-directions"
+              >
+                {t("profile.home.directions")}
+              </a>
+            ) : null}
             <ShareLinkButton label={shareLabel} title={vendor.display_name} />
           </div>
         </div>
       </header>
 
-      <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />
+      <StorySection heading={t("profile.home.storyHeading")} story={vendor.description} />
+
+      <ClipsRow
+        locale={locale}
+        clips={show.clips ? clips : []}
+        labels={{
+          heading: t("profile.home.clipsHeading"),
+          watch: t("profile.home.clipWatch"),
+        }}
+      />
+
+      <OffersSection
+        enabled={show.offers}
+        offers={offers.map((offer) => ({
+          id: offer.id,
+          title: offer.title,
+          endsLabel: offer.ends_at
+            ? t("profile.home.offersEnds", {
+                date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(
+                  new Date(offer.ends_at),
+                ),
+              })
+            : null,
+        }))}
+        labels={{ heading: t("profile.home.offersHeading") }}
+      />
+
+      {offeringTabs.length > 0 ? (
+        <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} mountInactivePanels />
+      ) : null}
+
+      <ReviewsSection
+        ratingAvg={reviews.rating_avg}
+        ratingCount={reviews.rating_count}
+        labels={{
+          heading: t("profile.tabReviews"),
+          summary: t("profile.reviewsSummary", {
+            rating: reviews.rating_avg ?? 0,
+            count: reviews.rating_count,
+          }),
+          none: t("profile.noReviews"),
+          verifiedOnly: t("profile.home.verifiedOnly"),
+        }}
+      />
+
+      <FindUsSection
+        branches={branches}
+        labels={{
+          heading: t("profile.home.findUsHeading"),
+          directions: t("profile.home.directions"),
+          directionsTo: (place) => t("profile.home.directionsTo", { place }),
+          hoursNotShared: t("profile.home.hoursNotShared"),
+          hoursRange: (opens, closes) => t("profile.home.hoursRange", { opens, closes }),
+          day: (day) => t(`profile.home.${dayKey[day]}`),
+          open: t("profile.home.openNow"),
+          closed: t("profile.home.closedNow"),
+        }}
+      />
+
+      {/* Never trap the customer on one shop: the street is one tap away. */}
+      <p className="m-0">
+        <Link
+          href={`/${locale}/vendors`}
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+          data-testid="bh-other-shops"
+        >
+          {t("profile.home.browseOtherShops")}
+        </Link>
+      </p>
     </div>
   );
 }
