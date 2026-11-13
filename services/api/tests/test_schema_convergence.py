@@ -96,6 +96,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113071000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # In-app notification center (additive, reversible).
+    "20261113130000",
 ]
 
 def _module() -> Any:
@@ -138,7 +140,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 157
+    assert len(sql_files) == len(migrations) == 158
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -159,8 +161,14 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     ]
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
-    assert actual_versions[-18:] == (
-        repairs + post_repair + queued_features + pilot_fixes + money_dispatch
+    notification_center = ["20261113130000"]
+    assert actual_versions[-19:] == (
+        repairs
+        + post_repair
+        + queued_features
+        + pilot_fixes
+        + money_dispatch
+        + notification_center
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

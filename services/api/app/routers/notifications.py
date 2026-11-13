@@ -8,7 +8,7 @@ customer token can never page through the vendor or admin feed even of its own
 user id.
 
 Rows are written only by the database (outbox + domain triggers in migration
-20261113090000) — there is deliberately no create endpoint.
+20261113130000) — there is deliberately no create endpoint.
 
 Web Push subscription endpoints are gated by ``feature_flags.web_push``
 (default OFF, read fresh each call, fails closed).

@@ -15,7 +15,7 @@ every app's navbar, a dropdown/sheet + full `/notifications` page, in-app toasts
 | PWA | customer: serwist `sw.ts` (no push yet); vendor: **no service worker** | Push = subscription + SW display path behind `feature_flags.web_push` (default OFF). Vendor gets a tiny push-only `public/push-sw.js`. Customer SW serves the notification API NetworkOnly. |
 | Admin roles | `user_roles(role='admin')` | Admin rows are **fanned out per admin user** at write time so seen/read is per person. |
 
-## Data (migration `20261113090000_in_app_notifications.sql`, additive + reversible)
+## Data (migration `20261113130000_in_app_notifications.sql`, additive + reversible)
 
 - `in_app_notifications(id, recipient_user_id, audience customer|vendor|admin, type, i18n_key, params jsonb, link_path,
   dedupe_key, created_at, seen_at, read_at)`; `UNIQUE(recipient_user_id, audience, dedupe_key)`.

@@ -1,5 +1,5 @@
-import { NotificationBellIsland } from "../../_components/notification-bell-island";
 import { ShopLocaleSwitcher } from "../../(shop)/_components/shop-locale-switcher";
+import { NotificationBellIsland } from "../../_components/notification-bell-island";
 
 import { AccountAppHeaderClient, type AccountHeaderClientLabels } from "./account-header-client";
 

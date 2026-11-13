@@ -83,6 +83,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113071000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # In-app notification center tables + triggers (additive, reversible).
+    "20261113130000",
 }
 
 
