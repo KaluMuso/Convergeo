@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "Categories zonse",
     "allLocations": "Locations zonse",
-    "preferred": "Preferred vendor",
+    "preferred": "Top shop",
     "verified": "Verified",
     "apply": "Apply filters",
     "clear": "Chotsani filters",
@@ -42,7 +42,7 @@
     "selfListed": "Self-listed",
     "idVerified": "ID verified",
     "sectorVerified": "Sector verified",
-    "preferred": "Preferred vendor"
+    "preferred": "Top shop"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,8 +73,8 @@
     "reviewsHeading": "Reviews za makasitomala",
     "reviewsSummary": "{rating, number, ::.1} average kuchokera ku {count, plural, one {# review} other {# reviews}}",
     "noReviews": "Palibe reviews pano",
-    "preferredBadge": "Preferred vendor",
-    "verifiedBadge": "Verified vendor",
+    "preferredBadge": "Top shop",
+    "verifiedBadge": "ID checked",
     "shareTitle": "{name} pa Convergeo",
     "statRating": "Rating",
     "statReviews": "Reviews",

@@ -196,23 +196,23 @@
       "description": "⚠ Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
     },
     "invite": {
-      "eyebrow": "Invite / concierge beta",
+      "eyebrow": "You are invited",
       "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo approves your KYC and grants seller access."
     },
     "steps": {
       "business": "Business",
-      "kyc": "Verify ID",
+      "kyc": "Check ID",
       "review": "Review"
     },
     "stepAnnouncement": "⚠ Step {current} of {total}",
     "doneIndicator": "✓",
     "business": {
-      "heading": "Business basics",
+      "heading": "Your shop",
       "intro": "Mutwebele ifyo mushitisha na umo ubushitishi bwenu bubombela ukuti tumipangile bwino ukutendeka.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
-      "categoryLabel": "Main category",
-      "categoryPlaceholder": "Select a category",
+      "categoryLabel": "What do you mostly sell?",
+      "categoryPlaceholder": "Choose one",
       "archetypeLabel": "Ubushitishi bwenu bubombela shani?",
       "archetypePlaceholder": "Saleni umusango wa bushitishi",
       "categories": {
@@ -235,16 +235,16 @@
       "saving": "Saving…"
     },
     "kyc": {
-      "heading": "T1 verification",
-      "intro": "Upload your NRC and a selfie. We match your mobile-money name. Nothing goes public until approved.",
+      "heading": "Check your ID",
+      "intro": "Take a photo of your NRC and of your face. Nobody else sees them.",
       "nrcLabel": "NRC photo",
-      "nrcHelp": "Capture the front of your National Registration Card in good light.",
-      "selfieLabel": "Selfie",
-      "selfieHelp": "Hold your phone at eye level. Face the camera directly.",
-      "legalNameLabel": "Full name (as on your NRC)",
+      "nrcHelp": "Take a photo of the front of your NRC (green ID card) in good light.",
+      "selfieLabel": "Photo of your face",
+      "selfieHelp": "Hold the phone in front of your face and look at it.",
+      "legalNameLabel": "Your full name (same as on your NRC)",
       "legalNamePlaceholder": "e.g. Chanda Mwansa",
-      "legalNameHelp": "Must match the name registered on your mobile-money number.",
-      "momoLabel": "Mobile-money number",
+      "legalNameHelp": "It must be the same as the name on your mobile money.",
+      "momoLabel": "Mobile money number",
       "momoPlaceholder": "e.g. 0977123456",
       "momoHelp": "⚠ MTN or Airtel number registered in your name for payouts.",
       "continue": "Continue",
@@ -255,18 +255,18 @@
       "uploadFailed": "Upload failed. Loleni connection yenu and try again.",
       "uploaded": "Saved",
       "nrcDone": "NRC photo saved",
-      "selfieDone": "Selfie saved"
+      "selfieDone": "Face photo saved"
     },
     "quality": {
       "heading": "Photo tips",
-      "light": "Use daylight or a bright room — avoid glare on the NRC.",
-      "steady": "Hold still; blurry photos are rejected.",
-      "frame": "Fill the frame — all four corners of the NRC visible.",
-      "face": "Remove hats and sunglasses for the selfie."
+      "light": "Use daylight. No shine on the card.",
+      "steady": "Hold still. Blurry photos are not accepted.",
+      "frame": "Show all four corners of the NRC.",
+      "face": "Take off hats and sunglasses."
     },
     "review": {
-      "heading": "Review and submit",
-      "intro": "Check your details. After submission, our team reviews within one business day.",
+      "heading": "Check and send",
+      "intro": "Check your details. We usually reply within one working day.",
       "businessSection": "Business",
       "businessNameLabel": "Ishina lya bushitishi",
       "businessCategoryLabel": "Umulundu ukalamba",
@@ -274,56 +274,56 @@
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "NRC photo uploaded",
-      "selfieUploaded": "Selfie uploaded",
+      "selfieUploaded": "Face photo added",
       "notUploaded": "Not uploaded",
       "submit": "Tumizeni for review",
       "submitting": "Tumizeniting…",
-      "editBusiness": "Edit business",
-      "editDocs": "Edit documents",
+      "editBusiness": "Change shop details",
+      "editDocs": "Change photos",
       "gateNotice": "⚠ Your listings stay hidden until KYC is approved."
     },
     "status": {
-      "heading": "Verification status",
+      "heading": "Your ID check",
       "pending": {
-        "title": "Under review",
-        "body": "We are verifying your documents. You will get a WhatsApp update when done.",
+        "title": "We are checking",
+        "body": "We are checking your photos. We will message you on WhatsApp when it is done.",
         "cta": "Bweleleni to dashboard"
       },
       "approved": {
-        "title": "You are verified",
+        "title": "Your ID is checked",
         "body": "⚠ T1 KYC approved. You can create listings — buyers will see them once you publish.",
-        "cta": "Create your first listing",
-        "t2Link": "Upgrade to T2 (PACRA + TPIN)"
+        "cta": "Add your first product",
+        "t2Link": "Add business papers (PACRA, TPIN)"
       },
       "rejected": {
-        "title": "Verification needs changes",
-        "body": "We could not approve your application.",
+        "title": "Please fix your details",
+        "body": "We could not approve you yet. See why below.",
         "reasonLabel": "Reason",
-        "resubmitCta": "Update documents",
-        "gateNotice": "Listings remain hidden until you pass verification."
+        "resubmitCta": "Fix and send again",
+        "gateNotice": "Your products stay hidden until your ID is approved."
       },
       "resubmit": {
-        "title": "Resubmit documents",
-        "body": "Update the items below and resubmit — you do not need to start over.",
+        "title": "Send your photos again",
+        "body": "Fix the items below and send again. You don't need to start over.",
         "nrcRequired": "NRC photo required",
-        "selfieRequired": "Selfie required",
-        "submit": "Resubmit for review"
+        "selfieRequired": "Face photo needed",
+        "submit": "Send again"
       }
     },
     "t2": {
-      "stubLabel": "Upgrade to verified business (T2)",
-      "stubBody": "PACRA certificate and company TPIN — coming soon."
+      "stubLabel": "Business papers check (coming soon)",
+      "stubBody": "PACRA certificate and company TPIN."
     },
     "errors": {
-      "required": "This field is required",
+      "required": "Please fill this in",
       "invalidPhone": "Enter a valid Zambian mobile number",
-      "loadFailed": "Could not load your application. Try again.",
-      "saveFailed": "Could not save your business details. Try again.",
-      "submitFailed": "Submission failed. Try again.",
-      "authRequired": "Sign in to continue your seller invite application.",
+      "loadFailed": "We couldn't open your sign-up. Check your internet and try again.",
+      "saveFailed": "We couldn't save your shop details. Try again.",
+      "submitFailed": "We couldn't send it. Check your internet and try again.",
+      "authRequired": "Sign in to finish your seller sign-up.",
       "permissionDenied": "Tamuli na access to this seller application. Use the account that received the invite, or contact Convergeo.",
-      "draftLocked": "Business details can no longer be edited after approval.",
-      "notFound": "We could not find your vendor application.",
+      "draftLocked": "You are approved, so shop details can't be changed here. Contact us to change them.",
+      "notFound": "We couldn't find your sign-up. Contact us for help.",
       "retryHint": "Loleni connection yenu, then try again."
     },
     "loading": "Ilelodisha…"
@@ -331,90 +331,90 @@
   "listings": {
     "images": {
       "heading": "Photos",
-      "intro": "{count} of {max} photos. The first is your cover.",
+      "intro": "{count} of {max} photos. The first photo is the main one.",
       "alt": "Listing photo {position}",
-      "cover_badge": "Cover",
+      "cover_badge": "Main photo",
       "position_label": "Photo {position}",
       "move_up": "Move up",
       "move_down": "Move down",
-      "set_cover": "Set as cover",
+      "set_cover": "Make main photo",
       "remove": "Remove",
       "drop_label": "Drag photos here",
       "browse_label": "Browse",
-      "compress_hint": "Photos are resized before upload to save data.",
+      "compress_hint": "We make photos smaller to save your data.",
       "limit_reached": "You've reached the photo limit.",
       "upload": "Add photos",
       "uploading": "Uploading…",
-      "upload_failed": "Upload failed",
+      "upload_failed": "Photo didn't send. Try again.",
       "minimum_required": "⚠ At least {count} evidence photo must remain attached while this listing is live.",
       "retry": "Esheni limbi"
     },
     "meta": {
-      "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
+      "title": "Add a product — Convergeo Seller",
+      "description": "Add a product: find it in our list, add a new one, or add a one-off item."
     },
     "title": "Create listing",
     "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
     "loading": "Ilelodisha…",
     "tabs": {
-      "ariaLabel": "Listing creation mode",
-      "attach": "Catalog",
+      "ariaLabel": "How to add your product",
+      "attach": "Find it",
       "newCanonical": "New product",
-      "quickList": "Quick list"
+      "quickList": "One-off item"
     },
     "commission": {
       "heading": "⚠ Commission on this listing",
-      "body": "You only pay when you sell. Rate is fixed for this category.",
+      "body": "You only pay when you sell. The fee is the same for everything in this category.",
       "rate": "{rate}%"
     },
     "attach": {
       "searchPlaceholder": "Fweni catalog products",
       "searching": "Fweniing…",
-      "empty": "No matching products. Try another name or submit a new product.",
+      "empty": "Not found. Try another name, or tap New product.",
       "hint": "Fweni the Convergeo catalog to attach your offer.",
       "changeProduct": "← Change product",
-      "specHeading": "Product specs",
-      "publish": "Publish listing",
+      "specHeading": "Product details",
+      "publish": "Start selling",
       "publishing": "Publishing…"
     },
     "newCanonical": {
       "heading": "Tumizeni new product",
-      "intro": "We will review your product before it appears in the catalog.",
+      "intro": "Our team checks new products before buyers see them.",
       "nameLabel": "Product name",
       "namePlaceholder": "e.g. Wireless earbuds",
       "brandLabel": "Brand (optional)",
       "brandPlaceholder": "e.g. Samsung",
       "categoryLabel": "Category",
-      "categoryPlaceholder": "Select category",
+      "categoryPlaceholder": "Choose a category",
       "submit": "Tumizeni for review",
       "submitting": "Tumizeniting…",
-      "moderationNotice": "Your listing stays in draft until our team approves the product.",
+      "moderationNotice": "Buyers can't see it until our team says it is OK.",
       "details": {
         "about": "About this item",
         "heading": "Product details",
-        "help": "Enter only details you can verify for this category. Include units as stated by the manufacturer. You can add dimensions, weight, measurements, style, features, materials, care or guide instructions. Leave unknown details blank. All details require moderation. Up to 32 details; names: 80 characters; values: 2,000; description: 5,000.",
-        "name": "Detail name",
-        "value": "Detail value",
+        "help": "Add only details you are sure about, like size, weight, colour or what it is made of. Leave the rest empty. Our team checks them.",
+        "name": "Detail (e.g. Colour)",
+        "value": "Answer (e.g. Red)",
         "add": "Add detail",
         "remove": "Remove detail",
-        "invalid": "Complete each detail with a unique name and value, or remove it. Keep the description and details within the displayed limits."
+        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once."
       }
     },
     "quickList": {
-      "heading": "Quick list",
-      "intro": "Save a draft for a unique used item or a made-to-order offer.",
-      "titleLabel": "Listing title",
+      "heading": "One-off item",
+      "intro": "For a used item, or something you make for each buyer.",
+      "titleLabel": "Name of the item",
       "titlePlaceholder": "e.g. Used wooden chair",
-      "publish": "Publish listing",
+      "publish": "Start selling",
       "publishing": "Publishing…",
-      "descriptionLabel": "Listing description",
-      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
-      "draftNotice": "Saving a draft does not publish the listing.",
-      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
-      "saveDraft": "Save draft",
-      "savingDraft": "Saving draft…",
-      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
-      "categoriesUnavailable": "Categories are unavailable. Try again later."
+      "descriptionLabel": "Describe it",
+      "descriptionHelp": "Write at least 20 letters about this item.",
+      "draftNotice": "Saving does not put it on sale yet.",
+      "descriptionInvalid": "Write a bit more — at least 20 letters.",
+      "saveDraft": "Save for later",
+      "savingDraft": "Saving…",
+      "canonicalRequired": "Brand products (A, B, C) must be found in our list. Tap Find it.",
+      "categoriesUnavailable": "Categories didn't load. Check your internet and try again."
     },
     "fields": {
       "priceLabel": "⚠ Your price (ZMW)",
@@ -457,40 +457,40 @@
       "capacityLabel": "⚠ Weekly capacity",
       "capacityHelp": "⚠ Maximum made-to-order units you can accept each week.",
       "capacityInvalid": "⚠ Enter a weekly capacity between 1 and 9,999.",
-      "stockModeLabel": "Stock",
-      "stockTracked": "Tracked quantity",
-      "stockAlways": "Always available",
-      "stockQtyLabel": "Quantity in stock",
+      "stockModeLabel": "How many do you have?",
+      "stockTracked": "I will count them",
+      "stockAlways": "I always have it",
+      "stockQtyLabel": "How many you have now",
       "wholesaleLabel": "⚠ Wholesale tiers",
-      "wholesaleHelp": "T2+ verified businesses only",
+      "wholesaleHelp": "Only for shops with business papers checked",
       "wholesaleMeasureUnavailable": "⚠ Wholesale tiers for per-measure listings are not available yet.",
-      "moqLabel": "Minimum order quantity",
+      "moqLabel": "Smallest order",
       "evidenceDraftNotice": "⚠ Used and Class D listings are saved as drafts. Upload at least one evidence photo before publishing.",
       "saveDraft": "⚠ Save draft and add photos",
       "savingDraft": "⚠ Saving draft…"
     },
     "success": {
-      "live": "Listing is live!",
+      "live": "Your product is on sale!",
       "moderation": "Tumizenited for review — we will notify you on WhatsApp.",
       "evidence": "⚠ Draft saved. Add evidence photos before publishing.",
-      "draft": "Draft saved. This listing is not live."
+      "draft": "Saved. It is not on sale yet."
     },
     "errors": {
-      "required": "This field is required",
-      "submitFailed": "Could not create listing. Try again.",
+      "required": "Please fill this in",
+      "submitFailed": "We couldn't save your product. Check your internet and try again.",
       "standalone_required": "⚠ Classes D and E must be created with Quick list.",
-      "wholesale_requires_t2": "Wholesale requires T2 verification",
-      "product_not_found": "Product not found",
-      "product_not_active": "This product cannot be attached yet",
-      "category_not_found": "Category not found",
+      "wholesale_requires_t2": "Bulk prices need a business papers check first.",
+      "product_not_found": "We couldn't find that product. Search again.",
+      "product_not_active": "This product is not ready for sale yet. Choose another, or try later.",
+      "category_not_found": "We couldn't find that category. Choose another.",
       "invalid_tiers": "⚠ Price tiers must rise in quantity and fall in unit price",
-      "authRequired": "Sign in to manage listings.",
+      "authRequired": "Sign in to see your products.",
       "permissionDenied": "Tamuli na access to this vendor catalogue.",
-      "notFound": "That listing was not found for your shop.",
+      "notFound": "We couldn't find that product in your shop.",
       "retryHint": "Loleni connection yenu, then try again.",
-      "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
-      "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
-      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
+      "canonicalRequired": "Brand products (A, B, C) must be found in our list. Tap Find it, or New product.",
+      "standaloneDetailsRequired": "Choose a category and write at least 20 letters about the item.",
+      "policyBlocked": "This product can't be sold in this category right now. Check the details, or contact us."
     },
     "import": {
       "meta": {
@@ -674,10 +674,10 @@
       }
     },
     "kycGate": {
-      "title": "Verification still in progress",
+      "title": "We are still checking your ID",
       "body": "⚠ Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
-      "cta": "Check verification status",
-      "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
+      "cta": "See my ID check",
+      "wholesaleLocked": "Bulk prices open after your business papers are checked (T2)."
     },
     "variants": {
       "heading": "Colours, sizes and other options",
@@ -893,9 +893,9 @@
     "status": {
       "placed": "Placed",
       "confirmed": "Tukishishenied",
-      "processing": "Processing",
+      "processing": "Packing",
       "ready": "Ready for pickup",
-      "shipped": "Shipped",
+      "shipped": "Sent",
       "delivered": "Delivered",
       "completed": "Completed",
       "cancelled": "Cancelled"
@@ -906,17 +906,17 @@
     },
     "payment": {
       "heading": "Payment",
-      "cod": "Cash on delivery",
+      "cod": "Buyer pays cash when it arrives",
       "paid": "⚠ Paid — held in escrow",
-      "unpaid": "Awaiting payment"
+      "unpaid": "Not paid yet"
     },
     "items": {
       "heading": "Items",
       "qty": "Qty {qty}",
-      "empty": "No line items",
+      "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "SKU {sku}"
+      "sku": "Item code {sku}"
     },
     "timeline": {
       "heading": "Inshitaline",
@@ -924,81 +924,81 @@
       "note": "Note: {note}"
     },
     "actions": {
-      "heading": "Actions",
+      "heading": "What to do next",
       "confirm": "Tukishisheni order",
-      "reject": "Reject order",
+      "reject": "I can't do this order",
       "pack": "Start packing",
-      "ship": "Mark shipped",
-      "ready_for_pickup": "Ready for pickup",
+      "ship": "Mark as sent",
+      "ready_for_pickup": "Ready for the buyer to collect",
       "confirming": "Tukishisheniing…",
       "rejecting": "Rejecting…",
       "packing": "Packing…",
-      "shipping": "Shipping…",
+      "shipping": "Saving…",
       "markingReady": "Updating…",
-      "rejectPrompt": "Tell the customer why you cannot fulfil this order.",
-      "rejectLabel": "Reason (shown to customer)",
-      "rejectPlaceholder": "e.g. Out of stock — sorry for the inconvenience",
-      "shipPrompt": "Add tracking or courier details for the buyer.",
-      "shipLabel": "Tracking note",
-      "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
-      "submitReject": "Reject with reason",
-      "submitShip": "Mark as shipped",
+      "rejectPrompt": "Tell the buyer why you can't do this order.",
+      "rejectLabel": "Reason (the buyer sees this)",
+      "rejectPlaceholder": "e.g. Sold out — sorry",
+      "shipPrompt": "Tell the buyer who is bringing it.",
+      "shipLabel": "Delivery note",
+      "shipPlaceholder": "e.g. Rider John 0977…",
+      "submitReject": "Send reason",
+      "submitShip": "Mark as sent",
       "cancel": "Cancel"
     },
     "success": {
-      "confirmed": "Order confirmed.",
-      "rejected": "Order rejected.",
-      "packed": "Order is now processing.",
-      "shipped": "Order marked shipped.",
-      "ready": "Order ready for pickup."
+      "confirmed": "Done. The buyer knows you have it.",
+      "rejected": "Order turned down. The buyer has been told.",
+      "packed": "Now packing.",
+      "shipped": "Marked as sent.",
+      "ready": "Ready for the buyer to collect."
     },
     "errors": {
-      "loadFailed": "Could not load this order. Pull to refresh.",
-      "actionFailed": "Action failed. Try again.",
-      "forbidden": "You can only manage your own orders.",
-      "invalidTransition": "That action is not available for this order.",
-      "reasonRequired": "A reason is required when rejecting.",
-      "trackingRequired": "A tracking note is required when shipping."
+      "loadFailed": "We couldn't open this order. Pull down to try again.",
+      "actionFailed": "That didn't work. Check your internet and try again.",
+      "forbidden": "This order belongs to another shop.",
+      "invalidTransition": "You can't do that now. Pull down to see the latest order status.",
+      "reasonRequired": "Write a reason first.",
+      "trackingRequired": "Write who is bringing it first."
     },
     "courier": {
-      "heading": "Courier",
-      "courier": "Assigned courier",
-      "reference": "Courier reference: {ref}",
+      "heading": "Rider",
+      "courier": "Rider",
+      "reference": "Delivery number: {ref}",
       "statuses": {
-        "requested": "Requested",
-        "accepted": "Accepted",
+        "requested": "Looking for a rider",
+        "accepted": "Rider found",
         "picked_up": "Picked up",
         "delivered": "Delivered",
-        "failed": "Failed",
+        "failed": "Not delivered",
         "cancelled": "Cancelled"
       },
-      "codDue": "Rider collects {amount} from the customer",
-      "handoverNote": "The customer confirms delivery with a code they give the rider."
+      "codDue": "The rider collects {amount} cash from the buyer",
+      "handoverNote": "The buyer gives the rider a code to show they got it."
     }
   },
   "home": {
     "title": "Today",
-    "eyebrow": "Vendor home",
+    "eyebrow": "Seller home",
     "loading": "Ilelodisha dashboard…",
     "offlineNotice": "Showing saved data — connect to refresh.",
     "takings": {
-      "label": "Today's takings",
+      "label": "Sales today",
       "caption": "⚠ Tukishishenied revenue for {date} (Lusaka time)",
       "emptyCaption": "⚠ No confirmed revenue yet today — totals come from real orders only."
     },
     "analytics": {
-      "ariaLabel": "Last 30 days storefront performance",
-      "views": "Views",
+      "ariaLabel": "Your shop in the last 30 days",
+      "views": "People who looked",
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "GMV",
+      "gmv": "Sales",
       "gmvCaption": "30 days"
     },
     "needsAction": {
-      "heading": "Needs action",
-      "empty": "You're all caught up — no orders waiting on you.",
-      "emptyTitle": "You're all caught up"
+      "heading": "Do this now",
+      "empty": "Nothing to do — no orders are waiting for you.",
+      "emptyTitle": "All done"
     },
     "actions": {
       "openQueue": "Funguleni order queue",
@@ -1007,14 +1007,14 @@
     "quickStart": {
       "eyebrow": "For your {businessType} business",
       "products": {
-        "heading": "Grow your catalogue",
+        "heading": "Your products",
         "body": "⚠ Add products and keep your stock and prices up to date.",
-        "cta": "Manage your listings"
+        "cta": "See my products"
       },
       "services": {
-        "heading": "Grow your services",
-        "body": "Publish your services and reply to customer quote requests.",
-        "cta": "Manage your services"
+        "heading": "Your services",
+        "body": "Show your services and answer price requests.",
+        "cta": "See my services"
       },
       "events": {
         "heading": "Longeni imipikilo yenu",
@@ -1039,37 +1039,37 @@
       "other": "retail"
     },
     "errors": {
-      "loadFailed": "Could not load your dashboard. Try again.",
+      "loadFailed": "We couldn't open your home page. Check your internet and try again.",
       "authRequired": "Ingilani ukulolesha your vendor home.",
       "permissionDenied": "Tamuli na access to this vendor dashboard.",
       "retryHint": "Loleni connection yenu, then try again."
     },
     "kycBanner": {
-      "title": "Finish verification",
+      "title": "Finish your ID check",
       "body": "⚠ Your shop is not marked verified until KYC is approved with an auditable record.",
       "cta": "⚠ View KYC status"
     },
     "shortcuts": {
       "ariaLabel": "Quick links",
-      "listings": "Catalogue",
+      "listings": "Products",
       "profile": "Profile"
     }
   },
   "queue": {
     "meta": {
       "title": "Order queue — Convergeo Vendor",
-      "description": "Filter and fulfil orders with one-tap actions."
+      "description": "See your orders and move them on with one tap."
     },
     "title": "Ama-order",
-    "intro": "Tap an action to move orders forward. Pull down to refresh.",
+    "intro": "Tap a button to move an order on. Pull down to refresh.",
     "loading": "Ilelodisha orders…",
     "refreshing": "Refreshing…",
     "pullToRefresh": "Release to refresh",
-    "offlineNotice": "Offline — showing your last saved queue.",
-    "empty": "No orders in this view.",
+    "offlineNotice": "No internet — showing your last saved orders.",
+    "empty": "No orders here right now.",
     "emptyCta": "Bweleleni to home",
     "filters": {
-      "needsAction": "Needs action",
+      "needsAction": "To do",
       "placed": "New",
       "confirmed": "Tukishishenied",
       "processing": "Packing",
@@ -1085,7 +1085,7 @@
       "cancel": "Not now"
     },
     "errors": {
-      "loadFailed": "Could not load orders. Pull to refresh."
+      "loadFailed": "We couldn't open your orders. Pull down to try again."
     }
   },
   "payouts": {
@@ -1100,9 +1100,9 @@
     "balances": {
       "heading": "⚠ Your balances",
       "escrowHeld": "⚠ Held in escrow",
-      "released": "Released & available",
-      "paidOut": "Paid out",
-      "ledgerNote": "These figures match your ledger accounts exactly."
+      "released": "Ready to send to you",
+      "paidOut": "Sent to you",
+      "ledgerNote": "We pay you after the buyer gets the order."
     },
     "hold": {
       "noticeTitle": "⚠ Payouts paused for 24 hours",
@@ -1117,17 +1117,17 @@
       "empty": "⚠ No payouts yet.",
       "status": {
         "pending": "Iilindilila",
-        "processing": "Processing",
-        "paid": "Paid",
-        "failed": "Failed"
+        "processing": "Sending",
+        "paid": "Sent",
+        "failed": "Didn't go through"
       }
     },
     "statement": {
-      "heading": "Monthly statement",
+      "heading": "Monthly report",
       "monthLabel": "Month",
-      "downloadCsv": "Download CSV",
-      "downloading": "Preparing CSV…",
-      "pdfStub": "PDF statements are coming soon — CSV is available now."
+      "downloadCsv": "Download (spreadsheet)",
+      "downloading": "Getting it ready…",
+      "pdfStub": "PDF reports are coming soon."
     },
     "method": {
       "meta": {
@@ -1137,8 +1137,8 @@
       "link": "⚠ Change payout method",
       "back": "⚠ ← Bweleleni to payouts",
       "title": "⚠ Payout method",
-      "intro": "Enter the MTN, Airtel, or Zamtel number registered in your name. We re-verify via Lenco before saving.",
-      "msisdnLabel": "Mobile-money number",
+      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name before we save it.",
+      "msisdnLabel": "Mobile money number",
       "msisdnPlaceholder": "e.g. 0977123456",
       "railLabel": "Network",
       "rails": {
@@ -1146,22 +1146,22 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Verification code",
-      "otpPlaceholder": "6-digit OTP",
-      "otpHelp": "We sent a code to your registered phone. Enter it to confirm this change.",
+      "otpLabel": "Code from your phone",
+      "otpPlaceholder": "6 numbers",
+      "otpHelp": "We sent a code to your phone. Type it here.",
       "submit": "⚠ Save payout method",
       "saving": "Saving…",
       "success": "⚠ Payout method updated. Payouts are paused for 24 hours."
     },
     "errors": {
       "loadFailed": "⚠ Could not load payouts. Pull to refresh.",
-      "statementFailed": "Could not download the statement. Try again.",
+      "statementFailed": "We couldn't download the report. Try again.",
       "methodFailed": "⚠ Could not update payout method. Try again.",
-      "otpFailed": "Invalid or expired verification code.",
-      "nameMismatch": "That MoMo name does not match your verified legal name.",
+      "otpFailed": "That code is wrong or too old. Ask for a new one.",
+      "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
       "kycRequired": "⚠ Complete KYC before changing your payout method.",
       "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
-      "rateLimited": "Too many requests. Try again shortly.",
+      "rateLimited": "Too many tries. Wait a minute, then try again.",
       "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow."
     }
   },
@@ -1887,21 +1887,21 @@
       "ariaLabel": "Ukutampila kwa vendor",
       "desktopAriaLabel": "Sidebar ya vendor",
       "home": "Pamo",
-      "listings": "Listings",
+      "listings": "Products",
       "orders": "Ama-order",
       "profile": "Profile",
       "more": "Banji",
-      "scan": "Scan & verify",
+      "scan": "Scan a code",
       "returns": "Ukubwesha",
-      "analytics": "Analytics",
+      "analytics": "How my shop is doing",
       "services": "Services",
       "events": "Events",
       "rfq": "Ama-quote",
       "jobs": "Jobs",
-      "clips": "Clips",
+      "clips": "Videos",
       "reviews": "Reviews",
-      "payouts": "Payouts",
-      "disputes": "Disputes",
+      "payouts": "My money",
+      "disputes": "Problems",
       "intake": "Ama-draft ya WhatsApp"
     }
   },

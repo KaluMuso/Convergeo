@@ -21,7 +21,7 @@
     "services": "服务",
     "events": "活动",
     "supplies": "供应",
-    "vendors": "商家",
+    "vendors": "店铺",
     "count": "{label} ({count})"
   },
   "noResults": {
@@ -61,7 +61,7 @@
   },
   "results": {
     "count": "{count, plural, one {#个结果} other {#个结果}}",
-    "degraded": "显示关键词匹配结果（语义搜索不可用）",
+    "degraded": "目前显示简单匹配结果，可能不太准确。",
     "forQuery": "“{query}” 的结果"
   },
   "input": {

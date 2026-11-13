@@ -209,14 +209,16 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
       </a>
 
       {/* Phones (< md): logo + actions, then a full-width search row. */}
-      <nav aria-label={labels.navAriaLabel} className="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden">
+      <nav
+        aria-label={labels.navAriaLabel}
+        className="flex flex-col gap-2 px-4 pb-3 pt-2 md:hidden"
+      >
         <div className="flex items-center justify-between gap-2">
           {logo}
-          <div className="flex items-center gap-0.5">
-            {themeToggle}
-            {accountLink(false)}
-            {cartTrigger(false)}
-          </div>
+          {/* Simple-UX: one labelled action on phones. Account lives in the
+              labelled bottom bar and display settings in the footer, so the
+              bare person / monitor icons are not repeated here. */}
+          <div className="flex items-center gap-0.5">{cartTrigger(true)}</div>
         </div>
         {mobileSearchSlot ? <div className="w-full min-w-0">{mobileSearchSlot}</div> : null}
       </nav>

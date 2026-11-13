@@ -1,6 +1,6 @@
 {
   "services.title": "服务",
-  "services.rfq.sent": "报价请求已发送给 {count, plural, one {# 个商家} other {# 个商家}}",
+  "services.rfq.sent": "已向 {count, plural, other {# 个卖家}}发送询价",
   "services.quote.received": "来自 {vendor} 的报价：{amount}",
   "browse": {
     "title": "服务",
@@ -92,7 +92,7 @@
   },
   "postJob": {
     "title": "发布需求",
-    "subtitle": "描述您的需求——匹配的服务商将发送报价。",
+    "subtitle": "说出您的需要，做这类工作的人会给您报价。",
     "category": {
       "label": "服务类别",
       "beauty": "美容",
@@ -134,13 +134,13 @@
     "authCta": "使用手机号继续",
     "draftSaved": "在您登录之前，草稿将保存在此设备上。",
     "ack": {
-      "sent": "我们已通知匹配的服务商。报价通常在一天内送达。",
-      "noMatch": "我们目前未能找到匹配的服务商，但我们会继续寻找并通知您。"
+      "sent": "我们已通知相关服务商。通常一天内会收到报价。",
+      "noMatch": "暂时没找到人。我们会继续找，并通知您。"
     },
     "errors": {
-      "required": "请填写所有必填字段。",
-      "generic": "出了点问题。请重试。",
-      "rateLimited": "请求过于频繁。请稍候。"
+      "required": "请填写标有 * 的项目。",
+      "generic": "出了点问题。请检查网络后重试。",
+      "rateLimited": "尝试次数太多。请等一分钟再试。"
     }
   },
   "quotes": {
@@ -191,7 +191,7 @@
   },
   "accept": {
     "title": "接受此报价",
-    "intro": "立即支付 {pct}% 的定金以锁定 {vendor}。余款在工作完成后支付。",
+    "intro": "现在付 {pct}% 预订 {vendor}，完工后再付余款。",
     "quoteFrom": "来自 {vendor} 的报价",
     "totalLabel": "需求总价值",
     "depositLabel": "现在应付定金",
@@ -288,8 +288,8 @@
     "status": {
       "paid": "Paid and verified",
       "unpaid": "Unpaid",
-      "initiated": "Payment pending",
-      "ussd_pushed": "Payment pending",
+      "initiated": "尚未付款",
+      "ussd_pushed": "请在手机上付款",
       "pay_offline": "Awaiting mobile approval",
       "failed": "Payment failed",
       "expired": "Payment unresolved — awaiting reconciliation",

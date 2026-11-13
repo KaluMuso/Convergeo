@@ -193,28 +193,28 @@
   "onboarding": {
     "meta": {
       "title": "Seller invite onboarding — Convergeo",
-      "description": "Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
+      "description": "Finish your seller sign-up and ID check. Your products stay hidden until we approve you."
     },
     "invite": {
-      "eyebrow": "Invite / concierge beta",
-      "body": "You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo approves your KYC and grants seller access."
+      "eyebrow": "You are invited",
+      "body": "Finish these 3 steps. We check your ID, then you can start selling."
     },
     "steps": {
       "business": "Business",
-      "kyc": "Verify ID",
+      "kyc": "Check ID",
       "review": "Review"
     },
     "stepAnnouncement": "Step {current} of {total}",
     "doneIndicator": "✓",
     "business": {
-      "heading": "Business basics",
-      "intro": "Tell us what you sell and how your business operates so we can tailor your setup.",
+      "heading": "Your shop",
+      "intro": "Tell us what you sell.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
-      "categoryLabel": "Main category",
-      "categoryPlaceholder": "Select a category",
-      "archetypeLabel": "How does your business operate?",
-      "archetypePlaceholder": "Select a business type",
+      "categoryLabel": "What do you mostly sell?",
+      "categoryPlaceholder": "Choose one",
+      "archetypeLabel": "What kind of business are you?",
+      "archetypePlaceholder": "Choose one",
       "categories": {
         "electronics": "Electronics",
         "home": "Home & living",
@@ -225,48 +225,48 @@
       },
       "archetypes": {
         "market_trader": "Market trader",
-        "registered_retailer": "Registered retailer",
-        "service_professional": "Service professional",
-        "manufacturer": "Manufacturer",
-        "importer_wholesaler": "Importer or wholesaler",
-        "event_organiser": "Event organiser"
+        "registered_retailer": "Registered shop",
+        "service_professional": "I do services (repairs, beauty…)",
+        "manufacturer": "I make things",
+        "importer_wholesaler": "I import or sell in bulk",
+        "event_organiser": "I run events"
       },
       "continue": "Continue",
       "saving": "Saving…"
     },
     "kyc": {
-      "heading": "T1 verification",
-      "intro": "Upload your NRC and a selfie. We match your mobile-money name. Nothing goes public until approved.",
+      "heading": "Check your ID",
+      "intro": "Take a photo of your NRC and of your face. Nobody else sees them.",
       "nrcLabel": "NRC photo",
-      "nrcHelp": "Capture the front of your National Registration Card in good light.",
-      "selfieLabel": "Selfie",
-      "selfieHelp": "Hold your phone at eye level. Face the camera directly.",
-      "legalNameLabel": "Full name (as on your NRC)",
+      "nrcHelp": "Take a photo of the front of your NRC (green ID card) in good light.",
+      "selfieLabel": "Photo of your face",
+      "selfieHelp": "Hold the phone in front of your face and look at it.",
+      "legalNameLabel": "Your full name (same as on your NRC)",
       "legalNamePlaceholder": "e.g. Chanda Mwansa",
-      "legalNameHelp": "Must match the name registered on your mobile-money number.",
-      "momoLabel": "Mobile-money number",
+      "legalNameHelp": "It must be the same as the name on your mobile money.",
+      "momoLabel": "Mobile money number",
       "momoPlaceholder": "e.g. 0977123456",
-      "momoHelp": "MTN or Airtel number registered in your name for payouts.",
+      "momoHelp": "MTN or Airtel number in your name. We send your money here.",
       "continue": "Continue",
       "uploading": "Uploading…",
       "capture": "Take photo",
       "retake": "Retake",
       "usePhoto": "Use this photo",
-      "uploadFailed": "Upload failed. Check your connection and try again.",
+      "uploadFailed": "The photo didn't send. Check your internet and try again.",
       "uploaded": "Saved",
       "nrcDone": "NRC photo saved",
-      "selfieDone": "Selfie saved"
+      "selfieDone": "Face photo saved"
     },
     "quality": {
       "heading": "Photo tips",
-      "light": "Use daylight or a bright room — avoid glare on the NRC.",
-      "steady": "Hold still; blurry photos are rejected.",
-      "frame": "Fill the frame — all four corners of the NRC visible.",
-      "face": "Remove hats and sunglasses for the selfie."
+      "light": "Use daylight. No shine on the card.",
+      "steady": "Hold still. Blurry photos are not accepted.",
+      "frame": "Show all four corners of the NRC.",
+      "face": "Take off hats and sunglasses."
     },
     "review": {
-      "heading": "Review and submit",
-      "intro": "Check your details. After submission, our team reviews within one business day.",
+      "heading": "Check and send",
+      "intro": "Check your details. We usually reply within one working day.",
       "businessSection": "Business",
       "businessNameLabel": "Business name",
       "businessCategoryLabel": "Main category",
@@ -274,56 +274,56 @@
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "NRC photo uploaded",
-      "selfieUploaded": "Selfie uploaded",
+      "selfieUploaded": "Face photo added",
       "notUploaded": "Not uploaded",
-      "submit": "Submit for review",
-      "submitting": "Submitting…",
-      "editBusiness": "Edit business",
-      "editDocs": "Edit documents",
-      "gateNotice": "Your listings stay hidden until KYC is approved."
+      "submit": "Send",
+      "submitting": "Sending…",
+      "editBusiness": "Change shop details",
+      "editDocs": "Change photos",
+      "gateNotice": "Your products stay hidden until we approve your ID."
     },
     "status": {
-      "heading": "Verification status",
+      "heading": "Your ID check",
       "pending": {
-        "title": "Under review",
-        "body": "We are verifying your documents. You will get a WhatsApp update when done.",
-        "cta": "Back to dashboard"
+        "title": "We are checking",
+        "body": "We are checking your photos. We will message you on WhatsApp when it is done.",
+        "cta": "Back to home"
       },
       "approved": {
-        "title": "You are verified",
-        "body": "T1 KYC approved. You can create listings — buyers will see them once you publish.",
-        "cta": "Create your first listing",
-        "t2Link": "Upgrade to T2 (PACRA + TPIN)"
+        "title": "Your ID is checked",
+        "body": "You can add products now. Buyers see them when you publish.",
+        "cta": "Add your first product",
+        "t2Link": "Add business papers (PACRA, TPIN)"
       },
       "rejected": {
-        "title": "Verification needs changes",
-        "body": "We could not approve your application.",
+        "title": "Please fix your details",
+        "body": "We could not approve you yet. See why below.",
         "reasonLabel": "Reason",
-        "resubmitCta": "Update documents",
-        "gateNotice": "Listings remain hidden until you pass verification."
+        "resubmitCta": "Fix and send again",
+        "gateNotice": "Your products stay hidden until your ID is approved."
       },
       "resubmit": {
-        "title": "Resubmit documents",
-        "body": "Update the items below and resubmit — you do not need to start over.",
+        "title": "Send your photos again",
+        "body": "Fix the items below and send again. You don't need to start over.",
         "nrcRequired": "NRC photo required",
-        "selfieRequired": "Selfie required",
-        "submit": "Resubmit for review"
+        "selfieRequired": "Face photo needed",
+        "submit": "Send again"
       }
     },
     "t2": {
-      "stubLabel": "Upgrade to verified business (T2)",
-      "stubBody": "PACRA certificate and company TPIN — coming soon."
+      "stubLabel": "Business papers check (coming soon)",
+      "stubBody": "PACRA certificate and company TPIN."
     },
     "errors": {
-      "required": "This field is required",
+      "required": "Please fill this in",
       "invalidPhone": "Enter a valid Zambian mobile number",
-      "loadFailed": "Could not load your application. Try again.",
-      "saveFailed": "Could not save your business details. Try again.",
-      "submitFailed": "Submission failed. Try again.",
-      "authRequired": "Sign in to continue your seller invite application.",
-      "permissionDenied": "You do not have access to this seller application. Use the account that received the invite, or contact Convergeo.",
-      "draftLocked": "Business details can no longer be edited after approval.",
-      "notFound": "We could not find your vendor application.",
+      "loadFailed": "We couldn't open your sign-up. Check your internet and try again.",
+      "saveFailed": "We couldn't save your shop details. Try again.",
+      "submitFailed": "We couldn't send it. Check your internet and try again.",
+      "authRequired": "Sign in to finish your seller sign-up.",
+      "permissionDenied": "This sign-up belongs to another account. Sign in with the number that got the invite, or contact us.",
+      "draftLocked": "You are approved, so shop details can't be changed here. Contact us to change them.",
+      "notFound": "We couldn't find your sign-up. Contact us for help.",
       "retryHint": "Check your connection, then try again."
     },
     "loading": "Loading…"
@@ -331,104 +331,104 @@
   "listings": {
     "images": {
       "heading": "Photos",
-      "intro": "{count} of {max} photos. The first is your cover.",
+      "intro": "{count} of {max} photos. The first photo is the main one.",
       "alt": "Listing photo {position}",
-      "cover_badge": "Cover",
+      "cover_badge": "Main photo",
       "position_label": "Photo {position}",
       "move_up": "Move up",
       "move_down": "Move down",
-      "set_cover": "Set as cover",
+      "set_cover": "Make main photo",
       "remove": "Remove",
       "drop_label": "Drag photos here",
       "browse_label": "Browse",
-      "compress_hint": "Photos are resized before upload to save data.",
+      "compress_hint": "We make photos smaller to save your data.",
       "limit_reached": "You've reached the photo limit.",
       "upload": "Add photos",
       "uploading": "Uploading…",
-      "upload_failed": "Upload failed",
-      "minimum_required": "At least {count} evidence photo must remain attached while this listing is live.",
+      "upload_failed": "Photo didn't send. Try again.",
+      "minimum_required": "Keep at least {count} real photo while this product is for sale.",
       "retry": "Retry"
     },
     "meta": {
-      "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
+      "title": "Add a product — Convergeo Seller",
+      "description": "Add a product: find it in our list, add a new one, or add a one-off item."
     },
     "title": "Create listing",
     "intro": "Choose how you want to list. Commission is shown before you publish.",
     "loading": "Loading…",
     "tabs": {
-      "ariaLabel": "Listing creation mode",
-      "attach": "Catalog",
+      "ariaLabel": "How to add your product",
+      "attach": "Find it",
       "newCanonical": "New product",
-      "quickList": "Quick list"
+      "quickList": "One-off item"
     },
     "commission": {
-      "heading": "Commission on this listing",
-      "body": "You only pay when you sell. Rate is fixed for this category.",
+      "heading": "Commission: our fee on this product",
+      "body": "You only pay when you sell. The fee is the same for everything in this category.",
       "rate": "{rate}%"
     },
     "attach": {
-      "searchPlaceholder": "Search catalog products",
+      "searchPlaceholder": "Search for your product",
       "searching": "Searching…",
-      "empty": "No matching products. Try another name or submit a new product.",
-      "hint": "Search the Convergeo catalog to attach your offer.",
+      "empty": "Not found. Try another name, or tap New product.",
+      "hint": "Search our list. If your product is there, you only add your price.",
       "changeProduct": "← Change product",
-      "specHeading": "Product specs",
-      "publish": "Publish listing",
+      "specHeading": "Product details",
+      "publish": "Start selling",
       "publishing": "Publishing…"
     },
     "newCanonical": {
-      "heading": "Submit new product",
-      "intro": "We will review your product before it appears in the catalog.",
+      "heading": "Add a new product",
+      "intro": "Our team checks new products before buyers see them.",
       "nameLabel": "Product name",
       "namePlaceholder": "e.g. Wireless earbuds",
       "brandLabel": "Brand (optional)",
       "brandPlaceholder": "e.g. Samsung",
       "categoryLabel": "Category",
-      "categoryPlaceholder": "Select category",
-      "submit": "Submit for review",
-      "submitting": "Submitting…",
-      "moderationNotice": "Your listing stays in draft until our team approves the product.",
+      "categoryPlaceholder": "Choose a category",
+      "submit": "Send for checking",
+      "submitting": "Sending…",
+      "moderationNotice": "Buyers can't see it until our team says it is OK.",
       "details": {
         "about": "About this item",
         "heading": "Product details",
-        "help": "Enter only details you can verify for this category. Include units as stated by the manufacturer. You can add dimensions, weight, measurements, style, features, materials, care or guide instructions. Leave unknown details blank. All details require moderation. Up to 32 details; names: 80 characters; values: 2,000; description: 5,000.",
-        "name": "Detail name",
-        "value": "Detail value",
+        "help": "Add only details you are sure about, like size, weight, colour or what it is made of. Leave the rest empty. Our team checks them.",
+        "name": "Detail (e.g. Colour)",
+        "value": "Answer (e.g. Red)",
         "add": "Add detail",
         "remove": "Remove detail",
-        "invalid": "Complete each detail with a unique name and value, or remove it. Keep the description and details within the displayed limits."
+        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once."
       }
     },
     "quickList": {
-      "heading": "Quick list",
-      "intro": "Save a draft for a unique used item or a made-to-order offer.",
-      "titleLabel": "Listing title",
+      "heading": "One-off item",
+      "intro": "For a used item, or something you make for each buyer.",
+      "titleLabel": "Name of the item",
       "titlePlaceholder": "e.g. Used wooden chair",
-      "publish": "Publish listing",
+      "publish": "Start selling",
       "publishing": "Publishing…",
-      "descriptionLabel": "Listing description",
-      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
-      "draftNotice": "Saving a draft does not publish the listing.",
-      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
-      "saveDraft": "Save draft",
-      "savingDraft": "Saving draft…",
-      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
-      "categoriesUnavailable": "Categories are unavailable. Try again later."
+      "descriptionLabel": "Describe it",
+      "descriptionHelp": "Write at least 20 letters about this item.",
+      "draftNotice": "Saving does not put it on sale yet.",
+      "descriptionInvalid": "Write a bit more — at least 20 letters.",
+      "saveDraft": "Save for later",
+      "savingDraft": "Saving…",
+      "canonicalRequired": "Brand products (A, B, C) must be found in our list. Tap Find it.",
+      "categoriesUnavailable": "Categories didn't load. Check your internet and try again."
     },
     "fields": {
-      "priceLabel": "Your price (ZMW)",
+      "priceLabel": "Your price (K)",
       "pricePlaceholder": "0.00",
-      "priceHelp": "Enter kwacha and ngwee, e.g. 1,234.56",
-      "pricePerStepHelp": "Price for one selected sale increment.",
-      "priceInvalid": "Enter a valid price like 1234.56",
-      "productClassLabel": "Product class",
-      "classA": "A. Branded SKU",
-      "classB": "B. Branded variant",
-      "classC": "C. Commodity / generic",
-      "classD": "Class D — One-of-a-kind / unique",
-      "classE": "Class E — Made-to-order",
-      "standaloneClassHint": "Classes D and E are standalone. Use Quick list to create them.",
+      "priceHelp": "e.g. 1,234.50",
+      "pricePerStepHelp": "Price for one step (see below).",
+      "priceInvalid": "Type a price like 1234.50",
+      "productClassLabel": "What kind of product?",
+      "classA": "A. Brand product (same everywhere)",
+      "classB": "B. Brand product with sizes or colours",
+      "classC": "C. Everyday goods (no brand)",
+      "classD": "D. One-of-a-kind item",
+      "classE": "E. Made for each buyer",
+      "standaloneClassHint": "For D and E, use One-off item.",
       "saleUnitLabel": "Sold by",
       "unitEach": "Each",
       "unitMetre": "Metre",
@@ -436,61 +436,61 @@
       "unitLitre": "Litre",
       "unitBag": "Bag",
       "unitSqm": "Square metre",
-      "unitStepLabel": "Smallest sale increment",
-      "unitStepHelp": "Use up to 3 decimal places, e.g. 0.5 for half a unit.",
-      "unitStepInvalid": "Enter an increment greater than zero with up to 3 decimal places.",
-      "minStepsLabel": "Minimum increments per order",
+      "unitStepLabel": "Smallest amount you sell",
+      "unitStepHelp": "e.g. 0.5 for half a metre.",
+      "unitStepInvalid": "Type a number above 0, like 1 or 0.5.",
+      "minStepsLabel": "Smallest order (in steps)",
       "conditionLabel": "Condition",
       "conditionNew": "New",
       "conditionRefurbished": "Refurbished",
       "conditionUsed": "Used",
-      "defectNotesLabel": "Condition and defects",
-      "defectNotesPlaceholder": "Describe wear, damage, missing parts, and any repairs…",
-      "defectNotesHelp": "At least 10 characters. Clearly list every visible defect.",
-      "defectNotesInvalid": "Describe the used item's condition and defects in at least 10 characters.",
-      "fulfilmentLabel": "Fulfilment",
-      "fulfilmentStocked": "In stock",
-      "fulfilmentMadeToOrder": "Made to order",
-      "leadTimeLabel": "Lead time (days)",
-      "leadTimeHelp": "How many days you need before the order is ready.",
-      "leadTimeInvalid": "Enter a lead time between 1 and 365 days.",
-      "capacityLabel": "Weekly capacity",
-      "capacityHelp": "Maximum made-to-order units you can accept each week.",
-      "capacityInvalid": "Enter a weekly capacity between 1 and 9,999.",
-      "stockModeLabel": "Stock",
-      "stockTracked": "Tracked quantity",
-      "stockAlways": "Always available",
-      "stockQtyLabel": "Quantity in stock",
-      "wholesaleLabel": "Wholesale tiers",
-      "wholesaleHelp": "T2+ verified businesses only",
-      "wholesaleMeasureUnavailable": "Wholesale tiers for per-measure listings are not available yet.",
-      "moqLabel": "Minimum order quantity",
-      "evidenceDraftNotice": "Used and Class D listings are saved as drafts. Upload at least one evidence photo before publishing.",
-      "saveDraft": "Save draft and add photos",
-      "savingDraft": "Saving draft…"
+      "defectNotesLabel": "Marks or damage",
+      "defectNotesPlaceholder": "Say what is worn, broken, missing or fixed…",
+      "defectNotesHelp": "Write at least 10 letters. Tell buyers about every mark.",
+      "defectNotesInvalid": "Write a bit more about any marks or damage — at least 10 letters.",
+      "fulfilmentLabel": "Do you have it now?",
+      "fulfilmentStocked": "Yes, I have it",
+      "fulfilmentMadeToOrder": "No, I make it when ordered",
+      "leadTimeLabel": "Days to make it",
+      "leadTimeHelp": "How many days before it is ready.",
+      "leadTimeInvalid": "Type a number of days from 1 to 365.",
+      "capacityLabel": "How many can you make each week?",
+      "capacityHelp": "The most orders you can take in one week.",
+      "capacityInvalid": "Type a number from 1 to 9,999.",
+      "stockModeLabel": "How many do you have?",
+      "stockTracked": "I will count them",
+      "stockAlways": "I always have it",
+      "stockQtyLabel": "How many you have now",
+      "wholesaleLabel": "Bulk prices",
+      "wholesaleHelp": "Only for shops with business papers checked",
+      "wholesaleMeasureUnavailable": "Bulk prices are not ready yet for items sold by metre, kg or litre.",
+      "moqLabel": "Smallest order",
+      "evidenceDraftNotice": "Used and one-of-a-kind items are saved first. Add at least one real photo before you sell.",
+      "saveDraft": "Save and add photos",
+      "savingDraft": "Saving…"
     },
     "success": {
-      "live": "Listing is live!",
-      "moderation": "Submitted for review — we will notify you on WhatsApp.",
-      "evidence": "Draft saved. Add evidence photos before publishing.",
-      "draft": "Draft saved. This listing is not live."
+      "live": "Your product is on sale!",
+      "moderation": "Sent. We will tell you on WhatsApp when our team has checked it.",
+      "evidence": "Saved. Add real photos before you sell.",
+      "draft": "Saved. It is not on sale yet."
     },
     "errors": {
-      "required": "This field is required",
-      "submitFailed": "Could not create listing. Try again.",
-      "standalone_required": "Classes D and E must be created with Quick list.",
-      "wholesale_requires_t2": "Wholesale requires T2 verification",
-      "product_not_found": "Product not found",
-      "product_not_active": "This product cannot be attached yet",
-      "category_not_found": "Category not found",
-      "invalid_tiers": "Price tiers must rise in quantity and fall in unit price",
-      "authRequired": "Sign in to manage listings.",
-      "permissionDenied": "You do not have access to this vendor catalogue.",
-      "notFound": "That listing was not found for your shop.",
+      "required": "Please fill this in",
+      "submitFailed": "We couldn't save your product. Check your internet and try again.",
+      "standalone_required": "For D and E, use One-off item.",
+      "wholesale_requires_t2": "Bulk prices need a business papers check first.",
+      "product_not_found": "We couldn't find that product. Search again.",
+      "product_not_active": "This product is not ready for sale yet. Choose another, or try later.",
+      "category_not_found": "We couldn't find that category. Choose another.",
+      "invalid_tiers": "Each bulk price must be for more items and cost less per item than the one before.",
+      "authRequired": "Sign in to see your products.",
+      "permissionDenied": "This account can't open this shop's products.",
+      "notFound": "We couldn't find that product in your shop.",
       "retryHint": "Check your connection, then try again.",
-      "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
-      "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
-      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
+      "canonicalRequired": "Brand products (A, B, C) must be found in our list. Tap Find it, or New product.",
+      "standaloneDetailsRequired": "Choose a category and write at least 20 letters about the item.",
+      "policyBlocked": "This product can't be sold in this category right now. Check the details, or contact us."
     },
     "import": {
       "meta": {
@@ -674,10 +674,10 @@
       }
     },
     "kycGate": {
-      "title": "Verification still in progress",
-      "body": "Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
-      "cta": "Check verification status",
-      "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
+      "title": "We are still checking your ID",
+      "body": "Your products may stay hidden until your ID is approved.",
+      "cta": "See my ID check",
+      "wholesaleLocked": "Bulk prices open after your business papers are checked (T2)."
     },
     "variants": {
       "heading": "Colours, sizes and other options",
@@ -893,9 +893,9 @@
     "status": {
       "placed": "Placed",
       "confirmed": "Confirmed",
-      "processing": "Processing",
+      "processing": "Packing",
       "ready": "Ready for pickup",
-      "shipped": "Shipped",
+      "shipped": "Sent",
       "delivered": "Delivered",
       "completed": "Completed",
       "cancelled": "Cancelled"
@@ -906,120 +906,120 @@
     },
     "payment": {
       "heading": "Payment",
-      "cod": "Cash on delivery",
-      "paid": "Paid — held in escrow",
-      "unpaid": "Awaiting payment"
+      "cod": "Buyer pays cash when it arrives",
+      "paid": "Paid — we keep it safe until delivery",
+      "unpaid": "Not paid yet"
     },
     "items": {
       "heading": "Items",
       "qty": "Qty {qty}",
-      "empty": "No line items",
+      "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "SKU {sku}"
+      "sku": "Item code {sku}"
     },
     "timeline": {
-      "heading": "Timeline",
+      "heading": "What has happened",
       "empty": "No events yet",
       "note": "Note: {note}"
     },
     "actions": {
-      "heading": "Actions",
-      "confirm": "Confirm order",
-      "reject": "Reject order",
+      "heading": "What to do next",
+      "confirm": "Yes, I have it",
+      "reject": "I can't do this order",
       "pack": "Start packing",
-      "ship": "Mark shipped",
-      "ready_for_pickup": "Ready for pickup",
+      "ship": "Mark as sent",
+      "ready_for_pickup": "Ready for the buyer to collect",
       "confirming": "Confirming…",
       "rejecting": "Rejecting…",
       "packing": "Packing…",
-      "shipping": "Shipping…",
+      "shipping": "Saving…",
       "markingReady": "Updating…",
-      "rejectPrompt": "Tell the customer why you cannot fulfil this order.",
-      "rejectLabel": "Reason (shown to customer)",
-      "rejectPlaceholder": "e.g. Out of stock — sorry for the inconvenience",
-      "shipPrompt": "Add tracking or courier details for the buyer.",
-      "shipLabel": "Tracking note",
-      "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
-      "submitReject": "Reject with reason",
-      "submitShip": "Mark as shipped",
+      "rejectPrompt": "Tell the buyer why you can't do this order.",
+      "rejectLabel": "Reason (the buyer sees this)",
+      "rejectPlaceholder": "e.g. Sold out — sorry",
+      "shipPrompt": "Tell the buyer who is bringing it.",
+      "shipLabel": "Delivery note",
+      "shipPlaceholder": "e.g. Rider John 0977…",
+      "submitReject": "Send reason",
+      "submitShip": "Mark as sent",
       "cancel": "Cancel"
     },
     "success": {
-      "confirmed": "Order confirmed.",
-      "rejected": "Order rejected.",
-      "packed": "Order is now processing.",
-      "shipped": "Order marked shipped.",
-      "ready": "Order ready for pickup."
+      "confirmed": "Done. The buyer knows you have it.",
+      "rejected": "Order turned down. The buyer has been told.",
+      "packed": "Now packing.",
+      "shipped": "Marked as sent.",
+      "ready": "Ready for the buyer to collect."
     },
     "errors": {
-      "loadFailed": "Could not load this order. Pull to refresh.",
-      "actionFailed": "Action failed. Try again.",
-      "forbidden": "You can only manage your own orders.",
-      "invalidTransition": "That action is not available for this order.",
-      "reasonRequired": "A reason is required when rejecting.",
-      "trackingRequired": "A tracking note is required when shipping."
+      "loadFailed": "We couldn't open this order. Pull down to try again.",
+      "actionFailed": "That didn't work. Check your internet and try again.",
+      "forbidden": "This order belongs to another shop.",
+      "invalidTransition": "You can't do that now. Pull down to see the latest order status.",
+      "reasonRequired": "Write a reason first.",
+      "trackingRequired": "Write who is bringing it first."
     },
     "courier": {
-      "heading": "Courier",
-      "courier": "Assigned courier",
-      "reference": "Courier reference: {ref}",
+      "heading": "Rider",
+      "courier": "Rider",
+      "reference": "Delivery number: {ref}",
       "statuses": {
-        "requested": "Requested",
-        "accepted": "Accepted",
+        "requested": "Looking for a rider",
+        "accepted": "Rider found",
         "picked_up": "Picked up",
         "delivered": "Delivered",
-        "failed": "Failed",
+        "failed": "Not delivered",
         "cancelled": "Cancelled"
       },
-      "codDue": "Rider collects {amount} from the customer",
-      "handoverNote": "The customer confirms delivery with a code they give the rider."
+      "codDue": "The rider collects {amount} cash from the buyer",
+      "handoverNote": "The buyer gives the rider a code to show they got it."
     }
   },
   "home": {
     "title": "Today",
-    "eyebrow": "Vendor home",
+    "eyebrow": "Seller home",
     "loading": "Loading dashboard…",
     "offlineNotice": "Showing saved data — connect to refresh.",
     "takings": {
-      "label": "Today's takings",
-      "caption": "Confirmed revenue for {date} (Lusaka time)",
-      "emptyCaption": "No confirmed revenue yet today — totals come from real orders only."
+      "label": "Sales today",
+      "caption": "Money from confirmed orders on {date}",
+      "emptyCaption": "No sales yet today."
     },
     "analytics": {
-      "ariaLabel": "Last 30 days storefront performance",
-      "views": "Views",
+      "ariaLabel": "Your shop in the last 30 days",
+      "views": "People who looked",
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "GMV",
+      "gmv": "Sales",
       "gmvCaption": "30 days"
     },
     "needsAction": {
-      "heading": "Needs action",
-      "empty": "You're all caught up — no orders waiting on you.",
-      "emptyTitle": "You're all caught up"
+      "heading": "Do this now",
+      "empty": "Nothing to do — no orders are waiting for you.",
+      "emptyTitle": "All done"
     },
     "actions": {
-      "openQueue": "Open order queue",
-      "confirmOrders": "Confirm new orders"
+      "openQueue": "See orders",
+      "confirmOrders": "Say yes to new orders"
     },
     "quickStart": {
       "eyebrow": "For your {businessType} business",
       "products": {
-        "heading": "Grow your catalogue",
-        "body": "Add products and keep your stock and prices up to date.",
-        "cta": "Manage your listings"
+        "heading": "Your products",
+        "body": "Add products. Keep prices and stock up to date.",
+        "cta": "See my products"
       },
       "services": {
-        "heading": "Grow your services",
-        "body": "Publish your services and reply to customer quote requests.",
-        "cta": "Manage your services"
+        "heading": "Your services",
+        "body": "Show your services and answer price requests.",
+        "cta": "See my services"
       },
       "events": {
-        "heading": "Run your events",
-        "body": "Create events, manage ticket types, and prepare your scan team.",
-        "cta": "Manage your events"
+        "heading": "Your events",
+        "body": "Make events, set ticket prices and get your door team ready.",
+        "cta": "See my events"
       }
     },
     "businessArchetypes": {
@@ -1039,39 +1039,39 @@
       "other": "retail"
     },
     "errors": {
-      "loadFailed": "Could not load your dashboard. Try again.",
-      "authRequired": "Sign in to view your vendor home.",
-      "permissionDenied": "You do not have access to this vendor dashboard.",
+      "loadFailed": "We couldn't open your home page. Check your internet and try again.",
+      "authRequired": "Sign in to see your shop.",
+      "permissionDenied": "This account can't open this shop. Sign in with your seller number.",
       "retryHint": "Check your connection, then try again."
     },
     "kycBanner": {
-      "title": "Finish verification",
-      "body": "Your shop is not marked verified until KYC is approved with an auditable record.",
-      "cta": "View KYC status"
+      "title": "Finish your ID check",
+      "body": "Buyers trust shops with a checked ID. Finish yours to get the badge.",
+      "cta": "See my ID check"
     },
     "shortcuts": {
       "ariaLabel": "Quick links",
-      "listings": "Catalogue",
+      "listings": "Products",
       "profile": "Profile"
     }
   },
   "queue": {
     "meta": {
       "title": "Order queue — Convergeo Vendor",
-      "description": "Filter and fulfil orders with one-tap actions."
+      "description": "See your orders and move them on with one tap."
     },
     "title": "Orders",
-    "intro": "Tap an action to move orders forward. Pull down to refresh.",
+    "intro": "Tap a button to move an order on. Pull down to refresh.",
     "loading": "Loading orders…",
     "refreshing": "Refreshing…",
     "pullToRefresh": "Release to refresh",
-    "offlineNotice": "Offline — showing your last saved queue.",
-    "empty": "No orders in this view.",
+    "offlineNotice": "No internet — showing your last saved orders.",
+    "empty": "No orders here right now.",
     "emptyCta": "Back to home",
     "filters": {
-      "needsAction": "Needs action",
+      "needsAction": "To do",
       "placed": "New",
-      "confirmed": "Confirmed",
+      "confirmed": "Said yes",
       "processing": "Packing",
       "all": "All"
     },
@@ -1085,60 +1085,60 @@
       "cancel": "Not now"
     },
     "errors": {
-      "loadFailed": "Could not load orders. Pull to refresh."
+      "loadFailed": "We couldn't open your orders. Pull down to try again."
     }
   },
   "payouts": {
     "meta": {
-      "title": "Payouts — Convergeo Vendor",
-      "description": "View escrow-held and released balances, payout history, and download monthly statements."
+      "title": "Your money — Convergeo Seller",
+      "description": "See money waiting, money ready and money sent to you."
     },
     "eyebrow": "Money",
-    "title": "Payouts",
-    "intro": "Balances come straight from the ledger — no separate bookkeeping.",
-    "loading": "Loading payouts…",
+    "title": "Your money",
+    "intro": "Money from your sales, and money we have sent to you.",
+    "loading": "Loading…",
     "balances": {
-      "heading": "Your balances",
-      "escrowHeld": "Held in escrow",
-      "released": "Released & available",
-      "paidOut": "Paid out",
-      "ledgerNote": "These figures match your ledger accounts exactly."
+      "heading": "Your money",
+      "escrowHeld": "Waiting for delivery",
+      "released": "Ready to send to you",
+      "paidOut": "Sent to you",
+      "ledgerNote": "We pay you after the buyer gets the order."
     },
     "hold": {
-      "noticeTitle": "Payouts paused for 24 hours",
-      "noticeBody": "After changing your mobile-money number, payouts are held for 24 hours while we verify the change. You will be notified when payouts resume."
+      "noticeTitle": "Money sending paused for 24 hours",
+      "noticeBody": "You changed your mobile money number. We wait 24 hours to keep your money safe. We will message you when we start again."
     },
     "paused": {
-      "noticeTitle": "Payouts are switched off for now",
-      "noticeBody": "No money is being sent to your mobile-money number yet. The balances below are still recorded in the ledger."
+      "noticeTitle": "We are not sending money yet",
+      "noticeBody": "Nothing is sent to your mobile money yet. Your sales are still counted below."
     },
     "history": {
-      "heading": "Payout history",
-      "empty": "No payouts yet.",
+      "heading": "Money sent to you",
+      "empty": "No money sent yet.",
       "status": {
-        "pending": "Pending",
-        "processing": "Processing",
-        "paid": "Paid",
-        "failed": "Failed"
+        "pending": "Waiting",
+        "processing": "Sending",
+        "paid": "Sent",
+        "failed": "Didn't go through"
       }
     },
     "statement": {
-      "heading": "Monthly statement",
+      "heading": "Monthly report",
       "monthLabel": "Month",
-      "downloadCsv": "Download CSV",
-      "downloading": "Preparing CSV…",
-      "pdfStub": "PDF statements are coming soon — CSV is available now."
+      "downloadCsv": "Download (spreadsheet)",
+      "downloading": "Getting it ready…",
+      "pdfStub": "PDF reports are coming soon."
     },
     "method": {
       "meta": {
-        "title": "Payout method — Convergeo Vendor",
-        "description": "Change the mobile-money number where your payouts are sent."
+        "title": "Where we send your money — Convergeo Seller",
+        "description": "Change the mobile money number we send your money to."
       },
-      "link": "Change payout method",
-      "back": "← Back to payouts",
-      "title": "Payout method",
-      "intro": "Enter the MTN, Airtel, or Zamtel number registered in your name. We re-verify via Lenco before saving.",
-      "msisdnLabel": "Mobile-money number",
+      "link": "Change where we send your money",
+      "back": "← Back to your money",
+      "title": "Where we send your money",
+      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name before we save it.",
+      "msisdnLabel": "Mobile money number",
       "msisdnPlaceholder": "e.g. 0977123456",
       "railLabel": "Network",
       "rails": {
@@ -1146,23 +1146,23 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Verification code",
-      "otpPlaceholder": "6-digit OTP",
-      "otpHelp": "We sent a code to your registered phone. Enter it to confirm this change.",
-      "submit": "Save payout method",
+      "otpLabel": "Code from your phone",
+      "otpPlaceholder": "6 numbers",
+      "otpHelp": "We sent a code to your phone. Type it here.",
+      "submit": "Save number",
       "saving": "Saving…",
-      "success": "Payout method updated. Payouts are paused for 24 hours."
+      "success": "Number saved. We wait 24 hours before sending money to it."
     },
     "errors": {
-      "loadFailed": "Could not load payouts. Pull to refresh.",
-      "statementFailed": "Could not download the statement. Try again.",
-      "methodFailed": "Could not update payout method. Try again.",
-      "otpFailed": "Invalid or expired verification code.",
-      "nameMismatch": "That MoMo name does not match your verified legal name.",
-      "kycRequired": "Complete KYC before changing your payout method.",
-      "payoutsPaused": "Payouts are paused after a payout method change.",
-      "rateLimited": "Too many requests. Try again shortly.",
-      "methodChangeLimit": "Too many payout method changes today. Try again tomorrow."
+      "loadFailed": "We couldn't open your money page. Pull down to try again.",
+      "statementFailed": "We couldn't download the report. Try again.",
+      "methodFailed": "We couldn't save the number. Try again.",
+      "otpFailed": "That code is wrong or too old. Ask for a new one.",
+      "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
+      "kycRequired": "Finish your ID check first.",
+      "payoutsPaused": "You changed your number, so money sending is paused for 24 hours.",
+      "rateLimited": "Too many tries. Wait a minute, then try again.",
+      "methodChangeLimit": "You changed the number too many times today. Try again tomorrow."
     }
   },
   "scan": {
@@ -1875,34 +1875,34 @@
   },
   "shell": {
     "groups": {
-      "operate": "Operate",
-      "sell": "Sell & grow",
-      "business": "Business"
+      "operate": "Daily work",
+      "sell": "Sell more",
+      "business": "My business"
     },
     "moreMenu": {
-      "title": "All vendor tools",
+      "title": "Everything",
       "close": "Close"
     },
     "nav": {
       "ariaLabel": "Vendor navigation",
       "desktopAriaLabel": "Vendor sidebar",
       "home": "Home",
-      "listings": "Listings",
+      "listings": "Products",
       "orders": "Orders",
       "profile": "Profile",
       "more": "More",
-      "scan": "Scan & verify",
+      "scan": "Scan a code",
       "returns": "Returns",
-      "analytics": "Analytics",
+      "analytics": "How my shop is doing",
       "services": "Services",
       "events": "Events",
-      "rfq": "Quote requests",
+      "rfq": "Price requests",
       "jobs": "Jobs",
-      "clips": "Clips",
+      "clips": "Videos",
       "reviews": "Reviews",
-      "payouts": "Payouts",
-      "disputes": "Disputes",
-      "intake": "WhatsApp drafts"
+      "payouts": "My money",
+      "disputes": "Problems",
+      "intake": "Products from WhatsApp"
     }
   },
   "intake": {

@@ -35,7 +35,7 @@ Tap targets ≥ 44px. Errors always say what to do next.
 | Vendor (to shoppers)                 | **Seller** (or the shop's own name)                  |
 | Fulfilment / fulfillment             | **Delivery or pickup**                               |
 | Listing                              | **Product** (seller app: "product" or "item")        |
-| OTP / verification code              | **SMS code**                                         |
+| OTP / verification code              | **Code** ("the code we sent")                        |
 | RFQ / quote request                  | **Ask for a price** / price request                  |
 | KYC / T1 verification                | **ID check**                                         |
 | T2 / PACRA + TPIN                    | **Business papers check**                            |
@@ -111,7 +111,7 @@ Tap targets ≥ 44px. Errors always say what to do next.
   pay?" → "How you will pay".
 - "Cash on delivery" label → **"Pay when it arrives"** (with the word cash in the help line).
 - Contact step: "Verify & continue", "one-time code", "Payer mobile number", "USSD payment
-  prompt". → "Check code and continue", "SMS code", "Phone number that will pay", "a message
+  prompt". → "Check code and continue", "code", "Phone number that will pay", "a message
   on your phone asking for your PIN".
 - Review: "How your payment is protected / Held by Convergeo" (online only) → plain words.
 - Card copy: "PCI compliant hosted checkout", "Lenco's secure hosted page" → "Safe card page
@@ -121,11 +121,11 @@ Tap targets ≥ 44px. Errors always say what to do next.
 - Errors: most say what to do. Fix the few that don't ("Verification failed. Try again." →
   "That didn't work. Check the code and try again.").
 
-### 7. Sign-in / sign-up / SMS code (`(auth)/*`, `auth.*`)
+### 7. Sign-in / sign-up / phone code (`(auth)/*`, `auth.*`)
 
 - "Phone sign-in uses a verification code. If you cannot receive one, use email instead."
-  → "We'll send you an SMS code. No code? Use email instead."
-- "Enter verification code", "Verify code" → "Enter the SMS code", "Continue".
+  → "We will send a code to your phone. No code? Use email instead."
+- "Enter verification code", "Verify code" → "Enter the code we sent", "Continue".
 - "Too many authentication requests" → "Too many tries. Wait {seconds} seconds, then try
   again."
 - Welcome screen: "we'll personalize your home feed" → "We'll show you more of what you like."
@@ -146,7 +146,7 @@ Tap targets ≥ 44px. Errors always say what to do next.
 
 - "Manage listings, orders, and payouts in the vendor portal" → "Sell on Convergeo? Open your
   seller app."
-- Delete-data confirm "verify with OTP" → "We'll send you an SMS code to check it's you."
+- Delete-data confirm "verify with OTP" → "We send a code to your phone to check it's you."
 - Addresses empty: "Add a landmark and GPS pin so vendors can find you faster." → "Add a place
   people know, like a church or school, so the rider can find you."
 
@@ -250,7 +250,26 @@ Tap targets ≥ 44px. Errors always say what to do next.
   onboarding, home, listings, orders, queue, payouts and menu copy. Keys unchanged; FR and ZH
   updated to match; Bemba/Nyanja drafts appended to `PHASE1_NATIVE_REVIEW.md` for native
   review (bem/nya JSON untouched).
-- Product page pre-selects the only pickup branch.
+- Product page pickup branch: **not** pre-selected. `use-pickup-location-selection.test.tsx`
+  locks "never auto-selects" as a contract, so this needs a product decision first.
 - Phone header: cart shows the word "Cart"; duplicate theme and account icons hidden on
   phones (still in the bottom bar and footer; still in the header on tablet and desktop).
 - No API, money, state-machine or business-rule changes.
+
+## Notes from implementation
+
+- **OTP copy stays channel-neutral.** `auth-labels.test.ts` forbids naming SMS or WhatsApp in
+  the sign-in help (the code may arrive on either). The glossary therefore says "code" or "the
+  code we sent to your phone", not "SMS code".
+- **Honesty guards kept.** Cart copy tests (LB-P2-04, COD-first) require the words "Lusaka",
+  "pickup", "checkout", "qualifies", "cash on delivery" and "T2" in certain strings. The plain
+  copy keeps those words instead of weakening the tests (for example the cart teaser reads
+  "Pay when it arrives (cash on delivery): pay the rider in cash…").
+- **Home trust ladder** now reads "Order on your phone → The seller sends it → Pay when it
+  arrives". CLAUDE.md's guardrail names the escrow ladder ("You paid → Held → Released"); that
+  ladder still exists for prepaid orders (checkout review, order timeline) but the home page no
+  longer promises it while the pilot is cash-only. Revisit when online payment goes live.
+- **Bemba / Nyanja:** JSON values were only touched where they were already an exact English
+  copy of the old English (passthrough), so they stay in sync with English; loanword values
+  ("Pickup", "Courier", "Zone") were left as they were. Vernacular drafts of the glossary are in
+  `packages/i18n/messages/PHASE1_NATIVE_REVIEW.md` for native review.

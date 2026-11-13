@@ -1,12 +1,12 @@
 {
   "index": {
-    "title": "Vendeurs",
+    "title": "Boutiques",
     "subtitle": "Découvrez des vendeurs et commerces dans toute la Zambie",
     "results": "{count, plural, one {# entreprise} other {# entreprises}}",
     "searchPlaceholder": "Rechercher des entreprises",
     "searchLabel": "Rechercher dans l'annuaire",
     "viewProfile": "Voir la boutique",
-    "becomeVendor": "Devenir vendeur",
+    "becomeVendor": "Ouvrir votre boutique",
     "heroPitch": "Référencez votre entreprise, touchez des clients dans toute la Zambie et recevez vos paiements en toute sécurité."
   },
   "filters": {
@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "Toutes les catégories",
     "allLocations": "Tous les emplacements",
-    "preferred": "Vendeur privilégié",
+    "preferred": "Boutique recommandée",
     "verified": "Vérifié",
     "apply": "Appliquer les filtres",
     "clear": "Effacer les filtres",
@@ -42,7 +42,7 @@
     "selfListed": "Auto-inscrit",
     "idVerified": "Identité vérifiée",
     "sectorVerified": "Secteur vérifié",
-    "preferred": "Vendeur préféré"
+    "preferred": "Boutique recommandée"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,14 +73,14 @@
     "reviewsHeading": "Avis clients",
     "reviewsSummary": "{rating, number, ::.1} en moyenne sur {count, plural, one {# avis} other {# avis}}",
     "noReviews": "Pas encore d'avis",
-    "preferredBadge": "Vendeur privilégié",
-    "verifiedBadge": "Vendeur vérifié",
+    "preferredBadge": "Boutique recommandée",
+    "verifiedBadge": "Identité vérifiée",
     "shareTitle": "{name} sur Convergeo",
     "statRating": "Note",
     "statReviews": "Avis",
     "statListings": "Produits",
     "statOrders": "Commandes",
-    "offeringsAria": "Offres du vendeur",
+    "offeringsAria": "Ce que vend cette boutique",
     "tabProducts": "Produits",
     "tabServices": "Services",
     "tabEvents": "Événements",

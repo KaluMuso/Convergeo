@@ -10,10 +10,10 @@
     "defaultCategory": "全部商品",
     "breadcrumbAria": "面包屑导航",
     "results": "{count, plural, one {# 个商品} other {# 个商品}}",
-    "emptyTitle": "未找到商品",
-    "emptyBody": "请尝试清除筛选条件或浏览其他类别。",
-    "unavailableTitle": "暂时无法加载商品",
-    "unavailableBody": "我们目前无法加载此类别的商品。请稍后重试，或使用搜索。",
+    "emptyTitle": "这里还没有商品",
+    "emptyBody": "请清除筛选，或看看其他分类。",
+    "unavailableTitle": "无法加载此页面",
+    "unavailableBody": "请检查网络后重试，或使用搜索。",
     "sort": {
       "label": "排序方式",
       "relevance": "相关度",
@@ -99,17 +99,17 @@
     "hero": {
       "eyebrow": "赞比亚的购物平台",
       "fallbackTitle": "在赞比亚选购商品、服务与活动",
-      "fallbackSubtitle": "比较卖家，安排卢萨卡配送或全国自提，发现身边好物。",
+      "fallbackSubtitle": "找到附近的卖家。卢萨卡可送货，全国可自取。",
       "primaryCta": "开始浏览",
-      "secondaryCta": "了解如何开店",
+      "secondaryCta": "在 Convergeo 开店",
       "placeholder": {
         "title": "欢迎来到 Convergeo",
         "subtitle": "随着营销板块上线，您的可配置店面将显示在此处。"
       },
-      "escrowLine": "在线支付可用时提供托管保护——款项由 Convergeo 保管至送达后再放款。",
-      "escrowStep1": "您付款",
-      "escrowStep2": "由 Convergeo 保管",
-      "escrowStep3": "送达后放款",
+      "escrowLine": "用手机下单，卖家发货，货到付款。",
+      "escrowStep1": "手机下单",
+      "escrowStep2": "卖家发货",
+      "escrowStep3": "货到付款",
       "carousel": {
         "previous": "上一张",
         "next": "下一张",
@@ -137,10 +137,10 @@
     },
     "trust": {
       "ariaLabel": "为何选择 Convergeo",
-      "sellers": "可查看状态的卖家资料",
-      "fulfillment": "商品支持时提供卢萨卡配送或全国自提",
-      "returns": "符合条件的订单有清晰的退换与退款说明",
-      "escrow": "在线支付可用时，Convergeo 会保管您的款项直至送达"
+      "sellers": "每家店都有自己的页面，看清您向谁买。",
+      "fulfillment": "卢萨卡送货，全国自取。",
+      "returns": "商品坏了或发错？48 小时内可退。",
+      "escrow": "订单送到时付现金。"
     },
     "demo": {
       "sampleListing": "示例商品"
@@ -193,8 +193,8 @@
       "recentViewProduct": "查看 {name}"
     },
     "sellCta": {
-      "title": "目前 Convergeo 卖家入驻仅限邀请",
-      "body": "公开自助注册尚未开放。受邀卖家可继续入驻；其他人可了解卖家内测如何运作。",
+      "title": "想在 Convergeo 开店？",
+      "body": "目前只有受邀的店铺可以加入。看看怎么运作。",
       "cta": "了解如何开店"
     },
     "flash": {
@@ -246,20 +246,20 @@
     "standalone": {
       "detailsHeading": "商品详情",
       "soldBy": "由 {vendor} 销售。",
-      "classLabel": "商品类别",
+      "classLabel": "商品类型",
       "classValue": "{class} 类",
       "conditionLabel": "成色",
-      "incrementLabel": "销售增量",
-      "minimumLabel": "最低购买量",
-      "fulfilmentLabel": "备货方式",
+      "incrementLabel": "按此数量出售",
+      "minimumLabel": "最少购买",
+      "fulfilmentLabel": "现货或定做",
       "fulfilmentStocked": "现货",
-      "fulfilmentMadeToOrder": "按订单制作",
-      "leadTimeLabel": "备货期",
+      "fulfilmentMadeToOrder": "为您定做",
+      "leadTimeLabel": "制作天数",
       "leadTimeDays": "{days} 天",
-      "capacityLabel": "每周产能",
+      "capacityLabel": "每周可做数量",
       "capacityPerWeek": "每周 {quantity}",
       "locationLabel": "卖家位置",
-      "defectsHeading": "成色与瑕疵说明"
+      "defectsHeading": "瑕疵或损坏"
     },
     "noSellers": {
       "title": "暂无卖家",
@@ -312,7 +312,7 @@
     "buyBox": {
       "priceLabel": "价格",
       "pricePerIncrement": "每 {quantity} 的价格",
-      "minimumOrderQuantity": "最低购买量：{quantity}",
+      "minimumOrderQuantity": "最少购买：{quantity}",
       "lowStockQuantity": "仅剩 {quantity}",
       "units": {
         "each": "件",
@@ -329,26 +329,26 @@
       "increaseSymbol": "+",
       "addToCart": "加入购物车",
       "addingToCart": "正在添加…",
-      "addToCartError": "无法加入购物车。请检查网络后重试。",
+      "addToCartError": "加入购物车失败。请检查网络后重试。",
       "inStock": "有货",
       "outOfStock": "缺货",
       "lowStock": "仅剩 {count} 件",
       "alwaysAvailable": "有货",
-      "singleVendor": "仅由该商家销售",
-      "moq": "最低起订量：{count}",
-      "lowestPrice": "卖家中最低价",
-      "moreThanLowest": "比最低报价高 {diff}",
+      "singleVendor": "只有这个卖家有",
+      "moq": "最少购买：{count}",
+      "lowestPrice": "最低价",
+      "moreThanLowest": "比最低价贵 {diff}",
       "wishlistAdd": "加入心愿单",
       "wishlistRemove": "移出心愿单",
       "wishlistSaved": "已加入心愿单",
       "pickup": {
-        "heading": "选择提货点",
-        "selectAria": "提货点",
-        "placeholder": "请选择提货点",
+        "heading": "您在哪里取货？",
+        "selectAria": "取货地点",
+        "placeholder": "选择地点",
         "loading": "正在加载提货点…",
-        "loadError": "无法加载提货点，请重试。",
-        "unavailable": "该商品当前没有可用的提货点",
-        "required": "请选择提货点后再加入购物车"
+        "loadError": "无法加载取货地点。请检查网络后重试。",
+        "unavailable": "目前没有取货点有这件商品",
+        "required": "请先选择取货地点"
       }
     },
     "stickyAtc": {
@@ -381,10 +381,10 @@
       "heading": "举报此商品",
       "reasonLegend": "此商品有什么问题？",
       "detailLabel": "更多详情（可选）",
-      "detailPlaceholder": "补充有助于审核的信息（请勿填写个人联系方式）。",
+      "detailPlaceholder": "请补充说明（不要写电话号码）。",
       "submit": "提交举报",
       "cancel": "取消",
-      "success": "谢谢 — 我们的审核团队将进行审查。",
+      "success": "谢谢，我们的团队会核查。",
       "signedOut": "请登录后再举报商品。",
       "error": "无法提交举报，请重试。",
       "rateLimited": "举报次数过多，请稍后再试。",
@@ -432,13 +432,13 @@
   },
   "comparePage": {
     "title": "比较卖家",
-    "subtitle": "查看同一商品的多商家价格、成色与履约选项。",
+    "subtitle": "比较不同卖家同一商品的价格。",
     "noProductTitle": "请选择要比较的商品",
     "noProductBody": "打开有多家卖家的商品页，然后使用“比较卖家”。本页不会虚构比较数据。",
     "unavailableTitle": "比较暂不可用",
     "unavailableBody": "无法加载此商品的卖家比较。商品页可能仍可使用。",
     "singleSellerTitle": "目前只有一位卖家",
-    "singleSellerBody": "比较至少需要同一商品的两个在售列表。当有更多商家上架时再来查看。",
+    "singleSellerBody": "目前只有一个卖家有这件商品。请稍后再看。",
     "browseCta": "搜索商品",
     "backToProduct": "返回商品",
     "chooseOnProduct": "在商品页选择卖家",
@@ -492,7 +492,7 @@
       "reasonLegend": "请告诉我们需要检查的内容。",
       "submit": "提交举报",
       "cancel": "取消",
-      "success": "谢谢 — 我们的审核团队将进行审查。",
+      "success": "谢谢，我们的团队会核查。",
       "signedOut": "请登录后再举报评价。",
       "error": "无法提交举报，请重试。",
       "reasons": {
@@ -516,7 +516,7 @@
   "deals": {
     "metaTitle": "今日特惠",
     "title": "今日特惠",
-    "subtitle": "认证卖家的限时价格，托管支付更安心。",
+    "subtitle": "限时低价，来自已核实的卖家。",
     "endsIn": "{time} 后结束",
     "ended": "已结束",
     "off": "-{percent}%",

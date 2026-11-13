@@ -70,7 +70,7 @@
     "add": "Add address",
     "edit": "Edit address",
     "emptyTitle": "No saved addresses",
-    "emptyBody": "Add a landmark and GPS pin so vendors can find you faster.",
+    "emptyBody": "Add a place people know, like a church or school, so the rider can find you.",
     "label": "Label",
     "labelPlaceholder": "Home, work, shop…",
     "landmark": "Landmark directions",
@@ -132,7 +132,7 @@
     "deleteCta": "Delete my account",
     "deleteDescription": "Permanently remove your login and anonymise personal details.",
     "deleteConfirmTitle": "Delete your account?",
-    "deleteConfirmBody": "This cannot be undone. Type DELETE MY DATA to confirm, then verify with OTP.",
+    "deleteConfirmBody": "You can't undo this. Type DELETE MY DATA, then enter the code we send to your phone.",
     "deletePhraseLabel": "Confirmation phrase",
     "deletePhrasePlaceholder": "DELETE MY DATA",
     "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted.",
@@ -204,7 +204,7 @@
       "viewCart": "View cart"
     },
     "status": {
-      "pending": "Pending",
+      "pending": "Waiting",
       "quoted": "Quoted",
       "quoted_expired": "Expired",
       "accepted": "Accepted",
@@ -254,8 +254,8 @@
     "helpCta": "Visit help centre",
     "deviceNote": "Saved items and recently viewed stay on this device unless you clear them. They are not a stock or price hold.",
     "vendorPortalTitle": "Seller tools",
-    "vendorPortalBody": "Manage listings, orders, and payouts in the vendor portal.",
-    "vendorPortalCta": "Open vendor portal"
+    "vendorPortalBody": "You sell on Convergeo. Open your seller app to see products, orders and money.",
+    "vendorPortalCta": "Open seller app"
   },
   "saved": {
     "title": "Saved items",
@@ -294,7 +294,7 @@
     "description": "New arrivals from the stores you follow, from the last 30 days.",
     "emptyTitle": "Nothing new yet",
     "emptyBody": "Follow stores you like and their new products will show up here.",
-    "browseVendors": "Browse vendors",
+    "browseVendors": "Find shops",
     "signIn": "Sign in to see the stores you follow",
     "signInCta": "Sign in",
     "loadFailed": "Couldn't load your feed. Try again.",

@@ -1,6 +1,6 @@
 {
   "services.title": "Services",
-  "services.rfq.sent": "Demande de devis envoyée à {count, plural, one {# vendeur} other {# vendeurs}}",
+  "services.rfq.sent": "Demande de prix envoyée à {count, plural, one {# vendeur} other {# vendeurs}}",
   "services.quote.received": "Devis de {vendor} : {amount}",
   "browse": {
     "title": "Services",
@@ -92,7 +92,7 @@
   },
   "postJob": {
     "title": "Publier une mission",
-    "subtitle": "Décrivez ce dont vous avez besoin — les prestataires correspondants vous enverront des devis.",
+    "subtitle": "Dites ce dont vous avez besoin. Des prestataires vous enverront des prix.",
     "category": {
       "label": "Catégorie de service",
       "beauty": "Beauté",
@@ -134,13 +134,13 @@
     "authCta": "Continuer avec le téléphone",
     "draftSaved": "Votre brouillon est enregistré sur cet appareil jusqu'à votre connexion.",
     "ack": {
-      "sent": "Nous avons prévenu les prestataires correspondants. Les devis arrivent généralement sous un jour.",
-      "noMatch": "Nous n'avons pas trouvé de prestataires correspondants pour le moment, mais nous continuons à chercher et vous préviendrons."
+      "sent": "Nous avons prévenu des prestataires. Les prix arrivent en général sous un jour.",
+      "noMatch": "Personne pour l'instant. Nous continuons à chercher et vous enverrons un message."
     },
     "errors": {
-      "required": "Veuillez remplir tous les champs obligatoires.",
-      "generic": "Une erreur s'est produite. Veuillez réessayer.",
-      "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+      "required": "Veuillez remplir les champs marqués *.",
+      "generic": "Un problème est survenu. Vérifiez votre connexion et réessayez.",
+      "rateLimited": "Trop d'essais. Attendez une minute, puis réessayez."
     }
   },
   "quotes": {
@@ -191,7 +191,7 @@
   },
   "accept": {
     "title": "Accepter ce devis",
-    "intro": "Payez maintenant un acompte de {pct} % pour réserver {vendor}. Le solde est dû à la fin du travail.",
+    "intro": "Payez {pct} % maintenant pour réserver {vendor}. Payez le reste quand le travail est fini.",
     "quoteFrom": "Devis de {vendor}",
     "totalLabel": "Valeur totale de la mission",
     "depositLabel": "Acompte à payer maintenant",
@@ -288,8 +288,8 @@
     "status": {
       "paid": "Paid and verified",
       "unpaid": "Unpaid",
-      "initiated": "Payment pending",
-      "ussd_pushed": "Payment pending",
+      "initiated": "Pas encore payé",
+      "ussd_pushed": "Regardez votre téléphone pour payer",
       "pay_offline": "Awaiting mobile approval",
       "failed": "Payment failed",
       "expired": "Payment unresolved — awaiting reconciliation",

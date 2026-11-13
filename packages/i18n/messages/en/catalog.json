@@ -12,10 +12,10 @@
     "results": "{count, plural, one {# listing} other {# listings}}",
     "resultsUnknown": "Listing count unavailable",
     "childCategories": "Shop by subcategory",
-    "emptyTitle": "No listings found",
-    "emptyBody": "Try clearing filters or browsing another category.",
-    "unavailableTitle": "Listings unavailable",
-    "unavailableBody": "We could not load products for this category right now. Try again shortly, or use search.",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "Clear your filters, or look in another category.",
+    "unavailableTitle": "We couldn't load this page",
+    "unavailableBody": "Check your internet and try again, or use search.",
     "sort": {
       "label": "Sort by",
       "relevance": "Relevance",
@@ -102,17 +102,17 @@
     "hero": {
       "eyebrow": "Zambia's marketplace",
       "fallbackTitle": "Shop products, services, and events across Zambia",
-      "fallbackSubtitle": "Compare sellers, arrange Lusaka delivery or nationwide pickup, and discover what is nearby.",
+      "fallbackSubtitle": "Find sellers near you. Get it delivered in Lusaka, or collect it anywhere in Zambia.",
       "primaryCta": "Start browsing",
-      "secondaryCta": "Learn about selling",
+      "secondaryCta": "Sell on Convergeo",
       "placeholder": {
         "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Buyer protection with escrow when online payment is available — held by Convergeo until delivery, then released.",
-      "escrowStep1": "You pay",
-      "escrowStep2": "Held by Convergeo",
-      "escrowStep3": "Released on delivery",
+      "escrowLine": "Order on your phone. The seller sends it. Pay when it arrives.",
+      "escrowStep1": "Order on your phone",
+      "escrowStep2": "The seller sends it",
+      "escrowStep3": "Pay when it arrives",
       "carousel": {
         "previous": "Previous slide",
         "next": "Next slide",
@@ -140,10 +140,10 @@
     },
     "trust": {
       "ariaLabel": "Why shop on Convergeo",
-      "sellers": "Seller profiles with status you can review",
-      "fulfillment": "Lusaka delivery or nationwide pickup when the listing supports it",
-      "returns": "Clear returns and refund guidance for eligible orders",
-      "escrow": "When online payment is available, Convergeo holds your money until delivery"
+      "sellers": "Every shop has its own page. See who you buy from.",
+      "fulfillment": "Delivery in Lusaka. Pickup across Zambia.",
+      "returns": "Broken or wrong item? Return it within 48 hours.",
+      "escrow": "Pay cash when your order arrives."
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -196,9 +196,9 @@
       }
     },
     "sellCta": {
-      "title": "Selling on Convergeo is invite-only for now",
-      "body": "Public self-service signup is not open yet. Invited sellers can continue onboarding; everyone else can learn how the seller beta works.",
-      "cta": "Learn about selling"
+      "title": "Want to sell on Convergeo?",
+      "body": "Right now, only invited shops can join. See how it works.",
+      "cta": "See how selling works"
     },
     "flash": {
       "defaultTag": "⚡ Flash deal",
@@ -247,22 +247,22 @@
     "breadcrumbAria": "Breadcrumb",
     "sellerCount": "{count, plural, one {# seller} other {# sellers}}",
     "standalone": {
-      "detailsHeading": "Listing details",
+      "detailsHeading": "About this item",
       "soldBy": "Sold by {vendor}.",
-      "classLabel": "Product class",
+      "classLabel": "Type of item",
       "classValue": "Class {class}",
       "conditionLabel": "Condition",
-      "incrementLabel": "Sold in increments of",
-      "minimumLabel": "Minimum order",
-      "fulfilmentLabel": "Fulfilment",
-      "fulfilmentStocked": "Ready from stock",
-      "fulfilmentMadeToOrder": "Made to order",
-      "leadTimeLabel": "Lead time",
+      "incrementLabel": "Sold in steps of",
+      "minimumLabel": "Smallest order",
+      "fulfilmentLabel": "Ready now or made for you",
+      "fulfilmentStocked": "Ready now",
+      "fulfilmentMadeToOrder": "Made for you",
+      "leadTimeLabel": "Days to make it",
       "leadTimeDays": "{days} days",
-      "capacityLabel": "Weekly capacity",
+      "capacityLabel": "How many they can make each week",
       "capacityPerWeek": "{quantity} per week",
-      "locationLabel": "Seller location",
-      "defectsHeading": "Condition and defect notes"
+      "locationLabel": "Where the seller is",
+      "defectsHeading": "Marks or damage"
     },
     "noSellers": {
       "title": "No sellers available",
@@ -315,7 +315,7 @@
     "buyBox": {
       "priceLabel": "Price",
       "pricePerIncrement": "Price per {quantity}",
-      "minimumOrderQuantity": "Minimum order: {quantity}",
+      "minimumOrderQuantity": "Smallest order: {quantity}",
       "lowStockQuantity": "Only {quantity} left",
       "units": {
         "each": "item",
@@ -332,27 +332,27 @@
       "increaseSymbol": "+",
       "addToCart": "Add to cart",
       "addingToCart": "Adding…",
-      "addToCartError": "Could not add to cart. Check your connection and try again.",
+      "addToCartError": "Could not add to cart. Check your internet and try again.",
       "inStock": "In stock",
       "outOfStock": "Out of stock",
       "lowStock": "Only {count} left",
       "alwaysAvailable": "Available",
-      "singleVendor": "Sold by this vendor only",
-      "moq": "Minimum order: {count}",
+      "singleVendor": "Only this seller has it",
+      "moq": "Smallest order: {count}",
       "ariaLabel": "Purchase options",
-      "lowestPrice": "Lowest price among sellers",
-      "moreThanLowest": "{diff} more than the lowest offer",
+      "lowestPrice": "Cheapest price",
+      "moreThanLowest": "{diff} more than the cheapest",
       "wishlistAdd": "Save to wishlist",
       "wishlistRemove": "Remove from wishlist",
       "wishlistSaved": "Saved to wishlist",
       "pickup": {
-        "heading": "Choose a pickup branch",
-        "selectAria": "Pickup branch",
-        "placeholder": "Select a branch",
+        "heading": "Where will you collect it?",
+        "selectAria": "Pickup place",
+        "placeholder": "Choose a place",
         "loading": "Loading pickup branches…",
-        "loadError": "Could not load pickup branches. Try again.",
-        "unavailable": "No pickup branch is currently available for this item",
-        "required": "Select a pickup branch to add this item"
+        "loadError": "Could not load pickup places. Check your internet and try again.",
+        "unavailable": "No pickup place has this item right now",
+        "required": "Choose where you will collect it first"
       }
     },
     "stickyAtc": {
@@ -369,7 +369,7 @@
     "contactVendor": {
       "cta": "Contact seller",
       "dialogTitle": "Ask about this item",
-      "dialogHint": "Your message goes to {vendor} about this listing. Replies stay on Convergeo — we never share your phone number in the message.",
+      "dialogHint": "Your message goes to {vendor}. Replies come here. We never share your phone number.",
       "messageLabel": "Your question",
       "messagePlaceholder": "e.g. Is this still available? Can you deliver to Kabulonga?",
       "submit": "Send message",
@@ -394,7 +394,7 @@
     "requestQuote": {
       "cta": "Request quote",
       "dialogTitle": "Request a custom quote",
-      "dialogHint": "Describe what you need from {vendor}. They will send a formal price you can add to cart.",
+      "dialogHint": "Tell {vendor} what you need. They will send you a price you can add to your cart.",
       "detailsLabel": "What do you need?",
       "detailsPlaceholder": "e.g. Custom size, colour, quantity, delivery area, deadline…",
       "submit": "Send request",
@@ -421,10 +421,10 @@
       "heading": "Report this listing",
       "reasonLegend": "What is wrong with this listing?",
       "detailLabel": "More details (optional)",
-      "detailPlaceholder": "Add any context that helps moderation (no personal contact info).",
+      "detailPlaceholder": "Tell us more (don't add phone numbers).",
       "submit": "Submit report",
       "cancel": "Cancel",
-      "success": "Thanks — our moderation team will review it.",
+      "success": "Thank you. Our team will check it.",
       "signedOut": "Sign in to report a listing.",
       "error": "Could not submit this report. Please try again.",
       "rateLimited": "Too many reports. Please wait and try again.",
@@ -487,13 +487,13 @@
   },
   "comparePage": {
     "title": "Compare sellers",
-    "subtitle": "See multi-vendor prices, condition, and fulfillment options for the same product.",
+    "subtitle": "See prices from different sellers for the same thing.",
     "noProductTitle": "Choose a product to compare",
     "noProductBody": "Open a product page with more than one seller, then use Compare sellers. This page never invents comparison data.",
     "unavailableTitle": "Comparison unavailable",
     "unavailableBody": "We could not load seller comparison for this product. The product page may still work.",
     "singleSellerTitle": "Only one seller right now",
-    "singleSellerBody": "Comparison needs at least two active listings for the same product. Check back when more vendors list this item.",
+    "singleSellerBody": "Only one seller has this right now. Check again later.",
     "browseCta": "Search products",
     "backToProduct": "Back to product",
     "chooseOnProduct": "Choose a seller on the product page",
@@ -549,7 +549,7 @@
       "reasonLegend": "Tell us what needs checking.",
       "submit": "Submit report",
       "cancel": "Cancel",
-      "success": "Thanks — our moderation team will review it.",
+      "success": "Thank you. Our team will check it.",
       "signedOut": "Sign in to report a review.",
       "error": "Could not submit this report. Please try again.",
       "reasons": {
@@ -573,7 +573,7 @@
   "deals": {
     "metaTitle": "Today's deals",
     "title": "Today's deals",
-    "subtitle": "Limited-time prices from verified sellers. Paid safely through escrow.",
+    "subtitle": "Low prices for a short time, from checked sellers.",
     "endsIn": "Ends in {time}",
     "ended": "Ended",
     "off": "-{percent}%",

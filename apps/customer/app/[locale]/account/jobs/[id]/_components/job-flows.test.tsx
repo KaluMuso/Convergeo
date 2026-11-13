@@ -174,7 +174,7 @@ describe("mounted service balance funding", () => {
     await user.type(screen.getByLabelText(/mobile money number/i), "0971111111");
     await user.selectOptions(screen.getByLabelText(/payment method/i), "airtel");
     await user.click(screen.getByRole("button", { name: "Pay outstanding amount" }));
-    await waitFor(() => expect(screen.getByText("Payment pending")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Check your phone to pay")).toBeInTheDocument());
     expect(
       screen.queryByRole("button", { name: "Pay outstanding amount" }),
     ).not.toBeInTheDocument();

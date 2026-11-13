@@ -93,7 +93,7 @@
     "description": "New arrivals from the stores you follow, from the last 30 days.",
     "emptyTitle": "Nothing new yet",
     "emptyBody": "Follow stores you like and their new products will show up here.",
-    "browseVendors": "Browse vendors",
+    "browseVendors": "Find shops",
     "signIn": "Sign in to see the stores you follow",
     "signInCta": "Sign in",
     "loadFailed": "Couldn't load your feed. Try again.",

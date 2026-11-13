@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "Categories shonse",
     "allLocations": "Locations shonse",
-    "preferred": "Preferred vendor",
+    "preferred": "Top shop",
     "verified": "Verified",
     "apply": "Apply filters",
     "clear": "Futa filters",
@@ -42,7 +42,7 @@
     "selfListed": "Self-listed",
     "idVerified": "ID verified",
     "sectorVerified": "Sector verified",
-    "preferred": "Preferred vendor"
+    "preferred": "Top shop"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,8 +73,8 @@
     "reviewsHeading": "Reviews sha bakashita",
     "reviewsSummary": "{rating, number, ::.1} average kufuma ku {count, plural, one {# review} other {# reviews}}",
     "noReviews": "Takuli reviews pano",
-    "preferredBadge": "Preferred vendor",
-    "verifiedBadge": "Verified vendor",
+    "preferredBadge": "Top shop",
+    "verifiedBadge": "ID checked",
     "shareTitle": "{name} pa Convergeo",
     "statRating": "Rating",
     "statReviews": "Reviews",

@@ -199,7 +199,7 @@
     "cancelCta": "Cancel transfer",
     "cancelling": "Cancelling…",
     "cancelledNotice": "Transfer cancelled.",
-    "pendingNotice": "Pending transfer to {phone}",
+    "pendingNotice": "Waiting for {phone} to accept this ticket",
     "claimBanner": {
       "title": "A friend sent you a ticket",
       "body": "{event} starts {datetime}. Claim it before it expires.",
@@ -214,8 +214,8 @@
       "notHolder": "Only the ticket holder can transfer this ticket.",
       "notTransferable": "This ticket can no longer be transferred.",
       "cutoffPassed": "Transfers close 6 hours before the event starts.",
-      "pendingExists": "This ticket already has a pending transfer.",
-      "notPending": "This transfer is no longer pending.",
+      "pendingExists": "You already sent this ticket to someone. Wait for them, or stop that first.",
+      "notPending": "This ticket send is already finished.",
       "expired": "This transfer offer has expired.",
       "phoneMismatch": "Sign in with the phone number the ticket was sent to.",
       "rateLimited": "Too many requests. Try again shortly."
