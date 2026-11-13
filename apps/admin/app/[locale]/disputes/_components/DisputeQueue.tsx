@@ -5,8 +5,10 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { payoutsEnabled } from "../../../../lib/payout-posture";
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+import { EmptyBlock } from "../../_components/StateBlocks";
 
 import { type DisputeQueueItem, type QueueSort, disputesApi } from "./api";
 import { DisputeSlaBadge } from "./DisputeSlaBadge";
@@ -68,6 +70,15 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
 
   return (
     <div className="space-y-4">
+      {!payoutsEnabled() ? (
+        <p
+          role="note"
+          data-testid="payouts-disabled-banner"
+          className="rounded-md border border-warning/40 bg-warning/5 p-3 text-sm text-text"
+        >
+          {t("payoutsOffBanner")}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm text-text-2" htmlFor="dispute-sort">
           {t("sortLabel")}
@@ -84,7 +95,7 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-text-2">{t("empty")}</p>
+        <EmptyBlock title={t("empty")} body={t("emptyHint")} />
       ) : (
         <>
           <ul className="space-y-3 md:hidden" data-testid="disputes-queue-cards">
