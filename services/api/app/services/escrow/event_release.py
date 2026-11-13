@@ -11,13 +11,14 @@ no end time (see ``instance_settlement_end``) — so a multi-day event's funds n
 longer release mid-event:
   - Event <= 14 days out at purchase time -> single full release at end + 24h.
   - Event > 14 days out at purchase time -> optional pre-event advance at
-    starts_at - 7d, remainder at end + 1d. The advance share is the platform
-    policy ``platform_config.event_pre_event_advance_bps`` (0..5000 bps).
-    DEFAULT 0 = no advance: 100% is held until after the event ends (growth
-    blueprint §7.3 control 1 / §7.4 — an organiser who takes an advance and
-    vanishes cannot be clawed back, and Lenco cannot reverse a payout). With
-    0 bps a phased order that has not yet posted phase 1 settles as a single
-    full release at end + 24h. Legacy behaviour was 5000 (50%); an order whose
+    starts_at - 7d, remainder at end + 1d. The advance is TIERED
+    (services/events/advance_policy.py): unverified organisers get 0 — 100%
+    held until after the event ends; verified organisers (KYC tier, signed
+    advance undertaking, no unpaid advance debt) get the configured share
+    (``event_verified_organiser_advance_bps``, <= 50%). If such an event is
+    cancelled the advance becomes an organiser receivable and buyers are
+    refunded in full from escrow. With 0 bps a phased order that has not yet
+    posted phase 1 settles as one full release at end + 24h; an order whose
     phase 1 was already paid keeps its phase-2 schedule for the remainder.
   - Recurring event (event_type, D29/P14) -> single full release at end + 24h
     regardless of lead time (no >14d phased pre-event advance): a routine series
@@ -83,10 +84,6 @@ PHASE2_DELAY_DAYS = 1
 
 MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
 
-# Release policy (platform_config, see module docstring).
-PRE_EVENT_ADVANCE_CONFIG_KEY = "event_pre_event_advance_bps"
-DEFAULT_PRE_EVENT_ADVANCE_BPS = 0
-MAX_PRE_EVENT_ADVANCE_BPS = 5_000
 # Only a live (or finished) event may pay its organiser.
 RELEASABLE_EVENT_STATUSES = frozenset({"published", "completed"})
 
@@ -413,28 +410,16 @@ VALUES ({actor_sql}, {action_sql}, 'order', {order_sql}, NULL, {after_sql});
         raise RuntimeError(f"flag mass refund failed: {result.error}")
 
 
-def load_pre_event_advance_bps() -> int:
-    """Platform policy: pre-event advance share in bps (default 0 = hold 100%).
+def resolve_advance_bps(organiser_vendor_id: str) -> int:
+    """Tiered pre-event advance share for this organiser (0 unless verified).
 
-    Fails closed: an unreadable / malformed value means NO advance, never more
-    than ``MAX_PRE_EVENT_ADVANCE_BPS`` (the legacy 50%).
+    See ``services/events/advance_policy.py``: unverified organisers are held 100%
+    until after the event; verified organisers who signed the advance undertaking
+    get the configured share (<= 50%), recoverable as an organiser receivable.
     """
-    key_sql = sql_literal(PRE_EVENT_ADVANCE_CONFIG_KEY)
-    result = run_sql_script(
-        f"SELECT value::text FROM public.platform_config WHERE key = {key_sql} LIMIT 1;"
-    )
-    if not result.ok or not result.rows:
-        return DEFAULT_PRE_EVENT_ADVANCE_BPS
-    raw = result.rows[0].strip()
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        return DEFAULT_PRE_EVENT_ADVANCE_BPS
-    if isinstance(parsed, str) and parsed.strip().isdigit():
-        parsed = int(parsed.strip())
-    if isinstance(parsed, bool) or not isinstance(parsed, int) or parsed <= 0:
-        return DEFAULT_PRE_EVENT_ADVANCE_BPS
-    return min(parsed, MAX_PRE_EVENT_ADVANCE_BPS)
+    from app.services.events.advance_policy import organiser_advance_decision
+
+    return organiser_advance_decision(organiser_vendor_id).bps
 
 
 def _ensure_cancel_refund_job(*, order_id: str, event_id: str) -> None:
@@ -556,6 +541,11 @@ def evaluate_event_release(
     if context.event_status == "cancelled":
         _flag_mass_refund(order_id=order_id, event_id=context.event_id)
         try:
+            from app.services.events.advance_policy import recover_event_advance
+
+            recover_event_advance(
+                order_id=order_id, vendor_id=context.vendor_id, event_id=context.event_id
+            )
             _ensure_cancel_refund_job(order_id=order_id, event_id=context.event_id)
         except Exception:
             # Audit flag above keeps the order in the admin queue; next tick retries.
@@ -572,7 +562,7 @@ def evaluate_event_release(
 
     # Pre-event advance policy: with no advance configured, a phased order that has
     # not yet paid phase 1 settles as one full post-event release (100% held).
-    advance_bps = load_pre_event_advance_bps()
+    advance_bps = resolve_advance_bps(context.vendor_id)
     if (
         branch == "phased"
         and advance_bps <= 0
@@ -721,6 +711,17 @@ def evaluate_event_release(
             outcome="not_eligible",
             reason="no_escrow_remaining",
             branch=branch,
+        )
+
+    # Money now owed to the organiser first repays any outstanding advance debt.
+    try:
+        from app.services.events.advance_policy import offset_organiser_receivable
+
+        offset_organiser_receivable(context.vendor_id)
+    except Exception:
+        logger.exception(
+            "event release: organiser receivable offset failed",
+            extra={"order_id": order_id, "vendor_id": context.vendor_id},
         )
 
     posted_after = _posted_release_keys(required_keys)

@@ -146,9 +146,9 @@ def db_url_env(db: PgConn) -> Generator[None, None, None]:
 
 @pytest.fixture
 def legacy_advance_policy(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pre-event advance configured at the legacy 50% (5000 bps)."""
+    """Verified organiser with the advance at 50% (5000 bps)."""
     monkeypatch.setattr(
-        "app.services.escrow.event_release.load_pre_event_advance_bps", lambda: 5_000
+        "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 5_000
     )
 
 
@@ -1284,9 +1284,10 @@ def _seed_order(
 
 
 class TestReleaseSafetyPolicy:
-    """fix/event-ticket-integrity: no advance by default; never pay a non-live event."""
+    """fix/event-ticket-integrity: unverified organisers get no advance; never pay a
+    non-live event. (VENDOR_A has no advance undertaking -> unverified.)"""
 
-    def test_default_policy_holds_100_percent_until_after_event(
+    def test_unverified_organiser_held_100_percent_until_after_event(
         self, db: PgConn, db_url_env: None
     ) -> None:
         _event_id, order_id, starts_at = _seed_order(db, lead_days=20)  # >14d bought early
@@ -1311,48 +1312,19 @@ class TestReleaseSafetyPolicy:
         )
         assert again.outcome == "already_released"
 
-    def test_policy_reads_platform_config_and_fails_closed(
-        self, db: PgConn, db_url_env: None
-    ) -> None:
-        from app.services.escrow.event_release import (
-            PRE_EVENT_ADVANCE_CONFIG_KEY,
-            load_pre_event_advance_bps,
-        )
-
-        def put(raw: str) -> None:
-            assert db.run(
-                "INSERT INTO public.platform_config (key, value) VALUES "
-                f"('{PRE_EVENT_ADVANCE_CONFIG_KEY}', '{raw}'::jsonb) "
-                "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;"
-            ).ok
-
-        try:
-            put("0")
-            assert load_pre_event_advance_bps() == 0
-            put("3000")
-            assert load_pre_event_advance_bps() == 3000
-            put("9000")  # capped at the legacy 50%
-            assert load_pre_event_advance_bps() == 5000
-            put('"junk"')
-            assert load_pre_event_advance_bps() == 0
-            put("-5")
-            assert load_pre_event_advance_bps() == 0
-        finally:
-            put("0")
-
     def test_legacy_phase1_paid_then_policy_off_releases_exact_remainder(
         self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _event_id, order_id, starts_at = _seed_order(db, lead_days=20)
         monkeypatch.setattr(
-            "app.services.escrow.event_release.load_pre_event_advance_bps", lambda: 5_000
+            "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 5_000
         )
         first = evaluate_event_release(
             _SERVICE, order_id, now=starts_at - timedelta(days=PHASE1_LEAD_DAYS)
         )
         assert first.phases_posted == ("phase1",)
         monkeypatch.setattr(
-            "app.services.escrow.event_release.load_pre_event_advance_bps", lambda: 0
+            "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 0
         )
         second = evaluate_event_release(_SERVICE, order_id, now=_phase2_due(starts_at))
         assert second.outcome == "released"

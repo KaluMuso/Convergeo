@@ -231,6 +231,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
     "POST /internal/event-refund-jobs/tick": INTERNAL_CRON,
+    "POST /internal/event-advance-debts/tick": INTERNAL_CRON,
     "POST /internal/event-recurrence/tick": INTERNAL_CRON,
     "POST /internal/funnel/abandon-tick": INTERNAL_CRON,
     # M18-P07 WAHA intake operations. Three separate sweeps rather than one
@@ -323,6 +324,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /orders/{order_id}/report-problem": STANDARD_WRITE,
     "POST /organiser/events": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/cancel": STANDARD_WRITE,
+    "POST /organiser/advance/undertaking": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/end": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/publish": STANDARD_WRITE,
     "POST /organiser/events/{event_id}/ticket-types": STANDARD_WRITE,

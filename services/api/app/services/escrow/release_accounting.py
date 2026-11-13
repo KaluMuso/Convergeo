@@ -115,6 +115,8 @@ class OrderReleaseLedgerSummary:
     vendor_released_ngwee: int
     refund_drained_ngwee: int
     delivery_fee_captured_ngwee: int = 0
+    # Escrow refilled by event_advance_recovery (cancelled event with an advance).
+    advance_recovered_ngwee: int = 0
 
     @property
     def expected_net_after_commission(self) -> int:
@@ -133,6 +135,7 @@ class OrderReleaseLedgerSummary:
             - self.delivery_fee_captured_ngwee
             - self.vendor_released_ngwee
             - self.refund_drained_ngwee
+            + self.advance_recovered_ngwee
             == 0
         )
 
@@ -260,6 +263,7 @@ def remaining_escrow_ngwee(order_id: str) -> int:
         - summary.delivery_fee_captured_ngwee
         - summary.vendor_released_ngwee
         - summary.refund_drained_ngwee
+        + summary.advance_recovered_ngwee
     )
 
 
@@ -357,6 +361,7 @@ def order_has_refund_remainder(order_id: str) -> bool:
         - summary.delivery_fee_captured_ngwee
         - summary.vendor_released_ngwee
         - summary.refund_drained_ngwee
+        + summary.advance_recovered_ngwee
     )
     return summary.refund_drained_ngwee > 0 and remaining > 0
 
@@ -429,6 +434,8 @@ SELECT
   coalesce(sum(CASE WHEN lt.kind IN ('refund_lane1', 'refund_lane2', 'refund_reversal')
     THEN lp.amount_ngwee ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'delivery_fee_capture'
+    THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
+  coalesce(sum(CASE WHEN lt.kind = 'event_advance_recovery'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text
 FROM public.ledger_transactions lt
 INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
@@ -448,7 +455,7 @@ WHERE lt.order_id = {order_sql}
     # Each CASE sums |escrow legs|; charge/cod credit escrow once per txn so abs
     # equals the economic amount. Commission/delivery/release debit escrow — abs likewise.
     parts = result.rows[0].split("|")
-    if len(parts) != 5:
+    if len(parts) != 6:
         return OrderReleaseLedgerSummary(
             order_id=order_id,
             charge_received_ngwee=0,
@@ -463,6 +470,7 @@ WHERE lt.order_id = {order_sql}
         vendor_released_ngwee=int(parts[2]),
         refund_drained_ngwee=int(parts[3]),
         delivery_fee_captured_ngwee=int(parts[4]),
+        advance_recovered_ngwee=int(parts[5]),
     )
 
 
@@ -484,6 +492,8 @@ SELECT
   coalesce(sum(CASE WHEN lt.kind = 'release_to_vendor'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'delivery_fee_capture'
+    THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
+  coalesce(sum(CASE WHEN lt.kind = 'event_advance_recovery'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text
 FROM public.ledger_transactions lt
 INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id

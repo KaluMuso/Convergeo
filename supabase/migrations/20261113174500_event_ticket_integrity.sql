@@ -28,9 +28,23 @@
 --    API). A replay for an order that already redeemed passes through so the
 --    caller's ON CONFLICT (order_id) DO NOTHING stays a no-op.
 --
--- Additive only (function body replaced in place, new trigger + function).
+-- 3. Tiered organiser advance policy + organiser receivable (section 3 below).
 --
--- Reversible rollback:
+-- Additive only (function body replaced in place, new triggers/functions/tables,
+-- ledger kind checks widened to a strict superset, config rows on conflict do
+-- nothing).
+--
+-- Reversible rollback (manual; the ledger part fails closed once money moved,
+-- because ledger_postings references accounts ON DELETE RESTRICT):
+--   DELETE FROM public.platform_config WHERE key IN (
+--     'event_verified_organiser_advance_bps', 'event_advance_min_kyc_tier',
+--     'event_advance_repayment_days');
+--   DROP TABLE IF EXISTS public.organiser_advance_debts;
+--   DROP TABLE IF EXISTS public.organiser_advance_undertakings;
+--   DELETE FROM public.ledger_accounts la WHERE la.kind = 'organiser_receivable'
+--     AND NOT EXISTS (SELECT 1 FROM public.ledger_postings lp WHERE lp.account_id = la.id);
+--   -- then restore both ledger_accounts checks from
+--   -- 20261113120500_delivery_revenue_ledger_account.sql / 0006_money.sql.
 --   DROP TRIGGER IF EXISTS event_promo_redemptions_enforce_limit
 --     ON public.event_promo_redemptions;
 --   DROP FUNCTION IF EXISTS public.enforce_event_promo_redemption_limit();
@@ -173,12 +187,110 @@ create trigger event_promo_redemptions_enforce_limit
   for each row
   execute function public.enforce_event_promo_redemption_limit();
 
+-- ---------------------------------------------------------------------------
+-- 3. Tiered organiser advance policy + organiser receivable
+-- ---------------------------------------------------------------------------
+-- Unverified organisers: 100% of ticket money held until after the event.
+-- Verified organisers (approved KYC tier >= event_advance_min_kyc_tier, active,
+-- signed the advance undertaking, no unpaid/blacklisted advance debt): up to
+-- event_verified_organiser_advance_bps released 7 days before the event.
+-- If such an event is cancelled, the released advance (plus the platform's
+-- captured commission/fee) is put back into the order's escrow so buyers are
+-- refunded in full from platform funds; the organiser's share is recorded as an
+-- organiser_receivable (vendor ledger account) and an organiser_advance_debts row.
+-- Unpaid past event_advance_repayment_days -> vendor suspended, debt blacklisted
+-- and flagged for legal follow-up (API sweeper, audited).
+
+alter table public.ledger_accounts drop constraint if exists ledger_accounts_kind_check;
+alter table public.ledger_accounts add constraint ledger_accounts_kind_check
+  check (kind in (
+    'platform_cash', 'escrow', 'commission_revenue',
+    'vendor_payable', 'cod_receivable', 'fees',
+    'delivery_revenue', 'organiser_receivable'
+  ));
+
+alter table public.ledger_accounts drop constraint if exists ledger_accounts_vendor_kind_check;
+alter table public.ledger_accounts add constraint ledger_accounts_vendor_kind_check check (
+  (kind in ('vendor_payable', 'cod_receivable', 'organiser_receivable') and vendor_id is not null)
+  or (kind not in ('vendor_payable', 'cod_receivable', 'organiser_receivable') and vendor_id is null)
+);
+
+create table if not exists public.organiser_advance_undertakings (
+  vendor_id uuid primary key references public.vendors (id) on delete restrict,
+  terms_version text not null check (length(trim(terms_version)) > 0),
+  accepted_by uuid not null references auth.users (id) on delete restrict,
+  accepted_at timestamptz not null default timezone('utc', now()),
+  revoked_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+comment on table public.organiser_advance_undertakings is
+  'Organiser acceptance of the pre-event advance undertaking: if the event is cancelled '
+  'or fails, buyers are refunded by the platform and the organiser repays the advance.';
+
+create trigger organiser_advance_undertakings_set_updated_at
+  before update on public.organiser_advance_undertakings
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.organiser_advance_debts (
+  id uuid primary key default gen_random_uuid(),
+  vendor_id uuid not null references public.vendors (id) on delete restrict,
+  event_id uuid not null references public.events (id) on delete restrict,
+  order_id uuid not null references public.orders (id) on delete restrict,
+  amount_ngwee bigint not null check (amount_ngwee > 0),
+  recovered_ngwee bigint not null default 0
+    check (recovered_ngwee >= 0 and recovered_ngwee <= amount_ngwee),
+  status text not null default 'open' check (status in ('open', 'settled', 'written_off')),
+  due_at timestamptz not null,
+  suspended_at timestamptz,
+  blacklisted_at timestamptz,
+  legal_followup_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint organiser_advance_debts_order_key unique (order_id),
+  constraint organiser_advance_debts_settled_check
+    check (status <> 'settled' or recovered_ngwee = amount_ngwee)
+);
+
+create index if not exists organiser_advance_debts_vendor_open_idx
+  on public.organiser_advance_debts (vendor_id, due_at) where status = 'open';
+
+comment on table public.organiser_advance_debts is
+  'Advance released to an organiser before an event that was later cancelled; mirrors '
+  'the organiser_receivable ledger account per order. Written only by the API.';
+
+create trigger organiser_advance_debts_set_updated_at
+  before update on public.organiser_advance_debts
+  for each row execute function public.set_updated_at();
+
+alter table public.organiser_advance_undertakings enable row level security;
+alter table public.organiser_advance_undertakings force row level security;
+alter table public.organiser_advance_debts enable row level security;
+alter table public.organiser_advance_debts force row level security;
+revoke all on table public.organiser_advance_undertakings, public.organiser_advance_debts
+  from anon, authenticated;
+grant all on table public.organiser_advance_undertakings, public.organiser_advance_debts
+  to service_role;
+
 insert into public.platform_config (key, value, description) values
   (
-    'event_pre_event_advance_bps',
-    '0'::jsonb,
-    'Share (basis points, 0-5000) of a >14-day-ahead ticket order released to the '
-    'organiser 7 days before the event. 0 = hold 100% until after the event ends '
-    '(growth blueprint 7.3 control 1 / 7.4). Legacy behaviour was 5000 (50%).'
+    'event_verified_organiser_advance_bps',
+    '5000'::jsonb,
+    'Max share (bps, capped at 5000) of a >14-day-ahead ticket order released 7 days '
+    'before the event to a VERIFIED organiser who signed the advance undertaking. '
+    'Unverified organisers always get 0 (100% held until after the event). 0 here '
+    'disables advances for everyone.'
+  ),
+  (
+    'event_advance_min_kyc_tier',
+    '2'::jsonb,
+    'Minimum approved KYC tier for an organiser to qualify for a pre-event advance.'
+  ),
+  (
+    'event_advance_repayment_days',
+    '14'::jsonb,
+    'Days an organiser has to repay a recovered advance before automatic suspension, '
+    'blacklisting and a legal follow-up flag.'
   )
 on conflict (key) do nothing;

@@ -40,6 +40,15 @@ def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PAYOUTS_ENABLED", "true")
 
 
+@pytest.fixture(autouse=True)
+def _no_advance_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unit fakes have no ledger; advance recovery is covered in
+    tests/test_event_advance_policy.py against a real database."""
+    monkeypatch.setattr(
+        "app.services.events.refund_jobs._recover_advance_for_job", lambda _job: None
+    )
+
+
 @dataclass
 class FakeSqlState:
     jobs: dict[str, dict[str, str]] = field(default_factory=dict)

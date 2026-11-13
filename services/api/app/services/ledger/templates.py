@@ -11,7 +11,7 @@ from app.schemas.base import parse_ngwee
 PLATFORM_ACCOUNT_KINDS = frozenset(
     {"platform_cash", "escrow", "commission_revenue", "fees", "delivery_revenue"}
 )
-VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable"})
+VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable", "organiser_receivable"})
 
 
 class LedgerTemplate(StrEnum):
@@ -28,6 +28,9 @@ class LedgerTemplate(StrEnum):
     LENCO_FEE = "lenco_fee"
     DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
     COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
+    EVENT_ADVANCE_RECOVERY = "event_advance_recovery"
+    ORGANISER_RECEIVABLE_OFFSET = "organiser_receivable_offset"
+    ORGANISER_RECEIVABLE_REPAID = "organiser_receivable_repaid"
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,6 +334,65 @@ def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> Template
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
 
 
+def event_advance_recovery(
+    *, advance_ngwee: int, platform_restore_ngwee: int, vendor_id: str
+) -> TemplateResult:
+    """Cancelled event with a released pre-event advance: refill the order's escrow.
+
+    The organiser's advance becomes a receivable (the organiser owes it back under
+    the advance undertaking) and the platform hands back the commission / platform
+    fee it captured on a sale that did not happen, so the buyer is refunded in full
+    from escrow (i.e. from platform funds).
+
+    Debit organiser_receivable (vendor) (+advance).
+    Debit commission_revenue (+platform_restore), when non-zero.
+    Credit escrow (−advance − platform_restore).
+    """
+    advance = parse_ngwee(advance_ngwee)
+    if advance <= 0:
+        msg = "advance_ngwee must be positive"
+        raise ValueError(msg)
+    restore = 0 if platform_restore_ngwee == 0 else parse_ngwee(platform_restore_ngwee)
+    debit_legs: list[PostingLeg] = [
+        PostingLeg(AccountRef("organiser_receivable", vendor_id), advance)
+    ]
+    if restore > 0:
+        debit_legs.append(PostingLeg(AccountRef("commission_revenue"), restore))
+    legs = (*debit_legs, PostingLeg(AccountRef("escrow"), -(advance + restore)))
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.EVENT_ADVANCE_RECOVERY, legs=legs)
+
+
+def organiser_receivable_offset(*, amount_ngwee: int, vendor_id: str) -> TemplateResult:
+    """Net an organiser's advance debt against money the platform owes them.
+
+    Debit vendor_payable (vendor) (+amount).
+    Credit organiser_receivable (vendor) (−amount).
+    """
+    amount = parse_ngwee(amount_ngwee)
+    legs = (
+        PostingLeg(AccountRef("vendor_payable", vendor_id), amount),
+        PostingLeg(AccountRef("organiser_receivable", vendor_id), -amount),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET, legs=legs)
+
+
+def organiser_receivable_repaid(*, amount_ngwee: int, vendor_id: str) -> TemplateResult:
+    """Organiser repaid an advance debt in cash (confirmed by finance).
+
+    Debit platform_cash (+amount).
+    Credit organiser_receivable (vendor) (−amount).
+    """
+    amount = parse_ngwee(amount_ngwee)
+    legs = (
+        PostingLeg(AccountRef("platform_cash"), amount),
+        PostingLeg(AccountRef("organiser_receivable", vendor_id), -amount),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -358,6 +420,9 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.LENCO_FEE: lenco_fee,
     LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
     LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
+    LedgerTemplate.EVENT_ADVANCE_RECOVERY: event_advance_recovery,
+    LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET: organiser_receivable_offset,
+    LedgerTemplate.ORGANISER_RECEIVABLE_REPAID: organiser_receivable_repaid,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

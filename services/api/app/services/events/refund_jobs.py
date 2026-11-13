@@ -469,6 +469,18 @@ def _sync_awaiting_job(
     return EventRefundJobProcessResult(job["id"], "awaiting_payout", "still_in_flight")
 
 
+def _recover_advance_for_job(job: dict[str, str]) -> None:
+    from app.services.events.advance_policy import recover_event_advance
+
+    order_sql = sql_uuid(job["order_id"], "order_id")
+    loaded = run_sql_script(f"SELECT vendor_id::text FROM public.orders WHERE id = {order_sql};")
+    if not loaded.ok or not loaded.rows:
+        raise RuntimeError(f"order vendor lookup failed: {loaded.error}")
+    recover_event_advance(
+        order_id=job["order_id"], vendor_id=loaded.rows[0].strip(), event_id=job["event_id"]
+    )
+
+
 def process_event_refund_job(
     service_client: ServiceRoleClient,
     job_id: str,
@@ -532,6 +544,11 @@ def process_event_refund_job(
         return EventRefundJobProcessResult(job_id, "manual_review", "invalid_job_amount")
 
     try:
+        if job.get("source") == SOURCE_ORGANISER_CANCEL:
+            # A verified organiser may have received a pre-event advance: recover it
+            # into escrow as an organiser receivable first, so the buyer is refunded
+            # in full from escrow (idempotent; no-op when nothing was released).
+            _recover_advance_for_job(job)
         result: RefundExecutionResult = execute_refund(
             service_client=cast(RefundServiceClient, service_client),
             order_id=job["order_id"],
