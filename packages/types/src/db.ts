@@ -4072,24 +4072,28 @@ export type Database = {
           {
             foreignKeyName: "order_item_stock_consumption_listing_id_fkey"
             columns: ["listing_id"]
+            isOneToOne: false
             referencedRelation: "vendor_listings"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_item_stock_consumption_listing_variant_id_fkey"
             columns: ["listing_variant_id"]
+            isOneToOne: false
             referencedRelation: "vendor_listing_variants"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_item_stock_consumption_order_id_fkey"
             columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "order_item_stock_consumption_order_item_id_fkey"
             columns: ["order_item_id"]
+            isOneToOne: true
             referencedRelation: "order_items"
             referencedColumns: ["id"]
           },
