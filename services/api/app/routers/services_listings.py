@@ -79,6 +79,21 @@ class _ServiceClient(Protocol):
     def client(self) -> Any: ...
 
 
+ServiceSort = Literal["newest", "price_asc", "verified", "best"]
+
+
+def sort_services(items: list[ServiceBrowseItem], sort: str) -> list[ServiceBrowseItem]:
+    """Stable post-sort of the browse list (default keeps updated_at desc)."""
+    if sort == "price_asc":
+        return sorted(
+            items,
+            key=lambda item: (item.from_price_ngwee is None, item.from_price_ngwee or 0),
+        )
+    if sort in ("verified", "best"):
+        return sorted(items, key=lambda item: not item.provider.preferred_badge)
+    return list(items)
+
+
 class ProviderSummary(StrictModel):
     id: str
     slug: str
@@ -586,8 +601,10 @@ def browse_services(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     category: Annotated[ServiceVertical | None, Query()] = None,
     area: Annotated[str | None, Query(max_length=120)] = None,
+    sort: Annotated[ServiceSort, Query()] = "newest",
 ) -> ServiceBrowseResponse:
-    return build_browse_response(service_client.client, category=category, area=area)
+    response = build_browse_response(service_client.client, category=category, area=area)
+    return response.model_copy(update={"items": sort_services(response.items, sort)})
 
 
 @router.get("/services/{slug}", response_model=ServiceDetailResponse)

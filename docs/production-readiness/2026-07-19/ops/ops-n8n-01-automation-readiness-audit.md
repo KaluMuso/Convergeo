@@ -151,6 +151,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `waha-intake-sweeps.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
 | `waha-intake-digest.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
 | `waha-otp-handoff.json`           | Staging Auth OTP transport  | not audited             | DORMANT‡                                                              |
+| `dispatch-stale-alert.json`       | Courier dispatch ops        | no                      | DORMANT§                                                              |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 
@@ -164,6 +165,8 @@ zero in-flight OTP persistence, or handset delivery. Owner review of the actual
 n8n version, supported secret binding, private replay schema/login, retention,
 backups, access, and bounded staging acceptance remains required. Do not activate;
 see [OTP draft gates](../../../ops/n8n-workflows.md#otp-draft-gates).
+
+§**Added after this audit (courier dispatch v1, 2026-11-09) — not observed live.** Ships `active: false`; the tick it calls is a no-op while `feature_flags.courier_dispatch` is `false` (the default). Listed only to keep the completeness matrix exhaustive.
 
 ---
 

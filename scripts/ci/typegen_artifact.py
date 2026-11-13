@@ -23,15 +23,30 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 148
+MIGRATION_COUNT = 158
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
-# Reviewed variants (#762) and money-path reconciliation (#759 into #718) after repairs.
+# Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
+# 2026-11 queued features (#764-#768) replay after repairs, in filename order.
 POST_REPAIR_ORDER = [
     "20261107120000",
     "20261107130000",
     "20261107140000",
     "20261107150000",
     "20261107160000",
+    # #766 feed/retention, #765 brand theme, #768 courier dispatch, #767 Ask quotas.
+    "20261108100000",
+    "20261108110000",
+    "20261108120000",
+    "20261109100000",
+    "20261109120000",
+    # #777 pilot fixes: Band B fallback, fulfilment choices, cancel stock release.
+    "20261113060000",
+    "20261113070000",
+    "20261113071000",
+    # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+    "20261113120500",
+    # In-app notification center tables + triggers (additive, reversible).
+    "20261113130000",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

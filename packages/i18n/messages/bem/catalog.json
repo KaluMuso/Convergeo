@@ -61,7 +61,7 @@
     },
     "serviceBar": {
       "ariaLabel": "Amashiwi ya delivery no pickup",
-      "message": "Delivery ya Lusaka · Pickup nationwide · Escrow ilyo mwalipila online"
+      "message": "Cash on delivery · Delivery ya Lusaka · Pickup nationwide"
     },
     "rails": {
       "departmentTitle": "Ifyapya mu {category}",
@@ -100,6 +100,39 @@
       "fulfillment": "Delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa",
       "returns": "Amabuloshi ya returns no refunds ku ama-order ayasuminishwa",
       "sellers": "Amaprofiles ya basellers no status mwingalola"
+    },
+    "feed": {
+      "sponsored": "Sponsored",
+      "sponsoredBy": "Sponsored by {advertiser}",
+      "adCta": "Learn more",
+      "loadingMore": "Loading more",
+      "end": "You're all caught up",
+      "retry": "Try again",
+      "loadError": "Couldn't load more right now.",
+      "forYouPersonal": "Picked from what you've been browsing",
+      "forYouTrending": "Trending with shoppers in Zambia",
+      "eventCapacity": "{filled}/{total} spots",
+      "sections": {
+        "forYou": "For you",
+        "servicesNearYou": "Services near you",
+        "bestElectronics": "Best in electronics",
+        "bestFashion": "Best in fashion",
+        "mens": "Men's",
+        "womens": "Women's",
+        "kids": "Kids",
+        "underK100": "Cheap finds under K100",
+        "techGadgets": "Tech gadgets",
+        "seasonalSummer": "Summer picks",
+        "eventsThisWeek": "Events this week",
+        "newArrivals": "New arrivals",
+        "trending": "Trending now",
+        "topVendors": "Top vendors"
+      },
+      "stream": {
+        "title": "Popular now",
+        "loadMore": "Load more",
+        "moreLoaded": "{count} more items loaded."
+      }
     }
   },
   "pdp": {
@@ -211,7 +244,9 @@
       "vendorHeading": "Fimbi ukufuma ku {vendor}",
       "categoryHeading": "Fimbi mu category iyi",
       "loading": "Ilelodisha ifintu fimbi…",
-      "unavailable": "Tatwaishibe ukuleta ifintu fimbi nomba."
+      "unavailable": "Tatwaishibe ukuleta ifintu fimbi nomba.",
+      "storeHeading": "Fimbi ukufuma kuli iyi shopu",
+      "similarHeading": "Ifyapalana mu category iyi"
     },
     "recentlyViewed": {
       "heading": "Ifyo mwamonapo"
@@ -382,7 +417,13 @@
       "openFilters": "Ama-filters",
       "filtersActive": "Ama-filters (yakonka)"
     },
-    "backToTop": "Bwelele pamo"
+    "backToTop": "Bwelele pamo",
+    "sort": {
+      "best": "Best match",
+      "verified": "Verified sellers",
+      "bundles": "Bundles",
+      "cheapestChip": "Cheapest"
+    }
   },
   "reviews": {
     "report": {
@@ -410,5 +451,53 @@
   "comparison": {
     "conditionUsed": "Yakubomfya",
     "preferredBadge": "Ushitisha asalwa"
+  },
+  "backInStock": {
+    "notifyMe": "Notify me when it's back",
+    "subscribed": "We'll notify you when it's back in stock",
+    "failed": "Couldn't set the alert. Try again.",
+    "seeSimilar": "See similar items in stock",
+    "unavailable": "Currently unavailable"
+  },
+  "deals": {
+    "metaTitle": "Today's deals",
+    "title": "Today's deals",
+    "subtitle": "Limited-time prices from verified sellers. Paid safely through escrow.",
+    "endsIn": "Ends in {time}",
+    "ended": "Ended",
+    "off": "-{percent}%",
+    "emptyTitle": "No live deals right now",
+    "emptyBody": "New deals drop often. Browse the catalogue in the meantime.",
+    "browse": "Browse all products",
+    "unavailable": "Deals are unavailable right now. Try again shortly."
+  },
+  "qa": {
+    "title": "Questions & answers",
+    "empty": "No questions yet. Ask the seller anything about this product.",
+    "askLabel": "Your question",
+    "askPlaceholder": "e.g. Does it come with a charger?",
+    "submit": "Ask",
+    "submitting": "Sending…",
+    "signIn": "Sign in to ask a question",
+    "sent": "Question sent. It appears once it's checked.",
+    "failed": "Couldn't send your question. Try again.",
+    "tooShort": "Write at least 5 characters.",
+    "sellerAnswer": "Seller",
+    "buyerAnswer": "Buyer",
+    "loadFailed": "Questions couldn't load."
+  },
+  "saveSearch": {
+    "cta": "Save search",
+    "saved": "Search saved — we'll alert you to new matches",
+    "signIn": "Sign in to save searches",
+    "failed": "Couldn't save this search. Try again."
+  },
+  "delivery": {
+    "deliveryToday": "Delivery in Lusaka today",
+    "deliveryTomorrow": "Delivery in Lusaka tomorrow",
+    "deliveryDays": "Delivery in Lusaka in {min}–{max} days",
+    "pickupToday": "Pickup today",
+    "pickupTomorrow": "Pickup tomorrow",
+    "pickupDays": "Pickup in {min}–{max} days"
   }
 }

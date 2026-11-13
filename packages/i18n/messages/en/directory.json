@@ -1,6 +1,6 @@
 {
   "index": {
-    "title": "Business directory",
+    "title": "Vendors",
     "subtitle": "Discover sellers and businesses across Zambia",
     "results": "{count, plural, one {# business} other {# businesses}}",
     "searchPlaceholder": "Search businesses",
@@ -85,7 +85,18 @@
     "tabServices": "Services",
     "tabEvents": "Events",
     "serviceFrom": "From {price}",
-    "whatsappCta": "Chat on WhatsApp"
+    "whatsappCta": "Chat on WhatsApp",
+    "follow": "Follow",
+    "following": "Following",
+    "newSeller": "New seller",
+    "newSellerJoined": "New seller · joined {date}",
+    "tabAbout": "About",
+    "tabReviews": "Reviews",
+    "followedToast": "You're following {name}",
+    "viewFeed": "See new from stores you follow",
+    "searchStore": "Search {name}",
+    "allCategories": "All",
+    "noMatches": "No products match. Try another word or category."
   },
   "listings": {
     "vendor": "Sold by {vendor}",

@@ -2,9 +2,32 @@ import { DEFAULT_LOCALE, resolveSeoAlternateLocales } from "@vergeo/i18n";
 
 import type { Metadata } from "next";
 
-/** Default production origin; override with NEXT_PUBLIC_SITE_URL in deploy env. */
+const PRODUCTION_SITE_URL = "https://vergeo5.com";
+const DEV_SITE_URL = "http://localhost:3000";
+
+/**
+ * Canonical site origin for metadata, sitemap, robots and JSON-LD.
+ *
+ * `NEXT_PUBLIC_SITE_URL` always wins. Without it, only the production plane (or an
+ * unset plane, i.e. today's behaviour) may emit the production origin: staging /
+ * preview builds use the deployment's own origin (`VERCEL_URL`) and development
+ * uses localhost, so non-production pages never advertise vergeo5.com URLs.
+ * Direct `process.env.X` reads so Next.js can inline the public ones.
+ */
 export function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://vergeo5.com";
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) {
+    return configured;
+  }
+  const plane = (process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE ?? "").trim().toLowerCase();
+  if (plane === "staging" || plane === "preview") {
+    const vercelHost = process.env.VERCEL_URL?.trim();
+    return vercelHost ? `https://${vercelHost}` : DEV_SITE_URL;
+  }
+  if (plane === "development") {
+    return DEV_SITE_URL;
+  }
+  return PRODUCTION_SITE_URL;
 }
 
 function cloudinaryImageUrl(publicId: string, cloudName: string, width = 960): string {

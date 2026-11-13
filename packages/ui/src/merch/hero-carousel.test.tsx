@@ -80,62 +80,78 @@ describe("HeroCarousel", () => {
   });
 
   it("loops to the next slide via controls and announces manual changes", () => {
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
 
     render(<HeroCarousel slides={slides} labels={labels} />);
 
     fireEvent.click(screen.getByTestId("hero-carousel-next"));
-    expect(scrollIntoView).toHaveBeenCalled();
+    expect(stripScrollTo).toHaveBeenCalled();
     expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("Slide 2 of 3");
 
     fireEvent.click(screen.getByTestId("hero-carousel-dot-2"));
     expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("Slide 3 of 3");
   });
 
+  it("scrolls only the strip, never the window (no jump back to the hero)", () => {
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
+    const windowScroll = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const intoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = intoView;
+
+    render(<HeroCarousel slides={slides} labels={labels} />);
+    fireEvent.click(screen.getByTestId("hero-carousel-next"));
+
+    expect(stripScrollTo).toHaveBeenCalled();
+    expect(intoView).not.toHaveBeenCalled();
+    expect(windowScroll).not.toHaveBeenCalled();
+    windowScroll.mockRestore();
+  });
+
   it("supports arrow-key navigation", () => {
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
 
     render(<HeroCarousel slides={slides} labels={labels} />);
 
     fireEvent.keyDown(screen.getByTestId("hero-carousel"), { key: "ArrowRight" });
-    expect(scrollIntoView).toHaveBeenCalled();
+    expect(stripScrollTo).toHaveBeenCalled();
     expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("Slide 2 of 3");
   });
 
   it("auto-advances on an interval unless reduced motion is preferred", () => {
     vi.useFakeTimers();
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
 
     render(<HeroCarousel slides={slides} labels={labels} autoAdvanceMs={1000} />);
 
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(stripScrollTo).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("hero-carousel-live")).toHaveTextContent("");
   });
 
   it("does not auto-advance when prefers-reduced-motion is set", () => {
     vi.useFakeTimers();
     mockMatchMedia({ "(prefers-reduced-motion: reduce)": true });
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
 
     render(<HeroCarousel slides={slides} labels={labels} autoAdvanceMs={1000} />);
 
     act(() => {
       vi.advanceTimersByTime(3000);
     });
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(stripScrollTo).not.toHaveBeenCalled();
   });
 
   it("pauses auto-advance while hovered", () => {
     vi.useFakeTimers();
-    const scrollIntoView = vi.fn();
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const stripScrollTo = vi.fn();
+    HTMLElement.prototype.scrollTo = stripScrollTo as unknown as HTMLElement["scrollTo"];
 
     const { getByTestId } = render(
       <HeroCarousel slides={slides} labels={labels} autoAdvanceMs={1000} />,
@@ -145,7 +161,7 @@ describe("HeroCarousel", () => {
     act(() => {
       vi.advanceTimersByTime(3000);
     });
-    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(stripScrollTo).not.toHaveBeenCalled();
   });
 
   it("renders prev/next controls with at least 44px hit targets", () => {

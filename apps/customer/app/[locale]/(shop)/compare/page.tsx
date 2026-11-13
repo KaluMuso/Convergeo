@@ -26,6 +26,8 @@ type PageProps = {
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
 };
 
 type ComparisonApiListing = {
@@ -120,13 +122,14 @@ function toComparisonListings(response: ComparisonApiResponse): ComparisonListin
 function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
   return {
     heading: t("comparison.heading"),
-    vendorCount: t("comparison.vendorCount"),
+    vendorCount: String(t.raw("comparison.vendorCount")),
     sortLabel: t("comparison.sortLabel"),
     sortPrice: t("comparison.sortPrice"),
     sortDistance: t("comparison.sortDistance"),
     price: t("comparison.price"),
     condition: t("comparison.condition"),
-    distance: t("comparison.distance"),
+    // Keep the {distance} placeholder; the client fills it per listing.
+    distance: t("comparison.distance", { distance: "{distance}" }),
     vendor: t("comparison.vendor"),
     fulfillment: t("comparison.fulfillment"),
     delivery: t("comparison.delivery"),
@@ -135,7 +138,7 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     selectedListing: t("comparison.selectedListing"),
     preferredBadge: t("comparison.preferredBadge"),
     noReviews: t("comparison.noReviews"),
-    rating: t("comparison.rating"),
+    rating: String(t.raw("comparison.rating")),
     conditionNew: t("comparison.conditionNew"),
     conditionRefurbished: t("comparison.conditionRefurbished"),
     conditionUsed: t("comparison.conditionUsed"),

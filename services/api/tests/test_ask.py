@@ -394,10 +394,13 @@ async def test_top_k_never_surfaces_wholesale_listings() -> None:
             return _Resp(self._rows)
 
     class _Table:
-        def __init__(self) -> None:
+        def __init__(self, name: str) -> None:
+            self._name = name
             self._ids: set[str] = set()
+            self._columns = ""
 
-        def select(self, *_a: Any, **_k: Any) -> _Table:
+        def select(self, columns: str = "", *_a: Any, **_k: Any) -> _Table:
+            self._columns = columns
             return self
 
         def in_(self, _column: str, values: list[str]) -> _Table:
@@ -408,14 +411,30 @@ async def test_top_k_never_surfaces_wholesale_listings() -> None:
             return self
 
         def execute(self) -> _Resp:
-            return _Resp([{"id": wholesale_id}] if wholesale_id in self._ids else [])
+            if self._name == "vendor_listings" and "products(" in self._columns:
+                # attach_route_slugs: every remaining listing is routable.
+                return _Resp(
+                    [
+                        {
+                            "id": listing_id,
+                            "product_id": f"prod-{listing_id}",
+                            "product_class": "A",
+                            "status": "active",
+                            "products": {"slug": f"slug-{listing_id}", "status": "active"},
+                        }
+                        for listing_id in sorted(self._ids)
+                    ]
+                )
+            if self._name == "vendor_listings":
+                return _Resp([{"id": wholesale_id}] if wholesale_id in self._ids else [])
+            return _Resp([])
 
     class _Client:
         def rpc(self, _name: str, _params: dict[str, Any]) -> _Rpc:
             return _Rpc([_hit(retail_id, "Single charger"), _hit(wholesale_id, "Bulk carton")])
 
-        def table(self, _name: str) -> _Table:
-            return _Table()
+        def table(self, name: str) -> _Table:
+            return _Table(name)
 
     async def _no_embedding(_query: str) -> list[float] | None:
         return None

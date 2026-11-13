@@ -73,6 +73,24 @@ export type OrderDetail = {
   related_orders: OrderSummary[];
 };
 
+export type CourierDeliveryStatus =
+  "requested" | "accepted" | "picked_up" | "delivered" | "failed" | "cancelled";
+
+export type CourierDelivery = {
+  status: CourierDeliveryStatus;
+  courier_name: string;
+  courier_reference: string | null;
+  cod_amount_ngwee: number;
+  timeline: Array<{ status: CourierDeliveryStatus; at: string }>;
+  /** Only ever returned to the order owner, and only while the dispatch is in flight. */
+  handover_code: string | null;
+};
+
+export type OrderDeliveryResponse = {
+  enabled: boolean;
+  dispatch: CourierDelivery | null;
+};
+
 // Point the invoice link at the real signed download endpoint (M15-P07).
 // The API returns a relative stub path (`/account/orders/{id}/invoice`); we lift the
 // order id out of it and target the owner-scoped `/invoices/{id}` PDF stream.
@@ -93,5 +111,7 @@ export function createOrdersApiClient(getToken: () => string | null | Promise<st
   return {
     listOrders: () => client.request<{ groups: CheckoutGroup[] }>("/account/orders"),
     getOrder: (orderId: string) => client.request<OrderDetail>(`/account/orders/${orderId}`),
+    getDelivery: (orderId: string) =>
+      client.request<OrderDeliveryResponse>(`/account/orders/${orderId}/delivery`),
   };
 }

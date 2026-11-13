@@ -82,11 +82,19 @@ export type CartNavTriggerProps = {
   labels: Pick<MiniCartLabels, "openCart">;
   cartIcon: ReactNode;
   className?: string;
+  /** Visible text rendered beside the icon (header "Cart" label). */
+  label?: ReactNode;
 };
 
-export function CartNavTrigger({ labels, cartIcon, className }: CartNavTriggerProps) {
+export function CartNavTrigger({ labels, cartIcon, className, label }: CartNavTriggerProps) {
   const { cart } = useCartStore();
   const count = getCartItemCount(cart);
+  const badge =
+    count > 0 ? (
+      <span className="absolute -right-2 -top-1.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-bold leading-none text-[var(--primary-btn-fg)] ring-2 ring-surface">
+        {count > 99 ? "99+" : String(count)}
+      </span>
+    ) : null;
 
   return (
     <button
@@ -99,12 +107,12 @@ export function CartNavTrigger({ labels, cartIcon, className }: CartNavTriggerPr
       data-testid="cart-nav-trigger"
       onClick={openMiniCart}
     >
-      <span aria-hidden>{cartIcon}</span>
-      {count > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface">
-          {count > 99 ? "99+" : String(count)}
-        </span>
-      ) : null}
+      {/* The count sits on the icon itself; the label (if any) reads beside it. */}
+      <span aria-hidden className="relative inline-flex">
+        {cartIcon}
+        {badge}
+      </span>
+      {label ? <span aria-hidden>{label}</span> : null}
     </button>
   );
 }

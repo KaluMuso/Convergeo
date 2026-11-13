@@ -119,6 +119,20 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       total: t("checkout.fulfilment.total"),
       loading: t("checkout.contact.loading"),
       error: t("checkout.error"),
+      guide: {
+        deliveryHelp: t("checkout.fulfilment.guide.deliveryHelp"),
+        pickupHelp: t("checkout.fulfilment.guide.pickupHelp"),
+        groupHint: t("checkout.fulfilment.guide.groupHint"),
+        tipsTitle: t("checkout.fulfilment.guide.tipsTitle"),
+        tip1: t("checkout.fulfilment.guide.tip1"),
+        tip2: t("checkout.fulfilment.guide.tip2"),
+        tip3: t("checkout.fulfilment.guide.tip3"),
+        landmarkRequired: t("checkout.fulfilment.guide.landmarkRequired"),
+        cutoffTitle: t("checkout.fulfilment.guide.cutoffTitle"),
+        cutoffBefore: t("checkout.fulfilment.guide.cutoffBefore"),
+        cutoffAfter: t("checkout.fulfilment.guide.cutoffAfter"),
+        cutoffMadeToOrder: t("checkout.fulfilment.guide.cutoffMadeToOrder"),
+      },
     },
     payment: {
       title: t("checkout.payment.title"),
@@ -150,6 +164,15 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       railRejected: t("checkout.payment.railRejected"),
       error: t("checkout.payment.error"),
       paymentsDisabled: t("checkout.payment.paymentsDisabled"),
+      codGuide: {
+        title: t("checkout.payment.codGuide.title"),
+        step1: t("checkout.payment.codGuide.step1"),
+        step2: t.raw("checkout.payment.codGuide.step2") as string,
+        step3: t("checkout.payment.codGuide.step3"),
+        capNote: t.raw("checkout.payment.codGuide.capNote") as string,
+        overCap: t.raw("checkout.payment.codGuide.overCap") as string,
+        editCart: t("checkout.payment.codGuide.editCart"),
+      },
     },
     review: {
       title: t("checkout.review.title"),
@@ -191,6 +214,16 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       nextMomo: t("checkout.review.nextMomo"),
       nextCard: t("checkout.review.nextCard"),
       nextCod: t("checkout.review.nextCod"),
+      codGuide: {
+        title: t("checkout.review.codGuide.title"),
+        step1: t("checkout.review.codGuide.step1"),
+        step2: t("checkout.review.codGuide.step2"),
+        step3: t.raw("checkout.review.codGuide.step3") as string,
+        deliveryTo: t.raw("checkout.review.codGuide.deliveryTo") as string,
+        deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
+        pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
+        placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
+      },
     },
     countdown: {
       label: t("checkout.countdown.label"),
@@ -203,6 +236,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     emptyCart: t("checkout.emptyCart"),
     retry: t("checkout.retry"),
     backToCart: t("checkout.backToCart"),
+    overCodCapTemplate: t.raw("checkout.overCodCap") as string,
   };
 }
 

@@ -28,6 +28,17 @@ import {
   loadHomeDefaultData,
   pickHeroVisualPublicId,
 } from "./_components/home-default";
+import { isRenderableSection } from "./_components/home-feed/feed-types";
+import {
+  buildFeedLabels,
+  HomeFeed,
+  loadHomeFeedFirstPage,
+} from "./_components/home-feed/home-feed";
+import {
+  HomeListingStream,
+  listingIdsOf,
+  loadHomeStreamFirstPage,
+} from "./_components/home-feed/home-stream";
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
@@ -66,7 +77,10 @@ export function generateStaticParams() {
 async function getCatalogTranslator(locale: string) {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({ locale, messages, namespace: "catalog" });
 }
@@ -161,11 +175,13 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages] = await Promise.all([
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
     loadNamespace(locale as Locale, "directory"),
+    loadHomeFeedFirstPage(locale),
+    loadHomeStreamFirstPage(),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
   // Card/rail labels cross into client components as serializable strings and are
@@ -222,6 +238,25 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     },
   };
 
+  // Admin-governed feed (home_feed_sections) supersedes the hard-coded default
+  // rails whenever it resolves to at least one section; otherwise the legacy
+  // rails below remain the fallback (API down / feed not configured).
+  const useAdminFeed = feedPage.sections.some(isRenderableSection);
+  const feedLabels = buildFeedLabels(
+    tRaw as unknown as Parameters<typeof buildFeedLabels>[0],
+    railLabels,
+  );
+
+  const streamLabels = {
+    title: t("home.feed.stream.title"),
+    loadMore: t("home.feed.stream.loadMore"),
+    loading: t("home.feed.loadingMore"),
+    moreLoaded: raw("home.feed.stream.moreLoaded"),
+    endOfResults: t("home.feed.end"),
+    loadError: t("home.feed.loadError"),
+    retry: t("home.feed.retry"),
+  };
+
   // Audit hierarchy: categories before flash/campaign; events after product rails.
   const earlyCampaignKeys = plan.campaignSectionKeys.filter(
     (key) => key !== "hero" && key !== "category_grid" && key !== "events_row",
@@ -251,6 +286,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
           t={t}
           brandName={brandName}
           visualPublicId={pickHeroVisualPublicId(defaultData.newest)}
+          sponsoredSlides={feedPage.carousel}
         />
       )}
 
@@ -279,7 +315,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         }}
       />
 
-      {plan.showDefaultRails ? (
+      {plan.showDefaultRails && !useAdminFeed ? (
         <>
           <HomeProductRail
             id="home-rail-new"
@@ -295,7 +331,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             <HomeProductRail
               key={rail.category.id}
               id={`home-rail-${rail.category.slug}`}
-              title={t("home.rails.departmentTitle", { category: rail.category.name })}
+              title={t("home.rails.departmentTitle", {
+                category: rail.category.name,
+              })}
               viewAllHref={`/${locale}/c/${rail.category.slug}`}
               viewAllLabel={t("home.rails.viewAll")}
               listings={rail.listings}
@@ -310,7 +348,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
         : null}
 
-      {plan.showDefaultRails ? (
+      {plan.showDefaultRails && !useAdminFeed ? (
         <>
           <HomeServicesRail
             id="home-rail-services"
@@ -349,6 +387,25 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       ) : null}
 
       {plan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
+
+      {/* Infinite feed is last so loading more never pushes static modules away. */}
+      {useAdminFeed ? (
+        <HomeFeed
+          page={feedPage}
+          locale={locale}
+          labels={feedLabels}
+          streamFollows={streamPage.items.length > 0}
+        />
+      ) : null}
+
+      {/* "Popular now": first batch is SSR; only later pages load on the client. */}
+      <HomeListingStream
+        page={streamPage}
+        sectionListingIds={listingIdsOf(feedPage.sections)}
+        locale={locale}
+        cardLabels={railLabels}
+        labels={streamLabels}
+      />
     </div>
   );
 }

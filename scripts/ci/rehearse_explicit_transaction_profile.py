@@ -50,6 +50,21 @@ REVIEWED_SUFFIX = (
     "20261107140000_reconcile_approve_kyc_vendor.sql",
     "20261107150000_prepaid_settlement_platform_fee_leg.sql",
     "20261107160000_cart_variant_atomic_paths.sql",
+    # #766 feed/retention, #765 brand theme, #768 courier dispatch, #767 Ask quotas.
+    "20261108100000_home_feed_sections.sql",
+    "20261108110000_retention_foundations.sql",
+    "20261108120000_vendor_brand_theme.sql",
+    "20261109100000_courier_dispatch_v1.sql",
+    "20261109120000_ask_vergeo_daily_quota.sql",
+    # Pilot fixes (#777): Band B fallback zone, server-authoritative fulfilment,
+    # stock release on cancel.
+    "20261113060000_delivery_fallback_zone_band_b.sql",
+    "20261113070000_checkout_fulfilment_choices.sql",
+    "20261113071000_order_cancel_stock_release.sql",
+    # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+    "20261113120500_delivery_revenue_ledger_account.sql",
+    # In-app notification center tables + triggers (additive, reversible).
+    "20261113130000_in_app_notifications.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -603,9 +618,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 148 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 158 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 148 source migrations",
+            "disposable copy does not match 158 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -688,10 +703,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_148|PASS")
+                    print("failure_cleanup|restored_158|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 148 migrations",
+                        "error: disposable failure cleanup could not restore 158 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1044,7 +1059,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 148 migrations"
+                    "normal full replay did not restore 158 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

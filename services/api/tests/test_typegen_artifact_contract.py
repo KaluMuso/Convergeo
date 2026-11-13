@@ -94,7 +94,7 @@ def test_successful_generation_capture_is_exact_and_nonsecret(stage: Fixture) ->
         "migrations",
         "generated",
     }
-    assert d["migration_count"] == len(d["migrations"]) == h.MIGRATION_COUNT == 148
+    assert d["migration_count"] == len(d["migrations"]) == h.MIGRATION_COUNT == 158
     assert [r["version"] for r in d["migrations"]][-len(h.TAIL_ORDER) :] == h.TAIL_ORDER
     assert d["generated"]["path"] == h.TYPES_PATH
     assert "PRIVATE_" not in (stage.root / h.MANIFEST_PATH).read_text()

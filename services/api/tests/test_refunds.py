@@ -30,6 +30,15 @@ REFUND_ID = "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1a1"
 CUSTOMER_MOMO = "+260971234567"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
@@ -435,6 +444,11 @@ class TestExecuteRefundPaths:
                 "app.services.refunds.execute.summarize_order_release_ledger",
                 return_value=full_release,
             ),
+            # Released before the delivery-fee capture existed: the vendor got the fee.
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=0,
+            ),
         ):
             result = execute_refund(
                 service_client=service,
@@ -446,8 +460,58 @@ class TestExecuteRefundPaths:
         assert result.phase == RefundPhase.POST_RELEASE
         mock_post.assert_called_once()
         call = mock_post.call_args.kwargs
+        assert call["delivery_fee_ngwee"] == 0
         assert call["template"] == LedgerTemplate.CLAWBACK
         assert call["clawback_ngwee"] == 105_000
+
+    @patch("app.services.refunds.execute.post_transaction")
+    def test_post_release_refund_not_blocked_by_captured_delivery_fee(
+        self,
+        mock_post: MagicMock,
+    ) -> None:
+        """The delivery fee left escrow for delivery_revenue: no escrow 'remains'."""
+        mock_post.return_value = _posted_txn("post-clawback-fee")
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=True)
+        service = FakeServiceClient(fake)
+        released_with_fee = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=105_000,
+            commission_captured_ngwee=0,
+            vendor_released_ngwee=100_000,
+            refund_drained_ngwee=0,
+            delivery_fee_captured_ngwee=5_000,
+        )
+
+        with (
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=released_with_fee,
+            ),
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=5_000,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+            )
+
+        assert result.phase == RefundPhase.POST_RELEASE
+        mock_post.assert_called_once()
+        # Customer gets items + fee; the fee comes back out of delivery_revenue,
+        # only the items are clawed from the vendor (who never received the fee).
+        call = mock_post.call_args.kwargs
+        assert call["template"] == LedgerTemplate.CLAWBACK
+        assert call["clawback_ngwee"] == 105_000
+        assert call["delivery_fee_ngwee"] == 5_000
 
     @patch("app.services.refunds.execute.post_transaction")
     def test_partial_event_release_blocks_full_clawback(

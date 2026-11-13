@@ -24,7 +24,8 @@
     "privacy": "Data ndi privacy",
     "business": "Mode ya business",
     "signOut": "Tulani",
-    "signingOut": "Mukutuluka…"
+    "signingOut": "Mukutuluka…",
+    "following": "Zomwe mukutsatira"
   },
   "title": "Account yanga",
   "hub": {
@@ -86,5 +87,18 @@
     "remove": "Chotsani",
     "removeLabel": "Chotsani {name} ku recently viewed",
     "viewProduct": "Onani"
+  },
+  "following": {
+    "title": "Following",
+    "description": "New arrivals from the stores you follow, from the last 30 days.",
+    "emptyTitle": "Nothing new yet",
+    "emptyBody": "Follow stores you like and their new products will show up here.",
+    "browseVendors": "Browse vendors",
+    "signIn": "Sign in to see the stores you follow",
+    "signInCta": "Sign in",
+    "loadFailed": "Couldn't load your feed. Try again.",
+    "retry": "Try again",
+    "loadMore": "Show more",
+    "viewFeed": "See new from stores you follow"
   }
 }

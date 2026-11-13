@@ -110,6 +110,8 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/telemetry/frontend-errors"),
         ("POST", "/telemetry/views"),
         ("POST", "/ask"),
+        # Read-only remaining-quota lookup; optional bearer only selects the tier.
+        ("GET", "/ask/quota"),
         ("POST", "/auth/guard/otp-quota"),
         # M16-P09 beta gate: pre-login invite gate + feedback. redeem/gate are
         # inherently pre-auth; feedback is optional-auth (attaches user_id if a
@@ -157,7 +159,22 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/healthz"),
         ("GET", "/readyz"),
         ("GET", "/merch/slots"),
+        # Admin-governed home feed (cache-friendly; optional bearer only personalises
+        # the for_you section inside the handler) + fire-and-forget ad beacon that
+        # only increments aggregates for live placements. Both IP rate-limited.
+        ("GET", "/home/feed"),
+        # Popular-now listing stream: public, keyset cursor, IP rate-limited.
+        ("GET", "/home/stream"),
+        # Public recommendation rails / live flash deals / published product Q&A —
+        # read-only, IP rate-limited, same visibility rules as the PLP/PDP.
+        ("GET", "/products/{slug}/recommendations"),
+        ("GET", "/services/{service_id}/recommendations"),
+        ("GET", "/events/{slug}/recommendations"),
+        ("GET", "/deals"),
+        ("GET", "/products/{slug}/questions"),
+        ("POST", "/home/ads/events"),
         ("GET", "/public/config/commission-rates"),
+        ("GET", "/public/config/storefront"),
         ("GET", "/products/{slug}"),
         ("GET", "/products/{slug}/comparison"),
         ("GET", "/products/{slug}/related"),

@@ -41,6 +41,12 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo event \"{event_title}\" details have changed. Date: {event_date}. Venue: {venue}. Check your tickets in the app. Reply STOP to opt out."
+    },
+    "courier_dispatch_request": {
+      "body": "Convergeo delivery request {order_reference}. Pickup: {pickup_line}. Drop-off: {dropoff_line}. Items: {items_line}. Payment: {cod_line}. Contacts: {contacts_line}."
+    },
+    "dispatch_stale_alert": {
+      "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
     }
   },
   "sms": {
@@ -105,6 +111,14 @@
         "subject": "Your Convergeo vendor verification needs attention",
         "body": "<p>We could not approve your vendor verification.</p><p><strong>Reason:</strong> {reason}</p><p>Please resubmit your documents from the vendor app.</p>"
       }
+    },
+    "courier_dispatch_request": {
+      "subject": "Convergeo delivery request {order_id}",
+      "body": "<p>New delivery job from Convergeo.</p><p>{dispatch_message}</p>"
+    },
+    "dispatch_stale_alert": {
+      "subject": "Dispatch {order_id} not accepted",
+      "body": "<p>Dispatch for order {order_id} is still waiting for courier acceptance.</p>"
     }
   },
   "marketing": {
@@ -122,6 +136,63 @@
     },
     "payout_failure_alert": {
       "body": "Payout failure alert: {vendor_name} — {amount} (ref {lenco_reference}). Review in admin."
+    }
+  },
+  "center": {
+    "bell": "Notifications",
+    "bellUnread": "{count, plural, one {# unread notification} other {# unread notifications}}",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "seeAll": "See all notifications",
+    "empty": "You're all caught up. New updates will appear here.",
+    "loading": "Loading…",
+    "loadError": "Couldn't load notifications.",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "unreadDot": "Unread",
+    "view": "View",
+    "close": "Close",
+    "pageDescription": "Order, payment and account updates for you.",
+    "push": {
+      "enable": "Turn on phone alerts",
+      "enabled": "Phone alerts are on",
+      "denied": "Alerts are blocked in your browser settings.",
+      "hint": "Get an alert on this phone even when the app is closed.",
+      "unavailable": "Phone alerts aren't available yet.",
+      "failed": "Couldn't turn on alerts. Try again."
+    },
+    "errors": {
+      "forbidden": "You can't view these notifications.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "invalidCursor": "That page link has expired. Reload to continue."
+    }
+  },
+  "inApp": {
+    "fallback": "You have a new update.",
+    "customer": {
+      "order_placed": "Order {ref} placed. We'll tell you when the seller confirms.",
+      "order_confirmed": "Order {ref} was confirmed by the seller.",
+      "order_rejected": "Order {ref} was declined by the seller. Any payment will be returned.",
+      "order_packed": "Order {ref} is being packed.",
+      "order_shipped": "Order {ref} is on its way.",
+      "order_ready_pickup": "Order {ref} is ready for pickup. Open it to see your pickup code.",
+      "order_delivered": "Order {ref} was delivered. How did it go?",
+      "quote_received": "You received a new quote. Compare and accept it in the app.",
+      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate."
+    },
+    "vendor": {
+      "order_placed": "New order {ref}. Confirm it to start.",
+      "order_delivered": "Order {ref} was delivered.",
+      "kyc_submitted": "We received your verification documents. We'll review them soon.",
+      "kyc_approved": "Your shop is verified. You can now receive payouts.",
+      "kyc_rejected": "Your verification needs changes. Open it to see why.",
+      "rfq_received": "A customer asked you for a quote.",
+      "job_matched": "A new job matches your services.",
+      "dispute_opened": "A customer opened a dispute on order {ref}. Please respond."
+    },
+    "admin": {
+      "kyc_submitted": "New KYC submission waiting for review.",
+      "dispute_opened": "New dispute opened on order {ref}."
     }
   }
 }

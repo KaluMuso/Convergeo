@@ -11,7 +11,9 @@
  *   2. ticket-wallet pages / API        → NetworkFirst (live QR stays fresh).
  *   3. images                            → CacheFirst, capped + expiring.
  *   4. catalog / PDP navigations         → StaleWhileRevalidate.
- *   5. our API GETs                      → NetworkFirst.
+ *   5a. per-user / unlisted API GETs     → NetworkOnly (PRIVACY: phones are
+ *       shared within households; nothing personal is ever persisted).
+ *   5b. allowlisted PUBLIC API GETs      → NetworkFirst (anonymous only).
  *   6. Next.js static assets             → serwist `defaultCache`.
  *
  * Update lifecycle is SAFE: `skipWaiting` is OFF, so a new SW waits until the
@@ -32,6 +34,9 @@ import {
   type RuntimeCaching,
 } from "serwist";
 
+import { parsePushPayload, safeNotificationUrl } from "./lib/push-payload";
+import { CLEAR_USER_CACHES_MESSAGE, USER_CACHE_NAMES } from "./lib/clear-user-caches";
+
 /** Default-locale offline shell (precached; served when a navigation fails). */
 const OFFLINE_FALLBACK_URL = "/en/offline";
 
@@ -44,6 +49,15 @@ const CATALOG_PATTERN =
   /^\/[^/]+\/(?:p|c|v|e|events|services|directory|supplies|categories|compare|calendar)(?:\/|$)/;
 const WALLET_PAGE_PATTERN = /^\/[^/]+\/account\/tickets(?:\/|$)/;
 const WALLET_API_PATH_PREFIX = "/account/tickets";
+
+/**
+ * API paths that are genuinely public and non-personal. ALLOWLIST (not a
+ * denylist): any API GET not listed here is NetworkOnly. A request that carries
+ * an `Authorization` header is never cached either, because some public paths
+ * (home feed, catalog) personalise their response for signed-in users.
+ */
+const PUBLIC_API_PATH_PATTERN =
+  /^\/(?:catalog|products|search|categories|directory|discovery|public\/config|home\/feed)(?:\/|$)/;
 
 /** Same-origin API base (empty → no API matches, e.g. under test). */
 function apiOrigin(): string | null {
@@ -80,6 +94,20 @@ export function isApiRequest(url: URL): boolean {
   return origin !== null && url.origin === origin;
 }
 
+/** True only for anonymous GETs to allowlisted public, non-personal API paths. */
+export function isPublicApiRequest(
+  url: URL,
+  request: Pick<Request, "method" | "headers">,
+): boolean {
+  if (request.method !== "GET" || !isApiRequest(url)) return false;
+  if (!PUBLIC_API_PATH_PATTERN.test(url.pathname)) return false;
+  // B2B supplies feed is gated by business identity — never public.
+  if (url.searchParams.get("wholesale") === "true") return false;
+  // Signed-in requests may be personalised — never persist them.
+  if (request.headers?.has("Authorization")) return false;
+  return true;
+}
+
 export function isWalletPage(pathname: string): boolean {
   return WALLET_PAGE_PATTERN.test(pathname);
 }
@@ -87,6 +115,16 @@ export function isWalletPage(pathname: string): boolean {
 /** Wallet API responses — folded from the M10 `sw-wallet.ts` fragment. */
 export function isWalletApi(url: URL): boolean {
   return isApiRequest(url) && url.pathname.startsWith(WALLET_API_PATH_PREFIX);
+}
+
+/** Notification center + Web Push endpoints on our API origin. */
+export function isNotificationsApi(url: URL): boolean {
+  return (
+    isApiRequest(url) &&
+    (url.pathname.startsWith("/me/notifications") ||
+      url.pathname.startsWith("/me/push-subscriptions") ||
+      url.pathname === "/me/web-push")
+  );
 }
 
 // ── Runtime-cache rules (named so the test can assert them by name) ─────────
@@ -160,10 +198,28 @@ export const cacheRules: NamedRule[] = [
     }),
   },
   {
-    // 5. Our API GETs — network-first (fresh data, offline fall-back to cache).
-    name: "api",
+    // 5. Notification center API — per-user and live (badge counts, read
+    //     state): NetworkOnly so one signed-in user's feed is never served
+    //     from the shared runtime cache to another user of the same phone.
+    name: "notifications-network-only",
+    matcher: ({ url }) => isNotificationsApi(url),
+    handler: new NetworkOnly(),
+  },
+  {
+    // 5a. PRIVACY — every other API request (per-user: /me, /cart, /orders,
+    // /account, /wishlist, /notifications, …) is NetworkOnly and never cached.
+    name: "api-private",
     matcher: ({ url, request }) =>
-      request.method === "GET" && isApiRequest(url) && !isWalletApi(url),
+      request.method === "GET" &&
+      isApiRequest(url) &&
+      !isWalletApi(url) &&
+      !isPublicApiRequest(url, request),
+    handler: new NetworkOnly(),
+  },
+  {
+    // 5b. Allowlisted public API GETs — network-first (offline fall-back to cache).
+    name: "api",
+    matcher: ({ url, request }) => isPublicApiRequest(url, request),
     handler: new NetworkFirst({
       cacheName: "api-v1",
       networkTimeoutSeconds: 5,
@@ -199,14 +255,40 @@ export const SW_UPDATE_POLICY = { skipWaiting: false, clientsClaim: false } as c
 
 // Minimal shape of the service-worker global — the customer tsconfig lib does
 // not ship the full `webworker` types, so we model only what we touch.
+type WaitableEvent = { waitUntil: (promise: Promise<unknown>) => void };
+type PushEventLike = WaitableEvent & { data?: { text: () => string } | null };
+type NotificationClickLike = WaitableEvent & {
+  notification: { close: () => void; data?: { url?: unknown } };
+};
+type WindowClientLike = {
+  url: string;
+  focus: () => Promise<unknown>;
+  navigate?: (url: string) => Promise<unknown>;
+};
 type ServiceWorkerScope = {
   __SW_MANIFEST?: (PrecacheEntry | string)[];
   skipWaiting: () => Promise<void>;
-  addEventListener: (
+  addEventListener: ((
     type: "message",
     listener: (event: { data?: { type?: string } }) => void,
-  ) => void;
+  ) => void) &
+    ((type: "push", listener: (event: PushEventLike) => void) => void) &
+    ((type: "notificationclick", listener: (event: NotificationClickLike) => void) => void);
+  registration: {
+    showNotification: (title: string, options: Record<string, unknown>) => Promise<void>;
+  };
+  clients: {
+    matchAll: (options: {
+      type: "window";
+      includeUncontrolled: boolean;
+    }) => Promise<WindowClientLike[]>;
+    openWindow: (url: string) => Promise<unknown>;
+  };
+  navigator?: { setAppBadge?: (count?: number) => Promise<void> };
 };
+
+/** Fallback tap target when a push carries no usable link. */
+const PUSH_FALLBACK_URL = "/en/account/notifications";
 
 function inServiceWorkerContext(): boolean {
   return (
@@ -239,6 +321,49 @@ if (inServiceWorkerContext()) {
     },
   });
   serwist.addEventListeners();
+
+  // Web Push display path (flag `web_push`, default OFF — no subscription can
+  // exist until the founder enables it). Payload contract: lib/push-payload.ts.
+  sw.addEventListener("push", (event) => {
+    const display = parsePushPayload(event.data?.text() ?? null, PUSH_FALLBACK_URL);
+    const badge = display.badge;
+    event.waitUntil(
+      Promise.all([
+        sw.registration.showNotification(display.title, {
+          body: display.body,
+          icon: "/brand/convergeo-icon-192.png",
+          badge: "/brand/convergeo-icon-192.png",
+          tag: "vergeo-notification",
+          data: { url: display.url },
+        }),
+        badge !== null && typeof sw.navigator?.setAppBadge === "function"
+          ? sw.navigator.setAppBadge(badge).catch(() => undefined)
+          : Promise.resolve(),
+      ]),
+    );
+  });
+
+  sw.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    const url = safeNotificationUrl(event.notification.data?.url, PUSH_FALLBACK_URL);
+    event.waitUntil(
+      sw.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+        const open = windows[0];
+        if (open) {
+          return open.focus().then(() => open.navigate?.(url));
+        }
+        return sw.clients.openWindow(url);
+      }),
+    );
+  });
+
+  // Sign-out: purge every per-user runtime cache so a shared phone never
+  // serves the previous user's data.
+  sw.addEventListener("message", (event) => {
+    if (event.data?.type === CLEAR_USER_CACHES_MESSAGE) {
+      void Promise.all(USER_CACHE_NAMES.map((name) => caches.delete(name)));
+    }
+  });
 
   // Update prompt handshake: the page asks the waiting SW to take over.
   sw.addEventListener("message", (event) => {

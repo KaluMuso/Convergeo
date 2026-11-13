@@ -10,7 +10,7 @@ export type TopUtilityBarLabels = {
   countryCode: string;
   localeAria: string;
   localeNames: Record<string, string>;
-  phone: string;
+  phone: string | null;
   email: string;
   socialAria: string;
   facebookAria: string;
@@ -20,7 +20,7 @@ export type TopUtilityBarLabels = {
 };
 
 export type TopUtilityBarLinks = {
-  phoneHref: string;
+  phoneHref: string | null;
   emailHref: string;
   facebook: string;
   twitter: string;
@@ -105,7 +105,7 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
       aria-label={labels.ariaLabel}
       className="border-b border-panel-border bg-panel text-panel-text"
     >
-      <div className="mx-auto flex min-h-9 max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1 text-micro lg:px-6">
+      <div className="flex min-h-9 w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1 text-micro lg:px-6 xl:px-8">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="inline-flex items-center gap-1.5 font-medium tracking-wide">
             <ZambiaFlag className="h-3.5 w-5 shrink-0 rounded-[1px] shadow-sm" />
@@ -132,12 +132,14 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
         </div>
 
         <div className="hidden min-w-0 items-center gap-4 text-panel-muted md:flex">
-          <a
-            href={links.phoneHref}
-            className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            {labels.phone}
-          </a>
+          {labels.phone && links.phoneHref ? (
+            <a
+              href={links.phoneHref}
+              className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
+              {labels.phone}
+            </a>
+          ) : null}
           <a
             href={links.emailHref}
             className="truncate transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"

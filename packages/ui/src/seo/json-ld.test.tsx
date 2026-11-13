@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, SEO_INDEXABLE_LOCALES } from "@vergeo/i18n";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildBreadcrumbListJsonLd,
@@ -12,6 +12,7 @@ import {
   buildSearchActionUrlTemplate,
   buildWebSiteJsonLd,
   canBuildProductJsonLd,
+  getSiteUrl,
   ngweeToZmwDecimal,
   stripCanonicalParams,
 } from "./json-ld";
@@ -284,5 +285,39 @@ describe("buildBreadcrumbListJsonLd", () => {
       name: "Electronics",
       item: "https://vergeo5.com/en/c/electronics",
     });
+  });
+});
+
+describe("getSiteUrl plane safety", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the production origin on the production plane (or unset)", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
+    expect(getSiteUrl()).toBe("https://vergeo5.com");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "");
+    expect(getSiteUrl()).toBe("https://vergeo5.com");
+  });
+
+  it("never emits the production origin on staging/preview/development", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+    vi.stubEnv("VERCEL_URL", "vergeo5-git-fix-team.vercel.app");
+    for (const plane of ["staging", "preview"]) {
+      vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", plane);
+      expect(getSiteUrl()).toBe("https://vergeo5-git-fix-team.vercel.app");
+    }
+    vi.stubEnv("VERCEL_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    expect(getSiteUrl()).not.toContain("vergeo5.com");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "development");
+    expect(getSiteUrl()).toBe("http://localhost:3000");
+  });
+
+  it("lets NEXT_PUBLIC_SITE_URL win on every plane", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://staging.example.test");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    expect(getSiteUrl()).toBe("https://staging.example.test");
   });
 });

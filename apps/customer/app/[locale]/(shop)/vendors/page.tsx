@@ -1,0 +1,291 @@
+import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
+import Link from "next/link";
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
+
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
+import { FilterBar } from "../_components/directory/filter-bar";
+import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
+import { buildVendorLadderLabels } from "../_components/directory/vendor-ladder-labels";
+
+import type { Metadata } from "next";
+
+export const revalidate = 60;
+
+type DirectoryApiResponse = {
+  items: Array<{
+    id: string;
+    slug: string;
+    display_name: string;
+    description: string | null;
+    logo_url: string | null;
+    preferred_badge: boolean;
+    kyc_tier: number | null;
+    commercial_tier: string | null;
+    verified: boolean;
+    landmark: string | null;
+    categories: string[];
+    rating_avg: number | null;
+    rating_count: number;
+    listing_count: number;
+    created_at?: string | null;
+  }>;
+  facets: {
+    categories: Array<{ value: string; count: number }>;
+    locations: Array<{ value: string; count: number }>;
+    badges: Array<{ value: string; count: number }>;
+  };
+  total: number;
+};
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+type DirectoryTranslator = {
+  (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
+};
+
+function readParam(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string {
+  const value = params[key];
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+  return value ?? "";
+}
+
+async function getDirectoryTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
+  const baseMessages = await getMessages();
+  const directoryMessages = await loadNamespace(locale as Locale, "directory");
+  const messages = {
+    ...baseMessages,
+    directory: directoryMessages,
+  } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "directory",
+  }) as unknown as DirectoryTranslator;
+}
+
+async function fetchDirectory(
+  query: Record<string, string>,
+): Promise<DirectoryApiResponse | null> {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  }
+
+  try {
+    const url = absoluteApiUrl(`/directory?${searchParams.toString()}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
+      next: { revalidate, tags: ["directory"] },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as DirectoryApiResponse;
+  } catch {
+    return null;
+  }
+}
+
+export function generateStaticParams() {
+  return LOCALES.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getDirectoryTranslator(locale);
+  return {
+    title: t("index.title"),
+    description: t("index.subtitle"),
+    alternates: buildCanonicalAlternates(locale, "vendors"),
+    openGraph: {
+      title: t("index.title"),
+      description: t("index.subtitle"),
+      type: "website",
+      locale,
+      url: buildLocaleCanonical(locale, "vendors"),
+    },
+    robots: { index: true, follow: true },
+  };
+}
+
+export default async function DirectoryPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const { locale } = await params;
+  const resolvedSearchParams = await searchParams;
+
+  if (!LOCALES.includes(locale as Locale)) {
+    return null;
+  }
+
+  setRequestLocale(locale);
+  const t = await getDirectoryTranslator(locale);
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as DirectoryTranslator;
+
+  const q = readParam(resolvedSearchParams, "q");
+  const category = readParam(resolvedSearchParams, "category");
+  const location = readParam(resolvedSearchParams, "location");
+  const badges = readParam(resolvedSearchParams, "badges");
+
+  const directory = await fetchDirectory({ q, category, location, badges });
+  const vendors = directory?.items ?? [];
+  const facets = directory?.facets ?? {
+    categories: [],
+    locations: [],
+    badges: [],
+  };
+  const total = directory?.total ?? 0;
+
+  const categoryLabels = {
+    electronics: t("filters.categories.electronics"),
+    "fashion-beauty": t("filters.categories.fashion-beauty"),
+    "home-living": t("filters.categories.home-living"),
+    groceries: t("filters.categories.groceries"),
+  };
+  const ladderLabels = buildVendorLadderLabels(t);
+
+  const formatFacetLabel = (label: string, count: number) =>
+    t("filters.facetCount", { label, count });
+
+  const categoryOptions = facets.categories.map((facet) => ({
+    value: facet.value,
+    label: formatFacetLabel(
+      categoryLabels[facet.value as keyof typeof categoryLabels] ??
+        facet.value.replace(/-/g, " "),
+      facet.count,
+    ),
+  }));
+
+  const locationOptions = facets.locations.map((facet) => ({
+    value: facet.value,
+    label: formatFacetLabel(facet.value, facet.count),
+  }));
+
+  return (
+    <div className="space-y-4 lg:mx-auto lg:w-full lg:max-w-6xl">
+      {/* Compact title row: the grid is the hero, not a marketing panel. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
+            {t("index.title")}
+          </h1>
+          <p className="m-0 mt-1 flex flex-wrap gap-x-3 text-sm text-text-2">
+            <span>{t("index.subtitle")}</span>
+            <span className="font-semibold text-text">
+              {t("index.results", { count: total })}
+            </span>
+          </p>
+        </div>
+        <Link
+          href={`/${locale}/sell`}
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+        >
+          {t("index.becomeVendor")}
+        </Link>
+      </div>
+
+      <Suspense fallback={null}>
+        <FilterBar
+          locale={locale}
+          categoryOptions={categoryOptions}
+          locationOptions={locationOptions}
+          initialQuery={q}
+          initialCategory={category}
+          initialLocation={location}
+          initialBadges={badges ? badges.split(",") : []}
+          labels={{
+            heading: t("filters.heading"),
+            searchPlaceholder: t("index.searchPlaceholder"),
+            category: t("filters.category"),
+            location: t("filters.location"),
+            badges: t("filters.badges"),
+            allCategories: t("filters.allCategories"),
+            allLocations: t("filters.allLocations"),
+            preferred: t("filters.preferred"),
+            verified: t("filters.verified"),
+            apply: t("filters.apply"),
+            clear: t("filters.clear"),
+          }}
+        />
+      </Suspense>
+
+      {vendors.length === 0 ? (
+        <EmptyState
+          title={t("empty.title")}
+          body={t("empty.body")}
+          data-testid="directory-empty"
+        />
+      ) : (
+        <>
+          <VendorCardGrid
+            locale={locale}
+            vendors={vendors.map((vendor) => ({
+              id: vendor.id,
+              slug: vendor.slug,
+              displayName: vendor.display_name,
+              description: vendor.description,
+              logoUrl: vendor.logo_url,
+              preferredBadge: vendor.preferred_badge,
+              kycTier: vendor.kyc_tier,
+              commercialTier: vendor.commercial_tier,
+              verified: vendor.verified,
+              landmark: vendor.landmark,
+              categories: vendor.categories,
+              ratingAvg: vendor.rating_avg,
+              ratingCount: vendor.rating_count,
+              listingCount: vendor.listing_count,
+              createdAt: vendor.created_at,
+            }))}
+            labels={{
+              listings: t("card.listings"),
+              reviews: t("card.reviews"),
+              rating: String(t.raw("card.rating")),
+              noReviews: t("card.noReviews"),
+              verifiedSince: String(t.raw("card.verifiedSince")),
+              preferredBadge: t("card.preferredBadge"),
+              verifiedBadge: t("card.verifiedBadge"),
+              trustLabels: ladderLabels,
+              viewProfile: t("index.viewProfile"),
+              categoryLabels,
+              defaultLocation: t("card.defaultLocation"),
+            }}
+          />
+          <BackToTop label={tCatalog("plp.backToTop")} />
+        </>
+      )}
+    </div>
+  );
+}

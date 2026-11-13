@@ -6,7 +6,7 @@
     "title": "Votre panier",
     "emptyTitle": "Votre panier est vide",
     "emptyBody": "Parcourez les produits et ajoutez des articles pour commencer.",
-    "emptyTrustEscrow": "Le paiement en ligne est conservé par Convergeo jusqu'à la confirmation de livraison.",
+    "emptyTrustEscrow": "Payez en espèces à la réception pour les commandes éligibles — rien n'est débité en ligne.",
     "emptyTrustDelivery": "Les zones de livraison à Lusaka sont confirmées au paiement avant de payer.",
     "emptyTrustPickup": "Le retrait national reste disponible quand la livraison ne l'est pas.",
     "browseCta": "Continuer les achats",
@@ -62,7 +62,7 @@
     "loadErrorBody": "Vérifiez votre connexion et réessayez. Vos articles ne sont pas perdus.",
     "loadErrorRetry": "Réessayer",
     "multiSellerNote": "Les articles de différents vendeurs peuvent avoir des options de livraison ou de retrait différentes. Chaque vendeur a son propre choix de fulfillment.",
-    "escrowTeaser": "Lorsque vous payez en ligne, Convergeo conserve votre argent jusqu'à la livraison — puis le libère au vendeur.",
+    "escrowTeaser": "Paiement à la livraison : payez le livreur à l'arrivée. Vous saurez si votre commande est éligible au paiement.",
     "stockUnavailableNotice": "Un article n'est plus disponible. Vérifiez votre panier avant de continuer.",
     "summaryHeading": "Récapitulatif",
     "sellerIndex": "Vendeur {index} sur {total}",
@@ -134,7 +134,21 @@
       "continue": "Continuer",
       "subtotal": "Sous-total",
       "deliveryFees": "Frais de livraison",
-      "total": "Total"
+      "total": "Total",
+      "guide": {
+        "deliveryHelp": "Un livreur vous l'apporte à Lusaka. Vous verrez les frais avant de passer la commande.",
+        "pickupHelp": "Récupérez-la vous-même chez le vendeur. Pas de frais de livraison.",
+        "groupHint": "Chaque vendeur prépare et expédie ses propres articles : choisissez la livraison ou le retrait pour chacun.",
+        "tipsTitle": "Aidez le livreur à vous trouver",
+        "tip1": "Indiquez un lieu connu du quartier : église, école, station-service ou marché.",
+        "tip2": "Ajoutez votre quartier et votre rue, et un repère pour votre portail, comme sa couleur.",
+        "tip3": "Gardez votre téléphone allumé. Le livreur peut appeler votre numéro pour vous trouver.",
+        "landmarkRequired": "Ajoutez un repère et un quartier pour que le livreur puisse vous trouver.",
+        "cutoffTitle": "Quand sera-t-elle expédiée ?",
+        "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock partent généralement aujourd'hui, après confirmation du vendeur.",
+        "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock partiront généralement demain, après confirmation du vendeur.",
+        "cutoffMadeToOrder": "Les articles sur commande partent dès qu'ils sont prêts — voyez le délai de chaque article."
+      }
     },
     "countdown": {
       "label": "Articles réservés pendant",
@@ -146,11 +160,12 @@
     "emptyCart": "Votre panier est vide.",
     "retry": "Réessayer",
     "backToCart": "Retour au panier",
+    "overCodCap": "Votre commande dépasse {cap}, le plafond du paiement à la livraison, et le paiement en ligne est indisponible pour le moment. Retirez des articles de votre panier pour finaliser la commande.",
     "loading": "Démarrage du paiement…",
     "error": "Une erreur s'est produite. Réessayez.",
     "payment": {
       "title": "Comment souhaitez-vous payer ?",
-      "subtitle": "Votre paiement est conservé en sécurité jusqu'à la livraison.",
+      "subtitle": "Choisissez votre mode de paiement. Vous vérifierez tout à l'étape suivante avant de passer la commande.",
       "momo": "Mobile money",
       "card": "Carte de débit ou de crédit",
       "cod": "Paiement à la livraison",
@@ -177,7 +192,16 @@
       "codHelp": "Payez en espèces au livreur à la livraison pour les commandes éligibles.",
       "codUnavailableTitle": "Paiement à la livraison indisponible",
       "selected": "Sélectionné",
-      "unavailable": "Indisponible"
+      "unavailable": "Indisponible",
+      "codGuide": {
+        "title": "Comment fonctionne le paiement à la livraison",
+        "step1": "Rien n'est débité maintenant.",
+        "step2": "Payez {amount} en espèces à l'arrivée de votre commande — au livreur, ou en boutique si vous la retirez.",
+        "step3": "Le livreur n'a pas toujours de monnaie : préparez le montant exact si possible.",
+        "capNote": "Le paiement à la livraison est possible pour les commandes jusqu'à {cap}.",
+        "overCap": "Le total de votre commande est de {total}. Pour payer à la livraison, retirez des articles ou passez des commandes séparées de {cap} maximum.",
+        "editCart": "Modifier le panier"
+      }
     },
     "review": {
       "title": "Vérifiez votre commande",
@@ -207,7 +231,17 @@
       "whatHappensNext": "Et ensuite",
       "nextMomo": "Vous recevrez une invite USSD. Approuvez-la pour démarrer le paiement — la commande n'est confirmée qu'après vérification.",
       "nextCard": "Vous continuerez sur la page sécurisée Lenco. Ne fermez pas cette page avant la fin du paiement.",
-      "nextCod": "Votre commande est placée en paiement à la livraison. Payez le livreur à l'arrivée — aucun paiement en ligne n'est pris maintenant."
+      "nextCod": "Votre commande est placée en paiement à la livraison. Payez le livreur à l'arrivée — aucun paiement en ligne n'est pris maintenant.",
+      "codGuide": {
+        "title": "Comment vous paierez",
+        "step1": "Rien n'est débité lorsque vous passez cette commande.",
+        "step2": "Le vendeur confirme votre commande et la prépare.",
+        "step3": "Vous payez {amount} en espèces à la réception.",
+        "deliveryTo": "Livraison à : {landmark}",
+        "deliveryNoLandmark": "Livraison à Lusaka",
+        "pickupFromSeller": "Vous la récupérerez chez le vendeur",
+        "placeOrderCod": "Commander — payer à la livraison"
+      }
     },
     "pending": {
       "pageTitle": "Approuver le paiement",
@@ -228,7 +262,22 @@
       "retry": "Réessayer le paiement",
       "retrying": "Envoi d'une nouvelle demande…",
       "retryError": "Impossible de réessayer le paiement. Vérifiez votre connexion et réessayez.",
-      "viewOrder": "Voir la commande"
+      "viewOrder": "Voir la commande",
+      "cod": {
+        "orderNumberLabel": "Numéro de commande",
+        "amountDueLabel": "À payer à la livraison",
+        "nextTitle": "Et ensuite",
+        "step1Title": "Le vendeur confirme votre commande",
+        "step1Body": "Il vérifie le stock et l'accepte. Suivez chaque étape sur la page de votre commande.",
+        "step2Title": "Votre commande est expédiée",
+        "step2Body": "Les articles en stock confirmés avant 14 h (heure de Lusaka) partent généralement le jour même ; les autres le lendemain.",
+        "step3Title": "Vous payez à l'arrivée",
+        "step3Body": "Payez {amount} en espèces au livreur — ou en boutique si vous la retirez.",
+        "helpTitle": "Besoin de modifier ou d'annuler ?",
+        "helpBody": "Contactez-nous avec votre numéro de commande avant l'expédition.",
+        "contactCta": "Contacter l'assistance",
+        "continueShopping": "Continuer les achats"
+      }
     },
     "ussd": {
       "title": "Vérifiez votre téléphone",

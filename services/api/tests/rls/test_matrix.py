@@ -198,6 +198,15 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    # Ask Vergeo premium flag: own-row (or admin) SELECT; no client write grants.
+    "ask_user_tiers": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "audit_log": {
         Persona.ANON: {
             "select": "deny",
@@ -838,6 +847,201 @@ EXPECTATIONS: TableExpectations = {
             "insert": "permit",
             "update": "permit",
             "delete": "permit",
+        },
+    },
+    # Courier dispatch v1: admin-only directory (non-admin probes match 0 rows; INSERT hits the admin WITH CHECK).
+    "courier_partners": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
+    # Courier dispatch v1: admin-only service areas.
+    "courier_partner_zones": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
+    # Courier dispatch v1: admin SELECT policy only; writes are service-role (no client grant).
+    "dispatch_requests": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
+    # Courier dispatch v1: trigger-written audit; admin SELECT only.
+    "dispatch_request_events": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
+    # Courier dispatch v1: handover secrets — no client grant at all (client-invisible).
+    "dispatch_handover_codes": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "disputes": {
@@ -1799,6 +2003,10 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # 20261113071000: per-item stock consumption ledger for cancel-time release.
+    # REVOKE ALL from anon/authenticated, service_role only; written by the
+    # SECURITY DEFINER release_cancelled_order_stock() trigger and the order path.
+    "order_item_stock_consumption": client_invisible(),
     "order_item_tickets": {
         Persona.ANON: {
             "select": "deny",
@@ -2826,6 +3034,35 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_insert_delete_only(),
         Persona.ADMIN: all_but_update_denied(),
     },
+    # #766 home feed / ads (20261108100000) and retention foundations
+    # (20261108110000): service-role-only tables. Every client grant is revoked,
+    # so every client verb is permission denied (RLS is also FORCEd).
+    "home_feed_sections": client_invisible(),
+    "ad_placements": client_invisible(),
+    "ad_placement_transitions": client_invisible(),
+    "ad_placement_daily_stats": client_invisible(),
+    "flash_deals": client_invisible(),
+    "product_questions": client_invisible(),
+    "product_answers": client_invisible(),
+    # #766 retention: owner-only rows (`user_id = auth.uid()` USING + WITH CHECK,
+    # no admin bypass). The DEFAULT VALUES insert probe has no owner and is
+    # rejected; WHERE-false update/delete probes match zero rows.
+    "saved_searches": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
+        Persona.ADMIN: malformed_write_probe(),
+    },
+    "listing_alert_subscriptions": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
+        Persona.ADMIN: malformed_write_probe(),
+    },
     # R02-P15. Vendor-curated storefront collections; public read when active.
     "vendor_storefront_collection_items": {
         Persona.ANON: {
@@ -3144,6 +3381,36 @@ EXPECTATIONS: TableExpectations = {
     "payment_collection_receipts": client_invisible(),
     "payment_collection_exceptions": client_invisible(),
     "cart_merge_receipts": client_invisible(),
+    # Notification center (20261113130000). Own-row SELECT; the only client UPDATE
+    # grant is the (seen_at, read_at) column pair, so the generic
+    # `SET created_at = created_at` probe is denied; no client INSERT/DELETE.
+    "in_app_notifications": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
+    # Web Push subscriptions: API writes for the caller; clients read/delete own.
+    "web_push_subscriptions": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "permit"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()

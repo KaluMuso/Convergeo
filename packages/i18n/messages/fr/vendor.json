@@ -277,7 +277,7 @@
       },
       "approved": {
         "title": "Vous êtes vérifié",
-        "body": "KYC T1 approuvé. Vous pouvez créer des annonces — les acheteurs les verront une fois publiées.",
+        "body": "Votre identité est vérifiée. Vous pouvez créer des annonces — les acheteurs les voient dès que vous les publiez.",
         "cta": "Créer votre première annonce",
         "t2Link": "Passer au T2 (PACRA + TPIN)"
       },
@@ -312,7 +312,50 @@
       "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "checklist": {
+      "heading": "Liste de vérification",
+      "progress": "{done} sur {total} terminés",
+      "items": {
+        "business": {
+          "title": "Informations sur l'entreprise",
+          "why": "Le nom et le type de votre boutique, pour que les acheteurs sachent à qui ils achètent."
+        },
+        "momo": {
+          "title": "Numéro mobile money",
+          "why": "Nous vérifions que le nom lié à ce numéro correspond à votre NRC. Les versements y seront envoyés une fois ouverts."
+        },
+        "nrc": {
+          "title": "Photo de la NRC",
+          "why": "Prouve votre identité. Jamais montrée aux acheteurs."
+        },
+        "selfie": {
+          "title": "Selfie",
+          "why": "Comparé à la photo de votre NRC pour que personne ne vende en votre nom."
+        },
+        "review": {
+          "title": "Contrôle par Vergeo5",
+          "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
+        }
+      },
+      "states": {
+        "not_started": "Pas commencé",
+        "saved": "Enregistré, pas encore envoyé",
+        "submitted": "Envoyé",
+        "under_review": "En cours d'examen",
+        "approved": "Approuvé",
+        "rejected": "À corriger"
+      },
+      "fix": {
+        "nrc": "Comment corriger : reprenez la photo de la NRC à la lumière du jour, avec les quatre coins visibles.",
+        "selfie": "Comment corriger : reprenez le selfie face à l'objectif, sans chapeau ni lunettes de soleil.",
+        "review": "Corrigez les éléments signalés ci-dessus, puis renvoyez — inutile de tout recommencer."
+      },
+      "reasonLabel": "Message de notre équipe",
+      "ctaFinish": "Continuer la vérification",
+      "ctaFix": "Corriger et renvoyer",
+      "pendingNote": "Vous pouvez explorer l'application en attendant. Vos annonces restent cachées aux acheteurs jusqu'à l'approbation."
+    }
   },
   "listings": {
     "images": {
@@ -607,7 +650,7 @@
         "delete": "Supprimer l'annonce",
         "deleting": "Suppression…",
         "returnableLabel": "Accepter les retours",
-        "returnableHelp": "Politique de retour Lane-2 pour cette annonce.",
+        "returnableHelp": "Permettre aux acheteurs de retourner cet article dans le délai ci-dessous s'il ne convient pas.",
         "returnWindowLabel": "Délai de retour (heures)",
         "tierHeading": "Paliers de gros",
         "tierQtyLabel": "Quantité min",
@@ -653,11 +696,23 @@
         "storageFailed": "Impossible de conserver l’opération pour la réessayer sans doublon. Activez le stockage de session.",
         "notTracked": "Cette annonce n’utilise pas de stock suivi.",
         "authorityRequired": "Utilisez la section d’ajustement du stock. Le stock existant, les unités et le mode de stock ne peuvent pas être remplacés dans cet éditeur."
+      },
+      "statusGuide": {
+        "heading": "Que signifient Brouillon, En ligne et En pause",
+        "draft": "Vous seul le voyez. Complétez les détails puis publiez.",
+        "active": "Les acheteurs peuvent le trouver et le commander.",
+        "paused": "Caché aux acheteurs. Réactivez-le quand vous avez de nouveau du stock.",
+        "kycNote": "Tant que votre vérification n'est pas approuvée, les acheteurs ne voient aucune de vos annonces."
+      },
+      "statusHint": {
+        "draft": "Visible par vous seul",
+        "active": "Visible et commandable par les acheteurs",
+        "paused": "Caché aux acheteurs"
       }
     },
     "kycGate": {
       "title": "Vérification en cours",
-      "body": "Les annonces peuvent rester bloquées jusqu'à l'approbation KYC avec un dossier auditable. Aucun badge vérifié sans cette trace.",
+      "body": "Vous pouvez préparer vos annonces dès maintenant, mais les acheteurs ne les verront qu'après l'approbation de votre vérification.",
       "cta": "Voir le statut de vérification",
       "wholesaleLocked": "Les prix de gros se débloquent après une vérification T2 auditable."
     },
@@ -732,6 +787,25 @@
         "saveFailed": "Impossible d'enregistrer vos options. Réessayez."
       },
       "saving": "Enregistrement…"
+    },
+    "guide": {
+      "heading": "Conseils pour une annonce qui vend",
+      "photos": {
+        "title": "Photos (jusqu'à 8)",
+        "body": "Utilisez la lumière du jour et un fond uni. La première photo est la couverture vue par les acheteurs. Montrez l'avant, l'arrière, les étiquettes et tout défaut."
+      },
+      "title": {
+        "title": "Titre",
+        "body": "Indiquez ce que c'est, la marque et le détail clé, p. ex. « Samsung A15, 128 Go, noir ». Pas de MAJUSCULES ni de numéro de téléphone."
+      },
+      "price": {
+        "title": "Prix en kwacha",
+        "body": "Saisissez le prix total payé par l'acheteur, p. ex. 1250 ou 1250.50. Notre commission est prélevée sur ce prix."
+      },
+      "stock": {
+        "title": "Stock et options",
+        "body": "Indiquez la quantité réellement disponible. Ajoutez des options (taille, couleur) quand l'acheteur doit choisir — chaque option a son propre stock."
+      }
     }
   },
   "profile": {
@@ -843,6 +917,23 @@
       "permissionDenied": "Vous n'avez pas accès à ce profil boutique.",
       "notFound": "Profil boutique introuvable pour ce compte.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "brand": {
+      "title": "Couleurs de la boutique",
+      "help": "Vos couleurs s'appliquent uniquement à votre page boutique. Nous les ajustons automatiquement pour garder un texte lisible (WCAG AA).",
+      "primary": "Couleur principale",
+      "primaryHelp": "Boutons et liens de votre boutique",
+      "accent": "Couleur d'accent",
+      "accentHelp": "Mises en avant et badges",
+      "contrast": "contraste {ratio}:1",
+      "reset": "Réinitialiser",
+      "adjusted": "Nous avons légèrement assombri cette couleur pour garder le texte lisible.",
+      "extract": "Extraire du logo",
+      "extracting": "Lecture du logo…",
+      "needLogo": "Téléversez d'abord un logo.",
+      "extractFailed": "Impossible de lire les couleurs du logo. Choisissez-les manuellement.",
+      "previewButton": "Ajouter au panier",
+      "previewAccent": "Nouveautés"
     }
   },
   "orders": {
@@ -884,7 +975,11 @@
     "timeline": {
       "heading": "Chronologie",
       "empty": "Aucun événement pour le moment",
-      "note": "Note : {note}"
+      "note": "Note : {note}",
+      "stateDone": "terminé",
+      "stateCurrent": "étape en cours",
+      "stateUpcoming": "à venir",
+      "srState": "({state})"
     },
     "actions": {
       "heading": "Actions",
@@ -906,7 +1001,14 @@
       "shipPlaceholder": "ex. Coursier Yango — chauffeur John 0977…",
       "submitReject": "Rejeter avec motif",
       "submitShip": "Marquer comme expédiée",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "after": {
+        "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
+        "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",
+        "pack": "Le client voit que vous préparez sa commande.",
+        "ship": "Appuyez quand le coursier a le colis. Ajoutez son nom ou son téléphone.",
+        "ready_for_pickup": "Le client est invité à venir la retirer chez vous."
+      }
     },
     "success": {
       "confirmed": "Commande confirmée.",
@@ -921,7 +1023,61 @@
       "forbidden": "Vous ne pouvez gérer que vos propres commandes.",
       "invalidTransition": "Cette action n'est pas disponible pour cette commande.",
       "reasonRequired": "Un motif est requis pour le rejet.",
-      "trackingRequired": "Une note de suivi est requise pour l'expédition."
+      "trackingRequired": "Une note de suivi est requise pour l'expédition.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "guide": {
+      "headingNow": "À faire maintenant",
+      "headingNext": "Et ensuite",
+      "scanCta": "Ouvrir Scan pour remettre",
+      "paidExplainer": "Le client a payé. Vergeo5 conserve l'argent en sécurité jusqu'à la livraison.",
+      "unpaidExplainer": "Le client n'a pas encore payé. N'emballez et n'envoyez rien avant que le paiement soit reçu.",
+      "cod": {
+        "body": "Le client paie le coursier en espèces à la livraison. Vous n'encaissez rien vous-même.",
+        "settlement": "Vergeo5 vous règle le montant de la commande — inutile de relancer le coursier ou le client."
+      },
+      "steps": {
+        "confirm": {
+          "title": "Acceptez ou refusez cette commande",
+          "body": "Le client attend. Vérifiez que vous avez tous les articles, puis acceptez. Si c'est impossible, refusez en indiquant la raison."
+        },
+        "pack": {
+          "title": "Emballez les articles",
+          "body": "Appuyez sur Commencer l'emballage au début. Vérifiez tailles et couleurs avec la liste ci-dessous."
+        },
+        "handToRider": {
+          "title": "Remettez le colis au coursier",
+          "body": "Quand le coursier le récupère, appuyez sur Marquer comme expédiée et ajoutez son nom ou son numéro."
+        },
+        "readyForPickup": {
+          "title": "Indiquez qu'elle est prête à être retirée",
+          "body": "Quand le colis est prêt dans votre boutique, appuyez sur Prête pour le retrait. Nous prévenons le client."
+        },
+        "awaitCollection": {
+          "title": "En attente du retrait par le client",
+          "body": "À son arrivée, scannez son code QR ou saisissez son PIN dans Scan avant de remettre le colis."
+        },
+        "awaitDelivery": {
+          "title": "En route avec le coursier",
+          "body": "Rien à faire. Le client donne un code au coursier pour confirmer la livraison."
+        },
+        "awaitConfirmation": {
+          "title": "Livrée",
+          "body": "Le client dispose d'un court délai pour signaler un problème. Ensuite, la commande se clôture automatiquement."
+        },
+        "done": {
+          "title": "Commande terminée",
+          "body": "Plus rien à faire pour cette commande."
+        },
+        "cancelled": {
+          "title": "Commande annulée",
+          "body": "Aucune action. N'envoyez pas ces articles."
+        },
+        "unknown": {
+          "title": "Vérifiez cette commande",
+          "body": "Actualisez pour voir le dernier statut."
+        }
+      }
     }
   },
   "home": {
@@ -979,6 +1135,55 @@
       "ariaLabel": "Raccourcis",
       "listings": "Catalogue",
       "profile": "Profil"
+    },
+    "analytics": {
+      "gmv": "Ventes"
+    },
+    "tasks": {
+      "heading": "Vos prochaines étapes",
+      "intro": "Commencez en haut : le plus urgent est en premier.",
+      "items": {
+        "kycFix": {
+          "title": "Corrigez votre vérification",
+          "body": "Nous n'avons pas pu valider l'un de vos documents. Voyez quoi changer — inutile de tout recommencer."
+        },
+        "kycFinish": {
+          "title": "Terminez votre vérification",
+          "body": "Les acheteurs ne voient pas votre boutique tant que nous n'avons pas vérifié votre identité. Cela prend environ 5 minutes."
+        },
+        "kycPending": {
+          "title": "Votre vérification est en cours d'examen",
+          "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "Acceptez et emballez avant 14 h pour que les livraisons partent avec les coursiers du jour."
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "Moins d'une heure avant la limite d'expédition de 14 h — acceptez et emballez maintenant."
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "La limite de 14 h est passée. Préparez-les maintenant pour qu'elles partent en premier à la prochaine tournée."
+        },
+        "catalogueProducts": {
+          "title": "Vérifiez vos produits",
+          "body": "Gardez stocks et prix à jour pour qu'aucun acheteur ne commande un article que vous n'avez pas."
+        },
+        "catalogueServices": {
+          "title": "Vérifiez vos services",
+          "body": "Gardez prix et disponibilités à jour, et répondez vite aux demandes de devis."
+        },
+        "catalogueEvents": {
+          "title": "Vérifiez vos événements",
+          "body": "Contrôlez dates, types de billets et prix avant de partager votre événement."
+        },
+        "profile": {
+          "title": "Complétez le profil de votre boutique",
+          "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
+        }
+      }
     }
   },
   "queue": {
@@ -1011,7 +1216,37 @@
       "cancel": "Pas maintenant"
     },
     "errors": {
-      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser."
+      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "emptyNeedsAction": {
+      "title": "Rien ne vous attend",
+      "body": "Les nouvelles commandes apparaissent ici en premier. Nous vous envoyons aussi un message WhatsApp."
+    },
+    "emptyFiltered": {
+      "title": "Aucune commande dans cette vue",
+      "body": "Essayez un autre onglet ou revenez aux commandes qui vous attendent.",
+      "cta": "Afficher les commandes à traiter"
+    },
+    "nextStep": {
+      "confirm": "Ensuite : accepter ou refuser",
+      "pack": "Ensuite : emballer les articles",
+      "handToRider": "Ensuite : remettre au coursier",
+      "readyForPickup": "Ensuite : indiquer prête pour le retrait",
+      "awaitCollection": "En attente du retrait par le client",
+      "awaitDelivery": "Avec le coursier",
+      "awaitConfirmation": "Livrée — en attente du client",
+      "done": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "cutoff": {
+      "before": "Limite d'expédition 14 h · encore {time}",
+      "timeHoursMinutes": "{hours} h {minutes} min",
+      "timeMinutes": "{minutes} min",
+      "beforeBody": "Les livraisons acceptées, emballées et remises au coursier avant 14 h (heure de Lusaka) partent avec les coursiers du jour.",
+      "urgentBody": "Moins d'une heure — terminez l'emballage maintenant pour les coursiers du jour.",
+      "after": "La limite d'expédition de 14 h est passée",
+      "afterBody": "Les livraisons préparées maintenant partiront à la prochaine tournée. Les retraits ne sont pas concernés."
     }
   },
   "payouts": {
@@ -1033,6 +1268,10 @@
     "hold": {
       "noticeTitle": "Versements suspendus pendant 24 heures",
       "noticeBody": "Après le changement de votre numéro mobile money, les versements sont suspendus pendant 24 heures, le temps de vérifier le changement. Vous serez notifié lorsque les versements reprendront."
+    },
+    "paused": {
+      "noticeTitle": "Les versements sont désactivés pour le moment",
+      "noticeBody": "Aucun argent n'est encore envoyé vers votre numéro mobile money. Les soldes ci-dessous restent enregistrés dans le grand livre."
     },
     "history": {
       "heading": "Historique des versements",
@@ -1084,7 +1323,27 @@
       "kycRequired": "Complétez le KYC avant de changer de méthode de versement.",
       "payoutsPaused": "Les versements sont suspendus après un changement de méthode de versement.",
       "rateLimited": "Trop de requêtes. Réessayez sous peu.",
-      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain."
+      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "pilot": {
+      "badge": "Pas encore activé",
+      "title": "Les versements ne sont pas activés pendant le pilote",
+      "body": "Vous ne recevrez pas encore de versements via cette application, il n'y a donc aucun solde à afficher. C'est normal — votre compte n'a aucun problème.",
+      "meanwhileHeading": "Comment fonctionne l'argent pendant le pilote",
+      "meanwhile": {
+        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Vergeo5 vous règle.",
+        "prepaid": "Commandes payées : Vergeo5 conserve l'argent du client en sécurité jusqu'à la livraison.",
+        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Vergeo5."
+      },
+      "laterHeading": "Ce que vous verrez ici plus tard",
+      "later": {
+        "held": "L'argent retenu pour les commandes en cours de livraison",
+        "released": "L'argent débloqué et prêt à vous être versé",
+        "history": "Chaque versement vers votre numéro mobile money, avec son statut",
+        "statement": "Un relevé mensuel téléchargeable"
+      },
+      "notify": "Nous vous préviendrons sur WhatsApp avant l'activation des versements."
     }
   },
   "scan": {
@@ -1460,7 +1719,7 @@
       "namePlaceholder": "Entrée générale",
       "priceLabel": "Prix (ZMW)",
       "pricePlaceholder": "75.00",
-      "priceHelp": "Saisissez le montant en kwacha ; stocké en ngwee (sans décimales en base de données).",
+      "priceHelp": "Saisissez le prix en kwacha, p. ex. 75 ou 75.50.",
       "priceFreeHelp": "Le RSVP gratuit est toujours à K0.00.",
       "qtyCapLabel": "Limite de quantité (facultatif)",
       "qtyCapPlaceholder": "Illimité",

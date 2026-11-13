@@ -10,11 +10,12 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { fetchStorefrontConfigClient } from "../../../../../lib/storefront-config";
+
 import { CartPageSkeleton } from "./cart-page-skeleton";
 import { ChangeNotices, type ChangeNoticeLabels } from "./change-notices";
 import { CartLineItem, type CartLineItemLabels } from "./line-items";
 import {
-  FREE_DELIVERY_THRESHOLD_NGEWEE,
   type ChangeNotice,
   type CartEmptyTrustLabels,
   type VendorGroup,
@@ -49,14 +50,19 @@ type VendorGroupsProps = {
   onQtyChange: (listingId: string, qty: number) => Promise<void>;
   onRemove: (listingId: string) => Promise<void>;
   onSaveForLater?: (listingId: string) => Promise<void>;
+  /**
+   * Free-delivery threshold from the public config API. `null`/undefined when
+   * unavailable — the threshold copy and progress bar are then hidden (no invented value).
+   */
+  freeDeliveryThresholdNgwee?: number | null;
 };
 
-function deliveryProgress(subtotalNgwee: number): number {
-  return Math.min(100, Math.round((subtotalNgwee / FREE_DELIVERY_THRESHOLD_NGEWEE) * 100));
+export function deliveryProgress(subtotalNgwee: number, thresholdNgwee: number): number {
+  return Math.min(100, Math.round((subtotalNgwee / thresholdNgwee) * 100));
 }
 
-function remainingForFreeDelivery(subtotalNgwee: number): number {
-  return Math.max(0, FREE_DELIVERY_THRESHOLD_NGEWEE - subtotalNgwee);
+export function remainingForFreeDelivery(subtotalNgwee: number, thresholdNgwee: number): number {
+  return Math.max(0, thresholdNgwee - subtotalNgwee);
 }
 
 export function VendorGroups({
@@ -68,14 +74,20 @@ export function VendorGroups({
   onQtyChange,
   onRemove,
   onSaveForLater,
+  freeDeliveryThresholdNgwee = null,
 }: VendorGroupsProps) {
+  const threshold =
+    typeof freeDeliveryThresholdNgwee === "number" && freeDeliveryThresholdNgwee > 0
+      ? freeDeliveryThresholdNgwee
+      : null;
   const multiSeller = groups.length > 1;
 
   return (
     <div className="flex flex-col gap-4" data-testid="cart-vendor-groups">
       {groups.map((group, index) => {
-        const progress = deliveryProgress(group.subtotal_ngwee);
-        const remaining = remainingForFreeDelivery(group.subtotal_ngwee);
+        const progress = threshold === null ? 0 : deliveryProgress(group.subtotal_ngwee, threshold);
+        const remaining =
+          threshold === null ? 0 : remainingForFreeDelivery(group.subtotal_ngwee, threshold);
         const sellerIndexLabel =
           multiSeller && labels.sellerIndex
             ? labels.sellerIndex
@@ -115,12 +127,11 @@ export function VendorGroups({
               className="flex flex-col gap-2 rounded bg-bg-2 p-3"
               data-testid={`cart-delivery-nudge-${group.vendor_id}`}
             >
-              <p className="text-xs text-text-2">
-                {labels.deliveryThreshold.replace(
-                  "{threshold}",
-                  formatK(FREE_DELIVERY_THRESHOLD_NGEWEE),
-                )}
-              </p>
+              {threshold !== null ? (
+                <p className="text-xs text-text-2">
+                  {labels.deliveryThreshold.replace("{threshold}", formatK(threshold))}
+                </p>
+              ) : null}
               {group.delivery_eligible ? (
                 <p
                   className="text-sm font-medium text-success"
@@ -128,7 +139,7 @@ export function VendorGroups({
                 >
                   {labels.freeDeliveryUnlocked}
                 </p>
-              ) : (
+              ) : threshold === null ? null : (
                 <>
                   <p className="text-sm text-text-2">
                     {labels.deliveryHint.replace("{amount}", formatK(remaining))}
@@ -141,7 +152,7 @@ export function VendorGroups({
                     aria-valuenow={progress}
                     aria-label={labels.freeDeliveryProgress
                       .replace("{amount}", formatK(group.subtotal_ngwee))
-                      .replace("{threshold}", formatK(FREE_DELIVERY_THRESHOLD_NGEWEE))}
+                      .replace("{threshold}", formatK(threshold))}
                   >
                     <div
                       className="h-full bg-primary transition-[width] duration-fast ease-std motion-reduce:transition-none"
@@ -152,7 +163,7 @@ export function VendorGroups({
                   <p className="text-xs text-text-3">
                     {labels.freeDeliveryProgress
                       .replace("{amount}", formatK(group.subtotal_ngwee))
-                      .replace("{threshold}", formatK(FREE_DELIVERY_THRESHOLD_NGEWEE))}
+                      .replace("{threshold}", formatK(threshold))}
                   </p>
                 </>
               )}
@@ -213,6 +224,8 @@ export type CartPageLabels = {
   /** 3-step escrow ladder (You pay → Held → Released); reuses checkout.review keys. */
   escrowSteps: string[];
   stockUnavailableNotice: string;
+  /** Shown when checkout sent the buyer back because their stock hold lapsed. */
+  reservationExpiredNotice: string;
   summaryHeading: string;
   vendor: VendorGroupLabels;
   line: CartLineItemLabels;
@@ -294,10 +307,24 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const stockNotice = searchParams.get("notice") === "stock_unavailable";
+  const reservationNotice = searchParams.get("notice") === "reservation_expired";
+  const [freeDeliveryThresholdNgwee, setFreeDeliveryThresholdNgwee] = useState<number | null>(null);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchStorefrontConfigClient().then((config) => {
+      if (active) {
+        setFreeDeliveryThresholdNgwee(config.freeDeliveryThresholdNgwee);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleQtyChange = useCallback(
     async (listingId: string, qty: number) => {
@@ -401,6 +428,16 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
           </p>
         ) : null}
 
+        {reservationNotice ? (
+          <p
+            className="rounded border border-warning/40 bg-warning/10 p-3 text-sm text-text"
+            role="status"
+            data-testid="cart-reservation-expired-notice"
+          >
+            {labels.reservationExpiredNotice}
+          </p>
+        ) : null}
+
         {errorMessage ? (
           <p
             className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
@@ -435,6 +472,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
             onQtyChange={handleQtyChange}
             onRemove={handleRemove}
             onSaveForLater={handleSaveForLater}
+            freeDeliveryThresholdNgwee={freeDeliveryThresholdNgwee}
           />
         ) : null}
       </div>

@@ -24,12 +24,12 @@ export function MobileFilterDrawer({ labels, facets, initialState }: MobileFilte
   const active = hasActivePlpFilters(initialState);
 
   return (
-    <div className="lg:hidden" data-testid="plp-mobile-filters">
+    <div className="shrink-0 lg:hidden" data-testid="plp-mobile-filters">
       <Button
         type="button"
         variant="secondary"
         size="md"
-        className="w-full"
+        className="rounded-pill"
         loading={false}
         loadingLabel={labels.openFilters}
         aria-expanded={open}

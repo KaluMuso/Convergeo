@@ -60,7 +60,7 @@ export default async function PrivacyPage({ params }: PageProps) {
             link: (chunks: ReactNode) => (
               <Link
                 className="font-medium text-primary underline underline-offset-2"
-                href={`/${locale}/account/data`}
+                href={`/${locale}/account/privacy`}
               >
                 {chunks}
               </Link>

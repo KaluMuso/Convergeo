@@ -12,6 +12,7 @@ import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
 import { useSession } from "../../../../../lib/customer-session";
 import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
 
+import { NextSteps } from "./next-steps";
 import { PaymentFailed, type PaymentFailedLabels } from "./payment-failed";
 
 export type PaymentStatusPayload = {
@@ -41,6 +42,24 @@ export type PendingLabels = {
   ticketUnavailableBody: string;
   ussd: UssdWaitLabels;
   failed: PaymentFailedLabels;
+  /** UX pass 4 — COD confirmation detail. Templates use {amount}. */
+  codConfirmation?: CodConfirmationLabels;
+};
+
+export type CodConfirmationLabels = {
+  orderNumberLabel: string;
+  amountDueLabel: string;
+  nextTitle: string;
+  step1Title: string;
+  step1Body: string;
+  step2Title: string;
+  step2Body: string;
+  step3Title: string;
+  step3Body: string;
+  helpTitle: string;
+  helpBody: string;
+  contactCta: string;
+  continueShopping: string;
 };
 
 export type UssdWaitLabels = {
@@ -277,15 +296,9 @@ export function PendingPaymentShell({
     );
   }, [locale, router, statusPayload, successPath]);
 
-  useEffect(() => {
-    if (!statusPayload?.cod) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      router.replace(orderPath);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [orderPath, router, statusPayload?.cod]);
+  // COD no longer auto-redirects to the order page (UX pass 4): the buyer
+  // needs time to read the order number and what happens next. The
+  // confirmation offers explicit links to the order and to keep shopping.
 
   const handleRetry = async () => {
     const token = session?.access_token;
@@ -357,10 +370,33 @@ export function PendingPaymentShell({
   });
 
   if (statusPayload.cod) {
+    const cod = labels.codConfirmation;
+    const orderNumber = statusPayload.order_id
+      ? statusPayload.order_id.slice(0, 8).toUpperCase()
+      : null;
     return (
       <div className="space-y-5" data-testid="payment-cod">
         <h1 className="font-display text-h1 text-display-ink">{labels.codTitle}</h1>
         <div className="space-y-4 rounded-card border border-border bg-surface p-5">
+          {cod && orderNumber ? (
+            <dl className="grid grid-cols-2 gap-3" data-testid="payment-cod-summary">
+              <div className="space-y-0.5">
+                <dt className="font-body text-xs text-text-2">{cod.orderNumberLabel}</dt>
+                <dd
+                  className="font-mono text-h3 font-semibold tracking-wide text-display-ink"
+                  data-testid="payment-cod-order-number"
+                >
+                  {orderNumber}
+                </dd>
+              </div>
+              <div className="space-y-0.5">
+                <dt className="font-body text-xs text-text-2">{cod.amountDueLabel}</dt>
+                <dd className="font-mono text-h3 font-semibold text-[var(--price)]">
+                  {formattedAmount}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
           <p className="font-body text-sm text-text-2">
             {labels.codBody.replace("{amount}", formattedAmount)}
           </p>
@@ -374,6 +410,49 @@ export function PendingPaymentShell({
             {labels.codCta}
           </LinkButton>
         </div>
+        {cod ? (
+          <>
+            <NextSteps
+              heading={cod.nextTitle}
+              headingId="payment-cod-next"
+              headingAs="h2"
+              activeIndex={-1}
+              testId="payment-cod-next-steps"
+              steps={[
+                { title: cod.step1Title, body: cod.step1Body },
+                { title: cod.step2Title, body: cod.step2Body },
+                {
+                  title: cod.step3Title,
+                  body: cod.step3Body.split("{amount}").join(formattedAmount),
+                },
+              ]}
+            />
+            <section
+              aria-labelledby="payment-cod-help"
+              className="space-y-2 rounded-card border border-border bg-bg-2 p-4"
+            >
+              <h2 id="payment-cod-help" className="font-body text-sm font-semibold text-text">
+                {cod.helpTitle}
+              </h2>
+              <p className="font-body text-sm text-text-2">{cod.helpBody}</p>
+              <Link
+                href={`/${locale}/contact`}
+                className="inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {cod.contactCta}
+              </Link>
+            </section>
+            <LinkButton
+              href={`/${locale}`}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              LinkComponent={Link}
+            >
+              {cod.continueShopping}
+            </LinkButton>
+          </>
+        ) : null}
       </div>
     );
   }

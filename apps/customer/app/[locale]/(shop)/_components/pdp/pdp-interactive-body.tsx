@@ -3,8 +3,22 @@
 import { formatK } from "@vergeo/i18n";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
+import {
+  estimateDelivery,
+  formatDeliveryEstimate,
+} from "../../../../../lib/delivery-estimate";
+import { catalogDeliveryLabels } from "../plp/delivery-labels";
 import { catalogLogisticsLabels } from "../plp/logistics-pills";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
@@ -36,11 +50,14 @@ import type { ReportListingLabels } from "./report-listing";
 import type { RequestQuoteLabels } from "./request-quote-button";
 
 // Server rendering retains the offer table; a single-seller PDP never loads its module.
-const Comparison = dynamic(() => import("./comparison").then((module) => module.Comparison));
+const Comparison = dynamic(() =>
+  import("./comparison").then((module) => module.Comparison),
+);
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
 const ContactVendorButton = dynamic(
-  () => import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  () =>
+    import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
   { ssr: false },
 );
 
@@ -49,12 +66,17 @@ const RequestQuoteButton = dynamic(
   { ssr: false },
 );
 
-const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
-  ssr: false,
-});
+const ReportListing = dynamic(
+  () => import("./report-listing").then((mod) => mod.ReportListing),
+  {
+    ssr: false,
+  },
+);
 
 const RelatedProductRails = lazy(() =>
-  import("./related-product-rails").then((module) => ({ default: module.RelatedProductRails })),
+  import("./related-product-rails").then((module) => ({
+    default: module.RelatedProductRails,
+  })),
 );
 
 /** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
@@ -77,6 +99,7 @@ export type ProductListing = {
   productClass: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
+  lowStockThreshold?: number | null;
   moq: number;
   inStock: boolean;
   saleUnit?: SaleUnit;
@@ -140,6 +163,8 @@ export type PdpInteractiveBodyProps = {
   requestQuoteLabels: RequestQuoteLabels;
   reportListingLabels: ReportListingLabels;
   comparePageLabel: string;
+  /** Product title block rendered at the top of the buy-box column. */
+  headerSlot?: ReactNode;
 };
 
 function selectListingById(
@@ -180,6 +205,7 @@ export function PdpInteractiveBody({
   requestQuoteLabels,
   reportListingLabels,
   comparePageLabel,
+  headerSlot,
   relatedLabels,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -196,7 +222,10 @@ export function PdpInteractiveBody({
   );
 
   const selectedComparison = useMemo(
-    () => comparisonListings.find((listing) => listing.id === selectedListing?.id) ?? null,
+    () =>
+      comparisonListings.find(
+        (listing) => listing.id === selectedListing?.id,
+      ) ?? null,
     [comparisonListings, selectedListing?.id],
   );
 
@@ -263,6 +292,7 @@ export function PdpInteractiveBody({
         selectedVariant && selectedVariant.stockQty !== null
           ? selectedVariant.stockQty
           : selectedListing.stockQty,
+      lowStockThreshold: selectedListing.lowStockThreshold,
       moq: selectedListing.moq,
       inStock: selectedVariant
         ? selectedListing.inStock && selectedVariant.inStock
@@ -318,7 +348,10 @@ export function PdpInteractiveBody({
     if (!selectedListing) {
       return null;
     }
-    if (selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0) {
+    if (
+      selectedListing.vendor.ratingAvg !== null &&
+      selectedListing.vendor.ratingCount > 0
+    ) {
       return t("pdp.vendor.rating", {
         rating: selectedListing.vendor.ratingAvg,
         count: selectedListing.vendor.ratingCount,
@@ -344,14 +377,14 @@ export function PdpInteractiveBody({
        lg+: two-column grid — gallery left, sticky buy-box right; comparison table + vendor full width. */
     <div
       className={[
-        "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start lg:gap-8",
+        "flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:gap-8",
         stickyAtcVisible ? "pb-28 lg:pb-0" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       data-testid="pdp-interactive-body"
     >
-      <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+      <div className="min-w-0 md:col-start-1 md:row-start-1">
         <PdpGallery
           images={galleryImages}
           cloudName={cloudName}
@@ -365,7 +398,9 @@ export function PdpInteractiveBody({
       </div>
 
       {buyBoxListing && selectedListing && purchase ? (
-        <div className="flex flex-col gap-3 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
+        <div className="flex flex-col gap-3 md:sticky md:top-24 md:col-start-2 md:row-start-1">
+          {/* Title, brand and seller count sit beside the gallery (Amazon/Takealot). */}
+          {headerSlot}
           <BuyBox
             listing={buyBoxListing}
             singleVendor={singleVendor}
@@ -427,12 +462,25 @@ export function PdpInteractiveBody({
             returnsLabel={trustLabels.returns}
             returnsHref={`/${locale}/legal/returns`}
             escrowLabel={trustLabels.escrow}
+            deliveryEstimate={formatDeliveryEstimate(
+              estimateDelivery({
+                deliveryAvailable:
+                  selectedComparison?.deliveryAvailable ?? false,
+                pickupAvailable: selectedComparison?.pickupAvailable ?? false,
+                fulfilmentMode: selectedListing.leadTimeDays
+                  ? "made_to_order"
+                  : "stocked",
+                leadTimeDays: selectedListing.leadTimeDays,
+                inStock: selectedListing.inStock,
+              }),
+              catalogDeliveryLabels((key) => t.raw(key)),
+            )}
           />
         </div>
       ) : null}
 
       {shouldShowComparison(comparisonListings.length) ? (
-        <div className="min-w-0 lg:col-span-2">
+        <div className="min-w-0 md:col-span-2">
           <Comparison
             listings={comparisonListings}
             selectedListingId={selectedListingId}
@@ -444,7 +492,7 @@ export function PdpInteractiveBody({
       ) : null}
 
       {selectedListing ? (
-        <div className="min-w-0 lg:col-span-2">
+        <div className="min-w-0 md:col-span-2">
           <VendorBlock
             locale={locale}
             vendor={{
@@ -459,7 +507,8 @@ export function PdpInteractiveBody({
             preferredBadgeLabel={vendorLabels.preferredBadge}
             noReviewsLabel={vendorLabels.noReviews}
             ratingLabel={
-              selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0
+              selectedListing.vendor.ratingAvg !== null &&
+              selectedListing.vendor.ratingCount > 0
                 ? t("pdp.vendor.rating", {
                     rating: selectedListing.vendor.ratingAvg,
                     count: selectedListing.vendor.ratingCount,
@@ -476,11 +525,14 @@ export function PdpInteractiveBody({
               labels={contactVendorLabels}
             />
           ) : null}
-          <ReportListing listingId={selectedListing.id} labels={reportListingLabels} />
+          <ReportListing
+            listingId={selectedListing.id}
+            labels={reportListingLabels}
+          />
         </div>
       ) : null}
 
-      {buyBoxListing && purchase ? (
+      {buyBoxListing && purchase && buyBoxListing.inStock ? (
         <StickyMobileAtc
           listing={buyBoxListing}
           labels={buyBoxLabels}
@@ -492,7 +544,7 @@ export function PdpInteractiveBody({
         />
       ) : null}
       {relatedLabels ? (
-        <div className="min-w-0 lg:col-span-2">
+        <div id="pdp-related" className="min-w-0 scroll-mt-28 md:col-span-2">
           <Suspense
             fallback={
               <p role="status" className="text-sm text-text-2">

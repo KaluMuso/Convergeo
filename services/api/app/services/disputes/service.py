@@ -26,13 +26,21 @@ from app.services.events.disputes_policy import (
     assert_event_dispute_openable,
     organiser_respond_by,
 )
+from app.services.payouts.gate import DISPUTE_REFUND_UNAVAILABLE_PAYOUTS_DISABLED
 from app.services.refunds.config import load_restocking_fee_bps
-from app.services.refunds.execute import execute_refund
+from app.services.refunds.execute import ensure_refund_allowed, execute_refund
 from app.services.refunds.math import compute_lane2_refund, restocking_fee_ngwee
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 CustomerRail = Literal["mtn", "airtel", "zamtel"]
 ResolveDecision = Literal["resolved_refund", "resolved_release", "resolved_partial"]
+
+# Decisions that create a customer refund (ledger drain + customer payout row),
+# keyed to the stable execute_refund idempotency key for that dispute.
+_REFUND_IDEMPOTENCY_KEYS: dict[ResolveDecision, str] = {
+    "resolved_refund": "dispute-{dispute_id}-refund",
+    "resolved_partial": "dispute-{dispute_id}-partial",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -407,6 +415,19 @@ def resolve(
         )
 
     order_id = snapshot.order_id
+    # Payout kill switch: a refund outcome (full or partial) creates ledger drains
+    # and a pending customer payout that the sweeper would send once payouts are
+    # enabled. Refuse BEFORE any write; release-to-vendor is unaffected.
+    refund_key = _REFUND_IDEMPOTENCY_KEYS.get(decision)
+    if refund_key is not None:
+        ensure_refund_allowed(
+            service_client,
+            order_id=order_id,
+            idempotency_key=refund_key.format(dispute_id=dispute_id),
+            surface="dispute_resolve",
+            code=DISPUTE_REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+        )
+
     if decision == "resolved_refund":
         execute_refund(
             service_client=service_client,
@@ -415,7 +436,9 @@ def resolve(
             customer_rail=customer_rail,
             customer_momo=customer_momo,
             dispute_id=dispute_id,
-            idempotency_key=f"dispute-{dispute_id}-refund",
+            idempotency_key=_REFUND_IDEMPOTENCY_KEYS["resolved_refund"].format(
+                dispute_id=dispute_id
+            ),
         )
     elif decision == "resolved_release":
         evaluate_and_release(service_client, order_id)
@@ -433,7 +456,9 @@ def resolve(
             customer_rail=customer_rail,
             customer_momo=customer_momo,
             dispute_id=dispute_id,
-            idempotency_key=f"dispute-{dispute_id}-partial",
+            idempotency_key=_REFUND_IDEMPOTENCY_KEYS["resolved_partial"].format(
+                dispute_id=dispute_id
+            ),
         )
         # Close the TOCTOU: execute_refund re-reads item/delivery/bps independently of
         # the back-solve snapshot. Assert the executed amount is exactly the admin

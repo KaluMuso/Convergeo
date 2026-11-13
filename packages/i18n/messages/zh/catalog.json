@@ -19,7 +19,11 @@
       "relevance": "相关度",
       "cheapest": "价格最低",
       "nearest": "距离最近",
-      "newest": "最新"
+      "newest": "最新",
+      "best": "最佳匹配",
+      "verified": "认证卖家",
+      "bundles": "套装",
+      "cheapestChip": "最便宜"
     },
     "facets": {
       "heading": "筛选",
@@ -90,7 +94,7 @@
     },
     "serviceBar": {
       "ariaLabel": "配送与自提说明",
-      "message": "卢萨卡配送 · 全国自提 · 在线支付时由平台托管货款"
+      "message": "货到付款 · 卢萨卡配送 · 全国自提"
     },
     "hero": {
       "eyebrow": "赞比亚的购物平台",
@@ -203,6 +207,39 @@
       "seconds": "秒",
       "expired": "活动已结束",
       "ariaLabel": "{time} 后结束"
+    },
+    "feed": {
+      "sponsored": "赞助",
+      "sponsoredBy": "由 {advertiser} 赞助",
+      "adCta": "了解更多",
+      "loadingMore": "正在加载",
+      "end": "已经到底了",
+      "retry": "重试",
+      "loadError": "暂时无法加载更多内容。",
+      "forYouPersonal": "根据你的浏览记录挑选",
+      "forYouTrending": "赞比亚买家热门",
+      "eventCapacity": "{filled}/{total} 个名额",
+      "sections": {
+        "forYou": "为你推荐",
+        "servicesNearYou": "附近的服务",
+        "bestElectronics": "精选电子产品",
+        "bestFashion": "精选时尚",
+        "mens": "男士",
+        "womens": "女士",
+        "kids": "儿童",
+        "underK100": "K100 以下好物",
+        "techGadgets": "科技小物",
+        "seasonalSummer": "夏季精选",
+        "eventsThisWeek": "本周活动",
+        "newArrivals": "新品上架",
+        "trending": "当下热门",
+        "topVendors": "优质商家"
+      },
+      "stream": {
+        "title": "当前热门",
+        "loadMore": "加载更多",
+        "moreLoaded": "已加载更多 {count} 件商品。"
+      }
     }
   },
   "pdp": {
@@ -255,7 +292,9 @@
       "vendorHeading": "{vendor} 的更多商品",
       "categoryHeading": "此类别中的更多商品",
       "loading": "正在加载推荐…",
-      "unavailable": "推荐暂时不可用。"
+      "unavailable": "推荐暂时不可用。",
+      "storeHeading": "本店更多商品",
+      "similarHeading": "同类相似商品"
     },
     "recentlyViewed": {
       "heading": "最近浏览"
@@ -471,5 +510,53 @@
     "errors": {
       "rateLimited": "评价请求过多。请稍候再试。"
     }
+  },
+  "backInStock": {
+    "notifyMe": "到货通知我",
+    "subscribed": "到货后我们会通知您",
+    "failed": "无法设置提醒，请重试。",
+    "seeSimilar": "查看有货的类似商品",
+    "unavailable": "暂时缺货"
+  },
+  "deals": {
+    "metaTitle": "今日特惠",
+    "title": "今日特惠",
+    "subtitle": "认证卖家的限时价格，托管支付更安心。",
+    "endsIn": "{time} 后结束",
+    "ended": "已结束",
+    "off": "-{percent}%",
+    "emptyTitle": "暂无进行中的特惠",
+    "emptyBody": "特惠经常上新，先逛逛商品吧。",
+    "browse": "浏览全部商品",
+    "unavailable": "特惠暂时不可用，请稍后再试。"
+  },
+  "qa": {
+    "title": "问答",
+    "empty": "暂无提问，向卖家咨询这件商品吧。",
+    "askLabel": "您的问题",
+    "askPlaceholder": "例如：是否附带充电器？",
+    "submit": "提问",
+    "submitting": "发送中…",
+    "signIn": "登录后提问",
+    "sent": "问题已发送，审核后显示。",
+    "failed": "无法发送问题，请重试。",
+    "tooShort": "请至少输入 5 个字符。",
+    "sellerAnswer": "卖家",
+    "buyerAnswer": "买家",
+    "loadFailed": "问题加载失败。"
+  },
+  "saveSearch": {
+    "cta": "保存搜索",
+    "saved": "搜索已保存 — 有新匹配时会提醒您",
+    "signIn": "登录后保存搜索",
+    "failed": "无法保存此搜索，请重试。"
+  },
+  "delivery": {
+    "deliveryToday": "卢萨卡今日送达",
+    "deliveryTomorrow": "卢萨卡明日送达",
+    "deliveryDays": "卢萨卡 {min}–{max} 天送达",
+    "pickupToday": "今日可自提",
+    "pickupTomorrow": "明日可自提",
+    "pickupDays": "{min}–{max} 天后可自提"
   }
 }

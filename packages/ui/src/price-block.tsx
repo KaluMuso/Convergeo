@@ -37,13 +37,15 @@ export function PriceBlock({ ngwee, oldNgwee, savingsLabel, className }: PriceBl
 
   return (
     <div className={cx("flex flex-wrap items-baseline gap-2", className)} data-testid="price-block">
-      <span className="font-mono text-price font-bold text-[var(--price)]">{formattedPrice}</span>
+      <span className="v-price" data-price>
+        {formattedPrice}
+      </span>
       {formattedOldPrice ? (
-        <span className="font-mono text-sm text-text-3 line-through">{formattedOldPrice}</span>
+        <span className="v-price-was line-through">{formattedOldPrice}</span>
       ) : null}
       {hasOldPrice && savingsLabel ? (
         <span
-          className="inline-block rounded-pill bg-[color-mix(in_srgb,var(--discount)_12%,transparent)] px-2 py-0.5 text-micro font-semibold uppercase tracking-wide text-discount"
+          className="inline-block rounded-pill bg-[color-mix(in_srgb,var(--discount)_12%,transparent)] px-2 py-0.5 text-sm font-semibold text-discount"
           data-testid="price-savings"
         >
           {savingsLabel}

@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "Msika wa ku Zambia — kugula ndi escrow"
   },
   "meta": {
     "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Convergeo.",
@@ -49,8 +50,7 @@
     }
   },
   "contact": {
-    "phone": "+260 97 XXX XX70",
-    "email": "Convergeozambia@gmail.com"
+    "email": "support@vergeo5.com"
   },
   "social": {
     "facebook": "https://www.facebook.com/",
@@ -65,5 +65,49 @@
     "instagramAria": "Convergeo pa Instagram",
     "emailAria": "Email Convergeo",
     "countryCode": "ZM"
+  },
+  "toast": {
+    "dismiss": "Dismiss notification",
+    "addedToCart": "Added to cart",
+    "addedToCartDetail": "{name} is in your cart.",
+    "addToCartFailed": "Couldn't add to cart. Check your connection and try again.",
+    "wishlistAdded": "Saved to your wishlist",
+    "wishlistRemoved": "Removed from your wishlist",
+    "linkCopied": "Link copied",
+    "copyFailed": "Couldn't copy the link",
+    "signedIn": "You're signed in",
+    "signedOut": "You're signed out",
+    "saved": "Changes saved",
+    "saveFailed": "Couldn't save changes. Try again.",
+    "uploaded": "Upload complete",
+    "uploadFailed": "Upload failed. Try again.",
+    "orderStatusUpdated": "Order status updated",
+    "actionFailed": "Something went wrong. Try again.",
+    "moderationApplied": "Moderation decision recorded",
+    "configSaved": "Settings saved",
+    "messageSent": "Message sent",
+    "following": "You're following {name}",
+    "unfollowed": "You unfollowed {name}"
+  },
+  "share": {
+    "label": "Share"
+  },
+  "fab": {
+    "ask": "Ask Vergeo",
+    "askTitle": "Ask Vergeo",
+    "askHint": "Describe what you need — a product, a service or an event.",
+    "askPlaceholder": "e.g. solar panel under K3,000 in Lusaka",
+    "send": "Ask",
+    "voiceStart": "Speak your question",
+    "voiceStop": "Stop listening",
+    "listening": "Listening…",
+    "voiceUnsupported": "Voice input isn't supported in this browser.",
+    "close": "Close",
+    "showFooter": "Show site links",
+    "hideFooter": "Hide site links"
+  },
+  "paymentTrust": {
+    "footerSeal": "Lipirani mu cash order ikafika",
+    "footerPaymentNote": "Cash on delivery · Kulipira pa intaneti kukubwera posachedwa"
   }
 }

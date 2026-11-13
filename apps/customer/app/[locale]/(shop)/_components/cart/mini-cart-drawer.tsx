@@ -45,8 +45,6 @@ export {
   type CartNavTriggerProps,
 } from "./cart-store";
 
-export const FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000;
-
 export type ChangeNoticeKind = "price_changed" | "out_of_stock" | "qty_reduced";
 
 export type ChangeNotice = {
@@ -570,7 +568,12 @@ customerAuth.subscribe(() => {
       lastAddedMessage: null,
     });
   }
-  if (!state.loading && !state.error && state.session && lastReadyUserId !== state.session.user.id) {
+  if (
+    !state.loading &&
+    !state.error &&
+    state.session &&
+    lastReadyUserId !== state.session.user.id
+  ) {
     lastReadyUserId = state.session.user.id;
     void refreshCart();
   }

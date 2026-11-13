@@ -360,7 +360,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
           <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-1 md:p-6">
+        <div>
           <Suspense fallback={null}>
             <DateFilterChips
               labels={filterLabels}

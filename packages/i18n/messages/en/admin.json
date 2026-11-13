@@ -35,7 +35,9 @@
     "events": "High-value events",
     "roles": "Admin roles",
     "services": "Services",
-    "inventory": "Inventory"
+    "inventory": "Inventory",
+    "homeFeed": "Home feed",
+    "advertising": "Advertising"
   },
   "hubs": {
     "moderation": {
@@ -291,8 +293,17 @@
         "submitting": "Saving…",
         "success": "Decision recorded.",
         "failure": "Could not save decision.",
-        "noKycRecord": "No KYC record is attached to this vendor."
-      }
+        "noKycRecord": "No KYC record is attached to this vendor.",
+        "loading": "Loading documents…",
+        "openFullReview": "Open full review",
+        "rejectVisibleToVendor": "The vendor will see this reason.",
+        "confirmApprove": "Approve {vendor}? They will be notified and can start selling.",
+        "approveConfirm": "Yes, approve",
+        "rejectConfirm": "Reject and notify vendor",
+        "back": "Back",
+        "retry": "Retry"
+      },
+      "emptyHint": "New submissions will appear here."
     },
     "detail": {
       "back": "Back to queue",
@@ -374,7 +385,16 @@
       "cancel": "Cancel",
       "submitting": "Saving decision…",
       "success": "Decision recorded — vendor will be notified.",
-      "failure": "Could not save decision."
+      "failure": "Could not save decision.",
+      "reasonPlaceholder": "Choose a reason…",
+      "freeTextRequired": "Explain the reason (required)",
+      "checklistHint": "Tick every item in the checklist to enable Approve.",
+      "vendorWillBeNotified": "{vendor} will be notified of this decision.",
+      "vendorSees": "The vendor will see:",
+      "vendorSeesEmpty": "(choose a reason)",
+      "noDocuments": "No documents were uploaded.",
+      "openFullSize": "Open full size",
+      "refreshDocs": "Refresh links"
     },
     "reasons": {
       "blurry_document": "Document is blurry or unreadable",
@@ -382,6 +402,18 @@
       "expired_id": "ID document appears expired",
       "incomplete_submission": "Submission is incomplete",
       "other": "Other (specify below)"
+    },
+    "checklist": {
+      "title": "Review checklist",
+      "progress": "{done} of {total}",
+      "items": {
+        "nrcLegible": "NRC photo is clear and readable",
+        "nameMatches": "Name on the NRC matches the mobile money name",
+        "selfieMatches": "Selfie matches the NRC photo",
+        "notExpired": "NRC is not expired"
+      },
+      "momoMatched": "Automatic check: names match.",
+      "momoMismatch": "Automatic check: names do not match."
     }
   },
   "moderation": {
@@ -708,7 +740,8 @@
         "delivered": "Delivered",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "emptyHint": "Check the spelling or try fewer filters."
     },
     "detail": {
       "back": "Back to search",
@@ -738,7 +771,14 @@
       "fulfilment": {
         "delivery": "Delivery",
         "pickup": "Pickup"
-      }
+      },
+      "cancelledBanner": "This order was cancelled.",
+      "progressLabel": "Order progress",
+      "stepDone": "Done:",
+      "stepCurrent": "Current:",
+      "stepUpcoming": "Upcoming:",
+      "copyOrderId": "Copy order ID",
+      "advancedEscrow": "Advanced: manual escrow hold / release"
     },
     "dispatch": {
       "title": "Manual dispatch",
@@ -767,8 +807,8 @@
       "permissionDenied": "Permission denied — admin role required to record dispatch."
     },
     "intervention": {
-      "title": "Status intervention",
-      "subtitle": "Current status: {status}. Illegal transitions are rejected by the state machine.",
+      "title": "Next actions",
+      "subtitle": "Current status: {status}. Only the steps the order state machine allows are shown.",
       "event": "Transition event",
       "events": {
         "confirm": "Confirm order",
@@ -787,7 +827,23 @@
       "submit": "Apply intervention",
       "submitting": "Applying…",
       "success": "Status updated via state machine.",
-      "failure": "Transition rejected or failed."
+      "failure": "Transition rejected or failed.",
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "prepaidUnpaid": "This prepaid order has no successful payment, so it cannot move forward. It can only be cancelled.",
+      "terminal": "This order is finished. No further actions are possible.",
+      "useDispatchBelow": "Shipping and delivery are recorded in Manual dispatch below.",
+      "willChange": "This changes the order from {from} to {to}.",
+      "irreversible": "This cancels the order and cannot be undone.",
+      "refundQueuedNotSent": "Payouts are off for the pilot. Cancelling flags this order for a refund decision in the audit log. No refund is created and no money is sent."
     },
     "escrow": {
       "title": "Manual escrow hold / release",
@@ -821,6 +877,40 @@
       "empty": "No timeline events yet.",
       "statusChange": "{from} → {to}",
       "missing": "—"
+    },
+    "openDispatchBoard": "Courier dispatch board",
+    "delivery": {
+      "title": "Delivery and cash",
+      "titlePickup": "Pickup and cash",
+      "collectLabel": "Cash to collect",
+      "codZero": "Cash on delivery, nothing left to collect",
+      "prepaidCollectNothing": "Prepaid. Collect nothing.",
+      "customer": "Customer",
+      "copyPhone": "Copy customer phone number",
+      "whatsapp": "WhatsApp",
+      "noPhone": "No phone number on file.",
+      "dropoff": "Drop-off (landmark and GPS)",
+      "copyAddress": "Copy drop-off address",
+      "openMap": "Open map",
+      "noGps": "No GPS pin was shared.",
+      "loadingAddress": "Loading address from the courier request…",
+      "addressNotOnOrder": "The address is attached once a courier request exists for this order.",
+      "openDispatchBoard": "Open dispatch board",
+      "addressFailed": "Could not load the address from the courier request.",
+      "rider": "Courier / rider",
+      "courierRef": "Ref {ref}",
+      "copyRiderPhone": "Copy courier WhatsApp number",
+      "courierMessage": "Courier message (as the rider sees it)",
+      "copyCourierMessage": "Copy courier message",
+      "noRiderYet": "No courier has been requested for this order yet.",
+      "dispatchStatus": {
+        "requested": "Requested",
+        "accepted": "Accepted",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      }
     }
   },
   "accessDenied": {
@@ -958,7 +1048,9 @@
         "on_track": "On track",
         "due_soon": "Due soon",
         "overdue": "Overdue"
-      }
+      },
+      "emptyHint": "New disputes will appear here, oldest first.",
+      "payoutsOffBanner": "Payouts and customer refunds are switched off for the pilot. You can review disputes and release funds to the vendor; refund outcomes are unavailable until payouts are enabled."
     },
     "detail": {
       "back": "Back to queue",
@@ -1023,7 +1115,20 @@
         "submitting": "Processing…",
         "success": "Decision recorded — parties will be notified.",
         "failure": "Could not record decision.",
-        "alreadyResolved": "This dispute has already been resolved."
+        "alreadyResolved": "This dispute has already been resolved.",
+        "payoutsOffTitle": "Refunds are disabled for the pilot",
+        "payoutsOffBody": "No customer money is sent while payouts are off, so the refund outcomes are unavailable. Release to vendor is still possible.",
+        "amountPreview": "You entered {amount}",
+        "review": "Review decision",
+        "confirmTitle": "Confirm dispute decision",
+        "confirmSummary": {
+          "full_refund": "Refund {amount} to the customer. The dispute closes.",
+          "partial_refund": "Refund {amount} to the customer and release the rest to the vendor. The dispute closes.",
+          "release": "Release the escrowed funds to the vendor. The dispute closes."
+        },
+        "refundTo": "Refund to {momo} ({rail})",
+        "noteRecorded": "Your decision note is saved on the dispute and in the audit log.",
+        "refundUnavailablePayoutsDisabled": "Refunds are unavailable while payouts are disabled. No money was moved — choose Release to vendor or try again once payouts are enabled."
       }
     }
   },
@@ -1346,5 +1451,375 @@
     "permissionDenied": "You do not have access to this overview.",
     "unknownStock": "Unknown",
     "retry": "Try again"
+  },
+  "homeFeed": {
+    "title": "Home feed",
+    "subtitle": "Order, schedule and target the sections of the customer home page. Empty sections are hidden automatically.",
+    "loading": "Loading sections…",
+    "loadError": "Could not load feed sections.",
+    "retry": "Retry",
+    "create": "New section",
+    "preview": "Preview as guest",
+    "saveOrder": "Save order",
+    "orderSaved": "Order saved",
+    "hint": "Times use your browser clock; the feed is evaluated in UTC and shown in Africa/Lusaka.",
+    "columns": {
+      "order": "Order",
+      "key": "Section",
+      "type": "Type",
+      "schedule": "Schedule",
+      "status": "Status"
+    },
+    "moveUp": "Move {key} up",
+    "moveDown": "Move {key} down",
+    "arrowUp": "Up",
+    "arrowDown": "Down",
+    "scheduleOpen": "Always on",
+    "scheduleRange": "{from} → {to}",
+    "live": "Live",
+    "scheduled": "Scheduled",
+    "disabled": "Disabled",
+    "edit": "Edit",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "confirmDelete": "Delete this section? This cannot be undone.",
+    "saved": "Section saved",
+    "saveError": "Could not save. Check the fields and try again.",
+    "editTitle": "Edit section",
+    "createTitle": "New section",
+    "save": "Save",
+    "cancel": "Cancel",
+    "previewError": "Could not build the preview.",
+    "previewTitle": "Guest preview (first page)",
+    "previewEmpty": "No section resolves to data right now.",
+    "previewCarousel": "{count} sponsored carousel slides live",
+    "previewAd": "sponsored by {advertiser}",
+    "previewCount": "{count} items",
+    "errors": {
+      "invalidPrice": "Enter a kwacha amount such as 100 or 99.50."
+    },
+    "fields": {
+      "key": "Key (snake_case)",
+      "type": "Type",
+      "layout": "Layout",
+      "titleKey": "Title message key (optional)",
+      "titleEn": "Title (English)",
+      "titleFr": "Title (French)",
+      "limit": "Max items",
+      "viewAll": "View-all link (internal path)",
+      "categoryPath": "Category path",
+      "listingIds": "Listing IDs (one per line)",
+      "withinDays": "Upcoming within days",
+      "rulePaths": "Category paths (comma separated)",
+      "rulePriceMax": "Max price (K)",
+      "ruleSort": "Sort",
+      "ruleKeywords": "Title keywords (comma separated)",
+      "ruleNewDays": "Listed within days",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "audience": "Audience",
+      "enabled": "Enabled"
+    },
+    "types": {
+      "category": "Category",
+      "collection": "Manual collection",
+      "rule": "Rule",
+      "services": "Services",
+      "events": "Events",
+      "vendors": "Top vendors",
+      "for_you": "For you",
+      "ad_slot": "Ad slot"
+    },
+    "layouts": {
+      "rail": "Rail",
+      "grid": "Grid",
+      "banner": "Banner",
+      "ad": "Ad"
+    },
+    "sorts": {
+      "relevance": "Relevance",
+      "newest": "Newest",
+      "cheapest": "Cheapest",
+      "top_rated": "Top rated",
+      "trending": "Trending by views"
+    },
+    "audiences": {
+      "all": "Everyone",
+      "guest": "Guests only",
+      "signed_in": "Signed-in only"
+    },
+    "placeholders": {
+      "path": "/c/electronics",
+      "paths": "electronics, fashion/mens-clothing"
+    }
+  },
+  "advertising": {
+    "title": "Advertising",
+    "subtitle": "Sponsored feed slots and carousel slides. Only enabled placements inside their window appear on the site.",
+    "loading": "Loading placements…",
+    "loadError": "Could not load placements.",
+    "retry": "Retry",
+    "create": "New placement",
+    "hint": "Payments are recorded only — no money moves here.",
+    "empty": "No placements yet.",
+    "created": "Placement created as draft",
+    "saveError": "Could not save. Check the fields and try again.",
+    "transitionError": "That status change is not allowed.",
+    "confirmEnd": "End this placement? Ended placements cannot be restarted.",
+    "columns": {
+      "creative": "Creative",
+      "window": "Window",
+      "paid": "Paid",
+      "status": "Status",
+      "performance": "Last 30 days"
+    },
+    "windowRange": "{from} → {to}",
+    "performance": "{impressions} views · {clicks} clicks · CTR {ctr}",
+    "enable": "Enable",
+    "disable": "Disable",
+    "createTitle": "New placement",
+    "save": "Save draft",
+    "cancel": "Cancel",
+    "ctaHint": "Internal path (e.g. /c/electronics) or an https link on an approved advertiser domain.",
+    "errors": {
+      "invalidAmount": "Enter a kwacha amount such as 1500 or 99.50.",
+      "invalidWindow": "End must be after start."
+    },
+    "kinds": {
+      "vendor": "Vendor",
+      "business": "Business",
+      "external": "External company"
+    },
+    "types": {
+      "feed_slot": "Feed slot",
+      "carousel_slide": "Carousel slide"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "effective": {
+      "live": "Live now",
+      "upcoming": "Starts later",
+      "expired": "Window over",
+      "disabled": "Disabled",
+      "draft": "Not published",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "actions": {
+      "scheduled": "Schedule",
+      "active": "Activate",
+      "paused": "Pause",
+      "draft": "Back to draft",
+      "ended": "End"
+    },
+    "fields": {
+      "advertiserKind": "Advertiser type",
+      "advertiserName": "Advertiser name",
+      "vendorId": "Vendor ID",
+      "placementType": "Placement",
+      "imagePublicId": "Cloudinary public ID",
+      "headline": "Headline",
+      "ctaLabel": "Button label",
+      "body": "Supporting text",
+      "ctaHref": "Link",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "paidAmount": "Amount paid (K)",
+      "paymentReference": "Payment reference",
+      "priority": "Priority (higher first)"
+    },
+    "placeholders": {
+      "path": "/c/electronics"
+    }
+  },
+  "dispatch": {
+    "title": "Courier dispatch",
+    "subtitle": "Assign Lusaka delivery orders to a courier, notify them, and close each job with the customer's handover code.",
+    "back": "Back to orders",
+    "disabled": "Courier dispatch is switched off (flag courier_dispatch). You can prepare couriers below; dispatch actions stay blocked until the flag is enabled.",
+    "loading": "Loading dispatch board…",
+    "error": "Could not load the dispatch board.",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "statuses": {
+      "requested": "Requested",
+      "accepted": "Accepted",
+      "picked_up": "Picked up",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "ready": {
+      "title": "Ready for courier ({count})",
+      "empty": "No delivery orders are waiting for a courier.",
+      "meta": "{vendor} · {zone} · {items, plural, one {# item} other {# items}}",
+      "zoneUnknown": "no zone",
+      "cod": "COD — collect {amount}",
+      "prepaid": "Prepaid",
+      "lastFailed": "Last attempt failed: {reason}",
+      "courierLabel": "Courier",
+      "chooseCourier": "Choose a courier",
+      "courierOption": "{name}",
+      "courierOptionPrice": "{name} — {price}",
+      "noCouriers": "No active courier serves this zone. Add one below.",
+      "assign": "Assign courier",
+      "assigning": "Assigning…",
+      "assigned": "Dispatch created. Notify the courier next."
+    },
+    "active": {
+      "title": "In progress ({count})",
+      "empty": "No dispatches in progress.",
+      "closedTitle": "Recently closed",
+      "meta": "{courier} · {vendor}",
+      "requestedAgo": "Requested {minutes, plural, one {# minute} other {# minutes}} ago",
+      "stale": "No acceptance after 45 minutes",
+      "notified": "Notified {count, plural, one {# time} other {# times}}",
+      "courierRef": "Courier ref: {ref}",
+      "codDue": "Rider collects {amount}",
+      "prepaid": "Prepaid — rider collects nothing",
+      "quoted": "Courier price: {amount}",
+      "failureReason": "Failure: {reason}",
+      "deliveredViaCode": "Delivered — handover code verified",
+      "deliveredViaPhoto": "Delivered — proof-of-delivery photo",
+      "locked": "Handover locked after too many wrong codes"
+    },
+    "notify": {
+      "whatsapp": "Notify courier (WhatsApp)",
+      "email": "Notify courier (email)",
+      "sending": "Queuing…",
+      "queued": "Queued on the outbox ({channel}).",
+      "duplicate": "Already queued.",
+      "copy": "Copy message",
+      "copied": "Message copied — paste it into WhatsApp.",
+      "copyFailed": "Could not copy. Select the text below instead.",
+      "openWhatsApp": "Open in WhatsApp",
+      "messageTitle": "Message for the courier",
+      "loadingMessage": "Building message…"
+    },
+    "actions": {
+      "accept": "Courier accepted",
+      "pickUp": "Picked up from vendor",
+      "fail": "Mark failed",
+      "cancel": "Cancel dispatch",
+      "deliverWithPhoto": "Delivered (photo proof)",
+      "verifyHandover": "Enter handover code",
+      "working": "Saving…",
+      "courierRef": "Courier reference (optional)",
+      "courierRefPlaceholder": "e.g. TS-1042",
+      "failureReason": "Why did it fail?",
+      "failureReasonPlaceholder": "Rider unreachable, customer not home…",
+      "podPublicId": "Proof-of-delivery photo ID (Cloudinary public_id)",
+      "podPlaceholder": "convergeo/pod/ord-1a2b3c4d",
+      "confirm": "Confirm",
+      "close": "Close"
+    },
+    "handover": {
+      "label": "6-digit code from the rider",
+      "placeholder": "000000",
+      "submit": "Verify and mark delivered",
+      "verifying": "Verifying…",
+      "success": "Code verified — order delivered.",
+      "help": "Ask the rider to read out the code the customer gave them. Never share the code with the rider yourself."
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again.",
+      "permissionDenied": "You do not have permission for this action.",
+      "invalidTransition": "That step is not allowed from the current status. Refresh the board.",
+      "handoverInvalid": "Wrong code. {count, plural, one {# attempt} other {# attempts}} left before lockout.",
+      "handoverLocked": "Too many wrong codes. Verification is locked for {minutes, plural, one {# minute} other {# minutes}}.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "codeFormat": "Enter the 6-digit code.",
+      "podFormat": "Enter a Cloudinary public_id, not a URL.",
+      "reasonRequired": "Add a reason.",
+      "disabled": "Courier dispatch is switched off.",
+      "zoneNotServed": "This courier does not serve the order's delivery zone.",
+      "alreadyActive": "This order already has a courier dispatch.",
+      "paymentRequired": "The order is prepaid and not paid yet — do not dispatch.",
+      "orderNotReady": "The order is not ready for a courier yet.",
+      "courierInactive": "This courier is inactive."
+    },
+    "couriers": {
+      "title": "Couriers",
+      "empty": "No couriers yet.",
+      "add": "Add courier",
+      "edit": "Edit",
+      "save": "Save courier",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saved": "Courier saved.",
+      "name": "Name",
+      "whatsapp": "WhatsApp number",
+      "whatsappPlaceholder": "+260…",
+      "email": "Email",
+      "emailPlaceholder": "dispatch@courier.co.zm",
+      "notes": "Notes",
+      "active": "Active",
+      "inactive": "Inactive",
+      "manual": "Manual (WhatsApp / email)",
+      "apiReserved": "API integration — coming later",
+      "zones": "Service areas",
+      "zonePrice": "Price in kwacha (optional)",
+      "zoneLabel": "{label}",
+      "zonesNone": "All zones (quote per job)",
+      "contactLine": "{contact}",
+      "errors": {
+        "name": "Enter a name (max 120 characters).",
+        "contact": "Add a WhatsApp number or an email.",
+        "whatsapp": "WhatsApp number must look like +260971234567.",
+        "email": "Enter a valid email.",
+        "price": "Price must be in kwacha, e.g. 25 or 25.50.",
+        "taken": "A courier with this name already exists.",
+        "generic": "Could not save the courier.",
+        "permission": "You do not have permission to manage couriers."
+      },
+      "zonePriceLine": "{label} {price}"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "working": "Working…",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed"
+  },
+  "today": {
+    "title": "Today",
+    "subtitle": "What needs a person right now. Counts come straight from each queue.",
+    "refresh": "Refresh",
+    "loading": "Loading",
+    "noAccess": "No access",
+    "unavailable": "Could not load",
+    "allClear": "Nothing waiting",
+    "openList": "Open the list",
+    "open": "Open queue",
+    "cutoffPassed": "Today's 14:00 Lusaka cut-off has passed.",
+    "cutoffIn": "Cut-off 14:00 Lusaka in {hours}h {minutes}m.",
+    "overdueCount": "{count, plural, =0 {None overdue} one {# overdue} other {# overdue}}",
+    "placed": {
+      "title": "Awaiting vendor confirmation",
+      "hint": "New orders the vendor has not confirmed yet."
+    },
+    "dispatch": {
+      "title": "Ready to dispatch",
+      "hint": "Orders ready for a courier."
+    },
+    "kyc": {
+      "title": "KYC to review",
+      "hint": "Vendor verifications waiting for a decision."
+    },
+    "disputes": {
+      "title": "Disputes and refund requests",
+      "hint": "Open disputes waiting for a decision."
+    },
+    "notifications": {
+      "title": "Failed notifications",
+      "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
+    }
   }
 }

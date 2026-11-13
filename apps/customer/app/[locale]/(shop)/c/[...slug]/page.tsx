@@ -12,14 +12,21 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  getApiBaseUrl,
+  resolveApiBaseUrl,
+} from "../../../../../lib/api-base-url";
 import { fetchJson } from "../../../../../lib/fetch-json";
 import { BackToTop } from "../../_components/back-to-top";
 import { buildCategoryTree } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
-import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
+import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
+import {
+  FacetPanel,
+  type FacetCounts,
+} from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
 import { MobileFilterDrawer } from "../../_components/plp/mobile-filter-drawer";
@@ -71,10 +78,15 @@ type CatalogTranslator = {
   raw: (key: string) => string;
 };
 
-async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -86,7 +98,10 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
 async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const navMessages = await loadNamespace(locale as Locale, "nav");
-  const messages = { ...baseMessages, nav: navMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    nav: navMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -139,16 +154,21 @@ function buildCatalogQuery(
   return params.toString();
 }
 
-async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | null> {
+async function fetchCatalog(
+  queryString: string,
+): Promise<CatalogApiResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
     return null;
   }
   const suffix = queryString ? `?${queryString}` : "";
   try {
-    return await fetchJson<CatalogApiResponse>(`${baseUrl}/catalog/listings${suffix}`, {
-      next: { revalidate: 60 },
-    });
+    return await fetchJson<CatalogApiResponse>(
+      `${baseUrl}/catalog/listings${suffix}`,
+      {
+        next: { revalidate: 60 },
+      },
+    );
   } catch {
     return null;
   }
@@ -185,15 +205,21 @@ export function generateStaticParams() {
   ]);
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const resolvedSearch = await searchParams;
   const t = await getCatalogTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
-  const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+  const categoryName =
+    categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
 
   const canonicalPath = buildLocaleCanonical(locale, "c", ...slug);
-  const hasFilters = Object.keys(resolvedSearch).some((key) => !["lat", "lng"].includes(key));
+  const hasFilters = Object.keys(resolvedSearch).some(
+    (key) => !["lat", "lng"].includes(key),
+  );
   const title = t("plp.title", { category: categoryName });
   const description = t("plp.meta.description", { category: categoryName });
 
@@ -214,7 +240,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   };
 }
 
-export default async function CategoryPlpPage({ params, searchParams }: PageProps) {
+export default async function CategoryPlpPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale, slug } = await params;
   const resolvedSearch = await searchParams;
   setRequestLocale(locale);
@@ -222,7 +251,8 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
-  const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+  const categoryName =
+    categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
   const queryString = buildCatalogQuery(categoryPath, resolvedSearch);
   const catalog = await fetchCatalog(queryString);
   const catalogUnavailable = catalog === null;
@@ -251,7 +281,10 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
       ? categoryTree.find((entry) => entry.slug === leafSlug)
       : undefined;
   const childCategories =
-    activeNav?.children.map((child) => ({ slug: child.slug, name: child.name })) ??
+    activeNav?.children.map((child) => ({
+      slug: child.slug,
+      name: child.name,
+    })) ??
     (leafSlug === "all" || !leafSlug
       ? categoryTree.map((entry) => ({ slug: entry.slug, name: entry.name }))
       : []);
@@ -299,6 +332,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
     },
+    delivery: catalogDeliveryLabels((key) => t.raw(key)),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
@@ -326,8 +360,14 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
         <h1 className="font-display text-h1 text-display-ink">
           {t("plp.title", { category: categoryName })}
         </h1>
-        <p className="text-sm text-text-2" data-testid="plp-results-count" aria-live="polite">
-          {catalogUnavailable ? t("plp.resultsUnknown") : t("plp.results", { count: total })}
+        <p
+          className="text-sm text-text-2"
+          data-testid="plp-results-count"
+          aria-live="polite"
+        >
+          {catalogUnavailable
+            ? t("plp.resultsUnknown")
+            : t("plp.results", { count: total })}
         </p>
       </header>
 
@@ -340,11 +380,16 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
 
       <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="hidden lg:block">
-          <FacetPanel labels={facetLabels} facets={facets} initialState={filterState} />
+          <FacetPanel
+            labels={facetLabels}
+            facets={facets}
+            initialState={filterState}
+          />
         </div>
 
         <section className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* One compact bar: Filters (modal on < lg) + sort chips. */}
+          <div className="flex flex-row-reverse items-center gap-2">
             <div className="min-w-0 flex-1">
               <SortBar
                 labels={{
@@ -353,6 +398,10 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
                   cheapest: t("plp.sort.cheapest"),
                   nearest: t("plp.sort.nearest"),
                   newest: t("plp.sort.newest"),
+                  best: t("plp.sort.best"),
+                  verified: t("plp.sort.verified"),
+                  bundles: t("plp.sort.bundles"),
+                  cheapestChip: t("plp.sort.cheapestChip"),
                 }}
                 value={sort}
                 hasLocation={hasLocation}
@@ -378,7 +427,10 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
               clearAll: t("plp.filters.clearAll"),
               // Preserve `{token}` placeholders for client-side chip templating.
               removeChip: t("plp.filters.removeChip", { filter: "{filter}" }),
-              priceRange: t("plp.filters.priceRange", { min: "{min}", max: "{max}" }),
+              priceRange: t("plp.filters.priceRange", {
+                min: "{min}",
+                max: "{max}",
+              }),
               minPriceOnly: t("plp.filters.minPriceOnly", { min: "{min}" }),
               maxPriceOnly: t("plp.filters.maxPriceOnly", { max: "{max}" }),
               conditionNew: t("plp.facets.conditionNew"),
@@ -426,7 +478,9 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
           )}
         </section>
       </div>
-      {!catalogUnavailable && listings.length > 0 ? <BackToTop label={t("plp.backToTop")} /> : null}
+      {!catalogUnavailable && listings.length > 0 ? (
+        <BackToTop label={t("plp.backToTop")} />
+      ) : null}
     </div>
   );
 }

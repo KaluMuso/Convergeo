@@ -12,7 +12,10 @@ type MarketingTranslator = (key: string, values?: Record<string, string | number
 async function getMarketingTranslator(locale: string): Promise<MarketingTranslator> {
   const baseMessages = await getMessages();
   const marketingMessages = await loadNamespace(locale as Locale, "marketing");
-  const messages = { ...baseMessages, marketing: marketingMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    marketing: marketingMessages,
+  } as AbstractIntlMessages;
   return createTranslator({
     locale,
     messages,
@@ -52,6 +55,7 @@ function buildLabels(t: MarketingTranslator): ContactFormLabels {
     success: t("form.success"),
     errorGeneric: t("form.errorGeneric"),
     errorRateLimited: t("form.errorRateLimited"),
+    errorUnavailable: t("form.errorUnavailable"),
     validation: {
       nameRequired: t("form.validation.nameRequired"),
       nameTooLong: t("form.validation.nameTooLong"),
@@ -79,19 +83,21 @@ export default async function ContactPage({ params }: PageProps) {
         <p className="text-body text-text-2">{t("hero.subhead")}</p>
       </header>
 
-      <section className="mb-8 space-y-3 rounded-lg border border-border bg-bg-2 p-6">
-        <h2 className="font-display text-h2 text-display-ink">{t("whatsapp.heading")}</h2>
-        <p className="text-body text-text">{t("whatsapp.body")}</p>
-        <a
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-body font-medium text-surface"
-          href={whatsappHref}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          {t("whatsapp.cta")}
-        </a>
-        <p className="text-sm text-text-2">{t("whatsapp.hint")}</p>
-      </section>
+      {whatsappHref ? (
+        <section className="mb-8 space-y-3 rounded-lg border border-border bg-bg-2 p-6">
+          <h2 className="font-display text-h2 text-display-ink">{t("whatsapp.heading")}</h2>
+          <p className="text-body text-text">{t("whatsapp.body")}</p>
+          <a
+            className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-body font-medium text-surface"
+            href={whatsappHref}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            {t("whatsapp.cta")}
+          </a>
+          <p className="text-sm text-text-2">{t("whatsapp.hint")}</p>
+        </section>
+      ) : null}
 
       <section className="mb-8 space-y-2">
         <h2 className="font-display text-h3 text-display-ink">{t("hours.heading")}</h2>

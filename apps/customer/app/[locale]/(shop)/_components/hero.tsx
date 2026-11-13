@@ -8,6 +8,7 @@ import {
   normalizeMerchMessageKey,
   type MerchSlotRow,
 } from "./merch-data";
+import { withLocaleHref } from "./merch-href";
 
 type CatalogTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -115,8 +116,14 @@ export function HomeHero({ slot, locale, t }: HomeHeroProps) {
     ? resolvePayloadText(payload, "eyebrow_key", t, "home.hero.eyebrow")
     : t("home.hero.eyebrow");
 
-  const primaryHref = readPayloadString(payload, "primary_cta_href") ?? `/${locale}/search`;
-  const secondaryHref = readPayloadString(payload, "secondary_cta_href") ?? `/${locale}/sell`;
+  const primaryHref = withLocaleHref(
+    locale,
+    readPayloadString(payload, "primary_cta_href") ?? `/${locale}/search`,
+  );
+  const secondaryHref = withLocaleHref(
+    locale,
+    readPayloadString(payload, "secondary_cta_href") ?? `/${locale}/sell`,
+  );
 
   const primaryCta = buildHeroCta(t("home.hero.primaryCta"), primaryHref, "primary");
   const secondaryCta = buildHeroCta(t("home.hero.secondaryCta"), secondaryHref, "secondary");

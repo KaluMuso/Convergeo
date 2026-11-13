@@ -5,37 +5,39 @@
 
 :root {
   /* ── Ground & surfaces ── */
-  --bg: #faf7f2;
-  --bg-2: #f3ede3;
+  --bg: #f7f6f2;
+  --bg-2: #eeede8;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --border: #e8dfd0;
+  --border: #e3e1da;
 
   /* ── Dark panels (reference light-theme chrome) ── */
-  --panel: #1c1308;
-  --panel-2: #231c10;
-  --panel-text: #f5edd8;
-  --panel-muted: #b8a88a;
+  --panel: #0f2a21;
+  --panel-2: #163a2e;
+  --panel-text: #f3f0e8;
+  --panel-muted: #a9bfb4;
   --panel-border: rgba(255, 255, 255, 0.12);
 
   /* ── Ink & display ── */
-  --text: #2a1f0e;
-  --text-2: #6b5a3e;
-  --text-3: #7a6a52;
-  --display-ink: #1c1308;
+  --text: #15201b;
+  --text-2: #4a5550;
+  --text-3: #5e6963;
+  --display-ink: #0f2a21;
 
   /* ── Brand & semantic ── */
-  --primary: #4c5470;
-  --primary-deep: #363c52;
-  --primary-tint: #d0d4e8;
-  --accent: #2d4a7a;
-  --success: #3a7a4a;
-  --danger: #c0392b;
-  --warning: #d4a020;
-  --info: #2a6a9a;
+  --primary: #0b5d45;
+  --primary-deep: #08473a;
+  --primary-tint: #e3f0ea;
+  --accent: #a4501c;
+  --accent-deep: #7e3c12;
+  --accent-tint: #f6e8dd;
+  --success: #1e7a4c;
+  --danger: #b3261e;
+  --warning: #b7791f;
+  --info: #1d5e8c;
   --on-danger: #ffffff;
-  --price: #2a2118;
-  --discount: #c0392b;
+  --price: #15201b;
+  --discount: #b3261e;
 
   /* Zambia mobile-money rail brand marks (checkout/payout selectors). */
   --payment-rail-mtn: #ffcc00;
@@ -55,18 +57,18 @@
   --cat-auto: #8a8ab5;
 
   /* ── Type ── */
-  --font-display: "Cormorant Garamond", Georgia, serif;
-  --font-display-alt: "DM Serif Display", Georgia, serif;
+  --font-display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --font-display-alt: var(--font-display);
   --font-body: "DM Sans", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
-  --fs-hero: clamp(2.4rem, 4vw, 3.9rem);
-  --fs-h1: clamp(1.8rem, 3vw, 2.6rem);
-  --fs-h2: clamp(1.5rem, 2.4vw, 2.1rem);
+  --fs-hero: clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem);
+  --fs-h1: clamp(1.75rem, 1.35rem + 1.8vw, 2.625rem);
+  --fs-h2: clamp(1.375rem, 1.15rem + 1vw, 1.875rem);
   --fs-h3: 1.0625rem;
   --fs-body: 0.9375rem;
   --fs-sm: 0.8125rem;
   --fs-micro: 0.6875rem;
-  --fs-price: 1.02rem;
+  --fs-price: 1.0625rem;
 
   /* ── Space (4px base) ── */
   --sp-0: 0px;
@@ -96,14 +98,16 @@
   /* ── Radii ── */
   --r-sm: 8px;
   --r: 12px;
-  --r-lg: 18px;
+  --r-lg: 16px;
+  --r-xl: 24px;
   --r-pill: 999px;
 
   /* ── Shadows ── */
-  --shadow-1: 0 4px 24px rgba(28, 19, 8, 0.07);
-  --shadow-2: 0 8px 32px rgba(28, 19, 8, 0.14);
-  --shadow-3: 0 12px 48px rgba(28, 19, 8, 0.13);
-  --focus-ring: 0 0 0 3px rgba(76, 84, 112, 0.24);
+  --shadow-1: 0 1px 2px rgba(15, 42, 33, 0.06), 0 2px 8px rgba(15, 42, 33, 0.05);
+  --shadow-2: 0 2px 4px rgba(15, 42, 33, 0.06), 0 8px 24px rgba(15, 42, 33, 0.1);
+  --shadow-3: 0 4px 8px rgba(15, 42, 33, 0.06), 0 20px 48px rgba(15, 42, 33, 0.16);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px rgba(11, 93, 69, 0.55);
+  --ds-tracking-display: -0.02em;
 
   /* ── Motion ── */
   --dur-fast: 150ms;
@@ -131,29 +135,31 @@
 /* Dark palette — warm charcoal (audit §6.1). Page ground is independent of
    --panel so marketing panels stay distinct chrome rather than tinting the app. */
 [data-theme="dark"] {
-  --bg: #141312;
-  --bg-2: #1c1a18;
-  --surface: #22201e;
-  --surface-elevated: #2a2826;
+  --bg: #121614;
+  --bg-2: #181d1a;
+  --surface: #1b201d;
+  --surface-elevated: #232925;
   --border: rgba(255, 255, 255, 0.1);
-  --text: #f2ede6;
-  --text-2: #b0a99f;
-  --text-3: #918a80;
-  --display-ink: #f2ede6;
-  --primary: #7aa0d4;
-  --primary-deep: #5a82b8;
-  --primary-tint: #2a323c;
-  --accent: #d4a04a;
-  --price: #f2ede6;
-  --discount: #e57368;
+  --text: #e4e8e5;
+  --text-2: #a8b1ac;
+  --text-3: #8e9892;
+  --display-ink: #e4e8e5;
+  --primary: #5fc49c;
+  --primary-deep: #4aae88;
+  --primary-tint: #1d2c26;
+  --accent: #e39255;
+  --accent-deep: #f0ae7c;
+  --accent-tint: #2e2219;
+  --price: #e4e8e5;
+  --discount: #ef8a80;
   --on-danger: #ffffff;
-  /* Primary button in dark: lightened blue bg needs dark text for AA. */
-  --primary-btn-fg: #141312;
-  --primary-btn-hover: #8bb0dc;
+  /* Primary button in dark: lifted malachite bg needs dark text for AA. */
+  --primary-btn-fg: #121614;
+  --primary-btn-hover: #78d0ad;
   --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55);
-  --focus-ring: 0 0 0 3px rgba(122, 154, 181, 0.35);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px rgba(95, 196, 156, 0.6);
 
   color-scheme: dark;
 }
@@ -296,17 +302,17 @@
   color: var(--panel-text);
   font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.15;
 }
 
 .v-footer__heading {
   margin: 0 0 var(--sp-3);
   color: var(--panel-text);
-  font-size: var(--fs-sm);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.005em;
 }
 
 .v-footer__links {
@@ -355,8 +361,25 @@
 .v-footer__copyright {
   padding-top: var(--sp-6);
   border-top: 1px solid var(--panel-border);
-  margin-top: var(--sp-8);
-  font-size: var(--fs-micro);
+  margin-top: var(--sp-10);
+  font-size: var(--fs-sm);
+}
+
+.v-footer__tagline {
+  margin: var(--sp-3) 0 0;
+  color: var(--panel-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+
+.v-footer__seal {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+  color: var(--panel-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 
 @media (max-width: 1100px) {
@@ -509,4 +532,650 @@
   .tap:active {
     transform: none !important;
   }
+}
+
+/* ── Copperbelt typographic + interaction base (all apps) ───────────────── */
+/* In @layer base so Tailwind utilities (tracking-*, focus-visible:outline-none)
+   still win over these defaults. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :where(h1, h2, h3, .font-display) {
+    letter-spacing: var(--ds-tracking-display);
+    text-wrap: balance;
+  }
+
+  :where(p) {
+    text-wrap: pretty;
+  }
+
+  /* Prices, counters and quantities never jitter between digits. */
+  :where([data-price], .tabular, [data-testid*="price"]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--accent-tint);
+    color: var(--text);
+  }
+
+  /* One visible, consistent focus treatment for anything keyboard-focusable that
+     does not draw its own ring. Components with bespoke rings keep theirs. */
+  :where(
+    a,
+    button,
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"],
+    summary,
+    input,
+    select,
+    textarea
+  ):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Escrow seal — the system's signature motif: a copper ring + malachite
+   centre used on trust strips, buy boxes and the hero. */
+.ds-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  background: var(--primary-tint);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.ds-seal--on-panel {
+  background: color-mix(in srgb, var(--panel-text) 10%, transparent);
+  color: var(--panel-text);
+}
+
+/* ── Toasts (toast.tsx) ─────────────────────────────────────────────────────
+   Bottom-centre on phones (above the bottom nav), bottom-right on desktop.
+   Ink-on-surface card with a coloured icon disc; motion collapses to opacity
+   via the reduced-motion variables above. */
+.v-toaster {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(var(--sp-4) + 4rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: min(100% - var(--sp-8), 24rem);
+  pointer-events: none;
+}
+
+@media (min-width: 64rem) {
+  /* Centred on desktop: bottom-right belongs to the floating action buttons. */
+  .v-toaster {
+    bottom: var(--sp-6);
+  }
+}
+
+.v-toaster__region {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.v-toast {
+  --toast-tone: var(--info);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--toast-tone);
+  border-radius: var(--r);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  pointer-events: auto;
+  touch-action: pan-y;
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+.v-toast[data-state="closed"] {
+  animation: toast-out var(--dur-fast) var(--ease-std) forwards;
+}
+
+.v-toast[data-swiping="true"] {
+  animation: none;
+  transition: none;
+}
+
+.v-toast[data-toast-type="success"] {
+  --toast-tone: var(--success);
+}
+.v-toast[data-toast-type="error"] {
+  --toast-tone: var(--danger);
+}
+.v-toast[data-toast-type="cart"] {
+  --toast-tone: var(--primary);
+}
+
+.v-toast__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--toast-tone) 12%, transparent);
+  color: var(--toast-tone);
+}
+
+.v-toast__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 3px;
+}
+
+.v-toast__message {
+  font-weight: 600;
+}
+
+.v-toast__description {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.v-toast__close {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.v-toast__close:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}
+
+/* ── Notification center (notification-center.tsx / notification-list.tsx) ──
+   Bell + top-right unseen badge; the panel is a bottom sheet on phones and an
+   anchored dropdown from 40rem up. Tokens only; motion reuses the toast-in
+   keyframes so reduced-motion collapses it the same way. */
+.v-notif {
+  position: relative;
+  display: inline-flex;
+}
+
+.v-notif__bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.v-notif__bell:hover {
+  background: var(--bg-2);
+}
+
+.v-notif__bell:focus-visible,
+.v-notif__item:focus-visible,
+.v-notif__link-button:focus-visible,
+.v-notif__more:focus-visible,
+.v-notif__see-all:focus-visible,
+.v-notif__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.v-notif__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--danger);
+  color: var(--on-danger);
+  font-family: var(--font-body);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.v-notif__panel {
+  position: fixed;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(80dvh, 32rem);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  font-family: var(--font-body);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: toast-in var(--dur) var(--ease-out) both;
+}
+
+@media (min-width: 40rem) {
+  /* Portalled to <body>; anchored under the bell via inline custom props. */
+  .v-notif__panel {
+    left: auto;
+    right: var(--notif-right, var(--sp-4));
+    bottom: auto;
+    top: var(--notif-top, 4rem);
+    width: 24rem;
+    max-height: min(70dvh, 32rem);
+    border-radius: var(--r);
+  }
+}
+
+.v-notif__panel:focus {
+  outline: none;
+}
+
+.v-notif__list[data-variant="page"] {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.v-notif__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.v-notif__head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.v-notif__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.v-notif__link-button,
+.v-notif__see-all {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.v-notif__close {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+.v-notif__status {
+  margin: 0;
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.v-notif__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v-notif__items > li + li {
+  border-top: 1px solid var(--border);
+}
+
+.v-notif__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: var(--sp-1) var(--sp-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-6);
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.v-notif__item:hover {
+  background: var(--bg-2);
+}
+
+.v-notif__item[data-read="false"] {
+  background: var(--primary-tint);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.v-notif__dot {
+  position: absolute;
+  left: var(--sp-2);
+  top: calc(var(--sp-3) + 0.4rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--primary);
+}
+
+.v-notif__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.v-notif__message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.v-notif__time {
+  color: var(--text-3);
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.v-notif__foot {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+
+.v-notif__more {
+  min-height: 2.75rem;
+  padding: 0 var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v-notif__push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.v-notif__push-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.v-notif__more:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* ── Hero (merch/hero-carousel.tsx) ─────────────────────────────────────── */
+.v-hero__content {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 44rem;
+  flex-direction: column;
+  align-self: end;
+  gap: var(--sp-3);
+  padding: var(--sp-12) var(--sp-5) var(--sp-14);
+}
+
+@media (min-width: 64rem) {
+  .v-hero__content {
+    gap: var(--sp-4);
+    padding: var(--sp-16) var(--sp-12) var(--sp-18);
+  }
+}
+
+.v-hero__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--panel-text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.v-hero__brand-seal {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--r-pill);
+  background: var(--primary-tint);
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.v-hero__title {
+  margin: 0;
+  max-width: 18ch;
+  color: var(--panel-text);
+  font-size: var(--fs-hero);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+
+.v-hero__subtitle {
+  margin: 0;
+  max-width: 34rem;
+  color: color-mix(in srgb, var(--panel-text) 82%, transparent);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+/* ── Product card refinements (product-card.tsx) ────────────────────────────
+   Hairline card, no resting shadow; title leads, vendor is quiet metadata,
+   price sits in the display face. */
+.v-card--product {
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .v-card--product:not(.v-card--static):hover {
+    box-shadow: var(--shadow-2);
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  }
+}
+
+.v-card__title {
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.v-card__title--compact {
+  font-size: var(--fs-sm);
+}
+
+.v-card__vendor {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.v-card--product [data-testid="price-block"] {
+  font-family: var(--font-display);
+}
+
+.v-card__discount {
+  display: inline-block;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--discount);
+  color: var(--on-danger);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Mobile bottom nav (bottom-nav.tsx) — native-feeling tab bar ─────────── */
+.v-bottom-nav {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px);
+  backdrop-filter: saturate(1.4) blur(12px);
+}
+
+.v-bottom-nav__icon {
+  width: 3.25rem;
+  height: 1.75rem;
+  border-radius: var(--r-pill);
+  transition: background-color var(--dur-fast) var(--ease-std);
+}
+
+.v-bottom-nav [aria-current="page"] > .v-bottom-nav__icon {
+  background: var(--primary-tint);
+}
+
+.v-bottom-nav [aria-current="page"] {
+  font-weight: 700;
+}
+
+/* ── Prices (price-block.tsx): display face, heavy major unit, quieter "K".
+   The amount stays one text node (screen readers + tests read "K1,234.56"). */
+.v-price {
+  color: var(--price);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-price::first-letter {
+  font-size: 0.68em;
+  font-weight: 650;
+  margin-right: 0.08em;
+}
+
+.v-price-was {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Broken or loading images never show raw alt text: neutral stage + glyph. */
+.v-card__media,
+[data-image-stage] {
+  background-color: var(--bg-2);
+}
+
+.v-card__media img,
+[data-image-stage] img {
+  color: transparent;
+  font-size: 0;
+}
+
+.v-card__media::before,
+[data-image-stage]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  opacity: 0.35;
+  background: var(--text-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='9' cy='10' r='2'/%3E%3Cpath d='m21 16-5-5-9 9'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='9' cy='10' r='2'/%3E%3Cpath d='m21 16-5-5-9 9'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* Hide a failed <img> entirely so only the stage shows (set by onError). */
+img[data-broken="true"] {
+  visibility: hidden;
+}
+
+.v-toast__action {
+  align-self: flex-start;
+  margin-top: 2px;
+  color: var(--primary);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

@@ -11,6 +11,7 @@ type OrderTimelineProps = {
 
 export function OrderTimeline({ events, locale }: OrderTimelineProps) {
   const t = useTranslations("admin.orders.timeline");
+  const statuses = useTranslations("admin.orders.detail.statuses");
 
   if (events.length === 0) {
     return <p className="text-sm text-muted">{t("empty")}</p>;
@@ -23,8 +24,8 @@ export function OrderTimeline({ events, locale }: OrderTimelineProps) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-medium text-text">
               {t("statusChange", {
-                from: event.from_status ?? t("missing"),
-                to: event.to_status ?? t("missing"),
+                from: event.from_status ? statuses(event.from_status) : t("missing"),
+                to: event.to_status ? statuses(event.to_status) : t("missing"),
               })}
             </span>
             <time className="text-xs text-muted">

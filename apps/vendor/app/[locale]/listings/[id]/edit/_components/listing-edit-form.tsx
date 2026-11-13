@@ -1,13 +1,16 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { notify } from "@vergeo/ui/src/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../../_components/async-state";
+import { ListSkeleton } from "../../../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
+import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/listing-guide";
 import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
@@ -17,7 +20,7 @@ import {
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
 import { milliToUnitInput } from "../../../new/_lib/measure";
-import { Badge, Button, FormField, Input, Spinner, Switch } from "../../../new/_lib/ui";
+import { Badge, Button, FormField, Input, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
 
@@ -299,13 +302,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           : current,
       );
       setTiers(tiersFromListing(response.listing));
-      setNotice(
-        response.cart_revalidation?.has_changes
-          ? t("listings.manage.edit.priceChangedNotice")
-          : t("listings.manage.edit.saved"),
-      );
+      const savedNotice = response.cart_revalidation?.has_changes
+        ? t("listings.manage.edit.priceChangedNotice")
+        : t("listings.manage.edit.saved");
+      setNotice(savedNotice);
+      notify.success(savedNotice);
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -331,8 +335,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         images: response.listing.images ?? current?.images,
       }));
       setNotice(t("listings.manage.edit.saved"));
+      notify.success(t("listings.manage.edit.saved"));
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -353,17 +359,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       }
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }
   };
 
   if (sessionLoading || loading) {
-    return (
-      <div className="flex min-h-40 items-center justify-center">
-        <Spinner label={t("listings.manage.loading")} />
-      </div>
-    );
+    return <ListSkeleton label={t("listings.manage.loading")} rows={4} />;
   }
 
   if (!session) {
@@ -420,7 +423,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
             label={statusLabel}
           />
         </div>
+        <ListingVisibilityHint status={listing.status} />
       </header>
+
+      <ListingTipsPanel />
 
       {error ? (
         <p className="text-sm text-danger" role="alert">

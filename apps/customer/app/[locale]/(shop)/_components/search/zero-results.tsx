@@ -51,25 +51,27 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
         </ul>
       </section>
 
-      <section aria-labelledby="search-category-suggestions">
-        <h2 id="search-category-suggestions" className="mb-2 text-sm font-semibold text-text">
-          {labels.categoriesTitle}
-        </h2>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {labels.categories.map((category) => (
-            <li key={category.key}>
-              <LinkButton
-                href={category.href}
-                variant="secondary"
-                className="rounded-lg text-center text-sm hover:border-primary"
-                LinkComponent={Link}
-              >
-                {category.label}
-              </LinkButton>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {labels.categories.length > 0 ? (
+        <section aria-labelledby="search-category-suggestions">
+          <h2 id="search-category-suggestions" className="mb-2 text-sm font-semibold text-text">
+            {labels.categoriesTitle}
+          </h2>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {labels.categories.map((category) => (
+              <li key={category.key}>
+                <LinkButton
+                  href={category.href}
+                  variant="secondary"
+                  className="rounded-lg text-center text-sm hover:border-primary"
+                  LinkComponent={Link}
+                >
+                  {category.label}
+                </LinkButton>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section
         aria-labelledby="ask-vergeo-title"
