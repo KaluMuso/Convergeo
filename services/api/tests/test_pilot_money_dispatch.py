@@ -394,6 +394,10 @@ def _insert_dispatch(conn: PgConn, order_id: str, status: str) -> None:
         f"""
         INSERT INTO public.courier_partners (id, name, contact_email)
         VALUES ('{partner_id}', 'Pilot riders {partner_id[:8]}', 'riders@example.com');
+        -- Zambia DPA (20261113163100): dispatch needs the customer's current consent.
+        INSERT INTO public.privacy_consents (user_id, purpose, version, granted, source)
+        SELECT customer_id, 'delivery_partner_share', '2026-11-13', true, 'checkout'
+        FROM public.orders WHERE id = '{order_id}';
         INSERT INTO public.dispatch_requests (order_id, courier_partner_id, status)
         VALUES ('{order_id}', '{partner_id}', '{status}');
         """
