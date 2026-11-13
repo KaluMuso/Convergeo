@@ -9,7 +9,14 @@ from enum import StrEnum
 from app.schemas.base import parse_ngwee
 
 PLATFORM_ACCOUNT_KINDS = frozenset(
-    {"platform_cash", "escrow", "commission_revenue", "fees", "delivery_revenue"}
+    {
+        "platform_cash",
+        "escrow",
+        "commission_revenue",
+        "fees",
+        "delivery_revenue",
+        "marketing_expense",
+    }
 )
 VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable"})
 
@@ -28,6 +35,7 @@ class LedgerTemplate(StrEnum):
     LENCO_FEE = "lenco_fee"
     DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
     COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
+    COUPON_FUNDING = "coupon_funding"
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,17 +175,27 @@ def payout_executed(*, amount_ngwee: int, vendor_id: str) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.PAYOUT_EXECUTED, legs=legs)
 
 
-def refund_lane1(*, refund_ngwee: int) -> TemplateResult:
+def _promo_return(promo_return_ngwee: int) -> int:
+    """Platform-funded coupon share handed back to marketing_expense (0 = none)."""
+    return 0 if promo_return_ngwee == 0 else parse_ngwee(promo_return_ngwee)
+
+
+def refund_lane1(*, refund_ngwee: int, promo_return_ngwee: int = 0) -> TemplateResult:
     """Lane 1 full refund (faulty/wrong) — return funds from escrow to platform cash.
 
-    Debit escrow (+refund).
-    Credit platform_cash (−refund).
+    Debit escrow (+refund + promo_return).
+    Credit platform_cash (−refund) — what the customer actually paid.
+    Credit marketing_expense (−promo_return) — the platform-funded coupon share
+    that topped escrow up at collection goes back where it came from.
     """
     refund = parse_ngwee(refund_ngwee)
-    legs = (
-        PostingLeg(AccountRef("escrow"), refund),
+    promo = _promo_return(promo_return_ngwee)
+    legs: tuple[PostingLeg, ...] = (
+        PostingLeg(AccountRef("escrow"), refund + promo),
         PostingLeg(AccountRef("platform_cash"), -refund),
     )
+    if promo:
+        legs = (*legs, PostingLeg(AccountRef("marketing_expense"), -promo))
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.REFUND_LANE1, legs=legs)
 
@@ -189,8 +207,12 @@ def refund_lane2(
     vendor_retained_ngwee: int,
     restocking_fee_ngwee: int,
     vendor_id: str,
+    promo_return_ngwee: int = 0,
 ) -> TemplateResult:
     """Lane 2 change-of-mind refund with deductions.
+
+    ``promo_return_ngwee`` (platform-funded coupon share) is drained from escrow
+    on top of ``escrow_release`` and credited back to marketing_expense.
 
     Debit escrow (+escrow_release).
     Credit platform_cash (−refund_to_customer).
@@ -206,12 +228,16 @@ def refund_lane2(
     if release != refund + retained + restocking:
         msg = "escrow_release must equal refund + vendor_retained + restocking_fee"
         raise ValueError(msg)
-    legs = (
-        PostingLeg(AccountRef("escrow"), release),
+    promo = _promo_return(promo_return_ngwee)
+    candidates = (
+        PostingLeg(AccountRef("escrow"), release + promo),
         PostingLeg(AccountRef("platform_cash"), -refund),
         PostingLeg(AccountRef("vendor_payable", vendor_id), -retained),
         PostingLeg(AccountRef("commission_revenue"), -restocking),
+        PostingLeg(AccountRef("marketing_expense"), -promo),
     )
+    # Zero legs are dropped only for the coupon leg so the legacy shape is unchanged.
+    legs = candidates if promo else candidates[:4]
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.REFUND_LANE2, legs=legs)
 
@@ -231,15 +257,25 @@ def cod_collected(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED, legs=legs)
 
 
-def clawback(*, clawback_ngwee: int, vendor_id: str, delivery_fee_ngwee: int = 0) -> TemplateResult:
+def clawback(
+    *,
+    clawback_ngwee: int,
+    vendor_id: str,
+    delivery_fee_ngwee: int = 0,
+    promo_return_ngwee: int = 0,
+) -> TemplateResult:
     """Post-release refund clawback — recover funds from vendor payable.
 
     Debit vendor_payable (vendor) (+clawback − delivery_fee).
     Debit delivery_revenue (+delivery_fee) — the refunded delivery fee the platform
     captured at release (never vendor money, so never clawed from the vendor).
     Credit platform_cash (−clawback).
+    With ``promo_return_ngwee`` (platform-funded coupon share, released to the
+    vendor at full price): also debit vendor_payable and credit marketing_expense
+    by that share, so the vendor gives back the full item price it received.
     """
     amount = parse_ngwee(clawback_ngwee)
+    promo = _promo_return(promo_return_ngwee)
     fee = 0 if delivery_fee_ngwee == 0 else parse_ngwee(delivery_fee_ngwee)
     if fee > amount:
         msg = "delivery_fee_ngwee must not exceed clawback_ngwee"
@@ -251,6 +287,12 @@ def clawback(*, clawback_ngwee: int, vendor_id: str, delivery_fee_ngwee: int = 0
     if fee > 0:
         debit_legs.append(PostingLeg(AccountRef("delivery_revenue"), fee))
     legs = (*debit_legs, PostingLeg(AccountRef("platform_cash"), -amount))
+    if promo:
+        legs = (
+            *legs,
+            PostingLeg(AccountRef("vendor_payable", vendor_id), promo),
+            PostingLeg(AccountRef("marketing_expense"), -promo),
+        )
     _assert_balanced(legs)
     return TemplateResult(kind=LedgerTemplate.CLAWBACK, legs=legs)
 
@@ -331,6 +373,21 @@ def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> Template
     return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
 
 
+def coupon_funding(*, discount_ngwee: int) -> TemplateResult:
+    """Platform-funded coupon: top escrow up to the full price at collection.
+
+    Debit marketing_expense (+discount).
+    Credit escrow (−discount).
+    """
+    discount = parse_ngwee(discount_ngwee)
+    legs = (
+        PostingLeg(AccountRef("marketing_expense"), discount),
+        PostingLeg(AccountRef("escrow"), -discount),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.COUPON_FUNDING, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -358,6 +415,7 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.LENCO_FEE: lenco_fee,
     LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
     LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
+    LedgerTemplate.COUPON_FUNDING: coupon_funding,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

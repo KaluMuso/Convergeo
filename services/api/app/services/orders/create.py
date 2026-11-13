@@ -11,6 +11,8 @@ from uuid import UUID, uuid4
 
 from app.errors import AppError
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.coupons.rules import scale_snapshot_for_vendor_discount
+from app.services.coupons.store import map_reservation_error
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import OrderStatus
@@ -56,6 +58,17 @@ class VendorFulfilmentInput:
 
 
 @dataclass(frozen=True, slots=True)
+class CouponOrderPlan:
+    """Server-recomputed coupon for this checkout (reserved inside the order tx)."""
+
+    coupon_id: str
+    funder: Literal["platform", "vendor"]
+    discount_ngwee: int
+    #: listing_id → discount on that cart line (sums exactly to discount_ngwee).
+    line_discounts: dict[str, int]
+
+
+@dataclass(frozen=True, slots=True)
 class CreatedOrderItem:
     order_item_id: str
     listing_id: str
@@ -75,6 +88,7 @@ class CreatedOrder:
     cod: bool
     commission_snapshot: dict[str, Any]
     items: tuple[CreatedOrderItem, ...]
+    coupon_discount_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -743,6 +757,7 @@ def _validate_vendor_groups(
     session_subtotal: int,
     session_delivery_fee: int,
     session_total: int,
+    session_discount: int = 0,
 ) -> dict[str, VendorFulfilmentInput]:
     by_vendor = {group.vendor_id: group for group in vendor_groups}
     cart_vendors = {line.vendor_id for line in cart_lines}
@@ -782,7 +797,7 @@ def _validate_vendor_groups(
             details={"expected": session_delivery_fee, "actual": delivery_sum},
         )
 
-    if session_subtotal + session_delivery_fee != session_total:
+    if session_subtotal + session_delivery_fee - session_discount != session_total:
         raise AppError(
             code="orders.totals_mismatch",
             message="Checkout session total is inconsistent",
@@ -805,6 +820,35 @@ def _validate_vendor_groups(
     return by_vendor
 
 
+def _validate_coupon_plan(
+    coupon: CouponOrderPlan, *, session_discount: int, cart_lines: list[CartLineInput]
+) -> None:
+    listing_ids = {line.listing_id for line in cart_lines}
+    if (
+        coupon.discount_ngwee <= 0
+        or coupon.discount_ngwee != session_discount
+        or sum(coupon.line_discounts.values()) != coupon.discount_ngwee
+        or any(amount < 0 for amount in coupon.line_discounts.values())
+        or not set(coupon.line_discounts) <= listing_ids
+    ):
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon amount changed; apply it again",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    for line in cart_lines:
+        if coupon.line_discounts.get(line.listing_id, 0) > line_total_ngwee(
+            line.qty, line.unit_price_ngwee
+        ):
+            raise AppError(
+                code="coupon.changed",
+                message="The coupon amount changed; apply it again",
+                http_status=409,
+                details={"message_key": "checkout.coupon.errors.changed"},
+            )
+
+
 def create_orders_atomic(
     *,
     client: Any,
@@ -816,6 +860,8 @@ def create_orders_atomic(
     vendor_groups: list[VendorFulfilmentInput],
     address_id: str | None = None,
     inject_failure: str | None = None,
+    coupon: CouponOrderPlan | None = None,
+    is_gift: bool = False,
 ) -> CreateOrdersResult:
     """Create per-vendor orders from a validated checkout session in one transaction."""
     _validate_uuid(customer_id, "customer_id")
@@ -868,12 +914,37 @@ def create_orders_atomic(
     session_subtotal = int(session.get("subtotal_ngwee", 0))
     session_delivery_fee = int(session.get("delivery_fee_ngwee", 0))
     session_total = int(session.get("total_ngwee", 0))
+    session_discount = int(session.get("discount_ngwee") or 0)
+    if coupon is not None:
+        _validate_coupon_plan(coupon, session_discount=session_discount, cart_lines=cart_lines)
+        if payment_method == "cod":
+            raise AppError(
+                code="coupon.cod_not_allowed",
+                message="Coupons need mobile money or card payment",
+                http_status=422,
+                details={"message_key": "checkout.coupon.errors.cod_not_allowed"},
+            )
+    elif session_discount != 0:
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon on this checkout is no longer valid",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    if is_gift and payment_method == "cod":
+        raise AppError(
+            code="gift.cod_not_allowed",
+            message="Gifts need mobile money or card payment",
+            http_status=422,
+            details={"message_key": "checkout.gift.errors.codNotAllowed"},
+        )
     groups_by_vendor = _validate_vendor_groups(
         vendor_groups=vendor_groups,
         cart_lines=cart_lines,
         session_subtotal=session_subtotal,
         session_delivery_fee=session_delivery_fee,
         session_total=session_total,
+        session_discount=session_discount,
     )
 
     commission_rates = _load_commission_rates(client)
@@ -894,6 +965,14 @@ def create_orders_atomic(
             commission_keys=commission_keys,
             commission_rates=commission_rates,
         )
+        order_discount = (
+            sum(coupon.line_discounts.get(line.listing_id, 0) for line in vendor_lines)
+            if coupon is not None
+            else 0
+        )
+        if coupon is not None and coupon.funder == "vendor" and order_discount > 0:
+            # Vendor-funded: commission is charged on the discounted price.
+            snapshot = scale_snapshot_for_vendor_discount(snapshot, coupon.line_discounts)
         order_id = str(uuid4())
         planned_items = tuple(
             CreatedOrderItem(
@@ -917,6 +996,7 @@ def create_orders_atomic(
                     cod=cod,
                     commission_snapshot=snapshot,
                     items=planned_items,
+                    coupon_discount_ngwee=order_discount,
                 ),
                 vendor_lines,
             )
@@ -934,6 +1014,18 @@ def create_orders_atomic(
             _require_own_address_sql(sql_uuid(address_id, "address_id"), customer_sql)
         )
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
+    redemption_sql = "NULL"
+    if coupon is not None:
+        coupon_sql = sql_uuid(coupon.coupon_id, "coupon_id")
+        # Atomic reservation under the coupon row lock; raises COUPON_* markers.
+        statements.append(
+            f"SELECT public.reserve_coupon_redemption({coupon_sql}, {customer_sql}, "
+            f"{session_sql}, {int(coupon.discount_ngwee)});"
+        )
+        redemption_sql = (
+            "(SELECT id FROM public.coupon_redemptions "
+            f"WHERE coupon_id = {coupon_sql} AND checkout_group_id = {session_sql})"
+        )
 
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
@@ -945,11 +1037,20 @@ def create_orders_atomic(
             f"""
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
-  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot
+  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot,
+  coupon_redemption_id, coupon_discount_ngwee, coupon_funder, is_gift
 ) VALUES (
   {order_sql}, {session_sql}, {vendor_sql}, {customer_sql}, '{status_placed}',
   '{order.fulfilment}', {zone_sql}, {address_sql}, {order.delivery_fee_ngwee},
-  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb
+  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb,
+  {redemption_sql if order.coupon_discount_ngwee > 0 else "NULL"},
+  {int(order.coupon_discount_ngwee)},
+  {
+                sql_literal(coupon.funder)
+                if coupon is not None and order.coupon_discount_ngwee > 0
+                else "NULL"
+            },
+  {"true" if is_gift else "false"}
 );
 """
         )
@@ -1063,6 +1164,9 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        coupon_error = map_reservation_error(error)
+        if coupon_error is not None:
+            raise coupon_error
         if _ADDRESS_NOT_OWNED_MARKER in error:
             raise AppError(
                 code="checkout.address_invalid",

@@ -94,6 +94,8 @@ class PickupCredentialsOut(StrictModel):
     qr_token: str | None = None
     pin: str | None = None
     stub: bool = True
+    #: Gift orders: the PIN went to the recipient's phone and is never shown to the payer.
+    sent_to_recipient: bool = False
 
 
 class InvoiceLinkOut(StrictModel):
@@ -114,6 +116,8 @@ class OrderSummaryOut(StrictModel):
     total_ngwee: NgweeInt
     item_count: int
     created_at: str
+    discount_ngwee: NgweeInt = 0
+    is_gift: bool = False
 
 
 class CheckoutGroupOut(StrictModel):
@@ -142,6 +146,9 @@ class OrderDetailResponse(StrictModel):
     total_ngwee: NgweeInt
     created_at: str
     items: list[OrderItemSummary]
+    #: Coupon discount on this order's items (total_ngwee is already net of it).
+    discount_ngwee: NgweeInt = 0
+    is_gift: bool = False
     timeline: list[TimelineStepOut]
     pickup: PickupCredentialsOut | None = None
     invoice: InvoiceLinkOut | None = None
@@ -162,6 +169,11 @@ def _rows(response: Any) -> list[dict[str, Any]]:
     if not isinstance(data, list):
         return []
     return [row for row in data if isinstance(row, dict)]
+
+
+def _order_discount_ngwee(order_row: dict[str, Any]) -> int:
+    raw = order_row.get("coupon_discount_ngwee")
+    return raw if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0 else 0
 
 
 def _payment_mode(*, cod: bool) -> Literal["cod", "prepaid"]:
@@ -445,7 +457,7 @@ def _load_order_row(service_client: _ServiceRoleClient, order_id: str) -> dict[s
         service_client.client.table("orders")
         .select(
             "id, checkout_group_id, vendor_id, customer_id, status, fulfilment, "
-            "cod, delivery_fee_ngwee, created_at"
+            "cod, delivery_fee_ngwee, created_at, coupon_discount_ngwee, is_gift"
         )
         .eq("id", order_id)
         .maybe_single()
@@ -472,6 +484,7 @@ def _build_order_summary(
 ) -> OrderSummaryOut:
     subtotal = _sum_items_ngwee(items)
     delivery_fee = int(order_row.get("delivery_fee_ngwee") or 0)
+    discount = _order_discount_ngwee(order_row)
     cod = bool(order_row.get("cod"))
     return OrderSummaryOut(
         id=str(order_row["id"]),
@@ -482,9 +495,11 @@ def _build_order_summary(
         cod=cod,
         paid=paid,
         payment_mode=_payment_mode(cod=cod),
-        total_ngwee=subtotal + delivery_fee,
+        total_ngwee=subtotal + delivery_fee - discount,
         item_count=sum(item.qty for item in items),
         created_at=str(order_row["created_at"]),
+        discount_ngwee=discount,
+        is_gift=bool(order_row.get("is_gift")),
     )
 
 
@@ -496,6 +511,9 @@ def _load_pickup_credentials(
     fulfilment = str(order_row.get("fulfilment"))
     if status != "ready" or fulfilment != "pickup":
         return None
+    if bool(order_row.get("is_gift")):
+        # The recipient collects; the payer never sees the PIN or QR.
+        return PickupCredentialsOut(stub=False, sent_to_recipient=True)
 
     # M09-P03 fields — read when present; stub gracefully when unmerged.
     qr_token: str | None = None
@@ -564,6 +582,7 @@ def _build_order_detail(
     cod = bool(order_row.get("cod"))
     subtotal = _sum_items_ngwee(items)
     delivery_fee = int(order_row.get("delivery_fee_ngwee") or 0)
+    discount = _order_discount_ngwee(order_row)
 
     return OrderDetailResponse(
         id=order_id,
@@ -577,9 +596,11 @@ def _build_order_detail(
         payment_mode=_payment_mode(cod=cod),
         delivery_fee_ngwee=delivery_fee,
         subtotal_ngwee=subtotal,
-        total_ngwee=subtotal + delivery_fee,
+        total_ngwee=subtotal + delivery_fee - discount,
         created_at=str(order_row["created_at"]),
         items=items,
+        discount_ngwee=discount,
+        is_gift=bool(order_row.get("is_gift")),
         timeline=build_customer_timeline(
             status=str(order_row["status"]),
             fulfilment=str(order_row["fulfilment"]),
@@ -605,7 +626,7 @@ def list_customer_orders(
         service_client.client.table("orders")
         .select(
             "id, checkout_group_id, vendor_id, customer_id, status, fulfilment, "
-            "cod, delivery_fee_ngwee, created_at"
+            "cod, delivery_fee_ngwee, created_at, coupon_discount_ngwee, is_gift"
         )
         .eq("customer_id", current_user.id)
         .order("created_at", desc=True)
@@ -668,7 +689,7 @@ def get_customer_order(
         service_client.client.table("orders")
         .select(
             "id, checkout_group_id, vendor_id, customer_id, status, fulfilment, "
-            "cod, delivery_fee_ngwee, created_at"
+            "cod, delivery_fee_ngwee, created_at, coupon_discount_ngwee, is_gift"
         )
         .eq("checkout_group_id", str(order_row["checkout_group_id"]))
         .eq("customer_id", current_user.id)
@@ -696,4 +717,55 @@ def get_customer_order(
         order_row,
         vendor_name=vendor_names.get(str(order_row["vendor_id"]), "Vendor"),
         related_orders=related_summaries,
+    )
+
+
+class GiftReceiptItemOut(StrictModel):
+    title: str
+    qty: int
+    variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
+
+
+class GiftReceiptOut(StrictModel):
+    """A receipt the payer can share with the recipient: no prices, ever."""
+
+    order_id: str
+    vendor_name: str
+    recipient_name: str | None = None
+    message: str | None = None
+    fulfilment: str
+    items: list[GiftReceiptItemOut]
+
+
+@router.get("/{order_id}/gift-receipt", response_model=GiftReceiptOut)
+def get_gift_receipt(
+    order_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
+) -> GiftReceiptOut:
+    order_row = _assert_customer_owns_order(
+        _load_order_row(service_client, order_id), current_user.id
+    )
+    if not bool(order_row.get("is_gift")):
+        raise AppError(code="not_found", message="Gift receipt not found", http_status=404)
+    gift = _single_row(
+        service_client.client.table("gift_details")
+        .select("recipient_name, message")
+        .eq("checkout_group_id", str(order_row["checkout_group_id"]))
+        .eq("buyer_id", current_user.id)
+        .maybe_single()
+        .execute()
+    )
+    vendor_names = _load_vendor_names(service_client, {str(order_row["vendor_id"])})
+    items = _load_order_items(service_client, order_id)
+    return GiftReceiptOut(
+        order_id=order_id,
+        vendor_name=vendor_names.get(str(order_row["vendor_id"]), "Vendor"),
+        recipient_name=str(gift["recipient_name"]) if gift and gift.get("recipient_name") else None,
+        message=str(gift["message"]) if gift and gift.get("message") else None,
+        fulfilment=str(order_row["fulfilment"]),
+        items=[
+            GiftReceiptItemOut(title=item.title, qty=item.qty, variant_options=item.variant_options)
+            for item in items
+        ],
     )

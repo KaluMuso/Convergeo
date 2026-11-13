@@ -418,7 +418,7 @@ def summarize_order_release_ledger(order_id: str) -> OrderReleaseLedgerSummary:
     script = f"""
 SELECT
   coalesce(sum(CASE WHEN lt.kind IN (
-      'charge_received', 'escrow_hold', 'cod_receivable_opened'
+      'charge_received', 'escrow_hold', 'cod_receivable_opened', 'coupon_funding'
     ) THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'commission_capture'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
@@ -477,7 +477,7 @@ def build_release_accounting_day_totals(*, report_date: str) -> dict[str, int]:
     script = f"""
 SELECT
   coalesce(sum(CASE WHEN lt.kind IN (
-      'charge_received', 'escrow_hold', 'cod_receivable_opened'
+      'charge_received', 'escrow_hold', 'cod_receivable_opened', 'coupon_funding'
     ) THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'commission_capture'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,

@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Any, Literal, Protocol, cast
 
 from app.errors import AppError
+from app.services.coupons.rules import refund_discount_share_ngwee
 from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     decide_refund_phase_under_gate,
@@ -119,7 +120,9 @@ def _order_item_total_ngwee(service_client: ServiceRoleClient, order_id: str) ->
 def _fetch_order(service_client: ServiceRoleClient, order_id: str) -> dict[str, Any]:
     response = (
         service_client.client.table("orders")
-        .select("id, vendor_id, delivery_fee_ngwee, status, cod")
+        .select(
+            "id, vendor_id, delivery_fee_ngwee, status, cod, coupon_discount_ngwee, coupon_funder"
+        )
         .eq("id", order_id)
         .maybe_single()
         .execute()
@@ -275,6 +278,7 @@ def _post_pre_release_ledger(
     vendor_id: str,
     lane1: Lane1RefundAmount | None,
     lane2: Lane2RefundBreakdown | None,
+    promo_return_ngwee: int = 0,
 ) -> tuple[str, ...]:
     txn_ids: list[str] = []
     if lane == 1:
@@ -285,6 +289,7 @@ def _post_pre_release_ledger(
             order_id=order_id,
             refund_id=refund_id,
             refund_ngwee=lane1.refund_ngwee,
+            promo_return_ngwee=promo_return_ngwee,
         )
         txn_ids.append(posted.id)
     else:
@@ -299,6 +304,7 @@ def _post_pre_release_ledger(
             vendor_retained_ngwee=lane2.vendor_retained_ngwee,
             restocking_fee_ngwee=lane2.restocking_fee_ngwee,
             vendor_id=vendor_id,
+            promo_return_ngwee=promo_return_ngwee,
         )
         txn_ids.append(posted.id)
     return tuple(txn_ids)
@@ -312,6 +318,7 @@ def _post_post_release_clawback(
     vendor_id: str,
     clawback_ngwee: int,
     refunded_delivery_fee_ngwee: int = 0,
+    promo_return_ngwee: int = 0,
 ) -> str:
     # The delivery fee went to delivery_revenue at release (never to the vendor):
     # refund it from there, and claw only the rest back from the vendor. Orders
@@ -337,8 +344,65 @@ def _post_post_release_clawback(
         clawback_ngwee=clawback_ngwee,
         vendor_id=vendor_id,
         delivery_fee_ngwee=platform_fee_ngwee,
+        promo_return_ngwee=promo_return_ngwee,
     )
     return posted.id
+
+
+@dataclass(frozen=True, slots=True)
+class CouponRefundShare:
+    """Coupon discount attached to the refunded slice of an order."""
+
+    discount_ngwee: int = 0
+    funder: str | None = None
+
+    @property
+    def promo_return_ngwee(self) -> int:
+        """Platform-funded share goes back to marketing_expense (vendor-funded: 0)."""
+        return self.discount_ngwee if self.funder == "platform" else 0
+
+
+def _coupon_returned_so_far(service_client: ServiceRoleClient, order_id: str) -> int:
+    response = (
+        service_client.client.table("refunds")
+        .select("status, breakdown")
+        .eq("order_id", order_id)
+        .execute()
+    )
+    total = 0
+    for row in _rows(response):
+        if row.get("status") not in ACTIVE_REFUND_STATUSES:
+            continue
+        breakdown = row.get("breakdown")
+        if isinstance(breakdown, dict):
+            value = breakdown.get("coupon_discount_ngwee")
+            if isinstance(value, int) and value > 0:
+                total += value
+    return total
+
+
+def _coupon_share(
+    service_client: ServiceRoleClient,
+    *,
+    order: dict[str, Any],
+    order_id: str,
+    refunded_items_ngwee: int,
+) -> CouponRefundShare:
+    """Proportional coupon share for this refund (customer gets back what they paid)."""
+    raw = order.get("coupon_discount_ngwee")
+    discount = raw if isinstance(raw, int) and not isinstance(raw, bool) else 0
+    if discount <= 0:
+        return CouponRefundShare()
+    share = refund_discount_share_ngwee(
+        order_discount_ngwee=discount,
+        order_items_ngwee=_order_item_total_ngwee(service_client, order_id),
+        refunded_items_ngwee=refunded_items_ngwee,
+        already_returned_ngwee=_coupon_returned_so_far(service_client, order_id),
+    )
+    funder = order.get("coupon_funder")
+    return CouponRefundShare(
+        discount_ngwee=share, funder=str(funder) if isinstance(funder, str) else None
+    )
 
 
 def _compute_lane_amounts(
@@ -350,6 +414,7 @@ def _compute_lane_amounts(
     return_transport_ngwee: int,
     item_ngwee_override: int | None = None,
     delivery_fee_ngwee_override: int | None = None,
+    coupon_share: CouponRefundShare | None = None,
 ) -> tuple[int, Lane1RefundAmount | None, Lane2RefundBreakdown | None]:
     delivery_fee = (
         delivery_fee_ngwee_override
@@ -361,6 +426,9 @@ def _compute_lane_amounts(
         if item_ngwee_override is not None
         else _order_item_total_ngwee(service_client, order_id)
     )
+    # The customer paid items − coupon share; refund what they paid.
+    if coupon_share is not None and coupon_share.discount_ngwee > 0:
+        item_total = max(0, item_total - coupon_share.discount_ngwee)
     if lane == 1:
         lane1 = compute_lane1_refund(item_ngwee=item_total, delivery_fee_ngwee=delivery_fee)
         return lane1.refund_ngwee, lane1, None
@@ -393,6 +461,8 @@ def _complete_refund_money_path(
 ) -> RefundExecutionResult:
     """Post ledger + queue customer payout; refund completes when Lenco confirms delivery."""
     ledger_ids: list[str] = []
+    promo_raw = breakdown.get("promo_return_ngwee")
+    promo_return = promo_raw if isinstance(promo_raw, int) and promo_raw > 0 else 0
     if phase == RefundPhase.PRE_RELEASE:
         ledger_ids.extend(
             _post_pre_release_ledger(
@@ -403,6 +473,7 @@ def _complete_refund_money_path(
                 vendor_id=vendor_id,
                 lane1=lane1,
                 lane2=lane2,
+                promo_return_ngwee=promo_return,
             )
         )
     else:
@@ -416,6 +487,7 @@ def _complete_refund_money_path(
                 refunded_delivery_fee_ngwee=(
                     lane1.delivery_fee_ngwee if lane == 1 and lane1 is not None else 0
                 ),
+                promo_return_ngwee=promo_return,
             )
         )
 
@@ -487,6 +559,12 @@ def _resume_processing_refund(
 
     item_override = breakdown.get("item_ngwee_override")
     delivery_override = breakdown.get("delivery_fee_ngwee_override")
+    stored_share = breakdown.get("coupon_discount_ngwee")
+    stored_funder = breakdown.get("coupon_funder")
+    resume_share = CouponRefundShare(
+        discount_ngwee=stored_share if isinstance(stored_share, int) else 0,
+        funder=stored_funder if isinstance(stored_funder, str) else None,
+    )
     refund_amount, lane1, lane2 = _compute_lane_amounts(
         service_client=service_client,
         order=order,
@@ -497,6 +575,7 @@ def _resume_processing_refund(
         delivery_fee_ngwee_override=(
             int(delivery_override) if isinstance(delivery_override, int) else None
         ),
+        coupon_share=resume_share,
     )
     stored_amount = int(existing.get("amount_ngwee") or 0)
     if stored_amount > 0:
@@ -580,6 +659,16 @@ def execute_refund(
             {"order_id": order_id},
         )
 
+    coupon_share = _coupon_share(
+        service_client,
+        order=order,
+        order_id=order_id,
+        refunded_items_ngwee=(
+            item_ngwee_override
+            if item_ngwee_override is not None
+            else _order_item_total_ngwee(service_client, order_id)
+        ),
+    )
     refund_amount, lane1, lane2 = _compute_lane_amounts(
         service_client=service_client,
         order=order,
@@ -588,6 +677,7 @@ def execute_refund(
         return_transport_ngwee=return_transport_ngwee,
         item_ngwee_override=item_ngwee_override,
         delivery_fee_ngwee_override=delivery_fee_ngwee_override,
+        coupon_share=coupon_share,
     )
 
     if refund_amount <= 0:
@@ -660,7 +750,7 @@ def execute_refund(
                 - summary.vendor_released_ngwee
                 - summary.refund_drained_ngwee
             )
-            if refund_amount > remaining_escrow_ngwee:
+            if refund_amount + coupon_share.promo_return_ngwee > remaining_escrow_ngwee:
                 raise AppError(
                     "refund_exceeds_escrow",
                     "Refund amount exceeds remaining escrow for this order",
@@ -687,6 +777,12 @@ def execute_refund(
         breakdown["item_ngwee_override"] = item_ngwee_override
     if delivery_fee_ngwee_override is not None:
         breakdown["delivery_fee_ngwee_override"] = delivery_fee_ngwee_override
+    if coupon_share.discount_ngwee > 0:
+        # What the customer did not pay is never refunded to them: the share
+        # stays with the funder (platform share returns to marketing_expense).
+        breakdown["coupon_discount_ngwee"] = coupon_share.discount_ngwee
+        breakdown["coupon_funder"] = coupon_share.funder
+        breakdown["promo_return_ngwee"] = coupon_share.promo_return_ngwee
 
     ledger_key_base = source_key
 

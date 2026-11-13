@@ -414,6 +414,20 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /organiser/ticket-types/{ticket_type_id}/allocations": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/early-bird": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/price-tiers": STANDARD_WRITE,
+    # Coupons / gift orders / birthdays (flags coupons, gift_orders, birthday_greetings).
+    # Coupon apply is SENSITIVE (code guessing) and also enforces its own
+    # per-user + per-IP counters in routers/checkout_extras.py.
+    "POST /checkout/steps/coupon": SENSITIVE_WRITE,
+    "DELETE /checkout/steps/coupon": STANDARD_WRITE,
+    "PUT /checkout/steps/gift": STANDARD_WRITE,
+    "DELETE /checkout/steps/gift": STANDARD_WRITE,
+    "POST /admin/coupons": ADMIN_WRITE,
+    "PATCH /admin/coupons/{coupon_id}": ADMIN_WRITE,
+    "POST /vendor/coupons": STANDARD_WRITE,
+    "PATCH /vendor/coupons/{coupon_id}": STANDARD_WRITE,
+    "PUT /account/birthday": SENSITIVE_WRITE,
+    "DELETE /account/birthday": SENSITIVE_WRITE,
+    "POST /internal/birthdays/tick": INTERNAL_CRON,
 }
 
 

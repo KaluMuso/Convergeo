@@ -35,6 +35,9 @@ class PaymentOptionsResponse(BaseModel):
     total_ngwee: int
     cod_cap_ngwee: int
     cod_eligible: bool
+    #: Coupon discount already taken off ``total_ngwee`` (items only, never delivery).
+    discount_ngwee: int = 0
+    coupon_code: str | None = None
     # Methods actually offered right now. Prepaid rails (momo/card) appear only
     # when the payment kill switch is enabled; COD appears when COD-eligible.
     available_methods: list[PaymentMethod] = Field(default_factory=list)
@@ -102,6 +105,41 @@ def _normalize_payer_number(value: str) -> str:
 def _is_valid_payer_number(value: str) -> bool:
     normalized = _normalize_payer_number(value)
     return PAYER_NUMBER_PATTERN.match(normalized) is not None
+
+
+def _is_gift_checkout(service: ServiceRoleClient, session_id: str) -> bool:
+    try:
+        response = (
+            service.client.table("gift_details")
+            .select("checkout_group_id")
+            .eq("checkout_group_id", session_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        return False
+    data = getattr(response, "data", None)
+    return isinstance(data, list) and bool(data)
+
+
+def _reject_cod_for_coupon_or_gift(
+    service: ServiceRoleClient, session_id: str, group: dict[str, object]
+) -> None:
+    discount = group.get("discount_ngwee", 0)
+    if isinstance(discount, int) and discount > 0:
+        raise AppError(
+            code="coupon.cod_not_allowed",
+            message="Coupons need mobile money or card payment",
+            http_status=422,
+            details={"message_key": "checkout.coupon.errors.cod_not_allowed"},
+        )
+    if _is_gift_checkout(service, session_id):
+        raise AppError(
+            code="gift.cod_not_allowed",
+            message="Gifts need mobile money or card payment",
+            http_status=422,
+            details={"message_key": "checkout.gift.errors.codNotAllowed"},
+        )
 
 
 def _session_totals(group: dict[str, object]) -> tuple[int, int, int]:
@@ -202,7 +240,11 @@ async def get_payment_options(
     group = _fetch_checkout_group(service, session_id, current_user.id)
     subtotal, delivery_fee, total = _session_totals(group)
     cod_cap = _load_cod_cap_ngwee(service)
-    cod_eligible = total <= cod_cap
+    discount_raw = group.get("discount_ngwee", 0)
+    discount = discount_raw if isinstance(discount_raw, int) else 0
+    coupon_code = group.get("coupon_code") if discount > 0 else None
+    # Coupons and gifts are prepaid only: a discounted or gift checkout never offers COD.
+    cod_eligible = total <= cod_cap and discount == 0 and not _is_gift_checkout(service, session_id)
 
     return PaymentOptionsResponse(
         session_id=session_id,
@@ -211,6 +253,8 @@ async def get_payment_options(
         total_ngwee=total,
         cod_cap_ngwee=cod_cap,
         cod_eligible=cod_eligible,
+        discount_ngwee=discount,
+        coupon_code=coupon_code if isinstance(coupon_code, str) else None,
         available_methods=available_payment_methods(cod_eligible=cod_eligible),
     )
 
@@ -225,6 +269,8 @@ async def validate_payment_method(
     group = _fetch_checkout_group(service, body.session_id, current_user.id)
     subtotal, delivery_fee, total = _session_totals(group)
     cod_cap = _load_cod_cap_ngwee(service)
+    if body.method == "cod":
+        _reject_cod_for_coupon_or_gift(service, body.session_id, group)
 
     rail_value = body.rail
     validated_rail, validated_payer = _validate_payment_method(
