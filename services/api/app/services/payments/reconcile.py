@@ -922,14 +922,17 @@ async def run_daily_reconciliation_report(
         "lenco_transaction_count": len(lenco_rows),
         "ledger_transaction_count": len(ledger_rows),
         "clean": not diff.has_discrepancies,
-        # Escrow release accounting (gross / commission / net) — integer ngwee.
-        # commission + vendor_released should equal gross for fully settled orders
-        # on the day (refunds excluded from these three totals).
+        # Escrow release accounting (gross / commission / delivery / net) — integer
+        # ngwee. commission + delivery fee + vendor_released should equal gross for
+        # fully settled orders on the day (refunds excluded from these totals).
         "release_gross_collected_ngwee": release_accounting["gross_collected_ngwee"],
         "release_commission_captured_ngwee": release_accounting[
             "commission_captured_ngwee"
         ],
         "release_vendor_net_ngwee": release_accounting["vendor_released_ngwee"],
+        "release_delivery_fee_captured_ngwee": release_accounting.get(
+            "delivery_fee_captured_ngwee", 0
+        ),
     }
 
     legacy_discrepancies: dict[str, Any] = {

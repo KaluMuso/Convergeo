@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -15,6 +16,9 @@ type DecisionPanelProps = {
 };
 
 const RAILS = ["mtn", "airtel", "zamtel"] as const;
+
+/** Server error: refunds are refused while payouts are disabled (no money moved). */
+const REFUND_UNAVAILABLE_PAYOUTS_DISABLED = "dispute.refund_unavailable_payouts_disabled";
 
 export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   const t = useTranslations("admin.disputes.detail.decision");
@@ -97,8 +101,12 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
       setMessage(t("success"));
       onDecided();
       return true;
-    } catch {
-      setError(t("failure"));
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.code === REFUND_UNAVAILABLE_PAYOUTS_DISABLED
+          ? t("refundUnavailablePayoutsDisabled")
+          : t("failure"),
+      );
       return false;
     } finally {
       setSubmitting(false);

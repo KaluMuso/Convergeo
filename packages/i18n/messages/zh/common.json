@@ -108,5 +108,9 @@
     "close": "关闭",
     "showFooter": "显示网站链接",
     "hideFooter": "隐藏网站链接"
+  },
+  "paymentTrust": {
+    "footerSeal": "订单送达时以现金付款",
+    "footerPaymentNote": "货到付款 · 在线支付即将推出"
   }
 }

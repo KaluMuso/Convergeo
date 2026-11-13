@@ -6,13 +6,20 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Badge, Button, Spinner } from "../../listings/new/_lib/ui";
+import { isVendorPayoutsEnabled } from "../../../../lib/payouts-availability";
+import { VendorErrorState } from "../../_components/async-state";
+import { ListSkeleton } from "../../_components/vendor-skeletons";
+import { Badge, Button } from "../../listings/new/_lib/ui";
 import { createPayoutsClient } from "../_lib/payouts-client";
+
+import { PayoutsPilotNotice } from "./payouts-pilot-notice";
 
 import type { PayoutBalances, PayoutHistoryItem } from "../_lib/payouts-client";
 
 type PayoutsViewProps = {
   locale: string;
+  /** Override for tests; defaults to the build-time flag (off for the pilot). */
+  payoutsEnabled?: boolean;
 };
 
 function currentMonthValue(): string {
@@ -47,9 +54,21 @@ function statusLabel(status: string, t: ReturnType<typeof useTranslations<"vendo
   return t("payouts.history.status.pending");
 }
 
-export function PayoutsView({ locale }: PayoutsViewProps) {
+export function PayoutsView({
+  locale,
+  payoutsEnabled = isVendorPayoutsEnabled(),
+}: PayoutsViewProps) {
+  if (!payoutsEnabled) {
+    return <PayoutsPilotNotice />;
+  }
+  return <LivePayoutsView locale={locale} />;
+}
+
+function LivePayoutsView({ locale }: { locale: string }) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
+  const [reloadKey, setReloadKey] = useState(0);
   const [balances, setBalances] = useState<PayoutBalances | null>(null);
   const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
   const [month, setMonth] = useState(currentMonthValue);
@@ -93,7 +112,7 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [load, session, sessionLoading, t]);
+  }, [load, session, sessionLoading, t, reloadKey]);
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -114,10 +133,20 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
   };
 
   if (loading) {
+    return <ListSkeleton label={t("payouts.loading")} />;
+  }
+
+  if (error && !balances) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Spinner label={t("payouts.loading")} />
-      </div>
+      <VendorErrorState
+        title={error}
+        body={t("payouts.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => {
+          setLoading(true);
+          setReloadKey((value) => value + 1);
+        }}
+      />
     );
   }
 
@@ -128,6 +157,17 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
         <h1 className="font-display text-2xl font-semibold">{t("payouts.title")}</h1>
         <p className="text-sm text-text-2">{t("payouts.intro")}</p>
       </header>
+
+      {balances?.payouts_paused ? (
+        <div
+          className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-text"
+          role="status"
+          data-testid="payouts-paused-notice"
+        >
+          <p className="font-medium">{t("payouts.paused.noticeTitle")}</p>
+          <p className="mt-1">{t("payouts.paused.noticeBody")}</p>
+        </div>
+      ) : null}
 
       {balances?.payouts_blocked ? (
         <div

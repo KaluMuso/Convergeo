@@ -114,5 +114,9 @@
     "close": "Close",
     "showFooter": "Show site links",
     "hideFooter": "Hide site links"
+  },
+  "paymentTrust": {
+    "footerSeal": "Pay cash when your order arrives",
+    "footerPaymentNote": "Cash on delivery · Online payment coming soon"
   }
 }

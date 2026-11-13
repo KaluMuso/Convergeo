@@ -17,7 +17,10 @@ from app.services.escrow.release_accounting import (
 )
 from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
+    capture_order_delivery_fee,
     compute_release_amounts,
+    delivery_fee_already_captured,
+    delivery_fee_refunded_ngwee,
     order_has_open_dispute,
     order_has_refund_remainder,
     release_blocked_reason,
@@ -33,6 +36,9 @@ DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48
 DEFAULT_RELEASE_AFTER_SHIPPED_DAYS = 7
 
 RELEASE_ELIGIBLE_STATUSES = frozenset({"shipped", "delivered", "completed"})
+# A shipped order whose latest courier dispatch ended without delivery never
+# reaches the vendor on a timer: the parcel is lost, refused or back at the shop.
+UNDELIVERED_DISPATCH_STATUSES = frozenset({"failed", "cancelled"})
 
 
 class ServiceRoleClient(Protocol):
@@ -70,6 +76,8 @@ class _OrderContext:
     checkout_group_id: str
     cod: bool
     commission_snapshot: dict[str, Any]
+    # Vendor release gross = item subtotal only; the delivery fee is platform
+    # revenue (the platform pays the courier, D16) and is captured separately.
     gross_ngwee: int
     has_open_dispute: bool | None
     already_released: bool
@@ -77,6 +85,7 @@ class _OrderContext:
     delivered_at: datetime | None
     shipped_at: datetime | None
     has_escrow_evidence: bool
+    delivery_fee_ngwee: int = 0
 
 
 def release_idempotency_key(order_id: str) -> str:
@@ -166,7 +175,8 @@ LIMIT 1;
     return bool(pay.ok and pay.rows)
 
 
-def _order_gross_ngwee(order_id: str, delivery_fee_ngwee: int) -> int:
+def _order_gross_ngwee(order_id: str) -> int:
+    """Item subtotal the vendor's release is computed on (never the delivery fee)."""
     order_sql = _sql_uuid(order_id, "order_id")
     script = f"""
 SELECT coalesce(sum(qty * unit_price_ngwee), 0)::text
@@ -174,8 +184,7 @@ FROM public.order_items
 WHERE order_id = {order_sql};
 """
     result = run_sql_script(script)
-    subtotal = int(result.rows[0]) if result.ok and result.rows else 0
-    return subtotal + int(delivery_fee_ngwee)
+    return int(result.rows[0]) if result.ok and result.rows else 0
 
 
 def _load_order_events(order_id: str) -> list[tuple[str | None, str, str | None, str]]:
@@ -229,6 +238,28 @@ def _event_timestamps(
             buyer_confirmed = True
 
     return delivered_at, shipped_at, buyer_confirmed
+
+
+def latest_dispatch_status(order_id: str) -> str | None:
+    """Status of the order's most recent courier dispatch, or None if it has none.
+
+    Raises ``ReleaseAccountingError`` when the lookup fails (callers hold).
+    """
+    order_sql = _sql_uuid(order_id, "order_id")
+    script = f"""
+SELECT coalesce((
+  SELECT dr.status
+  FROM public.dispatch_requests dr
+  WHERE dr.order_id = {order_sql}
+  ORDER BY dr.created_at DESC, dr.id DESC
+  LIMIT 1
+), 'none');
+"""
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError("dispatch_lookup_failed")
+    status = result.rows[0]
+    return None if status == "none" else status
 
 
 def _has_open_dispute(order_id: str) -> bool | None:
@@ -343,7 +374,8 @@ LIMIT 1;
         # psql -At renders boolean::text as 'true'/'false' (not 't'/'f').
         cod=is_cod,
         commission_snapshot=commission_snapshot,
-        gross_ngwee=_order_gross_ngwee(order_id, delivery_fee_ngwee),
+        gross_ngwee=_order_gross_ngwee(order_id),
+        delivery_fee_ngwee=delivery_fee_ngwee,
         has_open_dispute=_has_open_dispute(order_id),
         already_released=_already_released(order_id),
         buyer_confirmed=buyer_confirmed,
@@ -451,11 +483,38 @@ def evaluate_and_release(
             rule=rule,
         )
 
+    if context.status == "shipped":
+        try:
+            dispatch_status = latest_dispatch_status(order_id)
+        except ReleaseAccountingError:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="held",
+                reason="dispatch_lookup_failed",
+            )
+        if dispatch_status in UNDELIVERED_DISPATCH_STATUSES:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="held",
+                reason=f"dispatch_{dispatch_status}",
+            )
+
     # Partial item PRE_RELEASE refunds drain only the returned slice; release the
     # remaining escrow (never the original full-order gross) so kept items reach
     # the vendor. Full refunds leave remaining ≤ 0 and stay blocked above.
     release_gross_ngwee = context.gross_ngwee
     release_snapshot = context.commission_snapshot
+    delivery_capture_ngwee = context.delivery_fee_ngwee
+    if delivery_capture_ngwee > 0:
+        try:
+            if delivery_fee_already_captured(order_id):
+                delivery_capture_ngwee = 0
+        except ReleaseAccountingError:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="held",
+                reason="ledger_lookup_failed",
+            )
     if order_has_refund_remainder(order_id):
         remaining = remaining_escrow_ngwee(order_id)
         if remaining <= 0:
@@ -464,18 +523,34 @@ def evaluate_and_release(
                 outcome="not_eligible",
                 reason="order_refunded",
             )
-        release_gross_ngwee = remaining
+        # The uncaptured delivery fee is still in escrow; it is platform revenue,
+        # so take it out of the remainder before the vendor's share is computed.
+        # A lane-1 item return already refunded the fee to the customer: that
+        # part is gone from escrow and must not be captured out of the vendor's items.
+        if delivery_capture_ngwee > 0:
+            try:
+                refunded_fee = delivery_fee_refunded_ngwee(order_id)
+            except ReleaseAccountingError:
+                return ReleaseResult(
+                    order_id=order_id,
+                    outcome="held",
+                    reason="refund_lookup_failed",
+                )
+            delivery_capture_ngwee = max(0, delivery_capture_ngwee - refunded_fee)
+        delivery_capture_ngwee = min(delivery_capture_ngwee, remaining)
+        release_gross_ngwee = remaining - delivery_capture_ngwee
         release_snapshot = scale_commission_snapshot_for_gross(
             context.commission_snapshot,
-            target_gross_ngwee=remaining,
+            target_gross_ngwee=release_gross_ngwee,
             original_gross_ngwee=context.gross_ngwee,
         )
 
     # Capture platform commission from the immutable purchase-time snapshot BEFORE
     # releasing the vendor's net (mirrors COD capture-then-release). With PR #274
     # posting CHARGE_RECEIVED at collection, escrow holds the full gross; this
-    # drains commission to commission_revenue so the lifecycle balances exactly:
-    #   charge(−gross) + capture(+commission) + release(+net) = 0.
+    # drains commission to commission_revenue and the delivery fee to
+    # delivery_revenue so the lifecycle balances exactly:
+    #   charge(−items−fee) + capture(+commission) + delivery(+fee) + release(+net) = 0.
     # Idempotent per order via the release-scoped key (distinct from the release key),
     # so a sweeper re-run never double-captures; a free/0% order posts no capture leg.
     # Fail-closed: invalid snapshot or ledger errors raise — never mark released.
@@ -514,10 +589,18 @@ def evaluate_and_release(
         commission_snapshot=release_snapshot,
         idempotency_key_prefix=release_idempotency_key(order_id),
     )
-    transaction_id = _post_release(
+    capture_order_delivery_fee(
         order_id=order_id,
-        vendor_id=context.vendor_id,
-        net_ngwee=amounts.net_ngwee,
+        delivery_fee_ngwee=delivery_capture_ngwee,
+    )
+    transaction_id = (
+        _post_release(
+            order_id=order_id,
+            vendor_id=context.vendor_id,
+            net_ngwee=amounts.net_ngwee,
+        )
+        if amounts.net_ngwee > 0
+        else None
     )
     return ReleaseResult(
         order_id=order_id,

@@ -44,7 +44,7 @@ export default async function AccountProfilePage({ params }: PageProps) {
           phoneHelp: t("profile.phoneHelp"),
           save: t("profile.save"),
           saving: t("profile.saving"),
-          updated: t("profile.updated"),
+          updated: String(t.raw("profile.updated")),
           error: t("profile.error"),
           locales: {
             en: t("locales.en"),

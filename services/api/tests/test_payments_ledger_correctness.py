@@ -321,7 +321,15 @@ def _seed_migration_sql() -> str:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[3]
-    return (root / "supabase/migrations/20261107130000_seed_ledger_accounts.sql").read_text()
+    migrations = root / "supabase/migrations"
+    return "\n".join(
+        (migrations / name).read_text()
+        for name in (
+            "20261107130000_seed_ledger_accounts.sql",
+            # Platform delivery revenue (pilot money fix): the fee is not vendor money.
+            "20261113120500_delivery_revenue_ledger_account.sql",
+        )
+    )
 
 
 def test_seed_migration_covers_every_kind_the_engine_resolves() -> None:

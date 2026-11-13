@@ -1127,7 +1127,8 @@
           "release": "Release the escrowed funds to the vendor. The dispute closes."
         },
         "refundTo": "Refund to {momo} ({rail})",
-        "noteRecorded": "Your decision note is saved on the dispute and in the audit log."
+        "noteRecorded": "Your decision note is saved on the dispute and in the audit log.",
+        "refundUnavailablePayoutsDisabled": "Refunds are unavailable while payouts are disabled. No money was moved — choose Release to vendor or try again once payouts are enabled."
       }
     }
   },

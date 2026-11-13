@@ -50,6 +50,7 @@ class FakeSupabaseStore:
                 "name": "Itel A70",
             },
         }
+        self.orders: list[dict[str, Any]] = []
         self.user_wishlist: list[dict[str, Any]] = []
         self.user_recently_viewed: list[dict[str, Any]] = []
 
@@ -138,6 +139,16 @@ class FakeQuery:
             return self._execute_wishlist()
         if self.table == "user_recently_viewed":
             return self._execute_recent()
+        if self.table == "orders":
+            statuses = self._filter_value("in:status")
+            rows = [
+                {"id": row["id"]}
+                for row in self.store.orders
+                if row["customer_id"] == self.user_id
+                and row["address_id"] == self._filter_value("address_id")
+                and (statuses is None or row["status"] in statuses)
+            ]
+            return FakeResult(rows)
         return FakeResult([] if not self._maybe_single else None)
 
     def _filter_value(self, column: str) -> Any:
@@ -420,6 +431,41 @@ def test_address_crud(account_client: TestClient) -> None:
         headers=auth_header(TOKEN_A),
     )
     assert delete_response.status_code == 204
+
+
+@pytest.mark.parametrize("status", ["placed", "confirmed", "processing", "ready", "shipped"])
+def test_address_on_an_undelivered_order_cannot_be_deleted(
+    account_client: TestClient, account_store: FakeSupabaseStore, status: str
+) -> None:
+    address_id = account_store.seed_address(user_id=USER_A, landmark="Kabwata market")
+    account_store.orders.append(
+        {"id": "order-1", "customer_id": USER_A, "address_id": address_id, "status": status}
+    )
+
+    response = account_client.delete(
+        f"/account/addresses/{address_id}", headers=auth_header(TOKEN_A)
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "account.address_in_use"
+    assert address_id in account_store.addresses
+
+
+@pytest.mark.parametrize("status", ["delivered", "completed", "cancelled"])
+def test_address_of_a_finished_order_can_be_deleted(
+    account_client: TestClient, account_store: FakeSupabaseStore, status: str
+) -> None:
+    address_id = account_store.seed_address(user_id=USER_A, landmark="Kabwata market")
+    account_store.orders.append(
+        {"id": "order-1", "customer_id": USER_A, "address_id": address_id, "status": status}
+    )
+
+    response = account_client.delete(
+        f"/account/addresses/{address_id}", headers=auth_header(TOKEN_A)
+    )
+
+    assert response.status_code == 204
+    assert address_id not in account_store.addresses
 
 
 def test_user_cannot_read_other_users_address(

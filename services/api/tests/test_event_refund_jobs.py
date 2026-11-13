@@ -31,6 +31,15 @@ PAYOUT_ID = "e9000000-0000-4000-8000-0000000000c3"
 GROUP_ID = "e9000000-0000-0000-0000-0000000000d1"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 @dataclass
 class FakeSqlState:
     jobs: dict[str, dict[str, str]] = field(default_factory=dict)
