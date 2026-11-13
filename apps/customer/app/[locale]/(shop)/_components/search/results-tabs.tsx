@@ -1,5 +1,6 @@
 "use client";
 
+import { searchSessionHeaders } from "@vergeo/analytics/search-session";
 import { formatK } from "@vergeo/i18n";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
@@ -432,7 +433,10 @@ export function ResultsTabs({
         params.set("lat", String(userLat));
         params.set("lng", String(userLng));
       }
-      const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
+      const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, {
+        signal,
+        headers: searchSessionHeaders(),
+      });
       if (!res.ok) {
         throw new Error(`Search load failed (${res.status})`);
       }

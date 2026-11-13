@@ -49,6 +49,38 @@
           "name": "Vergeo5 Internal Analytics"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/analytics/v2-retention-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_ANALYTICS_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "analytics-v2-retention-tick",
+      "name": "Sweep Analytics v2 (flag-gated)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Analytics"
+        }
+      },
+      "notes": "No-op ({\"skipped\":\"flag_off\"}) unless feature flag analytics_v2_rollups is ON. Deletes raw v2 events >30d, listing-view dedup keys >2d, collapses raw search terms >30d."
     }
   ],
   "connections": {
@@ -57,6 +89,17 @@
         [
           {
             "node": "Sweep Analytics PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Analytics PII": {
+      "main": [
+        [
+          {
+            "node": "Sweep Analytics v2 (flag-gated)",
             "type": "main",
             "index": 0
           }

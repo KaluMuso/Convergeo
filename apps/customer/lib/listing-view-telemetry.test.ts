@@ -6,6 +6,7 @@ import {
   MAX_LISTING_IMPRESSION_BATCH,
   queueListingImpression,
   recordListingPdpView,
+  surfaceFromPath,
 } from "./listing-view-telemetry";
 
 const API_ORIGIN = "https://api.example.test";
@@ -137,5 +138,82 @@ describe("listing view telemetry", () => {
         referrerPolicy: "no-referrer",
       }),
     );
+  });
+
+  it("sends no surface or token while v2 tracking is off (v1 payload unchanged)", () => {
+    window.history.pushState({}, "", "/en/c/phones");
+    expect(queueListingImpression(LISTING_ONE)).toBe(true);
+    vi.runAllTimers();
+    expect(recordListingPdpView(LISTING_TWO, "token-abc")).toBe(true);
+    expect(parsedBodies()).toEqual([
+      { session_id: SESSION_ID, listing_ids: [LISTING_ONE] },
+      { session_id: SESSION_ID, listing_id: LISTING_TWO },
+    ]);
+  });
+
+  describe("analytics_v2 tracking on", () => {
+    beforeEach(() => {
+      vi.stubEnv("NEXT_PUBLIC_ANALYTICS_V2_TRACKING", "1");
+    });
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      window.history.pushState({}, "", "/");
+    });
+
+    it("attributes impressions to the surface of the current page", () => {
+      window.history.pushState({}, "", "/en/v/some-vendor");
+      expect(queueListingImpression(LISTING_ONE)).toBe(true);
+      vi.runAllTimers();
+      window.history.pushState({}, "", "/en");
+      expect(queueListingImpression(LISTING_TWO)).toBe(true);
+      // Client dedup stays per listing/session/day (surface = first sighting).
+      expect(queueListingImpression(LISTING_ONE)).toBe(false);
+      vi.runAllTimers();
+      expect(parsedBodies()).toEqual([
+        { session_id: SESSION_ID, listing_ids: [LISTING_ONE], surface: "storefront" },
+        { session_id: SESSION_ID, listing_ids: [LISTING_TWO], surface: "home" },
+      ]);
+    });
+
+    it("sends a signed-in PDP view via keepalive fetch with the bearer, never a beacon", () => {
+      const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 200 })));
+      vi.stubGlobal("fetch", fetchMock);
+      expect(recordListingPdpView(LISTING_ONE, "token-abc")).toBe(true);
+      expect(navigator.sendBeacon).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${API_ORIGIN}/telemetry/views`,
+        expect.objectContaining({
+          body: JSON.stringify({
+            session_id: SESSION_ID,
+            listing_id: LISTING_ONE,
+            surface: "pdp",
+          }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer token-abc",
+          },
+          credentials: "omit",
+          keepalive: true,
+        }),
+      );
+    });
+
+    it("sends an anonymous PDP view as a beacon with surface pdp", () => {
+      expect(recordListingPdpView(LISTING_ONE, null)).toBe(true);
+      expect(parsedBodies()).toEqual([
+        { session_id: SESSION_ID, listing_id: LISTING_ONE, surface: "pdp" },
+      ]);
+    });
+  });
+
+  it("maps paths to surfaces without leaking slugs", () => {
+    expect(surfaceFromPath("/en")).toBe("home");
+    expect(surfaceFromPath("/")).toBe("home");
+    expect(surfaceFromPath("/bem/c/phones")).toBe("plp");
+    expect(surfaceFromPath("/en/search")).toBe("plp");
+    expect(surfaceFromPath("/v/acme")).toBe("storefront");
+    expect(surfaceFromPath("/fr/p/iphone-15")).toBe("pdp");
+    expect(surfaceFromPath("/en/account")).toBe("unknown");
+    expect(surfaceFromPath(null)).toBe("unknown");
   });
 });

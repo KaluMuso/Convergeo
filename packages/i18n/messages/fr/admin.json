@@ -7,6 +7,7 @@
   },
   "nav": {
     "home": "Tableau de bord",
+    "analytics": "Analytique",
     "kyc": "File KYC",
     "business": "Entreprises",
     "moderation": "Modération",
@@ -1215,5 +1216,106 @@
     "reason": "Motif de la désactivation (obligatoire)",
     "deactivate": "Désactiver",
     "confirmDeactivate": "Désactiver {name} ? Ces rôles seront retirés : {roles}."
+  },
+  "analytics": {
+    "title": "Analytique",
+    "subtitle": "Comportement agrégé de la place de marché et des acheteurs. Aucun acheteur individuel ni texte de recherche brut n’est affiché.",
+    "tabs": {
+      "label": "Sections analytiques",
+      "overview": "Vue d’ensemble",
+      "search": "Recherche et demande",
+      "products": "Produits et entonnoir",
+      "insights": "Analyses"
+    },
+    "range": {
+      "label": "Période",
+      "days": "{days} derniers jours"
+    },
+    "loading": "Chargement des analyses…",
+    "error": "Impossible de charger les analyses.",
+    "retry": "Réessayer",
+    "permissionDenied": "Seuls les administrateurs de la plateforme peuvent consulter les analyses.",
+    "disabled": {
+      "title": "L’analytique n’est pas activée",
+      "body": "Les agrégations quotidiennes sont désactivées (indicateur analytics_v2_rollups). Rien n’est collecté ni affiché ici tant qu’il n’est pas activé."
+    },
+    "dataThrough": "Données de comportement jusqu’au {day} (UTC). Commandes et paiements en direct.",
+    "dataPending": "Les données de comportement n’ont pas encore été agrégées. Commandes et paiements en direct.",
+    "insufficient": "Données insuffisantes ({n}+ requis)",
+    "notAvailable": "—",
+    "empty": "Aucune donnée pour cette période.",
+    "delta": {
+      "none": "Pas de référence pour la période précédente",
+      "value": "{change} par rapport à la période précédente"
+    },
+    "columns": {
+      "day": "Jour",
+      "term": "Terme recherché",
+      "product": "Produit",
+      "page": "Type de page"
+    },
+    "session": {
+      "rule": "Une session se termine après 30 minutes d’inactivité.",
+      "activeSpan": "Durée active moyenne",
+      "estimatedEnd": "La fin de session est estimée à partir de la dernière activité observée ; ce n’est pas le temps passé sur le site.",
+      "duration": "{minutes} min {seconds} s"
+    },
+    "overview": {
+      "commercialTitle": "Commandes et paiements",
+      "commercialHint": "Issu uniquement des commandes et des paiements. Payé signifie un paiement réussi.",
+      "behaviourTitle": "Comportement des acheteurs",
+      "dailyTitle": "GMV payé par jour",
+      "reconciliation": {
+        "mismatch": "Les paiements ne concordent pas avec les commandes payées les jours suivants : {days}. Vérifiez les paiements avant d’utiliser ces chiffres."
+      },
+      "kpi": {
+        "gmvPaid": "GMV payé",
+        "ordersPaid": "Commandes payées",
+        "aov": "Panier payé moyen",
+        "checkoutsStarted": "Paiements commencés",
+        "ordersPlacedHint": "{placed} commandes passées",
+        "sessions": "Sessions",
+        "visitorDays": "Visiteurs-jours",
+        "bounceRate": "Taux de rebond",
+        "searches": "Recherches",
+        "zeroResultShare": "Recherches sans résultat"
+      }
+    },
+    "search": {
+      "kNotice": "Les termes recherchés moins de {k} fois sur cette période sont regroupés dans « autres » et jamais affichés.",
+      "zeroResults": "Recherches sans résultat",
+      "zeroTitle": "Recherché mais introuvable",
+      "zeroHint": "Demande que le catalogue ne couvre pas encore.",
+      "topTitle": "Termes les plus recherchés",
+      "other": "Autres : {terms} termes, {searches} recherches"
+    },
+    "products": {
+      "funnelTitle": "Entonnoir",
+      "funnelHint": "Les étapes de navigation proviennent des sessions ; les étapes de paiement et de commande proviennent des commandes et des paiements.",
+      "shareOfSessions": "{share} des sessions",
+      "steps": {
+        "sessions": "Sessions",
+        "search_sessions": "Sessions avec recherche",
+        "product_view_sessions": "Sessions avec vue produit",
+        "cart_adds": "Ajouts au panier",
+        "checkouts_started": "Paiements commencés",
+        "orders_placed": "Commandes passées",
+        "orders_paid": "Commandes payées"
+      },
+      "topTitle": "Produits les plus consultés",
+      "views": "Vues",
+      "unnamed": "Produit sans nom",
+      "pageViewsTitle": "Pages vues par type de page",
+      "entryTitle": "Pages d’entrée"
+    },
+    "insights": {
+      "placeholder": "Les analyses automatiques arriveront dans une version ultérieure. Pour l’instant, cette liste présente les contrôles de qualité des données.",
+      "none": "Aucun problème de qualité des données sur cette période.",
+      "kinds": {
+        "payment_mismatch": "Les paiements ne concordent pas avec les commandes payées le {day}.",
+        "rollup_failed": "L’agrégation quotidienne a échoué pour le {day}.",
+        "rollup_stale": "Les agrégations sont en retard (dernière : {day})."
+      }
+    }
   }
 }

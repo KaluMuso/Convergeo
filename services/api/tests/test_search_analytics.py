@@ -292,8 +292,12 @@ class TestAdminAuthz:
         monkeypatch: pytest.MonkeyPatch,
         seeded_db: PgConn,
     ) -> None:
-        log_search_query(term="Blue Widget", zero_result=False)
-        log_search_query(term="missing", zero_result=True)
+        # 1B-04: terms are listed only at k >= 5, and never as the raw spelling.
+        for _ in range(5):
+            log_search_query(term="Blue Widget", zero_result=False)
+            log_search_query(term="missing", zero_result=True)
+        for _ in range(4):
+            log_search_query(term="rare thing", zero_result=True)
         log_ask_query(term="cost me", usd_micros=1200)
         _mock_auth(monkeypatch, CUSTOMER_ID, frozenset({"admin"}))
         headers = {"Authorization": f"Bearer {VALID_TOKEN}"}
@@ -301,6 +305,8 @@ class TestAdminAuthz:
         top = client.get("/admin/search-insights/top-terms", headers=headers)
         assert top.status_code == 200
         assert any(item["normalized_term"] == "blue widget" for item in top.json())
+        assert all(item["sample_term"] == item["normalized_term"] for item in top.json())
+        assert "rare thing" not in {item["normalized_term"] for item in top.json()}
 
         zero = client.get("/admin/search-insights/zero-results", headers=headers)
         assert zero.status_code == 200
