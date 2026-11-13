@@ -12,7 +12,24 @@ describe("parseStorefrontConfig", () => {
   it("accepts valid integers", () => {
     expect(
       parseStorefrontConfig({ free_delivery_threshold_ngwee: 35_000, low_stock_threshold: 3 }),
-    ).toEqual({ freeDeliveryThresholdNgwee: 35_000, lowStockThreshold: 3 });
+    ).toEqual({
+      freeDeliveryThresholdNgwee: 35_000,
+      lowStockThreshold: 3,
+      coupons: false,
+      giftOrders: false,
+      birthdays: false,
+    });
+  });
+
+  it("reads growth flags only when explicitly true", () => {
+    const config = parseStorefrontConfig({
+      coupons_enabled: true,
+      gift_orders_enabled: "true",
+      birthday_greetings_enabled: true,
+    });
+    expect(config.coupons).toBe(true);
+    expect(config.giftOrders).toBe(false);
+    expect(config.birthdays).toBe(true);
   });
 
   it("nulls missing, float, negative and zero-threshold values", () => {

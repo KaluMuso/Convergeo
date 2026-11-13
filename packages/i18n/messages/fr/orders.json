@@ -33,7 +33,8 @@
     "requestReturn": "Demander un retour",
     "openDispute": "Ouvrir ou voir le litige",
     "variantOption": "{group} : {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Remise coupon"
   },
   "status": {
     "placed": "Passée",
@@ -230,5 +231,16 @@
     "beforeDispatch": "Envie de modifier ou d'annuler ? Contactez l'assistance avec votre numéro de commande avant l'expédition.",
     "afterDispatch": "Un problème avec votre commande ? Contactez l'assistance avec votre numéro de commande.",
     "contactCta": "Contacter l'assistance"
+  },
+  "gift": {
+    "title": "C'est un cadeau",
+    "body": "Vous êtes l'acheteur. Les remboursements vous reviennent.",
+    "receiptLink": "Ouvrir le reçu cadeau (sans prix)",
+    "receiptTitle": "Reçu cadeau",
+    "for": "Pour {name}",
+    "from": "De {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Les reçus cadeau n'affichent jamais de prix.",
+    "pinSentToRecipient": "Nous avons envoyé le code PIN de retrait à la personne que vous gâtez."
   }
 }

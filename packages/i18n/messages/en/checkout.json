@@ -244,7 +244,8 @@
         "deliveryNoLandmark": "Lusaka delivery",
         "pickupFromSeller": "You'll collect from the seller",
         "placeOrderCod": "Place order — pay on delivery"
-      }
+      },
+      "discount": "Coupon {code}"
     },
     "pending": {
       "pageTitle": "Approve payment",
@@ -335,6 +336,61 @@
       "viewOrder": "View my order",
       "viewTickets": "View my tickets",
       "viewJob": "Back to the job"
+    },
+    "coupon": {
+      "toggle": "Have a coupon code?",
+      "label": "Coupon code",
+      "apply": "Apply",
+      "applying": "Checking code…",
+      "remove": "Remove",
+      "applied": "{code} applied: {amount} off",
+      "paidByPlatform": "Convergeo pays this discount. The shop still gets its full price.",
+      "paidByShop": "This discount is a gift from the shop.",
+      "prepaidOnly": "Coupons work with mobile money or card, not cash on delivery.",
+      "errors": {
+        "generic": "That code didn't work. Check it and try again.",
+        "not_found": "We couldn't find that code.",
+        "inactive": "This code is paused right now.",
+        "not_started": "This code isn't active yet.",
+        "expired": "This code has expired.",
+        "min_spend": "Spend a bit more on eligible items to use this code.",
+        "not_applicable": "This code doesn't cover anything in your cart.",
+        "limit_reached": "This code has been used up.",
+        "already_used": "You've already used this code.",
+        "budget_exhausted": "This offer has ended for this month.",
+        "changed": "Your cart changed. Apply the code again.",
+        "cod_not_allowed": "Coupons need mobile money or card payment.",
+        "tooManyAttempts": "Too many tries. Wait a few minutes and try again.",
+        "featureUnavailable": "Coupons aren't available yet."
+      }
+    },
+    "gift": {
+      "toggle": "Send as a gift",
+      "intro": "We'll deliver to the person you're gifting. You stay the buyer: any refund comes back to you.",
+      "recipientName": "Their name",
+      "recipientPhone": "Their phone number",
+      "recipientPhoneHelp": "A Zambian mobile number. We send them one message about the gift.",
+      "message": "Gift message (optional)",
+      "messageHelp": "Up to 200 characters. No links.",
+      "consent": "They agreed to share their phone (and address, for delivery) with Convergeo for this gift.",
+      "pickupNote": "Pickup: we send the pickup PIN to them, not to you.",
+      "deliveryNote": "Delivery: use their landmark in the delivery step.",
+      "privacyNote": "We use their details only for this gift and delete them after it's done. Their receipt shows no prices.",
+      "save": "Save gift details",
+      "saving": "Saving…",
+      "remove": "Not a gift",
+      "saved": "Gift for {name} ({phone})",
+      "prepaidOnly": "Gifts need mobile money or card payment.",
+      "errors": {
+        "generic": "We couldn't save the gift details. Try again.",
+        "consent": "Tick the box to confirm they agreed.",
+        "name": "Enter their name.",
+        "phone": "Enter a Zambian mobile number, like 097 123 4567.",
+        "message": "Gift messages can't include links.",
+        "codNotAllowed": "Gifts need mobile money or card payment.",
+        "tooMany": "Too many changes. Wait a few minutes.",
+        "featureUnavailable": "Gifts aren't available yet."
+      }
     }
   },
   "variant": {

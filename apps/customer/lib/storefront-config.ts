@@ -9,11 +9,18 @@ import { absoluteApiUrl, getApiBaseUrl } from "./api-base-url";
 export type StorefrontConfig = {
   freeDeliveryThresholdNgwee: number | null;
   lowStockThreshold: number | null;
+  /** Growth feature flags (default OFF; the API enforces them again). */
+  coupons: boolean;
+  giftOrders: boolean;
+  birthdays: boolean;
 };
 
 export const EMPTY_STOREFRONT_CONFIG: StorefrontConfig = {
   freeDeliveryThresholdNgwee: null,
   lowStockThreshold: null,
+  coupons: false,
+  giftOrders: false,
+  birthdays: false,
 };
 
 function nonNegativeInt(value: unknown): number | null {
@@ -30,6 +37,9 @@ export function parseStorefrontConfig(payload: unknown): StorefrontConfig {
     // 0 would divide by zero in the progress bar and means "no threshold".
     freeDeliveryThresholdNgwee: threshold !== null && threshold > 0 ? threshold : null,
     lowStockThreshold: nonNegativeInt(record.low_stock_threshold),
+    coupons: record.coupons_enabled === true,
+    giftOrders: record.gift_orders_enabled === true,
+    birthdays: record.birthday_greetings_enabled === true,
   };
 }
 

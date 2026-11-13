@@ -164,7 +164,8 @@
       "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
       "order_delivered": "Order {ref} yafika. Cali shani?",
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
-      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
+      "birthday_greeting": "Ubushiku busuma ubwa kufyalwa! Bomfyeni kuponi {code} mu nshiku {valid_days}."
     },
     "vendor": {
       "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",

@@ -1997,7 +1997,8 @@
       "home": "首页",
       "listings": "商品",
       "orders": "订单",
-      "profile": "资料"
+      "profile": "资料",
+      "coupons": "优惠券"
     }
   },
   "intake": {
@@ -2006,6 +2007,73 @@
     },
     "errors": {
       "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
+    }
+  },
+  "coupons": {
+    "meta": {
+      "title": "优惠券 — Convergeo 商家",
+      "description": "为您的店铺创建优惠码。"
+    },
+    "manager": {
+      "title": "优惠券",
+      "intro": "为您的顾客提供店铺商品的优惠码。",
+      "fundingNote": "优惠由您承担：从该订单的收入中扣除，佣金按折后价格计算。",
+      "createTitle": "新建优惠券",
+      "code": "优惠码",
+      "codeHelp": "3–32 个字母、数字或连字符，例如 SAVE20。",
+      "kind": "优惠类型",
+      "kindPercent": "百分比折扣",
+      "kindFixed": "固定金额（克瓦查）",
+      "percent": "百分比（例如 10）",
+      "amount": "金额（克瓦查，例如 20）",
+      "maxDiscount": "最高优惠（K，可选）",
+      "maxDiscountHelp": "限制大额订单的百分比优惠。",
+      "minSpend": "最低消费（K，可选）",
+      "minSpendHelp": "按适用商品计算。",
+      "scope": "适用范围",
+      "scopeAll": "全部",
+      "scopeShop": "我的整个店铺",
+      "scopeVendor": "某个店铺",
+      "scopeCategory": "某个类别",
+      "scopeListing": "某个商品",
+      "scopeId": "ID",
+      "scopeIdHelp": "从店铺、类别或商品页面复制 ID。",
+      "startsOn": "开始日期",
+      "endsOn": "结束日期（可选）",
+      "endsOnHelp": "优惠码在当天结束前有效（卢萨卡时间）。",
+      "totalLimit": "总使用次数（可选）",
+      "totalLimitHelp": "留空表示不限总次数。",
+      "perUserLimit": "每位顾客可用次数",
+      "create": "创建优惠券",
+      "creating": "正在创建…",
+      "created": "优惠券已创建。",
+      "listTitle": "您的优惠券",
+      "empty": "暂无优惠券。",
+      "loading": "正在加载…",
+      "usage": "已使用 {used} 次",
+      "usageLimited": "已使用 {used}/{limit} 次",
+      "summaryOff": "优惠 {value}",
+      "summaryMin": "最低 {amount}",
+      "statusActive": "进行中",
+      "statusPaused": "已暂停",
+      "statusArchived": "已结束",
+      "pause": "暂停",
+      "resume": "恢复",
+      "archive": "结束",
+      "errors": {
+        "generic": "出错了，请重试。",
+        "disabled": "优惠券功能尚未开启。",
+        "forbidden": "只有管理员可以管理平台优惠券。",
+        "code": "请使用 3–32 个字母、数字或连字符。",
+        "codeTaken": "该优惠码已被使用。",
+        "percent": "请输入 1 到 100 之间的百分比。",
+        "percentTooHigh": "该百分比超过允许的上限。",
+        "amount": "请输入金额，例如 20 或 12.50。",
+        "dates": "结束日期须不早于开始日期，且不能是过去的日期。",
+        "scope": "请选择适用范围并粘贴其 ID。",
+        "listing": "该商品不属于您的店铺。",
+        "archived": "已结束的优惠券不能重新开始，请新建一个。"
+      }
     }
   }
 }

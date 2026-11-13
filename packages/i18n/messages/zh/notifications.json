@@ -150,7 +150,8 @@
       "order_ready_pickup": "订单 {ref} 可以自提了。打开查看您的取货码。",
       "order_delivered": "订单 {ref} 已送达。体验如何？",
       "quote_received": "您收到了新的报价。请在应用中比较并接受。",
-      "ticket_issued": "您的门票已就绪。入场时请出示二维码。"
+      "ticket_issued": "您的门票已就绪。入场时请出示二维码。",
+      "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。"
     },
     "vendor": {
       "order_placed": "新订单 {ref}。请确认后开始处理。",

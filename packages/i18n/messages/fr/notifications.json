@@ -150,7 +150,8 @@
       "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
       "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
       "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
-      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée.",
+      "birthday_greeting": "Joyeux anniversaire ! Utilisez le code {code} pour une surprise dans les {valid_days} prochains jours."
     },
     "vendor": {
       "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",

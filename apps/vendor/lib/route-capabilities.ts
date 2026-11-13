@@ -6,6 +6,7 @@ import { parseStringAllowlist, readFeatureFlag } from "./feature-flags";
 const INTAKE_FLAG = "waha_vendor_intake";
 const INTAKE_ALLOWLIST_KEY = "waha_intake_vendor_allowlist";
 const CLIPS_FLAG = "clips";
+const COUPONS_FLAG = "coupons";
 
 async function resolveVendorIdForUser(userId: string | null): Promise<string | null> {
   if (!userId) {
@@ -64,6 +65,17 @@ export async function isIntakeRouteAccessible(): Promise<boolean> {
       return false;
     }
     return allowlist.includes(vendorId);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the vendor coupons page may render (`feature_flags.coupons`, fail closed). */
+export async function isCouponsRouteAccessible(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    return await readFeatureFlag(supabase, COUPONS_FLAG);
   } catch {
     return false;
   }

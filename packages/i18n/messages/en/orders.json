@@ -33,7 +33,8 @@
     "requestReturn": "Request a return",
     "openDispute": "Open or view dispute",
     "variantOption": "{group}: {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Coupon discount"
   },
   "status": {
     "placed": "Placed",
@@ -248,5 +249,16 @@
     "beforeDispatch": "Want to change or cancel? Contact support with your order number before it's sent out.",
     "afterDispatch": "Something wrong with your order? Contact support with your order number.",
     "contactCta": "Contact support"
+  },
+  "gift": {
+    "title": "This is a gift",
+    "body": "You're the buyer. Refunds come back to you.",
+    "receiptLink": "Open the gift receipt (no prices)",
+    "receiptTitle": "Gift receipt",
+    "for": "For {name}",
+    "from": "From {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Gift receipts never show prices.",
+    "pinSentToRecipient": "We sent the pickup PIN to the person you're gifting."
   }
 }

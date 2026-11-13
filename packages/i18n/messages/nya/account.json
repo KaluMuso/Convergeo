@@ -100,5 +100,47 @@
     "retry": "Try again",
     "loadMore": "Show more",
     "viewFeed": "See new from stores you follow"
+  },
+  "birthday": {
+    "title": "Tsiku lanu lobadwa (mwakufuna)",
+    "intro": "Tell us your birthday for a treat each year. We only need the day and month.",
+    "day": "Tsiku",
+    "month": "Mwezi",
+    "year": "Year (optional)",
+    "yearHelp": "Leave empty if you prefer. We never show it.",
+    "months": [
+      "Januwale",
+      "Febuluwale",
+      "Malichi",
+      "Epulo",
+      "Meyi",
+      "Juni",
+      "Julayi",
+      "Ogasiti",
+      "Seputembala",
+      "Okutobala",
+      "Novembala",
+      "Disembala"
+    ],
+    "consent": "Yes, send me a birthday treat each year. I can stop this any time.",
+    "adult": "Ndili ndi zaka 18 kapena kupitirira.",
+    "save": "Sungani",
+    "saving": "Saving…",
+    "saved": "Saved. Look out for a treat on your birthday.",
+    "current": "Your birthday: {date}",
+    "changeFrom": "You can change the date again from {date}.",
+    "remove": "Chotsani tsiku langa lobadwa",
+    "removed": "Removed. We won't send birthday messages.",
+    "privacy": "Every birthday message has a way to stop them.",
+    "errors": {
+      "generic": "We couldn't save your birthday. Try again.",
+      "consent": "Tick the first box to get a birthday treat.",
+      "adult": "Birthday treats are for people aged 18 or older.",
+      "minor": "Birthday treats are for people aged 18 or older.",
+      "invalid": "Choose a real date.",
+      "changeLocked": "You changed your birthday recently. Try again later.",
+      "tooMany": "Too many changes. Try again later.",
+      "featureUnavailable": "Birthday treats aren't available yet."
+    }
   }
 }

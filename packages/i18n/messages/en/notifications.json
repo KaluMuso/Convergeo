@@ -178,7 +178,8 @@
       "order_ready_pickup": "Order {ref} is ready for pickup. Open it to see your pickup code.",
       "order_delivered": "Order {ref} was delivered. How did it go?",
       "quote_received": "You received a new quote. Compare and accept it in the app.",
-      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate."
+      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate.",
+      "birthday_greeting": "Happy birthday! Use code {code} for a treat in the next {valid_days} days."
     },
     "vendor": {
       "order_placed": "New order {ref}. Confirm it to start.",

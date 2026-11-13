@@ -38,6 +38,7 @@ const capabilities = {
   payouts: false,
   disputes: true,
   intake: false,
+  coupons: false,
 };
 
 const mocks = vi.hoisted(() => ({

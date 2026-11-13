@@ -241,7 +241,8 @@
         "deliveryNoLandmark": "Livraison à Lusaka",
         "pickupFromSeller": "Vous la récupérerez chez le vendeur",
         "placeOrderCod": "Commander — payer à la livraison"
-      }
+      },
+      "discount": "Coupon {code}"
     },
     "pending": {
       "pageTitle": "Approuver le paiement",
@@ -309,6 +310,61 @@
       "widgetUnavailable": "Les paiements par carte sont temporairement indisponibles. Essayez le mobile money ou réessayez plus tard.",
       "widgetLabel": "Commande Convergeo",
       "secureNote": "Sécurisé par Lenco — paiement hébergé conforme PCI"
+    },
+    "coupon": {
+      "toggle": "Vous avez un code promo ?",
+      "label": "Code promo",
+      "apply": "Appliquer",
+      "applying": "Vérification…",
+      "remove": "Retirer",
+      "applied": "{code} appliqué : {amount} de remise",
+      "paidByPlatform": "Convergeo paie cette remise. La boutique reçoit son prix complet.",
+      "paidByShop": "Cette remise est offerte par la boutique.",
+      "prepaidOnly": "Les coupons fonctionnent avec le mobile money ou la carte, pas le paiement à la livraison.",
+      "errors": {
+        "generic": "Ce code n'a pas fonctionné. Vérifiez-le et réessayez.",
+        "not_found": "Code introuvable.",
+        "inactive": "Ce code est suspendu pour le moment.",
+        "not_started": "Ce code n'est pas encore actif.",
+        "expired": "Ce code a expiré.",
+        "min_spend": "Ajoutez un peu plus d'articles éligibles pour utiliser ce code.",
+        "not_applicable": "Ce code ne couvre aucun article de votre panier.",
+        "limit_reached": "Ce code a été entièrement utilisé.",
+        "already_used": "Vous avez déjà utilisé ce code.",
+        "budget_exhausted": "Cette offre est terminée pour ce mois.",
+        "changed": "Votre panier a changé. Appliquez le code à nouveau.",
+        "cod_not_allowed": "Les coupons exigent le mobile money ou la carte.",
+        "tooManyAttempts": "Trop d'essais. Attendez quelques minutes.",
+        "featureUnavailable": "Les coupons ne sont pas encore disponibles."
+      }
+    },
+    "gift": {
+      "toggle": "Envoyer en cadeau",
+      "intro": "Nous livrons à la personne que vous gâtez. Vous restez l'acheteur : tout remboursement vous revient.",
+      "recipientName": "Son nom",
+      "recipientPhone": "Son numéro de téléphone",
+      "recipientPhoneHelp": "Un numéro mobile zambien. Nous lui envoyons un seul message à propos du cadeau.",
+      "message": "Message (facultatif)",
+      "messageHelp": "200 caractères maximum. Pas de liens.",
+      "consent": "Cette personne a accepté de partager son téléphone (et son adresse, pour la livraison) avec Convergeo pour ce cadeau.",
+      "pickupNote": "Retrait : nous lui envoyons le code PIN de retrait, pas à vous.",
+      "deliveryNote": "Livraison : indiquez son repère à l'étape de livraison.",
+      "privacyNote": "Ses données servent uniquement à ce cadeau et sont supprimées ensuite. Son reçu n'affiche aucun prix.",
+      "save": "Enregistrer le cadeau",
+      "saving": "Enregistrement…",
+      "remove": "Ce n'est pas un cadeau",
+      "saved": "Cadeau pour {name} ({phone})",
+      "prepaidOnly": "Les cadeaux exigent le mobile money ou la carte.",
+      "errors": {
+        "generic": "Impossible d'enregistrer le cadeau. Réessayez.",
+        "consent": "Cochez la case pour confirmer son accord.",
+        "name": "Indiquez son nom.",
+        "phone": "Indiquez un numéro mobile zambien, ex. 097 123 4567.",
+        "message": "Le message ne peut pas contenir de liens.",
+        "codNotAllowed": "Les cadeaux exigent le mobile money ou la carte.",
+        "tooMany": "Trop de modifications. Attendez quelques minutes.",
+        "featureUnavailable": "Les cadeaux ne sont pas encore disponibles."
+      }
     }
   },
   "variant": {

@@ -164,7 +164,8 @@
       "order_ready_pickup": "Order {ref} yakonzeka kutengedwa. Tsegulani kuti muone code.",
       "order_delivered": "Order {ref} yafika. Zinayenda bwanji?",
       "quote_received": "Mwalandira quote yatsopano. Yerekezerani ndi kuvomereza mu app.",
-      "ticket_issued": "Tikiti yanu yakonzeka. Onetsani QR code pa geti."
+      "ticket_issued": "Tikiti yanu yakonzeka. Onetsani QR code pa geti.",
+      "birthday_greeting": "Tsiku labwino lobadwa! Gwiritsani ntchito kuponi {code} m'masiku {valid_days}."
     },
     "vendor": {
       "order_placed": "Order yatsopano {ref}. Ivomerezeni kuti muyambe.",
