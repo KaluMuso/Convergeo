@@ -16,17 +16,17 @@ import {
 
 type DispatchPanelProps = {
   order: OrderDetail;
+  /** Dispatch events valid for the order's current state (from the state-machine mirror). */
+  events: OrderEvent[];
   onSuccess: () => void;
 };
 
-const DISPATCH_EVENTS: OrderEvent[] = ["ship", "mark_delivered"];
-
-export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
+export function DispatchPanel({ order, events: DISPATCH_EVENTS, onSuccess }: DispatchPanelProps) {
   const t = useTranslations("admin.orders.dispatch");
   const [courier, setCourier] = useState<DispatchCourier>(DEFAULT_DISPATCH_COURIER);
   const [courierOther, setCourierOther] = useState("");
   const [trackingNote, setTrackingNote] = useState("");
-  const [event, setEvent] = useState<OrderEvent>("ship");
+  const [event, setEvent] = useState<OrderEvent>(DISPATCH_EVENTS[0] ?? "ship");
   const [confirmedManual, setConfirmedManual] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +151,7 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] disabled:opacity-60"
         disabled={submitting || !ready}
         onClick={() => void submit()}
       >

@@ -234,6 +234,11 @@
         "newArrivals": "Nouveautés",
         "trending": "Tendances",
         "topVendors": "Meilleurs vendeurs"
+      },
+      "stream": {
+        "title": "Populaire en ce moment",
+        "loadMore": "Voir plus",
+        "moreLoaded": "{count} articles de plus chargés."
       }
     }
   },

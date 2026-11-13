@@ -50,6 +50,8 @@ type ShopHeaderProps = {
   localeSwitcher?: React.ReactNode;
   /** Mobile search affordance — typically `MobileHeaderSearch` from the layout. */
   mobileSearchSlot?: ReactNode;
+  /** Notification bell island (renders nothing for guests). */
+  notificationSlot?: ReactNode;
 };
 
 /** Pill chip on tablet's scroller row, plain nav link on desktop. */
@@ -58,7 +60,7 @@ const navLinkClassName =
 
 /** Phones: icon with a short word under it (no bare icons). */
 const stackedActionClassName =
-  "inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded px-1 text-micro font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
+  "inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded px-0.5 text-micro font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
 
 const actionClassName =
   "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
@@ -70,7 +72,12 @@ const actionClassName =
  * · search (with Ask Vergeo sparkle) · Directory · Services · Events · Account
  * · Cart. Cart/account show icon + label side by side, count on the icon.
  */
-export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps) {
+export function ShopHeader({
+  locale,
+  labels,
+  mobileSearchSlot,
+  notificationSlot,
+}: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
   const eligibleForSupplies = useBusinessEligibility();
@@ -223,6 +230,7 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
               word under it, so nothing is a bare icon and nothing is removed. */}
           <div className="flex items-center gap-0.5">
             {labels.theme ? <HeaderThemeToggle labels={labels.theme} caption /> : null}
+            {notificationSlot}
             <Link href={accountHref} className={stackedActionClassName}>
               <IconAccount aria-hidden />
               <span>{labels.account}</span>
@@ -256,6 +264,7 @@ export function ShopHeader({ locale, labels, mobileSearchSlot }: ShopHeaderProps
         </div>
         <div className="order-3 ml-auto flex shrink-0 items-center gap-0.5 lg:order-5 lg:ml-0">
           {themeToggle}
+          {notificationSlot}
           {accountLink(true)}
           {cartTrigger(true)}
         </div>

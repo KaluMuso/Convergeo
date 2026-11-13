@@ -43,7 +43,8 @@ function balances(patch: Partial<PayoutBalances>): PayoutBalances {
 function renderView() {
   return render(
     <NextIntlClientProvider locale="en" messages={{ vendor: { payouts: copy } }}>
-      <PayoutsView locale="en" />
+      {/* The live screen (build flag on); the pilot notice is covered by payouts-pilot.test.tsx. */}
+      <PayoutsView locale="en" payoutsEnabled />
     </NextIntlClientProvider>,
   );
 }
