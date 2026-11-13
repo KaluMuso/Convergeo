@@ -3397,6 +3397,8 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # Web Push delivery queue (20261113140000): service-role only.
+    "web_push_deliveries": client_invisible(),
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),
