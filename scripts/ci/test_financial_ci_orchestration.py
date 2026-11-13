@@ -64,8 +64,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # 12 F2 forward migrations + 9 reviewed repair/variant/money reconciliation files
         # + 5 reviewed 2026-11 queued feature migrations (#764-#768)
         # + 3 reviewed pilot-fix migrations (#777).
-        self.assertEqual(len(runner.FORWARD), 29)
-        self.assertEqual(len(set(runner.FORWARD)), 29)
+        # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+        self.assertEqual(len(runner.FORWARD), 30)
+        self.assertEqual(len(set(runner.FORWARD)), 30)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

@@ -81,6 +81,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113060000",
     "20261113070000",
     "20261113071000",
+    # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+    "20261113120500",
 }
 
 
