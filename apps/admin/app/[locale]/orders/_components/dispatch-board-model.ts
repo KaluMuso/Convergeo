@@ -48,6 +48,16 @@ export type ReadyOrder = {
   item_count: number;
   created_at: string;
   last_failed_reason: string | null;
+  // Logistics phase 1 (optional so older API payloads still parse).
+  checkout_group_id?: string | null;
+  group_key?: string | null;
+  dropoff_landmark?: string | null;
+  ready_at?: string | null;
+  deliver_together?: boolean;
+  pickup_label?: string | null;
+  pickup_area?: string | null;
+  multi_branch?: boolean;
+  delivery_attempts?: number;
 };
 
 export type Dispatch = {
@@ -76,6 +86,13 @@ export type Dispatch = {
   order_status: string;
   delivery_zone: string | null;
   handover_locked: boolean;
+  direction?: "delivery" | "return";
+  attempt_no?: number;
+  failure_code?: string | null;
+  actual_cost_ngwee?: number | null;
+  cod_collected_ngwee?: number | null;
+  cod_collected_method?: string | null;
+  remitted?: boolean;
 };
 
 export type DeliveryZone = { zone_key: string; label: string; fee_ngwee: number };
@@ -122,7 +139,27 @@ export function zonePriceNgwee(courier: Courier, zoneKey: string | null): number
 }
 
 export type DispatchAction =
-  "accept" | "pickUp" | "fail" | "cancel" | "deliverWithPhoto" | "verifyHandover";
+  | "accept"
+  | "pickUp"
+  | "fail"
+  | "cancel"
+  | "deliverWithPhoto"
+  | "verifyHandover"
+  | "complete"
+  | "returned"
+  | "recordCost";
+
+export const FAILURE_CODES = [
+  "customer_unavailable",
+  "customer_refused",
+  "wrong_address",
+  "vendor_not_ready",
+  "courier_no_show",
+  "damaged",
+  "other",
+] as const;
+
+export type FailureCode = (typeof FAILURE_CODES)[number];
 
 const TARGET_TO_ACTION: Partial<Record<DispatchStatus, DispatchAction>> = {
   accepted: "accept",
@@ -132,18 +169,50 @@ const TARGET_TO_ACTION: Partial<Record<DispatchStatus, DispatchAction>> = {
 };
 
 /** Buttons for one dispatch, derived from the API's `allowed_next`. */
-export function actionsFor(dispatch: Pick<Dispatch, "status" | "allowed_next">): DispatchAction[] {
+export function actionsFor(
+  dispatch: Pick<Dispatch, "status" | "allowed_next"> & Partial<Pick<Dispatch, "direction">>,
+): DispatchAction[] {
   const actions: DispatchAction[] = [];
+  const isReturn = dispatch.direction === "return";
   for (const target of dispatch.allowed_next) {
     if (target === "delivered") {
-      // Delivery is proven by the customer's code (preferred) or a POD photo.
-      actions.push("verifyHandover", "deliverWithPhoto");
+      if (isReturn) continue; // a return closes only when the shop acknowledges it
+      // One step: the customer's code (or a photo) AND the rider's cash.
+      actions.push("complete", "verifyHandover", "deliverWithPhoto");
       continue;
     }
     const action = TARGET_TO_ACTION[target];
     if (action) actions.push(action);
   }
+  if (isReturn && (dispatch.status === "accepted" || dispatch.status === "picked_up")) {
+    actions.push("returned");
+  }
+  if (["picked_up", "delivered", "failed", "cancelled"].includes(dispatch.status)) {
+    actions.push("recordCost");
+  }
   return actions;
+}
+
+/** Ready orders grouped by checkout + address: one rider can take a multi-shop drop. */
+export function groupReadyOrders(
+  orders: readonly ReadyOrder[],
+): { key: string; landmark: string | null; orders: ReadyOrder[] }[] {
+  const groups = new Map<string, { key: string; landmark: string | null; orders: ReadyOrder[] }>();
+  for (const order of orders) {
+    const key = order.group_key ?? order.order_id;
+    const group = groups.get(key) ?? { key, landmark: order.dropoff_landmark ?? null, orders: [] };
+    group.orders.push(order);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
+
+/** What the next job for a ready order is: first job, a second attempt, or a return. */
+export function nextJobKind(
+  order: Pick<ReadyOrder, "status" | "delivery_attempts">,
+): "first" | "retry" | "returnOnly" {
+  if (order.status !== "shipped") return "first";
+  return (order.delivery_attempts ?? 0) >= 2 ? "returnOnly" : "retry";
 }
 
 export function targetStatusFor(action: DispatchAction): DispatchStatus | null {

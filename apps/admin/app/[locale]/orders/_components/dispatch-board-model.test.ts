@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   actionsFor,
+  groupReadyOrders,
+  nextJobKind,
   buildCourierPayload,
   canNotify,
   classifyHandoverError,
@@ -117,14 +119,56 @@ describe("actionsFor", () => {
     ).toEqual(["pickUp", "fail", "cancel"]);
   });
 
-  it("offers handover code first, photo proof second, once picked up", () => {
+  it("offers the combined delivered + cash step first, once picked up", () => {
     expect(
       actionsFor(dispatch({ status: "picked_up", allowed_next: ["delivered", "failed"] })),
-    ).toEqual(["verifyHandover", "deliverWithPhoto", "fail"]);
+    ).toEqual(["complete", "verifyHandover", "deliverWithPhoto", "fail", "recordCost"]);
   });
 
-  it("offers nothing for terminal dispatches", () => {
-    expect(actionsFor(dispatch({ status: "delivered", allowed_next: [] }))).toEqual([]);
+  it("offers only the courier cost for terminal dispatches", () => {
+    expect(actionsFor(dispatch({ status: "delivered", allowed_next: [] }))).toEqual(["recordCost"]);
+    expect(actionsFor(dispatch({ status: "requested", allowed_next: [] }))).toEqual([]);
+  });
+
+  it("closes a return only by the shop's acknowledgement", () => {
+    expect(
+      actionsFor(
+        dispatch({
+          status: "picked_up",
+          allowed_next: ["delivered", "failed"],
+          direction: "return",
+        }),
+      ),
+    ).toEqual(["fail", "returned", "recordCost"]);
+  });
+
+  it("groups ready orders by checkout and address, and picks the next job", () => {
+    const base = {
+      order_reference: "ord-x",
+      status: "ready",
+      vendor_name: "Shop",
+      delivery_zone: "lusaka_a",
+      cod: true,
+      cod_amount_ngwee: 1000,
+      subtotal_ngwee: 1000,
+      delivery_fee_ngwee: 0,
+      item_count: 1,
+      created_at: "2026-11-13T08:00:00Z",
+      last_failed_reason: null,
+    };
+    const groups = groupReadyOrders([
+      { ...base, order_id: "a", group_key: "g1:addr", dropoff_landmark: "Kabulonga Spar" },
+      { ...base, order_id: "b", group_key: "g1:addr", dropoff_landmark: "Kabulonga Spar" },
+      { ...base, order_id: "c", group_key: null },
+    ]);
+    expect(groups.map((group) => group.orders.map((order) => order.order_id))).toEqual([
+      ["a", "b"],
+      ["c"],
+    ]);
+    expect(groups[0]?.landmark).toBe("Kabulonga Spar");
+    expect(nextJobKind({ status: "ready", delivery_attempts: 0 })).toBe("first");
+    expect(nextJobKind({ status: "shipped", delivery_attempts: 1 })).toBe("retry");
+    expect(nextJobKind({ status: "shipped", delivery_attempts: 2 })).toBe("returnOnly");
   });
 
   it("maps actions back to target statuses", () => {

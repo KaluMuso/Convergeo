@@ -14,10 +14,14 @@ import {
   classifyHandoverError,
   type Dispatch,
   type DispatchAction,
+  FAILURE_CODES,
+  type FailureCode,
   isHandoverCodeWellFormed,
   isPodPublicIdWellFormed,
   isStale,
+  kwachaTextToNgwee,
   minutesWaiting,
+  ngweeToKwachaText,
   targetStatusFor,
   whatsAppShareUrl,
 } from "./dispatch-board-model";
@@ -41,11 +45,28 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
+  const [failureCode, setFailureCode] = useState<FailureCode>("customer_unavailable");
+  const [cashText, setCashText] = useState(ngweeToKwachaText(dispatch.cod_amount_ngwee || null));
+  const [cashMethod, setCashMethod] = useState<"cash" | "mobile_money">("cash");
+  const [costText, setCostText] = useState(ngweeToKwachaText(dispatch.actual_cost_ngwee ?? null));
 
   const actions = flagEnabled ? actionsFor(dispatch) : [];
   const stale = isStale(dispatch);
 
   const fail = (err: unknown) => {
+    const known: Record<string, string> = {
+      dispatch_cod_required: "errors.codRequired",
+      dispatch_cod_mismatch: "errors.codMismatch",
+      dispatch_cod_not_expected: "errors.codNotExpected",
+      dispatch_cost_not_allowed: "errors.costNotAllowed",
+      order_refund_path_required: "errors.refundPathRequired",
+      dispatch_handover_invalid: "errors.handoverInvalidShort",
+      dispatch_handover_locked: "errors.handoverLockedShort",
+    };
+    if (err instanceof ApiError && known[err.code]) {
+      setError(t(known[err.code] as string));
+      return;
+    }
     if (err instanceof ApiError && err.code === "dispatch_invalid_transition") {
       setError(t("errors.invalidTransition"));
       return;
@@ -75,6 +96,65 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
   };
 
   const submitAction = async (action: DispatchAction) => {
+    if (action === "complete") {
+      const proofIsCode = code.trim().length > 0;
+      if (proofIsCode && !isHandoverCodeWellFormed(code)) {
+        setError(t("errors.codeFormat"));
+        return;
+      }
+      if (!proofIsCode && !isPodPublicIdWellFormed(podId)) {
+        setError(t("errors.podFormat"));
+        return;
+      }
+      const cash = dispatch.cod_amount_ngwee > 0 ? kwachaTextToNgwee(cashText) : null;
+      if (dispatch.cod_amount_ngwee > 0 && (cash === null || Number.isNaN(cash))) {
+        setError(t("errors.codRequired"));
+        return;
+      }
+      await run(
+        `/admin/dispatch/requests/${dispatch.id}/complete`,
+        {
+          handover_code: proofIsCode ? code.trim() : null,
+          pod_photo_public_id: proofIsCode ? null : podId.trim(),
+          cod_collected_ngwee: cash,
+          cod_collected_method: dispatch.cod_amount_ngwee > 0 ? cashMethod : null,
+        },
+        t("complete.success"),
+      );
+      setCode("");
+      return;
+    }
+    if (action === "returned") {
+      await run(
+        `/admin/dispatch/requests/${dispatch.id}/returned`,
+        { note: reason.trim() || null },
+        t("returned.success"),
+      );
+      return;
+    }
+    if (action === "recordCost") {
+      const cost = kwachaTextToNgwee(costText);
+      if (cost === null || Number.isNaN(cost)) {
+        setError(t("errors.costFormat"));
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        await ordersApi.request(`/admin/dispatch/requests/${dispatch.id}/cost`, {
+          method: "PATCH",
+          body: JSON.stringify({ actual_cost_ngwee: cost }),
+        });
+        setOpenAction(null);
+        setNotice(t("cost.success"));
+        onChanged();
+      } catch (err) {
+        fail(err);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (action === "verifyHandover") {
       if (!isHandoverCodeWellFormed(code)) {
         setError(t("errors.codeFormat"));
@@ -129,6 +209,7 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
       to_status: target,
       courier_reference: courierRef.trim() || null,
       failure_reason: action === "fail" ? reason.trim() : null,
+      failure_code: action === "fail" ? failureCode : null,
       pod_photo_public_id: action === "deliverWithPhoto" ? podId.trim() : null,
     });
   };
@@ -191,6 +272,31 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
       </div>
 
       <div className="space-y-1 text-sm">
+        {dispatch.direction === "return" || (dispatch.attempt_no ?? 1) > 1 ? (
+          <div>
+            <p className="font-medium text-warning">
+              {dispatch.direction === "return"
+                ? t("active.returnJob")
+                : t("active.attempt", { attempt: dispatch.attempt_no ?? 1 })}
+            </p>
+          </div>
+        ) : null}
+        {dispatch.cod_collected_ngwee != null ? (
+          <div>
+            <p className={dispatch.remitted ? "text-success" : "text-warning"}>
+              {dispatch.remitted
+                ? t("active.cashRemitted", { amount: formatK(dispatch.cod_collected_ngwee) })
+                : t("active.cashHeld", { amount: formatK(dispatch.cod_collected_ngwee) })}
+            </p>
+          </div>
+        ) : null}
+        {dispatch.actual_cost_ngwee != null ? (
+          <div>
+            <p className="text-muted">
+              {t("active.actualCost", { amount: formatK(dispatch.actual_cost_ngwee) })}
+            </p>
+          </div>
+        ) : null}
         <div>
           <p className="text-text">
             {dispatch.cod_amount_ngwee > 0
@@ -328,6 +434,92 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
             void submitAction(openAction);
           }}
         >
+          {openAction === "complete" ? (
+            <div className="space-y-3">
+              <label className="block space-y-1 text-sm">
+                <span className="text-muted">{t("handover.label")}</span>
+                <input
+                  className="min-h-11 w-full rounded-md border border-border px-3 font-mono tracking-widest"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={6}
+                  value={code}
+                  placeholder={t("handover.placeholder")}
+                  onChange={(change) => setCode(change.target.value.replace(/[^0-9]/g, ""))}
+                />
+                <span className="block text-xs text-muted">{t("complete.proofHelp")}</span>
+              </label>
+              {code.trim().length === 0 ? (
+                <label className="block space-y-1 text-sm">
+                  <span className="text-muted">{t("actions.podPublicId")}</span>
+                  <input
+                    className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
+                    maxLength={255}
+                    value={podId}
+                    placeholder={t("actions.podPlaceholder")}
+                    onChange={(change) => setPodId(change.target.value)}
+                  />
+                </label>
+              ) : null}
+              {dispatch.cod_amount_ngwee > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  <label className="block flex-1 space-y-1 text-sm">
+                    <span className="text-muted">
+                      {t("complete.cashLabel", { amount: formatK(dispatch.cod_amount_ngwee) })}
+                    </span>
+                    <input
+                      className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
+                      inputMode="decimal"
+                      value={cashText}
+                      onChange={(change) => setCashText(change.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span className="text-muted">{t("complete.methodLabel")}</span>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-border px-3"
+                      value={cashMethod}
+                      onChange={(change) =>
+                        setCashMethod(
+                          change.target.value === "mobile_money" ? "mobile_money" : "cash",
+                        )
+                      }
+                    >
+                      <option value="cash">{t("complete.methodCash")}</option>
+                      <option value="mobile_money">{t("complete.methodMobileMoney")}</option>
+                    </select>
+                  </label>
+                </div>
+              ) : (
+                <p className="text-xs text-muted">{t("complete.prepaidHelp")}</p>
+              )}
+            </div>
+          ) : null}
+          {openAction === "returned" ? (
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted">{t("returned.noteLabel")}</span>
+              <input
+                className="min-h-11 w-full rounded-md border border-border px-3"
+                maxLength={500}
+                value={reason}
+                placeholder={t("returned.notePlaceholder")}
+                onChange={(change) => setReason(change.target.value)}
+              />
+              <span className="block text-xs text-muted">{t("returned.help")}</span>
+            </label>
+          ) : null}
+          {openAction === "recordCost" ? (
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted">{t("cost.label")}</span>
+              <input
+                className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
+                inputMode="decimal"
+                value={costText}
+                placeholder={t("cost.placeholder")}
+                onChange={(change) => setCostText(change.target.value)}
+              />
+            </label>
+          ) : null}
           {openAction === "verifyHandover" ? (
             <label className="block space-y-1 text-sm">
               <span className="text-muted">{t("handover.label")}</span>
@@ -353,6 +545,25 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                 placeholder={t("actions.courierRefPlaceholder")}
                 onChange={(change) => setCourierRef(change.target.value)}
               />
+            </label>
+          ) : null}
+          {openAction === "fail" ? (
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted">{t("actions.failureCode")}</span>
+              <select
+                className="min-h-11 w-full rounded-md border border-border px-3"
+                value={failureCode}
+                onChange={(change) => {
+                  const next = FAILURE_CODES.find((value) => value === change.target.value);
+                  if (next) setFailureCode(next);
+                }}
+              >
+                {FAILURE_CODES.map((value) => (
+                  <option key={value} value={value}>
+                    {t(`failureCodes.${value}`)}
+                  </option>
+                ))}
+              </select>
             </label>
           ) : null}
           {openAction === "fail" ? (

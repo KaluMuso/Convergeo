@@ -13,6 +13,8 @@ import {
   type Board,
   couriersForOrder,
   groupDispatches,
+  groupReadyOrders,
+  nextJobKind,
   type ReadyOrder,
   zonePriceNgwee,
 } from "./dispatch-board-model";
@@ -95,11 +97,30 @@ export function DispatchBoard() {
         {board.ready_orders.length === 0 ? (
           <p className="text-sm text-muted">{t("ready.empty")}</p>
         ) : (
-          <ul className="space-y-3">
-            {board.ready_orders.map((order) => (
-              <ReadyOrderRow key={order.order_id} order={order} board={board} onAssigned={reload} />
+          <div className="space-y-4">
+            {groupReadyOrders(board.ready_orders).map((group) => (
+              <div key={group.key} className="space-y-2" data-testid={`ready-group-${group.key}`}>
+                {group.orders.length > 1 ? (
+                  <p className="text-sm font-medium text-text">
+                    {t("ready.groupTitle", {
+                      count: group.orders.length,
+                      landmark: group.landmark ?? t("ready.zoneUnknown"),
+                    })}
+                  </p>
+                ) : null}
+                <ul className="space-y-3">
+                  {group.orders.map((order) => (
+                    <ReadyOrderRow
+                      key={order.order_id}
+                      order={order}
+                      board={board}
+                      onAssigned={reload}
+                    />
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
@@ -152,6 +173,10 @@ const ASSIGN_ERROR_KEYS: Record<string, string> = {
   order_payment_required: "errors.paymentRequired",
   dispatch_order_not_ready: "errors.orderNotReady",
   courier_inactive: "errors.courierInactive",
+  courier_cash_cap_exceeded: "errors.cashCap",
+  dispatch_attempts_exhausted: "errors.attemptsExhausted",
+  dispatch_return_not_allowed: "errors.returnNotAllowed",
+  dispatch_vendor_self_delivery: "errors.vendorSelfDelivery",
 };
 
 type ReadyOrderRowProps = {
@@ -167,14 +192,19 @@ function ReadyOrderRow({ order, board, onAssigned }: ReadyOrderRowProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const assign = async () => {
+  const kind = nextJobKind(order);
+  const assign = async (direction: "delivery" | "return" = "delivery") => {
     if (!courierId) return;
     setBusy(true);
     setError(null);
     try {
       await ordersApi.request("/admin/dispatch/requests", {
         method: "POST",
-        body: JSON.stringify({ order_id: order.order_id, courier_partner_id: courierId }),
+        body: JSON.stringify({
+          order_id: order.order_id,
+          courier_partner_id: courierId,
+          direction,
+        }),
       });
       onAssigned();
     } catch (err) {
@@ -206,6 +236,28 @@ function ReadyOrderRow({ order, board, onAssigned }: ReadyOrderRowProps) {
               items: order.item_count,
             })}
           </p>
+          {order.pickup_label || order.pickup_area ? (
+            <p className="text-xs text-muted">
+              {t("ready.pickupFrom", {
+                branch: [order.pickup_label, order.pickup_area].filter(Boolean).join(" · "),
+              })}
+            </p>
+          ) : null}
+          {order.dropoff_landmark ? (
+            <p className="text-xs text-muted">
+              {t("ready.dropTo", { landmark: order.dropoff_landmark })}
+            </p>
+          ) : null}
+          <p className={order.status === "ready" ? "text-xs text-success" : "text-xs text-muted"}>
+            {order.status === "ready"
+              ? t("ready.parcelReady")
+              : order.status === "shipped"
+                ? t("ready.failedAttempts", { count: order.delivery_attempts ?? 0 })
+                : t("ready.notYetReady")}
+          </p>
+          {order.multi_branch ? (
+            <p className="text-xs text-warning">{t("ready.multiBranch")}</p>
+          ) : null}
           {order.last_failed_reason ? (
             <p className="text-xs text-warning">
               {t("ready.lastFailed", { reason: order.last_failed_reason })}
@@ -245,14 +297,30 @@ function ReadyOrderRow({ order, board, onAssigned }: ReadyOrderRowProps) {
               })}
             </select>
           </label>
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
-            disabled={busy || !courierId || !board.flag_enabled}
-            onClick={() => void assign()}
-          >
-            {busy ? t("ready.assigning") : t("ready.assign")}
-          </button>
+          {kind !== "returnOnly" ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
+              disabled={busy || !courierId || !board.flag_enabled}
+              onClick={() => void assign("delivery")}
+            >
+              {busy
+                ? t("ready.assigning")
+                : kind === "retry"
+                  ? t("ready.sendAgain")
+                  : t("ready.assign")}
+            </button>
+          ) : null}
+          {kind !== "first" ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm disabled:opacity-60"
+              disabled={busy || !courierId || !board.flag_enabled}
+              onClick={() => void assign("return")}
+            >
+              {t("ready.returnToShop")}
+            </button>
+          ) : null}
         </div>
       )}
       {error ? (

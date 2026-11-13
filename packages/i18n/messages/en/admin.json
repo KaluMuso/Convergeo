@@ -1569,7 +1569,16 @@
       "noCouriers": "No active courier serves this zone. Add one below.",
       "assign": "Assign courier",
       "assigning": "Assigning…",
-      "assigned": "Dispatch created. Notify the courier next."
+      "assigned": "Dispatch created. Notify the courier next.",
+      "groupTitle": "{count} shops → one address: {landmark}. Book one rider.",
+      "pickupFrom": "Collect from: {branch}",
+      "dropTo": "Deliver to: {landmark}",
+      "parcelReady": "Parcel sealed and ready for the rider",
+      "notYetReady": "Shop has not marked it ready yet — call before sending a rider",
+      "failedAttempts": "{count, plural, one {# failed attempt} other {# failed attempts}}: send again or return to the shop",
+      "multiBranch": "Items come from more than one branch — confirm the pickup point with the shop",
+      "sendAgain": "Send again (attempt 2)",
+      "returnToShop": "Return to shop"
     },
     "active": {
       "title": "In progress ({count})",
@@ -1586,7 +1595,12 @@
       "failureReason": "Failure: {reason}",
       "deliveredViaCode": "Delivered — handover code verified",
       "deliveredViaPhoto": "Delivered — proof-of-delivery photo",
-      "locked": "Handover locked after too many wrong codes"
+      "locked": "Handover locked after too many wrong codes",
+      "returnJob": "Return to shop",
+      "attempt": "Delivery attempt {attempt}",
+      "cashHeld": "Rider holds {amount} cash (not yet remitted)",
+      "cashRemitted": "{amount} cash remitted",
+      "actualCost": "Courier cost: {amount}"
     },
     "notify": {
       "whatsapp": "Notify courier (WhatsApp)",
@@ -1616,7 +1630,11 @@
       "podPublicId": "Proof-of-delivery photo ID (Cloudinary public_id)",
       "podPlaceholder": "convergeo/pod/ord-1a2b3c4d",
       "confirm": "Confirm",
-      "close": "Close"
+      "close": "Close",
+      "complete": "Delivered + cash",
+      "returned": "Shop got it back",
+      "recordCost": "Record courier cost",
+      "failureCode": "What went wrong"
     },
     "handover": {
       "label": "6-digit code from the rider",
@@ -1641,7 +1659,19 @@
       "alreadyActive": "This order already has a courier dispatch.",
       "paymentRequired": "The order is prepaid and not paid yet — do not dispatch.",
       "orderNotReady": "The order is not ready for a courier yet.",
-      "courierInactive": "This courier is inactive."
+      "courierInactive": "This courier is inactive.",
+      "codRequired": "Enter the cash the rider collected.",
+      "codMismatch": "Cash collected differs from the amount due. Do not record it — report a shortfall.",
+      "codNotExpected": "This order is prepaid; no cash should be recorded.",
+      "costNotAllowed": "Record the cost after the courier has collected the parcel.",
+      "costFormat": "Enter the cost in kwacha, e.g. 45.00.",
+      "refundPathRequired": "This order was paid online: finance must cancel and refund it.",
+      "handoverInvalidShort": "That code does not match.",
+      "handoverLockedShort": "Too many wrong codes. Try again later.",
+      "cashCap": "This courier already holds too much cash. Record their remittance first.",
+      "attemptsExhausted": "Two attempts failed. Return the parcel to the shop.",
+      "returnNotAllowed": "A return is only possible after a failed delivery.",
+      "vendorSelfDelivery": "The shop delivers this order itself."
     },
     "couriers": {
       "title": "Couriers",
@@ -1678,6 +1708,35 @@
         "permission": "You do not have permission to manage couriers."
       },
       "zonePriceLine": "{label} {price}"
+    },
+    "failureCodes": {
+      "customer_unavailable": "Customer not available",
+      "customer_refused": "Customer refused",
+      "wrong_address": "Wrong or unclear address",
+      "vendor_not_ready": "Shop not ready",
+      "courier_no_show": "Courier did not come",
+      "damaged": "Parcel damaged",
+      "other": "Other"
+    },
+    "complete": {
+      "proofHelp": "Enter the customer's 6-digit code. No code? Leave it empty and give a delivery photo.",
+      "cashLabel": "Cash the rider collected (due {amount})",
+      "methodLabel": "Paid by",
+      "methodCash": "Cash",
+      "methodMobileMoney": "Mobile money",
+      "prepaidHelp": "Prepaid order: the rider collects no cash.",
+      "success": "Delivered and cash recorded against the courier."
+    },
+    "returned": {
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "e.g. Shop counted 3 items back",
+      "help": "Cancels the order and puts the stock back. Prepaid orders also need finance to refund.",
+      "success": "Return closed: order cancelled and stock restored."
+    },
+    "cost": {
+      "label": "What the courier charged (K)",
+      "placeholder": "e.g. 45.00",
+      "success": "Courier cost saved."
     }
   }
 }
