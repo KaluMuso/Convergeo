@@ -34,7 +34,6 @@ const StepPayment = dynamic(() => import("./step-payment").then((mod) => mod.Ste
   loading: () => <div aria-hidden="true" className="min-h-48" />,
 });
 
-
 export type PickupLocation = {
   landmark: string;
   lat: number;
@@ -97,6 +96,23 @@ export type FulfilmentStepLabels = {
   total: string;
   loading: string;
   error: string;
+  /** UX pass 4 guidance — optional so older label fixtures keep compiling. */
+  guide?: FulfilmentGuideLabels;
+};
+
+export type FulfilmentGuideLabels = {
+  deliveryHelp: string;
+  pickupHelp: string;
+  groupHint: string;
+  tipsTitle: string;
+  tip1: string;
+  tip2: string;
+  tip3: string;
+  landmarkRequired: string;
+  cutoffTitle: string;
+  cutoffBefore: string;
+  cutoffAfter: string;
+  cutoffMadeToOrder: string;
 };
 
 export type CountdownLabels = {
@@ -125,6 +141,8 @@ export type FulfilmentTotals = {
   groups: FulfilmentGroupResult[];
   /** Required by POST /orders when any group uses delivery. */
   addressId: string | null;
+  /** Display-only: the landmark the buyer typed, echoed on the review step. */
+  landmark?: string | null;
 };
 
 /** Lazy — step 2 is only reached after contact; keeps /checkout first-load JS in budget. */
@@ -188,6 +206,7 @@ export type CheckoutShellLabels = {
     nextMomo: string;
     nextCard: string;
     nextCod: string;
+    codGuide?: ReviewStepLabels["codGuide"];
   };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
@@ -280,6 +299,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       total: messages.fulfilment.total,
       loading: messages.fulfilment.loading,
       error: messages.fulfilment.error,
+      guide: messages.fulfilment.guide,
     },
     payment: {
       title: messages.payment.title,
@@ -311,6 +331,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       railRejected: messages.payment.railRejected,
       error: messages.payment.error,
       paymentsDisabled: messages.payment.paymentsDisabled,
+      codGuide: messages.payment.codGuide,
     },
     review: {
       title: messages.review.title,
@@ -345,6 +366,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       nextMomo: messages.review.nextMomo,
       nextCard: messages.review.nextCard,
       nextCod: messages.review.nextCod,
+      codGuide: messages.review.codGuide,
     },
     countdown: {
       label: messages.countdown.label,
@@ -689,6 +711,10 @@ function IdentityCheckoutShell({
           session={checkoutSession}
           totals={paymentOptions}
           payment={paymentSelection as ReviewPayment}
+          fulfilment={{
+            groups: fulfilmentTotals.groups,
+            landmark: fulfilmentTotals.landmark ?? null,
+          }}
           labels={labels.review}
           onPlaceOrder={async () => {
             if (!isCurrent()) throw new Error(labels.review.placeOrderUnavailable);
