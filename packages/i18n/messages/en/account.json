@@ -164,6 +164,16 @@
       "success": "Account deleted",
       "returnToLogin": "Your account has been deleted. Return to sign in",
       "error": "We could not delete your account. Check the code and try again."
+    },
+    "deliveryConsent": {
+      "title": "Sharing details with delivery partners",
+      "description": "Vergeo5 uses licensed courier companies for some deliveries. To deliver your order, the courier needs your name, phone number and delivery address. We only share them if you allow it. Pickup orders never need this.",
+      "label": "Share my name, phone and address with the delivery partner to deliver my orders",
+      "grantedAt": "Allowed on {at}. You can turn this off at any time.",
+      "notGranted": "Not allowed. Vergeo5 staff deliver your orders themselves, or ask you before using a courier.",
+      "loading": "Loading your choice…",
+      "loadFailed": "We couldn't load your choice. Try again later.",
+      "saveFailed": "We couldn't save your choice. Try again."
     }
   },
   "common": {

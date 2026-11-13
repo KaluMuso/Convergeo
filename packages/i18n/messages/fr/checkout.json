@@ -241,6 +241,11 @@
         "deliveryNoLandmark": "Livraison à Lusaka",
         "pickupFromSeller": "Vous la récupérerez chez le vendeur",
         "placeOrderCod": "Commander — payer à la livraison"
+      },
+      "deliveryConsent": {
+        "label": "Partager mon nom, mon téléphone et mon adresse avec le partenaire de livraison pour livrer cette commande",
+        "hint": "Facultatif. Un coursier agréé peut livrer votre commande. Sans cet accord, l'équipe Vergeo5 la livre ou vous appelle d'abord. Modifiable à tout moment dans Compte → Confidentialité.",
+        "saveFailed": "Impossible d'enregistrer ce choix. Vous pouvez quand même passer commande."
       }
     },
     "pending": {

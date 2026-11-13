@@ -292,6 +292,11 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mudzatenga kwa seller",
         "placeOrderCod": "Tumizani order — lipirani pa delivery"
+      },
+      "deliveryConsent": {
+        "label": "Patsani courier dzina langa, foni ndi address kuti abweretse order iyi",
+        "hint": "Sikokakamiza. Courier wokhala ndi licence angabweretse order yanu. Mukapanda kulola, antchito a Vergeo5 adzabweretsa kapena adzakuyimbirani kaye. Mungasinthe pa Account → Privacy.",
+        "saveFailed": "Talephera kusunga zomwe mwasankha. Mungathebe kuyika order."
       }
     },
     "stepAnnouncement": "Step {current} ya {total}",

@@ -198,6 +198,7 @@ export type CheckoutShellLabels = {
     escrowStep3: string;
     consentLabel: string;
     consentRequired: string;
+    deliveryConsent?: { label: string; hint: string; saveFailed: string };
     placeOrder: string;
     loading: string;
     placingOrder: string;
@@ -358,6 +359,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       escrowStep3: messages.review.escrowStep3,
       consentLabel: messages.review.consentLabel,
       consentRequired: messages.review.consentRequired,
+      deliveryConsent: messages.review.deliveryConsent,
       placeOrder: messages.review.placeOrder,
       loading: messages.review.loading,
       placingOrder: messages.review.placingOrder,

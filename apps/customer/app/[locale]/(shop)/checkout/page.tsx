@@ -206,6 +206,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       escrowStep3: t("checkout.review.escrowStep3"),
       consentLabel: t("checkout.review.consentLabel"),
       consentRequired: t("checkout.review.consentRequired"),
+      deliveryConsent: {
+        label: t("checkout.review.deliveryConsent.label"),
+        hint: t("checkout.review.deliveryConsent.hint"),
+        saveFailed: t("checkout.review.deliveryConsent.saveFailed"),
+      },
       placeOrder: t("checkout.review.placeOrder"),
       loading: t("checkout.review.loading"),
       placingOrder: t("checkout.review.placingOrder"),
