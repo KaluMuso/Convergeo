@@ -6939,6 +6939,66 @@ export type Database = {
           },
         ]
       }
+      web_push_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: string
+          last_error: string | null
+          last_status_code: number | null
+          next_attempt_at: string
+          notification_id: string
+          recipient_user_id: string
+          sent_at: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          notification_id: string
+          recipient_user_id: string
+          sent_at?: string | null
+          status?: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          notification_id?: string
+          recipient_user_id?: string
+          sent_at?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_push_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "in_app_notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "web_push_deliveries_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "web_push_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       web_push_subscriptions: {
         Row: {
           audience: string

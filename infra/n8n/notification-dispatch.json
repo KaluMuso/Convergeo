@@ -48,6 +48,37 @@
           "name": "Vergeo5 Internal Dispatch"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/dispatch/web-push-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_DISPATCH_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "web-push-tick",
+      "name": "Send Web Push Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 480],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Dispatch"
+        }
+      }
     }
   ],
   "connections": {
@@ -56,6 +87,11 @@
         [
           {
             "node": "Dispatch Outbox Batch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Web Push Batch",
             "type": "main",
             "index": 0
           }
