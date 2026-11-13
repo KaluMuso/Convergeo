@@ -92,6 +92,8 @@ def _build_template_args(
             return {"original_legs": original.legs}
         case LedgerTemplate.LENCO_FEE:
             return {"fee_ngwee": gross}
+        case LedgerTemplate.DELIVERY_FEE_CAPTURE:
+            return {"delivery_fee_ngwee": gross}
         case _:
             raise AssertionError(f"unhandled template {template}")
 

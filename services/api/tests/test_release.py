@@ -578,6 +578,57 @@ class TestReleaseCapturesCommission:
         assert account_balance_ngwee(VENDOR_PAYABLE_ID) == payable_before - GROSS_NGEWEE
 
 
+DELIVERY_REVENUE_ID = "c7000000-0000-0000-0000-000000000007"
+
+
+class TestReleaseKeepsDeliveryFeeForPlatform:
+    """Pilot fix: the platform pays the courier, so the fee never reaches the vendor."""
+
+    def test_release_pays_vendor_items_minus_commission_only(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        fee = 4_500
+        now = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
+        _insert_order(db, order_id=order_id, group_id=group_id, status="completed")
+        db.run(f"UPDATE public.orders SET delivery_fee_ngwee = {fee} WHERE id = '{order_id}';")
+        _insert_order_event(
+            db,
+            order_id=order_id,
+            from_status="delivered",
+            to_status="completed",
+            actor=CUSTOMER_ID,
+            created_at=now - timedelta(hours=1),
+        )
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        payable_before = account_balance_ngwee(VENDOR_PAYABLE_ID)
+        delivery_before = account_balance_ngwee(DELIVERY_REVENUE_ID)
+        # Collection holds items + delivery fee in escrow (fulfillment.py).
+        post_transaction(
+            idempotency_key=f"escrow-hold-{order_id}",
+            template=LedgerTemplate.ESCROW_HOLD,
+            order_id=order_id,
+            order_amount_ngwee=GROSS_NGEWEE + fee,
+        )
+
+        result = evaluate_and_release(_SERVICE, order_id, now=now)
+        second = evaluate_and_release(_SERVICE, order_id, now=now)
+
+        assert result.outcome == "released"
+        assert second.outcome == "already_released"
+        assert result.net_ngwee == NET_NGEWEE
+        assert account_balance_ngwee(VENDOR_PAYABLE_ID) == payable_before - NET_NGEWEE
+        assert account_balance_ngwee(DELIVERY_REVENUE_ID) == delivery_before - fee
+        # charge(−items−fee) + commission + fee + net == 0: escrow fully drained.
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+        captures = db.run(
+            "SELECT count(*)::text FROM public.ledger_transactions "
+            f"WHERE idempotency_key = 'delivery-fee-{order_id}';"
+        )
+        assert captures.ok and captures.rows == ["1"]
+
+
 class TestPureRuleEvaluation:
     def test_dispute_beats_buyer_confirm(self) -> None:
         now = datetime(2026, 7, 10, tzinfo=UTC)

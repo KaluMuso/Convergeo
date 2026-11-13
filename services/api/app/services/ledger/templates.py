@@ -9,7 +9,7 @@ from enum import StrEnum
 from app.schemas.base import parse_ngwee
 
 PLATFORM_ACCOUNT_KINDS = frozenset(
-    {"platform_cash", "escrow", "commission_revenue", "fees"}
+    {"platform_cash", "escrow", "commission_revenue", "fees", "delivery_revenue"}
 )
 VENDOR_ACCOUNT_KINDS = frozenset({"vendor_payable", "cod_receivable"})
 
@@ -26,6 +26,7 @@ class LedgerTemplate(StrEnum):
     CLAWBACK = "clawback"
     REFUND_REVERSAL = "refund_reversal"
     LENCO_FEE = "lenco_fee"
+    DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
 
 
 @dataclass(frozen=True, slots=True)
@@ -280,6 +281,27 @@ def lenco_fee(*, fee_ngwee: int) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.LENCO_FEE, legs=legs)
 
 
+def delivery_fee_capture(*, delivery_fee_ngwee: int) -> TemplateResult:
+    """Move the customer's delivery fee out of escrow to platform delivery revenue.
+
+    The platform books and pays the courier (D16), so the fee is platform income,
+    never part of the vendor's release.
+
+    Debit escrow (+fee).
+    Credit delivery_revenue (−fee).
+    """
+    fee = parse_ngwee(delivery_fee_ngwee)
+    if fee <= 0:
+        msg = "delivery_fee_ngwee must be positive"
+        raise ValueError(msg)
+    legs = (
+        PostingLeg(AccountRef("escrow"), fee),
+        PostingLeg(AccountRef("delivery_revenue"), -fee),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.DELIVERY_FEE_CAPTURE, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -305,6 +327,7 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.CLAWBACK: clawback,
     LedgerTemplate.REFUND_REVERSAL: refund_reversal,
     LedgerTemplate.LENCO_FEE: lenco_fee,
+    LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

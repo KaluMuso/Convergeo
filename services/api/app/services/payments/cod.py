@@ -71,8 +71,13 @@ class CodOrderContext:
     status: str
     cod: bool
     fulfilment: str
+    # What the customer pays in cash: items + delivery fee.
     collectable_ngwee: int
     commission_snapshot: dict[str, Any]
+    # Vendor release is computed on items only; the delivery fee is platform
+    # revenue (the platform pays the courier, D16).
+    items_ngwee: int = 0
+    delivery_fee_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,6 +299,8 @@ WHERE o.id = {order_sql};
         fulfilment=parts[4],
         collectable_ngwee=subtotal + delivery_fee,
         commission_snapshot=snapshot,
+        items_ngwee=subtotal,
+        delivery_fee_ngwee=delivery_fee,
     )
 
 
@@ -364,6 +371,7 @@ def confirm_cod_collection(
     )
     from app.services.escrow.release_accounting import (
         ReleaseAccountingError,
+        capture_order_delivery_fee,
         compute_release_amounts,
         release_blocked_reason,
     )
@@ -395,7 +403,7 @@ def confirm_cod_collection(
     try:
         amounts = compute_release_amounts(
             order_id=order_id,
-            gross_ngwee=ctx.collectable_ngwee,
+            gross_ngwee=ctx.items_ngwee,
             commission_snapshot=ctx.commission_snapshot,
         )
     except ReleaseAccountingError as exc:
@@ -437,6 +445,13 @@ def confirm_cod_collection(
         idempotency_key_prefix=f"cod-commission-{order_id}",
     )
     txn_ids.extend(captured.posted_transaction_ids)
+
+    delivery_txn = capture_order_delivery_fee(
+        order_id=order_id,
+        delivery_fee_ngwee=ctx.delivery_fee_ngwee,
+    )
+    if delivery_txn is not None:
+        txn_ids.append(delivery_txn)
 
     if amounts.net_ngwee > 0:
         released = post_transaction(
@@ -545,10 +560,14 @@ def commission_ngwee_for_collectable(
     *,
     collectable_ngwee: int,
     commission_snapshot: Mapping[str, Any],
+    delivery_fee_ngwee: int = 0,
 ) -> tuple[int, int]:
-    """Return (commission_ngwee, net_vendor_ngwee) from a purchase-time snapshot."""
+    """Return (commission_ngwee, net_vendor_ngwee) from a purchase-time snapshot.
+
+    The delivery fee inside ``collectable_ngwee`` is platform revenue, never vendor net.
+    """
     commission = compute_order_commission(commission_snapshot).commission_ngwee
-    return commission, collectable_ngwee - commission
+    return commission, collectable_ngwee - delivery_fee_ngwee - commission
 
 
 def expected_collection_posting_legs(
@@ -556,19 +575,31 @@ def expected_collection_posting_legs(
     collectable_ngwee: int,
     commission_bps: int,
     vendor_id: str,
+    delivery_fee_ngwee: int = 0,
 ) -> tuple[tuple[str, str | None, int], ...]:
-    """Return signed legs for collection confirm (cash + commission + vendor net)."""
+    """Return signed legs for collection confirm (cash + commission + fee + vendor net).
+
+    ``collectable_ngwee`` is items + delivery fee; commission and the vendor's
+    net are computed on items only, the fee goes to ``delivery_revenue``.
+    """
+    items = collectable_ngwee - delivery_fee_ngwee
     commission = commission_ngwee_from_bps(
-        gross_ngwee=collectable_ngwee,
+        gross_ngwee=items,
         commission_bps=commission_bps,
     )
-    net = collectable_ngwee - commission
+    net = items - commission
     legs: list[tuple[str, str | None, int]] = [
         ("platform_cash", None, collectable_ngwee),
         ("cod_receivable", vendor_id, -collectable_ngwee),
         ("escrow", None, commission),
         ("commission_revenue", None, -commission),
-        ("escrow", None, net),
-        ("vendor_payable", vendor_id, -net),
     ]
+    if delivery_fee_ngwee > 0:
+        legs.extend(
+            [
+                ("escrow", None, delivery_fee_ngwee),
+                ("delivery_revenue", None, -delivery_fee_ngwee),
+            ]
+        )
+    legs.extend([("escrow", None, net), ("vendor_payable", vendor_id, -net)])
     return tuple(legs)
