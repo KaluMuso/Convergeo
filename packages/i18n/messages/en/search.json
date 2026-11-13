@@ -21,7 +21,7 @@
     "services": "Services",
     "events": "Events",
     "supplies": "Supplies",
-    "vendors": "Vendors",
+    "vendors": "Shops",
     "count": "{label} ({count})"
   },
   "noResults": {
@@ -62,7 +62,7 @@
   "results": {
     "count": "{count, plural, one {# result} other {# results}}",
     "forQuery": "Results for “{query}”",
-    "degraded": "Showing keyword matches (semantic search unavailable)",
+    "degraded": "Showing simple matches. Results may be less exact right now.",
     "productGridAria": "Product search results"
   },
   "input": {

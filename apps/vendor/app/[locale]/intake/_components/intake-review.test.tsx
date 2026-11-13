@@ -139,7 +139,7 @@ async function openReview() {
 
 async function selectCanonical() {
   const search = screen.getByRole("textbox", {
-    name: "Search catalog products",
+    name: "Search for your product",
   });
   fireEvent.change(search, { target: { value: "Samsung" } });
   const result = await screen.findByRole("option", {
@@ -152,7 +152,7 @@ async function selectCanonical() {
 describe("explicit canonical intake", () => {
   it("does not choose a name match or submit on load", async () => {
     await openReview();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search catalog products" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Search for your product" }), {
       target: { value: "Samsung" },
     });
     await screen.findByRole("option", { name: "Samsung RT38 Fridge" });
@@ -211,7 +211,7 @@ describe("explicit canonical intake", () => {
   it("keeps unavailable products unselected and shows a recovery message", async () => {
     previewUnavailable = true;
     await openReview();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search catalog products" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Search for your product" }), {
       target: { value: "Samsung" },
     });
     await userEvent.click(await screen.findByRole("option", { name: "Samsung RT38 Fridge" }));

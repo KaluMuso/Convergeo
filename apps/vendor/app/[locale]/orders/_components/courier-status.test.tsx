@@ -38,7 +38,9 @@ describe("CourierStatusCard", () => {
     expect(screen.getByText("TownStar")).toBeInTheDocument();
     expect(screen.getByTestId("vendor-courier-status")).toHaveAttribute("data-status", "accepted");
     expect(screen.getByText("Courier reference: TS-1042")).toBeInTheDocument();
-    expect(screen.getByText("Rider collects K1,050.50 from the customer")).toBeInTheDocument();
+    expect(
+      screen.getByText("The rider collects K1,050.50 cash from the buyer"),
+    ).toBeInTheDocument();
   });
 
   it("lists timeline steps oldest first and never shows a handover code", () => {
@@ -46,7 +48,7 @@ describe("CourierStatusCard", () => {
     const steps = screen
       .getAllByRole("listitem")
       .map((item) => item.querySelector("span")?.textContent);
-    expect(steps).toEqual(["Requested", "Accepted"]);
+    expect(steps).toEqual(["Looking for a rider", "Rider found"]);
     expect(screen.queryByText(/^[0-9]{6}$/)).not.toBeInTheDocument();
   });
 });

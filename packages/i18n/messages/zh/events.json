@@ -199,7 +199,7 @@
     "cancelCta": "取消转让",
     "cancelling": "取消中…",
     "cancelledNotice": "转让已取消。",
-    "pendingNotice": "正在转让给 {phone}",
+    "pendingNotice": "等待 {phone} 接收此票",
     "claimBanner": {
       "title": "朋友给您发送了一张门票",
       "body": "{event} 于 {datetime} 开始。请在过期前领取。",
@@ -214,8 +214,8 @@
       "notHolder": "只有门票持有者才能转让此门票。",
       "notTransferable": "此门票无法再转让。",
       "cutoffPassed": "转让在活动开始前 6 小时截止。",
-      "pendingExists": "此门票已有一个待处理的转让。",
-      "notPending": "此转让不再处于待处理状态。",
+      "pendingExists": "您已把这张票发给别人。请等待对方，或先取消。",
+      "notPending": "这次转票已经结束。",
       "expired": "此转让邀请已过期。",
       "phoneMismatch": "请使用门票发送到的电话号码登录。",
       "rateLimited": "请求过多，请稍后重试。"

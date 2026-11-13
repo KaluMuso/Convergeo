@@ -192,26 +192,26 @@
   "onboarding": {
     "meta": {
       "title": "Onboarding invitation vendeur — Convergeo",
-      "description": "Complétez votre candidature vendeur sur invitation et le KYC T1. Les annonces restent verrouillées jusqu'à l'approbation admin."
+      "description": "Terminez votre inscription vendeur et la vérification d'identité. Vos produits restent cachés jusqu'à notre accord."
     },
     "invite": {
-      "eyebrow": "Bêta invitation / concierge",
-      "body": "Vous terminez une candidature vendeur sur invitation. Catalogue, versements et tableau de bord restent verrouillés jusqu'à l'approbation KYC et l'accès vendeur."
+      "eyebrow": "Vous êtes invité",
+      "body": "Terminez ces 3 étapes. Nous vérifions votre identité (KYC), puis vous pouvez vendre. Produits, argent et tableau de bord s'ouvrent après notre accord."
     },
     "steps": {
       "business": "Entreprise",
-      "kyc": "Vérifier l'identité",
+      "kyc": "Identité",
       "review": "Récapitulatif"
     },
     "stepAnnouncement": "Étape {current} sur {total}",
     "doneIndicator": "✓",
     "business": {
-      "heading": "Informations de l'entreprise",
-      "intro": "Dites aux acheteurs qui vous êtes. Vous pourrez modifier ces informations plus tard dans votre profil.",
+      "heading": "Votre boutique",
+      "intro": "Dites-nous ce que vous vendez et comment vous travaillez, pour préparer votre boutique.",
       "nameLabel": "Nom de l'entreprise ou de la boutique",
       "namePlaceholder": "ex. Lusaka Electronics",
-      "categoryLabel": "Catégorie principale",
-      "categoryPlaceholder": "Sélectionnez une catégorie",
+      "categoryLabel": "Que vendez-vous surtout ?",
+      "categoryPlaceholder": "Choisir",
       "categories": {
         "electronics": "Électronique",
         "home": "Maison et art de vivre",
@@ -224,92 +224,92 @@
       "saving": "Enregistrement…"
     },
     "kyc": {
-      "heading": "Vérification T1",
-      "intro": "Importez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile-money. Rien n'est publié avant approbation.",
+      "heading": "Vérifier votre identité (vérification T1)",
+      "intro": "Prenez une photo de votre NRC et de votre visage. Personne d'autre ne les voit.",
       "nrcLabel": "Photo du NRC",
-      "nrcHelp": "Photographiez le recto de votre carte nationale d'identité (NRC) sous un bon éclairage.",
-      "selfieLabel": "Selfie",
-      "selfieHelp": "Tenez votre téléphone à hauteur des yeux. Regardez directement l'appareil photo.",
-      "legalNameLabel": "Nom complet (tel qu'indiqué sur votre NRC)",
+      "nrcHelp": "Photographiez le recto de votre NRC (carte d'identité verte) avec une bonne lumière.",
+      "selfieLabel": "Photo de votre visage",
+      "selfieHelp": "Tenez le téléphone devant votre visage et regardez-le.",
+      "legalNameLabel": "Votre nom complet (comme sur la NRC)",
       "legalNamePlaceholder": "ex. Chanda Mwansa",
-      "legalNameHelp": "Doit correspondre au nom enregistré sur votre numéro mobile-money.",
-      "momoLabel": "Numéro mobile-money",
+      "legalNameHelp": "Il doit être identique au nom de votre mobile money.",
+      "momoLabel": "Numéro mobile money",
       "momoPlaceholder": "ex. 0977123456",
-      "momoHelp": "Numéro MTN ou Airtel enregistré à votre nom pour les versements.",
+      "momoHelp": "Numéro MTN ou Airtel à votre nom. Nous y envoyons votre argent.",
       "continue": "Continuer",
       "uploading": "Importation…",
       "capture": "Prendre une photo",
       "retake": "Reprendre",
       "usePhoto": "Utiliser cette photo",
-      "uploadFailed": "Échec de l'importation. Vérifiez votre connexion et réessayez.",
+      "uploadFailed": "La photo n'est pas partie. Vérifiez votre connexion et réessayez.",
       "uploaded": "Enregistré",
-      "nrcDone": "Photo du NRC enregistrée",
-      "selfieDone": "Selfie enregistré"
+      "nrcDone": "Photo NRC enregistrée",
+      "selfieDone": "Photo du visage enregistrée"
     },
     "quality": {
       "heading": "Conseils photo",
-      "light": "Utilisez la lumière du jour ou une pièce bien éclairée — évitez les reflets sur le NRC.",
-      "steady": "Ne bougez pas ; les photos floues sont rejetées.",
-      "frame": "Remplissez le cadre — les quatre coins du NRC visibles.",
-      "face": "Retirez chapeaux et lunettes de soleil pour le selfie."
+      "light": "Utilisez la lumière du jour. Pas de reflet sur la carte.",
+      "steady": "Ne bougez pas. Les photos floues sont refusées.",
+      "frame": "Montrez les quatre coins de la NRC.",
+      "face": "Enlevez chapeau et lunettes de soleil."
     },
     "review": {
-      "heading": "Vérifier et soumettre",
-      "intro": "Vérifiez vos informations. Après la soumission, notre équipe examine votre dossier sous un jour ouvrable.",
+      "heading": "Vérifier et envoyer",
+      "intro": "Vérifiez vos informations. Nous répondons en général sous un jour ouvré.",
       "businessSection": "Entreprise",
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "Photo du NRC importée",
-      "selfieUploaded": "Selfie importé",
+      "selfieUploaded": "Photo du visage ajoutée",
       "notUploaded": "Non importé",
-      "submit": "Soumettre pour examen",
-      "submitting": "Soumission…",
-      "editBusiness": "Modifier l'entreprise",
-      "editDocs": "Modifier les documents",
-      "gateNotice": "Vos annonces restent masquées jusqu'à l'approbation du KYC."
+      "submit": "Envoyer",
+      "submitting": "Envoi…",
+      "editBusiness": "Modifier la boutique",
+      "editDocs": "Modifier les photos",
+      "gateNotice": "Vos produits restent cachés jusqu'à la validation de votre identité."
     },
     "status": {
-      "heading": "Statut de vérification",
+      "heading": "Votre vérification d'identité",
       "pending": {
-        "title": "En cours d'examen",
-        "body": "Nous vérifions vos documents. Vous recevrez une notification WhatsApp une fois terminé.",
-        "cta": "Retour au tableau de bord"
+        "title": "Nous vérifions",
+        "body": "Nous vérifions vos photos. Nous vous écrirons sur WhatsApp une fois fini.",
+        "cta": "Retour à l'accueil"
       },
       "approved": {
-        "title": "Vous êtes vérifié",
+        "title": "Votre identité est vérifiée",
         "body": "Votre identité est vérifiée. Vous pouvez créer des annonces — les acheteurs les voient dès que vous les publiez.",
-        "cta": "Créer votre première annonce",
-        "t2Link": "Passer au T2 (PACRA + TPIN)"
+        "cta": "Ajouter votre premier produit",
+        "t2Link": "Ajouter les papiers de l'entreprise — T2 (PACRA, TPIN)"
       },
       "rejected": {
-        "title": "La vérification nécessite des modifications",
-        "body": "Nous n'avons pas pu approuver votre demande.",
+        "title": "Corrigez vos informations",
+        "body": "Nous n'avons pas encore pu vous approuver. Voir la raison ci-dessous.",
         "reasonLabel": "Motif",
-        "resubmitCta": "Mettre à jour les documents",
-        "gateNotice": "Les annonces restent masquées jusqu'à ce que vous passiez la vérification."
+        "resubmitCta": "Corriger et renvoyer",
+        "gateNotice": "Vos produits restent cachés jusqu'à la validation de votre identité."
       },
       "resubmit": {
-        "title": "Soumettre à nouveau les documents",
-        "body": "Mettez à jour les éléments ci-dessous et soumettez à nouveau — vous n'avez pas besoin de tout recommencer.",
+        "title": "Renvoyer vos photos",
+        "body": "Corrigez les éléments ci-dessous et renvoyez. Pas besoin de tout recommencer.",
         "nrcRequired": "Photo du NRC requise",
-        "selfieRequired": "Selfie requis",
-        "submit": "Soumettre à nouveau pour examen"
+        "selfieRequired": "Photo du visage requise",
+        "submit": "Renvoyer"
       }
     },
     "t2": {
-      "stubLabel": "Passer à l'entreprise vérifiée (T2)",
-      "stubBody": "Certificat PACRA et TPIN de l'entreprise — bientôt disponible."
+      "stubLabel": "Vérification des papiers — T2 (bientôt)",
+      "stubBody": "Certificat PACRA et TPIN de l'entreprise."
     },
     "errors": {
-      "required": "Ce champ est obligatoire",
+      "required": "Veuillez remplir ce champ",
       "invalidPhone": "Saisissez un numéro de mobile zambien valide",
-      "loadFailed": "Impossible de charger votre demande. Réessayez.",
-      "saveFailed": "Impossible d'enregistrer les informations de l'entreprise. Réessayez.",
-      "submitFailed": "Échec de la soumission. Réessayez.",
-      "authRequired": "Connectez-vous pour continuer votre candidature vendeur sur invitation.",
-      "permissionDenied": "Vous n'avez pas accès à cette candidature vendeur. Utilisez le compte invité, ou contactez Convergeo.",
-      "draftLocked": "Les informations de l'entreprise ne peuvent plus être modifiées après approbation.",
-      "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
+      "loadFailed": "Impossible d'ouvrir votre inscription. Vérifiez votre connexion et réessayez.",
+      "saveFailed": "Impossible d'enregistrer la boutique. Réessayez.",
+      "submitFailed": "Envoi impossible. Vérifiez votre connexion et réessayez.",
+      "authRequired": "Connectez-vous pour terminer l'inscription vendeur.",
+      "permissionDenied": "Cette inscription appartient à un autre compte. Connectez-vous avec le numéro invité ou contactez-nous.",
+      "draftLocked": "Vous êtes approuvé : la boutique ne se modifie plus ici. Contactez-nous pour la changer.",
+      "notFound": "Inscription introuvable. Contactez-nous.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "loading": "Chargement…",
@@ -360,104 +360,104 @@
   "listings": {
     "images": {
       "heading": "Photos",
-      "intro": "{count} sur {max} photos. La première est votre couverture.",
+      "intro": "{count} sur {max} photos. La première est la photo principale.",
       "alt": "Photo {position} de l'annonce",
-      "cover_badge": "Couverture",
+      "cover_badge": "Photo principale",
       "position_label": "Photo {position}",
       "move_up": "Monter",
       "move_down": "Descendre",
-      "set_cover": "Définir comme couverture",
+      "set_cover": "Mettre en photo principale",
       "remove": "Supprimer",
       "drop_label": "Glissez les photos ici",
       "browse_label": "Parcourir",
-      "compress_hint": "Les photos sont redimensionnées avant l'envoi pour économiser des données.",
+      "compress_hint": "Nous réduisons les photos pour économiser vos données.",
       "limit_reached": "Vous avez atteint la limite de photos.",
       "upload": "Ajouter des photos",
       "uploading": "Envoi en cours…",
-      "upload_failed": "Échec de l'envoi",
-      "minimum_required": "Au moins {count} photo justificative doit rester jointe tant que cette annonce est publiée.",
+      "upload_failed": "La photo n'est pas partie. Réessayez.",
+      "minimum_required": "Gardez au moins {count} vraie photo tant que ce produit est en vente.",
       "retry": "Réessayer"
     },
     "meta": {
-      "title": "Créer une annonce — Vendeur Convergeo",
-      "description": "Rattachez au catalogue, soumettez un nouveau produit ou enregistrez un brouillon autonome."
+      "title": "Ajouter un produit — Convergeo Vendeur",
+      "description": "Ajoutez un produit : trouvez-le dans notre liste, créez-en un ou ajoutez un article unique."
     },
     "title": "Créer une annonce",
     "intro": "Choisissez votre mode de mise en vente. La commission est affichée avant publication.",
     "loading": "Chargement…",
     "tabs": {
-      "ariaLabel": "Mode de création d'annonce",
-      "attach": "Catalogue",
+      "ariaLabel": "Comment ajouter votre produit",
+      "attach": "Le trouver (catalogue)",
       "newCanonical": "Nouveau produit",
-      "quickList": "Annonce rapide"
+      "quickList": "Article unique (liste rapide)"
     },
     "commission": {
-      "heading": "Commission sur cette annonce",
-      "body": "Vous ne payez que lorsque vous vendez. Le taux est fixe pour cette catégorie.",
+      "heading": "Notre commission sur ce produit",
+      "body": "Vous payez seulement quand vous vendez. La commission est la même pour toute la catégorie.",
       "rate": "{rate}%"
     },
     "attach": {
-      "searchPlaceholder": "Rechercher des produits du catalogue",
+      "searchPlaceholder": "Cherchez votre produit",
       "searching": "Recherche…",
-      "empty": "Aucun produit correspondant. Essayez un autre nom ou soumettez un nouveau produit.",
-      "hint": "Recherchez dans le catalogue Convergeo pour rattacher votre offre.",
+      "empty": "Introuvable. Essayez un autre nom ou touchez Nouveau produit.",
+      "hint": "Cherchez dans notre liste. Si votre produit y est, ajoutez seulement votre prix.",
       "changeProduct": "← Changer de produit",
-      "specHeading": "Caractéristiques du produit",
-      "publish": "Publier l'annonce",
+      "specHeading": "Détails du produit",
+      "publish": "Mettre en vente",
       "publishing": "Publication…"
     },
     "newCanonical": {
-      "heading": "Soumettre un nouveau produit",
-      "intro": "Nous examinerons votre produit avant qu'il apparaisse dans le catalogue.",
+      "heading": "Ajouter un nouveau produit",
+      "intro": "Notre équipe vérifie les nouveaux produits avant que les acheteurs les voient.",
       "nameLabel": "Nom du produit",
       "namePlaceholder": "ex. Écouteurs sans fil",
       "brandLabel": "Marque (facultatif)",
       "brandPlaceholder": "ex. Samsung",
       "categoryLabel": "Catégorie",
-      "categoryPlaceholder": "Sélectionner une catégorie",
-      "submit": "Soumettre pour examen",
-      "submitting": "Soumission…",
-      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit.",
+      "categoryPlaceholder": "Choisir une catégorie",
+      "submit": "Envoyer pour vérification",
+      "submitting": "Envoi…",
+      "moderationNotice": "Les acheteurs ne le voient pas avant l'accord de notre équipe.",
       "details": {
         "about": "À propos de cet article",
         "heading": "Détails du produit",
-        "help": "Indiquez uniquement des détails vérifiables pour cette catégorie, avec les unités du fabricant : dimensions, poids, mesures, style, caractéristiques, matériaux, entretien ou instructions. Laissez les détails inconnus vides. Tous les détails sont soumis à modération. Jusqu’à 32 détails ; noms : 80 caractères ; valeurs : 2 000 ; description : 5 000.",
-        "name": "Nom du détail",
-        "value": "Valeur du détail",
+        "help": "Ajoutez seulement des détails sûrs, comme taille, poids, couleur, matière ou entretien. Utilisez les unités du fabricant. Laissez le reste vide — notre équipe vérifie chaque détail. Jusqu'à 32 détails ; noms 80 caractères, réponses 2 000, description 5 000.",
+        "name": "Détail (ex. Couleur)",
+        "value": "Réponse (ex. Rouge)",
         "add": "Ajouter un détail",
         "remove": "Supprimer le détail",
-        "invalid": "Donnez à chaque détail un nom unique et une valeur, ou supprimez-le. Respectez les limites indiquées."
+        "invalid": "Remplissez chaque détail et sa réponse, ou retirez-le. Chaque nom ne sert qu'une fois. Respectez les limites indiquées."
       }
     },
     "quickList": {
-      "heading": "Annonce rapide",
-      "intro": "Enregistrez un brouillon pour un article d’occasion unique ou une offre fabriquée sur commande.",
-      "titleLabel": "Titre de l'annonce",
+      "heading": "Article unique",
+      "intro": "Pour un article d'occasion ou un article fait pour chaque acheteur.",
+      "titleLabel": "Nom de l'article",
       "titlePlaceholder": "p. ex. Chaise en bois d’occasion",
-      "publish": "Publier l'annonce",
+      "publish": "Mettre en vente",
       "publishing": "Publication…",
-      "descriptionLabel": "Description de l’annonce",
-      "descriptionHelp": "Décrivez cet article ou cette offre en au moins 20 caractères.",
-      "draftNotice": "Enregistrer un brouillon ne publie pas l’annonce.",
-      "descriptionInvalid": "Saisissez au moins 20 caractères, sans compter les espaces au début et à la fin.",
-      "saveDraft": "Enregistrer le brouillon",
-      "savingDraft": "Enregistrement du brouillon…",
-      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Sélectionnez-le dans Catalogue.",
-      "categoriesUnavailable": "Les catégories sont indisponibles. Réessayez plus tard."
+      "descriptionLabel": "Décrivez-le",
+      "descriptionHelp": "Écrivez au moins 20 caractères sur cet article.",
+      "draftNotice": "Enregistrer ne le met pas encore en vente.",
+      "descriptionInvalid": "Écrivez un peu plus — au moins 20 caractères.",
+      "saveDraft": "Enregistrer pour plus tard",
+      "savingDraft": "Enregistrement…",
+      "canonicalRequired": "Les produits de marque (A, B, C) doivent être trouvés dans notre liste. Touchez Le trouver.",
+      "categoriesUnavailable": "Les catégories ne se chargent pas. Vérifiez votre connexion et réessayez."
     },
     "fields": {
-      "priceLabel": "Votre prix (ZMW)",
+      "priceLabel": "Votre prix (K)",
       "pricePlaceholder": "0.00",
-      "priceHelp": "Saisissez les kwacha et ngwee, ex. 1,234.56",
-      "pricePerStepHelp": "Prix d'un incrément de vente sélectionné.",
-      "priceInvalid": "Saisissez un prix valide comme 1234.56",
-      "productClassLabel": "Classe de produit",
-      "classA": "Classe A — SKU de marque",
-      "classB": "Classe B — Variante de marque",
-      "classC": "Classe C — Produit de base / générique",
-      "classD": "Classe D — Pièce unique",
-      "classE": "Classe E — Fabriqué sur commande",
-      "standaloneClassHint": "Les classes D et E sont autonomes. Utilisez Liste rapide pour les créer.",
+      "priceHelp": "ex. 1 234,50",
+      "pricePerStepHelp": "Prix pour une unité de vente (voir ci-dessous).",
+      "priceInvalid": "Saisissez un prix comme 1234,50",
+      "productClassLabel": "Classe de produit — quel type ?",
+      "classA": "A. Produit de marque, identique partout (SKU de marque)",
+      "classB": "B. Produit de marque avec tailles ou couleurs (variante)",
+      "classC": "C. Produits courants, sans marque (générique)",
+      "classD": "D. Article unique",
+      "classE": "E. Fait pour chaque acheteur",
+      "standaloneClassHint": "Pour D et E, utilisez Article unique.",
       "saleUnitLabel": "Vendu par",
       "unitEach": "Unité",
       "unitMetre": "Mètre",
@@ -465,61 +465,61 @@
       "unitLitre": "Litre",
       "unitBag": "Sac",
       "unitSqm": "Mètre carré",
-      "unitStepLabel": "Plus petit incrément de vente",
-      "unitStepHelp": "Utilisez jusqu'à 3 décimales, ex. 0,5 pour une demi-unité.",
-      "unitStepInvalid": "Saisissez un incrément supérieur à zéro avec jusqu'à 3 décimales.",
-      "minStepsLabel": "Nombre minimal d'incréments par commande",
+      "unitStepLabel": "Plus petite quantité vendue (incrément)",
+      "unitStepHelp": "Jusqu'à 3 décimales, ex. 0,5 pour un demi-mètre.",
+      "unitStepInvalid": "Saisissez un nombre supérieur à 0 avec jusqu'à 3 décimales, comme 1 ou 0,5.",
+      "minStepsLabel": "Commande minimum, en incréments",
       "conditionLabel": "État",
       "conditionNew": "Neuf",
       "conditionRefurbished": "Reconditionné",
       "conditionUsed": "D'occasion",
-      "defectNotesLabel": "État et défauts",
-      "defectNotesPlaceholder": "Décrivez l'usure, les dommages, les pièces manquantes et les réparations…",
-      "defectNotesHelp": "Au moins 10 caractères. Indiquez clairement chaque défaut visible.",
-      "defectNotesInvalid": "Décrivez l'état et les défauts de l'article d'occasion en au moins 10 caractères.",
-      "fulfilmentLabel": "Mode d'exécution",
-      "fulfilmentStocked": "En stock",
-      "fulfilmentMadeToOrder": "Fabriqué sur commande",
-      "leadTimeLabel": "Délai (jours)",
-      "leadTimeHelp": "Nombre de jours nécessaires avant que la commande soit prête.",
-      "leadTimeInvalid": "Saisissez un délai compris entre 1 et 365 jours.",
-      "capacityLabel": "Capacité hebdomadaire",
-      "capacityHelp": "Nombre maximal d'unités sur commande que vous acceptez chaque semaine.",
-      "capacityInvalid": "Saisissez une capacité hebdomadaire comprise entre 1 et 9 999.",
-      "stockModeLabel": "Stock",
-      "stockTracked": "Quantité suivie",
-      "stockAlways": "Toujours disponible",
-      "stockQtyLabel": "Quantité en stock",
-      "wholesaleLabel": "Paliers de gros",
-      "wholesaleHelp": "Entreprises vérifiées T2+ uniquement",
-      "wholesaleMeasureUnavailable": "Les paliers de gros ne sont pas encore disponibles pour les annonces vendues à la mesure.",
-      "moqLabel": "Quantité minimale de commande",
-      "evidenceDraftNotice": "Les annonces d'occasion et de classe D sont enregistrées en brouillon. Ajoutez au moins une photo de preuve avant de publier.",
-      "saveDraft": "Enregistrer le brouillon et ajouter des photos",
-      "savingDraft": "Enregistrement du brouillon…"
+      "defectNotesLabel": "Traces ou défauts",
+      "defectNotesPlaceholder": "Indiquez ce qui est usé, cassé, manquant ou réparé…",
+      "defectNotesHelp": "Au moins 10 caractères. Signalez chaque défaut.",
+      "defectNotesInvalid": "Écrivez un peu plus sur les défauts — au moins 10 caractères.",
+      "fulfilmentLabel": "Exécution — l'avez-vous maintenant ?",
+      "fulfilmentStocked": "Oui, je l'ai",
+      "fulfilmentMadeToOrder": "Non, je le fais sur commande",
+      "leadTimeLabel": "Délai — jours de fabrication",
+      "leadTimeHelp": "Combien de jours avant qu'il soit prêt.",
+      "leadTimeInvalid": "Saisissez un nombre de jours entre 1 et 365.",
+      "capacityLabel": "Capacité hebdomadaire — combien par semaine ?",
+      "capacityHelp": "Le plus de commandes possible en une semaine.",
+      "capacityInvalid": "Saisissez un nombre entre 1 et 9 999.",
+      "stockModeLabel": "Stock — combien en avez-vous ?",
+      "stockTracked": "Je les compte",
+      "stockAlways": "J'en ai toujours",
+      "stockQtyLabel": "Combien vous en avez",
+      "wholesaleLabel": "Paliers de gros (prix de gros)",
+      "wholesaleHelp": "Réservé aux entreprises vérifiées T2 (papiers contrôlés)",
+      "wholesaleMeasureUnavailable": "Les prix de gros ne sont pas encore prêts pour les articles au mètre, kg ou litre.",
+      "moqLabel": "Quantité minimum de commande (MOQ)",
+      "evidenceDraftNotice": "Les articles d'occasion et uniques sont d'abord enregistrés. Ajoutez au moins une vraie photo avant de vendre.",
+      "saveDraft": "Enregistrer et ajouter des photos",
+      "savingDraft": "Enregistrement…"
     },
     "success": {
-      "live": "L'annonce est en ligne !",
-      "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp.",
-      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier.",
-      "draft": "Brouillon enregistré. Cette annonce n’est pas en ligne."
+      "live": "Votre produit est en vente !",
+      "moderation": "Envoyé. Nous vous dirons sur WhatsApp quand notre équipe l'aura vérifié.",
+      "evidence": "Enregistré. Ajoutez de vraies photos avant de vendre.",
+      "draft": "Enregistré. Pas encore en vente."
     },
     "errors": {
-      "required": "Ce champ est obligatoire",
-      "submitFailed": "Impossible de créer l'annonce. Réessayez.",
-      "standalone_required": "Les classes D et E doivent être créées via la liste rapide.",
-      "wholesale_requires_t2": "La vente en gros nécessite une vérification T2",
-      "product_not_found": "Produit introuvable",
-      "product_not_active": "Ce produit ne peut pas encore être rattaché",
-      "category_not_found": "Catégorie introuvable",
-      "invalid_tiers": "Les paliers de prix doivent augmenter en quantité et diminuer en prix unitaire",
-      "authRequired": "Connectez-vous pour gérer les annonces.",
-      "permissionDenied": "Vous n'avez pas accès à ce catalogue vendeur.",
-      "notFound": "Cette annonce est introuvable pour votre boutique.",
+      "required": "Veuillez remplir ce champ",
+      "submitFailed": "Impossible d'enregistrer le produit. Vérifiez votre connexion et réessayez.",
+      "standalone_required": "Pour D et E, utilisez Article unique.",
+      "wholesale_requires_t2": "Les prix de gros exigent d'abord la vérification des papiers.",
+      "product_not_found": "Produit introuvable. Cherchez à nouveau.",
+      "product_not_active": "Ce produit n'est pas encore prêt à la vente. Choisissez-en un autre ou réessayez plus tard.",
+      "category_not_found": "Catégorie introuvable. Choisissez-en une autre.",
+      "invalid_tiers": "Chaque prix de gros doit porter sur plus d'articles et coûter moins par article que le précédent.",
+      "authRequired": "Connectez-vous pour voir vos produits.",
+      "permissionDenied": "Ce compte ne peut pas ouvrir les produits de cette boutique.",
+      "notFound": "Produit introuvable dans votre boutique.",
       "retryHint": "Vérifiez votre connexion, puis réessayez.",
-      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Utilisez l’association au catalogue ou la création d’un produit.",
-      "standaloneDetailsRequired": "Sélectionnez une catégorie et ajoutez une description d’au moins 20 caractères pour cette annonce autonome.",
-      "policyBlocked": "Cette annonce ne peut pas être publiée selon la politique de catégorie ou de lancement actuelle. Vérifiez ses champs et contactez l’assistance si nécessaire."
+      "canonicalRequired": "Les produits de marque (A, B, C) doivent être trouvés dans notre liste. Touchez Le trouver ou Nouveau produit.",
+      "standaloneDetailsRequired": "Choisissez une catégorie et écrivez au moins 20 caractères sur l'article.",
+      "policyBlocked": "Ce produit ne peut pas être vendu dans cette catégorie pour le moment. Vérifiez les détails ou contactez-nous."
     },
     "import": {
       "meta": {
@@ -711,10 +711,10 @@
       }
     },
     "kycGate": {
-      "title": "Vérification en cours",
+      "title": "Nous vérifions encore votre identité",
       "body": "Vous pouvez préparer vos annonces dès maintenant, mais les acheteurs ne les verront qu'après l'approbation de votre vérification.",
-      "cta": "Voir le statut de vérification",
-      "wholesaleLocked": "Les prix de gros se débloquent après une vérification T2 auditable."
+      "cta": "Voir ma vérification",
+      "wholesaleLocked": "Les prix de gros s'ouvrent après la vérification des papiers (T2)."
     },
     "variants": {
       "heading": "Couleurs, tailles et autres options",
@@ -947,9 +947,9 @@
     "status": {
       "placed": "Passée",
       "confirmed": "Confirmée",
-      "processing": "En traitement",
+      "processing": "En préparation",
       "ready": "Prête pour le retrait",
-      "shipped": "Expédiée",
+      "shipped": "Envoyée",
       "delivered": "Livrée",
       "completed": "Terminée",
       "cancelled": "Annulée"
@@ -960,9 +960,9 @@
     },
     "payment": {
       "heading": "Paiement",
-      "cod": "Paiement à la livraison",
-      "paid": "Payé — sous séquestre",
-      "unpaid": "En attente de paiement"
+      "cod": "Paiement à la livraison — l'acheteur paie à l'arrivée",
+      "paid": "Payée — en séquestre jusqu'à la livraison",
+      "unpaid": "Pas encore payée"
     },
     "items": {
       "heading": "Articles",
@@ -970,10 +970,10 @@
       "empty": "Aucun article",
       "variantOption": "{group} : {value}",
       "variantSeparator": " · ",
-      "sku": "SKU {sku}"
+      "sku": "SKU (code article) {sku}"
     },
     "timeline": {
-      "heading": "Chronologie",
+      "heading": "Historique",
       "empty": "Aucun événement pour le moment",
       "note": "Note : {note}",
       "stateDone": "terminé",
@@ -982,25 +982,25 @@
       "srState": "({state})"
     },
     "actions": {
-      "heading": "Actions",
-      "confirm": "Confirmer la commande",
-      "reject": "Rejeter la commande",
+      "heading": "Prochaine étape",
+      "confirm": "Oui, je l'ai",
+      "reject": "Je ne peux pas",
       "pack": "Commencer l'emballage",
-      "ship": "Marquer comme expédiée",
+      "ship": "Marquer comme envoyée (expédiée)",
       "ready_for_pickup": "Prête pour le retrait",
       "confirming": "Confirmation…",
       "rejecting": "Rejet…",
       "packing": "Emballage…",
-      "shipping": "Expédition…",
+      "shipping": "Enregistrement…",
       "markingReady": "Mise à jour…",
-      "rejectPrompt": "Indiquez au client pourquoi vous ne pouvez pas traiter cette commande.",
-      "rejectLabel": "Motif (visible par le client)",
-      "rejectPlaceholder": "ex. Rupture de stock — désolé pour la gêne occasionnée",
-      "shipPrompt": "Ajoutez les détails de suivi ou de livraison pour l'acheteur.",
-      "shipLabel": "Note de suivi",
-      "shipPlaceholder": "ex. Coursier Yango — chauffeur John 0977…",
-      "submitReject": "Rejeter avec motif",
-      "submitShip": "Marquer comme expédiée",
+      "rejectPrompt": "Dites à l'acheteur pourquoi vous ne pouvez pas.",
+      "rejectLabel": "Raison (visible par l'acheteur)",
+      "rejectPlaceholder": "ex. Épuisé — désolé",
+      "shipPrompt": "Dites à l'acheteur qui livre.",
+      "shipLabel": "Note de livraison",
+      "shipPlaceholder": "ex. Livreur John 0977…",
+      "submitReject": "Envoyer la raison",
+      "submitShip": "Marquer comme envoyée (expédiée)",
       "cancel": "Annuler",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
@@ -1011,19 +1011,19 @@
       }
     },
     "success": {
-      "confirmed": "Commande confirmée.",
-      "rejected": "Commande rejetée.",
-      "packed": "La commande est maintenant en traitement.",
-      "shipped": "Commande marquée comme expédiée.",
-      "ready": "Commande prête pour le retrait."
+      "confirmed": "C'est fait. L'acheteur sait que vous l'avez.",
+      "rejected": "Commande refusée. L'acheteur est prévenu.",
+      "packed": "En préparation.",
+      "shipped": "Marquée comme envoyée.",
+      "ready": "Prête pour le retrait."
     },
     "errors": {
-      "loadFailed": "Impossible de charger cette commande. Tirez pour actualiser.",
-      "actionFailed": "Échec de l'action. Réessayez.",
-      "forbidden": "Vous ne pouvez gérer que vos propres commandes.",
-      "invalidTransition": "Cette action n'est pas disponible pour cette commande.",
-      "reasonRequired": "Un motif est requis pour le rejet.",
-      "trackingRequired": "Une note de suivi est requise pour l'expédition.",
+      "loadFailed": "Impossible d'ouvrir cette commande. Tirez vers le bas pour réessayer.",
+      "actionFailed": "Cela n'a pas marché. Vérifiez votre connexion et réessayez.",
+      "forbidden": "Cette commande appartient à une autre boutique.",
+      "invalidTransition": "Impossible pour le moment. Tirez vers le bas pour voir le dernier statut.",
+      "reasonRequired": "Écrivez d'abord une raison.",
+      "trackingRequired": "Écrivez d'abord qui livre.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "guide": {
@@ -1086,30 +1086,30 @@
     "loading": "Chargement du tableau de bord…",
     "offlineNotice": "Affichage des données enregistrées — connectez-vous pour actualiser.",
     "takings": {
-      "label": "Recettes du jour",
-      "caption": "Revenus confirmés pour le {date} (heure de Lusaka)",
-      "emptyCaption": "Aucun revenu confirmé aujourd'hui — les totaux viennent uniquement des commandes réelles."
+      "label": "Ventes du jour",
+      "caption": "Argent des commandes confirmées le {date} (heure de Lusaka)",
+      "emptyCaption": "Pas encore de ventes aujourd'hui. Les totaux viennent uniquement de vraies commandes."
     },
     "needsAction": {
-      "heading": "À traiter",
-      "empty": "Vous êtes à jour — aucune commande en attente de votre part.",
-      "emptyTitle": "Tout est à jour"
+      "heading": "À faire",
+      "empty": "Rien à faire — aucune commande ne vous attend.",
+      "emptyTitle": "Tout est fait"
     },
     "actions": {
-      "openQueue": "Ouvrir la file d'attente des commandes",
-      "confirmOrders": "Confirmer les nouvelles commandes"
+      "openQueue": "Voir les commandes",
+      "confirmOrders": "Accepter les nouvelles commandes"
     },
     "quickStart": {
       "eyebrow": "Pour votre entreprise {businessType}",
       "products": {
-        "heading": "Développez votre catalogue",
-        "body": "Ajoutez des produits et gardez votre stock et vos prix à jour.",
-        "cta": "Gérer vos annonces"
+        "heading": "Vos produits",
+        "body": "Ajoutez des produits. Gardez prix et stock à jour.",
+        "cta": "Voir mes produits"
       },
       "services": {
-        "heading": "Développez vos services",
-        "body": "Publiez vos services et répondez aux demandes de devis des clients.",
-        "cta": "Gérer vos services"
+        "heading": "Vos services",
+        "body": "Montrez vos services et répondez aux demandes de prix.",
+        "cta": "Voir mes services"
       }
     },
     "businessTypes": {
@@ -1121,19 +1121,19 @@
       "other": "commerce de détail"
     },
     "errors": {
-      "loadFailed": "Impossible de charger le tableau de bord. Réessayez.",
-      "authRequired": "Connectez-vous pour voir l'accueil vendeur.",
-      "permissionDenied": "Vous n'avez pas accès à ce tableau de bord vendeur.",
+      "loadFailed": "Impossible d'ouvrir votre accueil. Vérifiez votre connexion et réessayez.",
+      "authRequired": "Connectez-vous pour voir votre boutique.",
+      "permissionDenied": "Ce compte ne peut pas ouvrir cette boutique. Connectez-vous avec votre numéro vendeur.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "kycBanner": {
-      "title": "Terminer la vérification",
-      "body": "Votre boutique n'est pas marquée vérifiée tant que le KYC n'est pas approuvé avec un dossier auditable.",
-      "cta": "Voir le statut KYC"
+      "title": "Terminez la vérification d'identité (KYC)",
+      "body": "Les acheteurs font confiance aux boutiques vérifiées. Terminez la vôtre pour obtenir le badge.",
+      "cta": "Voir ma vérification"
     },
     "shortcuts": {
       "ariaLabel": "Raccourcis",
-      "listings": "Catalogue",
+      "listings": "Produits",
       "profile": "Profil"
     },
     "analytics": {
@@ -1189,20 +1189,20 @@
   "queue": {
     "meta": {
       "title": "File d'attente des commandes — Vendeur Convergeo",
-      "description": "Filtrez et traitez les commandes en un seul geste."
+      "description": "Voyez vos commandes et avancez-les d'un geste."
     },
     "title": "Commandes",
-    "intro": "Touchez une action pour faire avancer les commandes. Tirez vers le bas pour actualiser.",
+    "intro": "Touchez un bouton pour avancer une commande. Tirez vers le bas pour actualiser.",
     "loading": "Chargement des commandes…",
     "refreshing": "Actualisation…",
     "pullToRefresh": "Relâchez pour actualiser",
-    "offlineNotice": "Hors ligne — affichage de votre dernière file d'attente enregistrée.",
-    "empty": "Aucune commande dans cette vue.",
+    "offlineNotice": "Pas de connexion — dernières commandes enregistrées.",
+    "empty": "Aucune commande ici pour le moment.",
     "emptyCta": "Retour à l'accueil",
     "filters": {
-      "needsAction": "À traiter",
+      "needsAction": "À faire",
       "placed": "Nouvelles",
-      "confirmed": "Confirmées",
+      "confirmed": "Acceptées",
       "processing": "Préparation",
       "all": "Toutes"
     },
@@ -1216,7 +1216,7 @@
       "cancel": "Pas maintenant"
     },
     "errors": {
-      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser.",
+      "loadFailed": "Impossible d'ouvrir vos commandes. Tirez vers le bas pour réessayer.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "emptyNeedsAction": {
@@ -1251,54 +1251,54 @@
   },
   "payouts": {
     "meta": {
-      "title": "Versements — Convergeo Vendeur",
-      "description": "Consultez les soldes sous séquestre et débloqués, l'historique des versements et téléchargez les relevés mensuels."
+      "title": "Votre argent — Convergeo Vendeur",
+      "description": "Voyez l'argent en attente, prêt et envoyé."
     },
     "eyebrow": "Argent",
-    "title": "Versements",
-    "intro": "Les soldes proviennent directement du grand livre — aucune comptabilité séparée.",
-    "loading": "Chargement des versements…",
+    "title": "Versements (votre argent)",
+    "intro": "L'argent de vos ventes et ce que nous vous avons envoyé. Les chiffres viennent directement de nos registres.",
+    "loading": "Chargement…",
     "balances": {
-      "heading": "Vos soldes",
-      "escrowHeld": "Sous séquestre",
-      "released": "Débloqué et disponible",
-      "paidOut": "Versé",
-      "ledgerNote": "Ces montants correspondent exactement à vos comptes du grand livre."
+      "heading": "Votre argent",
+      "escrowHeld": "En attente de livraison (en séquestre)",
+      "released": "Prêt à vous être envoyé (libéré)",
+      "paidOut": "Envoyé (versé)",
+      "ledgerNote": "Nous vous payons après la réception par l'acheteur. Ces chiffres correspondent exactement à votre registre."
     },
     "hold": {
-      "noticeTitle": "Versements suspendus pendant 24 heures",
-      "noticeBody": "Après le changement de votre numéro mobile money, les versements sont suspendus pendant 24 heures, le temps de vérifier le changement. Vous serez notifié lorsque les versements reprendront."
+      "noticeTitle": "Envois d'argent suspendus 24 heures",
+      "noticeBody": "Vous avez changé de numéro mobile money. Nous attendons 24 heures pour protéger votre argent. Nous vous écrirons à la reprise."
     },
     "paused": {
-      "noticeTitle": "Les versements sont désactivés pour le moment",
-      "noticeBody": "Aucun argent n'est encore envoyé vers votre numéro mobile money. Les soldes ci-dessous restent enregistrés dans le grand livre."
+      "noticeTitle": "Nous n'envoyons pas encore d'argent",
+      "noticeBody": "Rien n'est encore envoyé sur votre mobile money. Vos ventes sont comptées ci-dessous."
     },
     "history": {
-      "heading": "Historique des versements",
-      "empty": "Aucun versement pour le moment.",
+      "heading": "Argent envoyé",
+      "empty": "Aucun envoi pour l'instant.",
       "status": {
         "pending": "En attente",
-        "processing": "En cours de traitement",
-        "paid": "Payé",
+        "processing": "En cours d'envoi",
+        "paid": "Envoyé",
         "failed": "Échoué"
       }
     },
     "statement": {
       "heading": "Relevé mensuel",
       "monthLabel": "Mois",
-      "downloadCsv": "Télécharger le CSV",
-      "downloading": "Préparation du CSV…",
-      "pdfStub": "Les relevés PDF arrivent bientôt — le CSV est disponible dès maintenant."
+      "downloadCsv": "Télécharger CSV (tableur)",
+      "downloading": "Préparation…",
+      "pdfStub": "Les relevés PDF arrivent bientôt. Le CSV est disponible."
     },
     "method": {
       "meta": {
-        "title": "Méthode de versement — Convergeo Vendeur",
-        "description": "Modifiez le numéro mobile money vers lequel vos versements sont envoyés."
+        "title": "Où nous envoyons votre argent — Convergeo Vendeur",
+        "description": "Changez le numéro mobile money qui reçoit votre argent."
       },
-      "link": "Changer de méthode de versement",
-      "back": "← Retour aux versements",
-      "title": "Méthode de versement",
-      "intro": "Saisissez le numéro MTN, Airtel ou Zamtel enregistré à votre nom. Nous le revérifions via Lenco avant l'enregistrement.",
+      "link": "Changer le numéro de réception",
+      "back": "← Retour à votre argent",
+      "title": "Mode de versement — où nous envoyons votre argent",
+      "intro": "Saisissez un numéro MTN, Airtel ou Zamtel à votre nom. Nous vérifions le nom avec Lenco avant d'enregistrer.",
       "msisdnLabel": "Numéro mobile money",
       "msisdnPlaceholder": "ex. 0977123456",
       "railLabel": "Réseau",
@@ -1307,23 +1307,23 @@
         "airtel": "Airtel",
         "zamtel": "Zamtel"
       },
-      "otpLabel": "Code de vérification",
-      "otpPlaceholder": "Code à 6 chiffres",
-      "otpHelp": "Nous avons envoyé un code à votre téléphone enregistré. Saisissez-le pour confirmer ce changement.",
-      "submit": "Enregistrer la méthode de versement",
+      "otpLabel": "Code reçu",
+      "otpPlaceholder": "6 chiffres",
+      "otpHelp": "Nous avons envoyé un code à votre téléphone enregistré. Saisissez-le pour confirmer.",
+      "submit": "Enregistrer le numéro",
       "saving": "Enregistrement…",
-      "success": "Méthode de versement mise à jour. Les versements sont suspendus pendant 24 heures."
+      "success": "Numéro enregistré. Nous attendons 24 heures avant d'y envoyer de l'argent."
     },
     "errors": {
-      "loadFailed": "Impossible de charger les versements. Tirez pour actualiser.",
+      "loadFailed": "Impossible d'ouvrir la page argent. Tirez vers le bas pour réessayer.",
       "statementFailed": "Impossible de télécharger le relevé. Réessayez.",
-      "methodFailed": "Impossible de mettre à jour la méthode de versement. Réessayez.",
-      "otpFailed": "Code de vérification invalide ou expiré.",
-      "nameMismatch": "Ce nom MoMo ne correspond pas à votre nom légal vérifié.",
-      "kycRequired": "Complétez le KYC avant de changer de méthode de versement.",
-      "payoutsPaused": "Les versements sont suspendus après un changement de méthode de versement.",
-      "rateLimited": "Trop de requêtes. Réessayez sous peu.",
-      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain.",
+      "methodFailed": "Impossible d'enregistrer le numéro. Réessayez.",
+      "otpFailed": "Code faux ou expiré. Demandez-en un nouveau.",
+      "nameMismatch": "Le nom de ce numéro mobile money n'est pas le vôtre. Utilisez un numéro à votre nom.",
+      "kycRequired": "Terminez la vérification d'identité (KYC) avant de changer le numéro de réception.",
+      "payoutsPaused": "Vous avez changé de numéro : les envois sont suspendus 24 heures.",
+      "rateLimited": "Trop d'essais. Attendez une minute, puis réessayez.",
+      "methodChangeLimit": "Trop de changements aujourd'hui. Réessayez demain.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "pilot": {
@@ -1995,7 +1995,7 @@
     "nav": {
       "ariaLabel": "Navigation vendeur",
       "home": "Accueil",
-      "listings": "Annonces",
+      "listings": "Produits",
       "orders": "Commandes",
       "profile": "Profil"
     }

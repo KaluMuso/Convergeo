@@ -310,8 +310,8 @@
     "status": {
       "paid": "Paid and verified",
       "unpaid": "Unpaid",
-      "initiated": "Payment pending",
-      "ussd_pushed": "Payment pending",
+      "initiated": "Not paid yet",
+      "ussd_pushed": "Check your phone to pay",
       "pay_offline": "Awaiting mobile approval",
       "failed": "Payment failed",
       "expired": "Payment unresolved — awaiting reconciliation",

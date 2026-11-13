@@ -40,8 +40,8 @@ describe("HomeTrustStrip (CUST-HOME-01)", () => {
   it("renders localised trust items and the escrow ladder", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
     expect(screen.getByTestId("home-trust-strip")).toBeInTheDocument();
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("You pay");
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("Held by Convergeo");
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("Order on your phone");
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("Pay when it arrives");
     expect(screen.getByTestId("home-trust-sellers")).toHaveTextContent(
       catalogMessages.home.trust.sellers,
     );

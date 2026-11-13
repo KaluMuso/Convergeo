@@ -10,10 +10,10 @@
     "defaultCategory": "Tous les produits",
     "breadcrumbAria": "Fil d'Ariane",
     "results": "{count, plural, one {# annonce} other {# annonces}}",
-    "emptyTitle": "Aucune annonce trouvée",
-    "emptyBody": "Essayez d'effacer les filtres ou de parcourir une autre catégorie.",
-    "unavailableTitle": "Annonces indisponibles",
-    "unavailableBody": "Nous n'avons pas pu charger les produits de cette catégorie. Réessayez sous peu, ou utilisez la recherche.",
+    "emptyTitle": "Rien ici pour l'instant",
+    "emptyBody": "Effacez les filtres ou regardez une autre catégorie.",
+    "unavailableTitle": "Impossible de charger cette page",
+    "unavailableBody": "Vérifiez votre connexion et réessayez, ou utilisez la recherche.",
     "sort": {
       "label": "Trier par",
       "relevance": "Pertinence",
@@ -99,17 +99,17 @@
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
       "fallbackTitle": "Achetez produits, services et événements partout en Zambie",
-      "fallbackSubtitle": "Comparez les vendeurs, organisez une livraison à Lusaka ou un retrait national, et découvrez ce qui est près de vous.",
+      "fallbackSubtitle": "Trouvez des vendeurs près de chez vous. Livraison à Lusaka ou retrait partout en Zambie.",
       "primaryCta": "Commencer à parcourir",
-      "secondaryCta": "En savoir plus sur la vente",
+      "secondaryCta": "Vendre sur Convergeo",
       "placeholder": {
         "title": "Bienvenue sur Convergeo",
         "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
       },
-      "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Convergeo jusqu'à la livraison, puis versé.",
-      "escrowStep1": "Vous payez",
-      "escrowStep2": "Conservé par Convergeo",
-      "escrowStep3": "Versé à la livraison",
+      "escrowLine": "Commandez sur votre téléphone. Le vendeur l'envoie. Payez à l'arrivée.",
+      "escrowStep1": "Commandez sur votre téléphone",
+      "escrowStep2": "Le vendeur l'envoie",
+      "escrowStep3": "Payez à l'arrivée",
       "carousel": {
         "previous": "Diapositive précédente",
         "next": "Diapositive suivante",
@@ -137,10 +137,10 @@
     },
     "trust": {
       "ariaLabel": "Pourquoi acheter sur Convergeo",
-      "sellers": "Profils vendeurs avec un statut que vous pouvez consulter",
-      "fulfillment": "Livraison à Lusaka ou retrait partout en Zambie lorsque l'annonce le permet",
-      "returns": "Retours et remboursements expliqués pour les commandes éligibles",
-      "escrow": "Lorsque le paiement en ligne est disponible, Convergeo conserve votre argent jusqu'à la livraison"
+      "sellers": "Chaque boutique a sa page. Voyez à qui vous achetez.",
+      "fulfillment": "Livraison à Lusaka. Retrait partout en Zambie.",
+      "returns": "Article cassé ou incorrect ? Retournez-le sous 48 heures.",
+      "escrow": "Payez en espèces à l'arrivée de la commande."
     },
     "demo": {
       "sampleListing": "Annonce exemple"
@@ -193,9 +193,9 @@
       "recentViewProduct": "Voir {name}"
     },
     "sellCta": {
-      "title": "La vente sur Convergeo est sur invitation pour le moment",
-      "body": "L'inscription libre des vendeurs n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding ; les autres peuvent découvrir le fonctionnement de la bêta vendeur.",
-      "cta": "En savoir plus sur la vente"
+      "title": "Vous voulez vendre sur Convergeo ?",
+      "body": "Pour l'instant, seules les boutiques invitées peuvent rejoindre. Voyez comment ça marche.",
+      "cta": "Comment vendre"
     },
     "flash": {
       "defaultTag": "⚡ Offre flash",
@@ -249,22 +249,22 @@
     "breadcrumbAria": "Fil d'Ariane",
     "sellerCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
     "standalone": {
-      "detailsHeading": "Détails de l'annonce",
+      "detailsHeading": "À propos de cet article",
       "soldBy": "Vendu par {vendor}.",
-      "classLabel": "Classe de produit",
+      "classLabel": "Type d'article",
       "classValue": "Classe {class}",
       "conditionLabel": "État",
-      "incrementLabel": "Vendu par unités de",
+      "incrementLabel": "Vendu par",
       "minimumLabel": "Commande minimum",
-      "fulfilmentLabel": "Traitement",
-      "fulfilmentStocked": "Disponible en stock",
-      "fulfilmentMadeToOrder": "Fabriqué sur commande",
-      "leadTimeLabel": "Délai",
+      "fulfilmentLabel": "Prêt ou fait sur mesure",
+      "fulfilmentStocked": "Prêt maintenant",
+      "fulfilmentMadeToOrder": "Fait pour vous",
+      "leadTimeLabel": "Jours de fabrication",
       "leadTimeDays": "{days} jours",
-      "capacityLabel": "Capacité hebdomadaire",
+      "capacityLabel": "Combien par semaine",
       "capacityPerWeek": "{quantity} par semaine",
-      "locationLabel": "Emplacement du vendeur",
-      "defectsHeading": "Notes sur l'état et les défauts"
+      "locationLabel": "Où est le vendeur",
+      "defectsHeading": "Traces ou défauts"
     },
     "noSellers": {
       "title": "Aucun vendeur disponible",
@@ -339,21 +339,21 @@
       "outOfStock": "En rupture de stock",
       "lowStock": "Plus que {count} en stock",
       "alwaysAvailable": "Disponible",
-      "singleVendor": "Vendu uniquement par ce vendeur",
+      "singleVendor": "Seul ce vendeur l'a",
       "moq": "Commande minimum : {count}",
-      "lowestPrice": "Prix le plus bas parmi les vendeurs",
-      "moreThanLowest": "{diff} de plus que l'offre la plus basse",
+      "lowestPrice": "Prix le plus bas",
+      "moreThanLowest": "{diff} de plus que le moins cher",
       "wishlistAdd": "Ajouter à la liste de souhaits",
       "wishlistRemove": "Retirer de la liste de souhaits",
       "wishlistSaved": "Ajouté à la liste de souhaits",
       "pickup": {
-        "heading": "Choisissez une agence de retrait",
-        "selectAria": "Agence de retrait",
-        "placeholder": "Sélectionnez une agence",
+        "heading": "Où allez-vous la récupérer ?",
+        "selectAria": "Lieu de retrait",
+        "placeholder": "Choisir un lieu",
         "loading": "Chargement des agences de retrait…",
-        "loadError": "Impossible de charger les agences de retrait. Réessayez.",
-        "unavailable": "Aucune agence de retrait n'est disponible pour cet article",
-        "required": "Choisissez une agence de retrait pour ajouter cet article"
+        "loadError": "Impossible de charger les lieux de retrait. Vérifiez votre connexion et réessayez.",
+        "unavailable": "Aucun lieu de retrait n'a cet article pour le moment",
+        "required": "Choisissez d'abord le lieu de retrait"
       }
     },
     "stickyAtc": {
@@ -386,10 +386,10 @@
       "heading": "Signaler cette annonce",
       "reasonLegend": "Quel est le problème avec cette annonce ?",
       "detailLabel": "Plus de détails (facultatif)",
-      "detailPlaceholder": "Ajoutez tout contexte utile à la modération (sans coordonnées personnelles).",
+      "detailPlaceholder": "Dites-nous en plus (sans numéro de téléphone).",
       "submit": "Envoyer le signalement",
       "cancel": "Annuler",
-      "success": "Merci — notre équipe de modération l'examinera.",
+      "success": "Merci. Notre équipe va vérifier.",
       "signedOut": "Connectez-vous pour signaler une annonce.",
       "error": "Impossible d'envoyer ce signalement. Veuillez réessayer.",
       "rateLimited": "Trop de signalements. Veuillez patienter et réessayer.",
@@ -437,13 +437,13 @@
   },
   "comparePage": {
     "title": "Comparer les vendeurs",
-    "subtitle": "Voyez les prix multi-vendeurs, l'état et les options de livraison pour le même produit.",
+    "subtitle": "Comparez les prix de plusieurs vendeurs pour le même article.",
     "noProductTitle": "Choisissez un produit à comparer",
     "noProductBody": "Ouvrez une fiche produit avec plus d'un vendeur, puis utilisez Comparer les vendeurs. Cette page n'invente jamais de données de comparaison.",
     "unavailableTitle": "Comparaison indisponible",
     "unavailableBody": "Nous n'avons pas pu charger la comparaison des vendeurs pour ce produit. La fiche produit peut encore fonctionner.",
     "singleSellerTitle": "Un seul vendeur pour l'instant",
-    "singleSellerBody": "La comparaison nécessite au moins deux annonces actives pour le même produit. Revenez quand d'autres vendeurs l'auront listé.",
+    "singleSellerBody": "Un seul vendeur l'a pour l'instant. Revenez plus tard.",
     "browseCta": "Rechercher des produits",
     "backToProduct": "Retour au produit",
     "chooseOnProduct": "Choisir un vendeur sur la fiche produit",
@@ -497,7 +497,7 @@
       "reasonLegend": "Dites-nous ce qui doit être vérifié.",
       "submit": "Envoyer le signalement",
       "cancel": "Annuler",
-      "success": "Merci — notre équipe de modération l'examinera.",
+      "success": "Merci. Notre équipe va vérifier.",
       "signedOut": "Connectez-vous pour signaler un avis.",
       "error": "Impossible d'envoyer ce signalement. Veuillez réessayer.",
       "reasons": {
@@ -521,7 +521,7 @@
   "deals": {
     "metaTitle": "Offres du jour",
     "title": "Offres du jour",
-    "subtitle": "Prix limités de vendeurs vérifiés. Paiement protégé par séquestre.",
+    "subtitle": "Petits prix pour peu de temps, chez des vendeurs vérifiés.",
     "endsIn": "Se termine dans {time}",
     "ended": "Terminé",
     "off": "-{percent} %",

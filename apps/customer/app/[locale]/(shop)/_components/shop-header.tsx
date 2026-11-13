@@ -58,6 +58,10 @@ type ShopHeaderProps = {
 const navLinkClassName =
   "inline-flex min-h-11 items-center rounded-pill border border-border px-3.5 text-sm font-medium text-text-2 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing lg:rounded lg:border-transparent lg:px-3 lg:hover:border-transparent lg:hover:bg-bg-2 lg:hover:text-text";
 
+/** Phones: icon with a short word under it (no bare icons). */
+const stackedActionClassName =
+  "inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded px-0.5 text-micro font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
+
 const actionClassName =
   "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded px-3 text-sm font-semibold text-text transition-colors hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing";
 
@@ -222,14 +226,30 @@ export function ShopHeader({
       >
         <div className="flex items-center justify-between gap-2">
           {logo}
+          {/* Simple-UX: every phone action keeps its icon and gets a short
+              word under it, so nothing is a bare icon and nothing is removed.
+              The theme switch sits on the search row so the signed-in row
+              (bell + account + cart) still fits at 360px. */}
           <div className="flex items-center gap-0.5">
-            {themeToggle}
             {notificationSlot}
-            {accountLink(false)}
-            {cartTrigger(false)}
+            <Link href={accountHref} className={stackedActionClassName}>
+              <IconAccount aria-hidden />
+              <span>{labels.account}</span>
+            </Link>
+            <CartNavTrigger
+              labels={{ openCart: cartCountLabel ?? labels.openCart }}
+              cartIcon={<IconCart aria-hidden />}
+              label={labels.cart}
+              className={`relative ${stackedActionClassName}`}
+            />
           </div>
         </div>
-        {mobileSearchSlot ? <div className="w-full min-w-0">{mobileSearchSlot}</div> : null}
+        {mobileSearchSlot || labels.theme ? (
+          <div className="flex w-full min-w-0 items-center gap-1">
+            {mobileSearchSlot ? <div className="min-w-0 flex-1">{mobileSearchSlot}</div> : null}
+            {labels.theme ? <HeaderThemeToggle labels={labels.theme} caption /> : null}
+          </div>
+        ) : null}
       </nav>
 
       {/* Tablet + desktop (md+), full-bleed. Desktop is one row:

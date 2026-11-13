@@ -1,6 +1,6 @@
 {
   "services.title": "Services",
-  "services.rfq.sent": "RFQ sent to {count, plural, one {# vendor} other {# vendors}}",
+  "services.rfq.sent": "Price request sent to {count, plural, one {# seller} other {# sellers}}",
   "services.quote.received": "Quote from {vendor}: {amount}",
   "browse": {
     "title": "Services",
@@ -48,7 +48,7 @@
     "requestQuoteHint": "Describe your job and get quotes from matching providers.",
     "requestQuoteHintDirect": "Send your requirements directly to this provider for a formal quote.",
     "requestQuoteDialogTitle": "Request a quote",
-    "requestQuoteDialogHint": "Describe what you need from {vendor}. They will reply with a formal price.",
+    "requestQuoteDialogHint": "Tell {vendor} what you need. They will reply with a price.",
     "requestQuoteDetailsLabel": "What do you need?",
     "requestQuoteDetailsPlaceholder": "e.g. Scope, location, timing, budget range…",
     "requestQuoteSubmit": "Send request",
@@ -120,7 +120,7 @@
   },
   "postJob": {
     "title": "Post a job",
-    "subtitle": "Describe what you need — matching providers will send quotes.",
+    "subtitle": "Say what you need. People who do this work will send you prices.",
     "category": {
       "label": "Service category",
       "beauty": "Beauty",
@@ -162,13 +162,13 @@
     "authCta": "Continue with phone",
     "draftSaved": "Your draft is saved on this device until you sign in.",
     "ack": {
-      "sent": "We notified matching providers. Quotes usually arrive within a day.",
-      "noMatch": "We could not find matching providers right now, but we will keep looking and notify you."
+      "sent": "We told people who do this work. Prices usually come within a day.",
+      "noMatch": "We haven't found anyone yet. We will keep looking and message you."
     },
     "errors": {
-      "required": "Please fill in all required fields.",
-      "generic": "Something went wrong. Please try again.",
-      "rateLimited": "Too many requests. Please wait a moment."
+      "required": "Please fill in the boxes marked *.",
+      "generic": "Something went wrong. Check your internet and try again.",
+      "rateLimited": "Too many tries. Wait a minute, then try again."
     }
   },
   "quotes": {
@@ -219,8 +219,8 @@
   },
   "accept": {
     "title": "Accept this quote",
-    "intro": "Pay a {pct}% deposit now to secure {vendor}. The balance is due when the work is done.",
-    "payIntro": "Accept {vendor}'s quote and pay securely. The amount due now is confirmed on the next screen.",
+    "intro": "Pay {pct}% now to book {vendor}. Pay the rest when the work is done.",
+    "payIntro": "Say yes to {vendor}'s price and pay safely. The next screen shows what you pay now.",
     "quoteFrom": "Quote from {vendor}",
     "totalLabel": "Total job value",
     "depositLabel": "Deposit due now",
@@ -308,7 +308,7 @@
     "priceLabel": "Fixed price",
     "depositLabel": "Deposit due now",
     "balanceLabel": "Balance on completion",
-    "escrowNote": "You pay → Held by Convergeo → Released to your provider once you confirm the job is done.",
+    "escrowNote": "We keep your money safe. Your provider gets it after you say the job is done.",
     "bookCta": "Book & pay {amount} deposit",
     "submitting": "Booking…",
     "errors": {
@@ -335,8 +335,8 @@
     "status": {
       "paid": "Paid and verified",
       "unpaid": "Unpaid",
-      "initiated": "Payment pending",
-      "ussd_pushed": "Payment pending",
+      "initiated": "Not paid yet",
+      "ussd_pushed": "Check your phone to pay",
       "pay_offline": "Awaiting mobile approval",
       "failed": "Payment failed",
       "expired": "Payment unresolved — awaiting reconciliation",

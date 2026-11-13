@@ -462,7 +462,7 @@
   "deals": {
     "metaTitle": "Today's deals",
     "title": "Today's deals",
-    "subtitle": "Limited-time prices from verified sellers. Paid safely through escrow.",
+    "subtitle": "Low prices for a short time, from checked sellers.",
     "endsIn": "Ends in {time}",
     "ended": "Ended",
     "off": "-{percent}%",

@@ -188,7 +188,7 @@
     "cancelCta": "Annuler le transfert",
     "cancelling": "Annulation…",
     "cancelledNotice": "Transfert annulé.",
-    "pendingNotice": "Transfert en attente vers {phone}",
+    "pendingNotice": "En attente que {phone} accepte ce billet",
     "claimBanner": {
       "title": "Un ami vous a envoyé un billet",
       "body": "{event} commence {datetime}. Récupérez-le avant son expiration.",
@@ -203,8 +203,8 @@
       "notHolder": "Seul le titulaire du billet peut le transférer.",
       "notTransferable": "Ce billet ne peut plus être transféré.",
       "cutoffPassed": "Les transferts ferment 6 heures avant le début de l'événement.",
-      "pendingExists": "Ce billet a déjà un transfert en attente.",
-      "notPending": "Ce transfert n'est plus en attente.",
+      "pendingExists": "Vous avez déjà envoyé ce billet. Attendez ou annulez d'abord.",
+      "notPending": "Cet envoi de billet est déjà terminé.",
       "expired": "Cette offre de transfert a expiré.",
       "phoneMismatch": "Connectez-vous avec le numéro de téléphone auquel le billet a été envoyé.",
       "rateLimited": "Trop de demandes. Réessayez bientôt."

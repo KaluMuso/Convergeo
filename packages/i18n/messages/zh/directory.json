@@ -1,12 +1,12 @@
 {
   "index": {
-    "title": "商家",
+    "title": "店铺",
     "subtitle": "发现赞比亚各地的卖家与商家",
     "results": "{count, plural, one {# 家商家} other {# 家商家}}",
     "searchPlaceholder": "搜索商家",
     "searchLabel": "搜索目录",
     "viewProfile": "查看店铺",
-    "becomeVendor": "成为卖家",
+    "becomeVendor": "开您的店",
     "heroPitch": "登记您的商家，触达赞比亚各地的客户，安全收款。"
   },
   "filters": {
@@ -16,7 +16,7 @@
     "badges": "徽章",
     "allCategories": "全部类别",
     "allLocations": "全部位置",
-    "preferred": "优选卖家",
+    "preferred": "优选店铺",
     "verified": "已验证",
     "apply": "应用筛选",
     "clear": "清除筛选",
@@ -42,7 +42,7 @@
     "selfListed": "自主上架",
     "idVerified": "身份已验证",
     "sectorVerified": "行业已验证",
-    "preferred": "优选商家"
+    "preferred": "优选店铺"
   },
   "tiers": {
     "bronze": "青铜",
@@ -73,14 +73,14 @@
     "reviewsHeading": "客户评价",
     "reviewsSummary": "平均 {rating, number, ::.1} 分，来自 {count, plural, one {# 条评价} other {# 条评价}}",
     "noReviews": "暂无评价",
-    "preferredBadge": "优选卖家",
-    "verifiedBadge": "已验证卖家",
+    "preferredBadge": "优选店铺",
+    "verifiedBadge": "已认证卖家（身份已核实）",
     "shareTitle": "Convergeo 上的 {name}",
     "statRating": "评分",
     "statReviews": "评价",
     "statListings": "商品",
     "statOrders": "订单",
-    "offeringsAria": "卖家提供的商品和服务",
+    "offeringsAria": "此店出售的商品",
     "tabProducts": "商品",
     "tabServices": "服务",
     "tabEvents": "活动",
@@ -99,7 +99,7 @@
     "noMatches": "没有匹配的商品，换个关键词或分类试试。"
   },
   "listings": {
-    "vendor": "由 {vendor} 销售",
+    "vendor": "卖家：{vendor}",
     "noReviews": "暂无评价",
     "reviewCount": "({count})",
     "quickAdd": "快速添加",
