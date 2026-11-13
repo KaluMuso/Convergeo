@@ -332,7 +332,7 @@ describe("role forms and mutation lifecycle through the current permission shell
 
     fixture.account = "target";
     await shell("/en/orders", <p data-target-content>Fixture order read</p>);
-    expect(nav()).toEqual(["/en/moderation", "/en/orders", "/en/services"]);
+    expect(nav()).toEqual(["/en/analytics", "/en/moderation", "/en/orders", "/en/services"]);
     expect(container.querySelector("[data-target-content]")).not.toBeNull();
     // A separately authorized actor revokes the synthetic row in this fixture.
     // The restricted browser performs only its normal permission recheck.

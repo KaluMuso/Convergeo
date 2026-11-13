@@ -2,7 +2,6 @@
 
 import { ApiError } from "@vergeo/config";
 import { formatK, formatNumber } from "@vergeo/i18n";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
@@ -25,6 +24,7 @@ import {
   type RangeDays,
   type SearchDemandData,
 } from "./analytics-data";
+import { AnalyticsTabs } from "./analytics-tabs";
 import { BarList } from "./bar-list";
 
 type LoadState<T> =
@@ -76,26 +76,7 @@ export function AnalyticsView({ locale, tab }: ViewProps) {
         <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
 
-      <nav aria-label={t("tabs.label")} className="flex flex-wrap gap-2">
-        {ANALYTICS_TABS.map((entry) => {
-          const active = entry.tab === tab;
-          return (
-            <Link
-              key={entry.tab}
-              href={`/${locale}/${entry.href}`}
-              aria-current={active ? "page" : undefined}
-              className={[
-                "inline-flex min-h-11 items-center rounded-md border px-3 text-sm font-medium",
-                active
-                  ? "border-primary bg-surface text-primary"
-                  : "border-border bg-surface text-text hover:border-primary",
-              ].join(" ")}
-            >
-              {t(`tabs.${entry.tab}`)}
-            </Link>
-          );
-        })}
-      </nav>
+      <AnalyticsTabs locale={locale} active={tab === "overview" ? "behaviour" : tab} />
 
       <fieldset className="flex flex-wrap items-center gap-2">
         <legend className="sr-only">{t("range.label")}</legend>
@@ -217,7 +198,12 @@ function OverviewTab({ data, locale }: { data: OverviewData; locale: string }) {
   return (
     <div className="space-y-4">
       <DataThrough day={data.data_through} />
-      {!c.payments_reconciled ? (
+      {data.finance_visible === false ? (
+        <p className="rounded-md border border-border p-3 text-xs text-muted">
+          {t("financeWithheld")}
+        </p>
+      ) : null}
+      {c.payments_reconciled === false ? (
         <p className="rounded-md border border-danger/40 p-3 text-sm text-danger" role="alert">
           {t("overview.reconciliation.mismatch", { days: c.payment_mismatch_days.join(", ") })}
         </p>
@@ -227,8 +213,14 @@ function OverviewTab({ data, locale }: { data: OverviewData; locale: string }) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kpi
             label={t("overview.kpi.gmvPaid")}
-            value={formatK(c.gmv_paid_ngwee, { locale })}
-            hint={delta(c.gmv_paid_ngwee, pc.gmv_paid_ngwee)}
+            value={
+              c.gmv_paid_ngwee === null ? t("financeOnly") : formatK(c.gmv_paid_ngwee, { locale })
+            }
+            hint={
+              c.gmv_paid_ngwee === null || pc.gmv_paid_ngwee === null
+                ? undefined
+                : delta(c.gmv_paid_ngwee, pc.gmv_paid_ngwee)
+            }
           />
           <Kpi
             label={t("overview.kpi.ordersPaid")}
@@ -237,7 +229,13 @@ function OverviewTab({ data, locale }: { data: OverviewData; locale: string }) {
           />
           <Kpi
             label={t("overview.kpi.aov")}
-            value={c.aov_ngwee === null ? t("notAvailable") : formatK(c.aov_ngwee, { locale })}
+            value={
+              c.aov_ngwee !== null
+                ? formatK(c.aov_ngwee, { locale })
+                : c.gmv_paid_ngwee === null
+                  ? t("financeOnly")
+                  : t("notAvailable")
+            }
           />
           <Kpi
             label={t("overview.kpi.checkoutsStarted")}
@@ -271,13 +269,26 @@ function OverviewTab({ data, locale }: { data: OverviewData; locale: string }) {
           caption={t("overview.dailyTitle")}
           emptyLabel={t("empty")}
           labelHeader={t("columns.day")}
-          valueHeader={t("overview.kpi.gmvPaid")}
-          items={data.daily.map((day) => ({
-            key: day.day,
-            label: day.day,
-            value: day.gmv_paid_ngwee,
-            display: formatK(day.gmv_paid_ngwee, { locale }),
-          }))}
+          valueHeader={
+            data.finance_visible === false
+              ? t("overview.kpi.ordersPaid")
+              : t("overview.kpi.gmvPaid")
+          }
+          items={data.daily.map((day) =>
+            day.gmv_paid_ngwee === null
+              ? {
+                  key: day.day,
+                  label: day.day,
+                  value: day.orders_paid,
+                  display: num(day.orders_paid),
+                }
+              : {
+                  key: day.day,
+                  label: day.day,
+                  value: day.gmv_paid_ngwee,
+                  display: formatK(day.gmv_paid_ngwee, { locale }),
+                },
+          )}
         />
       </TileShell>
     </div>

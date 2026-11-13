@@ -8,7 +8,7 @@
 export type AnalyticsTab = "overview" | "search" | "products" | "insights";
 
 export const ANALYTICS_TABS: ReadonlyArray<{ tab: AnalyticsTab; href: string; api: string }> = [
-  { tab: "overview", href: "analytics", api: "overview" },
+  { tab: "overview", href: "analytics/behaviour", api: "overview" },
   { tab: "search", href: "analytics/search", api: "search-demand" },
   { tab: "products", href: "analytics/products", api: "products-funnel" },
   { tab: "insights", href: "analytics/insights", api: "insights" },
@@ -34,9 +34,10 @@ export type Commercial = {
   orders_cancelled: number;
   orders_paid: number;
   paid_checkouts: number;
-  gmv_paid_ngwee: number;
+  /** `null` when the caller lacks finance.read/operate (D3). */
+  gmv_paid_ngwee: number | null;
   aov_ngwee: number | null;
-  payments_reconciled: boolean;
+  payments_reconciled: boolean | null;
   payment_mismatch_days: string[];
 };
 
@@ -45,6 +46,8 @@ export type OverviewData = {
   previous_range: DateRange;
   data_through: string | null;
   min_sample_n: number;
+  /** False when money figures were withheld for lack of a finance permission. */
+  finance_visible?: boolean;
   behaviour: Behaviour;
   previous_behaviour: Behaviour;
   commercial: Commercial;
@@ -53,7 +56,7 @@ export type OverviewData = {
     day: string;
     sessions: number | null;
     orders_paid: number;
-    gmv_paid_ngwee: number;
+    gmv_paid_ngwee: number | null;
   }>;
 };
 

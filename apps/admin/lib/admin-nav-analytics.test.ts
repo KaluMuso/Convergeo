@@ -7,18 +7,23 @@ import {
 
 import { resolveAdminNavCapabilities } from "./admin-nav-capabilities";
 
-describe("analytics nav entry (1B-05)", () => {
-  it("is hidden by default so the nav is unchanged while the flag is off", () => {
+describe("analytics nav entry", () => {
+  it("is hidden without analytics or finance grants", () => {
     const keys = filterAdminNavGroups(resolveAdminNavCapabilities()).flatMap((group) =>
       group.items.map((item) => item.key),
     );
     expect(keys).not.toContain("analytics");
+    expect(resolveAdminNavCapabilities(["products.manage"]).analytics).toBe(false);
   });
 
-  it("appears in the overview group once the status probe enables it", () => {
-    const caps = { ...resolveAdminNavCapabilities(), analytics: true };
-    const overview = filterAdminNavGroups(caps).find((group) => group.key === "overview");
+  it("follows analytics.read, finance.read and finance.operate (D3), not the v2 flag", () => {
+    for (const permission of ["analytics.read", "finance.read", "finance.operate"]) {
+      expect(resolveAdminNavCapabilities([permission]).analytics).toBe(true);
+    }
+    const overview = filterAdminNavGroups(resolveAdminNavCapabilities(["analytics.read"])).find(
+      (group) => group.key === "overview",
+    );
     expect(overview?.items.map((item) => item.key)).toEqual(["home", "analytics"]);
-    expect(resolveAdminActiveItem("/analytics/search")).toBe("analytics");
+    expect(resolveAdminActiveItem("/analytics/revenue")).toBe("analytics");
   });
 });

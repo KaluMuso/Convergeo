@@ -74,16 +74,17 @@ describe("admin navigation from current API permissions", () => {
   });
 
   it.each([
-    ["finance.read", ["orders"]],
+    // Analytics: revenue dashboards need finance (D3), the rest analytics.read.
+    ["finance.read", ["analytics", "orders"]],
     ["events.manage", ["events"]],
     ["products.manage", ["moderation"]],
     ["vendors.manage", ["kyc", "intake", "business"]],
     ["ads.manage", ["merch", "homeFeed", "advertising"]],
-    ["analytics.read", ["home"]],
+    ["analytics.read", ["home", "analytics"]],
     ["services.read", ["services"]],
     ["inventory.read", ["inventory"]],
     // 2026-11 governance permissions.
-    ["finance.operate", ["disputes", "orders"]],
+    ["finance.operate", ["analytics", "disputes", "orders"]],
     ["support.manage", ["disputes", "support"]],
     ["services.manage", ["services"]],
     ["audit.read", ["auditLog"]],
@@ -94,6 +95,7 @@ describe("admin navigation from current API permissions", () => {
 
   it("combines multiple role permissions without adding global controls", () => {
     expect(visible(["finance.read", "products.manage", "vendors.manage", "finance.read"])).toEqual([
+      "analytics",
       "kyc",
       "moderation",
       "intake",
@@ -113,7 +115,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("intake");
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
-    expect(keys).toHaveLength(18);
+    expect(keys).toHaveLength(19);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });
@@ -128,7 +130,7 @@ describe("admin navigation from current API permissions", () => {
   });
 
   it("removes previously visible items on role update and revocation", () => {
-    expect(visible(["finance.read"])).toEqual(["orders"]);
+    expect(visible(["finance.read"])).toEqual(["analytics", "orders"]);
     expect(visible(["products.manage"])).toEqual(["moderation"]);
     expect(visible([])).toEqual([]);
   });
@@ -146,7 +148,7 @@ describe("admin navigation from current API permissions", () => {
       },
     ]);
     const caps = resolveAdminNavCapabilities([], true);
-    const groups = filterAdminNavGroups({ ...caps, home: false });
+    const groups = filterAdminNavGroups({ ...caps, home: false, analytics: false });
     expect(groups.some((group) => group.key === "overview")).toBe(false);
     expect(groups.length).toBeGreaterThan(0);
   });
@@ -276,7 +278,7 @@ describe("mounted current-permission shell", () => {
       request.resolve(reply(grants()));
     });
     expect(container.querySelector('[data-protected-route="/en/orders"]')).not.toBeNull();
-    expect(navHrefs()).toEqual(["/en/orders"]);
+    expect(navHrefs()).toEqual(["/en/analytics", "/en/orders"]);
     expect(calls[0]?.init.cache).toBe("no-store");
   });
 
@@ -320,7 +322,7 @@ describe("mounted current-permission shell", () => {
     await renderRoute("/en/orders");
     current = grants(["finance.read", "products.manage"]);
     await refocus();
-    expect(navHrefs()).toEqual(["/en/moderation", "/en/orders"]);
+    expect(navHrefs()).toEqual(["/en/analytics", "/en/moderation", "/en/orders"]);
     current = grants(["products.manage"]);
     await refocus();
     expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
