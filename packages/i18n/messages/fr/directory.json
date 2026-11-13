@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "Toutes les catégories",
     "allLocations": "Tous les emplacements",
-    "preferred": "Boutique recommandée",
+    "preferred": "Boutique privilégiée",
     "verified": "Vérifié",
     "apply": "Appliquer les filtres",
     "clear": "Effacer les filtres",
@@ -42,7 +42,7 @@
     "selfListed": "Auto-inscrit",
     "idVerified": "Identité vérifiée",
     "sectorVerified": "Secteur vérifié",
-    "preferred": "Boutique recommandée"
+    "preferred": "Boutique privilégiée"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,8 +73,8 @@
     "reviewsHeading": "Avis clients",
     "reviewsSummary": "{rating, number, ::.1} en moyenne sur {count, plural, one {# avis} other {# avis}}",
     "noReviews": "Pas encore d'avis",
-    "preferredBadge": "Boutique recommandée",
-    "verifiedBadge": "Identité vérifiée",
+    "preferredBadge": "Boutique privilégiée",
+    "verifiedBadge": "Vendeur vérifié (identité contrôlée)",
     "shareTitle": "{name} sur Convergeo",
     "statRating": "Note",
     "statReviews": "Avis",

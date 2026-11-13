@@ -16,7 +16,7 @@
     "badges": "徽章",
     "allCategories": "全部类别",
     "allLocations": "全部位置",
-    "preferred": "推荐店铺",
+    "preferred": "优选店铺",
     "verified": "已验证",
     "apply": "应用筛选",
     "clear": "清除筛选",
@@ -42,7 +42,7 @@
     "selfListed": "自主上架",
     "idVerified": "身份已验证",
     "sectorVerified": "行业已验证",
-    "preferred": "推荐店铺"
+    "preferred": "优选店铺"
   },
   "tiers": {
     "bronze": "青铜",
@@ -73,8 +73,8 @@
     "reviewsHeading": "客户评价",
     "reviewsSummary": "平均 {rating, number, ::.1} 分，来自 {count, plural, one {# 条评价} other {# 条评价}}",
     "noReviews": "暂无评价",
-    "preferredBadge": "推荐店铺",
-    "verifiedBadge": "身份已核实",
+    "preferredBadge": "优选店铺",
+    "verifiedBadge": "已认证卖家（身份已核实）",
     "shareTitle": "Convergeo 上的 {name}",
     "statRating": "评分",
     "statReviews": "评价",

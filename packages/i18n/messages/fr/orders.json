@@ -15,7 +15,7 @@
     "paymentCod": "Payer à l'arrivée",
     "paymentPrepaid": "Payé",
     "paymentPending": "Pas encore payé",
-    "paymentPendingHint": "Nous n'avons pas encore reçu votre paiement."
+    "paymentPendingHint": "Nous n'avons pas encore reçu votre paiement : cette commande n'est pas payée."
   },
   "detail": {
     "title": "Détails de la commande",
@@ -117,7 +117,7 @@
     "categoryNotDelivered": "Commande non livrée",
     "categoryOther": "Autre chose",
     "descriptionLabel": "Décrivez le problème",
-    "descriptionPlaceholder": "Que s'est-il passé ?",
+    "descriptionPlaceholder": "Que s'est-il passé ? Ajoutez les détails utiles.",
     "evidenceLabel": "Ajouter des photos (si possible)",
     "evidenceHelp": "Jusqu'à 8 photos ou PDF, 10 Mo maximum chacun.",
     "addEvidence": "Ajouter une photo ou un PDF",

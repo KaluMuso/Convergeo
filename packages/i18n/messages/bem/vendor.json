@@ -235,7 +235,7 @@
       "saving": "Saving…"
     },
     "kyc": {
-      "heading": "Check your ID",
+      "heading": "Check your ID (T1 verification)",
       "intro": "Take a photo of your NRC and of your face. Nobody else sees them.",
       "nrcLabel": "NRC photo",
       "nrcHelp": "Take a photo of the front of your NRC (green ID card) in good light.",
@@ -293,7 +293,7 @@
         "title": "Your ID is checked",
         "body": "⚠ T1 KYC approved. You can create listings — buyers will see them once you publish.",
         "cta": "Add your first product",
-        "t2Link": "Add business papers (PACRA, TPIN)"
+        "t2Link": "Add business papers — T2 (PACRA, TPIN)"
       },
       "rejected": {
         "title": "Please fix your details",
@@ -311,7 +311,7 @@
       }
     },
     "t2": {
-      "stubLabel": "Business papers check (coming soon)",
+      "stubLabel": "Business papers check — T2 (coming soon)",
       "stubBody": "PACRA certificate and company TPIN."
     },
     "errors": {
@@ -358,9 +358,9 @@
     "loading": "Ilelodisha…",
     "tabs": {
       "ariaLabel": "How to add your product",
-      "attach": "Find it",
+      "attach": "Find it (catalog)",
       "newCanonical": "New product",
-      "quickList": "One-off item"
+      "quickList": "One-off item (quick list)"
     },
     "commission": {
       "heading": "⚠ Commission on this listing",
@@ -392,12 +392,12 @@
       "details": {
         "about": "About this item",
         "heading": "Product details",
-        "help": "Add only details you are sure about, like size, weight, colour or what it is made of. Leave the rest empty. Our team checks them.",
+        "help": "Add only details you are sure about, like size, weight, colour, materials or care. Use the maker's units. Leave the rest empty — our team checks every detail. Up to 32 details; names up to 80 letters, answers up to 2,000, description up to 5,000.",
         "name": "Detail (e.g. Colour)",
         "value": "Answer (e.g. Red)",
         "add": "Add detail",
         "remove": "Remove detail",
-        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once."
+        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once. Keep within the limits shown."
       }
     },
     "quickList": {
@@ -457,14 +457,14 @@
       "capacityLabel": "⚠ Weekly capacity",
       "capacityHelp": "⚠ Maximum made-to-order units you can accept each week.",
       "capacityInvalid": "⚠ Enter a weekly capacity between 1 and 9,999.",
-      "stockModeLabel": "How many do you have?",
+      "stockModeLabel": "Stock — how many do you have?",
       "stockTracked": "I will count them",
       "stockAlways": "I always have it",
       "stockQtyLabel": "How many you have now",
       "wholesaleLabel": "⚠ Wholesale tiers",
-      "wholesaleHelp": "Only for shops with business papers checked",
+      "wholesaleHelp": "Only for T2-verified businesses (business papers checked)",
       "wholesaleMeasureUnavailable": "⚠ Wholesale tiers for per-measure listings are not available yet.",
-      "moqLabel": "Smallest order",
+      "moqLabel": "Minimum order quantity (MOQ)",
       "evidenceDraftNotice": "⚠ Used and Class D listings are saved as drafts. Upload at least one evidence photo before publishing.",
       "saveDraft": "⚠ Save draft and add photos",
       "savingDraft": "⚠ Saving draft…"
@@ -906,7 +906,7 @@
     },
     "payment": {
       "heading": "Payment",
-      "cod": "Buyer pays cash when it arrives",
+      "cod": "Cash on delivery — buyer pays when it arrives",
       "paid": "⚠ Paid — held in escrow",
       "unpaid": "Not paid yet"
     },
@@ -916,7 +916,7 @@
       "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "Item code {sku}"
+      "sku": "SKU (item code) {sku}"
     },
     "timeline": {
       "heading": "Inshitaline",
@@ -928,7 +928,7 @@
       "confirm": "Tukishisheni order",
       "reject": "I can't do this order",
       "pack": "Start packing",
-      "ship": "Mark as sent",
+      "ship": "Mark as sent (shipped)",
       "ready_for_pickup": "Ready for the buyer to collect",
       "confirming": "Tukishisheniing…",
       "rejecting": "Rejecting…",
@@ -942,7 +942,7 @@
       "shipLabel": "Delivery note",
       "shipPlaceholder": "e.g. Rider John 0977…",
       "submitReject": "Send reason",
-      "submitShip": "Mark as sent",
+      "submitShip": "Mark as sent (shipped)",
       "cancel": "Cancel"
     },
     "success": {
@@ -963,7 +963,7 @@
     "courier": {
       "heading": "Rider",
       "courier": "Rider",
-      "reference": "Delivery number: {ref}",
+      "reference": "Courier reference: {ref}",
       "statuses": {
         "requested": "Looking for a rider",
         "accepted": "Rider found",
@@ -992,7 +992,7 @@
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "Sales",
+      "gmv": "Sales (GMV)",
       "gmvCaption": "30 days"
     },
     "needsAction": {
@@ -1045,7 +1045,7 @@
       "retryHint": "Loleni connection yenu, then try again."
     },
     "kycBanner": {
-      "title": "Finish your ID check",
+      "title": "Finish your ID check (KYC)",
       "body": "⚠ Your shop is not marked verified until KYC is approved with an auditable record.",
       "cta": "⚠ View KYC status"
     },
@@ -1100,9 +1100,9 @@
     "balances": {
       "heading": "⚠ Your balances",
       "escrowHeld": "⚠ Held in escrow",
-      "released": "Ready to send to you",
-      "paidOut": "Sent to you",
-      "ledgerNote": "We pay you after the buyer gets the order."
+      "released": "Ready to send to you (released)",
+      "paidOut": "Sent to you (paid out)",
+      "ledgerNote": "We pay you after the buyer gets the order. These figures match your ledger accounts exactly."
     },
     "hold": {
       "noticeTitle": "⚠ Payouts paused for 24 hours",
@@ -1125,9 +1125,9 @@
     "statement": {
       "heading": "Monthly report",
       "monthLabel": "Month",
-      "downloadCsv": "Download (spreadsheet)",
+      "downloadCsv": "Download CSV (spreadsheet)",
       "downloading": "Getting it ready…",
-      "pdfStub": "PDF reports are coming soon."
+      "pdfStub": "PDF reports are coming soon. CSV is ready now."
     },
     "method": {
       "meta": {
@@ -1137,7 +1137,7 @@
       "link": "⚠ Change payout method",
       "back": "⚠ ← Bweleleni to payouts",
       "title": "⚠ Payout method",
-      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name before we save it.",
+      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name with Lenco before we save it.",
       "msisdnLabel": "Mobile money number",
       "msisdnPlaceholder": "e.g. 0977123456",
       "railLabel": "Network",
@@ -1148,7 +1148,7 @@
       },
       "otpLabel": "Code from your phone",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your phone. Type it here.",
+      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
       "submit": "⚠ Save payout method",
       "saving": "Saving…",
       "success": "⚠ Payout method updated. Payouts are paused for 24 hours."
@@ -1900,8 +1900,8 @@
       "jobs": "Jobs",
       "clips": "Videos",
       "reviews": "Reviews",
-      "payouts": "My money",
-      "disputes": "Problems",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
       "intake": "Ama-draft ya WhatsApp"
     }
   },

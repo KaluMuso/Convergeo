@@ -196,7 +196,7 @@
     },
     "invite": {
       "eyebrow": "您已受邀",
-      "body": "完成这 3 步。我们核实身份后，您就能开始卖货。"
+      "body": "完成这 3 步。我们核实身份（KYC）后，您就能开始卖货。获批后开放商品、收入和控制台。"
     },
     "steps": {
       "business": "商户",
@@ -207,7 +207,7 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "您的店铺",
-      "intro": "告诉我们您卖什么。",
+      "intro": "告诉我们您卖什么、怎么经营，方便为您设置店铺。",
       "nameLabel": "商户或店铺名称",
       "namePlaceholder": "例如：卢萨卡电子",
       "categoryLabel": "您主要卖什么？",
@@ -224,7 +224,7 @@
       "saving": "保存中…"
     },
     "kyc": {
-      "heading": "核验身份",
+      "heading": "核验身份（T1 认证）",
       "intro": "拍一张 NRC 身份证照片和一张自拍。别人看不到。",
       "nrcLabel": "NRC 照片",
       "nrcHelp": "在光线好的地方拍 NRC（绿色身份证）正面。",
@@ -277,9 +277,9 @@
       },
       "approved": {
         "title": "身份已核实",
-        "body": "现在可以添加商品。发布后买家就能看到。",
+        "body": "身份已获批（T1 KYC）。现在可以添加商品，发布后买家就能看到。",
         "cta": "添加第一件商品",
-        "t2Link": "添加营业文件（PACRA、TPIN）"
+        "t2Link": "添加营业文件 — T2（PACRA、TPIN）"
       },
       "rejected": {
         "title": "请修改信息",
@@ -297,7 +297,7 @@
       }
     },
     "t2": {
-      "stubLabel": "营业文件核验（即将推出）",
+      "stubLabel": "营业文件核验 — T2（即将推出）",
       "stubBody": "PACRA 证书和公司 TPIN。"
     },
     "errors": {
@@ -344,9 +344,9 @@
     "loading": "加载中…",
     "tabs": {
       "ariaLabel": "添加商品的方式",
-      "attach": "查找商品",
+      "attach": "查找商品（目录）",
       "newCanonical": "新产品",
-      "quickList": "单件商品"
+      "quickList": "单件商品（快速上架）"
     },
     "commission": {
       "heading": "此商品的平台费（佣金）",
@@ -378,12 +378,12 @@
       "details": {
         "about": "关于此商品",
         "heading": "商品详情",
-        "help": "只填您确定的信息，如尺寸、重量、颜色或材质。不确定的留空。我们的团队会核对。",
+        "help": "只填您确定的信息，如尺寸、重量、颜色、材质或保养方式，使用厂家的单位。不确定的留空 — 我们的团队会核对每一项。最多 32 项；名称 80 字，内容 2,000 字，描述 5,000 字。",
         "name": "项目（例如：颜色）",
         "value": "内容（例如：红色）",
         "add": "添加详情",
         "remove": "删除详情",
-        "invalid": "请填写每个项目和内容，或删除它。每个项目名只能用一次。"
+        "invalid": "请填写每个项目和内容，或删除它。每个项目名只能用一次，并保持在显示的字数限制内。"
       }
     },
     "quickList": {
@@ -408,10 +408,10 @@
       "priceHelp": "例如 1,234.50",
       "pricePerStepHelp": "每份的价格（见下方）。",
       "priceInvalid": "请输入价格，例如 1234.50",
-      "productClassLabel": "什么类型的商品？",
-      "classA": "A. 品牌商品（各处相同）",
-      "classB": "B. 有尺码或颜色的品牌商品",
-      "classC": "C. 日常商品（无品牌）",
+      "productClassLabel": "商品类别 — 什么类型的商品？",
+      "classA": "A. 各处相同的品牌商品（品牌 SKU）",
+      "classB": "B. 有尺码或颜色的品牌商品（变体）",
+      "classC": "C. 无品牌日常商品（通用品）",
       "classD": "D. 独一件商品",
       "classE": "E. 为每位买家定做",
       "standaloneClassHint": "D 和 E 请用“单件商品”。",
@@ -422,10 +422,10 @@
       "unitLitre": "升",
       "unitBag": "袋",
       "unitSqm": "平方米",
-      "unitStepLabel": "最小出售量",
-      "unitStepHelp": "例如 0.5 表示半米。",
-      "unitStepInvalid": "请输入大于 0 的数，例如 1 或 0.5。",
-      "minStepsLabel": "最少购买份数",
+      "unitStepLabel": "最小出售量（销售增量）",
+      "unitStepHelp": "最多 3 位小数，例如 0.5 表示半米。",
+      "unitStepInvalid": "请输入大于 0、最多 3 位小数的数，例如 1 或 0.5。",
+      "minStepsLabel": "最少购买份数（按增量）",
       "conditionLabel": "成色",
       "conditionNew": "全新",
       "conditionRefurbished": "翻新",
@@ -434,23 +434,23 @@
       "defectNotesPlaceholder": "写明哪里磨损、损坏、缺件或修过…",
       "defectNotesHelp": "至少写 10 个字。把每处瑕疵都告诉买家。",
       "defectNotesInvalid": "请多写一点瑕疵情况 — 至少 10 个字。",
-      "fulfilmentLabel": "现在有货吗？",
+      "fulfilmentLabel": "履约方式 — 现在有货吗？",
       "fulfilmentStocked": "有现货",
       "fulfilmentMadeToOrder": "没有，接单后制作",
-      "leadTimeLabel": "制作天数",
+      "leadTimeLabel": "交货期 — 制作天数",
       "leadTimeHelp": "需要几天才能做好。",
       "leadTimeInvalid": "请输入 1 到 365 之间的天数。",
-      "capacityLabel": "每周能做多少件？",
+      "capacityLabel": "每周产能 — 每周能做多少件？",
       "capacityHelp": "一周最多能接的数量。",
       "capacityInvalid": "请输入 1 到 9,999 之间的数。",
-      "stockModeLabel": "您有多少？",
+      "stockModeLabel": "库存 — 您有多少？",
       "stockTracked": "我会计数",
       "stockAlways": "一直有货",
       "stockQtyLabel": "现有数量",
-      "wholesaleLabel": "批发价",
-      "wholesaleHelp": "仅限营业文件已核实的店铺",
+      "wholesaleLabel": "批发阶梯价",
+      "wholesaleHelp": "仅限 T2 认证商家（营业文件已核实）",
       "wholesaleMeasureUnavailable": "按米、公斤或升出售的商品暂不支持批发价。",
-      "moqLabel": "最少购买",
+      "moqLabel": "最小起订量（MOQ）",
       "evidenceDraftNotice": "二手和独一件商品会先保存。出售前请至少加一张实拍照片。",
       "saveDraft": "保存并添加照片",
       "savingDraft": "正在保存…"
@@ -657,7 +657,7 @@
     },
     "kycGate": {
       "title": "身份仍在核验中",
-      "body": "身份获批前，您的商品可能不会公开。",
+      "body": "身份核验（KYC）获批并有记录前，您的商品可能不会公开。没有记录我们绝不显示认证标志。",
       "cta": "查看身份核验",
       "wholesaleLocked": "营业文件核实（T2）后才能设置批发价。"
     },
@@ -886,8 +886,8 @@
     },
     "payment": {
       "heading": "付款",
-      "cod": "买家货到付现金",
-      "paid": "已付款 — 送达前由我们保管",
+      "cod": "货到付款 — 买家收货时付款",
+      "paid": "已付款 — 送达前由平台托管",
       "unpaid": "尚未付款"
     },
     "items": {
@@ -896,7 +896,7 @@
       "empty": "没有商品",
       "variantOption": "{group}：{value}",
       "variantSeparator": " · ",
-      "sku": "商品编码 {sku}"
+      "sku": "SKU（商品编码）{sku}"
     },
     "timeline": {
       "heading": "订单进度",
@@ -908,7 +908,7 @@
       "confirm": "确认接单",
       "reject": "无法接单",
       "pack": "开始打包",
-      "ship": "标记为已发出",
+      "ship": "标记为已发出（已发货）",
       "ready_for_pickup": "可供买家取货",
       "confirming": "确认中…",
       "rejecting": "拒绝中…",
@@ -922,7 +922,7 @@
       "shipLabel": "配送说明",
       "shipPlaceholder": "例如：骑手 John 0977…",
       "submitReject": "提交原因",
-      "submitShip": "标记为已发出",
+      "submitShip": "标记为已发出（已发货）",
       "cancel": "取消"
     },
     "success": {
@@ -948,8 +948,8 @@
     "offlineNotice": "正在显示已保存的数据——请连接以刷新。",
     "takings": {
       "label": "今日销售",
-      "caption": "{date} 已确认订单的金额",
-      "emptyCaption": "今天还没有销售。"
+      "caption": "{date}（卢萨卡时间）已确认订单的金额",
+      "emptyCaption": "今天还没有销售。合计只来自真实订单。"
     },
     "needsAction": {
       "heading": "待处理",
@@ -988,7 +988,7 @@
       "retryHint": "请检查网络后重试。"
     },
     "kycBanner": {
-      "title": "完成身份核验",
+      "title": "完成身份核验（KYC）",
       "body": "买家更信任已核实身份的店铺。完成核验即可获得标志。",
       "cta": "查看身份核验"
     },
@@ -1037,15 +1037,15 @@
       "description": "查看待结算、可提取和已打款的金额。"
     },
     "eyebrow": "资金",
-    "title": "您的收入",
-    "intro": "您的销售收入，以及我们已打给您的钱。",
+    "title": "结算（您的收入）",
+    "intro": "您的销售收入和已打给您的钱。数字直接来自我们的账本记录。",
     "loading": "加载中…",
     "balances": {
       "heading": "您的收入",
-      "escrowHeld": "等待送达",
-      "released": "可打款给您",
+      "escrowHeld": "等待送达（平台托管中）",
+      "released": "可打款给您（已释放）",
       "paidOut": "已打款",
-      "ledgerNote": "买家收到订单后，我们给您打款。"
+      "ledgerNote": "买家收到订单后，我们给您打款。这些数字与您的账本完全一致。"
     },
     "hold": {
       "noticeTitle": "打款暂停 24 小时",
@@ -1068,9 +1068,9 @@
     "statement": {
       "heading": "月度报表",
       "monthLabel": "月份",
-      "downloadCsv": "下载（表格）",
+      "downloadCsv": "下载 CSV（表格）",
       "downloading": "正在准备…",
-      "pdfStub": "PDF 报表即将推出。"
+      "pdfStub": "PDF 报表即将推出，现在可下载 CSV。"
     },
     "method": {
       "meta": {
@@ -1079,8 +1079,8 @@
       },
       "link": "更改收款号码",
       "back": "← 返回收入",
-      "title": "收款号码",
-      "intro": "输入您名下的 MTN、Airtel 或 Zamtel 号码。保存前我们会核对名字。",
+      "title": "收款方式 — 收款号码",
+      "intro": "输入您名下的 MTN、Airtel 或 Zamtel 号码。保存前我们会通过 Lenco 核对名字。",
       "msisdnLabel": "移动钱包号码",
       "msisdnPlaceholder": "例如：0977123456",
       "railLabel": "运营商",
@@ -1091,7 +1091,7 @@
       },
       "otpLabel": "手机验证码",
       "otpPlaceholder": "6 位数字",
-      "otpHelp": "我们已向您的手机发送验证码，请在这里输入。",
+      "otpHelp": "我们已向您登记的手机发送验证码，请输入以确认此更改。",
       "submit": "保存号码",
       "saving": "保存中…",
       "success": "号码已保存。24 小时后开始向它打款。"
@@ -1102,7 +1102,7 @@
       "methodFailed": "号码保存失败。请重试。",
       "otpFailed": "验证码错误或已过期。请重新获取。",
       "nameMismatch": "这个移动钱包号码的名字不是您。请用您名下的号码。",
-      "kycRequired": "请先完成身份核验。",
+      "kycRequired": "更改收款号码前，请先完成身份核验（KYC）。",
       "payoutsPaused": "您更换了号码，打款暂停 24 小时。",
       "rateLimited": "尝试次数太多。请等一分钟再试。",
       "methodChangeLimit": "今天更换次数太多。请明天再试。"

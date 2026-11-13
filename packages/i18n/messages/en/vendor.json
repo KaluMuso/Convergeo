@@ -197,7 +197,7 @@
     },
     "invite": {
       "eyebrow": "You are invited",
-      "body": "Finish these 3 steps. We check your ID, then you can start selling."
+      "body": "Finish these 3 steps. We check your ID (KYC), then you can start selling. Products, money and your dashboard open after we approve you."
     },
     "steps": {
       "business": "Business",
@@ -208,7 +208,7 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "Your shop",
-      "intro": "Tell us what you sell.",
+      "intro": "Tell us what you sell and how you work, so we can set up your shop.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
       "categoryLabel": "What do you mostly sell?",
@@ -235,7 +235,7 @@
       "saving": "Saving…"
     },
     "kyc": {
-      "heading": "Check your ID",
+      "heading": "Check your ID (T1 verification)",
       "intro": "Take a photo of your NRC and of your face. Nobody else sees them.",
       "nrcLabel": "NRC photo",
       "nrcHelp": "Take a photo of the front of your NRC (green ID card) in good light.",
@@ -291,9 +291,9 @@
       },
       "approved": {
         "title": "Your ID is checked",
-        "body": "You can add products now. Buyers see them when you publish.",
+        "body": "Your ID is approved (T1 KYC). You can add products now. Buyers see them when you publish.",
         "cta": "Add your first product",
-        "t2Link": "Add business papers (PACRA, TPIN)"
+        "t2Link": "Add business papers — T2 (PACRA, TPIN)"
       },
       "rejected": {
         "title": "Please fix your details",
@@ -311,7 +311,7 @@
       }
     },
     "t2": {
-      "stubLabel": "Business papers check (coming soon)",
+      "stubLabel": "Business papers check — T2 (coming soon)",
       "stubBody": "PACRA certificate and company TPIN."
     },
     "errors": {
@@ -358,9 +358,9 @@
     "loading": "Loading…",
     "tabs": {
       "ariaLabel": "How to add your product",
-      "attach": "Find it",
+      "attach": "Find it (catalog)",
       "newCanonical": "New product",
-      "quickList": "One-off item"
+      "quickList": "One-off item (quick list)"
     },
     "commission": {
       "heading": "Commission: our fee on this product",
@@ -392,12 +392,12 @@
       "details": {
         "about": "About this item",
         "heading": "Product details",
-        "help": "Add only details you are sure about, like size, weight, colour or what it is made of. Leave the rest empty. Our team checks them.",
+        "help": "Add only details you are sure about, like size, weight, colour, materials or care. Use the maker's units. Leave the rest empty — our team checks every detail. Up to 32 details; names up to 80 letters, answers up to 2,000, description up to 5,000.",
         "name": "Detail (e.g. Colour)",
         "value": "Answer (e.g. Red)",
         "add": "Add detail",
         "remove": "Remove detail",
-        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once."
+        "invalid": "Fill in each detail and its answer, or remove it. Each detail name can be used once. Keep within the limits shown."
       }
     },
     "quickList": {
@@ -422,10 +422,10 @@
       "priceHelp": "e.g. 1,234.50",
       "pricePerStepHelp": "Price for one step (see below).",
       "priceInvalid": "Type a price like 1234.50",
-      "productClassLabel": "What kind of product?",
-      "classA": "A. Brand product (same everywhere)",
-      "classB": "B. Brand product with sizes or colours",
-      "classC": "C. Everyday goods (no brand)",
+      "productClassLabel": "Product class — what kind of product?",
+      "classA": "A. Brand product, same everywhere (branded SKU)",
+      "classB": "B. Brand product with sizes or colours (variant)",
+      "classC": "C. Everyday goods, no brand (commodity)",
       "classD": "D. One-of-a-kind item",
       "classE": "E. Made for each buyer",
       "standaloneClassHint": "For D and E, use One-off item.",
@@ -436,10 +436,10 @@
       "unitLitre": "Litre",
       "unitBag": "Bag",
       "unitSqm": "Square metre",
-      "unitStepLabel": "Smallest amount you sell",
-      "unitStepHelp": "e.g. 0.5 for half a metre.",
-      "unitStepInvalid": "Type a number above 0, like 1 or 0.5.",
-      "minStepsLabel": "Smallest order (in steps)",
+      "unitStepLabel": "Smallest amount you sell (sale increment)",
+      "unitStepHelp": "Up to 3 numbers after the dot, e.g. 0.5 for half a metre.",
+      "unitStepInvalid": "Type a number above 0 with up to 3 numbers after the dot, like 1 or 0.5.",
+      "minStepsLabel": "Smallest order, in increments",
       "conditionLabel": "Condition",
       "conditionNew": "New",
       "conditionRefurbished": "Refurbished",
@@ -448,23 +448,23 @@
       "defectNotesPlaceholder": "Say what is worn, broken, missing or fixed…",
       "defectNotesHelp": "Write at least 10 letters. Tell buyers about every mark.",
       "defectNotesInvalid": "Write a bit more about any marks or damage — at least 10 letters.",
-      "fulfilmentLabel": "Do you have it now?",
+      "fulfilmentLabel": "Fulfilment — do you have it now?",
       "fulfilmentStocked": "Yes, I have it",
       "fulfilmentMadeToOrder": "No, I make it when ordered",
-      "leadTimeLabel": "Days to make it",
+      "leadTimeLabel": "Lead time — days to make it",
       "leadTimeHelp": "How many days before it is ready.",
       "leadTimeInvalid": "Type a number of days from 1 to 365.",
-      "capacityLabel": "How many can you make each week?",
+      "capacityLabel": "Weekly capacity — how many can you make each week?",
       "capacityHelp": "The most orders you can take in one week.",
       "capacityInvalid": "Type a number from 1 to 9,999.",
-      "stockModeLabel": "How many do you have?",
+      "stockModeLabel": "Stock — how many do you have?",
       "stockTracked": "I will count them",
       "stockAlways": "I always have it",
       "stockQtyLabel": "How many you have now",
-      "wholesaleLabel": "Bulk prices",
-      "wholesaleHelp": "Only for shops with business papers checked",
+      "wholesaleLabel": "Wholesale tiers (bulk prices)",
+      "wholesaleHelp": "Only for T2-verified businesses (business papers checked)",
       "wholesaleMeasureUnavailable": "Bulk prices are not ready yet for items sold by metre, kg or litre.",
-      "moqLabel": "Smallest order",
+      "moqLabel": "Minimum order quantity (MOQ)",
       "evidenceDraftNotice": "Used and one-of-a-kind items are saved first. Add at least one real photo before you sell.",
       "saveDraft": "Save and add photos",
       "savingDraft": "Saving…"
@@ -675,7 +675,7 @@
     },
     "kycGate": {
       "title": "We are still checking your ID",
-      "body": "Your products may stay hidden until your ID is approved.",
+      "body": "Your products may stay hidden until your ID check (KYC) is approved with a recorded decision. We never show a verified badge without it.",
       "cta": "See my ID check",
       "wholesaleLocked": "Bulk prices open after your business papers are checked (T2)."
     },
@@ -906,8 +906,8 @@
     },
     "payment": {
       "heading": "Payment",
-      "cod": "Buyer pays cash when it arrives",
-      "paid": "Paid — we keep it safe until delivery",
+      "cod": "Cash on delivery — buyer pays when it arrives",
+      "paid": "Paid — held in escrow until delivery",
       "unpaid": "Not paid yet"
     },
     "items": {
@@ -916,7 +916,7 @@
       "empty": "No items",
       "variantOption": "{group}: {value}",
       "variantSeparator": " · ",
-      "sku": "Item code {sku}"
+      "sku": "SKU (item code) {sku}"
     },
     "timeline": {
       "heading": "What has happened",
@@ -928,7 +928,7 @@
       "confirm": "Yes, I have it",
       "reject": "I can't do this order",
       "pack": "Start packing",
-      "ship": "Mark as sent",
+      "ship": "Mark as sent (shipped)",
       "ready_for_pickup": "Ready for the buyer to collect",
       "confirming": "Confirming…",
       "rejecting": "Rejecting…",
@@ -942,7 +942,7 @@
       "shipLabel": "Delivery note",
       "shipPlaceholder": "e.g. Rider John 0977…",
       "submitReject": "Send reason",
-      "submitShip": "Mark as sent",
+      "submitShip": "Mark as sent (shipped)",
       "cancel": "Cancel"
     },
     "success": {
@@ -963,7 +963,7 @@
     "courier": {
       "heading": "Rider",
       "courier": "Rider",
-      "reference": "Delivery number: {ref}",
+      "reference": "Courier reference: {ref}",
       "statuses": {
         "requested": "Looking for a rider",
         "accepted": "Rider found",
@@ -983,8 +983,8 @@
     "offlineNotice": "Showing saved data — connect to refresh.",
     "takings": {
       "label": "Sales today",
-      "caption": "Money from confirmed orders on {date}",
-      "emptyCaption": "No sales yet today."
+      "caption": "Money from confirmed orders on {date} (Lusaka time)",
+      "emptyCaption": "No sales yet today. Totals come from real orders only."
     },
     "analytics": {
       "ariaLabel": "Your shop in the last 30 days",
@@ -992,7 +992,7 @@
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "Sales",
+      "gmv": "Sales (GMV)",
       "gmvCaption": "30 days"
     },
     "needsAction": {
@@ -1045,7 +1045,7 @@
       "retryHint": "Check your connection, then try again."
     },
     "kycBanner": {
-      "title": "Finish your ID check",
+      "title": "Finish your ID check (KYC)",
       "body": "Buyers trust shops with a checked ID. Finish yours to get the badge.",
       "cta": "See my ID check"
     },
@@ -1094,15 +1094,15 @@
       "description": "See money waiting, money ready and money sent to you."
     },
     "eyebrow": "Money",
-    "title": "Your money",
-    "intro": "Money from your sales, and money we have sent to you.",
+    "title": "Payouts (your money)",
+    "intro": "Money from your sales, and money we have sent to you. Figures come straight from our records (ledger).",
     "loading": "Loading…",
     "balances": {
       "heading": "Your money",
-      "escrowHeld": "Waiting for delivery",
-      "released": "Ready to send to you",
-      "paidOut": "Sent to you",
-      "ledgerNote": "We pay you after the buyer gets the order."
+      "escrowHeld": "Waiting for delivery (held in escrow)",
+      "released": "Ready to send to you (released)",
+      "paidOut": "Sent to you (paid out)",
+      "ledgerNote": "We pay you after the buyer gets the order. These figures match your ledger accounts exactly."
     },
     "hold": {
       "noticeTitle": "Money sending paused for 24 hours",
@@ -1125,9 +1125,9 @@
     "statement": {
       "heading": "Monthly report",
       "monthLabel": "Month",
-      "downloadCsv": "Download (spreadsheet)",
+      "downloadCsv": "Download CSV (spreadsheet)",
       "downloading": "Getting it ready…",
-      "pdfStub": "PDF reports are coming soon."
+      "pdfStub": "PDF reports are coming soon. CSV is ready now."
     },
     "method": {
       "meta": {
@@ -1136,8 +1136,8 @@
       },
       "link": "Change where we send your money",
       "back": "← Back to your money",
-      "title": "Where we send your money",
-      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name before we save it.",
+      "title": "Payout method — where we send your money",
+      "intro": "Type an MTN, Airtel or Zamtel number in your name. We check the name with Lenco before we save it.",
       "msisdnLabel": "Mobile money number",
       "msisdnPlaceholder": "e.g. 0977123456",
       "railLabel": "Network",
@@ -1148,7 +1148,7 @@
       },
       "otpLabel": "Code from your phone",
       "otpPlaceholder": "6 numbers",
-      "otpHelp": "We sent a code to your phone. Type it here.",
+      "otpHelp": "We sent a code to your registered phone. Type it here to confirm this change.",
       "submit": "Save number",
       "saving": "Saving…",
       "success": "Number saved. We wait 24 hours before sending money to it."
@@ -1159,7 +1159,7 @@
       "methodFailed": "We couldn't save the number. Try again.",
       "otpFailed": "That code is wrong or too old. Ask for a new one.",
       "nameMismatch": "The name on this mobile money number is not your name. Use a number in your name.",
-      "kycRequired": "Finish your ID check first.",
+      "kycRequired": "Finish your ID check (KYC) before changing where we send your money.",
       "payoutsPaused": "You changed your number, so money sending is paused for 24 hours.",
       "rateLimited": "Too many tries. Wait a minute, then try again.",
       "methodChangeLimit": "You changed the number too many times today. Try again tomorrow."
@@ -1896,12 +1896,12 @@
       "analytics": "How my shop is doing",
       "services": "Services",
       "events": "Events",
-      "rfq": "Price requests",
+      "rfq": "Quote requests",
       "jobs": "Jobs",
       "clips": "Videos",
       "reviews": "Reviews",
-      "payouts": "My money",
-      "disputes": "Problems",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
       "intake": "Products from WhatsApp"
     }
   },

@@ -16,7 +16,7 @@
     "badges": "Badges",
     "allCategories": "All categories",
     "allLocations": "All locations",
-    "preferred": "Top shop",
+    "preferred": "Preferred shop",
     "verified": "Verified",
     "apply": "Apply filters",
     "clear": "Clear filters",
@@ -42,7 +42,7 @@
     "selfListed": "Self-listed",
     "idVerified": "ID verified",
     "sectorVerified": "Sector verified",
-    "preferred": "Top shop"
+    "preferred": "Preferred shop"
   },
   "tiers": {
     "bronze": "Bronze",
@@ -73,8 +73,8 @@
     "reviewsHeading": "Customer reviews",
     "reviewsSummary": "{rating, number, ::.1} average from {count, plural, one {# review} other {# reviews}}",
     "noReviews": "No reviews yet",
-    "preferredBadge": "Top shop",
-    "verifiedBadge": "ID checked",
+    "preferredBadge": "Preferred shop",
+    "verifiedBadge": "Verified seller (ID checked)",
     "shareTitle": "{name} on Convergeo",
     "statRating": "Rating",
     "statReviews": "Reviews",

@@ -15,7 +15,7 @@
     "paymentCod": "货到付款",
     "paymentPrepaid": "已付款",
     "paymentPending": "尚未付款",
-    "paymentPendingHint": "我们还没有收到您的付款。"
+    "paymentPendingHint": "我们还没有收到付款，此订单尚未付清。"
   },
   "detail": {
     "title": "订单详情",
@@ -117,7 +117,7 @@
     "categoryNotDelivered": "订单未送达",
     "categoryOther": "其他问题",
     "descriptionLabel": "描述问题",
-    "descriptionPlaceholder": "发生了什么？",
+    "descriptionPlaceholder": "发生了什么？请写下有助于我们核查的细节。",
     "evidenceLabel": "加照片（可选）",
     "evidenceHelp": "最多 8 张照片或 PDF，每个最大 10 MB。",
     "addEvidence": "添加照片或 PDF",

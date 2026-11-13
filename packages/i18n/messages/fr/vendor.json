@@ -196,7 +196,7 @@
     },
     "invite": {
       "eyebrow": "Vous êtes invité",
-      "body": "Terminez ces 3 étapes. Nous vérifions votre identité, puis vous pouvez vendre."
+      "body": "Terminez ces 3 étapes. Nous vérifions votre identité (KYC), puis vous pouvez vendre. Produits, argent et tableau de bord s'ouvrent après notre accord."
     },
     "steps": {
       "business": "Entreprise",
@@ -207,7 +207,7 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "Votre boutique",
-      "intro": "Dites-nous ce que vous vendez.",
+      "intro": "Dites-nous ce que vous vendez et comment vous travaillez, pour préparer votre boutique.",
       "nameLabel": "Nom de l'entreprise ou de la boutique",
       "namePlaceholder": "ex. Lusaka Electronics",
       "categoryLabel": "Que vendez-vous surtout ?",
@@ -224,7 +224,7 @@
       "saving": "Enregistrement…"
     },
     "kyc": {
-      "heading": "Vérifier votre identité",
+      "heading": "Vérifier votre identité (vérification T1)",
       "intro": "Prenez une photo de votre NRC et de votre visage. Personne d'autre ne les voit.",
       "nrcLabel": "Photo du NRC",
       "nrcHelp": "Photographiez le recto de votre NRC (carte d'identité verte) avec une bonne lumière.",
@@ -277,9 +277,9 @@
       },
       "approved": {
         "title": "Votre identité est vérifiée",
-        "body": "Vous pouvez ajouter des produits. Les acheteurs les voient une fois publiés.",
+        "body": "Votre identité est approuvée (KYC T1). Vous pouvez ajouter des produits. Les acheteurs les voient une fois publiés.",
         "cta": "Ajouter votre premier produit",
-        "t2Link": "Ajouter les papiers de l'entreprise (PACRA, TPIN)"
+        "t2Link": "Ajouter les papiers de l'entreprise — T2 (PACRA, TPIN)"
       },
       "rejected": {
         "title": "Corrigez vos informations",
@@ -297,7 +297,7 @@
       }
     },
     "t2": {
-      "stubLabel": "Vérification des papiers de l'entreprise (bientôt)",
+      "stubLabel": "Vérification des papiers — T2 (bientôt)",
       "stubBody": "Certificat PACRA et TPIN de l'entreprise."
     },
     "errors": {
@@ -344,9 +344,9 @@
     "loading": "Chargement…",
     "tabs": {
       "ariaLabel": "Comment ajouter votre produit",
-      "attach": "Le trouver",
+      "attach": "Le trouver (catalogue)",
       "newCanonical": "Nouveau produit",
-      "quickList": "Article unique"
+      "quickList": "Article unique (liste rapide)"
     },
     "commission": {
       "heading": "Notre commission sur ce produit",
@@ -378,12 +378,12 @@
       "details": {
         "about": "À propos de cet article",
         "heading": "Détails du produit",
-        "help": "Ajoutez seulement des détails sûrs, comme taille, poids, couleur ou matière. Laissez le reste vide. Notre équipe les vérifie.",
+        "help": "Ajoutez seulement des détails sûrs, comme taille, poids, couleur, matière ou entretien. Utilisez les unités du fabricant. Laissez le reste vide — notre équipe vérifie chaque détail. Jusqu'à 32 détails ; noms 80 caractères, réponses 2 000, description 5 000.",
         "name": "Détail (ex. Couleur)",
         "value": "Réponse (ex. Rouge)",
         "add": "Ajouter un détail",
         "remove": "Supprimer le détail",
-        "invalid": "Remplissez chaque détail et sa réponse, ou retirez-le. Chaque nom de détail ne sert qu'une fois."
+        "invalid": "Remplissez chaque détail et sa réponse, ou retirez-le. Chaque nom ne sert qu'une fois. Respectez les limites indiquées."
       }
     },
     "quickList": {
@@ -408,10 +408,10 @@
       "priceHelp": "ex. 1 234,50",
       "pricePerStepHelp": "Prix pour une unité de vente (voir ci-dessous).",
       "priceInvalid": "Saisissez un prix comme 1234,50",
-      "productClassLabel": "Quel type de produit ?",
-      "classA": "A. Produit de marque (identique partout)",
-      "classB": "B. Produit de marque avec tailles ou couleurs",
-      "classC": "C. Produits courants (sans marque)",
+      "productClassLabel": "Classe de produit — quel type ?",
+      "classA": "A. Produit de marque, identique partout (SKU de marque)",
+      "classB": "B. Produit de marque avec tailles ou couleurs (variante)",
+      "classC": "C. Produits courants, sans marque (générique)",
       "classD": "D. Article unique",
       "classE": "E. Fait pour chaque acheteur",
       "standaloneClassHint": "Pour D et E, utilisez Article unique.",
@@ -422,10 +422,10 @@
       "unitLitre": "Litre",
       "unitBag": "Sac",
       "unitSqm": "Mètre carré",
-      "unitStepLabel": "Plus petite quantité vendue",
-      "unitStepHelp": "ex. 0,5 pour un demi-mètre.",
-      "unitStepInvalid": "Saisissez un nombre supérieur à 0, comme 1 ou 0,5.",
-      "minStepsLabel": "Commande minimum (en unités)",
+      "unitStepLabel": "Plus petite quantité vendue (incrément)",
+      "unitStepHelp": "Jusqu'à 3 décimales, ex. 0,5 pour un demi-mètre.",
+      "unitStepInvalid": "Saisissez un nombre supérieur à 0 avec jusqu'à 3 décimales, comme 1 ou 0,5.",
+      "minStepsLabel": "Commande minimum, en incréments",
       "conditionLabel": "État",
       "conditionNew": "Neuf",
       "conditionRefurbished": "Reconditionné",
@@ -434,23 +434,23 @@
       "defectNotesPlaceholder": "Indiquez ce qui est usé, cassé, manquant ou réparé…",
       "defectNotesHelp": "Au moins 10 caractères. Signalez chaque défaut.",
       "defectNotesInvalid": "Écrivez un peu plus sur les défauts — au moins 10 caractères.",
-      "fulfilmentLabel": "L'avez-vous maintenant ?",
+      "fulfilmentLabel": "Exécution — l'avez-vous maintenant ?",
       "fulfilmentStocked": "Oui, je l'ai",
       "fulfilmentMadeToOrder": "Non, je le fais sur commande",
-      "leadTimeLabel": "Jours de fabrication",
+      "leadTimeLabel": "Délai — jours de fabrication",
       "leadTimeHelp": "Combien de jours avant qu'il soit prêt.",
       "leadTimeInvalid": "Saisissez un nombre de jours entre 1 et 365.",
-      "capacityLabel": "Combien pouvez-vous en faire par semaine ?",
+      "capacityLabel": "Capacité hebdomadaire — combien par semaine ?",
       "capacityHelp": "Le plus de commandes possible en une semaine.",
       "capacityInvalid": "Saisissez un nombre entre 1 et 9 999.",
-      "stockModeLabel": "Combien en avez-vous ?",
+      "stockModeLabel": "Stock — combien en avez-vous ?",
       "stockTracked": "Je les compte",
       "stockAlways": "J'en ai toujours",
       "stockQtyLabel": "Combien vous en avez",
-      "wholesaleLabel": "Prix de gros",
-      "wholesaleHelp": "Réservé aux boutiques dont les papiers sont vérifiés",
+      "wholesaleLabel": "Paliers de gros (prix de gros)",
+      "wholesaleHelp": "Réservé aux entreprises vérifiées T2 (papiers contrôlés)",
       "wholesaleMeasureUnavailable": "Les prix de gros ne sont pas encore prêts pour les articles au mètre, kg ou litre.",
-      "moqLabel": "Commande minimum",
+      "moqLabel": "Quantité minimum de commande (MOQ)",
       "evidenceDraftNotice": "Les articles d'occasion et uniques sont d'abord enregistrés. Ajoutez au moins une vraie photo avant de vendre.",
       "saveDraft": "Enregistrer et ajouter des photos",
       "savingDraft": "Enregistrement…"
@@ -657,7 +657,7 @@
     },
     "kycGate": {
       "title": "Nous vérifions encore votre identité",
-      "body": "Vos produits peuvent rester cachés jusqu'à la validation de votre identité.",
+      "body": "Vos produits peuvent rester cachés jusqu'à la validation de votre identité (KYC) avec une décision enregistrée. Nous n'affichons jamais de badge vérifié sans elle.",
       "cta": "Voir ma vérification",
       "wholesaleLocked": "Les prix de gros s'ouvrent après la vérification des papiers (T2)."
     },
@@ -886,8 +886,8 @@
     },
     "payment": {
       "heading": "Paiement",
-      "cod": "L'acheteur paie en espèces à l'arrivée",
-      "paid": "Payée — nous gardons l'argent jusqu'à la livraison",
+      "cod": "Paiement à la livraison — l'acheteur paie à l'arrivée",
+      "paid": "Payée — en séquestre jusqu'à la livraison",
       "unpaid": "Pas encore payée"
     },
     "items": {
@@ -896,7 +896,7 @@
       "empty": "Aucun article",
       "variantOption": "{group} : {value}",
       "variantSeparator": " · ",
-      "sku": "Code article {sku}"
+      "sku": "SKU (code article) {sku}"
     },
     "timeline": {
       "heading": "Historique",
@@ -908,7 +908,7 @@
       "confirm": "Oui, je l'ai",
       "reject": "Je ne peux pas",
       "pack": "Commencer l'emballage",
-      "ship": "Marquer comme envoyée",
+      "ship": "Marquer comme envoyée (expédiée)",
       "ready_for_pickup": "Prête pour le retrait",
       "confirming": "Confirmation…",
       "rejecting": "Rejet…",
@@ -922,7 +922,7 @@
       "shipLabel": "Note de livraison",
       "shipPlaceholder": "ex. Livreur John 0977…",
       "submitReject": "Envoyer la raison",
-      "submitShip": "Marquer comme envoyée",
+      "submitShip": "Marquer comme envoyée (expédiée)",
       "cancel": "Annuler"
     },
     "success": {
@@ -948,8 +948,8 @@
     "offlineNotice": "Affichage des données enregistrées — connectez-vous pour actualiser.",
     "takings": {
       "label": "Ventes du jour",
-      "caption": "Argent des commandes confirmées le {date}",
-      "emptyCaption": "Pas encore de ventes aujourd'hui."
+      "caption": "Argent des commandes confirmées le {date} (heure de Lusaka)",
+      "emptyCaption": "Pas encore de ventes aujourd'hui. Les totaux viennent uniquement de vraies commandes."
     },
     "needsAction": {
       "heading": "À faire",
@@ -988,7 +988,7 @@
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "kycBanner": {
-      "title": "Terminez la vérification d'identité",
+      "title": "Terminez la vérification d'identité (KYC)",
       "body": "Les acheteurs font confiance aux boutiques vérifiées. Terminez la vôtre pour obtenir le badge.",
       "cta": "Voir ma vérification"
     },
@@ -1037,15 +1037,15 @@
       "description": "Voyez l'argent en attente, prêt et envoyé."
     },
     "eyebrow": "Argent",
-    "title": "Votre argent",
-    "intro": "L'argent de vos ventes et ce que nous vous avons envoyé.",
+    "title": "Versements (votre argent)",
+    "intro": "L'argent de vos ventes et ce que nous vous avons envoyé. Les chiffres viennent directement de nos registres.",
     "loading": "Chargement…",
     "balances": {
       "heading": "Votre argent",
-      "escrowHeld": "En attente de livraison",
-      "released": "Prêt à vous être envoyé",
-      "paidOut": "Envoyé",
-      "ledgerNote": "Nous vous payons après la réception par l'acheteur."
+      "escrowHeld": "En attente de livraison (en séquestre)",
+      "released": "Prêt à vous être envoyé (libéré)",
+      "paidOut": "Envoyé (versé)",
+      "ledgerNote": "Nous vous payons après la réception par l'acheteur. Ces chiffres correspondent exactement à votre registre."
     },
     "hold": {
       "noticeTitle": "Envois d'argent suspendus 24 heures",
@@ -1068,9 +1068,9 @@
     "statement": {
       "heading": "Relevé mensuel",
       "monthLabel": "Mois",
-      "downloadCsv": "Télécharger (tableur)",
+      "downloadCsv": "Télécharger CSV (tableur)",
       "downloading": "Préparation…",
-      "pdfStub": "Les relevés PDF arrivent bientôt."
+      "pdfStub": "Les relevés PDF arrivent bientôt. Le CSV est disponible."
     },
     "method": {
       "meta": {
@@ -1079,8 +1079,8 @@
       },
       "link": "Changer le numéro de réception",
       "back": "← Retour à votre argent",
-      "title": "Où nous envoyons votre argent",
-      "intro": "Saisissez un numéro MTN, Airtel ou Zamtel à votre nom. Nous vérifions le nom avant d'enregistrer.",
+      "title": "Mode de versement — où nous envoyons votre argent",
+      "intro": "Saisissez un numéro MTN, Airtel ou Zamtel à votre nom. Nous vérifions le nom avec Lenco avant d'enregistrer.",
       "msisdnLabel": "Numéro mobile money",
       "msisdnPlaceholder": "ex. 0977123456",
       "railLabel": "Réseau",
@@ -1091,7 +1091,7 @@
       },
       "otpLabel": "Code reçu",
       "otpPlaceholder": "6 chiffres",
-      "otpHelp": "Nous avons envoyé un code sur votre téléphone. Saisissez-le ici.",
+      "otpHelp": "Nous avons envoyé un code à votre téléphone enregistré. Saisissez-le pour confirmer.",
       "submit": "Enregistrer le numéro",
       "saving": "Enregistrement…",
       "success": "Numéro enregistré. Nous attendons 24 heures avant d'y envoyer de l'argent."
@@ -1102,7 +1102,7 @@
       "methodFailed": "Impossible d'enregistrer le numéro. Réessayez.",
       "otpFailed": "Code faux ou expiré. Demandez-en un nouveau.",
       "nameMismatch": "Le nom de ce numéro mobile money n'est pas le vôtre. Utilisez un numéro à votre nom.",
-      "kycRequired": "Terminez d'abord la vérification d'identité.",
+      "kycRequired": "Terminez la vérification d'identité (KYC) avant de changer le numéro de réception.",
       "payoutsPaused": "Vous avez changé de numéro : les envois sont suspendus 24 heures.",
       "rateLimited": "Trop d'essais. Attendez une minute, puis réessayez.",
       "methodChangeLimit": "Trop de changements aujourd'hui. Réessayez demain."

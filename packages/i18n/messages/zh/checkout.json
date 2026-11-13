@@ -50,7 +50,7 @@
     "deliveryEligible": "此卖家在卢萨卡免运费。结账时确认您的区域。",
     "deliveryHint": "再从此卖家买 {amount}，即可在卢萨卡免运费。",
     "deliveryThreshold": "同一卖家消费满 {threshold}，卢萨卡免运费",
-    "deliveryScopeNote": "免运费只限卢萨卡市内。卢萨卡以外请到卖家处自取。",
+    "deliveryScopeNote": "免运费只限卢萨卡市内。卢萨卡以外请到卖家处自取。未达到免运费金额时，仍收取您所在区域的运费。",
     "freeDeliveryProgress": "已满 {amount}／{threshold}，朝卢萨卡免费配送靠近",
     "freeDeliveryUnlocked": "您在此卖家的订单可享卢萨卡免运费",
     "noticesTitle": "部分商品已变更",
@@ -145,8 +145,8 @@
         "tip3": "请保持手机开机，骑手可能会拨打您的下单号码来找您。",
         "landmarkRequired": "请填写地标和区域，方便骑手找到您。",
         "cutoffTitle": "什么时候发货？",
-        "cutoffBefore": "14:00 前下单，有货的商品通常在卖家确认后当天发出。",
-        "cutoffAfter": "已过 14:00，有货的商品通常在卖家确认后明天发出。",
+        "cutoffBefore": "卢萨卡时间 14:00 前下单，有货的商品通常在卖家确认后当天发出。",
+        "cutoffAfter": "卢萨卡已过 14:00，有货的商品通常在卖家确认后明天发出。",
         "cutoffMadeToOrder": "为您定做的商品做好后发出。每件商品都写了需要几天。"
       }
     },
@@ -168,7 +168,7 @@
       "subtitle": "选择付款方式。下单前会在下一页让您核对。",
       "momo": "移动支付",
       "card": "借记卡或信用卡",
-      "cod": "货到付款",
+      "cod": "货到付款（现金）",
       "railMtn": "MTN Mobile Money",
       "railAirtel": "Airtel Money",
       "payerLabel": "付款手机号",
@@ -214,7 +214,7 @@
       "paymentMethod": "付款方式",
       "methodMomo": "移动支付（{rail}）",
       "methodCard": "银行卡（Lenco 安全页面）",
-      "methodCod": "货到付款",
+      "methodCod": "货到付款（现金）",
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "付款手机：{number}",
@@ -231,7 +231,7 @@
       "whatHappensNext": "接下来会发生什么",
       "nextMomo": "手机会弹出消息，输入 PIN 付款。付款成功后订单才开始。",
       "nextCard": "接下来在 Lenco 的安全页面付款。显示付款成功前请不要关闭。",
-      "nextCod": "现在不用付钱。订单送到时把现金交给骑手。",
+      "nextCod": "现在不在网上付款。订单送到时把现金交给骑手（货到付款）。",
       "codGuide": {
         "title": "您的付款方式",
         "step1": "提交此订单时不会扣款。",
@@ -270,7 +270,7 @@
         "step1Title": "卖家确认",
         "step1Body": "卖家会确认有货。您可以在订单页查看每一步。",
         "step2Title": "订单发出",
-        "step2Body": "卖家在 14:00 前确认的话，有货商品通常当天发出；之后的明天发出。",
+        "step2Body": "卖家在卢萨卡时间 14:00 前确认的话，有货商品通常当天发出；之后的明天发出。",
         "step3Title": "送达时付款",
         "step3Body": "以现金向骑手支付 {amount}——自取则在店内支付。",
         "helpTitle": "需要修改或取消？",
@@ -308,7 +308,7 @@
       "error": "出了点问题。请检查网络后重试。",
       "widgetUnavailable": "银行卡付款暂时不能用。请用移动钱包，或稍后再试。",
       "widgetLabel": "Convergeo 订单",
-      "secureNote": "由支付伙伴 Lenco 提供的安全付款页面"
+      "secureNote": "由支付伙伴 Lenco 提供的安全付款页面（符合 PCI 标准）"
     }
   },
   "variant": {

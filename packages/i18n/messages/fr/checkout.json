@@ -50,7 +50,7 @@
     "deliveryEligible": "Livraison gratuite à Lusaka chez ce vendeur. Le paiement confirme votre zone.",
     "deliveryHint": "Ajoutez {amount} de plus chez ce vendeur pour la livraison gratuite à Lusaka.",
     "deliveryThreshold": "Livraison gratuite à Lusaka dès {threshold} chez un même vendeur",
-    "deliveryScopeNote": "La livraison gratuite ne vaut qu'à Lusaka. Ailleurs, utilisez le retrait chez le vendeur.",
+    "deliveryScopeNote": "La livraison gratuite ne vaut qu'à Lusaka. Ailleurs, utilisez le retrait chez le vendeur. Sous le montant de livraison gratuite, les frais de votre zone s'appliquent.",
     "freeDeliveryProgress": "{amount} sur {threshold} pour la livraison gratuite à Lusaka",
     "freeDeliveryUnlocked": "Votre commande chez ce vendeur donne droit à la livraison gratuite à Lusaka",
     "noticesTitle": "Certains articles ont changé",
@@ -145,8 +145,8 @@
         "tip3": "Gardez votre téléphone allumé. Le livreur peut appeler votre numéro pour vous trouver.",
         "landmarkRequired": "Ajoutez un repère et un quartier pour que le livreur puisse vous trouver.",
         "cutoffTitle": "Quand sera-t-elle expédiée ?",
-        "cutoffBefore": "Commandez avant 14 h : les articles en stock partent en général aujourd'hui, après l'accord du vendeur.",
-        "cutoffAfter": "Il est plus de 14 h : les articles en stock partent en général demain, après l'accord du vendeur.",
+        "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock partent en général aujourd'hui, après l'accord du vendeur.",
+        "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock partent en général demain, après l'accord du vendeur.",
         "cutoffMadeToOrder": "Les articles faits sur mesure partent quand ils sont prêts. Chaque article indique le nombre de jours."
       }
     },
@@ -168,7 +168,7 @@
       "subtitle": "Choisissez comment payer. Vous vérifiez tout à l'écran suivant avant de commander.",
       "momo": "Mobile money",
       "card": "Carte de débit ou de crédit",
-      "cod": "Payer à l'arrivée",
+      "cod": "Payer à l'arrivée (paiement à la livraison)",
       "railMtn": "MTN Mobile Money",
       "railAirtel": "Airtel Money",
       "payerLabel": "Numéro qui va payer",
@@ -214,7 +214,7 @@
       "paymentMethod": "Mode de paiement",
       "methodMomo": "Mobile money ({rail})",
       "methodCard": "Carte (page sécurisée Lenco)",
-      "methodCod": "Payer à l'arrivée",
+      "methodCod": "Payer à l'arrivée (paiement à la livraison)",
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Téléphone payeur : {number}",
@@ -231,7 +231,7 @@
       "whatHappensNext": "Et ensuite",
       "nextMomo": "Un message s'affiche sur votre téléphone. Entrez votre PIN pour payer. La commande commence quand le paiement passe.",
       "nextCard": "Ensuite, vous payez sur la page sécurisée de Lenco. Ne la fermez pas avant la confirmation.",
-      "nextCod": "Rien n'est payé maintenant. Payez le livreur en espèces à l'arrivée.",
+      "nextCod": "Rien n'est payé en ligne maintenant. Payez le livreur en espèces (paiement à la livraison) à l'arrivée.",
       "codGuide": {
         "title": "Comment vous paierez",
         "step1": "Rien n'est débité lorsque vous passez cette commande.",
@@ -270,7 +270,7 @@
         "step1Title": "Le vendeur accepte",
         "step1Body": "Il vérifie qu'il a l'article. Vous suivez chaque étape sur la page de commande.",
         "step2Title": "Votre commande est expédiée",
-        "step2Body": "Si le vendeur accepte avant 14 h, les articles en stock partent en général le jour même. Sinon, le lendemain.",
+        "step2Body": "Si le vendeur accepte avant 14 h (heure de Lusaka), les articles en stock partent en général le jour même. Sinon, le lendemain.",
         "step3Title": "Vous payez à l'arrivée",
         "step3Body": "Payez {amount} en espèces au livreur — ou en boutique si vous la retirez.",
         "helpTitle": "Besoin de modifier ou d'annuler ?",
@@ -308,7 +308,7 @@
       "error": "Un problème est survenu. Vérifiez votre connexion et réessayez.",
       "widgetUnavailable": "Le paiement par carte ne fonctionne pas pour le moment. Essayez le mobile money ou réessayez plus tard.",
       "widgetLabel": "Commande Convergeo",
-      "secureNote": "Page de carte sécurisée par Lenco, notre partenaire de paiement"
+      "secureNote": "Page de carte sécurisée par Lenco, notre partenaire de paiement (conforme PCI)"
     }
   },
   "variant": {

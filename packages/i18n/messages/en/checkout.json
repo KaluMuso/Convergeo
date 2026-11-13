@@ -51,7 +51,7 @@
     "deliveryEligible": "Free delivery in Lusaka from this seller. Checkout confirms your area.",
     "deliveryHint": "Add {amount} more from this seller for free Lusaka delivery.",
     "deliveryThreshold": "Free Lusaka delivery from {threshold} with one seller",
-    "deliveryScopeNote": "Free delivery is only inside Lusaka. Outside Lusaka, use pickup from the seller.",
+    "deliveryScopeNote": "Free delivery is only inside Lusaka. Outside Lusaka, use pickup from the seller. Below the free-delivery amount, your area's delivery fee still applies.",
     "freeDeliveryProgress": "{amount} of {threshold} toward free Lusaka delivery",
     "freeDeliveryUnlocked": "Your order from this seller qualifies for free Lusaka delivery",
     "noticesTitle": "Some items changed",
@@ -148,8 +148,8 @@
         "tip3": "Keep your phone on. The rider may call your checkout number to find you.",
         "landmarkRequired": "Add a landmark and area so the rider can find you.",
         "cutoffTitle": "When will it be sent?",
-        "cutoffBefore": "Order before 14:00 and items in stock usually go out today, after the seller says yes.",
-        "cutoffAfter": "It's after 14:00, so items in stock usually go out tomorrow, after the seller says yes.",
+        "cutoffBefore": "Order before 14:00 (Lusaka time) and items in stock usually go out today, after the seller says yes.",
+        "cutoffAfter": "It's after 14:00 in Lusaka, so items in stock usually go out tomorrow, after the seller says yes.",
         "cutoffMadeToOrder": "Items made for you go out when they are ready. Each item shows how many days."
       }
     },
@@ -171,7 +171,7 @@
       "subtitle": "Choose how to pay. You check everything on the next screen before you order.",
       "momo": "Mobile money",
       "card": "Debit or credit card",
-      "cod": "Pay when it arrives",
+      "cod": "Pay when it arrives (cash on delivery)",
       "railMtn": "MTN Mobile Money",
       "railAirtel": "Airtel Money",
       "payerLabel": "Phone number that will pay",
@@ -217,7 +217,7 @@
       "paymentMethod": "How you will pay",
       "methodMomo": "Mobile money ({rail})",
       "methodCard": "Card (safe Lenco page)",
-      "methodCod": "Pay when it arrives",
+      "methodCod": "Pay when it arrives (cash on delivery)",
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Paying phone: {number}",
@@ -234,7 +234,7 @@
       "whatHappensNext": "What happens next",
       "nextMomo": "A message pops up on your phone. Enter your PIN to pay. Your order starts when the payment goes through.",
       "nextCard": "Next you pay on Lenco's safe card page. Don't close it until it says you have paid.",
-      "nextCod": "Nothing is paid now. Pay the rider in cash when your order arrives.",
+      "nextCod": "Nothing is paid online now. Pay the rider in cash (cash on delivery) when your order arrives.",
       "codGuide": {
         "title": "How you'll pay",
         "step1": "Nothing is charged when you place this order.",
@@ -274,7 +274,7 @@
         "step1Title": "The seller says yes",
         "step1Body": "They check they have it. You can follow every step on your order page.",
         "step2Title": "Your order is sent out",
-        "step2Body": "If the seller says yes before 14:00, items in stock usually go out today. Later ones go tomorrow.",
+        "step2Body": "If the seller says yes before 14:00 (Lusaka time), items in stock usually go out today. Later ones go tomorrow.",
         "step3Title": "You pay when it arrives",
         "step3Body": "Pay {amount} in cash to the rider — or at the shop if you're collecting.",
         "helpTitle": "Need to change or cancel?",
@@ -312,7 +312,7 @@
       "error": "Something went wrong. Check your internet and try again.",
       "widgetUnavailable": "Card payment is not working right now. Try mobile money, or try again later.",
       "widgetLabel": "Convergeo order",
-      "secureNote": "Safe card page by Lenco, our payment partner"
+      "secureNote": "Safe card page by Lenco, our payment partner (PCI compliant)"
     },
     "group": {
       "pageTitle": "Complete your payment",

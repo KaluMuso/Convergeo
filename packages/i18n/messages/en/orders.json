@@ -15,7 +15,7 @@
     "paymentCod": "Pay when it arrives",
     "paymentPrepaid": "Paid",
     "paymentPending": "Not paid yet",
-    "paymentPendingHint": "We have not got your payment yet."
+    "paymentPendingHint": "We have not got your payment yet, so this order is not paid."
   },
   "detail": {
     "title": "Order details",
@@ -117,7 +117,7 @@
     "categoryNotDelivered": "Order not delivered",
     "categoryOther": "Something else",
     "descriptionLabel": "Describe the problem",
-    "descriptionPlaceholder": "What happened?",
+    "descriptionPlaceholder": "What happened? Add any details that help us look into it.",
     "evidenceLabel": "Add photos (if you can)",
     "evidenceHelp": "Up to 8 photos or PDFs, max 10 MB each.",
     "addEvidence": "Add photo or PDF",
