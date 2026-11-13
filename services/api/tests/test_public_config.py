@@ -228,7 +228,13 @@ def test_storefront_config_returns_platform_config_values(
     response = client.get("/public/config/storefront")
 
     assert response.status_code == 200
-    assert response.json() == {"free_delivery_threshold_ngwee": 35_000, "low_stock_threshold": 8}
+    assert response.json() == {
+        "free_delivery_threshold_ngwee": 35_000,
+        "low_stock_threshold": 8,
+        "coupons_enabled": False,
+        "gift_orders_enabled": False,
+        "birthday_greetings_enabled": False,
+    }
     assert "s-maxage" in response.headers.get("cache-control", "")
 
 
@@ -251,4 +257,10 @@ def test_storefront_config_ignores_malformed_values(monkeypatch: pytest.MonkeyPa
     )
     body = client.get("/public/config/storefront").json()
 
-    assert body == {"free_delivery_threshold_ngwee": 20_000, "low_stock_threshold": 5}
+    assert body == {
+        "free_delivery_threshold_ngwee": 20_000,
+        "low_stock_threshold": 5,
+        "coupons_enabled": False,
+        "gift_orders_enabled": False,
+        "birthday_greetings_enabled": False,
+    }

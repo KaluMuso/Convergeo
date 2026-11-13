@@ -33,6 +33,15 @@
     },
     "otp_login": {
       "body": "您的 Convergeo 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
+    },
+    "gift_recipient_notice": {
+      "body": "{recipient_name} 您好，{sender_name} 在 Convergeo 上从 {shop_name} 给您送了一份礼物。我们只会就此礼物联系您。回复 STOP 退订。"
+    },
+    "gift_ready_pickup": {
+      "body": "您来自 {shop_name} 的礼物已可领取。取货 PIN：{pickup_pin}。请勿泄露。"
+    },
+    "birthday_greeting": {
+      "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
     }
   },
   "sms": {

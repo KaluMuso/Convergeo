@@ -33,6 +33,15 @@
     },
     "otp_login": {
       "body": "Votre code de connexion Convergeo est {otp_code}. Il expire dans 10 minutes. Ne partagez pas ce code."
+    },
+    "gift_recipient_notice": {
+      "body": "Bonjour {recipient_name}, {sender_name} vous a envoyé un cadeau de {shop_name} sur Convergeo. Nous vous écrirons uniquement à propos de ce cadeau. Répondez STOP pour vous désabonner."
+    },
+    "gift_ready_pickup": {
+      "body": "Votre cadeau de {shop_name} est prêt à être retiré. Code PIN : {pickup_pin}. Ne le partagez pas."
+    },
+    "birthday_greeting": {
+      "body": "Joyeux anniversaire de la part de Convergeo ! Code {coupon_code} : {amount} de remise dès {min_spend} d'achat, valable {valid_days} jours. Répondez STOP pour vous désabonner."
     }
   },
   "sms": {

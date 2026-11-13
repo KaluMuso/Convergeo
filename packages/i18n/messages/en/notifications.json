@@ -47,6 +47,15 @@
     },
     "dispatch_stale_alert": {
       "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
+    },
+    "gift_recipient_notice": {
+      "body": "Hi {recipient_name}, {sender_name} sent you a gift from {shop_name} on Convergeo. We'll only message you about this gift. Reply STOP to opt out."
+    },
+    "gift_ready_pickup": {
+      "body": "Your gift from {shop_name} is ready to collect. Pickup PIN: {pickup_pin}. Don't share it."
+    },
+    "birthday_greeting": {
+      "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
     }
   },
   "sms": {
