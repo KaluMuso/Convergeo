@@ -64,8 +64,13 @@ FORWARD = [
     "20261113060000_delivery_fallback_zone_band_b.sql",
     "20261113070000_checkout_fulfilment_choices.sql",
     "20261113071000_order_cancel_stock_release.sql",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261113100000_admin_money_tables_read_only.sql",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500_delivery_revenue_ledger_account.sql",
+    # Admin governance (D1 admin direct writes read-only; permissions, audit_log enrichment, admin deactivation, delivery consent) — additive.
+    "20261113163000_admin_direct_writes_read_only.sql",
+    "20261113163100_admin_governance_audit_consent.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -438,7 +443,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 157 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 160 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

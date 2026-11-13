@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 157
+MIGRATION_COUNT = 160
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -43,8 +43,13 @@ POST_REPAIR_ORDER = [
     "20261113060000",
     "20261113070000",
     "20261113071000",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261113100000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # Admin governance (D1 admin direct writes read-only; permissions, audit_log enrichment, admin deactivation, delivery consent) — additive.
+    "20261113163000",
+    "20261113163100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

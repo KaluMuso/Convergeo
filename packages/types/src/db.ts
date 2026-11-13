@@ -414,32 +414,44 @@ export type Database = {
         Row: {
           action: string
           actor: string | null
+          actor_roles: string[] | null
           after: Json | null
           at: string
           before: Json | null
           entity_id: string | null
           entity_type: string
           id: string
+          outcome: string
+          reason: string | null
+          request_id: string | null
         }
         Insert: {
           action: string
           actor?: string | null
+          actor_roles?: string[] | null
           after?: Json | null
           at?: string
           before?: Json | null
           entity_id?: string | null
           entity_type: string
           id?: string
+          outcome?: string
+          reason?: string | null
+          request_id?: string | null
         }
         Update: {
           action?: string
           actor?: string | null
+          actor_roles?: string[] | null
           after?: Json | null
           at?: string
           before?: Json | null
           entity_id?: string | null
           entity_type?: string
           id?: string
+          outcome?: string
+          reason?: string | null
+          request_id?: string | null
         }
         Relationships: []
       }
@@ -4511,6 +4523,36 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_consents: {
+        Row: {
+          granted: boolean
+          id: string
+          purpose: string
+          recorded_at: string
+          source: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          granted: boolean
+          id?: string
+          purpose: string
+          recorded_at?: string
+          source: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          granted?: boolean
+          id?: string
+          purpose?: string
+          recorded_at?: string
+          source?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       product_answers: {
         Row: {
           author_role: string
@@ -7208,6 +7250,15 @@ export type Database = {
         Returns: undefined
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      deactivate_admin_account: {
+        Args: {
+          p_actor: string
+          p_reason: string
+          p_request_id?: string
+          p_target: string
+        }
+        Returns: Json
+      }
       embedding_enqueue_document: {
         Args: {
           p_entity_id: string
@@ -7238,6 +7289,10 @@ export type Database = {
           month_total_usd_micros: number
           success: boolean
         }[]
+      }
+      has_delivery_partner_consent: {
+        Args: { p_user: string }
+        Returns: boolean
       }
       has_role: { Args: { required_role: string }; Returns: boolean }
       insert_intake_class_a_listing: {
