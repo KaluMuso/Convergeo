@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+import { LoadingBlock } from "../../_components/StateBlocks";
 
 import { type KycDetail, kycApi } from "./api";
 import { DecisionPanel } from "./DecisionPanel";
 import { DocViewer } from "./DocViewer";
+import { EMPTY_CHECKS, isChecklistComplete, KycChecklist, type KycChecks } from "./KycChecklist";
 import { SlaBadge } from "./SlaBadge";
 
 type KycReviewDetailProps = {
@@ -23,6 +26,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [checks, setChecks] = useState<KycChecks>(EMPTY_CHECKS);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +50,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-muted">{t("loading")}</p>;
+    return <LoadingBlock label={t("loading")} rows={4} />;
   }
 
   if (error || !detail) {
@@ -88,48 +92,71 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
         </p>
       </header>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-text">{t("momoMatch")}</h2>
-        {momo ? (
-          <dl className="grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted">{t("momoPhone")}</dt>
-              <dd>{momo.phone}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("momoOperator")}</dt>
-              <dd>{momo.operator}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("legalName")}</dt>
-              <dd>{momo.legal_name}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("resolvedName")}</dt>
-              <dd>{momo.resolved_name ?? t("missingValue")}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("matchScore")}</dt>
-              <dd>{momo.match_score.toFixed(2)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("matchResult")}</dt>
-              <dd className={momo.matched ? "text-success" : "text-danger"}>
-                {momo.matched ? t("matched") : t("notMatched")}
-              </dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="text-sm text-muted">{t("missingValue")}</p>
-        )}
+      <section className="space-y-3" aria-labelledby="kyc-docs-heading">
+        <h2 id="kyc-docs-heading" className="text-sm font-semibold text-text">
+          {t("documents")}
+        </h2>
+        <DocViewer
+          documents={detail.documents}
+          docsAvailable={detail.docs_available}
+          onRefresh={() => void load()}
+        />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-text">{t("documents")}</h2>
-        <DocViewer documents={detail.documents} docsAvailable={detail.docs_available} />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold text-text">{t("momoMatch")}</h2>
+            {momo ? (
+              <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted">{t("momoPhone")}</dt>
+                  <dd>{momo.phone}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{t("momoOperator")}</dt>
+                  <dd>{momo.operator}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{t("legalName")}</dt>
+                  <dd>{momo.legal_name}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{t("resolvedName")}</dt>
+                  <dd>{momo.resolved_name ?? t("missingValue")}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{t("matchScore")}</dt>
+                  <dd>{momo.match_score.toFixed(2)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">{t("matchResult")}</dt>
+                  <dd className={momo.matched ? "text-success" : "text-danger"}>
+                    {momo.matched ? t("matched") : t("notMatched")}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="text-sm text-muted">{t("missingValue")}</p>
+            )}
+          </section>
 
-      <DecisionPanel detail={detail} onDecided={() => void load()} />
+          <KycChecklist
+            checks={checks}
+            onChange={setChecks}
+            disabled={detail.status !== "submitted" && detail.status !== "under_review"}
+            momoMatched={momo ? momo.matched : null}
+          />
+        </div>
+        <DecisionPanel
+          detail={detail}
+          checklistComplete={isChecklistComplete(checks)}
+          onDecided={() => {
+            setChecks(EMPTY_CHECKS);
+            void load();
+          }}
+        />
+      </div>
     </div>
   );
 }

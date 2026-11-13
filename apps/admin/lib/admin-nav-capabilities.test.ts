@@ -40,6 +40,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => fixture.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => fixture.translate }));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("@vergeo/ui/src/theme-toggle", () => ({ ThemeToggle: () => null }));
+// The notification bell polls its own API; these suites assert permission-shell fetches only.
+vi.mock("../app/[locale]/_components/admin-notification-bell", () => ({
+  AdminNotificationBell: () => null,
+}));
 vi.mock("../app/[locale]/_components/sign-out-button", () => ({
   SignOutButton: () => null,
 }));
@@ -188,7 +192,7 @@ beforeEach(() => {
       if (input === "/admin/orders/local-order") {
         return reply({
           id: "local-order",
-          status: "confirmed",
+          status: "processing",
           fulfilment: "delivery",
           cod: false,
           delivery_fee_ngwee: 0,
@@ -201,7 +205,16 @@ beforeEach(() => {
           customer_display_name: null,
           created_at: "2026-10-12T00:00:00Z",
           items: [],
-          payments: [],
+          payments: [
+            {
+              id: "local-payment",
+              rail: "mtn",
+              amount_ngwee: 0,
+              status: "success",
+              lenco_reference: "pay-local",
+              created_at: "2026-10-12T00:00:00Z",
+            },
+          ],
           ledger: [],
           timeline: [],
         });
@@ -367,7 +380,9 @@ describe("mounted current-permission shell", () => {
     expect(container.textContent).toContain("local-order");
     expect(container.querySelector('[data-testid="dispatch-courier"]')).toBeNull();
     expect(container.querySelector('[data-testid="escrow-amount"]')).toBeNull();
-    expect(container.querySelectorAll("main input, main select, main button")).toHaveLength(0);
+    expect(
+      container.querySelectorAll("main input, main select, main button:not([data-copy-button])"),
+    ).toHaveLength(0);
     current = grants([], true);
     await refocus();
     expect(container.querySelector('[data-testid="dispatch-courier"]')).not.toBeNull();
@@ -386,6 +401,15 @@ describe("mounted current-permission shell", () => {
       expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
       expect(container.querySelector("[data-protected-route]")).toBeNull();
     }
+  });
+
+  it("lets any admin open their own /notifications page without a nav permission", async () => {
+    current = grants(["products.manage"]);
+    await renderRoute("/en/notifications");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector('[data-protected-route="/en/notifications"]')).not.toBeNull();
+    await renderRoute("/en/notifications/extra");
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("shell.permissionDenied");
   });
 
   it("keeps mounted chrome/login/recovery transitions stable in both directions", async () => {

@@ -3,17 +3,21 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { notify } from "@vergeo/ui/src/toast";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
-import { Badge, Button, FormField, Input, PriceBlock, Spinner } from "../../listings/new/_lib/ui";
+import { VendorErrorState } from "../../_components/async-state";
+import { OrderDetailSkeleton } from "../../_components/vendor-skeletons";
+import { Badge, Button, FormField, Input, PriceBlock } from "../../listings/new/_lib/ui";
 
 import {
   CourierStatusCard,
   type VendorCourierDispatch,
   type VendorDeliveryResponse,
 } from "./courier-status";
+import { OrderNextStepCard, OrderPaymentExplainer, OrderStatusTimeline } from "./order-guidance";
 
 export type VendorActionName = "confirm" | "reject" | "pack" | "ship" | "ready_for_pickup";
 
@@ -291,19 +295,21 @@ export function OrderActionBar({
           }
           const isDestructive = action === "reject";
           return (
-            <Button
-              key={action}
-              type="button"
-              variant={isDestructive ? "secondary" : "primary"}
-              className="min-h-12 w-full text-base"
-              loading={pendingAction === action}
-              loadingLabel={t(ACTION_PENDING_KEYS[action])}
-              disabled={pendingAction !== null && pendingAction !== action}
-              onClick={() => handlePrimaryClick(action)}
-              data-testid={`vendor-order-action-${action}`}
-            >
-              {t(ACTION_LABEL_KEYS[action])}
-            </Button>
+            <div key={action} className="flex flex-col gap-1">
+              <Button
+                type="button"
+                variant={isDestructive ? "secondary" : "primary"}
+                className="min-h-12 w-full text-base"
+                loading={pendingAction === action}
+                loadingLabel={t(ACTION_PENDING_KEYS[action])}
+                disabled={pendingAction !== null && pendingAction !== action}
+                onClick={() => handlePrimaryClick(action)}
+                data-testid={`vendor-order-action-${action}`}
+              >
+                {t(ACTION_LABEL_KEYS[action])}
+              </Button>
+              <p className="px-1 text-xs text-text-3">{t(`orders.actions.after.${action}`)}</p>
+            </div>
           );
         })}
       </div>
@@ -313,10 +319,12 @@ export function OrderActionBar({
 
 type OrderDetailViewProps = {
   orderId: string;
+  locale?: string;
 };
 
-export function OrderDetailView({ orderId }: OrderDetailViewProps) {
+export function OrderDetailView({ orderId, locale = "en" }: OrderDetailViewProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -401,16 +409,27 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
     void loadOrder();
   };
 
-  if (sessionLoading || loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-16">
-        <Spinner label={t("orders.loading")} />
-      </div>
-    );
+  if (sessionLoading || (loading && !order)) {
+    return <OrderDetailSkeleton label={t("orders.loading")} />;
   }
 
   if (error && !order) {
-    return <p className="py-8 text-center text-sm text-danger">{error}</p>;
+    return (
+      <VendorErrorState
+        title={error}
+        body={t("orders.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => void loadOrder()}
+        action={
+          <Link
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+            href={`/${locale}/orders`}
+          >
+            {t("orders.back")}
+          </Link>
+        }
+      />
+    );
   }
 
   if (!order) {
@@ -452,9 +471,12 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
         <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       ) : null}
 
+      <OrderNextStepCard locale={locale} order={order} />
+
       <section className="flex flex-col gap-2 rounded-lg border border-border p-3">
         <h2 className="text-sm font-semibold text-text">{t("orders.payment.heading")}</h2>
-        <p className="text-sm text-text-2">{paymentLabel}</p>
+        <p className="text-sm font-medium text-text">{paymentLabel}</p>
+        <OrderPaymentExplainer cod={order.cod} paid={order.paid} />
         {order.delivery_fee_ngwee > 0 ? (
           <p className="text-sm text-text-2">
             <PriceBlock ngwee={order.delivery_fee_ngwee} />
@@ -506,25 +528,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-text">{t("orders.timeline.heading")}</h2>
-        {order.timeline.length === 0 ? (
-          <p className="text-sm text-text-2">{t("orders.timeline.empty")}</p>
-        ) : (
-          <ol className="flex flex-col gap-3">
-            {order.timeline.map((event) => (
-              <li key={event.id} className="rounded-lg border border-border p-3">
-                <p className="text-sm font-medium text-text">{statusLabel(event.to_status)}</p>
-                {event.note ? (
-                  <p className="mt-1 text-sm text-text-2">
-                    {t("orders.timeline.note", { note: event.note })}
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      <OrderStatusTimeline order={order} statusLabel={statusLabel} />
 
       <OrderActionBar
         orderId={orderId}

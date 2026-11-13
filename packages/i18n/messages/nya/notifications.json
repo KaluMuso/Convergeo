@@ -123,5 +123,62 @@
     "payout_failure_alert": {
       "body": "Chenjezo la payout failure: {vendor_name} — {amount} (ref {lenco_reference}). Onani mu admin."
     }
+  },
+  "center": {
+    "bell": "Ma-notification",
+    "bellUnread": "{count, plural, one {# notification yosawerengedwa} other {# ma-notification osawerengedwa}}",
+    "title": "Ma-notification",
+    "markAllRead": "Lembani zonse kuti zawerengedwa",
+    "seeAll": "Onani ma-notification onse",
+    "empty": "Palibe zatsopano. Zatsopano zidzaonekera pano.",
+    "loading": "Tikutsegula…",
+    "loadError": "Talephera kutsegula ma-notification.",
+    "retry": "Yesaninso",
+    "loadMore": "Onjezani zina",
+    "unreadDot": "Yosawerengedwa",
+    "view": "Onani",
+    "close": "Tsekani",
+    "pageDescription": "Zosintha za ma-order, malipiro ndi akaunti yanu.",
+    "push": {
+      "enable": "Yatsani zidziwitso pa foni",
+      "enabled": "Zidziwitso pa foni zayatsidwa",
+      "denied": "Zidziwitso zatsekedwa mu browser yanu.",
+      "hint": "Landirani chidziwitso pa foni iyi ngakhale app itatsekedwa.",
+      "unavailable": "Zidziwitso pa foni sizinapezeke.",
+      "failed": "Talephera kuyatsa zidziwitso. Yesaninso."
+    },
+    "errors": {
+      "forbidden": "Simungathe kuona ma-notification awa.",
+      "rateLimited": "Mwapempha kwambiri. Dikirani pang'ono.",
+      "invalidCursor": "Link iyi yatha ntchito. Tsegulaninso."
+    }
+  },
+  "inApp": {
+    "fallback": "Muli ndi zatsopano.",
+    "customer": {
+      "order_placed": "Order {ref} yatumizidwa. Tikudziwitsani wogulitsa akavomereza.",
+      "order_confirmed": "Wogulitsa wavomereza order {ref}.",
+      "order_rejected": "Wogulitsa wakana order {ref}. Ndalama zanu zidzabwezedwa.",
+      "order_packed": "Order {ref} ikukonzedwa.",
+      "order_shipped": "Order {ref} ili pa njira.",
+      "order_ready_pickup": "Order {ref} yakonzeka kutengedwa. Tsegulani kuti muone code.",
+      "order_delivered": "Order {ref} yafika. Zinayenda bwanji?",
+      "quote_received": "Mwalandira quote yatsopano. Yerekezerani ndi kuvomereza mu app.",
+      "ticket_issued": "Tikiti yanu yakonzeka. Onetsani QR code pa geti."
+    },
+    "vendor": {
+      "order_placed": "Order yatsopano {ref}. Ivomerezeni kuti muyambe.",
+      "order_delivered": "Order {ref} yafika.",
+      "kyc_submitted": "Talandira zikalata zanu. Tiziona posachedwa.",
+      "kyc_approved": "Shopu yanu yatsimikizidwa. Tsopano mutha kulandira ndalama.",
+      "kyc_rejected": "Kutsimikizira kwanu kukufunika kusintha. Tsegulani kuti muone chifukwa.",
+      "rfq_received": "Kasitomala wakupemphani quote.",
+      "job_matched": "Ntchito yatsopano ikugwirizana ndi ma-service anu.",
+      "dispute_opened": "Kasitomala watsegula mkangano pa order {ref}. Chonde yankhani."
+    },
+    "admin": {
+      "kyc_submitted": "KYC yatsopano ikudikira kuunikidwa.",
+      "dispute_opened": "Mkangano watsopano pa order {ref}."
+    }
   }
 }

@@ -293,8 +293,17 @@
         "submitting": "Saving…",
         "success": "Decision recorded.",
         "failure": "Could not save decision.",
-        "noKycRecord": "No KYC record is attached to this vendor."
-      }
+        "noKycRecord": "No KYC record is attached to this vendor.",
+        "loading": "Loading documents…",
+        "openFullReview": "Open full review",
+        "rejectVisibleToVendor": "The vendor will see this reason.",
+        "confirmApprove": "Approve {vendor}? They will be notified and can start selling.",
+        "approveConfirm": "Yes, approve",
+        "rejectConfirm": "Reject and notify vendor",
+        "back": "Back",
+        "retry": "Retry"
+      },
+      "emptyHint": "New submissions will appear here."
     },
     "detail": {
       "back": "Back to queue",
@@ -376,7 +385,16 @@
       "cancel": "Cancel",
       "submitting": "Saving decision…",
       "success": "Decision recorded — vendor will be notified.",
-      "failure": "Could not save decision."
+      "failure": "Could not save decision.",
+      "reasonPlaceholder": "Choose a reason…",
+      "freeTextRequired": "Explain the reason (required)",
+      "checklistHint": "Tick every item in the checklist to enable Approve.",
+      "vendorWillBeNotified": "{vendor} will be notified of this decision.",
+      "vendorSees": "The vendor will see:",
+      "vendorSeesEmpty": "(choose a reason)",
+      "noDocuments": "No documents were uploaded.",
+      "openFullSize": "Open full size",
+      "refreshDocs": "Refresh links"
     },
     "reasons": {
       "blurry_document": "Document is blurry or unreadable",
@@ -384,6 +402,18 @@
       "expired_id": "ID document appears expired",
       "incomplete_submission": "Submission is incomplete",
       "other": "Other (specify below)"
+    },
+    "checklist": {
+      "title": "Review checklist",
+      "progress": "{done} of {total}",
+      "items": {
+        "nrcLegible": "NRC photo is clear and readable",
+        "nameMatches": "Name on the NRC matches the mobile money name",
+        "selfieMatches": "Selfie matches the NRC photo",
+        "notExpired": "NRC is not expired"
+      },
+      "momoMatched": "Automatic check: names match.",
+      "momoMismatch": "Automatic check: names do not match."
     }
   },
   "moderation": {
@@ -710,7 +740,8 @@
         "delivered": "Delivered",
         "completed": "Completed",
         "cancelled": "Cancelled"
-      }
+      },
+      "emptyHint": "Check the spelling or try fewer filters."
     },
     "detail": {
       "back": "Back to search",
@@ -740,7 +771,14 @@
       "fulfilment": {
         "delivery": "Delivery",
         "pickup": "Pickup"
-      }
+      },
+      "cancelledBanner": "This order was cancelled.",
+      "progressLabel": "Order progress",
+      "stepDone": "Done:",
+      "stepCurrent": "Current:",
+      "stepUpcoming": "Upcoming:",
+      "copyOrderId": "Copy order ID",
+      "advancedEscrow": "Advanced: manual escrow hold / release"
     },
     "dispatch": {
       "title": "Manual dispatch",
@@ -769,8 +807,8 @@
       "permissionDenied": "Permission denied — admin role required to record dispatch."
     },
     "intervention": {
-      "title": "Status intervention",
-      "subtitle": "Current status: {status}. Illegal transitions are rejected by the state machine.",
+      "title": "Next actions",
+      "subtitle": "Current status: {status}. Only the steps the order state machine allows are shown.",
       "event": "Transition event",
       "events": {
         "confirm": "Confirm order",
@@ -789,7 +827,23 @@
       "submit": "Apply intervention",
       "submitting": "Applying…",
       "success": "Status updated via state machine.",
-      "failure": "Transition rejected or failed."
+      "failure": "Transition rejected or failed.",
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "prepaidUnpaid": "This prepaid order has no successful payment, so it cannot move forward. It can only be cancelled.",
+      "terminal": "This order is finished. No further actions are possible.",
+      "useDispatchBelow": "Shipping and delivery are recorded in Manual dispatch below.",
+      "willChange": "This changes the order from {from} to {to}.",
+      "irreversible": "This cancels the order and cannot be undone.",
+      "refundQueuedNotSent": "Payouts are off for the pilot. Cancelling flags this order for a refund decision in the audit log. No refund is created and no money is sent."
     },
     "escrow": {
       "title": "Manual escrow hold / release",
@@ -824,7 +878,40 @@
       "statusChange": "{from} → {to}",
       "missing": "—"
     },
-    "openDispatchBoard": "Courier dispatch board"
+    "openDispatchBoard": "Courier dispatch board",
+    "delivery": {
+      "title": "Delivery and cash",
+      "titlePickup": "Pickup and cash",
+      "collectLabel": "Cash to collect",
+      "codZero": "Cash on delivery, nothing left to collect",
+      "prepaidCollectNothing": "Prepaid. Collect nothing.",
+      "customer": "Customer",
+      "copyPhone": "Copy customer phone number",
+      "whatsapp": "WhatsApp",
+      "noPhone": "No phone number on file.",
+      "dropoff": "Drop-off (landmark and GPS)",
+      "copyAddress": "Copy drop-off address",
+      "openMap": "Open map",
+      "noGps": "No GPS pin was shared.",
+      "loadingAddress": "Loading address from the courier request…",
+      "addressNotOnOrder": "The address is attached once a courier request exists for this order.",
+      "openDispatchBoard": "Open dispatch board",
+      "addressFailed": "Could not load the address from the courier request.",
+      "rider": "Courier / rider",
+      "courierRef": "Ref {ref}",
+      "copyRiderPhone": "Copy courier WhatsApp number",
+      "courierMessage": "Courier message (as the rider sees it)",
+      "copyCourierMessage": "Copy courier message",
+      "noRiderYet": "No courier has been requested for this order yet.",
+      "dispatchStatus": {
+        "requested": "Requested",
+        "accepted": "Accepted",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      }
+    }
   },
   "accessDenied": {
     "title": "Access denied",
@@ -961,7 +1048,9 @@
         "on_track": "On track",
         "due_soon": "Due soon",
         "overdue": "Overdue"
-      }
+      },
+      "emptyHint": "New disputes will appear here, oldest first.",
+      "payoutsOffBanner": "Payouts and customer refunds are switched off for the pilot. You can review disputes and release funds to the vendor; refund outcomes are unavailable until payouts are enabled."
     },
     "detail": {
       "back": "Back to queue",
@@ -1026,8 +1115,20 @@
         "submitting": "Processing…",
         "success": "Decision recorded — parties will be notified.",
         "failure": "Could not record decision.",
-        "refundUnavailablePayoutsDisabled": "Refunds are unavailable while payouts are disabled. No money was moved — choose Release to vendor or try again once payouts are enabled.",
-        "alreadyResolved": "This dispute has already been resolved."
+        "alreadyResolved": "This dispute has already been resolved.",
+        "payoutsOffTitle": "Refunds are disabled for the pilot",
+        "payoutsOffBody": "No customer money is sent while payouts are off, so the refund outcomes are unavailable. Release to vendor is still possible.",
+        "amountPreview": "You entered {amount}",
+        "review": "Review decision",
+        "confirmTitle": "Confirm dispute decision",
+        "confirmSummary": {
+          "full_refund": "Refund {amount} to the customer. The dispute closes.",
+          "partial_refund": "Refund {amount} to the customer and release the rest to the vendor. The dispute closes.",
+          "release": "Release the escrowed funds to the vendor. The dispute closes."
+        },
+        "refundTo": "Refund to {momo} ({rail})",
+        "noteRecorded": "Your decision note is saved on the dispute and in the audit log.",
+        "refundUnavailablePayoutsDisabled": "Refunds are unavailable while payouts are disabled. No money was moved — choose Release to vendor or try again once payouts are enabled."
       }
     }
   },
@@ -1678,6 +1779,47 @@
         "permission": "You do not have permission to manage couriers."
       },
       "zonePriceLine": "{label} {price}"
+    }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "working": "Working…",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed"
+  },
+  "today": {
+    "title": "Today",
+    "subtitle": "What needs a person right now. Counts come straight from each queue.",
+    "refresh": "Refresh",
+    "loading": "Loading",
+    "noAccess": "No access",
+    "unavailable": "Could not load",
+    "allClear": "Nothing waiting",
+    "openList": "Open the list",
+    "open": "Open queue",
+    "cutoffPassed": "Today's 14:00 Lusaka cut-off has passed.",
+    "cutoffIn": "Cut-off 14:00 Lusaka in {hours}h {minutes}m.",
+    "overdueCount": "{count, plural, =0 {None overdue} one {# overdue} other {# overdue}}",
+    "placed": {
+      "title": "Awaiting vendor confirmation",
+      "hint": "New orders the vendor has not confirmed yet."
+    },
+    "dispatch": {
+      "title": "Ready to dispatch",
+      "hint": "Orders ready for a courier."
+    },
+    "kyc": {
+      "title": "KYC to review",
+      "hint": "Vendor verifications waiting for a decision."
+    },
+    "disputes": {
+      "title": "Disputes and refund requests",
+      "hint": "Open disputes waiting for a decision."
+    },
+    "notifications": {
+      "title": "Failed notifications",
+      "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
     }
   }
 }

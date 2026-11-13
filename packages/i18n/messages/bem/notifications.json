@@ -123,5 +123,62 @@
     "payout_failure_alert": {
       "body": "Warning ya payout failure: {vendor_name} — {amount} (ref {lenco_reference}). Onani mu admin."
     }
+  },
+  "center": {
+    "bell": "Ama-notification",
+    "bellUnread": "{count, plural, one {# notification iishilabelengwa} other {# ama-notification ayashilabelengwa}}",
+    "title": "Ama-notification",
+    "markAllRead": "Lemba yonse ati yabelengwa",
+    "seeAll": "Mona ama-notification yonse",
+    "empty": "Tapali ifipya. Ifipya fikalamoneka pano.",
+    "loading": "Ukulolela…",
+    "loadError": "Twafilwa ukuleta ama-notification.",
+    "retry": "Eseshapo nakabili",
+    "loadMore": "Leta na fimbi",
+    "unreadDot": "Iishilabelengwa",
+    "view": "Mona",
+    "close": "Isala",
+    "pageDescription": "Ifyalecitika pa ma-order, ukulipila ne akaunti yenu.",
+    "push": {
+      "enable": "Tampa ukupokelela pa foni",
+      "enabled": "Ukupokelela pa foni kwatampa",
+      "denied": "Ama-alert yaliikwa mu browser yenu.",
+      "hint": "Pokeleleni alert pali iyi foni nangu app yaisalwa.",
+      "unavailable": "Ama-alert pa foni tayalipo nomba.",
+      "failed": "Twafilwa ukutampa ama-alert. Eseshapo nakabili."
+    },
+    "errors": {
+      "forbidden": "Tamwakwata insambu sha kumona aya ma-notification.",
+      "rateLimited": "Mwalomba imiku iingi. Lolelako panono.",
+      "invalidCursor": "Ili link lyapwa. Fwailisheni nakabili."
+    }
+  },
+  "inApp": {
+    "fallback": "Mwakwata ifipya.",
+    "customer": {
+      "order_placed": "Order {ref} yatumwa. Tukamyeba nga uushitisha aisuminisha.",
+      "order_confirmed": "Uushitisha asuminisha order {ref}.",
+      "order_rejected": "Uushitisha akaana order {ref}. Indalama mwalipile shikabwela.",
+      "order_packed": "Order {ref} ileteyanishiwa.",
+      "order_shipped": "Order {ref} ili mu nshila.",
+      "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
+      "order_delivered": "Order {ref} yafika. Cali shani?",
+      "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
+      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+    },
+    "vendor": {
+      "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",
+      "order_delivered": "Order {ref} yafika.",
+      "kyc_submitted": "Twapokelela ifyalembwa fyenu. Tukafimona nomba line.",
+      "kyc_approved": "Shop yenu yasuminishiwa. Nomba kuti mwapokelela indalama.",
+      "kyc_rejected": "Ukusuminishiwa kwenu kulefwaya ukwalula. Kufyeni mumone umulandu.",
+      "rfq_received": "Kasita alomba quote kuli imwe.",
+      "job_matched": "Incito iipya ilinganya na ma-service yenu.",
+      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke."
+    },
+    "admin": {
+      "kyc_submitted": "KYC iipya ilelolela ukumonwa.",
+      "dispute_opened": "Ubwafya bupya pa order {ref}."
+    }
   }
 }
