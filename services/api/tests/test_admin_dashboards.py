@@ -429,6 +429,7 @@ def test_build_dashboard_legacy_clean_is_unknown(
     ):
         payload = build_dashboard(service_wrapper)
 
+    assert payload.reconciliation is not None  # build_dashboard always fills it (D3 strips later)
     assert payload.reconciliation.status == "unknown"
     assert payload.reconciliation.provenance == "LEGACY_UNVERSIONED_ACCOUNT_UNBOUND"
     assert payload.reconciliation.has_mismatch is False

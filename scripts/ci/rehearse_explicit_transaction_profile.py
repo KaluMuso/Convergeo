@@ -65,7 +65,7 @@ REVIEWED_SUFFIX = (
     "20261113100000_admin_money_tables_read_only.sql",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500_delivery_revenue_ledger_account.sql",
-    # Admin governance (D1 admin direct writes read-only; permissions, audit_log enrichment, admin deactivation, delivery consent) — additive.
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
     "20261113163000_admin_direct_writes_read_only.sql",
     "20261113163100_admin_governance_audit_consent.sql",
 )

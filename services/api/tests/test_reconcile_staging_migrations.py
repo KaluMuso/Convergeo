@@ -85,7 +85,7 @@ PENDING_REPAIR_VERSIONS = {
     "20261113100000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
-    # Admin governance (D1 admin direct writes read-only; permissions, audit_log enrichment, admin deactivation, delivery consent) — additive.
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
     "20261113163000",
     "20261113163100",
 }
