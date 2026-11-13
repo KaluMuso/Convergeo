@@ -60,6 +60,10 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "otp_login": TemplateClass.TRANSACTIONAL,
     "event_cancelled": TemplateClass.TRANSACTIONAL,
     "event_schedule_changed": TemplateClass.TRANSACTIONAL,
+    "gift_recipient_notice": TemplateClass.TRANSACTIONAL,
+    "gift_ready_pickup": TemplateClass.TRANSACTIONAL,
+    # Birthday offers are marketing: quiet hours + channel opt-out apply.
+    "birthday_greeting": TemplateClass.MARKETING,
     # Email receipts & KYC outcomes
     "payment_receipt": TemplateClass.TRANSACTIONAL,
     "order_receipt": TemplateClass.TRANSACTIONAL,

@@ -252,7 +252,10 @@ def _validated_gift(body: GiftRequest) -> tuple[str, str, str | None]:
             details={"field": "recipient_agreed", "message_key": "checkout.gift.errors.consent"},
         )
     name = " ".join(body.recipient_name.split())
-    phone = _normalize_phone(body.recipient_phone)
+    digits = re.sub(r"\D", "", body.recipient_phone)
+    if len(digits) == 10 and digits.startswith("0"):
+        digits = digits[1:]  # local 09x / 07x format
+    phone = _normalize_phone(digits if len(digits) == 9 else body.recipient_phone)
     if not name:
         raise AppError(
             code="gift.name_required",
