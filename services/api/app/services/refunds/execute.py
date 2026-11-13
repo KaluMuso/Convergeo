@@ -565,6 +565,7 @@ def execute_refund(
         remaining_escrow_ngwee = (
             summary.charge_received_ngwee
             - summary.commission_captured_ngwee
+            - summary.delivery_fee_captured_ngwee
             - summary.vendor_released_ngwee
             - summary.refund_drained_ngwee
         )
@@ -588,6 +589,7 @@ def execute_refund(
             remaining_escrow_ngwee = (
                 summary.charge_received_ngwee
                 - summary.commission_captured_ngwee
+                - summary.delivery_fee_captured_ngwee
                 - summary.vendor_released_ngwee
                 - summary.refund_drained_ngwee
             )

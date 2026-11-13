@@ -343,3 +343,41 @@ class TestCodCashHolder:
         assert _scalar(db, f"SELECT status FROM public.orders WHERE id = '{order_id}';") == (
             "completed"
         )
+
+
+class TestEscrowSummaryCountsDeliveryCapture:
+    """A released order with a captured fee has no escrow left (refunds not blocked)."""
+
+    def test_released_prepaid_order_with_fee_has_zero_remaining_escrow(self, db: PgConn) -> None:
+        from app.services.escrow.order_money_gate import claim_release_gate
+        from app.services.escrow.release import evaluate_and_release
+        from app.services.escrow.release_accounting import (
+            remaining_escrow_ngwee,
+            summarize_order_release_ledger,
+        )
+        from app.services.ledger.engine import post_transaction
+        from app.services.ledger.templates import LedgerTemplate
+
+        order_id = _insert_order(db, status="completed", cod=False)
+        result = db.run(
+            f"""
+            INSERT INTO public.order_events (id, order_id, actor, from_status, to_status)
+            VALUES ('{uuid.uuid4()}', '{order_id}', '{CUSTOMER_ID}', 'delivered', 'completed');
+            """
+        )
+        assert result.ok, result.error
+        post_transaction(
+            idempotency_key=f"escrow-hold-{order_id}",
+            template=LedgerTemplate.ESCROW_HOLD,
+            order_id=order_id,
+            order_amount_ngwee=ITEMS_NGWEE + FEE_NGWEE,
+        )
+
+        released = evaluate_and_release(None, order_id)  # type: ignore[arg-type]
+
+        assert released.outcome == "released"
+        summary = summarize_order_release_ledger(order_id)
+        assert summary.delivery_fee_captured_ngwee == FEE_NGWEE
+        assert summary.balanced is True
+        assert remaining_escrow_ngwee(order_id) == 0
+        claim_release_gate(order_id)  # idempotent re-claim still ok
