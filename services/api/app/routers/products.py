@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import logging
 import re
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Literal, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -20,6 +21,11 @@ from app.services.listings.variants import (
     variant_available_qty,
     variant_in_stock,
 )
+from app.services.vendor_plans.canonical_photos import (
+    load_canonical_images,
+    merge_listing_gallery,
+)
+from app.services.vendor_plans.resolver import shared_photos_enabled
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -43,6 +49,8 @@ class _ServiceClient(Protocol):
     def client(self) -> Any: ...
 
 
+logger = logging.getLogger(__name__)
+
 MAX_GALLERY_IMAGES = 8
 
 
@@ -50,6 +58,9 @@ class ProductImageResponse(BaseModel):
     public_id: str
     position: int
     listing_id: str
+    # "canonical" = shared product photo (flag `shared_canonical_photos`); its
+    # listing_id is the page's primary listing so existing clients keep working.
+    source: Literal["listing", "canonical"] = "listing"
 
 
 class VendorLocationResponse(BaseModel):
@@ -314,6 +325,49 @@ def _collect_images(
     return images
 
 
+def _canonical_public_ids(client: Any, product_id: str) -> list[str]:
+    """Shared canonical photos for the PDP, or [] when the flag is off.
+
+    Fail-soft: the PDP must render from listing photos if this read fails.
+    """
+    if not shared_photos_enabled(client):
+        return []
+    try:
+        return load_canonical_images(client, [product_id]).get(product_id, [])
+    except Exception:
+        logger.warning("canonical product photos unavailable", exc_info=True)
+        return []
+
+
+def _merge_canonical_gallery(
+    canonical_public_ids: list[str],
+    listing_gallery: list[ProductImageResponse],
+    *,
+    primary_listing_id: str,
+) -> list[ProductImageResponse]:
+    """Canonical photos lead the PDP gallery; listing photos fill the rest (≤8)."""
+    merged: list[ProductImageResponse] = []
+    seen: set[str] = set()
+    for public_id in canonical_public_ids:
+        if public_id in seen:
+            continue
+        seen.add(public_id)
+        merged.append(
+            ProductImageResponse(
+                public_id=public_id,
+                position=len(merged) + 1,
+                listing_id=primary_listing_id,
+                source="canonical",
+            )
+        )
+    for image in listing_gallery:
+        if image.public_id in seen:
+            continue
+        seen.add(image.public_id)
+        merged.append(image.model_copy(update={"position": len(merged) + 1}))
+    return merged[:MAX_GALLERY_IMAGES]
+
+
 def _maybe_single_row(response: Any) -> dict[str, Any] | None:
     """Normalize postgrest ``maybe_single().execute()`` empty results.
 
@@ -548,6 +602,11 @@ def build_product_detail(
         images_by_listing,
         primary_listing_id=primary_listing_id,
     )
+    canonical_public_ids = _canonical_public_ids(client, product_id)
+    if canonical_public_ids:
+        gallery_images = _merge_canonical_gallery(
+            canonical_public_ids, gallery_images, primary_listing_id=primary_listing_id or ""
+        )
 
     listings: list[ListingResponse] = []
     for row in listing_rows:
@@ -582,6 +641,22 @@ def build_product_detail(
             )
             if image_row.get("cloudinary_public_id")
         ][:MAX_GALLERY_IMAGES]
+        if canonical_public_ids:
+            # Own photos always show; canonical ones fill the free slots (≤8).
+            merged = merge_listing_gallery(
+                [image.public_id for image in listing_images],
+                canonical_public_ids,
+                cap=MAX_GALLERY_IMAGES,
+            )
+            listing_images = [
+                ProductImageResponse(
+                    public_id=public_id,
+                    position=index + 1,
+                    listing_id=listing_id,
+                    source=source,
+                )
+                for index, (public_id, source) in enumerate(merged)
+            ]
         option_groups, variants = _variant_payload(row, variant_sets.get(listing_id))
         listing_in_stock = is_listing_available(
             stock_mode,

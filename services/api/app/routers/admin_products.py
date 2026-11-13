@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
@@ -9,9 +10,13 @@ from app.core.auth import CurrentUser, require_moderator, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services.vendor_plans.canonical_photos import seed_canonical_images_from_listings
+from app.services.vendor_plans.resolver import shared_photos_enabled
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, model_validator
+
+logger = logging.getLogger(__name__)
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.3
 MAX_DUPLICATE_PAIRS = 100
@@ -904,6 +909,21 @@ async def list_pending_canonical_products(
     return items
 
 
+def _seed_canonical_photos(service_client: ServiceRoleClient, product_id: str) -> int:
+    """Approval adopts the proposing listing's photos as the product's (flag-gated).
+
+    Best effort: a photo-seeding failure must never undo or block moderation.
+    """
+    client = service_client.client
+    if not shared_photos_enabled(client):
+        return 0
+    try:
+        return seed_canonical_images_from_listings(client, product_id)
+    except Exception:
+        logger.warning("canonical photo seeding failed", exc_info=True)
+        return 0
+
+
 @canonical_router.patch("/{product_id}/status", response_model=CanonicalStatusResponse)
 async def patch_canonical_product_status(
     product_id: UUID,
@@ -931,6 +951,10 @@ async def patch_canonical_product_status(
         "reason": result.get("reason"),
         "actor_id": current_user.id,
     }
+    if str(result["status"]) == "active":
+        seeded = _seed_canonical_photos(service_client, product_id_str)
+        if seeded:
+            after["canonical_images_seeded"] = seeded
     recorder.record(
         action=f"admin.products.canonical.{body.status}",
         entity_type="product",

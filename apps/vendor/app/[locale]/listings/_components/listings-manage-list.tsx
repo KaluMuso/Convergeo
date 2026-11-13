@@ -12,6 +12,7 @@ import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manag
 import { Badge, PriceBlock } from "../new/_lib/ui";
 
 import { ListingStatusGuide, ListingTipsPanel, ListingVisibilityHint } from "./listing-guide";
+import { PlanUsageCard } from "./plan-usage-card";
 
 type ListingsManageListProps = {
   locale: string;
@@ -107,6 +108,10 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
         <h1 className="text-xl font-semibold text-text">{t("listings.manage.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
       </header>
+
+      <div className="px-1">
+        <PlanUsageCard refreshKey={listings.length} />
+      </div>
 
       <div className="px-1">
         <Link

@@ -62,7 +62,9 @@
       "categoriesTitle": "Category tree",
       "categoriesBody": "Public catalogue category structure.",
       "platformTitle": "Platform knobs",
-      "platformBody": "Operational limits and platform settings."
+      "platformBody": "Operational limits and platform settings.",
+      "vendorPlansTitle": "Vendor plans",
+      "vendorPlansBody": "Plan prices, listing and photo limits, and per-vendor overrides."
     }
   },
   "translations": {
@@ -138,7 +140,8 @@
       "deliveryZones": "Delivery zones",
       "platform": "Platform knobs",
       "flags": "Feature flags",
-      "categories": "Category tree"
+      "categories": "Category tree",
+      "vendorPlans": "Vendor plans"
     },
     "common": {
       "save": "Save changes",
@@ -211,6 +214,10 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    },
+    "vendorPlans": {
+      "title": "Vendor plans",
+      "subtitle": "Listing limits, photo limits, features and monthly prices. Changes apply immediately and are audited."
     }
   },
   "business": {
@@ -1786,7 +1793,8 @@
     "working": "Working…",
     "copy": "Copy",
     "copied": "Copied",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "rateLimited": "Too many changes in a short time. Wait a minute and try again."
   },
   "today": {
     "title": "Today",
@@ -1820,6 +1828,82 @@
     "notifications": {
       "title": "Failed notifications",
       "hint": "No failed-notification count is available in this console yet. Check the support log for message history."
+    }
+  },
+  "productImages": {
+    "errors": {
+      "full": "A product can have at most 8 photos.",
+      "duplicate": "That photo is already on this product."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Limits count distinct listings, never stock. Leave the listing limit empty for unlimited. Going over a limit never removes listings: vendors only see an upgrade prompt. Billing is not collected yet.",
+    "unlimited": "Unlimited",
+    "default": "Default plan",
+    "vendorCount": "{count, plural, one {# vendor} other {# vendors}}",
+    "summary": "{price}/month · {listings} listings · {images} photos",
+    "makeDefault": "Make default",
+    "delete": "Delete",
+    "createHeading": "New plan",
+    "create": "Create plan",
+    "fields": {
+      "key": "Plan key (lowercase, e.g. market_stall)",
+      "name": "Name",
+      "priceKwacha": "Monthly price (K)",
+      "maxListings": "Listing limit (empty = unlimited)",
+      "maxImages": "Photos per listing (1–8)",
+      "featuredSlots": "Featured slots",
+      "analyticsDepth": "Analytics",
+      "wholesaleTools": "Wholesale tools",
+      "active": "Active"
+    },
+    "depth": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "advanced": "Advanced"
+    },
+    "errors": {
+      "nameRequired": "Enter a plan name.",
+      "keyInvalid": "Use 2–32 lowercase letters, numbers or underscores, starting with a letter.",
+      "priceInvalid": "Enter a price in kwacha, for example 49 or 49.50.",
+      "listingsInvalid": "Enter a whole number of listings, or leave it empty for unlimited.",
+      "imagesInvalid": "Photos per listing must be between 1 and 8.",
+      "slotsInvalid": "Featured slots must be between 0 and 100.",
+      "overrideEmpty": "An override must change the listing limit or the photo limit.",
+      "expiryInvalid": "Choose an expiry date in the future, at most one year ahead.",
+      "reasonRequired": "Give a reason for the override.",
+      "vendorIdInvalid": "Enter a vendor ID (UUID).",
+      "vendorNotFound": "Vendor not found.",
+      "saveFailed": "Could not save. Check the values and try again.",
+      "keyTaken": "That plan key already exists.",
+      "defaultInactive": "The default plan must stay active.",
+      "defaultDelete": "The default plan cannot be deleted.",
+      "inUse": "Vendors are on this plan. Deactivate it instead, or move them first.",
+      "planInactive": "That plan is not active."
+    },
+    "vendor": {
+      "heading": "Vendor plan",
+      "hint": "Look up a vendor to assign a plan or give a time-limited exception.",
+      "vendorId": "Vendor ID",
+      "load": "Load",
+      "flagOff": "The vendor_plans flag is off, so these limits are not enforced yet.",
+      "effective": "Plan {plan}: {listings} listings ({count} used), {images} photos per listing",
+      "plan": "Plan",
+      "defaultPlan": "Choose a plan",
+      "note": "Note (optional)",
+      "assign": "Assign plan",
+      "noBilling": "Assigning a plan only records it. No payment is taken.",
+      "none": "default"
+    },
+    "override": {
+      "heading": "Override",
+      "current": "Active: {listings} listings until {expires} ({reason})",
+      "expired": "Expired on {expires}: {listings} listings ({reason})",
+      "unlimited": "Unlimited listings",
+      "expiresOn": "Expires on",
+      "reason": "Reason",
+      "save": "Save override",
+      "remove": "Remove override"
     }
   }
 }

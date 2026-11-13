@@ -46,6 +46,8 @@ type NewCanonicalFormProps = {
     commission: Parameters<typeof CommissionBanner>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    /** Listing cap reached (plan or KYC) — friendly upgrade copy. */
+    listingLimit?: string;
     required: string;
   };
 };
@@ -151,6 +153,7 @@ export function NewCanonicalForm({
       onError(
         listingCreateErrorMessage(caught, {
           standaloneRequired: labels.standaloneRequired,
+          listingLimit: labels.listingLimit,
           fallback: labels.submitError,
         }),
       );
