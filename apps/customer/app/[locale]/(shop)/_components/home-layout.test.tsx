@@ -18,6 +18,9 @@ import {
 
 import type { CatalogListing } from "./plp/listing-grid";
 
+// next/dynamic resolves asynchronously; render the real carousel synchronously in tests.
+vi.mock("./home-hero-carousel-lazy", async () => await import("./home-hero-carousel"));
+
 vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
   CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} data-testid="cloudinary-image" />,
 }));

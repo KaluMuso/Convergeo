@@ -3,9 +3,15 @@
 import { track } from "@vergeo/analytics";
 import { useEffect } from "react";
 
-import { recordRecentlyViewedOnServer } from "../../../../../lib/engagement-api";
 import { recordListingPdpView } from "../../../../../lib/listing-view-telemetry";
 import { recordRecentlyViewed } from "../recently-viewed/use-recently-viewed";
+
+/** Fire-and-forget server record: load the engagement client on demand, outside first-load JS. */
+function recordRecentlyViewedOnServer(productId: string): Promise<void> {
+  return import("../../../../../lib/engagement-api")
+    .then((mod) => mod.recordRecentlyViewedOnServer(productId))
+    .catch(() => undefined);
+}
 
 type Props = {
   productId: string;

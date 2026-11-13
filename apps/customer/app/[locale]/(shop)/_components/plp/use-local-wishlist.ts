@@ -3,7 +3,6 @@
 import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-import { syncWishlistWithServer } from "../../../../../lib/engagement-api";
 import {
   clearWishlistLocal,
   getWishlistServerSnapshot,
@@ -14,6 +13,16 @@ import {
   subscribeWishlist,
   toggleWishlistLocal,
 } from "../../../../../lib/wishlist-local";
+
+/**
+ * Server sync is fire-and-forget, so the engagement client loads on demand and
+ * stays out of the first-load bundle of every route that renders a wishlist heart.
+ */
+function syncWishlistWithServer(): Promise<void> {
+  return import("../../../../../lib/engagement-api")
+    .then((mod) => mod.syncWishlistWithServer())
+    .catch(() => undefined);
+}
 
 /** Test helper — clears in-memory store between vitest cases. */
 export function resetLocalWishlistStoreForTests(): void {

@@ -3,7 +3,6 @@
 import { emitToast } from "@vergeo/ui/src/toast";
 import { useState } from "react";
 
-import { saveSearch } from "../../../../../lib/engagement-api";
 
 type SaveSearchButtonProps = {
   locale: string;
@@ -21,6 +20,7 @@ export function SaveSearchButton({
 
   const onClick = async () => {
     setState("busy");
+    const { saveSearch } = await import("../../../../../lib/engagement-api");
     const result = await saveSearch(query, {});
     if (result === "signed_out") {
       setState("idle");
