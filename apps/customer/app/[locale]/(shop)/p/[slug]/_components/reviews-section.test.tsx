@@ -194,7 +194,7 @@ describe("ReviewsSection photo lightbox", () => {
     const trigger = screen.getByTestId("review-photo-reviews/photo-1");
     await user.click(trigger);
 
-    const lightbox = screen.getByTestId("review-photo-lightbox");
+    const lightbox = await screen.findByTestId("review-photo-lightbox");
     expect(lightbox).toHaveAttribute("role", "dialog");
     expect(lightbox).toHaveAccessibleName("Review photos");
     expect(screen.getByTestId("image-gallery")).toBeInTheDocument();
