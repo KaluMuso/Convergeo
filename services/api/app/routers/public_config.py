@@ -17,14 +17,14 @@ from decimal import Decimal
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
+from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+from app.schemas.base import StrictModel
 from app.services.coupons.store import (
     BIRTHDAY_FLAG,
     COUPONS_FLAG,
     GIFT_ORDERS_FLAG,
     flag_enabled,
 )
-from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
-from app.schemas.base import StrictModel
 from fastapi import APIRouter, Depends, Response
 from pydantic import Field
 
