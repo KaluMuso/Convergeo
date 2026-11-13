@@ -1,7 +1,7 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 
-import { NotificationBellSlot } from "./notification-bell-slot";
+import { LazyNotificationBellSlot } from "./lazy-notification-bell-slot";
 
 /**
  * Server wrapper: ships ONLY `notifications.center` + `notifications.inApp`
@@ -16,7 +16,7 @@ export async function NotificationBellIsland({ locale }: { locale: string }) {
   const messages = await notificationClientMessages(locale);
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <NotificationBellSlot locale={locale} />
+      <LazyNotificationBellSlot locale={locale} />
     </NextIntlClientProvider>
   );
 }
