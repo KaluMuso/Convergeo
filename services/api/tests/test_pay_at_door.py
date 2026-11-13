@@ -7,6 +7,7 @@ reachable. Lenco is a deterministic in-process fake: no network, no real money.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import uuid
@@ -20,7 +21,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.main import create_app
 from app.services.dispatch import service as dispatch_service
-from app.services.dispatch.state import DispatchStatus
+from app.services.dispatch.state import DispatchStatus, fetch_dispatch
 from app.services.ledger.templates import (
     LedgerTemplate,
     door_payment_collected,
@@ -289,10 +290,16 @@ def _make_order(db: PgConn, *, customer_id: str = CUSTOMER_ID) -> str:
     order_id = str(uuid.uuid4())
     group_id = str(uuid.uuid4())
     address_id = str(uuid.uuid4())
-    snapshot = (
-        '{"lines": [{"listing_id": "%s", "category_key": "electronics", "rate_bps": %d, '
-        '"qty": 1, "unit_price_ngwee": %d, "line_total_ngwee": %d, "wholesale": false}]}'
-    ) % (uuid.uuid4(), RATE_BPS, SUBTOTAL_NGWEE, SUBTOTAL_NGWEE)
+    line = {
+        "listing_id": str(uuid.uuid4()),
+        "category_key": "electronics",
+        "rate_bps": RATE_BPS,
+        "qty": 1,
+        "unit_price_ngwee": SUBTOTAL_NGWEE,
+        "line_total_ngwee": SUBTOTAL_NGWEE,
+        "wholesale": False,
+    }
+    snapshot = json.dumps({"lines": [line]})
     _sql(
         db,
         f"""
@@ -339,10 +346,17 @@ def _at_door(db: PgConn, **kwargs: Any) -> tuple[str, str]:
     return order_id, dispatch_id
 
 
+_BACKDATE_SQL = (
+    "UPDATE public.door_payment_attempts SET created_at = created_at - interval '10 minutes' "
+    "WHERE dispatch_request_id = '{dispatch_id}';"
+)
+
+
 def _code(db: PgConn, dispatch_id: str) -> str:
     return _sql(
         db,
-        f"SELECT code FROM public.dispatch_handover_codes WHERE dispatch_request_id = '{dispatch_id}';",
+        "SELECT code FROM public.dispatch_handover_codes "
+        f"WHERE dispatch_request_id = '{dispatch_id}';",
     )[0]
 
 
@@ -641,8 +655,7 @@ class TestDoorFailures:
 
         _sql(
             db,
-            "UPDATE public.door_payment_attempts SET created_at = created_at - interval '10 minutes' "
-            f"WHERE dispatch_request_id = '{dispatch_id}';",
+            _BACKDATE_SQL.format(dispatch_id=dispatch_id),
         )
         status = await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
         assert status.state == "failed" and status.latest_attempt_status == "expired"
@@ -651,8 +664,7 @@ class TestDoorFailures:
         await _request(dispatch_id, lenco, role="admin")
         _sql(
             db,
-            "UPDATE public.door_payment_attempts SET created_at = created_at - interval '10 minutes' "
-            f"WHERE dispatch_request_id = '{dispatch_id}';",
+            _BACKDATE_SQL.format(dispatch_id=dispatch_id),
         )
         with pytest.raises(AppError) as exc:
             await _request(dispatch_id, lenco, role="admin")
@@ -737,8 +749,7 @@ class TestDoorFailures:
         reference = _attempts(dispatch_id)[-1].lenco_reference
         _sql(
             db,
-            "UPDATE public.door_payment_attempts SET created_at = created_at - interval '10 minutes' "
-            f"WHERE dispatch_request_id = '{dispatch_id}';",
+            _BACKDATE_SQL.format(dispatch_id=dispatch_id),
         )
         await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
         status = door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
@@ -755,13 +766,28 @@ class TestDoorFailures:
         assert door.load_session(dispatch_id).settled_via == "cash"  # type: ignore[union-attr]
         assert "door_payment_collected" not in {t for t, _a, _n in _postings(db, order_id)}
 
+    async def test_refusal_after_door_payment_is_refused(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        lenco.pay(_attempts(dispatch_id)[-1].lenco_reference)
+        await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
+        with pytest.raises(AppError) as exc:
+            refuse_cod_collection(
+                order_id=order_id, actor_role=ActorRole.ADMIN, actor_id=ADMIN_ID, note="Refused"
+            )
+        assert exc.value.code == "cod_already_collected"
+        assert _order_status(db, order_id) == "shipped"
+        assert sum(_by_account(db, order_id).values()) == 0
+
     async def test_cash_fallback_respects_cap(self, db: PgConn, lenco: FakeLenco) -> None:
         _set_config(db, "cod_cap_ngwee", TOTAL_NGWEE - 1)
         _order_id, dispatch_id = _at_door(db)
         with pytest.raises(AppError) as exc:
             door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
         assert exc.value.code == "door_payment_cash_over_cap"
-        assert door.door_status(dispatch_service.fetch_dispatch(dispatch_id)).cash_allowed is False
+        assert door.door_status(fetch_dispatch(dispatch_id)).cash_allowed is False
 
     async def test_settlement_is_write_once_in_the_database(
         self, db: PgConn, lenco: FakeLenco
@@ -787,7 +813,8 @@ class TestDoorFailures:
             ],
         )
         result = db.run(
-            f"UPDATE public.door_payment_attempts SET status = 'successful' WHERE id = '{attempt.id}';"
+            "UPDATE public.door_payment_attempts SET status = 'successful' "
+            f"WHERE id = '{attempt.id}';"
         )
         assert not result.ok and "invalid door payment transition" in (result.error or "")
         amount = db.run(

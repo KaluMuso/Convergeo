@@ -152,9 +152,7 @@ LIMIT 1;
     return result.rows[0]
 
 
-def _cod_receivable_opened_template(
-    *, receivable_ngwee: int, vendor_id: str
-) -> TemplateResult:
+def _cod_receivable_opened_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
     """Order-time COD receivable paired with escrow (prepaid pipeline without Lenco).
 
     Debit cod_receivable (vendor) (+receivable).
@@ -170,9 +168,7 @@ def _cod_receivable_opened_template(
     return TemplateResult(kind=COD_RECEIVABLE_OPENED, legs=legs)
 
 
-def _cod_receivable_reversed_template(
-    *, receivable_ngwee: int, vendor_id: str
-) -> TemplateResult:
+def _cod_receivable_reversed_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
     """Reverse an open COD receivable on refused/uncollected delivery.
 
     Debit escrow (+receivable).
@@ -599,6 +595,15 @@ def refuse_cod_collection(
             from_status=ctx.status,
             to_status=OrderStatus.CANCELLED.value,
             created=False,
+        )
+
+    if _fetch_transaction_by_idempotency_key(collection_idempotency_key(order_id)) is not None:
+        # Paid at the door (mobile money) before handover: the money is in, so a
+        # refusal now is a refund (payout), never a silent receivable reversal.
+        raise CodError(
+            code="cod_already_collected",
+            message="This order is already paid; handle the refusal as a refund",
+            http_status=409,
         )
 
     if ctx.status not in _REFUSAL_STATUSES:
