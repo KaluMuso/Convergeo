@@ -32,6 +32,9 @@
 --
 -- 4. Guarded vendor suspension function used by the overdue-advance sweeper.
 --
+-- 5. Guard: organiser_receivable can never be credited below zero (atomic
+--    repayment / offset limit under concurrency).
+--
 -- Additive only (function body replaced in place, new triggers/functions/tables,
 -- ledger kind checks widened to a strict superset, config rows on conflict do
 -- nothing).
@@ -43,6 +46,8 @@
 --     'event_advance_repayment_days', 'event_advance_min_successful_events');
 --   DELETE FROM public.feature_flags WHERE flag = 'event_organiser_advance';
 --   DROP FUNCTION IF EXISTS public.transition_vendor_suspend(uuid, uuid, text, jsonb);
+--   DROP TRIGGER IF EXISTS ledger_postings_organiser_receivable_guard ON public.ledger_postings;
+--   DROP FUNCTION IF EXISTS public.guard_organiser_receivable_not_overdrawn();
 --   DROP TABLE IF EXISTS public.organiser_advance_debts;
 --   DROP TABLE IF EXISTS public.organiser_advance_undertakings;
 --   DELETE FROM public.ledger_accounts la WHERE la.kind = 'organiser_receivable'
@@ -390,3 +395,62 @@ revoke execute on function public.transition_vendor_suspend(uuid, uuid, text, js
   from anon, authenticated;
 grant execute on function public.transition_vendor_suspend(uuid, uuid, text, jsonb)
   to service_role;
+
+-- ---------------------------------------------------------------------------
+-- 5. Organiser receivable can never be overdrawn (atomic repayment limit)
+-- ---------------------------------------------------------------------------
+-- Repayments (organiser_receivable_repaid) and offsets (..._offset) credit the
+-- organiser_receivable account. The API checks "amount <= what is owed" first, but
+-- two concurrent repayments could both pass that read. This BEFORE INSERT guard
+-- locks the receivable's ledger_accounts row (FOR UPDATE) and re-sums the account
+-- under the lock; each plpgsql statement takes a fresh READ COMMITTED snapshot, so
+-- a waiter sees the credit committed by the lock holder. A credit that would take
+-- the balance below zero raises SQLSTATE 23514 'organiser_receivable_overdrawn'
+-- and the whole ledger transaction rolls back.
+-- Rollback: DROP TRIGGER IF EXISTS ledger_postings_organiser_receivable_guard
+--   ON public.ledger_postings;
+--   DROP FUNCTION IF EXISTS public.guard_organiser_receivable_not_overdrawn();
+create or replace function public.guard_organiser_receivable_not_overdrawn()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_kind text;
+  v_balance bigint;
+begin
+  if new.amount_ngwee >= 0 then
+    return new;
+  end if;
+
+  select kind into v_kind
+  from public.ledger_accounts
+  where id = new.account_id;
+  if v_kind is distinct from 'organiser_receivable' then
+    return new;
+  end if;
+
+  perform 1 from public.ledger_accounts where id = new.account_id for update;
+
+  select coalesce(sum(amount_ngwee), 0) into v_balance
+  from public.ledger_postings
+  where account_id = new.account_id;
+
+  if v_balance + new.amount_ngwee < 0 then
+    raise exception 'organiser_receivable_overdrawn'
+      using errcode = '23514',
+            detail = format('balance %s, credit %s', v_balance, -new.amount_ngwee);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists ledger_postings_organiser_receivable_guard on public.ledger_postings;
+create trigger ledger_postings_organiser_receivable_guard
+  before insert on public.ledger_postings
+  for each row
+  execute function public.guard_organiser_receivable_not_overdrawn();
+
+revoke all on function public.guard_organiser_receivable_not_overdrawn() from public;
+revoke execute on function public.guard_organiser_receivable_not_overdrawn()
+  from anon, authenticated;

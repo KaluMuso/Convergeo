@@ -564,7 +564,7 @@
     "20261113071000_order_cancel_stock_release.sql": "6a707332ff7839e8afbd4fb36c4fc9852fad74c4a19492037d6aeb477c3e4350",
     "20261113120500_delivery_revenue_ledger_account.sql": "76144826d81dac54f17d1a47330939751ae314acd0ae750af8bd82b63327ce72",
     "20261113130000_in_app_notifications.sql": "911bd1b5b18bcc7d02fb0ef6a48a995a79a788613fcbe995cc3ad1826c29aefa",
-    "20261113174500_event_ticket_integrity.sql": "0763445be47a3aa5d0c09709cee2098b8bc47555979b15180802215668bed613"
+    "20261113174500_event_ticket_integrity.sql": "fe33d5f150043f06e40631313907398778bcaad09d7b717276effd647c8e8e49"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

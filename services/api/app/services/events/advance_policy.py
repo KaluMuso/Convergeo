@@ -45,6 +45,7 @@ from app.services.escrow.release_accounting import summarize_order_release_ledge
 from app.services.kyc.eligibility import cap_tier_for_quotas
 from app.services.ledger.engine import (
     LedgerAccountNotFoundError,
+    LedgerError,
     account_balance_ngwee,
     post_transaction,
     resolve_account_id,
@@ -73,6 +74,7 @@ AUDIT_RECEIVABLE_OFFSET = "event_advance.receivable_offset"
 AUDIT_RECEIVABLE_REPAID = "event_advance.receivable_repaid"
 AUDIT_DEBT_OVERDUE = "event_advance.debt_overdue_suspended"
 SUSPEND_REASON = "event_advance_debt_overdue"
+RECEIVABLE_OVERDRAWN = "organiser_receivable_overdrawn"
 
 
 def _uuid_sql(value: str) -> str:
@@ -421,12 +423,19 @@ def offset_organiser_receivable(vendor_id: str) -> int:
         return 0
     # Key binds to the observed ledger state (posting counts on both accounts): a
     # concurrent run on the same state dedupes, any later state gets a fresh key.
-    posted = post_transaction(
-        idempotency_key=f"organiser-receivable-offset-{vendor_id}-{_ledger_state_tag(vendor_id)}",
-        template=LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET,
-        amount_ngwee=amount,
-        vendor_id=vendor_id,
-    )
+    try:
+        posted = post_transaction(
+            idempotency_key=(
+                f"organiser-receivable-offset-{vendor_id}-{_ledger_state_tag(vendor_id)}"
+            ),
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET,
+            amount_ngwee=amount,
+            vendor_id=vendor_id,
+        )
+    except LedgerError as exc:
+        if RECEIVABLE_OVERDRAWN in str(exc):
+            return 0  # a concurrent repayment/offset already settled it
+        raise
     if not posted.created:
         return 0
     _apply_recovered_to_debts(vendor_id, amount)
@@ -437,7 +446,13 @@ def offset_organiser_receivable(vendor_id: str) -> int:
 def record_organiser_repayment(
     *, vendor_id: str, amount_ngwee: int, actor_user_id: str, reference: str
 ) -> str:
-    """Finance-confirmed cash repayment of an advance debt (ledger + debts + audit)."""
+    """Finance-confirmed cash repayment of an advance debt (ledger + debts + audit).
+
+    The ``receivable`` read below is only a fast path. The authoritative limit is the
+    DB guard ``guard_organiser_receivable_not_overdrawn`` (BEFORE INSERT on
+    ledger_postings, row-locks the receivable account), so concurrent repayments can
+    never take the receivable below zero: the loser gets the same 409.
+    """
     if isinstance(amount_ngwee, bool) or not isinstance(amount_ngwee, int) or amount_ngwee <= 0:
         raise AppError(
             code="validation_error", message="amount_ngwee must be positive", http_status=422
@@ -453,12 +468,22 @@ def record_organiser_repayment(
     ref = reference.strip()
     if not ref:
         raise AppError(code="validation_error", message="reference is required", http_status=422)
-    posted = post_transaction(
-        idempotency_key=f"organiser-receivable-repaid-{vendor_id}-{ref}",
-        template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
-        amount_ngwee=amount_ngwee,
-        vendor_id=vendor_id,
-    )
+    try:
+        posted = post_transaction(
+            idempotency_key=f"organiser-receivable-repaid-{vendor_id}-{ref}",
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
+            amount_ngwee=amount_ngwee,
+            vendor_id=vendor_id,
+        )
+    except LedgerError as exc:
+        if RECEIVABLE_OVERDRAWN not in str(exc):
+            raise
+        raise AppError(
+            code="repayment_exceeds_receivable",
+            message="Repayment exceeds what the organiser owes",
+            http_status=409,
+            details={"receivable_ngwee": max(0, organiser_receivable_balance_ngwee(vendor_id))},
+        ) from exc
     if posted.created:
         _apply_recovered_to_debts(vendor_id, amount_ngwee)
         _audit(

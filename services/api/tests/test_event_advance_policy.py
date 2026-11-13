@@ -576,3 +576,67 @@ class TestRepaymentBeforeDue:
         )
         with pytest.raises(Exception):  # noqa: B017 - unknown status refused
             ap.list_advance_debts(status="bogus")
+
+
+class TestRepaymentConcurrency:
+    def test_parallel_overpaying_repayments_exactly_one_succeeds(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+
+        from app.errors import AppError
+
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        # Both callers pass the Python fast-path read (stale balance) and wait at the
+        # barrier, so only the DB guard can stop the second credit.
+        barrier = threading.Barrier(2)
+        real_balance = ap.organiser_receivable_balance_ngwee
+
+        waited = threading.local()
+
+        def stale_then_race(vendor_id: str) -> int:
+            balance = real_balance(vendor_id)
+            first_read = not getattr(waited, "done", False)
+            if first_read and threading.current_thread() is not threading.main_thread():
+                waited.done = True
+                barrier.wait(timeout=10)
+            return balance
+
+        monkeypatch.setattr(ap, "organiser_receivable_balance_ngwee", stale_then_race)
+
+        def repay(reference: str) -> str:
+            try:
+                ap.record_organiser_repayment(
+                    vendor_id=verified_organiser,
+                    amount_ngwee=advance,
+                    actor_user_id=VENDOR_B_OWNER_ID,
+                    reference=reference,
+                )
+                return "ok"
+            except AppError as exc:
+                assert exc.http_status == 409
+                return exc.code
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(repay, [f"race-a-{order_id[:8]}", f"race-b-{order_id[:8]}"]))
+
+        monkeypatch.setattr(ap, "organiser_receivable_balance_ngwee", real_balance)
+        assert sorted(outcomes) == ["ok", "repayment_exceeds_receivable"]
+        assert _receivable(verified_organiser) == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        assert _ledger_globally_balanced(db)
+
+    def test_db_guard_refuses_direct_overdraw(self, db: PgConn, verified_organiser: str) -> None:
+        from app.services.ledger.engine import LedgerError
+
+        _order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        with pytest.raises(LedgerError, match=ap.RECEIVABLE_OVERDRAWN):
+            post_transaction(
+                idempotency_key=f"test-overdraw-{uuid.uuid4().hex[:8]}",
+                template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
+                amount_ngwee=advance + 1,
+                vendor_id=verified_organiser,
+            )
+        assert _receivable(verified_organiser) == advance
+        assert _ledger_globally_balanced(db)
