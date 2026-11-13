@@ -428,6 +428,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /account/birthday": SENSITIVE_WRITE,
     "DELETE /account/birthday": SENSITIVE_WRITE,
     "POST /internal/birthdays/tick": INTERNAL_CRON,
+    "POST /internal/gifts/redact-tick": INTERNAL_CRON,
 }
 
 

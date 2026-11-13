@@ -207,7 +207,19 @@ def assemble_export_bundle(user_client: Client, user_id: str) -> dict[str, Any]:
         "payments": payments,
         "invoices": invoices,
         "flags": flags,
+        # Optional growth data (DPA: export what we hold). RLS limits each read to
+        # the caller's own rows; a missing table on an older DB reads as empty.
+        "birthday": _optional_rows(user_client, "profile_birthdays", "user_id", user_id),
+        "birthday_greetings": _optional_rows(user_client, "birthday_greetings", "user_id", user_id),
+        "gifts_sent": _optional_rows(user_client, "gift_details", "buyer_id", user_id),
     }
+
+
+def _optional_rows(client: Client, table: str, column: str, user_id: str) -> list[dict[str, Any]]:
+    try:
+        return _table_rows(client.table(table).select("*").eq(column, user_id).execute())
+    except Exception:
+        return []
 
 
 def upload_export_bundle(
@@ -291,11 +303,7 @@ def anonymize_and_delete_account(
     now_iso = datetime.now(UTC).isoformat()
 
     profile_response = (
-        db.table("profiles")
-        .select("id, deleted_at")
-        .eq("id", user_id)
-        .maybe_single()
-        .execute()
+        db.table("profiles").select("id, deleted_at").eq("id", user_id).maybe_single().execute()
     )
     profile = _maybe_single_row(profile_response)
     if profile and profile.get("deleted_at"):
@@ -314,6 +322,12 @@ def anonymize_and_delete_account(
         order_item_ids = [row["id"] for row in order_items if isinstance(row.get("id"), str)]
 
     db.table("addresses").delete().eq("user_id", user_id).execute()
+    # Birthday (consented marketing data) is erased; gift recipients' details
+    # the user entered are redacted (the orders themselves stay for accounting).
+    db.table("profile_birthdays").delete().eq("user_id", user_id).execute()
+    db.table("gift_details").update(
+        {"recipient_phone": None, "message": None, "redacted_at": now_iso}
+    ).eq("buyer_id", user_id).execute()
 
     db.table("profiles").update(
         {

@@ -379,6 +379,7 @@ def test_full_refund_with_vendor_discount_returns_what_was_paid(db: PgConn) -> N
 
 def test_birthday_greeting_is_issued_once_per_user_per_year(db: PgConn) -> None:
     user = CUSTOMER_B
+    year = 2040 + uuid.uuid4().int % 150  # fresh year per run: the DB may be reused
     _ok(
         db,
         f"""
@@ -391,7 +392,7 @@ DELETE FROM public.notification_outbox WHERE dedupe_key LIKE 'birthday_greeting:
 
     def issue(code: str) -> Any:
         return db.run(
-            f"SELECT public.issue_birthday_greeting('{user}', 2031, '2031-06-01', '{code}', "
+            f"SELECT public.issue_birthday_greeting('{user}', {year}, '{year}-06-01', '{code}', "
             "2000, 20000, 14);"
         )
 
@@ -411,7 +412,8 @@ DELETE FROM public.notification_outbox WHERE dedupe_key LIKE 'birthday_greeting:
         _scalar(
             db,
             f"SELECT count(*) FROM public.coupons WHERE personal_user_id = '{user}' "
-            "AND source = 'birthday' AND starts_at::date >= '2031-05-30'",
+            "AND source = 'birthday' "
+            f"AND starts_at::date BETWEEN '{year}-05-30' AND '{year}-06-02'",
         )
         == "1"
     )
@@ -419,7 +421,7 @@ DELETE FROM public.notification_outbox WHERE dedupe_key LIKE 'birthday_greeting:
         _scalar(
             db,
             f"SELECT count(*) FROM public.notification_outbox "
-            f"WHERE dedupe_key = 'birthday_greeting:{user}:2031:whatsapp'",
+            f"WHERE dedupe_key = 'birthday_greeting:{user}:{year}:whatsapp'",
         )
         == "1"
     )
@@ -427,7 +429,7 @@ DELETE FROM public.notification_outbox WHERE dedupe_key LIKE 'birthday_greeting:
         _scalar(
             db,
             f"SELECT count(*) FROM public.in_app_notifications WHERE recipient_user_id = '{user}' "
-            "AND dedupe_key = 'birthday:2031'",
+            f"AND dedupe_key = 'birthday:{year}'",
         )
         == "1"
     )
@@ -438,3 +440,35 @@ DELETE FROM public.notification_outbox WHERE dedupe_key LIKE 'birthday_greeting:
         f"WHERE id = '{coupons[0]}'",
     )
     assert row == "1|1|platform"
+
+
+def test_finished_gift_details_are_redacted_once(db: PgConn) -> None:
+    from app.routers.internal_gifts import redact_finished_gifts
+
+    checkout_id = _checkout(db)
+    _ok(
+        db,
+        f"""
+INSERT INTO public.gift_details (checkout_group_id, buyer_id, recipient_name,
+  recipient_phone, message, buyer_attested_at)
+VALUES ('{checkout_id}', '{CUSTOMER_A}', 'Mary', '+260971234567', 'Happy day', now());
+UPDATE public.checkout_groups SET status = 'expired' WHERE id = '{checkout_id}';
+""",
+    )
+    assert redact_finished_gifts().redacted >= 1
+    row = _scalar(
+        db,
+        "SELECT coalesce(recipient_phone, '-') || '|' || coalesce(message, '-') || '|' "
+        f"|| recipient_name FROM public.gift_details WHERE checkout_group_id = '{checkout_id}'",
+    )
+    assert row == "-|-|Mary"
+    # Idempotent: a re-run finds nothing left to redact for this checkout.
+    redact_finished_gifts()
+    assert (
+        _scalar(
+            db,
+            f"SELECT count(*) FROM public.gift_details WHERE checkout_group_id = '{checkout_id}' "
+            "AND redacted_at IS NOT NULL",
+        )
+        == "1"
+    )
