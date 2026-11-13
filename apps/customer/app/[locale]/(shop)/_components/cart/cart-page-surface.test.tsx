@@ -36,8 +36,10 @@ const updateQty = vi.fn(async () => null);
 const removeItem = vi.fn(async () => null);
 const saveForLater = vi.fn(async () => null);
 
+let searchQuery = "";
+
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(searchQuery),
 }));
 
 vi.mock("./mini-cart-drawer", async (importOriginal) => {
@@ -95,6 +97,7 @@ const labels = {
   escrowTeaser: cartMessages.escrowTeaser,
   escrowSteps: ["You pay", "Held by Convergeo", "Released"],
   stockUnavailableNotice: cartMessages.stockUnavailableNotice,
+  reservationExpiredNotice: "Your reservation expired — items were returned to your cart.",
   summaryHeading: cartMessages.summaryHeading,
   vendor: {
     vendorGroup: cartMessages.vendorGroup,
@@ -198,6 +201,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  searchQuery = "";
 });
 
 describe("cart page surface contract", () => {
@@ -245,6 +249,28 @@ describe("cart page surface contract", () => {
     expect(screen.getByTestId("cart-order-summary")).toBeInTheDocument();
     expect(screen.getByTestId("cart-subtotal")).toBeInTheDocument();
     expect(screen.getByTestId("cart-checkout-cta")).toBeInTheDocument();
+  });
+
+  it("explains why checkout sent the buyer back when their stock hold lapsed", () => {
+    storeState.loading = false;
+    storeState.cart = populatedCart;
+    searchQuery = "notice=reservation_expired";
+
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
+
+    expect(screen.getByTestId("cart-reservation-expired-notice")).toHaveTextContent(
+      labels.reservationExpiredNotice,
+    );
+    expect(screen.queryByTestId("cart-stock-unavailable-notice")).not.toBeInTheDocument();
+  });
+
+  it("shows no checkout notice on an ordinary cart visit", () => {
+    storeState.loading = false;
+    storeState.cart = populatedCart;
+
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
+
+    expect(screen.queryByTestId("cart-reservation-expired-notice")).not.toBeInTheDocument();
   });
 
   it("keeps exactly one cart-page marker per render", () => {

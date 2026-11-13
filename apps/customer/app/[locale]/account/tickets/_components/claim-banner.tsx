@@ -84,7 +84,7 @@ export function TicketTransferClaimBanner() {
               setError(tErrors("notTransferable"));
               break;
             default:
-              setError(err.message || tErrors("generic"));
+              setError(tErrors("generic"));
           }
         } else {
           setError(tErrors("generic"));

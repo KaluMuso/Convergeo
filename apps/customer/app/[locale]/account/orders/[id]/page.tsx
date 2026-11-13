@@ -59,10 +59,11 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
   const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "orders" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const t = createTranslator({ locale, messages, namespace: "orders" }) as {
+    (key: string, values?: Record<string, string | number>): string;
+    /** Unformatted message, for templates the client fills in itself. */
+    raw(key: string): unknown;
+  };
 
   const api = createOrdersApiClient(() => accessToken);
 
@@ -199,7 +200,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             qrLabel: t("pickup.qrLabel"),
             pinLabel: t("pickup.pinLabel"),
             stubBody: t("pickup.stubBody"),
-            pinAria: t("pickup.pinAria"),
+            pinAria: String(t.raw("pickup.pinAria")),
           }}
         />
       ) : null}
@@ -310,7 +311,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           body: t("reviewPrompt.body"),
           itemLabel: t("reviewPrompt.itemLabel"),
           ratingLabel: t("reviewPrompt.ratingLabel"),
-          starsAria: t("reviewPrompt.starsAria"),
+          starsAria: String(t.raw("reviewPrompt.starsAria")),
           bodyLabel: t("reviewPrompt.bodyLabel"),
           bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
           submit: t("reviewPrompt.submit"),

@@ -396,9 +396,9 @@ export default async function VendorProfilePage({ params }: PageProps) {
             noMatches: t("profile.noMatches"),
           }}
           gridLabels={{
-            vendor: t("listings.vendor"),
+            vendor: String(t.raw("listings.vendor")),
             noReviews: t("listings.noReviews"),
-            reviewCount: t("listings.reviewCount"),
+            reviewCount: String(t.raw("listings.reviewCount")),
             quickAdd: t("listings.quickAdd"),
             wishlist: t("listings.wishlist"),
             outOfStock: t("listings.outOfStock"),
@@ -419,7 +419,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
         <VendorServicesGrid
           locale={locale}
           services={services}
-          fromLabel={t("profile.serviceFrom")}
+          fromLabel={String(t.raw("profile.serviceFrom"))}
         />
       ),
     });

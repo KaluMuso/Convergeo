@@ -146,6 +146,7 @@
     "emptyCart": "Votre panier est vide.",
     "retry": "Réessayer",
     "backToCart": "Retour au panier",
+    "overCodCap": "Votre commande dépasse {cap}, le plafond du paiement à la livraison, et le paiement en ligne est indisponible pour le moment. Retirez des articles de votre panier pour finaliser la commande.",
     "loading": "Démarrage du paiement…",
     "error": "Une erreur s'est produite. Réessayez.",
     "payment": {

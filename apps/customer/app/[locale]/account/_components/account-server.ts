@@ -9,6 +9,8 @@ import type { LocaleSwitcherLabels } from "../../_components/locale-switcher";
 
 export type AccountTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
 };
 
 async function requireAccountSession(locale: string) {

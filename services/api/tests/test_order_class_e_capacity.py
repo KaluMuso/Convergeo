@@ -169,6 +169,8 @@ def test_hold_consumption_skips_class_e_and_legacy_made_to_order() -> None:
         checkout_group_id=SESSION_ID,
         listing_id=LISTING_A,
         qty=2,
+        order_id="00000000-0000-4000-8000-0000000000a1",
+        order_item_id="00000000-0000-4000-8000-0000000000b1",
     )
 
     assert "SELECT stock_mode, product_class, fulfilment_mode" in sql

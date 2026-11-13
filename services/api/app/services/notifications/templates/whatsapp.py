@@ -102,8 +102,10 @@ def _locale(payload: Mapping[str, Any]) -> str:
         raise TemplateRenderError(msg)
     locale = raw.strip().lower()
     if locale not in SUPPORTED_LOCALES:
-        msg = f"unsupported locale: {locale!r}"
-        raise TemplateRenderError(msg)
+        # The storefront also ships in languages (fr, zh) that have no approved
+        # WhatsApp template. English reaches the recipient; refusing to render
+        # dropped every WhatsApp notification for those accounts.
+        return "en"
     return locale
 
 

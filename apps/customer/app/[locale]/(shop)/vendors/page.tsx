@@ -52,6 +52,8 @@ type PageProps = {
 
 type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /** Unformatted message, for templates the client fills in itself. */
+  raw(key: string): unknown;
 };
 
 function readParam(
@@ -270,9 +272,9 @@ export default async function DirectoryPage({
             labels={{
               listings: t("card.listings"),
               reviews: t("card.reviews"),
-              rating: t("card.rating"),
+              rating: String(t.raw("card.rating")),
               noReviews: t("card.noReviews"),
-              verifiedSince: t("card.verifiedSince"),
+              verifiedSince: String(t.raw("card.verifiedSince")),
               preferredBadge: t("card.preferredBadge"),
               verifiedBadge: t("card.verifiedBadge"),
               trustLabels: ladderLabels,
