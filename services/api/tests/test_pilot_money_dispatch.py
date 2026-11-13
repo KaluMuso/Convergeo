@@ -451,3 +451,34 @@ class TestAutoReleaseRespectsDispatch:
         assert order_id in candidates
         assert result.outcome == "released"
         assert result.rule == "shipped_fallback"
+
+
+# ---------------------------------------------------------------------------
+# Finding 6 — one shipping path: courier dispatch vs vendor `ship`
+# ---------------------------------------------------------------------------
+
+
+class TestCourierDispatchOwnsShipping:
+    def test_in_flight_dispatch_owns_shipping(self, db: PgConn) -> None:
+        from app.routers.vendor_orders import courier_dispatch_owns_shipping
+
+        order_id = _insert_order(db, status="processing", cod=True)
+        assert courier_dispatch_owns_shipping(order_id) is False
+
+        _insert_dispatch(db, order_id, "requested")
+
+        assert courier_dispatch_owns_shipping(order_id) is True
+
+    def test_flag_on_owns_shipping_for_every_delivery_order(self, db: PgConn) -> None:
+        from app.routers.vendor_orders import courier_dispatch_owns_shipping
+
+        order_id = _insert_order(db, status="processing", cod=True)
+        db.run(
+            "INSERT INTO public.feature_flags (flag, enabled) VALUES ('courier_dispatch', true) "
+            "ON CONFLICT (flag) DO UPDATE SET enabled = true;"
+        )
+        try:
+            assert courier_dispatch_owns_shipping(order_id) is True
+            assert courier_dispatch_owns_shipping() is True
+        finally:
+            db.run("UPDATE public.feature_flags SET enabled = false WHERE flag = 'courier_dispatch';")
