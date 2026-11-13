@@ -146,6 +146,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/clips/{clip_id}/ranking"),
         ("GET", "/directory"),
         ("GET", "/directory/{slug}"),
+        # "From other shops" rail under product/service/event pages: public
+        # retail items from other ACTIVE shops only (no wholesale, no demo).
+        ("GET", "/directory/{slug}/elsewhere"),
         # Public discovery BFF + anonymized aggregates (IP rate-limited).
         ("GET", "/discovery/home"),
         ("GET", "/discovery/popular-searches"),

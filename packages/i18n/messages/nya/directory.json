@@ -120,7 +120,7 @@
       "clipsHeading": "Clips",
       "clipWatch": "Watch clip",
       "offersHeading": "Offers",
-      "offersEmpty": "No offers from this shop right now. Follow the shop to hear about new ones.",
+      "offersEnds": "Ends {date}",
       "serviceBook": "Book for {price}",
       "serviceQuote": "Funsani mtengo",
       "serviceArea": "Serves {area}",
@@ -137,5 +137,14 @@
     "distance": "{distance} kutali",
     "conditionNew": "Chatsopano",
     "conditionRefurbished": "Chokonzedwa"
+  },
+  "elsewhere": {
+    "heading": "From other shops",
+    "atShop": "at {shop}",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "kindProduct": "Product",
+    "kindService": "Service",
+    "kindEvent": "Event"
   }
 }

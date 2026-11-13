@@ -649,6 +649,18 @@ class TestVendorProfile:
                 "images": ["events/fest-1"],
                 "status": "published",
             },
+            {
+                "id": "evt-past",
+                "organiser_vendor_id": ACTIVE_VENDOR_ID,
+                "slug": "last-year",
+                "title": "Last year's fair",
+                "images": [],
+                "status": "published",
+            },
+        ]
+        store.event_instances = [  # type: ignore[attr-defined]
+            {"event_id": "evt-1", "starts_at": "2099-01-10T16:00:00+00:00"},
+            {"event_id": "evt-past", "starts_at": "2020-01-10T16:00:00+00:00"},
         ]
 
         response = client.get("/directory/tech-hub-lusaka")
@@ -658,8 +670,10 @@ class TestVendorProfile:
         assert [s["title"] for s in payload["services"]] == ["Deep clean"]
         assert payload["services"][0]["from_price_ngwee"] == 50000
         assert payload["services"][0]["image_public_id"] == "services/clean-1"
+        # Only events with an upcoming date are live; past-only events are hidden.
         assert [e["slug"] for e in payload["events"]] == ["summer-fest"]
         assert payload["events"][0]["image_public_id"] == "events/fest-1"
+        assert payload["events"][0]["next_starts_at"].startswith("2099-01-10")
 
 
 class TestVendorProfileWholesaleGating:
@@ -989,6 +1003,12 @@ class TestBusinessHome:
         ]
         payload = client.get("/directory/tech-hub-lusaka").json()
         assert [clip["id"] for clip in payload["clips"]] == ["clip-1"]
+        # Creator-clip seam: each clip names its author kind and profile slug.
+        assert payload["clips"][0]["author"] == {
+            "kind": "business",
+            "slug": "tech-hub-lusaka",
+            "display_name": "Tech Hub Lusaka",
+        }
         assert payload["offers_enabled"] is True
 
     def test_services_carry_fixed_booking_price_only_when_bookable(
@@ -1026,3 +1046,209 @@ class TestBusinessHome:
         assert services["svc-1"]["service_area"] == "Lusaka"
         assert services["svc-2"]["bookable"] is False
         assert services["svc-2"]["booking_price_ngwee"] is None
+
+
+class TestBusinessHomeElsewhere:
+    """GET /directory/{slug}/elsewhere — related items from OTHER shops only."""
+
+    def _seed(self, store: FakeSupabaseStore) -> None:
+        seed_active_vendor(store)
+        store.vendor_listings[0]["products"]["category_id"] = CATEGORY_ELECTRONICS
+        other = {"slug": "phone-planet", "display_name": "Phone Planet", "status": "active"}
+        store.products = [  # type: ignore[attr-defined]
+            {
+                "id": PRODUCT_A,
+                "slug": "itel-a70",
+                "name": "Itel A70",
+                "status": "active",
+                "category_id": CATEGORY_ELECTRONICS,
+            },
+            {
+                "id": PRODUCT_B,
+                "slug": "tecno-spark",
+                "name": "Tecno Spark",
+                "status": "active",
+                "category_id": CATEGORY_ELECTRONICS,
+            },
+        ]
+        base = {
+            "status": "active",
+            "stock_mode": "tracked",
+            "stock_qty": 3,
+            "min_steps": 1,
+            "moq": 1,
+            "product_class": "A",
+            "fulfilment_mode": "stocked",
+        }
+        store.vendor_listings += [
+            # Same product as the shop's own listing: covered by compare, not here.
+            {
+                **base,
+                "id": "x-1",
+                "product_id": PRODUCT_A,
+                "vendor_id": OTHER_VENDOR_UUID,
+                "price_ngwee": 400_000,
+                "wholesale": False,
+                "vendors": other,
+            },
+            {
+                **base,
+                "id": "x-2",
+                "product_id": PRODUCT_B,
+                "vendor_id": OTHER_VENDOR_UUID,
+                "price_ngwee": 300_000,
+                "wholesale": False,
+                "vendors": other,
+            },
+            {
+                **base,
+                "id": "x-3",
+                "product_id": PRODUCT_B,
+                "vendor_id": OTHER_VENDOR_UUID,
+                "price_ngwee": 100_000,
+                "wholesale": True,
+                "vendors": other,
+            },
+            {
+                **base,
+                "id": "x-4",
+                "product_id": PRODUCT_B,
+                "vendor_id": SUSPENDED_VENDOR_ID,
+                "price_ngwee": 50_000,
+                "wholesale": False,
+                "vendors": {"slug": "gone", "display_name": "Gone", "status": "suspended"},
+            },
+        ]
+        store.services = [
+            {
+                "id": "own-s",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title": "Screen repair",
+                "category": "repairs",
+                "status": "active",
+            },
+            {
+                "id": "other-s",
+                "vendor_id": OTHER_VENDOR_UUID,
+                "title": "Battery swap",
+                "category": "repairs",
+                "status": "active",
+                "from_price_ngwee": 15_000,
+                "bookable": False,
+                "portfolio_images": [],
+                "vendors": other,
+            },
+            {
+                "id": "other-cat",
+                "vendor_id": OTHER_VENDOR_UUID,
+                "title": "Plumbing",
+                "category": "plumbing",
+                "status": "active",
+                "vendors": other,
+            },
+        ]
+        store.events = [
+            {
+                "id": "own-e",
+                "organiser_vendor_id": ACTIVE_VENDOR_ID,
+                "slug": "own",
+                "title": "Own launch",
+                "status": "published",
+                "images": [],
+                "vendors": {"slug": "tech-hub-lusaka", "display_name": "Tech", "status": "active"},
+            },
+            {
+                "id": "other-e",
+                "organiser_vendor_id": OTHER_VENDOR_UUID,
+                "slug": "expo",
+                "title": "Phone Expo",
+                "status": "published",
+                "images": [],
+                "vendors": other,
+            },
+        ]
+        store.event_instances = [  # type: ignore[attr-defined]
+            {"event_id": "own-e", "starts_at": "2099-02-01T10:00:00+00:00"},
+            {"event_id": "other-e", "starts_at": "2099-03-01T10:00:00+00:00"},
+        ]
+
+    def test_returns_only_other_active_shops_retail_items(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        response = client.get("/directory/tech-hub-lusaka/elsewhere")
+        assert response.status_code == 200
+        payload = response.json()
+        assert [(p["listing_id"], p["price_ngwee"]) for p in payload["products"]] == [
+            ("x-2", 300_000)
+        ]
+        assert payload["products"][0]["vendor_slug"] == "phone-planet"
+        assert [s["id"] for s in payload["services"]] == ["other-s"]
+        assert [e["slug"] for e in payload["events"]] == ["expo"]
+
+    def test_unknown_or_inactive_shop_is_404(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        store.vendors[0]["status"] = "suspended"
+        assert client.get("/directory/tech-hub-lusaka/elsewhere").status_code == 404
+        assert client.get("/directory/nobody/elsewhere").status_code == 404
+
+    def test_mutations_are_not_allowed(self, client: TestClient, store: FakeSupabaseStore) -> None:
+        self._seed(store)
+        assert client.post("/directory/tech-hub-lusaka/elsewhere").status_code == 405
+
+    def test_product_focus_narrows_to_that_category_and_skips_that_product(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        on_itel = client.get("/directory/tech-hub-lusaka/elsewhere?product=itel-a70").json()
+        assert [p["listing_id"] for p in on_itel["products"]] == ["x-2"]
+        on_tecno = client.get("/directory/tech-hub-lusaka/elsewhere?product=tecno-spark").json()
+        # The product being viewed never appears in its own "other shops" rail.
+        assert on_tecno["products"] == []
+
+    def test_service_focus_uses_that_service_category_and_ignores_bad_ids(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        unknown = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+        focused = client.get(f"/directory/tech-hub-lusaka/elsewhere?service={unknown}")
+        assert focused.status_code == 200
+        assert focused.json()["services"] == []
+        malformed = client.get("/directory/tech-hub-lusaka/elsewhere?service=not-a-uuid")
+        assert malformed.status_code == 200
+        assert [s["id"] for s in malformed.json()["services"]] == ["other-s"]
+
+
+class TestBusinessHomeSections:
+    """Founder rule: a section shows only when its flag is ON and it has items."""
+
+    def test_defaults_show_only_sections_with_live_items(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        sections = client.get("/directory/tech-hub-lusaka").json()["sections"]
+        assert sections == {
+            "products": True,
+            "services": False,
+            "events": False,
+            "offers": False,
+            "clips": False,
+        }
+
+    def test_switched_off_section_sends_no_items(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.feature_flags = [  # type: ignore[attr-defined]
+            {"flag": "business_home_products", "enabled": False},
+            {"flag": "business_offers", "enabled": True},
+        ]
+        payload = client.get("/directory/tech-hub-lusaka").json()
+        assert payload["listings"] == []
+        assert payload["sections"]["products"] is False
+        # Offers flag ON but no offers yet: still hidden, never an empty block.
+        assert payload["offers_enabled"] is True
+        assert payload["offers"] == []
+        assert payload["sections"]["offers"] is False

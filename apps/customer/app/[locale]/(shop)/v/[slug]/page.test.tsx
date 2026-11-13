@@ -210,12 +210,43 @@ describe("Business Home page", () => {
     expect(
       screen.getByText("Only customers who bought here through Convergeo can leave a review."),
     ).toBeInTheDocument();
-    // Flags off: no clips row and no offers placeholder.
+    // Flags off / nothing live: no clips row, no offers block, no empty Events tab.
     expect(screen.queryByTestId("bh-clips")).toBeNull();
     expect(screen.queryByTestId("bh-offers")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Events" })).toBeNull();
     // Never trap the customer on one shop.
     expect(screen.getByTestId("bh-other-shops")).toHaveAttribute("href", "/en/vendors");
     // The vendor's plan tier is never shown to buyers.
     expect(document.body.textContent).not.toMatch(/gold/i);
+  });
+});
+
+describe("Business Home section switches", () => {
+  it("hides a section the API switched off even when the shop has items", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              ...PROFILE,
+              offers_enabled: true,
+              offers: [],
+              sections: {
+                products: true,
+                services: false,
+                events: false,
+                offers: false,
+                clips: false,
+              },
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    render(await VendorProfilePage({ params: params() }));
+    expect(screen.getByTestId("mock-products")).toBeInTheDocument();
+    expect(screen.queryByText("Party catering")).toBeNull();
+    expect(screen.queryByTestId("bh-offers")).toBeNull();
   });
 });

@@ -120,7 +120,7 @@
       "clipsHeading": "短视频",
       "clipWatch": "观看短视频",
       "offersHeading": "优惠",
-      "offersEmpty": "此店铺目前没有优惠。关注店铺以获取新优惠。",
+      "offersEnds": "截止 {date}",
       "serviceBook": "以 {price} 预订",
       "serviceQuote": "询价",
       "serviceArea": "服务区域：{area}",
@@ -137,5 +137,14 @@
     "distance": "相距 {distance}",
     "conditionNew": "全新",
     "conditionRefurbished": "翻新"
+  },
+  "elsewhere": {
+    "heading": "其他店铺",
+    "atShop": "店铺：{shop}",
+    "inStock": "有货",
+    "outOfStock": "缺货",
+    "kindProduct": "商品",
+    "kindService": "服务",
+    "kindEvent": "活动"
   }
 }

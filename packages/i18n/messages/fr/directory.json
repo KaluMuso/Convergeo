@@ -120,7 +120,7 @@
       "clipsHeading": "Clips",
       "clipWatch": "Voir le clip",
       "offersHeading": "Offres",
-      "offersEmpty": "Aucune offre de cette boutique pour le moment. Suivez la boutique pour être informé des nouvelles.",
+      "offersEnds": "Jusqu'au {date}",
       "serviceBook": "Réserver pour {price}",
       "serviceQuote": "Demander un prix",
       "serviceArea": "Intervient à {area}",
@@ -137,5 +137,14 @@
     "distance": "À {distance}",
     "conditionNew": "Neuf",
     "conditionRefurbished": "Reconditionné"
+  },
+  "elsewhere": {
+    "heading": "Dans d'autres boutiques",
+    "atShop": "chez {shop}",
+    "inStock": "En stock",
+    "outOfStock": "Rupture de stock",
+    "kindProduct": "Produit",
+    "kindService": "Service",
+    "kindEvent": "Événement"
   }
 }

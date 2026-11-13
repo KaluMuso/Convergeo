@@ -12,8 +12,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 
 import { BookService } from "./_components/book-service";
 import { ServiceQuoteCta } from "./_components/service-quote-cta";
@@ -469,6 +471,19 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           </section>
         </aside>
       </div>
+
+      {/* Founder rule: related items from OTHER shops, not only this one. */}
+      {service.provider.slug ? (
+        <Suspense fallback={null}>
+          <OtherShopsRail
+            locale={locale}
+            vendorSlug={service.provider.slug}
+            lead="service"
+            focusServiceId={service.id}
+            excludeIds={[service.id]}
+          />
+        </Suspense>
+      ) : null}
     </article>
   );
 }

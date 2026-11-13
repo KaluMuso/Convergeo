@@ -14,6 +14,7 @@ import {
   servicePriceLine,
   StorySection,
 } from "./sections";
+import { visibleSections } from "./visible-sections";
 
 afterEach(cleanup);
 
@@ -153,12 +154,34 @@ describe("Business Home sections", () => {
     expect(within(branches[1]!).getByText("Opening hours not shared yet")).toBeInTheDocument();
   });
 
-  it("hides the offers placeholder while the flag is off", () => {
-    const labels = { heading: "Offers", empty: "No offers right now." };
-    const { rerender } = render(<OffersSection enabled={false} labels={labels} />);
+  it("never shows an empty offers block: flag ON and at least one offer", () => {
+    const labels = { heading: "Offers" };
+    const offer = { id: "o1", title: "10% off rice", endsLabel: "Ends 30 Nov" };
+    const { rerender } = render(<OffersSection enabled={false} offers={[offer]} labels={labels} />);
     expect(screen.queryByTestId("bh-offers")).toBeNull();
-    rerender(<OffersSection enabled labels={labels} />);
-    expect(screen.getByTestId("bh-offers")).toHaveTextContent("No offers right now.");
+    rerender(<OffersSection enabled offers={[]} labels={labels} />);
+    expect(screen.queryByTestId("bh-offers")).toBeNull();
+    rerender(<OffersSection enabled offers={[offer]} labels={labels} />);
+    expect(screen.getByTestId("bh-offers")).toHaveTextContent("10% off rice");
+    expect(screen.getByTestId("bh-offers")).toHaveTextContent("Ends 30 Nov");
+  });
+
+  it("shows a section only when its flag is on AND it has live items", () => {
+    const counts = { products: 2, services: 0, events: 1, offers: 0, clips: 3 };
+    expect(
+      visibleSections({
+        counts,
+        sections: { products: true, services: true, events: false, offers: true, clips: true },
+      }),
+    ).toEqual({ products: true, services: false, events: false, offers: false, clips: true });
+    // Older API (no `sections`): core sections follow their items; offers need the flag.
+    expect(visibleSections({ counts: { ...counts, offers: 1 } })).toEqual({
+      products: true,
+      services: false,
+      events: true,
+      offers: false,
+      clips: true,
+    });
   });
 
   it("hides the clips row when there are no clips (flag off returns none)", () => {

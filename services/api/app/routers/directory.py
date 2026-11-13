@@ -4,6 +4,7 @@ import math
 import re
 from datetime import datetime
 from typing import Annotated, Any, Literal, Protocol, cast
+from uuid import UUID
 
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -178,6 +179,23 @@ class VendorEventItem(BaseModel):
     slug: str
     title: str
     image_public_id: str | None = None
+    #: Business Home: next upcoming date. Only events with one are "live".
+    next_starts_at: datetime | None = None
+
+
+class ClipAuthor(BaseModel):
+    """Who posted the clip.
+
+    Seam for customer creator clips (later, not built): today every clip is a
+    ``business`` clip from ``video_clips.vendor_id``. A future ``creator`` clip
+    (a customer acting as an influencer, tagging this shop) carries its own
+    profile slug, so the row can link to the creator's page without changing
+    this shape.
+    """
+
+    kind: Literal["business", "creator"] = "business"
+    slug: str
+    display_name: str
 
 
 class VendorClipItem(BaseModel):
@@ -185,6 +203,7 @@ class VendorClipItem(BaseModel):
     poster_url: str | None = None
     caption: str | None = None
     duration_s: int | None = None
+    author: ClipAuthor | None = None
 
 
 class VendorProfileResponse(BaseModel):
@@ -195,9 +214,66 @@ class VendorProfileResponse(BaseModel):
     reviews_summary: ReviewsSummary
     #: Business Home clips row — always empty while the `clips` flag is off.
     clips: list[VendorClipItem] = Field(default_factory=list)
-    #: Business Home offers block. No coupons table exists yet, so this only
-    #: reflects the `business_offers` flag (default off) and `offers` stays [].
+    #: Business Home offers block. No coupons table exists yet, so `offers`
+    #: stays [] and the section never shows; `offers_enabled` is the raw flag.
+    offers: list[VendorOfferItem] = Field(default_factory=list)
     offers_enabled: bool = False
+    #: Which Business Home sections may render: flag ON *and* at least one live
+    #: item. The page never shows an empty section.
+    sections: BusinessSections = Field(default_factory=lambda: BusinessSections())
+
+
+class VendorOfferItem(BaseModel):
+    """Seam for shop-funded offers/coupons (no table yet)."""
+
+    id: str
+    title: str
+    ends_at: datetime | None = None
+
+
+class BusinessSections(BaseModel):
+    products: bool = False
+    services: bool = False
+    events: bool = False
+    offers: bool = False
+    clips: bool = False
+
+
+#: Business Home section -> (`feature_flags` row, value when the row is missing).
+#: Products, services and events are live selling surfaces, so their rows are
+#: kill switches (missing = ON). Clips and offers are unreleased (missing = OFF).
+SECTION_FLAGS: dict[str, tuple[str, bool]] = {
+    "products": ("business_home_products", True),
+    "services": ("business_home_services", True),
+    "events": ("business_home_events", True),
+    "clips": ("clips", False),
+    "offers": ("business_offers", False),
+}
+
+
+VendorProfileResponse.model_rebuild()
+
+
+def _section_flags(client: Any) -> dict[str, bool]:
+    """All Business Home section flags in one read."""
+    defaults = {section: default for section, (_, default) in SECTION_FLAGS.items()}
+    try:
+        response = (
+            client.table("feature_flags")
+            .select("flag, enabled")
+            .in_("flag", [flag for flag, _ in SECTION_FLAGS.values()])
+            .execute()
+        )
+    except Exception:
+        return defaults
+    by_flag = {
+        str(row["flag"]): bool(row.get("enabled"))
+        for row in (getattr(response, "data", None) or [])
+        if isinstance(row, dict) and row.get("flag")
+    }
+    return {
+        section: by_flag.get(flag, default) for section, (flag, default) in SECTION_FLAGS.items()
+    }
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -757,31 +833,13 @@ def _fetch_vendor_services(client: Any, vendor_id: str) -> list[VendorServiceIte
     return items
 
 
-def _feature_flag_enabled(client: Any, flag: str) -> bool:
-    """Fail-closed read of `feature_flags` (same posture as services/clips/flags.py)."""
-    try:
-        response = (
-            client.table("feature_flags")
-            .select("enabled")
-            .eq("flag", flag)
-            .maybe_single()
-            .execute()
-        )
-    except Exception:
-        return False
-    data = getattr(response, "data", None)
-    if isinstance(data, list):
-        data = data[0] if data else None
-    return bool(isinstance(data, dict) and data.get("enabled"))
-
-
 CLIPS_ROW_LIMIT = 6
 
 
-def _fetch_vendor_clips(client: Any, vendor_id: str) -> list[VendorClipItem]:
-    """Published clips for the Business Home row — only when `clips` is on."""
-    if not _feature_flag_enabled(client, "clips"):
-        return []
+def _fetch_vendor_clips(
+    client: Any, vendor_id: str, author: ClipAuthor | None = None
+) -> list[VendorClipItem]:
+    """Published clips for the Business Home row (caller gates on `clips`)."""
     try:
         response = (
             client.table("video_clips")
@@ -805,6 +863,7 @@ def _fetch_vendor_clips(client: Any, vendor_id: str) -> list[VendorClipItem]:
                 poster_url=(str(row["poster_url"]) if row.get("poster_url") else None),
                 caption=(str(row["caption"]) if row.get("caption") else None),
                 duration_s=int(duration) if isinstance(duration, int) else None,
+                author=author,
             )
         )
     return clips
@@ -878,7 +937,46 @@ def _fetch_vendor_events(client: Any, vendor_id: str) -> list[VendorEventItem]:
                 image_public_id=(str(image) if isinstance(image, str) and image else None),
             )
         )
-    return items
+    return _keep_live_events(client, items)
+
+
+def _keep_live_events(
+    client: Any, items: list[VendorEventItem], *, now: datetime | None = None
+) -> list[VendorEventItem]:
+    """Business Home shows an event only while it has an upcoming date.
+
+    A published event whose dates have all passed is not something a customer
+    can attend, so it must not keep the Events section open.
+    """
+    if not items:
+        return []
+    at = now or datetime.now(LUSAKA_TZ)
+    response = (
+        client.table("event_instances")
+        .select("event_id, starts_at")
+        .in_("event_id", [item.id for item in items])
+        .execute()
+    )
+    next_start: dict[str, datetime] = {}
+    for row in response.data or []:
+        if not isinstance(row, dict):
+            continue
+        raw = row.get("starts_at")
+        try:
+            starts = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if starts.tzinfo is None or starts < at:
+            continue
+        event_id = str(row.get("event_id") or "")
+        if event_id not in next_start or starts < next_start[event_id]:
+            next_start[event_id] = starts
+    live = [
+        item.model_copy(update={"next_starts_at": next_start[item.id]})
+        for item in items
+        if item.id in next_start
+    ]
+    return sorted(live, key=lambda item: item.next_starts_at or at)
 
 
 def get_vendor_profile(
@@ -1051,6 +1149,25 @@ def get_vendor_profile(
         raise AppError("vendor.not_found", "Vendor not found", 404)
     order_count = _count_completed_orders(client, vendor_id)
 
+    # Founder rule: a section shows only when its feature is ON and the shop
+    # has at least one live item in it. A switched-off section sends no items.
+    flags = _section_flags(client)
+    shown_listings = listings if flags["products"] else []
+    shown_services = services if flags["services"] else []
+    shown_events = events if flags["events"] else []
+    clips = (
+        _fetch_vendor_clips(
+            client,
+            vendor_id,
+            ClipAuthor(
+                kind="business", slug=str(row["slug"]), display_name=str(row["display_name"])
+            ),
+        )
+        if flags["clips"]
+        else []
+    )
+    offers: list[VendorOfferItem] = []  # no coupons table yet (seam)
+
     return VendorProfileResponse(
         vendor=VendorProfileDetail(
             id=vendor_id,
@@ -1070,12 +1187,334 @@ def get_vendor_profile(
             locations=locations,
             created_at=row.get("created_at"),
         ),
-        listings=listings,
-        services=services,
-        events=events,
+        listings=shown_listings,
+        services=shown_services,
+        events=shown_events,
         reviews_summary=ReviewsSummary(rating_avg=rating_avg, rating_count=rating_count),
-        clips=_fetch_vendor_clips(client, vendor_id),
-        offers_enabled=_feature_flag_enabled(client, "business_offers"),
+        clips=clips,
+        offers=offers,
+        offers_enabled=flags["offers"],
+        sections=BusinessSections(
+            products=bool(shown_listings),
+            services=bool(shown_services),
+            events=bool(shown_events),
+            offers=bool(offers),
+            clips=bool(clips),
+        ),
+    )
+
+
+ELSEWHERE_LIMIT = 8
+
+
+class ElsewhereProduct(BaseModel):
+    listing_id: str
+    title: str
+    product_slug: str | None = None
+    price_ngwee: int
+    in_stock: bool
+    image_public_id: str | None = None
+    vendor_slug: str
+    vendor_name: str
+
+
+class ElsewhereService(BaseModel):
+    id: str
+    title: str
+    from_price_ngwee: int | None = None
+    bookable: bool = False
+    booking_price_ngwee: int | None = None
+    image_public_id: str | None = None
+    vendor_slug: str
+    vendor_name: str
+
+
+class ElsewhereEvent(BaseModel):
+    id: str
+    slug: str
+    title: str
+    image_public_id: str | None = None
+    next_starts_at: datetime | None = None
+    vendor_slug: str
+    vendor_name: str
+
+
+class ElsewhereResponse(BaseModel):
+    """Related items from OTHER shops for the Business Home rails.
+
+    Never the shop itself, never wholesale, never demo listings, and only from
+    active shops — the customer always has somewhere else to look.
+    """
+
+    products: list[ElsewhereProduct] = Field(default_factory=list)
+    services: list[ElsewhereService] = Field(default_factory=list)
+    events: list[ElsewhereEvent] = Field(default_factory=list)
+
+
+def _first_image(raw: Any) -> str | None:
+    image = raw[0] if isinstance(raw, list) and raw else None
+    return str(image) if isinstance(image, str) and image else None
+
+
+def _other_vendor(row: dict[str, Any], key: str = "vendors") -> dict[str, Any] | None:
+    vendor = row.get(key)
+    if isinstance(vendor, dict) and vendor.get("status") == "active" and vendor.get("slug"):
+        return vendor
+    return None
+
+
+def _focus_product(client: Any, slug: str | None) -> dict[str, Any] | None:
+    if not slug:
+        return None
+    row = (
+        client.table("products")
+        .select("id, category_id, status")
+        .eq("slug", slug)
+        .maybe_single()
+        .execute()
+    ).data
+    return row if isinstance(row, dict) and row.get("category_id") else None
+
+
+def _elsewhere_products(
+    client: Any, vendor_id: str, focus_product_slug: str | None = None
+) -> list[ElsewhereProduct]:
+    focus = _focus_product(client, focus_product_slug)
+    own = (
+        client.table("vendor_listings")
+        .select("product_id, wholesale, products(category_id)")
+        .eq("vendor_id", vendor_id)
+        .eq("status", "active")
+        .execute()
+    )
+    own_rows = [r for r in (own.data or []) if isinstance(r, dict) and not r.get("wholesale")]
+    own_products = {str(r["product_id"]) for r in own_rows if r.get("product_id")}
+    category_ids = sorted(
+        {
+            str(r["products"]["category_id"])
+            for r in own_rows
+            if isinstance(r.get("products"), dict) and r["products"].get("category_id")
+        }
+    )
+    if focus is not None:
+        # On a product page: the same kind of thing, from other shops, never
+        # the product being viewed (that is the comparison table's job).
+        category_ids = [str(focus["category_id"])]
+        own_products.add(str(focus["id"]))
+    if not category_ids:
+        return []
+    candidates = (
+        client.table("products")
+        .select("id, slug, name, status, category_id")
+        .in_("category_id", category_ids)
+        .eq("status", "active")
+        .limit(60)
+        .execute()
+    )
+    products = {
+        str(p["id"]): p
+        for p in (candidates.data or [])
+        if isinstance(p, dict) and p.get("id") and str(p["id"]) not in own_products
+    }
+    if not products:
+        return []
+    listing_rows = (
+        client.table("vendor_listings")
+        .select(
+            "id, product_id, vendor_id, price_ngwee, wholesale, stock_mode, stock_qty, "
+            "min_steps, moq, product_class, fulfilment_mode, vendor_capacity_per_week, "
+            "vendors!inner(slug, display_name, status)"
+        )
+        .in_("product_id", list(products))
+        .eq("status", "active")
+        .execute()
+    ).data or []
+    rows = [
+        r
+        for r in listing_rows
+        if isinstance(r, dict)
+        and str(r.get("vendor_id") or "") != vendor_id
+        and not r.get("wholesale")
+        and _other_vendor(r) is not None
+        and isinstance(r.get("price_ngwee"), int)
+    ]
+    demo = fetch_demo_listing_ids(client, [str(r["id"]) for r in rows if r.get("id")])
+    cheapest: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        if str(r.get("id") or "") in demo:
+            continue
+        pid = str(r["product_id"])
+        if pid not in cheapest or r["price_ngwee"] < cheapest[pid]["price_ngwee"]:
+            cheapest[pid] = r
+    picked = sorted(cheapest.values(), key=lambda r: (r["price_ngwee"], str(r["id"])))
+    picked = picked[:ELSEWHERE_LIMIT]
+    images: dict[str, str] = {}
+    if picked:
+        image_rows = (
+            client.table("listing_images")
+            .select("listing_id, cloudinary_public_id, position")
+            .in_("listing_id", [str(r["id"]) for r in picked])
+            .order("position")
+            .execute()
+        ).data or []
+        for img in image_rows:
+            lid = str(img.get("listing_id") or "")
+            pub = img.get("cloudinary_public_id")
+            if lid and lid not in images and isinstance(pub, str) and pub:
+                images[lid] = pub
+    out: list[ElsewhereProduct] = []
+    for r in picked:
+        product = products[str(r["product_id"])]
+        vendor = r["vendors"]
+        out.append(
+            ElsewhereProduct(
+                listing_id=str(r["id"]),
+                title=str(product.get("name") or ""),
+                product_slug=str(product["slug"]) if product.get("slug") else None,
+                price_ngwee=int(r["price_ngwee"]),
+                in_stock=is_listing_available(
+                    str(r.get("stock_mode") or ""),
+                    r.get("stock_qty"),
+                    min_steps=int(r.get("min_steps") or 1),
+                    moq=int(r.get("moq") or 1),
+                    product_class=str(r.get("product_class") or "A"),
+                    fulfilment_mode=str(r.get("fulfilment_mode") or "stocked"),
+                    vendor_capacity_per_week=(
+                        int(r["vendor_capacity_per_week"])
+                        if r.get("vendor_capacity_per_week") is not None
+                        else None
+                    ),
+                ),
+                image_public_id=images.get(str(r["id"])),
+                vendor_slug=str(vendor["slug"]),
+                vendor_name=str(vendor.get("display_name") or ""),
+            )
+        )
+    return out
+
+
+def _elsewhere_services(
+    client: Any, vendor_id: str, focus_service_id: str | None = None
+) -> list[ElsewhereService]:
+    own_query = client.table("services").select("category").eq("vendor_id", vendor_id)
+    if focus_service_id:
+        own_query = own_query.eq("id", focus_service_id)
+    own = own_query.eq("status", "active").execute()
+    categories = sorted(
+        {str(r["category"]) for r in (own.data or []) if isinstance(r, dict) and r.get("category")}
+    )
+    if not categories:
+        return []
+    rows = (
+        client.table("services")
+        .select(
+            "id, vendor_id, title, from_price_ngwee, bookable, booking_price_ngwee, "
+            "portfolio_images, status, vendors!inner(slug, display_name, status)"
+        )
+        .in_("category", categories)
+        .eq("status", "active")
+        .limit(40)
+        .execute()
+    ).data or []
+    out: list[ElsewhereService] = []
+    for r in rows:
+        if not isinstance(r, dict) or str(r.get("vendor_id") or "") == vendor_id:
+            continue
+        vendor = _other_vendor(r)
+        if vendor is None:
+            continue
+        price = r.get("from_price_ngwee")
+        out.append(
+            ElsewhereService(
+                id=str(r["id"]),
+                title=str(r.get("title") or ""),
+                from_price_ngwee=int(price) if price is not None else None,
+                bookable=bool(r.get("bookable")),
+                booking_price_ngwee=(
+                    int(r["booking_price_ngwee"])
+                    if r.get("bookable") and r.get("booking_price_ngwee") is not None
+                    else None
+                ),
+                image_public_id=_first_image(r.get("portfolio_images")),
+                vendor_slug=str(vendor["slug"]),
+                vendor_name=str(vendor.get("display_name") or ""),
+            )
+        )
+        if len(out) >= ELSEWHERE_LIMIT:
+            break
+    return out
+
+
+def _elsewhere_events(client: Any, vendor_id: str) -> list[ElsewhereEvent]:
+    rows = (
+        client.table("events")
+        .select(
+            "id, slug, title, images, status, organiser_vendor_id, "
+            "vendors!inner(slug, display_name, status)"
+        )
+        .eq("status", "published")
+        .limit(40)
+        .execute()
+    ).data or []
+    candidates: list[tuple[VendorEventItem, dict[str, Any]]] = []
+    for r in rows:
+        if not isinstance(r, dict) or str(r.get("organiser_vendor_id") or "") == vendor_id:
+            continue
+        vendor = _other_vendor(r)
+        if vendor is None or not r.get("id"):
+            continue
+        candidates.append(
+            (
+                VendorEventItem(
+                    id=str(r["id"]),
+                    slug=str(r.get("slug") or ""),
+                    title=str(r.get("title") or ""),
+                    image_public_id=_first_image(r.get("images")),
+                ),
+                vendor,
+            )
+        )
+    vendors_by_event = {item.id: vendor for item, vendor in candidates}
+    live = _keep_live_events(client, [item for item, _ in candidates])
+    return [
+        ElsewhereEvent(
+            **item.model_dump(),
+            vendor_slug=str(vendors_by_event[item.id]["slug"]),
+            vendor_name=str(vendors_by_event[item.id].get("display_name") or ""),
+        )
+        for item in live[:ELSEWHERE_LIMIT]
+    ]
+
+
+def _uuid_or_none(value: str | None) -> str | None:
+    """`services.id` is a uuid column: a malformed id is ignored, not a 500."""
+    if not value:
+        return None
+    try:
+        return str(UUID(value.strip()))
+    except ValueError:
+        return None
+
+
+def build_elsewhere(
+    client: Any,
+    slug: str,
+    *,
+    product_slug: str | None = None,
+    service_id: str | None = None,
+) -> ElsewhereResponse:
+    """Items from other shops. `product_slug` / `service_id` narrow the rail to
+    the thing a detail page is showing (same category, other shops)."""
+    vendor = (
+        client.table("vendors").select("id, status").eq("slug", slug).maybe_single().execute()
+    ).data
+    if not isinstance(vendor, dict) or vendor.get("status") != "active":
+        raise AppError("vendor.not_found", "Vendor not found", 404)
+    vendor_id = str(vendor["id"])
+    return ElsewhereResponse(
+        products=_elsewhere_products(client, vendor_id, product_slug),
+        services=_elsewhere_services(client, vendor_id, service_id),
+        events=_elsewhere_events(client, vendor_id),
     )
 
 
@@ -1122,4 +1561,25 @@ async def get_directory_vendor(
     cleaned = _sanitize_query(slug)
     if not cleaned:
         raise AppError("vendor.not_found", "Vendor not found", 404)
+    # D28/D36: guests and consumers get retail only; a verified business sees
+    # wholesale inline, resolved only through the shared access gate.
     return get_vendor_profile(supabase.client, cleaned, include_wholesale=access.eligible)
+
+
+@router.get("/{slug}/elsewhere", response_model=ElsewhereResponse)
+async def get_directory_vendor_elsewhere(
+    slug: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    product: Annotated[str | None, Query(max_length=200)] = None,
+    service: Annotated[str | None, Query(max_length=64)] = None,
+) -> ElsewhereResponse:
+    cleaned = _sanitize_query(slug)
+    if not cleaned:
+        raise AppError("vendor.not_found", "Vendor not found", 404)
+    return build_elsewhere(
+        supabase.client,
+        cleaned,
+        # Exact-match filters (`eq`), not patterns: only trim.
+        product_slug=(product or "").strip() or None,
+        service_id=_uuid_or_none(service),
+    )

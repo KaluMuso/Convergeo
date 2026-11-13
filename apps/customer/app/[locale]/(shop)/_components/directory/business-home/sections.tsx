@@ -1,5 +1,4 @@
 import { formatK } from "@vergeo/i18n";
-import Image from "next/image";
 import Link from "next/link";
 
 import { OpenStatus, type DaySchedule } from "./open-status";
@@ -160,13 +159,12 @@ export function ClipsRow({
               className="relative block h-40 w-24 overflow-hidden rounded-lg bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {clip.poster_url ? (
-                <Image
-                  src={clip.poster_url}
-                  alt=""
-                  fill
-                  sizes="96px"
-                  loading="lazy"
-                  className="object-cover"
+                // Decorative poster as a CSS background (like the header's logo
+                // and cover): keeps next/image's client runtime off this route.
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${JSON.stringify(clip.poster_url)})` }}
                 />
               ) : null}
               <svg
@@ -185,28 +183,44 @@ export function ClipsRow({
   );
 }
 
+export type BusinessOffer = {
+  id: string;
+  title: string;
+  /** Pre-formatted end date (server-side), or null when open-ended. */
+  endsLabel: string | null;
+};
+
 /**
- * Offers block. No coupons table exists on this base yet: the API only reports
- * the `business_offers` flag (default OFF), and while it is off nothing renders.
+ * Offers block. Shows only when the `business_offers` flag is ON *and* the shop
+ * has at least one live offer — never an empty block. No coupons table exists
+ * yet, so the API sends `offers: []` and this stays hidden.
  */
 export function OffersSection({
   enabled,
+  offers,
   labels,
 }: {
   enabled: boolean;
-  labels: { heading: string; empty: string };
+  offers: BusinessOffer[];
+  labels: { heading: string };
 }) {
-  if (!enabled) {
+  if (!enabled || offers.length === 0) {
     return null;
   }
   return (
-    <section
-      aria-labelledby="bh-offers"
-      data-testid="bh-offers"
-      className="space-y-2 rounded-lg border border-dashed border-border bg-surface p-4"
-    >
+    <section aria-labelledby="bh-offers" data-testid="bh-offers" className="space-y-2">
       <SectionHeading id="bh-offers">{labels.heading}</SectionHeading>
-      <p className="m-0 text-sm text-text-2">{labels.empty}</p>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {offers.map((offer) => (
+          <li
+            key={offer.id}
+            className="rounded-lg border border-border bg-accent-tint px-4 py-3 text-sm"
+          >
+            <p className="m-0 font-semibold text-text">{offer.title}</p>
+            {offer.endsLabel ? <p className="m-0 text-text-2">{offer.endsLabel}</p> : null}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

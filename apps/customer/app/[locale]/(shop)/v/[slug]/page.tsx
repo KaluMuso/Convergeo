@@ -28,6 +28,10 @@ import {
   type BusinessBranch,
   type ServiceLabels,
 } from "../../_components/directory/business-home/sections";
+import {
+  visibleSections,
+  type BusinessSectionKey,
+} from "../../_components/directory/business-home/visible-sections";
 import { FollowVendorButton } from "../../_components/directory/follow-vendor-button";
 import {
   StorefrontProducts,
@@ -119,7 +123,10 @@ type VendorProfileApiResponse = {
     poster_url: string | null;
     caption: string | null;
   }>;
+  offers?: Array<{ id: string; title: string; ends_at: string | null }>;
   offers_enabled?: boolean;
+  /** Flag ON and ≥1 live item, per section (API). Absent on older API builds. */
+  sections?: Partial<Record<BusinessSectionKey, boolean>>;
 };
 
 type PageProps = {
@@ -357,6 +364,18 @@ export default async function VendorProfilePage({ params }: PageProps) {
 
   const { vendor, listings, services, events, reviews_summary: reviews } = profile;
   const clips = profile.clips ?? [];
+  const offers = profile.offers ?? [];
+  const show = visibleSections({
+    counts: {
+      products: listings.length,
+      services: services.length,
+      events: events.length,
+      offers: offers.length,
+      clips: clips.length,
+    },
+    sections: profile.sections,
+    offersEnabled: profile.offers_enabled,
+  });
   const ladderLabels = buildVendorLadderLabels(t);
   const trustRibbon = vendorTrustRibbon(
     { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
@@ -407,7 +426,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
   // Inactive panels stay mounted (hidden) so services and events are in the
   // crawlable HTML, not only the first tab.
   const offeringTabs: TabItem[] = [];
-  if (listingsForGrid.length > 0) {
+  if (show.products) {
     offeringTabs.push({
       key: "products",
       label: t("profile.tabProducts"),
@@ -437,7 +456,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
       ),
     });
   }
-  if (services.length > 0) {
+  if (show.services) {
     offeringTabs.push({
       key: "services",
       label: t("profile.tabServices"),
@@ -455,7 +474,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
       ),
     });
   }
-  if (events.length > 0) {
+  if (show.events) {
     offeringTabs.push({
       key: "events",
       label: t("profile.tabEvents"),
@@ -562,7 +581,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
                   {vendor.order_count} {t("profile.statOrders").toLowerCase()}
                 </span>
               ) : null}
-              {listings.length > 0 ? (
+              {show.products ? (
                 <span>
                   {listings.length} {t("profile.statListings").toLowerCase()}
                 </span>
@@ -635,7 +654,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
 
       <ClipsRow
         locale={locale}
-        clips={clips}
+        clips={show.clips ? clips : []}
         labels={{
           heading: t("profile.home.clipsHeading"),
           watch: t("profile.home.clipWatch"),
@@ -643,11 +662,19 @@ export default async function VendorProfilePage({ params }: PageProps) {
       />
 
       <OffersSection
-        enabled={profile.offers_enabled ?? false}
-        labels={{
-          heading: t("profile.home.offersHeading"),
-          empty: t("profile.home.offersEmpty"),
-        }}
+        enabled={show.offers}
+        offers={offers.map((offer) => ({
+          id: offer.id,
+          title: offer.title,
+          endsLabel: offer.ends_at
+            ? t("profile.home.offersEnds", {
+                date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(
+                  new Date(offer.ends_at),
+                ),
+              })
+            : null,
+        }))}
+        labels={{ heading: t("profile.home.offersHeading") }}
       />
 
       {offeringTabs.length > 0 ? (
