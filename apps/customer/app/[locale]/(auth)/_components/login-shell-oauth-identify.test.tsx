@@ -22,6 +22,12 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   }),
 }));
 
+// Post-auth navigation reads the session through the customer-session helper (cart merge
+// barrier); it resolves to the same Google session token the exchange produced.
+vi.mock("../../../../lib/customer-session", () => ({
+  getReadyCustomerSession: async () => ({ access_token: "google-jwt" }),
+}));
+
 vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({
     getPreferences: async () => ({ onboarding: { completed_at: "2026-08-13T00:00:00Z" } }),

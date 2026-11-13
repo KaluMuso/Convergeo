@@ -61,7 +61,7 @@ describe("navigateAfterPortalAuth", () => {
   });
 
   it("links the anonymous analytics session once after customer sign-in, never for vendors", async () => {
-    getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
+    getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
     getPreferences.mockResolvedValue({ onboarding: { completed_at: "2026-08-13T00:00:00Z" } });
 
     await navigateAfterPortalAuth({
