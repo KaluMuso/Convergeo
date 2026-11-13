@@ -191,6 +191,10 @@
       "aiCapUsd": "AI monthly cap (USD)",
       "releaseDelivered": "Auto-release after delivered (hours)",
       "releaseShipped": "Auto-release after shipped (days)",
+      "advanceBps": "Verified organiser pre-event advance (bps, max 5000)",
+      "advanceMinKycTier": "Pre-event advance: minimum KYC tier",
+      "advanceMinEvents": "Pre-event advance: minimum successful past events",
+      "advanceRepaymentDays": "Pre-event advance: repayment window (days)",
       "dangerousHint": "COD cap changes affect new checkout eligibility only."
     },
     "flags": {
@@ -260,6 +264,46 @@
       "threshold": "Threshold {amount}",
       "projected": "Projected GMV {amount}",
       "status": "Status: {status}"
+    },
+    "advanceDebts": {
+      "title": "Organiser advance debts",
+      "subtitle": "Advances paid before an event that was later cancelled. Record cash repayments here; a debt repaid in full before its due date is settled and never triggers suspension.",
+      "loading": "Loading advance debts…",
+      "empty": "No advance debts match these filters.",
+      "error": "Could not load advance debts.",
+      "forbidden": "Permission denied — admin role required.",
+      "event": "Event: {title}",
+      "amounts": "Outstanding {outstanding} of {amount}",
+      "due": "Due {date}",
+      "blacklisted": "Overdue: organiser blacklisted and flagged for legal follow-up.",
+      "filters": {
+        "status": "Status",
+        "all": "All",
+        "organiser": "Organiser ID",
+        "organiserPlaceholder": "Vendor UUID (optional)",
+        "apply": "Apply filters"
+      },
+      "status": {
+        "open": "Open",
+        "settled": "Settled",
+        "written_off": "Written off"
+      },
+      "form": {
+        "title": "Record a cash repayment",
+        "hint": "Only record money finance has confirmed received. Amount in kwacha; the reference is the bank or mobile-money receipt.",
+        "organiser": "Organiser ID",
+        "amount": "Amount (K)",
+        "reference": "Receipt reference",
+        "submit": "Record repayment",
+        "saving": "Saving…",
+        "saved": "Repayment recorded. Still owed: {remaining}.",
+        "failed": "Could not record the repayment.",
+        "exceeds": "That is more than the organiser owes.",
+        "vendorRequired": "Enter the organiser ID.",
+        "amountInvalid": "Enter a positive kwacha amount with at most 2 decimals.",
+        "referenceInvalid": "Reference must be 3–80 letters, digits, dots, dashes or underscores.",
+        "useOrganiser": "Record a repayment for this organiser"
+      }
     }
   },
   "kyc": {

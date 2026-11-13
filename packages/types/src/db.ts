@@ -4349,6 +4349,128 @@ export type Database = {
           },
         ]
       }
+      organiser_advance_debts: {
+        Row: {
+          amount_ngwee: number
+          blacklisted_at: string | null
+          created_at: string
+          due_at: string
+          event_id: string
+          id: string
+          legal_followup_at: string | null
+          order_id: string
+          recovered_ngwee: number
+          status: string
+          suspended_at: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_ngwee: number
+          blacklisted_at?: string | null
+          created_at?: string
+          due_at: string
+          event_id: string
+          id?: string
+          legal_followup_at?: string | null
+          order_id: string
+          recovered_ngwee?: number
+          status?: string
+          suspended_at?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          amount_ngwee?: number
+          blacklisted_at?: string | null
+          created_at?: string
+          due_at?: string
+          event_id?: string
+          id?: string
+          legal_followup_at?: string | null
+          order_id?: string
+          recovered_ngwee?: number
+          status?: string
+          suspended_at?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organiser_advance_debts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organiser_advance_debts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organiser_advance_debts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "organiser_advance_debts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organiser_advance_undertakings: {
+        Row: {
+          accepted_at: string
+          accepted_by: string
+          created_at: string
+          revoked_at: string | null
+          terms_version: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          accepted_by: string
+          created_at?: string
+          revoked_at?: string | null
+          terms_version: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          accepted_at?: string
+          accepted_by?: string
+          created_at?: string
+          revoked_at?: string | null
+          terms_version?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organiser_advance_undertakings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "organiser_advance_undertakings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_collection_exceptions: {
         Row: {
           created_at: string
@@ -7549,6 +7671,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transition_vendor_suspend: {
+        Args: {
+          p_actor: string
+          p_details?: Json
+          p_reason: string
+          p_vendor_id: string
+        }
+        Returns: string
       }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {

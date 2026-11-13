@@ -10,12 +10,28 @@ instance's END — ``ends_at``, falling back to ``starts_at`` for legacy rows wi
 no end time (see ``instance_settlement_end``) — so a multi-day event's funds no
 longer release mid-event:
   - Event <= 14 days out at purchase time -> single full release at end + 24h.
-  - Event > 14 days out at purchase time -> 50% at starts_at - 7d, 50% at end + 1d.
+  - Event > 14 days out at purchase time -> optional pre-event advance at
+    starts_at - 7d, remainder at end + 1d. The advance is TIERED
+    (services/events/advance_policy.py): unverified organisers get 0 — 100%
+    held until after the event ends; verified organisers (KYC tier, signed
+    advance undertaking, no unpaid advance debt) get the configured share
+    (``event_verified_organiser_advance_bps``, <= 50%). If such an event is
+    cancelled the advance becomes an organiser receivable and buyers are
+    refunded in full from escrow. With 0 bps a phased order that has not yet
+    posted phase 1 settles as one full release at end + 24h; an order whose
+    phase 1 was already paid keeps its phase-2 schedule for the remainder.
   - Recurring event (event_type, D29/P14) -> single full release at end + 24h
     regardless of lead time (no >14d phased pre-event advance): a routine series
     holds funds until after each instance. All other event_types use the lead-time
     branch above; per-type rules live in services/events/type_policy.py.
-  - Cancelled event -> block all further releases + flag for admin-executed mass refund.
+  - Cancelled event -> block all further releases, flag the order and (idempotently)
+    queue its organiser-cancel refund job, so the sweep recovers refunds even when
+    the cancel request's best-effort side-effects failed.
+  - Event not live (status other than published/completed — e.g. unpublished /
+    moderation hold back to draft) -> hold; an event that silently never runs
+    must not pay out while hidden.
+  - Escrow not held for the order (no collection posted yet) -> not eligible;
+    commission is never captured and nothing released from an empty escrow.
   - Open dispute (same OPEN_DISPUTE_STATUSES as the order engine) -> hold.
 
 MONEY SEAM: idempotency keys here (``event-release-{order_id}-full`` /
@@ -30,6 +46,7 @@ phase). Reuses ``post_transaction`` + ``LedgerTemplate.RELEASE_TO_VENDOR`` /
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
@@ -45,6 +62,7 @@ from app.services.escrow.release_accounting import (
     order_has_open_dispute,
     order_is_refund_blocked,
     remaining_escrow_ngwee,
+    summarize_order_release_ledger,
 )
 from app.services.events.settlement_snapshot import (
     SettlementSchedule,
@@ -66,10 +84,15 @@ PHASE2_DELAY_DAYS = 1
 
 MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
 
+# Only a live (or finished) event may pay its organiser.
+RELEASABLE_EVENT_STATUSES = frozenset({"published", "completed"})
+
 EventReleaseBranch = Literal["full", "phased"]
 EventReleaseOutcome = Literal[
     "released", "held", "already_released", "not_eligible", "blocked_cancelled"
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceRoleClient(Protocol):
@@ -387,6 +410,47 @@ VALUES ({actor_sql}, {action_sql}, 'order', {order_sql}, NULL, {after_sql});
         raise RuntimeError(f"flag mass refund failed: {result.error}")
 
 
+def resolve_advance_bps(organiser_vendor_id: str) -> int:
+    """Tiered pre-event advance share for this organiser (0 unless verified).
+
+    See ``services/events/advance_policy.py``: unverified organisers are held 100%
+    until after the event; verified organisers who signed the advance undertaking
+    get the configured share (<= 50%), recoverable as an organiser receivable.
+    """
+    from app.services.events.advance_policy import organiser_advance_decision
+
+    return organiser_advance_decision(organiser_vendor_id).bps
+
+
+def _ensure_cancel_refund_job(*, order_id: str, event_id: str) -> None:
+    """Idempotently queue the organiser-cancel refund job for a cancelled event's order.
+
+    The cancel endpoint enqueues these best-effort; this makes the release sweep a
+    durable backstop. Enqueue is ON CONFLICT DO NOTHING, and execution stays gated
+    by the payout kill switch (jobs remain queued while payouts are disabled).
+    """
+    from app.services.events.refund_jobs import (
+        enqueue_organiser_cancel_refund_job,
+        organiser_cancel_refund_amount_ngwee,
+    )
+
+    order_sql = _sql_uuid(order_id, "order_id")
+    loaded = run_sql_script(
+        f"SELECT coalesce(customer_id::text, '') FROM public.orders WHERE id = {order_sql};"
+    )
+    if not loaded.ok or not loaded.rows or not loaded.rows[0].strip():
+        return
+    amount_ngwee = organiser_cancel_refund_amount_ngwee(order_id)
+    if amount_ngwee <= 0:
+        return
+    enqueue_organiser_cancel_refund_job(
+        event_id=event_id,
+        order_id=order_id,
+        customer_id=loaded.rows[0].strip(),
+        amount_ngwee=amount_ngwee,
+    )
+
+
 def _post_event_release(
     *, order_id: str, vendor_id: str, net_ngwee: int, idempotency_key: str
 ) -> str:
@@ -467,14 +531,53 @@ def evaluate_event_release(
             event_type=context.event_type,
         )
 
+    all_keys = (
+        full_release_key(order_id),
+        phase1_release_key(order_id),
+        phase2_release_key(order_id),
+    )
+    posted_keys = _posted_release_keys(all_keys)
+
+    if context.event_status == "cancelled":
+        _flag_mass_refund(order_id=order_id, event_id=context.event_id)
+        try:
+            from app.services.events.advance_policy import recover_event_advance
+
+            recover_event_advance(
+                order_id=order_id, vendor_id=context.vendor_id, event_id=context.event_id
+            )
+            _ensure_cancel_refund_job(order_id=order_id, event_id=context.event_id)
+        except Exception:
+            # Audit flag above keeps the order in the admin queue; next tick retries.
+            logger.exception(
+                "event release: cancel refund job enqueue failed",
+                extra={"order_id": order_id, "event_id": context.event_id},
+            )
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="blocked_cancelled",
+            reason="event_cancelled",
+            branch=branch,
+        )
+
+    # Pre-event advance policy: with no advance configured, a phased order that has
+    # not yet paid phase 1 settles as one full post-event release (100% held).
+    advance_bps = resolve_advance_bps(context.vendor_id)
+    if (
+        branch == "phased"
+        and advance_bps <= 0
+        and phase1_release_key(order_id) not in posted_keys
+        and phase2_release_key(order_id) not in posted_keys
+    ):
+        branch = "full"
+
     required_keys: tuple[str, ...] = (
         (full_release_key(order_id),)
         if branch == "full"
         else (phase1_release_key(order_id), phase2_release_key(order_id))
     )
-    posted_keys = _posted_release_keys(required_keys)
 
-    if set(required_keys) <= posted_keys:
+    if set(required_keys) <= posted_keys or full_release_key(order_id) in posted_keys:
         return EventReleaseResult(
             order_id=order_id,
             outcome="already_released",
@@ -482,12 +585,11 @@ def evaluate_event_release(
             branch=branch,
         )
 
-    if context.event_status == "cancelled":
-        _flag_mass_refund(order_id=order_id, event_id=context.event_id)
+    if context.event_status not in RELEASABLE_EVENT_STATUSES:
         return EventReleaseResult(
             order_id=order_id,
-            outcome="blocked_cancelled",
-            reason="event_cancelled",
+            outcome="held",
+            reason="event_not_live",
             branch=branch,
         )
 
@@ -518,9 +620,16 @@ def evaluate_event_release(
         if key not in posted_keys and effective_now >= due_at:
             phases_due.append(("full", net_ngwee, key))
     else:
-        # Integer-exact halves: floor(net/2) + remainder == net, no ngwee lost to rounding.
-        phase1_amount = net_ngwee // 2
-        phase2_amount = net_ngwee - phase1_amount
+        phase1_key_posted = phase1_release_key(order_id) in posted_keys
+        if phase1_key_posted:
+            # Phase 2 pays exactly what phase 1 left (whatever share it used).
+            already_released = summarize_order_release_ledger(order_id).vendor_released_ngwee
+            phase1_amount = 0
+            phase2_amount = max(0, net_ngwee - already_released)
+        else:
+            # Integer-exact split: floor(net * bps) + remainder == net, no ngwee lost.
+            phase1_amount = (net_ngwee * advance_bps) // 10_000
+            phase2_amount = net_ngwee - phase1_amount
         phase1_due = context.starts_at - timedelta(days=PHASE1_LEAD_DAYS)
         phase2_due = settlement_end + timedelta(days=PHASE2_DELAY_DAYS)
         phase1_key = phase1_release_key(order_id)
@@ -535,6 +644,16 @@ def evaluate_event_release(
     if not phases_due:
         return EventReleaseResult(
             order_id=order_id, outcome="not_eligible", reason="timers_not_met", branch=branch
+        )
+
+    # Never capture commission or release against an escrow that was never funded
+    # (collection not posted yet, or already fully drained).
+    if remaining_escrow_ngwee(order_id) <= 0:
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason="escrow_not_held",
+            branch=branch,
         )
 
     # D17 single-drain vs concurrent refund (idempotent when gate already=release).
@@ -592,6 +711,17 @@ def evaluate_event_release(
             outcome="not_eligible",
             reason="no_escrow_remaining",
             branch=branch,
+        )
+
+    # Money now owed to the organiser first repays any outstanding advance debt.
+    try:
+        from app.services.events.advance_policy import offset_organiser_receivable
+
+        offset_organiser_receivable(context.vendor_id)
+    except Exception:
+        logger.exception(
+            "event release: organiser receivable offset failed",
+            extra={"order_id": order_id, "vendor_id": context.vendor_id},
         )
 
     posted_after = _posted_release_keys(required_keys)

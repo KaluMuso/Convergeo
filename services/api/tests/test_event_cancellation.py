@@ -144,7 +144,7 @@ def test_cancellation_flags_paid_order_and_notifies_buyer_and_holder() -> None:
     client = _seeded()
     with (
         patch(
-            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            "app.services.events.cancellation.organiser_cancel_refund_amount_ngwee",
             return_value=25_000,
         ),
         patch(
@@ -188,7 +188,7 @@ def test_voided_holder_is_still_notified_after_database_cancellation() -> None:
 
     with (
         patch(
-            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            "app.services.events.cancellation.organiser_cancel_refund_amount_ngwee",
             return_value=25_000,
         ),
         patch(
@@ -209,7 +209,7 @@ def test_cancellation_is_idempotent_for_refund_flags_and_outbox() -> None:
     client = _seeded()
     patches = (
         patch(
-            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            "app.services.events.cancellation.organiser_cancel_refund_amount_ngwee",
             return_value=25_000,
         ),
         patch(

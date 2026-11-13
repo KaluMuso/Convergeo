@@ -35,3 +35,63 @@ export function verifyHighValueEvent(eventId: string): Promise<{ event_id: strin
     body: JSON.stringify({}),
   });
 }
+
+export type AdvanceDebtStatus = "open" | "settled" | "written_off";
+
+export type AdvanceDebt = {
+  id: string;
+  vendor_id: string;
+  vendor_name: string;
+  event_id: string;
+  event_title: string;
+  order_id: string;
+  amount_ngwee: number;
+  recovered_ngwee: number;
+  outstanding_ngwee: number;
+  status: AdvanceDebtStatus;
+  due_at: string;
+  suspended_at: string | null;
+  blacklisted_at: string | null;
+  legal_followup_at: string | null;
+  created_at: string;
+};
+
+export type AdvanceDebtFilters = {
+  status?: AdvanceDebtStatus | "";
+  vendorId?: string;
+};
+
+export function advanceDebtsPath(filters: AdvanceDebtFilters): string {
+  const params = new URLSearchParams();
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+  const vendorId = filters.vendorId?.trim();
+  if (vendorId) {
+    params.set("vendor_id", vendorId);
+  }
+  const query = params.toString();
+  return query ? `/admin/event-advance-debts?${query}` : "/admin/event-advance-debts";
+}
+
+export function listAdvanceDebts(filters: AdvanceDebtFilters): Promise<{ items: AdvanceDebt[] }> {
+  return eventsApi.request<{ items: AdvanceDebt[] }>(advanceDebtsPath(filters));
+}
+
+export type RepaymentInput = {
+  vendor_id: string;
+  amount_ngwee: number;
+  reference: string;
+};
+
+export function recordAdvanceRepayment(
+  input: RepaymentInput,
+): Promise<{ transaction_id: string; receivable_ngwee: number }> {
+  return eventsApi.request<{
+    transaction_id: string;
+    receivable_ngwee: number;
+  }>("/admin/event-advance-debts/repayments", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}

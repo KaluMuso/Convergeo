@@ -169,6 +169,10 @@
       "aiCapUsd": "AI 每月上限（USD）",
       "releaseDelivered": "送达后自动释放（小时）",
       "releaseShipped": "发货后自动释放（天）",
+      "advanceBps": "已验证主办方活动前预付比例（基点，最多 5000）",
+      "advanceMinKycTier": "活动前预付：最低 KYC 等级",
+      "advanceMinEvents": "活动前预付：最少成功举办的活动数",
+      "advanceRepaymentDays": "活动前预付：还款期限（天）",
       "dangerousHint": "货到付款上限的更改仅影响新的结账资格。"
     },
     "flags": {
@@ -238,6 +242,46 @@
       "threshold": "阈值 {amount}",
       "projected": "预计 GMV {amount}",
       "status": "状态：{status}"
+    },
+    "advanceDebts": {
+      "title": "主办方预付款欠款",
+      "subtitle": "活动前已支付、但活动随后取消的预付款。在此登记现金还款；在到期日前全额还清的欠款即结清，永远不会触发停用。",
+      "loading": "正在加载预付款欠款…",
+      "empty": "没有符合筛选条件的预付款欠款。",
+      "error": "无法加载预付款欠款。",
+      "forbidden": "权限不足 — 需要管理员角色。",
+      "event": "活动：{title}",
+      "amounts": "未还 {outstanding}，共 {amount}",
+      "due": "到期 {date}",
+      "blacklisted": "已逾期：主办方已列入黑名单并标记法律跟进。",
+      "filters": {
+        "status": "状态",
+        "all": "全部",
+        "organiser": "主办方 ID",
+        "organiserPlaceholder": "商家 UUID（可选）",
+        "apply": "应用筛选"
+      },
+      "status": {
+        "open": "未结",
+        "settled": "已结清",
+        "written_off": "已核销"
+      },
+      "form": {
+        "title": "登记现金还款",
+        "hint": "只登记财务已确认收到的款项。金额以克瓦查为单位；参考号为银行或移动支付收据。",
+        "organiser": "主办方 ID",
+        "amount": "金额（K）",
+        "reference": "收据参考号",
+        "submit": "登记还款",
+        "saving": "正在保存…",
+        "saved": "已登记还款。仍欠：{remaining}。",
+        "failed": "无法登记还款。",
+        "exceeds": "该金额超过主办方的欠款。",
+        "vendorRequired": "请输入主办方 ID。",
+        "amountInvalid": "请输入最多两位小数的正克瓦查金额。",
+        "referenceInvalid": "参考号须为 3–80 个字母、数字、点、短横线或下划线。",
+        "useOrganiser": "为该主办方登记还款"
+      }
     }
   },
   "kyc": {

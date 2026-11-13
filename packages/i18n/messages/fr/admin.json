@@ -169,6 +169,10 @@
       "aiCapUsd": "Plafond IA mensuel (USD)",
       "releaseDelivered": "Libération automatique après livraison (heures)",
       "releaseShipped": "Libération automatique après expédition (jours)",
+      "advanceBps": "Avance avant l'événement pour organisateurs vérifiés (pb, max 5000)",
+      "advanceMinKycTier": "Avance avant l'événement : niveau KYC minimum",
+      "advanceMinEvents": "Avance avant l'événement : nombre minimum d'événements réussis",
+      "advanceRepaymentDays": "Avance avant l'événement : délai de remboursement (jours)",
       "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
     },
     "flags": {
@@ -238,6 +242,46 @@
       "threshold": "Seuil {amount}",
       "projected": "GMV projeté {amount}",
       "status": "Statut : {status}"
+    },
+    "advanceDebts": {
+      "title": "Dettes d'avance des organisateurs",
+      "subtitle": "Avances versées avant un événement annulé par la suite. Enregistrez ici les remboursements en espèces ; une dette remboursée intégralement avant l'échéance est soldée et ne déclenche jamais de suspension.",
+      "loading": "Chargement des dettes d'avance…",
+      "empty": "Aucune dette d'avance ne correspond à ces filtres.",
+      "error": "Impossible de charger les dettes d'avance.",
+      "forbidden": "Permission refusée — rôle administrateur requis.",
+      "event": "Événement : {title}",
+      "amounts": "Reste dû {outstanding} sur {amount}",
+      "due": "Échéance {date}",
+      "blacklisted": "En retard : organisateur mis sur liste noire et signalé pour suivi juridique.",
+      "filters": {
+        "status": "Statut",
+        "all": "Tous",
+        "organiser": "ID de l'organisateur",
+        "organiserPlaceholder": "UUID du vendeur (facultatif)",
+        "apply": "Appliquer les filtres"
+      },
+      "status": {
+        "open": "Ouverte",
+        "settled": "Soldée",
+        "written_off": "Passée en perte"
+      },
+      "form": {
+        "title": "Enregistrer un remboursement en espèces",
+        "hint": "N'enregistrez que les sommes dont la finance a confirmé la réception. Montant en kwacha ; la référence est le reçu bancaire ou mobile money.",
+        "organiser": "ID de l'organisateur",
+        "amount": "Montant (K)",
+        "reference": "Référence du reçu",
+        "submit": "Enregistrer le remboursement",
+        "saving": "Enregistrement…",
+        "saved": "Remboursement enregistré. Reste dû : {remaining}.",
+        "failed": "Impossible d'enregistrer le remboursement.",
+        "exceeds": "Ce montant dépasse ce que l'organisateur doit.",
+        "vendorRequired": "Saisissez l'ID de l'organisateur.",
+        "amountInvalid": "Saisissez un montant positif en kwacha avec au plus 2 décimales.",
+        "referenceInvalid": "La référence doit contenir 3 à 80 lettres, chiffres, points, tirets ou traits de soulignement.",
+        "useOrganiser": "Enregistrer un remboursement pour cet organisateur"
+      }
     }
   },
   "kyc": {

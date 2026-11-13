@@ -144,6 +144,14 @@ def db_url_env(db: PgConn) -> Generator[None, None, None]:
         os.environ["SUPABASE_DB_URL"] = previous
 
 
+@pytest.fixture
+def legacy_advance_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verified organiser with the advance at 50% (5000 bps)."""
+    monkeypatch.setattr(
+        "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 5_000
+    )
+
+
 def _insert_event(
     conn: PgConn,
     *,
@@ -529,7 +537,7 @@ class TestFullReleaseBranch:
 
 class TestPhasedReleaseBranch:
     def test_phase1_then_phase2_sum_to_net_exactly(
-        self, db: PgConn, db_url_env: None
+        self, db: PgConn, db_url_env: None, legacy_advance_policy: None
     ) -> None:
         event_id = str(uuid.uuid4())
         instance_id = str(uuid.uuid4())
@@ -948,7 +956,7 @@ class TestEventCommissionCapture:
         assert _txn_count(db, full_release_key(order_id)) == 1
 
     def test_phased_release_captures_commission_once_before_phase1(
-        self, db: PgConn, db_url_env: None
+        self, db: PgConn, db_url_env: None, legacy_advance_policy: None
     ) -> None:
         event_id = str(uuid.uuid4())
         instance_id = str(uuid.uuid4())
@@ -1152,7 +1160,7 @@ class TestSettlementSnapshotImmutability:
     """EVT-SETTLEMENT-SNAPSHOT: release timing follows purchase-time schedule, not live rows."""
 
     def test_reschedule_after_purchase_does_not_shift_release(
-        self, db: PgConn, db_url_env: None
+        self, db: PgConn, db_url_env: None, legacy_advance_policy: None
     ) -> None:
         event_id = str(uuid.uuid4())
         instance_id = str(uuid.uuid4())
@@ -1233,3 +1241,138 @@ class TestSettlementSnapshotImmutability:
         assert schedule.starts_at == starts_at
         assert schedule.branch == "full"
         assert create_settlement_snapshot(order_id) is False
+
+
+def _commission_txn_count(conn: PgConn, order_id: str) -> int:
+    prefix = f"{event_commission_idempotency_prefix(order_id)}-commission-"
+    result = conn.run(
+        "SELECT count(*)::text FROM public.ledger_transactions "
+        f"WHERE kind = 'commission_capture' AND idempotency_key LIKE '{prefix}%';"
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
+
+
+def _seed_order(
+    db: PgConn,
+    *,
+    status: str = "published",
+    lead_days: int = 20,
+    fund_escrow: bool = True,
+) -> tuple[str, str, datetime]:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    type_id = str(uuid.uuid4())
+    order_id = str(uuid.uuid4())
+    starts_at = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    _insert_event(db, event_id=event_id, organiser_vendor_id=VENDOR_A)
+    _insert_instance(db, instance_id=instance_id, event_id=event_id, starts_at=starts_at)
+    _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+    _insert_ticket_order(
+        db,
+        order_id=order_id,
+        group_id=str(uuid.uuid4()),
+        item_id=str(uuid.uuid4()),
+        instance_id=instance_id,
+        ticket_type_id=type_id,
+        created_at=starts_at - timedelta(days=lead_days),
+        fund_escrow=fund_escrow,
+    )
+    if status != "published":
+        assert db.run(f"UPDATE public.events SET status = '{status}' WHERE id = '{event_id}';").ok
+    return event_id, order_id, starts_at
+
+
+class TestReleaseSafetyPolicy:
+    """fix/event-ticket-integrity: unverified organisers get no advance; never pay a
+    non-live event. (VENDOR_A has no advance undertaking -> unverified.)"""
+
+    def test_unverified_organiser_held_100_percent_until_after_event(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        _event_id, order_id, starts_at = _seed_order(db, lead_days=20)  # >14d bought early
+
+        pre_event = evaluate_event_release(
+            _SERVICE, order_id, now=starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+        )
+        assert pre_event.outcome == "not_eligible"
+        assert pre_event.reason == "timers_not_met"
+        assert _txn_count(db, phase1_release_key(order_id)) == 0
+        assert _commission_txn_count(db, order_id) == 0
+
+        after = evaluate_event_release(_SERVICE, order_id, now=_full_release_due(starts_at))
+        assert after.outcome == "released"
+        assert after.branch == "full"
+        assert after.net_ngwee == NET_NGEWEE
+        assert _txn_count(db, full_release_key(order_id)) == 1
+        assert _txn_count(db, phase1_release_key(order_id)) == 0
+
+        again = evaluate_event_release(
+            _SERVICE, order_id, now=_full_release_due(starts_at) + timedelta(days=1)
+        )
+        assert again.outcome == "already_released"
+
+    def test_legacy_phase1_paid_then_policy_off_releases_exact_remainder(
+        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _event_id, order_id, starts_at = _seed_order(db, lead_days=20)
+        monkeypatch.setattr(
+            "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 5_000
+        )
+        first = evaluate_event_release(
+            _SERVICE, order_id, now=starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+        )
+        assert first.phases_posted == ("phase1",)
+        monkeypatch.setattr(
+            "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 0
+        )
+        second = evaluate_event_release(_SERVICE, order_id, now=_phase2_due(starts_at))
+        assert second.outcome == "released"
+        assert second.phases_posted == ("phase2",)
+        assert first.net_ngwee + second.net_ngwee == NET_NGEWEE
+        assert summarize_order_release_ledger(order_id).vendor_released_ngwee == NET_NGEWEE
+
+    def test_unpublished_event_is_held_not_released(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        _event_id, order_id, starts_at = _seed_order(db, status="draft", lead_days=5)
+        result = evaluate_event_release(
+            _SERVICE, order_id, now=_full_release_due(starts_at) + timedelta(days=30)
+        )
+        assert result.outcome == "held"
+        assert result.reason == "event_not_live"
+        assert _txn_count(db, full_release_key(order_id)) == 0
+        assert _commission_txn_count(db, order_id) == 0
+
+    def test_completed_event_still_releases(self, db: PgConn, db_url_env: None) -> None:
+        _event_id, order_id, starts_at = _seed_order(db, status="completed", lead_days=5)
+        result = evaluate_event_release(_SERVICE, order_id, now=_full_release_due(starts_at))
+        assert result.outcome == "released"
+
+    def test_unfunded_escrow_never_captures_or_releases(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        _event_id, order_id, starts_at = _seed_order(db, lead_days=5, fund_escrow=False)
+        result = evaluate_event_release(_SERVICE, order_id, now=_full_release_due(starts_at))
+        assert result.outcome == "not_eligible"
+        assert result.reason == "escrow_not_held"
+        assert _commission_txn_count(db, order_id) == 0
+        assert _txn_count(db, full_release_key(order_id)) == 0
+
+    def test_cancelled_event_sweep_queues_refund_job_idempotently(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        event_id, order_id, starts_at = _seed_order(db, status="cancelled", lead_days=5)
+        for _ in range(2):
+            result = evaluate_event_release(
+                _SERVICE, order_id, now=starts_at + timedelta(days=3)
+            )
+            assert result.outcome == "blocked_cancelled"
+        jobs = db.run(
+            "SELECT source || '|' || status || '|' || amount_ngwee::text "
+            f"FROM public.event_refund_jobs WHERE order_id = '{order_id}';"
+        )
+        assert jobs.ok
+        assert jobs.rows == [f"organiser_cancel|queued|{UNIT_PRICE_NGWEE}"]
+        assert _txn_count(db, full_release_key(order_id)) == 0
+        del event_id

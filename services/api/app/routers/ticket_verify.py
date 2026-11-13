@@ -325,11 +325,25 @@ def _assert_organiser_scope(*, ticket: TicketRow, vendor_id: str) -> None:
         )
 
 
-def _assert_event_published(ticket: TicketRow) -> None:
-    if ticket.event_status != "published":
+# Founder policy: unpublishing (admin hide / moderation hold moves the event back
+# to ``draft``) only takes the event off browse and sales — tickets already sold
+# stay valid at the gate. Only a cancelled event voids admission (its tickets are
+# voided and refunded by the cancellation path); a completed event is closed.
+TICKET_ADMITTING_EVENT_STATUSES = frozenset({"published", "draft"})
+
+
+def _assert_event_admits_tickets(ticket: TicketRow) -> None:
+    if ticket.event_status == "cancelled":
+        raise AppError(
+            code="tickets.event_cancelled",
+            message="This event was cancelled; its tickets are no longer valid",
+            http_status=409,
+            details={"event_id": ticket.event_id},
+        )
+    if ticket.event_status not in TICKET_ADMITTING_EVENT_STATUSES:
         raise AppError(
             code="tickets.event_not_published",
-            message="Tickets can only be checked in for published events",
+            message="Tickets can only be checked in for live events",
             http_status=409,
             details={"event_id": ticket.event_id},
         )
@@ -427,7 +441,7 @@ WITH event_lock AS MATERIALIZED (
   JOIN public.events e ON e.id = ei.event_id
   WHERE t.id = {ticket_sql}
     AND e.organiser_vendor_id = {vendor_sql}
-    AND e.status = 'published'
+    AND e.status IN ('published', 'draft')
     {event_clause}
     {instance_clause}
   FOR SHARE OF e
@@ -518,7 +532,7 @@ def verify_and_check_in_ticket(
 ) -> CheckInResult:
     ticket = _fetch_ticket_row(ticket_id)
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
-    _assert_event_published(ticket)
+    _assert_event_admits_tickets(ticket)
     _assert_expected_scope(
         ticket,
         expected_event_id=expected_event_id,
@@ -547,7 +561,7 @@ def verify_and_check_in_ticket(
     if claimed is None:
         refreshed = _fetch_ticket_row(ticket_id)
         _assert_organiser_scope(ticket=refreshed, vendor_id=vendor_id)
-        _assert_event_published(refreshed)
+        _assert_event_admits_tickets(refreshed)
         _assert_expected_scope(
             refreshed,
             expected_event_id=expected_event_id,
@@ -706,7 +720,7 @@ def _process_batch_scan(
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
 
     try:
-        _assert_event_published(ticket)
+        _assert_event_admits_tickets(ticket)
         _assert_expected_scope(
             ticket,
             expected_event_id=expected_event_id,
@@ -766,7 +780,7 @@ def _process_batch_scan(
         refreshed = _fetch_ticket_row(item.ticket_id)
         _assert_organiser_scope(ticket=refreshed, vendor_id=vendor_id)
         try:
-            _assert_event_published(refreshed)
+            _assert_event_admits_tickets(refreshed)
             _assert_expected_scope(
                 refreshed,
                 expected_event_id=expected_event_id,
@@ -931,7 +945,7 @@ def override_and_check_in_ticket(
 ) -> CheckInResult:
     ticket = _fetch_ticket_row(ticket_id)
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
-    _assert_event_published(ticket)
+    _assert_event_admits_tickets(ticket)
     _assert_expected_scope(
         ticket,
         expected_event_id=expected_event_id,
