@@ -51,3 +51,9 @@ export function setAnalyticsConsent(state: Exclude<ConsentState, "unset">): void
   document.cookie =
     `${CONSENT_COOKIE}=${state}; path=/; max-age=${ONE_YEAR_SECONDS}; ` + "samesite=lax";
 }
+
+/** True when the browser sends Global Privacy Control; treated as an opt-out of v2 tracking. */
+export function isGlobalPrivacyControlOn(): boolean {
+  const nav = typeof navigator === "undefined" ? undefined : navigator;
+  return (nav as { globalPrivacyControl?: boolean } | undefined)?.globalPrivacyControl === true;
+}

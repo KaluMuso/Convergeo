@@ -20,6 +20,7 @@
       "platform": "Platform"
     },
     "home": "Dashboard",
+    "analytics": "Analytics",
     "kyc": "KYC queue",
     "business": "Business",
     "moderation": "Moderation",
@@ -1738,5 +1739,310 @@
     "reason": "Reason for deactivating (required)",
     "deactivate": "Deactivate",
     "confirmDeactivate": "Deactivate {name}? This removes these roles: {roles}."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Aggregated marketplace and shopper behaviour. No individual shoppers or raw search text are shown.",
+    "tabs": {
+      "label": "Analytics sections",
+      "overview": "Overview",
+      "search": "Search & demand",
+      "products": "Products & funnel",
+      "insights": "Insights",
+      "users": "Users",
+      "growth": "Growth",
+      "revenue": "Revenue",
+      "vendors": "Vendors",
+      "servicesEvents": "Services & events",
+      "behaviour": "Behaviour",
+      "performance": "Boost & uproot"
+    },
+    "range": {
+      "label": "Date range",
+      "days": "Last {days} days"
+    },
+    "loading": "Loading analytics…",
+    "error": "Could not load analytics.",
+    "retry": "Retry",
+    "permissionDenied": "Only platform admins can view analytics.",
+    "disabled": {
+      "title": "Analytics is not enabled",
+      "body": "Daily rollups are switched off (feature flag analytics_v2_rollups). Nothing is collected or shown here until it is turned on."
+    },
+    "dataThrough": "Behaviour data through {day} (UTC). Orders and payments are live.",
+    "dataPending": "Behaviour data has not been rolled up yet. Orders and payments are live.",
+    "insufficient": "Not enough data (needs {n}+)",
+    "notAvailable": "—",
+    "empty": "No data for this range.",
+    "delta": {
+      "none": "No previous-period baseline",
+      "value": "{change} vs previous period"
+    },
+    "columns": {
+      "day": "Day",
+      "term": "Search term",
+      "product": "Product",
+      "page": "Page type"
+    },
+    "session": {
+      "rule": "A session ends after 30 minutes without activity.",
+      "activeSpan": "Average active span",
+      "estimatedEnd": "Session end is estimated from the last activity seen, so this is not time on site.",
+      "duration": "{minutes} min {seconds} s"
+    },
+    "overview": {
+      "commercialTitle": "Orders and payments",
+      "commercialHint": "From orders and payments only. Paid means a successful payment.",
+      "behaviourTitle": "Shopper behaviour",
+      "dailyTitle": "Paid GMV by day",
+      "reconciliation": {
+        "mismatch": "Payments do not reconcile with paid checkouts on: {days}. Check the payments before relying on these numbers."
+      },
+      "kpi": {
+        "gmvPaid": "Paid GMV",
+        "ordersPaid": "Paid orders",
+        "aov": "Average paid checkout",
+        "checkoutsStarted": "Checkouts started",
+        "ordersPlacedHint": "{placed} orders placed",
+        "sessions": "Sessions",
+        "visitorDays": "Visitor-days",
+        "bounceRate": "Bounce rate",
+        "searches": "Searches",
+        "zeroResultShare": "Searches with no results"
+      }
+    },
+    "search": {
+      "kNotice": "Terms searched fewer than {k} times in this range are grouped as “other” and never shown.",
+      "zeroResults": "No-result searches",
+      "zeroTitle": "Searched for but not found",
+      "zeroHint": "Demand the catalogue does not meet yet.",
+      "topTitle": "Top search terms",
+      "other": "Other: {terms} terms, {searches} searches"
+    },
+    "products": {
+      "funnelTitle": "Funnel",
+      "funnelHint": "Browsing steps come from sessions; checkout and order steps come from orders and payments.",
+      "shareOfSessions": "{share} of sessions",
+      "steps": {
+        "sessions": "Sessions",
+        "search_sessions": "Sessions with a search",
+        "product_view_sessions": "Sessions with a product view",
+        "cart_adds": "Cart adds",
+        "checkouts_started": "Checkouts started",
+        "orders_placed": "Orders placed",
+        "orders_paid": "Paid orders"
+      },
+      "topTitle": "Most viewed products",
+      "views": "Views",
+      "unnamed": "Unnamed product",
+      "pageViewsTitle": "Page views by page type",
+      "entryTitle": "Entry pages"
+    },
+    "insights": {
+      "placeholder": "Automated insights arrive in a later release. For now this lists data-quality checks.",
+      "none": "No data-quality issues in this range.",
+      "kinds": {
+        "payment_mismatch": "Payments do not reconcile with paid checkouts on {day}.",
+        "rollup_failed": "The daily rollup failed for {day}.",
+        "rollup_stale": "Rollups are behind (latest: {day})."
+      }
+    },
+    "financeWithheld": "Money figures are hidden: they need the finance.read or finance.operate permission.",
+    "financeOnly": "Finance only",
+    "dash": {
+      "subtitle": "Marketplace figures from orders, payments, the ledger, vendors, services and events. Aggregates only.",
+      "lusakaNote": "Days are Africa/Lusaka calendar days. Today and the 7- and 30-day views include today so far.",
+      "noActivity": "No activity in this period.",
+      "daily": "By day",
+      "permissionFinance": "Revenue needs the finance.read or finance.operate permission.",
+      "period": {
+        "today": "Today",
+        "7d": "7 days",
+        "30d": "30 days",
+        "custom": "Custom",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "customHint": "Choose a start and end day, then Apply."
+      },
+      "export": {
+        "button": "Export CSV",
+        "working": "Exporting…",
+        "done": "Export downloaded. It has been recorded in the audit log.",
+        "permission": "You do not have permission to export this report.",
+        "error": "The export failed. Try again."
+      },
+      "users": {
+        "title": "Accounts",
+        "hint": "Registered customers exclude deleted accounts. Vendors count every vendor business.",
+        "customers": "Registered customers",
+        "vendors": "Registered vendors",
+        "activeVendors": "{n, plural, one {# active} other {# active}}",
+        "newCustomers": "New customers",
+        "newVendors": "New vendors",
+        "registrations": "New registrations",
+        "activityTitle": "Active users",
+        "activityHint": "Distinct visitors (anonymous) and signed-in accounts in the day, 7 days and 30 days ending on the last day of the period.",
+        "activityOff": "Active-user counts need Analytics v2 data collection, which is switched off. Registrations and purchases below are unaffected.",
+        "dau": "Daily active",
+        "wau": "Weekly active",
+        "mau": "Monthly active",
+        "signedIn": "{n} signed in",
+        "visitors": "Visitors",
+        "cohortsTitle": "Purchase retention",
+        "cohortsHint": "Customers grouped by the month of their first paid order; the share who ordered again in each later month.",
+        "cohort": "First order",
+        "cohortSize": "Customers",
+        "monthN": "Month {n}",
+        "small": "(small)"
+      },
+      "growth": {
+        "title": "Growth",
+        "hint": "Counts only. Paid orders include orders cancelled after payment.",
+        "customers": "New customers",
+        "vendors": "New vendors",
+        "listings": "New listings",
+        "checkouts_started": "Checkouts started",
+        "orders_placed": "Orders placed",
+        "orders_paid": "Paid orders",
+        "checkoutToPaid": "Checkout to paid"
+      },
+      "revenue": {
+        "title": "Platform revenue",
+        "hint": "From the ledger: commission plus delivery fees credited to the platform, net of refund reversals.",
+        "platformRevenue": "Platform revenue",
+        "commission": "Commission",
+        "delivery": "Delivery revenue",
+        "processingFees": "Payment fees",
+        "processingFeesHint": "A cost, not deducted above",
+        "ordersTitle": "Orders",
+        "ordersHint": "Order value is what customers paid for goods and delivery. It is not platform revenue.",
+        "paidOrders": "Paid orders",
+        "paidOrderValue": "Paid order value",
+        "notRevenue": "Not revenue",
+        "averagePaidOrder": "Average paid order",
+        "takeRate": "Take rate",
+        "cancelled": "Cancelled",
+        "paidThenCancelled": "{n} after payment",
+        "placed": "Orders placed",
+        "refundsTitle": "Refunds",
+        "refundsRequested": "Requested",
+        "refundsCompleted": "Completed",
+        "refundsOpen": "In progress",
+        "refundsFailed": "Failed"
+      },
+      "vendors": {
+        "title": "Vendors",
+        "total": "All vendors",
+        "active": "Active",
+        "new": "New in period",
+        "selling": "Selling",
+        "sellingHint": "With a paid order in the period",
+        "kycTitle": "KYC pipeline",
+        "kycHint": "Counts in the period; the bars show each vendor's latest KYC record now.",
+        "kycSubmitted": "Submitted",
+        "kycApproved": "Approved",
+        "kycRejected": "Rejected",
+        "kycDecisionTime": "Average decision time",
+        "hours": "{n, plural, one {# hour} other {# hours}}",
+        "kycCurrent": "Latest KYC status",
+        "statusTitle": "Vendor status",
+        "status": "Status",
+        "count": "Vendors",
+        "topTitle": "Top vendors",
+        "topHint": "By paid orders in the period. Ratings are all published reviews.",
+        "noReviews": "No published reviews in this period.",
+        "ratings": "{n, plural, one {# review} other {# reviews}} in the period, average {avg} / 5",
+        "vendor": "Vendor",
+        "itemSales": "Item sales",
+        "rating": "Rating",
+        "ratingCell": "{avg} ({n})"
+      },
+      "kycStatus": {
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "suspended": "Suspended",
+        "revoked": "Revoked"
+      },
+      "vendorStatus": {
+        "draft": "Draft",
+        "pending_kyc": "Pending KYC",
+        "active": "Active",
+        "suspended": "Suspended",
+        "suspended_compliance": "Suspended (compliance)"
+      },
+      "services": {
+        "title": "Services",
+        "hint": "Job requests, quotes, request threads and bookings started in the period.",
+        "activeListings": "Active service listings",
+        "jobsPosted": "Job requests",
+        "quotes": "{submitted} quotes, {accepted} accepted",
+        "rfqOpened": "Quote requests",
+        "rfqProgress": "{quoted} quoted, {accepted} accepted",
+        "bookings": "Bookings",
+        "bookingsPaid": "{n} paid"
+      },
+      "events": {
+        "title": "Events",
+        "hint": "Tickets issued and check-ins in the period. The check-in rate covers events that have started.",
+        "published": "Published events",
+        "instances": "Event dates",
+        "ticketsSold": "Tickets sold",
+        "checkIns": "Check-ins",
+        "checkInRate": "Check-in rate {rate}"
+      },
+      "performance": {
+        "funnelTitle": "Funnel: views to paid orders",
+        "funnelHint": "Product-page views, add-to-cart actions and paid orders in the period, with repeat and returning buyers.",
+        "views": "Views",
+        "carts": "Add to cart",
+        "orders": "Paid orders",
+        "customers": "Buyers",
+        "viewToOrder": "View to order",
+        "cartToOrder": "Cart to order",
+        "rateOfViews": "{rate} of views",
+        "rateOfCarts": "{rate} of carts",
+        "repeatRate": "Repeat rate",
+        "repeatHint": "{n, plural, one {# buyer} other {# buyers}} with 2+ orders in the period",
+        "returningRate": "Returning buyers",
+        "returningHint": "{n, plural, one {# buyer} other {# buyers}} who had ordered before",
+        "cohortsHint": "Monthly cohort retention is on the Users tab.",
+        "contributionTitle": "Contribution per order",
+        "contributionHint": "What the platform keeps from a paid order: commission plus delivery fee, minus the payment fee, the courier and refunds.",
+        "perOrder": "Contribution per order",
+        "contributionTotal": "Total contribution",
+        "margin": "Of order value",
+        "negativeOrders": "Loss-making orders",
+        "ordersCount": "{n, plural, one {# paid order} other {# paid orders}}",
+        "commission": "Commission",
+        "deliveryFee": "Delivery fee charged",
+        "paymentFee": "Payment fee",
+        "courierCost": "Courier cost",
+        "refundLoss": "Lost to refunds",
+        "gaps": "Not yet in these figures: payment fee for {fee, plural, one {# order} other {# orders}}, courier cost for {courier, plural, one {# order} other {# orders}}.",
+        "entities": "{n, plural, =0 {No activity in the period} one {# with activity} other {# with activity}}",
+        "grain": {
+          "categories": "Categories",
+          "products": "Products",
+          "vendors": "Vendors",
+          "clips": "Clips"
+        },
+        "ranking": {
+          "top": "Top: boost what sells",
+          "bottom": "Bottom: attention without sales",
+          "hidden_gems": "Hidden gems: sell when seen"
+        },
+        "rankingHint": {
+          "top": "Most paid orders in the period.",
+          "bottom": "At least {views} views, lowest view-to-order conversion first. Fix, reprice or uproot.",
+          "hidden_gems": "At least {orders} paid orders, highest view-to-order conversion first. Give these more exposure."
+        },
+        "name": "Name",
+        "clipNote": "Clip views are signed-in views of 3 seconds or more. Clip orders are paid orders whose buyer added the product to the cart from the clip in the {days} days before.",
+        "viewsNote": "View counters are kept per UTC day, so at the edges of a period up to two hours of views can fall on the next or previous day."
+      }
+    }
   }
 }

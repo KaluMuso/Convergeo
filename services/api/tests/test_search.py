@@ -930,3 +930,25 @@ def test_zero_result_is_logged(
 
     assert result.total == 0
     assert any(record.message == "search_zero_result" for record in caplog.records)
+
+
+def test_search_forwards_anonymous_analytics_session_to_query_log(
+    search_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """OD-8: the optional X-Analytics-Session header reaches the search log (never authz)."""
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        "app.services.search.log_search_query", lambda **kwargs: calls.append(kwargs)
+    )
+    sid = "0d080000-0000-4000-8000-000000000001"
+    resp = search_client.get(
+        "/search", params={"q": "itel"}, headers={"X-Analytics-Session": sid}
+    )
+    assert resp.status_code == 200
+    assert calls[-1]["session_id"] == sid
+    assert search_client.get("/search", params={"q": "itel"}).status_code == 200
+    assert calls[-1]["session_id"] is None
+    too_long = search_client.get(
+        "/search", params={"q": "itel"}, headers={"X-Analytics-Session": "x" * 37}
+    )
+    assert too_long.status_code == 422

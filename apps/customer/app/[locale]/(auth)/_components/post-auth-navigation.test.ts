@@ -15,6 +15,10 @@ vi.mock("../../account/_components/account-api", () => ({
   }),
 }));
 
+const identifyAnalyticsSession = vi.fn();
+
+vi.mock("@vergeo/analytics/identify", () => ({ identifyAnalyticsSession }));
+
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
 describe("navigateAfterPortalAuth", () => {
@@ -23,6 +27,7 @@ describe("navigateAfterPortalAuth", () => {
   beforeEach(() => {
     getReadyCustomerSession.mockReset();
     getPreferences.mockReset();
+    identifyAnalyticsSession.mockReset();
     router.push.mockReset();
     router.refresh.mockReset();
   });
@@ -53,6 +58,30 @@ describe("navigateAfterPortalAuth", () => {
     );
     expect(router.push).toHaveBeenCalledWith("/en/welcome?next=%2Fen%2Faccount");
     expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it("links the anonymous analytics session once after customer sign-in, never for vendors", async () => {
+    getReadyCustomerSession.mockResolvedValue({ access_token: "tok" });
+    getPreferences.mockResolvedValue({ onboarding: { completed_at: "2026-08-13T00:00:00Z" } });
+
+    await navigateAfterPortalAuth({
+      router,
+      locale: "en",
+      portal: "customer",
+      fallbackPath: "/en",
+    });
+    await vi.waitFor(() => expect(identifyAnalyticsSession).toHaveBeenCalledTimes(1));
+    expect(identifyAnalyticsSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: "tok" }),
+    );
+
+    await navigateAfterPortalAuth({
+      router,
+      locale: "en",
+      portal: "vendor",
+      fallbackPath: "/en/vendor",
+    });
+    expect(identifyAnalyticsSession).toHaveBeenCalledTimes(1);
   });
 
   it("customer email auth preserves the destination when onboarding is complete", async () => {

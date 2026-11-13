@@ -103,6 +103,12 @@ const STATIC_SECURITY_HEADERS = buildStaticSecurityHeaders({
 });
 
 const nextConfig: NextConfig = {
+  // analytics_v2 client switch (Convergeo Intelligence 1A-04). Always defined so it is
+  // inlined as a build-time constant: when unset ("") the v2 tracking code is dead and
+  // the minifier drops it from every route bundle.
+  env: {
+    NEXT_PUBLIC_ANALYTICS_V2_TRACKING: process.env.NEXT_PUBLIC_ANALYTICS_V2_TRACKING ?? "",
+  },
   transpilePackages: [
     "@vergeo/config",
     "@vergeo/i18n",

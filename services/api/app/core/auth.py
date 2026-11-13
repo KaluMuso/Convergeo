@@ -232,6 +232,22 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("GET", "/admin/search-insights/ask-cost"): "analytics.read",
     ("GET", "/admin/clip-analytics"): "analytics.read",
     ("GET", "/admin/governance/vendors"): "analytics.read",
+    # Analytics dashboards (founder decision D3): operational and marketplace figures need
+    # analytics.read; money figures need finance.read/finance.operate. The v2 overview
+    # strips its commercial block, and the vendors report its sales value, without them.
+    ("GET", "/admin/analytics/status"): ("analytics.read", "finance.read", "finance.operate"),
+    ("GET", "/admin/analytics/overview"): "analytics.read",
+    ("GET", "/admin/analytics/search-demand"): "analytics.read",
+    ("GET", "/admin/analytics/products-funnel"): "analytics.read",
+    ("GET", "/admin/analytics/insights"): "analytics.read",
+    ("GET", "/admin/analytics/users"): "analytics.read",
+    ("GET", "/admin/analytics/growth"): "analytics.read",
+    ("GET", "/admin/analytics/vendors"): "analytics.read",
+    ("GET", "/admin/analytics/services-events"): "analytics.read",
+    ("GET", "/admin/analytics/performance"): "analytics.read",
+    ("GET", "/admin/analytics/revenue"): ("finance.read", "finance.operate"),
+    # Export re-checks the chosen report's permission and audits every attempt.
+    ("GET", "/admin/analytics/export"): ("analytics.read", "finance.read", "finance.operate"),
     ("GET", "/admin/flash-deals"): "ads.manage",
     ("POST", "/admin/flash-deals"): "ads.manage",
     ("PATCH", "/admin/flash-deals/{deal_id}"): "ads.manage",

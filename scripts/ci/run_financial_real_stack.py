@@ -71,6 +71,14 @@ FORWARD = [
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
     "20261113163000_admin_direct_writes_read_only.sql",
     "20261113163100_admin_governance_audit_consent.sql",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261113235000_analytics_v2_foundation.sql",
+    "20261113235100_analytics_rollups.sql",
+    "20261113235200_analytics_commercial.sql",
+    "20261113235300_analytics_search_sessions.sql",
+    "20261113235400_analytics_lusaka_day.sql",
+    "20261113235500_analytics_search_daily_retention.sql",
+    "20261113235600_analytics_session_links.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -443,7 +451,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 160 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 167 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

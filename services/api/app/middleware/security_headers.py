@@ -21,6 +21,8 @@ CORS_ALLOW_HEADERS = [
     "Accept",
     "X-Request-ID",
     "Idempotency-Key",
+    "X-Analytics-Session",
+    "X-Analytics-Consent",
 ]
 
 

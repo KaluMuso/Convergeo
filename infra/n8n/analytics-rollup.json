@@ -1,0 +1,92 @@
+{
+  "name": "Analytics Daily Rollup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 2,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 02:15 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/analytics/rollup-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_ANALYTICS_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "analytics-rollup-tick",
+      "name": "Roll up analytics (flag-gated)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Analytics"
+        }
+      },
+      "notes": "No-op ({\"skipped\":\"flag_off\"}) unless feature flag analytics_v2_rollups is ON. Recomputes every missing day of the last 7 plus yesterday (idempotent delete+insert per day, 60 s statement timeout per day)."
+    }
+  ],
+  "connections": {
+    "Daily 02:15 UTC": {
+      "main": [
+        [
+          {
+            "node": "Roll up analytics (flag-gated)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "versionId": "intel-1b-01-analytics-rollup",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Convergeo Intelligence 1B-01: daily analytics rollups (docs/plan/intelligence/stage1-plan.md). Runs before the 03:00 retention sweep so a day is rolled up before raw rows age out."
+  },
+  "tags": [
+    {
+      "name": "analytics",
+      "createdAt": "2026-07-18T00:00:00.000Z",
+      "updatedAt": "2026-07-18T00:00:00.000Z"
+    }
+  ]
+}

@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.writer import get_writer
 from app.services.orders.audit import run_sql_script, sql_literal
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,11 @@ _UUID_RE = re.compile(
     re.IGNORECASE,
 )
 _WHITESPACE_RE = re.compile(r"\s+")
+# Search-term redaction (plan §R-E): e-mails and any run holding >= 6 digits (phone,
+# MSISDN, NRC, account numbers) never reach the query log once analytics_v2 is on.
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+_DIGIT_RUN_RE = re.compile(r"\+?\d[\d\s()./-]*\d")
+REDACTED_TERM_MAX_CHARS = 120
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +50,22 @@ class DailyAskCost:
     day: str
     usd_micros: int
     query_count: int
+
+
+def _mask_digit_run(match: re.Match[str]) -> str:
+    run = match.group(0)
+    return "#" if sum(ch.isdigit() for ch in run) >= 6 else run
+
+
+def redact_term(term: str) -> str:
+    """Strip contact/identity data from a free-text query (plan §R-E).
+
+    E-mail addresses become ``@`` and any digit run with 6+ digits becomes ``#``
+    (prices like "under 500" and models like "a54" survive). Capped at 120 chars.
+    """
+    redacted = _EMAIL_RE.sub("@", term)
+    redacted = _DIGIT_RUN_RE.sub(_mask_digit_run, redacted)
+    return redacted[:REDACTED_TERM_MAX_CHARS]
 
 
 def normalize_term(term: str) -> str:
@@ -64,6 +87,17 @@ def _user_id_sql(user_id: str | None) -> str:
     return f"{sql_literal(user_id)}::uuid"
 
 
+def _session_id_sql(session_id: str | None) -> str:
+    """Anonymous v2 session id (OD-8), or NULL. Only kept while analytics_v2 collect is ON.
+
+    Client-supplied and unauthenticated: it groups searches for the distinct-session
+    k-threshold and is never used for authorization. Malformed values are dropped.
+    """
+    if session_id is None or not collect_v2_enabled() or not _UUID_RE.match(session_id):
+        return "null"
+    return f"{sql_literal(session_id.lower())}::uuid"
+
+
 def _clamp_window_days(days: int) -> int:
     if days < 1:
         return 1
@@ -81,11 +115,20 @@ def _insert_query_log(
     zero_result: bool,
     usd_micros: int,
     user_id: str | None,
+    session_id: str | None = None,
 ) -> None:
-    """Best-effort insert; never raises."""
+    """Best-effort insert; never raises.
+
+    analytics_v2 (1A-05): with ``analytics_v2_collect`` ON the INSERT is handed to the
+    bounded off-request writer instead of running inline on the search request.
+    """
+    if collect_v2_enabled():
+        term = redact_term(term)
+        normalized = normalize_term(redact_term(normalized))
     script = f"""
 INSERT INTO public.search_query_log (
-  kind, term, normalized_term, entity_counts, zero_result, usd_micros, user_id
+  kind, term, normalized_term, entity_counts, zero_result, usd_micros, user_id,
+  analytics_session_id
 ) VALUES (
   {sql_literal(kind)},
   {sql_literal(term)},
@@ -93,9 +136,13 @@ INSERT INTO public.search_query_log (
   {_sql_json(entity_counts)},
   {"true" if zero_result else "false"},
   {max(0, int(usd_micros))},
-  {_user_id_sql(user_id)}
+  {_user_id_sql(user_id)},
+  {_session_id_sql(session_id)}
 );
 """
+    if collect_v2_enabled():
+        get_writer().submit_sql(script, kind=f"{kind}_log")
+        return
     result = run_sql_script(script)
     if not result.ok:
         logger.debug("search_query_log insert failed (swallowed): %s", result.error)
@@ -108,8 +155,13 @@ def log_search_query(
     zero_result: bool,
     user_id: str | None = None,
     normalized_term: str | None = None,
+    session_id: str | None = None,
 ) -> None:
-    """Fire-and-forget log of a search query. Swallows all errors."""
+    """Fire-and-forget log of a search query. Swallows all errors.
+
+    ``session_id`` is the anonymous analytics_v2 session id the client sent (OD-8); it
+    is stored only while ``analytics_v2_collect`` is ON.
+    """
     try:
         normalized = normalized_term if normalized_term is not None else normalize_term(term)
         _insert_query_log(
@@ -120,6 +172,7 @@ def log_search_query(
             zero_result=zero_result,
             usd_micros=0,
             user_id=user_id,
+            session_id=session_id,
         )
     except Exception as exc:  # noqa: BLE001 — logging must never break the caller.
         logger.debug("log_search_query swallowed error: %s", exc)
@@ -151,13 +204,15 @@ def log_ask_query(
 
 
 def trim_search_pii(now: datetime | None = None) -> int:
-    """NULL user_id on rows older than the retention window. Returns rows trimmed."""
+    """NULL user_id and the anonymous analytics session id on rows older than the
+    retention window. Returns rows trimmed."""
     cutoff = (now or datetime.now(UTC)) - timedelta(days=PII_RETENTION_DAYS)
     script = f"""
 WITH trimmed AS (
   UPDATE public.search_query_log
-  SET user_id = NULL
-  WHERE user_id IS NOT NULL
+  SET user_id = NULL,
+      analytics_session_id = NULL
+  WHERE (user_id IS NOT NULL OR analytics_session_id IS NOT NULL)
     AND created_at < {sql_literal(cutoff.isoformat())}::timestamptz
   RETURNING 1
 )
@@ -180,7 +235,7 @@ def top_terms(
     """Most frequent normalized terms (search + ask) within the window."""
     safe_limit = max(1, min(int(limit), 200))
     script = f"""
-SELECT normalized_term, min(term) AS sample_term, count(*)::text
+SELECT normalized_term, normalized_term AS sample_term, count(*)::text
 FROM public.search_query_log
 WHERE {_window_predicate(days)}
 GROUP BY normalized_term
@@ -200,7 +255,7 @@ def zero_result_terms(
     """Most frequent zero-result terms within the window (merchandising gap mining)."""
     safe_limit = max(1, min(int(limit), 200))
     script = f"""
-SELECT normalized_term, min(term) AS sample_term, count(*)::text
+SELECT normalized_term, normalized_term AS sample_term, count(*)::text
 FROM public.search_query_log
 WHERE zero_result AND {_window_predicate(days)}
 GROUP BY normalized_term
