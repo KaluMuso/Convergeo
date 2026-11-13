@@ -481,4 +481,6 @@ class TestCourierDispatchOwnsShipping:
             assert courier_dispatch_owns_shipping(order_id) is True
             assert courier_dispatch_owns_shipping() is True
         finally:
-            db.run("UPDATE public.feature_flags SET enabled = false WHERE flag = 'courier_dispatch';")
+            db.run(
+                "UPDATE public.feature_flags SET enabled = false WHERE flag = 'courier_dispatch';"
+            )
