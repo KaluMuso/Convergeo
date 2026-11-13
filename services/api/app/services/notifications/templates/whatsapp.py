@@ -26,6 +26,8 @@ WhatsAppTemplateId = Literal[
     "event_schedule_changed",
     "courier_dispatch_request",
     "dispatch_stale_alert",
+    "order_cancelled",
+    "vendor_order_unconfirmed_alert",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -268,6 +270,28 @@ def _map_dispatch_stale_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _map_order_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Logistics phase 1: customers learn their order was cancelled (e.g. a COD
+    # order the vendor rejected). Body: "Your order {{1}} was cancelled. Details
+    # and any refund: {{2}}". Needs Meta approval before go-live (SMS fallback).
+    return (
+        _require_str(payload, "order_reference"),
+        _require_str(payload, "orders_url"),
+    )
+
+
+def _map_vendor_order_unconfirmed_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    minutes = payload.get("minutes_waiting")
+    if isinstance(minutes, bool) or not isinstance(minutes, int) or minutes < 0:
+        msg = "payload['minutes_waiting'] must be a non-negative integer"
+        raise TemplateRenderError(msg)
+    return (
+        _require_str(payload, "order_reference"),
+        _require_str(payload, "vendor_name"),
+        str(minutes),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -362,6 +386,16 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="dispatch_stale_alert",
         meta_template_name="dispatch_stale_alert",
         map_variables=_map_dispatch_stale_alert,
+    ),
+    "order_cancelled": WhatsAppTemplateDefinition(
+        template_id="order_cancelled",
+        meta_template_name="order_cancelled",
+        map_variables=_map_order_cancelled,
+    ),
+    "vendor_order_unconfirmed_alert": WhatsAppTemplateDefinition(
+        template_id="vendor_order_unconfirmed_alert",
+        meta_template_name="vendor_order_unconfirmed_alert",
+        map_variables=_map_vendor_order_unconfirmed_alert,
     ),
 }
 

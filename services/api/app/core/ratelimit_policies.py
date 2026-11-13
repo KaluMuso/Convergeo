@@ -149,6 +149,12 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /dispatch/requests/{dispatch_id}/handover": SENSITIVE_WRITE,
     "POST /dispatch/requests/{dispatch_id}/notify": ADMIN_WRITE,
     "POST /dispatch/requests/{dispatch_id}/transition": ADMIN_WRITE,
+    # Logistics phase 1: combined delivered + cash (code attempts: per-admin
+    # ceiling in-router + per-dispatch lockout), return ack, cost, remittances.
+    "POST /dispatch/requests/{dispatch_id}/complete": SENSITIVE_WRITE,
+    "POST /dispatch/requests/{dispatch_id}/returned": ADMIN_WRITE,
+    "PATCH /dispatch/requests/{dispatch_id}/cost": ADMIN_WRITE,
+    "POST /logistics/cash/remittances": PAYMENT_WRITE,
     "PATCH /config/platform/{key}": ADMIN_WRITE,
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,
@@ -243,6 +249,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/jobs/expire-tick": INTERNAL_CRON,
     "POST /internal/n8n/abandoned-carts/tick": INTERNAL_CRON,
     "POST /internal/n8n/dispatch-stale/tick": INTERNAL_CRON,
+    "POST /internal/logistics/sla-watch/tick": INTERNAL_CRON,
     "POST /internal/n8n/kyc-stalled/tick": INTERNAL_CRON,
     "POST /internal/n8n/low-stock/tick": INTERNAL_CRON,
     "POST /internal/n8n/payout-failures/tick": INTERNAL_CRON,
@@ -405,6 +412,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /vendor/orders/{order_id}/confirm": STANDARD_WRITE,
     "POST /vendor/orders/{order_id}/pack": STANDARD_WRITE,
     "POST /vendor/orders/{order_id}/ready-for-pickup": STANDARD_WRITE,
+    "POST /vendor/orders/{order_id}/ready-for-collection": STANDARD_WRITE,
     "POST /vendor/orders/{order_id}/reject": STANDARD_WRITE,
     "POST /vendor/orders/{order_id}/ship": STANDARD_WRITE,
     "POST /vendor/payouts/method": PAYMENT_WRITE,

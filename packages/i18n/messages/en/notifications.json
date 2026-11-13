@@ -47,6 +47,12 @@
     },
     "dispatch_stale_alert": {
       "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
+    },
+    "order_cancelled": {
+      "body": "Your Convergeo order {order_reference} was cancelled. Details and any refund: {orders_url} Reply STOP to opt out."
+    },
+    "vendor_order_unconfirmed_alert": {
+      "body": "Convergeo ops: order {order_reference} from {vendor_name} is still unconfirmed after {minutes_waiting} min. Call the shop."
     }
   },
   "sms": {
@@ -91,6 +97,12 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo: \"{event_title}\" details updated. Date: {event_date}. Venue: {venue}. Check the app."
+    },
+    "order_cancelled": {
+      "body": "Convergeo: order {order_reference} was cancelled. Details: {orders_url}"
+    },
+    "vendor_order_unconfirmed_alert": {
+      "body": "Convergeo ops: {order_reference} not confirmed by {vendor_name} after {minutes_waiting} min."
     }
   },
   "email": {

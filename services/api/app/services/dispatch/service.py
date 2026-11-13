@@ -33,8 +33,10 @@ from app.services.dispatch.message import (
 )
 from app.services.dispatch.state import (
     ACTIVE_STATUSES,
+    FAILURE_CODES,
     DispatchRow,
     DispatchStatus,
+    DispatchTransitionError,
     DispatchTransitionOutcome,
     apply_dispatch_transition,
     assert_transition,
@@ -62,7 +64,12 @@ COURIER_DISPATCH_FLAG = "courier_dispatch"
 HANDOVER_CODE_LENGTH = 6
 HANDOVER_MAX_ATTEMPTS = 5
 HANDOVER_LOCKOUT_MINUTES = 15
-DISPATCHABLE_ORDER_STATUSES = frozenset({"confirmed", "processing"})
+DISPATCHABLE_ORDER_STATUSES = frozenset({"confirmed", "processing", "ready"})
+#: A second delivery attempt (or a return) is created on a shipped order whose
+#: last delivery attempt failed after pickup.
+REDISPATCH_ORDER_STATUSES = frozenset({"shipped"})
+MAX_DELIVERY_ATTEMPTS = 2
+DEFAULT_COURIER_CASH_CAP_NGWEE = 150_000  # K1,500
 STALE_REQUESTED_MINUTES_DEFAULT = 45
 COURIER_TEMPLATE = "courier_dispatch_request"
 STALE_ALERT_TEMPLATE = "dispatch_stale_alert"
@@ -134,13 +141,18 @@ SELECT json_build_object(
   ), '[]'::json),
   'vendor_name', v.display_name,
   'vendor_whatsapp', v.whatsapp_msisdn,
+  'checkout_group_id', o.checkout_group_id,
+  'delivery_funding', o.delivery_funding,
+  'pickup_location_id', pick.location_id,
+  'pickup_branch_count', (
+    SELECT count(DISTINCT c.location_id) FROM public.order_item_stock_consumption c
+    WHERE c.order_id = o.id AND c.location_id IS NOT NULL
+  ),
   'pickup', (
     SELECT json_build_object('landmark', vl.landmark, 'lat', vl.lat, 'lng', vl.lng,
-                             'phone', vl.phone_e164)
+                             'phone', vl.phone_e164, 'label', vl.label, 'area', vl.area)
     FROM public.vendor_locations vl
-    WHERE vl.vendor_id = o.vendor_id AND coalesce(vl.status, 'active') = 'active'
-    ORDER BY vl.is_primary DESC, vl.created_at ASC
-    LIMIT 1
+    WHERE vl.id = pick.location_id
   ),
   'dropoff', (
     SELECT json_build_object('landmark', a.landmark, 'lat', a.lat, 'lng', a.lng, 'phone', a.phone)
@@ -152,6 +164,23 @@ SELECT json_build_object(
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
 LEFT JOIN public.profiles pr ON pr.id = o.customer_id
+-- Logistics phase 1: collect from the branch that actually holds the stock
+-- (the one most units were consumed from), else the recorded pickup branch,
+-- else the vendor's primary active location.
+LEFT JOIN LATERAL (
+  SELECT coalesce(
+    o.pickup_location_id,
+    (SELECT c.location_id FROM public.order_item_stock_consumption c
+     WHERE c.order_id = o.id AND c.location_id IS NOT NULL
+     GROUP BY c.location_id
+     ORDER BY sum(c.listing_qty) DESC, c.location_id
+     LIMIT 1),
+    (SELECT vl.id FROM public.vendor_locations vl
+     WHERE vl.vendor_id = o.vendor_id AND coalesce(vl.status, 'active') = 'active'
+     ORDER BY vl.is_primary DESC, vl.created_at ASC
+     LIMIT 1)
+  ) AS location_id
+) pick ON true
 WHERE o.id = {order_sql};
 """,
         context="order dispatch context",
@@ -220,12 +249,100 @@ class CreateDispatchResult:
     courier_name: str
 
 
+@dataclass(frozen=True, slots=True)
+class _AttemptHistory:
+    delivery_attempts: int
+    last_delivery_status: str | None
+    has_return: bool
+    has_active: bool = False
+
+
+def _attempt_history(order_id: str) -> _AttemptHistory:
+    order_sql = sql_uuid(order_id, "order_id")
+    rows = json_rows(
+        f"""
+SELECT json_build_object(
+  'attempts', count(*) FILTER (WHERE d.direction = 'delivery' AND d.picked_up_at IS NOT NULL),
+  'last_status', (
+    SELECT d2.status FROM public.dispatch_requests d2
+    WHERE d2.order_id = {order_sql} AND d2.direction = 'delivery'
+    ORDER BY d2.created_at DESC, d2.id DESC LIMIT 1
+  ),
+  'has_return', bool_or(d.direction = 'return' AND d.status NOT IN ('cancelled', 'failed')),
+  'has_active', bool_or(d.status IN ('requested', 'accepted', 'picked_up'))
+)::text
+FROM public.dispatch_requests d
+WHERE d.order_id = {order_sql};
+""",
+        context="dispatch attempt history",
+    )
+    row = rows[0] if rows else {}
+    return _AttemptHistory(
+        delivery_attempts=int(row.get("attempts") or 0),
+        last_delivery_status=row.get("last_status"),
+        has_return=bool(row.get("has_return")),
+        has_active=bool(row.get("has_active")),
+    )
+
+
+def courier_cash_cap_ngwee() -> int:
+    result = run_sql_script(
+        "SELECT value::text FROM public.platform_config WHERE key = 'courier_cash_cap_ngwee';"
+    )
+    if result.ok and result.rows and result.rows[0].isdigit():
+        return int(result.rows[0])
+    return DEFAULT_COURIER_CASH_CAP_NGWEE
+
+
+def courier_cash_exposure_ngwee(courier_partner_id: str) -> dict[str, int]:
+    """Cash a courier holds (collected, not remitted) + cash on active jobs (ngwee)."""
+    courier_sql = sql_uuid(courier_partner_id, "courier_partner_id")
+    rows = json_rows(
+        f"""
+SELECT json_build_object(
+  'held', coalesce(sum(d.cod_collected_ngwee)
+                   FILTER (WHERE d.cod_collected_ngwee IS NOT NULL AND d.remittance_id IS NULL), 0),
+  'in_flight', coalesce(sum(d.cod_amount_ngwee)
+                   FILTER (WHERE d.status IN ('requested', 'accepted', 'picked_up')), 0)
+)::text
+FROM public.dispatch_requests d
+WHERE d.courier_partner_id = {courier_sql};
+""",
+        context="courier cash exposure",
+    )
+    row = rows[0] if rows else {}
+    return {"held": int(row.get("held") or 0), "in_flight": int(row.get("in_flight") or 0)}
+
+
+def assert_within_cash_cap(courier_partner_id: str, new_cod_ngwee: int) -> None:
+    """Rule 6.3.3: a courier never carries more cash than the cap."""
+    if new_cod_ngwee <= 0:
+        return
+    cap = courier_cash_cap_ngwee()
+    exposure = courier_cash_exposure_ngwee(courier_partner_id)
+    total = exposure["held"] + exposure["in_flight"] + new_cod_ngwee
+    if total > cap:
+        raise AppError(
+            code="courier_cash_cap_exceeded",
+            message="This courier would carry more cash than the cap; record a remittance first",
+            http_status=409,
+            details={
+                "cap_ngwee": cap,
+                "held_ngwee": exposure["held"],
+                "in_flight_ngwee": exposure["in_flight"],
+                "requested_ngwee": new_cod_ngwee,
+                "message_key": "admin.dispatch.errors.cashCap",
+            },
+        )
+
+
 def create_dispatch(
     *,
     order_id: str,
     courier_partner_id: str,
     actor_id: str,
     note: str = "Dispatch requested",
+    direction: Literal["delivery", "return"] = "delivery",
 ) -> CreateDispatchResult:
     order = load_order_dispatch_context(order_id)
     if order.get("fulfilment") != "delivery":
@@ -234,12 +351,57 @@ def create_dispatch(
             message="Courier dispatch applies only to delivery orders",
             http_status=409,
         )
-    if order.get("status") not in DISPATCHABLE_ORDER_STATUSES:
+    if order.get("delivery_funding") == "vendor_self":
+        raise AppError(
+            code="dispatch_vendor_self_delivery",
+            message="The vendor delivers this order itself (free delivery, own rider)",
+            http_status=409,
+        )
+    history = _attempt_history(order_id)
+    if history.has_active:
+        raise AppError(
+            code="dispatch_already_active",
+            message="Order already has an active or delivered dispatch",
+            http_status=409,
+        )
+    status = order.get("status")
+    attempt_no = 1
+    if direction == "return":
+        if status not in REDISPATCH_ORDER_STATUSES or history.last_delivery_status != "failed":
+            raise AppError(
+                code="dispatch_return_not_allowed",
+                message="A return is only for a shipped order whose delivery attempt failed",
+                http_status=409,
+                details={"status": status, "last_delivery_status": history.last_delivery_status},
+            )
+        if history.has_return:
+            raise AppError(
+                code="dispatch_already_active",
+                message="Order already has a return dispatch",
+                http_status=409,
+            )
+    elif status in REDISPATCH_ORDER_STATUSES:
+        if history.last_delivery_status != "failed" or history.has_return:
+            raise AppError(
+                code="dispatch_order_not_ready",
+                message="Only a shipped order whose last attempt failed can be re-sent",
+                http_status=409,
+                details={"status": status, "last_delivery_status": history.last_delivery_status},
+            )
+        if history.delivery_attempts >= MAX_DELIVERY_ATTEMPTS:
+            raise AppError(
+                code="dispatch_attempts_exhausted",
+                message="Two delivery attempts failed; return the parcel to the shop",
+                http_status=409,
+                details={"attempts": history.delivery_attempts, "max": MAX_DELIVERY_ATTEMPTS},
+            )
+        attempt_no = history.delivery_attempts + 1
+    elif status not in DISPATCHABLE_ORDER_STATUSES:
         raise AppError(
             code="dispatch_order_not_ready",
             message="Order is not ready for courier dispatch",
             http_status=409,
-            details={"status": order.get("status"), "allowed": sorted(DISPATCHABLE_ORDER_STATUSES)},
+            details={"status": status, "allowed": sorted(DISPATCHABLE_ORDER_STATUSES)},
         )
     if not bool(order.get("cod")) and not bool(order.get("paid")):
         raise AppError(
@@ -267,32 +429,52 @@ def create_dispatch(
             details={"zone_key": zone_key},
         )
 
-    cod_amount = int(order["cod_amount_ngwee"])
+    # A return carries goods back to the shop: no cash, no customer code.
+    cod_amount = int(order["cod_amount_ngwee"]) if direction == "delivery" else 0
+    assert_within_cash_cap(courier_partner_id, cod_amount)
     code = generate_handover_code()
     order_sql = sql_uuid(order_id, "order_id")
     courier_sql = sql_uuid(courier_partner_id, "courier_partner_id")
     actor_sql = sql_uuid(actor_id, "actor_id")
     price_sql = str(price) if price is not None else "NULL"
+    location = order.get("pickup_location_id")
+    location_sql = (
+        sql_uuid(str(location), "pickup_location_id") if isinstance(location, str) else "NULL"
+    )
+    code_sql = (
+        f"""INSERT INTO public.dispatch_handover_codes (dispatch_request_id, code)
+SELECT id, {sql_literal(code)} FROM ins
+RETURNING json_build_object('id', dispatch_request_id)::text;"""
+        if direction == "delivery"
+        else "SELECT json_build_object('id', id)::text FROM ins;"
+    )
     script = f"""
 BEGIN;
 {audit_context_sql(actor_id=actor_id, note=note)}
+UPDATE public.orders SET pickup_location_id = {location_sql}
+WHERE id = {order_sql} AND pickup_location_id IS NULL AND {location_sql} IS NOT NULL;
 WITH ins AS (
   INSERT INTO public.dispatch_requests (
-    order_id, courier_partner_id, status, cod_amount_ngwee, quoted_price_ngwee, created_by
+    order_id, courier_partner_id, status, cod_amount_ngwee, quoted_price_ngwee, created_by,
+    direction, attempt_no, pickup_location_id
   ) VALUES (
-    {order_sql}, {courier_sql}, 'requested', {cod_amount}, {price_sql}, {actor_sql}
+    {order_sql}, {courier_sql}, 'requested', {cod_amount}, {price_sql}, {actor_sql},
+    {sql_literal(direction)}, {attempt_no}, {location_sql}
   )
   RETURNING id
 )
-INSERT INTO public.dispatch_handover_codes (dispatch_request_id, code)
-SELECT id, {sql_literal(code)} FROM ins
-RETURNING json_build_object('id', dispatch_request_id)::text;
+{code_sql}
 COMMIT;
 """
     result = run_sql_script(script)
     if not result.ok:
-        if "dispatch_requests_one_active_per_order" in (result.error or "") or (
-            "dispatch_requests_one_delivered_per_order" in (result.error or "")
+        if any(
+            index in (result.error or "")
+            for index in (
+                "dispatch_requests_one_active_per_order",
+                "dispatch_requests_one_delivered_per_order",
+                "dispatch_requests_one_return_per_order",
+            )
         ):
             raise AppError(
                 code="dispatch_already_active",
@@ -335,7 +517,7 @@ def _order_status(order_id: str) -> str:
 def _order_event_for(target: DispatchStatus, order_status: str) -> OrderEvent | None:
     """Which order event (if any) a dispatch transition drives from ``order_status``."""
     if target is DispatchStatus.PICKED_UP:
-        if order_status == OrderStatus.PROCESSING.value:
+        if order_status in {OrderStatus.PROCESSING.value, OrderStatus.READY.value}:
             return OrderEvent.SHIP
         if order_status == OrderStatus.SHIPPED.value:
             return None
@@ -359,7 +541,11 @@ def _order_event_for(target: DispatchStatus, order_status: str) -> OrderEvent | 
     return None
 
 
-def _preflight_order(order_id: str, target: DispatchStatus) -> OrderEvent | None:
+def _preflight_order(
+    order_id: str, target: DispatchStatus, *, direction: str = "delivery"
+) -> OrderEvent | None:
+    if direction != "delivery":
+        return None  # a return job never moves the order until the shop acknowledges it
     event = _order_event_for(target, _order_status(order_id))
     if event is not None:
         check_order_transition(order_id=order_id, event=event, actor_role=ActorRole.ADMIN)
@@ -381,6 +567,58 @@ def _apply_order_event(
     return outcome.to_status.value
 
 
+def custody_fields(
+    dispatch: DispatchRow,
+    *,
+    cod_collected_ngwee: int | None,
+    cod_collected_method: str | None,
+) -> dict[str, str | int | None]:
+    """Validate the cash the rider says they collected at delivery (ngwee).
+
+    A cash job must record exactly the snapshot amount: a short or over
+    collection is never booked by an operator (a person resolves it as a
+    shortfall). A prepaid job must not record cash.
+    """
+    expected = dispatch.cod_amount_ngwee
+    if expected <= 0:
+        if cod_collected_ngwee not in (None, 0):
+            raise AppError(
+                code="dispatch_cod_not_expected",
+                message="This delivery is prepaid; no cash should be collected",
+                http_status=422,
+            )
+        return {}
+    if cod_collected_ngwee is None:
+        raise AppError(
+            code="dispatch_cod_required",
+            message="Record the cash the rider collected for this cash-on-delivery order",
+            http_status=422,
+            details={
+                "expected_ngwee": expected,
+                "message_key": "admin.dispatch.errors.codRequired",
+            },
+        )
+    if isinstance(cod_collected_ngwee, bool) or not isinstance(cod_collected_ngwee, int):
+        raise AppError(
+            code="validation_error", message="cod must be integer ngwee", http_status=422
+        )
+    if cod_collected_ngwee != expected:
+        raise AppError(
+            code="dispatch_cod_mismatch",
+            message="Collected cash differs from the amount due; escalate as a shortfall",
+            http_status=422,
+            details={
+                "expected_ngwee": expected,
+                "collected_ngwee": cod_collected_ngwee,
+                "message_key": "admin.dispatch.errors.codMismatch",
+            },
+        )
+    method = (cod_collected_method or "cash").strip()
+    if method not in {"cash", "mobile_money"}:
+        raise AppError(code="validation_error", message="Unknown cash method", http_status=422)
+    return {"cod_collected_ngwee": expected, "cod_collected_method": method}
+
+
 @dataclass(frozen=True, slots=True)
 class AdminTransitionResult:
     transition: DispatchTransitionOutcome
@@ -396,9 +634,20 @@ def transition_dispatch_admin(
     courier_reference: str | None = None,
     failure_reason: str | None = None,
     pod_photo_public_id: str | None = None,
+    failure_code: str | None = None,
+    cod_collected_ngwee: int | None = None,
+    cod_collected_method: str | None = None,
+    refund_authority: bool = False,
 ) -> AdminTransitionResult:
     dispatch = fetch_dispatch(dispatch_id)
     assert_transition(dispatch.status, to_status)
+    if dispatch.direction == "return" and to_status is DispatchStatus.DELIVERED:
+        raise AppError(
+            code="dispatch_return_ack_required",
+            message="A return is closed when the shop acknowledges the goods",
+            http_status=409,
+        )
+    del refund_authority  # reserved: pickup/delivery never cancel the order
 
     fields: dict[str, str | int | None] = {}
     if courier_reference is not None and courier_reference.strip():
@@ -412,6 +661,15 @@ def transition_dispatch_admin(
                 http_status=422,
             )
         fields["failure_reason"] = failure_reason.strip()[:500]
+        code = (failure_code or "other").strip()
+        if code not in FAILURE_CODES:
+            raise AppError(
+                code="validation_error",
+                message="Unknown failure_code",
+                http_status=422,
+                details={"allowed": sorted(FAILURE_CODES)},
+            )
+        fields["failure_code"] = code
     if to_status is DispatchStatus.DELIVERED:
         # Ops-confirmed delivery without the customer's code needs photo proof.
         if not pod_photo_public_id:
@@ -422,9 +680,20 @@ def transition_dispatch_admin(
             )
         fields["pod_photo_public_id"] = validate_pod_public_id(pod_photo_public_id)
         fields["delivered_via"] = "pod_photo"
+        if cod_collected_ngwee is not None:
+            # The combined /complete action always records cash; the legacy
+            # transition records it when given (else the custody board shows
+            # the delivered cash job as unrecorded).
+            fields.update(
+                custody_fields(
+                    dispatch,
+                    cod_collected_ngwee=cod_collected_ngwee,
+                    cod_collected_method=cod_collected_method,
+                )
+            )
 
     order_event = (
-        _preflight_order(dispatch.order_id, to_status)
+        _preflight_order(dispatch.order_id, to_status, direction=dispatch.direction)
         if to_status in {DispatchStatus.PICKED_UP, DispatchStatus.DELIVERED}
         else None
     )
@@ -540,9 +809,24 @@ COMMIT;
     return max(HANDOVER_MAX_ATTEMPTS - failed, 0), 0
 
 
-def _claim_handover(dispatch_id: str, *, actor_id: str) -> bool:
-    """Single-use claim: code verified + dispatch delivered in ONE transaction."""
+def _claim_handover(
+    dispatch_id: str,
+    *,
+    actor_id: str,
+    custody: dict[str, str | int | None] | None = None,
+) -> bool:
+    """Single-use claim: code verified + dispatch delivered (+ cash custody) in ONE txn."""
     dispatch_sql = sql_uuid(dispatch_id, "dispatch_id")
+    custody_sql = ""
+    if custody:
+        amount = custody["cod_collected_ngwee"]
+        if isinstance(amount, bool) or not isinstance(amount, int):
+            raise TypeError("cod_collected_ngwee must be integer ngwee")
+        custody_sql = (
+            f", cod_collected_ngwee = {amount}"
+            f", cod_collected_method = {sql_literal(str(custody['cod_collected_method']))}"
+            ", cod_collected_at = timezone('utc', now())"
+        )
     rows = json_rows(
         f"""
 BEGIN;
@@ -565,7 +849,7 @@ claimed AS (
   RETURNING h.dispatch_request_id
 )
 UPDATE public.dispatch_requests d
-SET status = 'delivered', delivered_via = 'handover_code'
+SET status = 'delivered', delivered_via = 'handover_code'{custody_sql}
 FROM claimed c
 WHERE d.id = c.dispatch_request_id
 RETURNING json_build_object('id', d.id)::text;
@@ -589,6 +873,9 @@ def verify_handover_code(
     code: str,
     actor_id: str,
     rate_limiter: Callable[[str], None] | None = None,
+    cod_collected_ngwee: int | None = None,
+    cod_collected_method: str | None = None,
+    require_custody: bool = False,
 ) -> HandoverResult:
     """Verify the customer's handover code; on match deliver dispatch + order.
 
@@ -638,8 +925,15 @@ def verify_handover_code(
         raise HandoverInvalidError(attempts_remaining=remaining)
 
     order_id = str(state["order_id"])
+    custody: dict[str, str | int | None] | None = None
+    if require_custody:
+        custody = custody_fields(
+            fetch_dispatch(dispatch_id),
+            cod_collected_ngwee=cod_collected_ngwee,
+            cod_collected_method=cod_collected_method,
+        )
     order_event = _preflight_order(order_id, DispatchStatus.DELIVERED)
-    if not _claim_handover(dispatch_id, actor_id=actor_id):
+    if not _claim_handover(dispatch_id, actor_id=actor_id, custody=custody):
         raise AppError(
             code="dispatch_handover_used",
             message="Handover was already verified or the dispatch changed",
@@ -864,17 +1158,62 @@ SELECT json_build_object(
     SELECT d.failure_reason FROM public.dispatch_requests d
     WHERE d.order_id = o.id AND d.status = 'failed'
     ORDER BY d.failed_at DESC NULLS LAST LIMIT 1
+  ),
+  'checkout_group_id', o.checkout_group_id,
+  'address_id', o.address_id,
+  'dropoff_landmark', a.landmark,
+  'ready_at', o.ready_at,
+  'deliver_together', o.deliver_together,
+  'delivery_funding', o.delivery_funding,
+  'pickup_label', pl.label,
+  'pickup_area', coalesce(pl.area, pl.landmark),
+  'pickup_branch_count', (
+    SELECT count(DISTINCT c.location_id) FROM public.order_item_stock_consumption c
+    WHERE c.order_id = o.id AND c.location_id IS NOT NULL
+  ),
+  'delivery_attempts', (
+    SELECT count(*) FROM public.dispatch_requests d
+    WHERE d.order_id = o.id AND d.direction = 'delivery' AND d.picked_up_at IS NOT NULL
   )
 )::text
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
+LEFT JOIN public.addresses a ON a.id = o.address_id
+LEFT JOIN LATERAL (
+  SELECT vl.label, vl.area, vl.landmark
+  FROM public.vendor_locations vl
+  WHERE vl.id = coalesce(
+    o.pickup_location_id,
+    (SELECT c.location_id FROM public.order_item_stock_consumption c
+     WHERE c.order_id = o.id AND c.location_id IS NOT NULL
+     GROUP BY c.location_id ORDER BY sum(c.listing_qty) DESC, c.location_id LIMIT 1),
+    (SELECT vl2.id FROM public.vendor_locations vl2
+     WHERE vl2.vendor_id = o.vendor_id AND coalesce(vl2.status, 'active') = 'active'
+     ORDER BY vl2.is_primary DESC, vl2.created_at ASC LIMIT 1))
+) pl ON true
 WHERE o.fulfilment = 'delivery'
-  AND o.status IN ('confirmed', 'processing')
-  AND NOT EXISTS (
-    SELECT 1 FROM public.dispatch_requests d
-    WHERE d.order_id = o.id AND d.status IN ('requested', 'accepted', 'picked_up', 'delivered')
+  AND o.delivery_funding <> 'vendor_self'
+  AND (
+    (o.status IN ('confirmed', 'processing', 'ready')
+     AND NOT EXISTS (
+       SELECT 1 FROM public.dispatch_requests d
+       WHERE d.order_id = o.id AND d.status IN ('requested', 'accepted', 'picked_up', 'delivered')
+     ))
+    -- Logistics phase 1: a shipped order whose last attempt failed waits for a
+    -- second attempt or a return to the shop.
+    OR (o.status = 'shipped'
+        AND NOT EXISTS (
+          SELECT 1 FROM public.dispatch_requests d
+          WHERE d.order_id = o.id
+            AND d.status IN ('requested', 'accepted', 'picked_up', 'delivered')
+        )
+        AND (SELECT d.status FROM public.dispatch_requests d
+             WHERE d.order_id = o.id AND d.direction = 'delivery'
+             ORDER BY d.created_at DESC, d.id DESC LIMIT 1) = 'failed')
   )
-ORDER BY (o.status = 'processing') DESC, o.created_at ASC
+-- Grouped by checkout + address so one rider can take a multi-shop checkout.
+ORDER BY o.checkout_group_id, o.address_id NULLS LAST,
+         (o.status = 'ready') DESC, o.created_at ASC
 LIMIT {int(limit)};
 """,
         context="dispatch board ready orders",
@@ -961,6 +1300,263 @@ ORDER BY d.requested_at ASC
 LIMIT 100;
 """,
         context="stale dispatch lookup",
+    )
+    for row in rows:
+        row["order_reference"] = order_reference(str(row["order_id"]))
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Logistics phase 1: one combined "handed over + cash recorded" action
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CompleteResult:
+    dispatch_id: str
+    order_id: str
+    order_status: str | None
+    delivered_via: str
+    cod_collected_ngwee: int | None
+
+
+def complete_delivery(
+    *,
+    dispatch_id: str,
+    actor_id: str,
+    handover_code: str | None,
+    pod_photo_public_id: str | None,
+    cod_collected_ngwee: int | None,
+    cod_collected_method: str | None,
+    rate_limiter: Callable[[str], None] | None = None,
+) -> CompleteResult:
+    """Deliver a picked-up job AND record the rider's cash in one step.
+
+    Proof is the customer's handover code (preferred) or a POD photo. For a
+    cash job the collected amount must equal the dispatch snapshot; it is
+    written in the same transaction as the delivery (write-once custody).
+    """
+    if bool(handover_code) == bool(pod_photo_public_id):
+        raise AppError(
+            code="validation_error",
+            message="Give either the customer's handover code or a delivery photo",
+            http_status=422,
+        )
+    dispatch = fetch_dispatch(dispatch_id)
+    if dispatch.direction != "delivery":
+        raise AppError(
+            code="dispatch_return_ack_required",
+            message="A return is closed when the shop acknowledges the goods",
+            http_status=409,
+        )
+    # Validate the cash before any proof is consumed.
+    custody_fields(
+        dispatch,
+        cod_collected_ngwee=cod_collected_ngwee,
+        cod_collected_method=cod_collected_method,
+    )
+    if handover_code:
+        handover = verify_handover_code(
+            dispatch_id=dispatch_id,
+            code=handover_code,
+            actor_id=actor_id,
+            rate_limiter=rate_limiter,
+            cod_collected_ngwee=cod_collected_ngwee,
+            cod_collected_method=cod_collected_method,
+            require_custody=True,
+        )
+        return CompleteResult(
+            dispatch_id=dispatch_id,
+            order_id=handover.order_id,
+            order_status=handover.order_status,
+            delivered_via="handover_code",
+            cod_collected_ngwee=cod_collected_ngwee if dispatch.cod_amount_ngwee > 0 else None,
+        )
+    result = transition_dispatch_admin(
+        dispatch_id=dispatch_id,
+        to_status=DispatchStatus.DELIVERED,
+        actor_id=actor_id,
+        note="Delivered (photo) and cash recorded",
+        pod_photo_public_id=pod_photo_public_id,
+        cod_collected_ngwee=cod_collected_ngwee,
+        cod_collected_method=cod_collected_method,
+    )
+    return CompleteResult(
+        dispatch_id=dispatch_id,
+        order_id=dispatch.order_id,
+        order_status=result.order_status,
+        delivered_via="pod_photo",
+        cod_collected_ngwee=cod_collected_ngwee if dispatch.cod_amount_ngwee > 0 else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Return to vendor: the shop acknowledges the goods -> cancel + restock
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ReturnAckResult:
+    dispatch_id: str
+    order_id: str
+    order_status: str
+
+
+def acknowledge_return(
+    *,
+    dispatch_id: str,
+    actor_id: str,
+    note: str,
+    full_admin: bool,
+) -> ReturnAckResult:
+    """Close a return job and cancel the shipped order with its stock put back.
+
+    The order is cancelled through the order state machine with
+    ``return_restock`` (the stock-release trigger restocks shipped orders only
+    on this path). A prepaid order also needs refund authority, which only a
+    full admin holds: a logistics-only operator gets ``order_refund_path_required``
+    and finance completes it.
+    """
+    dispatch = fetch_dispatch(dispatch_id)
+    if dispatch.direction != "return":
+        raise AppError(
+            code="dispatch_not_return",
+            message="Only a return job can be acknowledged by the shop",
+            http_status=409,
+        )
+    if dispatch.status not in {DispatchStatus.ACCEPTED, DispatchStatus.PICKED_UP}:
+        raise DispatchTransitionError(
+            "Return must be accepted or picked up before the shop acknowledges it",
+            from_status=dispatch.status.value,
+            to_status=DispatchStatus.DELIVERED.value,
+        )
+    text = note.strip() or "Returned goods acknowledged by the shop"
+    snapshot, _ = check_order_transition(
+        order_id=dispatch.order_id,
+        event=OrderEvent.CANCEL,
+        actor_role=ActorRole.ADMIN,
+        refund_path=full_admin,
+    )
+    if snapshot.status is not OrderStatus.SHIPPED:
+        raise AppError(
+            code="dispatch_order_not_ready",
+            message="Only a shipped order can be returned to the shop",
+            http_status=409,
+            details={"order_status": snapshot.status.value},
+        )
+    if dispatch.status is DispatchStatus.ACCEPTED:
+        apply_dispatch_transition(
+            dispatch_id=dispatch_id,
+            from_status=DispatchStatus.ACCEPTED,
+            to_status=DispatchStatus.PICKED_UP,
+            actor_id=actor_id,
+            note="Return collected from the customer",
+        )
+    outcome = transition_order(
+        order_id=dispatch.order_id,
+        event=OrderEvent.CANCEL,
+        actor_role=ActorRole.ADMIN,
+        actor_id=actor_id,
+        note=f"[courier-dispatch] returned to shop ({dispatch_id}): {text}"[:500],
+        refund_path=full_admin,
+        return_restock=True,
+    )
+    apply_dispatch_transition(
+        dispatch_id=dispatch_id,
+        from_status=DispatchStatus.PICKED_UP,
+        to_status=DispatchStatus.DELIVERED,
+        actor_id=actor_id,
+        note=text,
+        set_fields={"delivered_via": "vendor_ack"},
+    )
+    return ReturnAckResult(
+        dispatch_id=dispatch_id,
+        order_id=dispatch.order_id,
+        order_status=outcome.to_status.value,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Actual courier cost (margin reporting)
+# ---------------------------------------------------------------------------
+
+
+def record_actual_cost(*, dispatch_id: str, cost_ngwee: int, actor_id: str) -> DispatchRow:
+    """Record what the courier actually charged for this job (integer ngwee)."""
+    if isinstance(cost_ngwee, bool) or not isinstance(cost_ngwee, int) or cost_ngwee < 0:
+        raise AppError(
+            code="validation_error",
+            message="cost must be non-negative integer ngwee",
+            http_status=422,
+        )
+    if cost_ngwee > 5_000_000:
+        raise AppError(
+            code="validation_error",
+            message="cost is implausibly high (over K50,000)",
+            http_status=422,
+        )
+    dispatch_sql = sql_uuid(dispatch_id, "dispatch_id")
+    actor_sql = sql_uuid(actor_id, "actor_id")
+    rows = json_rows(
+        f"""
+BEGIN;
+UPDATE public.dispatch_requests
+SET actual_cost_ngwee = {cost_ngwee},
+    cost_recorded_at = timezone('utc', now()),
+    cost_recorded_by = {actor_sql}
+WHERE id = {dispatch_sql}
+  AND status IN ('picked_up', 'delivered', 'failed', 'cancelled')
+RETURNING json_build_object('id', id)::text;
+COMMIT;
+""",
+        context="record dispatch cost",
+    )
+    if not rows:
+        raise AppError(
+            code="dispatch_cost_not_allowed",
+            message="Record the cost once the courier has collected (or the job ended)",
+            http_status=409,
+        )
+    return fetch_dispatch(dispatch_id)
+
+
+# ---------------------------------------------------------------------------
+# Stale jobs (accepted not collected, picked up not delivered)
+# ---------------------------------------------------------------------------
+
+
+def _config_minutes(key: str, default: int) -> int:
+    result = run_sql_script(f"SELECT value::text FROM public.platform_config WHERE key = '{key}';")
+    if result.ok and result.rows and result.rows[0].isdigit() and int(result.rows[0]) > 0:
+        return int(result.rows[0])
+    return default
+
+
+def list_stale_active() -> list[dict[str, Any]]:
+    """Accepted > N min (not collected) and picked up > M min (not delivered)."""
+    accepted = _config_minutes("dispatch_stale_accepted_minutes", 45)
+    picked = _config_minutes("dispatch_stale_picked_up_minutes", 120)
+    rows = json_rows(
+        f"""
+SELECT json_build_object(
+  'dispatch_id', d.id,
+  'order_id', d.order_id,
+  'status', d.status,
+  'courier_name', c.name,
+  'since', CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END,
+  'minutes_waiting', floor(extract(epoch FROM (timezone('utc', now()) -
+      CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END)) / 60)::int
+)::text
+FROM public.dispatch_requests d
+JOIN public.courier_partners c ON c.id = d.courier_partner_id
+WHERE (d.status = 'accepted'
+       AND d.accepted_at <= timezone('utc', now()) - interval '{int(accepted)} minutes')
+   OR (d.status = 'picked_up'
+       AND d.picked_up_at <= timezone('utc', now()) - interval '{int(picked)} minutes')
+ORDER BY CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END ASC
+LIMIT 100;
+""",
+        context="stale active dispatch lookup",
     )
     for row in rows:
         row["order_reference"] = order_reference(str(row["order_id"]))

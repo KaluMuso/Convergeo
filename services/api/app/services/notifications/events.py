@@ -40,7 +40,7 @@ EVENT_REGISTRY: dict[str, NotificationMapping | None] = {
     "order_shipped": NotificationMapping("order_shipped", Audience.CUSTOMER),
     "order_delivered": NotificationMapping("order_delivered", Audience.CUSTOMER),
     "order_completed": None,  # terminal-success is silent (already delivered)
-    "order_cancelled": None,  # cancellation template not built yet
+    "order_cancelled": NotificationMapping("order_cancelled", Audience.CUSTOMER),
     # --- Payments -------------------------------------------------------
     "payment_received": NotificationMapping("payment_received", Audience.CUSTOMER),
     "payment_failed": None,  # payment-failed template not built yet

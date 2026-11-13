@@ -71,6 +71,9 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     # Courier dispatch v1 — operational, never deferred by quiet hours.
     "courier_dispatch_request": TemplateClass.TRANSACTIONAL,
     "dispatch_stale_alert": TemplateClass.TRANSACTIONAL,
+    # Logistics phase 1
+    "order_cancelled": TemplateClass.TRANSACTIONAL,
+    "vendor_order_unconfirmed_alert": TemplateClass.TRANSACTIONAL,
     # Engagement / nudge — quiet hours apply
     "review_request": TemplateClass.MARKETING,
     "abandoned_cart_recovery": TemplateClass.MARKETING,

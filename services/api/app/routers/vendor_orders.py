@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/vendor/orders", tags=["vendor-orders"])
 
-VendorActionName = Literal["confirm", "reject", "pack", "ship", "ready_for_pickup"]
+VendorActionName = Literal[
+    "confirm", "reject", "pack", "ship", "ready_for_pickup", "ready_for_collection"
+]
 
 ACTION_EVENT_MAP: dict[VendorActionName, OrderEvent] = {
     "confirm": OrderEvent.CONFIRM,
@@ -36,6 +38,7 @@ ACTION_EVENT_MAP: dict[VendorActionName, OrderEvent] = {
     "pack": OrderEvent.START_PROCESSING,
     "ship": OrderEvent.SHIP,
     "ready_for_pickup": OrderEvent.READY_FOR_PICKUP,
+    "ready_for_collection": OrderEvent.READY_FOR_COLLECTION,
 }
 
 STATUS_NOTIFICATION_TEMPLATE = "order_status_changed"
@@ -188,6 +191,14 @@ def _is_paid_order(service_client: _ServiceRoleClient, order_row: dict[str, Any]
     return _order_has_successful_payment(service_client, checkout_group_id)
 
 
+def order_is_vendor_self_delivery(order_id: str) -> bool:
+    result = run_sql_script(
+        "SELECT (delivery_funding = 'vendor_self')::text FROM public.orders "
+        f"WHERE id = {sql_literal(order_id)}::uuid;"
+    )
+    return bool(result.ok and result.rows and result.rows[0] in {"t", "true"})
+
+
 def courier_dispatch_owns_shipping(order_id: str | None = None) -> bool:
     """True when Vergeo5 courier dispatch, not the vendor, ships delivery orders.
 
@@ -199,6 +210,10 @@ def courier_dispatch_owns_shipping(order_id: str | None = None) -> bool:
     """
     from app.services.dispatch.service import is_courier_dispatch_enabled
 
+    if order_id is not None and order_is_vendor_self_delivery(order_id):
+        # The vendor promised free delivery with its own rider (or Yango):
+        # the vendor ships it, never the platform courier.
+        return False
     if is_courier_dispatch_enabled():
         return True
     if order_id is None:
@@ -540,6 +555,26 @@ def ship_vendor_order(
         order_row=order_row,
         event=OrderEvent.SHIP,
         note=body.tracking_note.strip(),
+    )
+
+
+@router.post("/{order_id}/ready-for-collection", response_model=OrderActionResponse)
+def ready_for_collection_vendor_order(
+    order_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
+) -> OrderActionResponse:
+    """Delivery order: parcel sealed and waiting at the branch for the rider."""
+    vendor = _load_vendor_for_owner(service_client, current_user.id)
+    order_row = _load_order_row(service_client, order_id)
+    _assert_vendor_owns_order(vendor_id=str(vendor["id"]), order_row=order_row)
+    return _execute_vendor_action(
+        service_client=service_client,
+        vendor_id=str(vendor["id"]),
+        actor_user_id=current_user.id,
+        order_row=order_row,
+        event=OrderEvent.READY_FOR_COLLECTION,
+        note="Order ready for courier collection",
     )
 
 

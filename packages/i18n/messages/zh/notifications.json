@@ -33,6 +33,9 @@
     },
     "otp_login": {
       "body": "您的 Convergeo 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
+    },
+    "order_cancelled": {
+      "body": "您的 Convergeo 订单 {order_reference} 已取消。详情及退款：{orders_url} 回复 STOP 退订。"
     }
   },
   "sms": {
@@ -71,6 +74,9 @@
     },
     "payout_failure_alert": {
       "body": "Convergeo 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+    },
+    "order_cancelled": {
+      "body": "Convergeo：订单 {order_reference} 已取消。详情：{orders_url}"
     }
   },
   "email": {

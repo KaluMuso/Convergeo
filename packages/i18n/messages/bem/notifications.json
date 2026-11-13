@@ -41,6 +41,9 @@
     },
     "event_schedule_changed": {
       "body": "Amashiwi ya event ya Convergeo \"{event_title}\" yaluka. Usiku: {event_date}. Venue: {venue}. Loleni tickets shenu mu app. Lemeni STOP ukuleka."
+    },
+    "order_cancelled": {
+      "body": "Order yenu {order_reference} pa Convergeo yafumishiwapo. Ifyalembwa no kubwesesha indalama: {orders_url} Lemeni STOP ukuleka."
     }
   },
   "sms": {
@@ -85,6 +88,9 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo: \"{event_title}\" details yasinthidwa. Usiku: {event_date}. Venue: {venue}. Loleni mu app."
+    },
+    "order_cancelled": {
+      "body": "Convergeo: order {order_reference} yafumishiwapo. Ifyalembwa: {orders_url}"
     }
   },
   "email": {

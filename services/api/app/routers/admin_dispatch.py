@@ -98,6 +98,19 @@ class CreateDispatchIn(StrictModel):
     order_id: str = Field(pattern=_UUID_PATTERN)
     courier_partner_id: str = Field(pattern=_UUID_PATTERN)
     note: str | None = Field(default=None, max_length=500)
+    #: "return" carries a failed delivery back to the shop (logistics phase 1).
+    direction: Literal["delivery", "return"] = "delivery"
+
+
+FailureCode = Literal[
+    "customer_unavailable",
+    "customer_refused",
+    "wrong_address",
+    "vendor_not_ready",
+    "courier_no_show",
+    "damaged",
+    "other",
+]
 
 
 class TransitionIn(StrictModel):
@@ -105,7 +118,29 @@ class TransitionIn(StrictModel):
     note: str | None = Field(default=None, max_length=500)
     courier_reference: str | None = Field(default=None, max_length=120)
     failure_reason: str | None = Field(default=None, max_length=500)
+    failure_code: FailureCode | None = None
     pod_photo_public_id: str | None = Field(default=None, max_length=255)
+    cod_collected_ngwee: int | None = Field(default=None, ge=0, le=100_000_000)
+    cod_collected_method: Literal["cash", "mobile_money"] | None = None
+
+
+class CompleteIn(StrictModel):
+    """One step: proof of delivery (code or photo) + the rider's cash."""
+
+    handover_code: str | None = Field(
+        default=None, min_length=6, max_length=6, pattern=r"^[0-9]{6}$"
+    )
+    pod_photo_public_id: str | None = Field(default=None, max_length=255)
+    cod_collected_ngwee: int | None = Field(default=None, ge=0, le=100_000_000)
+    cod_collected_method: Literal["cash", "mobile_money"] | None = None
+
+
+class ReturnAckIn(StrictModel):
+    note: str | None = Field(default=None, max_length=500)
+
+
+class CostIn(StrictModel):
+    actual_cost_ngwee: int = Field(ge=0, le=5_000_000)
 
 
 class NotifyIn(StrictModel):
@@ -142,6 +177,13 @@ class DispatchOut(StrictModel):
     order_status: str = ""
     delivery_zone: str | None = None
     handover_locked: bool = False
+    direction: str = "delivery"
+    attempt_no: int = 1
+    failure_code: str | None = None
+    actual_cost_ngwee: int | None = None
+    cod_collected_ngwee: int | None = None
+    cod_collected_method: str | None = None
+    remitted: bool = False
 
 
 class ReadyOrderOut(StrictModel):
@@ -157,6 +199,15 @@ class ReadyOrderOut(StrictModel):
     item_count: int
     created_at: str
     last_failed_reason: str | None
+    checkout_group_id: str | None = None
+    group_key: str | None = None
+    dropoff_landmark: str | None = None
+    ready_at: str | None = None
+    deliver_together: bool = True
+    pickup_label: str | None = None
+    pickup_area: str | None = None
+    multi_branch: bool = False
+    delivery_attempts: int = 0
 
 
 class DeliveryZoneOut(StrictModel):
@@ -265,7 +316,22 @@ def _dispatch_out(
         order_status=order_status,
         delivery_zone=delivery_zone,
         handover_locked=handover_locked,
+        direction=dispatch.direction,
+        attempt_no=dispatch.attempt_no,
+        failure_code=dispatch.failure_code,
+        actual_cost_ngwee=dispatch.actual_cost_ngwee,
+        cod_collected_ngwee=dispatch.cod_collected_ngwee,
+        cod_collected_method=dispatch.cod_collected_method,
+        remitted=dispatch.remittance_id is not None,
     )
+
+
+def _opt(value: Any) -> str | None:
+    return str(value) if value is not None else None
+
+
+def _is_full_admin(user: CurrentUser) -> bool:
+    return bool(user.roles.intersection({"admin", "superadmin"}))
 
 
 def _courier_input(body: CourierIn) -> courier_service.CourierInput:
@@ -330,6 +396,19 @@ def get_board(
                 item_count=int(row.get("item_count") or 0),
                 created_at=str(row["created_at"]),
                 last_failed_reason=row.get("last_failed_reason"),
+                checkout_group_id=_opt(row.get("checkout_group_id")),
+                group_key=(
+                    f"{row.get('checkout_group_id')}:{row.get('address_id')}"
+                    if row.get("checkout_group_id")
+                    else None
+                ),
+                dropoff_landmark=_opt(row.get("dropoff_landmark")),
+                ready_at=_opt(row.get("ready_at")),
+                deliver_together=row.get("deliver_together") is not False,
+                pickup_label=_opt(row.get("pickup_label")),
+                pickup_area=_opt(row.get("pickup_area")),
+                multi_branch=int(row.get("pickup_branch_count") or 0) > 1,
+                delivery_attempts=int(row.get("delivery_attempts") or 0),
             )
             for row in snapshot["ready_orders"]
         ],
@@ -416,6 +495,7 @@ def create_dispatch(
         courier_partner_id=body.courier_partner_id.lower(),
         actor_id=admin.id,
         note=(body.note or "").strip() or "Dispatch requested",
+        direction=body.direction,
     )
     recorder.record(
         action="admin.dispatch.request.create",
@@ -427,6 +507,8 @@ def create_dispatch(
             "courier_partner_id": result.dispatch.courier_partner_id,
             "status": result.dispatch.status.value,
             "cod_amount_ngwee": result.dispatch.cod_amount_ngwee,
+            "direction": result.dispatch.direction,
+            "attempt_no": result.dispatch.attempt_no,
         },
     )
     return _dispatch_out(result.dispatch, courier_name=result.courier_name)
@@ -548,6 +630,9 @@ def transition_dispatch(
         courier_reference=body.courier_reference,
         failure_reason=body.failure_reason,
         pod_photo_public_id=body.pod_photo_public_id,
+        failure_code=body.failure_code,
+        cod_collected_ngwee=body.cod_collected_ngwee,
+        cod_collected_method=body.cod_collected_method,
     )
     recorder.record(
         action="admin.dispatch.request.transition",
@@ -558,6 +643,8 @@ def transition_dispatch(
             "status": result.transition.to_status.value,
             "order_status": result.order_status,
             "courier_reference": body.courier_reference,
+            "failure_code": body.failure_code,
+            "cod_collected_ngwee": body.cod_collected_ngwee,
         },
     )
     if result.transition.to_status is DispatchStatus.PICKED_UP:
@@ -595,6 +682,94 @@ def verify_handover(
         dispatch=_dispatch_detail_out(str(dispatch_id)),
         order_status=result.order_status,
     )
+
+
+@dispatch_router.post("/requests/{dispatch_id}/complete", response_model=TransitionOut)
+def complete_dispatch(
+    dispatch_id: UUID,
+    body: CompleteIn,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> TransitionOut:
+    """One action: confirm the handover code (or photo) AND record the rider's cash."""
+    dispatch_service.require_courier_dispatch_enabled()
+    result = dispatch_service.complete_delivery(
+        dispatch_id=str(dispatch_id),
+        actor_id=admin.id,
+        handover_code=body.handover_code,
+        pod_photo_public_id=body.pod_photo_public_id,
+        cod_collected_ngwee=body.cod_collected_ngwee,
+        cod_collected_method=body.cod_collected_method,
+        rate_limiter=enforce_handover_rate_limit,
+    )
+    # The code itself is never written to the audit log.
+    recorder.record(
+        action="admin.dispatch.request.complete",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before={"status": DispatchStatus.PICKED_UP.value},
+        after={
+            "status": DispatchStatus.DELIVERED.value,
+            "order_status": result.order_status,
+            "delivered_via": result.delivered_via,
+            "cod_collected_ngwee": result.cod_collected_ngwee,
+            "cod_collected_method": body.cod_collected_method,
+        },
+    )
+    return TransitionOut(
+        dispatch=_dispatch_detail_out(str(dispatch_id)),
+        order_status=result.order_status,
+    )
+
+
+@dispatch_router.post("/requests/{dispatch_id}/returned", response_model=TransitionOut)
+def acknowledge_return(
+    dispatch_id: UUID,
+    body: ReturnAckIn,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> TransitionOut:
+    """The shop has the returned goods back: close the return, cancel, restock."""
+    dispatch_service.require_courier_dispatch_enabled()
+    result = dispatch_service.acknowledge_return(
+        dispatch_id=str(dispatch_id),
+        actor_id=admin.id,
+        note=body.note or "",
+        full_admin=_is_full_admin(admin),
+    )
+    recorder.record(
+        action="admin.dispatch.request.returned",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before={"order_status": "shipped"},
+        after={"status": DispatchStatus.DELIVERED.value, "order_status": result.order_status},
+    )
+    return TransitionOut(
+        dispatch=_dispatch_detail_out(str(dispatch_id)),
+        order_status=result.order_status,
+    )
+
+
+@dispatch_router.patch("/requests/{dispatch_id}/cost", response_model=DispatchOut)
+def record_cost(
+    dispatch_id: UUID,
+    body: CostIn,
+    admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> DispatchOut:
+    """What the courier actually charged for this job (feeds the margin report)."""
+    before = fetch_dispatch(str(dispatch_id))
+    updated = dispatch_service.record_actual_cost(
+        dispatch_id=str(dispatch_id), cost_ngwee=body.actual_cost_ngwee, actor_id=admin.id
+    )
+    recorder.record(
+        action="admin.dispatch.request.cost",
+        entity_type="dispatch_request",
+        entity_id=str(dispatch_id),
+        before={"actual_cost_ngwee": before.actual_cost_ngwee},
+        after={"actual_cost_ngwee": updated.actual_cost_ngwee},
+    )
+    return _dispatch_detail_out(str(dispatch_id))
 
 
 admin_router.include_router(dispatch_router)

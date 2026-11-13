@@ -148,6 +148,8 @@ ADMIN_PERMISSIONS = frozenset(
         "ads.manage",
         "analytics.read",
         "inventory.read",
+        "logistics.manage",
+        "cod.reconcile",
     }
 )
 
@@ -222,6 +224,27 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("POST", "/admin/flash-deals"): "ads.manage",
     ("PATCH", "/admin/flash-deals/{deal_id}"): "ads.manage",
     ("POST", "/admin/qa/{kind}/{item_id}/moderate"): "products.manage",
+    # Logistics phase 1: limited logistics login (dispatch board, couriers,
+    # jobs, codes, cost) without escrow / refunds / payouts / KYC power.
+    ("GET", "/admin/dispatch/board"): "logistics.manage",
+    ("GET", "/admin/dispatch/couriers"): "logistics.manage",
+    ("POST", "/admin/dispatch/couriers"): "logistics.manage",
+    ("PATCH", "/admin/dispatch/couriers/{courier_id}"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests"): "logistics.manage",
+    ("GET", "/admin/dispatch/requests/{dispatch_id}"): "logistics.manage",
+    ("GET", "/admin/dispatch/requests/{dispatch_id}/message"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/notify"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/transition"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/handover"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/complete"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/returned"): "logistics.manage",
+    ("PATCH", "/admin/dispatch/requests/{dispatch_id}/cost"): "logistics.manage",
+    ("GET", "/admin/logistics/margin-report"): "logistics.manage",
+    ("GET", "/admin/logistics/intercity-rates"): "logistics.manage",
+    ("GET", "/admin/logistics/cash/custody"): "logistics.manage",
+    # Matching rider cash to the ledger is a finance power.
+    ("POST", "/admin/logistics/cash/remittances"): "cod.reconcile",
+    ("GET", "/admin/logistics/cash/cash-up"): "cod.reconcile",
 }
 
 

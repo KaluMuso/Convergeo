@@ -168,6 +168,16 @@ class DispatchRow:
     delivered_at: str | None
     failed_at: str | None
     cancelled_at: str | None
+    # Logistics phase 1 (migration 20261113150000).
+    direction: str = "delivery"
+    attempt_no: int = 1
+    failure_code: str | None = None
+    pickup_location_id: str | None = None
+    actual_cost_ngwee: int | None = None
+    cod_collected_ngwee: int | None = None
+    cod_collected_method: str | None = None
+    cod_collected_at: str | None = None
+    remittance_id: str | None = None
 
 
 _DISPATCH_JSON = """json_build_object(
@@ -188,7 +198,16 @@ _DISPATCH_JSON = """json_build_object(
   'picked_up_at', d.picked_up_at,
   'delivered_at', d.delivered_at,
   'failed_at', d.failed_at,
-  'cancelled_at', d.cancelled_at
+  'cancelled_at', d.cancelled_at,
+  'direction', d.direction,
+  'attempt_no', d.attempt_no,
+  'failure_code', d.failure_code,
+  'pickup_location_id', d.pickup_location_id,
+  'actual_cost_ngwee', d.actual_cost_ngwee,
+  'cod_collected_ngwee', d.cod_collected_ngwee,
+  'cod_collected_method', d.cod_collected_method,
+  'cod_collected_at', d.cod_collected_at,
+  'remittance_id', d.remittance_id
 )"""
 
 
@@ -225,6 +244,15 @@ def dispatch_row_from_json(row: dict[str, Any]) -> DispatchRow:
         delivered_at=_opt_str(row.get("delivered_at")),
         failed_at=_opt_str(row.get("failed_at")),
         cancelled_at=_opt_str(row.get("cancelled_at")),
+        direction=str(row.get("direction") or "delivery"),
+        attempt_no=int(row.get("attempt_no") or 1),
+        failure_code=_opt_str(row.get("failure_code")),
+        pickup_location_id=_opt_str(row.get("pickup_location_id")),
+        actual_cost_ngwee=_opt_int(row.get("actual_cost_ngwee")),
+        cod_collected_ngwee=_opt_int(row.get("cod_collected_ngwee")),
+        cod_collected_method=_opt_str(row.get("cod_collected_method")),
+        cod_collected_at=_opt_str(row.get("cod_collected_at")),
+        remittance_id=_opt_str(row.get("remittance_id")),
     )
 
 
@@ -303,6 +331,9 @@ def apply_dispatch_transition(
     for column, value in (set_fields or {}).items():
         if column not in _SETTABLE_COLUMNS:
             raise ValueError(f"column {column!r} is not settable on transition")
+        if column == "cod_collected_ngwee":
+            # Cash custody is write-once (DB guard) and stamped in the same UPDATE.
+            assignments.append("cod_collected_at = timezone('utc', now())")
         if value is None:
             assignments.append(f"{column} = NULL")
         elif isinstance(value, int) and not isinstance(value, bool):
@@ -340,5 +371,25 @@ COMMIT;
 
 
 _SETTABLE_COLUMNS = frozenset(
-    {"courier_reference", "failure_reason", "pod_photo_public_id", "delivered_via"}
+    {
+        "courier_reference",
+        "failure_reason",
+        "pod_photo_public_id",
+        "delivered_via",
+        "failure_code",
+        "cod_collected_ngwee",
+        "cod_collected_method",
+    }
+)
+
+FAILURE_CODES = frozenset(
+    {
+        "customer_unavailable",
+        "customer_refused",
+        "wrong_address",
+        "vendor_not_ready",
+        "courier_no_show",
+        "damaged",
+        "other",
+    }
 )

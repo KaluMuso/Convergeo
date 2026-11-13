@@ -33,6 +33,9 @@
     },
     "otp_login": {
       "body": "Votre code de connexion Convergeo est {otp_code}. Il expire dans 10 minutes. Ne partagez pas ce code."
+    },
+    "order_cancelled": {
+      "body": "Votre commande Convergeo {order_reference} a été annulée. Détails et remboursement éventuel : {orders_url} Répondez STOP pour vous désabonner."
     }
   },
   "sms": {
@@ -71,6 +74,9 @@
     },
     "payout_failure_alert": {
       "body": "Échec du versement Convergeo : {vendor_name} {amount} réf {lenco_reference}. Vérifiez dans l'admin."
+    },
+    "order_cancelled": {
+      "body": "Convergeo : commande {order_reference} annulée. Détails : {orders_url}"
     }
   },
   "email": {

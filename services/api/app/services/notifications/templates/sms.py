@@ -114,7 +114,21 @@ def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
     ref = _text(p, "order_reference", "a dispatch")
     courier = _text(p, "courier_name", "the courier")
     minutes = _text(p, "minutes_waiting", "45")
-    return f"Vergeo5 ops: {ref} with {courier} not accepted after {minutes} min."
+    status = _text(p, "status", "requested")
+    stage = {"accepted": "not collected", "picked_up": "not delivered"}.get(status, "not accepted")
+    return f"Vergeo5 ops: {ref} with {courier} {stage} after {minutes} min."
+
+
+def _order_cancelled(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "your order")
+    return f"Vergeo5: order {ref} was cancelled. Open the app for details and any refund."
+
+
+def _vendor_order_unconfirmed_alert(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "an order")
+    vendor = _text(p, "vendor_name", "the vendor")
+    minutes = _text(p, "minutes_waiting", "120")
+    return f"Vergeo5 ops: {ref} not confirmed by {vendor} after {minutes} min. Call the shop."
 
 
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
@@ -130,6 +144,8 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "event_schedule_changed": _event_schedule_changed,
     "courier_dispatch_request": _courier_dispatch_request,
     "dispatch_stale_alert": _dispatch_stale_alert,
+    "order_cancelled": _order_cancelled,
+    "vendor_order_unconfirmed_alert": _vendor_order_unconfirmed_alert,
 }
 
 
