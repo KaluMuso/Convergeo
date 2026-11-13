@@ -159,8 +159,7 @@ def _repair_phone_confirmation(client: Any, persona: Any) -> None:
         client.auth.admin.update_user_by_id(persona.user_id, {"phone_confirm": True})
     except Exception as exc:  # noqa: BLE001 — reclassified as AuthPersonaError
         raise AuthPersonaError(
-            f"cannot repair phone confirmation for {persona.key} "
-            f"({persona.user_id}): {exc}"
+            f"cannot repair phone confirmation for {persona.key} ({persona.user_id}): {exc}"
         ) from exc
 
 
@@ -235,8 +234,7 @@ def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
         user = _fetch_existing(client, persona.user_id)
         if user is None:
             raise AuthPersonaError(
-                f"canonical persona {persona.key} ({persona.user_id}) does not exist "
-                "after seeding"
+                f"canonical persona {persona.key} ({persona.user_id}) does not exist after seeding"
             )
         if getattr(user, "id", None) != persona.user_id:
             raise AuthPersonaError(

@@ -148,8 +148,8 @@ INSERT INTO public.vendor_listings (
 ) VALUES (
   '{listing.listing_id}', '{vendor_id}',
   '{product.product_id}', {listing.price_ngwee}, 'new',
-  'tracked', {listing.stock_qty}, {'true' if listing.wholesale else 'false'},
-  {listing.moq}, {'true' if listing.returnable else 'false'},
+  'tracked', {listing.stock_qty}, {"true" if listing.wholesale else "false"},
+  {listing.moq}, {"true" if listing.returnable else "false"},
   '{listing.listing_status}', '{listing.sku}'
 ) ON CONFLICT (id) DO UPDATE SET
   price_ngwee = EXCLUDED.price_ngwee,
@@ -184,7 +184,7 @@ INSERT INTO public.vendor_locations (
   '{location.location_id}', '{vendor_id}', {location.lat}, {location.lng},
   '{location.landmark}', '{location.label}', '{location.area}',
   '{location.city}', '{location.province}', '{location.phone_e164}',
-  {'true' if location.is_primary else 'false'}, 'active'
+  {"true" if location.is_primary else "false"}, 'active'
 ) ON CONFLICT (id) DO UPDATE SET
   lat = EXCLUDED.lat,
   lng = EXCLUDED.lng,
@@ -297,15 +297,11 @@ ON CONFLICT (instance_id, ticket_type_id) DO UPDATE SET
 def build_cleanup_sql() -> str:
     """Delete only deterministic synthetic contract rows (prefix + known UUIDs)."""
     listing_ids = ", ".join(
-        f"'{listing.listing_id}'"
-        for product in CATALOG_FIXTURES
-        for listing in product.listings
+        f"'{listing.listing_id}'" for product in CATALOG_FIXTURES for listing in product.listings
     )
     product_ids = ", ".join(f"'{product.product_id}'" for product in CATALOG_FIXTURES)
     vendor_ids = ", ".join(
-        f"'{persona.vendor_id}'"
-        for persona in PERSONAS
-        if persona.vendor_id is not None
+        f"'{persona.vendor_id}'" for persona in PERSONAS if persona.vendor_id is not None
     )
     user_ids = ", ".join(f"'{persona.user_id}'" for persona in PERSONAS)
     location_ids = ", ".join(f"'{loc.location_id}'" for loc in VENDOR_LOCATIONS)
@@ -316,9 +312,7 @@ def build_cleanup_sql() -> str:
     ticket_type_ids = ", ".join(
         f"'{t.ticket_type_id}'" for event in EVENTS for t in event.ticket_types
     )
-    ticket_ids = ", ".join(
-        f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets
-    )
+    ticket_ids = ", ".join(f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets)
 
     # A row whose FK points at an exact canonical synthetic listing/vendor/
     # persona is dependent fixture state EXCEPT when it descends from a real
@@ -639,9 +633,7 @@ def parse_verification(results: dict[str, list[str]]) -> None:
     expected_types = sum(len(e.ticket_types) for e in EVENTS)
     if int(results["event_ticket_types"][0]) < expected_types:
         raise RuntimeError("synthetic ticket type verification failed")
-    expected_tickets = sum(
-        1 for e in EVENTS for t in e.tickets if t.status == "issued"
-    )
+    expected_tickets = sum(1 for e in EVENTS for t in e.tickets if t.status == "issued")
     if int(results["issued_tickets"][0]) < expected_tickets:
         raise RuntimeError(
             "synthetic issued-ticket verification failed — the scanner journey "

@@ -35,8 +35,58 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
         {
             "GET /admin/disputes",
             "GET /admin/disputes/{dispute_id}",
+            "GET /admin/disputes/{dispute_id}/notes",
             "GET /admin/orders/search",
             "GET /admin/orders/{order_id}",
+        }
+    ),
+    # D2 (founder, 2026-11-13): money operations without full `admin`. Reads included.
+    "finance.operate": frozenset(
+        {
+            "GET /admin/disputes",
+            "GET /admin/disputes/{dispute_id}",
+            "GET /admin/disputes/{dispute_id}/notes",
+            "GET /admin/orders/search",
+            "GET /admin/orders/{order_id}",
+            "POST /admin/disputes/{dispute_id}/decide",
+            "POST /admin/disputes/{dispute_id}/notes",
+            "POST /admin/orders/{order_id}/cod/confirm-collection",
+            "POST /admin/orders/{order_id}/cod/refuse-collection",
+            "POST /admin/orders/{order_id}/escrow",
+            "POST /admin/orders/{order_id}/intervene",
+            "POST /admin/refunds/execute",
+        }
+    ),
+    "support.manage": frozenset(
+        {
+            "GET /admin/disputes",
+            "GET /admin/disputes/{dispute_id}",
+            "GET /admin/disputes/{dispute_id}/notes",
+            "GET /admin/support/log",
+            "GET /admin/support/lookup",
+            "POST /admin/disputes/{dispute_id}/notes",
+            "POST /admin/support/send",
+        }
+    ),
+    "logistics.manage": frozenset(
+        {
+            "GET /admin/dispatch/board",
+            "GET /admin/dispatch/couriers",
+            "GET /admin/dispatch/requests/{dispatch_id}",
+            "GET /admin/dispatch/requests/{dispatch_id}/message",
+            "GET /admin/orders/{order_id}",
+            "PATCH /admin/dispatch/couriers/{courier_id}",
+            "POST /admin/dispatch/couriers",
+            "POST /admin/dispatch/requests",
+            "POST /admin/dispatch/requests/{dispatch_id}/handover",
+            "POST /admin/dispatch/requests/{dispatch_id}/notify",
+            "POST /admin/dispatch/requests/{dispatch_id}/transition",
+            "POST /admin/orders/{order_id}/dispatch",
+        }
+    ),
+    "audit.read": frozenset(
+        {
+            "GET /admin/audit-log",
         }
     ),
     "products.manage": frozenset(
@@ -96,10 +146,23 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/services",
         }
     ),
+    "services.manage": frozenset(
+        {
+            "GET /admin/rfq/jobs",
+            "GET /admin/service-providers",
+            "GET /admin/services",
+            "PATCH /admin/services/{service_id}/status",
+            "POST /admin/rfq/jobs/{job_id}/close",
+        }
+    ),
     "events.manage": frozenset(
         {
+            "GET /admin/events",
             "GET /admin/events/high-value-queue",
+            "GET /admin/events/organisers",
+            "POST /admin/events/{event_id}/cancel",
             "POST /admin/events/{event_id}/high-value-verify",
+            "POST /admin/events/{event_id}/unpublish",
         }
     ),
     "ads.manage": frozenset(
@@ -159,9 +222,11 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
     }
 )
 
-# Role and permission management: `superadmin` only — `admin` is denied.
+# Role, permission and admin-account management: `superadmin` only — `admin` is denied.
 SUPERADMIN_ONLY_ROUTES: frozenset[str] = frozenset(
     {
+        "GET /admin/accounts",
+        "POST /admin/accounts/{user_id}/deactivate",
         "DELETE /admin/roles/{key}",
         "DELETE /admin/roles/{key}/users/{user_id}",
         "GET /admin/roles",
@@ -171,9 +236,10 @@ SUPERADMIN_ONLY_ROUTES: frozenset[str] = frozenset(
     }
 )
 
-# Everything else is reachable only by the unrestricted `admin` / `superadmin` roles.
-# Money mutations (refunds, escrow, disputes, COD), platform config, flags, support,
-# clips moderation, dispatch and translations all live here: no permission grants them.
+# Everything else is reachable only by the unrestricted `admin` / `superadmin` roles:
+# platform config, commission rates, flags, listing reports, clips moderation,
+# translations and kill-switch resets. Money operations moved to `finance.operate` (D2),
+# support tools to `support.manage`, dispatch to `logistics.manage` (2026-11-13).
 UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
     {
         "DELETE /admin/translations/overrides",
@@ -185,21 +251,14 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
-        "GET /admin/dispatch/board",
-        "GET /admin/dispatch/couriers",
-        "GET /admin/dispatch/requests/{dispatch_id}",
-        "GET /admin/dispatch/requests/{dispatch_id}/message",
         "GET /admin/flags",
         "GET /admin/health",
-        "GET /admin/support/log",
-        "GET /admin/support/lookup",
         "GET /admin/translations/overrides",
         "PATCH /admin/config/categories/{category_id}",
         "PATCH /admin/config/commissions/{category_key}",
         "PATCH /admin/config/delivery-zones/{zone_key}",
         "PATCH /admin/config/flags/{flag}",
         "PATCH /admin/config/platform/{key}",
-        "PATCH /admin/dispatch/couriers/{courier_id}",
         "POST /admin/ai-spend/reset-kill-switch",
         "POST /admin/clip-analytics/reset-kill-switch",
         "POST /admin/clips/reports/{report_id}/dismiss",
@@ -208,25 +267,12 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/clips/{clip_id}/reject",
         "POST /admin/clips/{clip_id}/takedown",
         "POST /admin/config/categories/reorder",
-        "POST /admin/dispatch/couriers",
-        "POST /admin/dispatch/requests",
-        "POST /admin/dispatch/requests/{dispatch_id}/handover",
-        "POST /admin/dispatch/requests/{dispatch_id}/notify",
-        "POST /admin/dispatch/requests/{dispatch_id}/transition",
-        "POST /admin/disputes/{dispute_id}/decide",
         "POST /admin/echo",
         "POST /admin/flags/{flag_id}/dismiss",
         "POST /admin/flags/{flag_id}/escalate-suspend",
         "POST /admin/flags/{flag_id}/remove",
         "POST /admin/flags/{flag_id}/unpublish",
         "POST /admin/flags/{flag_id}/warn-vendor",
-        "POST /admin/orders/{order_id}/cod/confirm-collection",
-        "POST /admin/orders/{order_id}/cod/refuse-collection",
-        "POST /admin/orders/{order_id}/dispatch",
-        "POST /admin/orders/{order_id}/escrow",
-        "POST /admin/orders/{order_id}/intervene",
-        "POST /admin/refunds/execute",
-        "POST /admin/support/send",
         "PUT /admin/translations/overrides",
     }
 )
@@ -236,15 +282,23 @@ MONEY_MUTATIONS: frozenset[str] = frozenset(
         "POST /admin/refunds/execute",
         "POST /admin/orders/{order_id}/escrow",
         "POST /admin/orders/{order_id}/intervene",
-        "POST /admin/orders/{order_id}/dispatch",
         "POST /admin/orders/{order_id}/cod/confirm-collection",
         "POST /admin/orders/{order_id}/cod/refuse-collection",
         "POST /admin/disputes/{dispute_id}/decide",
+    }
+)
+# Platform money/config controls stay with the unrestricted roles only.
+CONTROL_MUTATIONS: frozenset[str] = frozenset(
+    {
         "PATCH /admin/config/commissions/{category_key}",
         "PATCH /admin/config/platform/{key}",
         "PATCH /admin/config/flags/{flag}",
     }
 )
+
+# Granted to superadmin (and to an rbac role holding the permission), never implied by
+# the unrestricted `admin` role (founder decision 2026-11-13).
+ADMIN_EXCLUDED_ROUTES: frozenset[str] = PERMISSION_ROUTES["audit.read"]
 
 # identity -> (roles held, permissions on its rbac role)
 IDENTITIES: dict[str, tuple[frozenset[str], tuple[str, ...]]] = {
@@ -289,7 +343,7 @@ def expected_allowed(identity: str, route: str) -> bool:
     if "superadmin" in roles:
         return True
     if "admin" in roles:
-        return route not in SUPERADMIN_ONLY_ROUTES
+        return route not in SUPERADMIN_ONLY_ROUTES and route not in ADMIN_EXCLUDED_ROUTES
     if route == ME:
         return True
     if "moderator" in roles:
@@ -361,11 +415,24 @@ def test_tables_do_not_overlap_with_unrestricted_or_superadmin_only() -> None:
     assert set(PERMISSION_ROUTES) == set(ADMIN_PERMISSIONS)
 
 
-def test_no_permission_or_moderator_grant_reaches_money_or_control_mutations() -> None:
-    assert MONEY_MUTATIONS <= UNRESTRICTED_ONLY_ROUTES
+def test_only_finance_operate_reaches_money_mutations_and_nothing_reaches_controls() -> None:
     assert MONEY_MUTATIONS <= set(ADMIN_ROUTES)
+    assert CONTROL_MUTATIONS <= UNRESTRICTED_ONLY_ROUTES
+    for permission, routes in PERMISSION_ROUTES.items():
+        reached = sorted(routes & MONEY_MUTATIONS)
+        if permission == "finance.operate":
+            assert set(reached) == MONEY_MUTATIONS
+        else:
+            assert not reached, f"{permission} reaches money mutations {reached}"
+    assert not MODERATOR_ROUTES & MONEY_MUTATIONS
     # Read permissions never carry a write.
-    for permission in ("finance.read", "analytics.read", "services.read", "inventory.read"):
+    for permission in (
+        "finance.read",
+        "analytics.read",
+        "services.read",
+        "inventory.read",
+        "audit.read",
+    ):
         writes = sorted(r for r in PERMISSION_ROUTES[permission] if not r.startswith("GET "))
         assert not writes, f"{permission} must stay read-only, grants {writes}"
 

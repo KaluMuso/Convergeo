@@ -661,9 +661,7 @@ def sweep_event_releases(
 ) -> tuple[EventReleaseSweepResult, str | None]:
     """Batch-evaluate event release candidates; idempotent under overlap via ledger keys."""
     effective_now = _normalize_now(now)
-    order_ids = _list_event_release_candidate_ids(
-        limit=limit, cursor=cursor, now=effective_now
-    )
+    order_ids = _list_event_release_candidate_ids(limit=limit, cursor=cursor, now=effective_now)
 
     released = 0
     held = 0

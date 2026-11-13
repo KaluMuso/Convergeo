@@ -8,9 +8,7 @@ from uuid import UUID
 
 from app.errors import AppError
 
-LISTING_REPORT_REASONS = frozenset(
-    {"counterfeit", "prohibited", "scam", "misleading", "other"}
-)
+LISTING_REPORT_REASONS = frozenset({"counterfeit", "prohibited", "scam", "misleading", "other"})
 ListingReportReason = Literal["counterfeit", "prohibited", "scam", "misleading", "other"]
 
 MAX_DETAIL_LEN = 500

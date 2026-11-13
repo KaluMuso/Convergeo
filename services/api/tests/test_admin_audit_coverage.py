@@ -20,6 +20,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
 from app.routers import cod as cod_router
+from app.services.orders.state import ActorRole
 from app.services.payments.cod import CodCollectionResult, CodError, CodRefusalResult
 from fastapi.testclient import TestClient
 
@@ -41,6 +42,9 @@ class _Query:
         return self
 
     def eq(self, *_a: Any) -> _Query:
+        return self
+
+    def in_(self, *_a: Any) -> _Query:
         return self
 
     def insert(self, payload: dict[str, Any]) -> _Query:
@@ -158,7 +162,14 @@ def test_admin_cod_confirm_is_attributed_to_the_administrator(
         f"/admin/orders/{ORDER_ID}/cod/confirm-collection", json={"note": "cash counted"}
     )
     assert response.status_code == 200, response.text
-    assert calls == [{"order_id": ORDER_ID, "actor_id": ADMIN_ID, "note": "cash counted"}]
+    assert calls == [
+        {
+            "order_id": ORDER_ID,
+            "actor_id": ADMIN_ID,
+            "note": "cash counted",
+            "actor_role": ActorRole.ADMIN,
+        }
+    ]
     assert len(sink.audit) == 1
     row = sink.audit[0]
     assert row["actor"] == ADMIN_ID
@@ -235,4 +246,10 @@ def test_non_admin_cannot_confirm_cod_and_leaves_no_audit_row(
     monkeypatch.setattr(cod_router, "confirm_cod_collection", lambda **_k: called.append(1))
     response = client.post(f"/admin/orders/{ORDER_ID}/cod/confirm-collection", json={"note": "x"})
     assert response.status_code == 403, response.text
-    assert called == [] and sink.audit == []
+    # No action row. Operators (moderator, rbac_*) leave an `outcome = denied` row (S5);
+    # customers and vendors leave nothing.
+    assert called == []
+    assert [row for row in sink.audit if row.get("outcome") != "denied"] == []
+    denied = [row for row in sink.audit if row.get("outcome") == "denied"]
+    operator = bool(roles & {"moderator"}) or any(r.startswith("rbac_") for r in roles)
+    assert len(denied) == (1 if operator else 0)

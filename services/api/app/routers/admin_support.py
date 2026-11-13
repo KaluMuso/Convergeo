@@ -6,7 +6,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.core.auth import CurrentUser, require_role
+from app.core.auth import CurrentUser, get_current_user, require_role
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -411,12 +411,35 @@ def _verify_support_operation(row: dict[str, Any], expected: dict[str, Any]) -> 
         )
 
 
+def mask_phone(phone: str | None) -> str | None:
+    """Keep the country prefix and last three digits: +260 97 ••• ••12 style."""
+    if not phone:
+        return phone
+    digits = phone.strip()
+    if len(digits) <= 7:
+        return "•" * len(digits)
+    return digits[:4] + "•" * (len(digits) - 7) + digits[-3:]
+
+
+def _masked(card: ContextCardOut) -> ContextCardOut:
+    return card.model_copy(
+        update={
+            "customer": card.customer.model_copy(update={"phone": mask_phone(card.customer.phone)})
+        }
+    )
+
+
 @support_router.get("/lookup", response_model=LookupResponse)
 async def support_lookup(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
     q: Annotated[str, Query(min_length=1, max_length=_MAX_QUERY_LEN)],
 ) -> LookupResponse:
     matches = _lookup_support(service_client, q)
+    # Customer-support operators (support.manage) see masked PII; the phone stays on
+    # the server and is used by POST /send. Unrestricted admins keep the full number.
+    if not current_user.roles & {"admin", "superadmin"}:
+        matches = [_masked(card) for card in matches]
     return LookupResponse(matches=matches)
 
 

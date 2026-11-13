@@ -10,7 +10,13 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Protocol, cast
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.deps import get_supabase_client
+from app.core.auth import (
+    DASHBOARD_FINANCE_PERMISSIONS,
+    CurrentUser,
+    get_current_user,
+    load_admin_permissions,
+)
+from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.services.ask.spend import (
@@ -108,8 +114,12 @@ class FunnelSnapshotOut(BaseModel):
 class DashboardOut(BaseModel):
     gmv_ngwee: int
     orders_by_status: OrdersByStatusOut
-    payout_liabilities: PayoutLiabilitiesOut
-    reconciliation: ReconciliationTileOut
+    # D3 (2026-11 RBAC audit): escrow held, unpaid liabilities and the reconciliation
+    # report are finance data. Callers without finance.read / finance.operate get null
+    # here and `finance_visible = false`; the aggregate cache always holds them.
+    payout_liabilities: PayoutLiabilitiesOut | None
+    reconciliation: ReconciliationTileOut | None
+    finance_visible: bool = True
     counts: CatalogCountsOut
     ai_usage: AiUsageTileOut
     funnel: FunnelSnapshotOut
@@ -446,11 +456,35 @@ def _get_cached_dashboard(service_client: ServiceRoleClient) -> DashboardOut:
     return payload
 
 
+def _without_finance(payload: DashboardOut) -> DashboardOut:
+    return payload.model_copy(
+        update={"payout_liabilities": None, "reconciliation": None, "finance_visible": False}
+    )
+
+
+def _cached_dashboard_without_finance(service_client: ServiceRoleClient) -> DashboardOut:
+    """Serve the shared aggregate without the per-request reconciliation read."""
+    global _cache_payload, _cache_expires_at
+    now = time.monotonic()
+    with _cache_lock:
+        cached = _cache_payload if now < _cache_expires_at else None
+    if cached is None:
+        cached = build_dashboard(service_client)
+        with _cache_lock:
+            _cache_payload = cached
+            _cache_expires_at = now + DASHBOARD_CACHE_TTL_SECONDS
+    return _without_finance(cached)
+
+
 @dashboard_router.get("", response_model=DashboardOut)
 async def get_admin_dashboard(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> DashboardOut:
-    return _get_cached_dashboard(service_client)
+    granted = load_admin_permissions(user, cast(SupabaseServiceClient, service_client))
+    if DASHBOARD_FINANCE_PERMISSIONS & granted:
+        return _get_cached_dashboard(service_client)
+    return _cached_dashboard_without_finance(service_client)
 
 
 admin_router.include_router(dashboard_router)

@@ -72,6 +72,7 @@ def _to_ngwee(raw: str) -> int | None:
         return None
     return int((kwacha * NGWEE_PER_KWACHA).quantize(Decimal("1")))
 
+
 _QUANTITY_RE: Final = re.compile(
     r"(?:\bx\s*(?P<x>\d{1,6})\b)"
     r"|(?:\b(?P<n>\d{1,6})\s*(?:pcs|pieces|units|available|in stock|left)\b)"

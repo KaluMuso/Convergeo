@@ -92,6 +92,7 @@ def my_permissions(
     if not permissions and not user.roles.intersection({"moderator", "admin", "superadmin"}):
         raise AppError(code="forbidden", message="Admin role required", http_status=403)
     return {
+        "user_id": user.id,
         "permissions": sorted(permissions),
         "can_manage_roles": "superadmin" in user.roles,
         "unrestricted": bool(user.roles.intersection({"admin", "superadmin"})),

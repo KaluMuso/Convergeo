@@ -16,9 +16,7 @@ from app.services.events.type_policy import normalize_event_type, policy_for
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.stock.claim import sql_uuid
 
-SettlementSnapshotStatus = Literal[
-    "active", "held_for_reschedule", "released", "cancelled"
-]
+SettlementSnapshotStatus = Literal["active", "held_for_reschedule", "released", "cancelled"]
 SettlementBranch = Literal["full", "phased"]
 
 PHASED_THRESHOLD_DAYS = 14

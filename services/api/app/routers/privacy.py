@@ -291,11 +291,7 @@ def anonymize_and_delete_account(
     now_iso = datetime.now(UTC).isoformat()
 
     profile_response = (
-        db.table("profiles")
-        .select("id, deleted_at")
-        .eq("id", user_id)
-        .maybe_single()
-        .execute()
+        db.table("profiles").select("id, deleted_at").eq("id", user_id).maybe_single().execute()
     )
     profile = _maybe_single_row(profile_response)
     if profile and profile.get("deleted_at"):

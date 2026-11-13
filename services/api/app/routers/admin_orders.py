@@ -790,6 +790,7 @@ async def intervene_order(
         entity_id=order_key,
         before=before,
         after={"status": outcome.to_status.value, "event": outcome.event.value},
+        reason=body.reason,
     )
     return InterventionResponse(
         order_id=order_id,
@@ -838,6 +839,7 @@ async def manual_escrow(
             "transaction_id": ledger_result.transaction_id,
             "manual": ledger_result.manual,
         },
+        reason=body.reason,
     )
     return EscrowResponse(
         order_id=order_id,

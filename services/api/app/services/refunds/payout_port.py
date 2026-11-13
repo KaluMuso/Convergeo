@@ -47,9 +47,7 @@ def _result_from_existing(
 ) -> CustomerRefundPayoutResult:
     existing_snapshot = existing_data.get("resolve_snapshot")
     existing_customer = (
-        existing_snapshot.get("customer_momo")
-        if isinstance(existing_snapshot, dict)
-        else None
+        existing_snapshot.get("customer_momo") if isinstance(existing_snapshot, dict) else None
     )
     if (
         existing_data.get("amount_ngwee") != amount_ngwee

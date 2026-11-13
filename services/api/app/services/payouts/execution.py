@@ -164,9 +164,7 @@ def _apply_vendor_payout_destination(
     if not isinstance(msisdn, str) or not msisdn.strip():
         return profile
     operator = (
-        str(rail).strip().lower()
-        if isinstance(rail, str) and rail.strip()
-        else profile.operator
+        str(rail).strip().lower() if isinstance(rail, str) and rail.strip() else profile.operator
     )
     if operator not in MOMO_RAILS:
         operator = profile.operator
@@ -220,12 +218,7 @@ def _update_payout_row(
     payout_id: str,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    response = (
-        service_client.client.table("payouts")
-        .update(payload)
-        .eq("id", payout_id)
-        .execute()
-    )
+    response = service_client.client.table("payouts").update(payload).eq("id", payout_id).execute()
     updated = _single_row(response)
     if updated is None and _rows(response):
         updated = _rows(response)[0]
@@ -505,9 +498,7 @@ async def execute_vendor_payout(
             lenco_reference=lenco_reference,
         )
         # C6: book Lenco's transfer fee so platform_cash tracks the Lenco balance.
-        book_transfer_fee(
-            payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0]
-        )
+        book_transfer_fee(payout_id=payout_id, fee=fee_fields_from_provider_raw(transfer.raw)[0])
 
     if terminal_status == "failed":
         merged_snapshot.update(

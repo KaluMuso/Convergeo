@@ -27,10 +27,7 @@ def is_listing_available(
     """
     minimum_qty = minimum_purchase_qty(min_steps=min_steps, moq=moq)
     if product_class == "E":
-        return (
-            isinstance(vendor_capacity_per_week, int)
-            and vendor_capacity_per_week >= minimum_qty
-        )
+        return isinstance(vendor_capacity_per_week, int) and vendor_capacity_per_week >= minimum_qty
     # Migration 0085 predates product classes and allowed made-to-order offers
     # with lead time but no weekly capacity. Preserve those legacy listings;
     # the stricter capacity contract belongs to explicit Class E offers.

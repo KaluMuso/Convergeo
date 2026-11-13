@@ -147,7 +147,8 @@ SELECT json_build_object(
     FROM public.addresses a WHERE a.id = o.address_id
   ),
   'customer_phone', pr.phone,
-  'customer_name', pr.display_name
+  'customer_name', pr.display_name,
+  'delivery_consent', public.has_delivery_partner_consent(o.customer_id)
 )::text
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
@@ -161,6 +162,22 @@ WHERE o.id = {order_sql};
     row = rows[0]
     row["cod_amount_ngwee"] = compute_cod_amount_ngwee(row)
     return row
+
+
+def require_delivery_partner_consent(order_ctx: dict[str, Any]) -> None:
+    """Zambia DPA: a third-party courier gets the customer's name, phone and address only
+    with the customer's current in-app consent (founder decision 2026-11-13). The same
+    rule is enforced by the dispatch_requests_require_delivery_consent trigger."""
+    if order_ctx.get("delivery_consent") is not True:
+        raise AppError(
+            code="delivery_consent_required",
+            message=(
+                "The customer has not agreed to share their delivery details with a "
+                "courier. Ask them to allow it in the app, or deliver with Vergeo5 staff."
+            ),
+            http_status=409,
+            details={"message_key": "admin.dispatch.errors.consentRequired"},
+        )
 
 
 def compute_cod_amount_ngwee(order_ctx: dict[str, Any]) -> int:
@@ -248,6 +265,8 @@ def create_dispatch(
             http_status=409,
         )
 
+    require_delivery_partner_consent(order)
+
     courier = load_courier(courier_partner_id)
     if not courier.get("active"):
         raise AppError(code="courier_inactive", message="Courier is inactive", http_status=409)
@@ -291,6 +310,10 @@ COMMIT;
 """
     result = run_sql_script(script)
     if not result.ok:
+        if "dispatch_requests_delivery_consent" in (result.error or "") or (
+            "has not consented to sharing delivery details" in (result.error or "")
+        ):
+            require_delivery_partner_consent({"delivery_consent": False})
         if "dispatch_requests_one_active_per_order" in (result.error or "") or (
             "dispatch_requests_one_delivered_per_order" in (result.error or "")
         ):
@@ -663,6 +686,9 @@ def build_dispatch_message(dispatch_id: str) -> tuple[DispatchRow, dict[str, Any
     dispatch = fetch_dispatch(dispatch_id)
     courier = load_courier(dispatch.courier_partner_id)
     order_ctx = load_order_dispatch_context(dispatch.order_id)
+    # The message carries the customer's name, phone and address: a consent withdrawn
+    # after dispatch stops any further copy or notification.
+    require_delivery_partner_consent(order_ctx)
     # The COD figure on the message is the dispatch snapshot, not a recompute.
     order_ctx["cod_amount_ngwee"] = dispatch.cod_amount_ngwee
     order_ctx["courier_reference"] = dispatch.courier_reference
