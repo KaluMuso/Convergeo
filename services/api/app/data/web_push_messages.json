@@ -1,0 +1,157 @@
+{
+  "bem": {
+    "inApp": {
+      "admin": {
+        "dispute_opened": "Ubwafya bupya pa order {ref}.",
+        "kyc_submitted": "KYC iipya ilelolela ukumonwa."
+      },
+      "customer": {
+        "order_confirmed": "Uushitisha asuminisha order {ref}.",
+        "order_delivered": "Order {ref} yafika. Cali shani?",
+        "order_packed": "Order {ref} ileteyanishiwa.",
+        "order_placed": "Order {ref} yatumwa. Tukamyeba nga uushitisha aisuminisha.",
+        "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
+        "order_rejected": "Uushitisha akaana order {ref}. Indalama mwalipile shikabwela.",
+        "order_shipped": "Order {ref} ili mu nshila.",
+        "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
+        "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+      },
+      "fallback": "Mwakwata ifipya.",
+      "vendor": {
+        "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke.",
+        "job_matched": "Incito iipya ilinganya na ma-service yenu.",
+        "kyc_approved": "Shop yenu yasuminishiwa. Nomba kuti mwapokelela indalama.",
+        "kyc_rejected": "Ukusuminishiwa kwenu kulefwaya ukwalula. Kufyeni mumone umulandu.",
+        "kyc_submitted": "Twapokelela ifyalembwa fyenu. Tukafimona nomba line.",
+        "order_delivered": "Order {ref} yafika.",
+        "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",
+        "rfq_received": "Kasita alomba quote kuli imwe."
+      }
+    },
+    "title": "Ama-notification"
+  },
+  "en": {
+    "inApp": {
+      "admin": {
+        "dispute_opened": "New dispute opened on order {ref}.",
+        "kyc_submitted": "New KYC submission waiting for review."
+      },
+      "customer": {
+        "order_confirmed": "Order {ref} was confirmed by the seller.",
+        "order_delivered": "Order {ref} was delivered. How did it go?",
+        "order_packed": "Order {ref} is being packed.",
+        "order_placed": "Order {ref} placed. We'll tell you when the seller confirms.",
+        "order_ready_pickup": "Order {ref} is ready for pickup. Open it to see your pickup code.",
+        "order_rejected": "Order {ref} was declined by the seller. Any payment will be returned.",
+        "order_shipped": "Order {ref} is on its way.",
+        "quote_received": "You received a new quote. Compare and accept it in the app.",
+        "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate."
+      },
+      "fallback": "You have a new update.",
+      "vendor": {
+        "dispute_opened": "A customer opened a dispute on order {ref}. Please respond.",
+        "job_matched": "A new job matches your services.",
+        "kyc_approved": "Your shop is verified. You can now receive payouts.",
+        "kyc_rejected": "Your verification needs changes. Open it to see why.",
+        "kyc_submitted": "We received your verification documents. We'll review them soon.",
+        "order_delivered": "Order {ref} was delivered.",
+        "order_placed": "New order {ref}. Confirm it to start.",
+        "rfq_received": "A customer asked you for a quote."
+      }
+    },
+    "title": "Notifications"
+  },
+  "fr": {
+    "inApp": {
+      "admin": {
+        "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
+        "kyc_submitted": "Nouvelle demande KYC en attente d'examen."
+      },
+      "customer": {
+        "order_confirmed": "La commande {ref} a été confirmée par le vendeur.",
+        "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
+        "order_packed": "La commande {ref} est en cours d'emballage.",
+        "order_placed": "Commande {ref} passée. Nous vous préviendrons quand le vendeur la confirmera.",
+        "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
+        "order_rejected": "La commande {ref} a été refusée par le vendeur. Tout paiement vous sera rendu.",
+        "order_shipped": "La commande {ref} est en route.",
+        "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
+        "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+      },
+      "fallback": "Vous avez une nouvelle mise à jour.",
+      "vendor": {
+        "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre.",
+        "job_matched": "Une nouvelle mission correspond à vos services.",
+        "kyc_approved": "Votre boutique est vérifiée. Vous pouvez maintenant recevoir des paiements.",
+        "kyc_rejected": "Votre vérification nécessite des modifications. Ouvrez-la pour en savoir plus.",
+        "kyc_submitted": "Nous avons reçu vos documents de vérification. Nous les examinerons bientôt.",
+        "order_delivered": "La commande {ref} a été livrée.",
+        "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",
+        "rfq_received": "Un client vous a demandé un devis."
+      }
+    },
+    "title": "Notifications"
+  },
+  "nya": {
+    "inApp": {
+      "admin": {
+        "dispute_opened": "Mkangano watsopano pa order {ref}.",
+        "kyc_submitted": "KYC yatsopano ikudikira kuunikidwa."
+      },
+      "customer": {
+        "order_confirmed": "Wogulitsa wavomereza order {ref}.",
+        "order_delivered": "Order {ref} yafika. Zinayenda bwanji?",
+        "order_packed": "Order {ref} ikukonzedwa.",
+        "order_placed": "Order {ref} yatumizidwa. Tikudziwitsani wogulitsa akavomereza.",
+        "order_ready_pickup": "Order {ref} yakonzeka kutengedwa. Tsegulani kuti muone code.",
+        "order_rejected": "Wogulitsa wakana order {ref}. Ndalama zanu zidzabwezedwa.",
+        "order_shipped": "Order {ref} ili pa njira.",
+        "quote_received": "Mwalandira quote yatsopano. Yerekezerani ndi kuvomereza mu app.",
+        "ticket_issued": "Tikiti yanu yakonzeka. Onetsani QR code pa geti."
+      },
+      "fallback": "Muli ndi zatsopano.",
+      "vendor": {
+        "dispute_opened": "Kasitomala watsegula mkangano pa order {ref}. Chonde yankhani.",
+        "job_matched": "Ntchito yatsopano ikugwirizana ndi ma-service anu.",
+        "kyc_approved": "Shopu yanu yatsimikizidwa. Tsopano mutha kulandira ndalama.",
+        "kyc_rejected": "Kutsimikizira kwanu kukufunika kusintha. Tsegulani kuti muone chifukwa.",
+        "kyc_submitted": "Talandira zikalata zanu. Tiziona posachedwa.",
+        "order_delivered": "Order {ref} yafika.",
+        "order_placed": "Order yatsopano {ref}. Ivomerezeni kuti muyambe.",
+        "rfq_received": "Kasitomala wakupemphani quote."
+      }
+    },
+    "title": "Ma-notification"
+  },
+  "zh": {
+    "inApp": {
+      "admin": {
+        "dispute_opened": "订单 {ref} 有新的争议。",
+        "kyc_submitted": "有新的 KYC 申请待审核。"
+      },
+      "customer": {
+        "order_confirmed": "卖家已确认订单 {ref}。",
+        "order_delivered": "订单 {ref} 已送达。体验如何？",
+        "order_packed": "订单 {ref} 正在打包。",
+        "order_placed": "订单 {ref} 已提交。卖家确认后我们会通知您。",
+        "order_ready_pickup": "订单 {ref} 可以自提了。打开查看您的取货码。",
+        "order_rejected": "卖家已拒绝订单 {ref}。已付款项将退还给您。",
+        "order_shipped": "订单 {ref} 已发出。",
+        "quote_received": "您收到了新的报价。请在应用中比较并接受。",
+        "ticket_issued": "您的门票已就绪。入场时请出示二维码。"
+      },
+      "fallback": "您有一条新动态。",
+      "vendor": {
+        "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。",
+        "job_matched": "有新的工作与您的服务匹配。",
+        "kyc_approved": "您的店铺已通过认证，现在可以收款了。",
+        "kyc_rejected": "您的认证需要修改。打开查看原因。",
+        "kyc_submitted": "我们已收到您的认证资料，将尽快审核。",
+        "order_delivered": "订单 {ref} 已送达。",
+        "order_placed": "新订单 {ref}。请确认后开始处理。",
+        "rfq_received": "有顾客向您询价。"
+      }
+    },
+    "title": "通知"
+  }
+}

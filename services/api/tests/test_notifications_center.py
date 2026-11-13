@@ -59,6 +59,10 @@ class FakeQuery:
         self.filters.append(lambda r: r.get(column) is None)
         return self
 
+    def lte(self, column: str, value: Any) -> FakeQuery:
+        self.filters.append(lambda r: str(r.get(column)) <= str(value))
+        return self
+
     def in_(self, column: str, values: list[Any]) -> FakeQuery:
         self.filters.append(lambda r: r.get(column) in values)
         return self
@@ -334,33 +338,141 @@ def test_push_subscribe_is_disabled_by_default(api: TestClient, store: Store) ->
     assert store.table("web_push_subscriptions").rows == []
 
 
-def test_push_subscribe_when_enabled_moves_device_to_caller(
+ENDPOINT = "https://fcm.googleapis.com/fcm/send/fake-endpoint-for-tests"
+KEYS_A = {"p256dh": "p" * 20, "auth": "a" * 12}
+KEYS_OTHER = {"p256dh": "q" * 20, "auth": "b" * 12}
+
+
+def _enable_push(store: Store, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WEB_PUSH_VAPID_PUBLIC_KEY", "public-placeholder")
+    monkeypatch.setenv("WEB_PUSH_VAPID_PRIVATE_KEY", "private-placeholder")
+    monkeypatch.setenv("WEB_PUSH_VAPID_SUBJECT", "mailto:ops@example.test")
+    store.table("feature_flags").rows.append({"flag": "web_push", "enabled": True})
+
+
+def _sub_body(keys: dict[str, str], audience: str = "customer") -> dict[str, Any]:
+    return {"audience": audience, "endpoint": ENDPOINT, "keys": keys}
+
+
+def test_push_config_fails_closed_without_all_three_vapid_vars(
     api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("WEB_PUSH_VAPID_PUBLIC_KEY", "public-test-value")
     store.table("feature_flags").rows.append({"flag": "web_push", "enabled": True})
-    subs = store.table("web_push_subscriptions").rows
-    subs.append({"user_id": USER_B, "endpoint": "https://push.example.test/abc"})
-    payload = {
-        "audience": "customer",
-        "endpoint": "https://push.example.test/abc",
-        "keys": {"p256dh": "p" * 20, "auth": "a" * 12},
+    monkeypatch.setenv("WEB_PUSH_VAPID_PUBLIC_KEY", "public-placeholder")
+    monkeypatch.delenv("WEB_PUSH_VAPID_PRIVATE_KEY", raising=False)
+    monkeypatch.delenv("WEB_PUSH_VAPID_SUBJECT", raising=False)
+    assert api.get("/me/web-push", headers=_h(USER_A)).json() == {
+        "enabled": False,
+        "vapid_public_key": None,
     }
-    assert api.put("/me/push-subscriptions", json=payload, headers=_h(USER_A)).status_code == 204
-    assert [s["user_id"] for s in subs] == [USER_A]
-    # A customer cannot register a vendor-audience subscription.
-    vendor_payload = {**payload, "audience": "vendor"}
     assert (
-        api.put("/me/push-subscriptions", json=vendor_payload, headers=_h(USER_A)).status_code
-        == 403
+        api.put("/me/push-subscriptions", json=_sub_body(KEYS_A), headers=_h(USER_A)).status_code
+        == 409
     )
+
+
+def test_push_subscribe_stores_and_refreshes_own_row(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_push(store, monkeypatch)
+    subs = store.table("web_push_subscriptions").rows
+    assert (
+        api.put("/me/push-subscriptions", json=_sub_body(KEYS_A), headers=_h(USER_A)).status_code
+        == 204
+    )
+    assert [(s["user_id"], s["p256dh"]) for s in subs] == [(USER_A, KEYS_A["p256dh"])]
+    subs[0]["id"] = "sub-1"
+    # Same user re-subscribing (rotated keys) updates in place, no duplicate.
+    assert (
+        api.put(
+            "/me/push-subscriptions", json=_sub_body(KEYS_OTHER), headers=_h(USER_A)
+        ).status_code
+        == 204
+    )
+    assert [(s["user_id"], s["p256dh"]) for s in subs] == [(USER_A, KEYS_OTHER["p256dh"])]
+
+
+def test_push_subscribe_never_deletes_another_users_endpoint(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Knowing B's endpoint URL is not enough to take it over or delete it."""
+    _enable_push(store, monkeypatch)
+    subs = store.table("web_push_subscriptions").rows
+    subs.append(
+        {
+            "id": "sub-b",
+            "user_id": USER_B,
+            "audience": "customer",
+            "endpoint": ENDPOINT,
+            "p256dh": KEYS_OTHER["p256dh"],
+            "auth_secret": KEYS_OTHER["auth"],
+        }
+    )
+    response = api.put("/me/push-subscriptions", json=_sub_body(KEYS_A), headers=_h(USER_A))
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "push_endpoint_conflict"
+    assert [s["user_id"] for s in subs] == [USER_B]
+    # Unsubscribe is scoped to the caller too.
     removed = api.post(
-        "/me/push-subscriptions/remove",
-        json={"endpoint": "https://push.example.test/abc"},
-        headers=_h(USER_A),
+        "/me/push-subscriptions/remove", json={"endpoint": ENDPOINT}, headers=_h(USER_A)
     )
     assert removed.status_code == 204
-    assert subs == []
+    assert [s["user_id"] for s in subs] == [USER_B]
+
+
+def test_push_subscribe_transfers_only_with_the_browsers_own_keys(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Shared phone: A signs in where B was; the browser re-presents the same keys."""
+    _enable_push(store, monkeypatch)
+    subs = store.table("web_push_subscriptions").rows
+    subs.append(
+        {
+            "id": "sub-b",
+            "user_id": USER_B,
+            "audience": "customer",
+            "endpoint": ENDPOINT,
+            "p256dh": KEYS_A["p256dh"],
+            "auth_secret": KEYS_A["auth"],
+        }
+    )
+    queue = store.table("web_push_deliveries").rows
+    queue.extend(
+        [
+            {"id": "d1", "subscription_id": "sub-b", "status": "pending"},
+            {"id": "d2", "subscription_id": "sub-b", "status": "sent"},
+        ]
+    )
+    assert (
+        api.put("/me/push-subscriptions", json=_sub_body(KEYS_A), headers=_h(USER_A)).status_code
+        == 204
+    )
+    assert [(s["id"], s["user_id"]) for s in subs] == [("sub-b", USER_A)]
+    # B's still-queued alert must never reach A's phone.
+    assert [d["id"] for d in queue] == ["d2"]
+
+
+def test_push_subscribe_rejects_non_push_service_endpoints(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_push(store, monkeypatch)
+    for endpoint in (
+        "https://push.example.test/abc",
+        "https://169.254.169.254/latest/meta-data",
+        "https://fcm.googleapis.com.evil.test/x",
+    ):
+        body = {"audience": "customer", "endpoint": endpoint, "keys": KEYS_A}
+        assert api.put("/me/push-subscriptions", json=body, headers=_h(USER_A)).status_code == 422
+    assert store.table("web_push_subscriptions").rows == []
+
+
+def test_push_subscribe_vendor_audience_needs_vendor_role(
+    api: TestClient, store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _enable_push(store, monkeypatch)
+    body = _sub_body(KEYS_A, audience="vendor")
+    assert api.put("/me/push-subscriptions", json=body, headers=_h(USER_A)).status_code == 403
+    assert api.put("/me/push-subscriptions", json=body, headers=_h(VENDOR_USER)).status_code == 204
 
 
 @pytest.mark.parametrize("admin_user", sorted(ADMIN_ROLE_USERS))

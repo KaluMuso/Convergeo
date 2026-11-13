@@ -7,6 +7,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.adapter_registry import build_adapters
 from app.services.notifications.dispatcher import run_dispatch_batch
+from app.services.notifications.web_push import run_web_push_batch
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/internal/dispatch", tags=["internal-dispatch"])
@@ -60,3 +61,15 @@ async def dispatch_tick(
         "skipped": stats.skipped,
         "retried": stats.retried,
     }
+
+
+@router.post(
+    "/web-push-tick",
+    dependencies=[Depends(require_internal_dispatch_token)],
+)
+async def web_push_tick(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    """Send queued Web Push alerts (flag ``web_push``; fails closed without VAPID env)."""
+    stats = await run_web_push_batch(supabase)
+    return stats.as_dict()
