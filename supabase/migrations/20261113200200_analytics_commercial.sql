@@ -9,7 +9,7 @@
 -- ngwee (bigint sums of qty * unit_price_ngwee + delivery_fee_ngwee).
 --
 -- Down (manual, after analytics_v2_rollups is OFF and the 1B-03 code is reverted):
---   re-run the analytics_rollup_day definition from 20261112130000_analytics_rollups.sql;
+--   re-run the analytics_rollup_day definition from 20261113200100_analytics_rollups.sql;
 --   drop function if exists public.analytics_commercial_daily(date, date);
 
 -- ---------------------------------------------------------------------------

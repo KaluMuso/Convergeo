@@ -67,8 +67,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
         # + 3 reviewed: audit S1 money tables read-only; admin governance D1 + permissions/
         #   audit_log/deactivation/consent (all additive).
-        self.assertEqual(len(runner.FORWARD), 33)
-        self.assertEqual(len(set(runner.FORWARD)), 33)
+        # + 7 reviewed: analytics v2 foundation, rollups, commercial, search sessions,
+        #   Lusaka day, search-daily retention, session links (additive, flag-gated).
+        self.assertEqual(len(runner.FORWARD), 40)
+        self.assertEqual(len(set(runner.FORWARD)), 40)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

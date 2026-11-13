@@ -24,7 +24,7 @@
 -- grant on either table.
 --
 -- Down (manual, after analytics_v2_rollups is OFF and the 1B-06 code is reverted):
---   re-run the analytics_rollup_day definition from 20261112140000_analytics_commercial.sql;
+--   re-run the analytics_rollup_day definition from 20261113200200_analytics_commercial.sql;
 --   alter table public.analytics_search_daily drop column if exists unsessioned_searches;
 --   alter table public.search_query_log drop column if exists analytics_session_id;
 -- Dropping the columns loses only the session attribution (aggregates stay valid; the
@@ -45,7 +45,7 @@ alter table public.analytics_search_daily
 
 comment on column public.analytics_search_daily.sessions is
   'Distinct anonymous analytics sessions that searched the term that day (OD-8). NULL '
-  'only on rows computed before 20261112150000 (treated as session-less by readers).';
+  'only on rows computed before 20261113200300 (treated as session-less by readers).';
 comment on column public.analytics_search_daily.unsessioned_searches is
   'Searches of the term that day without a session id. Readers count all of them, across '
   'the whole window, as at most ONE session (OD-8), so one person cannot pass k.';

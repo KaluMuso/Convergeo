@@ -251,6 +251,87 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_daily_rollup: {
+        Row: {
+          computed_at: string
+          day: string
+          dim_key: string
+          dim_value: string
+          metric: string
+          sample_n: number
+          value: number
+        }
+        Insert: {
+          computed_at?: string
+          day: string
+          dim_key?: string
+          dim_value?: string
+          metric: string
+          sample_n?: number
+          value: number
+        }
+        Update: {
+          computed_at?: string
+          day?: string
+          dim_key?: string
+          dim_value?: string
+          metric?: string
+          sample_n?: number
+          value?: number
+        }
+        Relationships: []
+      }
+      analytics_event_log: {
+        Row: {
+          anon_id: string | null
+          client_ts: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_id: string
+          event_name: string
+          event_version: number
+          page_key: string | null
+          props: Json
+          received_at: string
+          seq: number | null
+          session_id: string | null
+          source_app: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_id?: string | null
+          client_ts?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_id: string
+          event_name: string
+          event_version?: number
+          page_key?: string | null
+          props?: Json
+          received_at?: string
+          seq?: number | null
+          session_id?: string | null
+          source_app: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_id?: string | null
+          client_ts?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_id?: string
+          event_name?: string
+          event_version?: number
+          page_key?: string | null
+          props?: Json
+          received_at?: string
+          seq?: number | null
+          session_id?: string | null
+          source_app?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
@@ -281,6 +362,81 @@ export type Database = {
           props?: Json
           session_id?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      analytics_rollup_runs: {
+        Row: {
+          day: string
+          error: string | null
+          finished_at: string | null
+          rows: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          day: string
+          error?: string | null
+          finished_at?: string | null
+          rows?: number
+          started_at?: string
+          status: string
+        }
+        Update: {
+          day?: string
+          error?: string | null
+          finished_at?: string | null
+          rows?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      analytics_search_daily: {
+        Row: {
+          computed_at: string
+          day: string
+          normalized_term: string
+          searches: number
+          sessions: number | null
+          unsessioned_searches: number
+          zero_results: number
+        }
+        Insert: {
+          computed_at?: string
+          day: string
+          normalized_term: string
+          searches: number
+          sessions?: number | null
+          unsessioned_searches?: number
+          zero_results: number
+        }
+        Update: {
+          computed_at?: string
+          day?: string
+          normalized_term?: string
+          searches?: number
+          sessions?: number | null
+          unsessioned_searches?: number
+          zero_results?: number
+        }
+        Relationships: []
+      }
+      analytics_session_links: {
+        Row: {
+          linked_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          linked_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          linked_at?: string
+          session_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -5453,6 +5609,7 @@ export type Database = {
       }
       search_query_log: {
         Row: {
+          analytics_session_id: string | null
           created_at: string
           entity_counts: Json
           id: string
@@ -5464,6 +5621,7 @@ export type Database = {
           zero_result: boolean
         }
         Insert: {
+          analytics_session_id?: string | null
           created_at?: string
           entity_counts?: Json
           id?: string
@@ -5475,6 +5633,7 @@ export type Database = {
           zero_result?: boolean
         }
         Update: {
+          analytics_session_id?: string | null
           created_at?: string
           entity_counts?: Json
           id?: string
@@ -7057,6 +7216,29 @@ export type Database = {
           p_vendor_id: string
         }
         Returns: Json
+      }
+      analytics_commercial_daily: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          checkouts_started: number
+          day: string
+          gmv_paid_ngwee: number
+          orders_cancelled: number
+          orders_paid: number
+          orders_placed: number
+          paid_checkout_total_ngwee: number
+          paid_checkouts: number
+          payments_succeeded: number
+          payments_succeeded_ngwee: number
+        }[]
+      }
+      analytics_rollup_day: {
+        Args: { p_day: string; p_idle_minutes?: number }
+        Returns: number
+      }
+      analytics_search_daily_purge: {
+        Args: { p_limit?: number; p_today: string }
+        Returns: number
       }
       append_reconciliation_report_version: {
         Args: { p_report: Json }
