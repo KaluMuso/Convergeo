@@ -1,12 +1,19 @@
 "use client";
 
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gallery";
-import { Modal } from "@vergeo/ui/src/modal";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { ReportReview, type ReportReviewLabels } from "./report-review";
+
+import type { GalleryImage } from "@vergeo/ui/src/media/image-gallery";
+
+/** Opened only after a photo tap: keep Modal + gallery out of PDP first-load JS. */
+const ReviewPhotoLightbox = dynamic(
+  () => import("./review-photo-lightbox").then((mod) => mod.ReviewPhotoLightbox),
+  { ssr: false, loading: () => null },
+);
 
 export type ReviewRow = {
   id: string;
@@ -276,26 +283,17 @@ export function ReviewsSection({
         </>
       )}
 
-      <Modal
-        open={Boolean(lightbox && lightbox.length > 0)}
-        onClose={() => setLightbox(null)}
-        title={labels.lightboxTitle}
-        data-testid="review-photo-lightbox"
-      >
-        {lightbox && lightbox.length > 0 ? (
-          <ImageGallery
-            images={lightbox}
-            cloudName={cloudName}
-            previousLabel={labels.galleryPrevious}
-            nextLabel={labels.galleryNext}
-            indicatorLabel={(current, total) =>
-              labels.galleryIndicator
-                .replace("{current}", String(current))
-                .replace("{total}", String(total))
-            }
-          />
-        ) : null}
-      </Modal>
+      {lightbox && lightbox.length > 0 ? (
+        <ReviewPhotoLightbox
+          images={lightbox}
+          cloudName={cloudName}
+          title={labels.lightboxTitle}
+          previousLabel={labels.galleryPrevious}
+          nextLabel={labels.galleryNext}
+          indicatorTemplate={labels.galleryIndicator}
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </section>
   );
 }
