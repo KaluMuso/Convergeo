@@ -4,8 +4,14 @@ import { IconHeart } from "@vergeo/ui/src/icons";
 import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useEffect, useState } from "react";
 
-import { syncWishlistWithServer } from "../../../../../lib/engagement-api";
 import { isWishlistedLocal, toggleWishlistLocal } from "../../../../../lib/wishlist-local";
+
+/** Fire-and-forget server sync: load the engagement client on demand, outside first-load JS. */
+function syncWishlistWithServer(): Promise<void> {
+  return import("../../../../../lib/engagement-api")
+    .then((mod) => mod.syncWishlistWithServer())
+    .catch(() => undefined);
+}
 
 export type PdpWishlistButtonProps = {
   productId: string;
