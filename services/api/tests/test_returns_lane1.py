@@ -35,6 +35,15 @@ DELIVERY_NGWEE = 5_000
 EVIDENCE_PATH = f"orders/{CUSTOMER_A_ID}/{ORDER_A_ID}/evidence-1.jpg"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent

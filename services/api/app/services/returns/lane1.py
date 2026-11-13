@@ -11,7 +11,7 @@ from app.errors import AppError
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.notifications.dedupe import enqueue_outbox_row
-from app.services.refunds.execute import execute_refund
+from app.services.refunds.execute import ensure_refund_allowed, execute_refund
 from app.services.refunds.math import compute_lane1_refund
 
 logger = logging.getLogger(__name__)
@@ -445,6 +445,15 @@ def vendor_accept_lane1_return(
     order_id = str(order["id"])
     customer_id = str(order["customer_id"])
     vendor_id = str(order["vendor_id"])
+
+    # Payout kill switch: accepting a lane-1 return creates a customer refund
+    # payout. Refuse before the CAS so the return stays `requested` (re-drivable).
+    ensure_refund_allowed(
+        cast(Any, service_client),
+        order_id=order_id,
+        idempotency_key=f"return-{return_id}-refund",
+        surface="returns_lane1_accept",
+    )
 
     _cas_update_return_status(
         service_client,

@@ -94,6 +94,8 @@
     "delete": "Supprimer l'adresse",
     "deleteConfirmTitle": "Supprimer cette adresse ?",
     "deleteConfirmBody": "Cette adresse sera supprimée de votre compte. Les commandes déjà passées ne sont pas concernées.",
+    "deleteBlocked": "Cette adresse est liée à une commande qui n'a pas encore été livrée. Vous pourrez la supprimer une fois la commande terminée.",
+    "deleteFailed": "Impossible de supprimer l'adresse. Veuillez réessayer.",
     "cancel": "Annuler",
     "requiredLandmark": "Les indications par points de repère sont obligatoires.",
     "error": "Impossible d'enregistrer l'adresse. Veuillez réessayer."

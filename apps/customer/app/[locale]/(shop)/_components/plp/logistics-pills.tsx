@@ -10,9 +10,14 @@ export type LogisticsPillLabels = {
   pickup: string;
 };
 
-export function catalogLogisticsLabels(t: (key: string) => string): LogisticsPillLabels {
+export function catalogLogisticsLabels(t: {
+  (key: string): string;
+  raw(key: string): unknown;
+}): LogisticsPillLabels {
   return {
-    nearest: t("plp.card.pill.nearest"),
+    // `{distance} away` is filled per listing on the client: read it unformatted,
+    // or next-intl returns the key path for a message with a missing value.
+    nearest: String(t.raw("plp.card.pill.nearest")),
     belowMedian: t("plp.card.pill.belowMedian"),
     delivery: t("plp.card.pill.delivery"),
     pickup: t("plp.card.pill.pickup"),

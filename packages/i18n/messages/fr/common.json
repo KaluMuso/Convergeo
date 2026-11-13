@@ -114,5 +114,9 @@
     "close": "Fermer",
     "showFooter": "Afficher les liens du site",
     "hideFooter": "Masquer les liens du site"
+  },
+  "paymentTrust": {
+    "footerSeal": "Payez en espèces à l'arrivée de votre commande",
+    "footerPaymentNote": "Paiement à la livraison · Paiement en ligne bientôt disponible"
   }
 }

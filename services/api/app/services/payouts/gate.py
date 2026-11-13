@@ -77,3 +77,63 @@ def assert_payouts_execution_allowed() -> None:
             ),
             http_status=503,
         )
+
+
+# --- Customer-refund guard ---------------------------------------------------
+#
+# A customer refund is a ledger drain (refund_lane1/2 or clawback) plus a
+# ``pending`` customer_refund payout row that the payout sweeper sends once
+# payouts are enabled. While ``PAYOUTS_ENABLED`` is off, creating that state is a
+# latent, unreviewed money movement, so every refund-creating path must refuse
+# BEFORE writing any ledger posting, refund row or payout row. Behaviour with
+# payouts enabled is unchanged. Staging suppression is deliberately NOT checked
+# here: it only gates the provider send, and sandbox drills need refund rows.
+
+REFUND_UNAVAILABLE_PAYOUTS_DISABLED = "refund.unavailable_payouts_disabled"
+DISPUTE_REFUND_UNAVAILABLE_PAYOUTS_DISABLED = "dispute.refund_unavailable_payouts_disabled"
+
+
+class RefundPayoutsDisabledError(AppError):
+    """Raised when a refund (customer payout) is requested while payouts are off."""
+
+    def __init__(
+        self,
+        *,
+        code: str = REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+        details: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=(
+                "Refunds are temporarily unavailable while payouts are disabled. "
+                "No money has been moved."
+            ),
+            http_status=409,
+            details={"reason": "payouts_disabled", **(details or {})},
+        )
+
+
+def assert_customer_refund_allowed(
+    *,
+    code: str = REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+    surface: str,
+    details: dict[str, object] | None = None,
+) -> None:
+    """Refuse a refund-creating action while the payout kill switch is off.
+
+    Call this before ANY write (ledger, refund row, payout row, or a status change
+    that only makes sense if the refund follows). ``surface`` names the caller for
+    the structured log (never PII).
+    """
+    if payouts_enabled():
+        return
+    logger.warning(
+        "customer_refund_blocked",
+        extra={
+            "event": "customer_refund_blocked",
+            "reason_code": "payouts_disabled",
+            "surface": surface,
+            "error_code": code,
+        },
+    )
+    raise RefundPayoutsDisabledError(code=code, details=details)

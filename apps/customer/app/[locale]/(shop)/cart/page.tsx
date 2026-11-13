@@ -59,6 +59,7 @@ export default async function CartPage({ params }: CartPageProps) {
       t("checkout.review.escrowStep3"),
     ],
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
+    reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
     vendor: {
       vendorGroup: t("cart.vendorGroup"),

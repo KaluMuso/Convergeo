@@ -136,14 +136,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: flowMocks.push, replace: flowMocks.replace }),
 }));
 vi.mock("next-intl", () => ({
-  useTranslations: (namespace: string) => (key: string) => {
-    const messages: unknown = namespace === "vendor" ? vendorMessages : {};
-    const value = key.split(".").reduce<unknown>((current, part) => {
-      return current && typeof current === "object"
-        ? (current as Record<string, unknown>)[part]
-        : undefined;
-    }, messages);
-    return typeof value === "string" ? value : key;
+  useTranslations: (namespace: string) => {
+    const translate = (key: string) => {
+      const messages: unknown = namespace === "vendor" ? vendorMessages : {};
+      const value = key.split(".").reduce<unknown>((current, part) => {
+        return current && typeof current === "object"
+          ? (current as Record<string, unknown>)[part]
+          : undefined;
+      }, messages);
+      return typeof value === "string" ? value : key;
+    };
+    return Object.assign(translate, { raw: translate });
   },
 }));
 vi.mock("../../onboarding/_lib/kyc-client", () => ({

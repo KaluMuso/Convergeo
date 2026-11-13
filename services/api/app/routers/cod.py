@@ -131,10 +131,13 @@ def vendor_confirm_cod_collection(
     _assert_vendor_owns_order(vendor_id=str(vendor["id"]), order_vendor_id=order_vendor_id)
 
     try:
+        # Pickup only: the vendor took the cash at its counter. Delivery COD is
+        # collected by the platform's rider and refused here (admin-only).
         result = confirm_cod_collection(
             order_id=order_id,
             actor_id=user.id,
             note=body.note,
+            actor_role=ActorRole.VENDOR,
         )
     except CodError as exc:
         raise _map_cod_error(exc) from exc
@@ -203,12 +206,12 @@ def admin_confirm_cod_collection(
     body: CodNoteRequest,
     user: Annotated[CurrentUser, Depends(require_role("admin"))],
 ) -> CodCollectionResponse:
-    _ = user
     try:
         result = confirm_cod_collection(
             order_id=order_id,
             actor_id=user.id,
             note=body.note,
+            actor_role=ActorRole.ADMIN,
         )
     except CodError as exc:
         raise _map_cod_error(exc) from exc

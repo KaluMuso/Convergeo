@@ -12,9 +12,18 @@ from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     decide_refund_phase_under_gate,
 )
-from app.services.escrow.release_accounting import summarize_order_release_ledger
+from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
+    delivery_revenue_held_ngwee,
+    summarize_order_release_ledger,
+)
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
+from app.services.payouts.gate import (
+    REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+    assert_customer_refund_allowed,
+    payouts_enabled,
+)
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
 from app.services.refunds.config import load_restocking_fee_bps
 from app.services.refunds.constants import ACTIVE_REFUND_STATUSES, AWAITING_PROVIDER_STATUSES
@@ -174,6 +183,38 @@ def _find_existing_refund(
     return None
 
 
+def _is_pure_replay(existing: dict[str, Any] | None) -> bool:
+    """True when a retry would only return an existing refund and write nothing."""
+    if existing is None:
+        return False
+    status = str(existing.get("status") or "")
+    return status == "completed" or status in AWAITING_PROVIDER_STATUSES
+
+
+def ensure_refund_allowed(
+    service_client: ServiceRoleClient,
+    *,
+    order_id: str,
+    idempotency_key: str | None,
+    surface: str,
+    code: str = REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+) -> None:
+    """Payout-gate pre-check for refund callers — run BEFORE any write.
+
+    With payouts enabled this is a no-op. With payouts disabled it refuses, except
+    for a pure idempotent replay of a refund that already exists in a completed /
+    awaiting-provider state (those return the stored result and write nothing), so
+    retry semantics are unchanged. A ``processing``/``pending`` resume would post
+    ledger legs or create the payout row, so it is refused like a new refund.
+    """
+    if payouts_enabled():
+        return
+    source_key = _refund_source_key(idempotency_key, order_id)
+    if _is_pure_replay(_find_existing_refund(service_client, source_key=source_key)):
+        return
+    assert_customer_refund_allowed(code=code, surface=surface, details={"order_id": order_id})
+
+
 def _result_from_existing(row: dict[str, Any]) -> RefundExecutionResult:
     payout_ref = row.get("payout_ref")
     raw_breakdown = row.get("breakdown")
@@ -270,7 +311,24 @@ def _post_post_release_clawback(
     order_id: str,
     vendor_id: str,
     clawback_ngwee: int,
+    refunded_delivery_fee_ngwee: int = 0,
 ) -> str:
+    # The delivery fee went to delivery_revenue at release (never to the vendor):
+    # refund it from there, and claw only the rest back from the vendor. Orders
+    # released before that capture existed paid the fee to the vendor, so the
+    # whole amount is still clawed from vendor_payable for them.
+    platform_fee_ngwee = 0
+    if refunded_delivery_fee_ngwee > 0:
+        try:
+            held = delivery_revenue_held_ngwee(order_id)
+        except ReleaseAccountingError as exc:
+            raise AppError(
+                "refund_ledger_lookup_failed",
+                "Could not read the order's delivery revenue; retry the refund",
+                503,
+                {"order_id": order_id},
+            ) from exc
+        platform_fee_ngwee = min(refunded_delivery_fee_ngwee, held, clawback_ngwee)
     posted = post_transaction(
         idempotency_key=f"{ledger_key_base}-clawback",
         template=LedgerTemplate.CLAWBACK,
@@ -278,6 +336,7 @@ def _post_post_release_clawback(
         refund_id=refund_id,
         clawback_ngwee=clawback_ngwee,
         vendor_id=vendor_id,
+        delivery_fee_ngwee=platform_fee_ngwee,
     )
     return posted.id
 
@@ -354,6 +413,9 @@ def _complete_refund_money_path(
                 order_id=order_id,
                 vendor_id=vendor_id,
                 clawback_ngwee=refund_amount,
+                refunded_delivery_fee_ngwee=(
+                    lane1.delivery_fee_ngwee if lane == 1 and lane1 is not None else 0
+                ),
             )
         )
 
@@ -491,6 +553,11 @@ def execute_refund(
             return _result_from_existing(existing)
         if status in AWAITING_PROVIDER_STATUSES:
             return _result_from_existing(existing)
+    # Payout kill switch backstop (every caller): nothing below may write ledger
+    # legs, a refund row or a customer payout row while payouts are disabled.
+    assert_customer_refund_allowed(surface="execute_refund", details={"order_id": order_id})
+    if existing is not None:
+        status = str(existing.get("status") or "")
         if status in {"processing", "pending"}:
             return _resume_processing_refund(
                 service_client=service_client,
@@ -565,6 +632,7 @@ def execute_refund(
         remaining_escrow_ngwee = (
             summary.charge_received_ngwee
             - summary.commission_captured_ngwee
+            - summary.delivery_fee_captured_ngwee
             - summary.vendor_released_ngwee
             - summary.refund_drained_ngwee
         )
@@ -588,6 +656,7 @@ def execute_refund(
             remaining_escrow_ngwee = (
                 summary.charge_received_ngwee
                 - summary.commission_captured_ngwee
+                - summary.delivery_fee_captured_ngwee
                 - summary.vendor_released_ngwee
                 - summary.refund_drained_ngwee
             )

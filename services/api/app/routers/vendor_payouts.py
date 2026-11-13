@@ -21,6 +21,7 @@ from app.services.ledger.templates import AccountRef
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.orders.audit import run_sql_script
 from app.services.payouts.eligibility import compute_eligibility
+from app.services.payouts.gate import payouts_enabled
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import Field, field_validator
@@ -43,6 +44,9 @@ class PayoutBalances(StrictModel):
     released_available_ngwee: int
     paid_out_ngwee: int
     payouts_blocked: bool
+    # True while the platform payout kill switch is off: no payout will run for
+    # any vendor, so the UI must not present balances as about to be paid.
+    payouts_paused: bool
     payout_hold_until: str | None
     payout_msisdn: str | None
     payout_rail: str | None
@@ -220,6 +224,7 @@ def compute_vendor_balances(
         released_available_ngwee=eligibility.available_ngwee,
         paid_out_ngwee=vendor_paid_out_ngwee(vendor_id),
         payouts_blocked=payouts_blocked,
+        payouts_paused=not payouts_enabled(),
         payout_hold_until=payout_hold_until,
         payout_msisdn=payout_msisdn,
         payout_rail=payout_rail,

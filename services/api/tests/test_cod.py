@@ -38,6 +38,7 @@ COMMISSION_ID = "c3000000-0000-0000-0000-000000000003"
 VENDOR_PAYABLE_ID = "c5000000-0000-0000-0000-000000000005"
 COD_RECEIVABLE_ID = "c6000000-0000-0000-0000-000000000006"
 FEES_ID = "c4000000-0000-0000-0000-000000000004"
+DELIVERY_REVENUE_ID = "c7000000-0000-0000-0000-000000000007"
 
 COD_CAP_NGWEE = 50_000
 
@@ -220,7 +221,9 @@ class TestCodCollectionConfirm:
             gross_ngwee=subtotal,
             commission_bps=rate_bps,
         )
-        expected_net = collectable - expected_commission
+        # The delivery fee is platform revenue (the platform pays the rider):
+        # the vendor's net is items − commission, never items + fee − commission.
+        expected_net = subtotal - expected_commission
 
         _insert_cod_order(
             db,
@@ -236,6 +239,7 @@ class TestCodCollectionConfirm:
         payable_before = account_balance_ngwee(VENDOR_PAYABLE_ID)
         cod_before = account_balance_ngwee(COD_RECEIVABLE_ID)
         escrow_before = account_balance_ngwee(ESCROW_ID)
+        delivery_before = account_balance_ngwee(DELIVERY_REVENUE_ID)
 
         record_cod_receivable(order_id=order_id)
 
@@ -256,6 +260,9 @@ class TestCodCollectionConfirm:
         assert account_balance_ngwee(VENDOR_PAYABLE_ID) == payable_before - expected_net
         assert account_balance_ngwee(COD_RECEIVABLE_ID) == cod_before
         assert account_balance_ngwee(ESCROW_ID) == escrow_before
+        assert account_balance_ngwee(DELIVERY_REVENUE_ID) == delivery_before - delivery_fee
+        assert _transaction_posting_sum(db, f"delivery-fee-{order_id}") == 0
+        assert sum(amount for _, _, amount in _all_postings_for_order(db, order_id)) == 0
 
         assert _transaction_posting_sum(db, collection_idempotency_key(order_id)) == 0
 
@@ -372,6 +379,14 @@ class TestCodCommissionMath:
         assert comm == 6_172
         assert net == collectable - 6_172
 
+        comm, net = commission_ngwee_for_collectable(
+            collectable_ngwee=collectable,
+            commission_snapshot=snapshot,
+            delivery_fee_ngwee=7_000,
+        )
+        assert comm == 6_172
+        assert net == subtotal - 6_172
+
     def test_expected_collection_legs_sum_to_zero(self) -> None:
         legs = expected_collection_posting_legs(
             collectable_ngwee=200_000,
@@ -379,6 +394,18 @@ class TestCodCommissionMath:
             vendor_id=VENDOR_A,
         )
         assert sum(amount for _, _, amount in legs) == 0
+
+    def test_expected_collection_legs_route_delivery_fee_to_platform(self) -> None:
+        legs = expected_collection_posting_legs(
+            collectable_ngwee=200_000,
+            commission_bps=500,
+            vendor_id=VENDOR_A,
+            delivery_fee_ngwee=4_500,
+        )
+        assert sum(amount for _, _, amount in legs) == 0
+        assert ("delivery_revenue", None, -4_500) in legs
+        # Vendor net = items (195_500) − 5% commission (9_775).
+        assert ("vendor_payable", VENDOR_A, -(195_500 - 9_775)) in legs
 
 
 @pytest.mark.usefixtures("db_url_env")

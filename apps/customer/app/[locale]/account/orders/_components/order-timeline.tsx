@@ -4,6 +4,10 @@ export type OrderTimelineLabels = {
   title: string;
   steps: Record<string, string>;
   escrow: Record<string, string>;
+  /** Plain-language "what this means" per step key (camelCase), shown on the current step. */
+  explain?: Record<string, string>;
+  /** Badge on the current step, e.g. "Now". */
+  now?: string;
 };
 
 type OrderTimelineProps = {
@@ -33,6 +37,11 @@ function stepLabel(stepKey: string, labels: OrderTimelineLabels): string {
   return stepKey;
 }
 
+function explainLabel(stepKey: string, labels: OrderTimelineLabels): string | null {
+  const mapped = STEP_LABEL_KEY[stepKey];
+  return (mapped && labels.explain?.[mapped]) || null;
+}
+
 function escrowLabel(copyKey: string, labels: OrderTimelineLabels): string | null {
   if (copyKey === "none") {
     return null;
@@ -57,6 +66,7 @@ export function OrderTimeline({ timeline, labels }: OrderTimelineProps) {
           return (
             <li
               key={step.step_key}
+              aria-current={isCurrent ? "step" : undefined}
               className={[
                 "rounded border px-4 py-3",
                 isCurrent ? "border-primary bg-bg-2" : "border-border bg-surface",
@@ -77,14 +87,29 @@ export function OrderTimeline({ timeline, labels }: OrderTimelineProps) {
                   {isCompleted ? "✓" : "•"}
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p
-                    className={[
-                      "text-sm font-medium",
-                      isCurrent || isCompleted ? "text-display-ink" : "text-text-2",
-                    ].join(" ")}
-                  >
-                    {stepLabel(step.step_key, labels)}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p
+                      className={[
+                        "text-sm font-medium",
+                        isCurrent || isCompleted ? "text-display-ink" : "text-text-2",
+                      ].join(" ")}
+                    >
+                      {stepLabel(step.step_key, labels)}
+                    </p>
+                    {isCurrent && labels.now ? (
+                      <span className="rounded-full bg-primary-tint px-2 py-0.5 text-xs font-medium text-primary-deep">
+                        {labels.now}
+                      </span>
+                    ) : null}
+                  </div>
+                  {isCurrent && explainLabel(step.step_key, labels) ? (
+                    <p
+                      className="text-sm text-text-2"
+                      data-testid={`order-timeline-explain-${step.step_key}`}
+                    >
+                      {explainLabel(step.step_key, labels)}
+                    </p>
+                  ) : null}
                   {escrow ? <p className="text-xs text-text-2">{escrow}</p> : null}
                   {step.occurred_at ? (
                     <time className="font-mono text-xs text-text-2" dateTime={step.occurred_at}>
