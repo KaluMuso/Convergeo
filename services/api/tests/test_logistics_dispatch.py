@@ -168,6 +168,15 @@ class TestCombinedCompleteAndCustody:
 class TestCashCapAndRemittance:
     def test_cap_blocks_new_cash_job_until_remitted_and_ledger_books(self, db: PgConn) -> None:
         courier = _make_courier(db)
+        # The COD path books against the shop's ledger accounts (seeded by migrations
+        # in production; created here for an isolated run).
+        _sql_ok(
+            db,
+            "INSERT INTO public.ledger_accounts (kind, vendor_id) "
+            f"SELECT k, '{SHOP_A}'::uuid FROM unnest(ARRAY['vendor_payable', 'cod_receivable']) k "
+            "WHERE NOT EXISTS (SELECT 1 FROM public.ledger_accounts a "
+            f"WHERE a.kind = k AND a.vendor_id = '{SHOP_A}'::uuid);",
+        )
         first_order = _make_order(db)
         # Test-owner fixture: give the order a purchase-time commission snapshot.
         _sql_ok(

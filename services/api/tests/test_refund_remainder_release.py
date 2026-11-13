@@ -213,6 +213,8 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
             side_effect=fake_compute,
         ),
         patch("app.services.escrow.release.claim_release_gate"),
+        # Logistics phase 1 funding leg is covered by its own real-DB test.
+        patch("app.services.escrow.release.post_order_delivery_funding"),
         patch("app.services.escrow.release.capture_order_commission") as capture,
         patch(
             "app.services.escrow.release._post_release",
@@ -288,6 +290,8 @@ def test_release_after_partial_refund_never_captures_a_refunded_fee(
         patch("app.services.escrow.release.remaining_escrow_ngwee", return_value=remaining),
         patch("app.services.escrow.release.compute_release_amounts", side_effect=fake_compute),
         patch("app.services.escrow.release.claim_release_gate"),
+        # Logistics phase 1 funding leg is covered by its own real-DB test.
+        patch("app.services.escrow.release.post_order_delivery_funding"),
         patch("app.services.escrow.release.capture_order_commission"),
         patch("app.services.escrow.release.capture_order_delivery_fee") as capture_fee,
         patch("app.services.escrow.release._post_release", return_value="txn-1"),

@@ -586,7 +586,9 @@ SET status = '{to_status}'
 WHERE o.id = {order_sql} AND o.status = '{from_status}'
   AND (
     '{event.value}' NOT IN (
-      'confirm', 'start_processing', 'ready_for_pickup', 'ready_for_collection', 'ship'
+      -- 'mark_ready' kept as before (ready_for_pickup is NOT SQL-enforced here
+      -- today; see report); the new delivery readiness event is enforced.
+      'confirm', 'start_processing', 'mark_ready', 'ready_for_collection', 'ship'
     )
     OR o.cod
     OR EXISTS (SELECT 1 FROM public.payments p
