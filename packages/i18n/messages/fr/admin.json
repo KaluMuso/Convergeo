@@ -41,7 +41,9 @@
       "categoriesTitle": "Arborescence des catégories",
       "categoriesBody": "Structure publique du catalogue.",
       "platformTitle": "Réglages de la plateforme",
-      "platformBody": "Limites opérationnelles et paramètres plateforme."
+      "platformBody": "Limites opérationnelles et paramètres plateforme.",
+      "vendorPlansTitle": "Formules vendeurs",
+      "vendorPlansBody": "Prix des formules, limites d'annonces et de photos, et exceptions par vendeur."
     }
   },
   "translations": {
@@ -116,7 +118,8 @@
       "deliveryZones": "Zones de livraison",
       "platform": "Réglages de la plateforme",
       "flags": "Fonctionnalités (drapeaux)",
-      "categories": "Arborescence des catégories"
+      "categories": "Arborescence des catégories",
+      "vendorPlans": "Formules vendeurs"
     },
     "common": {
       "save": "Enregistrer les modifications",
@@ -189,6 +192,10 @@
       "moveChildrenConfirm": "Déplacer avec les sous-catégories",
       "orphanWarning": "Impossible de déplacer sans les sous-catégories — activez le déplacement avec sous-catégories.",
       "rootOption": "Racine (aucun parent)"
+    },
+    "vendorPlans": {
+      "title": "Formules vendeurs",
+      "subtitle": "Limites d'annonces et de photos, fonctionnalités et prix mensuels. Les changements s'appliquent immédiatement et sont journalisés."
     }
   },
   "business": {
@@ -1157,6 +1164,85 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "common": {
+    "rateLimited": "Trop de modifications en peu de temps. Patientez une minute puis réessayez."
+  },
+  "productImages": {
+    "errors": {
+      "full": "Un produit peut avoir au maximum 8 photos.",
+      "duplicate": "Cette photo figure déjà sur ce produit."
+    }
+  },
+  "vendorPlans": {
+    "hint": "Les limites comptent les annonces distinctes, jamais le stock. Laissez la limite d'annonces vide pour l'illimité. Dépasser une limite ne supprime jamais d'annonces : le vendeur voit seulement une invitation à changer de formule. Aucune facturation pour l'instant.",
+    "unlimited": "Illimité",
+    "default": "Formule par défaut",
+    "vendorCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
+    "summary": "{price}/mois · {listings} annonces · {images} photos",
+    "makeDefault": "Définir par défaut",
+    "delete": "Supprimer",
+    "createHeading": "Nouvelle formule",
+    "create": "Créer la formule",
+    "fields": {
+      "key": "Clé de formule (minuscules, ex. market_stall)",
+      "name": "Nom",
+      "priceKwacha": "Prix mensuel (K)",
+      "maxListings": "Limite d'annonces (vide = illimité)",
+      "maxImages": "Photos par annonce (1–8)",
+      "featuredSlots": "Emplacements mis en avant",
+      "analyticsDepth": "Statistiques",
+      "wholesaleTools": "Outils de vente en gros",
+      "active": "Active"
+    },
+    "depth": {
+      "basic": "Essentielles",
+      "standard": "Standard",
+      "advanced": "Avancées"
+    },
+    "errors": {
+      "nameRequired": "Saisissez un nom de formule.",
+      "keyInvalid": "Utilisez de 2 à 32 lettres minuscules, chiffres ou tirets bas, en commençant par une lettre.",
+      "priceInvalid": "Saisissez un prix en kwacha, par exemple 49 ou 49.50.",
+      "listingsInvalid": "Saisissez un nombre entier d'annonces, ou laissez vide pour l'illimité.",
+      "imagesInvalid": "Le nombre de photos par annonce doit être compris entre 1 et 8.",
+      "slotsInvalid": "Les emplacements mis en avant doivent être compris entre 0 et 100.",
+      "overrideEmpty": "Une exception doit modifier la limite d'annonces ou de photos.",
+      "expiryInvalid": "Choisissez une date d'expiration future, au plus dans un an.",
+      "reasonRequired": "Indiquez le motif de l'exception.",
+      "vendorIdInvalid": "Saisissez un identifiant vendeur (UUID).",
+      "vendorNotFound": "Vendeur introuvable.",
+      "saveFailed": "Enregistrement impossible. Vérifiez les valeurs et réessayez.",
+      "keyTaken": "Cette clé de formule existe déjà.",
+      "defaultInactive": "La formule par défaut doit rester active.",
+      "defaultDelete": "La formule par défaut ne peut pas être supprimée.",
+      "inUse": "Des vendeurs utilisent cette formule. Désactivez-la plutôt, ou déplacez-les d'abord.",
+      "planInactive": "Cette formule n'est pas active."
+    },
+    "vendor": {
+      "heading": "Formule du vendeur",
+      "hint": "Recherchez un vendeur pour lui attribuer une formule ou une exception temporaire.",
+      "vendorId": "Identifiant vendeur",
+      "load": "Charger",
+      "flagOff": "L'indicateur vendor_plans est désactivé : ces limites ne sont pas encore appliquées.",
+      "effective": "Formule {plan} : {listings} annonces ({count} utilisées), {images} photos par annonce",
+      "plan": "Formule",
+      "defaultPlan": "Choisir une formule",
+      "note": "Note (facultative)",
+      "assign": "Attribuer la formule",
+      "noBilling": "Attribuer une formule l'enregistre seulement. Aucun paiement n'est prélevé.",
+      "none": "par défaut"
+    },
+    "override": {
+      "heading": "Exception",
+      "current": "Active : {listings} annonces jusqu'au {expires} ({reason})",
+      "expired": "Expirée le {expires} : {listings} annonces ({reason})",
+      "unlimited": "Annonces illimitées",
+      "expiresOn": "Expire le",
+      "reason": "Motif",
+      "save": "Enregistrer l'exception",
+      "remove": "Retirer l'exception"
     }
   }
 }

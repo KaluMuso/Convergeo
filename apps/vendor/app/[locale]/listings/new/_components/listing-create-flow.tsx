@@ -12,6 +12,7 @@ import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { ListingTipsPanel } from "../../_components/listing-guide";
+import { PlanUsageCard } from "../../_components/plan-usage-card";
 import { createListingClient } from "../_lib/listing-client";
 import { Spinner, Switch, Tabs } from "../_lib/ui";
 
@@ -263,6 +264,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
                   commission: commissionLabels,
                   submitError: t("listings.errors.submitFailed"),
                   standaloneRequired: t("listings.errors.standalone_required"),
+                  listingLimit: t("plans.limitReachedShort"),
                 }}
               />
             </>
@@ -307,6 +309,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             commission: commissionLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
+            listingLimit: t("plans.limitReachedShort"),
             required: t("listings.errors.required"),
           }}
         />
@@ -348,6 +351,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
             policyBlocked: t("listings.errors.policyBlocked"),
+            listingLimit: t("plans.limitReachedShort"),
             required: t("listings.errors.required"),
           }}
         />
@@ -361,6 +365,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <h1 className="font-display text-h3 text-display-ink">{t("listings.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
+
+      <PlanUsageCard />
 
       <ListingTipsPanel defaultOpen />
 

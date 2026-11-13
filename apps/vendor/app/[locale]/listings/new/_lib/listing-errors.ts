@@ -7,6 +7,8 @@ export function listingCreateErrorMessage(
     canonicalRequired?: string;
     standaloneDetailsRequired?: string;
     policyBlocked?: string;
+    /** Plan or KYC listing cap reached (`listing_cap_exceeded`): never a generic failure. */
+    listingLimit?: string;
     fallback: string;
   },
 ): string {
@@ -19,6 +21,7 @@ export function listingCreateErrorMessage(
     if (error.code === "standalone_details_required")
       return messages.standaloneDetailsRequired ?? messages.fallback;
     if (error.code === "listing_policy_blocked") return messages.policyBlocked ?? messages.fallback;
+    if (error.code === "listing_cap_exceeded") return messages.listingLimit ?? messages.fallback;
   }
   return messages.fallback;
 }

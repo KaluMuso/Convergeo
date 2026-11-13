@@ -189,3 +189,40 @@ describe("uploadToCloudinaryWithProgress", () => {
     expect(appended.get("allowed_formats")).toBe(signed.allowed_formats);
   });
 });
+
+describe("sha256Hex", () => {
+  it("hashes the exact upload bytes as lowercase hex", async () => {
+    const { sha256Hex } = await import("./image-manager");
+    const digest = await sha256Hex(new Blob(["abc"]));
+    expect(digest).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  });
+
+  it("returns null when WebCrypto is unavailable (dedup is skipped, upload continues)", async () => {
+    const { sha256Hex } = await import("./image-manager");
+    vi.stubGlobal("crypto", {});
+    expect(await sha256Hex(new Blob(["abc"]))).toBeNull();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("imageErrorNotice", () => {
+  it("turns a plan photo cap into an upgrade message, not 'upload failed'", async () => {
+    const { imageErrorNotice } = await import("./image-manager");
+    const { ApiError } = await import("@vergeo/config");
+    const t = ((key: string, values?: Record<string, unknown>) =>
+      values ? `${key}:${JSON.stringify(values)}` : key) as never;
+    const planCap = new ApiError("image_limit_reached", "cap", {
+      status: 400,
+      details: { max_images: 3, upgrade_available: true },
+    });
+    expect(imageErrorNotice(planCap, t)).toBe('plans.photoLimitReached:{"max":3}');
+    const hardCap = new ApiError("image_limit_reached", "cap", {
+      status: 400,
+      details: { max_images: 8, upgrade_available: false },
+    });
+    expect(imageErrorNotice(hardCap, t)).toBe("listings.images.limit_reached");
+    const duplicate = new ApiError("duplicate_image", "dup", { status: 409 });
+    expect(imageErrorNotice(duplicate, t)).toBe("listings.images.duplicate");
+    expect(imageErrorNotice(new Error("network"), t)).toBeNull();
+  });
+});

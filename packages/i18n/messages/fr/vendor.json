@@ -376,7 +376,9 @@
       "uploading": "Envoi en cours…",
       "upload_failed": "Échec de l'envoi",
       "minimum_required": "Au moins {count} photo justificative doit rester jointe tant que cette annonce est publiée.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "duplicate": "Cette photo figure déjà sur l'annonce.",
+      "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau."
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
@@ -2007,5 +2009,23 @@
     "errors": {
       "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
     }
+  },
+  "plans": {
+    "heading": "Votre formule : {name}",
+    "free": "Gratuit",
+    "perMonth": "{price}/mois",
+    "usage": "{count} annonces utilisées sur {max}",
+    "usageUnlimited": "{count} annonces · sans limite",
+    "kycLimit": "Vous avez atteint la limite d'annonces de votre niveau de vérification. Faites vérifier votre entreprise pour en publier davantage.",
+    "atLimit": "Vous avez utilisé toutes les annonces de votre formule.",
+    "overLimit": "Vous avez plus d'annonces que votre formule ne le permet.",
+    "keepSelling": "Rien n'a été supprimé : vos annonces restent en ligne, et vous pouvez continuer à les modifier et à ajouter du stock. Pour ajouter de nouveaux produits, passez à une formule supérieure.",
+    "option": "{name} : {max} annonces pour {price}/mois",
+    "optionUnlimited": "{name} : annonces illimitées pour {price}/mois",
+    "howToUpgrade": "Pour changer de formule, écrivez à notre équipe. Aucun prélèvement automatique.",
+    "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
+    "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",
+    "photoLimitReached": "Votre formule autorise {max} photos par annonce. Passez à une formule supérieure pour en ajouter.",
+    "billingUnavailable": "Le paiement des formules n'est pas encore disponible. Notre équipe vous aidera à changer de formule."
   }
 }

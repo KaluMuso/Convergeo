@@ -336,6 +336,16 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /products/merge": ADMIN_WRITE,
     "PATCH /products/canonical/{product_id}/status": ADMIN_WRITE,
     "PUT /products/{product_id}/relations": ADMIN_WRITE,
+    # Vendor plans + canonical product photos (admin sub-routers, un-prefixed
+    # keys). Enforced in-router (admin_vendor_plans._limit, keyed by admin id).
+    "POST /vendor-plans": ADMIN_WRITE,
+    "PATCH /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "DELETE /vendor-plans/{plan_key}": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan": ADMIN_WRITE,
+    "PUT /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "DELETE /vendors/{vendor_id}/plan/override": ADMIN_WRITE,
+    "POST /products/{product_id}/images": ADMIN_WRITE,
+    "DELETE /products/{product_id}/images/{image_id}": ADMIN_WRITE,
     "POST /quotes/{quote_id}/decline": STANDARD_WRITE,
     "POST /quotes/{quote_id}/withdraw": STANDARD_WRITE,
     "POST /refunds/execute": PAYMENT_WRITE,

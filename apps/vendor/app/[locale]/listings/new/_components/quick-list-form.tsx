@@ -51,6 +51,8 @@ type QuickListFormProps = {
     fields: Parameters<typeof ListingFields>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    /** Listing cap reached (plan or KYC) — friendly upgrade copy. */
+    listingLimit?: string;
     /** Server category/release-policy rejection (listing_policy_blocked). */
     policyBlocked?: string;
     required: string;
@@ -163,6 +165,7 @@ export function QuickListForm({
       onError(
         listingCreateErrorMessage(caught, {
           standaloneRequired: labels.standaloneRequired,
+          listingLimit: labels.listingLimit,
           policyBlocked: labels.policyBlocked,
           fallback: labels.submitError,
         }),

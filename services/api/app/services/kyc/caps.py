@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Annotated, Any, cast
 
@@ -11,6 +11,7 @@ from app.errors import AppError
 from app.services.kyc.badge import payout_velocity_window_start
 from app.services.kyc.eligibility import cap_tier_for_quotas, resolve_vendor_eligibility
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.vendor_plans.resolver import EffectivePlan, resolve_effective_plan
 from fastapi import Depends
 
 ServiceClient = Any
@@ -51,6 +52,18 @@ class VendorCapLimits:
     cod_cap_ngwee: int
     listing_count: int
     order_count: int
+    # Vendor plans (flag ``vendor_plans``). ``quota.max_listings`` above is
+    # already the EFFECTIVE cap = min(KYC cap, plan cap); these fields say which
+    # one binds so the vendor sees an upgrade prompt rather than a KYC message.
+    kyc_max_listings: int | None = None
+    plan: EffectivePlan | None = None
+
+    @property
+    def limited_by_plan(self) -> bool:
+        if self.plan is None or self.plan.max_listings is None:
+            return False
+        kyc_cap = self.kyc_max_listings
+        return kyc_cap is None or self.plan.max_listings < kyc_cap
 
 
 @dataclass(slots=True)
@@ -259,7 +272,12 @@ def load_vendor_cap_limits_by_id(
     )
     # Orphaned bare kyc_tier must not unlock T2/T3 quota lifts (MR-D02).
     tier = cap_tier_for_quotas(eligibility)
-    quota = load_vendor_quota(service_client, tier)
+    kyc_quota = load_vendor_quota(service_client, tier)
+    quota = kyc_quota
+    plan = resolve_effective_plan(service_client.client, vendor_id)
+    if plan is not None and plan.max_listings is not None:
+        # Plans never lift the KYC trust cap: effective = min(KYC, plan).
+        quota = replace(kyc_quota, max_listings=min(kyc_quota.max_listings, plan.max_listings))
     cod_cap = _parse_config_int(service_client.client, "cod_cap_ngwee", 50_000)
     listing_count = _count_vendor_listings(service_client, vendor_id)
     order_count = _count_vendor_orders(service_client, vendor_id)
@@ -270,6 +288,8 @@ def load_vendor_cap_limits_by_id(
         cod_cap_ngwee=cod_cap,
         listing_count=listing_count,
         order_count=order_count,
+        kyc_max_listings=kyc_quota.max_listings,
+        plan=plan,
     )
 
 
@@ -313,16 +333,32 @@ def _raise_cap_error(
 
 
 def enforce_listing_cap(limits: VendorCapLimits) -> None:
-    if limits.listing_count >= limits.quota.max_listings:
+    if limits.listing_count < limits.quota.max_listings:
+        return
+    if limits.limited_by_plan and limits.plan is not None:
+        # Friendly upgrade prompt. Nothing is deleted or paused: existing
+        # listings stay live; only a NEW listing is refused.
         _raise_cap_error(
             code="listing_cap_exceeded",
-            message_key="vendor.caps.listing_limit",
+            message_key="vendor.plans.limitReached",
             details={
                 "max_listings": limits.quota.max_listings,
                 "current_listings": limits.listing_count,
                 "kyc_tier": limits.kyc_tier,
+                "limited_by": "plan",
+                "plan_key": limits.plan.plan.key,
+                "upgrade_available": True,
             },
         )
+    _raise_cap_error(
+        code="listing_cap_exceeded",
+        message_key="vendor.caps.listing_limit",
+        details={
+            "max_listings": limits.quota.max_listings,
+            "current_listings": limits.listing_count,
+            "kyc_tier": limits.kyc_tier,
+        },
+    )
 
 
 def enforce_first_order_cap(limits: VendorCapLimits, order_total_ngwee: int) -> None:

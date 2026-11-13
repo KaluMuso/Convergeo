@@ -41,7 +41,9 @@
       "categoriesTitle": "分类树",
       "categoriesBody": "公开目录分类结构。",
       "platformTitle": "平台参数",
-      "platformBody": "运营限额与平台设置。"
+      "platformBody": "运营限额与平台设置。",
+      "vendorPlansTitle": "商家套餐",
+      "vendorPlansBody": "套餐价格、商品和照片上限，以及按商家设置的例外。"
     }
   },
   "translations": {
@@ -116,7 +118,8 @@
       "deliveryZones": "配送区域",
       "platform": "平台参数",
       "flags": "功能开关",
-      "categories": "分类树"
+      "categories": "分类树",
+      "vendorPlans": "商家套餐"
     },
     "common": {
       "save": "保存更改",
@@ -189,6 +192,10 @@
       "moveChildrenConfirm": "连同子分类一起移动",
       "orphanWarning": "无法在不移动子分类的情况下移动该分类——请启用“连同子分类一起移动”。",
       "rootOption": "根节点（无父级）"
+    },
+    "vendorPlans": {
+      "title": "商家套餐",
+      "subtitle": "商品数量上限、照片上限、功能和月费。修改立即生效并记录审计日志。"
     }
   },
   "business": {
@@ -1157,6 +1164,85 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "common": {
+    "rateLimited": "短时间内修改过多，请稍等一分钟再试。"
+  },
+  "productImages": {
+    "errors": {
+      "full": "每个产品最多 8 张照片。",
+      "duplicate": "该照片已在此产品中。"
+    }
+  },
+  "vendorPlans": {
+    "hint": "上限按不同商品计算，从不按库存计算。商品上限留空表示不限。超出上限绝不会删除商品，商家只会看到升级提示。目前不收取费用。",
+    "unlimited": "不限",
+    "default": "默认套餐",
+    "vendorCount": "{count, plural, other {# 个商家}}",
+    "summary": "{price}/月 · {listings} 个商品 · {images} 张照片",
+    "makeDefault": "设为默认",
+    "delete": "删除",
+    "createHeading": "新建套餐",
+    "create": "创建套餐",
+    "fields": {
+      "key": "套餐标识（小写，例如 market_stall）",
+      "name": "名称",
+      "priceKwacha": "月费（K）",
+      "maxListings": "商品上限（留空为不限）",
+      "maxImages": "每个商品照片数（1–8）",
+      "featuredSlots": "推荐位",
+      "analyticsDepth": "数据分析",
+      "wholesaleTools": "批发工具",
+      "active": "启用"
+    },
+    "depth": {
+      "basic": "基础",
+      "standard": "标准",
+      "advanced": "高级"
+    },
+    "errors": {
+      "nameRequired": "请输入套餐名称。",
+      "keyInvalid": "请使用 2–32 个小写字母、数字或下划线，并以字母开头。",
+      "priceInvalid": "请输入克瓦查价格，例如 49 或 49.50。",
+      "listingsInvalid": "请输入整数商品数量，或留空表示不限。",
+      "imagesInvalid": "每个商品的照片数必须在 1 到 8 之间。",
+      "slotsInvalid": "推荐位必须在 0 到 100 之间。",
+      "overrideEmpty": "例外必须修改商品上限或照片上限。",
+      "expiryInvalid": "请选择未来的到期日期，最长一年。",
+      "reasonRequired": "请填写例外原因。",
+      "vendorIdInvalid": "请输入商家 ID（UUID）。",
+      "vendorNotFound": "未找到该商家。",
+      "saveFailed": "无法保存，请检查后重试。",
+      "keyTaken": "该套餐标识已存在。",
+      "defaultInactive": "默认套餐必须保持启用。",
+      "defaultDelete": "默认套餐不能删除。",
+      "inUse": "仍有商家使用此套餐。请改为停用，或先迁移这些商家。",
+      "planInactive": "该套餐未启用。"
+    },
+    "vendor": {
+      "heading": "商家套餐",
+      "hint": "查找商家以分配套餐或设置限时例外。",
+      "vendorId": "商家 ID",
+      "load": "加载",
+      "flagOff": "vendor_plans 开关已关闭，以下上限暂未生效。",
+      "effective": "套餐 {plan}：{listings} 个商品（已用 {count}），每个商品 {images} 张照片",
+      "plan": "套餐",
+      "defaultPlan": "选择套餐",
+      "note": "备注（可选）",
+      "assign": "分配套餐",
+      "noBilling": "分配套餐仅作记录，不会收取任何费用。",
+      "none": "默认"
+    },
+    "override": {
+      "heading": "例外",
+      "current": "生效中：{listings} 个商品，至 {expires}（{reason}）",
+      "expired": "已于 {expires} 过期：{listings} 个商品（{reason}）",
+      "unlimited": "商品数量不限",
+      "expiresOn": "到期日期",
+      "reason": "原因",
+      "save": "保存例外",
+      "remove": "移除例外"
     }
   }
 }

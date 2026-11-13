@@ -376,7 +376,9 @@
       "uploading": "上传中…",
       "upload_failed": "上传失败",
       "minimum_required": "商品发布期间必须至少保留 {count} 张凭证照片。",
-      "retry": "重试"
+      "retry": "重试",
+      "duplicate": "该照片已在此商品中。",
+      "dedupCanonical": "该照片已是产品主图，买家会在您的商品中看到它，无需重复上传。"
     },
     "meta": {
       "title": "创建商品 —— Convergeo 商家",
@@ -2007,5 +2009,23 @@
     "errors": {
       "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
     }
+  },
+  "plans": {
+    "heading": "您的套餐：{name}",
+    "free": "免费",
+    "perMonth": "{price}/月",
+    "usage": "已使用 {count}/{max} 个商品",
+    "usageUnlimited": "{count} 个商品 · 无上限",
+    "kycLimit": "您已达到当前认证等级的商品上限。完成企业认证即可发布更多商品。",
+    "atLimit": "您已用完套餐内的全部商品数量。",
+    "overLimit": "您的商品数量超出了套餐允许的范围。",
+    "keepSelling": "我们不会删除任何内容：您的商品保持上架，仍可编辑和补充库存。如需添加新商品，请升级套餐。",
+    "option": "{name}：{max} 个商品，{price}/月",
+    "optionUnlimited": "{name}：商品数量不限，{price}/月",
+    "howToUpgrade": "如需升级，请联系我们的团队。不会自动扣费。",
+    "limitReachedShort": "您已达到商品数量上限。现有商品保持上架；请查看上方套餐进行升级。",
+    "limitReached": "您已达到套餐的商品数量上限。现有商品保持上架；升级后可添加更多。",
+    "photoLimitReached": "您的套餐每个商品最多 {max} 张照片。升级套餐即可添加更多。",
+    "billingUnavailable": "套餐付款功能暂未开放。我们的团队会协助您升级。"
   }
 }

@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 158
+MIGRATION_COUNT = 160
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -47,6 +47,10 @@ POST_REPAIR_ORDER = [
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Vendor listing plans: plan tables, cap resolver, admission guard least(KYC, plan) (additive, reversible).
+    "20261113235000",
+    # Shared canonical product photos + listing_images.content_sha256 dedup (additive, reversible).
+    "20261113235100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

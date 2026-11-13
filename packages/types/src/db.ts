@@ -3619,6 +3619,7 @@ export type Database = {
       listing_images: {
         Row: {
           cloudinary_public_id: string
+          content_sha256: string | null
           created_at: string
           id: string
           listing_id: string
@@ -3627,6 +3628,7 @@ export type Database = {
         }
         Insert: {
           cloudinary_public_id: string
+          content_sha256?: string | null
           created_at?: string
           id?: string
           listing_id: string
@@ -3635,6 +3637,7 @@ export type Database = {
         }
         Update: {
           cloudinary_public_id?: string
+          content_sha256?: string | null
           created_at?: string
           id?: string
           listing_id?: string
@@ -4610,6 +4613,57 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_images: {
+        Row: {
+          cloudinary_public_id: string
+          content_sha256: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          position: number
+          product_id: string
+          source_listing_image_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cloudinary_public_id: string
+          content_sha256?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position: number
+          product_id: string
+          source_listing_image_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cloudinary_public_id?: string
+          content_sha256?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position?: number
+          product_id?: string
+          source_listing_image_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_images_source_listing_image_id_fkey"
+            columns: ["source_listing_image_id"]
+            isOneToOne: false
+            referencedRelation: "listing_images"
             referencedColumns: ["id"]
           },
         ]
@@ -6621,6 +6675,161 @@ export type Database = {
           },
         ]
       }
+      vendor_plan_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          billing_reference: string | null
+          billing_status: string
+          created_at: string
+          id: string
+          note: string | null
+          paid_through: string | null
+          plan_key: string
+          source: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          billing_reference?: string | null
+          billing_status?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_through?: string | null
+          plan_key: string
+          source?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          billing_reference?: string | null
+          billing_status?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_through?: string | null
+          plan_key?: string
+          source?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_plan_assignments_plan_key_fkey"
+            columns: ["plan_key"]
+            isOneToOne: false
+            referencedRelation: "vendor_plans"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "vendor_plan_assignments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_plan_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          max_images_per_listing: number | null
+          max_listings: number | null
+          reason: string
+          unlimited_listings: boolean
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          max_images_per_listing?: number | null
+          max_listings?: number | null
+          reason: string
+          unlimited_listings?: boolean
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          max_images_per_listing?: number | null
+          max_listings?: number | null
+          reason?: string
+          unlimited_listings?: boolean
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_plan_overrides_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_plans: {
+        Row: {
+          active: boolean
+          analytics_depth: string
+          created_at: string
+          featured_slots: number
+          is_default: boolean
+          key: string
+          max_images_per_listing: number
+          max_listings: number | null
+          name: string
+          position: number
+          price_ngwee: number
+          updated_at: string
+          wholesale_tools: boolean
+        }
+        Insert: {
+          active?: boolean
+          analytics_depth?: string
+          created_at?: string
+          featured_slots?: number
+          is_default?: boolean
+          key: string
+          max_images_per_listing?: number
+          max_listings?: number | null
+          name: string
+          position?: number
+          price_ngwee?: number
+          updated_at?: string
+          wholesale_tools?: boolean
+        }
+        Update: {
+          active?: boolean
+          analytics_depth?: string
+          created_at?: string
+          featured_slots?: number
+          is_default?: boolean
+          key?: string
+          max_images_per_listing?: number
+          max_listings?: number | null
+          name?: string
+          position?: number
+          price_ngwee?: number
+          updated_at?: string
+          wholesale_tools?: boolean
+        }
+        Relationships: []
+      }
       vendor_quotas: {
         Row: {
           created_at: string
@@ -7555,6 +7764,7 @@ export type Database = {
         Args: { p_class: string; p_vendor_id: string }
         Returns: boolean
       }
+      vendor_plan_listing_cap: { Args: { p_vendor_id: string }; Returns: number }
       vendor_replace_listing_variants: {
         Args: { p_groups: Json; p_listing_id: string; p_variants: Json }
         Returns: Json

@@ -390,7 +390,9 @@
       "uploading": "Uploading…",
       "upload_failed": "Upload failed",
       "minimum_required": "⚠ At least {count} evidence photo must remain attached while this listing is live.",
-      "retry": "Esheni limbi"
+      "retry": "Esheni limbi",
+      "duplicate": "This photo is already on the listing.",
+      "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again."
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
@@ -2325,5 +2327,23 @@
       "linkNotActive": "Only an active product can be linked."
     },
     "durationSeconds": "{seconds}s"
+  },
+  "plans": {
+    "heading": "Your plan: {name}",
+    "free": "Free",
+    "perMonth": "{price}/month",
+    "usage": "{count} of {max} listings used",
+    "usageUnlimited": "{count} listings · no limit",
+    "kycLimit": "You've reached the listing limit for your verification level. Verify your business to list more.",
+    "atLimit": "You've used all the listings on your plan.",
+    "overLimit": "You have more listings than your plan allows.",
+    "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
+    "option": "{name}: {max} listings for {price}/month",
+    "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
+    "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
+    "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
+    "photoLimitReached": "Your plan allows {max} photos per listing. Upgrade your plan to add more.",
+    "billingUnavailable": "Plan payments aren't available yet. Our team will help you upgrade."
   }
 }
