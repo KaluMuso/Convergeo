@@ -29,6 +29,7 @@ from app.services.logistics.area_pricing import (
     Area,
     AreaQuote,
     DeliveryPromise,
+    PricingSwitches,
     delivery_promise,
     load_areas,
     load_switches,
@@ -587,6 +588,15 @@ def area_zone(
     return zone if isinstance(zone, str) and zone in zones else None
 
 
+def _load_areas_safely(service: ServiceRoleClient) -> dict[str, Area]:
+    """Areas for the picker / pricing; empty (landmark matcher only) if unreadable."""
+    try:
+        return load_areas(service.client)
+    except Exception:  # noqa: BLE001 - the landmark matcher still prices delivery
+        logger.warning("checkout.areas_unavailable", extra={"event": "areas_unavailable"})
+        return {}
+
+
 def area_quote_for_checkout(
     service: ServiceRoleClient,
     *,
@@ -598,7 +608,11 @@ def area_quote_for_checkout(
     now: datetime,
 ) -> tuple[AreaQuote | None, bool, DeliveryPromise]:
     """(quote or None, live?, promise). A failure here never blocks a checkout."""
-    switches = load_switches(service.client)
+    try:
+        switches = load_switches(service.client)
+    except Exception:  # noqa: BLE001 - defaults: shadow on, live off, no rain
+        logger.warning("checkout.area_switches_failed", extra={"event": "area_switches_failed"})
+        switches = PricingSwitches()
     promise = delivery_promise(now, address_type, rain=switches.rain)
     if not (switches.shadow or switches.live) or not delivered_vendor_ids:
         return None, False, promise
@@ -1295,7 +1309,7 @@ async def validate_fulfilment_step(
     areas: dict[str, Area] = {}
     picked_area: Area | None = None
     if delivery_requested and body.address is not None:
-        areas = load_areas(service.client)
+        areas = _load_areas_safely(service)
         picked_area = areas.get(body.address.area_slug or "")
         if picked_area is not None and picked_area.zone_key in zones:
             # A picked area is priced by its own band; the landmark is directions only.
