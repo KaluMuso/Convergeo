@@ -36,9 +36,9 @@ describe("listings i18n", () => {
     expect(vendorMessages.listings.title).toBe("Create listing");
     expect(vendorMessages.listings.commission.rate).toBe("{rate}%");
     expect(vendorMessages.listings.attach.publish).toBe("Start selling");
-    expect(vendorMessages.listings.fields.classA).toBe("A. Brand product (same everywhere)");
-    expect(vendorMessages.listings.fields.classB).toBe("B. Brand product with sizes or colours");
-    expect(vendorMessages.listings.fields.classC).toBe("C. Everyday goods (no brand)");
+    expect(vendorMessages.listings.fields.classA).toBe("A. Brand product, same everywhere (branded SKU)");
+    expect(vendorMessages.listings.fields.classB).toBe("B. Brand product with sizes or colours (variant)");
+    expect(vendorMessages.listings.fields.classC).toBe("C. Everyday goods, no brand (commodity)");
     expect(vendorMessages.listings.errors.standalone_required).toBeTruthy();
   });
 });

@@ -37,7 +37,7 @@ describe("CourierStatusCard", () => {
     renderCard(base);
     expect(screen.getByText("TownStar")).toBeInTheDocument();
     expect(screen.getByTestId("vendor-courier-status")).toHaveAttribute("data-status", "accepted");
-    expect(screen.getByText("Delivery number: TS-1042")).toBeInTheDocument();
+    expect(screen.getByText("Courier reference: TS-1042")).toBeInTheDocument();
     expect(
       screen.getByText("The rider collects K1,050.50 cash from the buyer"),
     ).toBeInTheDocument();
