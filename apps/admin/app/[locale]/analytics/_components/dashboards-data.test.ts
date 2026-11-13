@@ -15,7 +15,13 @@ const tabsFor = (permissions: string[], v2 = false, unrestricted = false) =>
 
 describe("analytics tabs by permission (D3)", () => {
   it("analytics.read sees operational tabs but not revenue", () => {
-    expect(tabsFor(["analytics.read"])).toEqual(["users", "growth", "vendors", "servicesEvents"]);
+    expect(tabsFor(["analytics.read"])).toEqual([
+      "users",
+      "growth",
+      "vendors",
+      "servicesEvents",
+      "performance",
+    ]);
   });
 
   it("finance.read and finance.operate see revenue only", () => {
@@ -29,6 +35,7 @@ describe("analytics tabs by permission (D3)", () => {
       "growth",
       "vendors",
       "servicesEvents",
+      "performance",
       "behaviour",
       "search",
       "products",

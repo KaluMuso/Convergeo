@@ -17,6 +17,8 @@ import {
   ALL_ANALYTICS_TABS,
   GROWTH_KEYS,
   KYC_STATUSES,
+  PERFORMANCE_GRAINS,
+  PERFORMANCE_RANKINGS,
   PERIODS,
   VENDOR_STATUSES,
   allZero,
@@ -27,6 +29,8 @@ import {
   ratingText,
   type DashboardTab,
   type GrowthData,
+  type PerformanceData,
+  type PerformanceRow,
   type PeriodSelection,
   type RevenueData,
   type ServicesEventsData,
@@ -253,6 +257,8 @@ export function DashboardBody({
       return <VendorsTab data={data as VendorsData} locale={locale} />;
     case "servicesEvents":
       return <ServicesEventsTab data={data as ServicesEventsData} locale={locale} />;
+    case "performance":
+      return <PerformanceTab data={data as PerformanceData} locale={locale} />;
   }
 }
 
@@ -799,6 +805,234 @@ function ServicesEventsTab({ data, locale }: { data: ServicesEventsData; locale:
           ]}
         />
       </TileShell>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Performance: what to boost, what to uproot
+// ---------------------------------------------------------------------------
+
+function PerformanceTab({ data, locale }: { data: PerformanceData; locale: string }) {
+  const t = useTranslations("admin.analytics");
+  const { num, money, percent } = useFormat(locale);
+  const f = data.funnel;
+  const c = data.contribution;
+  return (
+    <div className="space-y-4">
+      <TileShell
+        title={t("dash.performance.funnelTitle")}
+        subtitle={t("dash.performance.funnelHint")}
+      >
+        <KpiGrid>
+          <Kpi label={t("dash.performance.views")} value={num(f.views)} />
+          <Kpi
+            label={t("dash.performance.carts")}
+            value={num(f.carts)}
+            hint={t("dash.performance.rateOfViews", { rate: percent(f.view_to_cart_bps) })}
+          />
+          <Kpi
+            label={t("dash.performance.orders")}
+            value={num(f.orders)}
+            hint={t("dash.performance.rateOfCarts", { rate: percent(f.cart_to_order_bps) })}
+          />
+          <Kpi label={t("dash.performance.viewToOrder")} value={percent(f.view_to_order_bps)} />
+          <Kpi label={t("dash.performance.customers")} value={num(f.customers)} />
+          <Kpi
+            label={t("dash.performance.repeatRate")}
+            value={percent(f.repeat_rate_bps)}
+            hint={t("dash.performance.repeatHint", { n: f.repeat_customers })}
+          />
+          <Kpi
+            label={t("dash.performance.returningRate")}
+            value={percent(f.returning_rate_bps)}
+            hint={t("dash.performance.returningHint", { n: f.returning_customers })}
+          />
+        </KpiGrid>
+        <p className="mt-2 text-xs text-muted">{t("dash.performance.cohortsHint")}</p>
+      </TileShell>
+
+      <TileShell
+        title={t("dash.performance.contributionTitle")}
+        subtitle={t("dash.performance.contributionHint")}
+      >
+        {c === null ? (
+          <p className="text-xs text-muted">{t("financeWithheld")}</p>
+        ) : c.orders === 0 ? (
+          <p className="text-sm text-muted">{t("dash.noActivity")}</p>
+        ) : (
+          <div className="space-y-3">
+            <KpiGrid>
+              <Kpi
+                label={t("dash.performance.perOrder")}
+                value={
+                  c.contribution_per_order_ngwee === null
+                    ? t("notAvailable")
+                    : money(c.contribution_per_order_ngwee)
+                }
+                hint={t("dash.performance.ordersCount", { n: c.orders })}
+              />
+              <Kpi
+                label={t("dash.performance.contributionTotal")}
+                value={money(c.contribution_ngwee)}
+              />
+              <Kpi label={t("dash.performance.margin")} value={percent(c.margin_bps)} />
+              <Kpi label={t("dash.performance.negativeOrders")} value={num(c.negative_orders)} />
+            </KpiGrid>
+            <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+              {(
+                [
+                  ["commission", c.commission_ngwee, 1],
+                  ["deliveryFee", c.delivery_fee_ngwee, 1],
+                  ["paymentFee", c.payment_fee_ngwee, -1],
+                  ["courierCost", c.courier_cost_ngwee, -1],
+                  ["refundLoss", c.refund_loss_ngwee, -1],
+                ] as const
+              ).map(([key, value, sign]) => (
+                <div key={key} className="flex justify-between border-t border-border py-1">
+                  <dt className="text-muted">{t(`dash.performance.${key}`)}</dt>
+                  <dd className="font-mono text-xs">{money(sign * value)}</dd>
+                </div>
+              ))}
+            </dl>
+            {c.fee_unbooked_orders > 0 || c.courier_cost_unknown_orders > 0 ? (
+              <p className="text-xs text-warning">
+                {t("dash.performance.gaps", {
+                  fee: c.fee_unbooked_orders,
+                  courier: c.courier_cost_unknown_orders,
+                })}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </TileShell>
+
+      {PERFORMANCE_GRAINS.map((grain) => (
+        <TileShell
+          key={grain}
+          title={t(`dash.performance.grain.${grain}`)}
+          subtitle={t("dash.performance.entities", { n: data[grain].entities })}
+        >
+          <div className="space-y-4">
+            {PERFORMANCE_RANKINGS.map((ranking) => (
+              <section key={ranking} className="space-y-1">
+                <h3 className="text-sm font-medium text-text">
+                  {t(`dash.performance.ranking.${ranking}`)}
+                </h3>
+                <p className="text-xs text-muted">
+                  {t(`dash.performance.rankingHint.${ranking}`, {
+                    views: data.thresholds.min_views,
+                    orders: data.thresholds.min_orders,
+                  })}
+                </p>
+                <ScoreTable
+                  rows={data[grain][ranking]}
+                  caption={`${t(`dash.performance.grain.${grain}`)}: ${t(
+                    `dash.performance.ranking.${ranking}`,
+                  )}`}
+                  finance={data.finance_visible}
+                  locale={locale}
+                />
+              </section>
+            ))}
+            {grain === "clips" ? (
+              <p className="text-xs text-muted">
+                {t("dash.performance.clipNote", { days: data.thresholds.clip_attribution_days })}
+              </p>
+            ) : null}
+          </div>
+        </TileShell>
+      ))}
+      {!data.finance_visible ? <p className="text-xs text-muted">{t("financeWithheld")}</p> : null}
+      <p className="text-xs text-muted">{t("dash.performance.viewsNote")}</p>
+    </div>
+  );
+}
+
+function ScoreTable({
+  rows,
+  caption,
+  finance,
+  locale,
+}: {
+  rows: PerformanceRow[];
+  caption: string;
+  finance: boolean;
+  locale: string;
+}) {
+  const t = useTranslations("admin.analytics");
+  const { num, money, percent } = useFormat(locale);
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted">{t("dash.noActivity")}</p>;
+  }
+  const columns: Array<Column<PerformanceRow>> = [
+    { key: "views", label: t("dash.performance.views"), render: (r) => num(r.views) },
+    { key: "carts", label: t("dash.performance.carts"), render: (r) => num(r.carts) },
+    { key: "orders", label: t("dash.performance.orders"), render: (r) => num(r.orders) },
+    {
+      key: "v2o",
+      label: t("dash.performance.viewToOrder"),
+      render: (r) => percent(r.view_to_order_bps),
+    },
+    {
+      key: "c2o",
+      label: t("dash.performance.cartToOrder"),
+      render: (r) => percent(r.cart_to_order_bps),
+    },
+    {
+      key: "repeat",
+      label: t("dash.performance.repeatRate"),
+      render: (r) => percent(r.repeat_rate_bps),
+    },
+  ];
+  if (finance) {
+    columns.push(
+      {
+        key: "sales",
+        label: t("dash.vendors.itemSales"),
+        render: (r) => (r.item_sales_ngwee === null ? "" : money(r.item_sales_ngwee)),
+      },
+      {
+        key: "perOrder",
+        label: t("dash.performance.perOrder"),
+        render: (r) =>
+          r.contribution_per_order_ngwee === null
+            ? t("notAvailable")
+            : money(r.contribution_per_order_ngwee),
+      },
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[32rem] text-sm">
+        <caption className="sr-only">{caption}</caption>
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            <th scope="col" className="py-1 pr-3 font-medium">
+              {t("dash.performance.name")}
+            </th>
+            {columns.map((column) => (
+              <th key={column.key} scope="col" className="py-1 pr-3 text-right font-medium">
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id} className="border-t border-border">
+              <th scope="row" className="py-1 pr-3 text-left font-normal">
+                {row.name || row.id.slice(0, 8)}
+              </th>
+              {columns.map((column) => (
+                <td key={column.key} className="py-1 pr-3 text-right font-mono text-xs">
+                  {column.render(row)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

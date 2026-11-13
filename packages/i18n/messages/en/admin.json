@@ -1754,7 +1754,8 @@
       "revenue": "Revenue",
       "vendors": "Vendors",
       "servicesEvents": "Services & events",
-      "behaviour": "Behaviour"
+      "behaviour": "Behaviour",
+      "performance": "Boost & uproot"
     },
     "range": {
       "label": "Date range",
@@ -1991,6 +1992,56 @@
         "ticketsSold": "Tickets sold",
         "checkIns": "Check-ins",
         "checkInRate": "Check-in rate {rate}"
+      },
+      "performance": {
+        "funnelTitle": "Funnel: views to paid orders",
+        "funnelHint": "Product-page views, add-to-cart actions and paid orders in the period, with repeat and returning buyers.",
+        "views": "Views",
+        "carts": "Add to cart",
+        "orders": "Paid orders",
+        "customers": "Buyers",
+        "viewToOrder": "View to order",
+        "cartToOrder": "Cart to order",
+        "rateOfViews": "{rate} of views",
+        "rateOfCarts": "{rate} of carts",
+        "repeatRate": "Repeat rate",
+        "repeatHint": "{n, plural, one {# buyer} other {# buyers}} with 2+ orders in the period",
+        "returningRate": "Returning buyers",
+        "returningHint": "{n, plural, one {# buyer} other {# buyers}} who had ordered before",
+        "cohortsHint": "Monthly cohort retention is on the Users tab.",
+        "contributionTitle": "Contribution per order",
+        "contributionHint": "What the platform keeps from a paid order: commission plus delivery fee, minus the payment fee, the courier and refunds.",
+        "perOrder": "Contribution per order",
+        "contributionTotal": "Total contribution",
+        "margin": "Of order value",
+        "negativeOrders": "Loss-making orders",
+        "ordersCount": "{n, plural, one {# paid order} other {# paid orders}}",
+        "commission": "Commission",
+        "deliveryFee": "Delivery fee charged",
+        "paymentFee": "Payment fee",
+        "courierCost": "Courier cost",
+        "refundLoss": "Lost to refunds",
+        "gaps": "Not yet in these figures: payment fee for {fee, plural, one {# order} other {# orders}}, courier cost for {courier, plural, one {# order} other {# orders}}.",
+        "entities": "{n, plural, =0 {No activity in the period} one {# with activity} other {# with activity}}",
+        "grain": {
+          "categories": "Categories",
+          "products": "Products",
+          "vendors": "Vendors",
+          "clips": "Clips"
+        },
+        "ranking": {
+          "top": "Top: boost what sells",
+          "bottom": "Bottom: attention without sales",
+          "hidden_gems": "Hidden gems: sell when seen"
+        },
+        "rankingHint": {
+          "top": "Most paid orders in the period.",
+          "bottom": "At least {views} views, lowest view-to-order conversion first. Fix, reprice or uproot.",
+          "hidden_gems": "At least {orders} paid orders, highest view-to-order conversion first. Give these more exposure."
+        },
+        "name": "Name",
+        "clipNote": "Clip views are signed-in views of 3 seconds or more. Clip orders are paid orders whose buyer added the product to the cart from the clip in the {days} days before.",
+        "viewsNote": "View counters are kept per UTC day, so at the edges of a period up to two hours of views can fall on the next or previous day."
       }
     }
   }

@@ -17,14 +17,14 @@ import pytest
 from app.main import create_app
 from app.routers import admin_analytics
 from app.routers import admin_analytics_dashboards as mod
-from app.services.analytics import dashboards
+from app.services.analytics import dashboards, performance
 from app.services.analytics import flags as analytics_flags
 from app.services.analytics.reporting_day import reporting_today
 from fastapi.testclient import TestClient
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
 TOKEN = {"Authorization": "Bearer valid.jwt.token"}
-REPORTS = ["users", "growth", "vendors", "services-events"]
+REPORTS = ["users", "growth", "vendors", "services-events", "performance"]
 TODAY = date(2026, 11, 13)
 
 
@@ -117,6 +117,16 @@ FAKE_PAYLOAD: dict[str, dict[str, Any]] = {
     },
     "services-events": {"range": {}, "events": {"tickets_sold": 4}, "daily": []},
     "revenue": {"range": {}, "platform_revenue": {"total_ngwee": 3_000}, "daily": []},
+    "performance": {
+        "range": {},
+        "funnel": {"views": 10, "orders": 1},
+        "products": {
+            "entities": 1,
+            "top": [{"id": "p1", "name": "@Phone", "orders": 1, "item_sales_ngwee": None}],
+            "bottom": [],
+            "hidden_gems": [],
+        },
+    },
 }
 
 
@@ -147,6 +157,15 @@ def api(monkeypatch: pytest.MonkeyPatch) -> Generator[tuple[TestClient, _AuditSi
         dashboards, "build_services_events", lambda window: FAKE_PAYLOAD["services-events"]
     )
     monkeypatch.setattr(dashboards, "build_revenue", lambda window: FAKE_PAYLOAD["revenue"])
+    monkeypatch.setattr(
+        performance,
+        "build_performance",
+        lambda window, include_money: {
+            **FAKE_PAYLOAD["performance"],
+            "finance_visible": include_money,
+            "contribution": {"contribution_ngwee": 900} if include_money else None,
+        },
+    )
     analytics_flags.override_for_tests(analytics_flags.ROLLUPS_FLAG, False)
     with TestClient(create_app(), raise_server_exceptions=False) as client:
         yield client, sink
@@ -203,6 +222,35 @@ def test_vendor_sales_value_needs_finance(
     mod.clear_dashboards_cache()
     _as(monkeypatch, {"rbac_both"}, {"analytics.read", "finance.read"})
     assert client.get("/admin/analytics/vendors", headers=TOKEN).json()["finance_visible"] is True
+
+
+def test_performance_money_needs_finance(
+    api: tuple[TestClient, _AuditSink], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, _ = api
+    _as(monkeypatch, {"rbac_analyst"}, {"analytics.read"})
+    body = client.get("/admin/analytics/performance?period=30d", headers=TOKEN).json()
+    assert body["finance_visible"] is False and body["contribution"] is None
+    mod.clear_dashboards_cache()
+    _as(monkeypatch, {"rbac_both"}, {"analytics.read", "finance.read"})
+    body = client.get("/admin/analytics/performance?period=30d", headers=TOKEN).json()
+    assert body["finance_visible"] is True
+    assert body["contribution"] == {"contribution_ngwee": 900}
+
+
+def test_export_of_performance_keeps_rankings_and_neutralises_names(
+    api: tuple[TestClient, _AuditSink], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, sink = api
+    _as(monkeypatch, {"rbac_analyst"}, {"analytics.read"})
+    resp = client.get("/admin/analytics/export?report=performance&period=7d", headers=TOKEN)
+    assert resp.status_code == 200
+    lines = list(csv.reader(io.StringIO(resp.text)))
+    assert ["performance", "products.top", "", "p1 @Phone", "orders", "1"] in lines
+    assert ["performance", "products", "", "", "entities", "1"] in lines
+    assert ["performance", "funnel", "", "", "views", "10"] in lines
+    assert all(not cell.startswith("@") for line in lines[2:] for cell in line)
+    assert sink.rows[0]["after"]["report"] == "performance"
 
 
 def test_invalid_window_is_422(

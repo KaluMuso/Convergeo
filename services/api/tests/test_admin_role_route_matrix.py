@@ -143,6 +143,7 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/analytics/growth",
             "GET /admin/analytics/insights",
             "GET /admin/analytics/overview",
+            "GET /admin/analytics/performance",
             "GET /admin/analytics/products-funnel",
             "GET /admin/analytics/search-demand",
             "GET /admin/analytics/services-events",

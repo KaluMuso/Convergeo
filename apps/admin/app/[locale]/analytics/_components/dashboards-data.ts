@@ -1,12 +1,13 @@
 /**
  * Founder analytics dashboards: API types, tab registry and pure helpers.
  *
- * `/admin/analytics/{users,growth,revenue,vendors,services-events}` return aggregates on
+ * `/admin/analytics/{users,growth,revenue,vendors,services-events,performance}` return aggregates on
  * Africa/Lusaka reporting days: integer counts, money in integer ngwee, rates in integer
  * basis points. Revenue needs finance.read/finance.operate; the rest analytics.read.
  */
 
-export type DashboardTab = "users" | "growth" | "revenue" | "vendors" | "servicesEvents";
+export type DashboardTab =
+  "users" | "growth" | "revenue" | "vendors" | "servicesEvents" | "performance";
 export type V2Tab = "behaviour" | "search" | "products" | "insights";
 export type AnyAnalyticsTab = DashboardTab | V2Tab;
 
@@ -31,6 +32,13 @@ export const ALL_ANALYTICS_TABS: readonly TabEntry[] = [
     tab: "servicesEvents",
     href: "analytics/services-events",
     api: "services-events",
+    needs: "analytics",
+    v2: false,
+  },
+  {
+    tab: "performance",
+    href: "analytics/performance",
+    api: "performance",
     needs: "analytics",
     v2: false,
   },
@@ -258,6 +266,78 @@ export type ServicesEventsData = {
     check_ins: number;
   }>;
 };
+
+export const PERFORMANCE_GRAINS = ["categories", "products", "vendors", "clips"] as const;
+export type PerformanceGrain = (typeof PERFORMANCE_GRAINS)[number];
+export const PERFORMANCE_RANKINGS = ["top", "bottom", "hidden_gems"] as const;
+export type PerformanceRanking = (typeof PERFORMANCE_RANKINGS)[number];
+
+/** One category / product / vendor / clip: funnel, conversion, repeat rate, money. */
+export type PerformanceRow = {
+  id: string;
+  name: string;
+  views: number;
+  carts: number;
+  orders: number;
+  units: number;
+  customers: number;
+  repeat_customers: number;
+  view_to_cart_bps: number | null;
+  cart_to_order_bps: number | null;
+  view_to_order_bps: number | null;
+  repeat_rate_bps: number | null;
+  /** Withheld (null) without finance.read / finance.operate. */
+  item_sales_ngwee: number | null;
+  contribution_ngwee: number | null;
+  contribution_per_order_ngwee: number | null;
+};
+
+export type PerformanceScorecard = { entities: number } & Record<
+  PerformanceRanking,
+  PerformanceRow[]
+>;
+
+export type PerformanceContribution = {
+  orders: number;
+  items_ngwee: number;
+  delivery_fee_ngwee: number;
+  commission_ngwee: number;
+  payment_fee_ngwee: number;
+  courier_cost_ngwee: number;
+  refunded_ngwee: number;
+  refund_loss_ngwee: number;
+  contribution_ngwee: number;
+  contribution_per_order_ngwee: number | null;
+  margin_bps: number | null;
+  negative_orders: number;
+  fee_unbooked_orders: number;
+  courier_cost_unknown_orders: number;
+};
+
+export type PerformanceData = {
+  range: DateRange;
+  finance_visible: boolean;
+  thresholds: {
+    min_views: number;
+    min_orders: number;
+    clip_attribution_days: number;
+    list_size: number;
+  };
+  funnel: {
+    views: number;
+    carts: number;
+    orders: number;
+    customers: number;
+    repeat_customers: number;
+    returning_customers: number;
+    view_to_cart_bps: number | null;
+    cart_to_order_bps: number | null;
+    view_to_order_bps: number | null;
+    repeat_rate_bps: number | null;
+    returning_rate_bps: number | null;
+  };
+  contribution: PerformanceContribution | null;
+} & Record<PerformanceGrain, PerformanceScorecard>;
 
 /** True when every numeric value in every row is zero (honest "no activity" state). */
 export function allZero(rows: ReadonlyArray<Record<string, unknown>>): boolean {

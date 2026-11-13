@@ -5,6 +5,10 @@ Routes (all under the audited ``/admin`` router, permissions in ``app.core.auth`
 * ``GET /admin/analytics/users`` · ``/growth`` · ``/vendors`` · ``/services-events`` —
   ``analytics.read``. Counts only; vendor sales value is withheld unless the caller also
   holds ``finance.read`` or ``finance.operate`` (founder decision D3).
+* ``GET /admin/analytics/performance`` — ``analytics.read``. What to boost and what to
+  uproot: category/product/vendor/clip funnels (views -> carts -> paid orders),
+  conversion and repeat rate; item sales and per-order contribution only with
+  ``finance.read`` / ``finance.operate``.
 * ``GET /admin/analytics/revenue`` — ``finance.read`` / ``finance.operate`` only.
 * ``GET /admin/analytics/export?report=…`` — CSV of one report; the report's own
   permission is re-checked, and every export (and every refused export) writes an
@@ -37,7 +41,7 @@ from app.core.auth import (
 )
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
-from app.services.analytics import dashboards
+from app.services.analytics import dashboards, performance
 from app.services.analytics import flags as analytics_flags
 from app.supabase_client import get_supabase_service_client
 from fastapi import APIRouter, Depends, Query, Request
@@ -50,12 +54,13 @@ dashboards_router = APIRouter(prefix="/analytics", tags=["admin-analytics-dashbo
 CACHE_TTL_SECONDS: Final = 60.0
 ANALYTICS_PERMISSIONS: Final = frozenset({"analytics.read"})
 
-Report = Literal["users", "growth", "revenue", "vendors", "services-events"]
+Report = Literal["users", "growth", "revenue", "vendors", "services-events", "performance"]
 REPORT_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
     "users": ANALYTICS_PERMISSIONS,
     "growth": ANALYTICS_PERMISSIONS,
     "vendors": ANALYTICS_PERMISSIONS,
     "services-events": ANALYTICS_PERMISSIONS,
+    "performance": ANALYTICS_PERMISSIONS,
     "revenue": DASHBOARD_FINANCE_PERMISSIONS,
 }
 
@@ -142,6 +147,13 @@ async def _report(
             finance=finance,
             builder=lambda: dashboards.build_vendors(window, include_money=finance),
         )
+    if report == "performance":
+        return await _build(
+            report,
+            window,
+            finance=finance,
+            builder=lambda: performance.build_performance(window, include_money=finance),
+        )
     return await _build(
         report, window, finance=False, builder=lambda: dashboards.build_services_events(window)
     )
@@ -183,6 +195,13 @@ async def get_services_events(
     user: CurrentUserDep, period: PeriodQuery = None, start: FromQuery = None, end: ToQuery = None
 ) -> dict[str, Any]:
     return await _report("services-events", _window(period, start, end), _granted(user))
+
+
+@dashboards_router.get("/performance")
+async def get_performance(
+    user: CurrentUserDep, period: PeriodQuery = None, start: FromQuery = None, end: ToQuery = None
+) -> dict[str, Any]:
+    return await _report("performance", _window(period, start, end), _granted(user))
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +261,26 @@ def report_rows(report: str, payload: dict[str, Any]) -> list[tuple[Any, ...]]:
                 for metric, metric_value in item.items():
                     if metric not in ("vendor_id", "name"):
                         rows.append((report, "top", "", dimension, metric, metric_value))
+            continue
+        if section in performance.GRAINS and isinstance(value, dict):
+            for ranking, items in value.items():
+                if not isinstance(items, list):
+                    rows.append((report, section, "", "", ranking, items))
+                    continue
+                for item in items:
+                    dimension = f"{item.get('id', '')} {item.get('name', '')}".strip()
+                    for metric, metric_value in item.items():
+                        if metric not in ("id", "name"):
+                            rows.append(
+                                (
+                                    report,
+                                    f"{section}.{ranking}",
+                                    "",
+                                    dimension,
+                                    metric,
+                                    metric_value,
+                                )
+                            )
             continue
         if section == "cohorts" and isinstance(value, list):
             for item in value:

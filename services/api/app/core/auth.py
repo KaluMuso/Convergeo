@@ -244,6 +244,7 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("GET", "/admin/analytics/growth"): "analytics.read",
     ("GET", "/admin/analytics/vendors"): "analytics.read",
     ("GET", "/admin/analytics/services-events"): "analytics.read",
+    ("GET", "/admin/analytics/performance"): "analytics.read",
     ("GET", "/admin/analytics/revenue"): ("finance.read", "finance.operate"),
     # Export re-checks the chosen report's permission and audits every attempt.
     ("GET", "/admin/analytics/export"): ("analytics.read", "finance.read", "finance.operate"),
