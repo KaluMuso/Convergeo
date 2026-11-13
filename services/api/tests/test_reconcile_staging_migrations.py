@@ -83,6 +83,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113071000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261113174500",
 }
 
 
