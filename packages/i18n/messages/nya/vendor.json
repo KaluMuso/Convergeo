@@ -943,7 +943,8 @@
       "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
       "submitReject": "Reject with reason",
       "submitShip": "Mark as shipped",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "ready_for_collection": "Yakonzeka kwa rider"
     },
     "success": {
       "confirmed": "Order confirmed.",

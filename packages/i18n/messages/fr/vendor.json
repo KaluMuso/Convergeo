@@ -923,7 +923,8 @@
       "shipPlaceholder": "ex. Coursier Yango — chauffeur John 0977…",
       "submitReject": "Rejeter avec motif",
       "submitShip": "Marquer comme expédiée",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "ready_for_collection": "Prêt pour le livreur"
     },
     "success": {
       "confirmed": "Commande confirmée.",

@@ -923,7 +923,8 @@
       "shipPlaceholder": "例如：Yango 快递，司机 John 0977…",
       "submitReject": "填写原因并拒绝",
       "submitShip": "标记为已发货",
-      "cancel": "取消"
+      "cancel": "取消",
+      "ready_for_collection": "可交给骑手"
     },
     "success": {
       "confirmed": "订单已确认。",
