@@ -23,6 +23,7 @@ from app.services.orders.state import (
     OrderTransitionError,
     transition_order,
 )
+from app.services.payments.cod import collection_idempotency_key
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
 
@@ -137,6 +138,10 @@ def _list_auto_confirm_candidates(
     deadline_sql = sql_literal(deadline.isoformat())
     dispute_filter = _open_dispute_filter_sql()
     cursor_filter = _cursor_filter_sql(cursor)
+    collect_key_prefix = sql_literal(collection_idempotency_key(""))
+    # A delivered COD order stays `delivered` until its cash is booked:
+    # confirm_cod_collection posts the collection and completes the order itself.
+    # Auto-completing it first would hide uncollected cash behind `completed`.
     script = f"""
 SELECT o.id::text
 FROM public.orders o
@@ -151,6 +156,14 @@ INNER JOIN LATERAL (
 WHERE o.status = 'delivered'
   AND delivered.created_at <= {deadline_sql}::timestamptz
   AND {dispute_filter}
+  AND (
+    o.cod = false
+    OR EXISTS (
+      SELECT 1
+      FROM public.ledger_transactions lt
+      WHERE lt.idempotency_key = ({collect_key_prefix} || o.id::text)
+    )
+  )
   {cursor_filter}
 ORDER BY o.id ASC
 LIMIT {int(limit)};

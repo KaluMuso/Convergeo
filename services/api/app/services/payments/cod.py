@@ -57,6 +57,12 @@ COD_RECEIVABLE_OPENED = "cod_receivable_opened"
 COD_RECEIVABLE_REVERSED = "cod_receivable_reversed"
 
 _COLLECTABLE_STATUSES = frozenset({OrderStatus.DELIVERED.value})
+# A customer can confirm receipt (delivered → completed) before ops books the
+# cash. Collection stays possible on such a completed order while no
+# ``cod-collect-*`` transaction exists, so the cash can always be booked. No
+# order transition is needed there (the order is already completed); the ledger
+# post is idempotent and the confirmation is audited like any other.
+_COMPLETED_UNCOLLECTED_STATUSES = frozenset({OrderStatus.COMPLETED.value})
 _REFUSAL_STATUSES = frozenset({OrderStatus.SHIPPED.value})
 
 
@@ -383,12 +389,13 @@ def confirm_cod_collection(
     collect_key = collection_idempotency_key(order_id)
     existing_collect = _fetch_transaction_by_idempotency_key(collect_key)
 
-    if existing_collect is None and ctx.status not in _COLLECTABLE_STATUSES:
+    allowed = _COLLECTABLE_STATUSES | _COMPLETED_UNCOLLECTED_STATUSES
+    if existing_collect is None and ctx.status not in allowed:
         raise CodError(
             code="cod_invalid_status",
             message="COD collection requires a delivered order",
             http_status=409,
-            details={"status": ctx.status, "required": sorted(_COLLECTABLE_STATUSES)},
+            details={"status": ctx.status, "required": sorted(allowed)},
         )
 
     blocked = release_blocked_reason(status=ctx.status, order_id=order_id)
