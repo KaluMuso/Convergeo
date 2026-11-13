@@ -20,21 +20,21 @@
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "next": "^15.5.29",
-    "next-intl": "^4.14.5",
+    "next-intl": "^4.14.10",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "serwist": "^9.5.12"
+    "serwist": "^9.5.13"
   },
   "devDependencies": {
-    "@serwist/next": "^9.5.12",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@serwist/next": "^9.5.13",
+    "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
+    "@testing-library/user-event": "^14.6.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "jsdom": "^26.0.0",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.5",
     "typescript": "^5.8.2",
     "vitest": "4.1.12"
   }
