@@ -151,6 +151,12 @@ def test_a_matched_landmark_keeps_its_own_zone(post_fulfilment: Any) -> None:
     "address",
     [
         {"landmark": "Ndola city centre"},
+        # Pilot fix: towns beyond the Lusaka ring used to fall through to Band B.
+        {"landmark": "Kabwe"},
+        {"landmark": "Near Shoprite, Kafue town"},
+        {"landmark": "Mazabuka, opposite the market"},
+        {"landmark": "Solwezi"},
+        {"landmark": "Kapiri Mposhi"},
         # GPS that is genuinely out of range is never overridden by the fallback.
         {"landmark": "Plot 12, behind the blue gate", "lat": -12.97, "lng": 28.63},
     ],
@@ -175,6 +181,73 @@ def test_other_town_detection() -> None:
     assert landmark_names_other_town("Kitwe, Parklands")
     assert not landmark_names_other_town("Plot 12, behind the blue gate")
     assert not landmark_names_other_town(None)
+
+
+@pytest.mark.parametrize(
+    "landmark",
+    [
+        "Kabwe",
+        "Plot 4, Kabwe",
+        "KAFUE",
+        "Chingola",
+        "Mufulira",
+        "Luanshya",
+        "Chililabombwe",
+        "Kalulushi",
+        "Kapiri Mposhi",
+        "Livingstone",
+        "Choma",
+        "Mazabuka",
+        "Monze",
+        "Chisamba",
+        "Solwezi",
+        "Chipata",
+        "Kasama",
+        "Mansa",
+        "Mongu",
+        "Petauke",
+        "Katete",
+        "Mpika",
+        "Nakonde",
+        "Siavonga",
+        "Kalomo",
+        "Sesheke",
+        "Mumbwa",
+        "Itezhi-Tezhi",
+    ],
+)
+def test_zambian_towns_outside_lusaka_are_detected(landmark: str) -> None:
+    assert landmark_names_other_town(landmark)
+
+
+@pytest.mark.parametrize(
+    "landmark",
+    [
+        # Lusaka places that carry a town's name, and near-Lusaka Band C keywords.
+        "Kafue Road, near Shoprite",
+        "Kabwe Roundabout",
+        "Mumbwa Road",
+        "Chipata Compound",
+        "Chongwe",
+        "Chilanga",
+        "Matero",
+    ],
+)
+def test_lusaka_landmarks_named_after_towns_are_not_other_towns(landmark: str) -> None:
+    assert not landmark_names_other_town(landmark)
+
+
+def test_fallback_hit_is_logged(post_fulfilment: Any, caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level("WARNING", logger="app.routers.checkout"):
+        response, _ = post_fulfilment(
+            {FALLBACK_DELIVERY_ZONE_KEY: "lusaka_b"}, {"landmark": "Plot 12, behind the blue gate"}
+        )
+
+    assert response.status_code == 200, response.text
+    hits = [r for r in caplog.records if r.getMessage() == "checkout.delivery_fallback_zone_used"]
+    assert hits, "fallback zone use must be logged for ops review"
+    assert getattr(hits[0], "fallback_zone", None) == "lusaka_b"
+    assert getattr(hits[0], "landmark_excerpt", "").startswith("plot 12")
 
 
 def test_city_name_only_landmark_gets_the_fallback_zone(post_fulfilment: Any) -> None:
