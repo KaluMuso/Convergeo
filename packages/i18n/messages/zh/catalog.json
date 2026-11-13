@@ -234,6 +234,11 @@
         "newArrivals": "新品上架",
         "trending": "当下热门",
         "topVendors": "优质商家"
+      },
+      "stream": {
+        "title": "当前热门",
+        "loadMore": "加载更多",
+        "moreLoaded": "已加载更多 {count} 件商品。"
       }
     }
   },

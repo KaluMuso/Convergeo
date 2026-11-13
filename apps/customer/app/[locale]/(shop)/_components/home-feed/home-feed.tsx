@@ -86,10 +86,13 @@ export function HomeFeed({
   page,
   locale,
   labels,
+  streamFollows = false,
 }: {
   page: HomeFeedPage;
   locale: string;
   labels: FeedLabels;
+  /** A "Popular now" stream renders after this feed and owns the end message. */
+  streamFollows?: boolean;
 }) {
   const sections = page.sections.filter(isRenderableSection);
   let listingSectionsSeen = 0;
@@ -114,7 +117,12 @@ export function HomeFeed({
           view
         );
       })}
-      <HomeFeedLoader initialCursor={page.next_cursor} locale={locale} labels={labels} />
+      <HomeFeedLoader
+        initialCursor={page.next_cursor}
+        locale={locale}
+        labels={labels}
+        hideEnd={streamFollows}
+      />
     </div>
   );
 }
