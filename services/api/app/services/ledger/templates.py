@@ -27,6 +27,7 @@ class LedgerTemplate(StrEnum):
     REFUND_REVERSAL = "refund_reversal"
     LENCO_FEE = "lenco_fee"
     DELIVERY_FEE_CAPTURE = "delivery_fee_capture"
+    COD_COLLECTED_BY_VENDOR = "cod_collected_by_vendor"
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,6 +303,25 @@ def delivery_fee_capture(*, delivery_fee_ngwee: int) -> TemplateResult:
     return TemplateResult(kind=LedgerTemplate.DELIVERY_FEE_CAPTURE, legs=legs)
 
 
+def cod_collected_by_vendor(*, collected_ngwee: int, vendor_id: str) -> TemplateResult:
+    """COD cash taken by the vendor at its own counter (pickup) — never platform cash.
+
+    The vendor already holds the cash, so it is booked against what the platform
+    owes the vendor: after the usual capture + release the vendor's payable shows
+    the commission (and any delivery fee) the vendor owes the platform.
+
+    Debit vendor_payable (vendor) (+collected).
+    Credit cod_receivable (vendor) (−collected).
+    """
+    collected = parse_ngwee(collected_ngwee)
+    legs = (
+        PostingLeg(AccountRef("vendor_payable", vendor_id), collected),
+        PostingLeg(AccountRef("cod_receivable", vendor_id), -collected),
+    )
+    _assert_balanced(legs)
+    return TemplateResult(kind=LedgerTemplate.COD_COLLECTED_BY_VENDOR, legs=legs)
+
+
 def parse_ngwee_signed(value: int) -> int:
     """Validate a signed (non-zero) integer ngwee posting amount — never float/bool."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -328,6 +348,7 @@ TEMPLATE_REGISTRY: dict[LedgerTemplate, TemplateFn] = {
     LedgerTemplate.REFUND_REVERSAL: refund_reversal,
     LedgerTemplate.LENCO_FEE: lenco_fee,
     LedgerTemplate.DELIVERY_FEE_CAPTURE: delivery_fee_capture,
+    LedgerTemplate.COD_COLLECTED_BY_VENDOR: cod_collected_by_vendor,
 }
 
 ALL_TEMPLATES: tuple[LedgerTemplate, ...] = tuple(LedgerTemplate)

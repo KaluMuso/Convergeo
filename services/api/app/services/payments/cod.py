@@ -5,10 +5,18 @@ Cash model (platform-collect):
   ``platform_cash``; the vendor's net share is credited to ``vendor_payable`` for
   later payout. Commission is captured from the escrow pipeline opened at order time.
 
-Vendor-remit (not the default path here):
-  If the vendor keeps physical cash, only the commission portion would sit in
-  ``cod_receivable``; reconciliation would net commission owed via vendor payable
-  debits instead of a full collectable receivable. Zambia launch uses platform-collect.
+Who holds the cash is decided by the order's fulfilment, never by who clicks:
+  * ``delivery`` — the platform's rider collects items + fee and remits to the
+    platform (platform-collect, above). Only ops (admin) may confirm it, after
+    the remittance arrives; a vendor confirmation is refused.
+  * ``pickup`` — the vendor takes the cash at its own counter. Collection posts
+    ``cod_collected_by_vendor`` (debit vendor_payable, credit cod_receivable),
+    never ``platform_cash``: after commission capture + release the vendor's
+    payable nets to the commission the vendor owes the platform, so a later
+    payout cannot pay the vendor a second time. Vendor or admin may confirm.
+
+Every first confirmation writes an ``audit_log`` row (``cod.collection_confirmed``)
+naming the confirming actor and who holds the cash.
 """
 
 from __future__ import annotations
@@ -359,11 +367,57 @@ def record_cod_receivable(*, order_id: str) -> CodReceivableResult:
     )
 
 
+COLLECTED_BY_PLATFORM = "platform_courier"
+COLLECTED_BY_VENDOR = "vendor"
+
+
+def cod_cash_holder(fulfilment: str) -> str:
+    """Who physically takes the customer's COD cash for this fulfilment."""
+    return COLLECTED_BY_VENDOR if fulfilment == "pickup" else COLLECTED_BY_PLATFORM
+
+
+def _record_collection_audit(
+    *,
+    ctx: CodOrderContext,
+    actor_id: str,
+    actor_role: ActorRole,
+    collected_by: str,
+    transaction_id: str,
+    net_vendor_ngwee: int,
+) -> None:
+    after = json.dumps(
+        {
+            "collected_by": collected_by,
+            "actor_role": actor_role.value,
+            "collectable_ngwee": ctx.collectable_ngwee,
+            "delivery_fee_ngwee": ctx.delivery_fee_ngwee,
+            "net_vendor_ngwee": net_vendor_ngwee,
+            "transaction_id": transaction_id,
+        }
+    )
+    actor_sql = _sql_uuid(actor_id, "actor_id") if _UUID_RE.match(actor_id) else "NULL"
+    script = f"""
+INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+VALUES (
+  {actor_sql},
+  'cod.collection_confirmed',
+  'order',
+  {_sql_uuid(ctx.order_id, "order_id")},
+  {sql_literal(json.dumps({"status": ctx.status}))}::jsonb,
+  {sql_literal(after)}::jsonb
+);
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise LedgerError(f"cod collection audit failed: {result.error}")
+
+
 def confirm_cod_collection(
     *,
     order_id: str,
     actor_id: str,
     note: str,
+    actor_role: ActorRole = ActorRole.ADMIN,
 ) -> CodCollectionResult:
     """Confirm COD cash collected at delivery — ledger + commission + vendor net.
 
@@ -382,9 +436,25 @@ def confirm_cod_collection(
         release_blocked_reason,
     )
 
-    _ = actor_id
     ctx = _load_cod_order(order_id)
     _assert_cod_order(ctx)
+
+    collected_by = cod_cash_holder(ctx.fulfilment)
+    if actor_role == ActorRole.VENDOR and collected_by != COLLECTED_BY_VENDOR:
+        # The rider collects delivery COD for the platform: only ops may book
+        # it, once the remittance arrives (otherwise platform_cash is invented).
+        raise CodError(
+            code="cod_platform_collects",
+            message="Cash for delivered COD orders is confirmed by Vergeo5 operations",
+            http_status=403,
+            details={"fulfilment": ctx.fulfilment, "collected_by": collected_by},
+        )
+    if actor_role not in (ActorRole.VENDOR, ActorRole.ADMIN):
+        raise CodError(
+            code="forbidden",
+            message="Only operations or the collecting vendor may confirm COD cash",
+            http_status=403,
+        )
 
     collect_key = collection_idempotency_key(order_id)
     existing_collect = _fetch_transaction_by_idempotency_key(collect_key)
@@ -439,12 +509,25 @@ def confirm_cod_collection(
 
     collected = post_transaction(
         idempotency_key=collect_key,
-        template=LedgerTemplate.COD_COLLECTED,
+        template=(
+            LedgerTemplate.COD_COLLECTED_BY_VENDOR
+            if collected_by == COLLECTED_BY_VENDOR
+            else LedgerTemplate.COD_COLLECTED
+        ),
         order_id=order_id,
         collected_ngwee=ctx.collectable_ngwee,
         vendor_id=ctx.vendor_id,
     )
     txn_ids.append(collected.id)
+    if collected.created:
+        _record_collection_audit(
+            ctx=ctx,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            collected_by=collected_by,
+            transaction_id=collected.id,
+            net_vendor_ngwee=amounts.net_ngwee,
+        )
 
     captured = capture_order_commission(
         order_id=order_id,

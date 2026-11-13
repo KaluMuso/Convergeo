@@ -42,6 +42,7 @@ def db() -> Generator[PgConn, None, None]:
         ready = conn.run("SELECT 1 FROM public.orders LIMIT 1")
         assert ready.ok, ready.error
         seed_matrix_fixtures(conn)
+        conn.run(f"SELECT public.ensure_vendor_ledger_accounts('{VENDOR_A}'::uuid);")
         yield conn
         return
     admin = PgConn("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
@@ -248,3 +249,97 @@ class TestCodDeliveryFeeToPlatform:
             f"WHERE idempotency_key = 'delivery-fee-{order_id}';",
         ) == "0"
         assert _order_postings_sum(db, order_id) == 0
+
+
+# ---------------------------------------------------------------------------
+# Finding 3 / C02 — who holds COD cash decides who may confirm it and the ledger
+# ---------------------------------------------------------------------------
+
+
+def _audit_after(conn: PgConn, order_id: str) -> dict[str, Any]:
+    raw = _scalar(
+        conn,
+        "SELECT after::text FROM public.audit_log WHERE action = 'cod.collection_confirmed' "
+        f"AND entity_id = '{order_id}'::uuid;",
+    )
+    loaded = json.loads(raw)
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+class TestCodCashHolder:
+    def test_vendor_cannot_confirm_rider_collected_cash(self, db: PgConn) -> None:
+        from app.services.orders.state import ActorRole
+
+        order_id = _insert_order(db, status="delivered", cod=True)
+
+        with pytest.raises(CodError) as excinfo:
+            confirm_cod_collection(
+                order_id=order_id,
+                actor_id=VENDOR_A,
+                note="I got the cash",
+                actor_role=ActorRole.VENDOR,
+            )
+
+        assert excinfo.value.code == "cod_platform_collects"
+        assert excinfo.value.http_status == 403
+        assert _scalar(
+            db,
+            f"SELECT count(*)::text FROM public.ledger_transactions WHERE order_id = '{order_id}';",
+        ) == "0"
+        assert _scalar(db, f"SELECT status FROM public.orders WHERE id = '{order_id}';") == (
+            "delivered"
+        )
+
+    def test_admin_confirms_rider_cash_and_is_recorded(self, db: PgConn) -> None:
+        order_id = _insert_order(db, status="delivered", cod=True)
+        cash_before = account_balance_ngwee(PLATFORM_CASH_ID)
+
+        confirm_cod_collection(order_id=order_id, actor_id=ADMIN_ID, note="Remitted by rider")
+
+        assert account_balance_ngwee(PLATFORM_CASH_ID) == cash_before + ITEMS_NGWEE + FEE_NGWEE
+        after = _audit_after(db, order_id)
+        assert after["collected_by"] == "platform_courier"
+        assert after["actor_role"] == "admin"
+        assert _scalar(
+            db,
+            "SELECT actor::text FROM public.audit_log WHERE action = 'cod.collection_confirmed' "
+            f"AND entity_id = '{order_id}'::uuid;",
+        ) == ADMIN_ID
+
+    def test_pickup_cash_held_by_vendor_never_becomes_platform_cash(self, db: PgConn) -> None:
+        from app.services.orders.state import ActorRole
+
+        order_id = _insert_order(db, status="delivered", cod=True, fulfilment="pickup", fee_ngwee=0)
+        payable_id = _account_id(db, "vendor_payable", VENDOR_A)
+        cash_before = account_balance_ngwee(PLATFORM_CASH_ID)
+        payable_before = account_balance_ngwee(payable_id)
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        commission = ITEMS_NGWEE * RATE_BPS // 10_000
+
+        result = confirm_cod_collection(
+            order_id=order_id,
+            actor_id=VENDOR_A,
+            note="Paid at the counter",
+            actor_role=ActorRole.VENDOR,
+        )
+        replay = confirm_cod_collection(
+            order_id=order_id,
+            actor_id=VENDOR_A,
+            note="Paid at the counter",
+            actor_role=ActorRole.VENDOR,
+        )
+
+        assert result.created is True and replay.created is False
+        # The vendor holds the cash: platform cash is untouched and the vendor's
+        # payable shows the commission it owes (debit-positive), not a payout.
+        assert account_balance_ngwee(PLATFORM_CASH_ID) == cash_before
+        assert account_balance_ngwee(payable_id) == payable_before + commission
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+        assert _order_postings_sum(db, order_id) == 0
+        after = _audit_after(db, order_id)
+        assert after["collected_by"] == "vendor"
+        assert after["actor_role"] == "vendor"
+        assert _scalar(db, f"SELECT status FROM public.orders WHERE id = '{order_id}';") == (
+            "completed"
+        )
