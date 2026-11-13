@@ -825,9 +825,9 @@
     },
     "fields": {
       "displayNameLabel": "显示名称",
-      "descriptionLabel": "简介",
-      "descriptionPlaceholder": "告诉买家您销售什么，以及为何选择您…",
-      "descriptionHelp": "建议至少 50 个字符，有助于买家信任您的店铺。",
+      "descriptionLabel": "您的故事",
+      "descriptionPlaceholder": "您是谁、从何时开始经营、顾客因什么认识您…",
+      "descriptionHelp": "简短即可，约 60 个字。它会显示在店铺页面顶部的“我们的故事”中。",
       "whatsappLabel": "WhatsApp 号码",
       "whatsappPlaceholder": "例如：0977 123456",
       "whatsappHelp": "可选。买家可直接给您发消息，在您的店铺上显示为“在 WhatsApp 上聊天”按钮。",

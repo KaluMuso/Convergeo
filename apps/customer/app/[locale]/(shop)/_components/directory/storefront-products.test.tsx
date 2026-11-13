@@ -4,27 +4,29 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../plp/listing-grid", () => ({
-  ListingGrid: ({ listings }: { listings: Array<{ title: string }> }) => (
+  ListingGrid: ({
+    listings,
+    renderFooter,
+  }: {
+    listings: Array<{ title: string }>;
+    renderFooter?: (listing: { title: string }) => React.ReactNode;
+  }) => (
     <ul>
       {listings.map((l) => (
-        <li key={l.title}>{l.title}</li>
+        <li key={l.title}>
+          {l.title}
+          {renderFooter?.(l)}
+        </li>
       ))}
     </ul>
   ),
 }));
 
-import {
-  StorefrontProducts,
-  type StorefrontListing,
-} from "./storefront-products";
+import { StorefrontProducts, type StorefrontListing } from "./storefront-products";
 
 afterEach(cleanup);
 
-const listing = (
-  title: string,
-  slug: string | null,
-  name: string | null,
-): StorefrontListing => ({
+const listing = (title: string, slug: string | null, name: string | null): StorefrontListing => ({
   id: title,
   title,
   productSlug: title,
@@ -88,5 +90,32 @@ describe("StorefrontProducts", () => {
       target: { value: "zzz" },
     });
     expect(screen.getByRole("status")).toHaveTextContent("No products match.");
+  });
+});
+
+describe("StorefrontProducts compare action", () => {
+  it("shows 'Compare with other shops' only on listings other shops also sell", () => {
+    render(
+      <StorefrontProducts
+        locale="en"
+        listings={[
+          {
+            ...listing("Solar lamp", "solar", "Solar"),
+            compare: {
+              href: "/en/p/solar-lamp#compare",
+              label: "Compare with 2 other shops · from K90.00",
+              ariaLabel: "Compare Solar lamp at other shops",
+            },
+          },
+          { ...listing("Phone charger", "phones", "Phones"), compare: null },
+        ]}
+        labels={labels}
+        gridLabels={{} as never}
+      />,
+    );
+    const links = screen.getAllByTestId("storefront-compare");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "/en/p/solar-lamp#compare");
+    expect(links[0]).toHaveTextContent("Compare with 2 other shops · from K90.00");
   });
 });

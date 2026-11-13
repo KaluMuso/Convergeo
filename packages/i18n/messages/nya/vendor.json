@@ -843,9 +843,9 @@
     },
     "fields": {
       "displayNameLabel": "Display name",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Tell buyers what you sell and why they should choose you…",
-      "descriptionHelp": "Aim for at least 50 characters — it helps buyers trust your shop.",
+      "descriptionLabel": "Your story",
+      "descriptionPlaceholder": "Who you are, since when, and what customers know you for…",
+      "descriptionHelp": "Keep it short — about 60 words. It shows at the top of your shop page as “Our story”.",
       "whatsappLabel": "WhatsApp number",
       "whatsappPlaceholder": "e.g. 0977 123456",
       "whatsappHelp": "Optional. Buyers can message you directly — shown as a “Chat on WhatsApp” button on your storefront.",
