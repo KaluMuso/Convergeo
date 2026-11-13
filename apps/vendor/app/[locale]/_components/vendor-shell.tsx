@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { isVendorAuthSetupPath } from "../../../lib/password-recovery-path";
 
 import { VendorNav } from "./vendor-nav";
+import { VendorNotificationBell } from "./vendor-notification-bell";
 
 import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
 
@@ -60,12 +61,15 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
         <Link href={`/${locale}`} className="font-display text-base font-semibold text-display-ink">
           {tCommon("app.name")}
         </Link>
-        <ThemeToggle
-          label={tCommon("theme.label")}
-          lightLabel={tCommon("theme.light")}
-          darkLabel={tCommon("theme.dark")}
-          systemLabel={tCommon("theme.system")}
-        />
+        <div className="flex items-center gap-1">
+          <VendorNotificationBell locale={locale} />
+          <ThemeToggle
+            label={tCommon("theme.label")}
+            lightLabel={tCommon("theme.light")}
+            darkLabel={tCommon("theme.dark")}
+            systemLabel={tCommon("theme.system")}
+          />
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">

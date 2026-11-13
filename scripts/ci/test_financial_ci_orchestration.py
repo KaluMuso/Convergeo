@@ -65,9 +65,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 5 reviewed 2026-11 queued feature migrations (#764-#768)
         # + 3 reviewed pilot-fix migrations (#777).
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
+        # + 1 reviewed: In-app notification center tables + triggers (additive, reversible).
         # + 1 reviewed: Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
-        self.assertEqual(len(runner.FORWARD), 31)
-        self.assertEqual(len(set(runner.FORWARD)), 31)
+        self.assertEqual(len(runner.FORWARD), 32)
+        self.assertEqual(len(set(runner.FORWARD)), 32)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

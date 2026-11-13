@@ -2671,6 +2671,48 @@ export type Database = {
         }
         Relationships: []
       }
+      in_app_notifications: {
+        Row: {
+          audience: string
+          created_at: string
+          dedupe_key: string
+          i18n_key: string
+          id: string
+          link_path: string | null
+          params: Json
+          read_at: string | null
+          recipient_user_id: string
+          seen_at: string | null
+          type: string
+        }
+        Insert: {
+          audience: string
+          created_at?: string
+          dedupe_key: string
+          i18n_key: string
+          id?: string
+          link_path?: string | null
+          params?: Json
+          read_at?: string | null
+          recipient_user_id: string
+          seen_at?: string | null
+          type: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          dedupe_key?: string
+          i18n_key?: string
+          id?: string
+          link_path?: string | null
+          params?: Json
+          read_at?: string | null
+          recipient_user_id?: string
+          seen_at?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       intake_deep_links: {
         Row: {
           created_at: string
@@ -7018,6 +7060,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      web_push_subscriptions: {
+        Row: {
+          audience: string
+          auth_secret: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience: string
+          auth_secret: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audience?: string
+          auth_secret?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       webhook_events: {
         Row: {

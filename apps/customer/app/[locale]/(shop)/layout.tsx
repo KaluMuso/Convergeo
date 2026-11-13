@@ -10,6 +10,7 @@ import {
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { NotificationBellIsland } from "../_components/notification-bell-island";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
@@ -92,6 +93,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <TopUtilityBarSlot locale={locale} />
       <ShopHeader
         locale={locale}
+        notificationSlot={<NotificationBellIsland locale={locale} />}
         mobileSearchSlot={
           <MobileHeaderSearch
             locale={locale}

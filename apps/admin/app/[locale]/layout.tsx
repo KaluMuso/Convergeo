@@ -47,13 +47,16 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   setRequestLocale(locale);
   const [commonMessages, adminBundle] = await Promise.all([
     getMessages(),
-    loadMessages(locale as Locale, ["admin", "services"]),
+    loadMessages(locale as Locale, ["admin", "services", "notifications"]),
   ]);
+  const notificationsAll = adminBundle.notifications as Record<string, unknown>;
 
   const messages = {
     ...commonMessages,
     admin: adminBundle.admin,
     services: adminBundle.services,
+    // Notification center copy only — not the WhatsApp/SMS/email templates.
+    notifications: { center: notificationsAll.center, inApp: notificationsAll.inApp },
   };
 
   // Translated toast copy for emitToastKey() call sites (common.toast).
