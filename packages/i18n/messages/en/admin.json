@@ -1578,7 +1578,10 @@
       "failedAttempts": "{count, plural, one {# failed attempt} other {# failed attempts}}: send again or return to the shop",
       "multiBranch": "Items come from more than one branch — confirm the pickup point with the shop",
       "sendAgain": "Send again (attempt 2)",
-      "returnToShop": "Return to shop"
+      "returnToShop": "Return to shop",
+      "area": "Area: {area}",
+      "workAddress": "Work address: deliver before 16:45",
+      "openMaps": "Open route in Google Maps"
     },
     "active": {
       "title": "In progress ({count})",
@@ -1737,6 +1740,17 @@
       "label": "What the courier charged (K)",
       "placeholder": "e.g. 45.00",
       "success": "Courier cost saved."
+    },
+    "rain": {
+      "on": "Rain mode is ON: area fees go up and delivery windows are 30 minutes longer.",
+      "off": "Rain mode is off.",
+      "turnOn": "Turn rain mode on",
+      "turnOff": "Turn rain mode off",
+      "pricingShadow": "Area pricing: shadow (new fee logged, zone fee charged).",
+      "pricingLive": "Area pricing: live (customers pay the area fee).",
+      "pricingOff": "Area pricing: off (zone fees only).",
+      "failed": "Couldn't change rain mode. Try again.",
+      "unavailable": "Rain mode switch unavailable."
     }
   }
 }

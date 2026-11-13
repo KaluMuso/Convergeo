@@ -25,6 +25,7 @@ import {
 } from "./step-contact";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
+import type { AreaPickerLabels } from "./area-picker";
 import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
 import type { FulfilmentMode, SaleUnit } from "../../_components/sale-quantity";
 
@@ -98,6 +99,8 @@ export type FulfilmentStepLabels = {
   error: string;
   /** UX pass 4 guidance — optional so older label fixtures keep compiling. */
   guide?: FulfilmentGuideLabels;
+  /** Area picker + Home/Work (area-pair pricing) — optional for older fixtures. */
+  area?: AreaPickerLabels;
 };
 
 export type FulfilmentGuideLabels = {
@@ -113,6 +116,10 @@ export type FulfilmentGuideLabels = {
   cutoffBefore: string;
   cutoffAfter: string;
   cutoffMadeToOrder: string;
+  /** `{start}` `{end}` (and `{date}` for later) — "Order before 2 pm, get it today". */
+  promiseTodayTemplate?: string;
+  promiseTomorrowTemplate?: string;
+  promiseLaterTemplate?: string;
 };
 
 export type CountdownLabels = {
@@ -300,6 +307,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       loading: messages.fulfilment.loading,
       error: messages.fulfilment.error,
       guide: messages.fulfilment.guide,
+      area: messages.fulfilment.area,
     },
     payment: {
       title: messages.payment.title,

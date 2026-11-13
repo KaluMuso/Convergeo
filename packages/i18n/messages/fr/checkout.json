@@ -144,10 +144,27 @@
         "tip2": "Ajoutez votre quartier et votre rue, et un repère pour votre portail, comme sa couleur.",
         "tip3": "Gardez votre téléphone allumé. Le livreur peut appeler votre numéro pour vous trouver.",
         "landmarkRequired": "Ajoutez un repère et un quartier pour que le livreur puisse vous trouver.",
-        "cutoffTitle": "Quand sera-t-elle expédiée ?",
-        "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock partent généralement aujourd'hui, après confirmation du vendeur.",
-        "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock partiront généralement demain, après confirmation du vendeur.",
-        "cutoffMadeToOrder": "Les articles sur commande partent dès qu'ils sont prêts — voyez le délai de chaque article."
+        "cutoffTitle": "Commandez avant 14 h, livré aujourd'hui",
+        "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock sont livrés à Lusaka aujourd'hui, après confirmation du vendeur.",
+        "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock seront livrés demain, après confirmation du vendeur.",
+        "cutoffMadeToOrder": "Les articles sur commande partent dès qu'ils sont prêts — voyez le délai de chaque article.",
+        "promiseToday": "Livraison aujourd'hui, {start}–{end}",
+        "promiseTomorrow": "Livraison demain, {start}–{end}",
+        "promiseLater": "Livraison le {date}, {start}–{end}"
+      },
+      "area": {
+        "label": "Votre quartier",
+        "help": "Choisissez votre quartier pour calculer le trajet de la boutique jusqu'à vous. Facultatif.",
+        "searchPlaceholder": "Rechercher, ex. Kabulonga",
+        "noMatch": "Aucun quartier trouvé. Décrivez votre repère ci-dessous.",
+        "notListed": "Quartier absent ? Passez cette étape et décrivez votre repère ci-dessous.",
+        "change": "Modifier",
+        "selected": "Quartier : {area}",
+        "unavailable": "La liste des quartiers n'a pas chargé. Votre repère ci-dessous suffit.",
+        "typeLabel": "Cette adresse est",
+        "home": "Domicile",
+        "work": "Travail",
+        "workHelp": "Les adresses de travail sont livrées en semaine avant 16 h 45, pendant les heures de bureau."
       }
     },
     "countdown": {

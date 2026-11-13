@@ -165,10 +165,27 @@
         "tip2": "Lembeni area ne street, ne cimo icingalanga geti lyenu, nga ni colour yalyo.",
         "tip3": "Shalikeni foni yenu ili on. Rider kuti amutumina pa namba yenu pa kumusanga.",
         "landmarkRequired": "Lembeni landmark ne area pa kuti rider amusange.",
-        "cutoffTitle": "Ni lilali fikatumwa?",
-        "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
-        "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
-        "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
+        "cutoffTitle": "Tumeni order ilyo 14:00 tailafika, mukapokelela lelo",
+        "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock fikesa mu Lusaka lelo, seller nga asuminisha.",
+        "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock fikesa mailo, seller nga asuminisha.",
+        "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu.",
+        "promiseToday": "Delivery lelo, {start}–{end}",
+        "promiseTomorrow": "Delivery mailo, {start}–{end}",
+        "promiseLater": "Delivery pa {date}, {start}–{end}"
+      },
+      "area": {
+        "label": "Incende yenu",
+        "help": "Saleni incende yenu pa kuti tupende umutengo ukufuma ku shop ukufika kuli imwe. Te cakukakatila.",
+        "searchPlaceholder": "Fwailisheni, ica kumwenako Kabulonga",
+        "noMatch": "Tapali incende yalingana. Lembeni icishibilo panshi.",
+        "notListed": "Incende yenu taimoneka? Shaleni ici, lembeni icishibilo panshi.",
+        "change": "Alula",
+        "selected": "Incende: {area}",
+        "unavailable": "Ilisita lya ncende talyaisa. Icishibilo panshi cilakumana.",
+        "typeLabel": "Iyi adilesi ni",
+        "home": "Ku ng'anda",
+        "work": "Ku ncito",
+        "workHelp": "Ku ncito tuletako mu nshiku sha ncito ilyo 16:45 tailafika, ofeshi ilyo ishilwe."
       }
     },
     "countdown": {

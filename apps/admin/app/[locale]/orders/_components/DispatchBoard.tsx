@@ -13,8 +13,10 @@ import {
   type Board,
   couriersForOrder,
   groupDispatches,
+  googleMapsDirectionsUrl,
   groupReadyOrders,
   nextJobKind,
+  type PricingSwitches,
   type ReadyOrder,
   zonePriceNgwee,
 } from "./dispatch-board-model";
@@ -89,6 +91,8 @@ export function DispatchBoard() {
         </button>
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+      <RainSwitch />
 
       <section className="space-y-3" aria-labelledby="dispatch-ready-heading">
         <h2 id="dispatch-ready-heading" className="font-medium text-text">
@@ -248,6 +252,26 @@ function ReadyOrderRow({ order, board, onAssigned }: ReadyOrderRowProps) {
               {t("ready.dropTo", { landmark: order.dropoff_landmark })}
             </p>
           ) : null}
+          {order.dropoff_area || order.address_type === "work" ? (
+            <p className="text-xs text-muted">
+              {[
+                order.dropoff_area ? t("ready.area", { area: order.dropoff_area }) : null,
+                order.address_type === "work" ? t("ready.workAddress") : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
+          {googleMapsDirectionsUrl(order) ? (
+            <a
+              href={googleMapsDirectionsUrl(order) ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center text-xs text-primary underline"
+            >
+              {t("ready.openMaps")}
+            </a>
+          ) : null}
           <p className={order.status === "ready" ? "text-xs text-success" : "text-xs text-muted"}>
             {order.status === "ready"
               ? t("ready.parcelReady")
@@ -329,5 +353,78 @@ function ReadyOrderRow({ order, board, onAssigned }: ReadyOrderRowProps) {
         </p>
       ) : null}
     </li>
+  );
+}
+
+/** Rain mode: raises area-pair fees by the configured multiplier and widens windows by 30 min. */
+function RainSwitch() {
+  const t = useTranslations("admin.dispatch");
+  const [switches, setSwitches] = useState<PricingSwitches | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void ordersApi
+      .request<PricingSwitches>("/admin/logistics/pricing-switches")
+      .then((data) => {
+        if (!cancelled) setSwitches(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!switches) {
+    return failed ? <p className="text-xs text-muted">{t("rain.unavailable")}</p> : null;
+  }
+
+  const toggle = async () => {
+    setBusy(true);
+    setFailed(false);
+    try {
+      const next = await ordersApi.request<PricingSwitches>("/admin/logistics/rain-mode", {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: !switches.rain_mode }),
+      });
+      setSwitches(next);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
+      data-testid="dispatch-rain-switch"
+    >
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-text">
+          {switches.rain_mode ? t("rain.on") : t("rain.off")}
+        </p>
+        <p className="text-xs text-muted">
+          {switches.area_pricing_live
+            ? t("rain.pricingLive")
+            : switches.area_pricing_shadow
+              ? t("rain.pricingShadow")
+              : t("rain.pricingOff")}
+        </p>
+        {failed ? <p className="text-xs text-danger">{t("rain.failed")}</p> : null}
+      </div>
+      <button
+        type="button"
+        aria-pressed={switches.rain_mode}
+        className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
+        disabled={busy}
+        onClick={() => void toggle()}
+      >
+        {switches.rain_mode ? t("rain.turnOff") : t("rain.turnOn")}
+      </button>
+    </div>
   );
 }

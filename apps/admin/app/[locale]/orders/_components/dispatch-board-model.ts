@@ -58,6 +58,13 @@ export type ReadyOrder = {
   pickup_area?: string | null;
   multi_branch?: boolean;
   delivery_attempts?: number;
+  // Area-pair pricing: coordinates for the Google Maps link-out (no API call).
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  dropoff_area?: string | null;
+  dropoff_lat?: number | null;
+  dropoff_lng?: number | null;
+  address_type?: "home" | "work";
 };
 
 export type Dispatch = {
@@ -386,4 +393,33 @@ export function courierToForm(
     notes: courier?.notes ?? "",
     zones,
   };
+}
+
+export type PricingSwitches = {
+  rain_mode: boolean;
+  area_pricing_shadow: boolean;
+  area_pricing_live: boolean;
+};
+
+function point(lat: number | null | undefined, lng: number | null | undefined): string | null {
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `${lat.toFixed(6)},${lng.toFixed(6)}`;
+}
+
+/**
+ * Google Maps directions link for the dispatcher (opens Google Maps; Convergeo
+ * makes no Maps API call, so it costs nothing). Shop -> customer, with the
+ * customer's area name + "Lusaka" when the address has no pin. Null when there
+ * is no usable destination.
+ */
+export function googleMapsDirectionsUrl(order: ReadyOrder): string | null {
+  const origin = point(order.pickup_lat, order.pickup_lng);
+  const destination =
+    point(order.dropoff_lat, order.dropoff_lng) ??
+    (order.dropoff_area ? `${order.dropoff_area}, Lusaka, Zambia` : null);
+  if (!destination) return null;
+  const params = new URLSearchParams({ api: "1", destination, travelmode: "driving" });
+  if (origin) params.set("origin", origin);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
