@@ -6,8 +6,20 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.cart.store import fetch_listing
+from app.services.inventory.location_stock import (
+    fetch_branch_stock_rows,
+    is_branch_tracked,
+)
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
+from app.services.listings.variants import (
+    ListingVariantSet,
+    effective_price_ngwee,
+    load_variant_sets,
+    variant_available_qty,
+    variant_in_stock,
+)
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -56,6 +68,33 @@ class VendorSummaryResponse(BaseModel):
     location: VendorLocationResponse | None = None
 
 
+class OptionValueResponse(BaseModel):
+    id: str
+    label: str
+    swatch_hex: str | None = None
+
+
+class OptionGroupResponse(BaseModel):
+    id: str
+    name: str
+    #: "swatch" renders colour chips, "pill" renders text pills (sizes, storage).
+    display: str = "pill"
+    values: list[OptionValueResponse] = Field(default_factory=list)
+
+
+class VariantResponse(BaseModel):
+    id: str
+    sku: str | None = None
+    option_value_ids: list[str] = Field(default_factory=list)
+    #: Effective unit price in ngwee (override, or the listing price).
+    price_ngwee: int
+    compare_at_ngwee: int | None = None
+    #: Own stock; None when the variant is not stock-limited separately.
+    stock_qty: int | None = None
+    in_stock: bool
+    image_public_id: str | None = None
+
+
 class ListingResponse(BaseModel):
     id: str
     title: str
@@ -76,6 +115,9 @@ class ListingResponse(BaseModel):
     defect_notes: str | None = None
     vendor: VendorSummaryResponse
     images: list[ProductImageResponse] = Field(default_factory=list)
+    option_groups: list[OptionGroupResponse] = Field(default_factory=list)
+    #: Active variants only; archived ones are never offered.
+    variants: list[VariantResponse] = Field(default_factory=list)
 
 
 class ProductDetailResponse(BaseModel):
@@ -92,6 +134,8 @@ class ProductDetailResponse(BaseModel):
 
 
 class RelatedProductItem(BaseModel):
+    listing_id: str | None = None
+    vendor_name: str | None = None
     slug: str
     name: str
     image_public_id: str | None = None
@@ -101,6 +145,14 @@ class RelatedProductItem(BaseModel):
 class RelatedProductsResponse(BaseModel):
     product_slug: str
     items: list[RelatedProductItem] = Field(default_factory=list)
+
+
+class RelatedProductRailsResponse(BaseModel):
+    product_slug: str
+    listing_id: str | None = None
+    vendor_name: str | None = None
+    same_vendor: list[RelatedProductItem] = Field(default_factory=list)
+    same_category: list[RelatedProductItem] = Field(default_factory=list)
 
 
 RELATED_LIMIT = 8
@@ -152,8 +204,8 @@ def _parse_vendor_row(
 
 
 def _aggregate_vendor_ratings(
-  client: Any,
-  vendor_ids: list[str],
+    client: Any,
+    vendor_ids: list[str],
 ) -> dict[str, tuple[float | None, int]]:
     if not vendor_ids:
         return {}
@@ -349,6 +401,39 @@ def _resolve_uuid_to_product_slug(client: Any, value: str) -> str | None:
     return _fetch_product_slug_for_listing(client, value)
 
 
+def _variant_payload(
+    row: dict[str, Any], variant_set: ListingVariantSet | None
+) -> tuple[list[OptionGroupResponse], list[VariantResponse]]:
+    if variant_set is None or not variant_set.requires_variant:
+        return [], []
+    groups = [
+        OptionGroupResponse(
+            id=group.id,
+            name=group.name,
+            display=group.display,
+            values=[
+                OptionValueResponse(id=value.id, label=value.label, swatch_hex=value.swatch_hex)
+                for value in group.values
+            ],
+        )
+        for group in variant_set.groups
+    ]
+    variants = [
+        VariantResponse(
+            id=variant.id,
+            sku=variant.sku,
+            option_value_ids=list(variant.option_value_ids),
+            price_ngwee=effective_price_ngwee(row, variant),
+            compare_at_ngwee=variant.compare_at_ngwee,
+            stock_qty=variant_available_qty(row, variant),
+            in_stock=variant_in_stock(row, variant),
+            image_public_id=variant.image_public_id,
+        )
+        for variant in variant_set.active_variants
+    ]
+    return groups, variants
+
+
 def build_product_detail(
     client: Any,
     slug: str,
@@ -455,6 +540,7 @@ def build_product_detail(
         if isinstance(vendor, dict) and vendor.get("id"):
             vendor_ids.append(str(vendor["id"]))
     vendor_ratings = _aggregate_vendor_ratings(client, list(dict.fromkeys(vendor_ids)))
+    variant_sets = load_variant_sets(client, listing_ids)
 
     primary_listing_id = str(listing_rows[0]["id"]) if listing_rows else None
     gallery_images = _collect_images(
@@ -496,6 +582,18 @@ def build_product_detail(
             )
             if image_row.get("cloudinary_public_id")
         ][:MAX_GALLERY_IMAGES]
+        option_groups, variants = _variant_payload(row, variant_sets.get(listing_id))
+        listing_in_stock = is_listing_available(
+            stock_mode,
+            parsed_stock_qty,
+            min_steps=min_steps,
+            moq=moq,
+            product_class=product_class,
+            fulfilment_mode=fulfilment_mode,
+            vendor_capacity_per_week=parsed_capacity,
+        )
+        if variants:
+            listing_in_stock = listing_in_stock and any(variant.in_stock for variant in variants)
 
         listings.append(
             ListingResponse(
@@ -511,27 +609,19 @@ def build_product_detail(
                 stock_qty=parsed_stock_qty,
                 moq=moq,
                 wholesale=bool(row.get("wholesale")),
-                in_stock=is_listing_available(
-                    stock_mode,
-                    parsed_stock_qty,
-                    min_steps=min_steps,
-                    moq=moq,
-                    product_class=product_class,
-                    fulfilment_mode=fulfilment_mode,
-                    vendor_capacity_per_week=parsed_capacity,
-                ),
+                in_stock=listing_in_stock,
                 fulfilment_mode=fulfilment_mode,
                 lead_time_days=parsed_lead_time,
                 vendor_capacity_per_week=parsed_capacity,
-                defect_notes=(
-                    str(row["defect_notes"]) if row.get("defect_notes") else None
-                ),
+                defect_notes=(str(row["defect_notes"]) if row.get("defect_notes") else None),
                 vendor=_parse_vendor_row(
                     vendor_raw,
                     rating_avg=rating_avg,
                     rating_count=rating_count,
                 ),
                 images=listing_images,
+                option_groups=option_groups,
+                variants=variants,
             )
         )
 
@@ -556,6 +646,9 @@ def build_product_detail(
 def _shoppable_related_items(
     client: Any,
     sibling_by_id: dict[str, dict[str, Any]],
+    *,
+    retail_available_only: bool = False,
+    vendor_id: str | None = None,
 ) -> dict[str, RelatedProductItem]:
     """Map each sibling product-id to a card, keeping only shoppable ones.
 
@@ -566,15 +659,23 @@ def _shoppable_related_items(
         return {}
 
     sibling_ids = list(sibling_by_id.keys())
-    listings_response = (
+    listings_query = (
         client.table("vendor_listings")
-        .select("id, product_id, price_ngwee, status, vendors!inner(status)")
+        .select(
+            "id, product_id, vendor_id, price_ngwee, status, wholesale, stock_mode, stock_qty, "
+            "min_steps, moq, product_class, fulfilment_mode, vendor_capacity_per_week, "
+            "vendors!inner(id, display_name, status)"
+        )
         .in_("product_id", sibling_ids)
         .eq("status", "active")
         .eq("vendors.status", "active")
         .order("price_ngwee")
-        .execute()
     )
+    if vendor_id is not None:
+        listings_query = listings_query.eq("vendor_id", vendor_id)
+    if retail_available_only:
+        listings_query = listings_query.eq("wholesale", False)
+    listings_response = listings_query.execute()
     listing_rows = list(listings_response.data or [])
     all_listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, all_listing_ids)
@@ -584,6 +685,25 @@ def _shoppable_related_items(
     for listing_row in listing_rows:
         listing_id = str(listing_row.get("id") or "")
         if listing_id in demo_listing_ids:
+            continue
+        vendor = listing_row.get("vendors") or {}
+        if vendor_id is not None and str(listing_row.get("vendor_id")) != vendor_id:
+            continue
+        if retail_available_only and (
+            listing_row.get("status") != "active"
+            or vendor.get("status") != "active"
+            or listing_row.get("wholesale")
+            or int(listing_row.get("price_ngwee") or 0) <= 0
+            or not is_listing_available(
+                str(listing_row.get("stock_mode") or ""),
+                listing_row.get("stock_qty"),
+                min_steps=int(listing_row.get("min_steps") or 1),
+                moq=int(listing_row.get("moq") or 1),
+                product_class=str(listing_row.get("product_class") or "A"),
+                fulfilment_mode=str(listing_row.get("fulfilment_mode") or "stocked"),
+                vendor_capacity_per_week=listing_row.get("vendor_capacity_per_week"),
+            )
+        ):
             continue
         pid = str(listing_row.get("product_id") or "")
         if pid and pid in sibling_by_id and pid not in cheapest_by_product:
@@ -619,6 +739,8 @@ def _shoppable_related_items(
         sibling = sibling_by_id[pid]
         listing_id = str(listing_row.get("id") or "")
         items[pid] = RelatedProductItem(
+            listing_id=listing_id,
+            vendor_name=(listing_row.get("vendors") or {}).get("display_name"),
             slug=str(sibling.get("slug") or ""),
             name=str(sibling.get("name") or ""),
             image_public_id=image_by_listing.get(listing_id),
@@ -658,9 +780,7 @@ def _curated_related_items(
         .eq("status", "active")
         .execute()
     )
-    sibling_by_id = {
-        str(row["id"]): row for row in (products_response.data or []) if row.get("id")
-    }
+    sibling_by_id = {str(row["id"]): row for row in (products_response.data or []) if row.get("id")}
     item_map = _shoppable_related_items(client, sibling_by_id)
     # Preserve the admin's curated order; drop any that aren't shoppable.
     items = [item_map[pid] for pid in ordered_ids if pid in item_map]
@@ -720,15 +840,79 @@ def build_related_products(
     return RelatedProductsResponse(product_slug=slug, items=items[:limit])
 
 
+class PickupLocationResponse(BaseModel):
+    id: str
+    landmark: str
+    lat: float
+    lng: float
+
+
+class PickupLocationsResponse(BaseModel):
+    listing_id: str
+    branch_tracked: bool
+    locations: list[PickupLocationResponse] = Field(default_factory=list)
+
+
+@router.get("/listings/{listing_id}/pickup-locations", response_model=PickupLocationsResponse)
+async def get_pickup_locations(
+    listing_id: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
+) -> PickupLocationsResponse:
+    """Active branches carrying a branch-tracked listing — the Customer PDP's
+    required-pickup-branch selector reads this before Add to Cart.
+
+    Same existence/visibility rule cart mutations already enforce (D36): an
+    id the caller isn't eligible to see is answered as though it never
+    existed, so this never leaks whether a wholesale-gated listing exists.
+
+    `branch_tracked=false` (legacy pooled listing) always returns an empty
+    `locations` list — the PDP needs no selection for those. A genuinely
+    branch-tracked listing with zero currently-active branches also returns
+    an empty list with `branch_tracked=true`, so the caller can render an
+    honest "no pickup branch available" state instead of a fabricated one.
+    """
+    fetch_listing(listing_id, business_eligible=access.eligible)
+
+    if not is_branch_tracked(listing_id):
+        return PickupLocationsResponse(listing_id=listing_id, branch_tracked=False, locations=[])
+
+    rows = [row for row in fetch_branch_stock_rows(listing_id) if row.status == "active"]
+    landmarks: dict[str, str] = {}
+    if rows:
+        response = (
+            supabase.client.table("vendor_locations")
+            .select("id, landmark")
+            .in_("id", [row.location_id for row in rows])
+            .execute()
+        )
+        for location_row in response.data or []:
+            location_id = location_row.get("id")
+            if location_id:
+                landmarks[str(location_id)] = str(location_row.get("landmark") or "")
+
+    return PickupLocationsResponse(
+        listing_id=listing_id,
+        branch_tracked=True,
+        locations=[
+            PickupLocationResponse(
+                id=row.location_id,
+                landmark=landmarks.get(row.location_id, ""),
+                lat=row.lat,
+                lng=row.lng,
+            )
+            for row in rows
+        ],
+    )
+
+
 @router.get("/{slug}", response_model=ProductDetailResponse)
 async def get_product(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
     access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ProductDetailResponse | RedirectResponse:
-    result = build_product_detail(
-        supabase.client, slug, include_wholesale=access.eligible
-    )
+    result = build_product_detail(supabase.client, slug, include_wholesale=access.eligible)
     if isinstance(result, RedirectResponse):
         return result
     return result
@@ -740,3 +924,112 @@ async def get_related_products(
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
 ) -> RelatedProductsResponse:
     return build_related_products(supabase.client, slug)
+
+
+def build_related_product_rails(
+    client: Any, slug: str, *, listing_id: str | None = None
+) -> RelatedProductRailsResponse:
+    """Public retail suggestions, bound to an explicitly selected public seller.
+
+    Curated relations are not relabelled as category matches. Vendor cards take
+    precedence on overlap; every card links to the exact offer supplying its price.
+    Availability is a browse snapshot, never a stock reservation.
+    """
+    product = _fetch_product_by_slug(client, slug)
+    if product is None or product.get("status") != "active":
+        raise AppError("product.not_found", "Product not found", 404)
+    # Match the public PDP's wholesale/demo visibility, including its 404 policy.
+    build_product_detail(client, slug)
+    product_id = str(product["id"])
+    result = RelatedProductRailsResponse(product_slug=slug)
+    vendor_id: str | None = None
+    if listing_id:
+        source = (
+            client.table("vendor_listings")
+            .select(
+                "id, product_id, vendor_id, wholesale, status, vendors!inner(status, display_name)"
+            )
+            .eq("id", listing_id)
+            .eq("product_id", product_id)
+            .eq("status", "active")
+            .eq("vendors.status", "active")
+            .execute()
+        )
+        source_rows = source.data or []
+        row = source_rows[0] if source_rows else None
+        if (
+            row is not None
+            and not row.get("wholesale")
+            and (row.get("vendors") or {}).get("status") == "active"
+            and row.get("vendor_id")
+            and not fetch_demo_listing_ids(client, [listing_id])
+        ):
+            vendor_id = str(row["vendor_id"])
+            result.listing_id = listing_id
+            result.vendor_name = (row.get("vendors") or {}).get("display_name")
+
+    if vendor_id:
+        offered = (
+            client.table("vendor_listings")
+            .select("product_id")
+            .eq("vendor_id", vendor_id)
+            .eq("status", "active")
+            .execute()
+        )
+        ids = list(
+            {
+                str(row["product_id"])
+                for row in offered.data or []
+                if row.get("product_id") and str(row["product_id"]) != product_id
+            }
+        )
+        if ids:
+            products = (
+                client.table("products")
+                .select("id, slug, name, status")
+                .in_("id", ids)
+                .eq("status", "active")
+                .execute()
+            )
+            candidates = {
+                str(row["id"]): row
+                for row in products.data or []
+                if row.get("status") == "active" and str(row["id"]) != product_id
+            }
+            matches = _shoppable_related_items(
+                client, candidates, retail_available_only=True, vendor_id=vendor_id
+            )
+            result.same_vendor = sorted(
+                matches.values(), key=lambda item: (item.from_price_ngwee or 0, item.slug)
+            )[:RELATED_LIMIT]
+
+    if product.get("category_id"):
+        siblings = (
+            client.table("products")
+            .select("id, slug, name, status")
+            .eq("category_id", product["category_id"])
+            .eq("status", "active")
+            .execute()
+        )
+        excluded_slugs = {item.slug for item in result.same_vendor} | {slug}
+        candidates = {
+            str(row["id"]): row
+            for row in siblings.data or []
+            if row.get("status") == "active"
+            and str(row["id"]) != product_id
+            and row.get("slug") not in excluded_slugs
+        }
+        matches = _shoppable_related_items(client, candidates, retail_available_only=True)
+        result.same_category = sorted(
+            matches.values(), key=lambda item: (item.from_price_ngwee or 0, item.slug)
+        )[:RELATED_LIMIT]
+    return result
+
+
+@router.get("/{slug}/related-rails", response_model=RelatedProductRailsResponse)
+async def get_related_product_rails(
+    slug: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    listing_id: str | None = None,
+) -> RelatedProductRailsResponse:
+    return build_related_product_rails(supabase.client, slug, listing_id=listing_id)

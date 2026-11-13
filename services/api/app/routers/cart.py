@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -12,15 +15,24 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
-from app.services.cart.grouping import CartLineView, group_by_vendor
-from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
+from app.services.cart.grouping import (
+    CartLineView,
+    group_by_vendor,
+    line_variant_id,
+    line_variant_options,
+)
+from app.services.cart.merge import (
+    MergeConflict,
+    MergeResolution,
+    merge_cart_items,
+    validate_item_qty_for_listing,
+)
 from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.store import (
     create_guest_cart,
     fetch_active_cart_by_guest,
     fetch_listing,
     fetch_listings_for_items,
-    mark_guest_cart_converted,
     service_db_client,
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
@@ -32,10 +44,19 @@ from app.services.listings.class_rules import (
     listing_lead_time_days,
     validate_listing_purchasable_for_cart,
 )
+from app.services.listings.variants import (
+    EMPTY_SET,
+    ListingVariant,
+    ListingVariantSet,
+    load_variant_sets,
+    overlay_listing_for_variant,
+    resolve_variant_for_purchase,
+)
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
 from jwt.exceptions import InvalidTokenError
+from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from supabase import Client
 
@@ -43,6 +64,7 @@ router = APIRouter(prefix="/cart", tags=["cart"])
 
 GUEST_CART_COOKIE = "vergeo_guest_cart"
 GUEST_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+_CART_ADD_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +87,9 @@ class CartItemInput(BaseModel):
     #: otherwise. Refusing the cart action on a bad clip id would let a forged
     #: value DENY someone their add-to-cart, which is the worse bug.
     clip_id: str | None = None
+    #: Required when the listing has option groups (colour/size). Validated
+    #: server-side: must be an ACTIVE variant of THIS listing with enough stock.
+    listing_variant_id: str | None = None
 
 
 class CartItemUpdate(BaseModel):
@@ -81,6 +106,11 @@ class AcceptRfqCartRequest(BaseModel):
     fulfilment: Literal["pickup", "delivery"] | None = None
     delivery_lat: float | None = None
     delivery_lng: float | None = None
+
+
+class VariantOptionResponse(BaseModel):
+    group: str
+    value: str
 
 
 class CartLineResponse(BaseModel):
@@ -102,6 +132,8 @@ class CartLineResponse(BaseModel):
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
     is_rfq_quote: bool = False
+    listing_variant_id: str | None = None
+    variant_options: list[VariantOptionResponse] = Field(default_factory=list)
 
 
 class VendorGroupResponse(BaseModel):
@@ -147,6 +179,13 @@ class SaveForLaterResponse(BaseModel):
     product_slug: str | None = None
     removed: bool
     cart: CartResponse
+
+
+class CartMergeResolutionInput(BaseModel):
+    accept_price_changes: list[str] = Field(default_factory=list)
+    accepted_price_proposals: dict[str, str] = Field(default_factory=dict)
+    pickup_location_choices: dict[str, str | None] = Field(default_factory=dict)
+    remove_listing_ids: list[str] = Field(default_factory=list)
 
 
 def _sign_guest_cart_cookie(guest_token: str, settings: Settings) -> str:
@@ -320,7 +359,7 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
         client.table("cart_items")
         .select(
             "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
-            "pickup_location_id, rfq_thread_id"
+            "pickup_location_id, rfq_thread_id, listing_variant_id"
         )
         .eq("cart_id", cart_id)
         .execute()
@@ -403,11 +442,11 @@ def _build_cart_response(
                     else None
                 ),
                 defect_notes=(
-                    str(listing["defect_notes"])
-                    if listing.get("defect_notes")
-                    else None
+                    str(listing["defect_notes"]) if listing.get("defect_notes") else None
                 ),
                 is_rfq_quote=is_rfq_quote,
+                listing_variant_id=line_variant_id(item),
+                variant_options=line_variant_options(listing),
             )
         )
 
@@ -438,6 +477,8 @@ def _build_cart_response(
                 vendor_capacity_per_week=line.vendor_capacity_per_week,
                 defect_notes=line.defect_notes,
                 is_rfq_quote=line.is_rfq_quote,
+                listing_variant_id=line.listing_variant_id,
+                variant_options=_variant_option_responses(line),
             )
             for line in line_views
         ],
@@ -464,6 +505,8 @@ def _build_cart_response(
                         vendor_capacity_per_week=item.vendor_capacity_per_week,
                         defect_notes=item.defect_notes,
                         is_rfq_quote=item.is_rfq_quote,
+                        listing_variant_id=item.listing_variant_id,
+                        variant_options=_variant_option_responses(item),
                     )
                     for item in group.items
                 ],
@@ -482,6 +525,37 @@ def _build_cart_response(
             )
             for conflict in (conflicts or [])
         ],
+    )
+
+
+def _variant_option_responses(line: CartLineView) -> list[VariantOptionResponse]:
+    return [
+        VariantOptionResponse(group=group, value=value) for group, value in line.variant_options
+    ]
+
+
+def _variant_set_for(listing_id: str) -> ListingVariantSet:
+    return load_variant_sets(service_db_client(), [listing_id]).get(listing_id, EMPTY_SET)
+
+
+def _variant_conflict_error(
+    listing_id: str,
+    *,
+    existing_variant_id: str | None,
+    variant_set: ListingVariantSet,
+) -> AppError:
+    existing = variant_set.get(existing_variant_id)
+    return AppError(
+        code="cart.variant_conflict",
+        message="Your cart already holds this item in a different option",
+        http_status=409,
+        details={
+            "listing_id": listing_id,
+            "existing_listing_variant_id": existing_variant_id,
+            "existing_options": variant_set.options_for(existing) if existing else [],
+            "message_key": "cart.variant_conflict",
+            "retry": False,
+        },
     )
 
 
@@ -540,11 +614,7 @@ def _enforce_listing_cart_rules(
             .maybe_single()
             .execute()
         )
-        row = (
-            response.data
-            if response is not None and isinstance(response.data, dict)
-            else None
-        )
+        row = response.data if response is not None and isinstance(response.data, dict) else None
         # A missing flag must not make a pre-release product class purchasable.
         if row is None or row.get("enabled") is not True:
             customer_released = False
@@ -584,6 +654,170 @@ async def get_cart(
     )
 
 
+def _committed_cart_add_replay(
+    writer: Any, cart_id: str, key: str, request_body: dict[str, Any]
+) -> bool:
+    """Check a committed claim, including after validation or a stale snapshot."""
+    prior = (
+        writer.table("cart_add_requests")
+        .select("request_body")
+        .eq("cart_id", cart_id)
+        .eq("idempotency_key", key)
+        .limit(1)
+        .execute()
+    )
+    prior_rows = prior.data if isinstance(prior.data, list) else []
+    if prior_rows and isinstance(prior_rows[0], dict):
+        if prior_rows[0].get("request_body") != request_body:
+            raise AppError(
+                code="cart.idempotency_mismatch",
+                message="Idempotency key was already used for a different cart add",
+                http_status=409,
+            )
+        return True
+    return False
+
+
+def _keyed_add_result(
+    *,
+    body: CartItemInput,
+    key: str,
+    owner: CartOwner,
+    client: Client,
+    business_eligible: bool,
+) -> bool:
+    """Apply a keyed add atomically. Return whether this call committed the add."""
+    cart_id = owner.cart_id or ""
+    request_body = body.model_dump(mode="json")
+    try:
+        # PostgreSQL canonicalizes UUID arguments. Match its canonical listing
+        # identity in the request fingerprint, including uppercase UUID input.
+        request_body["listing_id"] = str(uuid.UUID(body.listing_id))
+    except ValueError:
+        # Preserve the existing listing-validation path for other identifiers.
+        pass
+    if body.listing_variant_id is not None:
+        try:
+            request_body["listing_variant_id"] = str(uuid.UUID(body.listing_variant_id))
+        except ValueError as exc:
+            raise AppError(
+                code="cart.variant_invalid",
+                message="That option does not belong to this item",
+                http_status=422,
+                details={
+                    "listing_id": body.listing_id,
+                    "listing_variant_id": body.listing_variant_id,
+                    "message_key": "cart.variant_invalid",
+                },
+            ) from exc
+    writer = service_db_client()
+    variant_set = _variant_set_for(body.listing_id)
+    # A completed retry must still succeed if the listing or stock changed in
+    # the meantime. The RPC repeats this check under a cart row lock for races.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
+        return False
+
+    for _ in range(5):
+        if _committed_cart_add_replay(writer, cart_id, key, request_body):
+            return False
+        try:
+            # A stale line may coincide with a price or availability change.
+            raw_listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+            # #762: an ACTIVE variant of THIS listing with stock; price is the variant's.
+            variant = resolve_variant_for_purchase(
+                variant_set,
+                listing=raw_listing,
+                variant_id=request_body.get("listing_variant_id"),
+                qty=body.qty,
+            )
+            variant_id = variant.id if variant is not None else None
+            listing = overlay_listing_for_variant(raw_listing, variant_set, variant_id)
+            existing = (
+                client.table("cart_items")
+                .select("qty, pickup_location_id, listing_variant_id")
+                .eq("cart_id", cart_id)
+                .eq("listing_id", body.listing_id)
+                .limit(1)
+                .execute()
+            )
+            rows = existing.data if isinstance(existing.data, list) else []
+            previous = rows[0] if rows and isinstance(rows[0], dict) else None
+            expected_qty = int(previous["qty"]) if previous else None
+            previous_location = previous.get("pickup_location_id") if previous else None
+            expected_location = str(previous_location) if previous_location else None
+            if previous is not None and line_variant_id(previous) != variant_id:
+                # One line per listing: another variant is refused, never swapped.
+                raise _variant_conflict_error(
+                    body.listing_id,
+                    existing_variant_id=line_variant_id(previous),
+                    variant_set=variant_set,
+                )
+            new_qty = (expected_qty or 0) + body.qty
+            if variant is not None:
+                resolve_variant_for_purchase(
+                    variant_set, listing=raw_listing, variant_id=variant_id, qty=new_qty
+                )
+            location_id = _resolve_line_location_id(
+                body.listing_id,
+                pickup_location_id=body.pickup_location_id,
+                fulfilment=body.fulfilment,
+                delivery_lat=body.delivery_lat,
+                delivery_lng=body.delivery_lng,
+                existing_location_id=expected_location,
+            )
+            unit_price, wholesale = validate_item_qty_for_listing(
+                listing=listing, qty=new_qty, business_eligible=business_eligible
+            )
+            _enforce_listing_cart_rules(listing, new_qty, location_id=location_id)
+        except AppError:
+            # Another HTTP request may have committed this same key since the
+            # first read. Its replay wins over a now-invalid increment.
+            if _committed_cart_add_replay(writer, cart_id, key, request_body):
+                return False
+            raise
+        try:
+            result = writer.rpc(
+                "apply_cart_add_idempotent_v2",
+                {
+                    "p_cart_id": cart_id,
+                    "p_user_id": owner.user_id,
+                    "p_guest_token": owner.guest_token if owner.is_guest else None,
+                    "p_key": key,
+                    "p_body": request_body,
+                    "p_listing_id": request_body["listing_id"],
+                    "p_qty": body.qty,
+                    "p_expected_qty": expected_qty,
+                    "p_expected_location_id": expected_location,
+                    "p_unit_price_ngwee": unit_price,
+                    "p_wholesale": wholesale,
+                    "p_location_id": location_id,
+                    "p_listing_variant_id": variant_id,
+                },
+            ).execute()
+        except APIError as exc:
+            if exc.code == "P0001" and exc.message == "cart.idempotency_mismatch":
+                raise AppError(
+                    code="cart.idempotency_mismatch",
+                    message="Idempotency key was already used for a different cart add",
+                    http_status=409,
+                ) from exc
+            raise
+        if result.data == "applied":
+            return True
+        if result.data == "replayed":
+            return False
+        if result.data != "stale":
+            raise RuntimeError(f"Unexpected cart add RPC result: {result.data!r}")
+        # Another add moved the line since validation. Re-read and revalidate.
+    if _committed_cart_add_replay(writer, cart_id, key, request_body):
+        return False
+    raise AppError(
+        code="cart.concurrent_add_retry",
+        message="Cart changed during add; retry the same request",
+        http_status=409,
+    )
+
+
 @router.post("/items", response_model=CartResponse)
 async def add_cart_item(
     body: CartItemInput,
@@ -595,10 +829,61 @@ async def add_cart_item(
     service_client: Annotated[Any, Depends(get_supabase_client)],
     request: Request,
 ) -> CartResponse:
+    key = request.headers.get("Idempotency-Key")
+    if key is not None:
+        if not _CART_ADD_KEY.fullmatch(key):
+            raise AppError(
+                code="cart.idempotency_key_invalid",
+                message="Idempotency-Key must be 1–128 safe ASCII characters",
+                http_status=422,
+            )
+        client = _db_client_for_owner(
+            owner, settings=settings, user_token=_extract_bearer_token(request)
+        )
+        business_eligible = _business_eligible_for_user(owner.user_id)
+        applied = _keyed_add_result(
+            body=body,
+            key=key,
+            owner=owner,
+            client=client,
+            business_eligible=business_eligible,
+        )
+        if applied:
+            keyed_line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+            if body.listing_variant_id is not None:
+                keyed_line["listing_variant_id"] = body.listing_variant_id
+            attributed_clip = validate_clip_attribution(
+                service_client, clip_id=body.clip_id, listing_id=body.listing_id
+            )
+            if attributed_clip:
+                keyed_line["clip_id"] = attributed_clip
+            emit_cart_add(
+                checkout_group_id=None,
+                customer_id=owner.user_id,
+                snapshot={"lines": [keyed_line]},
+            )
+        cart_id = owner.cart_id or ""
+        items = _fetch_cart_items(client, cart_id)
+        listings = fetch_listings_for_items(items)
+        return _cart_response(
+            cart_id=cart_id,
+            items=items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=owner.user_id,
+        )
+
     # Eligibility is resolved BEFORE the fetch: under D36 it decides whether the
     # listing is visible at all, not merely how it is priced.
     business_eligible = _business_eligible_for_user(owner.user_id)
-    listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+    raw_listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
+    variant_set = _variant_set_for(body.listing_id)
+    variant: ListingVariant | None = resolve_variant_for_purchase(
+        variant_set, listing=raw_listing, variant_id=body.listing_variant_id, qty=body.qty
+    )
+    variant_id = variant.id if variant is not None else None
+    # Price derivation below reads listing["price_ngwee"]: view it as the variant.
+    listing = overlay_listing_for_variant(raw_listing, variant_set, variant_id)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -620,7 +905,7 @@ async def add_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("id, qty, pickup_location_id")
+        .select("id, qty, pickup_location_id, listing_variant_id")
         .eq("cart_id", cart_id)
         .eq("listing_id", body.listing_id)
         .limit(1)
@@ -638,7 +923,20 @@ async def add_cart_item(
         existing_location_id = (
             str(existing_location) if isinstance(existing_location, str) else None
         )
+        existing_variant_id = line_variant_id(rows[0])
+        if existing_variant_id != variant_id:
+            # One line per listing: a different colour/size of the same listing
+            # is refused rather than silently swapped or merged.
+            raise _variant_conflict_error(
+                body.listing_id,
+                existing_variant_id=existing_variant_id,
+                variant_set=variant_set,
+            )
         new_qty = int(rows[0]["qty"]) + body.qty
+        if variant is not None:
+            resolve_variant_for_purchase(
+                variant_set, listing=raw_listing, variant_id=variant_id, qty=new_qty
+            )
         location_id = _resolve_line_location_id(
             body.listing_id,
             pickup_location_id=body.pickup_location_id,
@@ -668,12 +966,15 @@ async def add_cart_item(
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
                 "pickup_location_id": location_id,
+                **({"listing_variant_id": variant_id} if variant_id is not None else {}),
             }
         ).execute()
 
     # Fire-and-forget funnel event (cart_add); server operational, consent-independent.
     # snapshot.lines carries the listing so vendor analytics can attribute the view.
     line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+    if variant_id is not None:
+        line["listing_variant_id"] = variant_id
     attributed_clip = validate_clip_attribution(
         service_client,
         clip_id=body.clip_id,
@@ -707,7 +1008,7 @@ async def update_cart_item(
     request: Request,
 ) -> CartResponse:
     business_eligible = _business_eligible_for_user(owner.user_id)
-    listing = fetch_listing(listing_id, business_eligible=business_eligible)
+    raw_listing = fetch_listing(listing_id, business_eligible=business_eligible)
 
     client = _db_client_for_owner(
         owner,
@@ -718,7 +1019,9 @@ async def update_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("pickup_location_id, rfq_thread_id, unit_price_ngwee, wholesale")
+        .select(
+            "pickup_location_id, rfq_thread_id, unit_price_ngwee, wholesale, listing_variant_id"
+        )
         .eq("cart_id", cart_id)
         .eq("listing_id", listing_id)
         .limit(1)
@@ -729,7 +1032,9 @@ async def update_cart_item(
     rfq_thread_id: str | None = None
     rfq_unit_price: int | None = None
     rfq_wholesale = False
+    existing_variant_id: str | None = None
     if existing_rows and isinstance(existing_rows[0], dict):
+        existing_variant_id = line_variant_id(existing_rows[0])
         raw_location = existing_rows[0].get("pickup_location_id")
         if isinstance(raw_location, str):
             existing_location_id = raw_location
@@ -740,6 +1045,14 @@ async def update_cart_item(
             if raw_price is not None:
                 rfq_unit_price = int(raw_price)
             rfq_wholesale = bool(existing_rows[0].get("wholesale"))
+
+    listing = raw_listing
+    if rfq_thread_id is None:
+        variant_set = _variant_set_for(listing_id)
+        resolve_variant_for_purchase(
+            variant_set, listing=raw_listing, variant_id=existing_variant_id, qty=body.qty
+        )
+        listing = overlay_listing_for_variant(raw_listing, variant_set, existing_variant_id)
 
     location_id = _resolve_line_location_id(
         listing_id,
@@ -851,6 +1164,7 @@ def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNotic
                 if isinstance(item.get("pickup_location_id"), str)
                 else None
             ),
+            listing_variant_id=line_variant_id(item),
         )
         for item in items
         if not is_rfq_pinned_line(item)
@@ -969,80 +1283,456 @@ async def save_cart_item_for_later(
     )
 
 
+def _merge_conflict_payload(conflicts: list[MergeConflict]) -> list[dict[str, Any]]:
+    return [
+        {
+            "listing_id": conflict.listing_id,
+            "code": conflict.code,
+            "message_key": conflict.message_key,
+            "details": conflict.details,
+        }
+        for conflict in conflicts
+    ]
+
+
+def _removed_merge_items(
+    items: list[dict[str, Any]],
+    remove_listing_ids: frozenset[str],
+    variant_by_listing: dict[str, str | None] | None = None,
+) -> list[dict[str, Any]]:
+    quantities: dict[str, int] = {}
+    for item in items:
+        listing_id = str(item["listing_id"])
+        if listing_id in remove_listing_ids:
+            quantities[listing_id] = quantities.get(listing_id, 0) + int(item["qty"])
+    variants = variant_by_listing or {}
+    removed: list[dict[str, Any]] = []
+    for listing_id in sorted(quantities):
+        row: dict[str, Any] = {"listing_id": listing_id, "qty": quantities[listing_id]}
+        if variants.get(listing_id):
+            row["listing_variant_id"] = variants[listing_id]
+        removed.append(row)
+    return removed
+
+
+def _variant_dropped_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Guest lines removed because the account cart holds another variant (#762)."""
+    return [
+        {
+            "listing_id": str(item["listing_id"]),
+            "qty": int(item["qty"]),
+            **(
+                {"listing_variant_id": line_variant_id(item)}
+                if line_variant_id(item) is not None
+                else {}
+            ),
+        }
+        for item in items
+    ]
+
+
+def _price_proposal_terms(
+    conflict: MergeConflict,
+    *,
+    user_id: str,
+    user_cart_id: str,
+    guest_cart_id: str,
+    user_items: list[dict[str, Any]],
+    guest_items: list[dict[str, Any]],
+    authority: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind consent to source lines and the authority used to quote this price."""
+    listing_id = conflict.listing_id
+    lines = [
+        {"cart_id": cart_id, **item}
+        for cart_id, items in ((user_cart_id, user_items), (guest_cart_id, guest_items))
+        for item in items
+        if str(item["listing_id"]) == listing_id
+    ]
+    lines.sort(key=lambda item: (item["cart_id"], str(item["id"])))
+    listing = next(
+        (row for row in authority.get("listings", []) if str(row.get("id")) == listing_id),
+        None,
+    )
+    rfq_ids = {str(item["rfq_thread_id"]) for item in lines if item.get("rfq_thread_id")}
+    relevant_authority = {
+        "business_status": authority.get("business_status"),
+        "listing": listing,
+        "rfq_threads": sorted(
+            (row for row in authority.get("rfq_threads", []) if str(row.get("id")) in rfq_ids),
+            key=lambda row: str(row["id"]),
+        ),
+        "location_stock": sorted(
+            (
+                row for row in authority.get("location_stock", [])
+                if str(row.get("listing_id")) == listing_id
+            ),
+            key=lambda row: str(row.get("location_id")),
+        ),
+    }
+    revision = hashlib.sha256(
+        json.dumps(relevant_authority, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "version": 1,
+        "user_id": user_id,
+        "user_cart_id": user_cart_id,
+        "guest_cart_id": guest_cart_id,
+        "listing_id": listing_id,
+        "currency": "ZMW",
+        "lines": lines,
+        "quantity": sum(int(item["qty"]) for item in lines),
+        "previous_unit_prices_ngwee": sorted(
+            {int(item["unit_price_ngwee"]) for item in lines}
+        ),
+        "current_unit_price_ngwee": int(conflict.details["current_unit_price_ngwee"]),
+        "wholesale": bool(listing and listing.get("wholesale")),
+        "moq": int(listing.get("moq", 1)) if listing else 1,
+        "price_tiers": listing.get("price_tiers") if listing else None,
+        "authority_revision": revision,
+    }
+
+
+def _price_conflicts_with_proposals(
+    conflicts: list[MergeConflict],
+    *,
+    settings: Settings,
+    user_id: str,
+    user_cart_id: str,
+    guest_cart_id: str,
+    user_items: list[dict[str, Any]],
+    guest_items: list[dict[str, Any]],
+    authority: dict[str, Any],
+) -> list[MergeConflict]:
+    result: list[MergeConflict] = []
+    for conflict in conflicts:
+        listing = next(
+            (
+                row for row in authority.get("listings", [])
+                if str(row.get("id")) == conflict.listing_id
+            ),
+            None,
+        )
+        title = listing.get("display_name") if listing else None
+        name = title if isinstance(title, str) and title.strip() else None
+        if conflict.code != "cart.price_changed":
+            result.append(MergeConflict(
+                listing_id=conflict.listing_id,
+                code=conflict.code,
+                message_key=conflict.message_key,
+                details={**conflict.details, "item_name": name},
+            ))
+            continue
+        terms = _price_proposal_terms(
+            conflict,
+            user_id=user_id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            user_items=user_items,
+            guest_items=guest_items,
+            authority=authority,
+        )
+        # RFQ-pinned prices require quote review; the ordinary price acceptance
+        # path cannot silently turn a changed quote into a listing-priced line.
+        can_accept = name is not None and not any(
+            item.get("rfq_thread_id") for item in terms["lines"]
+        )
+        result.append(
+            MergeConflict(
+                listing_id=conflict.listing_id,
+                code=conflict.code,
+                message_key=conflict.message_key,
+                details={
+                    **conflict.details,
+                    "item_name": name,
+                    "currency": "ZMW",
+                    "quantity": terms["quantity"],
+                    "wholesale": terms["wholesale"],
+                    "moq": terms["moq"],
+                    "current_line_total_ngwee": (
+                        terms["quantity"] * terms["current_unit_price_ngwee"]
+                    ),
+                    "proposal_token": jwt.encode(
+                        {"typ": "cart_price_proposal", "terms": terms},
+                        settings.supabase_service_role_key,
+                        algorithm="HS256",
+                    ) if can_accept else None,
+                },
+            )
+        )
+    return result
+
+
+def _validate_merge_resolution(
+    body: CartMergeResolutionInput,
+    conflicts: list[MergeConflict],
+    settings: Settings,
+) -> MergeResolution:
+    conflicts_by_listing: dict[str, list[MergeConflict]] = {}
+    for conflict in conflicts:
+        conflicts_by_listing.setdefault(conflict.listing_id, []).append(conflict)
+
+    accept_price_changes = frozenset(body.accept_price_changes)
+    pickup_location_choices = dict(body.pickup_location_choices)
+    remove_listing_ids = frozenset(body.remove_listing_ids)
+
+    invalid_accepts = {
+        listing_id
+        for listing_id in accept_price_changes
+        if not any(
+            conflict.code == "cart.price_changed"
+            for conflict in conflicts_by_listing.get(listing_id, [])
+        )
+    }
+    invalid_pickups = {
+        listing_id
+        for listing_id, choice in pickup_location_choices.items()
+        if not any(
+            conflict.code == "cart.pickup_conflict"
+            and choice
+            in {
+                conflict.details.get("user_pickup_location_id"),
+                conflict.details.get("guest_pickup_location_id"),
+            }
+            for conflict in conflicts_by_listing.get(listing_id, [])
+        )
+    }
+    invalid_removals = remove_listing_ids.difference(conflicts_by_listing)
+    invalid_proposals = set(body.accepted_price_proposals).difference(accept_price_changes)
+    for listing_id in accept_price_changes:
+        price_conflict = next(
+            (conflict for conflict in conflicts_by_listing.get(listing_id, [])
+             if conflict.code == "cart.price_changed"),
+            None,
+        )
+        if price_conflict is None:
+            continue
+        supplied = body.accepted_price_proposals.get(listing_id)
+        current = price_conflict.details.get("proposal_token")
+        try:
+            verified = jwt.decode(
+                supplied or "", settings.supabase_service_role_key, algorithms=["HS256"]
+            )
+            current_verified = jwt.decode(
+                str(current or ""), settings.supabase_service_role_key, algorithms=["HS256"]
+            )
+            if verified != current_verified or verified.get("typ") != "cart_price_proposal":
+                invalid_proposals.add(listing_id)
+        except InvalidTokenError:
+            invalid_proposals.add(listing_id)
+    if invalid_accepts or invalid_pickups or invalid_removals or invalid_proposals:
+        raise AppError(
+            code="cart.merge_conflict",
+            message="Cart conflicts changed; review the current choices",
+            http_status=409,
+            details={
+                "retry": False,
+                "conflicts": _merge_conflict_payload(conflicts),
+            },
+        )
+
+    return MergeResolution(
+        accept_price_changes=accept_price_changes,
+        pickup_location_choices=pickup_location_choices,
+        remove_listing_ids=remove_listing_ids,
+    )
+
+
 @router.post("/merge", response_model=CartResponse)
 async def merge_cart_on_login(
     response: Response,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
+    body: CartMergeResolutionInput | None = None,
 ) -> CartResponse:
-    guest_token = _resolve_guest_token(request, settings)
-    user_client = get_user_client(current_user.token, settings)
-
-    user_cart = _fetch_active_cart_by_user(user_client, current_user.id)
-    if user_cart is None:
-        user_cart = _create_user_cart(user_client, current_user.id)
-    user_cart_id = str(user_cart["id"])
-
-    user_items = _fetch_cart_items(user_client, user_cart_id)
-    guest_items: list[dict[str, Any]] = []
-    guest_cart_id: str | None = None
-
-    if guest_token is not None:
-        guest_cart = fetch_active_cart_by_guest(guest_token)
-        if guest_cart is not None:
-            guest_cart_id = str(guest_cart["id"])
-            guest_items = _fetch_cart_items(service_db_client(), guest_cart_id)
-
-    all_items = user_items + guest_items
-    listings = fetch_listings_for_items(all_items)
-    from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
-
-    rfq_threads_by_id = fetch_rfq_threads_for_items(service_db_client(), all_items)
-    merged_items, conflicts = merge_cart_items(
-        user_items=user_items,
-        guest_items=guest_items,
-        listings_by_id=listings,
-        business_eligible=_business_eligible_for_user(current_user.id),
-        customer_id=current_user.id,
-        rfq_threads_by_id=rfq_threads_by_id,
+    from app.services.cart.merge_atomic import (
+        AtomicMergeOutcome,
+        apply_login_cart_merge_atomic,
+        fetch_cart_merge_authority,
     )
 
-    # DELETE stays on the user client — 0086 left client DELETE granted, and
-    # exercising it here keeps the RLS delete path honest. The INSERT of the
-    # re-derived lines must be the service client (0086, B0-P02a).
-    user_client.table("cart_items").delete().eq("cart_id", user_cart_id).execute()
-    if merged_items:
-        service_db_client().table("cart_items").insert(
-            [
-                {
-                    "cart_id": user_cart_id,
-                    "listing_id": item.listing_id,
-                    "qty": item.qty,
-                    "unit_price_ngwee": item.unit_price_ngwee,
-                    "wholesale": item.wholesale,
-                    **(
-                        {"rfq_thread_id": item.rfq_thread_id}
-                        if item.rfq_thread_id is not None
-                        else {}
-                    ),
-                }
-                for item in merged_items
-            ]
-        ).execute()
+    guest_token = _resolve_guest_token(request, settings)
+    user_client = get_user_client(current_user.token, settings)
+    service = service_db_client()
+    ensure_response = service.rpc("ensure_account_cart", {"p_user_id": current_user.id}).execute()
+    user_cart_id = str(ensure_response.data)
+    business_eligible = _business_eligible_for_user(current_user.id)
+    variant_conflicts: list[MergeConflict] = []
 
-    if guest_cart_id is not None:
-        mark_guest_cart_converted(guest_cart_id)
+    # Three deterministic optimistic attempts cover a concurrent ordinary cart
+    # mutation without ever applying a stale proposal. A concurrent duplicate
+    # login request becomes ALREADY_CONVERTED and never rewrites the account.
+    for attempt in range(3):
+        user_items = _fetch_cart_items(user_client, user_cart_id)
+        guest_cart = fetch_active_cart_by_guest(guest_token) if guest_token is not None else None
+
+        # No verified active guest cart means there is nothing to merge. In
+        # particular, do not delete/reinsert the authenticated cart.
+        if guest_cart is None or guest_token is None:
+            break
+
+        guest_cart_id = str(guest_cart["id"])
+        source_guest_items = _fetch_cart_items(service, guest_cart_id)
+        # #762: one line per listing. A guest line for a different variant of a
+        # listing the account cart holds is not folded into it: it is removed
+        # explicitly (audited, conserved by variant in the SQL RPC) and reported.
+        user_variants = {str(item["listing_id"]): line_variant_id(item) for item in user_items}
+        variant_conflicts = []
+        variant_dropped: list[dict[str, Any]] = []
+        guest_items = []
+        for item in source_guest_items:
+            listing_key = str(item["listing_id"])
+            if listing_key in user_variants and user_variants[listing_key] != line_variant_id(
+                item
+            ):
+                variant_conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_key,
+                        code="cart.variant_conflict",
+                        message_key="cart.variant_conflict",
+                        details={"listing_id": listing_key, "retry": False},
+                    )
+                )
+                variant_dropped.append(item)
+                continue
+            guest_items.append(item)
+        variant_by_listing = {
+            str(item["listing_id"]): line_variant_id(item) for item in guest_items + user_items
+        }
+        all_items = user_items + guest_items
+        authority = fetch_cart_merge_authority(
+            service,
+            user_id=current_user.id,
+            items=user_items + source_guest_items,
+        )
+        raw_listing_rows = authority.get("listings")
+        listing_rows = raw_listing_rows if isinstance(raw_listing_rows, list) else []
+        listings = {
+            str(row["id"]): row for row in listing_rows if isinstance(row, dict) and row.get("id")
+        }
+        # Price/availability "as the line's variant" (#762 overlay), as the read path.
+        from app.services.listings.variants import load_variant_sets, overlay_listings_for_items
+
+        listings = overlay_listings_for_items(
+            all_items, listings, load_variant_sets(service, listings.keys())
+        )
+        raw_rfq_rows = authority.get("rfq_threads")
+        rfq_rows = raw_rfq_rows if isinstance(raw_rfq_rows, list) else []
+        rfq_threads_by_id = {
+            str(row["id"]): row for row in rfq_rows if isinstance(row, dict) and row.get("id")
+        }
+        stock_rows = authority.get("location_stock")
+        location_stock = (
+            [row for row in stock_rows if isinstance(row, dict)]
+            if isinstance(stock_rows, list)
+            else []
+        )
+        business_eligible = authority.get("business_status") == "verified"
+
+        _, current_conflicts = merge_cart_items(
+            user_items=user_items,
+            guest_items=guest_items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=current_user.id,
+            rfq_threads_by_id=rfq_threads_by_id,
+            location_stock=location_stock,
+        )
+        current_conflicts = _price_conflicts_with_proposals(
+            current_conflicts,
+            settings=settings,
+            user_id=current_user.id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            user_items=user_items,
+            guest_items=guest_items,
+            authority=authority,
+        )
+
+        resolution = (
+            _validate_merge_resolution(body, current_conflicts, settings)
+            if body is not None
+            else MergeResolution()
+        )
+        merged_items, conflicts = merge_cart_items(
+            user_items=user_items,
+            guest_items=guest_items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=current_user.id,
+            rfq_threads_by_id=rfq_threads_by_id,
+            location_stock=location_stock,
+            resolution=resolution,
+        )
+        if conflicts:
+            conflicts = _price_conflicts_with_proposals(
+                conflicts,
+                settings=settings,
+                user_id=current_user.id,
+                user_cart_id=user_cart_id,
+                guest_cart_id=guest_cart_id,
+                user_items=user_items,
+                guest_items=guest_items,
+                authority=authority,
+            )
+            raise AppError(
+                code="cart.merge_conflict",
+                message="Review cart conflicts before continuing",
+                http_status=409,
+                details={
+                    "retry": False,
+                    "conflicts": _merge_conflict_payload(conflicts),
+                },
+            )
+
+        outcome = apply_login_cart_merge_atomic(
+            service,
+            user_id=current_user.id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            guest_token=guest_token,
+            expected_user_items=user_items,
+            expected_guest_items=source_guest_items,
+            expected_authority=authority,
+            merged_items=merged_items,
+            removed_items=_removed_merge_items(
+                all_items, resolution.remove_listing_ids, variant_by_listing
+            )
+            + _variant_dropped_items(variant_dropped),
+            resolution={
+                "accept_price_changes": sorted(resolution.accept_price_changes),
+                "pickup_location_choices": resolution.pickup_location_choices,
+                "remove_listing_ids": sorted(resolution.remove_listing_ids),
+                "variant_conflict_listing_ids": sorted(
+                    {str(item["listing_id"]) for item in variant_dropped}
+                ),
+            },
+            variant_by_listing=variant_by_listing,
+        )
+        if outcome not in {
+            AtomicMergeOutcome.STALE_SNAPSHOT,
+            AtomicMergeOutcome.STALE_AUTHORITY,
+        }:
+            break
+        if attempt == 2:
+            raise AppError(
+                code="cart.merge_conflict",
+                message="Cart changed while sign-in merge was being prepared",
+                http_status=409,
+                details={"retry": True},
+            )
 
     _clear_guest_cookie(response)
 
     final_items = _fetch_cart_items(user_client, user_cart_id)
+    listings = fetch_listings_for_items(final_items)
     return _cart_response(
         cart_id=user_cart_id,
         items=final_items,
         listings_by_id=listings,
-        business_eligible=_business_eligible_for_user(current_user.id),
-        conflicts=conflicts,
+        business_eligible=business_eligible,
+        conflicts=variant_conflicts or None,
         customer_id=current_user.id,
     )
 
@@ -1113,9 +1803,9 @@ async def accept_rfq_into_cart(
     }
 
     if rows and isinstance(rows[0], dict):
-        line_writer.table("cart_items").update(line_payload).eq(
-            "id", str(rows[0]["id"])
-        ).eq("cart_id", cart_id).execute()
+        line_writer.table("cart_items").update(line_payload).eq("id", str(rows[0]["id"])).eq(
+            "cart_id", cart_id
+        ).execute()
     else:
         line_writer.table("cart_items").insert(
             {

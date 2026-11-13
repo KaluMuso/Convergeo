@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { LinkButton } from "@vergeo/ui/src/link-button";
@@ -10,8 +9,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { useSession } from "../../../../../lib/customer-session";
 import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
 
+import { NextSteps } from "./next-steps";
 import { PaymentFailed, type PaymentFailedLabels } from "./payment-failed";
 
 export type PaymentStatusPayload = {
@@ -38,8 +39,27 @@ export type PendingLabels = {
   codBody: string;
   codCta: string;
   viewOrder: string;
+  ticketUnavailableBody: string;
   ussd: UssdWaitLabels;
   failed: PaymentFailedLabels;
+  /** UX pass 4 — COD confirmation detail. Templates use {amount}. */
+  codConfirmation?: CodConfirmationLabels;
+};
+
+export type CodConfirmationLabels = {
+  orderNumberLabel: string;
+  amountDueLabel: string;
+  nextTitle: string;
+  step1Title: string;
+  step1Body: string;
+  step2Title: string;
+  step2Body: string;
+  step3Title: string;
+  step3Body: string;
+  helpTitle: string;
+  helpBody: string;
+  contactCta: string;
+  continueShopping: string;
 };
 
 export type UssdWaitLabels = {
@@ -122,9 +142,22 @@ type PendingPaymentShellProps = {
   locale: string;
   groupId: string;
   labels: PendingLabels;
+  ticketCheckout?: boolean;
+  /**
+   * Server-created groups (paid ticket / service deposit) land somewhere other than
+   * the order page on success (ticket wallet / job thread) and return to
+   * `/checkout?group=` rather than the cart checkout. Omitted for cart checkouts.
+   */
+  groupRoutes?: { success: string; checkout: string };
 };
 
-export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentShellProps) {
+export function PendingPaymentShell({
+  locale,
+  groupId,
+  labels,
+  ticketCheckout = false,
+  groupRoutes,
+}: PendingPaymentShellProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [statusPayload, setStatusPayload] = useState<PaymentStatusPayload | null>(null);
@@ -137,7 +170,8 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   const orderPath = statusPayload
     ? `/${locale}/account/orders/${statusPayload.order_id}`
     : `/${locale}/account/orders`;
-  const checkoutPath = `/${locale}/checkout`;
+  const checkoutPath = groupRoutes?.checkout ?? `/${locale}/checkout`;
+  const successPath = groupRoutes?.success ?? null;
 
   const fetchStatus = useCallback(async (): Promise<PaymentStatusPayload | null> => {
     const token = session?.access_token;
@@ -187,13 +221,8 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
         const outcome = resolveMomoPollOutcome(payload);
         if (outcome === "confirming") {
-          // Redirect to the order page (real escrow/payment state) — do not
-          // claim a standalone "paid" success without ledger confirmation.
-          router.replace(
-            payload.order_id
-              ? `/${locale}/account/orders/${payload.order_id}`
-              : `/${locale}/account/orders`,
-          );
+          // Stop polling and hand the buyer to the effect below. Navigation
+          // deliberately does NOT happen here — see the redirect effect.
           return;
         }
 
@@ -225,25 +254,51 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [
-    fetchStatus,
-    labels.error,
-    locale,
-    router,
-    schedulePoll,
-    session?.access_token,
-    sessionLoading,
-  ]);
+    // `locale`/`router` are deliberately absent: this effect no longer
+    // navigates. Redirecting is the separate, state-driven effect below.
+  }, [fetchStatus, labels.error, schedulePoll, session?.access_token, sessionLoading]);
 
+  /**
+   * Provider success -> authoritative order state, in two committed steps.
+   *
+   * This used to live inside the polling effect: `setStatusPayload(payload)`
+   * and `router.replace(...)` were issued back to back in the same callback,
+   * so navigation could begin before React had committed the state that
+   * renders the honest `payment-confirming` surface. The buyer could be moved
+   * off the pending page without that surface ever entering the DOM, which
+   * breaks the contract the E2E certification asserts and, worse, hides the
+   * one screen that tells the truth about where the money is.
+   *
+   * Splitting it fixes the ordering by construction rather than by timing:
+   * the poll only records the payload, React commits and paints the
+   * `payment-confirming` branch below, and THEN this effect runs and
+   * navigates. No sleep, no timer, no artificial delay for Playwright — the
+   * effect is exactly React's "after the render this state produced" hook.
+   *
+   * Both contracts are preserved: the confirming surface is still not a
+   * "paid" claim (resolveMomoPollOutcome never returns success), and the
+   * authoritative order route is still where the buyer lands.
+   */
   useEffect(() => {
-    if (!statusPayload?.cod) {
+    if (!statusPayload) {
       return;
     }
-    const timer = setTimeout(() => {
-      router.replace(orderPath);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [orderPath, router, statusPayload?.cod]);
+    // One outcome rule, one place: resolveMomoPollOutcome already returns
+    // "cod" for a COD group, so the COD timer below stays the only COD path.
+    if (resolveMomoPollOutcome(statusPayload) !== "confirming") {
+      return;
+    }
+    router.replace(
+      successPath ??
+        (statusPayload.order_id
+          ? `/${locale}/account/orders/${statusPayload.order_id}`
+          : `/${locale}/account/orders`),
+    );
+  }, [locale, router, statusPayload, successPath]);
+
+  // COD no longer auto-redirects to the order page (UX pass 4): the buyer
+  // needs time to read the order number and what happens next. The
+  // confirmation offers explicit links to the order and to keep shopping.
 
   const handleRetry = async () => {
     const token = session?.access_token;
@@ -310,13 +365,38 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   }
 
   const amountLocale = `${locale}-ZM`;
-  const formattedAmount = formatK(statusPayload.amount_ngwee, { locale: amountLocale });
+  const formattedAmount = formatK(statusPayload.amount_ngwee, {
+    locale: amountLocale,
+  });
 
   if (statusPayload.cod) {
+    const cod = labels.codConfirmation;
+    const orderNumber = statusPayload.order_id
+      ? statusPayload.order_id.slice(0, 8).toUpperCase()
+      : null;
     return (
       <div className="space-y-5" data-testid="payment-cod">
         <h1 className="font-display text-h1 text-display-ink">{labels.codTitle}</h1>
         <div className="space-y-4 rounded-card border border-border bg-surface p-5">
+          {cod && orderNumber ? (
+            <dl className="grid grid-cols-2 gap-3" data-testid="payment-cod-summary">
+              <div className="space-y-0.5">
+                <dt className="font-body text-xs text-text-2">{cod.orderNumberLabel}</dt>
+                <dd
+                  className="font-mono text-h3 font-semibold tracking-wide text-display-ink"
+                  data-testid="payment-cod-order-number"
+                >
+                  {orderNumber}
+                </dd>
+              </div>
+              <div className="space-y-0.5">
+                <dt className="font-body text-xs text-text-2">{cod.amountDueLabel}</dt>
+                <dd className="font-mono text-h3 font-semibold text-[var(--price)]">
+                  {formattedAmount}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
           <p className="font-body text-sm text-text-2">
             {labels.codBody.replace("{amount}", formattedAmount)}
           </p>
@@ -330,6 +410,49 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
             {labels.codCta}
           </LinkButton>
         </div>
+        {cod ? (
+          <>
+            <NextSteps
+              heading={cod.nextTitle}
+              headingId="payment-cod-next"
+              headingAs="h2"
+              activeIndex={-1}
+              testId="payment-cod-next-steps"
+              steps={[
+                { title: cod.step1Title, body: cod.step1Body },
+                { title: cod.step2Title, body: cod.step2Body },
+                {
+                  title: cod.step3Title,
+                  body: cod.step3Body.split("{amount}").join(formattedAmount),
+                },
+              ]}
+            />
+            <section
+              aria-labelledby="payment-cod-help"
+              className="space-y-2 rounded-card border border-border bg-bg-2 p-4"
+            >
+              <h2 id="payment-cod-help" className="font-body text-sm font-semibold text-text">
+                {cod.helpTitle}
+              </h2>
+              <p className="font-body text-sm text-text-2">{cod.helpBody}</p>
+              <Link
+                href={`/${locale}/contact`}
+                className="inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {cod.contactCta}
+              </Link>
+            </section>
+            <LinkButton
+              href={`/${locale}`}
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              LinkComponent={Link}
+            >
+              {cod.continueShopping}
+            </LinkButton>
+          </>
+        ) : null}
       </div>
     );
   }
@@ -341,6 +464,35 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
         <h1 className="font-display text-h1 text-display-ink">{labels.confirmingTitle}</h1>
         <p className="font-body text-sm text-text-2">{labels.confirmingBody}</p>
         <Spinner label={labels.confirmingBody} />
+      </div>
+    );
+  }
+
+  if (
+    ticketCheckout &&
+    (statusPayload.status === "cancelled" || statusPayload.status === "expired")
+  ) {
+    return (
+      <div
+        className="space-y-4 rounded-card border border-danger/30 bg-surface p-5"
+        role="alert"
+        data-testid="ticket-payment-unavailable"
+      >
+        <h1 className="font-display text-h1 text-display-ink">
+          {statusPayload.status === "cancelled"
+            ? labels.failed.cancelledTitle
+            : labels.failed.timeoutTitle}
+        </h1>
+        <p className="font-body text-sm text-text-2">{labels.ticketUnavailableBody}</p>
+        <LinkButton
+          href={orderPath}
+          variant="secondary"
+          size="lg"
+          className="w-full"
+          LinkComponent={Link}
+        >
+          {labels.viewOrder}
+        </LinkButton>
       </div>
     );
   }

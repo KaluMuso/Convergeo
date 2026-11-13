@@ -21,6 +21,9 @@
 
 export type ScanSyncTicket = {
   ticket_id: string;
+  holder_name?: string | null;
+  ticket_type_name?: string;
+  id_check_required?: boolean;
   window_sigs: string[];
   pin_hash_present: boolean;
 };
@@ -29,6 +32,7 @@ export type ScanSyncResponse = {
   event_id: string;
   instance_id: string;
   starts_at: string;
+  event_title?: string;
   window_seconds: number;
   horizon_start_window: number;
   horizon_end_window: number;
@@ -44,6 +48,10 @@ export type BatchScanResult = {
   from_status?: string | null;
   checked_in_at?: string | null;
   error_code?: string | null;
+  holder_name?: string | null;
+  ticket_type_name?: string | null;
+  event_title?: string | null;
+  id_check_required?: boolean;
 };
 
 export type BatchSubmitScan = {
@@ -345,6 +353,24 @@ export class OfflineScanStore {
 
   get lastSync(): ScanSyncResponse | null {
     return this.sync;
+  }
+
+  ticketContext(ticketId: string): {
+    holderName: string | null;
+    ticketTypeName: string | null;
+    eventTitle: string | null;
+    idCheckRequired: boolean;
+  } | null {
+    const ticket = this.sync?.tickets.find((row) => row.ticket_id === ticketId);
+    if (!ticket && !this.sync?.event_title) {
+      return null;
+    }
+    return {
+      holderName: ticket?.holder_name ?? null,
+      ticketTypeName: ticket?.ticket_type_name ?? null,
+      eventTitle: this.sync?.event_title ?? null,
+      idCheckRequired: Boolean(ticket?.id_check_required),
+    };
   }
 
   get queueSnapshot(): PendingScan[] {

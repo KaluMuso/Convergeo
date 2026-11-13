@@ -16,7 +16,7 @@
     "emptyBody": "Yang'anani zinthu ndi onjezani items kuti muyambe.",
     "emptyTitle": "Cart yanu ndi yopanda kanthu",
     "emptyTrustDelivery": "Ma-zone a delivery a Lusaka amatsimikizidwa pa checkout musanalipire.",
-    "emptyTrustEscrow": "Payment ya online imasungidwa ndi Convergeo mpaka delivery itsimikizidwe.",
+    "emptyTrustEscrow": "Lipirani mu cash order ikafika pa ma-order oyenera — palibe kulipira pa intaneti.",
     "emptyTrustPickup": "Pickup ya dziko lonse imakhalabe ilipo pamene delivery palibe.",
     "freeDeliveryProgress": "{amount} ya {threshold} ku free Lusaka delivery",
     "freeDeliveryUnlocked": "Subtotal ya vendor iyi ikuyenera free Lusaka delivery",
@@ -38,10 +38,23 @@
     "loadErrorBody": "Onani connection ndi yesaninso. Zinthu zanu sizinatayike.",
     "loadErrorRetry": "Yesaninso",
     "multiSellerNote": "Zinthu kuchokera kwa ogulitsa osiyanasiyana zingakhale ndi delivery kapena pickup yosiyana. Wogulitsa aliyense amasankha fulfilment yake pa checkout.",
-    "escrowTeaser": "Mukalipira online, Convergeo imasunga ndalama zanu mpaka kutumiza — kenako zimaperekedwa kwa wogulitsa.",
+    "escrowTeaser": "Cash on delivery: lipirani rider order ikafika. Mudzaona ngati order yanu ili yoyenera pa checkout.",
     "stockUnavailableNotice": "Chinthu sichipezeka. Onani cart yanu musanapitirire ku checkout.",
     "summaryHeading": "Chidule cha order",
     "sellerIndex": "Wogulitsa {index} wa {total}",
+    "mergeRecoveryTitle": "Onani cart yanu musanapitirire",
+    "mergeRecoveryBody": "Guest cart ndi account cart sizikugwirizana. Palibe chinthu chomwe chachotsedwa. Sankhani momwe mungathetsere zinthu izi.",
+    "mergeConflictLine": "Chinthu {listing}: {code}",
+    "mergePriceLine": "{item}: {previous} → {current} chilichonse × {quantity} = {total} zonse",
+    "mergeUnnamedItem": "Chinthu #{id}",
+    "mergeWholesaleTerms": "Kugula zambiri kumafuna osachepera {moq}.",
+    "mergePriceNeedsReview": "Mtengo wa quote uwu sungavomerezedwe pano ndipo uchotsedwa mu cart; uonenso musanagule.",
+    "mergeAccountChoice": "Sungani malo a pickup a account",
+    "mergeGuestChoice": "Gwiritsani malo a pickup a guest",
+    "mergeApply": "Vomerezani mitengo yatsopano ndi kuchotsa zinthu zosapezeka",
+    "mergeRetry": "Yesaninso kuphatikiza cart",
+    "mergeSignOut": "Tulukani mu account",
+    "mergeFailure": "Sitinathe kuteteza cart yanu. Zinthu zanu zasungidwabe.",
     "qtyDecrease": "Chepetsani chiwerengero",
     "qtyDecreaseSymbol": "-",
     "qtyIncrease": "Onjezani chiwerengero",
@@ -96,6 +109,7 @@
     "emptyCart": "Cart yanu ndi yopanda kanthu.",
     "error": "China chake chalakwika. Yesaninso.",
     "loading": "Ikuyamba checkout…",
+    "overCodCap": "Order yanu yaposa {cap}, ndalama zomwe cash on delivery ingalipire. Payment ya online silipo pano. Chotsani zinthu zina mu cart kuti mumalize kugula.",
     "pageTitle": "Kugula",
     "contact": {
       "title": "Zambiri zanu",
@@ -141,7 +155,21 @@
       "continue": "Pitilizani",
       "subtotal": "Subtotal yokha",
       "deliveryFees": "Ma-fees a delivery",
-      "total": "Zonse"
+      "total": "Zonse",
+      "guide": {
+        "deliveryHelp": "Rider adzakubweretserani ku Lusaka. Mudzaona mtengo wa delivery musanatumize order.",
+        "pickupHelp": "Mudzatenga nokha kwa seller. Palibe delivery fee.",
+        "groupHint": "Seller aliyense amanyamula ndi kutumiza zinthu zake, choncho sankhani delivery kapena pickup kwa seller aliyense.",
+        "tipsTitle": "Thandizani rider kukupezani",
+        "tip1": "Tchulani malo omwe anthu oyandikana nawo amadziwa — tchalitchi, sukulu, filling station kapena msika.",
+        "tip2": "Lembani area ndi street, ndi chinthu chosonyeza geti lanu, monga mtundu wake.",
+        "tip3": "Siyani foni yanu ili on. Rider angakuyimbireni pa namba yanu kuti akupezeni.",
+        "landmarkRequired": "Lembani landmark ndi area kuti rider akupezeni.",
+        "cutoffTitle": "Zidzatumizidwa liti?",
+        "cutoffBefore": "Mukatumiza order 14:00 isanakwane (nthawi ya Lusaka), zinthu zomwe zili mu stock zimatumizidwa lero, seller akatsimikiza.",
+        "cutoffAfter": "Nthawi yadutsa 14:00 ku Lusaka, choncho zinthu za mu stock zidzatumizidwa mawa, seller akatsimikiza.",
+        "cutoffMadeToOrder": "Zinthu zopangidwa pa order zimatumizidwa zikatha — onani nthawi ya chinthu chilichonse."
+      }
     },
     "countdown": {
       "label": "Zinthu zasungidwa kwa",
@@ -176,8 +204,17 @@
       "railRejected": "Mobile money network iyi sivomerezedwa",
       "railRequired": "Sankhani mobile money network",
       "required": "Lembani nambala ya payer",
-      "subtitle": "Payment yanu ikusungidwa bwino mpaka kutumiza.",
-      "title": "Mungafune kulipira bwanji?"
+      "subtitle": "Sankhani momwe mulipirire. Mudzaona zonse pa step yotsatira musanatumize order.",
+      "title": "Mungafune kulipira bwanji?",
+      "codGuide": {
+        "title": "Momwe cash on delivery imagwirira ntchito",
+        "step1": "Palibe ndalama yomwe ikutengedwa pano.",
+        "step2": "Lipirani {amount} mu cash order ikafika — kwa rider, kapena ku shop ngati mukutenga nokha.",
+        "step3": "Rider sangakhale ndi change, choncho konzekerani ndalama yeniyeni ngati mungathe.",
+        "capNote": "Cash on delivery ilipo pa ma-order ofika {cap}.",
+        "overCap": "Order yanu yonse ndi {total}. Kuti mulipire cash on delivery, chotsani zinthu zina kapena tumizani ma-order osiyana a {cap} kapena pansi.",
+        "editCart": "Konzani cart"
+      }
     },
     "pending": {
       "cancelledBody": "Mwadana mobile money prompt. Mutha kuyesanso kapena sankhani payment method ina pa checkout.",
@@ -196,9 +233,25 @@
       "retryError": "Sitinathe kuyesanso payment. Onani connection ndi yesaninso.",
       "retrying": "Ikutumiza prompt yatsopano…",
       "successRedirect": "Tikukupitani ku order yanu…",
+      "ticketUnavailableBody": "Payment ya ticket iyi singayesedwenso pa order iyi. Onani order yanu kuti mudziwe zambiri.",
       "timeoutBody": "USSD prompt yatha nthawi isanatsimikizidwe. Onani kuti phone yanu ili ndi network, kenako yesaninso — titumiza prompt yatsopano pa order yomweyo.",
       "timeoutTitle": "Payment yatha nthawi",
-      "viewOrder": "Onani order"
+      "viewOrder": "Onani order",
+      "cod": {
+        "orderNumberLabel": "Nambala ya order",
+        "amountDueLabel": "Lipirani pa delivery",
+        "nextTitle": "Zomwe zidzachitika",
+        "step1Title": "Seller atsimikiza order yanu",
+        "step1Body": "Amaona stock ndi kuivomereza. Mutha kutsatira zonse pa page ya order yanu.",
+        "step2Title": "Order yanu ikutumizidwa",
+        "step2Body": "Zinthu za mu stock zotsimikizidwa 14:00 isanakwane (nthawi ya Lusaka) zimatumizidwa tsiku lomwelo; zina mawa.",
+        "step3Title": "Mumalipira ikafika",
+        "step3Body": "Lipirani {amount} mu cash kwa rider — kapena ku shop ngati mukutenga nokha.",
+        "helpTitle": "Mukufuna kusintha kapena kuletsa?",
+        "helpBody": "Tilankhuleni ndi nambala ya order order isanatumizidwe.",
+        "contactCta": "Lankhulani ndi support",
+        "continueShopping": "Pitirizani kugula"
+      }
     },
     "reservationExpired": "Reservation yanu yatha — zinthu zabwerera ku cart yanu.",
     "review": {
@@ -229,7 +282,17 @@
       "subtitle": "Onani kuti zonse zili bwino musanalipire.",
       "subtotal": "Subtotal yokha",
       "title": "Onani order yanu",
-      "total": "Zonse"
+      "total": "Zonse",
+      "codGuide": {
+        "title": "Momwe mudzalipirire",
+        "step1": "Palibe ndalama yotengedwa mukatumiza order iyi.",
+        "step2": "Seller atsimikiza order yanu ndi kuikonza.",
+        "step3": "Mumalipira {amount} mu cash mukalandira.",
+        "deliveryTo": "Delivery ku: {landmark}",
+        "deliveryNoLandmark": "Delivery mu Lusaka",
+        "pickupFromSeller": "Mudzatenga kwa seller",
+        "placeOrderCod": "Tumizani order — lipirani pa delivery"
+      }
     },
     "stepAnnouncement": "Step {current} ya {total}",
     "steps": {
@@ -249,5 +312,9 @@
       "title": "Onani phone yanu",
       "waiting": "Tikudikira approval…"
     }
+  },
+  "variant": {
+    "option": "{group}: {value}",
+    "separator": " · "
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { createApiClient } from "@vergeo/config";
+import { emitToastKey, notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
@@ -72,8 +73,10 @@ export function CoverUpload({
           throw new Error("missing secure_url");
         }
         onUploaded(secureUrl);
+        emitToastKey("uploaded", { type: "success" });
       } catch {
         setError(t("profile.cover.uploadFailed"));
+        notify.error(t("profile.cover.uploadFailed"));
       } finally {
         setUploading(false);
       }

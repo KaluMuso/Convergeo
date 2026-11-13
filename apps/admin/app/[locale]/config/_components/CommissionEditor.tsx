@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -49,10 +50,16 @@ export function CommissionEditor() {
     if (!pending) {
       return;
     }
-    await configApi.request(`/admin/config/commissions/${pending.categoryKey}`, {
-      method: "PATCH",
-      body: JSON.stringify({ rate_bps: pending.to }),
-    });
+    try {
+      await configApi.request(`/admin/config/commissions/${pending.categoryKey}`, {
+        method: "PATCH",
+        body: JSON.stringify({ rate_bps: pending.to }),
+      });
+    } catch (caught) {
+      emitToastKey("actionFailed", { type: "error" });
+      throw caught;
+    }
+    emitToastKey("configSaved", { type: "success" });
     setPending(null);
     await load();
   };

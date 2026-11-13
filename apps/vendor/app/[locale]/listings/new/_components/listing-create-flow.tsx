@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { notify } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -10,8 +11,9 @@ import { VendorErrorState } from "../../../_components/async-state";
 import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
+import { ListingTipsPanel } from "../../_components/listing-guide";
 import { createListingClient } from "../_lib/listing-client";
-import { Spinner, Tabs } from "../_lib/ui";
+import { Spinner, Switch, Tabs } from "../_lib/ui";
 
 import { AttachForm } from "./attach-form";
 import { CanonicalSearch } from "./canonical-search";
@@ -39,6 +41,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   const [kycErrorKey, setKycErrorKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Colour/size options are set on the edit screen (variant photos need the
+  // listing's uploaded images), so opting in routes there after creation.
+  const [wantsOptions, setWantsOptions] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -125,7 +130,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     () => ({
       heading: t("listings.commission.heading"),
       body: t("listings.commission.body"),
-      rate: t("listings.commission.rate"),
+      rate: String(t.raw("listings.commission.rate")),
     }),
     [t],
   );
@@ -169,19 +174,24 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     mode: FlowTab,
     requiresEvidence: boolean,
   ) => {
-    if (requiresEvidence) {
-      setSuccessMessage(t("listings.success.evidence"));
-    } else if (mode === "new_canonical") {
-      setSuccessMessage(t("listings.success.moderation"));
-    } else {
-      setSuccessMessage(t("listings.success.live"));
-    }
+    const message = requiresEvidence
+      ? t("listings.success.evidence")
+      : mode === "new_canonical"
+        ? t("listings.success.moderation")
+        : response.status === "draft"
+          ? t("listings.success.draft")
+          : t("listings.success.live");
+    setSuccessMessage(message);
+    // The toast outlives the redirect to the listings page.
+    notify.success(message);
     setError(null);
     window.setTimeout(() => {
       router.push(
-        requiresEvidence
-          ? `/${locale}/listings/${response.listing_id}/edit`
-          : `/${locale}/listings`,
+        wantsOptions
+          ? `/${locale}/listings/${response.listing_id}/edit#options`
+          : requiresEvidence
+            ? `/${locale}/listings/${response.listing_id}/edit`
+            : `/${locale}/listings`,
       );
     }, 1200);
   };
@@ -272,6 +282,16 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           }
           onError={setError}
           labels={{
+            details: {
+              about: t("listings.newCanonical.details.about"),
+              heading: t("listings.newCanonical.details.heading"),
+              help: t("listings.newCanonical.details.help"),
+              name: t("listings.newCanonical.details.name"),
+              value: t("listings.newCanonical.details.value"),
+              add: t("listings.newCanonical.details.add"),
+              remove: t("listings.newCanonical.details.remove"),
+              invalid: t("listings.newCanonical.details.invalid"),
+            },
             heading: t("listings.newCanonical.heading"),
             intro: t("listings.newCanonical.intro"),
             nameLabel: t("listings.newCanonical.nameLabel"),
@@ -303,16 +323,31 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             handleSuccess(response, "quick_list", requiresEvidence)
           }
           onError={setError}
+          onRequestCatalog={() => {
+            setActiveTab("attach");
+            setSelectedProduct(null);
+            setError(null);
+          }}
           labels={{
             heading: t("listings.quickList.heading"),
             intro: t("listings.quickList.intro"),
             titleLabel: t("listings.quickList.titleLabel"),
             titlePlaceholder: t("listings.quickList.titlePlaceholder"),
-            publish: t("listings.quickList.publish"),
-            publishing: t("listings.quickList.publishing"),
+            categoryLabel: t("listings.newCanonical.categoryLabel"),
+            categoryPlaceholder: t("listings.newCanonical.categoryPlaceholder"),
+            descriptionLabel: t("listings.quickList.descriptionLabel"),
+            descriptionHelp: t("listings.quickList.descriptionHelp"),
+            descriptionInvalid: t("listings.quickList.descriptionInvalid"),
+            saveDraft: t("listings.quickList.saveDraft"),
+            savingDraft: t("listings.quickList.savingDraft"),
+            draftNotice: t("listings.quickList.draftNotice"),
+            canonicalRequired: t("listings.quickList.canonicalRequired"),
+            catalogLabel: t("listings.tabs.attach"),
+            categoriesUnavailable: t("listings.quickList.categoriesUnavailable"),
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
+            policyBlocked: t("listings.errors.policyBlocked"),
             required: t("listings.errors.required"),
           }}
         />
@@ -326,6 +361,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <h1 className="font-display text-h3 text-display-ink">{t("listings.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
+
+      <ListingTipsPanel defaultOpen />
 
       {!kycApproved ? (
         <div
@@ -365,6 +402,13 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
           {successMessage}
         </p>
       ) : null}
+
+      <Switch
+        label={t("listings.variants.createOptIn")}
+        checked={wantsOptions}
+        data-testid="listing-create-wants-options"
+        onChange={(event) => setWantsOptions(event.target.checked)}
+      />
 
       <Tabs
         ariaLabel={t("listings.tabs.ariaLabel")}

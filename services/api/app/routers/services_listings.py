@@ -54,6 +54,20 @@ def _clean_includes(items: list[str]) -> list[str]:
     """Trim, drop empties, cap item length, and cap the count of include bullets."""
     cleaned = [item.strip()[:MAX_INCLUDE_LEN] for item in items if item.strip()]
     return cleaned[:MAX_INCLUDES]
+
+
+def _validated_title(value: str | None) -> str:
+    title = value.strip() if value is not None else ""
+    if len(title) < 2:
+        raise AppError(
+            code="validation_error",
+            message="Service title must be at least two characters",
+            http_status=422,
+            details={"field": "title"},
+        )
+    return title
+
+
 UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -63,6 +77,21 @@ UUID_RE = re.compile(
 class _ServiceClient(Protocol):
     @property
     def client(self) -> Any: ...
+
+
+ServiceSort = Literal["newest", "price_asc", "verified", "best"]
+
+
+def sort_services(items: list[ServiceBrowseItem], sort: str) -> list[ServiceBrowseItem]:
+    """Stable post-sort of the browse list (default keeps updated_at desc)."""
+    if sort == "price_asc":
+        return sorted(
+            items,
+            key=lambda item: (item.from_price_ngwee is None, item.from_price_ngwee or 0),
+        )
+    if sort in ("verified", "best"):
+        return sorted(items, key=lambda item: not item.provider.preferred_badge)
+    return list(items)
 
 
 class ProviderSummary(StrictModel):
@@ -572,8 +601,10 @@ def browse_services(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
     category: Annotated[ServiceVertical | None, Query()] = None,
     area: Annotated[str | None, Query(max_length=120)] = None,
+    sort: Annotated[ServiceSort, Query()] = "newest",
 ) -> ServiceBrowseResponse:
-    return build_browse_response(service_client.client, category=category, area=area)
+    response = build_browse_response(service_client.client, category=category, area=area)
+    return response.model_copy(update={"items": sort_services(response.items, sort)})
 
 
 @router.get("/services/{slug}", response_model=ServiceDetailResponse)
@@ -636,8 +667,9 @@ def create_vendor_service(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ServiceMutationResponse:
     vendor = _load_vendor_for_owner(service_client, user.id)
+    title = _validated_title(payload.title)
     guard = screen_listing(
-        title=payload.title, description=payload.description, category=payload.category
+        title=title, description=payload.description, category=payload.category
     )
     if not guard.allowed:
         raise AppError(
@@ -654,7 +686,7 @@ def create_vendor_service(
         "id": str(uuid.uuid4()),
         "vendor_id": vendor["id"],
         "category": payload.category,
-        "title": payload.title.strip(),
+        "title": title,
         "description": payload.description,
         "service_area": payload.service_area,
         "from_price_ngwee": payload.from_price_ngwee,
@@ -684,8 +716,6 @@ def update_vendor_service(
 ) -> ServiceMutationResponse:
     _vendor, existing = _assert_vendor_owns_service(service_client, user.id, service_id)
     updates = payload.model_dump(exclude_unset=True)
-    if "title" in updates and updates["title"] is not None:
-        updates["title"] = updates["title"].strip()
 
     # Mirror the DB CHECK with a clean 422: the resulting service must have a
     # positive booking price if it is (or stays) bookable.
@@ -701,6 +731,27 @@ def update_vendor_service(
 
     if not updates:
         return ServiceMutationResponse(service=_to_summary(existing))
+
+    title = _validated_title(updates.get("title", existing.get("title")))
+    if "title" in updates:
+        updates["title"] = title
+
+    guard = screen_listing(
+        title=title,
+        description=updates.get("description", existing.get("description")),
+        category=updates.get("category", existing.get("category")),
+    )
+    if not guard.allowed:
+        raise AppError(
+            code="prohibited_listing",
+            message="Service listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": guard.reason,
+                "matched": guard.matched,
+            },
+        )
 
     response = (
         service_client.client.table("services")

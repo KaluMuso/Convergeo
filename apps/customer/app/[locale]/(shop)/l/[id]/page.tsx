@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
 import { formatListingQuantity, type SaleUnitLabels } from "../../_components/sale-quantity";
 import {
   fetchStandaloneListing,
@@ -22,7 +23,11 @@ import {
 } from "../../_components/standalone-listing/fetch-listing";
 import { StandaloneListingBody } from "../../_components/standalone-listing/standalone-listing-body";
 
-import type { BuyBoxLabels, BuyBoxListing } from "../../_components/pdp/buy-box";
+import type {
+  BuyBoxLabels,
+  BuyBoxListing,
+} from "../../_components/pdp/buy-box";
+import type { PickupLocationPickerLabels } from "../../_components/pdp/pickup-location-picker";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -38,8 +43,15 @@ type CatalogTranslator = {
 async function getTranslator(locale: string, namespace: "catalog" | "nav") {
   const baseMessages = await getMessages();
   const namespaceMessages = await loadNamespace(locale as Locale, namespace);
-  const messages = { ...baseMessages, [namespace]: namespaceMessages } as AbstractIntlMessages;
-  return createTranslator({ locale, messages, namespace }) as unknown as CatalogTranslator;
+  const messages = {
+    ...baseMessages,
+    [namespace]: namespaceMessages,
+  } as AbstractIntlMessages;
+  return createTranslator({
+    locale,
+    messages,
+    namespace,
+  }) as unknown as CatalogTranslator;
 }
 
 async function getOptionalAccessToken(): Promise<string | null> {
@@ -62,7 +74,10 @@ function unitLabels(t: CatalogTranslator): SaleUnitLabels {
   };
 }
 
-function toBuyBoxListing(listing: StandaloneListing): BuyBoxListing {
+function toBuyBoxListing(
+  listing: StandaloneListing,
+  lowStockThreshold: number | null,
+): BuyBoxListing {
   return {
     id: listing.id,
     title: listing.title,
@@ -71,6 +86,7 @@ function toBuyBoxListing(listing: StandaloneListing): BuyBoxListing {
     productClass: listing.product_class,
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
+    lowStockThreshold,
     moq: listing.moq,
     inStock: listing.in_stock,
     saleUnit: listing.sale_unit,
@@ -104,7 +120,20 @@ function buyBoxLabels(t: CatalogTranslator): BuyBoxLabels {
   };
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+function pickupLabels(t: CatalogTranslator): PickupLocationPickerLabels {
+  return {
+    heading: t("pdp.buyBox.pickup.heading"),
+    selectAria: t("pdp.buyBox.pickup.selectAria"),
+    placeholder: t("pdp.buyBox.pickup.placeholder"),
+    loading: t("pdp.buyBox.pickup.loading"),
+    loadError: t("pdp.buyBox.pickup.loadError"),
+    unavailable: t("pdp.buyBox.pickup.unavailable"),
+  };
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, id } = await params;
   const [t, accessToken] = await Promise.all([
     getTranslator(locale, "catalog"),
@@ -115,13 +144,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (result.kind !== "listing") {
     return {
       title:
-        result.kind === "unavailable" ? t("pdp.unavailableTitle") : t("pdp.meta.notFoundTitle"),
+        result.kind === "unavailable"
+          ? t("pdp.unavailableTitle")
+          : t("pdp.meta.notFoundTitle"),
       robots: { index: false, follow: false },
     };
   }
 
   const listing = result.data;
-  const description = t("pdp.meta.descriptionFallback", { name: listing.title });
+  const description = t("pdp.meta.descriptionFallback", {
+    name: listing.title,
+  });
   const canonicalPath = buildLocaleCanonical(locale, "l", listing.id);
 
   return {
@@ -150,7 +183,10 @@ export default async function StandaloneListingPage({ params }: PageProps) {
     getTranslator(locale, "nav"),
     getOptionalAccessToken(),
   ]);
-  const result = await fetchStandaloneListing(id, accessToken);
+  const [result, storefrontConfig] = await Promise.all([
+    fetchStandaloneListing(id, accessToken),
+    fetchStorefrontConfig(),
+  ]);
 
   if (result.kind === "not_found") {
     notFound();
@@ -199,14 +235,17 @@ export default async function StandaloneListingPage({ params }: PageProps) {
       : t("pdp.standalone.fulfilmentStocked");
   const images = [...listing.images]
     .sort((left, right) => left.position - right.position)
-    .map((image) => ({ publicId: image.cloudinary_public_id, alt: listing.title }));
+    .map((image) => ({
+      publicId: image.cloudinary_public_id,
+      alt: listing.title,
+    }));
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
     { name: tNav("shop.home"), path: "" },
     { name: listing.title, path: `l/${listing.id}` },
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-6 motion-rise lg:max-w-6xl">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-2 motion-rise md:py-4">
       <JsonLdScript data={breadcrumbJsonLd} />
 
       <nav aria-label={t("pdp.breadcrumbAria")} className="text-sm text-text-2">
@@ -218,10 +257,16 @@ export default async function StandaloneListingPage({ params }: PageProps) {
             >
               {tNav("shop.home")}
             </Link>
-            <span className="shrink-0 text-text-3 before:content-['/']" aria-hidden />
+            <span
+              className="shrink-0 text-text-3 before:content-['/']"
+              aria-hidden
+            />
           </li>
           <li className="min-w-0">
-            <span className="block truncate font-medium text-text" aria-current="page">
+            <span
+              className="block truncate font-medium text-text"
+              aria-current="page"
+            >
               {listing.title}
             </span>
           </li>
@@ -247,7 +292,7 @@ export default async function StandaloneListingPage({ params }: PageProps) {
 
       <StandaloneListingBody
         locale={locale}
-        listing={toBuyBoxListing(listing)}
+        listing={toBuyBoxListing(listing, storefrontConfig.lowStockThreshold)}
         sellerName={listing.vendor.name}
         images={images}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
@@ -257,6 +302,7 @@ export default async function StandaloneListingPage({ params }: PageProps) {
           next: t("pdp.gallery.next"),
         }}
         buyBoxLabels={buyBoxLabels(t)}
+        pickupLabels={pickupLabels(t)}
       />
 
       <section
@@ -264,7 +310,10 @@ export default async function StandaloneListingPage({ params }: PageProps) {
         className="rounded border border-border bg-surface p-4"
         data-testid="standalone-listing-details"
       >
-        <h2 id="standalone-listing-details-heading" className="font-display text-lg text-text">
+        <h2
+          id="standalone-listing-details-heading"
+          className="font-display text-lg text-text"
+        >
           {t("pdp.standalone.detailsHeading")}
         </h2>
         <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
@@ -275,11 +324,17 @@ export default async function StandaloneListingPage({ params }: PageProps) {
             </dd>
           </div>
           <div>
-            <dt className="text-text-2">{t("pdp.standalone.conditionLabel")}</dt>
-            <dd className="font-medium text-text">{t(`pdp.condition.${listing.condition}`)}</dd>
+            <dt className="text-text-2">
+              {t("pdp.standalone.conditionLabel")}
+            </dt>
+            <dd className="font-medium text-text">
+              {t(`pdp.condition.${listing.condition}`)}
+            </dd>
           </div>
           <div>
-            <dt className="text-text-2">{t("pdp.standalone.incrementLabel")}</dt>
+            <dt className="text-text-2">
+              {t("pdp.standalone.incrementLabel")}
+            </dt>
             <dd className="font-medium text-text">{increment}</dd>
           </div>
           <div>
@@ -287,20 +342,28 @@ export default async function StandaloneListingPage({ params }: PageProps) {
             <dd className="font-medium text-text">{minimum}</dd>
           </div>
           <div>
-            <dt className="text-text-2">{t("pdp.standalone.fulfilmentLabel")}</dt>
+            <dt className="text-text-2">
+              {t("pdp.standalone.fulfilmentLabel")}
+            </dt>
             <dd className="font-medium text-text">{fulfilment}</dd>
           </div>
           {listing.lead_time_days != null ? (
             <div>
-              <dt className="text-text-2">{t("pdp.standalone.leadTimeLabel")}</dt>
+              <dt className="text-text-2">
+                {t("pdp.standalone.leadTimeLabel")}
+              </dt>
               <dd className="font-medium text-text">
-                {t("pdp.standalone.leadTimeDays", { days: listing.lead_time_days })}
+                {t("pdp.standalone.leadTimeDays", {
+                  days: listing.lead_time_days,
+                })}
               </dd>
             </div>
           ) : null}
           {listing.vendor_capacity_per_week != null ? (
             <div>
-              <dt className="text-text-2">{t("pdp.standalone.capacityLabel")}</dt>
+              <dt className="text-text-2">
+                {t("pdp.standalone.capacityLabel")}
+              </dt>
               <dd className="font-medium text-text">
                 {t("pdp.standalone.capacityPerWeek", {
                   quantity: formatListingQuantity(
@@ -316,15 +379,24 @@ export default async function StandaloneListingPage({ params }: PageProps) {
           ) : null}
           {listing.location?.landmark ? (
             <div>
-              <dt className="text-text-2">{t("pdp.standalone.locationLabel")}</dt>
-              <dd className="font-medium text-text">{listing.location.landmark}</dd>
+              <dt className="text-text-2">
+                {t("pdp.standalone.locationLabel")}
+              </dt>
+              <dd className="font-medium text-text">
+                {listing.location.landmark}
+              </dd>
             </div>
           ) : null}
         </dl>
 
         {listing.defect_notes?.trim() ? (
-          <div className="mt-4 rounded border border-warning/40 bg-warning/10 p-3" role="note">
-            <h3 className="font-medium text-text">{t("pdp.standalone.defectsHeading")}</h3>
+          <div
+            className="mt-4 rounded border border-warning/40 bg-warning/10 p-3"
+            role="note"
+          >
+            <h3 className="font-medium text-text">
+              {t("pdp.standalone.defectsHeading")}
+            </h3>
             <p className="mt-1 whitespace-pre-line text-sm leading-6 text-text-2">
               {listing.defect_notes.trim()}
             </p>

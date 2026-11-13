@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "La place de marché zambienne — des achats protégés par séquestre"
   },
   "meta": {
     "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Convergeo — la place de marché multi-vendeurs.",
@@ -49,8 +50,7 @@
     "updateAction": "Recharger pour mettre à jour"
   },
   "contact": {
-    "phone": "+260 97 XXX XX70",
-    "email": "Convergeozambia@gmail.com"
+    "email": "support@vergeo5.com"
   },
   "social": {
     "facebook": "https://www.facebook.com/",
@@ -65,5 +65,58 @@
     "instagramAria": "Convergeo sur Instagram",
     "emailAria": "Envoyer un e-mail à Convergeo",
     "countryCode": "ZM"
+  },
+  "categorySelection": {
+    "category": "Catégorie",
+    "subcategory": "Sous-catégorie",
+    "placeholder": "Choisir une catégorie",
+    "empty": "Aucune catégorie disponible.",
+    "unavailable": "Cette catégorie est indisponible. Choisissez une catégorie disponible.",
+    "loading": "Chargement des catégories…",
+    "error": "Impossible de charger les catégories. Rechargez pour réessayer."
+  },
+  "toast": {
+    "dismiss": "Fermer la notification",
+    "addedToCart": "Ajouté au panier",
+    "addedToCartDetail": "{name} est dans votre panier.",
+    "addToCartFailed": "Impossible d'ajouter au panier. Vérifiez votre connexion et réessayez.",
+    "wishlistAdded": "Ajouté à vos favoris",
+    "wishlistRemoved": "Retiré de vos favoris",
+    "linkCopied": "Lien copié",
+    "copyFailed": "Impossible de copier le lien",
+    "signedIn": "Vous êtes connecté",
+    "signedOut": "Vous êtes déconnecté",
+    "saved": "Modifications enregistrées",
+    "saveFailed": "Impossible d'enregistrer. Réessayez.",
+    "uploaded": "Téléversement terminé",
+    "uploadFailed": "Échec du téléversement. Réessayez.",
+    "orderStatusUpdated": "Statut de la commande mis à jour",
+    "actionFailed": "Une erreur s'est produite. Réessayez.",
+    "moderationApplied": "Décision de modération enregistrée",
+    "configSaved": "Paramètres enregistrés",
+    "messageSent": "Message envoyé",
+    "following": "Vous suivez {name}",
+    "unfollowed": "Vous ne suivez plus {name}"
+  },
+  "share": {
+    "label": "Partager"
+  },
+  "fab": {
+    "ask": "Demander à Vergeo",
+    "askTitle": "Demander à Vergeo",
+    "askHint": "Décrivez ce qu'il vous faut : un produit, un service ou un événement.",
+    "askPlaceholder": "ex. panneau solaire à moins de 3 000 K à Lusaka",
+    "send": "Demander",
+    "voiceStart": "Dicter votre question",
+    "voiceStop": "Arrêter l'écoute",
+    "listening": "Écoute…",
+    "voiceUnsupported": "La saisie vocale n'est pas prise en charge par ce navigateur.",
+    "close": "Fermer",
+    "showFooter": "Afficher les liens du site",
+    "hideFooter": "Masquer les liens du site"
+  },
+  "paymentTrust": {
+    "footerSeal": "Payez en espèces à l'arrivée de votre commande",
+    "footerPaymentNote": "Paiement à la livraison · Paiement en ligne bientôt disponible"
   }
 }

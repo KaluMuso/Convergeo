@@ -1,5 +1,5 @@
 import withSerwistInit from "@serwist/next";
-import createNextIntlPlugin from "next-intl/plugin";
+import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
   buildConnectSrc,
   buildStaticSecurityHeaders,
@@ -7,12 +7,20 @@ import {
   isDevelopmentEnv,
   PERMISSIONS_POLICY_DEFAULT,
 } from "@vergeo/config/security-headers";
+import createNextIntlPlugin from "next-intl/plugin";
 
 import { resolveApiBaseUrl } from "./lib/api-base-url";
+import { assertCiPerfBuild } from "./lib/ci-perf-harness";
 
 import type { NextConfig } from "next";
 
+// Fail Vercel Preview/Production builds closed on missing/invalid public
+// Supabase config — inactive off Vercel (GitHub CI, local `next build`).
+// See packages/config/src/env.ts for the shared contract every portal uses.
+assertVercelPublicSupabaseEnv();
+
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+assertCiPerfBuild();
 
 /**
  * PWA / serwist — M16-P02. Compiles the unified `sw.ts` to `public/sw.js` and
@@ -113,6 +121,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // "Directory" was renamed to "Vendors" (owner, Nov 2026); keep old links working.
+  async redirects() {
+    return [
+      { source: "/:locale/directory", destination: "/:locale/vendors", permanent: true },
+    ];
+  },
   async headers() {
     // Report-only CSP (with per-request nonce) is applied in middleware.ts only.
     // Emitting `Content-Security-Policy-Report-Only` here with the unsubstituted
@@ -120,7 +134,7 @@ const nextConfig: NextConfig = {
     // Middleware gates Lenco on `/:locale/checkout/card/:paymentId` via
     // `buildReportOnlyCsp(true)` vs `buildReportOnlyCsp(false)`.
     void CSP_REPORT_ONLY_HEADER;
-    void (true ? buildReportOnlyCsp(true) : buildReportOnlyCsp(false));
+    void buildReportOnlyCsp(true);
     return [
       {
         source: "/:path*",

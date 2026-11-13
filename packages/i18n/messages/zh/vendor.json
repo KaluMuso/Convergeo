@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "数据分析 —— Convergeo 商家",
-      "description": "追踪过去 7 天或 30 天的销售额、订单和购物车活动，查看热门商品，并评估购物车到订单的转化率。"
+      "description": "查看过去 7 天或 30 天的销售额、订单与购物车/结账事件数，并比较独立的订单和事件总数。"
     },
     "eyebrow": "您的店铺",
     "title": "数据分析",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "销售额",
       "orders": "订单",
-      "views": "购物车活动"
+      "views": "购物车/结账事件"
     },
     "sparkline": {
       "sales": "每日销售额趋势",
       "orders": "每日订单趋势",
-      "views": "每日购物车活动趋势"
+      "views": "每日购物车/结账事件数"
     },
     "top": {
       "heading": "热门商品",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {已售 # 件} other {已售 # 件}}"
     },
     "conversion": {
-      "heading": "转化率",
-      "summary": "{orders, plural, one {# 个订单} other {# 个订单}}，来自 {views, plural, one {# 次购物车操作} other {# 次购物车操作}}",
-      "pct": "{pct}% 购物车转订单",
-      "empty": "活动数据尚不足以估算转化率。"
+      "heading": "订单与活动比值",
+      "summary": "本时间段内有 {orders, plural, one {# 个未取消订单} other {# 个未取消订单}}；{views, plural, one {# 次购物车/结账事件} other {# 次购物车/结账事件}}。",
+      "pct": "每 100 次购物车/结账事件对应 {pct} 个订单",
+      "empty": "本时间段内没有购物车/结账事件，无法计算比值。",
+      "definition": "统计加入购物车和开始结账的事件，不是商品浏览量或独立访客数。订单和事件为独立总数，并非转化群组；比值可超过 100。"
     },
     "errors": {
       "loadFailed": "无法加载您的数据分析，请重试。",
@@ -276,7 +277,7 @@
       },
       "approved": {
         "title": "您已通过验证",
-        "body": "T1 KYC 已通过。您可以创建商品，发布后买家即可看到。",
+        "body": "您的身份已认证。现在可以创建商品——发布后买家即可看到。",
         "cta": "创建您的第一个商品",
         "t2Link": "升级到 T2（PACRA + TPIN）"
       },
@@ -311,7 +312,50 @@
       "notFound": "未找到您的商家申请。",
       "retryHint": "请检查网络后重试。"
     },
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "checklist": {
+      "heading": "认证清单",
+      "progress": "已完成 {done}/{total}",
+      "items": {
+        "business": {
+          "title": "商家信息",
+          "why": "店铺名称和类型，让买家知道在向谁购买。"
+        },
+        "momo": {
+          "title": "移动钱包号码",
+          "why": "我们会核对该号码登记的姓名是否与您的 NRC 一致。付款功能开放后，款项将转入此号码。"
+        },
+        "nrc": {
+          "title": "NRC 照片",
+          "why": "用于证明您的身份，绝不会展示给买家。"
+        },
+        "selfie": {
+          "title": "自拍照",
+          "why": "与您的 NRC 照片比对，防止他人冒用您的名义销售。"
+        },
+        "review": {
+          "title": "Vergeo5 审核",
+          "why": "我们的团队会核查所有资料，通常在 1 个工作日内完成，并告知您结果。"
+        }
+      },
+      "states": {
+        "not_started": "未开始",
+        "saved": "已保存，尚未提交",
+        "submitted": "已提交",
+        "under_review": "审核中",
+        "approved": "已通过",
+        "rejected": "需要修改"
+      },
+      "fix": {
+        "nrc": "修改方法：在自然光下重拍 NRC 照片，确保四个角都在画面内。",
+        "selfie": "修改方法：正对镜头重拍自拍照，不要戴帽子或墨镜。",
+        "review": "修改上面标出的项目后重新提交——无需从头开始。"
+      },
+      "reasonLabel": "审核团队的说明",
+      "ctaFinish": "继续认证",
+      "ctaFix": "修改并重新提交",
+      "pendingNote": "等待期间您可以先熟悉后台。通过审核前，买家看不到您的商品。"
+    }
   },
   "listings": {
     "images": {
@@ -336,7 +380,7 @@
     },
     "meta": {
       "title": "创建商品 —— Convergeo 商家",
-      "description": "关联到目录、提交新产品，或快速上架商品。"
+      "description": "关联到目录、提交新产品，或保存独立商品草稿。"
     },
     "title": "创建商品",
     "intro": "选择您的上架方式。发布前将显示佣金。",
@@ -373,15 +417,33 @@
       "categoryPlaceholder": "选择类别",
       "submit": "提交审核",
       "submitting": "提交中…",
-      "moderationNotice": "在我们团队批准该产品之前，您的商品将保持草稿状态。"
+      "moderationNotice": "在我们团队批准该产品之前，您的商品将保持草稿状态。",
+      "details": {
+        "about": "关于此商品",
+        "heading": "商品详情",
+        "help": "仅填写您能核实且适用于此类别的详情，并使用制造商注明的单位。可添加尺寸、重量、测量数据、款式、特点、材质、保养或使用说明。未知详情请留空。所有详情均须审核。 最多32项详情；名称限80字符，内容限2,000字符，描述限5,000字符。",
+        "name": "详情名称",
+        "value": "详情内容",
+        "add": "添加详情",
+        "remove": "删除详情",
+        "invalid": "请为每项详情填写唯一名称和内容，或将其删除。请遵守字段长度限制。"
+      }
     },
     "quickList": {
       "heading": "快速上架",
-      "intro": "用于独立发布的商品、独一无二物品和按单生产商品。",
+      "intro": "为独一无二的二手商品或按单生产的商品保存草稿。",
       "titleLabel": "商品标题",
-      "titlePlaceholder": "例如：番茄（每公斤）",
+      "titlePlaceholder": "例如：二手木椅",
       "publish": "发布商品",
-      "publishing": "发布中…"
+      "publishing": "发布中…",
+      "descriptionLabel": "商品描述",
+      "descriptionHelp": "请具体描述此商品，至少 20 个字符。",
+      "draftNotice": "保存草稿不会发布商品。",
+      "descriptionInvalid": "请输入至少 20 个字符，开头和结尾的空格不计入。",
+      "saveDraft": "保存草稿",
+      "savingDraft": "正在保存草稿…",
+      "canonicalRequired": "A、B、C 类商品必须关联目录商品。请在“目录”中选择。",
+      "categoriesUnavailable": "暂时无法加载类别，请稍后重试。"
     },
     "fields": {
       "priceLabel": "您的价格（ZMW）",
@@ -439,7 +501,8 @@
     "success": {
       "live": "商品已上架！",
       "moderation": "已提交审核——我们将通过 WhatsApp 通知您。",
-      "evidence": "草稿已保存。发布前请添加凭证照片。"
+      "evidence": "草稿已保存。发布前请添加凭证照片。",
+      "draft": "草稿已保存，此商品尚未发布。"
     },
     "errors": {
       "required": "此字段为必填项",
@@ -453,7 +516,10 @@
       "authRequired": "请登录以管理商品。",
       "permissionDenied": "您无权访问此商家目录。",
       "notFound": "未找到该店铺商品。",
-      "retryHint": "请检查网络后重试。"
+      "retryHint": "请检查网络后重试。",
+      "canonicalRequired": "A、B、C 类必须关联目录商品。请使用关联目录或创建目录商品。",
+      "standaloneDetailsRequired": "请为独立商品选择类别，并添加至少 20 个字符的描述。",
+      "policyBlocked": "当前类别或发布政策不允许发布此商品。请检查字段，必要时联系支持。"
     },
     "import": {
       "meta": {
@@ -467,7 +533,9 @@
       "template": {
         "heading": "下载模板",
         "body": "使用我们带有示例行的 CSV 模板。价格以恩格威（整数）为单位。SKU 是每件商品的唯一编码。将 product_id 留空，即可在预览中获得目录匹配建议。",
-        "download": "下载 CSV 模板"
+        "download": "下载 CSV 模板",
+        "stockNote": "导入会为新 SKU 设置初始库存。重新导入已有 SKU 会保留其当前库存、库存模式和单位，不会补回已预留或售出的数量。",
+        "unitsHelp": "价格和库存数量均按销售步长计算。250 克的步长请使用 sale_unit kg 和 unit_step_milli 250；min_steps 4 表示最低购买量为 1 千克。批发阶梯价仅适用于已验证的企业买家，且要求使用 each 单位。"
       },
       "upload": {
         "heading": "上传 CSV",
@@ -484,7 +552,8 @@
         "details": "详情",
         "ok": "正常",
         "failed": "失败",
-        "imported": "已导入"
+        "imported": "已导入",
+        "stockPreserved": "商品已更新；现有库存和库存模式已保留。"
       },
       "preview": {
         "previewButton": "预览行",
@@ -497,7 +566,8 @@
         "attached": "已关联：{name}",
         "matched": "匹配：{name}",
         "detach": "更改",
-        "standalone": "无匹配——单独上架"
+        "standalone": "无匹配——单独上架",
+        "selectionRequired": "导入前请选择有效的目录商品。"
       },
       "apply": {
         "button": "应用导入",
@@ -507,7 +577,36 @@
         "uploadFailed": "导入失败。请检查文件后重试。",
         "previewFailed": "无法检查您的文件，请重试。",
         "no_file": "需要 CSV 文件",
-        "no_payload": "请提供 CSV 文件或 JSON 行"
+        "no_payload": "请提供 CSV 文件或 JSON 行",
+        "templateFailed": "无法下载模板，请重试。",
+        "invalidUnits": "请检查销售单位、数量步长和最低数量。按计量单位销售的商品不能使用批发阶梯价。",
+        "duplicateHeaders": "CSV 列名不得重复。",
+        "notEditable": "此现有商品不能通过导入修改。",
+        "unitChange": "导入不能更改现有 SKU 的单位或最小步数。",
+        "productChange": "此 SKU 已关联其他商品。",
+        "wholesaleEligibility": "批发需要当前有效的 T2 审批和至少一个有效价格档位。",
+        "invalidListing": "这些更改不适用于现有商品。请检查商品字段。",
+        "invalidTiers": "价格阶梯必须使用正数量，且单价须严格递减。",
+        "invalidBoolean": "布尔字段请使用 true 或 false。",
+        "missingField": "请填写必填 CSV 字段，包括 SKU、标题、价格和跟踪库存。",
+        "invalidInteger": "价格、库存和数量字段必须是整数。",
+        "invalidMinimum": "价格和数量步长必须为正数；库存不能为负数。",
+        "invalidProduct": "请选择有效的目录商品。",
+        "unknownColumns": "CSV 含有不支持的列或多余单元格。请使用下载的模板。",
+        "invalidStockMode": "请选择跟踪库存或始终有货。",
+        "invalidCondition": "请选择全新或翻新状态。",
+        "invalidStatus": "请选择草稿、上架或暂停状态。",
+        "emptyCsv": "CSV 文件为空。",
+        "missingHeaders": "CSV 必须包含所有必填列标题。",
+        "rowLimit": "每次最多导入 500 行数据。",
+        "prohibitedListing": "此商品禁止出售。请检查商品内容。",
+        "duplicateSku": "文件中的每个 SKU 只能出现一次。",
+        "listingCap": "已达到商品数量上限。请更新现有 SKU，或检查认证等级。",
+        "fileSize": "CSV 文件不得超过 512,000 字节。",
+        "invalidEncoding": "请使用 UTF-8 编码保存 CSV。",
+        "canonicalRequired": "导入新 SKU 前，请选择目录商品。",
+        "databaseFailure": "无法保存此行。请重试或联系支持。",
+        "unknownError": "此行需要检查。请检查 CSV 字段并重试。"
       }
     },
     "manage": {
@@ -551,7 +650,7 @@
         "delete": "删除商品",
         "deleting": "删除中…",
         "returnableLabel": "接受退货",
-        "returnableHelp": "此商品的 Lane-2 退货政策。",
+        "returnableHelp": "如果商品不合适，允许买家在下方期限内退货。",
         "returnWindowLabel": "退货窗口期（小时）",
         "tierHeading": "批发价格档位",
         "tierQtyLabel": "最小数量",
@@ -575,13 +674,138 @@
         "returnWindowRequired": "启用退货时，请输入退货窗口期。"
       },
       "emptyTitle": "暂无商品",
-      "statusLabel": "状态"
+      "statusLabel": "状态",
+      "stock": {
+        "heading": "调整可用库存",
+        "help": "输入以销售步数计算的增减量，而非实物盘点总量。可用库存已扣除预留数量。不能在此更改单位或库存模式。新增分店库存需由库存负责人处理。",
+        "refresh": "刷新可用库存",
+        "units": "销售单位：{unit}；每步为该单位的 {step}/1000。",
+        "branch": "分店",
+        "choose": "选择分店",
+        "inactive": "未启用",
+        "pooled": "可用共享库存：{qty}",
+        "delta": "增减量（+ 入库 / − 移除）",
+        "reason": "原因",
+        "retry": "重试同一操作",
+        "apply": "应用调整",
+        "saved": "已记录可用步数：{old} → {next}。操作：{id}。",
+        "invalid": "请选择已启用的分店，输入非零整数增减量和原因。",
+        "conflict": "调整已被拒绝。请刷新库存、检查分店和单位，再提交新调整。",
+        "retrySame": "结果尚未确认。请重试同一操作以获取已记录的结果；不要创建另一调整。",
+        "loadFailed": "无法加载库存，请点击刷新重试。",
+        "storageFailed": "无法保存操作以安全重试。调整库存前请启用会话存储。",
+        "notTracked": "此商品不使用跟踪库存。",
+        "authorityRequired": "请使用库存调整区域。不能在商品编辑器中覆盖现有库存、销售单位或库存模式。"
+      },
+      "statusGuide": {
+        "heading": "草稿、在售和已暂停是什么意思",
+        "draft": "只有您能看到。完善信息后即可发布。",
+        "active": "买家可以搜索并下单。",
+        "paused": "对买家隐藏。有库存后可恢复上架。",
+        "kycNote": "认证通过之前，买家看不到您的任何商品。"
+      },
+      "statusHint": {
+        "draft": "仅您可见",
+        "active": "买家可见并可下单",
+        "paused": "对买家隐藏"
+      }
     },
     "kycGate": {
       "title": "认证仍在进行",
-      "body": "在 KYC 获批并有可审计记录之前，商品可能保持受限。没有审计轨迹绝不会显示已认证徽章。",
+      "body": "您现在就可以准备商品，但只有在认证通过后买家才能看到。",
       "cta": "查看认证状态",
       "wholesaleLocked": "批发价需在可审计的 T2 认证后解锁。"
+    },
+    "variants": {
+      "heading": "颜色、尺码及其他规格",
+      "intro": "添加颜色或尺码等规格。每个组合都有独立的 SKU、库存、价格和照片。",
+      "loading": "正在加载规格…",
+      "loadFailed": "无法加载此商品的规格。",
+      "saveFailed": "无法保存您的规格，请重试。",
+      "saved": "规格已保存。",
+      "fixErrors": "请修正标出的字段后再保存。",
+      "groupLegend": "规格 {number}",
+      "groupName": "规格名称",
+      "groupNameHint": "例如颜色、尺码或存储容量。",
+      "showAsSwatches": "以色块显示",
+      "valueLabel": "选项 {number}",
+      "swatchColour": "颜色",
+      "removeValue": "删除选项 {value}",
+      "remove": "删除",
+      "addValue": "添加选项",
+      "removeGroup": "删除规格",
+      "addGroup": "再添加一个规格",
+      "addFirstGroup": "添加颜色或尺码",
+      "matrixHeading": "{count, plural, other {# 个组合}}",
+      "priceHint": "价格留空则使用商品价格（K{price}）。",
+      "offered": "提供",
+      "sku": "SKU",
+      "skuFor": "{variant} 的 SKU",
+      "stock": "库存",
+      "stockFor": "{variant} 的库存",
+      "price": "价格（K）",
+      "priceFor": "{variant} 的价格",
+      "photo": "照片",
+      "photoFor": "{variant} 的照片",
+      "photoNone": "商品照片",
+      "photoOption": "照片 {position}",
+      "save": "保存规格",
+      "createOptIn": "此商品有不同颜色或尺码（发布后设置）",
+      "unsupported": {
+        "classE": "定制商品使用报价选项，而非颜色和尺码。",
+        "wholesale": "批发商品暂不支持颜色或尺码规格。",
+        "measured": "按计量销售的商品暂不支持颜色或尺码规格。"
+      },
+      "errors": {
+        "groupNameRequired": "请为此规格命名，例如颜色或尺码。",
+        "duplicateGroup": "每个规格的名称必须不同。",
+        "valuesRequired": "请为此规格至少添加一个选项。",
+        "valueLabelRequired": "请填写此选项或将其删除。",
+        "duplicateValue": "此选项重复了。",
+        "invalidSwatch": "请为此色块选择颜色。",
+        "tooManyGroups": "最多可添加 {max} 个规格。",
+        "tooManyValues": "此规格的选项过多。",
+        "tooManyVariants": "组合过多，请删除部分选项。",
+        "variantsRequired": "请添加选项，让买家有组合可选。",
+        "activeVariantRequired": "请至少提供一个组合。",
+        "invalidSku": "SKU 只能包含字母、数字、点、短横线、斜杠或下划线。",
+        "duplicateSku": "每个 SKU 必须不同。",
+        "invalidStock": "库存请输入整数。",
+        "stockRequired": "请输入此组合的库存数量。",
+        "invalidPrice": "请输入克瓦查价格，例如 250.00。",
+        "optionPerGroup": "每个组合需要为每个规格选择一个选项。",
+        "unknownValue": "此组合使用了已不存在的选项。",
+        "duplicateCombination": "此组合重复了。",
+        "invalidCompareAt": "原价必须高于售价。",
+        "imageNotOnListing": "请选择此商品的一张照片。",
+        "invalidStatus": "请选择是否提供此组合。",
+        "invalidDisplay": "请选择此规格的显示方式。",
+        "groupsRequired": "请先添加一个规格。",
+        "classEUnsupported": "定制商品请改用报价选项。",
+        "wholesaleUnsupported": "批发商品暂不支持颜色或尺码规格。",
+        "measuredUnsupported": "按计量销售的商品暂不支持颜色或尺码规格。",
+        "saveFailed": "无法保存您的规格，请重试。"
+      },
+      "saving": "正在保存…"
+    },
+    "guide": {
+      "heading": "让商品更好卖的小技巧",
+      "photos": {
+        "title": "照片（最多 8 张）",
+        "body": "使用自然光和纯色背景。第一张照片是买家看到的封面。展示正面、背面、标签以及任何瑕疵。"
+      },
+      "title": {
+        "title": "标题",
+        "body": "写明商品是什么、品牌和关键信息，例如“Samsung A15，128GB，黑色”。不要全部大写，也不要写电话号码。"
+      },
+      "price": {
+        "title": "克瓦查价格",
+        "body": "填写买家支付的完整价格，例如 1250 或 1250.50。平台佣金从该价格中扣除。"
+      },
+      "stock": {
+        "title": "库存和选项",
+        "body": "填写您实际拥有的数量。买家需要选择时（如尺码、颜色）请添加选项——每个选项单独计算库存。"
+      }
     }
   },
   "profile": {
@@ -693,6 +917,23 @@
       "permissionDenied": "您无权访问此店面资料。",
       "notFound": "未找到此账户的店面资料。",
       "retryHint": "请检查网络后重试。"
+    },
+    "brand": {
+      "title": "店铺配色",
+      "help": "您的配色仅用于您的店铺页面。我们会自动调整以保证文字清晰可读（WCAG AA）。",
+      "primary": "主色",
+      "primaryHelp": "店铺页面的按钮和链接",
+      "accent": "强调色",
+      "accentHelp": "重点标记和徽章",
+      "contrast": "对比度 {ratio}:1",
+      "reset": "重置",
+      "adjusted": "我们稍微加深了该颜色，以保证文字清晰。",
+      "extract": "从标志提取",
+      "extracting": "正在读取标志…",
+      "needLogo": "请先上传标志。",
+      "extractFailed": "无法从标志读取颜色，请手动选择。",
+      "previewButton": "加入购物车",
+      "previewAccent": "新品上架"
     }
   },
   "orders": {
@@ -726,12 +967,19 @@
     "items": {
       "heading": "商品",
       "qty": "数量 {qty}",
-      "empty": "无商品明细"
+      "empty": "无商品明细",
+      "variantOption": "{group}：{value}",
+      "variantSeparator": " · ",
+      "sku": "SKU {sku}"
     },
     "timeline": {
       "heading": "时间线",
       "empty": "暂无事件",
-      "note": "备注：{note}"
+      "note": "备注：{note}",
+      "stateDone": "已完成",
+      "stateCurrent": "当前步骤",
+      "stateUpcoming": "待进行",
+      "srState": "（{state}）"
     },
     "actions": {
       "heading": "操作",
@@ -753,7 +1001,14 @@
       "shipPlaceholder": "例如：Yango 快递，司机 John 0977…",
       "submitReject": "填写原因并拒绝",
       "submitShip": "标记为已发货",
-      "cancel": "取消"
+      "cancel": "取消",
+      "after": {
+        "confirm": "系统会通知顾客您已接单。下一步是打包。",
+        "reject": "订单将被取消并告知顾客原因。如需退款由 Vergeo5 处理。",
+        "pack": "顾客会看到您正在准备订单。",
+        "ship": "骑手取件后点击此处，并填写骑手姓名或电话。",
+        "ready_for_pickup": "系统会通知顾客到您店里取货。"
+      }
     },
     "success": {
       "confirmed": "订单已确认。",
@@ -768,7 +1023,61 @@
       "forbidden": "您只能管理自己的订单。",
       "invalidTransition": "该操作不适用于此订单。",
       "reasonRequired": "拒绝时必须填写原因。",
-      "trackingRequired": "发货时必须填写物流备注。"
+      "trackingRequired": "发货时必须填写物流备注。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "guide": {
+      "headingNow": "现在要做的",
+      "headingNext": "接下来会怎样",
+      "scanCta": "打开扫码页面交付",
+      "paidExplainer": "顾客已付款。Vergeo5 会妥善保管这笔钱，直到订单送达。",
+      "unpaidExplainer": "顾客尚未付款。在显示已收款之前，请不要打包或发货。",
+      "cod": {
+        "body": "订单送达时，顾客用现金付给骑手。您本人无需收取任何款项。",
+        "settlement": "订单款项由 Vergeo5 与您结算——您无需向骑手或顾客催款。"
+      },
+      "steps": {
+        "confirm": {
+          "title": "接受或拒绝此订单",
+          "body": "顾客正在等待。确认所有商品都有货后接单。如果无法履约，请填写原因后拒绝。"
+        },
+        "pack": {
+          "title": "打包商品",
+          "body": "开始时点击“开始打包”。对照下方的商品清单核对尺码和颜色。"
+        },
+        "handToRider": {
+          "title": "把包裹交给骑手",
+          "body": "骑手取件后，点击“标记为已发货”并填写骑手姓名或电话。"
+        },
+        "readyForPickup": {
+          "title": "标记为待自提",
+          "body": "包裹打包好并在店里等候时，点击“待自提”。我们会通知顾客前来。"
+        },
+        "awaitCollection": {
+          "title": "等待顾客取货",
+          "body": "顾客到店后，先在扫码页面扫描其二维码或输入 PIN，再交付商品。"
+        },
+        "awaitDelivery": {
+          "title": "骑手配送中",
+          "body": "现在无需操作。顾客会向骑手提供验证码以确认收货。"
+        },
+        "awaitConfirmation": {
+          "title": "已送达",
+          "body": "顾客有一小段时间可以反馈问题，之后订单会自动完成。"
+        },
+        "done": {
+          "title": "订单已完成",
+          "body": "此订单无需再做任何操作。"
+        },
+        "cancelled": {
+          "title": "订单已取消",
+          "body": "无需操作。请不要发出这些商品。"
+        },
+        "unknown": {
+          "title": "请查看此订单",
+          "body": "刷新以查看最新状态。"
+        }
+      }
     }
   },
   "home": {
@@ -826,6 +1135,55 @@
       "ariaLabel": "快捷入口",
       "listings": "目录",
       "profile": "资料"
+    },
+    "analytics": {
+      "gmv": "销售额"
+    },
+    "tasks": {
+      "heading": "您的下一步",
+      "intro": "从上往下做——最紧急的排在最前面。",
+      "items": {
+        "kycFix": {
+          "title": "修正您的认证资料",
+          "body": "您的一份资料未能通过审核。查看需要修改的地方——无需从头开始。"
+        },
+        "kycFinish": {
+          "title": "完成身份认证",
+          "body": "在我们核实您的身份之前，买家看不到您的店铺。大约需要 5 分钟。"
+        },
+        "kycPending": {
+          "title": "认证正在审核中",
+          "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "请在 14:00 前接单并打包，配送订单即可随当天的骑手发出。"
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "距离 14:00 发货截止不到一小时——请立即接单并打包。"
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, other {有 # 个订单等待您处理}}",
+          "body": "今天 14:00 的截止时间已过。现在准备好，下一批发货时将优先送出。"
+        },
+        "catalogueProducts": {
+          "title": "检查您的商品",
+          "body": "保持库存和价格准确，避免买家订购您没有的商品。"
+        },
+        "catalogueServices": {
+          "title": "检查您的服务",
+          "body": "保持价格和可预约时间最新，并尽快回复报价请求。"
+        },
+        "catalogueEvents": {
+          "title": "检查您的活动",
+          "body": "分享活动前，请确认日期、票种和价格无误。"
+        },
+        "profile": {
+          "title": "完善店铺资料",
+          "body": "店铺标志、营业时间和简短介绍能让买家更信任您。"
+        }
+      }
     }
   },
   "queue": {
@@ -858,7 +1216,37 @@
       "cancel": "暂不"
     },
     "errors": {
-      "loadFailed": "无法加载订单。下拉刷新。"
+      "loadFailed": "无法加载订单。下拉刷新。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "emptyNeedsAction": {
+      "title": "没有待您处理的订单",
+      "body": "新订单会首先显示在这里。我们也会通过 WhatsApp 通知您。"
+    },
+    "emptyFiltered": {
+      "title": "此视图中没有订单",
+      "body": "换个标签看看，或返回需要您处理的订单。",
+      "cta": "显示需要处理的订单"
+    },
+    "nextStep": {
+      "confirm": "下一步：接受或拒绝",
+      "pack": "下一步：打包商品",
+      "handToRider": "下一步：交给骑手",
+      "readyForPickup": "下一步：标记为待自提",
+      "awaitCollection": "等待顾客取货",
+      "awaitDelivery": "骑手配送中",
+      "awaitConfirmation": "已送达——等待顾客确认",
+      "done": "已完成",
+      "cancelled": "已取消"
+    },
+    "cutoff": {
+      "before": "发货截止 14:00 · 还剩 {time}",
+      "timeHoursMinutes": "{hours} 小时 {minutes} 分钟",
+      "timeMinutes": "{minutes} 分钟",
+      "beforeBody": "在 14:00（卢萨卡时间）前接单、打包并交给骑手的配送订单，将随当天的骑手发出。",
+      "urgentBody": "不到一小时了——请立即完成打包，赶上今天的骑手。",
+      "after": "今天 14:00 的发货截止时间已过",
+      "afterBody": "现在准备的配送订单将在下一批发出。自提订单不受影响。"
     }
   },
   "payouts": {
@@ -880,6 +1268,10 @@
     "hold": {
       "noticeTitle": "结算暂停 24 小时",
       "noticeBody": "更改移动支付号码后，结算将暂停 24 小时，以便我们核实变更。结算恢复时会通知您。"
+    },
+    "paused": {
+      "noticeTitle": "结算功能目前已关闭",
+      "noticeBody": "目前尚未向您的移动支付号码付款。以下余额仍记录在账本中。"
     },
     "history": {
       "heading": "结算记录",
@@ -931,7 +1323,27 @@
       "kycRequired": "更改结算方式前请先完成 KYC。",
       "payoutsPaused": "更改结算方式后结算已暂停。",
       "rateLimited": "请求过于频繁。请稍后重试。",
-      "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。"
+      "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。",
+      "retryHint": "请检查网络连接后重试。"
+    },
+    "pilot": {
+      "badge": "尚未开通",
+      "title": "试点期间暂未开通付款",
+      "body": "您暂时无法通过本应用收到付款，因此这里没有余额可显示。这是正常的——您的账户没有任何问题。",
+      "meanwhileHeading": "试点期间的资金流程",
+      "meanwhile": {
+        "cod": "货到付款：顾客用现金付给骑手，再由 Vergeo5 与您结算。",
+        "prepaid": "已付款订单：Vergeo5 会妥善保管顾客的钱，直到订单送达。",
+        "questions": "对应付给您的款项有疑问？请联系 Vergeo5 试点团队。"
+      },
+      "laterHeading": "以后这里会显示",
+      "later": {
+        "held": "仍在配送中的订单所暂存的款项",
+        "released": "已释放给您、可以提现的款项",
+        "history": "每一笔转入您移动钱包号码的付款及其状态",
+        "statement": "可下载的月度对账单"
+      },
+      "notify": "开通付款前，我们会通过 WhatsApp 通知您。"
     }
   },
   "scan": {
@@ -1031,7 +1443,20 @@
         "hint": "将门票二维码对准框内中央",
         "loading": "正在启动摄像头…",
         "denied": "摄像头访问被阻止",
-        "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。"
+        "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。",
+        "useManual": "改为输入门票 PIN"
+      },
+      "manual": {
+        "heading": "手动签到",
+        "intro": "输入门票编号和宾客门票上的 6 位 PIN 码。",
+        "ticketIdLabel": "门票编号",
+        "ticketIdPlaceholder": "宾客门票上的编号",
+        "pinLabel": "6 位门票 PIN 码",
+        "pinPlaceholder": "000000",
+        "submit": "为门票签到",
+        "submitting": "正在签到…",
+        "useCamera": "返回摄像头扫描",
+        "offline": "手动签到需要联网——PIN 码在服务器端校验。"
       },
       "count": {
         "checkedIn": "{count, plural, one {已检票 # 人} other {已检票 # 人}}",
@@ -1074,7 +1499,29 @@
           "title": "非门票代码",
           "body": "这看起来不像是活动门票二维码。"
         },
+        "invalidPin": {
+          "title": "PIN 码不正确",
+          "body": "该 PIN 码与门票 {ticketId} 不匹配。请核对宾客门票后重试。"
+        },
+        "unauthorized": {
+          "title": "无权限",
+          "body": "您的账户无法为此活动的门票签到。"
+        },
+        "manualOffline": {
+          "title": "您已离线",
+          "body": "手动 PIN 签到需在服务器端校验。请恢复网络连接，或改为扫描门票二维码。"
+        },
+        "holder": "持票人：{name}",
+        "tier": "门票：{name}",
+        "idCheck": "此票需要核验身份",
         "scanAnother": "扫描下一个"
+      },
+      "override": {
+        "cta": "主办方覆盖放行",
+        "reasonLabel": "原因（必填）",
+        "reasonPlaceholder": "手机没电 / 二维码无法识别",
+        "submitting": "正在记录覆盖…",
+        "failed": "覆盖失败。请确认该票属于本场次。"
       },
       "recent": {
         "heading": "最近扫描",
@@ -1131,7 +1578,12 @@
       "saving": "保存中…",
       "saved": "更改已保存。",
       "backToList": "返回活动列表",
-      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
+      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}",
+      "city": "城市",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "用于城市发现筛选。地标和 GPS 仍用于寻址。",
+      "idCheckLabel": "对超过 K500 的门票要求门口核验身份",
+      "idCheckHelp": "扫描器会对单价达到 K500 的付费票显示身份核验提示。平台不存储身份证件。"
     },
     "instances": {
       "heading": "日期与容量",
@@ -1267,7 +1719,7 @@
       "namePlaceholder": "普通入场",
       "priceLabel": "价格（ZMW）",
       "pricePlaceholder": "75.00",
-      "priceHelp": "以克瓦查输入金额；在数据库中以 ngwee 存储（无小数）。",
+      "priceHelp": "以克瓦查填写价格，例如 75 或 75.50。",
       "priceFreeHelp": "免费 RSVP 始终为 K0.00。",
       "qtyCapLabel": "数量上限（可选）",
       "qtyCapPlaceholder": "无限制",
@@ -1278,7 +1730,10 @@
       "soldLabel": "{count, plural, one {已售 # 张} other {已售 # 张}}",
       "attendeeNamedLabel": "收集参加者姓名",
       "attendeeNamedHelp": "结账时为每张门票要求填写姓名，适用于研讨会、晚宴和对号入座的活动。",
-      "attendeeNamedBadge": "需要姓名"
+      "attendeeNamedBadge": "需要姓名",
+      "perksLabel": "权益（可选）",
+      "perksHelp": "向买家展示 — 休息室、周边、饮品券。没有则留空。",
+      "perksPlaceholder": "例如含一张饮品券"
     },
     "actions": {
       "save": "保存类型",
@@ -1460,6 +1915,8 @@
     "viewRoster": "查看参与者名单",
     "sections": {
       "revenue": "收入",
+      "velocity": "销售速度",
+      "acquisition": "获客来源",
       "checkIn": "检票进度",
       "escrow": "托管",
       "salesByType": "按门票类型销售"
@@ -1467,6 +1924,12 @@
     "labels": {
       "pending": "待释放",
       "released": "已释放给您",
+      "soldLast24h": "过去 24 小时售出",
+      "revenueLast24h": "过去 24 小时收入",
+      "projectedSold": "按近期节奏预估至开场销量",
+      "direct": "直接 / 未知",
+      "affiliateSource": "推广 {code}",
+      "acquisitionRow": "{orders, plural, one {# 笔订单} other {# 笔订单}} · {revenue}",
       "eventStatus": "活动状态",
       "soldCheckedIn": "{sold, plural, one {已售 #} other {已售 #}} · {checkedIn, plural, one {已检票 #} other {已检票 #}}"
     },
@@ -1475,6 +1938,31 @@
       "unauthorized": "请以主办方身份登录以查看此仪表板。",
       "notFound": "未找到活动。",
       "forbidden": "您只能查看自己活动的仪表板。"
+    },
+    "ops": {
+      "heading": "团队、优惠码与追踪",
+      "intro": "通过手机号邀请检票人员，创建百分比优惠码，并签发追踪码。推广码会记录在结账订单上 — 此版本尚不结算推广佣金。",
+      "loadFailed": "无法加载主办方工具。",
+      "teamHeading": "检票团队",
+      "revoke": "移除",
+      "pendingInvite": "待处理的 {role} 邀请：{phone}",
+      "phonePlaceholder": "手机号",
+      "roleLabel": "角色",
+      "roleDoor": "检票",
+      "roleManager": "经理",
+      "inviteCta": "邀请",
+      "inviteFailed": "无法发送该邀请。",
+      "shareToken": "分享此一次性链接：{path}?token={token}",
+      "promoHeading": "优惠码",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "折扣百分比",
+      "promoCta": "创建优惠码",
+      "promoFailed": "无法创建该优惠码。",
+      "affiliateHeading": "推广追踪码",
+      "affiliateNote": "代码会记录在已支付订单上。此版本没有推广分成。",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "创建代码",
+      "affiliateFailed": "无法创建该追踪码。"
     }
   },
   "eventRoster": {
@@ -1510,6 +1998,14 @@
       "listings": "商品",
       "orders": "订单",
       "profile": "资料"
+    }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "目录商品"
+    },
+    "errors": {
+      "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
     }
   }
 }

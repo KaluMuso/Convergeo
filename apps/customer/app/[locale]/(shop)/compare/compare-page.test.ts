@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { shouldShowComparison } from "../_components/pdp/comparison";
+import { shouldShowComparison } from "../_components/pdp/comparison-visibility";
 
 /** Mirrors resolveProductSlug in page.tsx for unit coverage. */
 function resolveProductSlug(query: { product?: string; slug?: string }): string | null {

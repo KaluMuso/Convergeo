@@ -347,7 +347,8 @@ class TestBranchClaims:
         db.run(
             f"""
             UPDATE public.stock_reservations
-            SET expires_at = timezone('utc', now()) - interval '1 minute'
+            SET expires_at = timezone('utc', now()) - interval '1 minute',
+                created_at = timezone('utc', now()) - interval '16 minutes'
             WHERE listing_id = '{listing_id}' AND checkout_group_id = '{group_id}';
             """
         )

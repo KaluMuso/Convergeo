@@ -145,7 +145,7 @@ class TestRfqCartMerge:
     def test_ordinary_cart_merge_unchanged(self) -> None:
         merged, conflicts = merge_cart_items(
             user_items=[_ordinary_line(qty=1, price=150_000)],
-            guest_items=[_ordinary_line(qty=2, price=140_000)],
+            guest_items=[_ordinary_line(qty=2, price=150_000)],
             listings_by_id={LISTING_RETAIL: _retail_listing()},
         )
         assert conflicts == []

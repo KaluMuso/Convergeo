@@ -75,7 +75,10 @@ export function FilterBar({
     const location = String(formData.get("location") ?? "");
     const preferred = formData.get("badge-preferred") === "on";
     const verified = formData.get("badge-verified") === "on";
-    const badges = [preferred ? "preferred" : null, verified ? "verified" : null]
+    const badges = [
+      preferred ? "preferred" : null,
+      verified ? "verified" : null,
+    ]
       .filter(Boolean)
       .join(",");
 
@@ -89,35 +92,47 @@ export function FilterBar({
 
   const onClear = () => {
     startTransition(() => {
-      router.push(`/${locale}/directory`);
+      router.push(`/${locale}/vendors`);
     });
   };
 
+  // One compact horizontal bar (search · category · location · trust chips ·
+  // apply) instead of a stacked form block; wraps on phones.
   return (
     <form
       onSubmit={onSubmit}
-      className="mb-4 space-y-3 rounded border border-border bg-surface p-4"
-      style={{ borderRadius: "var(--r)" }}
+      className="flex flex-wrap items-center gap-2"
       aria-busy={isPending}
+      aria-label={labels.heading}
     >
-      <h2 className="font-display text-base font-semibold text-text">{labels.heading}</h2>
-
-      <label className="block space-y-1">
-        <span className="text-sm text-text-2">{labels.searchPlaceholder}</span>
+      <label className="relative min-w-0 flex-1 basis-full sm:basis-64">
+        <span className="sr-only">{labels.searchPlaceholder}</span>
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3-3" />
+        </svg>
         <input
           name="q"
+          type="search"
           defaultValue={initialQuery}
           placeholder={labels.searchPlaceholder}
-          className="min-h-11 w-full rounded border border-border bg-bg px-3 text-sm text-text"
+          className="min-h-11 w-full rounded-pill border border-border bg-surface pl-10 pr-4 text-sm text-text placeholder:text-text-3 focus:border-primary focus:outline-none"
         />
       </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm text-text-2">{labels.category}</span>
+      <label className="shrink-0">
+        <span className="sr-only">{labels.category}</span>
         <select
           name="category"
           defaultValue={initialCategory}
-          className="min-h-11 w-full rounded border border-border bg-bg px-3 text-sm text-text"
+          className="min-h-11 shrink-0 rounded-pill border border-border bg-surface px-3.5 text-sm font-medium text-text focus:border-primary focus:outline-none"
         >
           <option value="">{labels.allCategories}</option>
           {categoryOptions.map((option) => (
@@ -128,12 +143,12 @@ export function FilterBar({
         </select>
       </label>
 
-      <label className="block space-y-1">
-        <span className="text-sm text-text-2">{labels.location}</span>
+      <label className="shrink-0">
+        <span className="sr-only">{labels.location}</span>
         <select
           name="location"
           defaultValue={initialLocation}
-          className="min-h-11 w-full rounded border border-border bg-bg px-3 text-sm text-text"
+          className="min-h-11 shrink-0 rounded-pill border border-border bg-surface px-3.5 text-sm font-medium text-text focus:border-primary focus:outline-none"
         >
           <option value="">{labels.allLocations}</option>
           {locationOptions.map((option) => (
@@ -144,39 +159,39 @@ export function FilterBar({
         </select>
       </label>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm text-text-2">{labels.badges}</legend>
-        <label className="flex min-h-11 items-center gap-2 text-sm text-text">
-          <input
-            type="checkbox"
-            name="badge-preferred"
-            defaultChecked={initialBadges.includes("preferred")}
-            className="h-4 w-4"
-          />
-          {labels.preferred}
-        </label>
-        <label className="flex min-h-11 items-center gap-2 text-sm text-text">
+      <fieldset className="m-0 flex shrink-0 items-center gap-2 border-0 p-0">
+        <legend className="sr-only">{labels.badges}</legend>
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-pill border border-border bg-surface px-3.5 text-sm font-medium text-text has-[:checked]:border-primary has-[:checked]:bg-primary-tint has-[:checked]:text-primary-deep">
           <input
             type="checkbox"
             name="badge-verified"
             defaultChecked={initialBadges.includes("verified")}
-            className="h-4 w-4"
+            className="h-4 w-4 accent-[var(--primary)]"
           />
           {labels.verified}
         </label>
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-pill border border-border bg-surface px-3.5 text-sm font-medium text-text has-[:checked]:border-primary has-[:checked]:bg-primary-tint has-[:checked]:text-primary-deep">
+          <input
+            type="checkbox"
+            name="badge-preferred"
+            defaultChecked={initialBadges.includes("preferred")}
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          {labels.preferred}
+        </label>
       </fieldset>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex shrink-0 gap-2">
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center rounded-pill bg-primary px-4 text-sm font-semibold text-surface"
+          className="inline-flex min-h-11 items-center rounded-pill bg-primary px-5 text-sm font-semibold text-[var(--primary-btn-fg)] hover:bg-[var(--primary-btn-hover)]"
         >
           {labels.apply}
         </button>
         <button
           type="button"
           onClick={onClear}
-          className="inline-flex min-h-11 items-center rounded-pill border border-border px-4 text-sm font-medium text-text"
+          className="inline-flex min-h-11 items-center rounded-pill px-3 text-sm font-medium text-text-2 hover:text-text"
         >
           {labels.clear}
         </button>

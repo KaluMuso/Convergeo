@@ -5,7 +5,9 @@ events (e.g. the ``product_view`` / PDP funnel step, which has no dedicated stre
 table) into the superset ``analytics_events`` table (migration 0029). ``query_funnel``
 reads the canonical ``analytics_event_stream`` view — a union of ``analytics_events``,
 ``funnel_events`` (0025) and ``search_query_log`` (0027) — to return the end-to-end
-funnel (search -> product_view -> cart -> checkout -> pay).
+event counts (search -> product_view -> cart -> checkout -> order_placed).
+Order placement is not confirmed payment. The stream does not supply a verified
+payment-success metric or a deduplicated customer conversion cohort.
 
 The existing streams (``funnel.py``, ``search_log.py``) are UNCHANGED: their rows
 surface through the view, so no hot write path is touched. The server log is
@@ -24,26 +26,36 @@ from uuid import UUID
 from app.services.orders.audit import run_sql_script, sql_literal
 
 # ---------------------------------------------------------------------------
-# Canonical funnel steps (search -> product_view -> cart -> checkout -> pay).
+# Canonical event-count steps; order placement does not establish payment success.
 # ---------------------------------------------------------------------------
-FUNNEL_STEPS: tuple[str, ...] = (
+EVENT_COUNT_STEPS: tuple[str, ...] = (
     "search",
     "product_view",
     "cart",
     "checkout",
-    "pay",
+    "order_placed",
 )
 
 # Maps a raw stream event_type onto a canonical funnel step. Multiple event types
 # (checkout_start, payment_start) collapse onto one step (checkout).
-EVENT_TYPE_TO_STEP: dict[str, str] = {
+EVENT_TYPE_TO_COUNT_STEP: dict[str, str] = {
     "search": "search",
     "product_view": "product_view",
     "cart_add": "cart",
     "checkout_start": "checkout",
     "step_complete": "checkout",
     "payment_start": "checkout",
-    "order_placed": "pay",
+    "order_placed": "order_placed",
+}
+
+# Deprecated public constants retain the historical dictionary/serialization
+# contract. "pay" has always counted order placement, not confirmed payment.
+FUNNEL_STEPS: tuple[str, ...] = tuple(
+    "pay" if step == "order_placed" else step for step in EVENT_COUNT_STEPS
+)
+EVENT_TYPE_TO_STEP: dict[str, str] = {
+    event_type: "pay" if step == "order_placed" else step
+    for event_type, step in EVENT_TYPE_TO_COUNT_STEP.items()
 }
 
 # Anonymization guard: raw-PII keys are never permitted in a server analytics prop.
@@ -72,13 +84,29 @@ _UUID_RE = re.compile(
 
 @dataclass(frozen=True, slots=True)
 class FunnelReport:
-    """Counts per canonical funnel step within the query window."""
+    """Event counts; steps is the deprecated, serialization-compatible view.
+
+    Use event_counts for explicit names. Keeping steps unchanged also preserves
+    dataclasses.asdict and construction from historical serialized reports.
+    """
 
     window_days: int
     steps: dict[str, int] = field(default_factory=dict)
 
+    @property
+    def event_counts(self) -> dict[str, int]:
+        """Canonical counts; order_placed is not payment success or a cohort."""
+        return {
+            canonical: self.steps.get(legacy, 0)
+            for legacy, canonical in zip(FUNNEL_STEPS, EVENT_COUNT_STEPS, strict=True)
+        }
+
     def count(self, step: str) -> int:
-        return self.steps.get(step, 0)
+        # Each view contains a single order-placement key, so summing either
+        # collection cannot double-count aliases. Legacy callers remain valid.
+        if step in self.steps:
+            return self.steps[step]
+        return self.event_counts.get(step, 0)
 
 
 def _validate_event_type(event_type: str) -> None:
@@ -101,9 +129,7 @@ def _assert_anonymized(props: dict[str, Any]) -> None:
         if key.lower() in _PII_KEYS:
             raise ValueError(f"Raw PII key not allowed in analytics props: {key!r}")
         # Money must be a plain int. bool is an int subclass, so reject it explicitly.
-        if key.endswith("_ngwee") and (
-            isinstance(value, bool) or not isinstance(value, int)
-        ):
+        if key.endswith("_ngwee") and (isinstance(value, bool) or not isinstance(value, int)):
             raise ValueError(f"Money prop {key!r} must be integer ngwee")
 
 
@@ -166,7 +192,7 @@ RETURNING id::text, event_type, created_at::text;
 
 
 def query_funnel(days: int = 30) -> FunnelReport:
-    """Return per-step counts of the end-to-end funnel from the unified view.
+    """Return event counts by stage, not unique-customer conversion or paid orders.
 
     Reads ``analytics_event_stream`` (analytics_events ∪ funnel_events ∪
     search_query_log) and folds each stream's event_type onto a canonical funnel step.
@@ -182,13 +208,17 @@ GROUP BY event_type;
     if not result.ok:
         raise RuntimeError(f"query_funnel failed: {result.error}")
 
-    steps: dict[str, int] = {step: 0 for step in FUNNEL_STEPS}
+    counts: dict[str, int] = {step: 0 for step in EVENT_COUNT_STEPS}
     for line in result.rows:
         parts = line.split("|")
         if len(parts) != 2 or not parts[1].isdigit():
             continue
         event_type, count = parts[0], int(parts[1])
-        step = EVENT_TYPE_TO_STEP.get(event_type)
+        step = EVENT_TYPE_TO_COUNT_STEP.get(event_type)
         if step is not None:
-            steps[step] += count
+            counts[step] += count
+    steps = {
+        legacy: counts[canonical]
+        for legacy, canonical in zip(FUNNEL_STEPS, EVENT_COUNT_STEPS, strict=True)
+    }
     return FunnelReport(window_days=window, steps=steps)

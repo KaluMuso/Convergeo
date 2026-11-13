@@ -3,6 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { PendingPaymentShell, type PendingLabels } from "../../_components/ussd-wait";
+import { groupRoutesFromQuery, type SearchParams } from "../../_lib/group-checkout";
 
 import type { Metadata } from "next";
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 type PageProps = {
   params: Promise<{ locale: string; groupId: string }>;
+  searchParams?: Promise<SearchParams & { ticket?: string }>;
 };
 
 export function generateStaticParams() {
@@ -36,16 +38,32 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
     confirmingTitle: t("checkout.pending.confirmingTitle"),
     confirmingBody: t("checkout.pending.confirmingBody"),
     codTitle: t("checkout.pending.codTitle"),
-    codBody: t("checkout.pending.codBody"),
+    codBody: String(t.raw("checkout.pending.codBody")),
     codCta: t("checkout.pending.codCta"),
+    codConfirmation: {
+      orderNumberLabel: t("checkout.pending.cod.orderNumberLabel"),
+      amountDueLabel: t("checkout.pending.cod.amountDueLabel"),
+      nextTitle: t("checkout.pending.cod.nextTitle"),
+      step1Title: t("checkout.pending.cod.step1Title"),
+      step1Body: t("checkout.pending.cod.step1Body"),
+      step2Title: t("checkout.pending.cod.step2Title"),
+      step2Body: t("checkout.pending.cod.step2Body"),
+      step3Title: t("checkout.pending.cod.step3Title"),
+      step3Body: t.raw("checkout.pending.cod.step3Body") as string,
+      helpTitle: t("checkout.pending.cod.helpTitle"),
+      helpBody: t("checkout.pending.cod.helpBody"),
+      contactCta: t("checkout.pending.cod.contactCta"),
+      continueShopping: t("checkout.pending.cod.continueShopping"),
+    },
     viewOrder: t("checkout.pending.viewOrder"),
+    ticketUnavailableBody: t("checkout.pending.ticketUnavailableBody"),
     ussd: {
       title: t("checkout.ussd.title"),
-      subtitle: t("checkout.ussd.subtitle"),
+      subtitle: String(t.raw("checkout.ussd.subtitle")),
       amountLabel: t("checkout.ussd.amountLabel"),
-      mtnHelp: t("checkout.ussd.mtnHelp"),
-      airtelHelp: t("checkout.ussd.airtelHelp"),
-      genericHelp: t("checkout.ussd.genericHelp"),
+      mtnHelp: String(t.raw("checkout.ussd.mtnHelp")),
+      airtelHelp: String(t.raw("checkout.ussd.airtelHelp")),
+      genericHelp: String(t.raw("checkout.ussd.genericHelp")),
       waiting: t("checkout.ussd.waiting"),
       doNotClose: t("checkout.ussd.doNotClose"),
       pollAria: t("checkout.pending.pollAria"),
@@ -63,7 +81,7 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
   };
 }
 
-export default async function PendingCheckoutPage({ params }: PageProps) {
+export default async function PendingCheckoutPage({ params, searchParams }: PageProps) {
   const { locale, groupId } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -73,12 +91,22 @@ export default async function PendingCheckoutPage({ params }: PageProps) {
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const labels = buildPendingLabels(locale, messages);
+  const ticketCheckout = (await searchParams)?.ticket === "1";
 
   return (
     <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <PendingPaymentShell locale={locale} groupId={groupId} labels={labels} />
+      <PendingPaymentShell
+        locale={locale}
+        groupId={groupId}
+        labels={labels}
+        ticketCheckout={ticketCheckout}
+        groupRoutes={groupRoutesFromQuery(locale, groupId, await searchParams)}
+      />
     </div>
   );
 }

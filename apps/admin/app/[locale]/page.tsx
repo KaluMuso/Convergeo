@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../lib/admin-translator";
 
 import { DashboardBoard } from "./_components/DashboardBoard";
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 export default async function HomePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.dashboard");
+  const t = await getAdminTranslator(locale, "admin.dashboard");
 
   return (
     <div className="space-y-4">

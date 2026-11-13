@@ -61,7 +61,9 @@ fi
 # 5) Separation script accepts distinct staging identifiers
 set +e
 STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co/ \
 STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com \
 STAGING_CUSTOMER_URL=https://staging-customer.example.vercel.app \
 STAGING_VENDOR_URL=https://staging-vendor.example.vercel.app \
 STAGING_ADMIN_URL=https://staging-admin.example.vercel.app \
@@ -76,9 +78,66 @@ else
   cat /tmp/sep-ok.txt || true
 fi
 
-# 6) Synthetic seed dry-run + no production markers in fixtures
+# The two names for each target must resolve to the same staging plane.
 set +e
-python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-dry.txt 2>&1
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://otherstaging12345678.supabase.co \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-ref.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-mismatched-ref.txt; then
+  ok "separation rejects mismatched Supabase project names"
+else
+  bad "separation should reject mismatched Supabase project names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_SUPABASE_URL=https://abcdefghij1234567890.supabase.co@another-host.example \
+STAGING_API_HOST=api.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-url.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_SUPABASE_URL must bind' /tmp/sep-deceptive-url.txt; then
+  ok "separation rejects deceptive Supabase URL host"
+else
+  bad "separation should reject deceptive Supabase URL host (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://other.staging.vergeo5.com \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-mismatched-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-mismatched-api.txt; then
+  ok "separation rejects mismatched API host names"
+else
+  bad "separation should reject mismatched API host names (rc=$rc)"
+fi
+
+set +e
+STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
+STAGING_API_HOST=api.staging.vergeo5.com \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com:443@another-host.example \
+  bash scripts/ci/check-staging-separation.sh >/tmp/sep-deceptive-api.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && grep -q 'STAGING_API_BASE_URL must be' /tmp/sep-deceptive-api.txt; then
+  ok "separation rejects deceptive API URL authority"
+else
+  bad "separation should reject deceptive API URL authority (rc=$rc)"
+fi
+
+# 6) Synthetic seed dry-run + no production markers in fixtures
+# uv run --project services/api (not bare python3): scripts/seed_staging.py
+# imports `supabase` at module level to reach the Auth Admin API for
+# canonical persona provisioning, mirroring the exact invocation
+# deploy-staging.yml / e2e.yml now use.
+set +e
+uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-dry.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -eq 0 ]] && grep -q 'stg-rv-20260719' /tmp/seed-dry.txt; then
@@ -102,7 +161,7 @@ fi
 # Seed must refuse production identifiers when provided
 set +e
 STAGING_SUPABASE_PROJECT_ID=dpadrlxukcjbewpqympu \
-  python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-prod.txt 2>&1
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-prod.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -ne 0 ]]; then
@@ -115,7 +174,7 @@ fi
 set +e
 STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
 STAGING_API_HOST=api.vergeo5.com \
-  python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-api.txt 2>&1
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-api.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -ne 0 ]]; then
@@ -262,17 +321,140 @@ if bash -n scripts/ci/vercel-staging-preview-prove.sh \
   && bash -n scripts/ci/staging-evidence-bundle.sh \
   && bash -n scripts/ci/reconcile-staging-migrations.sh \
   && bash -n scripts/ci/preflight-staging-schema-convergence.sh \
+  && bash -n scripts/ci/staging-cors-preview-probe.sh \
+  && python3 -m py_compile scripts/ci/vercel_deployment_checkpoint.py \
   && python3 -m py_compile scripts/ci/validate_staging_proof.py \
   && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
-  ok "preview prove + evidence bundle + migration reconcile syntax"
+  ok "preview prove + evidence bundle + migration reconcile + CORS probe syntax"
 else
-  bad "preview prove / evidence bundle / migration reconcile syntax invalid"
+  bad "preview prove / evidence bundle / migration reconcile / CORS probe syntax invalid"
+fi
+
+# 12b) RC-6 / PR-F3: CORS Preview probe wiring, ordering, and offline failure modes.
+#
+# strict E2E run #52 proved (real Playwright traces) that a browser hitting
+# the deployed Customer/Vendor/Admin Preview origins got CORS-rejected by the
+# staging API — because every SHA-pinned Preview deployment gets a newly
+# generated immutable hostname a static CORS_ORIGINS entry can never
+# anticipate. This turns that class of bug into a deploy-time proof instead
+# of something only Playwright discovers deep into the browse journey.
+cors_probe_line="$(grep -n 'staging-cors-preview-probe.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+health_fp_line="$(grep -n 'Health + fingerprint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${cors_probe_line}" ]]; then
+  bad "deploy-staging must wire scripts/ci/staging-cors-preview-probe.sh into the smoke job"
+elif [[ -z "${health_fp_line}" ]]; then
+  bad "deploy-staging: could not locate the Health + fingerprint step to order the CORS proof against"
+elif [[ "${cors_probe_line}" -lt "${health_fp_line}" ]] \
+  && grep -q "prove-vercel-preview.result == 'success'" .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging proves staging CORS for the certified Preview origins before health/fingerprint"
+else
+  bad "CORS proof must run after prove-vercel-preview succeeds and before Health + fingerprint"
+fi
+
+if grep -q 'preview-dir /tmp/preview-evidence' .github/workflows/deploy-staging.yml; then
+  ok "CORS proof reads the same normalized Preview evidence directory as fingerprinting"
+else
+  bad "CORS proof step must read /tmp/preview-evidence (the normalized per-portal evidence dir)"
+fi
+
+# The script must fail closed offline: missing evidence, a malformed
+# preview_url, and a production API host must all be rejected without
+# reaching the network.
+set +e
+mkdir -p /tmp/cors-probe-selftest/customer
+echo '{"preview_url": "not-an-https-url"}' > /tmp/cors-probe-selftest/customer/evidence.json
+bash scripts/ci/staging-cors-preview-probe.sh \
+  --preview-dir /tmp/cors-probe-selftest \
+  --api-base https://api.staging.vergeo5.com >/tmp/cors-probe-malformed.txt 2>&1
+rc_malformed=$?
+set -e
+rm -rf /tmp/cors-probe-selftest
+if [[ "${rc_malformed}" -ne 0 ]] \
+  && grep -qi 'not a valid https origin\|missing Preview evidence' /tmp/cors-probe-malformed.txt; then
+  ok "CORS probe fails closed on missing/malformed Preview evidence"
+else
+  bad "CORS probe should fail closed on missing/malformed Preview evidence (rc=${rc_malformed})"
+  cat /tmp/cors-probe-malformed.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-cors-preview-probe.sh \
+  --preview-dir /tmp \
+  --api-base https://api.vergeo5.com >/tmp/cors-probe-prod.txt 2>&1
+rc_prod=$?
+set -e
+if [[ "${rc_prod}" -ne 0 ]] && grep -qi 'production API host' /tmp/cors-probe-prod.txt; then
+  ok "CORS probe refuses to probe the production API host"
+else
+  bad "CORS probe should refuse api.vergeo5.com (rc=${rc_prod})"
+  cat /tmp/cors-probe-prod.txt || true
+fi
+
+# 12c) Cart-location remediation: native DB pool + service-role read proof.
+#
+# Run #55's aftermath proved location_stock.py's raw psycopg pool
+# (run_sql_script/resolve_db_url) is a connectivity path distinct from the
+# PostgREST/service-role client every other deploy check exercises — a
+# healthy /healthz + a passing CORS preflight both say nothing about it.
+if bash -n scripts/ci/staging-db-service-role-proof.sh; then
+  ok "staging-db-service-role-proof.sh syntax"
+else
+  bad "staging-db-service-role-proof.sh syntax invalid"
+fi
+
+db_proof_line="$(grep -n 'staging-db-service-role-proof.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${db_proof_line}" ]]; then
+  bad "deploy-staging must wire scripts/ci/staging-db-service-role-proof.sh into the smoke job"
+elif [[ -z "${health_fp_line}" ]]; then
+  bad "deploy-staging: could not locate the Health + fingerprint step to order the DB proof against"
+elif [[ "${cors_probe_line}" -lt "${db_proof_line}" && "${db_proof_line}" -lt "${health_fp_line}" ]]; then
+  ok "deploy-staging proves the native DB pool + service-role read after the CORS proof and before health/fingerprint"
+else
+  bad "DB service-role proof must run after the CORS proof and before Health + fingerprint"
+fi
+
+if grep -q -- '--listing-id f1000000-0000-4000-8000-000000000001' .github/workflows/deploy-staging.yml; then
+  ok "DB service-role proof targets the canonical branch-tracked E2E fixture listing"
+else
+  bad "DB service-role proof step must target the canonical branch-tracked fixture listing"
+fi
+
+# Fails closed offline: missing evidence and a production API host must both
+# be rejected without reaching the network — same discipline as the CORS probe.
+set +e
+bash scripts/ci/staging-db-service-role-proof.sh \
+  --preview-dir /tmp/nonexistent-preview-dir \
+  --api-base https://api.staging.vergeo5.com \
+  --listing-id f1000000-0000-4000-8000-000000000001 >/tmp/db-proof-missing-evidence.txt 2>&1
+rc_missing=$?
+set -e
+if [[ "${rc_missing}" -ne 0 ]] && grep -qi 'missing Preview evidence' /tmp/db-proof-missing-evidence.txt; then
+  ok "DB service-role proof fails closed on missing Preview evidence"
+else
+  bad "DB service-role proof should fail closed on missing Preview evidence (rc=${rc_missing})"
+  cat /tmp/db-proof-missing-evidence.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-db-service-role-proof.sh \
+  --preview-dir /tmp \
+  --api-base https://api.vergeo5.com \
+  --listing-id f1000000-0000-4000-8000-000000000001 >/tmp/db-proof-prod.txt 2>&1
+rc_db_prod=$?
+set -e
+if [[ "${rc_db_prod}" -ne 0 ]] && grep -qi 'production API host' /tmp/db-proof-prod.txt; then
+  ok "DB service-role proof refuses to probe the production API host"
+else
+  bad "DB service-role proof should refuse api.vergeo5.com (rc=${rc_db_prod})"
+  cat /tmp/db-proof-prod.txt || true
 fi
 
 # 13) deploy-staging wires explicit Preview proof for all three portals
 if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   && grep -q 'matrix:' .github/workflows/deploy-staging.yml \
-  && grep -q 'portal: \[customer, vendor, admin\]' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: customer' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: vendor' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: admin' .github/workflows/deploy-staging.yml \
   && grep -q 'vercel-staging-preview-prove.sh' .github/workflows/deploy-staging.yml \
   && grep -q 'staging-sha-proof' .github/workflows/deploy-staging.yml \
   && grep -q 'staging-evidence-bundle.sh' .github/workflows/deploy-staging.yml \
@@ -282,14 +464,41 @@ else
   bad "deploy-staging missing three-portal Preview proof wiring"
 fi
 
+# 13a) E1 retry transport: creation is checkpointed before any probe; every
+# recovered deployment is then re-probed. Attempt-scoped artifacts must not
+# collide with immutable artifacts from a prior run attempt.
+checkpoint_prepare_line="$(grep -n 'Create or recover Preview checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_upload_line="$(grep -n 'Upload PRE_PROBE checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_probe_line="$(grep -n 'Re-probe immutable Preview and mutable Customer hostname' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${checkpoint_prepare_line}" && -n "${checkpoint_upload_line}" && -n "${checkpoint_probe_line}" ]] \
+  && [[ "${checkpoint_prepare_line}" -lt "${checkpoint_upload_line}" ]] \
+  && [[ "${checkpoint_upload_line}" -lt "${checkpoint_probe_line}" ]] \
+  && grep -q 'staging-preview-checkpoint-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}' .github/workflows/deploy-staging.yml; then
+  ok "Vercel retry checkpoint is attempt-scoped, persisted pre-probe, and always re-probed"
+else
+  bad "Vercel retry checkpoint must be uploaded before probes with an attempt-scoped artifact name"
+fi
+
 # 13b) deploy-staging must preflight ledger drift before db push
 preflight_line="$(grep -n 'preflight-staging-schema-convergence.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
-push_line="$(grep -n 'supabase db push --include-all' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+push_line="$(grep -n '^[[:space:]]*supabase db push ' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
 if [[ -n "${preflight_line}" && -n "${push_line}" && "${preflight_line}" -lt "${push_line}" ]] \
   && grep -q 'STAGING_LEDGER_REPAIR_REQUIRED' .github/workflows/deploy-staging.yml; then
   ok "deploy-staging preflight blocks db push when ledger repair is required"
 else
   bad "deploy-staging must run schema preflight before supabase db push"
+fi
+
+# The adoption prerequisite and push must use the same explicit connection.
+# A linked CLI target must not silently replace the database that was checked.
+adoption_guard_line="$(grep -n 'python3 scripts/ci/guard_shared_service_adoption.py' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${adoption_guard_line}" && -n "${push_line}" ]] \
+  && [[ "${preflight_line}" -lt "${adoption_guard_line}" && "${adoption_guard_line}" -lt "${push_line}" ]] \
+  && grep -Fq 'supabase db push --db-url "${SUPABASE_DB_URL}" --include-all' .github/workflows/deploy-staging.yml \
+  && grep -Fq 'unset PGHOST PGHOSTADDR PGPORT PGSERVICE PGSERVICEFILE PGOPTIONS' .github/workflows/deploy-staging.yml; then
+  ok "reviewed installed adoption guards an explicit same-target migration push"
+else
+  bad "migration push must follow installed-adoption proof and retain its explicit database target"
 fi
 
 # 14) Preview prove dry-run validates portal mapping without Vercel calls
@@ -314,25 +523,34 @@ GOOD_SHA=deadbeefcafebabe0123456789abcdef01234567
 STAGING_REF=abcdefghij1234567890
 mkdir -p /tmp/evidence-bundle-test/{customer,vendor,admin}
 for portal in customer vendor admin; do
-  health_verdict="ok"
-  health_http="200"
-  if [ "$portal" = "admin" ]; then
-    health_verdict="cf_access_gate"
-    health_http="403"
-  fi
   python3 - <<PY
 import json, pathlib
 portal = "${portal}"
 doc = {
     "portal": portal,
-    "deployment_url": f"https://{portal}.example.vercel.app",
+    "vercel_project": f"convergeo-{portal}",
+    "project_id": f"prj_{portal}",
+    "candidate_sha": "${GOOD_SHA}",
     "deployment_id": f"dpl_{portal}",
-    "github_commit_sha": "${GOOD_SHA}",
+    "preview_url": f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app",
+    "deployment_sha": "${GOOD_SHA}",
     "target": "preview",
-    "api_env_verdict": "verified",
-    "health_verdict": "${health_verdict}",
-    "health_http": "${health_http}",
+    "configuration_revision": "staging-config-test-v1",
+    "checkpoint_stage": "PRE_PROBE",
+    "deployment_action": "created",
+    "deployment_origin_attempt": 2,
+    "deployment_create_calls": 1,
+    "reused_deployments": 0,
+    "health_status": "ok",
+    "health_app": portal,
+    "health_env": "staging",
+    "health_build_id": "${GOOD_SHA}",
+    "health_api_host": "api.staging.vergeo5.com",
+    "env_metadata_status": "verified",
 }
+if portal == "customer":
+    doc["stable_hostname_status"] = "verified"
+    doc["stable_hostname_url"] = "https://customer.staging.vergeo5.com"
 pathlib.Path("/tmp/evidence-bundle-test", portal, "evidence.json").write_text(
     json.dumps(doc) + "\n", encoding="utf-8"
 )
@@ -361,6 +579,55 @@ else
   cat /tmp/bundle-out.txt || true
 fi
 
+# 15b) Release handoff is an explicit v2 envelope; missing source/config
+# identity cannot be promoted from a legacy diagnostic bundle.
+printf '{"env":"staging","git_sha":"%s","image_tag":"%s","supabase_project_ref":"iyasmrmbcrvlfxpzescb"}\n' \
+  "${GOOD_SHA}" "${GOOD_SHA}" >/tmp/fingerprint-release-test.json
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --source-repository KaluMuso/Convergeo \
+  --source-repository-id 1290591718 \
+  --source-workflow .github/workflows/deploy-staging.yml \
+  --source-ref refs/heads/staging \
+  --source-run-id 100 \
+  --source-run-attempt 2 \
+  --configuration-revision staging-config-test-v1 \
+  --output /tmp/staging-sha-proof-v2-test.json >/tmp/bundle-v2-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]] \
+  && grep -q '"schema_version": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"run_attempt": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"customer_same_site_cart": "PASS"' /tmp/staging-sha-proof-v2-test.json; then
+  ok "staging-evidence-bundle emits validated v2 release envelope"
+else
+  bad "staging-evidence-bundle v2 release envelope failed (rc=$rc)"
+  cat /tmp/bundle-v2-out.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --output /tmp/staging-sha-proof-v2-invalid.json >/tmp/bundle-v2-invalid-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && [[ ! -f /tmp/staging-sha-proof-v2-invalid.json ]]; then
+  ok "staging-evidence-bundle rejects unbound v2 release envelope"
+else
+  bad "staging-evidence-bundle accepted unbound v2 release envelope"
+fi
+
 # 16) validate_staging_proof negative + positive regression cases
 python3 - <<'PY'
 import json
@@ -374,19 +641,35 @@ STAGING_REF = "abcdefghij1234567890"
 PROD_REF = "dpadrlxukcjbewpqympu"
 REPO = Path("scripts/ci")
 
-def portal_doc(portal: str, *, sha: str = GOOD_SHA, api_env: str = "verified", health: str = "ok", http: str = "200"):
-    if portal == "admin" and health == "cf_access_gate":
-        http = "403"
-    return {
+def portal_doc(
+    portal: str,
+    *,
+    sha: str = GOOD_SHA,
+    candidate_sha: str | None = None,
+    env_metadata: str = "verified",
+    health_status: str = "ok",
+    health_app: str | None = None,
+    api_host: str = "api.staging.vergeo5.com",
+    health_env: str = "staging",
+    build_id: str | None = None,
+    omit_build_id: bool = False,
+):
+    doc = {
         "portal": portal,
-        "deployment_url": f"https://{portal}.example.vercel.app",
+        "preview_url": f"https://{portal}.example.vercel.app",
         "deployment_id": f"dpl_{portal}",
-        "github_commit_sha": sha,
+        "candidate_sha": candidate_sha if candidate_sha is not None else sha,
+        "deployment_sha": sha,
         "target": "preview",
-        "api_env_verdict": api_env,
-        "health_verdict": health,
-        "health_http": http,
+        "health_status": health_status,
+        "health_app": health_app if health_app is not None else portal,
+        "health_env": health_env,
+        "health_api_host": api_host,
+        "env_metadata_status": env_metadata,
     }
+    if not omit_build_id:
+        doc["health_build_id"] = build_id if build_id is not None else sha
+    return doc
 
 def fingerprint(*, sha: str = GOOD_SHA, ref: str = STAGING_REF, env: str = "staging", image: str = GOOD_SHA):
     return {"env": env, "git_sha": sha, "image_tag": image, "supabase_project_ref": ref}
@@ -421,19 +704,34 @@ def run_validate(tmp: Path, fp: dict, previews: dict[str, dict], expect_ok: bool
     return ok if expect_ok else (not ok)
 
 previews_ok = {p: portal_doc(p) for p in ("customer", "vendor", "admin")}
-previews_ok["admin"] = portal_doc("admin", health="cf_access_gate")
 
 cases = [
     ("correct proof succeeds", lambda t: run_validate(t, fingerprint(), previews_ok, True)),
     ("wrong API git SHA fails", lambda t: run_validate(t, fingerprint(sha="0000000000000000000000000000000000000001"), previews_ok, False)),
     ("wrong staging Supabase ref fails", lambda t: run_validate(t, fingerprint(ref="wrongref123456789012345"), previews_ok, False)),
     ("production Supabase ref fails", lambda t: run_validate(t, fingerprint(ref=PROD_REF), previews_ok, False)),
-    ("BLOCKED_EXTERNAL Vercel env proof fails", lambda t: run_validate(
-        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_env="BLOCKED_EXTERNAL")}, False)),
-    ("wrong portal SHA fails", lambda t: run_validate(
+    ("BLOCKED_EXTERNAL env metadata does NOT fail the proof (non-blocking, informational only)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", env_metadata="BLOCKED_EXTERNAL")}, True)),
+    ("wrong portal deployment SHA fails", lambda t: run_validate(
         t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", sha="cafe" * 10)}, False)),
-    ("valid admin CF Access 403 remains accepted", lambda t: run_validate(
-        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health="cf_access_gate")}, True)),
+    ("admin health_status != ok is rejected — CF Access 403 is no longer an accepted outcome (PR #666)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health_status="cf_access_gate", api_host="")}, False)),
+    ("wrong health_app fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", health_app="customer")}, False)),
+    ("missing health_api_host fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_host="")}, False)),
+    ("production API host rejected even with every other field correct", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="api.vergeo5.com")}, False)),
+    ("localhost API host rejected", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="localhost")}, False)),
+    ("arbitrary wrong API host rejected", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="wrong-host.example.com")}, False)),
+    ("wrong health_env fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health_env="production")}, False)),
+    ("health_build_id absent passes (deployment_sha already proves candidate identity)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", omit_build_id=True)}, True)),
+    ("health_build_id present and wrong fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", build_id="cafe" * 10)}, False)),
 ]
 
 failed = []
@@ -484,11 +782,615 @@ else
   cat /tmp/reconcile-ok.txt /tmp/reconcile-bad.txt || true
 fi
 
-# 18) vercel-staging-preview-prove rejects BLOCKED_EXTERNAL at source
-if grep -q 'BLOCKED_EXTERNAL.*die\|die.*BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh; then
-  ok "vercel-staging-preview-prove fails closed on BLOCKED_EXTERNAL"
+# 18) vercel-staging-preview-prove: the deployed-health proof is the sole
+# blocking release gate; the Vercel env-API check (including its
+# BLOCKED_EXTERNAL outcome) is non-blocking/informational only (PR #666 —
+# see vercel_preview_health_verify.py / vercel_preview_env_verify.py).
+# Precisely: the ENV-API verdict must never appear in a failing branch. (A
+# Vercel Deployment Protection challenge on the health probe is a DIFFERENT,
+# legitimately blocking BLOCKED_EXTERNAL — see check 19 — so this must test
+# the env-API variables, not the bare string.)
+if grep -E 'api_env_verdict|env_metadata_status' scripts/ci/vercel-staging-preview-prove.sh \
+  | grep -q 'die'; then
+  bad "vercel-staging-preview-prove must NOT die on the env-API verdict — it is a non-blocking, informational signal, not the release gate"
 else
-  bad "vercel-staging-preview-prove must die on BLOCKED_EXTERNAL"
+  ok "vercel-staging-preview-prove treats the env-API verdict as non-blocking"
+fi
+
+if grep -Eq 'missing_host\) die|forbidden_host\) die|host_mismatch\) die|sha_mismatch\) die' \
+  scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "vercel-staging-preview-prove fails closed on deployed-health verdict failures"
+else
+  bad "vercel-staging-preview-prove must die on a failing health verdict (missing_host/forbidden_host/host_mismatch/sha_mismatch)"
+fi
+
+# 19) Vercel Deployment Protection bypass (deploy-staging run #31 root cause):
+# the health probe must authenticate with a per-project automation bypass
+# secret, and that secret must never reach argv, a URL, a log, evidence, or
+# GITHUB_OUTPUT. See scripts/ci/vercel_preview_access.py.
+if grep -q -- '--config "${health_curl_config}"' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'chmod 600 "${health_curl_config}"' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! grep -q -- '-H "x-vercel-protection-bypass' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "protection bypass secret reaches curl via a mode-600 config file, never argv"
+else
+  bad "protection bypass secret must be passed through a mode-600 curl config file, never -H/argv"
+fi
+
+# The secret must never be traced, echoed, or written to any evidence sink.
+if grep -vE '^\s*#' scripts/ci/vercel-staging-preview-prove.sh | grep -Eq '(^|\s)set -x(\s|$)'; then
+  bad "vercel-staging-preview-prove must never enable set -x (would trace the bypass secret)"
+else
+  ok "vercel-staging-preview-prove never enables set -x"
+fi
+
+# The ONLY permitted use of the secret value is writing the curl header line
+# into the mode-600 config file; it must never be echoed or logged.
+bypass_secret_uses="$(grep -n 'BYPASS_SECRET' scripts/ci/vercel-staging-preview-prove.sh \
+  | grep -vE '^\s*[0-9]+:\s*#' \
+  | grep -E 'echo|log |printf' \
+  | grep -v 'x-vercel-protection-bypass: %s' || true)"
+if [ -n "${bypass_secret_uses}" ]; then
+  bad "vercel-staging-preview-prove must never echo/log the bypass secret value: ${bypass_secret_uses}"
+else
+  ok "vercel-staging-preview-prove never echoes the bypass secret value"
+fi
+
+# Only the SOURCE label (kind + variable name) may be recorded. Inspect each
+# GITHUB_OUTPUT block independently: E1 has a safe pre-probe checkpoint output
+# before the later secret selection, so scanning from the first block to EOF
+# would mistake unrelated in-memory secret handling for an output write.
+github_output_blocks="$(awk '
+  /if \[ -n "\$\{GITHUB_OUTPUT:-\}" \]; then/ { in_output = 1 }
+  in_output { print }
+  in_output && /^  fi$/ { in_output = 0 }
+' scripts/ci/vercel-staging-preview-prove.sh)"
+if grep -q '"bypass_source": os.environ\["bypass_source"\]' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! printf '%s\n' "${github_output_blocks}" | grep -q 'BYPASS_SECRET'; then
+  ok "only the bypass SOURCE label reaches evidence/GITHUB_OUTPUT, never the secret"
+else
+  bad "bypass secret must not reach evidence.json or GITHUB_OUTPUT (only its source label)"
+fi
+
+# A Vercel protection challenge must be classified BLOCKED_EXTERNAL, never
+# reported as a broken application health route (run #31 misdiagnosis).
+if grep -q 'blocked_external)' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh \
+  && python3 -m py_compile scripts/ci/vercel_preview_access.py; then
+  ok "protection challenge classified BLOCKED_EXTERNAL, distinct from app failure"
+else
+  bad "vercel-staging-preview-prove must classify a protection challenge as BLOCKED_EXTERNAL"
+fi
+
+# The probe must retry only genuinely transient transport errors and fail
+# immediately on deterministic ones (run #32 follow-up). Verified against
+# libcurl's CURLE_* enum in vercel_preview_access.py.
+retry_classification_ok=1
+for code in 6 7 28; do
+  verdict="$(python3 scripts/ci/vercel_preview_access.py classify-curl-exit --code "${code}")"
+  case "${verdict}" in
+    TRANSIENT_TRANSPORT*$'\t'1*) ;;
+    *) retry_classification_ok=0; echo "  curl ${code} should be retryable, got: ${verdict}" ;;
+  esac
+done
+for code in 3 23 26 60; do
+  verdict="$(python3 scripts/ci/vercel_preview_access.py classify-curl-exit --code "${code}")"
+  case "${verdict}" in
+    NON_RETRYABLE_CURL*$'\t'0*) ;;
+    *) retry_classification_ok=0; echo "  curl ${code} must NOT be retryable, got: ${verdict}" ;;
+  esac
+done
+if [ "${retry_classification_ok}" -eq 1 ] \
+  && grep -q 'if \[ "\${health_exit_retryable}" != "1" \]; then' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "health probe retries transient transport errors only, never deterministic ones"
+else
+  bad "health probe must retry only transient curl transport errors (6/7/28/...) and fail fast on 3/23/26/60"
+fi
+
+# One-shot health probes send ONLY x-vercel-protection-bypass. Vercel
+# documents x-vercel-set-bypass-cookie as optional, for maintaining
+# authorization across multiple requests / in iframes — that belongs to the
+# Playwright browser flow, not to a single manual-redirect request (run #33
+# returned HTTP 307 on all three portals with it set).
+if grep -q 'x-vercel-set-bypass-cookie' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep 'x-vercel-set-bypass-cookie' scripts/ci/vercel-staging-preview-prove.sh | grep -q 'printf'; then
+  bad "deploy-staging one-shot health probe must NOT request a bypass cookie"
+elif grep -n 'x-vercel-set-bypass-cookie' scripts/ci/e2e-staging-probe.mjs \
+  | grep -vE '^\s*[0-9]+:\s*(//|\*)' | grep -q 'headers\['; then
+  bad "e2e-staging-probe one-shot health fetch must NOT request a bypass cookie"
+else
+  ok "one-shot health probes send only x-vercel-protection-bypass (no cookie request)"
+fi
+
+# ...while the multi-request browser flow KEEPS the cookie, per Vercel's docs.
+# The bypass moved OUT of playwright.config.ts entirely: extraHTTPHeaders is
+# context-level, so a credential set there is broadcast to Supabase, the
+# staging API and every third-party origin the browser touches. The single
+# injection point is now the origin-aware fixture, which is where the cookie
+# request must live.
+if grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'SET_BYPASS_COOKIE_HEADER' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'applyPortalBypass' e2e/fixtures/test-base.ts; then
+  ok "Playwright browser flow preserves the bypass cookie for follow-up requests"
+else
+  bad "Playwright must keep x-vercel-set-bypass-cookie for multi-request browser continuity"
+fi
+
+# ...and the config must NOT broadcast a bypass credential to every origin.
+# Comment lines are stripped first: the file DOCUMENTS why the bypass was
+# removed from it, and naming the trap must not trip the guard against it.
+if sed -E '/^[[:space:]]*(\*|\/\*|\/\/)/d' e2e/playwright.config.ts \
+  | grep -qE 'x-vercel-(protection-bypass|set-bypass-cookie)|extraHTTPHeaders|VERCEL_AUTOMATION_BYPASS_SECRET'; then
+  bad "playwright.config.ts must not inject a Vercel bypass credential globally (extraHTTPHeaders reaches every origin)"
+elif grep -q 'hasBypassCredential()' e2e/fixtures/test-base.ts \
+  && grep -q 'BYPASS_SECRET_FALLBACK' e2e/fixtures/env.ts; then
+  ok "bypass injection is per-origin only; the legacy repository-wide secret stays supported as a fallback"
+else
+  bad "the per-origin fixture must engage on any bypass credential, including the legacy fallback"
+fi
+
+# Run #70: a rewritten request must be rebuilt from allHeaders() (which keeps
+# Cookie), and an unmatched origin must receive NO portal credential at all.
+if grep -q 'await request.allHeaders()' e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '\.\.\.[^;{},]{0,200}\.headers\(\)' e2e/fixtures/test-base.ts e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '^\s*return BYPASS_SECRET_CUSTOMER;' e2e/fixtures/env.ts; then
+  ok "portal bypass rewrites from allHeaders() and hands no credential to unmatched origins"
+else
+  bad "portal bypass must rebuild requests from allHeaders() and fail closed on unmatched origins"
+fi
+
+# Redirect diagnostics must never surface a cookie value, a secret, or a query.
+redirect_diag_headers="$(mktemp)"
+printf 'HTTP/2 307 \r\nlocation: https://h.example/p?x-vercel-protection-bypass=LEAKME&nonce=N\r\nset-cookie: _vercel_jwt=JWTLEAK; Path=/\r\nserver: Vercel\r\n\r\n' \
+  > "${redirect_diag_headers}"
+redirect_diag_out="$(python3 scripts/ci/vercel_preview_access.py summarize-headers \
+  --headers-file "${redirect_diag_headers}" 2>&1 || true)"
+rm -f "${redirect_diag_headers}"
+if grep -q 'summarize-headers --headers-file' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! printf '%s' "${redirect_diag_out}" | grep -Eq 'LEAKME|JWTLEAK|nonce|_vercel_jwt' \
+  && printf '%s' "${redirect_diag_out}" | grep -q 'set_cookie=yes'; then
+  ok "redirect diagnostics expose host/path + set_cookie=yes/no only, never values"
+else
+  bad "redirect diagnostics must not print Set-Cookie values, secrets, or query strings"
+fi
+
+# The bypass secret is redacted from any surfaced curl error, without ever
+# being passed to an external command.
+if grep -q 'sanitized_curl_error()' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'raw="\${raw//\${BYPASS_SECRET}/\[redacted\]}"' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "curl stderr is redacted via bash expansion before being logged"
+else
+  bad "curl stderr must be redacted of the bypass secret before logging"
+fi
+
+# Per-portal Preview evidence must NOT be downloaded with merge-multiple.
+# Each portal artifact carries evidence.json/deployment.json at its root, so
+# merging all three into one directory collides them and silently destroys two
+# portals' evidence (deploy-staging run #34). Without merge-multiple,
+# download-artifact unpacks each artifact into its own <artifact-name>/ dir.
+evidence_dl_block="$(sed -n '/Download Preview evidence artifacts/,/Normalize Preview evidence paths/p' \
+  .github/workflows/deploy-staging.yml)"
+if printf '%s' "${evidence_dl_block}" | grep -vE '^\s*#' | grep -q 'merge-multiple'; then
+  bad "Preview evidence download must NOT use merge-multiple — the three portal artifacts collide and two are lost"
+elif printf '%s' "${evidence_dl_block}" | grep -q 'pattern: staging-preview-evidence-\*'; then
+  ok "Preview evidence downloads per-portal without merge-multiple (no artifact collision)"
+else
+  bad "Preview evidence download step must select the per-portal artifacts by pattern"
+fi
+
+# deploy-staging must scope the bypass secret per matrix leg (secrets are
+# issued per Vercel project; three portals = three projects).
+if grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER' .github/workflows/deploy-staging.yml \
+  && grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR' .github/workflows/deploy-staging.yml \
+  && grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN' .github/workflows/deploy-staging.yml \
+  && grep -q 'VERCEL_PORTAL_BYPASS_SECRET: ${{ secrets\[matrix.bypass_secret_name\] }}' .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging passes only the matching portal bypass secret to each matrix leg"
+else
+  bad "deploy-staging must scope the Vercel bypass secret per portal via the job matrix"
+fi
+
+# ── E2E portal identity (Workstream A) ───────────────────────────────────────
+# Playwright navigates the customer AND vendor origins directly, so a release
+# baseline must pin and prove BOTH. These guards keep that contract from
+# silently regressing back to "prove customer, assume the rest".
+
+# The vendor target is accepted only through the trusted reusable handoff, so a
+# release run pins the validated immutable Preview URL instead of a mutable alias.
+if grep -q '^      vendor_base_url:' .github/workflows/e2e.yml \
+  && grep -q "E2E_VENDOR_BASE_URL: \${{ inputs.internal_operation_id != '' && inputs.vendor_base_url" \
+    .github/workflows/e2e.yml; then
+  ok "e2e reusable workflow accepts the machine-derived vendor Preview URL"
+else
+  bad "e2e reusable workflow must wire the validated vendor Preview URL"
+fi
+
+# Both preflights must run, and both must run BEFORE any Playwright install, so
+# a skewed target never reaches a browser.
+# `|| true` matters: this file runs under `set -euo pipefail`, so a grep that
+# matches nothing would abort the whole harness mid-run — failing with no
+# diagnostic and silently skipping every guard below. A missing step must
+# report as a FAILED GUARD, not as a crash.
+e2e_probe_customer_line="$(grep -n 'e2e-staging-probe.mjs customer' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+e2e_probe_vendor_line="$(grep -n 'e2e-staging-probe.mjs vendor' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+e2e_install_line="$(grep -n 'playwright install' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${e2e_probe_customer_line}" || -z "${e2e_probe_vendor_line}" ]]; then
+  bad "e2e workflow must preflight BOTH directly-navigated portals (customer and vendor)"
+elif [[ -z "${e2e_install_line}" ]]; then
+  bad "e2e workflow: could not locate the Playwright install step to order preflights against"
+elif [[ "${e2e_probe_customer_line}" -lt "${e2e_install_line}" \
+  && "${e2e_probe_vendor_line}" -lt "${e2e_install_line}" ]]; then
+  ok "e2e workflow proves customer + vendor identity before installing Playwright"
+else
+  bad "e2e portal preflights must run before the Playwright install step"
+fi
+
+# Admin is proven independently by Deploy staging and no spec navigates it.
+# The moment a spec DOES navigate the admin origin, this guard demands the
+# matching preflight rather than letting admin ride along unproven.
+if grep -rqE '\bADMIN_BASE_URL\b' e2e/specs; then
+  e2e_probe_admin_line="$(grep -n 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+  if [[ -n "${e2e_probe_admin_line}" && -n "${e2e_install_line}" \
+    && "${e2e_probe_admin_line}" -lt "${e2e_install_line}" ]]; then
+    ok "a spec navigates the admin origin and the admin preflight runs before Playwright install"
+  elif [[ -n "${e2e_probe_admin_line}" ]]; then
+    bad "the admin preflight must run before the Playwright install step"
+  else
+    bad "a spec now navigates ADMIN_BASE_URL — add an admin preflight to e2e.yml and PORTALS"
+  fi
+elif grep -q 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml; then
+  bad "admin preflight present but no spec navigates the admin origin — remove the churn"
+else
+  ok "no spec navigates admin; correctly no admin preflight (Deploy staging proves it)"
+fi
+
+# Specs that navigate the vendor app must go through the fail-closed resolver,
+# never the raw constant that silently falls back to the customer origin.
+vendor_nav_specs="$(grep -rlE 'urlOn\(\s*(VENDOR_BASE_URL|vendorOrigin)' e2e/specs || true)"
+if [[ -z "${vendor_nav_specs}" ]]; then
+  bad "expected at least one spec to navigate the vendor origin"
+elif grep -rqE '\bVENDOR_BASE_URL\b' e2e/specs; then
+  bad "vendor-navigating specs must use requireVendorBaseUrl(), not the VENDOR_BASE_URL fallback"
+elif grep -rq 'requireVendorBaseUrl' e2e/specs; then
+  ok "vendor-navigating specs resolve their origin through the fail-closed requireVendorBaseUrl()"
+else
+  bad "vendor-navigating specs must resolve their origin through requireVendorBaseUrl()"
+fi
+
+# The resolver itself must fail closed on both degenerate configurations.
+if grep -q 'export function requireVendorBaseUrl' e2e/fixtures/env.ts \
+  && grep -q 'E2E_VENDOR_BASE_URL is not set' e2e/fixtures/env.ts \
+  && grep -q 'same origin as E2E_BASE_URL' e2e/fixtures/env.ts; then
+  ok "requireVendorBaseUrl fails closed on an unset vendor target and on origin collapse"
+else
+  bad "requireVendorBaseUrl must fail closed when E2E_VENDOR_BASE_URL is unset or collapses onto the customer origin"
+fi
+
+# The probe registry stays limited to portals a spec actually navigates:
+# admin is registered if and only if a spec navigates the admin origin.
+admin_navigated=false
+if grep -rqE '\bADMIN_BASE_URL\b' e2e/specs; then admin_navigated=true; fi
+if grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs && [[ "${admin_navigated}" != true ]]; then
+  bad "e2e-staging-probe registers an admin portal that nothing navigates"
+elif [[ "${admin_navigated}" == true ]] && ! grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs; then
+  bad "a spec navigates ADMIN_BASE_URL but e2e-staging-probe has no admin portal"
+elif grep -q 'customer:' scripts/ci/e2e-staging-probe.mjs \
+  && grep -q 'vendor:' scripts/ci/e2e-staging-probe.mjs; then
+  ok "e2e-staging-probe registers exactly the directly-navigated portals"
+else
+  bad "e2e-staging-probe must register the customer and vendor portals"
+fi
+
+# Secret hygiene: the probe may name the SOURCE VARIABLE, never a value.
+if grep -nE 'console\.(log|warn|error)' scripts/ci/e2e-staging-probe.mjs \
+  | grep -vE '^\s*[0-9]+:\s*//' \
+  | grep -qE '\$\{[^}]*(bypassSecret|secret)\b[^}]*\}'; then
+  bad "e2e-staging-probe must never interpolate a bypass secret value into output"
+else
+  ok "e2e-staging-probe prints bypass SOURCE VARIABLE names only, never secret values"
+fi
+
+# ── Canonical E2E fixture contract (Workstream B) ────────────────────────────
+# One source of truth for synthetic staging identity, one destructive reset per
+# run, and no credential in generated source.
+
+# The generated TS view must match the Python contract it claims to describe.
+if python3 scripts/ci/generate-e2e-fixtures.py --check >/dev/null 2>&1; then
+  ok "generated E2E fixtures are in sync with synthetic_contract.py"
+else
+  bad "e2e/fixtures/seed.generated.ts is stale — run python3 scripts/ci/generate-e2e-fixtures.py"
+fi
+
+# The generated file must stay generated.
+if head -1 e2e/fixtures/seed.generated.ts | grep -q '@generated'; then
+  ok "generated E2E fixtures carry the do-not-edit banner"
+else
+  bad "e2e/fixtures/seed.generated.ts must keep its @generated banner"
+fi
+
+# No credential may be generated into source. Comments explaining their ABSENCE
+# are fine, so strip comments before scanning.
+generated_code="$(sed 's://.*::' e2e/fixtures/seed.generated.ts | perl -0pe 's{/\*.*?\*/}{}gs' || true)"
+if printf '%s' "${generated_code}" | grep -qiE 'otp|ticketpin|service_role|pin_hash'; then
+  bad "generated E2E fixtures must never contain OTP codes, ticket PINs or service-role material"
+else
+  ok "generated E2E fixtures carry non-secret identity only"
+fi
+
+# Playwright must not reseed: the old module-scope beforeAll ran once per spec
+# file per project (~80 destructive resets racing each other).
+if grep -rq 'resetSeed' e2e; then
+  bad "destructive resetSeed() must not run inside the Playwright lifecycle"
+else
+  ok "no destructive reset inside Playwright — reset is a single workflow step"
+fi
+
+# ── vendor-sell order targeting + real lifecycle (Phase 3A) ───────────────────
+#
+# Run #77 failed because the spec picked its "order" with
+# getByRole("link", { name: /order|#/i }), which resolves to the mobile
+# VendorShell "Orders" navigation tab — rendered BEFORE the page content — so
+# "click the first order" silently reloaded the same queue. Product title,
+# price and status are equally unusable as an order identifier.
+vendor_sell_spec="e2e/specs/vendor-sell.spec.ts"
+if grep -qE 'getByRole\(\s*"link"' "${vendor_sell_spec}"; then
+  bad "vendor-sell must not identify an order by accessible name — it matches the Orders nav tab"
+elif grep -q 'getByTestId("vendor-order-card-link")' "${vendor_sell_spec}"; then
+  ok "vendor-sell targets the order card by test id, not by navigation chrome"
+else
+  bad "vendor-sell must target the order card via getByTestId(\"vendor-order-card-link\")"
+fi
+
+# The card link must actually carry that hook, in the vendor app.
+if grep -q 'data-testid="vendor-order-card-link"' \
+  "apps/vendor/app/[locale]/orders/_components/order-card.tsx"; then
+  ok "the vendor order-card link exposes the order-card test id"
+else
+  bad "apps/vendor order-card link must expose data-testid=vendor-order-card-link"
+fi
+
+# ship is reachable ONLY from processing+delivery (orders/state.py
+# TRANSITION_TABLE), so a freshly received order can never be shipped in one
+# click. The spec must walk every guarded transition, in order.
+lifecycle_order="$(grep -oE 'vendor-order-action-(confirm|pack|ship)' "${vendor_sell_spec}" | tr '\n' ' ')"
+case "${lifecycle_order}" in
+  "vendor-order-action-confirm vendor-order-action-pack vendor-order-action-ship "*)
+    ok "vendor-sell walks the real lifecycle confirm -> pack -> ship in order"
+    ;;
+  *)
+    bad "vendor-sell must exercise confirm -> pack -> ship (found: ${lifecycle_order:-none})"
+    ;;
+esac
+
+# The order the journey needs is not seeded statically: it is placed once per
+# run through the real order-creation service, inside the single mutating seed
+# step (the one place the service-role key is mapped).
+if grep -q -- '--transactional-cod' .github/workflows/e2e.yml \
+  && grep -q 'create_orders_atomic' services/api/app/staging/transactional.py; then
+  ok "the COD fixture order is created by the guarded order service, once per run"
+else
+  bad "vendor-sell needs a COD order placed via create_orders_atomic in the seed step"
+fi
+
+# A fabricated order would bypass the state machine entirely.
+if grep -qE 'table\("(orders|order_items|order_item_products)"\)' \
+  services/api/app/staging/transactional.py; then
+  bad "the transactional fixture must never write an order row directly"
+else
+  ok "the transactional fixture writes no order row by hand"
+fi
+
+# Exactly one mutating seed invocation per E2E run.
+e2e_seed_applies="$(grep -c -- '--apply' .github/workflows/e2e.yml || true)"
+if [ "${e2e_seed_applies}" = "1" ] && grep -q -- '--cleanup' .github/workflows/e2e.yml; then
+  ok "e2e workflow performs exactly one destructive cleanup+seed per run"
+else
+  bad "e2e workflow must run exactly one canonical cleanup+seed (found ${e2e_seed_applies} --apply)"
+fi
+
+# The staging service-role key is step-scoped. Job-level env would expose it to
+# every step including the Playwright run.
+e2e_job_env="$(sed -n '/^    env:/,/^    steps:/p' .github/workflows/e2e.yml || true)"
+if printf '%s' "${e2e_job_env}" | grep -q 'SERVICE_ROLE'; then
+  bad "the staging service-role key must never be a job-level env var in e2e.yml"
+elif [ "$(grep -c 'secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY' .github/workflows/e2e.yml || true)" = "1" ]; then
+  ok "staging service-role key is mapped into the canonical seed step only"
+else
+  bad "staging service-role key must be mapped exactly once, inside the seed step"
+fi
+
+# The seed target guard must run before the step that holds the key.
+seed_guard_line="$(grep -n 'Guard canonical seed target' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+seed_apply_line="$(grep -n 'Canonical cleanup + seed' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+browser_line="$(grep -n 'Install Playwright Chromium' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+if [ -z "${seed_guard_line}" ] || [ -z "${seed_apply_line}" ] || [ -z "${browser_line}" ]; then
+  bad "e2e workflow must guard the seed target, seed once, then install the browser"
+elif [ "${seed_guard_line}" -lt "${seed_apply_line}" ] && [ "${seed_apply_line}" -lt "${browser_line}" ]; then
+  ok "e2e seeds only after the fail-closed target guard and before any browser"
+else
+  bad "e2e seed ordering is wrong: guard -> seed -> browser"
+fi
+
+# The run-scoped PIN is masked and the private file is always removed.
+if grep -q '::add-mask::' .github/workflows/e2e.yml \
+  && grep -q 'convergeo-e2e-private.json' .github/workflows/e2e.yml \
+  && sed -n '/Remove private runtime material/,/run:/p' .github/workflows/e2e.yml | grep -q 'always()'; then
+  ok "scanner PIN is masked and its private file is removed with always()"
+else
+  bad "e2e must mask the scanner PIN and delete the private runtime file with always()"
+fi
+
+# The retired remote-reset contract must not come back.
+# --exclude this harness: it names the retired route in its own guard text, and
+# a self-match would fail the check forever.
+if grep -qE 'secrets\.E2E_SEED_(RESET_URL|TOKEN)' .github/workflows/e2e.yml \
+  || grep -rq --exclude="$(basename "${BASH_SOURCE[0]}")" 'internal/e2e/reset' \
+       .github/workflows scripts services/api/app 2>/dev/null; then
+  bad "the remote seed-reset endpoint contract must stay retired (direct workflow seeding only)"
+else
+  ok "no remote seed-reset endpoint — direct protected-staging workflow seeding only"
+fi
+
+# ── Focused diagnostic E2E mode ──────────────────────────────────────────────
+# A focused subset is a debugging tool, never a release gate. These guards keep
+# the two apart and keep the selection free of any injection surface.
+
+# The selector must be a typed choice — a free-text input could carry anything
+# into the job, and GitHub validates a choice against its options list before
+# the run starts.
+if sed -n '/^      focus_group:/,/^$/p' .github/workflows/e2e.yml \
+  | grep -q '^        type: choice$'; then
+  ok "focus_group is a typed choice input (no free-text selector)"
+else
+  bad "focus_group must be 'type: choice' — free text would reach the job unvalidated"
+fi
+
+# The allowlist itself.
+focus_opts_missing=""
+for opt in full previous-six cart vendor-auth checkout-honesty performance; do
+  grep -qE "^          - ${opt}$" .github/workflows/e2e.yml || focus_opts_missing="${focus_opts_missing} ${opt}"
+done
+if [ -z "${focus_opts_missing}" ]; then
+  ok "focus_group allowlist carries every diagnostic group"
+else
+  bad "focus_group allowlist is missing:${focus_opts_missing}"
+fi
+
+# Strict certification must always execute the complete matrix.
+if grep -q 'pre_release certification requires focus_group=full' .github/workflows/e2e.yml; then
+  ok "e2e refuses a focused pre_release run (certification runs the full matrix)"
+else
+  bad "e2e must fail closed when pre_release is combined with a focused subset"
+fi
+
+# A focused run must never be able to present itself as certification. The
+# certification artifact gate accepts integrated-staging only, so the mode
+# expression is what keeps a subset out.
+if grep -q "CERTIFICATION_MODE: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml \
+  && grep -q "'diagnostic-staging'" .github/workflows/e2e.yml; then
+  ok "focused runs are marked diagnostic-staging, never integrated-staging"
+else
+  bad "focused e2e runs must set CERTIFICATION_MODE=diagnostic-staging"
+fi
+
+# The input must never be interpolated into a shell command: the case statement
+# maps it to hardcoded spec paths instead.
+if grep -nE '^\s+(run:|.*npx playwright).*inputs\.focus_group' .github/workflows/e2e.yml >/dev/null 2>&1; then
+  bad "focus_group must not be interpolated into a run command — map it to hardcoded spec paths"
+else
+  ok "focus_group never reaches a command line (hardcoded spec paths only)"
+fi
+
+# Every allowlisted group must resolve to spec files that actually exist, or a
+# diagnostic run silently tests nothing.
+focus_specs_missing=""
+while read -r spec; do
+  [ -f "e2e/${spec}" ] || focus_specs_missing="${focus_specs_missing} ${spec}"
+done < <(grep -oE 'specs/[a-z0-9-]+\.spec\.ts' .github/workflows/e2e.yml | sort -u)
+if [ -z "${focus_specs_missing}" ]; then
+  ok "every focus-group spec path exists"
+else
+  bad "focus-group spec paths do not exist:${focus_specs_missing}"
+fi
+
+# A focused run is only worth reading if it ran the canonical seed and the same
+# strict identity proof as certification.
+if grep -q 'E2E_STAGING_SETUP:' .github/workflows/e2e.yml \
+  && grep -q "if: \${{ env.E2E_STAGING_SETUP == 'true' }}" .github/workflows/e2e.yml \
+  && grep -q "E2E_STRICT_SHA: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml; then
+  ok "focused runs keep the canonical seed and strict identity/SHA proof"
+else
+  bad "focused e2e runs must still seed canonically and prove deployed identity"
+fi
+
+# The expected matrix must be listed with the same selection the run uses, or
+# EXPECTED vs DISCOVERED compares a subset against all 65 and always fails.
+if sed -n '/Record expected matrix/,/Run E2E suite/p' .github/workflows/e2e.yml \
+  | grep -q 'playwright test ${FOCUS_SPECS} --list'; then
+  ok "expected-matrix listing uses the same focused selection as the run"
+else
+  bad "the --list step must apply the same focus selection as the run step"
+fi
+
+# ── Strict E2E execution policy (PR C) ───────────────────────────────────────
+# "Skipped" and "passed" look identical in a green tick. A release baseline that
+# silently skipped a required journey never exercised it — but reported success.
+
+# Every release-critical journey must declare REQUIRED_STRICT *and* enforce it.
+# Declaring without enforcing is the exact regression this guards against.
+strict_sites_ok=1
+for site in \
+  "e2e/specs/auth-otp.spec.ts:customer OTP verification" \
+  "e2e/specs/vendor-sell.spec.ts:vendor authenticated sell flow" \
+  "e2e/specs/event-ticket.spec.ts:free RSVP scanner verify + duplicate-reject" \
+  "e2e/specs/event-ticket.spec.ts:paid ticket order through admission" \
+  "e2e/specs/critical-path.spec.ts:checkout place-order -> payment surface" \
+  "e2e/specs/shop-checkout-momo.spec.ts:MoMo checkout and Lenco sandbox charge (F9b)"; do
+  spec_file="${site%%:*}"
+  spec_journey="${site#*:}"
+  if ! grep -q 'kind: "REQUIRED_STRICT"' "${spec_file}"; then
+    bad "${spec_file} no longer declares a REQUIRED_STRICT gate"
+    strict_sites_ok=0
+  elif ! grep -vE '^\s*(//|\*|/\*)' "${spec_file}" | grep -q 'enforceGate('; then
+    # Comment lines are stripped first: a commented-out enforceGate() is exactly
+    # the silent-skip regression this guard exists to catch.
+    bad "${spec_file} declares a required gate but never enforces it — it would silently skip"
+    strict_sites_ok=0
+  elif ! grep -qF "${spec_journey}" "${spec_file}"; then
+    bad "${spec_file} lost its REQUIRED_STRICT journey label (${spec_journey})"
+    strict_sites_ok=0
+  fi
+done
+if [ "${strict_sites_ok}" = "1" ]; then
+  ok "all six release-critical journeys declare AND enforce REQUIRED_STRICT"
+fi
+
+# Optional gates must stay classified and must never escalate.
+optional_ok=1
+for site in \
+  "e2e/specs/clips-feed.spec.ts:FEATURE_DISABLED" \
+  "e2e/specs/clips-commerce.spec.ts:FEATURE_DISABLED" \
+  "e2e/specs/mobile-layout.spec.ts:VIEWPORT_NOT_APPLICABLE"; do
+  spec_file="${site%%:*}"
+  spec_kind="${site#*:}"
+  if ! grep -q "kind: \"${spec_kind}\"" "${spec_file}"; then
+    bad "${spec_file} lost its ${spec_kind} classification"
+    optional_ok=0
+  elif grep -vE '^\s*(//|\*|/\*)' "${spec_file}" | grep -q 'enforceGate('; then
+    bad "${spec_file} must not enforce — ${spec_kind} is never a certification failure"
+    optional_ok=0
+  fi
+done
+if [ "${optional_ok}" = "1" ]; then
+  ok "optional/feature/viewport gates stay classified and never escalate"
+fi
+
+# One definition of strict mode, reusing the existing certification helper.
+# The policy's failure text legitimately says "integrated-staging"; what must
+# never happen is the policy READING the environment for itself.
+if grep -q 'strictCertificationRequired' e2e/fixtures/gating.ts \
+  && ! grep -qE 'process\.env|CERTIFICATION_MODE' e2e/fixtures/gating-policy.ts; then
+  ok "gating reuses strictCertificationRequired — no second definition of strict mode"
+else
+  bad "gating must derive strict mode from strictCertificationRequired(), not re-read the env"
+fi
+
+# Failure messages name the missing FIXTURE, never its value.
+if grep -nE 'resolveGate\(\{' -A6 e2e/specs/*.spec.ts \
+  | grep -qE '(staticCode|scannerPin|ticketPin\(\)|process\.env)'; then
+  bad "a spec passes a credential VALUE into resolveGate — pass the fixture NAME only"
+else
+  ok "gates carry fixture NAMES only, never OTP/PIN/service-role/bypass values"
+fi
+
+# The gating tests import a .ts module, so every self-test invocation must carry
+# the type-stripping flag or release-certify breaks the moment it runs them.
+selftest_calls="$(grep -rhoE 'node .*--test scripts/qa/self-test/\*\.test\.mjs' \
+  .github/workflows package.json scripts/qa/release-certify.sh 2>/dev/null || true)"
+if [ -z "${selftest_calls}" ]; then
+  bad "could not locate the qa self-test invocations"
+elif printf '%s\n' "${selftest_calls}" | grep -qv -- '--experimental-strip-types'; then
+  bad "every 'node --test scripts/qa/self-test/*' invocation must pass --experimental-strip-types"
+else
+  ok "all qa self-test invocations enable TypeScript stripping for the gating tests"
 fi
 
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"

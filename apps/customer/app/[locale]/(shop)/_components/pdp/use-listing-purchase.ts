@@ -1,9 +1,10 @@
 "use client";
 
+import { ApiError } from "@vergeo/config";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { catalogSaleUnitLabels, formatListingQuantity, resolveSaleUnit } from "../sale-quantity";
 
 import {
@@ -14,6 +15,9 @@ import {
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
+import { usePickupLocationSelection } from "./use-pickup-location-selection";
+
+import type { PickupLocation } from "./pickup-locations";
 
 export type ListingPurchaseControls = {
   quantity: number;
@@ -27,6 +31,34 @@ export type ListingPurchaseControls = {
   handleAddToCart: () => void;
   stockLabel: string;
   maxQuantity: number | null;
+  /** null while unknown (loading/error) — the picker/gate must never treat null as "not required". */
+  pickupBranchTracked: boolean | null;
+  pickupLocations: PickupLocation[];
+  pickupLocationsLoading: boolean;
+  pickupLocationsLoadError: boolean;
+  selectedPickupLocationId: string | null;
+  selectPickupLocation: (locationId: string) => void;
+  /** False while the listing has options and the buyer hasn't completed them. */
+  variantSatisfied: boolean;
+  /** True after an add-to-cart was blocked for missing options (highlight them). */
+  showMissingOptions: boolean;
+};
+
+/** API variant refusals that deserve a specific message instead of the generic one. */
+const VARIANT_ERROR_KEYS: Record<string, string> = {
+  "cart.variant_out_of_stock": "pdp.variants.errors.outOfStock",
+  "cart.variant_unavailable": "pdp.variants.errors.unavailable",
+  "cart.variant_invalid": "pdp.variants.errors.unavailable",
+  "cart.variant_conflict": "pdp.variants.errors.conflict",
+};
+
+export type ListingPurchaseVariant = {
+  /** Listing has option groups — a complete choice is needed to buy. */
+  required: boolean;
+  /** Resolved variant for the current picks, or null while incomplete. */
+  variantId: string | null;
+  /** Message shown when add-to-cart is blocked for missing options. */
+  missingLabel: string;
 };
 
 /**
@@ -36,6 +68,7 @@ export function useListingPurchase(
   listing: BuyBoxListing | null,
   labels: BuyBoxLabels,
   locale = "en",
+  variant?: ListingPurchaseVariant,
 ): ListingPurchaseControls | null {
   const t = useTranslations("catalog");
   const listingId = listing?.id ?? null;
@@ -46,8 +79,15 @@ export function useListingPurchase(
     listing ? clampQuantity(getMinimumQuantity(listing), listing) : 1,
   );
   const [adding, setAdding] = useState(false);
+  const addingRef = useRef(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const [showMissingOptions, setShowMissingOptions] = useState(false);
+  const variantRequired = variant?.required ?? false;
+  const variantId = variant?.variantId ?? null;
+  const variantMissingLabel = variant?.missingLabel ?? "";
+  const variantSatisfied = !variantRequired || variantId !== null;
+  const pickup = usePickupLocationSelection(listingId);
 
   const listingStockMode = listing?.stockMode;
   const listingStockQty = listing?.stockQty;
@@ -57,10 +97,9 @@ export function useListingPurchase(
     if (!listing) {
       return;
     }
-    // Intentional identity deps (id / stock bounds) — avoid resetting on new object identity each render.
+    // Stock bounds or a refreshed listing object only re-clamp the quantity;
+    // the add-to-cart outcome stays visible (e.g. after a cart add refreshes stock).
     setQuantity(clampQuantity(getMinimumQuantity(listing), listing));
-    setAddError(null);
-    setAddedMessage(null);
   }, [
     listing,
     listingId,
@@ -70,6 +109,13 @@ export function useListingPurchase(
     listingStockQty,
     listingInStock,
   ]);
+
+  useEffect(() => {
+    // A different listing starts with a clean purchase state.
+    setAddError(null);
+    setAddedMessage(null);
+    setShowMissingOptions(false);
+  }, [listingId]);
 
   const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
   const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
@@ -110,27 +156,85 @@ export function useListingPurchase(
   }, [listing]);
 
   const handleAddToCart = useCallback(() => {
-    if (!listing || !listing.inStock || adding) {
+    if (!listing || adding || addingRef.current) {
+      return;
+    }
+    // Options first: a buyer must be told what to pick even when the listing
+    // as a whole reads out of stock for their current partial choice.
+    if (!variantSatisfied) {
+      setAddError(variantMissingLabel);
+      setShowMissingOptions(true);
+      return;
+    }
+    if (!listing.inStock) {
+      return;
+    }
+    // Fail closed: never send add-to-cart while branch-tracking status is
+    // unknown (loading/error) or known-tracked with no branch chosen yet —
+    // the server would reject it as cart.pickup_location_required anyway,
+    // but this never silently omits pickup_location_id for a real user click.
+    if (pickup.branchTracked !== false && !pickup.selectedLocationId) {
+      setAddError(t("pdp.buyBox.pickup.required"));
       return;
     }
 
+    addingRef.current = true;
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
-    void addCartItem(listing.id, quantity)
-      .then(() => {
-        setAddedMessage(labels.addToCartLabel);
-        setLastAddedMessage(labels.addToCartLabel);
-        openMiniCart();
-      })
-      .catch(() => {
-        setAddError(labels.addToCartErrorLabel);
+    void (async () => {
+      const { addCartItem, openMiniCart, setLastAddedMessage } =
+        await import("../cart/mini-cart-drawer");
+      await addCartItem(
+        listing.id,
+        quantity,
+        undefined,
+        pickup.selectedLocationId || variantId
+          ? {
+              ...(pickup.selectedLocationId
+                ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" as const }
+                : {}),
+              ...(variantId ? { listingVariantId: variantId } : {}),
+            }
+          : undefined,
+      );
+      setAddedMessage(labels.addToCartLabel);
+      setLastAddedMessage(labels.addToCartLabel);
+      openMiniCart();
+      emitToastKey("addedToCart", { type: "cart" });
+    })()
+      .catch((error: unknown) => {
+        const variantErrorKey =
+          error instanceof ApiError ? VARIANT_ERROR_KEYS[error.code] : undefined;
+        setAddError(variantErrorKey ? t(variantErrorKey) : labels.addToCartErrorLabel);
+        emitToastKey("addToCartFailed", { type: "error" });
       })
       .finally(() => {
+        addingRef.current = false;
         setAdding(false);
       });
-  }, [adding, labels.addToCartErrorLabel, labels.addToCartLabel, listing, quantity]);
+  }, [
+    adding,
+    labels.addToCartErrorLabel,
+    labels.addToCartLabel,
+    listing,
+    pickup.branchTracked,
+    pickup.selectedLocationId,
+    quantity,
+    t,
+    variantId,
+    variantMissingLabel,
+    variantSatisfied,
+  ]);
+
+  // Clear the "missing options" highlight once the choice is complete.
+  useEffect(() => {
+    if (variantSatisfied) {
+      setShowMissingOptions(false);
+      setAddError((current) => (current === variantMissingLabel ? null : current));
+    }
+  }, [variantSatisfied, variantMissingLabel]);
 
   if (!listing) {
     return null;
@@ -150,6 +254,14 @@ export function useListingPurchase(
     addedMessage,
     handleAddToCart,
     stockLabel,
+    pickupBranchTracked: pickup.branchTracked,
+    pickupLocations: pickup.locations,
+    pickupLocationsLoading: pickup.loading,
+    pickupLocationsLoadError: pickup.loadError,
+    selectedPickupLocationId: pickup.selectedLocationId,
+    selectPickupLocation: pickup.selectLocation,
     maxQuantity,
+    variantSatisfied,
+    showMissingOptions,
   };
 }

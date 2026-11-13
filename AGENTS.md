@@ -2,11 +2,15 @@
 
 Project overview, decisions, and conventions live in `CLAUDE.md` and `docs/`. Standard commands are in `README.md` (JS/TS) and `services/api/README.md` (Python API).
 
-## Git branching (Cursor Cloud)
+## Git branching and cloud task identity
 
-- **Base branch:** `master` — branch from `master`, open PRs against `master`.
-- **Do not use** `claude/nice-knuth-ijvthu` (deleted); it was a stale ex-default branch that caused Wave-1 tangles.
-- Feature branches: `cursor/<descriptive-name>-<suffix>` off `master`.
+- An explicit user-specified source branch, commit and PR target take precedence over generic branching defaults.
+- For the PR #714 release continuation, select `hardening/20260924-converged-implementation` in the cloud task's source selector. Its parent PR targets `staging`; this does not make `staging` the implementation source. Do not reconstruct the candidate from `master` or S3.
+- Before editing, record `git rev-parse HEAD`, `git rev-parse HEAD^{tree}` and the working-tree status, and compare them with the task's expected identity. On a mismatch, stop before editing and request the correct task source.
+- A temporary local branch named `work`, a detached checkout, or no configured shell remote is not by itself an identity failure. Verify the actual source commit/tree; do not rename a branch and claim that changed its contents.
+- Use only the available, authorized repository publication control. A returned PR title/body without a URL or remotely verified ref is not publication proof. Do not bypass network controls or request production credentials to repair a task checkout.
+- Do not merge into `staging` or `master`, dispatch deployments, mutate shared databases, or activate money without the corresponding explicit authorization. Preserve the candidate's branch-specific deployment guards.
+- For unrelated work without a specified base, the default is `master`; use `cursor/<descriptive-name>-<suffix>` only for Cursor tasks. Never use the deleted `claude/nice-knuth-ijvthu` branch.
 
 ## Cursor Cloud specific instructions
 
@@ -36,6 +40,6 @@ Environment refresh (nvm node + pnpm, uv + API deps) is handled by the startup u
 
 ### Lint/test/build
 
-- JS/TS: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (turbo, all workspaces). Only the `customer` app currently has vitest tests.
+- JS/TS: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (turbo, all workspaces). Inspect the current workspace test scripts; do not assume only one app has tests.
 - API: from `services/api`, `uv run ruff check .`, `uv run mypy app tests scripts`, `uv run pytest` (Makefile wrappers `make api-lint|api-test|api-typecheck` are still placeholders — call `uv run ...` directly).
 - The i18n messages live in `packages/i18n/messages/<locale>/<namespace>.json` (17 namespaces, nested keys). EN is the source-of-truth with full coverage and `fr`/`zh` are complete; `bem`/`nya` are partial (13/17 namespaces — `admin`/`ai`/`legal`/`vendor` still EN-only) and fall back to EN via runtime deep-merge (`packages/i18n/src/request.ts`), so a missing vernacular key renders English, never a raw key path.

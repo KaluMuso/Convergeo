@@ -117,31 +117,13 @@ def _branch_claim_script(
     location_sql: str,
     expires_literal: str,
 ) -> str:
-    return f"""
-BEGIN;
-WITH claimed AS (
-  UPDATE public.listing_location_stock
-  SET stock_qty = stock_qty - {qty_sql}
-  WHERE listing_id = {listing_sql}
-    AND location_id = {location_sql}
-    AND stock_qty >= {qty_sql}
-  RETURNING stock_qty
-),
-upserted AS (
-  INSERT INTO public.stock_reservations (
-    listing_id, checkout_group_id, qty, expires_at, location_id
-  )
-  SELECT {listing_sql}, {group_sql}, {qty_sql}, '{expires_literal}'::timestamptz, {location_sql}
-  FROM claimed
-  ON CONFLICT (listing_id, checkout_group_id) DO UPDATE
-    SET qty = EXCLUDED.qty,
-        expires_at = EXCLUDED.expires_at,
-        location_id = EXCLUDED.location_id
-  RETURNING 1
-)
-SELECT stock_qty::text FROM claimed;
-COMMIT;
-"""
+    return _claim_script(
+        listing_sql=listing_sql,
+        group_sql=group_sql,
+        qty_sql=qty_sql,
+        location_sql=location_sql,
+        expires_literal=expires_literal,
+    )
 
 
 def _legacy_claim_script(
@@ -151,28 +133,35 @@ def _legacy_claim_script(
     qty_sql: str,
     expires_literal: str,
 ) -> str:
+    return _claim_script(
+        listing_sql=listing_sql,
+        group_sql=group_sql,
+        qty_sql=qty_sql,
+        location_sql="null::uuid",
+        expires_literal=expires_literal,
+    )
+
+
+def _claim_script(
+    *,
+    listing_sql: str,
+    group_sql: str,
+    qty_sql: str,
+    location_sql: str,
+    expires_literal: str,
+) -> str:
+    # The SQL authority binds the complete claim before consuming stock, and
+    # preserves that identity after release. NULL means rejection, not zero
+    # remaining stock (which is a successful last-item claim).
     return f"""
 BEGIN;
-WITH claimed AS (
-  UPDATE public.vendor_listings
-  SET stock_qty = stock_qty - {qty_sql}
-  WHERE id = {listing_sql}
-    AND stock_mode = 'tracked'
-    AND stock_qty >= {qty_sql}
-  RETURNING stock_qty
-),
-upserted AS (
-  INSERT INTO public.stock_reservations (
-    listing_id, checkout_group_id, qty, expires_at
-  )
-  SELECT {listing_sql}, {group_sql}, {qty_sql}, '{expires_literal}'::timestamptz
-  FROM claimed
-  ON CONFLICT (listing_id, checkout_group_id) DO UPDATE
-    SET qty = EXCLUDED.qty,
-        expires_at = EXCLUDED.expires_at
-  RETURNING 1
+WITH claimed AS MATERIALIZED (
+  SELECT public.claim_stock_reservation(
+    {listing_sql}, {group_sql}, {qty_sql}, {location_sql},
+    '{expires_literal}'::timestamptz
+  ) AS remaining
 )
-SELECT stock_qty::text FROM claimed;
+SELECT remaining::text FROM claimed WHERE remaining IS NOT NULL;
 COMMIT;
 """
 

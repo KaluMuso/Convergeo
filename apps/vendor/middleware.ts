@@ -6,6 +6,7 @@ import {
   getLocaleFromPath,
   handleCspReportRequest,
   isCspReportRequest,
+  isHealthCheckPath,
   mergeSessionCookies,
   resolveGatedRedirect,
   updateSession,
@@ -14,6 +15,8 @@ import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
+
+import { isVendorAuthSetupPath } from "./lib/password-recovery-path";
 
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
@@ -55,13 +58,19 @@ export default async function middleware(request: NextRequest) {
 
   const session = await updateSession(request);
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
-  const gate = resolveGatedRedirect(
-    "vendor",
-    request.nextUrl.pathname,
-    LOCALES,
-    session.user,
-    session.roles,
-  );
+  // /health carries only non-secret status/config facts (see route.ts) — it
+  // must stay reachable unauthenticated, like any deployment health check.
+  const gate =
+    isHealthCheckPath(request.nextUrl.pathname, LOCALES) ||
+    isVendorAuthSetupPath(request.nextUrl.pathname)
+      ? null
+      : resolveGatedRedirect(
+          "vendor",
+          request.nextUrl.pathname,
+          LOCALES,
+          session.user,
+          session.roles,
+        );
 
   if (gate) {
     return applyReportOnlyCspNonce(
@@ -80,5 +89,9 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
+  // See apps/customer/middleware.ts for the full rationale: a locale-less
+  // path (e.g. `/onboarding`, `/sw.js`) previously skipped both the gate
+  // check and next-intl's redirect, landing on `/[locale]` with an invalid
+  // locale value and throwing when any interpolated message tried to format.
+  matcher: ["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

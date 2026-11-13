@@ -24,7 +24,7 @@ function emptyMini(index: number): MegaMenuMiniDraft {
   return {
     key: `mini-${index}`,
     title: "",
-    href: "/en/search",
+    href: "/search",
   };
 }
 

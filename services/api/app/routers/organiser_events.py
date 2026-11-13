@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -37,16 +37,26 @@ EVENT_CATEGORIES = (
     "cultural-arts",
     "lifestyle-community",
     "free-rsvp",
+    "music",
+    "comedy-theatre-parent",
+    "sports",
+    "conferences-workshops",
+    "family",
+    "religious",
+    "markets",
+    "exhibitions",
+    "nightlife",
+    "community",
+    "private-events",
+    "concerts",
+    "festivals",
+    "gospel",
+    "stand-up",
+    "football",
+    "church",
 )
 
-EventCategory = Literal[
-    "workshops",
-    "comedy-theatre",
-    "pop-up-dinners",
-    "cultural-arts",
-    "lifestyle-community",
-    "free-rsvp",
-]
+EventCategory = str
 
 EventStatus = Literal["draft", "published", "cancelled", "completed"]
 PlatformFeePayer = Literal["organiser", "buyer"]
@@ -102,6 +112,8 @@ class EventCreateRequest(StrictModel):
     recurrence_until: str | None = Field(default=None, max_length=64)
     recurrence_horizon_days: int | None = Field(default=None, ge=14, le=366)
     platform_fee_payer: PlatformFeePayer = "organiser"
+    city: str | None = Field(default=None, max_length=80)
+    id_check_enabled: bool = False
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
@@ -134,6 +146,8 @@ class EventUpdateRequest(StrictModel):
     recurrence_until: str | None = Field(default=None, max_length=64)
     recurrence_horizon_days: int | None = Field(default=None, ge=14, le=366)
     platform_fee_payer: PlatformFeePayer | None = None
+    city: str | None = Field(default=None, max_length=80)
+    id_check_enabled: bool | None = None
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
@@ -164,6 +178,8 @@ class EventSummary(StrictModel):
     recurrence_timezone: str | None = None
     recurrence_until: datetime | None = None
     platform_fee_payer: PlatformFeePayer = "organiser"
+    city: str | None = None
+    id_check_enabled: bool = False
     venue: str | None = None
     landmark: str | None = None
     images: list[str] = Field(default_factory=list)
@@ -186,6 +202,9 @@ class EventDetailResponse(StrictModel):
     recurrence_until: datetime | None = None
     recurrence_horizon_days: int = 90
     platform_fee_payer: PlatformFeePayer = "organiser"
+    city: str | None = None
+    id_check_enabled: bool = False
+    high_value_verified: bool = False
     refund_policy_key: str | None = None
     age_restriction: int | None = None
     terms: str | None = None
@@ -279,22 +298,28 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
     for suffix in range(0, 100):
         candidate = base if suffix == 0 else f"{base}-{suffix}"
         existing = (
-            client.table("events")
-            .select("id")
-            .eq("slug", candidate)
-            .maybe_single()
-            .execute()
+            client.table("events").select("id").eq("slug", candidate).maybe_single().execute()
         )
         if _single_row(existing) is None:
             return candidate
     return f"{base}-{uuid.uuid4().hex[:8]}"
 
 
-def _category_from_row(row: dict[str, Any]) -> EventCategory | None:
+def _assert_known_category(slug: str) -> None:
+    if slug not in EVENT_CATEGORIES:
+        raise AppError(
+            code="invalid_category",
+            message="Unknown event category",
+            http_status=422,
+            details={"field": "category", "message_key": "vendor.events.errors.invalidCategory"},
+        )
+
+
+def _category_from_row(row: dict[str, Any]) -> str | None:
     """Read events.category_slug (0036), guarding against unknown values."""
     raw = row.get("category_slug")
-    if isinstance(raw, str) and raw in EVENT_CATEGORIES:
-        return raw  # type: ignore[return-value]
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
     return None
 
 
@@ -483,8 +508,9 @@ def _load_event_for_vendor(
         .select(
             "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
             "status, category_slug, landmark, event_type, visibility, recurrence_rule, "
-            "recurrence_timezone, recurrence_until, recurrence_horizon_days, platform_fee_payer, "
-            "refund_policy_key, age_restriction, terms"
+            "recurrence_timezone, recurrence_until, recurrence_horizon_days, "
+            "platform_fee_payer, refund_policy_key, age_restriction, terms, "
+            "city, id_check_enabled, high_value_verified_at"
         )
         .eq("id", event_id)
         .maybe_single()
@@ -569,6 +595,9 @@ def _serialize_event_detail(
         recurrence_until=_recurrence_until_from_row(event_row),
         recurrence_horizon_days=int(event_row.get("recurrence_horizon_days") or 90),
         platform_fee_payer=_platform_fee_payer_from_row(event_row),
+        city=_optional_text(event_row, "city"),
+        id_check_enabled=bool(event_row.get("id_check_enabled")),
+        high_value_verified=bool(event_row.get("high_value_verified_at")),
         refund_policy_key=_optional_text(event_row, "refund_policy_key"),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
         terms=_optional_text(event_row, "terms"),
@@ -607,6 +636,8 @@ def _serialize_event_summary(
         recurrence_timezone=_optional_text(event_row, "recurrence_timezone"),
         recurrence_until=_recurrence_until_from_row(event_row),
         platform_fee_payer=_platform_fee_payer_from_row(event_row),
+        city=_optional_text(event_row, "city"),
+        id_check_enabled=bool(event_row.get("id_check_enabled")),
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
@@ -691,14 +722,43 @@ def _schedule_event_date_label(client: Any, event_id: str) -> str:
     if not instances:
         return ""
     starts_at_values = [
-        _parse_starts_at(row["starts_at"])
-        for row in instances
-        if row.get("starts_at") is not None
+        _parse_starts_at(row["starts_at"]) for row in instances if row.get("starts_at") is not None
     ]
     if not starts_at_values:
         return ""
     earliest = min(starts_at_values)
     return earliest.astimezone(UTC).strftime("%d %b %Y, %H:%M UTC")
+
+
+def _record_event_reschedule(
+    client: Any,
+    *,
+    event_id: str,
+    actor_user_id: str,
+    old_instances: list[dict[str, Any]],
+    new_instances: list[EventInstanceInput],
+    old_venue: str,
+    new_venue: str,
+) -> None:
+    announced = datetime.now(UTC)
+    payload = {
+        "event_id": event_id,
+        "actor_user_id": actor_user_id,
+        "reason": "schedule_or_venue_change",
+        "old_schedule": [
+            {"id": row.get("id"), "starts_at": row.get("starts_at"), "ends_at": row.get("ends_at")}
+            for row in old_instances
+        ],
+        "new_schedule": [
+            {"id": item.id, "starts_at": item.starts_at, "ends_at": item.ends_at}
+            for item in new_instances
+        ],
+        "old_venue": old_venue or None,
+        "new_venue": new_venue or None,
+        "announced_at": announced.isoformat(),
+        "opt_out_deadline": (announced + timedelta(days=7)).isoformat(),
+    }
+    client.table("event_reschedules").insert(payload).execute()
 
 
 def _notify_schedule_change(
@@ -859,8 +919,9 @@ async def list_organiser_events(
         client.table("events")
         .select(
             "id, title, slug, description, venue, images, status, category_slug, landmark, "
-            "event_type, visibility, recurrence_rule, recurrence_timezone, recurrence_until, "
-            "recurrence_horizon_days, platform_fee_payer"
+            "event_type, visibility, recurrence_rule, recurrence_timezone, "
+            "recurrence_until, recurrence_horizon_days, platform_fee_payer, "
+            "city, id_check_enabled, high_value_verified_at"
         )
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
@@ -884,6 +945,7 @@ async def create_organiser_event(
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(service_client, vendor)
+    _assert_known_category(body.category)
     _validate_instance_time_order(body.instances)
     _validate_recurrence_payload(
         event_type=body.event_type,
@@ -892,9 +954,8 @@ async def create_organiser_event(
         recurrence_until=body.recurrence_until,
     )
     seed = body.instances[0] if body.instances else None
-    recurring_seed_invalid = (
-        body.event_type == "recurring"
-        and (len(body.instances) != 1 or seed is None or seed.ends_at is None)
+    recurring_seed_invalid = body.event_type == "recurring" and (
+        len(body.instances) != 1 or seed is None or seed.ends_at is None
     )
     if recurring_seed_invalid:
         raise AppError(
@@ -930,6 +991,8 @@ async def create_organiser_event(
         ),
         "recurrence_horizon_days": body.recurrence_horizon_days or 90,
         "platform_fee_payer": body.platform_fee_payer,
+        "city": body.city.strip() if body.city else None,
+        "id_check_enabled": body.id_check_enabled,
         "refund_policy_key": (body.refund_policy_key or "").strip() or None,
         "age_restriction": body.age_restriction,
         "terms": (body.terms or "").strip() or None,
@@ -1063,9 +1126,7 @@ async def update_organiser_event(
         body.recurrence_until
         if "recurrence_until" in body.model_fields_set
         else (
-            recurrence_until_from_row.isoformat()
-            if recurrence_until_from_row is not None
-            else None
+            recurrence_until_from_row.isoformat() if recurrence_until_from_row is not None else None
         )
     )
     _validate_recurrence_payload(
@@ -1100,6 +1161,7 @@ async def update_organiser_event(
     if body.description is not None:
         updates["description"] = body.description.strip() or None
     if body.category is not None:
+        _assert_known_category(body.category)
         updates["category_slug"] = body.category
     if body.landmark is not None:
         updates["landmark"] = body.landmark.strip() or None
@@ -1135,6 +1197,10 @@ async def update_organiser_event(
         updates["recurrence_horizon_days"] = body.recurrence_horizon_days
     if body.platform_fee_payer is not None:
         updates["platform_fee_payer"] = body.platform_fee_payer
+    if body.city is not None:
+        updates["city"] = body.city.strip() or None
+    if body.id_check_enabled is not None:
+        updates["id_check_enabled"] = body.id_check_enabled
     if body.refund_policy_key is not None:
         updates["refund_policy_key"] = body.refund_policy_key.strip() or None
     if body.age_restriction is not None:
@@ -1182,6 +1248,15 @@ async def update_organiser_event(
         )
         if venue_changed or dates_changed:
             holders = _load_ticket_holders(client, event_id)
+            _record_event_reschedule(
+                client,
+                event_id=event_id,
+                actor_user_id=current_user.id,
+                old_instances=instances_before,
+                new_instances=body.instances or [],
+                old_venue=str(venue_before or ""),
+                new_venue=str(event_row.get("venue") or ""),
+            )
             _notify_schedule_change(
                 client,
                 event_id=event_id,
@@ -1222,6 +1297,20 @@ async def publish_organiser_event(
             http_status=422,
             details={"field": "access_code"},
         )
+    from app.services.events.disputes_policy import UPHELD_SUSPENSION_THRESHOLD
+    from app.services.events.high_value import (
+        assert_high_value_publish_allowed,
+        count_upheld_event_disputes,
+    )
+
+    if count_upheld_event_disputes(vendor_id) >= UPHELD_SUSPENSION_THRESHOLD:
+        raise AppError(
+            code="organiser_dispute_suspended",
+            message="Ticketed publishing is suspended after three upheld event disputes",
+            http_status=403,
+            details={"message_key": "vendor.events.errors.disputeSuspended"},
+        )
+    assert_high_value_publish_allowed(event_row)
 
     event_row = _transition_status(
         service_client,

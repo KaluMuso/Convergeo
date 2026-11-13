@@ -5,6 +5,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Skeleton } from "@vergeo/ui/src/skeleton";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -244,6 +245,7 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
                           })
                           .catch(() => {
                             setActionError(labels.loadError);
+                            emitToastKey("addToCartFailed", { type: "error" });
                           })
                           .finally(() => {
                             setCartBusy(null);

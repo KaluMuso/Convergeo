@@ -5,7 +5,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { parseAuthError, parseRetryAfterFromResponse, RESEND_COOLDOWN_SECONDS } from "./auth-utils";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
@@ -51,37 +51,72 @@ export function OtpForm({
   const [code, setCode] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /**
+   * Single-flight lock for OTP verification.
+   *
+   * A `loading` STATE flag cannot do this job. Verification has two independent
+   * triggers — OtpField auto-submits via `onComplete` the instant the sixth
+   * digit lands, and the Verify button's `onClick` — and `setLoading(true)`
+   * only takes effect on the next render commit. A second trigger firing before
+   * that commit (a click arriving in the same tick as the auto-submit, which is
+   * exactly what a fast client does) still reads `loading === false` from its
+   * own render closure and fires a duplicate `verifyOtp` for one submission.
+   * Run #68's Vendor OTP traces show two POSTs to /auth/v1/verify for a single
+   * code; the second necessarily races the first for an already-spent OTP.
+   *
+   * A ref mutation is synchronous and immediately visible to every subsequent
+   * call in the same tick, so acquiring it before the first `await` closes the
+   * window. This is the same guarantee OtpField already gives its own
+   * `onComplete` via `completedRef` — the form just never applied it here.
+  */
+  const verifyingRef = useRef(false);
+  // Supabase OTPs are single-use. Once accepted, a later cart reconciliation
+  // failure may be retried, but the spent code must never be submitted again.
+  const authAcceptedRef = useRef(false);
 
   const handleVerify = async (otpCode: string) => {
-    if (otpCode.length !== 6 || loading) {
+    // Acquire synchronously, before any await, or the guard is not a guard.
+    if (otpCode.length !== 6 || verifyingRef.current) {
       return;
     }
+    verifyingRef.current = true;
 
     setErrorMessage(null);
     setLoading(true);
 
     try {
-      const supabase = await getBrowserClient();
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otpCode,
-        type: "sms",
-      });
+      if (!authAcceptedRef.current) {
+        const supabase = await getBrowserClient();
+        const { error } = await supabase.auth.verifyOtp({
+          phone,
+          token: otpCode,
+          type: "sms",
+        });
 
-      if (error) {
-        const parsed = parseAuthError(error);
-        if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
-        } else if (parsed.code === "wrong_code") {
-          setErrorMessage(labels.wrongCode);
-        } else if (parsed.code === "expired") {
-          setErrorMessage(labels.expired);
-        } else {
-          setErrorMessage(labels.generic);
+        if (error) {
+          const parsed = parseAuthError(error);
+          if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
+          } else if (parsed.code === "wrong_code") {
+            setErrorMessage(labels.wrongCode);
+          } else if (parsed.code === "expired") {
+            setErrorMessage(labels.expired);
+          } else {
+            setErrorMessage(labels.generic);
+          }
+          // Recoverable: the user must be able to correct and resubmit the code.
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
         }
-        return;
+
+        authAcceptedRef.current = true;
       }
 
+      // Deliberately NOT released after navigation succeeds: the code is
+      // consumed and the component is transitioning away.
       await navigateAfterPortalAuth({
         router,
         locale,
@@ -90,6 +125,11 @@ export function OtpForm({
         fallbackPath: defaultNextPath,
       });
     } catch (response) {
+      // Re-arm only this flight. If OTP acceptance already succeeded, the next
+      // submit skips verifyOtp and retries post-auth reconciliation/navigation.
+      verifyingRef.current = false;
+      setLoading(false);
+
       if (response instanceof Response && response.status === 429) {
         let body: unknown;
         try {
@@ -102,8 +142,6 @@ export function OtpForm({
         return;
       }
       setErrorMessage(labels.generic);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -15,10 +15,9 @@ from app.routers.events_public import (
     instance_in_window,
     order_instances,
     parse_starts_at,
-    tonight_window,
-    weekend_window,
 )
 from app.services.events.access import hash_access_code, issue_event_access_proof
+from app.services.events.date_windows import tonight_window, weekend_window
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -548,6 +547,28 @@ def test_detail_surfaces_category_and_event_landmark(store: FakeSupabaseStore) -
     assert detail.landmark == "Next to the National Museum"
 
 
+def test_detail_surfaces_platform_fee_bps_matching_ticket_purchase(
+    store: FakeSupabaseStore,
+) -> None:
+    from app.services.events.fees import EVENT_TICKETS_RATE_BPS, platform_fee_ngwee
+
+    _append_categorised_event(
+        store,
+        suffix="fe",
+        slug="fee-event",
+        title="Fee Event",
+        category_slug="cultural-arts",
+        landmark="Somewhere",
+    )
+    detail = build_detail_response(store, "fee-event")
+    assert detail.platform_fee_bps == EVENT_TICKETS_RATE_BPS
+    # The UI computes floor(line * bps / 10_000); it must equal what the API charges.
+    assert (
+        platform_fee_ngwee(line_total_ngwee=12_345, fee_payer="buyer", is_free=False)
+        == (12_345 * detail.platform_fee_bps) // 10_000
+    )
+
+
 def test_browse_tonight_filter(store: FakeSupabaseStore) -> None:
     response = build_browse_response(store, date_window="tonight", ref=REF_THURSDAY)
     slugs = {item.slug for item in response.items}
@@ -708,9 +729,7 @@ def test_detail_private_requires_signed_access_proof(
         build_detail_response(
             store,
             "secret-private",
-            access_proof=issue_event_access_proof(
-                event_id="different-event", credential_version=1
-            ),
+            access_proof=issue_event_access_proof(event_id="different-event", credential_version=1),
         )
     # Correct code → served.
     detail = build_detail_response(
@@ -775,7 +794,18 @@ def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
     detail = build_detail_response(store, "weekly-series")
     assert detail.event_type == "recurring"
     series = next(
-        item for item in build_browse_response(store, ref=REF_THURSDAY).items
+        item
+        for item in build_browse_response(store, ref=REF_THURSDAY).items
         if item.slug == "weekly-series"
     )
     assert series.event_type == "recurring"
+
+
+def test_neighbourhood_filter_matches_landmark(store: FakeSupabaseStore) -> None:
+    for row in store.events:
+        if row["id"] == EVENT_A:
+            row["landmark"] = "Kabulonga"
+    hits = build_browse_response(store, neighbourhood="Kabulonga", ref=REF_THURSDAY)
+    assert "tonight-gig" in {item.slug for item in hits.items}
+    misses = build_browse_response(store, neighbourhood="Woodlands", ref=REF_THURSDAY)
+    assert "tonight-gig" not in {item.slug for item in misses.items}

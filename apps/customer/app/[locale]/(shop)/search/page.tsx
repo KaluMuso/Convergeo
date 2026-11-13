@@ -1,7 +1,10 @@
 import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+} from "@vergeo/ui/src/seo/json-ld";
 import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -11,6 +14,7 @@ import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
+import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { PopularSearches } from "../_components/search/popular-searches";
 import { RecentSearches } from "../_components/search/recent-searches";
@@ -20,6 +24,7 @@ import {
   type SearchResponse,
   type TabCounts,
 } from "../_components/search/results-tabs";
+import { SaveSearchButton } from "../_components/search/save-search-button";
 import { SearchAnalytics } from "../_components/search/search-analytics";
 import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
 import { SearchFilterPanel } from "../_components/search/search-filter-panel";
@@ -110,7 +115,9 @@ async function fetchSearch(params: {
   }
 
   try {
-    return await client.request<SearchResponse>(`/search?${searchParams.toString()}`);
+    return await client.request<SearchResponse>(
+      `/search?${searchParams.toString()}`,
+    );
   } catch {
     return null;
   }
@@ -129,7 +136,9 @@ function buildSearchCategoryOptions(categories: CategoryRow[]) {
 function buildCategoryLabelMap(
   options: Array<{ path: string; label: string }>,
 ): Record<string, string> {
-  return Object.fromEntries(options.map((option) => [option.path, option.label]));
+  return Object.fromEntries(
+    options.map((option) => [option.path, option.label]),
+  );
 }
 
 function kindTotalsToTabCounts(totals: SearchKindTotals): TabCounts {
@@ -142,7 +151,10 @@ function kindTotalsToTabCounts(totals: SearchKindTotals): TabCounts {
   };
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const { q } = await searchParams;
   const trimmed = q?.trim();
@@ -199,10 +211,15 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     catalog: catalogMessages,
     nav: navMessages,
   } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "search" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const t = createTranslator({ locale, messages, namespace: "search" }) as {
+    (key: string, values?: Record<string, string | number>): string;
+    /**
+     * Literal ICU template, placeholders intact. Tab/filter/result labels are
+     * interpolated inside client components, and `t()` cannot format a message
+     * whose values are not known yet — it falls back to the bare key path.
+     */
+    raw: (key: string) => string;
+  };
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tNav = createTranslator({ locale, messages, namespace: "nav" });
 
@@ -250,7 +267,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : null;
 
   const tabCounts =
-    searchResponse?.kind_totals != null ? kindTotalsToTabCounts(searchResponse.kind_totals) : null;
+    searchResponse?.kind_totals != null
+      ? kindTotalsToTabCounts(searchResponse.kind_totals)
+      : null;
 
   const view = resolveSearchPageView({
     normalized,
@@ -259,12 +278,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     tabCounts,
   });
 
-  const categorySuggestions = [
-    { key: "electronics", href: `/${locale}/c/electronics`, label: t("categories.electronics") },
-    { key: "fashion", href: `/${locale}/c/fashion`, label: t("categories.fashion") },
-    { key: "home", href: `/${locale}/c/home-living`, label: t("categories.home") },
-    { key: "groceries", href: `/${locale}/c/groceries-staples`, label: t("categories.groceries") },
-  ];
+  const categorySuggestions = categoriesResult.ok
+    ? buildTopCategorySuggestions(categoriesResult.categories, locale)
+    : [];
 
   const suggestionTerms = [
     t("suggestionTerms.phones"),
@@ -281,7 +297,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     },
     {
       key: "directory",
-      href: `/${locale}/directory`,
+      href: `/${locale}/vendors`,
       label: tNav("shop.directory"),
     },
     {
@@ -326,16 +342,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     clear: t("filters.clear"),
     openFilters: t("filters.openFilters"),
     filtersActive: t("filters.filtersActive"),
-    facetCount: t("filters.facetCount"),
+    facetCount: t.raw("filters.facetCount"),
   };
 
   const appliedFilterLabels = {
     ariaLabel: t("filters.appliedAria"),
     clearAll: t("filters.clearAll"),
-    removeChip: t("filters.removeChip"),
-    priceRange: t("filters.priceRange"),
-    minPriceOnly: t("filters.minPriceOnly"),
-    maxPriceOnly: t("filters.maxPriceOnly"),
+    removeChip: t.raw("filters.removeChip"),
+    priceRange: t.raw("filters.priceRange"),
+    minPriceOnly: t.raw("filters.minPriceOnly"),
+    maxPriceOnly: t.raw("filters.maxPriceOnly"),
   };
 
   const searchPathname = `/${locale}/search`;
@@ -343,7 +359,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const categoryCounts =
     view.status === "results" && view.response.facets
       ? Object.fromEntries(
-          view.response.facets.categories.map((bucket) => [bucket.value, bucket.count]),
+          view.response.facets.categories.map((bucket) => [
+            bucket.value,
+            bucket.count,
+          ]),
         )
       : {};
 
@@ -354,14 +373,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     services: t("tabs.services"),
     events: t("tabs.events"),
     vendors: t("tabs.vendors"),
-    count: t("tabs.count"),
+    count: t.raw("tabs.count"),
     resultsCount: t("results.count", {
       count: view.status === "results" ? view.response.total : 0,
     }),
     degraded: t("results.degraded"),
-    priceFrom: t("result.priceFrom"),
-    category: t("result.category"),
-    distanceAway: t("nearMe.distanceAway"),
+    priceFrom: t.raw("result.priceFrom"),
+    category: t.raw("result.category"),
+    distanceAway: t.raw("nearMe.distanceAway"),
     openNow: t("nearMe.openNow"),
     closedNow: t("nearMe.closedNow"),
     marketplaceListing: t("result.marketplaceListing"),
@@ -369,11 +388,11 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     wishlistRemove: tCatalog("plp.card.wishlistRemove"),
     mediaEmpty: tCatalog("plp.card.mediaEmpty"),
     noReviews: tCatalog("plp.card.noReviews"),
-    reviewCount: tCatalog("plp.card.reviewCount"),
+    reviewCount: String(tCatalog.raw("plp.card.reviewCount")),
     productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),
-    moreLoaded: t("pagination.moreLoaded"),
+    moreLoaded: t.raw("pagination.moreLoaded"),
     endOfResults: t("pagination.endOfResults"),
     loadError: t("pagination.loadError"),
     retry: t("pagination.retry"),
@@ -401,19 +420,39 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         />
       ) : null}
       {view.status === "zero" ? (
-        <SearchAnalytics normalizedTerm={view.query} zeroResult resultCount={0} />
+        <SearchAnalytics
+          normalizedTerm={view.query}
+          zeroResult
+          resultCount={0}
+        />
       ) : null}
 
       <header className="mb-3 space-y-3 lg:mb-4">
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
         {query ? (
-          <p className="text-sm text-text-2" data-testid="search-query-summary">
-            {t("results.forQuery", { query })}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p
+              className="m-0 text-sm text-text-2"
+              data-testid="search-query-summary"
+            >
+              {t("results.forQuery", { query })}
+            </p>
+            <SaveSearchButton
+              locale={locale}
+              query={query}
+              labels={{
+                cta: tCatalog("saveSearch.cta"),
+                saved: tCatalog("saveSearch.saved"),
+                failed: tCatalog("saveSearch.failed"),
+              }}
+            />
+          </div>
         ) : null}
         <SearchInput
           locale={locale}
-          initialQuery={query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")}
+          initialQuery={
+            query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")
+          }
           autoFocus={!query && normalized.status !== "invalid"}
           labels={{
             placeholder: t("placeholder"),
@@ -425,7 +464,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           }}
         />
         {!query ? (
-          <BrowseDiscoveryChips ariaLabel={browseDiscoveryAria} chips={browseDiscoveryChips} />
+          <BrowseDiscoveryChips
+            ariaLabel={browseDiscoveryAria}
+            chips={browseDiscoveryChips}
+          />
         ) : null}
         {query ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -441,12 +483,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         labels={{
           title: t("recent.title"),
           clear: t("recent.clear"),
-          remove: t("recent.remove"),
+          remove: t.raw("recent.remove"),
         }}
       />
 
       {!query ? (
-        <PopularSearches locale={locale} className="mb-6" labels={{ title: t("popular.title") }} />
+        <PopularSearches
+          locale={locale}
+          className="mb-6"
+          labels={{ title: t("popular.title") }}
+        />
       ) : null}
 
       {view.status === "unavailable" ? (
@@ -550,7 +596,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         </Suspense>
       ) : null}
 
-      {view.status === "results" ? <BackToTop label={t("pagination.backToTop")} /> : null}
+      {view.status === "results" ? (
+        <BackToTop label={t("pagination.backToTop")} />
+      ) : null}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import subprocess
 import sys
 import uuid
@@ -18,6 +20,10 @@ from app.core.env_guards import (
     StagingIsolationError,
     assert_staging_project_target,
 )
+from app.errors import AppError
+from app.routers.ticket_verify import verify_and_check_in_ticket
+from app.services.tickets.qr import extract_pin_for_holder
+from app.staging.scanner_ticket import issue_scanner_certification_ticket
 from app.staging.seed_sql import (
     IMAGE_IDS,
     build_cleanup_sql,
@@ -32,6 +38,7 @@ from app.staging.synthetic_contract import (
     VENDOR_LOCATIONS,
     all_contract_uuid_literals,
     assert_contract_valid,
+    event_fixture,
     guard_seed_targets,
     persona_by_key,
     product_fixture,
@@ -298,6 +305,17 @@ def migrated_db() -> Generator[PgConn, None, None]:
     except Exception as exc:  # noqa: BLE001 — skip when extensions/migrations unavailable
         pytest.skip(f"migrations unavailable: {exc}")
     conn.run("ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone text")
+    # Mirrors the real hosted Supabase schema (queried live off
+    # iyasmrmbcrvlfxpzescb's information_schema.columns): phone_confirmed_at
+    # is a plain nullable timestamptz, and confirmed_at is a STORED generated
+    # column — LEAST() ignores NULL operands, which is exactly why a persona
+    # with only email_confirmed_at set still showed a non-null confirmed_at
+    # in run #52's evidence despite phone_confirmed_at being NULL.
+    conn.run("ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone_confirmed_at timestamptz")
+    conn.run(
+        "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmed_at timestamptz "
+        "GENERATED ALWAYS AS (LEAST(email_confirmed_at, phone_confirmed_at)) STORED"
+    )
     conn.run(
         "DO $$ BEGIN "
         "IF NOT EXISTS (SELECT 1 FROM pg_auth_members m "
@@ -375,24 +393,33 @@ def _assert_contract_proof(conn: PgConn) -> None:
     )
     assert zero_price.ok and zero_price.rows == ["0"]
 
-    for table in ("orders", "payments", "ledger_transactions"):
+    # The only order is the legitimate zero-priced free RSVP created through
+    # the ticket service. No payment or ledger row is fabricated (the service's
+    # one-ngwee order-line placeholder satisfies the legacy positive-price DB
+    # constraint without initiating or claiming a charge).
+    orders = conn.run(
+        "SELECT count(*)::text FROM public.orders o "
+        "JOIN public.order_items oi ON oi.order_id = o.id "
+        "JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id "
+        "JOIN public.ticket_types tt ON tt.id = oit.ticket_type_id "
+        "WHERE tt.kind = 'free_rsvp' AND tt.price_ngwee = 0"
+    )
+    assert orders.ok and orders.rows == ["1"]
+    for table in ("payments", "ledger_transactions"):
         count = conn.run(f"SELECT count(*)::text FROM public.{table}")
-        assert count.ok and count.rows == ["0"], (
-            f"static seed must not create {table} rows"
-        )
+        assert count.ok and count.rows == ["0"], f"seed must not create {table} rows"
 
 
 def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> None:
     assert_contract_valid()
-    seed_sql = build_seed_sql()
 
-    first = migrated_db.run_script(seed_sql)
+    first = _seed(migrated_db)
     assert first.ok, first.error or "initial seed failed"
 
     _run_verification(migrated_db)
     _assert_contract_proof(migrated_db)
 
-    second = migrated_db.run_script(seed_sql)
+    second = _seed(migrated_db)
     assert second.ok, second.error or "idempotent re-seed failed"
 
     _run_verification(migrated_db)
@@ -432,3 +459,975 @@ def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> No
     for location in VENDOR_LOCATIONS:
         parsed = uuid.UUID(location.location_id)
         assert str(parsed) == location.location_id
+
+
+def test_seeded_scanner_ticket_checks_in_once_through_production_verifier(
+    migrated_db: PgConn,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SUPABASE_DB_URL", migrated_db.dsn)
+    monkeypatch.setenv(
+        "SUPABASE_SERVICE_ROLE_KEY", "staging-seed-regression-service-role"
+    )
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error or "seed failed"
+
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    ticket = event.tickets[0]
+    pin_hash = migrated_db.run(
+        f"SELECT pin_hash FROM public.tickets WHERE id = '{ticket.ticket_id}' AND status = 'issued'"
+    )
+    assert pin_hash.ok and len(pin_hash.rows) == 1
+    pin = extract_pin_for_holder(pin_hash.rows[0], ticket_id=ticket.ticket_id)
+    assert pin is not None
+    vendor_id = persona_by_key(event.organiser_key).vendor_id
+    assert vendor_id is not None
+
+    try:
+        checked_in = verify_and_check_in_ticket(
+            ticket_id=ticket.ticket_id,
+            vendor_id=vendor_id,
+            pin=pin,
+            expected_event_id=event.event_id,
+            expected_instance_id=event.instance_id,
+        )
+        assert checked_in.to_status == "checked_in"
+
+        with pytest.raises(AppError) as duplicate:
+            verify_and_check_in_ticket(
+                ticket_id=ticket.ticket_id,
+                vendor_id=vendor_id,
+                pin=pin,
+                expected_event_id=event.event_id,
+                expected_instance_id=event.instance_id,
+            )
+        assert duplicate.value.code == "ticket_already_checked_in"
+        assert duplicate.value.http_status == 409
+    finally:
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or "cleanup failed"
+
+
+def test_seed_cli_cleanup_apply_succeeds_on_migrated_postgres(
+    migrated_db: PgConn,
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    def provision_local_personas(_client: Any, **_kwargs: Any) -> tuple[()]:
+        provisioned = migrated_db.run_script(_bare_auth_users_sql())
+        assert provisioned.ok, provisioned.error or "local auth persona setup failed"
+        return ()
+
+    monkeypatch.setattr(seed_module, "create_client", lambda *_args: object())
+    monkeypatch.setattr(seed_module, "ensure_auth_personas", provision_local_personas)
+    monkeypatch.setattr(seed_module, "verify_auth_personas", lambda *_args, **_kwargs: None)
+    monkeypatch.setenv("SUPABASE_DB_URL", migrated_db.dsn)
+    monkeypatch.setenv(
+        "STAGING_SUPABASE_URL",
+        f"https://{STAGING_SUPABASE_PROJECT_REF}.supabase.co",
+    )
+    monkeypatch.setenv("STAGING_SUPABASE_PROJECT_ID", STAGING_SUPABASE_PROJECT_REF)
+    monkeypatch.setenv("STAGING_API_BASE_URL", "https://api.staging.vergeo5.com")
+    monkeypatch.setenv(
+        "SUPABASE_SERVICE_ROLE_KEY", "staging-seed-regression-service-role"
+    )
+    monkeypatch.setattr(
+        seed_module.sys,
+        "argv",
+        ["seed_staging.py", "--env", "staging", "--cleanup", "--apply"],
+    )
+
+    try:
+        assert seed_module.main() == 0
+        _run_verification(migrated_db)
+        _assert_contract_proof(migrated_db)
+    finally:
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or "cleanup failed"
+
+
+# ---------------------------------------------------------------------------
+# auth.users/auth.identities are no longer created by build_seed_sql() at
+# all (RC-3's fix, then the later discovery that a hand-authored auth.users
+# row is never a real Auth-managed user — GoTrue's phone-login requires an
+# actual auth.identities row, which only the Auth Admin API's create_user()
+# populates). That create/repair/idempotency/never-touch-unrelated-rows
+# contract now lives against app.staging.auth_personas.ensure_auth_personas()
+# in test_auth_personas.py, mocking the Admin API the same way
+# app/services/identity.py's tests already do — this bare-Postgres harness
+# has no live GoTrue to call. _seed() below stands in for what the Admin API
+# would have already done, purely so the public.* FK chain
+# (profiles.id -> auth.users.id) holds for the tests in THIS file, which are
+# about cleanup/reseed dependency-chain safety, not auth.users itself.
+# ---------------------------------------------------------------------------
+def _bare_auth_users_sql() -> str:
+    """Test-only stand-in for the Admin API having already created every
+    PERSONAS entry — NOT a claim about auth.identities (real create_user()
+    behavior is covered by test_auth_personas.py's mocks). ON CONFLICT DO
+    NOTHING: build_cleanup_sql() may have already removed a row, or an
+    earlier call in the same test may have already inserted it.
+    """
+    parts = ["BEGIN;"]
+    for persona in PERSONAS:
+        parts.append(
+            f"""
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, phone, encrypted_password,
+  email_confirmed_at, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000000', '{persona.user_id}', 'authenticated',
+  'authenticated', '{persona.email}', '{persona.phone}', 'staging-hash-not-real',
+  timezone('utc', now()), timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
+  timezone('utc', now()), timezone('utc', now())
+) ON CONFLICT (id) DO NOTHING;
+"""
+        )
+    parts.append("COMMIT;")
+    return "\n".join(parts)
+
+
+def _seed(conn: PgConn) -> Any:
+    bare = conn.run_script(_bare_auth_users_sql())
+    assert bare.ok, bare.error or "test-only bare auth.users seed failed"
+    seeded = conn.run_script(build_seed_sql())
+    if not seeded.ok:
+        return seeded
+    previous_db = os.environ.get("SUPABASE_DB_URL")
+    previous_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    os.environ["SUPABASE_DB_URL"] = conn.dsn
+    os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "staging-seed-regression-service-role"
+    try:
+        issue_scanner_certification_ticket(object())
+    finally:
+        if previous_db is None:
+            os.environ.pop("SUPABASE_DB_URL", None)
+        else:
+            os.environ["SUPABASE_DB_URL"] = previous_db
+        if previous_key is None:
+            os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+        else:
+            os.environ["SUPABASE_SERVICE_ROLE_KEY"] = previous_key
+    return seeded
+
+
+# ---------------------------------------------------------------------------
+# FIXTURE_BUG regression coverage (staging E2E run #45): a live browser run of
+# shop-cod.spec.ts places a REAL order through the actual /checkout API (no
+# founder gate — it runs on every strict E2E pass). That order's
+# idempotency_key never matches the QA transactional-fixture driver's
+# {SEED_PREFIX}-txn- namespace, so it is invisible to the cleanup's existing
+# transactional-row scoping. These UUIDs are deliberately outside every
+# fixture family used by synthetic_contract.py (a1/b1/c1/d1/e*/f1) so they can
+# never collide with canonical fixture ids.
+# ---------------------------------------------------------------------------
+_REAL_ORDER_ADDRESS_ID = "09000000-0000-4000-8000-000000000001"
+_REAL_ORDER_CHECKOUT_GROUP_ID = "09000000-0000-4000-8000-000000000002"
+_REAL_ORDER_ID = "09000000-0000-4000-8000-000000000003"
+_REAL_ORDER_ITEM_ID = "09000000-0000-4000-8000-000000000004"
+_REAL_ORDER_PAYMENT_ID = "09000000-0000-4000-8000-000000000005"
+_UNRELATED_CART_ID = "09000000-0000-4000-8000-000000000006"
+_UNRELATED_CART_ITEM_ID = "09000000-0000-4000-8000-000000000007"
+
+
+def _insert_real_order(conn: PgConn, *, customer_id: str, vendor_id: str, listing_id: str) -> None:
+    """Mirrors shop-cod.spec.ts placing a real COD order through the live
+    checkout API — idempotency_key uses the real API's `chk-<token>` shape
+    (services/api/app/routers/checkout.py), never the QA transactional
+    driver's `{SEED_PREFIX}-txn-` prefix.
+    """
+    sql = f"""
+BEGIN;
+INSERT INTO public.addresses (id, user_id, landmark, phone)
+VALUES ('{_REAL_ORDER_ADDRESS_ID}', '{customer_id}', 'Test landmark', '+260970000000');
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee
+) VALUES (
+  '{_REAL_ORDER_CHECKOUT_GROUP_ID}', '{customer_id}', 'chk-e2e-regression-test', 10000, 0, 10000
+);
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, fulfilment, address_id, delivery_fee_ngwee, cod
+) VALUES (
+  '{_REAL_ORDER_ID}', '{_REAL_ORDER_CHECKOUT_GROUP_ID}', '{vendor_id}', '{customer_id}',
+  'delivery', '{_REAL_ORDER_ADDRESS_ID}', 0, true
+);
+INSERT INTO public.order_items (id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot)
+VALUES ('{_REAL_ORDER_ITEM_ID}', '{_REAL_ORDER_ID}', 'product', 1, 10000, 'test');
+INSERT INTO public.order_item_products (order_item_id, listing_id)
+VALUES ('{_REAL_ORDER_ITEM_ID}', '{listing_id}');
+INSERT INTO public.payments (
+  id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+) VALUES (
+  '{_REAL_ORDER_PAYMENT_ID}', '{_REAL_ORDER_CHECKOUT_GROUP_ID}', 'lenco', 'cod',
+  'cod-e2e-regression-test', 10000, 'initiated'
+);
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "real-order test fixture setup failed"
+
+
+def _delete_real_order(conn: PgConn) -> None:
+    sql = f"""
+BEGIN;
+DELETE FROM public.payments WHERE id = '{_REAL_ORDER_PAYMENT_ID}';
+DELETE FROM public.order_item_products WHERE order_item_id = '{_REAL_ORDER_ITEM_ID}';
+DELETE FROM public.order_items WHERE id = '{_REAL_ORDER_ITEM_ID}';
+DELETE FROM public.orders WHERE id = '{_REAL_ORDER_ID}';
+DELETE FROM public.checkout_groups WHERE id = '{_REAL_ORDER_CHECKOUT_GROUP_ID}';
+DELETE FROM public.addresses WHERE id = '{_REAL_ORDER_ADDRESS_ID}';
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "real-order test fixture teardown failed"
+
+
+def test_cleanup_removes_stray_cart_items_and_reproduces_run_45(migrated_db: PgConn) -> None:
+    """Exact reproduction of staging E2E run #45 (32650074063): a lone
+    cart_items row referencing a canonical vendor_listing, with nothing else
+    holding it. Before this PR's fix, DELETE FROM public.vendor_listings
+    failed with cart_items_listing_id_fkey (cart_items was never cleaned by
+    build_cleanup_sql()). Also proves an unrelated listing's cart row is
+    untouched by unrelated cleanup scoping.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    listing_a = product_fixture("PRODUCT_A").listings[0].listing_id
+    customer = persona_by_key("CUSTOMER_A").user_id
+
+    setup = migrated_db.run_script(
+        f"""
+BEGIN;
+INSERT INTO public.carts (id, user_id, status)
+VALUES ('{_UNRELATED_CART_ID}', '{customer}', 'active');
+INSERT INTO public.cart_items (id, cart_id, listing_id, qty, unit_price_ngwee)
+VALUES ('{_UNRELATED_CART_ITEM_ID}', '{_UNRELATED_CART_ID}', '{listing_a}', 1, 10000);
+COMMIT;
+"""
+    )
+    assert setup.ok, setup.error or "stray cart_items setup failed"
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or (
+        "cleanup must not fail on a stray cart_items row referencing a "
+        "canonical listing (run #45 reproduction)"
+    )
+
+    remaining = migrated_db.run(
+        f"SELECT count(*)::text FROM public.cart_items WHERE id = '{_UNRELATED_CART_ITEM_ID}'"
+    )
+    assert remaining.ok and remaining.rows == ["0"], (
+        "cart_items for a canonical listing must be removed"
+    )
+
+    migrated_db.run(f"DELETE FROM public.carts WHERE id = '{_UNRELATED_CART_ID}'")
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error
+
+
+def test_cleanup_preserves_full_dependency_chain_for_a_live_real_order(
+    migrated_db: PgConn,
+) -> None:
+    """A live real order (shop-cod.spec.ts) must never be force-deleted, and
+    neither must anything it transitively depends on: vendor_listings ->
+    products -> categories (vendor_listings_product_strategy_policy trigger,
+    20260813064106_product_strategy_core_contract.sql) and vendors -> profiles
+    / auth.users (vendors_owner_user_id_fkey, 0002_identity_vendors.sql). Each
+    of these was found by live reproduction, not by static FK reading alone —
+    the trigger-enforced ones do not show up in a plain FK grep. Unrelated
+    canonical rows in the SAME cleanup cycle must still be removed and
+    reseeded normally.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    unrelated = product_a.listings[1]
+    assert ordered.vendor_key != unrelated.vendor_key, "PRODUCT_A must remain multiseller"
+
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    unrelated_vendor = persona_by_key(unrelated.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert ordered_vendor.vendor_id is not None
+
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed with a live real order present"
+
+    def _exists(sql: str) -> bool:
+        result = migrated_db.run(sql)
+        assert result.ok, result.error
+        return result.rows == ["1"]
+
+    # Preserved: the ordered listing and everything it transitively depends on.
+    assert _exists(
+        f"SELECT count(*)::text FROM public.vendor_listings WHERE id = '{ordered.listing_id}'"
+    ), "vendor_listings row for a live real order must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.vendors WHERE id = '{ordered_vendor.vendor_id}'"
+    ), "vendors row for a live real order must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.profiles WHERE id = '{ordered_vendor.user_id}'"
+    ), "profiles row for the surviving vendor's owner must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{ordered_vendor.user_id}'"
+    ), "auth.users row for the surviving vendor's owner must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+    ), "auth.users row for the ordering customer must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.products WHERE id = '{product_a.product_id}'"
+    ), "products row for a listing still in use must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.categories WHERE id = '{product_a.category_id}'"
+    ), "categories row for a product still in use must survive cleanup"
+
+    # The real order rows themselves are untouched — never force-deleted.
+    for table, value in (
+        ("orders", _REAL_ORDER_ID),
+        ("checkout_groups", _REAL_ORDER_CHECKOUT_GROUP_ID),
+        ("payments", _REAL_ORDER_PAYMENT_ID),
+        ("order_items", _REAL_ORDER_ITEM_ID),
+    ):
+        assert _exists(
+            f"SELECT count(*)::text FROM public.{table} WHERE id = '{value}'"
+        ), f"real order row {table} must never be force-deleted"
+
+    # Unrelated canonical rows in the SAME cycle still clean up normally.
+    unrelated_listing_gone = migrated_db.run(
+        f"SELECT count(*)::text FROM public.vendor_listings WHERE id = '{unrelated.listing_id}'"
+    )
+    assert unrelated_listing_gone.ok and unrelated_listing_gone.rows == ["0"], (
+        "unrelated vendor_listings row must still be cleaned up"
+    )
+    unrelated_vendor_gone = migrated_db.run(
+        f"SELECT count(*)::text FROM public.vendors WHERE id = '{unrelated_vendor.vendor_id}'"
+    )
+    assert unrelated_vendor_gone.ok and unrelated_vendor_gone.rows == ["0"], (
+        "unrelated vendors row must still be cleaned up"
+    )
+
+    # Full healing: the next seed restores everything cleanup legitimately
+    # removed and refreshes the preserved rows to their canonical values.
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error or "reseed after a preserved real order failed"
+    _run_verification(migrated_db)
+    _assert_contract_proof_with_live_order(migrated_db)
+
+    _delete_real_order(migrated_db)
+
+
+def _assert_contract_proof_with_live_order(conn: PgConn) -> None:
+    """Same shape as _assert_contract_proof, minus the zero-orders assertion —
+    a live real order is deliberately kept across this test's cleanup cycle.
+    """
+    product_a = product_fixture("PRODUCT_A")
+    listing_a_ids = ", ".join(f"'{listing.listing_id}'" for listing in product_a.listings)
+    prices = conn.run(
+        "SELECT price_ngwee::text FROM public.vendor_listings "
+        f"WHERE id IN ({listing_a_ids}) ORDER BY price_ngwee"
+    )
+    assert prices.ok and prices.rows == ["12500", "14900"]
+
+    locations = conn.run("SELECT count(*)::text FROM public.vendor_locations")
+    assert locations.ok and locations.rows == ["2"]
+
+    ledger = conn.run("SELECT count(*)::text FROM public.ledger_transactions")
+    assert ledger.ok and ledger.rows == ["0"], "static seed must not create ledger rows"
+
+
+def test_legacy_identity_less_persona_recreation_is_safe_only_after_cleanup(
+    migrated_db: PgConn,
+) -> None:
+    """Section D (PR #689): deploy-staging.yml's optional synthetic reseed
+    previously ran seed_staging.py with --apply alone. When a persona's Auth
+    Admin API contract needs repair, ensure_auth_personas() (auth_personas.py)
+    deletes and recreates it (delete_user() then create_user()) — but if that
+    persona's own canonical public dependants (profiles, tickets, ...) still
+    exist, delete_user() hits the same restrict-FK wall the real-order guard
+    below deliberately relies on, and fails. The fix (Option 1) is that
+    deploy's optional reseed now runs --cleanup --apply, matching e2e.yml's
+    already-correct order: cleanup's own scoped, guarded delete of public
+    dependants — and, for a synthetic row with no real transactional
+    evidence, of auth.users itself — always runs before any Auth Admin API
+    repair.
+
+    Proven here end to end for a legacy identity-less row: this file's bare
+    auth.users stand-in (_bare_auth_users_sql(), see its docstring above)
+    never creates an auth.identities row, matching exactly the zero-identity
+    state live staging inspection found (auth_personas.py's module
+    docstring). And proven to remain fail-closed when real transactional
+    evidence exists — a persona must never be torn down, cleanup or not.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    customer = persona_by_key("CUSTOMER_A").user_id
+
+    # Negative control: proves the danger this fix addresses is real, not
+    # assumed. CUSTOMER_A holds a synthetic ticket (tickets.holder_user_id
+    # references auth.users on delete restrict, 0004_services_events.sql) —
+    # a stand-in for whatever canonical dependant a real Admin API
+    # delete_user() call would race if it ran before cleanup. If this delete
+    # now succeeds, the danger this test guards against no longer applies and
+    # the test (not the fix) needs revisiting.
+    blocked = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+    assert not blocked.ok, (
+        "expected deleting a persona's auth.users row to be FK-blocked while "
+        "its own canonical public dependants still exist"
+    )
+    still_present = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+    )
+    assert still_present.ok and still_present.rows == ["1"], (
+        "the blocked delete must not have partially applied"
+    )
+
+    # The fix: cleanup (--cleanup) runs BEFORE any Auth Admin API repair.
+    # Removes every public dependant on `customer` and — since no real order
+    # exists for this persona — the legacy auth.users row itself, via
+    # cleanup's own guarded final DELETE FROM auth.users.
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    gone = migrated_db.run(f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'")
+    assert gone.ok and gone.rows == ["0"], (
+        "a legacy identity-less persona with no real transactional evidence "
+        "must be fully removed by cleanup, so the subsequent Auth Admin API "
+        "call is a plain create_user() — never a delete_user() racing "
+        "leftover public dependants"
+    )
+
+    # Supported Auth recreation: stands in for ensure_auth_personas() calling
+    # create_user() for the now-missing persona (see the module comment above
+    # _bare_auth_users_sql() for why this file uses that stand-in rather than
+    # a live Admin API mock — that contract lives in test_auth_personas.py).
+    # Then the normal --apply seed. Both must succeed.
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error or "seed must succeed after cleanup-then-recreate"
+    _run_verification(migrated_db)
+    _assert_contract_proof(migrated_db)
+
+    # Real-order protection remains fail-closed even in this same cycle: a
+    # persona with genuine transactional evidence must never be torn down by
+    # cleanup, so ensure_auth_personas() never even reaches a delete_user()
+    # call for it.
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    assert ordered_vendor.vendor_id is not None
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+    try:
+        cleanup_with_order = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup_with_order.ok, cleanup_with_order.error or (
+            "cleanup failed with a live real order present"
+        )
+        survives = migrated_db.run(
+            f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+        )
+        assert survives.ok and survives.rows == ["1"], (
+            "auth.users row for a persona with a live real order must "
+            "survive cleanup — real-order protection must remain fail-closed"
+        )
+        blocked_again = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+        assert not blocked_again.ok, (
+            "a persona still tied to a real order must remain FK-blocked "
+            "from deletion even after cleanup runs — cleanup did not (and an "
+            "Auth Admin API delete_user() call could not) force it through"
+        )
+    finally:
+        reheal = _seed(migrated_db)
+        assert reheal.ok, reheal.error or "final reseed failed"
+        _delete_real_order(migrated_db)
+
+
+def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> None:
+    """Structural fix for run #45's partial-commit: the original cleanup ran
+    `DELETE FROM public.listing_location_stock` in its own early BEGIN/COMMIT
+    block, separate from the rest of cleanup, so it stayed durably deleted
+    even when a later block failed. This PR merges cleanup into one
+    transaction. Proves that end-to-end: a forced failure appended just before
+    the real cleanup's own COMMIT rolls back everything, including that very
+    first DELETE.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    before: dict[str, list[str]] = {}
+    tables = (
+        "listing_location_stock",
+        "vendor_listings",
+        "products",
+        "vendors",
+        "profiles",
+        "categories",
+    )
+    for table in tables:
+        result = migrated_db.run(f"SELECT count(*)::text FROM public.{table}")
+        assert result.ok, result.error
+        before[table] = result.rows
+    auth_before = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+    )
+    assert auth_before.ok
+
+    real_sql = build_cleanup_sql()
+    assert real_sql.rstrip().endswith("COMMIT;"), "unexpected cleanup SQL shape — update this test"
+    forced_failure_sql = real_sql.rstrip()[: -len("COMMIT;")] + "\nSELECT 1/0;\nCOMMIT;\n"
+
+    result = migrated_db.run_script(forced_failure_sql)
+    assert not result.ok, "expected the forced failure statement to abort the transaction"
+
+    for table in tables:
+        after = migrated_db.run(f"SELECT count(*)::text FROM public.{table}")
+        assert after.ok and after.rows == before[table], (
+            f"{table} must be fully rolled back when a later statement in the "
+            "same transaction fails — partial commit reproduces run #45"
+        )
+    auth_after = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+    )
+    assert auth_after.ok and auth_after.rows == auth_before.rows
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or (
+        "the real cleanup must still succeed after the forced-failure run"
+    )
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error
+
+
+def test_cleanup_seed_cycle_is_idempotent_across_three_cycles_with_a_live_order(
+    migrated_db: PgConn,
+) -> None:
+    """cleanup -> seed, repeated three times, with a real order persisting
+    throughout (as it would across repeated staging E2E runs, since no run
+    ever cleans up its own shop-cod.spec.ts order). All three cycles must
+    succeed, the canonical fixture must stay correct each time, and the real
+    order must never be disturbed.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert ordered_vendor.vendor_id is not None
+
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+
+    for cycle in range(1, 4):
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, f"cycle {cycle}: cleanup failed: {cleanup.error}"
+        seed = _seed(migrated_db)
+        assert seed.ok, f"cycle {cycle}: seed failed: {seed.error}"
+
+        _run_verification(migrated_db)
+
+        order_present = migrated_db.run(
+            f"SELECT count(*)::text FROM public.orders WHERE id = '{_REAL_ORDER_ID}'"
+        )
+        assert order_present.ok and order_present.rows == ["1"], (
+            f"cycle {cycle}: live real order must never be disturbed"
+        )
+
+    _delete_real_order(migrated_db)
+
+
+# ---------------------------------------------------------------------------
+# FIXTURE_BUG regression coverage (staging E2E run #46, 32658100525): on real
+# hosted Supabase, service_role has BYPASSRLS on public.* tables (granted
+# per-table by our own migrations) but no table-level grant on auth.users,
+# which the platform reserves for GoTrue and the connecting session owner
+# (postgres). build_cleanup_sql() switches to service_role early via
+# `SET LOCAL role service_role` and never switched back before the final
+# `DELETE FROM auth.users`, so that statement inherited service_role's lack
+# of privilege there — "permission denied for table users", live on staging.
+# tests/rls/conftest.py's AUTH_BOOTSTRAP_SQL grants service_role full CRUD on
+# its local auth.users stub as a convenience for other RLS tests, which is
+# exactly why #676's local reproduction never caught this: the local stub is
+# more permissive than real hosted Supabase. These tests revoke that local
+# grant to reproduce the real boundary before exercising the fix.
+# ---------------------------------------------------------------------------
+
+
+def test_reset_role_restores_session_owner_within_same_transaction(
+    migrated_db: PgConn,
+) -> None:
+    """No commit needed — proves RESET ROLE semantics alone: SET LOCAL role
+    service_role changes current_user, RESET ROLE reverts it to session_user,
+    both inside the same still-open transaction.
+    """
+    result = migrated_db.run_script(
+        """
+BEGIN;
+SELECT current_user::text || '|before';
+SET LOCAL role service_role;
+SELECT current_user::text || '|as_service_role';
+RESET ROLE;
+SELECT current_user::text || '|after_reset';
+ROLLBACK;
+"""
+    )
+    assert result.ok, result.error
+    rows = [row for row in result.rows if "|" in row]
+    assert len(rows) == 3, f"expected 3 labelled rows, got: {result.rows}"
+    before, during, after = (row.split("|") for row in rows)
+    assert before[1] == "before" and during[1] == "as_service_role" and after[1] == "after_reset"
+    assert during[0] == "service_role"
+    assert before[0] != "service_role"
+    assert after[0] == before[0], "RESET ROLE must restore the original session_user"
+
+
+def test_auth_users_cleanup_uses_session_owner_not_service_role(
+    migrated_db: PgConn,
+) -> None:
+    """Exact reproduction of staging E2E run #46: revokes the local test
+    harness's convenience grant so this database matches real hosted
+    Supabase's actual auth.users privilege boundary, then proves (a) the real
+    fixed cleanup succeeds under that boundary and (b) the identical
+    statement WITHOUT the RESET ROLE fix fails with run #46's exact error —
+    a behavioral SQL execution test, not a substring check, so it cannot pass
+    vacuously.
+    """
+    assert_contract_valid()
+    revoke = migrated_db.run(
+        "REVOKE SELECT, INSERT, UPDATE, DELETE ON auth.users FROM service_role"
+    )
+    assert revoke.ok, revoke.error
+    try:
+        for priv in ("SELECT", "DELETE"):
+            result = migrated_db.run(
+                f"SELECT has_table_privilege('service_role', 'auth.users', '{priv}')::text"
+            )
+            assert result.ok and result.rows == ["false"], (
+                f"precondition failed: service_role must not have {priv} on auth.users"
+            )
+        for priv in ("SELECT", "DELETE"):
+            owner = migrated_db.run(
+                f"SELECT has_table_privilege(current_user, 'auth.users', '{priv}')::text"
+            )
+            assert owner.ok and owner.rows == ["true"], (
+                f"precondition failed: session owner must retain {priv} on auth.users "
+                "(RESET ROLE has nothing to restore to otherwise)"
+            )
+
+        seeded = _seed(migrated_db)
+        assert seeded.ok, seeded.error
+
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or (
+            "cleanup must succeed under the real hosted-Supabase privilege boundary "
+            "(service_role has zero grants on auth.users) — run #46 reproduction"
+        )
+
+        auth_users_gone = migrated_db.run(
+            f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+        )
+        assert auth_users_gone.ok and auth_users_gone.rows == ["0"]
+
+        # Negative control: the identical cleanup SQL with RESET ROLE removed
+        # must fail with run #46's exact error class under this same revoked
+        # boundary — proves this test actually exercises the privilege
+        # boundary rather than passing regardless of the fix.
+        reseeded = _seed(migrated_db)
+        assert reseeded.ok, reseeded.error
+        full_sql = build_cleanup_sql()
+        broken_sql = full_sql.replace("RESET ROLE;\n\n", "", 1)
+        assert broken_sql != full_sql, "RESET ROLE not found in generated SQL — update this test"
+        broken = migrated_db.run_script(broken_sql)
+        assert not broken.ok, "expected the no-RESET-ROLE cleanup to fail under this boundary"
+        assert "permission denied" in (broken.error or "").lower()
+        assert "users" in (broken.error or "").lower()
+    finally:
+        restore = migrated_db.run(
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO postgres, service_role"
+        )
+        assert restore.ok, restore.error
+        _seed(migrated_db)
+
+
+def test_cleanup_never_broadens_auth_users_grants() -> None:
+    """Guards the remediation itself: the fix is RESET ROLE, never a widened
+    grant. No generated SQL — cleanup or seed — may ever issue an executable
+    GRANT statement; the privilege boundary run #46 exposed must stay exactly
+    as tight as real hosted Supabase already enforces it. Checks statements
+    only (skips `--` comments), since the fix's own explanatory comments
+    legitimately use the English word "grant"/"GRANT" in prose. Needs no live
+    database, so it always runs regardless of Postgres availability.
+    """
+    for sql in (build_cleanup_sql(), build_seed_sql()):
+        statements = (
+            line.strip()
+            for line in sql.splitlines()
+            if line.strip() and not line.strip().startswith("--")
+        )
+        for statement in statements:
+            assert not statement.upper().startswith("GRANT"), (
+                f"generated SQL must never issue GRANT: {statement!r}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Behavioural coverage for the transactional notification-outbox cleanup.
+#
+# public.notification_outbox carries NO foreign key to orders or
+# checkout_groups (0007_trust_ops.sql), so deleting a synthetic order never
+# cascades to the notifications it enqueued: create_orders_atomic writes
+# order.placed at placement, and each later guarded transition
+# (order-status-changed, order-refund-required, lane-1 intent, support
+# request) enqueues its own row keyed on order_id. Before build_cleanup_sql()
+# grew its outbox DELETE, every one of those rows survived cleanup and
+# accumulated across strict E2E runs.
+#
+# test_cod_fixture_lives_in_the_namespace_cleanup_already_owns asserts the
+# SHAPE of the generated SQL (statement order, both payload predicates). The
+# cases below assert the BEHAVIOUR against a real migrated database: what the
+# cleanup deletes, what it must leave alone, and that a second run is safe.
+# A textual assertion cannot catch a predicate that matches nothing (a typo in
+# a payload key, or `id` compared against text), so both layers are kept.
+# ---------------------------------------------------------------------------
+
+_OUTBOX_CHECKOUT_GROUP_ID = "0a000000-0000-4000-8000-000000000101"
+_OUTBOX_ORDER_ID = "0a000000-0000-4000-8000-000000000102"
+_OUTBOX_ADDRESS_ID = "0a000000-0000-4000-8000-000000000103"
+
+_OUTBOX_KEY_PREFIX = "stg-outbox-regression-"
+# Sorts ahead of the synthetic keys, so survivor lists below stay readable.
+_OUTBOX_REAL_ORDER_KEY = f"{_OUTBOX_KEY_PREFIX}a-real-order"
+_OUTBOX_UNRELATED_KEY = f"{_OUTBOX_KEY_PREFIX}b-unrelated"
+_OUTBOX_BY_CHECKOUT_GROUP_KEY = f"{_OUTBOX_KEY_PREFIX}c-synthetic-by-checkout-group"
+_OUTBOX_BY_ORDER_KEY = f"{_OUTBOX_KEY_PREFIX}d-synthetic-by-order"
+
+
+def _outbox_payload(**fields: str) -> str:
+    """A notification_outbox.payload JSON literal, escaped for a SQL string."""
+    return json.dumps(fields).replace("'", "''")
+
+
+def _arrange_outbox_rows(conn: PgConn) -> None:
+    """Seed, then place the two orders the cases discriminate between.
+
+    One order sits in the QA transactional namespace (``{SEED_PREFIX}-txn-``);
+    the other is placed the way the live checkout API places it (a ``chk-``
+    idempotency key, via ``_insert_real_order``) and stands in for a real
+    customer's order. Four outbox rows are then written across both, each
+    carrying only the payload keys its real enqueue path would carry.
+    """
+    assert_contract_valid()
+    seeded = _seed(conn)
+    assert seeded.ok, seeded.error or "seed failed"
+
+    product = product_fixture("PRODUCT_A")
+    listing = product.listings[0]
+    vendor = persona_by_key(listing.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert vendor.vendor_id is not None
+
+    _insert_real_order(
+        conn,
+        customer_id=customer,
+        vendor_id=vendor.vendor_id,
+        listing_id=listing.listing_id,
+    )
+
+    sql = f"""
+BEGIN;
+INSERT INTO public.addresses (id, user_id, landmark, phone)
+VALUES (
+  '{_OUTBOX_ADDRESS_ID}', '{customer}', 'Outbox regression landmark', '+260970000002'
+);
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee
+) VALUES (
+  '{_OUTBOX_CHECKOUT_GROUP_ID}', '{customer}',
+  '{SEED_PREFIX}-txn-outbox-regression', 10000, 0, 10000
+);
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, fulfilment, address_id,
+  delivery_fee_ngwee, cod
+) VALUES (
+  '{_OUTBOX_ORDER_ID}', '{_OUTBOX_CHECKOUT_GROUP_ID}', '{vendor.vendor_id}',
+  '{customer}', 'delivery', '{_OUTBOX_ADDRESS_ID}', 0, true
+);
+INSERT INTO public.notification_outbox (dedupe_key, channel, template, payload, status)
+VALUES
+  -- (C) a real customer order's status notification: order_id only, and that
+  -- order is NOT in the synthetic namespace.
+  (
+    '{_OUTBOX_REAL_ORDER_KEY}', 'whatsapp', 'order_status_changed',
+    '{_outbox_payload(order_id=_REAL_ORDER_ID)}'::jsonb, 'pending'
+  ),
+  -- (D) unrelated entirely: no order or checkout-group linkage of any kind.
+  (
+    '{_OUTBOX_UNRELATED_KEY}', 'email', 'kyc_approved',
+    '{_outbox_payload(kyc_record_id=_OUTBOX_CHECKOUT_GROUP_ID)}'::jsonb, 'pending'
+  ),
+  -- (A) order.placed as create_orders_atomic writes it, reduced to the
+  -- checkout_group_id link alone so only the first predicate can match it.
+  (
+    '{_OUTBOX_BY_CHECKOUT_GROUP_KEY}', 'whatsapp', 'order_placed',
+    '{_outbox_payload(checkout_group_id=_OUTBOX_CHECKOUT_GROUP_ID)}'::jsonb, 'pending'
+  ),
+  -- (B) a later guarded transition: order_id only, no checkout_group_id —
+  -- exactly the shape _enqueue_status_notification writes.
+  (
+    '{_OUTBOX_BY_ORDER_KEY}', 'whatsapp', 'order_status_changed',
+    '{_outbox_payload(order_id=_OUTBOX_ORDER_ID)}'::jsonb, 'pending'
+  );
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "outbox regression fixture setup failed"
+
+
+def _clear_outbox_rows(conn: PgConn) -> None:
+    sql = f"""
+BEGIN;
+DELETE FROM public.notification_outbox WHERE dedupe_key LIKE '{_OUTBOX_KEY_PREFIX}%';
+DELETE FROM public.orders WHERE id = '{_OUTBOX_ORDER_ID}';
+DELETE FROM public.checkout_groups WHERE id = '{_OUTBOX_CHECKOUT_GROUP_ID}';
+DELETE FROM public.addresses WHERE id = '{_OUTBOX_ADDRESS_ID}';
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "outbox regression fixture teardown failed"
+    _delete_real_order(conn)
+
+
+def _outbox_keys(conn: PgConn) -> list[str]:
+    """The regression fixture's surviving outbox rows, in a stable order."""
+    result = conn.run(
+        "SELECT dedupe_key FROM public.notification_outbox "
+        f"WHERE dedupe_key LIKE '{_OUTBOX_KEY_PREFIX}%' ORDER BY dedupe_key"
+    )
+    assert result.ok, result.error
+    return result.rows
+
+
+@pytest.fixture
+def outbox_rows(migrated_db: PgConn) -> Generator[PgConn, None, None]:
+    _arrange_outbox_rows(migrated_db)
+    try:
+        yield migrated_db
+    finally:
+        _clear_outbox_rows(migrated_db)
+
+
+def test_cleanup_deletes_outbox_rows_linked_only_by_checkout_group_id(
+    outbox_rows: PgConn,
+) -> None:
+    """(A) order.placed carries checkout_group_id; its group is synthetic."""
+    assert _OUTBOX_BY_CHECKOUT_GROUP_KEY in _outbox_keys(outbox_rows)
+
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_BY_CHECKOUT_GROUP_KEY not in _outbox_keys(outbox_rows), (
+        "an outbox row linked to a synthetic checkout group must be deleted"
+    )
+
+
+def test_cleanup_deletes_outbox_rows_linked_only_by_order_id(
+    outbox_rows: PgConn,
+) -> None:
+    """(B) Later transitions carry order_id only — reached via the order join."""
+    assert _OUTBOX_BY_ORDER_KEY in _outbox_keys(outbox_rows)
+
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_BY_ORDER_KEY not in _outbox_keys(outbox_rows), (
+        "an outbox row linked to an order in the synthetic namespace must be deleted"
+    )
+
+
+def test_cleanup_preserves_outbox_rows_for_a_real_non_namespace_order(
+    outbox_rows: PgConn,
+) -> None:
+    """(C) A real buyer's notification must survive: its order is not synthetic.
+
+    This is the assertion that keeps the namespace scoping honest — widening
+    either predicate to all orders would delete a live customer's pending
+    WhatsApp notification.
+    """
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_REAL_ORDER_KEY in _outbox_keys(outbox_rows), (
+        "a real order's notification must never be deleted by staging cleanup"
+    )
+
+
+def test_cleanup_preserves_unrelated_outbox_rows(outbox_rows: PgConn) -> None:
+    """(D) A notification with no order linkage at all is out of scope."""
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_UNRELATED_KEY in _outbox_keys(outbox_rows), (
+        "an unrelated notification must never be deleted by staging cleanup"
+    )
+
+
+def test_repeat_cleanup_is_idempotent_and_leaves_no_outbox_residue(
+    outbox_rows: PgConn,
+) -> None:
+    """(E) Cleanup runs once per strict E2E run; a second run must be a no-op.
+
+    Also pins zero residue: after cleanup no outbox row still points at the
+    synthetic checkout group or order, which is the leak this coverage exists
+    to catch.
+    """
+    first = outbox_rows.run_script(build_cleanup_sql())
+    assert first.ok, first.error or "first cleanup failed"
+
+    survivors = _outbox_keys(outbox_rows)
+    assert survivors == [_OUTBOX_REAL_ORDER_KEY, _OUTBOX_UNRELATED_KEY]
+
+    second = outbox_rows.run_script(build_cleanup_sql())
+    assert second.ok, second.error or "repeat cleanup failed"
+    assert _outbox_keys(outbox_rows) == survivors, (
+        "a repeated cleanup must not touch the rows the first run preserved"
+    )
+
+    residue = outbox_rows.run(
+        "SELECT count(*)::text FROM public.notification_outbox "
+        f"WHERE payload->>'checkout_group_id' = '{_OUTBOX_CHECKOUT_GROUP_ID}' "
+        f"   OR payload->>'order_id' = '{_OUTBOX_ORDER_ID}'"
+    )
+    assert residue.ok, residue.error
+    assert residue.rows == ["0"], "synthetic outbox residue must be zero after cleanup"
+
+    for table, row_id in (
+        ("orders", _OUTBOX_ORDER_ID),
+        ("checkout_groups", _OUTBOX_CHECKOUT_GROUP_ID),
+    ):
+        gone = outbox_rows.run(
+            f"SELECT count(*)::text FROM public.{table} WHERE id = '{row_id}'"
+        )
+        assert gone.ok, gone.error
+        assert gone.rows == ["0"], f"synthetic {table} row must be gone"

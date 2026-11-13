@@ -398,7 +398,7 @@ ensure_e2e_deps() {
 }
 
 run_e2e_suite() {
-  local spec="$1" gate_id="$2"
+  local spec="$1" gate_id="$2" project="${3:-mobile-390}"
   log "L3 E2E: ${gate_id}"
   if [[ "$SKIP_E2E" -eq 1 ]]; then
     write_gate "$gate_id" "ux" "NOT_RUN" "--skip-e2e"
@@ -420,7 +420,7 @@ run_e2e_suite() {
     E2E_BASE_URL='${E2E_BASE_URL}' E2E_THROTTLE=0 \
       CERTIFICATION_MODE='${MODE}' \
       PW_CHROMIUM_PATH='${PW_CHROMIUM_PATH:-}' \
-      npx playwright test '${spec}' --reporter=list --project=mobile-fast-3g-360
+      npx playwright test '${spec}' --reporter=list --project='${project}'
   "
   rc=$_RUN_TIMED_RC
   ms=$_RUN_TIMED_MS
@@ -439,11 +439,17 @@ run_e2e_suite() {
 
 run_e2e() {
   run_e2e_suite "specs/browse-journey.spec.ts" "e2e-browse-journey"
+  # mobile-layout.spec.ts is RESPONSIVE_ALL_VIEWPORTS (fixtures/spec-classification.ts):
+  # the CI E2E workflow runs it once per certification viewport (5 projects). This
+  # gate exercises it on the canonical mobile-390 project only — a single-viewport
+  # smoke, not the full cross-viewport certification.
   run_e2e_suite "specs/mobile-layout.spec.ts" "e2e-mobile-layout"
   run_e2e_suite "specs/data-quality.spec.ts" "e2e-data-quality"
   run_e2e_suite "specs/ux-surfaces.spec.ts" "e2e-ux-surfaces"
   run_e2e_suite "specs/a11y-smoke.spec.ts" "a11y-axe-smoke"
-  run_e2e_suite "specs/performance-smoke.spec.ts" "perf-web-vitals-smoke"
+  # performance-smoke.spec.ts is NETWORK_THROTTLED_ONLY, assigned only to the
+  # fast-3g project's testMatch — no other project would even discover it.
+  run_e2e_suite "specs/performance-smoke.spec.ts" "perf-web-vitals-smoke" "fast-3g"
 }
 
 run_payments_sandbox() {
@@ -464,7 +470,7 @@ run_recovery() {
     local log_out ms rc=0
     log_out="$(mktemp)"
     set +e
-    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --dry-run"
+    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --dry-run" || true
     rc=$_RUN_TIMED_RC
     ms=$_RUN_TIMED_MS
     set -e
@@ -478,27 +484,35 @@ run_recovery() {
     write_gate "backup-script-dry-run" "recovery" "NOT_RUN" "backup_drill.sh missing"
   fi
 
-  # RESTORE_DRILL_PROOF — real restore drill; dry-run cannot satisfy this gate.
+  # The local drill exercises restore mechanics with synthetic data. Neither it
+  # nor backup_drill.sh --local is trusted evidence of a hosted recovery drill.
+  if [[ "$MODE" == "integrated-staging" || "$MODE" == "production-readiness" ]]; then
+    write_gate "restore-drill-proof" "recovery" "BLOCKED_EXTERNAL" \
+      "missing trusted recovery evidence: synthetic/local drills cannot qualify staging or production; an authenticated candidate-bound recovery proof contract is required"
+    return 0
+  fi
+
+  # Non-promotion modes may run the local mechanism rehearsal.
   if [[ "${CERT_RUN_RESTORE_DRILL:-0}" == "1" && -f "${REPO_ROOT}/infra/scripts/restore-drill.sh" ]]; then
     local log_out ms rc=0
     log_out="$(mktemp)"
     set +e
-    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/infra/scripts/restore-drill.sh'"
+    run_timed "$log_out" bash -c "bash '${REPO_ROOT}/infra/scripts/restore-drill.sh'" || true
     rc=$_RUN_TIMED_RC
     ms=$_RUN_TIMED_MS
     set -e
     if [[ $rc -eq 0 ]]; then
-      write_gate "restore-drill-proof" "recovery" "PASS" "infra/scripts/restore-drill.sh" "$ms" "$rc"
+      write_gate "restore-drill-proof" "recovery" "PASS" "mechanism-only: infra/scripts/restore-drill.sh" "$ms" "$rc"
     else
-      write_gate "restore-drill-proof" "recovery" "FAIL" "restore drill failed: $(cat "$log_out")" "$ms" "$rc"
+      write_gate "restore-drill-proof" "recovery" "FAIL" "local mechanism drill failed: $(cat "$log_out")" "$ms" "$rc"
     fi
     rm -f "$log_out"
   elif [[ -f "${REPO_ROOT}/scripts/ops/backup_drill.sh" && "${CERT_RUN_RESTORE_DRILL:-0}" == "1" ]]; then
-    run_gate_cmd "restore-drill-proof" "recovery" "Restore drill (--local)" \
-      bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --local"
+    run_gate_cmd "restore-drill-proof" "recovery" "Restore drill (--local, mechanism-only)" \
+      bash -c "bash '${REPO_ROOT}/scripts/ops/backup_drill.sh' --local" || true
   else
     write_gate "restore-drill-proof" "recovery" "BLOCKED_EXTERNAL" \
-      "set CERT_RUN_RESTORE_DRILL=1 to execute restore proof (dry-run cannot satisfy)"
+      "set CERT_RUN_RESTORE_DRILL=1 to rehearse the local restore mechanism (not hosted recovery proof)"
   fi
 }
 
@@ -555,7 +569,7 @@ run_deploy_identity() {
 run_qa_self_tests() {
   log "QA framework self-tests"
   run_gate_cmd "qa-self-test" "static" "QA self-tests" \
-    bash -c "cd '$REPO_ROOT' && node --test scripts/qa/self-test/*.test.mjs"
+    bash -c "cd '$REPO_ROOT' && node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs"
 }
 
 # ── Orchestrate ──────────────────────────────────────────────────────────────

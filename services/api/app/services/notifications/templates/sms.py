@@ -103,6 +103,20 @@ def _event_schedule_changed(p: Mapping[str, Any]) -> str:
     )
 
 
+def _courier_dispatch_request(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "a delivery")
+    pickup = _text(p, "pickup_line", "see WhatsApp")
+    cod = _text(p, "cod_line", "")
+    return f"Vergeo5 job {ref}. Pickup: {pickup}. {cod}".strip()
+
+
+def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "a dispatch")
+    courier = _text(p, "courier_name", "the courier")
+    minutes = _text(p, "minutes_waiting", "45")
+    return f"Vergeo5 ops: {ref} with {courier} not accepted after {minutes} min."
+
+
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_confirmed": _order_confirmed,
     "payment_received": _payment_received,
@@ -114,6 +128,8 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "service_quote_accepted": _service_quote_accepted,
     "event_cancelled": _event_cancelled,
     "event_schedule_changed": _event_schedule_changed,
+    "courier_dispatch_request": _courier_dispatch_request,
+    "dispatch_stale_alert": _dispatch_stale_alert,
 }
 
 

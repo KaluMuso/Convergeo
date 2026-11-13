@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
@@ -9,8 +8,9 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { useSession } from "../../../../../../lib/customer-session";
 
-const DEFAULT_DEPOSIT_PCT = 50;
+const DEFAULT_DEPOSIT_PCT = 100;
 
 type BookResponse = {
   checkout_group_id: string;
@@ -76,7 +76,9 @@ export function BookService({
         method: "POST",
         body: JSON.stringify({ idempotency_key: idempotencyKeyRef.current }),
       });
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      router.push(
+        `/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}&kind=service_deposit`,
+      );
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError(t("errors.authRequired"));

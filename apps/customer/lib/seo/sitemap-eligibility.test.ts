@@ -38,9 +38,9 @@ describe("sitemap static eligibility", () => {
     expect([...SITEMAP_STATIC_SEGMENTS]).toEqual([
       "",
       "categories",
-      "directory",
       "events",
       "services",
+      "vendors",
     ]);
     for (const segment of SITEMAP_STATIC_SEGMENTS) {
       expect(isSitemapEligibleStaticSegment(segment)).toBe(true);

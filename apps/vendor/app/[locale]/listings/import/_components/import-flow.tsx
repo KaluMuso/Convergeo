@@ -4,21 +4,39 @@ import { useSession } from "@vergeo/auth/use-session";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
-import { applyRawRows, previewCsv } from "../_lib/import-client";
+import { applyRawRows, downloadTemplateCsv, previewCsv } from "../_lib/import-client";
 import { Button, Spinner } from "../_lib/ui";
 
-import type { CanonicalSuggestion, ImportPreview, ImportSummary } from "../_lib/import-client";
+import type {
+  CanonicalSuggestion,
+  ImportPreview,
+  ImportSummary,
+  RowPreview,
+} from "../_lib/import-client";
 
-const TEMPLATE_CSV = `sku,title,price_ngwee,stock_mode,stock_qty,condition,wholesale,moq,status,product_id
-TOM-001,Fresh tomatoes per kg,2500,tracked,50,new,false,1,active,
-RICE-10KG,White rice 10kg bag,18500,tracked,20,new,false,1,active,`;
+const CANONICAL_REQUIRED = "listings.import.errors.canonicalRequired";
+
+function rowReady(row: RowPreview, chosen?: CanonicalSuggestion): boolean {
+  return (
+    Object.keys(row.raw).length > 0 &&
+    (row.ok ||
+      (Boolean(chosen) &&
+        row.errors.length > 0 &&
+        row.errors.every((error) => error === CANONICAL_REQUIRED)))
+  );
+}
 
 export function ImportFlow() {
   const t = useTranslations("vendor");
   const { session, loading: sessionLoading } = useSession();
+  const translateRowError = (error: string) =>
+    error.startsWith("listings.import.errors.") && t.has(error)
+      ? t(error)
+      : t("listings.import.errors.unknownError");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [attached, setAttached] = useState<Record<number, CanonicalSuggestion>>({});
@@ -26,15 +44,27 @@ export function ImportFlow() {
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
-  const handleDownloadTemplate = useCallback(() => {
-    const blob = new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "vergeo5-listings-template.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }, []);
+  const handleDownloadTemplate = useCallback(async () => {
+    setDownloadingTemplate(true);
+    setError(null);
+    try {
+      const csv = await downloadTemplateCsv(getToken);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "vergeo5-listings-template.csv";
+        anchor.click();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      setError(t("listings.import.errors.templateFailed"));
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  }, [getToken, t]);
 
   const resetResults = useCallback(() => {
     setPreview(null);
@@ -74,7 +104,7 @@ export function ImportFlow() {
     }
     // Rebuild each parsed row, injecting the vendor's confirmed product_id.
     const rawRows = preview.rows
-      .filter((row) => Object.keys(row.raw).length > 0)
+      .filter((row) => rowReady(row, attached[row.row]))
       .map((row) => {
         const chosen = attached[row.row]?.product_id ?? row.raw.product_id ?? "";
         return { ...row.raw, product_id: chosen };
@@ -95,8 +125,8 @@ export function ImportFlow() {
   }, [attached, getToken, preview, session, t]);
 
   const attachableCount = useMemo(
-    () => (preview ? preview.rows.filter((row) => Object.keys(row.raw).length > 0).length : 0),
-    [preview],
+    () => (preview ? preview.rows.filter((row) => rowReady(row, attached[row.row])).length : 0),
+    [attached, preview],
   );
 
   if (sessionLoading) {
@@ -131,7 +161,19 @@ export function ImportFlow() {
         <p className="text-sm text-[var(--color-text-muted)]">
           {t("listings.import.template.body")}
         </p>
-        <Button type="button" variant="secondary" loadingLabel="" onClick={handleDownloadTemplate}>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          {t("listings.import.template.unitsHelp")}
+        </p>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          {t("listings.import.template.stockNote")}
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          loadingLabel=""
+          disabled={downloadingTemplate}
+          onClick={() => void handleDownloadTemplate()}
+        >
           {t("listings.import.template.download")}
         </Button>
       </section>
@@ -173,7 +215,7 @@ export function ImportFlow() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-[var(--color-text)]">
               {t("listings.import.preview.summary", {
-                valid: preview.valid,
+                valid: attachableCount,
                 total: preview.total,
               })}
             </p>
@@ -205,19 +247,23 @@ export function ImportFlow() {
               <tbody>
                 {preview.rows.map((row) => {
                   const chosen = attached[row.row];
+                  const ready = rowReady(row, chosen);
+                  const visibleErrors = chosen
+                    ? row.errors.filter((error) => error !== CANONICAL_REQUIRED)
+                    : row.errors;
                   return (
                     <tr key={row.row} className="border-t border-[var(--color-border)] align-top">
                       <td className="px-3 py-2 font-mono">{row.row}</td>
                       <td className="px-3 py-2">
-                        {row.ok
+                        {ready
                           ? t("listings.import.results.ok")
                           : t("listings.import.results.failed")}
                       </td>
                       <td className="px-3 py-2">
                         <span className="text-[var(--color-text)]">{row.title ?? "—"}</span>
-                        {row.errors.length > 0 ? (
+                        {visibleErrors.length > 0 ? (
                           <span className="mt-1 block text-xs text-[var(--color-danger)]">
-                            {row.errors.join("; ")}
+                            {visibleErrors.map(translateRowError).join("; ")}
                           </span>
                         ) : null}
                       </td>
@@ -231,7 +277,9 @@ export function ImportFlow() {
                         ) : chosen ? (
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-medium text-[var(--color-success)]">
-                              {t("listings.import.preview.attached", { name: chosen.name })}
+                              {t("listings.import.preview.attached", {
+                                name: chosen.name,
+                              })}
                             </span>
                             <button
                               type="button"
@@ -258,7 +306,10 @@ export function ImportFlow() {
                                 type="button"
                                 className="min-h-9 rounded-md border border-[var(--color-border)] px-2 py-1 text-start text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-muted)]"
                                 onClick={() =>
-                                  setAttached((prev) => ({ ...prev, [row.row]: suggestion }))
+                                  setAttached((prev) => ({
+                                    ...prev,
+                                    [row.row]: suggestion,
+                                  }))
                                 }
                               >
                                 {t("listings.import.preview.attachAction", {
@@ -269,7 +320,7 @@ export function ImportFlow() {
                           </span>
                         ) : (
                           <span className="text-xs text-[var(--color-text-muted)]">
-                            {t("listings.import.preview.standalone")}
+                            {t("listings.import.preview.selectionRequired")}
                           </span>
                         )}
                       </td>
@@ -286,10 +337,14 @@ export function ImportFlow() {
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-4 text-sm">
             <p className="font-medium text-[var(--color-success)]">
-              {t("listings.import.results.accepted", { count: summary.accepted })}
+              {t("listings.import.results.accepted", {
+                count: summary.accepted,
+              })}
             </p>
             <p className="font-medium text-[var(--color-danger)]">
-              {t("listings.import.results.rejected", { count: summary.rejected })}
+              {t("listings.import.results.rejected", {
+                count: summary.rejected,
+              })}
             </p>
           </div>
 
@@ -314,7 +369,13 @@ export function ImportFlow() {
                         : t("listings.import.results.failed")}
                     </td>
                     <td className="px-3 py-2 text-[var(--color-text-muted)]">
-                      {row.ok ? t("listings.import.results.imported") : row.errors.join("; ")}
+                      {row.ok
+                        ? t(
+                            row.stock_preserved
+                              ? "listings.import.results.stockPreserved"
+                              : "listings.import.results.imported",
+                          )
+                        : row.errors.map(translateRowError).join("; ")}
                     </td>
                   </tr>
                 ))}

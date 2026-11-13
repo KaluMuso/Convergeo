@@ -94,7 +94,7 @@ export function useFocusTrap(
     const focusInitial = () => {
       const focusables = getFocusableElements(container);
       const initial = focusables[0] ?? container;
-      if (initial !== document.activeElement) {
+      if (!container.contains(document.activeElement) || document.activeElement === container) {
         initial.focus();
       }
     };
@@ -153,6 +153,8 @@ export type ModalProps = {
   /** Optional id for aria-labelledby; auto-generated when omitted. */
   titleId?: string;
   className?: string;
+  /** Optional sizing for media viewers; keeps the shared dialog behavior. */
+  panelStyle?: React.CSSProperties;
   /** Test hook for dialog surface. */
   "data-testid"?: string;
 };
@@ -196,6 +198,7 @@ export function Modal({
   closeOnScrimClick = true,
   titleId: titleIdProp,
   className,
+  panelStyle: panelStyleOverride,
   "data-testid": dataTestId,
 }: ModalProps) {
   const autoTitleId = useId();
@@ -262,7 +265,7 @@ export function Modal({
 
   return createPortal(
     <dialog {...dialogProps}>
-      <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
+      <div style={{ ...panelStyle, ...panelStyleOverride }} onClick={(e) => e.stopPropagation()}>
         <h2
           id={titleId}
           style={{

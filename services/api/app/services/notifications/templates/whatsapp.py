@@ -24,6 +24,8 @@ WhatsAppTemplateId = Literal[
     "compliance_confirmation",
     "event_cancelled",
     "event_schedule_changed",
+    "courier_dispatch_request",
+    "dispatch_stale_alert",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -100,8 +102,10 @@ def _locale(payload: Mapping[str, Any]) -> str:
         raise TemplateRenderError(msg)
     locale = raw.strip().lower()
     if locale not in SUPPORTED_LOCALES:
-        msg = f"unsupported locale: {locale!r}"
-        raise TemplateRenderError(msg)
+        # The storefront also ships in languages (fr, zh) that have no approved
+        # WhatsApp template. English reaches the recipient; refusing to render
+        # dropped every WhatsApp notification for those accounts.
+        return "en"
     return locale
 
 
@@ -237,6 +241,33 @@ def _map_event_schedule_changed(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _map_courier_dispatch_request(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Courier pickup request (courier dispatch v1). Every slot is pre-rendered to a
+    # single line by app.services.dispatch.message (Meta rejects newlines in body
+    # params); the COD slot already carries formatK-equivalent text from integer
+    # ngwee. Missing slots raise so a half-built job never reaches a rider.
+    return (
+        _require_str(payload, "order_reference"),
+        _require_str(payload, "pickup_line"),
+        _require_str(payload, "dropoff_line"),
+        _require_str(payload, "items_line"),
+        _require_str(payload, "cod_line"),
+        _require_str(payload, "contacts_line"),
+    )
+
+
+def _map_dispatch_stale_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    minutes = payload.get("minutes_waiting")
+    if isinstance(minutes, bool) or not isinstance(minutes, int) or minutes < 0:
+        msg = "payload['minutes_waiting'] must be a non-negative integer"
+        raise TemplateRenderError(msg)
+    return (
+        _require_str(payload, "order_reference"),
+        _require_str(payload, "courier_name"),
+        str(minutes),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -321,6 +352,16 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="event_schedule_changed",
         meta_template_name="event_schedule_changed",
         map_variables=_map_event_schedule_changed,
+    ),
+    "courier_dispatch_request": WhatsAppTemplateDefinition(
+        template_id="courier_dispatch_request",
+        meta_template_name="courier_dispatch_request",
+        map_variables=_map_courier_dispatch_request,
+    ),
+    "dispatch_stale_alert": WhatsAppTemplateDefinition(
+        template_id="dispatch_stale_alert",
+        meta_template_name="dispatch_stale_alert",
+        map_variables=_map_dispatch_stale_alert,
     ),
 }
 

@@ -14,6 +14,7 @@ from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import OrderStatus
+from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 _UUID_RE = re.compile(
@@ -39,6 +40,10 @@ class CartLineInput:
     qty: int
     unit_price_ngwee: int
     title_snapshot: str | None
+    #: Chosen colour/size variant (validated against the listing upstream; the
+    #: DB trigger re-checks it belongs to the listing) and its immutable label.
+    listing_variant_id: str | None = None
+    variant_snapshot: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +108,8 @@ def _sql_json(value: dict[str, Any]) -> str:
 # `pending` (a concurrent submit already completed it) — Python maps it to an
 # idempotent replay instead of a hard failure.
 _ALREADY_COMPLETED_MARKER = "FIXA_CHECKOUT_ALREADY_COMPLETED"
+# Marker raised when the delivery address is not one of the buyer's own.
+_ADDRESS_NOT_OWNED_MARKER = "FIXA_ADDRESS_NOT_OWNED"
 # Marker raised when a tracked hold vanished or no longer covers the ordered qty
 # between the pre-transaction check and the in-tx consumption (#4 oversell guard).
 _HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
@@ -110,6 +117,12 @@ _HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
 # would exceed the vendor's current UTC-week capacity. Its payload is intentionally
 # machine-readable so the Python boundary can return a stable customer-facing 409.
 _CLASS_E_CAPACITY_MARKER = "FIXA_CLASS_E_CAPACITY_EXCEEDED"
+# Raised by public.consume_listing_variant_stock (migration 20261107120000).
+_VARIANT_STOCK_ERROR_RE = re.compile(
+    r"VARIANT_(?P<kind>OUT_OF_STOCK|UNAVAILABLE):"
+    r"(?P<variant_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+    re.IGNORECASE,
+)
 _CLASS_E_CAPACITY_ERROR_RE = re.compile(
     rf"{_CLASS_E_CAPACITY_MARKER}:"
     r"(?P<listing_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
@@ -148,8 +161,35 @@ $lock$;
 """
 
 
+def _require_own_address_sql(address_sql: str, customer_sql: str) -> str:
+    """Abort unless the delivery address belongs to the buyer placing the order.
+
+    ``address_id`` arrives from the client. Without this check an order could be
+    attached to any address row, sending a courier to (and showing the buyer the
+    landmark and phone of) somebody else.
+    """
+    return f"""
+DO $address$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.addresses
+    WHERE id = {address_sql} AND user_id = {customer_sql}
+  ) THEN
+    RAISE EXCEPTION '{_ADDRESS_NOT_OWNED_MARKER}';
+  END IF;
+END
+$address$;
+"""
+
+
 def _consume_reservation_conditional_sql(
-    *, checkout_group_id: str, listing_id: str, qty: int
+    *,
+    checkout_group_id: str,
+    listing_id: str,
+    qty: int,
+    order_id: str,
+    order_item_id: str,
+    listing_variant_id: str | None = None,
 ) -> str:
     """Consume one tracked hold, aborting the tx if it is gone or too small (#4).
 
@@ -159,10 +199,23 @@ def _consume_reservation_conditional_sql(
     the meantime, no row matches and we abort the whole transaction — no partial
     order, no oversell. Non-tracked and made-to-order listings never create stock
     holds, so they are skipped here as well.
+
+    In the same transaction it records what this order line took from stock —
+    the hold's quantity and branch, and the variant quantity decremented by
+    ``consume_listing_variant_stock`` (which runs earlier in the script) — so a
+    pre-dispatch cancellation can put back exactly that, once
+    (``public.release_cancelled_order_stock``).
     """
     group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
     listing_sql = sql_uuid(listing_id, "listing_id")
     listing_literal = sql_literal(listing_id)
+    order_sql = sql_uuid(order_id, "order_id")
+    item_sql = sql_uuid(order_item_id, "order_item_id")
+    variant_sql = (
+        sql_uuid(listing_variant_id, "listing_variant_id")
+        if listing_variant_id is not None
+        else "NULL::uuid"
+    )
     qty_sql = str(int(qty))
     return f"""
 DO $consume$
@@ -171,6 +224,9 @@ DECLARE
   v_product_class text;
   v_fulfilment_mode text;
   v_deleted int;
+  v_location uuid;
+  v_listing_qty int := 0;
+  v_variant_qty int := 0;
 BEGIN
   SELECT stock_mode, product_class, fulfilment_mode
   INTO v_mode, v_product_class, v_fulfilment_mode
@@ -182,11 +238,28 @@ BEGIN
     DELETE FROM public.stock_reservations
     WHERE checkout_group_id = {group_sql}
       AND listing_id = {listing_sql}
-      AND qty >= {qty_sql};
+      AND qty >= {qty_sql}
+    RETURNING location_id INTO v_location;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     IF v_deleted = 0 THEN
       RAISE EXCEPTION '{_HOLD_INVALID_MARKER}:%', {listing_literal};
     END IF;
+    v_listing_qty := {qty_sql};
+  END IF;
+  IF {variant_sql} IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.vendor_listing_variants
+    WHERE id = {variant_sql} AND stock_qty IS NOT NULL
+  ) THEN
+    v_variant_qty := {qty_sql};
+  END IF;
+  IF v_listing_qty > 0 OR v_variant_qty > 0 THEN
+    INSERT INTO public.order_item_stock_consumption (
+      order_item_id, order_id, listing_id, listing_qty, location_id,
+      listing_variant_id, variant_qty
+    ) VALUES (
+      {item_sql}, {order_sql}, {listing_sql}, v_listing_qty, v_location,
+      {variant_sql}, v_variant_qty
+    );
   END IF;
 END
 $consume$;
@@ -283,6 +356,27 @@ def _consume_reservations_sql(checkout_group_id: str) -> str:
     return f"DELETE FROM public.stock_reservations WHERE checkout_group_id = {group_sql};"
 
 
+def _clear_ordered_cart_lines_sql(cart_lines: list[CartLineInput], customer_sql: str) -> str:
+    """Take the lines that just became a COD order out of the buyer's cart.
+
+    A cash-on-delivery order is final the moment it is placed, so leaving its
+    lines in the cart let the buyer check the same goods out a second time.
+    Only the exact ordered rows go, and only from the buyer's own cart: a line
+    added in another tab after checkout started was never ordered and stays.
+    Prepaid checkouts keep their cart until the payment outcome is known.
+    """
+    if not cart_lines:
+        return ""
+    item_ids = ", ".join(sql_uuid(line.cart_item_id, "cart_item_id") for line in cart_lines)
+    return f"""
+DELETE FROM public.cart_items ci
+USING public.carts c
+WHERE ci.id IN ({item_ids})
+  AND c.id = ci.cart_id
+  AND c.user_id = {customer_sql};
+"""
+
+
 def _fetch_existing_by_idempotency_key(
     client: Any, *, idempotency_key: str, customer_id: str
 ) -> dict[str, Any] | None:
@@ -294,7 +388,9 @@ def _fetch_existing_by_idempotency_key(
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None when the idempotency key has no
+    # row. That is the normal first-order path, not a failed read.
+    data = response.data if response is not None else None
     return data if isinstance(data, dict) else None
 
 
@@ -307,7 +403,7 @@ def _fetch_checkout_session(client: Any, *, session_id: str, customer_id: str) -
         .maybe_single()
         .execute()
     )
-    row = response.data
+    row = response.data if response is not None else None
     if not isinstance(row, dict):
         raise AppError(
             code="checkout.session_not_found",
@@ -404,6 +500,88 @@ def _build_commission_snapshot(
     payload: dict[str, Any] = {"lines": snapshot_lines}
     if primary_rate is not None:
         payload["rate_bps"] = primary_rate
+    return payload
+
+
+def _load_vendor_owner_ids(client: Any, vendor_ids: list[str]) -> dict[str, str]:
+    """Owner account per vendor — the recipient of that vendor's notifications."""
+    if not vendor_ids:
+        return {}
+    response = client.table("vendors").select("id, owner_user_id").in_("id", vendor_ids).execute()
+    rows = response.data if isinstance(response.data, list) else []
+    owners: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        vendor_id = row.get("id")
+        owner_id = row.get("owner_user_id")
+        if isinstance(vendor_id, str) and isinstance(owner_id, str) and owner_id:
+            owners[vendor_id] = owner_id
+    return owners
+
+
+def _load_product_names(client: Any, product_ids: list[str]) -> dict[str, str]:
+    if not product_ids:
+        return {}
+    response = client.table("products").select("id, name").in_("id", product_ids).execute()
+    rows = response.data if isinstance(response.data, list) else []
+    names: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        product_id = row.get("id")
+        name = row.get("name")
+        if isinstance(product_id, str) and isinstance(name, str) and name.strip():
+            names[product_id] = name.strip()
+    return names
+
+
+def order_display_reference(order_id: str) -> str:
+    """The short order number the vendor and customer apps show (``1A2B3C4D``)."""
+    return order_id.replace("-", "")[:8].upper()
+
+
+def _vendor_new_order_payload(
+    *,
+    order: CreatedOrder,
+    lines: list[CartLineInput],
+    session_id: str,
+    customer_id: str,
+    owner_user_id: str | None,
+    product_ids: dict[str, str],
+    product_names: dict[str, str],
+) -> dict[str, Any]:
+    """Outbox payload the ``vendor_new_order`` templates can actually render.
+
+    The dispatcher addresses a row only through ``recipient_id`` and the WhatsApp
+    template requires ``order_reference``, ``product_title`` and ``quantity``. The
+    COD row used to carry none of them, so a vendor was never told about a new
+    cash-on-delivery order on any channel.
+    """
+    titles: list[str] = []
+    for line in lines:
+        title = (line.title_snapshot or "").strip()
+        if not title:
+            title = product_names.get(product_ids.get(line.listing_id, ""), "")
+        if title:
+            titles.append(title)
+    if not titles:
+        product_title = order_display_reference(order.order_id)
+    elif len(lines) > 1:
+        product_title = f"{titles[0]} +{len(lines) - 1}"
+    else:
+        product_title = titles[0]
+    payload: dict[str, Any] = {
+        "order_id": order.order_id,
+        "checkout_group_id": session_id,
+        "vendor_id": order.vendor_id,
+        "customer_id": customer_id,
+        "order_reference": order_display_reference(order.order_id),
+        "product_title": product_title,
+        "quantity": sum(line.qty for line in lines),
+    }
+    if owner_user_id:
+        payload["recipient_id"] = owner_user_id
     return payload
 
 
@@ -515,6 +693,41 @@ def _resolve_completed_after_race(
         str(completed.get("idempotency_key")) == idempotency_key
     ):
         return _result_from_group(completed, client=client, replayed=True)
+    raise AppError(
+        code="orders.session_already_completed",
+        message="Checkout session already completed",
+        http_status=409,
+        details={"session_id": session_id},
+    )
+
+
+def replay_if_completed(
+    client: Any,
+    *,
+    session_id: str,
+    customer_id: str,
+    idempotency_key: str,
+) -> CreateOrdersResult | None:
+    """Return the existing order set when this session has already been ordered.
+
+    ``None`` means the session is not completed and the caller should carry on.
+    A completed session replayed with its own idempotency key returns the same
+    orders; any other key is a conflict. Callers use this before they read the
+    cart, because a placed COD order has already taken its lines out of it.
+    """
+    response = (
+        client.table("checkout_groups")
+        .select("*")
+        .eq("id", session_id)
+        .eq("customer_id", customer_id)
+        .maybe_single()
+        .execute()
+    )
+    row = response.data if response is not None else None
+    if not isinstance(row, dict) or str(row.get("status")) != "completed":
+        return None
+    if str(row.get("idempotency_key")) == idempotency_key:
+        return _result_from_group(row, client=client, replayed=True)
     raise AppError(
         code="orders.session_already_completed",
         message="Checkout session already completed",
@@ -642,7 +855,9 @@ def create_orders_atomic(
             details={"session_id": session_id},
         )
     if _session_expired(client, session_id):
-        client.table("checkout_groups").update({"status": "expired"}).eq("id", session_id).execute()
+        expire_checkout_group_if_unpaid(
+            client, checkout_group_id=session_id, terminal_status="expired"
+        )
         raise AppError(
             code="checkout.reservation_expired",
             message="Your reservation has expired",
@@ -668,6 +883,8 @@ def create_orders_atomic(
     product_ids = _load_product_ids(client, listing_ids)
 
     cod = payment_method == "cod"
+    vendor_owner_ids = _load_vendor_owner_ids(client, sorted(groups_by_vendor)) if cod else {}
+    product_names = _load_product_names(client, sorted(set(product_ids.values()))) if cod else {}
     planned_orders: list[tuple[CreatedOrder, list[CartLineInput]]] = []
     for vendor_id in sorted(groups_by_vendor):
         group = groups_by_vendor[vendor_id]
@@ -712,6 +929,10 @@ def create_orders_atomic(
 
     statements: list[str] = ["BEGIN;"]
     statements.append(_lock_and_recheck_sql(session_sql, customer_sql))
+    if address_id is not None:
+        statements.append(
+            _require_own_address_sql(sql_uuid(address_id, "address_id"), customer_sql)
+        )
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
 
     for order, vendor_lines in planned_orders:
@@ -746,6 +967,12 @@ INSERT INTO public.orders (
             else:
                 product_columns = ""
                 product_values = ""
+            if line.listing_variant_id is not None:
+                product_columns += ", listing_variant_id, variant_snapshot"
+                product_values += (
+                    f", {sql_uuid(line.listing_variant_id, 'listing_variant_id')}"
+                    f", {_sql_json(line.variant_snapshot or {})}::jsonb"
+                )
             statements.append(
                 f"""
 INSERT INTO public.order_items (
@@ -762,12 +989,15 @@ VALUES ({item_sql}, {listing_sql}{product_values});
         # COD: fulfilment-valid at place — notify immediately.
         if order.cod:
             dedupe_key = build_dedupe_key("order.placed", order.order_id, OUTBOX_CHANNEL)
-            payload = {
-                "order_id": order.order_id,
-                "checkout_group_id": session_id,
-                "vendor_id": order.vendor_id,
-                "customer_id": customer_id,
-            }
+            payload = _vendor_new_order_payload(
+                order=order,
+                lines=vendor_lines,
+                session_id=session_id,
+                customer_id=customer_id,
+                owner_user_id=vendor_owner_ids.get(order.vendor_id),
+                product_ids=product_ids,
+                product_names=product_names,
+            )
             statements.append(
                 f"""
 INSERT INTO public.notification_outbox (
@@ -779,15 +1009,37 @@ INSERT INTO public.notification_outbox (
 """
             )
 
+    # Per-variant stock: lock + decrement each chosen variant in UUID order (no
+    # deadlocks across overlapping carts); a sold-out variant aborts the tx.
+    for line in sorted(
+        (line for line in cart_lines if line.listing_variant_id is not None),
+        key=lambda line: str(line.listing_variant_id),
+    ):
+        variant_sql = sql_uuid(str(line.listing_variant_id), "listing_variant_id")
+        statements.append(
+            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.qty)});"
+        )
+
+    placed_item_by_cart_line: dict[str, tuple[str, str]] = {
+        line.cart_item_id: (order.order_id, item.order_item_id)
+        for order, vendor_lines in planned_orders
+        for item, line in zip(order.items, vendor_lines, strict=True)
+    }
     for line in cart_lines:
+        placed_order_id, placed_item_id = placed_item_by_cart_line[line.cart_item_id]
         statements.append(
             _consume_reservation_conditional_sql(
                 checkout_group_id=session_id,
                 listing_id=line.listing_id,
                 qty=line.qty,
+                order_id=placed_order_id,
+                order_item_id=placed_item_id,
+                listing_variant_id=line.listing_variant_id,
             )
         )
     statements.append(_consume_reservations_sql(session_id))
+    if cod:
+        statements.append(_clear_ordered_cart_lines_sql(cart_lines, customer_sql))
     statements.append(
         f"""
 UPDATE public.checkout_groups
@@ -811,6 +1063,32 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        if _ADDRESS_NOT_OWNED_MARKER in error:
+            raise AppError(
+                code="checkout.address_invalid",
+                message="Delivery address was not found for this account",
+                http_status=422,
+                details={"field": "address_id"},
+            )
+        variant_match = _VARIANT_STOCK_ERROR_RE.search(error)
+        if variant_match is not None:
+            kind = variant_match.group("kind").upper()
+            code = (
+                "cart.variant_out_of_stock"
+                if kind == "OUT_OF_STOCK"
+                else "cart.variant_unavailable"
+            )
+            raise AppError(
+                code=code,
+                message="An option in your cart is no longer available in that quantity",
+                http_status=409,
+                details={
+                    "message_key": code,
+                    "listing_variant_id": variant_match.group("variant_id"),
+                    "redirect_to": "cart",
+                    "retry": False,
+                },
+            )
         capacity_match = _CLASS_E_CAPACITY_ERROR_RE.search(error)
         if capacity_match is not None:
             requested_qty = int(capacity_match.group("requested"))

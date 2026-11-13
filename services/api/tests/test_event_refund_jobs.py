@@ -31,6 +31,15 @@ PAYOUT_ID = "e9000000-0000-4000-8000-0000000000c3"
 GROUP_ID = "e9000000-0000-0000-0000-0000000000d1"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 @dataclass
 class FakeSqlState:
     jobs: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -358,6 +367,88 @@ def test_process_job_executes_refund_and_waits_for_provider(
     assert outcome.outcome == "awaiting_payout"
     assert state.jobs[JOB_ID]["status"] == "awaiting_payout"
     assert state.jobs[JOB_ID]["refund_id"] == REFUND_ID
+
+
+def _banded_job(amount: str) -> dict[str, str]:
+    return {
+        "id": JOB_ID,
+        "event_id": EVENT_ID,
+        "order_id": ORDER_ID,
+        "customer_id": CUSTOMER_ID,
+        "source": "buyer_cancel",
+        "source_key": SOURCE_KEY_V1,
+        "amount_ngwee": amount,
+        "status": "queued",
+        "refund_id": "",
+        "payout_id": "",
+        "attempts": "0",
+        "next_retry_at": "",
+        "last_error": "",
+    }
+
+
+def _destination_service() -> Any:
+    return FakeService(
+        FakeClient(
+            {
+                "profiles": [{"id": CUSTOMER_ID, "phone": "+260971234567"}],
+                "orders": [{"id": ORDER_ID, "checkout_group_id": GROUP_ID}],
+                "payments": [{"checkout_group_id": GROUP_ID, "status": "success", "rail": "mtn"}],
+            }
+        )
+    )
+
+
+@pytest.mark.parametrize("banded_amount", [4_750, 2_500])
+def test_process_job_refunds_only_the_banded_job_amount(
+    monkeypatch: pytest.MonkeyPatch, banded_amount: int
+) -> None:
+    """C4: a K50 ticket cancelled in the minus-5% / 50% band refunds the band, not K50."""
+    state = FakeSqlState()
+    state.jobs[JOB_ID] = _banded_job(str(banded_amount))
+    state.refunds[REFUND_ID] = "awaiting_payout"
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", state.run)
+
+    exec_result = RefundExecutionResult(
+        refund_id=REFUND_ID,
+        order_id=ORDER_ID,
+        lane=1,
+        phase=RefundPhase.PRE_RELEASE,
+        amount_ngwee=banded_amount,
+        payout_id=PAYOUT_ID,
+        lenco_reference="rfd-test",
+        ledger_transaction_ids=("ledger-1",),
+        breakdown={},
+        created=True,
+    )
+    with patch(
+        "app.services.events.refund_jobs.execute_refund", return_value=exec_result
+    ) as mocked:
+        outcome = process_event_refund_job(_destination_service(), JOB_ID)
+
+    assert outcome.outcome == "awaiting_payout"
+    kwargs = mocked.call_args.kwargs
+    assert kwargs["item_ngwee_override"] == banded_amount
+    assert isinstance(kwargs["item_ngwee_override"], int)
+    assert kwargs["delivery_fee_ngwee_override"] == 0
+    assert kwargs["lane"] == 1
+
+
+@pytest.mark.parametrize("bad_amount", ["0", "-100", "abc", ""])
+def test_process_job_with_invalid_amount_goes_to_manual_review_without_refund(
+    monkeypatch: pytest.MonkeyPatch, bad_amount: str
+) -> None:
+    state = FakeSqlState()
+    state.jobs[JOB_ID] = _banded_job(bad_amount)
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", state.run)
+
+    with patch("app.services.events.refund_jobs.execute_refund") as mocked:
+        outcome = process_event_refund_job(_destination_service(), JOB_ID)
+
+    mocked.assert_not_called()
+    assert outcome.outcome == "manual_review"
+    assert outcome.reason == "invalid_job_amount"
+    assert state.jobs[JOB_ID]["status"] == "manual_review"
 
 
 def test_sync_job_marks_completed_when_refund_provider_paid(

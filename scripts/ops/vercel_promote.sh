@@ -112,8 +112,10 @@ vercel_rest_post() {
 # /deployments list payload. Emits "uid\tcommitSha" (or nothing) on stdout.
 select_deployment() {
   MASTER_GIT_SHA="$MASTER_GIT_SHA" python3 -c '
-import json, os, sys
+import json, os, re, sys
 sha = os.environ.get("MASTER_GIT_SHA", "")
+if re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+    raise SystemExit
 raw = sys.stdin.read().strip()
 if not raw:
     raise SystemExit
@@ -129,7 +131,8 @@ for row in rows:
     uid = row.get("uid") or row.get("id") or ""
     if not uid:
         continue
-    if state == "READY" and (not sha or (commit and (commit.startswith(sha[:7]) or sha.startswith(commit[:7])))):
+    if (state == "READY" and isinstance(commit, str)
+            and re.fullmatch(r"[0-9a-f]{40}", commit) and commit == sha):
         print(uid + "\t" + commit)
         break
 '

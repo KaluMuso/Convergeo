@@ -1,9 +1,9 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { useCallback, useMemo, useState } from "react";
 
+import { useSession } from "../../../../../lib/customer-session";
 import { createRfqApiClient, RFQ_DETAILS_MAX_CHARS } from "../../../../../lib/rfq-api";
 
 export type RequestQuoteStatus = "idle" | "sending" | "success" | "error";

@@ -1,7 +1,8 @@
 "use client";
 
-import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 
+import { getReadyCustomerSession } from "../../../../lib/customer-session";
 import { createAccountApiClient } from "../../account/_components/account-api";
 
 import {
@@ -41,6 +42,7 @@ export async function navigateAfterPortalAuth({
   fallbackPath,
 }: NavigateAfterPortalAuthArgs): Promise<void> {
   const fallback = resolvePostAuthPath(locale, nextParam, fallbackPath);
+  emitToastKey("signedIn", { type: "success" });
 
   if (portal !== "customer") {
     router.push(fallback);
@@ -48,18 +50,12 @@ export async function navigateAfterPortalAuth({
     return;
   }
 
+  const session = await getReadyCustomerSession();
+  if (!session?.access_token) {
+    throw new Error("auth.session_required");
+  }
+
   try {
-    const supabase = await getBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      router.push(fallback);
-      router.refresh();
-      return;
-    }
-
     const api = createAccountApiClient(() => session.access_token);
     const preferences = await api.getPreferences();
     const destination = resolveCustomerPostAuthPath(

@@ -18,6 +18,7 @@ class CartLineSnapshot:
     qty: int
     unit_price_ngwee: int
     pickup_location_id: str | None = None
+    listing_variant_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +78,58 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
     return listings
 
 
+def _fetch_variants(variant_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Price override / own stock / status for the lines' chosen variants."""
+    if not variant_ids:
+        return {}
+    id_literals = ", ".join(
+        sql_uuid(variant_id, "listing_variant_id") for variant_id in variant_ids
+    )
+    result = run_sql_script(
+        f"""
+        SELECT id::text, listing_id::text, coalesce(price_ngwee::text, ''),
+               coalesce(stock_qty::text, ''), status
+        FROM public.vendor_listing_variants
+        WHERE id IN ({id_literals});
+        """
+    )
+    if not result.ok:
+        raise RuntimeError(f"fetch variants failed: {result.error}")
+    variants: dict[str, dict[str, Any]] = {}
+    for row in result.rows:
+        parts = row.split("|")
+        if len(parts) != 5:
+            continue
+        variant_id, listing_id, price_raw, stock_raw, status = parts
+        variants[variant_id] = {
+            "listing_id": listing_id,
+            "price_ngwee": int(price_raw) if price_raw else None,
+            "stock_qty": int(stock_raw) if stock_raw else None,
+            "status": status,
+        }
+    return variants
+
+
+def _apply_variant(
+    listing: dict[str, Any],
+    variant: dict[str, Any] | None,
+    available: int | None,
+) -> tuple[int | None, int | None]:
+    """Return (current_price, available) for a line seen as its variant."""
+    price = listing.get("price_ngwee")
+    current_price = price if isinstance(price, int) else None
+    if variant is None or variant.get("status") != "active":
+        return current_price, 0
+    if isinstance(variant.get("price_ngwee"), int):
+        current_price = int(variant["price_ngwee"])
+    variant_stock = variant.get("stock_qty")
+    # available is None only when the listing's stock is not governed at all
+    # (always-available / made-to-order); variant stock does not apply then.
+    if isinstance(variant_stock, int) and available is not None:
+        available = min(available, max(variant_stock, 0))
+    return current_price, available
+
+
 def _available_qty(
     listing: dict[str, Any],
     *,
@@ -107,6 +160,9 @@ def _available_qty(
 def revalidate_lines(lines: list[CartLineSnapshot]) -> RevalidateResult:
     listing_ids = [line.listing_id for line in lines]
     listings = _fetch_listings(listing_ids)
+    variants = _fetch_variants(
+        sorted({line.listing_variant_id for line in lines if line.listing_variant_id})
+    )
     notices: list[ChangeNotice] = []
 
     for line in lines:
@@ -127,6 +183,10 @@ def revalidate_lines(lines: list[CartLineSnapshot]) -> RevalidateResult:
         current_price = listing.get("price_ngwee")
         current_price_ngwee = current_price if isinstance(current_price, int) else None
         available = _available_qty(listing, pickup_location_id=line.pickup_location_id)
+        if line.listing_variant_id:
+            current_price_ngwee, available = _apply_variant(
+                listing, variants.get(line.listing_variant_id), available
+            )
 
         if current_price_ngwee is not None and current_price_ngwee != line.unit_price_ngwee:
             notices.append(

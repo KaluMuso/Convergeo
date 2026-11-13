@@ -7,6 +7,7 @@ import {
   handleCspReportRequest,
   isAdminBypassActive,
   isCspReportRequest,
+  isHealthCheckPath,
   mergeSessionCookies,
   resolveGatedRedirect,
   updateSession,
@@ -17,6 +18,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
 import { verifyCfAccessAssertion } from "./lib/cf-access";
+import { isAdminPasswordRecoveryPath } from "./lib/password-recovery-path";
 
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
@@ -54,6 +56,53 @@ export function isProductionCfAccessRequired(): boolean {
   return process.env.NODE_ENV === "production" && !isAdminBypassActive();
 }
 
+/**
+ * Staging/Preview-only, `/health`-only exception: lets the deploy-staging
+ * verifier prove the deployed admin build's effective API wiring
+ * (`GET /{locale}/health` -> {status, app, env, buildId, apiHost}, never
+ * session/user/admin data — see route.ts) without a Cloudflare Access
+ * assertion.
+ *
+ * Requires TWO independent, non-request-controllable signals to agree —
+ * neither is a request header, cookie, or query param a caller could set,
+ * so this cannot be triggered against any deployment by an external
+ * request:
+ *
+ *   A. `VERCEL_ENV === "preview"` — Vercel's own system signal for which
+ *      kind of deployment this actually is. `NODE_ENV` cannot substitute
+ *      for this: Next.js sets `NODE_ENV=production` for the built server
+ *      bundle on every Vercel deployment, Production and Preview alike, so
+ *      it cannot distinguish them.
+ *   B. `NEXT_PUBLIC_DEPLOYMENT_PLANE` is `staging` or `preview` — the
+ *      application-level plane, baked in by the Vercel project's own
+ *      environment configuration.
+ *
+ * A misconfigured `NEXT_PUBLIC_DEPLOYMENT_PLANE` alone (e.g. accidentally
+ * left as `staging` on a Production deployment) cannot open this exception:
+ * `VERCEL_ENV` on Production is `"production"`, so signal A still fails
+ * closed regardless of B.
+ *
+ * On the `production` plane this is always false, so CF Access (and the
+ * admin role gate below) keep guarding `/health` exactly as before: this
+ * function changes nothing about production admin's security model. It
+ * also never touches `isAdminBypassActive()` — that flag's own scope is
+ * unrelated and unaffected by this narrower, path-scoped exception.
+ */
+export function isStagingHealthCheckException(request: NextRequest): boolean {
+  const isPreviewDeployment = process.env.VERCEL_ENV === "preview";
+  if (!isPreviewDeployment) {
+    return false;
+  }
+
+  const plane = process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
+  const isStagingPlane = plane === "staging" || plane === "preview";
+  if (!isStagingPlane) {
+    return false;
+  }
+
+  return isHealthCheckPath(request.nextUrl.pathname, LOCALES);
+}
+
 export function hasCfAccessJwtAssertion(request: NextRequest): boolean {
   const assertion = request.headers.get(CF_ACCESS_HEADER);
   return typeof assertion === "string" && assertion.trim().length > 0;
@@ -72,8 +121,9 @@ export default async function middleware(request: NextRequest) {
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
 
   const adminBypass = isAdminBypassActive();
+  const healthCheckException = isStagingHealthCheckException(request);
 
-  if (isProductionCfAccessRequired()) {
+  if (isProductionCfAccessRequired() && !healthCheckException) {
     // Cryptographically verify the Cloudflare Access assertion: signature against the
     // team JWKS (RS256) + expected audience + issuer + expiry. Fails closed — absent,
     // malformed, unsigned, wrong-key, wrong-audience, expired, or an unconfigured
@@ -86,14 +136,28 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  const gate = resolveGatedRedirect(
-    "admin",
-    request.nextUrl.pathname,
-    LOCALES,
-    session.user,
-    session.roles,
-    { adminBypass },
-  );
+  const gate =
+    healthCheckException || isAdminPasswordRecoveryPath(request.nextUrl.pathname)
+      ? null
+      : resolveGatedRedirect(
+          "admin",
+          request.nextUrl.pathname,
+          LOCALES,
+          session.user,
+          // Verified claims admit the shell; every privileged API request
+          // independently reloads current database roles and permissions.
+          session.roles.some(
+            (role) =>
+              role === "superadmin" ||
+              role === "moderator" ||
+              /^rbac_[a-z][a-z0-9_]{2,39}$/.test(role),
+          )
+            ? [...session.roles, "admin"]
+            : session.roles,
+          {
+            adminBypass,
+          },
+        );
 
   if (gate) {
     return applyReportOnlyCspNonce(
@@ -112,5 +176,11 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
+  // See apps/customer/middleware.ts for the full rationale: a locale-less
+  // path previously skipped both the Cloudflare Access check below and
+  // next-intl's redirect, landing on `/[locale]` with an invalid locale
+  // value and throwing when any interpolated message tried to format.
+  // Broadening this also means the CF Access re-verification below now runs
+  // on more paths than before — strictly additive, never a relaxation.
+  matcher: ["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

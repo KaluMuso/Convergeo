@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from app.staging.scanner_ticket import build_scanner_rsvp_cleanup_sql
 from app.staging.synthetic_contract import (
     CATALOG_FIXTURES,
     CATEGORY_FIXTURE,
+    EVENTS,
     KYC_FIXTURES,
     PERSONAS,
     SEED_PREFIX,
@@ -21,28 +23,15 @@ IMAGE_IDS: dict[str, str] = {
 }
 
 
-def _auth_users_sql() -> str:
-    parts = ["BEGIN;"]
-    for persona in PERSONAS:
-        parts.append(
-            f"""
-INSERT INTO auth.users (
-  instance_id, id, aud, role, email, phone, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-) VALUES (
-  '00000000-0000-0000-0000-000000000000', '{persona.user_id}', 'authenticated',
-  'authenticated', '{persona.email}', '{persona.phone}', 'staging-hash-not-real',
-  timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-  timezone('utc', now()), timezone('utc', now())
-) ON CONFLICT (id) DO NOTHING;
-"""
-        )
-    parts.append("COMMIT;")
-    return "\n".join(parts)
-
-
 def build_seed_sql() -> str:
-    """Build idempotent SQL from fixed synthetic constants (no user input)."""
+    """Build idempotent SQL from fixed synthetic constants (no user input).
+
+    Assumes every PERSONAS entry is already a real Auth-managed user (created
+    via app.staging.auth_personas.ensure_auth_personas() through the Supabase
+    Auth Admin API, which the caller must run first) — this SQL only writes
+    public.* fixture rows that FK-reference auth.users.id; it never creates
+    or touches auth.users/auth.identities itself.
+    """
     sql_parts = [
         "BEGIN;",
         "SET LOCAL role service_role;",
@@ -75,6 +64,12 @@ INSERT INTO public.vendors (
   display_name = EXCLUDED.display_name,
   status = EXCLUDED.status,
   kyc_tier = EXCLUDED.kyc_tier;
+-- B1: every vendor needs its payable / COD receivable ledger accounts or
+-- release_to_vendor / payout / clawback fail with ledger_account_unavailable.
+INSERT INTO public.ledger_accounts (kind, vendor_id)
+SELECT k.kind, '{persona.vendor_id}'::uuid
+FROM (VALUES ('vendor_payable'), ('cod_receivable')) AS k(kind)
+ON CONFLICT (kind, vendor_id) WHERE vendor_id IS NOT NULL DO NOTHING;
 """
             )
 
@@ -216,12 +211,87 @@ ON CONFLICT (listing_id, location_id) DO UPDATE SET stock_qty = EXCLUDED.stock_q
             )
 
     sql_parts.append("COMMIT;")
+    # Events come last: they reference the vendors and profiles seeded above.
+    sql_parts.append(build_events_sql())
     if location_stock_parts:
         # Branch stock rows are inserted as the migration owner (postgres). service_role
         # lacks a stable SET ROLE grant on every CI/bare-Postgres shim, while postgres
         # must seed deterministic QA fixtures without tripping RLS (owner bypass).
         sql_parts.extend(["BEGIN;", *location_stock_parts, "COMMIT;"])
-    return _auth_users_sql() + "\n" + "\n".join(sql_parts)
+    return "\n".join(sql_parts)
+
+
+def _sql_literal(value: str) -> str:
+    return value.replace("'", "''")
+
+
+def build_events_sql() -> str:
+    """Seed event structure; the scanner ticket is issued later via real RSVP."""
+    parts = ["BEGIN;"]
+    for event in EVENTS:
+        organiser = persona_by_key(event.organiser_key)
+        parts.append(
+            f"""
+INSERT INTO public.events (
+  id, organiser_vendor_id, slug, title, event_type, status, visibility,
+  platform_fee_payer, venue, city, landmark, lat, lng, images
+) VALUES (
+  '{event.event_id}', '{organiser.vendor_id}', '{_sql_literal(event.slug)}',
+  '{_sql_literal(event.title)}', '{event.event_type}', '{event.status}',
+  '{event.visibility}', '{event.platform_fee_payer}',
+  '{_sql_literal(event.venue)}', '{_sql_literal(event.city)}',
+  '{_sql_literal(event.landmark)}', {event.lat}, {event.lng}, '{{}}'
+) ON CONFLICT (id) DO UPDATE SET
+  organiser_vendor_id = EXCLUDED.organiser_vendor_id,
+  slug = EXCLUDED.slug,
+  title = EXCLUDED.title,
+  event_type = EXCLUDED.event_type,
+  status = EXCLUDED.status,
+  visibility = EXCLUDED.visibility,
+  platform_fee_payer = EXCLUDED.platform_fee_payer,
+  venue = EXCLUDED.venue,
+  city = EXCLUDED.city,
+  landmark = EXCLUDED.landmark,
+  lat = EXCLUDED.lat,
+  lng = EXCLUDED.lng;
+
+INSERT INTO public.event_instances (id, event_id, starts_at, ends_at, capacity, status)
+VALUES (
+  '{event.instance_id}', '{event.event_id}', '{event.starts_at}',
+  '{event.ends_at}', {event.capacity}, 'scheduled'
+) ON CONFLICT (id) DO UPDATE SET
+  starts_at = EXCLUDED.starts_at,
+  ends_at = EXCLUDED.ends_at,
+  capacity = EXCLUDED.capacity,
+  status = EXCLUDED.status;
+"""
+        )
+        for ticket_type in event.ticket_types:
+            qty_cap = "NULL" if ticket_type.qty_cap is None else str(ticket_type.qty_cap)
+            parts.append(
+                f"""
+INSERT INTO public.ticket_types (
+  id, event_id, kind, pass_kind, name, price_ngwee, qty_cap, attendee_named
+) VALUES (
+  '{ticket_type.ticket_type_id}', '{event.event_id}', '{ticket_type.kind}',
+  '{ticket_type.pass_kind}', '{_sql_literal(ticket_type.name)}',
+  {ticket_type.price_ngwee}, {qty_cap}, {str(ticket_type.attendee_named).lower()}
+) ON CONFLICT (id) DO UPDATE SET
+  kind = EXCLUDED.kind,
+  pass_kind = EXCLUDED.pass_kind,
+  name = EXCLUDED.name,
+  price_ngwee = EXCLUDED.price_ngwee,
+  qty_cap = EXCLUDED.qty_cap,
+  attendee_named = EXCLUDED.attendee_named;
+
+INSERT INTO public.ticket_type_instances (instance_id, ticket_type_id, allocation)
+VALUES ('{event.instance_id}', '{ticket_type.ticket_type_id}', {ticket_type.allocation})
+ON CONFLICT (instance_id, ticket_type_id) DO UPDATE SET
+  allocation = EXCLUDED.allocation;
+"""
+            )
+    parts.append("COMMIT;")
+    return "\n".join(parts)
 
 
 def build_cleanup_sql() -> str:
@@ -241,18 +311,81 @@ def build_cleanup_sql() -> str:
     location_ids = ", ".join(f"'{loc.location_id}'" for loc in VENDOR_LOCATIONS)
     kyc_ids = ", ".join(f"'{record.id}'" for record in KYC_FIXTURES)
     business_buyer_id = persona_by_key("BUSINESS_BUYER").business_buyer_id
+    event_ids = ", ".join(f"'{event.event_id}'" for event in EVENTS)
+    instance_ids = ", ".join(f"'{event.instance_id}'" for event in EVENTS)
+    ticket_type_ids = ", ".join(
+        f"'{t.ticket_type_id}'" for event in EVENTS for t in event.ticket_types
+    )
+    ticket_ids = ", ".join(
+        f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets
+    )
+
+    # A row whose FK points at an exact canonical synthetic listing/vendor/
+    # persona is dependent fixture state EXCEPT when it descends from a real
+    # order — i.e. a checkout_group whose idempotency_key does NOT match the
+    # QA transactional-fixture driver's `{SEED_PREFIX}-txn-` namespace. Every
+    # strict E2E run places exactly this kind of real order (shop-cod.spec.ts
+    # runs unconditionally, no founder gate, straight through the live
+    # checkout API — see e2e/specs/shop-cod.spec.ts). Orders/payments are
+    # guarded financial state machines (CLAUDE.md convention #4): cleanup must
+    # never force a delete through one. The listing/vendor/persona row is left
+    # in place instead — the seed step's `ON CONFLICT (id) DO UPDATE` upserts
+    # it fresh regardless, so correctness is unaffected; only the
+    # delete-and-recreate churn is skipped for that one row.
+    real_order_listing_ids_sql = f"""
+    SELECT oip.listing_id
+    FROM public.order_item_products oip
+    JOIN public.order_items oi ON oi.id = oip.order_item_id
+    JOIN public.orders o ON o.id = oi.order_id
+    JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
+    real_order_vendor_ids_sql = f"""
+    SELECT o.vendor_id
+    FROM public.orders o
+    JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
+    real_order_customer_ids_sql = f"""
+    SELECT cg.customer_id
+    FROM public.checkout_groups cg
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
 
     return f"""
 BEGIN;
+
+-- Branch stock rows are owned by the migration owner (postgres), same as the
+-- seed's INSERT — must run before the SET LOCAL role switch below. Sharing
+-- this transaction with the rest of cleanup (rather than its own early
+-- BEGIN/COMMIT) means a later failure rolls this back too instead of leaving
+-- it durably deleted while the rest of the fixture survives untouched.
 DELETE FROM public.listing_location_stock
 WHERE listing_id IN ({listing_ids});
-COMMIT;
 
-BEGIN;
 SET LOCAL role service_role;
 SET LOCAL "request.jwt.claims" = '{{"role":"service_role"}}';
 
+-- Cart rows are ephemeral pre-purchase state with no downstream dependents —
+-- safe to clear unconditionally for canonical synthetic listings.
+DELETE FROM public.cart_items
+WHERE listing_id IN ({listing_ids});
+
 -- Transactional rows created by QA drivers (scoped to synthetic checkout keys).
+-- Order creation and guarded transitions enqueue notifications independently of
+-- the order foreign-key lifecycle. Remove only outbox rows whose payload points
+-- at this synthetic checkout namespace before deleting the referenced orders.
+DELETE FROM public.notification_outbox
+WHERE payload->>'checkout_group_id' IN (
+  SELECT id::text FROM public.checkout_groups
+  WHERE idempotency_key LIKE '{SEED_PREFIX}-txn-%'
+)
+OR payload->>'order_id' IN (
+  SELECT o.id::text
+  FROM public.orders o
+  JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+  WHERE cg.idempotency_key LIKE '{SEED_PREFIX}-txn-%'
+);
 DELETE FROM public.payments
 WHERE checkout_group_id IN (
   SELECT id FROM public.checkout_groups
@@ -278,12 +411,58 @@ DELETE FROM public.listing_images
 WHERE listing_id IN ({listing_ids})
    OR cloudinary_public_id LIKE 'staging-synthetic/{SEED_PREFIX}%';
 
+-- rfq_threads and listing_specification_snapshots also restrict-FK into
+-- vendor_listings, but neither grants service_role table access (SELECT is
+-- authenticated-only in their own migrations — 0095, 20260813064106), so a
+-- defensive exclusion here cannot even run under this transaction's role.
+-- Both are also NOT reachable by any current E2E spec (no spec exercises
+-- RFQ/quote flows, and nothing in services/api writes
+-- listing_specification_snapshots yet), so this is deliberately left as a
+-- follow-up: add the matching NOT IN exclusion (and its own grant, if still
+-- needed) only once one becomes reachable and the failure is proven live.
 DELETE FROM public.vendor_listings
-WHERE id IN ({listing_ids})
-   OR sku LIKE '{SEED_PREFIX}%';
+WHERE (id IN ({listing_ids}) OR sku LIKE '{SEED_PREFIX}%')
+  AND id NOT IN ({real_order_listing_ids_sql});
 
+-- A canonical product still referenced by a vendor_listings row we just
+-- skipped above (real-order guard) cannot be deleted either: products.id has
+-- ON DELETE SET NULL into vendor_listings.product_id (0003_catalog.sql), and
+-- the vendor_listings_product_strategy_policy trigger rejects that resulting
+-- UPDATE for Class A/B/C listings ("Class % listings require a canonical
+-- product") — proven live, not inferred. By this point in the transaction
+-- vendor_listings has already been pruned to exactly the surviving rows, so
+-- checking current references is sufficient and needs no separate real-order
+-- subquery of its own.
 DELETE FROM public.products
-WHERE id IN ({product_ids})
+WHERE (id IN ({product_ids}) OR slug LIKE '{SEED_PREFIX}%')
+  AND id NOT IN (
+    SELECT product_id FROM public.vendor_listings WHERE product_id IS NOT NULL
+  );
+
+-- Events before vendors/profiles: tickets reference holders and events
+-- reference the organiser vendor.
+-- The certification ticket has a real free-RSVP order spine. Remove its
+-- restrict-FK dependants in the same deterministic order as its issuer.
+{build_scanner_rsvp_cleanup_sql()}
+
+DELETE FROM public.tickets
+WHERE id IN ({ticket_ids})
+   OR instance_id IN ({instance_ids});
+
+DELETE FROM public.ticket_type_instances
+WHERE instance_id IN ({instance_ids})
+   OR ticket_type_id IN ({ticket_type_ids});
+
+DELETE FROM public.ticket_types
+WHERE id IN ({ticket_type_ids})
+   OR event_id IN ({event_ids});
+
+DELETE FROM public.event_instances
+WHERE id IN ({instance_ids})
+   OR event_id IN ({event_ids});
+
+DELETE FROM public.events
+WHERE id IN ({event_ids})
    OR slug LIKE '{SEED_PREFIX}%';
 
 DELETE FROM public.vendor_locations
@@ -295,21 +474,91 @@ WHERE id IN ({kyc_ids});
 DELETE FROM public.business_buyers
 WHERE id = '{business_buyer_id}';
 
+-- ledger_accounts.vendor_id restrict-references vendors. Drop only accounts
+-- that never carried a posting (money history is never deleted); a vendor whose
+-- accounts hold postings survives, mirroring the real-order guard.
+DELETE FROM public.ledger_accounts la
+WHERE la.vendor_id IN (
+    SELECT v.id FROM public.vendors v
+    WHERE (v.id IN ({vendor_ids}) OR v.slug LIKE '{SEED_PREFIX}%')
+      AND v.id NOT IN ({real_order_vendor_ids_sql})
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM public.ledger_postings lp WHERE lp.account_id = la.id
+  );
+
 DELETE FROM public.vendors
-WHERE id IN ({vendor_ids})
-   OR slug LIKE '{SEED_PREFIX}%';
+WHERE (id IN ({vendor_ids}) OR slug LIKE '{SEED_PREFIX}%')
+  AND id NOT IN ({real_order_vendor_ids_sql})
+  AND id NOT IN (
+    SELECT la.vendor_id FROM public.ledger_accounts la WHERE la.vendor_id IS NOT NULL
+  );
 
 DELETE FROM public.user_roles
 WHERE user_id IN ({user_ids});
 
+-- Mirrors the products guard above: vendors.owner_user_id references
+-- profiles(id) on delete restrict (0002_identity_vendors.sql) — the only
+-- restrict FK into profiles in the schema. A profile still owning a
+-- surviving (real-order-guarded) vendor row cannot be deleted either;
+-- proven live the same way the products landmine was. vendors has already
+-- been pruned to survivors only by this point, so checking current state is
+-- sufficient.
 DELETE FROM public.profiles
-WHERE id IN ({user_ids});
+WHERE id IN ({user_ids})
+  AND id NOT IN (
+    SELECT owner_user_id FROM public.vendors WHERE owner_user_id IS NOT NULL
+  );
 
+-- Same pattern one level further down the chain: products.category_id
+-- (0003_catalog.sql) and vendor_listings.category_id
+-- (20260813064106_product_strategy_core_contract.sql) both restrict-reference
+-- categories. A surviving (real-order-guarded) product or listing still
+-- pointing at the canonical synthetic category blocks its delete — proven
+-- live, not inferred. Both tables have already been pruned to survivors only
+-- by this point, so checking current state is sufficient.
 DELETE FROM public.categories
-WHERE slug = '{CATEGORY_FIXTURE["category_slug"]}';
+WHERE slug = '{CATEGORY_FIXTURE["category_slug"]}'
+  AND id NOT IN (
+    SELECT category_id FROM public.products WHERE category_id IS NOT NULL
+    UNION
+    SELECT category_id FROM public.vendor_listings WHERE category_id IS NOT NULL
+  );
 
+-- auth.users is administered by the hosted project's session owner
+-- (postgres), not service_role: on real staging Supabase, service_role has
+-- BYPASSRLS on public.* tables (granted per-table by our own migrations) but
+-- no table-level GRANT on auth.users, which the platform reserves for GoTrue
+-- and the connecting owner role. Every other statement above touches public
+-- schema tables service_role legitimately owns; this is the one place the
+-- earlier SET LOCAL role service_role must be undone before writing. Do NOT
+-- confuse this Postgres role with the STAGING_SUPABASE_SERVICE_ROLE_KEY
+-- GitHub secret used elsewhere to seal the ticket credential over HTTPS —
+-- that key has no bearing on this psql session's table privileges. RESET
+-- ROLE reverts current_role to session_user (the role STAGING_SUPABASE_DB_URL
+-- connects as) immediately, still inside this same transaction, so a later
+-- failure still rolls back everything, including this delete and every
+-- earlier one — proven live against staging E2E run #46
+-- (permission denied for table users) and confirmed via a hosted-privilege
+-- regression test that revokes service_role's local test-only auth.users
+-- grant before exercising this exact statement.
+RESET ROLE;
+
+-- Skips a persona still referenced as the customer on a real checkout_group,
+-- for the same reason vendor_listings/vendors are skipped above. Also skips
+-- a persona still owning a surviving vendor: profiles.id cascades from
+-- auth.users (0002_identity_vendors.sql), so deleting auth.users here would
+-- cascade into profiles and re-trigger the exact vendors_owner_user_id_fkey
+-- restrict violation the profiles guard above already exists to avoid —
+-- proven live, not inferred. user_roles deletion above is unaffected either
+-- way: deleting a CHILD row while the auth.users parent survives is never
+-- FK-blocked.
 DELETE FROM auth.users
-WHERE id IN ({user_ids});
+WHERE id IN ({user_ids})
+  AND id NOT IN ({real_order_customer_ids_sql})
+  AND id NOT IN (
+    SELECT owner_user_id FROM public.vendors WHERE owner_user_id IS NOT NULL
+  );
 
 COMMIT;
 """
@@ -340,6 +589,27 @@ def verification_queries() -> dict[str, str]:
             "SELECT wholesale::text FROM public.vendor_listings "
             "WHERE sku LIKE '%-list-prd-d-wholesale'"
         ),
+        "event_published": (
+            "SELECT count(*)::int FROM public.events "
+            f"WHERE slug LIKE '{SEED_PREFIX}%' AND status = 'published'"
+        ),
+        "event_instances_scheduled": (
+            "SELECT count(*)::int FROM public.event_instances ei "
+            "JOIN public.events e ON e.id = ei.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%' AND ei.status = 'scheduled'"
+        ),
+        "event_ticket_types": (
+            "SELECT count(*)::int FROM public.ticket_types tt "
+            "JOIN public.events e ON e.id = tt.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%'"
+        ),
+        "issued_tickets": (
+            "SELECT count(*)::int FROM public.tickets t "
+            "JOIN public.event_instances ei ON ei.id = t.instance_id "
+            "JOIN public.events e ON e.id = ei.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%' "
+            "AND t.status = 'issued' AND t.checked_in_at IS NULL"
+        ),
         "zero_price_guard": (
             "SELECT count(*)::int FROM public.vendor_listings "
             f"WHERE sku LIKE '{SEED_PREFIX}%' AND price_ngwee < 1"
@@ -362,11 +632,27 @@ def parse_verification(results: dict[str, list[str]]) -> None:
         raise RuntimeError("wholesale-only product D verification failed")
     if results["zero_price_guard"] != ["0"]:
         raise RuntimeError("zero-price guard failed for synthetic listings")
+    if int(results["event_published"][0]) < len(EVENTS):
+        raise RuntimeError("synthetic event verification failed")
+    if int(results["event_instances_scheduled"][0]) < len(EVENTS):
+        raise RuntimeError("synthetic event instance verification failed")
+    expected_types = sum(len(e.ticket_types) for e in EVENTS)
+    if int(results["event_ticket_types"][0]) < expected_types:
+        raise RuntimeError("synthetic ticket type verification failed")
+    expected_tickets = sum(
+        1 for e in EVENTS for t in e.tickets if t.status == "issued"
+    )
+    if int(results["issued_tickets"][0]) < expected_tickets:
+        raise RuntimeError(
+            "synthetic issued-ticket verification failed — the scanner journey "
+            "needs an un-scanned ticket"
+        )
 
 
 __all__ = [
     "IMAGE_IDS",
     "build_cleanup_sql",
+    "build_events_sql",
     "build_seed_sql",
     "parse_verification",
     "verification_queries",

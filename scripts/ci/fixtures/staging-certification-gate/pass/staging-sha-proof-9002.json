@@ -4,33 +4,51 @@
   "previews": {
     "customer": {
       "portal": "customer",
-      "deployment_url": "https://convergeo-customer-preview.example.vercel.app",
+      "vercel_project": "convergeo-customer",
+      "project_id": "prj_customer",
+      "candidate_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "deployment_id": "dpl_customer",
-      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "preview_url": "https://convergeo-customer-preview.example.vercel.app",
+      "deployment_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "target": "preview",
-      "api_env_verdict": "verified",
-      "health_verdict": "ok",
-      "health_http": "200"
+      "health_status": "ok",
+      "health_app": "customer",
+      "health_env": "staging",
+      "health_build_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "health_api_host": "api.staging.vergeo5.com",
+      "env_metadata_status": "verified"
     },
     "vendor": {
       "portal": "vendor",
-      "deployment_url": "https://convergeo-vendor-preview.example.vercel.app",
+      "vercel_project": "convergeo-vendor",
+      "project_id": "prj_vendor",
+      "candidate_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "deployment_id": "dpl_vendor",
-      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "preview_url": "https://convergeo-vendor-preview.example.vercel.app",
+      "deployment_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "target": "preview",
-      "api_env_verdict": "verified",
-      "health_verdict": "ok",
-      "health_http": "200"
+      "health_status": "ok",
+      "health_app": "vendor",
+      "health_env": "staging",
+      "health_build_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "health_api_host": "api.staging.vergeo5.com",
+      "env_metadata_status": "verified"
     },
     "admin": {
       "portal": "admin",
-      "deployment_url": "https://convergeo-admin-preview.example.vercel.app",
+      "vercel_project": "convergeo-admin",
+      "project_id": "prj_admin",
+      "candidate_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "deployment_id": "dpl_admin",
-      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "preview_url": "https://convergeo-admin-preview.example.vercel.app",
+      "deployment_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "target": "preview",
-      "api_env_verdict": "verified",
-      "health_verdict": "ok",
-      "health_http": "200"
+      "health_status": "ok",
+      "health_app": "admin",
+      "health_env": "staging",
+      "health_build_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "health_api_host": "api.staging.vergeo5.com",
+      "env_metadata_status": "verified"
     }
   },
   "api_fingerprint": {

@@ -5,8 +5,13 @@
  * process environment (populated locally via a `.env`-style export or, in CI,
  * from GitHub Actions secrets). Absent flags degrade gracefully: founder-gated
  * legs (Lenco sandbox pay, WhatsApp mock assertions, deterministic seed reset)
- * are skipped with a clear annotation rather than failing.
+ * are skipped with a clear annotation outside strict certification. Required
+ * payment evidence fails the MoMo checkout spec in strict certification.
  */
+
+import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
+import { missingSandboxMomoEvidence } from "./sandbox-momo-evidence";
+import { SEED } from "./seed.generated";
 
 export function flag(name: string): boolean {
   const raw = process.env[name];
@@ -30,6 +35,81 @@ export const BASE_URL = str("E2E_BASE_URL", "http://localhost:3000");
 export const VENDOR_BASE_URL = str("E2E_VENDOR_BASE_URL", BASE_URL);
 export const ADMIN_BASE_URL = str("E2E_ADMIN_BASE_URL", BASE_URL);
 
+/**
+ * Vercel "Protection Bypass for Automation" secrets.
+ *
+ * A bypass secret is issued PER VERCEL PROJECT, and the three portals are
+ * three separate projects (convergeo-customer/-vendor/-admin), so a secret
+ * generated for one is NOT assumed to work on another. Specs navigate the
+ * vendor origin directly (vendor-sell, event-ticket), so when the vendor app
+ * runs on its own origin it needs its own secret.
+ *
+ * Each resolves portal-specific first, then the pre-existing repository-wide
+ * secret as a backward-compatible fallback, then nothing. Presence is checked
+ * per source; values are never compared to each other.
+ *
+ * Per portal, therefore:
+ *   VERCEL_AUTOMATION_BYPASS_SECRET_<PORTAL>  ->  that portal's own secret
+ *   else VERCEL_AUTOMATION_BYPASS_SECRET      ->  the legacy shared fallback
+ *   else ""                                   ->  no bypass for that portal
+ */
+export const BYPASS_SECRET_FALLBACK = str("VERCEL_AUTOMATION_BYPASS_SECRET");
+export const BYPASS_SECRET_CUSTOMER = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER",
+  BYPASS_SECRET_FALLBACK,
+);
+export const BYPASS_SECRET_VENDOR = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR",
+  BYPASS_SECRET_FALLBACK,
+);
+export const BYPASS_SECRET_ADMIN = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN",
+  BYPASS_SECRET_FALLBACK,
+);
+
+/**
+ * True when ANY bypass credential is configured — portal-specific OR the
+ * legacy repository-wide fallback.
+ *
+ * This is the fixture's activation gate, and it deliberately does NOT require
+ * a portal-specific secret. The per-origin fixture is now the ONLY place a
+ * bypass header is attached in the browser (playwright.config.ts no longer
+ * sets one globally), so a legacy-only setup must engage it too — otherwise
+ * a legacy-only run would send no bypass at all and every protected portal
+ * would 401/SSO-redirect. Presence-based; never compares two secret values.
+ */
+export function hasBypassCredential(): boolean {
+  return (
+    BYPASS_SECRET_FALLBACK.length > 0 ||
+    BYPASS_SECRET_CUSTOMER.length > 0 ||
+    BYPASS_SECRET_VENDOR.length > 0 ||
+    BYPASS_SECRET_ADMIN.length > 0
+  );
+}
+
+/** Snapshot of the per-portal origin/secret pairing this run is configured with. */
+export function portalBypassConfig(): PortalBypassConfig {
+  return {
+    customer: { baseUrl: BASE_URL, secret: BYPASS_SECRET_CUSTOMER },
+    vendor: { baseUrl: VENDOR_BASE_URL, secret: BYPASS_SECRET_VENDOR },
+    admin: { baseUrl: ADMIN_BASE_URL, secret: BYPASS_SECRET_ADMIN },
+  };
+}
+
+/**
+ * Pick the bypass secret for whichever portal origin a request targets.
+ *
+ * Fails CLOSED: anything that is not one of the three configured portal
+ * origins — Supabase, the staging FastAPI, a CDN, a third party, an
+ * unparseable URL — resolves to "" and the caller then leaves that request's
+ * headers completely untouched. The previous fallback handed the CUSTOMER
+ * credential to every unmatched origin, which is a credential-exposure
+ * condition rather than a convenience. See `portal-bypass.ts`.
+ */
+export function bypassSecretForUrl(url: string): string {
+  return resolveBypassSecret(url, portalBypassConfig());
+}
+
 /** Build a locale-prefixed absolute URL against an explicit origin. */
 export function urlOn(origin: string, p: string): string {
   const clean = p.startsWith("/") ? p : `/${p}`;
@@ -44,20 +124,21 @@ export const THROTTLE = process.env.E2E_THROTTLE !== "0";
 
 /**
  * Lenco sandbox pay leg (founder gate F9b). Runs the live sandbox charge only
- * when the flag is set AND the reference/secret env is present. Otherwise the
- * checkout spec asserts up to the pay-initiation boundary and skips the charge.
+ * when the flag, keys, and test MSISDN are present. No checkout is placed
+ * with missing evidence.
  */
 export const lenco = {
   enabled: flag("LENCO_SANDBOX"),
+  environment: str("LENCO_ENV"),
   publicKey: str("LENCO_SANDBOX_PUBLIC_KEY"),
   secretKey: str("LENCO_SANDBOX_SECRET_KEY"),
   /** A sandbox MoMo number Lenco auto-approves in test mode. */
   testMomoNumber: str("LENCO_SANDBOX_MOMO_NUMBER"),
 };
 
-/** True only when the sandbox flag + creds are all present. */
+/** True only when the sandbox flag, keys, number and label are safe. */
 export function lencoSandboxReady(): boolean {
-  return lenco.enabled && lenco.secretKey.length > 0;
+  return missingSandboxMomoEvidence(lenco).length === 0;
 }
 
 /**
@@ -75,32 +156,68 @@ export function whatsappMockReady(): boolean {
 }
 
 /**
- * Deterministic seed reset. When present, the reset hook POSTs to a test-only
- * endpoint (guarded server-side, staging only) that idempotently rebuilds the
- * canonical fixtures keyed by the slugs in `seed.ts`.
+ * Fixture generation the staging database was seeded from.
+ *
+ * Published by the canonical seed step in the workflow. There is deliberately no
+ * `E2E_SEED_RESET_URL`/`E2E_SEED_TOKEN` any more: the reset is a guarded,
+ * once-per-run CLI step against the protected staging environment, not a
+ * remotely callable mutation endpoint.
  */
-export const seed = {
-  resetUrl: str("E2E_SEED_RESET_URL"),
-  token: str("E2E_SEED_TOKEN"),
-};
-
-export function seedResetReady(): boolean {
-  return seed.resetUrl.length > 0 && seed.token.length > 0;
+export function expectedFixtureVersion(): string {
+  return str("E2E_FIXTURE_VERSION");
 }
 
 /**
- * OTP login. Staging is configured with a fixed test phone whose OTP is either
- * static (Supabase test OTP map) or readable from the WhatsApp/SMS mock outbox.
- * Without these, the auth spec asserts up to the "code sent" boundary and skips
- * the verify leg.
+ * OTP login identities.
+ *
+ * The canonical personas carry DISTINCT database roles — `customer` vs `vendor`
+ * — so one account provably cannot drive both the customer auth journey and the
+ * vendor-portal journeys. Phones come from the generated fixture contract (they
+ * are public synthetic identifiers, already committed in the Python source);
+ * only the CODES are secrets.
  */
-export const otp = {
-  testPhone: str("E2E_TEST_PHONE"),
-  staticCode: str("E2E_TEST_OTP"),
+export const customerOtp = {
+  testPhone: SEED.personas.customer.phone,
+  staticCode: str("E2E_CUSTOMER_TEST_OTP"),
 };
 
-export function otpVerifyReady(): boolean {
-  return otp.testPhone.length > 0 && otp.staticCode.length > 0;
+export const vendorOtp = {
+  testPhone: SEED.personas.vendor.phone,
+  staticCode: str("E2E_VENDOR_TEST_OTP"),
+};
+
+export function customerOtpReady(): boolean {
+  return /^\d{6}$/.test(customerOtp.staticCode) && phoneOtpSafetyReady();
+}
+
+export function vendorOtpReady(): boolean {
+  return /^\d{6}$/.test(vendorOtp.staticCode) && phoneOtpSafetyReady();
+}
+
+/** Declarations gate test sends; they do not inspect or activate hosted flags. */
+export function phoneOtpSafetyReady(): boolean {
+  return (
+    str("SMS_OTP_TRANSPORT").toLowerCase() === "waha" &&
+    str("WAHA_OTP_ENABLED").toLowerCase() === "true" &&
+    str("STAGING_SMS_SANDBOX_ATTESTED").toLowerCase() === "true" &&
+    str("STAGING_TEST_OTP_MAP_ATTESTED").toLowerCase() === "true"
+  );
+}
+
+/**
+ * Organiser scanner credential for the seeded ticket.
+ *
+ * This is the holder-visible PIN issued by the real free-RSVP service for this
+ * seed run, not the rotating QR. It is recovered into a private 0600 runtime
+ * file, masked, and exported into the job — never derived, logged, or committed.
+ * `E2E_TICKET_QR` remains a temporary backward-compatible alias.
+ */
+export function ticketPin(): string {
+  return str("E2E_TICKET_PIN") || str("E2E_TICKET_QR");
+}
+
+export function ticketPinReady(): boolean {
+  return ticketPin().length > 0;
 }
 
 /** Convenience: build a locale-prefixed path. */
@@ -132,8 +249,45 @@ export function certificationMode(): CertificationMode {
   return "local-development";
 }
 
-/** True when absent seed/fixtures must FAIL (not soft-skip). */
-export function strictSyntheticRequired(): boolean {
+/**
+ * True when this run is a release-certification run (integrated staging or
+ * production readiness) rather than local exploration or a nightly smoke.
+ */
+export function strictCertificationRequired(): boolean {
   const mode = certificationMode();
   return mode === "integrated-staging" || mode === "production-readiness";
+}
+
+/** True when absent seed/fixtures must FAIL (not soft-skip). */
+export function strictSyntheticRequired(): boolean {
+  return strictCertificationRequired();
+}
+
+/**
+ * Origin for specs that navigate the VENDOR app directly (vendor-sell,
+ * event-ticket).
+ *
+ * `VENDOR_BASE_URL` deliberately falls back to `BASE_URL` so `--list` and
+ * typecheck work with no extra env, but that fallback silently points vendor
+ * specs at the CUSTOMER app. Convenient locally; unacceptable for
+ * certification, where a "pass" against the wrong origin is worse than a
+ * failure. In a strict run the target must be configured and must be a
+ * genuinely different origin — otherwise fail closed, loudly.
+ */
+export function requireVendorBaseUrl(): string {
+  if (!strictCertificationRequired()) {
+    return VENDOR_BASE_URL;
+  }
+  const configured = str("E2E_VENDOR_BASE_URL");
+  if (!configured) {
+    throw new Error(
+      "strictCertification: E2E_VENDOR_BASE_URL is not set — vendor specs would navigate the customer origin; a release baseline cannot certify the vendor portal on an unproven target",
+    );
+  }
+  if (originOf(configured) === originOf(BASE_URL)) {
+    throw new Error(
+      "strictCertification: E2E_VENDOR_BASE_URL resolves to the same origin as E2E_BASE_URL — vendor specs would navigate the customer app",
+    );
+  }
+  return configured;
 }

@@ -12,6 +12,7 @@ from app.schemas.base import (
     RefundReference,
     StrictModel,
 )
+from pydantic import model_validator
 
 
 class CollectionStatus(StrEnum):
@@ -25,6 +26,24 @@ class TransferStatus(StrEnum):
     PENDING = "pending"
     SUCCESSFUL = "successful"
     FAILED = "failed"
+
+
+class ProviderOutcome(StrEnum):
+    """Authoritative provider observation, separate from observation errors."""
+
+    SUCCESSFUL = "successful"
+    PENDING = "pending"
+    FAILED = "failed"
+    NOT_FOUND = "not_found"
+
+
+class ProviderErrorKind(StrEnum):
+    """Why no authoritative provider observation was available."""
+
+    TRANSPORT = "transport"
+    AUTHENTICATION = "authentication"
+    INVALID_OBSERVATION = "invalid_observation"
+    PROVIDER = "provider"
 
 
 class InitiateCollectionRequest(StrictModel):
@@ -49,13 +68,33 @@ class QueryStatusRequest(StrictModel):
     reference: str
 
 
-class QueryStatusResult(StrictModel):
-    reference: str
-    status: str
-    amount_major: str
-    currency: str = "ZMW"
+class ProviderResult(StrictModel):
+    requested_reference: str | None = None
+    outcome: ProviderOutcome | None = None
+    reference: str | None = None
+    status: str | None = None
+    amount_major: str | None = None
+    currency: str | None = "ZMW"
     provider_reference: str | None = None
+    debit_account_id: str | None = None
+    destination: dict[str, Any] | None = None
+    failure_reason: str | None = None
     raw: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def derive_compatibility_fields(self) -> ProviderResult:
+        """Keep existing result constructors valid while making provenance explicit."""
+        if self.requested_reference is None:
+            self.requested_reference = self.reference
+        if self.outcome is None and self.status is not None:
+            normalized = self.status.strip().lower()
+            if normalized == "successful":
+                self.outcome = ProviderOutcome.SUCCESSFUL
+            elif normalized == "failed":
+                self.outcome = ProviderOutcome.FAILED
+            else:
+                self.outcome = ProviderOutcome.PENDING
+        return self
 
 
 class InitiatePayoutRequest(StrictModel):
@@ -67,10 +106,14 @@ class InitiatePayoutRequest(StrictModel):
 
 
 class InitiatePayoutResult(StrictModel):
+    reference: str | None = None
     provider_reference: str | None = None
     status: TransferStatus
     amount_major: str
     currency: str = "ZMW"
+    debit_account_id: str | None = None
+    destination: dict[str, Any] | None = None
+    failure_reason: str | None = None
     raw: dict[str, Any] | None = None
 
 
@@ -95,12 +138,28 @@ class VerifyWebhookResult(StrictModel):
     event_id: str | None = None
 
 
+QueryStatusResult = ProviderResult
+
+
 class PaymentProviderError(Exception):
     """Typed error from the payment provider layer."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        kind: ProviderErrorKind = ProviderErrorKind.PROVIDER,
+        reference: str | None = None,
+        observation_uncertain: bool = False,
+        dispatch_may_have_succeeded: bool = False,
+    ) -> None:
         self.code = code
         self.message = message
+        self.kind = kind
+        self.reference = reference
+        self.observation_uncertain = observation_uncertain
+        self.dispatch_may_have_succeeded = dispatch_may_have_succeeded
         super().__init__(message)
 
 

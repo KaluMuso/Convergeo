@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 import { MerchBoard } from "./_components/MerchBoard";
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 export default async function MerchPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.merch");
+  const t = await getAdminTranslator(locale, "admin.merch");
 
   return (
     <div className="space-y-4">

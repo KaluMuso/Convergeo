@@ -14,6 +14,8 @@
 # Environment (names only — values from vault / shell):
 #   API_BASE_URL          Default https://api.vergeo5.com
 #   EXPECTED_ENV          staging | production | development (fingerprint assert)
+#   EXPECTED_IMAGE_TAG    Optional exact 40-character lowercase SHA image tag
+#   EXPECTED_SUPABASE_PROJECT_REF  Optional exact fingerprint project reference
 #   MASTER_GIT_SHA        Expected deployed SHA (default: git rev-parse HEAD in repo)
 #   CUSTOMER_URL          Default https://www.vergeo5.com
 #   VENDOR_URL            Default https://vendor.vergeo5.com
@@ -37,6 +39,8 @@ MIGRATIONS_DIR="${REPO_ROOT}/supabase/migrations"
 
 API_BASE_URL="${API_BASE_URL:-https://api.vergeo5.com}"
 EXPECTED_ENV="${EXPECTED_ENV:-production}"
+EXPECTED_IMAGE_TAG="${EXPECTED_IMAGE_TAG:-}"
+EXPECTED_SUPABASE_PROJECT_REF="${EXPECTED_SUPABASE_PROJECT_REF:-}"
 MASTER_GIT_SHA="${MASTER_GIT_SHA:-}"
 CUSTOMER_URL="${CUSTOMER_URL:-https://www.vergeo5.com}"
 VENDOR_URL="${VENDOR_URL:-https://vendor.vergeo5.com}"
@@ -105,6 +109,17 @@ data = json.load(sys.stdin)
 if isinstance(data, dict):
     print(data.get(key, ""))
 ' "$key"
+}
+
+# Identity fields must be strings, never coerced JSON numbers or booleans.
+json_get_string() {
+  python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+value = data.get(sys.argv[1]) if isinstance(data, dict) else None
+# Shell command substitution strips trailing newlines; reject them before transport.
+print(value if isinstance(value, str) and "\n" not in value and "\r" not in value else "")
+' "$1"
 }
 
 http_code() {
@@ -178,17 +193,28 @@ check_g1_api() {
     fi
   fi
 
-  # Fingerprint env + git_sha (G9 overlap)
-  local fp_env fp_sha fp_ref
+  # Optional expected image/project bind this generic verifier to its caller.
+  local fp_env fp_sha fp_ref fp_image
   if [[ -n "$fp" && "$fp" == \{* ]]; then
-    fp_env="$(printf '%s' "$fp" | json_get env)"
-    fp_sha="$(printf '%s' "$fp" | json_get git_sha)"
-    fp_ref="$(printf '%s' "$fp" | json_get supabase_project_ref)"
+    fp_env="$(printf '%s' "$fp" | json_get_string env)"
+    fp_sha="$(printf '%s' "$fp" | json_get_string git_sha)"
+    fp_ref="$(printf '%s' "$fp" | json_get_string supabase_project_ref)"
+    fp_image="$(printf '%s' "$fp" | json_get_string image_tag)"
     detail="${detail} env=${fp_env:-?} git_sha=${fp_sha:-?} supabase_project_ref=${fp_ref:-?}"
 
     if [[ -n "$EXPECTED_ENV" && "$fp_env" != "$EXPECTED_ENV" ]]; then
       fail=1
       detail="${detail} expected_env=${EXPECTED_ENV}"
+    fi
+    if [[ -n "$EXPECTED_SUPABASE_PROJECT_REF" && "$fp_ref" != "$EXPECTED_SUPABASE_PROJECT_REF" ]]; then
+      fail=1
+      detail="${detail} SUPABASE_PROJECT_MISMATCH"
+    fi
+    if [[ -n "$EXPECTED_IMAGE_TAG" ]] &&
+       [[ ! "$EXPECTED_IMAGE_TAG" =~ ^[0-9a-f]{40}$ ||
+          ! "$fp_image" =~ ^[0-9a-f]{40}$ || "$fp_image" != "$EXPECTED_IMAGE_TAG" ]]; then
+      fail=1
+      detail="${detail} IMAGE_TAG_MISMATCH"
     fi
   else
     fail=1
@@ -473,11 +499,10 @@ check_g9() {
   local fail=0
 
   if [[ -n "${FINGERPRINT_GIT_SHA:-}" ]]; then
-    local short_master short_fp
-    short_master="$(printf '%s' "$MASTER_GIT_SHA" | cut -c1-7)"
-    short_fp="$(printf '%s' "$FINGERPRINT_GIT_SHA" | cut -c1-7)"
     detail="fingerprint_sha=${FINGERPRINT_GIT_SHA} master=${MASTER_GIT_SHA}"
-    if [[ "$FINGERPRINT_GIT_SHA" != "$MASTER_GIT_SHA" && "$short_fp" != "$short_master" ]]; then
+    if [[ ! "$MASTER_GIT_SHA" =~ ^[0-9a-f]{40}$ ||
+          ! "$FINGERPRINT_GIT_SHA" =~ ^[0-9a-f]{40}$ ||
+          "$FINGERPRINT_GIT_SHA" != "$MASTER_GIT_SHA" ]]; then
       fail=1
       detail="${detail} SHA_MISMATCH"
     fi

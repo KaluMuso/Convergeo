@@ -12,7 +12,8 @@
     "privacy": "Données et confidentialité",
     "business": "Mode entreprise",
     "signOut": "Se déconnecter",
-    "signingOut": "Déconnexion…"
+    "signingOut": "Déconnexion…",
+    "following": "Abonnements"
   },
   "business": {
     "title": "Mode entreprise",
@@ -93,6 +94,8 @@
     "delete": "Supprimer l'adresse",
     "deleteConfirmTitle": "Supprimer cette adresse ?",
     "deleteConfirmBody": "Cette adresse sera supprimée de votre compte. Les commandes déjà passées ne sont pas concernées.",
+    "deleteBlocked": "Cette adresse est liée à une commande qui n'a pas encore été livrée. Vous pourrez la supprimer une fois la commande terminée.",
+    "deleteFailed": "Impossible de supprimer l'adresse. Veuillez réessayer.",
     "cancel": "Annuler",
     "requiredLandmark": "Les indications par points de repère sont obligatoires.",
     "error": "Impossible d'enregistrer l'adresse. Veuillez réessayer."
@@ -230,5 +233,18 @@
     "remove": "Retirer",
     "removeLabel": "Retirer {name} des vus récemment",
     "viewProduct": "Voir"
+  },
+  "following": {
+    "title": "Abonnements",
+    "description": "Les nouveautés des boutiques que vous suivez, sur les 30 derniers jours.",
+    "emptyTitle": "Rien de nouveau pour l'instant",
+    "emptyBody": "Suivez des boutiques et leurs nouveaux produits apparaîtront ici.",
+    "browseVendors": "Voir les vendeurs",
+    "signIn": "Connectez-vous pour voir les boutiques que vous suivez",
+    "signInCta": "Se connecter",
+    "loadFailed": "Impossible de charger votre fil. Réessayez.",
+    "retry": "Réessayer",
+    "loadMore": "Afficher plus",
+    "viewFeed": "Voir les nouveautés des boutiques suivies"
   }
 }

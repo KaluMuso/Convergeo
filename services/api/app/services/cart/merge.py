@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from app.errors import AppError
@@ -25,7 +25,17 @@ class MergedCartItem:
     qty: int
     unit_price_ngwee: int
     wholesale: bool
+    pickup_location_id: str | None = None
     rfq_thread_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MergeResolution:
+    """Explicit choices made by the signed-in customer for merge conflicts."""
+
+    accept_price_changes: frozenset[str] = frozenset()
+    pickup_location_choices: dict[str, str | None] = field(default_factory=dict)
+    remove_listing_ids: frozenset[str] = frozenset()
 
 
 def _find_item_for_listing(items: list[dict[str, Any]], listing_id: str) -> dict[str, Any] | None:
@@ -211,6 +221,8 @@ def merge_cart_items(
     business_eligible: bool = False,
     customer_id: str | None = None,
     rfq_threads_by_id: dict[str, dict[str, Any]] | None = None,
+    location_stock: list[dict[str, Any]] | None = None,
+    resolution: MergeResolution | None = None,
 ) -> tuple[list[MergedCartItem], list[MergeConflict]]:
     """Merge guest + user cart lines: qty-sum duplicates, refresh prices, surface conflicts.
 
@@ -392,14 +404,22 @@ def merge_cart_items(
             price_tiers=price_tiers,
         )
 
-        if user_item is not None and int(user_item.get("unit_price_ngwee", 0)) != unit_price:
+        previous_prices = sorted(
+            {
+                int(item.get("unit_price_ngwee", 0))
+                for item in (user_item, guest_item)
+                if item is not None
+            }
+        )
+        if any(previous_price != unit_price for previous_price in previous_prices):
             conflicts.append(
                 MergeConflict(
                     listing_id=listing_id,
                     code="cart.price_changed",
                     message_key="cart.price_changed",
                     details={
-                        "previous_unit_price_ngwee": int(user_item["unit_price_ngwee"]),
+                        "previous_unit_price_ngwee": previous_prices[0],
+                        "previous_unit_prices_ngwee": previous_prices,
                         "current_unit_price_ngwee": unit_price,
                     },
                 )
@@ -414,7 +434,101 @@ def merge_cart_items(
             )
         )
 
-    return result, conflicts
+    choices = resolution or MergeResolution()
+    conflicts = [
+        conflict
+        for conflict in conflicts
+        if conflict.listing_id not in choices.remove_listing_ids
+        and not (
+            conflict.code == "cart.price_changed"
+            and conflict.listing_id in choices.accept_price_changes
+        )
+    ]
+
+    stock_rows = location_stock or []
+    resolved_result: list[MergedCartItem] = []
+    for merged in result:
+        listing_id = merged.listing_id
+        if listing_id in choices.remove_listing_ids:
+            continue
+
+        user_item = _find_item_for_listing(user_items, listing_id)
+        guest_item = _find_item_for_listing(guest_items, listing_id)
+        user_location = (
+            str(user_item["pickup_location_id"])
+            if user_item is not None and user_item.get("pickup_location_id")
+            else None
+        )
+        guest_location = (
+            str(guest_item["pickup_location_id"])
+            if guest_item is not None and guest_item.get("pickup_location_id")
+            else None
+        )
+
+        pickup_location_id = user_location or guest_location
+        if user_location and guest_location and user_location != guest_location:
+            selected = choices.pickup_location_choices.get(listing_id)
+            if selected not in {user_location, guest_location}:
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.pickup_conflict",
+                        message_key="cart.pickup_conflict",
+                        details={
+                            "listing_id": listing_id,
+                            "user_pickup_location_id": user_location,
+                            "guest_pickup_location_id": guest_location,
+                            "retry": False,
+                        },
+                    )
+                )
+            else:
+                pickup_location_id = selected
+
+        resolved_item = replace(merged, pickup_location_id=pickup_location_id)
+        listing = listings_by_id.get(listing_id, {})
+        listing_stock = [row for row in stock_rows if str(row.get("listing_id")) == listing_id]
+        if pickup_location_id and listing_stock:
+            selected_stock = next(
+                (row for row in listing_stock if str(row.get("location_id")) == pickup_location_id),
+                None,
+            )
+            available = int(selected_stock["stock_qty"]) if selected_stock is not None else 0
+            if available < resolved_item.qty:
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.stock_unavailable",
+                        message_key="cart.stock_unavailable",
+                        details={
+                            "listing_id": listing_id,
+                            "pickup_location_id": pickup_location_id,
+                            "requested_qty": resolved_item.qty,
+                            "available_qty": available,
+                            "retry": True,
+                        },
+                    )
+                )
+        elif listing.get("stock_mode") == "tracked" and listing.get("stock_qty") is not None:
+            available = int(listing["stock_qty"])
+            if available < resolved_item.qty:
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.stock_unavailable",
+                        message_key="cart.stock_unavailable",
+                        details={
+                            "listing_id": listing_id,
+                            "requested_qty": resolved_item.qty,
+                            "available_qty": available,
+                            "retry": True,
+                        },
+                    )
+                )
+
+        resolved_result.append(resolved_item)
+
+    return resolved_result, conflicts
 
 
 def validate_item_qty_for_listing(

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEPLOYMENT_PLANE_BUNDLE_MARKER,
   isDeployedFrontendEnv,
+  isE2EMockSessionAllowed,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
   isStagingApiOrigin,
@@ -186,5 +187,103 @@ describe("resolvePublicApiBaseUrl", () => {
         NODE_ENV: "development",
       }),
     ).toBe(false);
+  });
+});
+
+describe("isE2EMockSessionAllowed", () => {
+  it("allows the mock in development, regardless of the flag or plane", () => {
+    expect(isE2EMockSessionAllowed({ NODE_ENV: "development" })).toBe(true);
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "development",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: undefined,
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: undefined,
+      }),
+    ).toBe(true);
+  });
+
+  it("allows the mock on the staging plane with the explicit flag", () => {
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: "1",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "staging",
+      }),
+    ).toBe(true);
+  });
+
+  it("denies the mock on the staging plane without the flag", () => {
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "staging",
+      }),
+    ).toBe(false);
+  });
+
+  it("denies the mock on the production plane even with the flag set (fail-closed)", () => {
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: "1",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+      }),
+    ).toBe(false);
+  });
+
+  it("denies the mock on the production plane without the flag", () => {
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+      }),
+    ).toBe(false);
+  });
+
+  it("denies the mock when the flag is set but the plane is missing entirely", () => {
+    // The exact accident PR A must guard against: NEXT_PUBLIC_E2E_MOCK_SESSION=1
+    // set somewhere (e.g. copied into the wrong Vercel scope) with no staging
+    // plane marker compiled in at all — must still fail closed, not default open.
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: "1",
+      }),
+    ).toBe(false);
+  });
+
+  it("denies the mock for an unrecognised plane value even with the flag set", () => {
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: "1",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "not-a-real-plane",
+      }),
+    ).toBe(false);
+  });
+
+  it("denies the mock for a preview-plane build even with the flag set", () => {
+    // Only the literal "staging" plane is trusted for this contract today —
+    // "preview" is a distinct plane value in this codebase (see DeploymentPlane)
+    // and is not assumed to carry the same synthetic-fixture guarantees.
+    expect(
+      isE2EMockSessionAllowed({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_E2E_MOCK_SESSION: "1",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
+      }),
+    ).toBe(false);
+  });
+
+  it("treats any non-'1' flag value as denied", () => {
+    for (const value of ["true", "yes", "0", ""]) {
+      expect(
+        isE2EMockSessionAllowed({
+          NODE_ENV: "production",
+          NEXT_PUBLIC_E2E_MOCK_SESSION: value,
+          NEXT_PUBLIC_DEPLOYMENT_PLANE: "staging",
+        }),
+      ).toBe(false);
+    }
   });
 });

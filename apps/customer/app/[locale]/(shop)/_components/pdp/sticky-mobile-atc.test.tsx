@@ -73,6 +73,14 @@ function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): Listing
     handleAddToCart: vi.fn(),
     stockLabel: "In stock",
     maxQuantity: 5,
+    pickupBranchTracked: false,
+    pickupLocations: [],
+    pickupLocationsLoading: false,
+    pickupLocationsLoadError: false,
+    selectedPickupLocationId: null,
+    selectPickupLocation: vi.fn(),
+    variantSatisfied: true,
+    showMissingOptions: false,
     ...overrides,
   };
 }
@@ -195,6 +203,81 @@ describe("StickyMobileAtc", () => {
     );
   });
 
+  it("disables the sticky Add to Cart button until a required branch is selected", async () => {
+    const observeRef = createRef<HTMLElement | null>();
+    observeRef.current = document.createElement("section");
+    const purchase = makePurchase({ pickupBranchTracked: true, selectedPickupLocationId: null });
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={purchase}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+
+    observerCallback?.(
+      [
+        {
+          isIntersecting: false,
+          target: observeRef.current!,
+        } as unknown as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    expect(await screen.findByTestId("pdp-sticky-add-to-cart")).toBeDisabled();
+  });
+
+  /**
+   * Regression: on one flex line the fixed-width qty stepper and CTA starved the
+   * summary column — measured at 32px wide on a 360px viewport and 62px at 390px
+   * — so `K249.00` (76px) spilled out of its box and painted over the decrement
+   * control, and the stock line read "In s…". jsdom has no layout engine, so the
+   * structural contract is asserted here and the widths are covered by the
+   * measured browser evidence.
+   */
+  it("keeps the summary off the control line until there is room for both", async () => {
+    const observeRef = createRef<HTMLElement | null>();
+    observeRef.current = document.createElement("section");
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={makePurchase()}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+
+    observerCallback?.(
+      [
+        {
+          isIntersecting: false,
+          target: observeRef.current!,
+        } as unknown as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    const bar = await screen.findByTestId("pdp-sticky-mobile-atc");
+    const row = bar.firstElementChild as HTMLElement;
+
+    // Stacked on phones, side by side only once the row can hold both.
+    expect(row.className).toContain("flex-col");
+    expect(row.className).toContain("sm:flex-row");
+
+    // The price is clipped inside its own column, never painted over a control.
+    expect(screen.getByTestId("pdp-sticky-price").className).toContain("truncate");
+
+    // The stepper and the CTA still share one line.
+    const controls = screen.getByTestId("pdp-sticky-qty-decrease").parentElement!.parentElement!;
+    expect(controls).toContainElement(screen.getByTestId("pdp-sticky-add-to-cart"));
+  });
+
   it("does not render when listing is out of stock", () => {
     const observeRef = createRef<HTMLElement | null>();
     observeRef.current = document.createElement("section");
@@ -221,5 +304,34 @@ describe("StickyMobileAtc", () => {
     );
 
     expect(screen.queryByTestId("pdp-sticky-mobile-atc")).not.toBeInTheDocument();
+  });
+
+  it("routes the buyer back to the picker while colour/size is incomplete", async () => {
+    const user = userEvent.setup();
+    const observeRef = createRef<HTMLElement | null>();
+    const buyBox = document.createElement("section");
+    buyBox.scrollIntoView = vi.fn();
+    observeRef.current = buyBox;
+    const purchase = makePurchase({ variantSatisfied: false });
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={purchase}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+    observerCallback?.(
+      [{ isIntersecting: false, target: buyBox } as unknown as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
+
+    expect(await screen.findByTestId("pdp-sticky-choose-options")).toBeInTheDocument();
+    expect(screen.queryByTestId("pdp-sticky-add-to-cart")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("pdp-sticky-choose-options"));
+    expect(purchase.handleAddToCart).toHaveBeenCalledTimes(1);
+    expect(buyBox.scrollIntoView).toHaveBeenCalled();
   });
 });

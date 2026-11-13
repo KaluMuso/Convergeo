@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -72,6 +73,7 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
       });
       closeDialog();
       setMessage(t("dialog.success"));
+      notify.success(t("dialog.success"));
       await load();
     } catch {
       setActionError(t("dialog.failure"));
@@ -183,6 +185,8 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
               )}
             </section>
 
+            <CanonicalSubmissionDetails item={selected} heading={t("dialog.details")} />
+
             {mode === "reject" ? (
               <label className="mt-4 block text-sm text-text">
                 {t("dialog.rejectReason")}
@@ -239,6 +243,32 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
             </div>
           </div>
         </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** Submitted content is plain text, including guide text and structured JSON. */
+export function CanonicalSubmissionDetails({
+  item,
+  heading,
+}: {
+  item: Pick<CanonicalQueueItem, "brand" | "description" | "spec">;
+  heading: string;
+}) {
+  return (
+    <section className="mt-4 space-y-2" aria-label={heading}>
+      <h4 className="font-medium">{heading}</h4>
+      {item.brand ? <p className="break-words">{item.brand}</p> : null}
+      {item.description ? (
+        <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+          {item.description}
+        </p>
+      ) : null}
+      {Object.keys(item.spec ?? {}).length ? (
+        <pre className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">
+          {JSON.stringify(item.spec, null, 2)}
+        </pre>
       ) : null}
     </section>
   );

@@ -152,6 +152,7 @@ export function CategoryMegaMenu({
   );
 
   const [open, setOpen] = useState(false);
+  const [panelLeft, setPanelLeft] = useState(0);
   const [categories, setCategories] = useState<NavCategory[] | null>(null);
   const [featuredContent, setFeaturedContent] = useState<MegaMenuFeaturedContent | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,6 +164,27 @@ export function CategoryMegaMenu({
   const loadRef = useRef(loadCategories);
   const featuredRef = useRef(resolveFeaturedContent);
   const panelId = useId();
+
+  const positionPanel = useCallback(() => {
+    const triggerLeft = containerRef.current?.getBoundingClientRect().left;
+    if (triggerLeft === undefined) {
+      return;
+    }
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const viewport = document.documentElement.clientWidth || window.innerWidth;
+    const panelWidth = Math.min(52 * rem, Math.max(0, viewport - 2 * rem));
+    setPanelLeft(
+      Math.max(rem - triggerLeft, Math.min(0, viewport - rem - triggerLeft - panelWidth)),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    window.addEventListener("resize", positionPanel);
+    return () => window.removeEventListener("resize", positionPanel);
+  }, [open, positionPanel]);
 
   const closeMenu = useCallback(() => {
     setOpen(false);
@@ -251,7 +273,10 @@ export function CategoryMegaMenu({
         aria-expanded={open}
         aria-controls={panelId}
         aria-haspopup="dialog"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          positionPanel();
+          setOpen((value) => !value);
+        }}
         className="inline-flex min-h-11 items-center gap-1 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
       >
         {labels.trigger}
@@ -271,7 +296,8 @@ export function CategoryMegaMenu({
         aria-label={labels.panelAria}
         hidden={!open}
         tabIndex={-1}
-        className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(52rem,92vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
+        style={{ left: panelLeft }}
+        className="absolute top-full z-50 mt-1 max-h-[70vh] w-[min(52rem,calc(100vw-2rem))] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
       >
         {loading || categories === null || featuredContent === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>

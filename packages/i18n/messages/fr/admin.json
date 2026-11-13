@@ -15,7 +15,10 @@
     "config": "Configuration",
     "merch": "Merchandising",
     "translations": "Traductions",
-    "support": "Support"
+    "support": "Support",
+    "events": "Événements à haute valeur",
+    "homeFeed": "Home feed",
+    "advertising": "Advertising"
   },
   "hubs": {
     "moderation": {
@@ -223,6 +226,20 @@
       "reasonPlaceholder": "Motif (visible par le demandeur)"
     }
   },
+  "events": {
+    "title": "Événements à haute valeur",
+    "subtitle": "Les événements dont le GMV payé projeté atteint au moins K100 000 doivent être vérifiés par un admin avant publication. Ceci n'appelle personne automatiquement.",
+    "queue": {
+      "loading": "Chargement des événements à haute valeur…",
+      "empty": "Aucun événement à haute valeur non vérifié.",
+      "error": "Impossible de charger la file des événements à haute valeur.",
+      "actionError": "Impossible de vérifier cet événement. Réessayez.",
+      "verify": "Vérifier",
+      "threshold": "Seuil {amount}",
+      "projected": "GMV projeté {amount}",
+      "status": "Statut : {status}"
+    }
+  },
   "kyc": {
     "title": "File d'examen KYC",
     "subtitle": "Vérifications vendeur en attente — soumissions les plus anciennes en premier.",
@@ -368,6 +385,11 @@
       "saving": "Enregistrement…",
       "saved": "Sélection enregistrée.",
       "saveError": "Impossible d'enregistrer la sélection."
+    },
+    "canonical": {
+      "dialog": {
+        "details": "Détails du produit"
+      }
     }
   },
   "flags": {
@@ -709,7 +731,22 @@
       "drillIn": "Voir les détails du rapport",
       "hideDrillIn": "Masquer les détails",
       "mismatchAlert": "Écart détecté dans le grand livre — examinez les divergences.",
-      "cleanDay": "Aucune divergence dans le dernier rapport."
+      "cleanDay": "Aucune divergence dans le dernier rapport.",
+      "evidenceState": "Evidence: {state}",
+      "version": "Report version {number}",
+      "accountCurrency": "Account {account} · {currency}",
+      "states": {
+        "missing": "No report",
+        "account_unconfigured": "Provider account is not configured",
+        "legacy_unbound": "Legacy report without account or version binding",
+        "invalid": "Invalid evidence",
+        "stale": "Report is older than the expected reporting day",
+        "unresolved": "Unresolved discrepancies",
+        "noncertifying": "Evidence does not certify reconciliation",
+        "current_clean": "Current certified clean evidence"
+      },
+      "provenanceBound": "Immutable report bound to the configured provider account",
+      "provenanceLegacy": "Legacy evidence without account or version binding"
     },
     "orders": {
       "title": "Commandes par statut",
@@ -896,7 +933,9 @@
       "submitting": "Envoi…",
       "success": "Mis en file d'attente sur {channel}.",
       "successDeduped": "Déjà en file d'attente sur {channel} (dédupliqué).",
-      "failure": "Impossible d'envoyer le message."
+      "failure": "Impossible d'envoyer le message.",
+      "conflict": "Cet identifiant d'envoi correspond à un autre destinataire ou message. Vérifiez le client et le brouillon avant de commencer un nouvel envoi.",
+      "startNew": "Commencer un nouvel envoi"
     },
     "log": {
       "title": "Journal des interactions",
@@ -932,6 +971,192 @@
     },
     "errors": {
       "rateLimited": "Trop de messages d'assistance — réessayez sous peu."
+    }
+  },
+  "homeFeed": {
+    "title": "Home feed",
+    "subtitle": "Order, schedule and target the sections of the customer home page. Empty sections are hidden automatically.",
+    "loading": "Loading sections…",
+    "loadError": "Could not load feed sections.",
+    "retry": "Retry",
+    "create": "New section",
+    "preview": "Preview as guest",
+    "saveOrder": "Save order",
+    "orderSaved": "Order saved",
+    "hint": "Times use your browser clock; the feed is evaluated in UTC and shown in Africa/Lusaka.",
+    "columns": {
+      "order": "Order",
+      "key": "Section",
+      "type": "Type",
+      "schedule": "Schedule",
+      "status": "Status"
+    },
+    "moveUp": "Move {key} up",
+    "moveDown": "Move {key} down",
+    "arrowUp": "Up",
+    "arrowDown": "Down",
+    "scheduleOpen": "Always on",
+    "scheduleRange": "{from} → {to}",
+    "live": "Live",
+    "scheduled": "Scheduled",
+    "disabled": "Disabled",
+    "edit": "Edit",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "confirmDelete": "Delete this section? This cannot be undone.",
+    "saved": "Section saved",
+    "saveError": "Could not save. Check the fields and try again.",
+    "editTitle": "Edit section",
+    "createTitle": "New section",
+    "save": "Save",
+    "cancel": "Cancel",
+    "previewError": "Could not build the preview.",
+    "previewTitle": "Guest preview (first page)",
+    "previewEmpty": "No section resolves to data right now.",
+    "previewCarousel": "{count} sponsored carousel slides live",
+    "previewAd": "sponsored by {advertiser}",
+    "previewCount": "{count} items",
+    "errors": {
+      "invalidPrice": "Enter a kwacha amount such as 100 or 99.50."
+    },
+    "fields": {
+      "key": "Key (snake_case)",
+      "type": "Type",
+      "layout": "Layout",
+      "titleKey": "Title message key (optional)",
+      "titleEn": "Title (English)",
+      "titleFr": "Title (French)",
+      "limit": "Max items",
+      "viewAll": "View-all link (internal path)",
+      "categoryPath": "Category path",
+      "listingIds": "Listing IDs (one per line)",
+      "withinDays": "Upcoming within days",
+      "rulePaths": "Category paths (comma separated)",
+      "rulePriceMax": "Max price (K)",
+      "ruleSort": "Sort",
+      "ruleKeywords": "Title keywords (comma separated)",
+      "ruleNewDays": "Listed within days",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "audience": "Audience",
+      "enabled": "Enabled"
+    },
+    "types": {
+      "category": "Category",
+      "collection": "Manual collection",
+      "rule": "Rule",
+      "services": "Services",
+      "events": "Events",
+      "vendors": "Top vendors",
+      "for_you": "For you",
+      "ad_slot": "Ad slot"
+    },
+    "layouts": {
+      "rail": "Rail",
+      "grid": "Grid",
+      "banner": "Banner",
+      "ad": "Ad"
+    },
+    "sorts": {
+      "relevance": "Relevance",
+      "newest": "Newest",
+      "cheapest": "Cheapest",
+      "top_rated": "Top rated",
+      "trending": "Trending by views"
+    },
+    "audiences": {
+      "all": "Everyone",
+      "guest": "Guests only",
+      "signed_in": "Signed-in only"
+    },
+    "placeholders": {
+      "path": "/c/electronics",
+      "paths": "electronics, fashion/mens-clothing"
+    }
+  },
+  "advertising": {
+    "title": "Advertising",
+    "subtitle": "Sponsored feed slots and carousel slides. Only enabled placements inside their window appear on the site.",
+    "loading": "Loading placements…",
+    "loadError": "Could not load placements.",
+    "retry": "Retry",
+    "create": "New placement",
+    "hint": "Payments are recorded only — no money moves here.",
+    "empty": "No placements yet.",
+    "created": "Placement created as draft",
+    "saveError": "Could not save. Check the fields and try again.",
+    "transitionError": "That status change is not allowed.",
+    "confirmEnd": "End this placement? Ended placements cannot be restarted.",
+    "columns": {
+      "creative": "Creative",
+      "window": "Window",
+      "paid": "Paid",
+      "status": "Status",
+      "performance": "Last 30 days"
+    },
+    "windowRange": "{from} → {to}",
+    "performance": "{impressions} views · {clicks} clicks · CTR {ctr}",
+    "enable": "Enable",
+    "disable": "Disable",
+    "createTitle": "New placement",
+    "save": "Save draft",
+    "cancel": "Cancel",
+    "ctaHint": "Internal path (e.g. /c/electronics) or an https link on an approved advertiser domain.",
+    "errors": {
+      "invalidAmount": "Enter a kwacha amount such as 1500 or 99.50.",
+      "invalidWindow": "End must be after start."
+    },
+    "kinds": {
+      "vendor": "Vendor",
+      "business": "Business",
+      "external": "External company"
+    },
+    "types": {
+      "feed_slot": "Feed slot",
+      "carousel_slide": "Carousel slide"
+    },
+    "statuses": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "effective": {
+      "live": "Live now",
+      "upcoming": "Starts later",
+      "expired": "Window over",
+      "disabled": "Disabled",
+      "draft": "Not published",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "actions": {
+      "scheduled": "Schedule",
+      "active": "Activate",
+      "paused": "Pause",
+      "draft": "Back to draft",
+      "ended": "End"
+    },
+    "fields": {
+      "advertiserKind": "Advertiser type",
+      "advertiserName": "Advertiser name",
+      "vendorId": "Vendor ID",
+      "placementType": "Placement",
+      "imagePublicId": "Cloudinary public ID",
+      "headline": "Headline",
+      "ctaLabel": "Button label",
+      "body": "Supporting text",
+      "ctaHref": "Link",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "paidAmount": "Amount paid (K)",
+      "paymentReference": "Payment reference",
+      "priority": "Priority (higher first)"
+    },
+    "placeholders": {
+      "path": "/c/electronics"
     }
   }
 }

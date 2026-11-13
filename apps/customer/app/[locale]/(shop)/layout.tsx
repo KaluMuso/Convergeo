@@ -10,6 +10,7 @@ import {
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { NotificationBellIsland } from "../_components/notification-bell-island";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
@@ -92,11 +93,13 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <TopUtilityBarSlot locale={locale} />
       <ShopHeader
         locale={locale}
+        notificationSlot={<NotificationBellIsland locale={locale} />}
         mobileSearchSlot={
           <MobileHeaderSearch
             locale={locale}
             triggerLabel={t("shop.searchPlaceholder")}
             sheetTitle={tSearch("title")}
+            askLabel={t("shop.askVergeo")}
             labels={{
               placeholder: t("shop.searchPlaceholder"),
               submit: t("shop.searchSubmit"),
@@ -129,8 +132,15 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           supplies: t("shop.supplies"),
           account: t("shop.account"),
           cart: t("shop.cart"),
-          cartWithCount: t("shop.cartWithCount"),
+          // Interpolated with the live cart count in the header client component.
+          cartWithCount: String(t.raw("shop.cartWithCount")),
           openCart: tCheckout("cart.openCart"),
+          theme: {
+            label: tCommon("theme.label"),
+            light: tCommon("theme.light"),
+            dark: tCommon("theme.dark"),
+            system: tCommon("theme.system"),
+          },
           searchInput: {
             placeholder: t("shop.searchPlaceholder"),
             submit: t("shop.searchSubmit"),
@@ -150,7 +160,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <main
         id="shop-main"
         tabIndex={-1}
-        className="shop-main mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-[1400px] lg:px-7 lg:pb-12 lg:pt-6"
+        className="shop-main mx-auto w-full max-w-[1400px] flex-1 px-4 pb-20 pt-4 focus-visible:outline-none md:px-6 md:pt-5 lg:px-7 lg:pb-12 lg:pt-6"
       >
         {children}
       </main>

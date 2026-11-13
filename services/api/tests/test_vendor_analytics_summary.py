@@ -26,21 +26,23 @@ ORDER_A1 = "c9200000-0000-0000-0000-000000000001"
 ORDER_B1 = "c9200000-0000-0000-0000-0000000000b1"
 ITEM_A1 = "c9300000-0000-0000-0000-000000000001"
 ITEM_B1 = "c9300000-0000-0000-0000-0000000000b1"
-SESSION_A = "c9s00000-0000-0000-0000-00000000000a"
-SESSION_B = "c9s00000-0000-0000-0000-00000000000b"
+SESSION_A = "c9a00000-0000-4000-8000-00000000000a"
+SESSION_B = "c9a00000-0000-4000-8000-00000000000b"
 
 
 def _seed_summary(db: PgConn) -> None:
+    cleaned = db.run(
+        "DELETE FROM public.listing_view_dedup "
+        f"WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}'); "
+        f"DELETE FROM public.listing_analytics WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}');"
+    )
+    assert cleaned.ok, cleaned.error
     script = (
         "BEGIN;\n"
         "SET LOCAL role service_role;\n"
         'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\';\n'
     )
     script += f"""
-DELETE FROM public.listing_view_dedup
-  WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}');
-DELETE FROM public.listing_analytics
-  WHERE listing_id IN ('{LISTING_A}', '{LISTING_B}');
 DELETE FROM public.order_item_products WHERE order_item_id IN (
   SELECT id FROM public.order_items WHERE order_id IN ('{ORDER_A1}', '{ORDER_B1}'));
 DELETE FROM public.order_items WHERE order_id IN ('{ORDER_A1}', '{ORDER_B1}');
@@ -62,8 +64,9 @@ ON CONFLICT (id) DO NOTHING;
     ]:
         script += f"""
 INSERT INTO public.vendor_listings (
-  id, vendor_id, title_override, price_ngwee, condition, stock_mode, status
-) VALUES ('{lid}', '{vid}', '{title}', 50000, 'new', 'always_available', 'active')
+  id, vendor_id, product_id, title_override, price_ngwee, condition, stock_mode, status
+) VALUES ('{lid}', '{vid}', 'b0000000-0000-0000-0000-000000000001',
+          '{title}', 50000, 'new', 'always_available', 'active')
 ON CONFLICT (id) DO NOTHING;
 """
     script += f"""

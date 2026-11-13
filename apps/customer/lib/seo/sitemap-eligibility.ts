@@ -18,9 +18,9 @@ export function sitemapLocales(): readonly string[] {
 export const SITEMAP_STATIC_SEGMENTS = [
   "",
   "categories",
-  "directory",
   "events",
   "services",
+  "vendors",
 ] as const;
 
 export type SitemapStaticSegment = (typeof SITEMAP_STATIC_SEGMENTS)[number];

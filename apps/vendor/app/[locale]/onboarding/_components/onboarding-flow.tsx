@@ -3,7 +3,7 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
 import { classifyVendorError, vendorErrorMessageKey } from "../../_lib/vendor-errors";
@@ -23,7 +23,7 @@ import {
   stepKeyFromIndex,
   writeLocalDraft,
 } from "../_lib/persistence";
-import { createStorageClient } from "../_lib/storage";
+import { createStorageClient, isPrivateKycPath } from "../_lib/storage";
 import { Spinner } from "../_lib/ui";
 
 import { BusinessBasicsStep } from "./business-basics-step";
@@ -43,10 +43,52 @@ type OnboardingFlowProps = {
 };
 
 export function OnboardingFlow({ locale }: OnboardingFlowProps) {
+  const { session, loading } = useSession();
+  const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50dvh] items-center justify-center">
+        <Spinner label={t("onboarding.loading")} />
+      </div>
+    );
+  }
+  if (!session) {
+    return (
+      <VendorErrorState
+        title={t("onboarding.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
+    );
+  }
+
+  // Remount all draft/capture state at the account boundary, including A → B → A.
+  return <AccountOnboardingFlow key={session.user.id} locale={locale} session={session} />;
+}
+
+function AccountOnboardingFlow({
+  locale,
+  session,
+}: OnboardingFlowProps & { session: NonNullable<ReturnType<typeof useSession>["session"]> }) {
   const t = useTranslations("vendor");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const { session, loading: sessionLoading } = useSession();
+  const userId = session.user.id;
+  const activeSession = useRef({ active: false, generation: 0 });
+  const [sessionGeneration, setSessionGeneration] = useState(0);
+  const navigationGeneration = useRef(0);
+  const pending = useRef({ basics: false, submit: false, upload: false });
+  const isCurrentSession = useCallback(
+    (generation: number) =>
+      activeSession.current.active && activeSession.current.generation === generation,
+    [],
+  );
+  const isCurrentOperation = useCallback(
+    (generation: number, navigation: number) =>
+      isCurrentSession(generation) && navigationGeneration.current === navigation,
+    [isCurrentSession],
+  );
 
   const [draft, setDraft] = useState<OnboardingDraft | null>(null);
   const [application, setApplication] = useState<KycApplication | null>(null);
@@ -98,25 +140,26 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   );
 
   useEffect(() => {
-    if (sessionLoading) {
-      return;
-    }
-
-    if (!session) {
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
+    const generation = activeSession.current.generation + 1;
+    activeSession.current = { active: true, generation };
+    setSessionGeneration(generation);
+    // A token refresh/retry cannot resend a submission that is still in flight.
+    pending.current = { basics: false, submit: pending.current.submit, upload: false };
 
     async function bootstrap() {
       setLoading(true);
+      setDraft(null);
+      setApplication(null);
+      setSavingBasics(false);
+      setSubmitting(pending.current.submit);
+      setCurrentStep(0);
+      setResubmitMode(false);
       setFatalErrorKey(null);
       setError(null);
       try {
         // Idempotent server bootstrap — creates/resumes draft without vendor role.
         const app = await kycClient.bootstrapApplication();
-        if (cancelled) {
+        if (!isCurrentSession(generation)) {
           return;
         }
 
@@ -129,7 +172,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         setResubmitMode(resubmit);
         setApplication(app);
 
-        const local = readLocalDraft();
+        const local = readLocalDraft(userId);
         const merged = mergeDraftWithServer(local, app);
         const step = resolveResumeStep(merged, {
           resubmitMode: resubmit,
@@ -139,9 +182,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         merged.step = step;
         setDraft(merged);
         setCurrentStep(step);
-        writeLocalDraft(merged);
+        writeLocalDraft(userId, merged);
       } catch (caught) {
-        if (cancelled) {
+        if (!isCurrentSession(generation)) {
           return;
         }
         const kind = classifyVendorError(caught).kind;
@@ -152,10 +195,11 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           setDraft(null);
           return;
         }
-        const local = readLocalDraft();
+        const local = readLocalDraft(userId);
         if (local) {
-          setDraft(local);
-          setCurrentStep(local.step);
+          const step = resolveResumeStep(local, { resubmitMode: false, rejectedDocs: null });
+          setDraft({ ...local, step });
+          setCurrentStep(step);
         } else {
           setDraft({
             step: 0,
@@ -170,7 +214,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         }
         setError(t("onboarding.errors.loadFailed"));
       } finally {
-        if (!cancelled) {
+        if (isCurrentSession(generation)) {
           setLoading(false);
         }
       }
@@ -178,33 +222,52 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
     void bootstrap();
     return () => {
-      cancelled = true;
+      activeSession.current = { active: false, generation: generation + 1 };
     };
-  }, [kycClient, locale, reloadKey, router, session, sessionLoading, t]);
+  }, [isCurrentSession, kycClient, locale, reloadKey, router, t, userId]);
 
-  const updateDraft = useCallback((patch: Partial<OnboardingDraft>) => {
-    setDraft((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const next = { ...prev, ...patch };
-      writeLocalDraft(next);
-      return next;
-    });
-  }, []);
+  const updateDraft = useCallback(
+    (patch: Partial<OnboardingDraft>) => {
+      setDraft((prev) => {
+        if (!prev || !isCurrentSession(sessionGeneration)) {
+          return prev;
+        }
+        const next = { ...prev, ...patch };
+        writeLocalDraft(userId, next);
+        return next;
+      });
+    },
+    [isCurrentSession, sessionGeneration, userId],
+  );
 
   const goToStep = useCallback(
     (step: number) => {
+      if (!isCurrentSession(sessionGeneration)) {
+        return;
+      }
+      // Editing/back navigation cancels the UI effects of work from the old step.
+      navigationGeneration.current += 1;
+      setError(null);
       setCurrentStep(step);
       updateDraft({ step });
     },
-    [updateDraft],
+    [isCurrentSession, sessionGeneration, updateDraft],
   );
 
   const handleBusinessContinue = useCallback(async () => {
-    if (!draft) {
+    if (
+      !draft ||
+      !isCurrentSession(sessionGeneration) ||
+      pending.current.basics ||
+      pending.current.submit ||
+      !draft.businessName.trim() ||
+      !draft.businessCategory.trim() ||
+      !draft.businessArchetype.trim()
+    ) {
       return;
     }
+    const navigation = navigationGeneration.current;
+    pending.current.basics = true;
     setError(null);
     setSavingBasics(true);
     try {
@@ -213,9 +276,15 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         archetype: draft.businessCategory.trim() || null,
         business_archetype: draft.businessArchetype.trim() || null,
       });
+      if (!isCurrentOperation(sessionGeneration, navigation)) {
+        return;
+      }
       setApplication(app);
       goToStep(stepIndexFromKey("kyc"));
     } catch (caught) {
+      if (!isCurrentOperation(sessionGeneration, navigation)) {
+        return;
+      }
       const kind = classifyVendorError(caught).kind;
       if (kind === "auth" || kind === "permission") {
         setFatalErrorKey(vendorErrorMessageKey(caught, "onboarding"));
@@ -223,48 +292,81 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       }
       setError(t("onboarding.errors.saveFailed"));
     } finally {
-      setSavingBasics(false);
+      if (isCurrentSession(sessionGeneration)) {
+        pending.current.basics = false;
+        setSavingBasics(false);
+      }
     }
-  }, [draft, goToStep, kycClient, t]);
+  }, [draft, goToStep, isCurrentSession, isCurrentOperation, kycClient, sessionGeneration, t]);
 
   const handleKycContinue = useCallback(() => {
-    if (!draft) {
+    if (!draft || !isCurrentSession(sessionGeneration) || pending.current.upload) {
       return;
     }
     const momo = normalizeZmPhone(draft.momoPhone);
-    if (!isValidZmMobile(momo) || draft.legalName.trim().length < 2) {
+    if (
+      !isValidZmMobile(momo) ||
+      draft.legalName.trim().length < 2 ||
+      !isPrivateKycPath(draft.nrcPath ?? "") ||
+      !isPrivateKycPath(draft.selfiePath ?? "")
+    ) {
       return;
     }
     setError(null);
     updateDraft({ momoPhone: momo });
     goToStep(stepIndexFromKey("review"));
-  }, [draft, goToStep, updateDraft]);
+  }, [draft, goToStep, isCurrentSession, sessionGeneration, updateDraft]);
 
   const handleUpload = useCallback(
     async (docType: "nrc" | "selfie", file: File) => {
-      const signed = await storageClient.signKycUpload(docType, file.size);
-      const path = await storageClient.uploadSigned(file, signed);
-      if (docType === "nrc") {
-        updateDraft({ nrcPath: path });
-      } else {
-        updateDraft({ selfiePath: path });
+      const navigation = navigationGeneration.current;
+      if (!isCurrentSession(sessionGeneration) || pending.current.upload) {
+        throw new Error("Onboarding upload is no longer available");
       }
-      return path;
+      pending.current.upload = true;
+      try {
+        const signed = await storageClient.signKycUpload(docType, file.size);
+        if (!isCurrentOperation(sessionGeneration, navigation)) {
+          throw new Error("Onboarding session changed");
+        }
+        const path = await storageClient.uploadSigned(file, signed);
+        if (!isCurrentOperation(sessionGeneration, navigation)) {
+          throw new Error("Onboarding session changed");
+        }
+        updateDraft(docType === "nrc" ? { nrcPath: path } : { selfiePath: path });
+        return path;
+      } finally {
+        if (isCurrentSession(sessionGeneration)) {
+          pending.current.upload = false;
+        }
+      }
     },
-    [storageClient, updateDraft],
+    [isCurrentSession, isCurrentOperation, sessionGeneration, storageClient, updateDraft],
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!draft) {
+    if (
+      !draft ||
+      !isCurrentSession(sessionGeneration) ||
+      pending.current.submit ||
+      pending.current.upload
+    ) {
+      return;
+    }
+    if (
+      !isPrivateKycPath(draft.nrcPath ?? "") ||
+      !isPrivateKycPath(draft.selfiePath ?? "") ||
+      !isValidZmMobile(draft.momoPhone) ||
+      draft.legalName.trim().length < 2
+    ) {
+      setError(t("onboarding.errors.submitFailed"));
       return;
     }
     const docPaths = [draft.nrcPath, draft.selfiePath].filter((path): path is string =>
       Boolean(path),
     );
-    if (docPaths.length === 0 || draft.legalName.trim().length < 2) {
-      setError(t("onboarding.errors.submitFailed"));
-      return;
-    }
+    const navigation = navigationGeneration.current;
+    pending.current.submit = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -285,29 +387,42 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         await kycClient.submit(payload);
       }
 
-      clearLocalDraft();
+      if (!isCurrentOperation(sessionGeneration, navigation)) {
+        return;
+      }
+      clearLocalDraft(userId);
+      // Keep the submit lock until navigation/unmount, so repeats cannot resend.
       router.push(`/${locale}/onboarding/status`);
     } catch {
-      setError(t("onboarding.errors.submitFailed"));
+      if (isCurrentOperation(sessionGeneration, navigation)) {
+        pending.current.submit = false;
+        setSubmitting(false);
+        setError(t("onboarding.errors.submitFailed"));
+      }
     } finally {
-      setSubmitting(false);
+      if (activeSession.current.active && !isCurrentOperation(sessionGeneration, navigation)) {
+        pending.current.submit = false;
+        setSubmitting(false);
+      }
     }
-  }, [draft, kycClient, locale, resubmitMode, router, t]);
+  }, [
+    draft,
+    isCurrentSession,
+    isCurrentOperation,
+    kycClient,
+    locale,
+    resubmitMode,
+    router,
+    sessionGeneration,
+    t,
+    userId,
+  ]);
 
-  if (sessionLoading || loading) {
+  if (loading || !isCurrentSession(sessionGeneration)) {
     return (
       <div className="flex min-h-[50dvh] items-center justify-center">
         <Spinner label={t("onboarding.loading")} />
       </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <VendorErrorState
-        title={t("onboarding.errors.authRequired")}
-        retryLabel={tCommon("common.retry")}
-      />
     );
   }
 
@@ -407,6 +522,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
       {stepKey === "kyc" || resubmitMode ? (
         <KycDocsStep
+          key={`${userId}:${sessionGeneration}`}
           momoPhone={draft.momoPhone}
           legalName={draft.legalName}
           nrcPath={draft.nrcPath}

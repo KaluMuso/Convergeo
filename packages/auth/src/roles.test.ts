@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { User } from "@supabase/supabase-js";
+import { getRoles, getRolesFromClaims, getRolesFromUser, hasRole } from "./roles";
 
-import { getRoles, getRolesFromUser, hasRole } from "./roles";
+import type { User } from "@supabase/supabase-js";
 
 function makeUser(roles: string[] | undefined): User {
   return {
@@ -37,6 +37,80 @@ describe("getRolesFromUser", () => {
   });
 });
 
+describe("getRolesFromClaims", () => {
+  it("reads roles from verified access token claims (app_metadata.roles)", () => {
+    expect(getRolesFromClaims({ app_metadata: { roles: ["customer", "vendor"] } })).toEqual([
+      "customer",
+      "vendor",
+    ]);
+  });
+
+  it("filters unknown role strings", () => {
+    expect(getRolesFromClaims({ app_metadata: { roles: ["vendor", "superuser"] } })).toEqual([
+      "vendor",
+    ]);
+  });
+
+  it("accepts bounded restricted role keys only from verified claims", () => {
+    expect(
+      getRolesFromClaims({ app_metadata: { roles: ["rbac_finance", "superadmin", "rbac_!bad"] } }),
+    ).toEqual(["rbac_finance", "superadmin"]);
+    expect(getRolesFromClaims({ user_metadata: { roles: ["rbac_finance"] } })).toEqual([]);
+  });
+
+  it("filters non-string entries", () => {
+    expect(getRolesFromClaims({ app_metadata: { roles: ["vendor", 123, null, {}] } })).toEqual([
+      "vendor",
+    ]);
+  });
+
+  it("fails closed when app_metadata.roles is not an array", () => {
+    expect(getRolesFromClaims({ app_metadata: { roles: "vendor" } })).toEqual([]);
+  });
+
+  it("fails closed when app_metadata is missing", () => {
+    expect(getRolesFromClaims({})).toEqual([]);
+  });
+
+  it("fails closed when app_metadata is not an object", () => {
+    expect(getRolesFromClaims({ app_metadata: "vendor" })).toEqual([]);
+  });
+
+  it.each([
+    ["empty", []],
+    [
+      "embellished",
+      Object.assign([], { app_metadata: { roles: ["vendor", "superadmin", "rbac_finance"] } }),
+    ],
+  ])("fails closed on %s array-shaped claims", (_, claims) => {
+    expect(getRolesFromClaims(claims)).toEqual([]);
+  });
+
+  it.each([
+    ["empty", []],
+    ["embellished", Object.assign([], { roles: ["vendor", "superadmin", "rbac_finance"] })],
+  ])("fails closed on %s array-shaped app_metadata", (_, app_metadata) => {
+    expect(getRolesFromClaims({ app_metadata })).toEqual([]);
+  });
+
+  it("fails closed on non-object claims", () => {
+    expect(getRolesFromClaims(null)).toEqual([]);
+    expect(getRolesFromClaims(undefined)).toEqual([]);
+    expect(getRolesFromClaims("vendor")).toEqual([]);
+    expect(getRolesFromClaims(42)).toEqual([]);
+  });
+
+  it("never trusts user_metadata as a role source, even if app_metadata is absent", () => {
+    expect(getRolesFromClaims({ user_metadata: { roles: ["vendor"] } })).toEqual([]);
+  });
+
+  it("never trusts user_metadata even alongside a role-less app_metadata", () => {
+    expect(getRolesFromClaims({ app_metadata: {}, user_metadata: { roles: ["admin"] } })).toEqual(
+      [],
+    );
+  });
+});
+
 describe("getRoles", () => {
   it("reads authoritative roles from public.user_roles", async () => {
     const supabase = {
@@ -52,5 +126,37 @@ describe("getRoles", () => {
 
     await expect(getRoles(supabase as never, "user-1")).resolves.toEqual(["vendor", "customer"]);
     expect(supabase.from).toHaveBeenCalledWith("user_roles");
+  });
+});
+
+describe("bounded platform role claims", () => {
+  it("accepts existing role union without trusting user metadata", () => {
+    expect(
+      getRolesFromClaims({
+        app_metadata: {
+          roles: ["customer", "vendor", "superadmin", "moderator", "rbac_finance", "rbac_services"],
+        },
+        user_metadata: { roles: ["admin"] },
+      }),
+    ).toEqual(["customer", "vendor", "superadmin", "moderator", "rbac_finance", "rbac_services"]);
+  });
+
+  it("matches bounded database role keys and rejects malformed keys", () => {
+    expect(
+      getRolesFromClaims({
+        app_metadata: {
+          roles: [
+            "rbac_abc",
+            `rbac_${"a".repeat(40)}`,
+            `rbac_${"a".repeat(41)}`,
+            "rbac_a",
+            "rbac_ab",
+            "rbac_ABC",
+            "rbac_!abc",
+            "vendor_staff",
+          ],
+        },
+      }),
+    ).toEqual(["rbac_abc", `rbac_${"a".repeat(40)}`]);
   });
 });

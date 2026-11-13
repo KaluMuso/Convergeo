@@ -1,6 +1,6 @@
 import { runDataQualityChecks } from "../fixtures/data-quality";
 import { path, strictSyntheticRequired } from "../fixtures/env";
-import { SEED, resetSeed } from "../fixtures/seed";
+import { SEED, assertFixtureVersion } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
 /**
@@ -10,10 +10,7 @@ import { expect, test } from "../fixtures/test-base";
 test.describe("data-quality · browse surfaces", () => {
   test.beforeEach(async () => {
     if (strictSyntheticRequired()) {
-      const reset = await resetSeed();
-      if (!reset) {
-        throw new Error("strictSyntheticRequired: seed reset unavailable");
-      }
+      assertFixtureVersion();
     }
   });
 

@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Statistiques — Vendeur Convergeo",
-      "description": "Suivez vos ventes, commandes et activité du panier sur les 7 ou 30 derniers jours, consultez vos meilleures annonces et évaluez la conversion panier-commande."
+      "description": "Suivez les ventes, commandes et événements panier/passage en caisse sur 7 ou 30 jours, et comparez des totaux indépendants."
     },
     "eyebrow": "Votre boutique",
     "title": "Statistiques",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "Ventes",
       "orders": "Commandes",
-      "views": "Activité du panier"
+      "views": "Événements panier/caisse"
     },
     "sparkline": {
       "sales": "Tendance quotidienne des ventes",
       "orders": "Tendance quotidienne des commandes",
-      "views": "Tendance quotidienne de l'activité du panier"
+      "views": "Nombre quotidien d’événements panier/caisse"
     },
     "top": {
       "heading": "Meilleures annonces",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# vendu} other {# vendus}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# commande} other {# commandes}} sur {views, plural, one {# action panier} other {# actions panier}}",
-      "pct": "{pct}% panier-commande",
-      "empty": "Pas encore assez d'activité pour estimer la conversion."
+      "heading": "Ratio commandes/activité",
+      "summary": "{orders, plural, one {# commande non annulée} other {# commandes non annulées}} ; {views, plural, one {# événement panier/caisse} other {# événements panier/caisse}} sur cette période.",
+      "pct": "{pct} commandes pour 100 événements panier/caisse",
+      "empty": "Aucun événement panier/caisse sur cette période ; le ratio est indisponible.",
+      "definition": "Compte les ajouts au panier et débuts de passage en caisse, pas les vues ni les visiteurs uniques. Les commandes et événements sont des totaux indépendants, pas une cohorte de conversion ; le ratio peut dépasser 100."
     },
     "errors": {
       "loadFailed": "Impossible de charger vos statistiques. Veuillez réessayer.",
@@ -276,7 +277,7 @@
       },
       "approved": {
         "title": "Vous êtes vérifié",
-        "body": "KYC T1 approuvé. Vous pouvez créer des annonces — les acheteurs les verront une fois publiées.",
+        "body": "Votre identité est vérifiée. Vous pouvez créer des annonces — les acheteurs les voient dès que vous les publiez.",
         "cta": "Créer votre première annonce",
         "t2Link": "Passer au T2 (PACRA + TPIN)"
       },
@@ -311,7 +312,50 @@
       "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "checklist": {
+      "heading": "Liste de vérification",
+      "progress": "{done} sur {total} terminés",
+      "items": {
+        "business": {
+          "title": "Informations sur l'entreprise",
+          "why": "Le nom et le type de votre boutique, pour que les acheteurs sachent à qui ils achètent."
+        },
+        "momo": {
+          "title": "Numéro mobile money",
+          "why": "Nous vérifions que le nom lié à ce numéro correspond à votre NRC. Les versements y seront envoyés une fois ouverts."
+        },
+        "nrc": {
+          "title": "Photo de la NRC",
+          "why": "Prouve votre identité. Jamais montrée aux acheteurs."
+        },
+        "selfie": {
+          "title": "Selfie",
+          "why": "Comparé à la photo de votre NRC pour que personne ne vende en votre nom."
+        },
+        "review": {
+          "title": "Contrôle par Vergeo5",
+          "why": "Notre équipe vérifie tout, en général sous 1 jour ouvré, et vous informe du résultat."
+        }
+      },
+      "states": {
+        "not_started": "Pas commencé",
+        "saved": "Enregistré, pas encore envoyé",
+        "submitted": "Envoyé",
+        "under_review": "En cours d'examen",
+        "approved": "Approuvé",
+        "rejected": "À corriger"
+      },
+      "fix": {
+        "nrc": "Comment corriger : reprenez la photo de la NRC à la lumière du jour, avec les quatre coins visibles.",
+        "selfie": "Comment corriger : reprenez le selfie face à l'objectif, sans chapeau ni lunettes de soleil.",
+        "review": "Corrigez les éléments signalés ci-dessus, puis renvoyez — inutile de tout recommencer."
+      },
+      "reasonLabel": "Message de notre équipe",
+      "ctaFinish": "Continuer la vérification",
+      "ctaFix": "Corriger et renvoyer",
+      "pendingNote": "Vous pouvez explorer l'application en attendant. Vos annonces restent cachées aux acheteurs jusqu'à l'approbation."
+    }
   },
   "listings": {
     "images": {
@@ -336,7 +380,7 @@
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
-      "description": "Rattachez au catalogue, soumettez un nouveau produit ou créez une annonce rapide."
+      "description": "Rattachez au catalogue, soumettez un nouveau produit ou enregistrez un brouillon autonome."
     },
     "title": "Créer une annonce",
     "intro": "Choisissez votre mode de mise en vente. La commission est affichée avant publication.",
@@ -373,15 +417,33 @@
       "categoryPlaceholder": "Sélectionner une catégorie",
       "submit": "Soumettre pour examen",
       "submitting": "Soumission…",
-      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit."
+      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit.",
+      "details": {
+        "about": "À propos de cet article",
+        "heading": "Détails du produit",
+        "help": "Indiquez uniquement des détails vérifiables pour cette catégorie, avec les unités du fabricant : dimensions, poids, mesures, style, caractéristiques, matériaux, entretien ou instructions. Laissez les détails inconnus vides. Tous les détails sont soumis à modération. Jusqu’à 32 détails ; noms : 80 caractères ; valeurs : 2 000 ; description : 5 000.",
+        "name": "Nom du détail",
+        "value": "Valeur du détail",
+        "add": "Ajouter un détail",
+        "remove": "Supprimer le détail",
+        "invalid": "Donnez à chaque détail un nom unique et une valeur, ou supprimez-le. Respectez les limites indiquées."
+      }
     },
     "quickList": {
       "heading": "Annonce rapide",
-      "intro": "Pour les produits de base, les pièces uniques et les offres sur commande autonomes.",
+      "intro": "Enregistrez un brouillon pour un article d’occasion unique ou une offre fabriquée sur commande.",
       "titleLabel": "Titre de l'annonce",
-      "titlePlaceholder": "ex. Tomates au kg",
+      "titlePlaceholder": "p. ex. Chaise en bois d’occasion",
       "publish": "Publier l'annonce",
-      "publishing": "Publication…"
+      "publishing": "Publication…",
+      "descriptionLabel": "Description de l’annonce",
+      "descriptionHelp": "Décrivez cet article ou cette offre en au moins 20 caractères.",
+      "draftNotice": "Enregistrer un brouillon ne publie pas l’annonce.",
+      "descriptionInvalid": "Saisissez au moins 20 caractères, sans compter les espaces au début et à la fin.",
+      "saveDraft": "Enregistrer le brouillon",
+      "savingDraft": "Enregistrement du brouillon…",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Sélectionnez-le dans Catalogue.",
+      "categoriesUnavailable": "Les catégories sont indisponibles. Réessayez plus tard."
     },
     "fields": {
       "priceLabel": "Votre prix (ZMW)",
@@ -439,7 +501,8 @@
     "success": {
       "live": "L'annonce est en ligne !",
       "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp.",
-      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier."
+      "evidence": "Brouillon enregistré. Ajoutez des photos de preuve avant de publier.",
+      "draft": "Brouillon enregistré. Cette annonce n’est pas en ligne."
     },
     "errors": {
       "required": "Ce champ est obligatoire",
@@ -453,7 +516,10 @@
       "authRequired": "Connectez-vous pour gérer les annonces.",
       "permissionDenied": "Vous n'avez pas accès à ce catalogue vendeur.",
       "notFound": "Cette annonce est introuvable pour votre boutique.",
-      "retryHint": "Vérifiez votre connexion, puis réessayez."
+      "retryHint": "Vérifiez votre connexion, puis réessayez.",
+      "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Utilisez l’association au catalogue ou la création d’un produit.",
+      "standaloneDetailsRequired": "Sélectionnez une catégorie et ajoutez une description d’au moins 20 caractères pour cette annonce autonome.",
+      "policyBlocked": "Cette annonce ne peut pas être publiée selon la politique de catégorie ou de lancement actuelle. Vérifiez ses champs et contactez l’assistance si nécessaire."
     },
     "import": {
       "meta": {
@@ -467,7 +533,9 @@
       "template": {
         "heading": "Télécharger le modèle",
         "body": "Utilisez notre modèle CSV avec des exemples de lignes. Les prix sont en ngwee (nombre entier). Le SKU est votre code unique par annonce. Laissez product_id vide pour obtenir des suggestions de correspondance au catalogue dans l'aperçu.",
-        "download": "Télécharger le modèle CSV"
+        "download": "Télécharger le modèle CSV",
+        "stockNote": "Les imports définissent le stock initial des nouveaux SKU. Réimporter un SKU existant conserve son stock actuel, son mode et ses unités, sans remettre en stock les unités réservées ou vendues.",
+        "unitsHelp": "Les prix et le stock sont exprimés par palier de vente. Pour des paliers de 250 g, utilisez sale_unit kg et unit_step_milli 250 ; min_steps 4 indique un minimum de 1 kg. Les tarifs de gros sont réservés aux acheteurs professionnels vérifiés et exigent des unités each."
       },
       "upload": {
         "heading": "Importer un CSV",
@@ -484,7 +552,8 @@
         "details": "Détails",
         "ok": "OK",
         "failed": "Échec",
-        "imported": "Importée"
+        "imported": "Importée",
+        "stockPreserved": "Annonce mise à jour ; le stock existant et son mode ont été conservés."
       },
       "preview": {
         "previewButton": "Aperçu des lignes",
@@ -497,7 +566,8 @@
         "attached": "Rattaché : {name}",
         "matched": "Correspond : {name}",
         "detach": "Modifier",
-        "standalone": "Aucune correspondance — annoncé séparément"
+        "standalone": "Aucune correspondance — annoncé séparément",
+        "selectionRequired": "Sélectionnez un produit actif du catalogue avant l’importation."
       },
       "apply": {
         "button": "Appliquer l'importation",
@@ -507,7 +577,36 @@
         "uploadFailed": "Échec de l'importation. Vérifiez votre fichier et réessayez.",
         "previewFailed": "Impossible de vérifier votre fichier. Veuillez réessayer.",
         "no_file": "Un fichier CSV est requis",
-        "no_payload": "Fournissez un fichier CSV ou des lignes JSON"
+        "no_payload": "Fournissez un fichier CSV ou des lignes JSON",
+        "templateFailed": "Impossible de télécharger le modèle. Veuillez réessayer.",
+        "invalidUnits": "Vérifiez l’unité de vente, le pas de quantité et la quantité minimale. Les unités mesurées ne peuvent pas utiliser les tarifs de gros.",
+        "duplicateHeaders": "Chaque nom de colonne CSV doit être unique.",
+        "notEditable": "Cette annonce existante ne peut pas être modifiée par importation.",
+        "unitChange": "Une importation ne peut pas modifier les unités ou le nombre minimal de pas d’un SKU existant.",
+        "productChange": "Ce SKU est déjà associé à un autre produit.",
+        "wholesaleEligibility": "La vente en gros nécessite une approbation T2 en cours et au moins un palier de prix valide.",
+        "invalidListing": "Ces modifications ne sont pas valides pour cette annonce. Vérifiez ses champs.",
+        "invalidTiers": "Les paliers doivent avoir des quantités positives et des prix strictement décroissants.",
+        "invalidBoolean": "Utilisez true ou false pour les champs booléens.",
+        "missingField": "Complétez les champs CSV obligatoires : référence, titre, prix et stock suivi.",
+        "invalidInteger": "Les prix, stocks et quantités doivent être des nombres entiers.",
+        "invalidMinimum": "Les prix et les pas de quantité doivent être positifs ; le stock ne peut pas être négatif.",
+        "invalidProduct": "Sélectionnez un produit actif du catalogue.",
+        "unknownColumns": "Le CSV contient des colonnes non prises en charge ou des cellules en trop. Utilisez le modèle téléchargé.",
+        "invalidStockMode": "Choisissez un stock suivi ou toujours disponible.",
+        "invalidCondition": "Choisissez l’état neuf ou reconditionné.",
+        "invalidStatus": "Choisissez le statut brouillon, actif ou en pause.",
+        "emptyCsv": "Le fichier CSV est vide.",
+        "missingHeaders": "Le CSV doit inclure tous les en-têtes de colonnes obligatoires.",
+        "rowLimit": "Importez au maximum 500 lignes de données à la fois.",
+        "prohibitedListing": "Cet article est interdit. Vérifiez le contenu de l’annonce.",
+        "duplicateSku": "Chaque référence doit apparaître une seule fois dans le fichier.",
+        "listingCap": "Votre limite d’annonces est atteinte. Mettez à jour les références existantes ou vérifiez votre niveau de vérification.",
+        "fileSize": "Le CSV ne doit pas dépasser 512 000 octets.",
+        "invalidEncoding": "Enregistrez le CSV avec l’encodage UTF-8.",
+        "canonicalRequired": "Sélectionnez un produit du catalogue avant d’importer cette nouvelle référence.",
+        "databaseFailure": "Cette ligne n’a pas pu être enregistrée. Réessayez ou contactez l’assistance.",
+        "unknownError": "Cette ligne doit être vérifiée. Contrôlez les champs CSV et réessayez."
       }
     },
     "manage": {
@@ -551,7 +650,7 @@
         "delete": "Supprimer l'annonce",
         "deleting": "Suppression…",
         "returnableLabel": "Accepter les retours",
-        "returnableHelp": "Politique de retour Lane-2 pour cette annonce.",
+        "returnableHelp": "Permettre aux acheteurs de retourner cet article dans le délai ci-dessous s'il ne convient pas.",
         "returnWindowLabel": "Délai de retour (heures)",
         "tierHeading": "Paliers de gros",
         "tierQtyLabel": "Quantité min",
@@ -575,13 +674,138 @@
         "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
       },
       "emptyTitle": "Aucune annonce",
-      "statusLabel": "Statut"
+      "statusLabel": "Statut",
+      "stock": {
+        "heading": "Ajuster le stock disponible",
+        "help": "Saisissez une variation en pas de vente, pas un total physique compté. Les unités réservées sont déjà exclues. Les unités et le mode de stock sont fixes. La création de stocks par agence nécessite le responsable du stock.",
+        "refresh": "Actualiser la disponibilité",
+        "units": "Unité : {unit} ; chaque pas vaut {step}/1000 de cette unité.",
+        "branch": "Agence",
+        "choose": "Choisir une agence",
+        "inactive": "Inactive",
+        "pooled": "Stock mutualisé disponible : {qty}",
+        "delta": "Variation (+ reçu / − retiré)",
+        "reason": "Motif",
+        "retry": "Réessayer la même opération",
+        "apply": "Appliquer la variation",
+        "saved": "Enregistré : {old} → {next} pas disponibles. Opération : {id}.",
+        "invalid": "Choisissez une agence active, une variation entière non nulle et un motif.",
+        "conflict": "Ajustement refusé. Actualisez la disponibilité, vérifiez l’agence et les unités, puis soumettez un nouvel ajustement.",
+        "retrySame": "Résultat incertain. Réessayez la même opération pour obtenir son résultat enregistré ; ne créez pas un autre ajustement.",
+        "loadFailed": "Impossible de charger la disponibilité. Réessayez avec Actualiser.",
+        "storageFailed": "Impossible de conserver l’opération pour la réessayer sans doublon. Activez le stockage de session.",
+        "notTracked": "Cette annonce n’utilise pas de stock suivi.",
+        "authorityRequired": "Utilisez la section d’ajustement du stock. Le stock existant, les unités et le mode de stock ne peuvent pas être remplacés dans cet éditeur."
+      },
+      "statusGuide": {
+        "heading": "Que signifient Brouillon, En ligne et En pause",
+        "draft": "Vous seul le voyez. Complétez les détails puis publiez.",
+        "active": "Les acheteurs peuvent le trouver et le commander.",
+        "paused": "Caché aux acheteurs. Réactivez-le quand vous avez de nouveau du stock.",
+        "kycNote": "Tant que votre vérification n'est pas approuvée, les acheteurs ne voient aucune de vos annonces."
+      },
+      "statusHint": {
+        "draft": "Visible par vous seul",
+        "active": "Visible et commandable par les acheteurs",
+        "paused": "Caché aux acheteurs"
+      }
     },
     "kycGate": {
       "title": "Vérification en cours",
-      "body": "Les annonces peuvent rester bloquées jusqu'à l'approbation KYC avec un dossier auditable. Aucun badge vérifié sans cette trace.",
+      "body": "Vous pouvez préparer vos annonces dès maintenant, mais les acheteurs ne les verront qu'après l'approbation de votre vérification.",
       "cta": "Voir le statut de vérification",
       "wholesaleLocked": "Les prix de gros se débloquent après une vérification T2 auditable."
+    },
+    "variants": {
+      "heading": "Couleurs, tailles et autres options",
+      "intro": "Ajoutez des options comme Couleur ou Taille. Chaque combinaison a son propre SKU, stock, prix et photo.",
+      "loading": "Chargement des options…",
+      "loadFailed": "Impossible de charger les options de cette annonce.",
+      "saveFailed": "Impossible d'enregistrer vos options. Réessayez.",
+      "saved": "Options enregistrées.",
+      "fixErrors": "Corrigez les champs signalés, puis enregistrez à nouveau.",
+      "groupLegend": "Option {number}",
+      "groupName": "Nom de l'option",
+      "groupNameHint": "Par exemple Couleur, Taille ou Stockage.",
+      "showAsSwatches": "Afficher en pastilles de couleur",
+      "valueLabel": "Choix {number}",
+      "swatchColour": "Couleur",
+      "removeValue": "Supprimer le choix {value}",
+      "remove": "Supprimer",
+      "addValue": "Ajouter un choix",
+      "removeGroup": "Supprimer l'option",
+      "addGroup": "Ajouter une autre option",
+      "addFirstGroup": "Ajouter des couleurs ou des tailles",
+      "matrixHeading": "{count, plural, one {# combinaison} other {# combinaisons}}",
+      "priceHint": "Laissez le prix vide pour utiliser le prix de l'annonce (K{price}).",
+      "offered": "Proposée",
+      "sku": "SKU",
+      "skuFor": "SKU pour {variant}",
+      "stock": "Stock",
+      "stockFor": "Stock pour {variant}",
+      "price": "Prix (K)",
+      "priceFor": "Prix pour {variant}",
+      "photo": "Photo",
+      "photoFor": "Photo pour {variant}",
+      "photoNone": "Photos de l'annonce",
+      "photoOption": "Photo {position}",
+      "save": "Enregistrer les options",
+      "createOptIn": "Cet article existe en plusieurs couleurs ou tailles (à configurer après publication)",
+      "unsupported": {
+        "classE": "Les annonces sur commande utilisent des options de devis plutôt que des couleurs et tailles.",
+        "wholesale": "Les annonces de gros ne peuvent pas encore avoir d'options couleur ou taille.",
+        "measured": "Les annonces vendues à la mesure ne peuvent pas encore avoir d'options couleur ou taille."
+      },
+      "errors": {
+        "groupNameRequired": "Donnez un nom à cette option, p. ex. Couleur ou Taille.",
+        "duplicateGroup": "Chaque option doit avoir un nom différent.",
+        "valuesRequired": "Ajoutez au moins un choix à cette option.",
+        "valueLabelRequired": "Remplissez ce choix ou supprimez-le.",
+        "duplicateValue": "Ce choix apparaît deux fois.",
+        "invalidSwatch": "Choisissez une couleur pour cette pastille.",
+        "tooManyGroups": "Vous pouvez ajouter jusqu'à {max} options.",
+        "tooManyValues": "Cette option a trop de choix.",
+        "tooManyVariants": "Trop de combinaisons. Supprimez quelques choix.",
+        "variantsRequired": "Ajoutez des choix pour que les acheteurs aient des combinaisons.",
+        "activeVariantRequired": "Proposez au moins une combinaison.",
+        "invalidSku": "Les SKU utilisent lettres, chiffres, points, tirets, barres obliques ou traits de soulignement.",
+        "duplicateSku": "Chaque SKU doit être différent.",
+        "invalidStock": "Saisissez le stock en nombre entier.",
+        "stockRequired": "Indiquez combien vous en avez pour cette combinaison.",
+        "invalidPrice": "Saisissez un prix en kwacha, p. ex. 250.00.",
+        "optionPerGroup": "Chaque combinaison doit avoir un choix par option.",
+        "unknownValue": "Cette combinaison utilise un choix qui n'existe plus.",
+        "duplicateCombination": "Cette combinaison apparaît deux fois.",
+        "invalidCompareAt": "Le prix « avant » doit être supérieur au prix.",
+        "imageNotOnListing": "Choisissez une photo de cette annonce.",
+        "invalidStatus": "Indiquez si cette combinaison est proposée.",
+        "invalidDisplay": "Choisissez comment afficher cette option.",
+        "groupsRequired": "Ajoutez d'abord une option.",
+        "classEUnsupported": "Les annonces sur commande utilisent plutôt les options de devis.",
+        "wholesaleUnsupported": "Les annonces de gros ne peuvent pas encore avoir d'options couleur ou taille.",
+        "measuredUnsupported": "Les annonces vendues au poids ou à la mesure ne peuvent pas encore avoir d'options couleur ou taille.",
+        "saveFailed": "Impossible d'enregistrer vos options. Réessayez."
+      },
+      "saving": "Enregistrement…"
+    },
+    "guide": {
+      "heading": "Conseils pour une annonce qui vend",
+      "photos": {
+        "title": "Photos (jusqu'à 8)",
+        "body": "Utilisez la lumière du jour et un fond uni. La première photo est la couverture vue par les acheteurs. Montrez l'avant, l'arrière, les étiquettes et tout défaut."
+      },
+      "title": {
+        "title": "Titre",
+        "body": "Indiquez ce que c'est, la marque et le détail clé, p. ex. « Samsung A15, 128 Go, noir ». Pas de MAJUSCULES ni de numéro de téléphone."
+      },
+      "price": {
+        "title": "Prix en kwacha",
+        "body": "Saisissez le prix total payé par l'acheteur, p. ex. 1250 ou 1250.50. Notre commission est prélevée sur ce prix."
+      },
+      "stock": {
+        "title": "Stock et options",
+        "body": "Indiquez la quantité réellement disponible. Ajoutez des options (taille, couleur) quand l'acheteur doit choisir — chaque option a son propre stock."
+      }
     }
   },
   "profile": {
@@ -693,6 +917,23 @@
       "permissionDenied": "Vous n'avez pas accès à ce profil boutique.",
       "notFound": "Profil boutique introuvable pour ce compte.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "brand": {
+      "title": "Couleurs de la boutique",
+      "help": "Vos couleurs s'appliquent uniquement à votre page boutique. Nous les ajustons automatiquement pour garder un texte lisible (WCAG AA).",
+      "primary": "Couleur principale",
+      "primaryHelp": "Boutons et liens de votre boutique",
+      "accent": "Couleur d'accent",
+      "accentHelp": "Mises en avant et badges",
+      "contrast": "contraste {ratio}:1",
+      "reset": "Réinitialiser",
+      "adjusted": "Nous avons légèrement assombri cette couleur pour garder le texte lisible.",
+      "extract": "Extraire du logo",
+      "extracting": "Lecture du logo…",
+      "needLogo": "Téléversez d'abord un logo.",
+      "extractFailed": "Impossible de lire les couleurs du logo. Choisissez-les manuellement.",
+      "previewButton": "Ajouter au panier",
+      "previewAccent": "Nouveautés"
     }
   },
   "orders": {
@@ -726,12 +967,19 @@
     "items": {
       "heading": "Articles",
       "qty": "Qté {qty}",
-      "empty": "Aucun article"
+      "empty": "Aucun article",
+      "variantOption": "{group} : {value}",
+      "variantSeparator": " · ",
+      "sku": "SKU {sku}"
     },
     "timeline": {
       "heading": "Chronologie",
       "empty": "Aucun événement pour le moment",
-      "note": "Note : {note}"
+      "note": "Note : {note}",
+      "stateDone": "terminé",
+      "stateCurrent": "étape en cours",
+      "stateUpcoming": "à venir",
+      "srState": "({state})"
     },
     "actions": {
       "heading": "Actions",
@@ -753,7 +1001,14 @@
       "shipPlaceholder": "ex. Coursier Yango — chauffeur John 0977…",
       "submitReject": "Rejeter avec motif",
       "submitShip": "Marquer comme expédiée",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "after": {
+        "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
+        "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",
+        "pack": "Le client voit que vous préparez sa commande.",
+        "ship": "Appuyez quand le coursier a le colis. Ajoutez son nom ou son téléphone.",
+        "ready_for_pickup": "Le client est invité à venir la retirer chez vous."
+      }
     },
     "success": {
       "confirmed": "Commande confirmée.",
@@ -768,7 +1023,61 @@
       "forbidden": "Vous ne pouvez gérer que vos propres commandes.",
       "invalidTransition": "Cette action n'est pas disponible pour cette commande.",
       "reasonRequired": "Un motif est requis pour le rejet.",
-      "trackingRequired": "Une note de suivi est requise pour l'expédition."
+      "trackingRequired": "Une note de suivi est requise pour l'expédition.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "guide": {
+      "headingNow": "À faire maintenant",
+      "headingNext": "Et ensuite",
+      "scanCta": "Ouvrir Scan pour remettre",
+      "paidExplainer": "Le client a payé. Vergeo5 conserve l'argent en sécurité jusqu'à la livraison.",
+      "unpaidExplainer": "Le client n'a pas encore payé. N'emballez et n'envoyez rien avant que le paiement soit reçu.",
+      "cod": {
+        "body": "Le client paie le coursier en espèces à la livraison. Vous n'encaissez rien vous-même.",
+        "settlement": "Vergeo5 vous règle le montant de la commande — inutile de relancer le coursier ou le client."
+      },
+      "steps": {
+        "confirm": {
+          "title": "Acceptez ou refusez cette commande",
+          "body": "Le client attend. Vérifiez que vous avez tous les articles, puis acceptez. Si c'est impossible, refusez en indiquant la raison."
+        },
+        "pack": {
+          "title": "Emballez les articles",
+          "body": "Appuyez sur Commencer l'emballage au début. Vérifiez tailles et couleurs avec la liste ci-dessous."
+        },
+        "handToRider": {
+          "title": "Remettez le colis au coursier",
+          "body": "Quand le coursier le récupère, appuyez sur Marquer comme expédiée et ajoutez son nom ou son numéro."
+        },
+        "readyForPickup": {
+          "title": "Indiquez qu'elle est prête à être retirée",
+          "body": "Quand le colis est prêt dans votre boutique, appuyez sur Prête pour le retrait. Nous prévenons le client."
+        },
+        "awaitCollection": {
+          "title": "En attente du retrait par le client",
+          "body": "À son arrivée, scannez son code QR ou saisissez son PIN dans Scan avant de remettre le colis."
+        },
+        "awaitDelivery": {
+          "title": "En route avec le coursier",
+          "body": "Rien à faire. Le client donne un code au coursier pour confirmer la livraison."
+        },
+        "awaitConfirmation": {
+          "title": "Livrée",
+          "body": "Le client dispose d'un court délai pour signaler un problème. Ensuite, la commande se clôture automatiquement."
+        },
+        "done": {
+          "title": "Commande terminée",
+          "body": "Plus rien à faire pour cette commande."
+        },
+        "cancelled": {
+          "title": "Commande annulée",
+          "body": "Aucune action. N'envoyez pas ces articles."
+        },
+        "unknown": {
+          "title": "Vérifiez cette commande",
+          "body": "Actualisez pour voir le dernier statut."
+        }
+      }
     }
   },
   "home": {
@@ -826,6 +1135,55 @@
       "ariaLabel": "Raccourcis",
       "listings": "Catalogue",
       "profile": "Profil"
+    },
+    "analytics": {
+      "gmv": "Ventes"
+    },
+    "tasks": {
+      "heading": "Vos prochaines étapes",
+      "intro": "Commencez en haut : le plus urgent est en premier.",
+      "items": {
+        "kycFix": {
+          "title": "Corrigez votre vérification",
+          "body": "Nous n'avons pas pu valider l'un de vos documents. Voyez quoi changer — inutile de tout recommencer."
+        },
+        "kycFinish": {
+          "title": "Terminez votre vérification",
+          "body": "Les acheteurs ne voient pas votre boutique tant que nous n'avons pas vérifié votre identité. Cela prend environ 5 minutes."
+        },
+        "kycPending": {
+          "title": "Votre vérification est en cours d'examen",
+          "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "Acceptez et emballez avant 14 h pour que les livraisons partent avec les coursiers du jour."
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "Moins d'une heure avant la limite d'expédition de 14 h — acceptez et emballez maintenant."
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, one {# commande vous attend} other {# commandes vous attendent}}",
+          "body": "La limite de 14 h est passée. Préparez-les maintenant pour qu'elles partent en premier à la prochaine tournée."
+        },
+        "catalogueProducts": {
+          "title": "Vérifiez vos produits",
+          "body": "Gardez stocks et prix à jour pour qu'aucun acheteur ne commande un article que vous n'avez pas."
+        },
+        "catalogueServices": {
+          "title": "Vérifiez vos services",
+          "body": "Gardez prix et disponibilités à jour, et répondez vite aux demandes de devis."
+        },
+        "catalogueEvents": {
+          "title": "Vérifiez vos événements",
+          "body": "Contrôlez dates, types de billets et prix avant de partager votre événement."
+        },
+        "profile": {
+          "title": "Complétez le profil de votre boutique",
+          "body": "Un logo, des horaires et une courte description aident les acheteurs à vous faire confiance."
+        }
+      }
     }
   },
   "queue": {
@@ -858,7 +1216,37 @@
       "cancel": "Pas maintenant"
     },
     "errors": {
-      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser."
+      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "emptyNeedsAction": {
+      "title": "Rien ne vous attend",
+      "body": "Les nouvelles commandes apparaissent ici en premier. Nous vous envoyons aussi un message WhatsApp."
+    },
+    "emptyFiltered": {
+      "title": "Aucune commande dans cette vue",
+      "body": "Essayez un autre onglet ou revenez aux commandes qui vous attendent.",
+      "cta": "Afficher les commandes à traiter"
+    },
+    "nextStep": {
+      "confirm": "Ensuite : accepter ou refuser",
+      "pack": "Ensuite : emballer les articles",
+      "handToRider": "Ensuite : remettre au coursier",
+      "readyForPickup": "Ensuite : indiquer prête pour le retrait",
+      "awaitCollection": "En attente du retrait par le client",
+      "awaitDelivery": "Avec le coursier",
+      "awaitConfirmation": "Livrée — en attente du client",
+      "done": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "cutoff": {
+      "before": "Limite d'expédition 14 h · encore {time}",
+      "timeHoursMinutes": "{hours} h {minutes} min",
+      "timeMinutes": "{minutes} min",
+      "beforeBody": "Les livraisons acceptées, emballées et remises au coursier avant 14 h (heure de Lusaka) partent avec les coursiers du jour.",
+      "urgentBody": "Moins d'une heure — terminez l'emballage maintenant pour les coursiers du jour.",
+      "after": "La limite d'expédition de 14 h est passée",
+      "afterBody": "Les livraisons préparées maintenant partiront à la prochaine tournée. Les retraits ne sont pas concernés."
     }
   },
   "payouts": {
@@ -880,6 +1268,10 @@
     "hold": {
       "noticeTitle": "Versements suspendus pendant 24 heures",
       "noticeBody": "Après le changement de votre numéro mobile money, les versements sont suspendus pendant 24 heures, le temps de vérifier le changement. Vous serez notifié lorsque les versements reprendront."
+    },
+    "paused": {
+      "noticeTitle": "Les versements sont désactivés pour le moment",
+      "noticeBody": "Aucun argent n'est encore envoyé vers votre numéro mobile money. Les soldes ci-dessous restent enregistrés dans le grand livre."
     },
     "history": {
       "heading": "Historique des versements",
@@ -931,7 +1323,27 @@
       "kycRequired": "Complétez le KYC avant de changer de méthode de versement.",
       "payoutsPaused": "Les versements sont suspendus après un changement de méthode de versement.",
       "rateLimited": "Trop de requêtes. Réessayez sous peu.",
-      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain."
+      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "pilot": {
+      "badge": "Pas encore activé",
+      "title": "Les versements ne sont pas activés pendant le pilote",
+      "body": "Vous ne recevrez pas encore de versements via cette application, il n'y a donc aucun solde à afficher. C'est normal — votre compte n'a aucun problème.",
+      "meanwhileHeading": "Comment fonctionne l'argent pendant le pilote",
+      "meanwhile": {
+        "cod": "Paiement à la livraison : le client paie le coursier en espèces et Vergeo5 vous règle.",
+        "prepaid": "Commandes payées : Vergeo5 conserve l'argent du client en sécurité jusqu'à la livraison.",
+        "questions": "Des questions sur l'argent qui vous est dû ? Contactez l'équipe pilote Vergeo5."
+      },
+      "laterHeading": "Ce que vous verrez ici plus tard",
+      "later": {
+        "held": "L'argent retenu pour les commandes en cours de livraison",
+        "released": "L'argent débloqué et prêt à vous être versé",
+        "history": "Chaque versement vers votre numéro mobile money, avec son statut",
+        "statement": "Un relevé mensuel téléchargeable"
+      },
+      "notify": "Nous vous préviendrons sur WhatsApp avant l'activation des versements."
     }
   },
   "scan": {
@@ -1031,7 +1443,20 @@
         "hint": "Centrez le QR du billet dans le cadre",
         "loading": "Démarrage de la caméra…",
         "denied": "Accès à la caméra bloqué",
-        "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets."
+        "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets.",
+        "useManual": "Saisir plutôt le PIN du billet"
+      },
+      "manual": {
+        "heading": "Enregistrement manuel",
+        "intro": "Saisissez l'identifiant du billet et le PIN à 6 chiffres figurant sur le billet de l'invité.",
+        "ticketIdLabel": "Identifiant du billet",
+        "ticketIdPlaceholder": "Identifiant figurant sur le billet de l'invité",
+        "pinLabel": "PIN du billet à 6 chiffres",
+        "pinPlaceholder": "000000",
+        "submit": "Enregistrer le billet",
+        "submitting": "Enregistrement…",
+        "useCamera": "Revenir au scan par caméra",
+        "offline": "L'enregistrement manuel nécessite une connexion — le PIN est vérifié sur le serveur."
       },
       "count": {
         "checkedIn": "{count, plural, one {# enregistré} other {# enregistrés}}",
@@ -1074,7 +1499,29 @@
           "title": "Pas un code de billet",
           "body": "Cela ne ressemble pas à un QR de billet d'événement."
         },
+        "invalidPin": {
+          "title": "PIN incorrect",
+          "body": "Ce PIN ne correspond pas au billet {ticketId}. Vérifiez le billet de l'invité et réessayez."
+        },
+        "unauthorized": {
+          "title": "Non autorisé",
+          "body": "Votre compte ne peut pas enregistrer les billets de cet événement."
+        },
+        "manualOffline": {
+          "title": "Vous êtes hors ligne",
+          "body": "L'enregistrement manuel par PIN est vérifié sur le serveur. Reconnectez-vous ou scannez le QR du billet."
+        },
+        "holder": "Titulaire : {name}",
+        "tier": "Billet : {name}",
+        "idCheck": "Contrôle d'identité requis pour ce billet",
         "scanAnother": "Scanner un autre"
+      },
+      "override": {
+        "cta": "Admettre avec une dérogation organisateur",
+        "reasonLabel": "Motif (obligatoire)",
+        "reasonPlaceholder": "Téléphone éteint / QR illisible",
+        "submitting": "Enregistrement de la dérogation…",
+        "failed": "La dérogation a échoué. Vérifiez que ce billet appartient à cette session."
       },
       "recent": {
         "heading": "Scans récents",
@@ -1131,7 +1578,12 @@
       "saving": "Enregistrement…",
       "saved": "Modifications enregistrées.",
       "backToList": "Retour aux événements",
-      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
+      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}",
+      "city": "Ville",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Utilisée pour les filtres de découverte. Le landmark et le GPS restent l'adresse.",
+      "idCheckLabel": "Demander un contrôle d'identité pour les billets de plus de K500",
+      "idCheckHelp": "Affiche un rappel d'identité sur le scanner pour les billets payants à K500 ou plus. La plateforme ne stocke aucun document d'identité."
     },
     "instances": {
       "heading": "Dates et capacité",
@@ -1267,7 +1719,7 @@
       "namePlaceholder": "Entrée générale",
       "priceLabel": "Prix (ZMW)",
       "pricePlaceholder": "75.00",
-      "priceHelp": "Saisissez le montant en kwacha ; stocké en ngwee (sans décimales en base de données).",
+      "priceHelp": "Saisissez le prix en kwacha, p. ex. 75 ou 75.50.",
       "priceFreeHelp": "Le RSVP gratuit est toujours à K0.00.",
       "qtyCapLabel": "Limite de quantité (facultatif)",
       "qtyCapPlaceholder": "Illimité",
@@ -1278,7 +1730,10 @@
       "soldLabel": "{count, plural, one {# vendu} other {# vendus}}",
       "attendeeNamedLabel": "Recueillir les noms des participants",
       "attendeeNamedHelp": "Exiger un nom pour chaque billet au paiement — utile pour les ateliers, dîners et événements avec places assises.",
-      "attendeeNamedBadge": "Noms requis"
+      "attendeeNamedBadge": "Noms requis",
+      "perksLabel": "Avantages (facultatif)",
+      "perksHelp": "Affichés à l'acheteur — lounge, goodies, jetons boisson. Laissez vide s'il n'y en a pas.",
+      "perksPlaceholder": "ex. Inclut un jeton boisson"
     },
     "actions": {
       "save": "Enregistrer le type",
@@ -1460,6 +1915,8 @@
     "viewRoster": "Voir la liste des participants",
     "sections": {
       "revenue": "Revenus",
+      "velocity": "Rythme des ventes",
+      "acquisition": "Source d'acquisition",
       "checkIn": "Progression du pointage",
       "escrow": "Séquestre",
       "salesByType": "Ventes par type de billet"
@@ -1467,6 +1924,12 @@
     "labels": {
       "pending": "En attente de déblocage",
       "released": "Débloqué pour vous",
+      "soldLast24h": "Vendus sur 24 h",
+      "revenueLast24h": "Revenus sur 24 h",
+      "projectedSold": "Projection de ventes d'ici le début (d'après le rythme récent)",
+      "direct": "Direct / inconnu",
+      "affiliateSource": "Affilié {code}",
+      "acquisitionRow": "{orders, plural, one {# commande} other {# commandes}} · {revenue}",
       "eventStatus": "Statut de l'événement",
       "soldCheckedIn": "{sold, plural, one {# vendu} other {# vendus}} · {checkedIn, plural, one {# pointé} other {# pointés}}"
     },
@@ -1475,6 +1938,31 @@
       "unauthorized": "Connectez-vous en tant qu'organisateur pour voir ce tableau de bord.",
       "notFound": "Événement introuvable.",
       "forbidden": "Vous ne pouvez consulter le tableau de bord que de vos propres événements."
+    },
+    "ops": {
+      "heading": "Équipe, promos et suivi",
+      "intro": "Invitez le staff d'entrée par téléphone, créez des codes promo en pourcentage, et émettez des codes de suivi. Les codes affiliés sont enregistrés au paiement — ils ne paient pas encore.",
+      "loadFailed": "Impossible de charger les outils organisateur.",
+      "teamHeading": "Équipe d'entrée",
+      "revoke": "Retirer",
+      "pendingInvite": "Invitation {role} en attente pour {phone}",
+      "phonePlaceholder": "Numéro de téléphone",
+      "roleLabel": "Rôle",
+      "roleDoor": "Entrée",
+      "roleManager": "Manager",
+      "inviteCta": "Inviter",
+      "inviteFailed": "Impossible d'envoyer cette invitation.",
+      "shareToken": "Partagez ce lien à usage unique : {path}?token={token}",
+      "promoHeading": "Codes promo",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Pourcentage",
+      "promoCta": "Créer un promo",
+      "promoFailed": "Impossible de créer ce promo.",
+      "affiliateHeading": "Codes de suivi affilié",
+      "affiliateNote": "Les codes sont enregistrés sur les commandes payées. Il n'y a pas de paiement affilié dans cette version.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Créer un code",
+      "affiliateFailed": "Impossible de créer ce code de suivi."
     }
   },
   "eventRoster": {
@@ -1510,6 +1998,14 @@
       "listings": "Annonces",
       "orders": "Commandes",
       "profile": "Profil"
+    }
+  },
+  "intake": {
+    "detail": {
+      "canonicalProduct": "Produit du catalogue"
+    },
+    "errors": {
+      "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
     }
   }
 }

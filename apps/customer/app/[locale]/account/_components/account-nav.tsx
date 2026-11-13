@@ -14,6 +14,7 @@ export type AccountNavLabels = {
   jobs: string;
   quotes: string;
   saved: string;
+  following: string;
   addresses: string;
   preferences: string;
   profile: string;
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "jobs", href: (locale) => `/${locale}/account/jobs` },
   { key: "quotes", href: (locale) => `/${locale}/account/quotes` },
   { key: "saved", href: (locale) => `/${locale}/wishlist` },
+  { key: "following", href: (locale) => `/${locale}/account/following` },
   { key: "addresses", href: (locale) => `/${locale}/account/addresses` },
   { key: "preferences", href: (locale) => `/${locale}/account/preferences` },
   { key: "profile", href: (locale) => `/${locale}/account/profile` },

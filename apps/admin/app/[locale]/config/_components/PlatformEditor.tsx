@@ -1,5 +1,6 @@
 "use client";
 
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -58,10 +59,16 @@ export function PlatformEditor() {
     if (!pending) {
       return;
     }
-    await configApi.request(`/admin/config/platform/${pending.key}`, {
-      method: "PATCH",
-      body: JSON.stringify({ value: pending.to }),
-    });
+    try {
+      await configApi.request(`/admin/config/platform/${pending.key}`, {
+        method: "PATCH",
+        body: JSON.stringify({ value: pending.to }),
+      });
+    } catch (caught) {
+      emitToastKey("actionFailed", { type: "error" });
+      throw caught;
+    }
+    emitToastKey("configSaved", { type: "success" });
     setPending(null);
     await load();
   };

@@ -18,15 +18,18 @@ Orange-cloud (proxied) records unless noted. TLS mode: **Full (strict)** on OCI 
 
 Use the `{service}.staging.vergeo5.com` convention (not `staging-api.vergeo5.com`).
 
-| Name             | Type | Target                       | Proxied | Notes                                              |
-| ---------------- | ---- | ---------------------------- | ------- | -------------------------------------------------- |
-| `api.staging`    | A    | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging API (`vergeo5-api-staging` → host `:8001`) |
-| `n8n.staging`    | A    | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging n8n UI (basic auth)                        |
-| `vendor.staging` | A    | optional / Preview           | Yes     | Optional if not using Vercel Preview URLs          |
-| `admin.staging`  | A    | optional / Preview           | Yes     | Optional; keep allowlist if exposed                |
+| Name               | Type  | Target                       | Proxied | Notes                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------ | ----- | ---------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.staging`      | A     | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging API (`vergeo5-api-staging` → host `:8001`)                                                                                                                                                                                                                                                                                                                                          |
+| `n8n.staging`      | A     | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging n8n UI (basic auth)                                                                                                                                                                                                                                                                                                                                                                 |
+| `vendor.staging`   | A     | optional / Preview           | Yes     | Optional if not using Vercel Preview URLs                                                                                                                                                                                                                                                                                                                                                   |
+| `admin.staging`    | A     | optional / Preview           | Yes     | Optional; keep allowlist if exposed                                                                                                                                                                                                                                                                                                                                                         |
+| `customer.staging` | CNAME | `cname.vercel-dns.com`       | Yes     | **Required, not optional** — guest-cart `SameSite=Lax` cookies cannot survive the cross-site `*.vercel.app` Preview origin against `api.staging.vergeo5.com` (Run #62); this stable same-site hostname is the fix. Points at a Vercel _custom domain_ (not the OCI VM) — see `infra/vercel.md` and `docs/ops/staging-samesite-guest-cart.md`. Not yet provisioned as of that doc's writing. |
 
 Staging frontends may use Vercel Preview URLs on branch `staging` instead of
-custom domains. Never alias staging records to production OCI IPs by mistake.
+custom domains — except the Customer app's guest-cart flows, which need
+`customer.staging` above. Never alias staging records to production OCI IPs
+by mistake.
 
 ## WAF / caching posture (free tier)
 

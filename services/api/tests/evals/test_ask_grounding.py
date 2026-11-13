@@ -212,6 +212,9 @@ async def test_ask_grounding(entry: EvalEntry) -> None:
         guest_key="ip:127.0.0.1",
         model_caller=model_caller,
         retriever=_fixture_retriever,
+        # This eval grades the RAG + LLM grounding path; deterministic workflow
+        # intents (price/stock lookups) are covered in tests/test_ask_upgrade.py.
+        enable_workflow=False,
     )
 
     cited = [citation.entity_id for citation in response.citations]

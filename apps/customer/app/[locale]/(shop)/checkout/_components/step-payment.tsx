@@ -6,6 +6,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -52,7 +53,26 @@ export type PaymentStepLabels = {
   error: string;
   /** Shown when the API payment kill-switch blocks momo/card initiation. */
   paymentsDisabled: string;
+  /** UX pass 4 — plain-language COD explainer. Templates use {amount} / {cap} / {total}. */
+  codGuide?: PaymentCodGuideLabels;
 };
+
+export type PaymentCodGuideLabels = {
+  title: string;
+  step1: string;
+  step2: string;
+  step3: string;
+  capNote: string;
+  overCap: string;
+  editCart: string;
+};
+
+function fill(template: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.split(`{${key}}`).join(value),
+    template,
+  );
+}
 
 export type PaymentOptions = {
   session_id: string;
@@ -61,6 +81,12 @@ export type PaymentOptions = {
   total_ngwee: number;
   cod_cap_ngwee: number;
   cod_eligible: boolean;
+  /**
+   * Methods the API will accept right now: momo/card only while the payment
+   * kill switch is on, cod only when the total is within the cap. Absent on an
+   * older API, in which case every method is shown as before.
+   */
+  available_methods?: PaymentMethod[];
 };
 
 export type ValidatedPayment = {
@@ -69,12 +95,25 @@ export type ValidatedPayment = {
   payer_number: string | null;
 };
 
+/**
+ * Pre-resolved options for a server-created checkout group (paid ticket / service
+ * deposit). The amount comes from `GET /checkout/groups/{id}`; the cart-session
+ * option fetch and `/checkout/steps/payment` validation are skipped, COD is never
+ * offered, and `onComplete` starts the payment (errors surface in this step).
+ */
+export type PresetPayment = {
+  options: PaymentOptions;
+  methods: ReadonlyArray<"momo" | "card">;
+  continueLabel?: string;
+};
+
 type StepPaymentProps = {
   locale: string;
   sessionId: string;
   accessToken: string;
   labels: PaymentStepLabels;
-  onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void;
+  onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void | Promise<void>;
+  preset?: PresetPayment;
 };
 
 function MethodOption({ selected, children }: { selected: boolean; children: ReactNode }) {
@@ -99,18 +138,31 @@ export function StepPayment({
   accessToken,
   labels,
   onComplete,
+  preset,
 }: StepPaymentProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const groupLabelId = useId();
-  const [options, setOptions] = useState<PaymentOptions | null>(null);
-  const [method, setMethod] = useState<PaymentMethod>("momo");
+  const [options, setOptions] = useState<PaymentOptions | null>(preset?.options ?? null);
+  const [method, setMethod] = useState<PaymentMethod>(
+    preset && !preset.methods.includes("momo") ? "card" : "momo",
+  );
   const [rail, setRail] = useState<MomoRail>("mtn");
   const [nationalNumber, setNationalNumber] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(true);
+  const [initializing, setInitializing] = useState(!preset);
+  // Never offer a method the API has said it will refuse: with online payments
+  // switched off a buyer must not be walked through a MoMo or card form first.
+  const offered: ReadonlyArray<PaymentMethod> | null = preset
+    ? (preset.methods as ReadonlyArray<PaymentMethod>)
+    : (options?.available_methods ?? null);
+  const offers = (candidate: PaymentMethod) => (offered ? offered.includes(candidate) : true);
+  const nothingOffered = offered !== null && offered.length === 0;
 
   useEffect(() => {
+    if (preset) {
+      return;
+    }
     let cancelled = false;
     const loadOptions = async () => {
       setInitializing(true);
@@ -124,7 +176,13 @@ export function StepPayment({
         );
         if (!cancelled) {
           setOptions(response);
-          if (!response.cod_eligible && method === "cod") {
+          const available = response.available_methods;
+          if (available) {
+            const first = available[0];
+            if (first && !available.includes(method)) {
+              setMethod(first);
+            }
+          } else if (!response.cod_eligible && method === "cod") {
             setMethod("momo");
           }
         }
@@ -142,7 +200,7 @@ export function StepPayment({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, labels.error, method, sessionId]);
+  }, [accessToken, labels.error, method, preset, sessionId]);
 
   useEffect(() => {
     if (!errorMessage) {
@@ -169,6 +227,30 @@ export function StepPayment({
     }
 
     setLoading(true);
+    if (preset) {
+      try {
+        await onComplete(
+          {
+            method,
+            rail: method === "momo" ? rail : null,
+            payer_number:
+              method === "momo" ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber) : null,
+          },
+          preset.options,
+        );
+        // Success navigates away; keep the button busy so it cannot double-submit.
+      } catch (error) {
+        setErrorMessage(
+          error instanceof ApiError && error.code === "payments_disabled"
+            ? labels.paymentsDisabled
+            : error instanceof ApiError && error.code === "checkout.invalid_payer_number"
+              ? labels.invalidPayer
+              : labels.error,
+        );
+        setLoading(false);
+      }
+      return;
+    }
     try {
       const client = createApiClient({
         baseUrl: getApiBaseUrl(),
@@ -240,7 +322,11 @@ export function StepPayment({
     );
   }
 
-  const codCapFormatted = formatK(options.cod_cap_ngwee, { locale: `${locale}-ZM` });
+  const codCapFormatted = formatK(options.cod_cap_ngwee, {
+    locale: `${locale}-ZM`,
+  });
+  const totalFormatted = formatK(options.total_ngwee, { locale: `${locale}-ZM` });
+  const codGuide = labels.codGuide;
 
   return (
     <div className="space-y-5">
@@ -257,47 +343,51 @@ export function StepPayment({
         className="flex flex-col gap-3"
         data-testid="checkout-payment-methods"
       >
-        <MethodOption selected={method === "momo"}>
-          <div className="flex items-start justify-between gap-3">
-            <Radio
-              name="payment-method"
-              label={labels.momo}
-              checked={method === "momo"}
-              onChange={() => {
-                setMethod("momo");
-                setErrorMessage(null);
-              }}
-            />
-            {method === "momo" ? (
-              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
-                {labels.selected}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
-        </MethodOption>
+        {offers("momo") ? (
+          <MethodOption selected={method === "momo"}>
+            <div className="flex items-start justify-between gap-3">
+              <Radio
+                name="payment-method"
+                label={labels.momo}
+                checked={method === "momo"}
+                onChange={() => {
+                  setMethod("momo");
+                  setErrorMessage(null);
+                }}
+              />
+              {method === "momo" ? (
+                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                  {labels.selected}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
+          </MethodOption>
+        ) : null}
 
-        <MethodOption selected={method === "card"}>
-          <div className="flex items-start justify-between gap-3">
-            <Radio
-              name="payment-method"
-              label={labels.card}
-              checked={method === "card"}
-              onChange={() => {
-                setMethod("card");
-                setErrorMessage(null);
-              }}
-            />
-            {method === "card" ? (
-              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
-                {labels.selected}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
-        </MethodOption>
+        {offers("card") ? (
+          <MethodOption selected={method === "card"}>
+            <div className="flex items-start justify-between gap-3">
+              <Radio
+                name="payment-method"
+                label={labels.card}
+                checked={method === "card"}
+                onChange={() => {
+                  setMethod("card");
+                  setErrorMessage(null);
+                }}
+              />
+              {method === "card" ? (
+                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                  {labels.selected}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
+          </MethodOption>
+        ) : null}
 
-        {options.cod_eligible ? (
+        {preset ? null : options.cod_eligible ? (
           <MethodOption selected={method === "cod"}>
             <div className="flex items-start justify-between gap-3">
               <Radio
@@ -316,22 +406,53 @@ export function StepPayment({
               ) : null}
             </div>
             <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.codHelp}</p>
+            {codGuide && method === "cod" ? (
+              <div
+                className="mt-3 space-y-2 rounded-md bg-bg-2 px-3 py-3"
+                data-testid="checkout-cod-guide"
+              >
+                <p className="font-body text-sm font-semibold text-text">{codGuide.title}</p>
+                <ul className="list-disc space-y-1 pl-5 font-body text-sm text-text-2">
+                  <li>{codGuide.step1}</li>
+                  <li>{fill(codGuide.step2, { amount: totalFormatted })}</li>
+                  <li>{codGuide.step3}</li>
+                </ul>
+                <p className="font-body text-xs text-text-3">
+                  {fill(codGuide.capNote, { cap: codCapFormatted })}
+                </p>
+              </div>
+            ) : null}
           </MethodOption>
         ) : (
           <div
             className="rounded-card border border-dashed border-border bg-bg-2 p-4"
             data-testid="checkout-cod-unavailable"
-            aria-disabled="true"
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="font-body text-sm font-semibold text-text-3">{labels.cod}</p>
                 <p className="mt-1 font-body text-sm font-medium text-text">
                   {labels.codUnavailableTitle}
                 </p>
-                <p className="mt-1 font-body text-sm text-text-3">
+                <p className="mt-1 font-body text-sm text-text-2">
                   {labels.codIneligible(codCapFormatted)}
                 </p>
+                {codGuide ? (
+                  <>
+                    <p className="mt-2 font-body text-sm text-text-2">
+                      {fill(codGuide.overCap, {
+                        total: totalFormatted,
+                        cap: codCapFormatted,
+                      })}
+                    </p>
+                    <Link
+                      href={`/${locale}/cart`}
+                      className="mt-1 inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+                    >
+                      {codGuide.editCart}
+                    </Link>
+                  </>
+                ) : null}
               </div>
               <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-text-3">
                 {labels.unavailable}
@@ -341,7 +462,7 @@ export function StepPayment({
         )}
       </div>
 
-      {method === "momo" ? (
+      {method === "momo" && offers("momo") ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={labels.momo}>
             <PaymentRailChoice
@@ -371,14 +492,18 @@ export function StepPayment({
             requiredMarker="*"
             asGroup
           >
-            <div className="flex gap-2">
-              <Input
-                size="lg"
-                className="w-24 shrink-0 text-center font-mono"
-                value={DEFAULT_COUNTRY_CODE}
-                readOnly
-                aria-label={labels.countryCode}
-              />
+            {/* Input carries `w-full` from field styles, which beats `w-24` in the
+                generated CSS — size the prefix via a wrapper so the row fits 360px. */}
+            <div className="flex min-w-0 gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  size="lg"
+                  className="text-center font-mono"
+                  value={DEFAULT_COUNTRY_CODE}
+                  readOnly
+                  aria-label={labels.countryCode}
+                />
+              </div>
               <Input
                 size="lg"
                 className="min-w-0 flex-1 font-mono"
@@ -399,7 +524,7 @@ export function StepPayment({
         </div>
       ) : null}
 
-      {method === "card" ? (
+      {method === "card" && offers("card") ? (
         <div className="rounded-card border border-border bg-bg-2 px-4 py-3">
           <p className="font-body text-sm text-text-2">{labels.cardExplainer}</p>
         </div>
@@ -420,19 +545,29 @@ export function StepPayment({
         <span ref={errorRef} className="sr-only" aria-hidden="true" />
       ) : null}
 
-      <Button
-        type="button"
-        size="lg"
-        className="w-full"
-        loading={loading}
-        loadingLabel={labels.loading}
-        disabled={loading}
-        onClick={() => {
-          void handleSubmit();
-        }}
-      >
-        {labels.continue}
-      </Button>
+      {nothingOffered ? (
+        <p
+          role="alert"
+          className="font-body text-sm text-danger"
+          data-testid="checkout-payments-off"
+        >
+          {labels.paymentsDisabled}
+        </p>
+      ) : (
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          loading={loading}
+          loadingLabel={labels.loading}
+          disabled={loading}
+          onClick={() => {
+            void handleSubmit();
+          }}
+        >
+          {preset?.continueLabel ?? labels.continue}
+        </Button>
+      )}
     </div>
   );
 }

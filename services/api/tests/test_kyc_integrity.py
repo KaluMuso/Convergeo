@@ -187,6 +187,18 @@ class FakeRpc:
         raise NotImplementedError(self._fn)
 
 
+class FakeKycStorage:
+    def __init__(self) -> None:
+        self.objects: set[str] = set()
+
+    def from_(self, bucket: str) -> FakeKycStorage:
+        assert bucket == "kyc-docs"
+        return self
+
+    def exists(self, path: str) -> bool:
+        return path in self.objects
+
+
 class FakeSupabaseClient:
     def __init__(self) -> None:
         self.tables: dict[str, FakeTable] = {
@@ -201,6 +213,7 @@ class FakeSupabaseClient:
             "orders": FakeTable(),
             "user_roles": FakeTable(),
         }
+        self.storage = FakeKycStorage()
         self._block_vendor_role_grant = False
 
     def table(self, name: str) -> FakeTable:
@@ -296,13 +309,15 @@ def _seed_kyc(
     tier: int = 2,
     status: str = "submitted",
 ) -> None:
+    paths = [f"kyc/{vendor_id}/nrc-1700000000", f"kyc/{vendor_id}/selfie-1700000001"]
+    fake.storage.objects.update(paths)
     fake.tables["kyc_records"].rows.append(
         {
             "id": kyc_id,
             "vendor_id": vendor_id,
             "tier": tier,
             "status": status,
-            "doc_storage_paths": [f"kyc/{vendor_id}/nrc.jpg"],
+            "doc_storage_paths": paths,
             "momo_name_match": {
                 "phone": "+260971234567",
                 "operator": "mtn",

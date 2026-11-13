@@ -31,7 +31,9 @@
     "back": "返回订单列表",
     "actionsTitle": "送达之后",
     "requestReturn": "申请退货",
-    "openDispute": "发起或查看纠纷"
+    "openDispute": "发起或查看纠纷",
+    "variantOption": "{group}：{value}",
+    "variantSeparator": " · "
   },
   "status": {
     "placed": "已下单",
@@ -56,13 +58,28 @@
     "delivered": "已送达",
     "completed": "款项已放款给商家",
     "cancelled": "订单已取消",
-    "refunded": "退款至您的移动支付账户"
+    "refunded": "退款至您的移动支付账户",
+    "explain": {
+      "placed": "我们已收到您的订单并转给卖家。",
+      "paymentHeld": "您的付款由 Convergeo 代为保管，送达后才会支付给卖家。",
+      "paymentCod": "尚未扣款。您在收货时以现金付款。",
+      "confirmed": "卖家已接单并正在备货。",
+      "processing": "卖家正在打包您的商品。",
+      "ready": "您的订单已备好。取货时请向卖家出示取货码。",
+      "shipped": "订单已交给骑手。请保持手机开机，以便骑手联系您。",
+      "delivered": "订单已送达。请检查商品，然后在下方确认。",
+      "completed": "此订单已完成。",
+      "cancelled": "此订单已取消。如有疑问，请联系客服。",
+      "refunded": "退款正在退回您的移动钱包。"
+    },
+    "now": "当前",
+    "completedCod": "订单已完成"
   },
   "escrow": {
     "held": "在您收到订单之前，您的款项由 Convergeo 安全保管。",
     "released": "订单完成后，款项已放款给商家。",
     "refunded": "退款正在返回至您的移动支付钱包。",
-    "cod": "收到订单时，用现金或移动支付向商家付款。"
+    "cod": "收到订单时以现金付款。"
   },
   "pickup": {
     "title": "自提详情",
@@ -207,5 +224,11 @@
     "loading": "正在加载评价表单…",
     "starFilled": "★",
     "starEmpty": "☆"
+  },
+  "help": {
+    "title": "这个订单需要帮助？",
+    "beforeDispatch": "想修改或取消？请在发货前凭订单号联系客服。",
+    "afterDispatch": "订单有问题？请凭订单号联系客服。",
+    "contactCta": "联系客服"
   }
 }

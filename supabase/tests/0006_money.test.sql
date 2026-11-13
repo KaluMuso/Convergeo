@@ -166,10 +166,13 @@ values
     0
   );
 
+-- Platform accounts are seeded by 20261107130000_seed_ledger_accounts.sql with
+-- these canonical ids; the insert is a no-op on a migrated database.
 insert into public.ledger_accounts (id, kind)
 values
-  ('e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 'escrow'),
-  ('e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2', 'platform_cash');
+  ('c2000000-0000-0000-0000-000000000002', 'escrow'),
+  ('c1000000-0000-0000-0000-000000000001', 'platform_cash')
+on conflict do nothing;
 
 insert into public.payments (
   id,
@@ -286,8 +289,8 @@ insert into public.ledger_transactions (id, kind)
 values ('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'payment_captured');
 insert into public.ledger_postings (transaction_id, account_id, amount_ngwee)
 values
-  ('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 1000),
-  ('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2', -1000);
+  ('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'c2000000-0000-0000-0000-000000000002', 1000),
+  ('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'c1000000-0000-0000-0000-000000000001', -1000);
 
 select extensions.lives_ok(
   $$set constraints ledger_postings_zero_sum immediate$$,
@@ -302,8 +305,8 @@ select extensions.throws_ok(
     values ('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 'payment_captured');
     insert into public.ledger_postings (transaction_id, account_id, amount_ngwee)
     values
-      ('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 'e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 1000),
-      ('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 'e2e2e2e2-e2e2-e2e2-e2e2-e2e2e2e2e2e2', -500);
+      ('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 'c2000000-0000-0000-0000-000000000002', 1000),
+      ('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 'c1000000-0000-0000-0000-000000000001', -500);
     set constraints ledger_postings_zero_sum immediate;
   end
   $inner$;

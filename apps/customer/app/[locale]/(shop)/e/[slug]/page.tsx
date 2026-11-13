@@ -15,7 +15,11 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
 
-import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
+import {
+  EventJsonLd,
+  isEventIndexable,
+  type EventJsonLdInput,
+} from "./_components/event-jsonld";
 import { PrivateEventAccess } from "./_components/private-event-access";
 import { isPastEventInstance } from "./_lib/instance-time";
 
@@ -58,6 +62,7 @@ type TicketType = {
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
   tiers: { min_qty: number; price_ngwee: number }[];
+  perks?: string | null;
 };
 
 type EventDetail = {
@@ -75,6 +80,8 @@ type EventDetail = {
   min_price_ngwee: number | null;
   is_free: boolean;
   is_sold_out: boolean;
+  platform_fee_payer?: "organiser" | "buyer";
+  platform_fee_bps?: number;
   visibility?: "public" | "unlisted" | "private";
   organiser: {
     id: string;
@@ -115,7 +122,10 @@ async function eventAccessProofFor(slug: string): Promise<string | null> {
   return cookieStore.get(eventAccessCookieName(slug))?.value ?? null;
 }
 
-async function fetchEvent(slug: string, accessProof?: string | null): Promise<EventDetail | null> {
+async function fetchEvent(
+  slug: string,
+  accessProof?: string | null,
+): Promise<EventDetail | null> {
   const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
   if (!url) {
     return null;
@@ -187,7 +197,10 @@ function eventImageUrls(images: string[]): string[] {
   return resolveCloudinaryImageUrls(images);
 }
 
-function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInput {
+function toEventJsonLdInput(
+  event: EventDetail,
+  locale: string,
+): EventJsonLdInput {
   return {
     name: event.title,
     slug: event.slug,
@@ -213,7 +226,9 @@ function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInpu
   };
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const event = await fetchEvent(slug, await eventAccessProofFor(slug));
   const t = await getEventsTranslator(locale);
@@ -259,6 +274,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
         },
       ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
     },
     robots: { index: indexable, follow: true },
   };
@@ -313,10 +333,16 @@ export default async function EventDetailPage({ params }: PageProps) {
         <div className="absolute inset-0 flex items-end bg-gradient-to-t from-panel via-panel/60 to-transparent p-6 md:p-10 lg:p-12">
           <div className="max-w-4xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {event.is_sold_out ? <Badge variant="sold_out" label={t("detail.soldOut")} /> : null}
-              {event.is_free ? <Badge variant="free" label={t("detail.free")} /> : null}
+              {event.is_sold_out ? (
+                <Badge variant="sold_out" label={t("detail.soldOut")} />
+              ) : null}
+              {event.is_free ? (
+                <Badge variant="free" label={t("detail.free")} />
+              ) : null}
             </div>
-            <h1 className="font-display text-hero text-panel-text">{event.title}</h1>
+            <h1 className="font-display text-hero text-panel-text">
+              {event.title}
+            </h1>
             <div className="flex flex-col gap-1 text-sm text-panel-muted sm:flex-row sm:flex-wrap sm:gap-x-5">
               {featuredInstance ? (
                 <p>{formatInstanceDate(featuredInstance.starts_at, locale)}</p>
@@ -337,16 +363,30 @@ export default async function EventDetailPage({ params }: PageProps) {
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:gap-12">
         <div className="flex min-w-0 flex-col gap-8">
           {event.description ? (
-            <section className="flex flex-col gap-3" aria-labelledby="event-about-heading">
-              <h2 id="event-about-heading" className="font-display text-h2 text-display-ink">
+            <section
+              className="flex flex-col gap-3"
+              aria-labelledby="event-about-heading"
+            >
+              <h2
+                id="event-about-heading"
+                className="font-display text-h2 text-display-ink"
+              >
                 {t("detail.about")}
               </h2>
-              <p className="max-w-3xl text-body leading-relaxed text-text-2">{event.description}</p>
+              <p className="max-w-3xl text-body leading-relaxed text-text-2">
+                {event.description}
+              </p>
             </section>
           ) : null}
 
-          <section className="flex flex-col gap-4" aria-labelledby="event-dates-heading">
-            <h2 id="event-dates-heading" className="font-display text-h2 text-display-ink">
+          <section
+            className="flex flex-col gap-4"
+            aria-labelledby="event-dates-heading"
+          >
+            <h2
+              id="event-dates-heading"
+              className="font-display text-h2 text-display-ink"
+            >
               {t("detail.dates")}
             </h2>
             <ol className="flex list-none flex-col gap-3 p-0">
@@ -357,7 +397,10 @@ export default async function EventDetailPage({ params }: PageProps) {
                     key={instance.id}
                     className="grid gap-3 rounded-lg border border-border bg-surface p-4 shadow-1 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-center"
                   >
-                    <span className="font-display text-h2 text-primary" aria-hidden="true">
+                    <span
+                      className="font-display text-h2 text-primary"
+                      aria-hidden="true"
+                    >
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div>
@@ -371,7 +414,12 @@ export default async function EventDetailPage({ params }: PageProps) {
                         })}
                       </p>
                     </div>
-                    {past ? <Badge variant="public" label={t("detail.pastInstance")} /> : null}
+                    {past ? (
+                      <Badge
+                        variant="public"
+                        label={t("detail.pastInstance")}
+                      />
+                    ) : null}
                   </li>
                 );
               })}
@@ -383,7 +431,10 @@ export default async function EventDetailPage({ params }: PageProps) {
               className="rounded-lg border border-border bg-bg-2 p-5"
               aria-labelledby="event-venue-heading"
             >
-              <h2 id="event-venue-heading" className="font-display text-h3 text-display-ink">
+              <h2
+                id="event-venue-heading"
+                className="font-display text-h3 text-display-ink"
+              >
                 {t("detail.venue")}
               </h2>
               {event.venue ? (
@@ -415,6 +466,8 @@ export default async function EventDetailPage({ params }: PageProps) {
             ticketTypes={event.ticket_types}
             isSoldOut={event.is_sold_out}
             eventAccessProof={eventAccessProof}
+            platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
+            platformFeeBps={event.platform_fee_bps ?? null}
           />
 
           <section className="rounded-lg border border-border bg-bg-2 p-5">
@@ -429,13 +482,17 @@ export default async function EventDetailPage({ params }: PageProps) {
               ) : null}
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-text">{event.organiser.display_name}</p>
+                  <p className="font-semibold text-text">
+                    {event.organiser.display_name}
+                  </p>
                   {event.organiser.preferred_badge ? (
                     <Badge variant="public" label={t("browse.verified")} />
                   ) : null}
                 </div>
                 {event.organiser.description ? (
-                  <p className="mt-1 text-sm text-text-2">{event.organiser.description}</p>
+                  <p className="mt-1 text-sm text-text-2">
+                    {event.organiser.description}
+                  </p>
                 ) : null}
                 {event.organiser.slug ? (
                   <Link

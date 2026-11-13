@@ -80,6 +80,7 @@
       "success": "谢谢——您的消息已发出。我们很快会与您联系。",
       "errorGeneric": "出了点问题。请重试，或通过 WhatsApp 联系我们。",
       "errorRateLimited": "您已经发送了几条消息。请稍候片刻再发送下一条。",
+      "errorUnavailable": "我们暂时无法接收留言。请通过 WhatsApp 联系我们，或稍后再试。",
       "validation": {
         "nameRequired": "请告诉我们您的姓名。",
         "nameTooLong": "该姓名过长。",

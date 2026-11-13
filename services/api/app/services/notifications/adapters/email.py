@@ -183,6 +183,30 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    # Courier dispatch v1: the body is the same pre-rendered message the admin
+    # board offers as "Copy message" (app.services.dispatch.message).
+    "courier_dispatch_request": {
+        "en": {
+            "subject_key": "notifications.email.courier_dispatch_request.subject",
+            "subject": "Vergeo5 delivery request {order_id}",
+            "body_key": "notifications.email.courier_dispatch_request.body",
+            "body": (
+                "<p>New delivery job from Vergeo5.</p>"
+                "<p>{dispatch_message}</p>"
+            ),
+        },
+    },
+    "dispatch_stale_alert": {
+        "en": {
+            "subject_key": "notifications.email.dispatch_stale_alert.subject",
+            "subject": "Dispatch {order_id} not accepted",
+            "body_key": "notifications.email.dispatch_stale_alert.body",
+            "body": (
+                "<p>Dispatch for order {order_id} is still waiting for courier "
+                "acceptance.</p>"
+            ),
+        },
+    },
     "service_quote_accepted": {
         "en": {
             "subject_key": "notifications.email.service_quote_accepted.subject",
@@ -253,6 +277,9 @@ def render_email_html(
         "review_url": html.escape(str(payload.get("review_url") or "")),
         "deposit": html.escape(_ngwee_field(payload, "deposit_ngwee")),
         "total": html.escape(_ngwee_field(payload, "total_job_ngwee")),
+        "dispatch_message": "<br>".join(
+            html.escape(line) for line in str(payload.get("dispatch_message") or "").splitlines()
+        ),
     }
     subject = strings["subject"].format(**vars_map)
     body = strings["body"].format(**vars_map)

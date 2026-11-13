@@ -168,7 +168,7 @@ def validate_staging_sha_proof_for_certification(
 
     api_sha = str(fingerprint_raw.get("git_sha") or "").lower()
     for portal in ("customer", "vendor", "admin"):
-        portal_sha = str(previews[portal].get("github_commit_sha") or "").lower()
+        portal_sha = str(previews[portal].get("deployment_sha") or "").lower()
         if portal_sha != candidate_sha.lower():
             raise StagingDeployProvenanceError(
                 f"{portal} preview SHA {portal_sha[:12]} != candidate {candidate_sha[:12]}"

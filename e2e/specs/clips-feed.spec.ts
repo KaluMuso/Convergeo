@@ -1,4 +1,5 @@
 import { flag, path } from "../fixtures/env";
+import { resolveGate } from "../fixtures/gating";
 import { expect, test } from "../fixtures/test-base";
 
 /**
@@ -28,7 +29,12 @@ test.describe("clips feed", () => {
         description:
           "Clips route is behind the `clips` feature flag (F-V1); set E2E_CLIPS=1 once it is on.",
       });
-      test.skip(true, "clips feature flag is off");
+      const gate = resolveGate({
+        kind: "FEATURE_DISABLED",
+        journey: "clips feed",
+        fixtures: ["E2E_CLIPS"],
+      });
+      test.skip(true, gate.reason);
     }
   });
 

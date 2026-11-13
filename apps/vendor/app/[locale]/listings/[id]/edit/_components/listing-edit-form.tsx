@@ -1,13 +1,17 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import { notify } from "@vergeo/ui/src/toast";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../../_components/async-state";
+import { ListSkeleton } from "../../../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
+import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/listing-guide";
+import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
   parseListingFieldValues,
@@ -16,9 +20,11 @@ import {
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
 import { milliToUnitInput } from "../../../new/_lib/measure";
-import { Badge, Button, FormField, Input, Spinner, Switch } from "../../../new/_lib/ui";
+import { Badge, Button, FormField, Input, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
+
+import { StockEditor } from "./stock-editor";
 
 type ListingEditFormProps = {
   locale: string;
@@ -184,16 +190,39 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     };
   }, [listingId, manageClient, reloadKey, session, sessionLoading]);
 
-  const buildPriceTiers = (): PriceTier[] | undefined => {
+  const buildPriceTiers = (): PriceTier[] | null => {
     if (!fieldValues?.wholesale) {
-      return undefined;
+      return null;
     }
-    return tiers
-      .filter((tier) => tier.minQty && isValidZmwDecimal(tier.priceZmw))
+    if (
+      tiers.length === 0 ||
+      tiers.some(
+        (tier) =>
+          !/^[1-9]\d*$/.test(tier.minQty.trim()) ||
+          !Number.isSafeInteger(Number(tier.minQty)) ||
+          !isValidZmwDecimal(tier.priceZmw),
+      )
+    ) {
+      return null;
+    }
+    const parsed = tiers
       .map((tier) => ({
         min_qty: Number(tier.minQty),
         price_ngwee: zmwDecimalToNgwee(tier.priceZmw),
-      }));
+      }))
+      .sort((a, b) => a.min_qty - b.min_qty);
+    if (
+      parsed.some((tier, index) => {
+        const previous = parsed[index - 1];
+        return (
+          previous !== undefined &&
+          (tier.min_qty <= previous.min_qty || tier.price_ngwee >= previous.price_ngwee)
+        );
+      })
+    ) {
+      return null;
+    }
+    return parsed;
   };
 
   const handleSave = async () => {
@@ -203,6 +232,11 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     const validationError = validateListingFields(fieldValues, fieldLabels);
     if (validationError) {
       setError(validationError);
+      return;
+    }
+    const priceTiers = buildPriceTiers();
+    if (fieldValues.wholesale && priceTiers === null) {
+      setError(t("listings.errors.invalid_tiers"));
       return;
     }
     if (
@@ -245,11 +279,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         fulfilment_mode: fieldValues.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
-        stock_mode: fieldValues.stockMode,
-        stock_qty: parsed.stockQty,
         wholesale: fieldValues.wholesale,
         moq: parsed.moq,
-        price_tiers: buildPriceTiers(),
+        price_tiers: priceTiers,
         returnable,
         return_window_hours: returnable ? Number(returnWindowHours) : null,
       });
@@ -257,13 +289,27 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         ...response.listing,
         images: response.listing.images ?? current?.images,
       }));
-      setNotice(
-        response.cart_revalidation?.has_changes
-          ? t("listings.manage.edit.priceChangedNotice")
-          : t("listings.manage.edit.saved"),
+      // The available quantity may have changed while a price edit was open.
+      // Keep the next save from reintroducing the old stock value.
+      setFieldValues((current) =>
+        current
+          ? {
+              ...current,
+              stockMode: response.listing.stock_mode,
+              stockQty:
+                response.listing.stock_qty === null ? "" : String(response.listing.stock_qty),
+            }
+          : current,
       );
+      setTiers(tiersFromListing(response.listing));
+      const savedNotice = response.cart_revalidation?.has_changes
+        ? t("listings.manage.edit.priceChangedNotice")
+        : t("listings.manage.edit.saved");
+      setNotice(savedNotice);
+      notify.success(savedNotice);
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -289,8 +335,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         images: response.listing.images ?? current?.images,
       }));
       setNotice(t("listings.manage.edit.saved"));
+      notify.success(t("listings.manage.edit.saved"));
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -311,17 +359,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       }
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
+      notify.error(t("listings.manage.errors.saveFailed"));
     } finally {
       setActionLoading(null);
     }
   };
 
   if (sessionLoading || loading) {
-    return (
-      <div className="flex min-h-40 items-center justify-center">
-        <Spinner label={t("listings.manage.loading")} />
-      </div>
-    );
+    return <ListSkeleton label={t("listings.manage.loading")} rows={4} />;
   }
 
   if (!session) {
@@ -378,7 +423,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
             label={statusLabel}
           />
         </div>
+        <ListingVisibilityHint status={listing.status} />
       </header>
+
+      <ListingTipsPanel />
 
       {error ? (
         <p className="text-sm text-danger" role="alert">
@@ -392,6 +440,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       ) : null}
 
       <ListingFields
+        inventoryReadOnly
         values={fieldValues}
         onChange={(patch) =>
           setFieldValues((current) => (current ? { ...current, ...patch } : current))
@@ -400,6 +449,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         labels={fieldLabels}
         allowStandaloneClasses={listing.product_id === null}
       />
+
+      <StockEditor listingId={listingId} client={manageClient} ownerId={session?.user.id ?? ""} />
 
       <FormField
         label={t("listings.manage.edit.compareAtLabel")}
@@ -445,6 +496,25 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         minimumImages={minimumEvidenceImages}
         onImagesChange={(images) =>
           setListing((current) => (current ? { ...current, images } : current))
+        }
+      />
+
+      <VariantsEditor
+        listingId={listingId}
+        client={manageClient}
+        imagePublicIds={[...(listing.images ?? [])]
+          .sort((a, b) => a.position - b.position)
+          .map((image) => image.cloudinary_public_id)}
+        stockTracked={listing.stock_mode === "tracked"}
+        listingPriceNgwee={listing.price_ngwee}
+        unsupportedReason={
+          listing.product_class === "E"
+            ? "classE"
+            : listing.wholesale || (listing.price_tiers?.length ?? 0) > 0
+              ? "wholesale"
+              : (listing.sale_unit ?? "each") !== "each"
+                ? "measured"
+                : null
         }
       />
 

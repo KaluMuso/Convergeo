@@ -3,6 +3,8 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
+import { withLocaleHref } from "./merch-href";
+
 export type MegaMenuMini = {
   title: string;
   href: string;
@@ -16,19 +18,7 @@ export type MegaMenuMerchPayload = {
   promoHref: string;
 };
 
-const LOCALES = new Set(["en", "bem", "nya", "fr", "zh"]);
-
-/** Prefix locale when admin enters a root-relative path without locale segment. */
-export function withLocaleHref(locale: string, href: string): string {
-  if (!href.startsWith("/")) {
-    return href;
-  }
-  const segment = href.split("/").filter(Boolean)[0];
-  if (segment && LOCALES.has(segment)) {
-    return href;
-  }
-  return `/${locale}${href}`;
-}
+export { withLocaleHref };
 
 type MerchSlotRow = {
   slot_key: string;

@@ -109,6 +109,15 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "20 Aug 2026, 18:00 UTC"
         payload["venue"] = "Lusaka Showgrounds"
+    elif template_id == "courier_dispatch_request":
+        payload["pickup_line"] = "Kamwala Trading - Stand 12"
+        payload["dropoff_line"] = "Woodlands, opposite Total"
+        payload["items_line"] = "2 x Samsung A15"
+        payload["cod_line"] = f"Collect cash on delivery: {MONEY_FORMATTED}"
+        payload["contacts_line"] = "Pickup +260970000001; Customer +260970000002"
+    elif template_id == "dispatch_stale_alert":
+        payload["courier_name"] = "TownStar"
+        payload["minutes_waiting"] = 47
     return payload
 
 

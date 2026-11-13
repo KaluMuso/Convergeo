@@ -5,6 +5,9 @@ Routes (auto-discovered via the module-level ``router``):
 * ``GET /public/config/commission-rates`` — D4 category commission percentages for
   marketing/checkout display. Service-role read of ``commission_rates``; safe to
   cache at the edge (``s-maxage=300``).
+* ``GET /public/config/storefront`` — read-only storefront display thresholds from
+  ``platform_config`` (free-delivery threshold, low-stock threshold) so the web UI
+  never re-hard-codes values the API enforces.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from decimal import Decimal
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
+from app.routers.checkout import DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
 from app.schemas.base import StrictModel
 from fastapi import APIRouter, Depends, Response
 from pydantic import Field
@@ -99,4 +103,50 @@ async def get_public_commission_rates(
     return PublicCommissionRatesResponse(
         rates=rates,
         updated_at=latest_updated_at or datetime.now(UTC),
+    )
+
+
+PUBLIC_STOREFRONT_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=60"
+FREE_DELIVERY_THRESHOLD_KEY = "free_delivery_threshold_ngwee"
+LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
+# Mirrors the default used by the low-stock n8n job (internal_n8n.py).
+DEFAULT_LOW_STOCK_THRESHOLD = 5
+
+
+class PublicStorefrontConfigResponse(StrictModel):
+    free_delivery_threshold_ngwee: int = Field(ge=0)
+    low_stock_threshold: int = Field(ge=0)
+
+
+def _read_config_int(client: Any, key: str, default: int) -> int:
+    response = (
+        client.table("platform_config").select("value").eq("key", key).maybe_single().execute()
+    )
+    data = getattr(response, "data", None) if response is not None else None
+    if not isinstance(data, dict):
+        return default
+    value = data.get("value")
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int) and value >= 0:
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return default
+
+
+@router.get("/storefront", response_model=PublicStorefrontConfigResponse)
+async def get_public_storefront_config(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> PublicStorefrontConfigResponse:
+    client = service_client.client
+    response.headers["Cache-Control"] = PUBLIC_STOREFRONT_CACHE_CONTROL
+    return PublicStorefrontConfigResponse(
+        free_delivery_threshold_ngwee=_read_config_int(
+            client, FREE_DELIVERY_THRESHOLD_KEY, DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+        ),
+        low_stock_threshold=_read_config_int(
+            client, LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD
+        ),
     )

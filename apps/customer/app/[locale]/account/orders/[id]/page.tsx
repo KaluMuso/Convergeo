@@ -5,11 +5,13 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getAccountAccessToken } from "../../_components/account-server";
+import { AccountListBoundary } from "../../_components/account-list-boundary";
+import { getAccountListSession } from "../../_components/account-list-server";
 import { InvoiceLinkBlock } from "../_components/invoice-link";
 import { OrderTimeline } from "../_components/order-timeline";
 import {
   createOrdersApiClient,
+  type CourierDelivery,
   type OrderDetail,
   type OrderItem,
   type OrderSummary,
@@ -17,6 +19,7 @@ import {
 import { PickupCredentialsBlock } from "../_components/pickup-credentials";
 
 import { ConfirmReceivedBlock } from "./_components/confirm-received";
+import { CourierDeliveryBlock } from "./_components/courier-delivery";
 import {
   buildDispatchStatusUpdates,
   DispatchTimeline,
@@ -52,14 +55,15 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const accessToken = await getAccountAccessToken(locale);
+  const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
   const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "orders" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const t = createTranslator({ locale, messages, namespace: "orders" }) as {
+    (key: string, values?: Record<string, string | number>): string;
+    /** Unformatted message, for templates the client fills in itself. */
+    raw(key: string): unknown;
+  };
 
   const api = createOrdersApiClient(() => accessToken);
 
@@ -84,17 +88,46 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       ready: t("timeline.ready"),
       shipped: t("timeline.shipped"),
       delivered: t("timeline.delivered"),
-      completed: t("timeline.completed"),
+      // COD: no money is held or released by the platform, so don't say "released".
+      completed:
+        order.payment_mode === "cod" ? t("timeline.completedCod") : t("timeline.completed"),
       cancelled: t("timeline.cancelled"),
       refunded: t("timeline.refunded"),
     },
     escrow: {
       held: t("escrow.held"),
-      released: t("escrow.released"),
+      // COD: the platform never held the money, so there is nothing "released".
+      released: order.payment_mode === "cod" ? "" : t("escrow.released"),
       refunded: t("escrow.refunded"),
       cod: t("escrow.cod"),
     },
+    explain: {
+      placed: t("timeline.explain.placed"),
+      paymentHeld: t("timeline.explain.paymentHeld"),
+      paymentCod: t("timeline.explain.paymentCod"),
+      confirmed: t("timeline.explain.confirmed"),
+      processing: t("timeline.explain.processing"),
+      ready: t("timeline.explain.ready"),
+      shipped: t("timeline.explain.shipped"),
+      delivered: t("timeline.explain.delivered"),
+      completed: t("timeline.explain.completed"),
+      cancelled: t("timeline.explain.cancelled"),
+      refunded: t("timeline.explain.refunded"),
+    },
+    now: t("timeline.now"),
   };
+  const beforeDispatch = ["placed", "confirmed", "processing", "ready"].includes(order.status);
+
+  // Courier dispatch v1 — owner-only endpoint; a failure here must never break
+  // the order page, so it degrades to the legacy dispatch timeline.
+  let courierDelivery: CourierDelivery | null = null;
+  if (order.fulfilment === "delivery") {
+    try {
+      courierDelivery = (await api.getDelivery(order.id)).dispatch;
+    } catch {
+      courierDelivery = null;
+    }
+  }
 
   const otherOrders = order.related_orders.filter(
     (related: OrderSummary) => related.id !== order.id,
@@ -104,7 +137,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     (order as OrderDetail & { dispatch_events?: DispatchOrderEvent[] }).dispatch_events ?? [];
   const dispatchDetails = extractDispatchFromEvents(dispatchEvents);
 
-  return (
+  const content = (
     <section className="space-y-6">
       <header className="space-y-2">
         <Link
@@ -128,28 +161,73 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
 
       <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
 
-      <DispatchTimeline
-        fulfilment={order.fulfilment}
-        status={order.status}
-        courier={dispatchDetails.courier}
-        trackingNote={dispatchDetails.trackingNote}
-        statusUpdates={buildDispatchStatusUpdates(
-          order.timeline,
-          {
-            processing: t("timeline.processing"),
-            shipped: t("timeline.shipped"),
-            delivered: t("timeline.delivered"),
-          },
-          dispatchEvents,
-        )}
-        labels={{
-          title: t("dispatch.title"),
-          courier: t("dispatch.courier"),
-          tracking: t("dispatch.tracking"),
-          empty: t("dispatch.empty"),
-          statusUpdates: t("dispatch.statusUpdates"),
-        }}
-      />
+      <section
+        aria-labelledby="order-help-heading"
+        className="space-y-2 rounded border border-border bg-bg-2 p-4"
+        data-testid="order-help"
+      >
+        <h3 id="order-help-heading" className="text-sm font-semibold text-display-ink">
+          {t("help.title")}
+        </h3>
+        <p className="text-sm text-text-2">
+          {beforeDispatch ? t("help.beforeDispatch") : t("help.afterDispatch")}
+        </p>
+        <Link
+          href={`/${locale}/contact`}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {t("help.contactCta")}
+        </Link>
+      </section>
+
+      {courierDelivery ? (
+        <CourierDeliveryBlock
+          delivery={courierDelivery}
+          labels={{
+            title: t("courier.title"),
+            courier: t("courier.courier"),
+            reference: t("courier.reference"),
+            statuses: {
+              requested: t("courier.statuses.requested"),
+              accepted: t("courier.statuses.accepted"),
+              picked_up: t("courier.statuses.picked_up"),
+              delivered: t("courier.statuses.delivered"),
+              failed: t("courier.statuses.failed"),
+              cancelled: t("courier.statuses.cancelled"),
+            },
+            codDue: (amount) => t("courier.codDue", { amount }),
+            handoverTitle: t("courier.handoverTitle"),
+            handoverBody: t("courier.handoverBody"),
+            handoverAria: (code) => t("courier.handoverAria", { code }),
+            failedBody: t("courier.failedBody"),
+          }}
+        />
+      ) : null}
+
+      {courierDelivery ? null : (
+        <DispatchTimeline
+          fulfilment={order.fulfilment}
+          status={order.status}
+          courier={dispatchDetails.courier}
+          trackingNote={dispatchDetails.trackingNote}
+          statusUpdates={buildDispatchStatusUpdates(
+            order.timeline,
+            {
+              processing: t("timeline.processing"),
+              shipped: t("timeline.shipped"),
+              delivered: t("timeline.delivered"),
+            },
+            dispatchEvents,
+          )}
+          labels={{
+            title: t("dispatch.title"),
+            courier: t("dispatch.courier"),
+            tracking: t("dispatch.tracking"),
+            empty: t("dispatch.empty"),
+            statusUpdates: t("dispatch.statusUpdates"),
+          }}
+        />
+      )}
 
       {order.pickup ? (
         <PickupCredentialsBlock
@@ -159,7 +237,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             qrLabel: t("pickup.qrLabel"),
             pinLabel: t("pickup.pinLabel"),
             stubBody: t("pickup.stubBody"),
-            pinAria: t("pickup.pinAria"),
+            pinAria: String(t.raw("pickup.pinAria")),
           }}
         />
       ) : null}
@@ -171,6 +249,18 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
             <li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm">
               <span className="text-display-ink">
                 {t("detail.lineQty", { title: item.title, qty: item.qty })}
+                {item.variant_options && item.variant_options.length > 0 ? (
+                  <span
+                    className="block text-xs text-text-2"
+                    data-testid={`order-line-variant-${item.id}`}
+                  >
+                    {item.variant_options
+                      .map((option) =>
+                        t("detail.variantOption", { group: option.group, value: option.value }),
+                      )
+                      .join(t("detail.variantSeparator"))}
+                  </span>
+                ) : null}
               </span>
               <span className="shrink-0 font-mono text-display-ink">
                 {formatK(item.qty * item.unit_price_ngwee)}
@@ -258,7 +348,7 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           body: t("reviewPrompt.body"),
           itemLabel: t("reviewPrompt.itemLabel"),
           ratingLabel: t("reviewPrompt.ratingLabel"),
-          starsAria: t("reviewPrompt.starsAria"),
+          starsAria: String(t.raw("reviewPrompt.starsAria")),
           bodyLabel: t("reviewPrompt.bodyLabel"),
           bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
           submit: t("reviewPrompt.submit"),
@@ -303,4 +393,5 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       ) : null}
     </section>
   );
+  return <AccountListBoundary accountId={accountId}>{content}</AccountListBoundary>;
 }

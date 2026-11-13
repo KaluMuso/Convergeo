@@ -5,7 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/auth/use-session", () => ({
+vi.mock("../../../../lib/customer-session", () => ({
   useSession: () => ({ user: null, session: null, loading: false }),
 }));
 
@@ -44,6 +44,7 @@ const navLabels = {
   jobs: accountMessages.nav.jobs,
   quotes: accountMessages.nav.quotes,
   saved: accountMessages.nav.saved,
+  following: accountMessages.nav.following,
   addresses: accountMessages.nav.addresses,
   preferences: accountMessages.nav.preferences,
   profile: accountMessages.nav.profile,

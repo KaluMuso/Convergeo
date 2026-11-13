@@ -14,6 +14,12 @@ from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY
 from app.services.events.access import verify_event_access_proof
+from app.services.events.fees import (
+    checkout_total_ngwee,
+    commission_rate_bps,
+    normalize_fee_payer,
+    platform_fee_ngwee,
+)
 from app.services.events.gmv_cap import (
     _resolve_cap_tier,
     _write_cap_reject_audit,
@@ -29,6 +35,7 @@ from app.services.events.gmv_reservation import (
     release_expired_gmv_reservations,
     release_gmv_reservation,
 )
+from app.services.events.promo import record_promo_redemption, resolve_promo_discount
 from app.services.events.settlement_snapshot import create_settlement_snapshot
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
@@ -41,8 +48,6 @@ from app.services.tickets.inventory import claim_ticket_or_raise
 from app.services.tickets.qr import generate_pin, generate_qr_secret, seal_pin_storage
 
 EVENT_TICKETS_CATEGORY = "event_tickets"
-EVENT_TICKETS_RATE_BPS = 500
-FREE_EVENTS_RATE_BPS = 0
 
 _UUID_RE = __import__("re").compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -58,6 +63,8 @@ class TicketCheckoutResult:
     claimed_ticket_ids: tuple[str, ...]
     subtotal_ngwee: int
     commission_snapshot: dict[str, Any]
+    platform_fee_ngwee: int = 0
+    total_ngwee: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,7 +255,8 @@ SELECT
   tt.attendee_named::text,
   coalesce(tt.early_bird_price_ngwee::text, ''),
   coalesce(tt.early_bird_until::text, ''),
-  v.status
+  v.status,
+  e.platform_fee_payer
 FROM public.ticket_types tt
 INNER JOIN public.events e ON e.id = tt.event_id
 INNER JOIN public.vendors v ON v.id = e.organiser_vendor_id
@@ -267,7 +275,7 @@ WHERE tt.id = {type_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 16:
+    if len(parts) != 17:
         raise RuntimeError("unexpected ticket context row shape")
 
     if parts[6] != parts[1]:
@@ -314,6 +322,7 @@ WHERE tt.id = {type_sql};
             "title": parts[9],
             "status": parts[10],
             "visibility": parts[11],
+            "platform_fee_payer": normalize_fee_payer(parts[16]),
         },
         "organiser_vendor_id": parts[8],
     }
@@ -341,11 +350,15 @@ def _require_private_event_access(
         version = int(row.get("version") or 0) if isinstance(row, dict) else 0
     except (TypeError, ValueError):
         version = 0
-    if version < 1 or verify_event_access_proof(
-        access_proof,
-        event_id=event_id,
-        credential_version=version,
-    ) is None:
+    if (
+        version < 1
+        or verify_event_access_proof(
+            access_proof,
+            event_id=event_id,
+            credential_version=version,
+        )
+        is None
+    ):
         raise AppError(
             code="tickets.private_access_required",
             message="Private event ticket purchase requires verified access",
@@ -363,10 +376,16 @@ def _build_ticket_commission_snapshot(
     qty: int,
     unit_price_ngwee: int,
     claimed_ticket_ids: tuple[str, ...] = (),
+    fee_payer: str = "organiser",
+    platform_fee: int = 0,
+    promo_code: str | None = None,
+    promo_discount_ngwee: int = 0,
+    affiliate_code: str | None = None,
 ) -> dict[str, Any]:
     is_free = kind == "free_rsvp"
     category_key = FREE_EVENTS_CATEGORY if is_free else EVENT_TICKETS_CATEGORY
-    rate_bps = FREE_EVENTS_RATE_BPS if is_free else EVENT_TICKETS_RATE_BPS
+    payer = normalize_fee_payer(fee_payer)
+    rate_bps = commission_rate_bps(fee_payer=payer, is_free=is_free)
     line_total = line_total_ngwee(qty, unit_price_ngwee)
     snapshot: dict[str, Any] = {
         "lines": [
@@ -383,9 +402,16 @@ def _build_ticket_commission_snapshot(
         ],
         "rate_bps": rate_bps,
         "category_key": category_key,
+        "fee_payer": payer,
+        "platform_fee_ngwee": platform_fee,
     }
     if claimed_ticket_ids:
         snapshot["ticket_claim_ids"] = list(claimed_ticket_ids)
+    if promo_code:
+        snapshot["promo_code"] = promo_code
+        snapshot["promo_discount_ngwee"] = promo_discount_ngwee
+    if affiliate_code:
+        snapshot["affiliate_code"] = affiliate_code
     return snapshot
 
 
@@ -406,11 +432,14 @@ def _insert_checkout_spine(
     gmv_amount_ngwee: int | None = None,
     gmv_ttl_minutes: int | None = None,
     service_client: Any | None = None,
+    platform_fee: int = 0,
 ) -> tuple[str, str, str]:
     checkout_group_id = str(uuid.uuid4())
     order_id = str(uuid.uuid4())
     order_item_id = str(uuid.uuid4())
     subtotal = line_total_ngwee(qty, unit_price_ngwee)
+    fee = max(0, platform_fee)
+    total = checkout_total_ngwee(subtotal_ngwee=subtotal, platform_fee=fee)
     idempotency_key = f"tkt-{secrets.token_urlsafe(16)}"
 
     customer_sql = sql_uuid(customer_id, "customer_id")
@@ -443,20 +472,31 @@ def _insert_checkout_spine(
                 amount_ngwee=gmv_amount_ngwee,
                 expires_at_literal=expires_literal,
             )
+            # A rejected reservation must abort the entire checkout transaction.
+            # Checking its returned zero after COMMIT leaves an orphaned spine.
+            gmv_reserve_sql += """
+DO $$ BEGIN
+  IF current_setting('app.gmv_reservation_accepted', true) IS DISTINCT FROM '1' THEN
+    RAISE EXCEPTION 'organiser_gmv_cap_exceeded';
+  END IF;
+END $$;
+"""
 
     script = f"""
 BEGIN;
 INSERT INTO public.checkout_groups (
-  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee, status
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee,
+  platform_fee_ngwee, total_ngwee, status
 ) VALUES (
-  {group_sql}, {customer_sql}, '{idempotency_key}', {subtotal}, 0, {subtotal}, '{checkout_status}'
+  {group_sql}, {customer_sql}, '{idempotency_key}',
+  {subtotal}, 0, {fee}, {total}, '{checkout_status}'
 );
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
-  delivery_fee_ngwee, cod, commission_snapshot
+  delivery_fee_ngwee, platform_fee_ngwee, cod, commission_snapshot
 ) VALUES (
   {order_sql}, {group_sql}, {vendor_sql}, {customer_sql}, '{order_status}', 'pickup',
-  0, false, {snapshot_sql}
+  0, {fee}, false, {snapshot_sql}
 );
 INSERT INTO public.order_items (
   id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
@@ -469,9 +509,11 @@ VALUES ({item_sql}, {type_sql}, {instance_sql}, {names_sql});
 COMMIT;
 """
     result = run_sql_script(script)
-    if not result.ok:
+    if not result.ok and not (
+        gmv_reserve_sql and "organiser_gmv_cap_exceeded" in (result.error or "")
+    ):
         raise RuntimeError(f"ticket checkout spine insert failed: {result.error}")
-    if gmv_reserve_sql and (not result.rows or result.rows[-1] != "1"):
+    if not result.ok:
         assert gmv_event_id is not None and gmv_amount_ngwee is not None
         cap_ngwee = load_organiser_t1_event_gmv_cap_ngwee()
         paid = event_paid_gmv_ngwee(gmv_event_id)
@@ -518,6 +560,8 @@ def add_ticket_to_checkout(
     attendee_names: list[str] | None = None,
     event_access_proof: str | None = None,
     now: datetime | None = None,
+    promo_code: str | None = None,
+    affiliate_code: str | None = None,
 ) -> TicketCheckoutResult:
     """Claim ticket capacity and create a pending checkout order for paid tickets."""
     _validate_uuid(customer_id, "customer_id")
@@ -567,6 +611,16 @@ def add_ticket_to_checkout(
     )
     # EVT-GMV-ATOMIC / VF-P06: reserve GMV headroom atomically with checkout spine.
     line_total = line_total_ngwee(qty, unit_price)
+    discount, promo_id, promo_norm = resolve_promo_discount(
+        service_client.client,
+        event_id=str(ctx["event"]["id"]),
+        code=promo_code,
+        line_total_ngwee=line_total,
+    )
+    charged = line_total - discount
+    charged_unit = charged // qty if qty else 0
+    fee_payer = normalize_fee_payer(ctx["event"].get("platform_fee_payer"))
+    fee = platform_fee_ngwee(line_total_ngwee=charged, fee_payer=fee_payer, is_free=False)
     title = str(ticket_type.get("name") or "Ticket")
     provisional_snapshot = _build_ticket_commission_snapshot(
         ticket_type_id=ticket_type_id,
@@ -574,14 +628,19 @@ def add_ticket_to_checkout(
         ticket_name=title,
         kind=kind,
         qty=qty,
-        unit_price_ngwee=unit_price,
+        unit_price_ngwee=charged_unit,
+        fee_payer=fee_payer,
+        platform_fee=fee,
+        promo_code=promo_norm,
+        promo_discount_ngwee=discount,
+        affiliate_code=affiliate_code,
     )
 
     checkout_group_id, order_id, order_item_id = _insert_checkout_spine(
         customer_id=customer_id,
         organiser_vendor_id=ctx["organiser_vendor_id"],
         qty=qty,
-        unit_price_ngwee=unit_price,
+        unit_price_ngwee=charged_unit,
         title_snapshot=title,
         instance_id=instance_id,
         ticket_type_id=ticket_type_id,
@@ -590,9 +649,10 @@ def add_ticket_to_checkout(
         order_status="placed",
         attendee_names=names,
         gmv_event_id=str(ctx["event"]["id"]),
-        gmv_amount_ngwee=line_total,
+        gmv_amount_ngwee=charged,
         gmv_ttl_minutes=load_reservation_ttl_minutes(),
         service_client=service_client,
+        platform_fee=fee,
     )
 
     claim = claim_ticket_or_raise(
@@ -609,17 +669,33 @@ def add_ticket_to_checkout(
         ticket_name=title,
         kind=kind,
         qty=qty,
-        unit_price_ngwee=unit_price,
+        unit_price_ngwee=charged_unit,
         claimed_ticket_ids=claim.ticket_ids,
+        fee_payer=fee_payer,
+        platform_fee=fee,
+        promo_code=promo_norm,
+        promo_discount_ngwee=discount,
+        affiliate_code=affiliate_code,
     )
     _update_commission_snapshot(order_id, final_snapshot)
+    if promo_id and discount > 0:
+        record_promo_redemption(
+            promo_id=promo_id,
+            event_id=str(ctx["event"]["id"]),
+            order_id=order_id,
+            customer_id=customer_id,
+            discount_ngwee=discount,
+        )
 
+    subtotal = charged
     return TicketCheckoutResult(
         checkout_group_id=checkout_group_id,
         order_id=order_id,
         order_item_id=order_item_id,
         claimed_ticket_ids=claim.ticket_ids,
-        subtotal_ngwee=line_total_ngwee(qty, unit_price),
+        subtotal_ngwee=subtotal,
+        platform_fee_ngwee=fee,
+        total_ngwee=checkout_total_ngwee(subtotal_ngwee=subtotal, platform_fee=fee),
         commission_snapshot=final_snapshot,
     )
 

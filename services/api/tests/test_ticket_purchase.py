@@ -12,9 +12,9 @@ from app.errors import AppError
 from app.main import create_app
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY, compute_order_commission
 from app.services.events.access import hash_access_code, issue_event_access_proof
+from app.services.events.fees import EVENT_TICKETS_RATE_BPS
 from app.services.tickets.purchase import (
     EVENT_TICKETS_CATEGORY,
-    EVENT_TICKETS_RATE_BPS,
     _link_claimed_tickets,
     add_ticket_to_checkout,
     find_orders_pending_ticket_issue,

@@ -32,7 +32,7 @@ def _safe_build_identifier(value: str) -> str:
     return candidate if _BUILD_IDENTIFIER_RE.fullmatch(candidate) else "unknown"
 
 
-@router.get("/healthz")
+@router.api_route("/healthz", methods=["GET", "HEAD"])
 async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -152,7 +152,7 @@ def _search_embedding_configured() -> bool:
     return bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
 
 
-@router.get("/readyz")
+@router.api_route("/readyz", methods=["GET", "HEAD"])
 async def readyz(checks: Annotated[str | None, Query()] = None) -> dict[str, str]:
     """Readiness probe.
 

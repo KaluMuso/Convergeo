@@ -30,8 +30,8 @@
       "id": "rate_scope_manifest_count",
       "type": "metric_equals",
       "metric": "rate_counter_scope_count",
-      "expected": 78,
-      "pending_until_migration": "20260813160000"
+      "expected": 79,
+      "pending_until_migration": "20260817200000"
     },
     {
       "id": "listing_surface_column",

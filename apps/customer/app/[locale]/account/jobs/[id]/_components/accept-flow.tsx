@@ -1,16 +1,16 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { customerAuth, useSession } from "../../../../../../lib/customer-session";
 
-export const DEFAULT_DEPOSIT_PCT = 50;
+export const DEFAULT_DEPOSIT_PCT = 100;
 
 type AcceptResponse = {
   checkout_group_id: string;
@@ -26,9 +26,8 @@ type AcceptFlowProps = {
   quoteId: string;
   vendorName: string;
   totalNgwee: number;
-  /** Admin-tunable server default; used only for the pre-accept preview. */
-  depositPct?: number;
   onCancel?: () => void;
+  onPendingChange?: (pending: boolean) => void;
 };
 
 /** Half-up integer ngwee — mirrors the server deposit math for a consistent preview. */
@@ -36,41 +35,82 @@ export function previewDepositNgwee(totalNgwee: number, depositPct: number): num
   return Math.floor((totalNgwee * depositPct + 50) / 100);
 }
 
-export function AcceptFlow({
+export function AcceptFlow({ locale, jobId, quoteId, ...props }: AcceptFlowProps) {
+  const { session, generation } = useSession();
+  if (!session) return null;
+
+  return (
+    <ActiveAcceptFlow
+      key={`${generation}:${session.user.id}:${locale}:${jobId}:${quoteId}`}
+      locale={locale}
+      jobId={jobId}
+      quoteId={quoteId}
+      accessToken={session.access_token}
+      authGeneration={generation}
+      userId={session.user.id}
+      {...props}
+    />
+  );
+}
+
+function ActiveAcceptFlow({
   locale,
   jobId,
   quoteId,
   vendorName,
   totalNgwee,
-  depositPct = DEFAULT_DEPOSIT_PCT,
   onCancel,
-}: AcceptFlowProps) {
+  onPendingChange,
+  accessToken,
+  authGeneration,
+  userId,
+}: AcceptFlowProps & {
+  accessToken: string;
+  authGeneration: number;
+  userId: string;
+}) {
   const t = useTranslations("services.accept");
-  const { session } = useSession();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const active = useRef(false);
+  const acceptInFlight = useRef(false);
 
-  const depositNgwee = useMemo(
-    () => previewDepositNgwee(totalNgwee, depositPct),
-    [totalNgwee, depositPct],
-  );
-  const balanceNgwee = totalNgwee - depositNgwee;
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const isCurrent = useCallback(() => {
+    const auth = customerAuth.snapshot();
+    return active.current && auth.generation === authGeneration && auth.session?.user.id === userId;
+  }, [authGeneration, userId]);
+
+  const getToken = useCallback(() => accessToken, [accessToken]);
 
   const handleAccept = useCallback(async () => {
+    if (!isCurrent() || acceptInFlight.current) return;
+    acceptInFlight.current = true;
     setSubmitting(true);
     setError(null);
+    onPendingChange?.(true);
     try {
       const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
       const result = await client.request<AcceptResponse>(
         `/jobs/${jobId}/quotes/${quoteId}/accept`,
         { method: "POST", body: JSON.stringify({}) },
       );
-      // Hand off to the standard deposit checkout for the created checkout group.
-      router.push(`/${locale}/checkout?session=${result.checkout_group_id}&kind=service_deposit`);
+      // The server may have accepted the quote even if this view has gone away.
+      if (!isCurrent()) return;
+      // #760 group checkout pays the deposit obligation's group with the amount the
+      // API set for it; the preview above is display-only.
+      router.push(
+        `/${locale}/checkout?group=${encodeURIComponent(result.checkout_group_id)}&kind=service_deposit`,
+      );
     } catch (err) {
+      if (!isCurrent()) return;
       if (err instanceof ApiError && err.status === 403) {
         setError(t("errors.notOwner"));
       } else if (err instanceof ApiError && (err.status === 409 || err.status === 422)) {
@@ -81,30 +121,22 @@ export function AcceptFlow({
         setError(t("errors.generic"));
       }
       setSubmitting(false);
+      acceptInFlight.current = false;
+      onPendingChange?.(false);
     }
-  }, [getToken, jobId, quoteId, locale, router, t]);
+  }, [getToken, isCurrent, jobId, quoteId, locale, onPendingChange, router, t]);
 
   return (
     <section className="space-y-4 rounded border border-border bg-surface p-4">
       <header className="space-y-1">
         <h3 className="font-display text-h3 text-display-ink">{t("title")}</h3>
-        <p className="text-sm text-text-2">{t("intro", { pct: depositPct, vendor: vendorName })}</p>
+        <p className="text-sm text-text-2">{t("payIntro", { vendor: vendorName })}</p>
       </header>
 
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
           <dt className="text-text-2">{t("totalLabel")}</dt>
           <dd className="font-mono text-display-ink">{formatK(totalNgwee)}</dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("depositLabel")}</dt>
-          <dd className="font-mono text-lg font-semibold text-display-ink">
-            {formatK(depositNgwee)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-text-2">{t("balanceLabel")}</dt>
-          <dd className="font-mono text-display-ink">{formatK(balanceNgwee)}</dd>
         </div>
       </dl>
 
@@ -121,7 +153,7 @@ export function AcceptFlow({
           disabled={submitting}
           onClick={() => void handleAccept()}
         >
-          {t("confirmCta", { amount: formatK(depositNgwee) })}
+          {t("payCta")}
         </Button>
         {onCancel ? (
           <Button

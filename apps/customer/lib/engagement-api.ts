@@ -4,7 +4,11 @@
  */
 
 import { getApiBaseUrl } from "./api-base-url";
-import { listWishlistEntries, replaceWishlistLocal, type WishlistEntry } from "./wishlist-local";
+import {
+  listWishlistEntries,
+  replaceWishlistLocal,
+  type WishlistEntry,
+} from "./wishlist-local";
 
 async function getAccessToken(): Promise<string | null> {
   try {
@@ -23,15 +27,18 @@ async function apiRequest<T>(
 ): Promise<T | null> {
   const { token, ...rest } = init;
   try {
-    const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
-      ...rest,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(rest.headers ?? {}),
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}${path}`,
+      {
+        ...rest,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...(rest.headers ?? {}),
+        },
       },
-    });
+    );
     if (!response.ok) {
       return null;
     }
@@ -107,7 +114,9 @@ export async function syncWishlistWithServer(): Promise<void> {
   );
 }
 
-export async function pushWishlistProductIds(productIds: string[]): Promise<void> {
+export async function pushWishlistProductIds(
+  productIds: string[],
+): Promise<void> {
   const token = await getAccessToken();
   if (!token) {
     return;
@@ -119,7 +128,9 @@ export async function pushWishlistProductIds(productIds: string[]): Promise<void
   });
 }
 
-export async function recordRecentlyViewedOnServer(productId: string): Promise<void> {
+export async function recordRecentlyViewedOnServer(
+  productId: string,
+): Promise<void> {
   const token = await getAccessToken();
   if (!token || !productId) {
     return;
@@ -129,4 +140,185 @@ export async function recordRecentlyViewedOnServer(productId: string): Promise<v
     token,
     body: JSON.stringify({ product_id: productId }),
   });
+}
+
+/** True when signed in (has a Supabase session token). */
+export async function hasCustomerSession(): Promise<boolean> {
+  return (await getAccessToken()) !== null;
+}
+
+type FollowListResponse = { items: Array<{ vendor_id: string }> };
+
+/** Whether the signed-in customer follows `vendorId`; null when signed out or on error. */
+export async function isFollowingVendor(
+  vendorId: string,
+): Promise<boolean | null> {
+  const token = await getAccessToken();
+  if (!token) {
+    return null;
+  }
+  const data = await apiRequest<FollowListResponse>("/me/follows?limit=100", {
+    method: "GET",
+    token,
+  });
+  if (!data) {
+    return null;
+  }
+  return data.items.some((item) => item.vendor_id === vendorId);
+}
+
+/** PUT/DELETE /vendors/{id}/follow (204). Returns false on any failure. */
+export async function setVendorFollow(
+  vendorId: string,
+  follow: boolean,
+): Promise<boolean> {
+  const token = await getAccessToken();
+  if (!token) {
+    return false;
+  }
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/vendors/${encodeURIComponent(vendorId)}/follow`,
+      {
+        method: follow ? "PUT" : "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Back-in-stock alert: POST /me/listing-alerts {listing_id, kind:"back_in_stock"}
+ * (retention API, 201). Returns "signed_out" when there is no session so the
+ * caller can route to login.
+ */
+export async function subscribeBackInStock(
+  listingId: string,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/me/listing-alerts`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ listing_id: listingId, kind: "back_in_stock" }),
+      },
+    );
+    return response.ok ? "ok" : "error";
+  } catch {
+    return "error";
+  }
+}
+
+export type ProductQuestion = {
+  id: string;
+  body: string;
+  created_at?: string | null;
+  answers: Array<{
+    id: string;
+    body: string;
+    author_role: string;
+    vendor_name?: string | null;
+  }>;
+};
+
+/** Public Q&A list: GET /products/{slug}/questions. null on failure. */
+export async function fetchProductQuestions(
+  slug: string,
+): Promise<ProductQuestion[] | null> {
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl().replace(/\/$/, "")}/products/${encodeURIComponent(slug)}/questions?limit=10`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as ProductQuestion[];
+  } catch {
+    return null;
+  }
+}
+
+/** Ask a question: POST /products/{slug}/questions (signed in). */
+export async function askProductQuestion(
+  slug: string,
+  body: string,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  const result = await apiRequest<unknown>(
+    `/products/${encodeURIComponent(slug)}/questions`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ body }),
+    },
+  );
+  return result === null ? "error" : "ok";
+}
+
+/** Save a search: POST /me/saved-searches {query, filters}. */
+export async function saveSearch(
+  query: string,
+  filters: Record<string, string>,
+): Promise<"ok" | "signed_out" | "error"> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  const result = await apiRequest<unknown>("/me/saved-searches", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ query, filters }),
+  });
+  return result === null ? "error" : "ok";
+}
+
+/** /me/follows/feed item (CatalogListingItem subset). */
+export type FollowFeedItem = {
+  id: string;
+  title: string;
+  product_slug: string | null;
+  vendor_name: string;
+  price_ngwee: number;
+  compare_at_ngwee?: number | null;
+  condition: string;
+  in_stock: boolean;
+  image_public_id: string | null;
+  rating: number;
+  review_count: number;
+  distance_m: number | null;
+  delivery_available?: boolean;
+  pickup_available?: boolean;
+  fulfilment_mode?: string;
+  lead_time_days?: number | null;
+};
+
+/** New listings from followed stores. "signed_out" when there is no session. */
+export async function fetchFollowFeed(
+  offset = 0,
+): Promise<
+  { items: FollowFeedItem[]; next_offset: number | null } | "signed_out" | null
+> {
+  const token = await getAccessToken();
+  if (!token) {
+    return "signed_out";
+  }
+  return apiRequest<{ items: FollowFeedItem[]; next_offset: number | null }>(
+    `/me/follows/feed?limit=24&offset=${offset}`,
+    { method: "GET", token },
+  );
 }

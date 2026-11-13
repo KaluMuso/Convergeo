@@ -15,6 +15,7 @@ from typing import Annotated, Any, Literal, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
+from app.services.kyc.document_evidence import KYC_DOCS_BUCKET
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -32,7 +33,6 @@ class _StorageServiceClient(Protocol):
     @property
     def client(self) -> Any: ...
 
-KYC_DOCS_BUCKET = "kyc-docs"
 MAX_KYC_DOC_BYTES = 10_485_760  # 10 MiB — matches the config.toml bucket limit.
 
 

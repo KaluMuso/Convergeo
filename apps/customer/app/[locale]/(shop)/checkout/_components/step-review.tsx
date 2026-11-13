@@ -5,13 +5,16 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,
   formatMadeToOrderLeadTime,
   type SaleUnitLabels,
 } from "../../_components/sale-quantity";
 
-import type { CheckoutSession } from "./step-fulfilment";
+import { NextSteps } from "./next-steps";
+
+import type { CheckoutSession, FulfilmentGroupResult } from "./step-fulfilment";
 import type { PaymentMethod, MomoRail, PaymentOptions } from "./step-payment";
 
 export type ReviewStepLabels = {
@@ -19,6 +22,8 @@ export type ReviewStepLabels = {
   subtitle: string;
   lineItems: string;
   qtyTemplate: string;
+  variantOption?: string;
+  variantSeparator?: string;
   saleUnits: SaleUnitLabels;
   madeToOrderLeadTime: string;
   subtotal: string;
@@ -45,6 +50,24 @@ export type ReviewStepLabels = {
   nextMomo: string;
   nextCard: string;
   nextCod: string;
+  /** UX pass 4 — COD-specific review copy. Templates use {amount} / {landmark}. */
+  codGuide?: ReviewCodGuideLabels;
+};
+
+export type ReviewCodGuideLabels = {
+  title: string;
+  step1: string;
+  step2: string;
+  step3: string;
+  deliveryTo: string;
+  deliveryNoLandmark: string;
+  pickupFromSeller: string;
+  placeOrderCod: string;
+};
+
+export type ReviewFulfilment = {
+  groups: FulfilmentGroupResult[];
+  landmark: string | null;
 };
 
 export type ReviewPayment = {
@@ -59,6 +82,7 @@ type StepReviewProps = {
   totals: PaymentOptions;
   payment: ReviewPayment;
   labels: ReviewStepLabels;
+  fulfilment?: ReviewFulfilment;
   onPlaceOrder?: () => void | Promise<void>;
 };
 
@@ -72,6 +96,7 @@ export function StepReview({
   totals,
   payment,
   labels,
+  fulfilment,
   onPlaceOrder,
 }: StepReviewProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
@@ -94,6 +119,24 @@ export function StepReview({
     const railLabel = payment.rail === "airtel" ? labels.railAirtel : labels.railMtn;
     return labels.methodMomo.replace("{rail}", railLabel);
   })();
+
+  const codGuide = payment.method === "cod" ? labels.codGuide : undefined;
+  const totalFormatted = formatK(totals.total_ngwee, { locale: amountLocale });
+  const codStepsId = useId();
+
+  const fulfilmentLine = (vendorId: string): string | null => {
+    const guide = labels.codGuide;
+    const group = fulfilment?.groups.find((entry) => entry.vendor_id === vendorId);
+    if (!guide || !group) {
+      return null;
+    }
+    if (group.fulfilment === "pickup") {
+      return guide.pickupFromSeller;
+    }
+    return fulfilment?.landmark
+      ? guide.deliveryTo.split("{landmark}").join(fulfilment.landmark)
+      : guide.deliveryNoLandmark;
+  };
 
   const nextCopy =
     payment.method === "cod"
@@ -162,6 +205,14 @@ export function StepReview({
             className="space-y-2 rounded-card border border-border bg-surface p-4"
           >
             <p className="font-body text-sm font-semibold text-text">{group.vendor_name}</p>
+            {fulfilmentLine(group.vendor_id) ? (
+              <p
+                className="font-body text-xs text-text-2"
+                data-testid={`review-fulfilment-${group.vendor_id}`}
+              >
+                {fulfilmentLine(group.vendor_id)}
+              </p>
+            ) : null}
             <ul className="space-y-2">
               {group.items.map((item) => {
                 const leadTimeLabel = formatMadeToOrderLeadTime(
@@ -174,7 +225,13 @@ export function StepReview({
                   <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
                     <span className="min-w-0 break-words font-body text-text-2">
                       <span>
-                        {lineTitle(item)}{" "}
+                        {lineTitle(item)}
+                        <VariantLineLabel
+                          options={item.variant_options}
+                          template={labels.variantOption ?? "{value}"}
+                          separator={labels.variantSeparator ?? ", "}
+                          testId={`review-line-variant-${item.listing_id}`}
+                        />{" "}
                         <span className="text-text-3">
                           {labels.qtyTemplate.replace(
                             "{qty}",
@@ -233,24 +290,41 @@ export function StepReview({
         ) : null}
       </div>
 
-      <div
-        className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
-        aria-labelledby={nextId}
-      >
-        <p id={nextId} className="font-body text-sm font-semibold text-text">
-          {labels.whatHappensNext}
-        </p>
-        <p className="font-body text-sm text-text-2">{nextCopy}</p>
-      </div>
+      {codGuide ? (
+        // COD is honest about money: nothing is charged now, so the escrow
+        // "you paid → held" triad is NOT shown for this method.
+        <NextSteps
+          heading={codGuide.title}
+          headingId={codStepsId}
+          testId="checkout-review-cod-steps"
+          steps={[
+            { title: codGuide.step1 },
+            { title: codGuide.step2 },
+            { title: codGuide.step3.split("{amount}").join(totalFormatted) },
+          ]}
+        />
+      ) : (
+        <>
+          <div
+            className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
+            aria-labelledby={nextId}
+          >
+            <p id={nextId} className="font-body text-sm font-semibold text-text">
+              {labels.whatHappensNext}
+            </p>
+            <p className="font-body text-sm text-text-2">{nextCopy}</p>
+          </div>
 
-      <div className="space-y-2 rounded-card border border-primary/20 bg-primary/5 px-4 py-3">
-        <p className="font-body text-sm font-semibold text-text">{labels.escrowTitle}</p>
-        <ol className="list-decimal space-y-1 pl-5 font-body text-sm text-text-2">
-          <li>{labels.escrowStep1}</li>
-          <li>{labels.escrowStep2}</li>
-          <li>{labels.escrowStep3}</li>
-        </ol>
-      </div>
+          <div className="space-y-2 rounded-card border border-primary/20 bg-primary/5 px-4 py-3">
+            <p className="font-body text-sm font-semibold text-text">{labels.escrowTitle}</p>
+            <ol className="list-decimal space-y-1 pl-5 font-body text-sm text-text-2">
+              <li>{labels.escrowStep1}</li>
+              <li>{labels.escrowStep2}</li>
+              <li>{labels.escrowStep3}</li>
+            </ol>
+          </div>
+        </>
+      )}
 
       {!placeOrderAvailable ? (
         <p
@@ -297,7 +371,7 @@ export function StepReview({
           void handleSubmit();
         }}
       >
-        {labels.placeOrder}
+        {codGuide ? codGuide.placeOrderCod : labels.placeOrder}
       </Button>
     </div>
   );

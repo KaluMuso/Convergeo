@@ -5,7 +5,9 @@ import {
   THEME_PRESET_LIST,
   DEFAULT_SEASONAL_PRESET,
 } from "@vergeo/ui/src/theme-presets";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -30,7 +32,7 @@ export function generateStaticParams() {
 export default async function ThemePresetsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.theme");
+  const t = await getAdminTranslator(locale, "admin.theme");
 
   const activeId = resolveSeasonalPreset(process.env.NEXT_PUBLIC_SEASONAL_THEME);
   const presetIds = SEASONAL_PRESET_IDS.join(", ");

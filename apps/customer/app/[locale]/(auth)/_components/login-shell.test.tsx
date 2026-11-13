@@ -1,0 +1,294 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const signInWithOtp = vi.fn(async () => ({ error: null }));
+const exchangeCodeForSession = vi.fn();
+
+const getBrowserClient = vi.hoisted(() => vi.fn());
+getBrowserClient.mockImplementation(async () => ({
+  auth: {
+    signInWithOtp,
+    verifyOtp: vi.fn(),
+    exchangeCodeForSession,
+    getSession: vi.fn(),
+    signInWithPassword: vi.fn(),
+    signUp: vi.fn(),
+  },
+}));
+
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({ getBrowserClient }));
+
+vi.mock("../../account/_components/account-api", () => ({
+  createAccountApiClient: () => ({ getPreferences: vi.fn() }),
+}));
+
+const push = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh: vi.fn() }),
+}));
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  window.history.replaceState({}, "", "/en/login");
+});
+
+import { AuthLoginShell, AuthSignupShell, type AuthLoginLabels } from "./login-shell";
+
+const labels: AuthLoginLabels = {
+  title: "Sign in",
+  subtitle: "Welcome back",
+  phone: {
+    countryCode: "Country code",
+    nationalNumber: "Phone number",
+    phoneLabel: "Mobile number",
+    phoneHelp: "SMS help",
+    phonePlaceholder: "97 123 4567",
+    submit: "Continue with phone",
+    loading: "Loading",
+    required: "Required",
+    invalidPhone: "Invalid phone",
+    sendFailed: "Send failed",
+    throttled: "Try again in {seconds} seconds",
+  },
+  email: {
+    emailLabel: "Email address",
+    passwordLabel: "Password",
+    submit: "Sign in with email",
+    loading: "Loading",
+    required: "Required",
+    invalidEmail: "Invalid email",
+    invalidPassword: "Invalid password",
+    generic: "Generic error",
+    throttled: "Try again in {seconds} seconds",
+    invalidCredentials: "Invalid credentials",
+    emailNotConfirmed: "Email not confirmed",
+    alreadyRegistered: "Already registered",
+    forgotPassword: "Forgot password?",
+  },
+  divider: "or",
+  emailToggle: "Use email instead",
+  phoneToggle: "Use phone instead",
+  google: "Continue with Google",
+  googleLoading: "Signing in with Google",
+  genericError: "Something went wrong",
+};
+
+describe("OAuth callback code is exchanged once", () => {
+  it("does not spend a callback code after the page unmounts during client loading", async () => {
+    window.history.replaceState({}, "", "/en/login?code=unused-code");
+    const client = await getBrowserClient();
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    getBrowserClient.mockImplementationOnce(async () => {
+      await pending;
+      return client;
+    });
+
+    const view = render(
+      <AuthLoginShell locale="en" variant="vendor" labels={labels} defaultNextPath="/en" />,
+    );
+    view.unmount();
+    await act(async () => release());
+
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("navigates a successful vendor callback once under Strict Mode", async () => {
+    window.history.replaceState({}, "", "/en/login?code=vendor-code");
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    render(
+      <React.StrictMode>
+        <AuthLoginShell
+          locale="en"
+          variant="vendor"
+          labels={labels}
+          defaultNextPath="/en"
+          nextParam="/en/services"
+          showSignupLink={false}
+        />
+      </React.StrictMode>,
+    );
+
+    await waitFor(() => expect(push).toHaveBeenCalledExactlyOnceWith("/en/services"));
+    expect(exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith("vendor-code");
+  });
+
+  it.each(["login", "signup"])("%s callback survives Strict Mode effect replay", async (page) => {
+    window.history.replaceState({}, "", `/en/${page}?code=single-use-code`);
+    exchangeCodeForSession.mockResolvedValue({
+      error: new Error("expired code"),
+    });
+
+    render(
+      <React.StrictMode>
+        {page === "login" ? (
+          <AuthLoginShell locale="en" variant="customer" labels={labels} defaultNextPath="/en" />
+        ) : (
+          <AuthSignupShell
+            locale="en"
+            labels={{
+              ...labels,
+              loginPrompt: "Have an account?",
+              loginLink: "Sign in",
+            }}
+            defaultNextPath="/en"
+          />
+        )}
+      </React.StrictMode>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(labels.genericError);
+    expect(exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith("single-use-code");
+  });
+});
+
+/**
+ * D25/PR-D: the shared shell is the ONE decision point for whether phone OTP
+ * is offered per portal (`apps/vendor` and `apps/admin` both render this
+ * exact component through cross-app imports — see their login `page.tsx`).
+ * These cases pin each portal's contract so a future default/prop change in
+ * this file cannot silently re-disable — or accidentally enable — phone
+ * login on a portal without a test failing here first.
+ */
+describe("AuthLoginShell — per-portal phone/email contract", () => {
+  it("vendor: phone form renders by default and email/password stays reachable via toggle", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="vendor"
+        labels={labels}
+        defaultNextPath="/en"
+        showSignupLink={false}
+      />,
+    );
+
+    // Default method is phone — this is the regression the vendor login page
+    // previously failed: phoneEnabled={false} rendered EmailForm only.
+    expect(screen.getByRole("textbox", { name: /phone|mobile/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/email address/i)).not.toBeInTheDocument();
+
+    // The toggle is present and switches to email/password without losing it.
+    const toggle = screen.getByRole("button", { name: "Use email instead" });
+    await user.click(toggle);
+
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /phone|mobile/i })).not.toBeInTheDocument();
+
+    // And back to phone — the email/password path never disappears from the UI.
+    await user.click(screen.getByRole("button", { name: "Use phone instead" }));
+    expect(screen.getByRole("textbox", { name: /phone|mobile/i })).toBeInTheDocument();
+  });
+
+  it("admin: phone authentication remains disabled — email/password only, no toggle", () => {
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="admin"
+        labels={labels}
+        defaultNextPath="/en"
+        showSignupLink={false}
+        phoneEnabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /phone|mobile/i })).not.toBeInTheDocument();
+    // No method toggle at all when phone is disabled — nothing to switch between.
+    expect(
+      screen.queryByRole("button", { name: /use (email|phone) instead/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("customer: existing default behavior unchanged — phone first, toggle to email", () => {
+    render(<AuthLoginShell locale="en" variant="customer" labels={labels} defaultNextPath="/en" />);
+
+    expect(screen.getByRole("textbox", { name: /phone|mobile/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use email instead" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Run #70: the vendor portal imports this exact shell (apps/vendor's login
+ * page.tsx), and its middleware bounces protected routes to
+ * `/{locale}/login?next=…`. The shell forwarded `nextParam` to EmailForm and
+ * GoogleButton but not to PhoneForm, so the phone leg — the ONLY leg the
+ * vendor portal's E2E journey uses — lost the destination between /login and
+ * /otp. These cases pin the wiring for both portals that render phone login.
+ */
+describe("AuthLoginShell — next destination survives the phone OTP leg", () => {
+  it("vendor: the shell's nextParam reaches the OTP URL PhoneForm builds", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="vendor"
+        labels={labels}
+        defaultNextPath="/en"
+        nextParam="/en/services"
+        showSignupLink={false}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567&next=%2Fen%2Fservices");
+    });
+  });
+
+  it("customer: the same wiring holds on the customer portal", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="customer"
+        labels={labels}
+        defaultNextPath="/en"
+        nextParam="/en/account/orders"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith(
+        "/en/otp?phone=%2B260971234567&next=%2Fen%2Faccount%2Forders",
+      );
+    });
+  });
+
+  it("no next param: the OTP URL is unchanged from the previous behavior", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="vendor"
+        labels={labels}
+        defaultNextPath="/en"
+        showSignupLink={false}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
+    });
+  });
+});

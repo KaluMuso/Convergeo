@@ -10,6 +10,11 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.routers.vendor_licences import REGULATED_CLASSES
+from app.services.kyc.document_evidence import (
+    KYC_DOCS_BUCKET,
+    validate_kyc_document_evidence,
+    validate_kyc_document_paths,
+)
 from app.services.kyc.state_machine import (
     ServiceRoleClient,
     transition_approve,
@@ -25,8 +30,6 @@ from pydantic import BaseModel, Field, model_validator
 # Queue shows records awaiting a decision (legacy `pending` mapped in state machine).
 REVIEW_QUEUE_STATUSES = ("submitted", "under_review")
 
-# Private bucket for KYC documents (declared in M12-P02b / vendor onboarding types).
-KYC_DOCS_BUCKET = "kyc-docs"
 SIGNED_URL_TTL_SECONDS = 300
 
 SLA_ON_TRACK_HOURS = 24
@@ -262,7 +265,7 @@ def sign_kyc_documents(
 ) -> tuple[list[SignedDocUrl], bool]:
     reference = now or datetime.now(UTC)
     documents: list[SignedDocUrl] = []
-    docs_available = True
+    docs_available = bool(paths)
 
     storage = getattr(service_client.client, "storage", None)
     if storage is None:
@@ -622,6 +625,12 @@ async def get_kyc_detail(
     vendor = _load_vendor_row(service_client, str(row["vendor_id"]))
     paths_raw = row.get("doc_storage_paths")
     paths = [str(path) for path in paths_raw] if isinstance(paths_raw, list) else []
+    validate_kyc_document_paths(
+        vendor_id=str(row["vendor_id"]),
+        tier=int(row["tier"]),
+        paths=paths,
+        require_complete=False,
+    )
     documents, docs_available = sign_kyc_documents(service_client, paths)
     momo_raw = row.get("momo_name_match")
     momo = momo_raw if isinstance(momo_raw, dict) else None
@@ -705,6 +714,14 @@ async def approve_kyc(
     vendor_id = str(row["vendor_id"])
     tier = int(row["tier"])
     _require_tier2_license_fields(tier=tier, body=body)
+    paths_raw = row.get("doc_storage_paths")
+    paths = [str(path) for path in paths_raw] if isinstance(paths_raw, list) else []
+    validate_kyc_document_evidence(
+        service_client,
+        vendor_id=vendor_id,
+        tier=tier,
+        paths=paths,
+    )
     before = _snapshot_before_decision(service_client, vendor_id=vendor_id, kyc_row=row)
     result = transition_approve(
         actor_id=current_user.id,

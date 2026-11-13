@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
@@ -149,6 +150,7 @@ export function RelatedProductsEditor() {
       );
       setRelated(response.related.map(toRow));
       setMessage(t("saved"));
+      notify.success(t("saved"));
     } catch {
       setError(t("saveError"));
     } finally {

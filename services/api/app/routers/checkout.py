@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import math
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -12,24 +14,37 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
-from app.services.cart.grouping import CartLineView, group_by_vendor
+from app.services.cart.grouping import (
+    CartLineView,
+    group_by_vendor,
+    line_variant_id,
+    line_variant_options,
+)
 from app.services.cart.merge import validate_item_qty_for_listing
-from app.services.cart.read_path import listing_cart_access_conflict
+from app.services.cart.read_path import listing_cart_access_conflict, variant_stock_conflict
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
     is_rfq_pinned_line,
     validate_rfq_pinned_line_authority,
 )
-from app.services.stock.claim import claim_reservation, get_reservation_ttl_minutes
+from app.services.stock.claim import (
+    claim_reservation,
+    get_reservation_ttl_minutes,
+    run_sql_script,
+    sql_uuid,
+)
+from app.services.stock.release import release_reservation
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
 
 router = APIRouter(prefix="/checkout", tags=["checkout"])
+logger = logging.getLogger(__name__)
 
 LUSAKA_CENTER_LAT = -15.4167
 LUSAKA_CENTER_LNG = 28.2833
@@ -39,11 +54,57 @@ ZONE_BANDS_KM: tuple[tuple[str, float], ...] = (
     ("lusaka_c", 25.0),
 )
 DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000
+# Towns a typed landmark can name that are definitely not Lusaka delivery
+# (beyond the 25 km Band C ring): provincial and district towns of Zambia.
+# Near-Lusaka places stay with the landmark bands instead: Chongwe, Chilanga
+# and "Kafue Road" are Band C keywords below. Kafue *town* (~45 km) and
+# Chisamba (~50 km) are outside. Matched whole-word; a town name used as a
+# Lusaka street or landmark ("Kabwe Roundabout", "Mumbwa Road") is not a town.
+# fmt: off
+OTHER_TOWN_TOKENS: tuple[str, ...] = (
+    # Copperbelt
+    "ndola", "kitwe", "chingola", "mufulira", "luanshya", "chililabombwe",
+    "kalulushi", "masaiti", "mpongwe", "lufwanyama",
+    # Central (outside the Lusaka ring)
+    "kabwe", "kapiri mposhi", "kapiri", "mkushi", "serenje", "mumbwa",
+    "chibombo", "chisamba", "itezhi tezhi", "itezhi-tezhi",
+    # Southern
+    "livingstone", "choma", "mazabuka", "monze", "kalomo", "namwala",
+    "siavonga", "sinazongwe", "gwembe", "kazungula", "chirundu",
+    # Lusaka Province towns outside the ring
+    "kafue", "luangwa", "rufunsa",
+    # Eastern
+    "chipata", "petauke", "katete", "lundazi", "chadiza", "nyimba", "sinda",
+    # Northern / Muchinga
+    "kasama", "mbala", "mpulungu", "mporokoso", "luwingu", "mpika", "chinsali",
+    "nakonde", "isoka",
+    # Luapula
+    "mansa", "samfya", "kawambwa", "nchelenge", "mwense",
+    # North-Western
+    "solwezi", "mwinilunga", "kasempa", "kabompo", "zambezi", "chavuma",
+    # Western
+    "mongu", "senanga", "sesheke", "kaoma", "kalabo", "lukulu", "shangombo",
+)
+# Words after a town name that make it a Lusaka street / landmark, not a town.
+_LUSAKA_STREET_SUFFIXES: tuple[str, ...] = (
+    "road", "rd", "roundabout", "round about", "r/a", "rdbt", "rbt", "street", "st",
+    "avenue", "ave", "drive", "close", "compound", "cmpd", "overspill", "turn off",
+    "turnoff", "turn-off",
+)
+# fmt: on
+# platform_config key naming the delivery zone for a typed Lusaka landmark the
+# keyword matcher cannot place. Unset (the default) keeps the strict behaviour.
+FALLBACK_DELIVERY_ZONE_KEY = "delivery_fallback_zone"
 
 
 class ServiceRoleClient(Protocol):
     @property
     def client(self) -> Client: ...
+
+
+class VariantOptionOut(BaseModel):
+    group: str
+    value: str
 
 
 class CartLineOut(BaseModel):
@@ -63,6 +124,8 @@ class CartLineOut(BaseModel):
     lead_time_days: int | None = None
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
+    listing_variant_id: str | None = None
+    variant_options: list[VariantOptionOut] = Field(default_factory=list)
 
 
 class PickupLocationOut(BaseModel):
@@ -163,6 +226,131 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * radius_km * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def _other_town_pattern() -> re.Pattern[str]:
+    ordered = sorted(OTHER_TOWN_TOKENS, key=lambda word: (-len(word), word))
+    alternation = "|".join(
+        r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word)) for word in ordered
+    )
+    suffixes = "|".join(
+        r"[\s-]+".join(re.escape(part) for part in re.split(r"[\s-]+", word))
+        for word in sorted(_LUSAKA_STREET_SUFFIXES, key=lambda word: (-len(word), word))
+    )
+    # "Kafue-Road" / "Kabwe R/A" / "Chipata Overspill" are Lusaka places too.
+    return re.compile(
+        rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])(?![\s-]+(?:{suffixes})(?![a-z0-9]))"
+    )
+
+
+_OTHER_TOWN_PATTERN = _other_town_pattern()
+
+
+def landmark_names_other_town(landmark: str | None) -> bool:
+    """True when a typed landmark names a town outside Lusaka delivery.
+
+    Whole-word, so "Kafue Road" (Lusaka, Band C) and "Kabwe Roundabout" are not
+    towns, while "Kafue town" or "Plot 4, Kabwe" are.
+    """
+    text = " ".join((landmark or "").lower().replace("\u2019", "").replace("'", "").split())
+    return bool(_OTHER_TOWN_PATTERN.search(text))
+
+
+def _keyword_pattern(keywords: tuple[str, ...]) -> re.Pattern[str]:
+    ordered = sorted(keywords, key=lambda word: (-len(word), word))
+    alternation = "|".join(
+        r"\s+".join(re.escape(part) for part in word.split()) for word in ordered
+    )
+    return re.compile(rf"(?<![a-z0-9])(?:{alternation})(?![a-z0-9])")
+
+
+# Explicit band words a customer or operator types. Checked first, in this order.
+_EXPLICIT_BAND_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("lusaka_a", ("band a", "central", "cbd")),
+    ("lusaka_b", ("band b", "mid-ring")),
+    ("lusaka_c", ("band c", "outer")),
+)
+# Area names by band (docs/ops/lusaka-delivery-reference-prices.md section 4/5).
+# Bare "garden" and "levy" are left out on purpose: they false-match inside other names.
+_AREA_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "lusaka_a": (
+        "kabulonga",
+        "woodlands",
+        "east park",
+        "cairo road",
+        "longacres",
+        "rhodes park",
+        "northmead",
+        "fairview",
+        "kabwata",
+        "olympia",
+        "roma",
+        "kalingalinga",
+        "emmasdale",
+        "manda hill",
+        "arcades",
+        "levy junction",
+        "levy mall",
+        "thorn park",
+        "thornpark",
+        "uth",
+        "unza",
+    ),
+    "lusaka_b": (
+        "chilenje",
+        "makeni",
+        "matero",
+        "mtendere",
+        "ibex hill",
+        "chelston",
+        "chelstone",
+        "chainda",
+        "libala",
+        "kamwala",
+        "kalundu",
+        "lilayi",
+        "chawama",
+        "ngombe",
+        "john laing",
+        "chaisa",
+        "bauleni",
+        "kabanana",
+    ),
+    "lusaka_c": (
+        "chalala",
+        "chilanga",
+        "airport",
+        "kkia",
+        "chongwe",
+        "kafue road",
+        "kanyama",
+        "leopards hill",
+        "foxdale",
+    ),
+}
+_EXPLICIT_BAND_PATTERNS = tuple(
+    (zone, _keyword_pattern(words)) for zone, words in _EXPLICIT_BAND_KEYWORDS
+)
+# One pattern over every area name so the longest phrase wins wherever it appears.
+_AREA_ZONE_BY_KEYWORD = {word: zone for zone, words in _AREA_KEYWORDS.items() for word in words}
+_AREA_PATTERN = _keyword_pattern(tuple(_AREA_ZONE_BY_KEYWORD))
+
+
+def _normalise_landmark(landmark: str) -> str:
+    lowered = landmark.lower().replace("\u2019", "").replace("'", "")
+    return " ".join(lowered.split())
+
+
+def _match_landmark_zone(landmark: str) -> str | None:
+    """Zone for a typed landmark with no GPS; whole-word, longest area phrase first."""
+    text = _normalise_landmark(landmark)
+    for zone_key, pattern in _EXPLICIT_BAND_PATTERNS:
+        if pattern.search(text):
+            return zone_key
+    found = [re.sub(r"\s+", " ", m.group(0)) for m in _AREA_PATTERN.finditer(text)]
+    if found:
+        return _AREA_ZONE_BY_KEYWORD[max(found, key=len)]
+    return None
+
+
 def resolve_delivery_zone(
     *,
     lat: float | None,
@@ -178,17 +366,11 @@ def resolve_delivery_zone(
         return None
 
     if landmark:
-        lower = landmark.lower()
-        if any(token in lower for token in ("ndola", "kitwe", "livingstone", "chipata")):
+        if landmark_names_other_town(landmark):
             return None
-        if "band a" in lower or "central" in lower or "cbd" in lower:
-            return "lusaka_a"
-        if "band b" in lower or "mid-ring" in lower or "kabulonga" in lower:
-            return "lusaka_b"
-        if "band c" in lower or "outer" in lower:
-            return "lusaka_c"
-        if "lusaka" in lower or "woodlands" in lower or "east park" in lower:
-            return "lusaka_a"
+        zone = _match_landmark_zone(landmark)
+        if zone is not None:
+            return zone
 
     return None
 
@@ -227,7 +409,7 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
         client.table("cart_items")
         .select(
             "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
-            "pickup_location_id, rfq_thread_id"
+            "pickup_location_id, rfq_thread_id, listing_variant_id"
         )
         .eq("cart_id", cart_id)
         .execute()
@@ -270,6 +452,71 @@ def _load_free_delivery_threshold(service: ServiceRoleClient) -> int:
         if isinstance(raw, str) and raw.isdigit():
             return int(raw)
     return DEFAULT_FREE_DELIVERY_THRESHOLD_NGEWEE
+
+
+def _load_fallback_delivery_zone(
+    service: ServiceRoleClient, zones: dict[str, dict[str, Any]]
+) -> str | None:
+    """Operator-chosen zone for a Lusaka landmark the matcher cannot place.
+
+    The fulfilment form collects a free-text landmark and no GPS, and the matcher
+    only knows a handful of area names, so most real Lusaka addresses used to be
+    refused as "outside Lusaka". Which band (and so which fee) such an address
+    gets is a pricing choice, so it is read from ``platform_config`` and only
+    honoured when it names an active zone; unset keeps the refusal.
+    """
+    response = (
+        service.client.table("platform_config")
+        .select("value")
+        .eq("key", FALLBACK_DELIVERY_ZONE_KEY)
+        .maybe_single()
+        .execute()
+    )
+    data = _extract_data(response)
+    if not isinstance(data, dict):
+        return None
+    raw = data.get("value")
+    if isinstance(raw, str) and raw.strip() in zones:
+        return raw.strip()
+    return None
+
+
+def resolve_address_zone(
+    service: ServiceRoleClient,
+    zones: dict[str, dict[str, Any]],
+    *,
+    lat: float | None,
+    lng: float | None,
+    landmark: str | None,
+) -> str | None:
+    """Delivery zone for an address, with the operator fallback for bare landmarks.
+
+    The fulfilment step and ``POST /orders`` both price delivery through this one
+    rule, so the zone an order is created with is the zone the buyer was quoted.
+    """
+    zone = resolve_delivery_zone(lat=lat, lng=lng, landmark=landmark)
+    if zone is None and lat is None and lng is None and not landmark_names_other_town(landmark):
+        zone = _load_fallback_delivery_zone(service, zones)
+        if zone is not None:
+            # Ops review these daily to grow the area keywords / town list.
+            # Landmark is truncated: it is address text (Zambia DPA minimisation).
+            logger.warning(
+                "checkout.delivery_fallback_zone_used",
+                extra={
+                    "event": "delivery_fallback_zone_used",
+                    "fallback_zone": zone,
+                    "landmark_excerpt": _normalise_landmark(landmark or "")[:60],
+                },
+            )
+    return zone
+
+
+def load_zone_fees(zones: dict[str, dict[str, Any]]) -> dict[str, int]:
+    return {
+        key: int(zone.get("fee_ngwee", 0))
+        for key, zone in zones.items()
+        if isinstance(zone.get("fee_ngwee"), int)
+    }
 
 
 def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> dict[str, str]:
@@ -400,6 +647,10 @@ def _rederive_line_prices(
         if listing is None:
             conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
             continue
+        variant_conflict = variant_stock_conflict(listing_id, listing, int(item["qty"]))
+        if variant_conflict is not None:
+            conflicts.append(variant_conflict)
+            continue
         try:
             fresh_price, fresh_wholesale = validate_item_qty_for_listing(
                 listing=listing,
@@ -471,6 +722,8 @@ def _build_line_views(
                 defect_notes=(
                     str(listing["defect_notes"]) if listing.get("defect_notes") else None
                 ),
+                listing_variant_id=line_variant_id(item),
+                variant_options=line_variant_options(listing),
             )
         )
     return line_views
@@ -516,11 +769,72 @@ def _session_expires_at(service: ServiceRoleClient, session_id: str) -> datetime
     return datetime.fromisoformat(raw.replace("Z", "+00:00"))
 
 
+def _release_session_holds(session_id: str) -> int:
+    """Put every stock hold of ``session_id`` back on the shelf right away."""
+    group_sql = sql_uuid(session_id, "session_id")
+    held = run_sql_script(
+        f"SELECT listing_id::text FROM public.stock_reservations "
+        f"WHERE checkout_group_id = {group_sql};"
+    )
+    if not held.ok:
+        raise RuntimeError(f"load session holds failed: {held.error}")
+    released = 0
+    for listing_id in sorted({row for row in held.rows if row}):
+        if release_reservation(listing_id=listing_id, checkout_group_id=session_id).released:
+            released += 1
+    return released
+
+
+def _supersede_own_pending_sessions(customer_id: str) -> int:
+    """Abandon the caller's earlier, never-ordered checkouts and free their stock.
+
+    Every visit to /checkout opens a new session, and each session takes its own
+    hold. Without this, a refresh or a trip back to the cart left the buyer
+    competing with their own previous hold for up to the reservation TTL: the
+    last unit of a listing showed as out of stock in the cart of the very person
+    trying to buy it. Only sessions that still hold stock and never produced an
+    order or a payment are touched; the status flip waits on the same row lock
+    order creation takes, so a session that is completing concurrently wins.
+    """
+    customer_sql = sql_uuid(customer_id, "customer_id")
+    superseded = run_sql_script(
+        f"""
+BEGIN;
+WITH superseded AS (
+  UPDATE public.checkout_groups cg
+  SET status = 'abandoned'
+  WHERE cg.customer_id = {customer_sql}
+    AND cg.status = 'pending'
+    AND EXISTS (
+      SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+    )
+    AND NOT EXISTS (SELECT 1 FROM public.orders o WHERE o.checkout_group_id = cg.id)
+    AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.checkout_group_id = cg.id)
+  RETURNING cg.id
+)
+SELECT id::text FROM superseded;
+COMMIT;
+"""
+    )
+    if not superseded.ok:
+        raise RuntimeError(f"supersede pending checkouts failed: {superseded.error}")
+    released = 0
+    for session_id in sorted({row for row in superseded.rows if row}):
+        released += _release_session_holds(session_id)
+    return released
+
+
 def _ensure_session_active(
     service: ServiceRoleClient, session_id: str, customer_id: str
 ) -> tuple[dict[str, Any], datetime]:
     group = _fetch_checkout_group(service, session_id, customer_id)
     status = str(group.get("status") or "")
+    if status == "completed":
+        # The order is placed and its holds were consumed, so the reservation
+        # clock no longer applies. Expiring here would turn a retried POST /orders
+        # (lost response on a slow link) into "reservation expired" for an order
+        # that exists; the idempotent replay downstream owns this case.
+        return group, datetime.now(UTC)
     if status in {"expired", "abandoned"}:
         raise AppError(
             code="checkout.reservation_expired",
@@ -544,9 +858,9 @@ def _ensure_session_active(
             expires_at = datetime.now(UTC) + timedelta(minutes=ttl_min)
 
     if expires_at <= datetime.now(UTC):
-        service.client.table("checkout_groups").update({"status": "expired"}).eq(
-            "id", session_id
-        ).execute()
+        expire_checkout_group_if_unpaid(
+            service.client, checkout_group_id=session_id, terminal_status="expired"
+        )
         raise AppError(
             code="checkout.reservation_expired",
             message="Your reservation has expired",
@@ -618,6 +932,12 @@ async def create_checkout_session(
     )
     subtotal = cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
 
+    try:
+        _supersede_own_pending_sessions(current_user.id)
+    except Exception:
+        # Best effort: the sweeper still reclaims these holds at TTL.
+        logger.warning("checkout.supersede_pending_failed", exc_info=True)
+
     session_id = str(uuid.uuid4())
     idempotency_key = f"chk-{secrets.token_urlsafe(16)}"
     service.client.table("checkout_groups").insert(
@@ -655,9 +975,14 @@ async def create_checkout_session(
             )
         )
         if not result.claimed and not result.skipped:
-            service.client.table("checkout_groups").update({"status": "abandoned"}).eq(
-                "id", session_id
-            ).execute()
+            expire_checkout_group_if_unpaid(
+                service.client, checkout_group_id=session_id, terminal_status="abandoned"
+            )
+            try:
+                # Lines claimed before the one that failed must not stay held.
+                _release_session_holds(session_id)
+            except Exception:
+                logger.warning("checkout.release_partial_holds_failed", exc_info=True)
             raise AppError(
                 code="checkout.stock_unavailable",
                 message="An item in your cart is no longer available",
@@ -722,6 +1047,11 @@ async def create_checkout_session(
                         lead_time_days=item.lead_time_days,
                         vendor_capacity_per_week=item.vendor_capacity_per_week,
                         defect_notes=item.defect_notes,
+                        listing_variant_id=item.listing_variant_id,
+                        variant_options=[
+                            VariantOptionOut(group=group_name, value=value)
+                            for group_name, value in item.variant_options
+                        ],
                     )
                     for item in group.items
                 ],
@@ -811,7 +1141,15 @@ async def validate_fulfilment_step(
     settings: Annotated[Settings, Depends(get_settings)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> FulfilmentStepResponse:
-    _ensure_session_active(service, body.session_id, current_user.id)
+    active_group, _ = _ensure_session_active(service, body.session_id, current_user.id)
+    if str(active_group.get("status") or "") == "completed":
+        # Totals of an ordered session are what the buyer agreed to pay.
+        raise AppError(
+            code="orders.session_already_completed",
+            message="Checkout session already completed",
+            http_status=409,
+            details={"session_id": body.session_id},
+        )
 
     user_client = get_user_client(current_user.token, settings)
     cart = _fetch_active_cart_by_user(user_client, current_user.id)
@@ -846,16 +1184,14 @@ async def validate_fulfilment_step(
         )
 
     zones = _load_delivery_zones(service)
-    zone_fees = {
-        key: int(zone.get("fee_ngwee", 0))
-        for key, zone in zones.items()
-        if isinstance(zone.get("fee_ngwee"), int)
-    }
+    zone_fees = load_zone_fees(zones)
 
     resolved_zone: str | None = None
     pickup_only = False
     if delivery_requested and body.address is not None:
-        resolved_zone = resolve_delivery_zone(
+        resolved_zone = resolve_address_zone(
+            service,
+            zones,
             lat=body.address.lat,
             lng=body.address.lng,
             landmark=body.address.landmark,
@@ -919,8 +1255,18 @@ async def validate_fulfilment_step(
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": total_delivery_fee,
             "total_ngwee": total,
+            # POST /orders re-prices from these server-recorded choices; the
+            # groups a client sends there are only checked against them.
+            "fulfilment_choices": [
+                {
+                    "vendor_id": result.vendor_id,
+                    "fulfilment": result.fulfilment,
+                    "delivery_zone": result.delivery_zone,
+                }
+                for result in results
+            ],
         }
-    ).eq("id", body.session_id).execute()
+    ).eq("id", body.session_id).eq("status", "pending").execute()
 
     return FulfilmentStepResponse(
         session_id=body.session_id,

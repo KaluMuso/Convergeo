@@ -1,12 +1,12 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { OtpField } from "@vergeo/ui/src/otp-field";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -19,6 +19,11 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { ResendCountdown } from "../../../(auth)/_components/resend-countdown";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  reconcileCustomerSession,
+  type CustomerSession,
+  useSession,
+} from "../../../../../lib/customer-session";
 
 export type ContactStepLabels = {
   title: string;
@@ -49,9 +54,56 @@ export type ContactStepLabels = {
 type StepContactProps = {
   labels: ContactStepLabels;
   onComplete: () => void;
+  showIntro?: boolean;
 };
 
-export function StepContact({ labels, onComplete }: StepContactProps) {
+export function ContactStepIntro({
+  labels,
+}: {
+  labels: Pick<ContactStepLabels, "title" | "subtitle">;
+}) {
+  return (
+    <div className="space-y-1">
+      <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+      <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
+    </div>
+  );
+}
+
+export function ContactStepSkeleton({
+  loadingLabel,
+  showIntro = false,
+}: {
+  loadingLabel: string;
+  showIntro?: boolean;
+}) {
+  return (
+    <div className="space-y-4" data-testid="checkout-loading-skeleton" aria-busy="true">
+      <p className="sr-only" aria-live="polite">
+        {loadingLabel}
+      </p>
+      {showIntro ? (
+        <div className="space-y-1" aria-hidden="true">
+          <Skeleton shape="line" width="60%" height="1.5rem" />
+          <Skeleton shape="line" width="80%" />
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-4" aria-hidden="true">
+        <div className="space-y-2">
+          <Skeleton shape="line" width="8rem" />
+          <div className="flex gap-2">
+            <Skeleton width="6rem" height="3rem" />
+            <Skeleton className="min-w-0 flex-1" height="3rem" />
+          </div>
+          <Skeleton shape="line" width="70%" />
+        </div>
+        <Skeleton height="3rem" />
+      </div>
+    </div>
+  );
+}
+
+export function StepContact({ labels, onComplete, showIntro = true }: StepContactProps) {
   const { session, loading: sessionLoading } = useSession();
   const [phase, setPhase] = useState<"phone" | "otp">("phone");
   const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -61,6 +113,17 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const skippedRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  /** Single-flight lock for OTP verification — see handleVerifyOtp. */
+  const verifyingRef = useRef(false);
+  /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
+  const acceptedSessionRef = useRef<CustomerSession | null>(null);
 
   const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
@@ -86,6 +149,9 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   }, [session, sessionLoading, labels.generic, onComplete]);
 
   if (sessionLoading) {
+    if (!showIntro) {
+      return <ContactStepSkeleton loadingLabel={labels.loading} />;
+    }
     return (
       <p className="font-body text-sm text-text-3" aria-live="polite">
         {labels.loading}
@@ -96,7 +162,9 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   if (session?.access_token) {
     return (
       <div className="space-y-2">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        {showIntro ? (
+          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        ) : null}
         <p className="font-body text-sm text-text-2">{labels.skippedLoggedIn}</p>
       </div>
     );
@@ -142,41 +210,73 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   };
 
   const handleVerifyOtp = async (otpCode: string) => {
-    if (otpCode.length !== 6 || loading) {
+    // Same single-flight contract as the standalone OtpForm, for the same
+    // reason: OtpField auto-submits on the sixth digit AND the Verify button
+    // below can fire, while `loading` state only lands on the next render
+    // commit — so a redundant interaction in that window would send a second
+    // verifyOtp for one single-use code. The ref is synchronous, so acquiring
+    // it before the first await actually closes the window.
+    if (otpCode.length !== 6 || verifyingRef.current) {
       return;
     }
+    verifyingRef.current = true;
+
     setErrorMessage(null);
     setLoading(true);
+
     try {
-      const supabase = await getBrowserClient();
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otpCode,
-        type: "sms",
-      });
-      if (error) {
-        const parsed = parseAuthError(error);
-        if (parsed.code === "wrong_code") {
-          setErrorMessage(labels.wrongCode);
-        } else if (parsed.code === "expired") {
-          setErrorMessage(labels.expired);
-        } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
-        } else {
-          setErrorMessage(labels.generic);
+      let acceptedSession = acceptedSessionRef.current;
+      const retryReconciliation = acceptedSession !== null;
+
+      if (!acceptedSession) {
+        const supabase = await getBrowserClient();
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone,
+          token: otpCode,
+          type: "sms",
+        });
+        if (error) {
+          const parsed = parseAuthError(error);
+          if (parsed.code === "wrong_code") {
+            setErrorMessage(labels.wrongCode);
+          } else if (parsed.code === "expired") {
+            setErrorMessage(labels.expired);
+          } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
+          } else {
+            setErrorMessage(labels.generic);
+          }
+          // Recoverable — let the buyer correct and resubmit the code.
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
         }
-        return;
+        acceptedSession = data.session;
+        if (!acceptedSession?.access_token) {
+          setErrorMessage(labels.generic);
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
+        }
+
+        // An auth event can already have remounted checkout for this identity.
+        // Let that shell own contact/session requests; never resume stale work.
+        if (!mountedRef.current) return;
+        acceptedSessionRef.current = acceptedSession;
       }
-      const token = data.session?.access_token;
-      if (!token) {
-        setErrorMessage(labels.generic);
-        return;
-      }
-      await completeContactStep(token, phone);
+
+      const readySession = await reconcileCustomerSession(acceptedSession, retryReconciliation);
+      if (!mountedRef.current) return;
+      if (!readySession?.access_token) throw new Error("auth.session_required");
+      await completeContactStep(readySession.access_token, phone);
     } catch {
-      setErrorMessage(labels.generic);
-    } finally {
+      // Before acceptance this retries verification; after acceptance it
+      // retries only merge/contact with the saved session token.
+      verifyingRef.current = false;
       setLoading(false);
+      setErrorMessage(labels.generic);
     }
   };
 
@@ -191,10 +291,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   if (phase === "phone") {
     return (
       <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
-          <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-        </div>
+        {showIntro ? <ContactStepIntro labels={labels} /> : null}
         <form className="flex flex-col gap-4" onSubmit={(event) => void handleSendOtp(event)}>
           <FormField
             label={labels.phoneLabel}
@@ -204,14 +301,17 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
             requiredMarker="*"
             asGroup
           >
-            <div className="flex gap-2">
-              <Input
-                size="lg"
-                className="w-24 shrink-0 text-center font-mono"
-                value={countryCode}
-                readOnly
-                aria-label={labels.countryCode}
-              />
+            {/* Size the prefix via a wrapper: field styles' `w-full` beats `w-24`. */}
+            <div className="flex min-w-0 gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  size="lg"
+                  className="text-center font-mono"
+                  value={countryCode}
+                  readOnly
+                  aria-label={labels.countryCode}
+                />
+              </div>
               <Input
                 size="lg"
                 className="min-w-0 flex-1 font-mono"
@@ -245,10 +345,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
-        <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
-      </div>
+      {showIntro ? <ContactStepIntro labels={labels} /> : null}
       <div className="flex flex-col gap-4">
         <OtpField
           value={code}

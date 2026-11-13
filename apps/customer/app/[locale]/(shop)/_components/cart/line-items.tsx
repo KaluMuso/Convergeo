@@ -12,6 +12,7 @@ import {
 } from "../sale-quantity";
 
 import { QtyStepper, type QtyStepperLabels } from "./qty-stepper";
+import { VariantLineLabel } from "./variant-line-label";
 
 import type { CartLine, ChangeNotice } from "./mini-cart-drawer";
 
@@ -27,6 +28,9 @@ export type CartLineItemLabels = QtyStepperLabels & {
   saveForLater: string;
   saveForLaterLabel: string;
   outOfStockLine: string;
+  /** "{group}: {value}" for the chosen colour/size. */
+  variantOption?: string;
+  variantSeparator?: string;
 };
 
 type CartLineItemProps = {
@@ -82,6 +86,12 @@ export function CartLineItem({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-medium text-text">{title}</h3>
+          <VariantLineLabel
+            options={item.variant_options}
+            template={labels.variantOption ?? "{value}"}
+            separator={labels.variantSeparator ?? ", "}
+            testId={`cart-line-variant-${item.listing_id}`}
+          />
           <p className="text-sm text-text-2">{unitPriceLabel}</p>
           {leadTimeLabel ? (
             <p

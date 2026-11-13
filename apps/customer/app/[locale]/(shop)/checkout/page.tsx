@@ -2,8 +2,13 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { ExistingCheckoutStatus } from "./_components/existing-checkout-status-lazy";
+import { GroupCheckoutLazy } from "./_components/group-checkout-lazy";
+import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
+import { resolveGroupParam } from "./_lib/group-checkout";
 
+import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
@@ -14,8 +19,40 @@ export const metadata: Metadata = {
   },
 };
 
+function buildGroupLabels(
+  locale: string,
+  messages: AbstractIntlMessages,
+  shell: CheckoutShellLabels,
+): GroupCheckoutLabels {
+  const t = createTranslator({ locale, messages, namespace: "checkout" });
+  return {
+    pageTitle: t("checkout.group.pageTitle"),
+    loading: t("checkout.group.loading"),
+    error: t("checkout.group.error"),
+    loginRequired: t("checkout.group.loginRequired"),
+    forbidden: t("checkout.group.forbidden"),
+    notFound: t("checkout.group.notFound"),
+    expired: t("checkout.group.expired"),
+    notPayable: t("checkout.group.notPayable"),
+    ticketHeading: t("checkout.group.ticketHeading"),
+    serviceHeading: t("checkout.group.serviceHeading"),
+    providerLabel: t("checkout.group.providerLabel"),
+    tierLineTemplate: t.raw("checkout.group.tierLine") as string,
+    subtotal: t("checkout.group.subtotal"),
+    platformFee: t("checkout.group.platformFee"),
+    total: t("checkout.group.total"),
+    serviceNote: t("checkout.group.serviceNote"),
+    payCtaTemplate: t.raw("checkout.group.payCta") as string,
+    viewOrder: t("checkout.group.viewOrder"),
+    escrowTitle: shell.review.escrowTitle,
+    escrowSteps: [shell.review.escrowStep1, shell.review.escrowStep2, shell.review.escrowStep3],
+    payment: shell.payment,
+  };
+}
+
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export function generateStaticParams() {
@@ -27,7 +64,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
 
   return {
     pageTitle: t("checkout.pageTitle"),
-    stepAnnouncementTemplate: t("checkout.stepAnnouncement"),
+    stepAnnouncementTemplate: String(t.raw("checkout.stepAnnouncement")),
     doneIndicator: t("checkout.doneIndicator"),
     steps: {
       contact: t("checkout.steps.contact"),
@@ -46,9 +83,9 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       sendOtp: t("checkout.contact.sendOtp"),
       verifyOtp: t("checkout.contact.verifyOtp"),
       otpAria: t("checkout.contact.otpAria"),
-      otpDigitTemplate: t("checkout.contact.otpDigit"),
+      otpDigitTemplate: String(t.raw("checkout.contact.otpDigit")),
       resend: t("checkout.contact.resend"),
-      resendInTemplate: t("checkout.contact.resendIn"),
+      resendInTemplate: String(t.raw("checkout.contact.resendIn")),
       changePhone: t("checkout.contact.changePhone"),
       loading: t("checkout.contact.loading"),
       required: t("checkout.contact.required"),
@@ -56,7 +93,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       sendFailed: t("checkout.contact.sendFailed"),
       wrongCode: t("checkout.contact.wrongCode"),
       expired: t("checkout.contact.expired"),
-      throttledTemplate: t("checkout.contact.throttled"),
+      throttledTemplate: String(t.raw("checkout.contact.throttled")),
       generic: t("checkout.contact.generic"),
       skippedLoggedIn: t("checkout.contact.skippedLoggedIn"),
     },
@@ -69,11 +106,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       landmarkPlaceholder: t("checkout.fulfilment.landmarkPlaceholder"),
       landmarkHelp: t("checkout.fulfilment.landmarkHelp"),
       addressLabel: t("checkout.fulfilment.addressLabel"),
-      zoneFeeTemplate: t("checkout.fulfilment.zoneFee"),
+      zoneFeeTemplate: String(t.raw("checkout.fulfilment.zoneFee")),
       zoneFree: t("checkout.fulfilment.zoneFree"),
-      zoneLabelTemplate: t("checkout.fulfilment.zoneLabel"),
-      pickupAtTemplate: t("checkout.fulfilment.pickupAt"),
-      pickupHoursTemplate: t("checkout.fulfilment.pickupHours"),
+      zoneLabelTemplate: String(t.raw("checkout.fulfilment.zoneLabel")),
+      pickupAtTemplate: String(t.raw("checkout.fulfilment.pickupAt")),
+      pickupHoursTemplate: String(t.raw("checkout.fulfilment.pickupHours")),
       outsideZone: t("checkout.fulfilment.outsideZone"),
       mixedHint: t("checkout.fulfilment.mixedHint"),
       continue: t("checkout.fulfilment.continue"),
@@ -82,6 +119,20 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       total: t("checkout.fulfilment.total"),
       loading: t("checkout.contact.loading"),
       error: t("checkout.error"),
+      guide: {
+        deliveryHelp: t("checkout.fulfilment.guide.deliveryHelp"),
+        pickupHelp: t("checkout.fulfilment.guide.pickupHelp"),
+        groupHint: t("checkout.fulfilment.guide.groupHint"),
+        tipsTitle: t("checkout.fulfilment.guide.tipsTitle"),
+        tip1: t("checkout.fulfilment.guide.tip1"),
+        tip2: t("checkout.fulfilment.guide.tip2"),
+        tip3: t("checkout.fulfilment.guide.tip3"),
+        landmarkRequired: t("checkout.fulfilment.guide.landmarkRequired"),
+        cutoffTitle: t("checkout.fulfilment.guide.cutoffTitle"),
+        cutoffBefore: t("checkout.fulfilment.guide.cutoffBefore"),
+        cutoffAfter: t("checkout.fulfilment.guide.cutoffAfter"),
+        cutoffMadeToOrder: t("checkout.fulfilment.guide.cutoffMadeToOrder"),
+      },
     },
     payment: {
       title: t("checkout.payment.title"),
@@ -100,7 +151,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       countryCode: t("checkout.payment.countryCode"),
       nationalNumber: t("checkout.payment.nationalNumber"),
       cardExplainer: t("checkout.payment.cardExplainer"),
-      codIneligibleTemplate: t("checkout.payment.codIneligible"),
+      codIneligibleTemplate: String(t.raw("checkout.payment.codIneligible")),
       codUnavailableTitle: t("checkout.payment.codUnavailableTitle"),
       selected: t("checkout.payment.selected"),
       unavailable: t("checkout.payment.unavailable"),
@@ -113,12 +164,23 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       railRejected: t("checkout.payment.railRejected"),
       error: t("checkout.payment.error"),
       paymentsDisabled: t("checkout.payment.paymentsDisabled"),
+      codGuide: {
+        title: t("checkout.payment.codGuide.title"),
+        step1: t("checkout.payment.codGuide.step1"),
+        step2: t.raw("checkout.payment.codGuide.step2") as string,
+        step3: t("checkout.payment.codGuide.step3"),
+        capNote: t.raw("checkout.payment.codGuide.capNote") as string,
+        overCap: t.raw("checkout.payment.codGuide.overCap") as string,
+        editCart: t("checkout.payment.codGuide.editCart"),
+      },
     },
     review: {
       title: t("checkout.review.title"),
       subtitle: t("checkout.review.subtitle"),
       lineItems: t("checkout.review.lineItems"),
-      qtyTemplate: t("checkout.review.qty"),
+      qtyTemplate: String(t.raw("checkout.review.qty")),
+      variantOption: String(t.raw("variant.option")),
+      variantSeparator: String(t.raw("variant.separator")),
       saleUnits: {
         each: t("cart.saleUnits.each"),
         metre: t("cart.saleUnits.metre"),
@@ -132,12 +194,12 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       deliveryFees: t("checkout.review.deliveryFees"),
       total: t("checkout.review.total"),
       paymentMethod: t("checkout.review.paymentMethod"),
-      methodMomoTemplate: t("checkout.review.methodMomo"),
+      methodMomoTemplate: String(t.raw("checkout.review.methodMomo")),
       methodCard: t("checkout.review.methodCard"),
       methodCod: t("checkout.review.methodCod"),
       railMtn: t("checkout.review.railMtn"),
       railAirtel: t("checkout.review.railAirtel"),
-      payerNumberTemplate: t("checkout.review.payerNumber"),
+      payerNumberTemplate: String(t.raw("checkout.review.payerNumber")),
       escrowTitle: t("checkout.review.escrowTitle"),
       escrowStep1: t("checkout.review.escrowStep1"),
       escrowStep2: t("checkout.review.escrowStep2"),
@@ -152,20 +214,33 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       nextMomo: t("checkout.review.nextMomo"),
       nextCard: t("checkout.review.nextCard"),
       nextCod: t("checkout.review.nextCod"),
+      codGuide: {
+        title: t("checkout.review.codGuide.title"),
+        step1: t("checkout.review.codGuide.step1"),
+        step2: t("checkout.review.codGuide.step2"),
+        step3: t.raw("checkout.review.codGuide.step3") as string,
+        deliveryTo: t.raw("checkout.review.codGuide.deliveryTo") as string,
+        deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
+        pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
+        placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
+      },
     },
     countdown: {
       label: t("checkout.countdown.label"),
       expired: t("checkout.countdown.expired"),
-      ariaLiveTemplate: t("checkout.countdown.ariaLive"),
+      ariaLiveTemplate: String(t.raw("checkout.countdown.ariaLive")),
     },
     reservationExpired: t("checkout.reservationExpired"),
     loading: t("checkout.loading"),
     error: t("checkout.error"),
     emptyCart: t("checkout.emptyCart"),
+    retry: t("checkout.retry"),
+    backToCart: t("checkout.backToCart"),
+    overCodCapTemplate: t.raw("checkout.overCodCap") as string,
   };
 }
 
-export default async function CheckoutPage({ params }: PageProps) {
+export default async function CheckoutPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -176,6 +251,112 @@ export default async function CheckoutPage({ params }: PageProps) {
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const query = (await searchParams) ?? {};
+  const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
+  const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
+
+  // #760 service-deposit group checkout: the job accept flow hands off with
+  // ?group=<id>&kind=service_deposit.
+  // It pays the deposit obligation's group; tickets keep the ticket checkout below.
+  // Legacy ?session=…&kind=service_deposit links keep the read-only status view below.
+  if (query.kind === "service_deposit" && !hasSession) {
+    const depositGroupId = resolveGroupParam(query);
+    if (
+      typeof depositGroupId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(depositGroupId)
+    ) {
+      const labels = buildCheckoutLabels(locale, messages);
+      return (
+        <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+          <GroupCheckoutLazy
+            locale={locale}
+            groupId={depositGroupId}
+            labels={buildGroupLabels(locale, messages, labels)}
+          />
+        </div>
+      );
+    }
+  }
+
+  // Ticket purchases (and their card retries) hand off with a valid ?group=;
+  // the ticket checkout owns that payment. Service-deposit handoffs use
+  // ?session=, and any invalid or ambiguous handoff fails closed below.
+  if (
+    hasGroup &&
+    !hasSession &&
+    typeof query.group === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
+  ) {
+    const labels = buildCheckoutLabels(locale, messages);
+    const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
+    const ticketMessages = await loadNamespace(locale as Locale, "events");
+    const ticketT = createTranslator({
+      locale,
+      messages: { events: ticketMessages } as AbstractIntlMessages,
+      namespace: "events",
+    });
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <LazyTicketCheckout
+          locale={locale}
+          groupId={query.group}
+          retry={query.retry === "1"}
+          labels={labels}
+          loginLabel={ticketT("ticketPurchase.loginRequired")}
+          payLabel={ticketT("ticketPurchase.payCta")}
+          retryLabel={checkoutT("checkout.pending.retry")}
+          cancelledLabel={checkoutT("checkout.pending.cancelledTitle")}
+          expiredLabel={checkoutT("checkout.pending.timeoutTitle")}
+          ordersLabel={checkoutT("checkout.pending.viewOrder")}
+        />
+      </div>
+    );
+  }
+
+  // Supplied handoffs never fall through to product-cart creation, even invalid ones.
+  if (hasSession || hasGroup) {
+    const suppliedId = hasSession ? query.session : query.group;
+    const groupId =
+      hasSession !== hasGroup &&
+      typeof suppliedId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(suppliedId)
+        ? suppliedId
+        : null;
+    const t = createTranslator({ locale, messages, namespace: "checkout" });
+    const ordersMessages = await loadNamespace(locale as Locale, "orders");
+    const orders = createTranslator({
+      locale,
+      messages: { orders: ordersMessages } as AbstractIntlMessages,
+      namespace: "orders",
+    });
+    const adminMessages = await loadNamespace(locale as Locale, "admin");
+    const admin = createTranslator({
+      locale,
+      messages: { admin: adminMessages } as AbstractIntlMessages,
+      namespace: "admin",
+    });
+
+    return (
+      <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+        <ExistingCheckoutStatus
+          key={`${locale}:${groupId ?? "invalid"}`}
+          groupId={groupId}
+          labels={{
+            title: t("checkout.pageTitle"),
+            loading: t("checkout.contact.loading"),
+            error: t("checkout.error"),
+            expired: t("checkout.countdown.expired"),
+            statusTemplate: orders.raw("list.status"),
+            // These existing labels are neutral states, not payment outcomes.
+            pending: admin("business.queue.filter.pending"),
+            completed: orders("status.completed"),
+            payment: t("checkout.steps.payment"),
+            unavailable: t("checkout.payment.unavailable"),
+          }}
+        />
+      </div>
+    );
+  }
   const labels = buildCheckoutLabels(locale, messages);
 
   return (

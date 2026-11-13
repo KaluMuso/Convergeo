@@ -18,13 +18,16 @@ type LazyCartHostSlotProps = {
  */
 export function LazyCartHostSlot({ locale }: LazyCartHostSlotProps) {
   const t = useTranslations("checkout");
+  // Messages that still carry `{…}` placeholders are read raw — the drawer
+  // interpolates them; `t()` cannot format them without values and would fall
+  // back to the bare key path.
+  const raw = (key: string) => String(t.raw(key));
   return (
     <CartHostSlot
       locale={locale}
       labels={{
         title: t("cart.miniCartTitle"),
         close: t("cart.miniCartClose"),
-        itemCount: t("cart.itemCount"),
         subtotal: t("cart.subtotal"),
         total: t("cart.total"),
         viewCart: t("cart.viewCart"),
@@ -41,7 +44,7 @@ export function LazyCartHostSlot({ locale }: LazyCartHostSlotProps) {
         loadErrorTitle: t("cart.loadErrorTitle"),
         loadErrorBody: t("cart.loadErrorBody"),
         loadErrorRetry: t("cart.loadErrorRetry"),
-        quantityValue: t("cart.qtyValue"),
+        quantityValue: raw("cart.qtyValue"),
         saleUnits: {
           each: t("cart.saleUnits.each"),
           metre: t("cart.saleUnits.metre"),
@@ -50,7 +53,7 @@ export function LazyCartHostSlot({ locale }: LazyCartHostSlotProps) {
           bag: t("cart.saleUnits.bag"),
           sqm: t("cart.saleUnits.sqm"),
         },
-        madeToOrderLeadTime: t("cart.madeToOrderLeadTime"),
+        madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
       }}
     />
   );

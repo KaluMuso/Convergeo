@@ -22,6 +22,7 @@ from app.errors import (
 )
 from app.logging import configure_logging
 from app.middleware import RequestIdMiddleware
+from app.middleware.cors_error_path import CorsErrorPathMiddleware
 from app.middleware.security_headers import (
     CORS_ALLOW_HEADERS,
     CORS_ALLOW_METHODS,
@@ -52,6 +53,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        # Staging-only immutable Vercel Preview origins (RC-6 / PR-F3). Always
+        # None outside ENV=staging — see Settings.cors_allow_origin_regex.
+        allow_origin_regex=settings.cors_allow_origin_regex,
         allow_credentials=True,
         allow_methods=CORS_ALLOW_METHODS,
         allow_headers=CORS_ALLOW_HEADERS,
@@ -86,4 +90,15 @@ def create_app() -> FastAPI:
     return app
 
 
-app = create_app()
+# Wrapped OUTSIDE create_app()'s return, not inside it: create_app() must
+# keep returning the raw FastAPI instance (100+ tests call it directly and
+# rely on FastAPI-only attributes like `.dependency_overrides`/`.openapi()`).
+# Only this module-level `app` — what `uvicorn app.main:app` actually
+# serves — gets the CORS error-path fallback. See
+# app/middleware/cors_error_path.py for why this must sit outside the
+# Starlette app entirely, not merely be added via app.add_middleware().
+app = CorsErrorPathMiddleware(
+    create_app(),
+    allow_origins=get_settings().cors_origin_list,
+    allow_origin_regex=get_settings().cors_allow_origin_regex,
+)

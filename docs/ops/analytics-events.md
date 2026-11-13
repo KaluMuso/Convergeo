@@ -29,9 +29,9 @@ created_at`).
 - **RLS.** `analytics_events` is RLS + FORCE: service-role write, admin read, no
   client/anon read. The view is `security_invoker` so base-table RLS still applies.
 
-## Canonical funnel
+## Stage event counts and compatibility
 
-`search → product_view → cart → checkout → pay`
+`search → product_view → cart → checkout → order_placed`
 
 | Funnel step  | `event_type`(s)                                    | Stream source      |
 | ------------ | -------------------------------------------------- | ------------------ |
@@ -39,10 +39,21 @@ created_at`).
 | product_view | `product_view`                                     | `analytics_events` |
 | cart         | `cart_add`                                         | `funnel_events`    |
 | checkout     | `checkout_start`, `step_complete`, `payment_start` | `funnel_events`    |
-| pay          | `order_placed`                                     | `funnel_events`    |
+| order_placed | `order_placed`                                     | `funnel_events`    |
 
-`app.services.analytics.events.query_funnel(days)` returns per-step counts over the
-window from `analytics_event_stream`.
+`app.services.analytics.events.query_funnel(days).event_counts` returns these
+explicitly named event counts over the window from `analytics_event_stream`.
+These count rows, not unique visitors or a matched conversion cohort. In
+particular, `order_placed` establishes order creation, **not confirmed payment**.
+
+For existing Python/dictionary/serialized consumers, `FunnelReport.steps`,
+`dataclasses.asdict(report)`, `FUNNEL_STEPS` and `EVENT_TYPE_TO_STEP` retain their
+historical `pay` key and values. That deprecated name has always meant order
+placement. `count("pay")` still returns the same count; new consumers should use
+`count("order_placed")` or `event_counts["order_placed"]`, with `EVENT_COUNT_STEPS`
+and `EVENT_TYPE_TO_COUNT_STEP` for the explicit definitions. Each collection
+contains only one order-placement key; never sum the legacy and canonical views
+together. No payment-success metric is inferred or added by this naming repair.
 
 ## Event payloads (client mirror + `analytics_events` props)
 

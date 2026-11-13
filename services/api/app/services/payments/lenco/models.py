@@ -6,7 +6,7 @@ from enum import StrEnum
 from typing import Any, Literal, NoReturn
 
 from app.schemas.base import NgweeInt, PaymentReference, RefundReference, StrictModel
-from app.services.payments.base import PaymentProviderError
+from app.services.payments.base import PaymentProviderError, ProviderErrorKind
 
 CollectionOperator = Literal["mtn", "airtel", "zamtel"]
 PayoutOperator = Literal["mtn", "airtel", "zamtel"]
@@ -28,14 +28,32 @@ class LencoErrorCategory(StrEnum):
     INSUFFICIENT = "insufficient"
     INVALID_NUMBER = "invalid_number"
     PROVIDER_ERROR = "provider_error"
+    AUTHENTICATION = "authentication"
+    INVALID_OBSERVATION = "invalid_observation"
 
 
 class LencoClientError(PaymentProviderError):
     """Typed Lenco client failure with a stable category code."""
 
-    def __init__(self, category: LencoErrorCategory, message: str) -> None:
+    def __init__(
+        self,
+        category: LencoErrorCategory,
+        message: str,
+        *,
+        kind: ProviderErrorKind = ProviderErrorKind.PROVIDER,
+        reference: str | None = None,
+        observation_uncertain: bool = False,
+        dispatch_may_have_succeeded: bool = False,
+    ) -> None:
         self.category = category
-        super().__init__(category.value, message)
+        super().__init__(
+            category.value,
+            message,
+            kind=kind,
+            reference=reference,
+            observation_uncertain=observation_uncertain,
+            dispatch_may_have_succeeded=dispatch_may_have_succeeded,
+        )
 
 
 # --- Collections ---
@@ -170,6 +188,7 @@ class LencoTransferData(StrictModel):
     status: TransferStatusValue
     reason_for_failure: str | None = None
     narration: str | None = None
+    account_id: str | None = None
     credit_account: dict[str, Any] | None = None
 
 
@@ -264,6 +283,9 @@ def map_lenco_failure(
     if timed_out or http_status == 504:
         return LencoErrorCategory.TIMEOUT
 
+    if http_status in {401, 403}:
+        return LencoErrorCategory.AUTHENTICATION
+
     if error_code:
         mapped = _LENCO_ERROR_CODE_MAP.get(error_code.strip())
         if mapped is not None:
@@ -292,6 +314,10 @@ def raise_lenco_failure(
     reason_for_failure: str | None = None,
     http_status: int | None = None,
     timed_out: bool = False,
+    kind: ProviderErrorKind | None = None,
+    reference: str | None = None,
+    observation_uncertain: bool = False,
+    dispatch_may_have_succeeded: bool = False,
 ) -> NoReturn:
     raise lenco_failure(
         error_code=error_code,
@@ -299,6 +325,10 @@ def raise_lenco_failure(
         reason_for_failure=reason_for_failure,
         http_status=http_status,
         timed_out=timed_out,
+        kind=kind,
+        reference=reference,
+        observation_uncertain=observation_uncertain,
+        dispatch_may_have_succeeded=dispatch_may_have_succeeded,
     )
 
 
@@ -309,6 +339,10 @@ def lenco_failure(
     reason_for_failure: str | None = None,
     http_status: int | None = None,
     timed_out: bool = False,
+    kind: ProviderErrorKind | None = None,
+    reference: str | None = None,
+    observation_uncertain: bool = False,
+    dispatch_may_have_succeeded: bool = False,
 ) -> LencoClientError:
     category = map_lenco_failure(
         error_code=error_code,
@@ -318,4 +352,18 @@ def lenco_failure(
         timed_out=timed_out,
     )
     detail = message or reason_for_failure or "Lenco request failed"
-    return LencoClientError(category, detail)
+    if kind is None:
+        if category == LencoErrorCategory.AUTHENTICATION:
+            kind = ProviderErrorKind.AUTHENTICATION
+        elif timed_out or observation_uncertain:
+            kind = ProviderErrorKind.TRANSPORT
+        else:
+            kind = ProviderErrorKind.PROVIDER
+    return LencoClientError(
+        category,
+        detail,
+        kind=kind,
+        reference=reference,
+        observation_uncertain=observation_uncertain,
+        dispatch_may_have_succeeded=dispatch_may_have_succeeded,
+    )

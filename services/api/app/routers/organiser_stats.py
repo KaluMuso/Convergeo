@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Protocol
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -59,6 +59,18 @@ class EscrowSplit(StrictModel):
     released_ngwee: int
 
 
+class SalesVelocity(StrictModel):
+    sold_last_24h: int
+    revenue_last_24h_ngwee: int
+    projected_sold: int | None = None
+
+
+class AcquisitionSource(StrictModel):
+    source: str
+    orders: int
+    revenue_ngwee: int
+
+
 class OrganiserEventStatsResponse(StrictModel):
     event_id: str
     event_status: str
@@ -67,6 +79,8 @@ class OrganiserEventStatsResponse(StrictModel):
     check_in: CheckInProgress
     escrow: EscrowSplit
     mass_refund_flagged: bool
+    velocity: SalesVelocity
+    acquisition: list[AcquisitionSource] = []
 
 
 class RosterAttendee(StrictModel):
@@ -137,20 +151,21 @@ LIMIT 1;
 def _load_sales_by_type(event_id: str) -> list[TicketTypeSales]:
     event_sql = _sql_uuid(event_id)
     script = f"""
-SELECT
-  tt.id::text,
-  tt.kind,
-  tt.name,
-  tt.price_ngwee::text,
-  count(t.id) FILTER (
+SELECT json_build_object(
+  'ticket_type_id', tt.id,
+  'kind', tt.kind,
+  'name', tt.name,
+  'price_ngwee', tt.price_ngwee,
+  'sold', count(t.id) FILTER (
     WHERE t.status IN ('issued', 'checked_in') AND t.order_item_id IS NOT NULL
-  )::text AS sold,
-  count(t.id) FILTER (
+  ),
+  'checked_in', count(t.id) FILTER (
     WHERE t.status = 'checked_in' AND t.order_item_id IS NOT NULL
-  )::text AS checked_in,
-  coalesce(sum(oi.unit_price_ngwee) FILTER (
+  ),
+  'revenue_ngwee', coalesce(sum(oi.unit_price_ngwee) FILTER (
     WHERE t.status IN ('issued', 'checked_in') AND t.order_item_id IS NOT NULL
-  ), 0)::text AS revenue
+  ), 0)
+)::text
 FROM public.ticket_types tt
 LEFT JOIN public.tickets t ON t.ticket_type_id = tt.id
 LEFT JOIN public.order_items oi ON oi.id = t.order_item_id
@@ -169,25 +184,15 @@ ORDER BY tt.created_at ASC;
 
     rows: list[TicketTypeSales] = []
     for raw in result.rows:
-        parts = raw.split("|", 6)
-        if len(parts) != 7:
-            continue
-        ticket_type_id, kind, name, price_raw, sold_raw, checked_in_raw, revenue_raw = parts
+        # Tier names are free text. A single JSON column preserves pipes and
+        # newlines rather than treating them as database output delimiters.
+        row = json.loads(raw)
         # order_items.unit_price_ngwee is forced to a nominal 1 ngwee for free_rsvp
         # (schema requires unit_price_ngwee > 0) — that is a storage workaround, not
         # real money, so free_rsvp revenue is always reported as 0.
-        revenue = 0 if kind == "free_rsvp" else int(revenue_raw)
-        rows.append(
-            TicketTypeSales(
-                ticket_type_id=ticket_type_id,
-                kind=kind,
-                name=name,
-                price_ngwee=int(price_raw),
-                sold=int(sold_raw),
-                checked_in=int(checked_in_raw),
-                revenue_ngwee=revenue,
-            )
-        )
+        if row["kind"] == "free_rsvp":
+            row["revenue_ngwee"] = 0
+        rows.append(TicketTypeSales.model_validate(row))
     return rows
 
 
@@ -270,6 +275,100 @@ WHERE al.entity_type = 'order'
     return int(result.rows[0]) > 0
 
 
+def _load_velocity(event_id: str, *, sold_so_far: int) -> SalesVelocity:
+    event_sql = _sql_uuid(event_id)
+    result = run_sql_script(
+        f"""
+SELECT
+  coalesce((
+    SELECT count(*) FROM public.tickets t
+    JOIN public.event_instances ei ON ei.id = t.instance_id
+    WHERE ei.event_id = {event_sql}
+      AND t.status <> 'void'
+      AND t.created_at >= timezone('utc', now()) - interval '24 hours'
+  ), 0)::text,
+  coalesce((
+    SELECT sum(oi.qty * oi.unit_price_ngwee)
+    FROM public.order_items oi
+    JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+    JOIN public.event_instances ei ON ei.id = oit.instance_id
+    JOIN public.orders o ON o.id = oi.order_id
+    JOIN public.payments p ON p.checkout_group_id = o.checkout_group_id
+    WHERE ei.event_id = {event_sql}
+      AND p.status = 'success'
+      AND p.created_at >= timezone('utc', now()) - interval '24 hours'
+  ), 0)::text,
+  coalesce(
+    (SELECT min(ei.starts_at) FROM public.event_instances ei WHERE ei.event_id = {event_sql}),
+    timezone('utc', now())
+  )::text,
+  coalesce(
+    (SELECT sum(ei.capacity) FROM public.event_instances ei WHERE ei.event_id = {event_sql}),
+    0
+  )::text;
+"""
+    )
+    if not result.ok or not result.rows:
+        return SalesVelocity(sold_last_24h=0, revenue_last_24h_ngwee=0)
+    parts = result.rows[0].split("|")
+    if len(parts) != 4:
+        return SalesVelocity(sold_last_24h=0, revenue_last_24h_ngwee=0)
+    sold_24h = int(parts[0])
+    revenue_24h = int(parts[1])
+    try:
+        next_start = datetime.fromisoformat(parts[2].replace("Z", "+00:00"))
+        if next_start.tzinfo is None:
+            next_start = next_start.replace(tzinfo=UTC)
+    except ValueError:
+        next_start = datetime.now(UTC)
+    capacity = int(parts[3])
+    days_until = (next_start.astimezone(UTC) - datetime.now(UTC)) / timedelta(days=1)
+    projected: int | None = None
+    if days_until > 0 and sold_24h > 0:
+        projected = min(capacity, sold_so_far + int(sold_24h * days_until))
+    return SalesVelocity(
+        sold_last_24h=sold_24h,
+        revenue_last_24h_ngwee=revenue_24h,
+        projected_sold=projected,
+    )
+
+
+def _load_acquisition(event_id: str) -> list[AcquisitionSource]:
+    event_sql = _sql_uuid(event_id)
+    result = run_sql_script(
+        f"""
+SELECT
+  coalesce(nullif(o.commission_snapshot->>'affiliate_code', ''), 'direct') AS src,
+  count(DISTINCT o.id)::text,
+  coalesce(sum(oi.qty * oi.unit_price_ngwee), 0)::text
+FROM public.orders o
+JOIN public.order_items oi ON oi.order_id = o.id
+JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+JOIN public.event_instances ei ON ei.id = oit.instance_id
+JOIN public.payments p ON p.checkout_group_id = o.checkout_group_id
+WHERE ei.event_id = {event_sql}
+  AND p.status = 'success'
+GROUP BY 1
+ORDER BY 3 DESC;
+"""
+    )
+    if not result.ok or not result.rows:
+        return []
+    items: list[AcquisitionSource] = []
+    for raw in result.rows:
+        parts = raw.split("|")
+        if len(parts) != 3:
+            continue
+        items.append(
+            AcquisitionSource(
+                source=parts[0],
+                orders=int(parts[1]),
+                revenue_ngwee=int(parts[2]),
+            )
+        )
+    return items
+
+
 @router.get("/events/{event_id}/stats", response_model=OrganiserEventStatsResponse)
 async def get_organiser_event_stats(
     event_id: str,
@@ -319,6 +418,8 @@ async def get_organiser_event_stats(
         check_in=CheckInProgress(issued=total_issued, checked_in=total_checked_in),
         escrow=escrow,
         mass_refund_flagged=flagged,
+        velocity=_load_velocity(event_id, sold_so_far=total_issued),
+        acquisition=_load_acquisition(event_id),
     )
 
 

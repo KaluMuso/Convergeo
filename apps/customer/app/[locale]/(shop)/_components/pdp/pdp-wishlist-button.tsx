@@ -1,10 +1,17 @@
 "use client";
 
 import { IconHeart } from "@vergeo/ui/src/icons";
+import { emitToastKey } from "@vergeo/ui/src/toast";
 import { useEffect, useState } from "react";
 
-import { syncWishlistWithServer } from "../../../../../lib/engagement-api";
 import { isWishlistedLocal, toggleWishlistLocal } from "../../../../../lib/wishlist-local";
+
+/** Fire-and-forget server sync: load the engagement client on demand, outside first-load JS. */
+function syncWishlistWithServer(): Promise<void> {
+  return import("../../../../../lib/engagement-api")
+    .then((mod) => mod.syncWishlistWithServer())
+    .catch(() => undefined);
+}
 
 export type PdpWishlistButtonProps = {
   productId: string;
@@ -43,6 +50,9 @@ export function PdpWishlistButton({
           const next = toggleWishlistLocal({ productId, slug: productSlug });
           setSaved(next);
           setAnnounce(next ? savedAnnounceLabel : removeLabel);
+          emitToastKey(next ? "wishlistAdded" : "wishlistRemoved", {
+            type: next ? "success" : "info",
+          });
           void syncWishlistWithServer();
         }}
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-text transition-colors hover:bg-surface disabled:opacity-50 motion-reduce:transition-none"

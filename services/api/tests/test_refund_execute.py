@@ -33,6 +33,15 @@ CUSTOMER_MOMO = "+260971234567"
 CALLER_KEY = "dispute-11111111-2222-3333-4444-555555555555-refund"
 
 
+@pytest.fixture(autouse=True)
+def _payouts_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These refund-path tests exercise behaviour with payouts ON (unchanged).
+
+    The payouts-OFF refusal is covered by tests/test_refund_payout_guard.py.
+    """
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+
+
 class IdempotentPostTransaction:
     """Thread-safe stand-in for the ledger engine's ON CONFLICT(idempotency_key) dedup.
 
@@ -314,9 +323,12 @@ class TestConcurrentAndRetry:
         assert active[0]["source_key"] == CALLER_KEY
         # Exactly one payout — the loser returned the winner's refund, never paid out.
         assert len(fake.tables["payouts"].rows) == 1
-        # Escrow drained exactly once: one distinct ledger idempotency key created.
+        # Escrow drained exactly once: one ledger transaction created. When the loser
+        # finds the winner still "processing" it resumes it, re-posting with the same
+        # stable idempotency key (deduped by the ledger), so 1-2 calls are both valid.
         assert ledger.created_count == 1
-        assert ledger.keys.count(f"{CALLER_KEY}-ledger") == 1
+        assert set(ledger.keys) == {f"{CALLER_KEY}-ledger"}
+        assert 1 <= len(ledger.keys) <= 2
         # Both callers observe the same refund; exactly one performed the creation.
         assert {r.refund_id for r in results} == {active[0]["id"]}
         assert sum(1 for r in results if r.created) == 1
@@ -506,6 +518,10 @@ class TestKeyDerivation:
             patch(
                 "app.services.refunds.execute.summarize_order_release_ledger",
                 return_value=full_release,
+            ),
+            patch(
+                "app.services.refunds.execute.delivery_revenue_held_ngwee",
+                return_value=0,
             ),
         ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,

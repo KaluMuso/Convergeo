@@ -90,6 +90,7 @@ class OrderSnapshot:
     checkout_group_id: str
     cod: bool
     paid: bool
+    has_collected_money: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,10 +157,7 @@ class RefundPathRequiredError(AppError):
     def __init__(self) -> None:
         super().__init__(
             code="order_refund_path_required",
-            message=(
-                "Paid order cancellation requires refund_path=True "
-                "(M08 refund execution pending)"
-            ),
+            message=("Collected money requires an authorized financial-resolution path"),
             http_status=409,
             details={"refund_path_required": True},
         )
@@ -297,11 +295,13 @@ SELECT
     WHEN EXISTS (
       SELECT 1
       FROM public.payments p
+      JOIN public.checkout_groups c ON c.id=p.checkout_group_id AND c.customer_id=o.customer_id
       WHERE p.checkout_group_id = o.checkout_group_id
         AND p.status = 'success'
     ) THEN 'true'
     ELSE 'false'
-  END
+  END,
+  public.order_has_collected_money(o.id)::text
 FROM public.orders o
 WHERE o.id = {order_sql}
 {lock_clause};
@@ -310,7 +310,7 @@ WHERE o.id = {order_sql}
     if not result.ok or not result.rows:
         return None
     parts = result.rows[0].split("|")
-    if len(parts) != 6:
+    if len(parts) != 7:
         return None
     return OrderSnapshot(
         id=parts[0],
@@ -320,12 +320,13 @@ WHERE o.id = {order_sql}
         # psql -At / ::text may render boolean as t/f or true/false.
         cod=parts[4].lower() in {"t", "true", "1"},
         paid=parts[5].lower() in {"t", "true", "1"},
+        has_collected_money=parts[6].lower() in {"t", "true", "1"},
     )
 
 
 def is_order_paid(order: OrderSnapshot) -> bool:
-    """Paid = successful checkout payment and not COD (collection-at-delivery)."""
-    return order.paid and not order.cod
+    """Any collected money requires resolution; this is not full service funding."""
+    return order.has_collected_money and not order.cod
 
 
 def resolve_transition(
@@ -345,16 +346,14 @@ def resolve_transition(
         return TransitionResult(
             permitted=False,
             reason=(
-                f"Actor {actor_role.value} not permitted for "
-                f"{from_status.value} + {event.value}"
+                f"Actor {actor_role.value} not permitted for {from_status.value} + {event.value}"
             ),
         )
     if spec.fulfilment is not None and spec.fulfilment != fulfilment:
         return TransitionResult(
             permitted=False,
             reason=(
-                f"Event {event.value} requires fulfilment={spec.fulfilment}, "
-                f"order has {fulfilment}"
+                f"Event {event.value} requires fulfilment={spec.fulfilment}, order has {fulfilment}"
             ),
         )
     return TransitionResult(permitted=True, to_status=spec.to_status)
@@ -390,6 +389,65 @@ def _validate_actor_id(actor_role: ActorRole, actor_id: str) -> None:
         raise ValueError("actor_id must be a valid UUID for non-system actors")
 
 
+def check_order_transition(
+    *,
+    order_id: str,
+    event: OrderEvent,
+    actor_role: ActorRole,
+    refund_path: bool = False,
+) -> tuple[OrderSnapshot, OrderStatus]:
+    """Validate a transition exactly as ``transition_order`` would, without writing.
+
+    Lets a caller that must change a SECOND aggregate first (e.g. a courier
+    dispatch claiming its single-use handover code) fail fast on every rule the
+    order state machine would reject, before it commits anything. Returns the
+    snapshot it validated against and the destination status.
+    """
+    snapshot = _fetch_order_snapshot(order_id)
+    if snapshot is None:
+        raise AppError(code="not_found", message="Order not found", http_status=404)
+    to_status = _validate_snapshot_transition(snapshot, event=event, actor_role=actor_role)
+    # Read-only fail-fast mirrors of the money rules ``transition_order`` enforces
+    # atomically in SQL. They can only refuse earlier; they never grant anything.
+    refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
+    if (
+        event in CANCELLATION_EVENTS
+        and is_order_paid(snapshot)
+        and not snapshot.cod
+        and not refund_authority
+    ):
+        raise RefundPathRequiredError()
+    if event in PREPAID_PAYMENT_REQUIRED_EVENTS and not snapshot.cod and not snapshot.paid:
+        raise PrepaidPaymentRequiredError(
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=actor_role.value,
+        )
+    return snapshot, to_status
+
+
+def _validate_snapshot_transition(
+    snapshot: OrderSnapshot,
+    *,
+    event: OrderEvent,
+    actor_role: ActorRole,
+) -> OrderStatus:
+    resolved = resolve_transition(
+        from_status=snapshot.status,
+        event=event,
+        actor_role=actor_role,
+        fulfilment=snapshot.fulfilment,
+    )
+    if not resolved.permitted or resolved.to_status is None:
+        raise OrderTransitionError(
+            resolved.reason or "Transition not permitted",
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=actor_role.value,
+        )
+    return resolved.to_status
+
+
 def transition_order(
     *,
     order_id: str,
@@ -412,59 +470,134 @@ def transition_order(
     if snapshot is None:
         raise AppError(code="not_found", message="Order not found", http_status=404)
 
-    resolved = resolve_transition(
-        from_status=snapshot.status,
-        event=event,
-        actor_role=actor_role,
-        fulfilment=snapshot.fulfilment,
-    )
-    if not resolved.permitted or resolved.to_status is None:
-        raise OrderTransitionError(
-            resolved.reason or "Transition not permitted",
-            from_status=snapshot.status.value,
-            event=event.value,
-            actor_role=actor_role.value,
-        )
-
-    if event in CANCELLATION_EVENTS and is_order_paid(snapshot) and not refund_path:
-        raise RefundPathRequiredError()
-
-    if (
-        event in PREPAID_PAYMENT_REQUIRED_EVENTS
-        and not snapshot.cod
-        and not snapshot.paid
-    ):
-        raise PrepaidPaymentRequiredError(
-            from_status=snapshot.status.value,
-            event=event.value,
-            actor_role=actor_role.value,
-        )
+    # Money rules (refund authority, prepaid payment) are enforced atomically in
+    # the locked SQL below (release money design), not by a Python pre-check.
+    to_status_enum = _validate_snapshot_transition(snapshot, event=event, actor_role=actor_role)
 
     order_sql = sql_uuid(order_id, "order_id")
-    to_status = resolved.to_status.value
+    to_status = to_status_enum.value
     from_status = snapshot.status.value
+    actor_sql = sql_uuid(actor_id, "actor_id")
+    # Roles alone and a caller-supplied refund_path flag are not order authority.
+    authority_sql = {
+        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
+        ActorRole.VENDOR: (
+            "EXISTS (SELECT 1 FROM public.vendors v "
+            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
+        ),
+        ActorRole.ADMIN: (
+            "EXISTS (SELECT 1 FROM public.user_roles ur "
+            f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+        ),
+        ActorRole.SYSTEM: "true",  # identity checked above; internal trusted caller only
+    }[actor_role]
+    cancellation = event in CANCELLATION_EVENTS
+    refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""
 BEGIN;
 SELECT set_config('app.order_actor', {sql_literal(actor_id)}, true);
 SELECT set_config('app.order_note', {sql_literal(note)}, true);
-WITH locked AS (
-  SELECT id, status
-  FROM public.orders
-  WHERE id = {order_sql}
-  FOR UPDATE
-)
+SELECT public.lock_payment_checkout_scope(
+  (SELECT checkout_group_id FROM public.orders WHERE id={order_sql}));
+SELECT id, status FROM public.orders WHERE id={order_sql} FOR UPDATE;
+SELECT pg_advisory_xact_lock(hashtext('order_escrow:' || {order_sql}::text));
+DO $order_authority$
+DECLARE o public.orders%rowtype; has_money boolean; has_uncertain_attempt boolean;
+BEGIN
+  SELECT * INTO STRICT o FROM public.orders WHERE id={order_sql};
+  IF NOT ({authority_sql}) THEN
+    RAISE EXCEPTION 'ORDER_ACTOR_FORBIDDEN';
+  END IF;
+  IF o.status <> '{from_status}' THEN
+    RAISE EXCEPTION 'ORDER_TRANSITION_CONFLICT';
+  END IF;
+  has_money := public.order_has_collected_money(o.id);
+  has_uncertain_attempt := EXISTS (
+    SELECT 1 FROM public.order_payment_checkouts(o.id) scope
+    JOIN public.payments p ON p.checkout_group_id=scope.checkout_group_id
+    WHERE p.status NOT IN ('success','cancelled')
+      AND (p.status<>'failed' OR coalesce(p.raw->>'terminal_provider_failure','false')<>'true')
+  );
+  IF {str(cancellation).lower()} AND has_money AND NOT o.cod THEN
+    IF NOT {str(refund_authority).lower()} THEN
+      RAISE EXCEPTION 'ORDER_REFUND_AUTHORITY_REQUIRED';
+    END IF;
+    -- An authorized cancellation reserves financial resolution, not a refund
+    -- entitlement or provider payout. Existing release ownership is preserved.
+    INSERT INTO public.order_money_gates(order_id,gate)
+    SELECT o.id,'refund' WHERE NOT EXISTS (
+      SELECT 1 FROM public.ledger_transactions
+      WHERE order_id=o.id AND kind='release_to_vendor')
+    ON CONFLICT(order_id) DO NOTHING;
+  END IF;
+  IF {str(cancellation).lower()} AND (has_money OR has_uncertain_attempt) AND NOT o.cod THEN
+    INSERT INTO public.audit_log(actor,action,entity_type,entity_id,after)
+    VALUES ({actor_sql},'order.financial_resolution_required','order',o.id,
+      jsonb_build_object('event','{event.value}','reason',{sql_literal(note)},
+        'collected_money',has_money,'uncertain_attempt',has_uncertain_attempt,
+        'checkout_groups',(SELECT jsonb_agg(checkout_group_id)
+                          FROM public.order_payment_checkouts(o.id))));
+  END IF;
+END $order_authority$;
 UPDATE public.orders o
 SET status = '{to_status}'
-FROM locked l
-WHERE o.id = l.id
-  AND l.status = '{from_status}'
+WHERE o.id = {order_sql} AND o.status = '{from_status}'
+  AND (
+    '{event.value}' NOT IN ('confirm', 'start_processing', 'mark_ready', 'ship')
+    OR o.cod
+    OR EXISTS (SELECT 1 FROM public.payments p
+               JOIN public.checkout_groups c ON c.id=p.checkout_group_id
+                 AND c.customer_id=o.customer_id
+               WHERE p.checkout_group_id=o.checkout_group_id AND p.status='success')
+  )
 RETURNING o.status;
 COMMIT;
 """
     update_result = run_sql_script(update_script)
     if not update_result.ok:
+        error = update_result.error or ""
+        if "ORDER_ACTOR_FORBIDDEN" in error:
+            raise AppError(
+                code="forbidden", message="Order actor is not authorized", http_status=403
+            )
+        if "ORDER_REFUND_AUTHORITY_REQUIRED" in error:
+            raise RefundPathRequiredError()
+        if "ORDER_TRANSITION_CONFLICT" in error:
+            current = _fetch_order_snapshot(order_id)
+            if (
+                cancellation
+                and current is not None
+                and is_order_paid(current)
+                and not refund_authority
+            ):
+                raise RefundPathRequiredError()
+            raise OrderTransitionError(
+                "Concurrent transition changed order state",
+                from_status=from_status,
+                event=event.value,
+                actor_role=actor_role.value,
+            )
         raise RuntimeError(f"order transition failed: {update_result.error}")
     if not update_result.rows or update_result.rows[-1] != to_status:
+        current = _fetch_order_snapshot(order_id)
+        if (
+            event in CANCELLATION_EVENTS
+            and current is not None
+            and is_order_paid(current)
+            and not refund_authority
+        ):
+            raise RefundPathRequiredError()
+        if (
+            event in PREPAID_PAYMENT_REQUIRED_EVENTS
+            and current is not None
+            and not current.cod
+            and not current.paid
+        ):
+            raise PrepaidPaymentRequiredError(
+                from_status=current.status.value,
+                event=event.value,
+                actor_role=actor_role.value,
+            )
         raise OrderTransitionError(
             "Concurrent transition changed order state",
             from_status=from_status,
@@ -475,7 +608,7 @@ COMMIT;
     return TransitionOutcome(
         order_id=order_id,
         from_status=snapshot.status,
-        to_status=resolved.to_status,
+        to_status=to_status_enum,
         event=event,
         actor_id=actor_id,
         note=note,

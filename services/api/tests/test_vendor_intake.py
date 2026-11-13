@@ -32,6 +32,8 @@ OTHER_VENDOR_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 SESSION_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 OTHER_SESSION_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 BINDING_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+PRODUCT_ID = "12345678-1234-4234-8234-123456789abc"
+CATEGORY_ID = "22345678-1234-4234-8234-123456789abc"
 VALID_TOKEN = "valid.jwt.token"
 
 
@@ -197,9 +199,7 @@ def _seed(
     status: str = state_machine.READY_FOR_VENDOR_REVIEW,
     draft: dict[str, Any] | None = None,
 ) -> None:
-    fake.table("feature_flags").rows.append(
-        {"flag": "waha_vendor_intake", "enabled": True}
-    )
+    fake.table("feature_flags").rows.append({"flag": "waha_vendor_intake", "enabled": True})
     fake.table("platform_config").rows.append(
         {"key": "waha_intake_vendor_allowlist", "value": [VENDOR_ID]}
     )
@@ -267,12 +267,23 @@ def _seed(
             "model_ref": None,
         }
     )
+    fake.table("products").rows.append(
+        {
+            "id": PRODUCT_ID,
+            "name": "Samsung Fridge",
+            "status": "active",
+            "product_class": "A",
+            "category_id": CATEGORY_ID,
+            "sale_unit": "each",
+            "base_unit": "each",
+            "base_units_per_sale_unit_milli": 1000,
+        }
+    )
+    fake.table("categories").rows.append({"id": CATEGORY_ID, "prohibited": False})
     # Cap machinery reads these.
     fake.table("vendor_listings")
     fake.table("orders")
-    fake.table("platform_config").rows.append(
-        {"key": "cod_cap_ngwee", "value": 50_000}
-    )
+    fake.table("platform_config").rows.append({"key": "cod_cap_ngwee", "value": 50_000})
 
 
 def _headers() -> dict[str, str]:
@@ -311,14 +322,24 @@ def _stub_listing_creation(
 
     from app.routers.vendor_listings import ListingCreateResponse
 
-    def fake_create(service_client: Any, *, vendor: dict[str, Any], body: Any) -> Any:
+    def fake_create(
+        service_client: Any, *, vendor: dict[str, Any], body: Any, insert_listing: Any = None
+    ) -> Any:
+        assert insert_listing is not None
         captured["vendor_id"] = vendor["id"]
         captured["body"] = body
+        service_client.client.table("vendor_listings").insert(
+            {
+                "id": "99999999-9999-9999-9999-999999999999",
+                "product_id": body.product_id,
+                "status": status,
+            }
+        ).execute()
         return ListingCreateResponse(
             listing_id="99999999-9999-9999-9999-999999999999",
             mode=body.mode,
             status=status,
-            product_id=None,
+            product_id=body.product_id,
             product_status=None,
             commission=None,
         )
@@ -330,26 +351,25 @@ def _stub_listing_creation(
 # --- handoff: the draft -> listing translation ------------------------------
 def test_handoff_never_publishes() -> None:
     request = handoff.build_listing_request(
-        {"title": "Fridge", "price_ngwee": 350_000, "condition": "new", "stock_mode": "always"}
+        {"title": "Fridge", "price_ngwee": 350_000, "condition": "new", "stock_mode": "always"},
+        product_id=PRODUCT_ID,
     )
     assert request.publish is False
-    assert request.mode == "quick_list"
+    assert request.mode == "attach"
+    assert request.product_id == PRODUCT_ID
+    assert request.product_class == "A"
 
 
 def test_handoff_refuses_used_condition() -> None:
     """A used item must not be silently relabelled "refurbished" for buyers."""
     with pytest.raises(handoff.DraftNotSubmittable) as exc:
-        handoff.build_listing_request(
-            {"title": "Fridge", "price_ngwee": 1000, "condition": "used"}
-        )
+        handoff.build_listing_request({"title": "Fridge", "price_ngwee": 1000, "condition": "used"})
     assert exc.value.details["reason"] == "unsupported_condition"
 
 
 def test_handoff_refuses_zero_price() -> None:
     with pytest.raises(handoff.DraftNotSubmittable) as exc:
-        handoff.build_listing_request(
-            {"title": "Fridge", "price_ngwee": 0, "condition": "new"}
-        )
+        handoff.build_listing_request({"title": "Fridge", "price_ngwee": 0, "condition": "new"})
     assert exc.value.details["reason"] == "invalid_price"
 
 
@@ -389,29 +409,31 @@ def test_handoff_tracked_stock_carries_quantity() -> None:
             "condition": "new",
             "stock_mode": "tracked",
             "quantity": 4,
-        }
+        },
+        product_id=PRODUCT_ID,
     )
     assert request.stock_mode == "tracked"
     assert request.stock_qty == 4
 
 
-def test_handoff_made_to_order_maps_to_always_available() -> None:
-    request = handoff.build_listing_request(
-        {
-            "title": "Cake",
-            "price_ngwee": 25_000,
-            "condition": "new",
-            "stock_mode": "made_to_order",
-        }
-    )
-    assert request.stock_mode == "always_available"
-    assert request.stock_qty is None
+def test_handoff_made_to_order_is_not_silently_reclassified() -> None:
+    with pytest.raises(handoff.DraftNotSubmittable) as exc:
+        handoff.build_listing_request(
+            {
+                "title": "Cake",
+                "price_ngwee": 25_000,
+                "condition": "new",
+                "stock_mode": "made_to_order",
+            },
+            product_id=PRODUCT_ID,
+        )
+    assert exc.value.details["reason"] == "unsupported_mapping"
 
 
 def test_handoff_preserves_exact_ngwee() -> None:
     """No rounding, no float, no currency maths anywhere in the handoff."""
     request = handoff.build_listing_request(
-        {"title": "Fridge", "price_ngwee": 123_456_789, "condition": "new"}
+        {"title": "Fridge", "price_ngwee": 123_456_789, "condition": "new"}, product_id=PRODUCT_ID
     )
     assert request.price_ngwee == 123_456_789
 
@@ -494,9 +516,7 @@ def test_valid_link_for_another_vendors_session_still_403s(
     wrapper.client = fake
     token, _ = deeplink.mint(wrapper, session_id=OTHER_SESSION_ID)
 
-    response = client.post(
-        "/vendor/intake/links/redeem", headers=_headers(), json={"token": token}
-    )
+    response = client.post("/vendor/intake/links/redeem", headers=_headers(), json={"token": token})
     assert response.status_code == 403
 
 
@@ -509,9 +529,7 @@ def test_redeeming_own_link_returns_the_session(
     wrapper.client = fake
     token, _ = deeplink.mint(wrapper, session_id=SESSION_ID)
 
-    response = client.post(
-        "/vendor/intake/links/redeem", headers=_headers(), json={"token": token}
-    )
+    response = client.post("/vendor/intake/links/redeem", headers=_headers(), json={"token": token})
     assert response.status_code == 200
     assert response.json()["id"] == SESSION_ID
 
@@ -630,7 +648,9 @@ def test_submit_creates_a_draft_listing_and_advances(
     captured = _stub_listing_creation(monkeypatch)
 
     response = client.post(
-        f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers()
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
     )
     assert response.status_code == 200
     body = response.json()
@@ -640,6 +660,8 @@ def test_submit_creates_a_draft_listing_and_advances(
 
     # The request handed to the shared seam must never ask to publish.
     assert captured["body"].publish is False
+    assert captured["body"].mode == "attach"
+    assert captured["body"].product_id == PRODUCT_ID
     assert captured["vendor_id"] == VENDOR_ID
 
     session = fake.table("intake_sessions").rows[0]
@@ -655,8 +677,16 @@ def test_submit_is_idempotent(
     _stub_caps(monkeypatch)
     _stub_listing_creation(monkeypatch)
 
-    first = client.post(f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers())
-    second = client.post(f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers())
+    first = client.post(
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
+    )
+    second = client.post(
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
+    )
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -674,7 +704,9 @@ def test_submit_blocked_by_kyc_listing_cap(
     captured = _stub_listing_creation(monkeypatch)
 
     response = client.post(
-        f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers()
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
     )
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "listing_cap_exceeded"
@@ -691,7 +723,9 @@ def test_submit_requires_ready_state(
     _stub_listing_creation(monkeypatch)
 
     response = client.post(
-        f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers()
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
     )
     assert response.status_code == 409
 
@@ -706,7 +740,9 @@ def test_submit_refuses_when_seam_returns_active(
     _stub_listing_creation(monkeypatch, status="active")
 
     response = client.post(
-        f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers()
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
     )
     assert response.status_code == 500
 
@@ -720,7 +756,9 @@ def test_submit_of_used_condition_draft_is_refused(
     _stub_listing_creation(monkeypatch)
 
     response = client.post(
-        f"/vendor/intake/sessions/{SESSION_ID}/submit", headers=_headers()
+        f"/vendor/intake/sessions/{SESSION_ID}/submit",
+        headers=_headers(),
+        json={"product_id": PRODUCT_ID},
     )
     assert response.status_code == 422
     assert response.json()["error"]["details"]["reason"] == "unsupported_condition"

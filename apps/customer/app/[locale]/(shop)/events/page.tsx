@@ -1,5 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
+import { eventCategoryNodes } from "@vergeo/ui/src/category-selection-data";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
@@ -10,13 +11,13 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
+import { DateFilterChips } from "../_components/events/date-filter-chips";
+import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {
-  DateFilterChips,
   EVENT_CATEGORIES,
   type EventCategory,
   type EventDateWindow,
-} from "../_components/events/date-filter-chips";
-import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
+} from "../_components/events/event-taxonomy";
 
 import type { Metadata } from "next";
 
@@ -34,28 +35,54 @@ type PageProps = {
   searchParams: Promise<{
     date_window?: string;
     category?: string;
+    on_date?: string;
+    city?: string;
+    neighbourhood?: string;
+    lat?: string;
+    lng?: string;
   }>;
 };
 
 type EventsTranslator = {
+  has(key: string): boolean;
   (key: string, values?: Record<string, string | number>): string;
 };
 
 function parseDateWindow(value: string | undefined): EventDateWindow {
-  if (value === "this_weekend" || value === "all") {
+  if (
+    value === "this_weekend" ||
+    value === "next_week" ||
+    value === "next_month" ||
+    value === "all"
+  ) {
     return value;
   }
   return "tonight";
+}
+
+function parseOnDate(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
 function parseCategory(value: string | undefined): EventCategory | null {
   if (!value) {
     return null;
   }
-  if ((EVENT_CATEGORIES as readonly string[]).includes(value)) {
-    return value as EventCategory;
+  return value;
+}
+
+function parseCoord(value: string | undefined, min: number, max: number): number | null {
+  if (!value) {
+    return null;
   }
-  return null;
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return null;
+  }
+  return parsed;
 }
 
 function formatFeaturedEventDate(iso: string | null, locale: string): string | null {
@@ -87,13 +114,30 @@ async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
 async function fetchEvents(params: {
   dateWindow: EventDateWindow;
   category: EventCategory | null;
+  onDate: string | null;
+  city: string;
+  neighbourhood: string;
+  lat: number | null;
+  lng: number | null;
 }): Promise<EventsApiResponse | null> {
   const search = new URLSearchParams();
-  if (params.dateWindow !== "all") {
+  if (params.onDate) {
+    search.set("on_date", params.onDate);
+  } else if (params.dateWindow !== "all") {
     search.set("date_window", params.dateWindow);
   }
   if (params.category) {
     search.set("category", params.category);
+  }
+  if (params.city) {
+    search.set("city", params.city);
+  }
+  if (params.neighbourhood) {
+    search.set("neighbourhood", params.neighbourhood);
+  }
+  if (params.lat !== null && params.lng !== null) {
+    search.set("lat", String(params.lat));
+    search.set("lng", String(params.lng));
   }
 
   const suffix = search.toString() ? `?${search.toString()}` : "";
@@ -124,7 +168,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const query = await searchParams;
   const t = await getEventsTranslator(locale);
   const hasFilters =
-    (query.date_window !== undefined && query.date_window !== "tonight") || Boolean(query.category);
+    (query.date_window !== undefined && query.date_window !== "tonight") ||
+    Boolean(query.category) ||
+    Boolean(query.on_date) ||
+    Boolean(query.city) ||
+    Boolean(query.neighbourhood) ||
+    Boolean(query.lat);
 
   return {
     title: t("browse.title"),
@@ -155,18 +204,60 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   }) as EventsTranslator;
   const dateWindow = parseDateWindow(query.date_window);
   const category = parseCategory(query.category);
-  const data = await fetchEvents({ dateWindow, category });
+  const onDate = parseOnDate(query.on_date);
+  const city = (query.city ?? "").trim();
+  const neighbourhood = (query.neighbourhood ?? "").trim();
+  const lat = parseCoord(query.lat, -90, 90);
+  const lng = parseCoord(query.lng, -180, 180);
+  const data = await fetchEvents({
+    dateWindow,
+    category,
+    onDate,
+    city,
+    neighbourhood,
+    lat,
+    lng,
+  });
   const items = data?.items ?? [];
   const calendarDates = data?.calendar_dates ?? [];
+  const apiCategories = data?.categories?.length ? data.categories : [...EVENT_CATEGORIES];
+  let categoryTaxonomy: { slug: string; parent_slug: string | null; label_key: string }[] = [];
+  try {
+    const taxonomyUrl = absoluteApiUrl("/categories/events");
+    if (!taxonomyUrl) throw new Error("API URL unavailable");
+    const response = await fetch(taxonomyUrl, { next: { revalidate: 60 } });
+    if (response.ok) {
+      const rows: unknown = await response.json();
+      if (Array.isArray(rows))
+        categoryTaxonomy = rows.filter(
+          (row): row is { slug: string; parent_slug: string | null; label_key: string } =>
+            Boolean(row) &&
+            typeof row.slug === "string" &&
+            (row.parent_slug === null || typeof row.parent_slug === "string") &&
+            typeof row.label_key === "string",
+        );
+    }
+  } catch {
+    /* Existing category chips remain available when taxonomy is unavailable. */
+  }
   const featuredEvent = items[0];
   const remainingEvents = items.slice(1);
 
   const filterLabels = {
     tonight: t("filters.tonight"),
     thisWeekend: t("filters.thisWeekend"),
+    nextWeek: t("filters.nextWeek"),
+    nextMonth: t("filters.nextMonth"),
     allDates: t("filters.allDates"),
     categoryLabel: t("filters.categoryLabel"),
+    subcategoryLabel: t("filters.subcategoryLabel"),
     calendarLabel: t("browse.calendarLabel"),
+    cityLabel: t("filters.cityLabel"),
+    cityPlaceholder: t("filters.cityPlaceholder"),
+    neighbourhoodLabel: t("filters.neighbourhoodLabel"),
+    neighbourhoodPlaceholder: t("filters.neighbourhoodPlaceholder"),
+    nearMe: t("filters.nearMe"),
+    nearMeDenied: t("filters.nearMeDenied"),
     categories: {
       all: t("categories.all"),
       workshops: t("categories.workshops"),
@@ -175,6 +266,23 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
       "cultural-arts": t("categories.cultural-arts"),
       "lifestyle-community": t("categories.lifestyle-community"),
       "free-rsvp": t("categories.free-rsvp"),
+      music: t("categories.music"),
+      "comedy-theatre-parent": t("categories.comedy-theatre-parent"),
+      sports: t("categories.sports"),
+      "conferences-workshops": t("categories.conferences-workshops"),
+      family: t("categories.family"),
+      religious: t("categories.religious"),
+      markets: t("categories.markets"),
+      exhibitions: t("categories.exhibitions"),
+      nightlife: t("categories.nightlife"),
+      community: t("categories.community"),
+      "private-events": t("categories.private-events"),
+      concerts: t("categories.concerts"),
+      festivals: t("categories.festivals"),
+      gospel: t("categories.gospel"),
+      "stand-up": t("categories.stand-up"),
+      football: t("categories.football"),
+      church: t("categories.church"),
     },
   };
 
@@ -206,6 +314,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
               <div className="flex flex-wrap items-center gap-4">
                 {featuredEvent.is_sold_out ? (
                   <Badge variant="sold_out" label={t("browse.soldOut")} />
+                ) : featuredEvent.is_selling_fast ? (
+                  <Badge variant="selling_fast" label={t("browse.sellingFast")} />
                 ) : featuredEvent.is_free ? (
                   <Badge variant="free" label={t("browse.free")} />
                 ) : featuredEvent.min_price_ngwee ? (
@@ -250,13 +360,19 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
           <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-1 md:p-6">
+        <div>
           <Suspense fallback={null}>
             <DateFilterChips
               labels={filterLabels}
               calendarDates={calendarDates}
+              categories={apiCategories}
+              taxonomy={eventCategoryNodes(categoryTaxonomy, t)}
               activeDateWindow={dateWindow}
+              activeOnDate={onDate}
               activeCategory={category}
+              activeCity={city}
+              activeNeighbourhood={neighbourhood}
+              nearMeActive={lat !== null && lng !== null}
             />
           </Suspense>
         </div>
@@ -271,6 +387,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
               labels={{
                 free: t("browse.free"),
                 soldOut: t("browse.soldOut"),
+                sellingFast: t("browse.sellingFast"),
                 viewEvent: t("browse.viewEvent"),
                 capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
                 verified: t("browse.verified"),

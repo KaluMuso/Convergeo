@@ -15,6 +15,7 @@ vi.mock("@supabase/ssr", () => ({
 
 describe("createBrowserClient", () => {
   beforeEach(() => {
+    window.history.replaceState({}, "", "/");
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     resetBrowserClientForTests();
@@ -34,8 +35,33 @@ describe("createBrowserClient", () => {
     expect(createSupabaseBrowserClient).toHaveBeenCalledWith(
       "https://example.supabase.co",
       "anon-key",
+      { auth: { detectSessionInUrl: true } },
     );
     expect(createSupabaseBrowserClient).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    "/en/login?code=fixture",
+    "/fr/signup?code=fixture",
+    "/bem/reset-password/confirm?code=fixture",
+  ])("leaves one-time PKCE exchange to the callback route at %s", (path) => {
+    window.history.replaceState({}, "", path);
+    createBrowserClient();
+    expect(createSupabaseBrowserClient).toHaveBeenCalledWith(
+      "https://example.supabase.co",
+      "anon-key",
+      { auth: { detectSessionInUrl: false } },
+    );
+  });
+
+  it("keeps automatic handling at the Site URL for email confirmation", () => {
+    window.history.replaceState({}, "", "/?code=fixture");
+    createBrowserClient();
+    expect(createSupabaseBrowserClient).toHaveBeenCalledWith(
+      "https://example.supabase.co",
+      "anon-key",
+      { auth: { detectSessionInUrl: true } },
+    );
   });
 
   it("throws when public env vars are missing", () => {

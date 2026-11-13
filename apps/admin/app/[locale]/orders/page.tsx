@@ -1,5 +1,8 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import Link from "next/link";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 import { OrderSearch } from "./_components/OrderSearch";
 
@@ -14,13 +17,19 @@ export function generateStaticParams() {
 export default async function OrdersPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.orders");
+  const t = await getAdminTranslator(locale, "admin.orders");
 
   return (
     <div className="space-y-4">
       <header className="space-y-1">
         <h1 className="font-serif text-xl text-text">{t("title")}</h1>
         <p className="text-sm text-muted">{t("subtitle")}</p>
+        <Link
+          href={`/${locale}/orders/dispatch`}
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+        >
+          {t("openDispatchBoard")}
+        </Link>
       </header>
       <OrderSearch locale={locale} />
     </div>

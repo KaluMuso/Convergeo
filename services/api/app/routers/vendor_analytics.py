@@ -2,11 +2,13 @@
 
 Numbers reconcile with orders truth: sales/orders are derived from the vendor's
 own `orders` + `order_items` rows (cancelled excluded). The "cart activity"
-metric (API field `views`, shown in the UI as "Cart activity") counts distinct
+metric (legacy API fields `views_by_day` / `views_total`) counts distinct
 add-to-cart / checkout-start `funnel_events` whose cart snapshot references one of
 the vendor's listings — buying-intent activity, not raw storefront impressions,
-so `conversion` is a cart-to-order rate. All money is integer ngwee; the client
-renders via `formatK`.
+not unique visitors or matched order-producing journeys. The order/activity ratio
+compares independent window totals, can exceed 100, and is not a conversion rate.
+Legacy fields keep their numeric values; explicit fields describe the same data.
+All money is integer ngwee; the client renders via `formatK`.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from app.routers.vendor_orders import _load_vendor_for_owner
 from app.schemas.base import StrictModel
 from app.services.orders.audit import run_sql_script
 from fastapi import APIRouter, Depends, Query
+from pydantic import Field
 
 router = APIRouter(prefix="/vendor/analytics", tags=["vendor-analytics"])
 
@@ -46,9 +49,29 @@ class TopListing(StrictModel):
 
 
 class ConversionHint(StrictModel):
+    """Deprecated field names; values retained for older consumers."""
+
     orders_total: int
-    views_total: int
-    conversion_pct: float
+    views_total: int = Field(
+        description="Distinct cart_add/checkout_start event rows, not listing views.",
+        deprecated=True,
+    )
+    conversion_pct: float = Field(
+        description="Orders per 100 activity events, not conversion; legacy zero if none.",
+        deprecated=True,
+    )
+
+
+class OrderActivityRatio(StrictModel):
+    """Independent totals in the UTC window, not a matched conversion cohort."""
+
+    orders_total: int = Field(description="Non-cancelled vendor orders created in the window.")
+    cart_activity_events_total: int = Field(
+        description="Distinct cart_add/checkout_start rows referencing a vendor listing."
+    )
+    orders_per_100_cart_activity_events: float | None = Field(
+        description="100 * orders / activity events; may exceed 100; null if no events."
+    )
 
 
 class VendorAnalyticsResponse(StrictModel):
@@ -56,9 +79,14 @@ class VendorAnalyticsResponse(StrictModel):
     days: list[str]
     sales_ngwee_by_day: list[int]
     orders_by_day: list[int]
-    views_by_day: list[int]
+    cart_activity_events_by_day: list[int]
+    views_by_day: list[int] = Field(
+        description="Legacy alias of cart_activity_events_by_day; not listing views.",
+        deprecated=True,
+    )
     top_listings: list[TopListing]
-    conversion_hint: ConversionHint
+    order_activity_ratio: OrderActivityRatio
+    conversion_hint: ConversionHint = Field(deprecated=True)
 
 
 class VendorAnalyticsSummary(StrictModel):
@@ -96,10 +124,7 @@ def _safe_vendor_uuid(vendor_id: str) -> str:
 
 
 def _window_start_sql(window: int) -> str:
-    return (
-        "(date_trunc('day', timezone('utc', now())) "
-        f"- interval '{window - 1} days')"
-    )
+    return f"(date_trunc('day', timezone('utc', now())) - interval '{window - 1} days')"
 
 
 def _run(script: str, *, what: str) -> list[str]:
@@ -114,9 +139,7 @@ def _run(script: str, *, what: str) -> list[str]:
     return result.rows
 
 
-def _sales_orders_by_day(
-    vendor_sql: str, window: int
-) -> tuple[list[str], list[int], list[int]]:
+def _sales_orders_by_day(vendor_sql: str, window: int) -> tuple[list[str], list[int], list[int]]:
     start = _window_start_sql(window)
     script = f"""
 WITH days AS (
@@ -161,7 +184,7 @@ ORDER BY d.day ASC;
     return days, sales, orders
 
 
-def _views_by_day(vendor_sql: str, window: int) -> list[int]:
+def _cart_activity_events_by_day(vendor_sql: str, window: int) -> list[int]:
     start = _window_start_sql(window)
     script = f"""
 WITH days AS (
@@ -185,20 +208,20 @@ ev AS (
     AND fe.created_at >= {start}
 ),
 agg AS (
-  SELECT ev.day, count(*) AS views FROM ev GROUP BY ev.day
+  SELECT ev.day, count(*) AS activity_events FROM ev GROUP BY ev.day
 )
-SELECT to_char(d.day, 'YYYY-MM-DD'), coalesce(agg.views, 0)::text
+SELECT to_char(d.day, 'YYYY-MM-DD'), coalesce(agg.activity_events, 0)::text
 FROM days d
 LEFT JOIN agg ON agg.day = d.day
 ORDER BY d.day ASC;
 """
-    views: list[int] = []
-    for row in _run(script, what="views"):
+    activity_events: list[int] = []
+    for row in _run(script, what="cart/checkout activity events"):
         parts = row.split("|")
         if len(parts) < 2:
             continue
-        views.append(int(parts[1]))
-    return views
+        activity_events.append(int(parts[1]))
+    return activity_events
 
 
 def _top_listings(vendor_sql: str, window: int) -> list[TopListing]:
@@ -277,13 +300,13 @@ def compute_vendor_analytics(vendor_id: str, window: int) -> VendorAnalyticsResp
     """Assemble vendor-scoped analytics; empty history yields zero-filled series."""
     vendor_sql = _safe_vendor_uuid(vendor_id)
     days, sales, orders = _sales_orders_by_day(vendor_sql, window)
-    views = _views_by_day(vendor_sql, window)
+    activity_events = _cart_activity_events_by_day(vendor_sql, window)
     top = _top_listings(vendor_sql, window)
 
     orders_total = sum(orders)
-    views_total = sum(views)
-    conversion_pct = (
-        round(100.0 * orders_total / views_total, 1) if views_total else 0.0
+    activity_events_total = sum(activity_events)
+    orders_per_100_events = (
+        round(100.0 * orders_total / activity_events_total, 1) if activity_events_total else None
     )
 
     return VendorAnalyticsResponse(
@@ -291,12 +314,18 @@ def compute_vendor_analytics(vendor_id: str, window: int) -> VendorAnalyticsResp
         days=days,
         sales_ngwee_by_day=sales,
         orders_by_day=orders,
-        views_by_day=views,
+        cart_activity_events_by_day=activity_events,
+        views_by_day=activity_events,
         top_listings=top,
+        order_activity_ratio=OrderActivityRatio(
+            orders_total=orders_total,
+            cart_activity_events_total=activity_events_total,
+            orders_per_100_cart_activity_events=orders_per_100_events,
+        ),
         conversion_hint=ConversionHint(
             orders_total=orders_total,
-            views_total=views_total,
-            conversion_pct=conversion_pct,
+            views_total=activity_events_total,
+            conversion_pct=orders_per_100_events if orders_per_100_events is not None else 0.0,
         ),
     )
 
@@ -324,6 +353,7 @@ def get_vendor_analytics(
 
 __all__ = [
     "ConversionHint",
+    "OrderActivityRatio",
     "TopListing",
     "VendorAnalyticsResponse",
     "VendorAnalyticsSummary",

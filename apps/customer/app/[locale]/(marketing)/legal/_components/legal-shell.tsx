@@ -44,9 +44,9 @@ export function LegalShell({
   afterSections,
 }: LegalShellProps) {
   return (
-    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-8 space-y-4">
-        <h1 className="font-display text-h1 text-display-ink">{title}</h1>
+    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-10 lg:py-16">
+      <header className="mb-10 space-y-4 border-b border-border pb-8">
+        <h1 className="font-display text-h1 font-bold text-display-ink">{title}</h1>
         <p className="text-sm text-text-2">{updatedLabel}</p>
         <aside
           className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-text"
@@ -59,11 +59,9 @@ export function LegalShell({
       {sections.length > 0 ? (
         <nav
           aria-label={typeof tocLabel === "string" ? tocLabel : undefined}
-          className="mb-8 rounded-lg border border-border bg-bg-2 p-4"
+          className="mb-10 rounded-lg border border-border bg-surface p-5"
         >
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-2">
-            {tocLabel}
-          </h2>
+          <h2 className="mb-3 font-display text-body font-semibold text-text">{tocLabel}</h2>
           <ul className="flex flex-col gap-2 text-sm">
             {sections.map((section) => (
               <li key={section.id}>
@@ -82,8 +80,10 @@ export function LegalShell({
       <article className="space-y-10">
         {sections.map((section) => (
           <section key={section.id} id={section.id} className="scroll-mt-24 space-y-3">
-            <h2 className="font-display text-h2 text-display-ink">{section.heading}</h2>
-            <div className="text-body leading-relaxed text-text">{section.body}</div>
+            <h2 className="font-display text-h2 font-semibold text-display-ink">
+              {section.heading}
+            </h2>
+            <div className="max-w-prose text-body leading-relaxed text-text">{section.body}</div>
           </section>
         ))}
         {afterSections}

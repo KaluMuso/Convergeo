@@ -3,16 +3,19 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 import {
   CartNavTrigger,
   MiniCartDrawer,
   closeMiniCart,
   openMiniCart,
+  resetCartClientForTests,
   setLastAddedMessage,
   setStoreStateForTests,
 } from "./mini-cart-drawer";
@@ -24,7 +27,7 @@ vi.mock("@vergeo/auth/browser-client-lazy", () => ({
 }));
 
 vi.mock("../../../../../lib/api-base-url", () => ({
-  getApiBaseUrl: () => "http://localhost:8000",
+  getApiBaseUrl: vi.fn(() => "http://localhost:8000"),
 }));
 
 vi.mock("next/link", () => ({
@@ -46,7 +49,6 @@ vi.mock("next/link", () => ({
 const labels = {
   title: checkoutMessages.cart.miniCartTitle,
   close: checkoutMessages.cart.miniCartClose,
-  itemCount: checkoutMessages.cart.itemCount,
   subtotal: checkoutMessages.cart.subtotal,
   total: checkoutMessages.cart.total,
   viewCart: checkoutMessages.cart.viewCart,
@@ -68,7 +70,22 @@ const labels = {
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
 };
 
+/**
+ * `cart.itemCount` is an ICU plural, so the drawer formats it itself rather than
+ * interpolating a template label. Mirror the shop layout, which puts the
+ * `checkout` namespace on the client provider.
+ */
+function renderInIntl(ui: React.ReactElement) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ checkout: checkoutMessages }}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
+
 beforeEach(() => {
+  resetCartClientForTests();
+  vi.mocked(getApiBaseUrl).mockReturnValue("http://localhost:8000");
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
@@ -104,7 +121,7 @@ describe("MiniCartDrawer a11y", () => {
     setLastAddedMessage("Added to cart");
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(screen.getByTestId("mini-cart-live")).toHaveTextContent("Added to cart");
     expect(screen.getByRole("dialog", { name: labels.title })).toBeInTheDocument();
@@ -123,15 +140,24 @@ describe("MiniCartDrawer a11y", () => {
     );
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
     expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
   });
 
+  it("does not fetch a relative cart URL when the API origin is unavailable", async () => {
+    vi.mocked(getApiBaseUrl).mockReturnValue("");
+    openMiniCart();
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
+
+    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("CartNavTrigger opens the drawer with a 44px target", async () => {
     const user = userEvent.setup();
-    render(
+    renderInIntl(
       <>
         <CartNavTrigger labels={{ openCart: labels.openCart }} cartIcon={<span>Cart</span>} />
         <MiniCartDrawer locale="en" labels={labels} />
@@ -172,7 +198,7 @@ describe("MiniCartDrawer a11y", () => {
     );
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(await screen.findByTestId("mini-cart-lead-time-listing-1")).toHaveTextContent(
       "Made to order · ready in 10 days",

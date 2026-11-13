@@ -15,12 +15,16 @@ from typing import Any, Literal, Protocol, cast
 
 from app.errors import AppError
 from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.payouts.gate import REFUND_UNAVAILABLE_PAYOUTS_DISABLED, payouts_enabled
 from app.services.refunds.execute import RefundExecutionResult, execute_refund
 from app.services.refunds.execute import ServiceRoleClient as RefundServiceClient
 from app.services.refunds.payout_port import CustomerRail
 from app.services.stock.claim import sql_int, sql_uuid
 
-SOURCE_ORGANISER_CANCEL = "organiser_cancel"
+RefundSource = Literal["organiser_cancel", "buyer_cancel", "reschedule_opt_out"]
+SOURCE_ORGANISER_CANCEL: RefundSource = "organiser_cancel"
+SOURCE_BUYER_CANCEL: RefundSource = "buyer_cancel"
+SOURCE_RESCHEDULE_OPT_OUT: RefundSource = "reschedule_opt_out"
 SOURCE_KEY_V1 = "v1"
 MAX_JOB_ATTEMPTS = 5
 RETRY_BACKOFF_BASE_SECONDS = 120
@@ -86,14 +90,23 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     return parsed.astimezone(UTC)
 
 
-def _policy_snapshot(*, event_id: str, order_id: str) -> dict[str, Any]:
-    return {
-        "reason": "event_cancelled",
+def _policy_snapshot(
+    *,
+    event_id: str,
+    order_id: str,
+    source: str = SOURCE_ORGANISER_CANCEL,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    snapshot: dict[str, Any] = {
+        "reason": source,
         "lane": 1,
         "event_id": event_id,
         "order_id": order_id,
-        "refund_policy": "full_ticket_refund",
+        "refund_policy": "full_ticket_refund" if source != SOURCE_BUYER_CANCEL else source,
     }
+    if extra:
+        snapshot.update(extra)
+    return snapshot
 
 
 def order_ticket_refund_amount_ngwee(order_id: str) -> int:
@@ -117,6 +130,14 @@ SELECT (
     ),
     0
   )
+  + coalesce(
+    (
+      SELECT o.platform_fee_ngwee::bigint
+      FROM public.orders o
+      WHERE o.id = {order_sql}
+    ),
+    0
+  )
 )::text;
 """
     result = run_sql_script(script)
@@ -125,14 +146,17 @@ SELECT (
     return int(result.rows[0])
 
 
-def enqueue_organiser_cancel_refund_job(
+def enqueue_event_refund_job(
     *,
     event_id: str,
     order_id: str,
     customer_id: str,
     amount_ngwee: int,
+    source: RefundSource,
+    source_key: str = SOURCE_KEY_V1,
+    extra_policy: dict[str, Any] | None = None,
 ) -> bool:
-    """Idempotently queue a cancellation refund job for one paid ticket order."""
+    """Idempotently queue a refund job for one paid ticket order."""
     if amount_ngwee <= 0:
         return False
 
@@ -140,9 +164,11 @@ def enqueue_organiser_cancel_refund_job(
     order_sql = sql_uuid(order_id, "order_id")
     customer_sql = sql_uuid(customer_id, "customer_id")
     amount_sql = sql_int(amount_ngwee, "amount_ngwee")
-    source_sql = sql_literal(SOURCE_ORGANISER_CANCEL)
-    source_key_sql = sql_literal(SOURCE_KEY_V1)
-    policy_json = json.dumps(_policy_snapshot(event_id=event_id, order_id=order_id))
+    source_sql = sql_literal(source)
+    source_key_sql = sql_literal(source_key)
+    policy_json = json.dumps(
+        _policy_snapshot(event_id=event_id, order_id=order_id, source=source, extra=extra_policy)
+    )
     policy_sql = sql_literal(policy_json) + "::jsonb"
 
     script = f"""
@@ -160,6 +186,23 @@ RETURNING id::text;
     if not result.ok:
         raise RuntimeError(f"enqueue event refund job failed: {result.error}")
     return bool(result.rows)
+
+
+def enqueue_organiser_cancel_refund_job(
+    *,
+    event_id: str,
+    order_id: str,
+    customer_id: str,
+    amount_ngwee: int,
+) -> bool:
+    """Idempotently queue a cancellation refund job for one paid ticket order."""
+    return enqueue_event_refund_job(
+        event_id=event_id,
+        order_id=order_id,
+        customer_id=customer_id,
+        amount_ngwee=amount_ngwee,
+        source=SOURCE_ORGANISER_CANCEL,
+    )
 
 
 def load_customer_refund_destination(
@@ -408,6 +451,12 @@ def process_event_refund_job(
     if next_retry is not None and effective_now < next_retry:
         return EventRefundJobProcessResult(job_id, "skipped", "backoff")
 
+    # Payout kill switch: executing the job writes refund ledger legs and a pending
+    # customer payout. Leave the job untouched (queued, attempts not bumped) so it
+    # runs once payouts are enabled — never park it in manual_review/dead for this.
+    if not payouts_enabled():
+        return EventRefundJobProcessResult(job_id, "skipped", "payouts_disabled")
+
     if status == "queued":
         if not _claim_job(job_id, now=effective_now):
             return EventRefundJobProcessResult(job_id, "skipped", "claim_failed")
@@ -425,6 +474,18 @@ def process_event_refund_job(
     phone, rail = destination
     idempotency_key = f"evt-refund-{job['event_id']}-{job['order_id']}"
 
+    # C4: the job amount is the policy-banded refund (full / minus admin fee / 50%)
+    # computed at enqueue time, already inclusive of any buyer-paid platform fee and
+    # delivery. Pass it as the whole refund (delivery override 0) so execute_refund
+    # never falls back to refunding the full order.
+    try:
+        job_amount_ngwee = int(job.get("amount_ngwee") or "0")
+    except ValueError:
+        job_amount_ngwee = 0
+    if job_amount_ngwee <= 0:
+        _update_job(job_id, status="manual_review", last_error="invalid_job_amount")
+        return EventRefundJobProcessResult(job_id, "manual_review", "invalid_job_amount")
+
     try:
         result: RefundExecutionResult = execute_refund(
             service_client=cast(RefundServiceClient, service_client),
@@ -433,12 +494,19 @@ def process_event_refund_job(
             customer_rail=rail,
             customer_momo=phone,
             idempotency_key=idempotency_key,
+            item_ngwee_override=job_amount_ngwee,
+            delivery_fee_ngwee_override=0,
         )
     except AppError as exc:
         code = str(exc.code or "refund_failed")
         if code in {"partial_release_refund_blocked", "cod_not_collected"}:
             _update_job(job_id, status="manual_review", last_error=code)
             return EventRefundJobProcessResult(job_id, "manual_review", code)
+        if code == REFUND_UNAVAILABLE_PAYOUTS_DISABLED:
+            # Switch flipped off between the pre-check and execute: re-queue for a
+            # later sweep (no ledger/refund/payout rows were written).
+            _update_job(job_id, status="queued", last_error=code)
+            return EventRefundJobProcessResult(job_id, "skipped", "payouts_disabled")
         if code == "release_in_progress":
             attempts = int(job.get("attempts") or "0")
             if attempts >= MAX_JOB_ATTEMPTS:

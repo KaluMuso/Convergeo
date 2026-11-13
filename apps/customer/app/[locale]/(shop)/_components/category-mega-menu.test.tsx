@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildCategoryTree,
@@ -12,7 +12,10 @@ import {
   type NavCategory,
 } from "./category-mega-menu";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const labels = {
   trigger: "All Categories",
@@ -43,6 +46,41 @@ function isFocusInMegaMenuPanel(element: Element | null): boolean {
 }
 
 describe("CategoryMegaMenu", () => {
+  it("clamps the panel to the viewport and repositions on resize", async () => {
+    const user = userEvent.setup();
+    const viewport = vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(1024);
+    render(
+      <CategoryMegaMenu
+        locale="en"
+        labels={labels}
+        loadCategories={() => Promise.resolve(tree)}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: featured,
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /all categories/i });
+    const container = trigger.parentElement!;
+    const triggerRect = vi
+      .spyOn(container, "getBoundingClientRect")
+      .mockReturnValue({ left: 372 } as DOMRect);
+
+    await user.click(trigger);
+    const panel = screen.getByRole("dialog", { name: labels.panelAria });
+    expect(panel).toHaveStyle({ left: "-196px" });
+
+    viewport.mockReturnValue(1366);
+    triggerRect.mockReturnValue({ left: 400 } as DOMRect);
+    fireEvent(window, new Event("resize"));
+    expect(panel).toHaveStyle({ left: "0px" });
+  });
+
   it("toggles the disclosure and lazily loads categories on first open", async () => {
     const user = userEvent.setup();
     render(

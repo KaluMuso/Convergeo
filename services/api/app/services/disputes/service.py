@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
 from app.errors import AppError
@@ -20,12 +21,26 @@ from app.services.disputes.state import (
     write_dispute_audit_log,
 )
 from app.services.escrow.release import evaluate_and_release
+from app.services.events.disputes_policy import (
+    MISREPRESENTATION_KIND,
+    assert_event_dispute_openable,
+    organiser_respond_by,
+)
+from app.services.payouts.gate import DISPUTE_REFUND_UNAVAILABLE_PAYOUTS_DISABLED
 from app.services.refunds.config import load_restocking_fee_bps
-from app.services.refunds.execute import execute_refund
+from app.services.refunds.execute import ensure_refund_allowed, execute_refund
 from app.services.refunds.math import compute_lane2_refund, restocking_fee_ngwee
+from app.services.stock.claim import run_sql_script, sql_uuid
 
 CustomerRail = Literal["mtn", "airtel", "zamtel"]
 ResolveDecision = Literal["resolved_refund", "resolved_release", "resolved_partial"]
+
+# Decisions that create a customer refund (ledger drain + customer payout row),
+# keyed to the stable execute_refund idempotency key for that dispute.
+_REFUND_IDEMPOTENCY_KEYS: dict[ResolveDecision, str] = {
+    "resolved_refund": "dispute-{dispute_id}-refund",
+    "resolved_partial": "dispute-{dispute_id}-partial",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +133,42 @@ def _load_order_row(service_client: ServiceRoleClient, order_id: str) -> dict[st
     return row
 
 
+def _load_ticket_event_end(order_id: str) -> tuple[str, datetime]:
+    order_sql = sql_uuid(order_id, "order_id")
+    result = run_sql_script(
+        f"""
+SELECT e.id::text, max(ei.ends_at)::text
+FROM public.order_items oi
+JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+JOIN public.event_instances ei ON ei.id = oit.instance_id
+JOIN public.events e ON e.id = ei.event_id
+WHERE oi.order_id = {order_sql}
+GROUP BY e.id
+LIMIT 1;
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"event dispute lookup failed: {result.error}")
+    if not result.rows:
+        raise AppError(
+            code="event_dispute_not_ticket_order",
+            message="Event disputes can only be opened on ticket orders",
+            http_status=422,
+            details={"message_key": "events.disputes.errors.notTicketOrder"},
+        )
+    parts = result.rows[0].split("|", 1)
+    if len(parts) != 2 or not parts[1]:
+        raise AppError(
+            code="event_dispute_not_ticket_order",
+            message="Event disputes can only be opened on ticket orders",
+            http_status=422,
+        )
+    ends_at = datetime.fromisoformat(parts[1].replace("Z", "+00:00"))
+    if ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=UTC)
+    return parts[0], ends_at.astimezone(UTC)
+
+
 def _assert_customer_owns_order(order_row: dict[str, Any], customer_id: str) -> None:
     if str(order_row.get("customer_id")) != customer_id:
         raise AppError(code="not_found", message="Order not found", http_status=404)
@@ -203,6 +254,7 @@ def open_dispute(
     opener_user_id: str,
     evidence_paths: list[str] | None = None,
     note: str = "Customer opened dispute",
+    kind: str = "order",
 ) -> OpenDisputeResult:
     """Open a dispute for an order; idempotent when a non-terminal dispute already exists."""
     order_row = _load_order_row(service_client, order_id)
@@ -218,12 +270,18 @@ def open_dispute(
         )
 
     paths = list(evidence_paths or [])
-    insert_row = {
+    insert_row: dict[str, Any] = {
         "order_id": order_id,
         "opener_user_id": opener_user_id,
         "evidence_paths": paths,
         "status": DisputeStatus.OPEN.value,
+        "kind": kind if kind == MISREPRESENTATION_KIND else "order",
     }
+    if kind == MISREPRESENTATION_KIND:
+        event_id, ends_at = _load_ticket_event_end(order_id)
+        assert_event_dispute_openable(ends_at=ends_at, kind=kind, evidence_paths=paths)
+        insert_row["event_id"] = event_id
+        insert_row["organiser_respond_by"] = organiser_respond_by().isoformat()
     response = service_client.client.table("disputes").insert(insert_row).execute()
     row = _single_row(response)
     if row is None:
@@ -346,9 +404,7 @@ def resolve(
     # the payout reference and is backstopped by the refunds(order_id) partial unique
     # index (0032), so a retry collapses to one ledger drain + one payout.
     if (
-        resolve_transition(
-            from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN
-        )
+        resolve_transition(from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN)
         is None
     ):
         raise DisputeTransitionError(
@@ -359,6 +415,19 @@ def resolve(
         )
 
     order_id = snapshot.order_id
+    # Payout kill switch: a refund outcome (full or partial) creates ledger drains
+    # and a pending customer payout that the sweeper would send once payouts are
+    # enabled. Refuse BEFORE any write; release-to-vendor is unaffected.
+    refund_key = _REFUND_IDEMPOTENCY_KEYS.get(decision)
+    if refund_key is not None:
+        ensure_refund_allowed(
+            service_client,
+            order_id=order_id,
+            idempotency_key=refund_key.format(dispute_id=dispute_id),
+            surface="dispute_resolve",
+            code=DISPUTE_REFUND_UNAVAILABLE_PAYOUTS_DISABLED,
+        )
+
     if decision == "resolved_refund":
         execute_refund(
             service_client=service_client,
@@ -367,7 +436,9 @@ def resolve(
             customer_rail=customer_rail,
             customer_momo=customer_momo,
             dispute_id=dispute_id,
-            idempotency_key=f"dispute-{dispute_id}-refund",
+            idempotency_key=_REFUND_IDEMPOTENCY_KEYS["resolved_refund"].format(
+                dispute_id=dispute_id
+            ),
         )
     elif decision == "resolved_release":
         evaluate_and_release(service_client, order_id)
@@ -385,7 +456,9 @@ def resolve(
             customer_rail=customer_rail,
             customer_momo=customer_momo,
             dispute_id=dispute_id,
-            idempotency_key=f"dispute-{dispute_id}-partial",
+            idempotency_key=_REFUND_IDEMPOTENCY_KEYS["resolved_partial"].format(
+                dispute_id=dispute_id
+            ),
         )
         # Close the TOCTOU: execute_refund re-reads item/delivery/bps independently of
         # the back-solve snapshot. Assert the executed amount is exactly the admin
@@ -445,10 +518,7 @@ def list_vendor_disputes(
     vendor_id: str,
 ) -> list[DisputeRecord]:
     orders_response = (
-        service_client.client.table("orders")
-        .select("id")
-        .eq("vendor_id", vendor_id)
-        .execute()
+        service_client.client.table("orders").select("id").eq("vendor_id", vendor_id).execute()
     )
     order_ids = [str(row["id"]) for row in _rows(orders_response)]
     if not order_ids:

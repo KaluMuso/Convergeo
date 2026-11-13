@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Convergeo"
+    "name": "Convergeo",
+    "tagline": "赞比亚线上市集——托管担保购物"
   },
   "meta": {
     "defaultDescription": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
@@ -43,8 +44,7 @@
     "updateAction": "重新加载以更新"
   },
   "contact": {
-    "phone": "+260 97 XXX XX70",
-    "email": "Convergeozambia@gmail.com"
+    "email": "support@vergeo5.com"
   },
   "social": {
     "facebook": "https://www.facebook.com/",
@@ -59,5 +59,58 @@
     "instagramAria": "Convergeo 的 Instagram",
     "emailAria": "发送邮件给 Convergeo",
     "countryCode": "ZM"
+  },
+  "categorySelection": {
+    "category": "类别",
+    "subcategory": "子类别",
+    "placeholder": "选择类别",
+    "empty": "暂无可用类别。",
+    "unavailable": "此类别不可用。请选择可用类别。",
+    "loading": "正在加载类别…",
+    "error": "无法加载类别。请刷新后重试。"
+  },
+  "toast": {
+    "dismiss": "关闭通知",
+    "addedToCart": "已加入购物车",
+    "addedToCartDetail": "{name} 已在您的购物车中。",
+    "addToCartFailed": "无法加入购物车。请检查网络后重试。",
+    "wishlistAdded": "已加入心愿单",
+    "wishlistRemoved": "已从心愿单移除",
+    "linkCopied": "链接已复制",
+    "copyFailed": "无法复制链接",
+    "signedIn": "您已登录",
+    "signedOut": "您已退出登录",
+    "saved": "更改已保存",
+    "saveFailed": "无法保存更改，请重试。",
+    "uploaded": "上传完成",
+    "uploadFailed": "上传失败，请重试。",
+    "orderStatusUpdated": "订单状态已更新",
+    "actionFailed": "出现问题，请重试。",
+    "moderationApplied": "审核决定已记录",
+    "configSaved": "设置已保存",
+    "messageSent": "消息已发送",
+    "following": "您已关注 {name}",
+    "unfollowed": "您已取消关注 {name}"
+  },
+  "share": {
+    "label": "分享"
+  },
+  "fab": {
+    "ask": "问 Vergeo",
+    "askTitle": "问 Vergeo",
+    "askHint": "描述您的需求：商品、服务或活动。",
+    "askPlaceholder": "例如：卢萨卡 3,000 克瓦查以内的太阳能板",
+    "send": "提问",
+    "voiceStart": "语音提问",
+    "voiceStop": "停止聆听",
+    "listening": "正在聆听…",
+    "voiceUnsupported": "此浏览器不支持语音输入。",
+    "close": "关闭",
+    "showFooter": "显示网站链接",
+    "hideFooter": "隐藏网站链接"
+  },
+  "paymentTrust": {
+    "footerSeal": "订单送达时以现金付款",
+    "footerPaymentNote": "货到付款 · 在线支付即将推出"
   }
 }

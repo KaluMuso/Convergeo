@@ -35,6 +35,7 @@ class _ServiceRoleClient(Protocol):
 class OpenDisputeRequest(StrictModel):
     evidence_paths: list[str] = Field(default_factory=list, max_length=8)
     description: str = Field(default="", max_length=2000)
+    kind: Literal["order", "event_misrepresentation"] = "order"
 
 
 class OpenDisputeResponse(StrictModel):
@@ -274,6 +275,7 @@ async def customer_open_dispute(
         opener_user_id=current_user.id,
         evidence_paths=body.evidence_paths,
         note=note,
+        kind=body.kind,
     )
     return OpenDisputeResponse(
         dispute_id=result.dispute_id,
@@ -446,14 +448,12 @@ async def sign_vendor_evidence_upload(
 
     customer_id = str(order_row["customer_id"])
     extension = _content_extension(body.content_type)
-    path = (
-        f"orders/{customer_id}/{order_id}/vendor-evidence-{int(time.time())}.{extension}"
-    )
+    path = f"orders/{customer_id}/{order_id}/vendor-evidence-{int(time.time())}.{extension}"
 
     try:
-        result = (
-            service_client.client.storage.from_(ORDER_EVIDENCE_BUCKET).create_signed_upload_url(path)
-        )
+        result = service_client.client.storage.from_(
+            ORDER_EVIDENCE_BUCKET
+        ).create_signed_upload_url(path)
     except Exception as exc:  # noqa: BLE001
         raise AppError(
             code="storage_error",

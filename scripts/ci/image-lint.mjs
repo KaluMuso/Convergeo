@@ -24,6 +24,18 @@ const UNOPTIMIZED_IMAGE_EXTENSIONS = new Set([
   ".tif",
   ".tiff",
 ]);
+/**
+ * PWA / touch icons that MUST stay PNG: the web app manifest (app/manifest.ts)
+ * and the apple-touch-icon / icons metadata in app/[locale]/layout.tsx require
+ * PNG (WebP/AVIF are not accepted for installability or iOS home-screen icons).
+ * Exact paths only, relative to apps/customer/public — never a wildcard.
+ */
+export const PNG_ICON_ALLOWLIST = new Set([
+  "brand/convergeo-icon-180.png",
+  "brand/convergeo-icon-192.png",
+  "brand/convergeo-icon-512.png",
+]);
+
 const OPTIMIZED_IMAGE_EXTENSIONS = new Set([".webp", ".avif", ".svg", ".ico"]);
 
 /** @typedef {{ file: string, line: number, message: string }} LintIssue */
@@ -102,7 +114,7 @@ export function lintSourceFile(filePath) {
  * @param {string} dir
  * @returns {LintIssue[]}
  */
-export function lintPublicImages(dir = PUBLIC_DIR) {
+export function lintPublicImages(dir = PUBLIC_DIR, publicRoot = dir) {
   /** @type {LintIssue[]} */
   const issues = [];
   if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) {
@@ -112,7 +124,7 @@ export function lintPublicImages(dir = PUBLIC_DIR) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
-      issues.push(...lintPublicImages(full));
+      issues.push(...lintPublicImages(full, publicRoot));
       continue;
     }
     const ext = extname(entry.name).toLowerCase();
@@ -120,6 +132,10 @@ export function lintPublicImages(dir = PUBLIC_DIR) {
       continue;
     }
     if (UNOPTIMIZED_IMAGE_EXTENSIONS.has(ext)) {
+      const relPath = relative(publicRoot, full).split("\\").join("/");
+      if (PNG_ICON_ALLOWLIST.has(relPath)) {
+        continue;
+      }
       issues.push({
         file: full,
         line: 1,
@@ -172,6 +188,19 @@ function runSelfTest() {
     failed = true;
   } else {
     console.log(`SELF-TEST FAIL (expected): ${formatIssues(badIssues)[0]}`);
+  }
+
+  // Allowlist: exact PWA icon paths pass; any other PNG still fails.
+  const iconDir = join(ROOT, "scripts/ci/.tmp-image-lint/public");
+  mkdirSync(join(iconDir, "brand"), { recursive: true });
+  writeFileSync(join(iconDir, "brand/convergeo-icon-192.png"), "", "utf8");
+  writeFileSync(join(iconDir, "brand/other.png"), "", "utf8");
+  const publicIssues = lintPublicImages(iconDir);
+  if (publicIssues.length !== 1 || !publicIssues[0].file.endsWith("other.png")) {
+    console.error("SELF-TEST FAIL: only non-allowlisted PNG should be flagged");
+    failed = true;
+  } else {
+    console.log("SELF-TEST PASS: allowlisted icon accepted, other PNG flagged");
   }
 
   process.exit(failed ? 1 : 0);

@@ -1,5 +1,24 @@
-import { BASE_URL, LOCALE, flag, lencoSandboxReady, otpVerifyReady, path } from "../fixtures/env";
+import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
+import { checkoutSurface } from "../fixtures/checkout";
+import {
+  BASE_URL,
+  LOCALE,
+  customerOtp,
+  customerOtpReady,
+  flag,
+  lenco,
+  lencoSandboxReady,
+  path,
+  strictSyntheticRequired,
+} from "../fixtures/env";
+import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
+import {
+  blockUnapprovedCheckoutWrites,
+  guardApprovedOtpRequests,
+  guardApprovedPaymentRequests,
+  missingOutboundApproval,
+} from "../fixtures/outbound-approval";
 import {
   FIXTURE_GROUP_ID,
   assertNoAccidentalRealMoney,
@@ -8,8 +27,13 @@ import {
   paymentMockMode,
   statusFixture,
 } from "../fixtures/payment-fixtures";
+import { missingSandboxMomoEvidence } from "../fixtures/sandbox-momo-evidence";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+
+// The payment-honesty branch intercepts provider status with page.route.
+// A registered PWA worker would bypass that deterministic network boundary.
+test.use({ serviceWorkers: "block" });
 
 /**
  * VE-P07 / G16 / S7 — highest-value browse-safe critical path.
@@ -19,9 +43,28 @@ import { expect, test } from "../fixtures/test-base";
  * Deployed sandbox: continues through MoMo when `LENCO_SANDBOX` + OTP/session
  * env are present. Never enables production real-money rails.
  */
+test.use({ trace: "off", video: "off", screenshot: "off" });
+
 test.describe("critical-path", () => {
+  test.describe.configure({ retries: 0 });
   test("browse → cart → checkout honesty matches backend mode", async ({ page }) => {
     assertNoAccidentalRealMoney();
+    if (!paymentMockMode() && !customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "deployed phone-capable critical path",
+        fixtures: [
+          "E2E_CUSTOMER_TEST_OTP",
+          "SMS_OTP_TRANSPORT",
+          "WAHA_OTP_ENABLED",
+          "STAGING_SMS_SANDBOX_ATTESTED",
+          "STAGING_TEST_OTP_MAP_ATTESTED",
+        ],
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
     test.info().annotations.push({
       type: "mode",
       description: paymentMockMode()
@@ -74,9 +117,27 @@ test.describe("critical-path", () => {
     // 3. Open a PDP fixture (seed slug — non-demo when inventory exists).
     await page.goto(path(`/p/${SEED.product.slug}`));
     const buyBox = page.getByTestId("pdp-buy-box");
-    const pdpAvailable = await buyBox.isVisible().catch(() => false);
+    // E2E run #52 (RC-5): an immediate isVisible() sampled the DOM before the
+    // PDP finished rendering, misread a genuinely-present buy box as absent,
+    // and silently fell through to the payment-mock confirmation branch below
+    // — passing without ever exercising a real add-to-cart/cart leg. Strict
+    // mode now waits (bounded, not sleep) for the required synthetic PDP;
+    // local browse-safe mode keeps the instant honest-fallback read.
+    const pdpAvailable = strictSyntheticRequired()
+      ? await buyBox
+          .waitFor({ state: "visible", timeout: 20_000 })
+          .then(() => true)
+          .catch(() => false)
+      : await buyBox.isVisible().catch(() => false);
 
     if (!pdpAvailable) {
+      if (strictSyntheticRequired()) {
+        throw new Error(
+          `strictSyntheticRequired: seeded PDP ${SEED.product.slug} unavailable — the critical-path journey ` +
+            "requires the real add-to-cart/cart/checkout leg and must not fall through to payment-mock " +
+            "confirmation as a substitute",
+        );
+      }
       test.info().annotations.push({
         type: "inventory",
         description: `PDP ${SEED.product.slug} unavailable on this target (empty/demo-excluded catalogue). Browse legs asserted; ATC/checkout continue via payment-mock confirmation.`,
@@ -85,21 +146,77 @@ test.describe("critical-path", () => {
       await expect(page.getByTestId("pdp-price")).toBeVisible();
 
       // 4. Add to cart.
-      await page.getByTestId("pdp-add-to-cart").click();
-      await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible({
-        timeout: 20_000,
-      });
+      await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 20_000 });
 
       // 5. Reach cart + checkout.
       await page.goto(path("/cart"));
       await expect(page.getByTestId("cart-page")).toBeVisible();
+      // A signed-in CheckoutShell POSTs its contact/session snapshot on mount.
+      // Gate the deployed money/OTP branch before that first checkout navigation.
+      if (paymentMockMode()) {
+        await blockUnapprovedCheckoutWrites(page);
+      } else {
+        const missingApproval = [
+          ...new Set([
+            ...missingOutboundApproval("momo"),
+            ...missingOutboundApproval("otp", process.env, {
+              persona: "customer",
+              recipientPhone: customerOtp.testPhone,
+            }),
+          ]),
+        ];
+        if (!sandboxEnabled() || !customerOtpReady()) {
+          // The deployed provider branch is required in strict certification.
+          const gate = resolveGate({
+            kind: "REQUIRED_STRICT",
+            journey: "deployed sandbox MoMo settle (F9b)",
+            fixtures: [
+              ...missingSandboxMomoEvidence(lenco),
+              ...(!customerOtpReady() ? ["E2E_CUSTOMER_TEST_OTP"] : []),
+            ],
+          });
+          enforceGate(gate);
+          test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+          test.skip(true, gate.reason);
+          return;
+        }
+        if (missingApproval.length) {
+          // Credentials alone are not approval to contact a provider/recipient.
+          const gate = resolveGate({
+            kind: "OPTIONAL_GATE",
+            journey: "approved deployed sandbox MoMo settle",
+            fixtures: missingApproval,
+          });
+          test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+          test.skip(true, gate.reason);
+          return;
+        }
+        await guardApprovedOtpRequests(page, "customer", customerOtp.testPhone);
+        await guardApprovedPaymentRequests(page, "momo");
+      }
       await page.goto(path("/checkout"));
-      await expect(
-        page
-          .getByRole("heading", { name: /checkout|payment|delivery|contact/i })
-          .or(page.getByText(/sign in|phone|loading/i))
-          .first(),
-      ).toBeVisible({ timeout: 30_000 });
+      /**
+       * Run 35456698878: this assertion used to be
+       *
+       *   getByRole("heading", { name: /checkout|payment|delivery|contact/i })
+       *     .or(getByText(/sign in|phone|loading/i))
+       *     .first()
+       *
+       * whose `.or()` arm matched the shop chrome's hidden global
+       * "Loading categories…" rail — earlier in the DOM than the Checkout
+       * heading, so `.first()` resolved to an invisible, unrelated node and
+       * the journey timed out without ever saying what it had actually found.
+       *
+       * Scoped now to Checkout's own step content. `li[aria-current="step"]`
+       * is published only by packages/ui/src/stepper.tsx, and Checkout is the
+       * only Customer surface that renders a Stepper — in BOTH its loading and
+       * its loaded branch, so this is true from first paint. No copy is read,
+       * so no unrelated global string can satisfy it; the timeout is unchanged
+       * and the journey is not weakened.
+       */
+      await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
+      // Exactly one step is current: the wizard is live, not an empty shell.
+      await expect(page.locator('li[aria-current="step"]')).toHaveCount(1);
     }
 
     // 6–7. Payment branch appropriate to environment — UI must match authoritative state.
@@ -117,23 +234,41 @@ test.describe("critical-path", () => {
     }
 
     // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
-    if (!sandboxEnabled() || !otpVerifyReady()) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "Sandbox MoMo settle skipped — set E2E_DEPLOYED_TARGET + LENCO_SANDBOX_* + E2E_TEST_PHONE/OTP. Browse/cart asserted above.",
+    if (!sandboxEnabled() || !customerOtpReady()) {
+      // The deployed provider branch is required in strict certification.
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "deployed sandbox MoMo settle (F9b)",
+        fixtures: [
+          ...missingSandboxMomoEvidence(lenco),
+          ...(!customerOtpReady()
+            ? [
+                "E2E_CUSTOMER_TEST_OTP",
+                "SMS_OTP_TRANSPORT",
+                "WAHA_OTP_ENABLED",
+                "STAGING_SMS_SANDBOX_ATTESTED",
+                "STAGING_TEST_OTP_MAP_ATTESTED",
+              ]
+            : []),
+        ],
       });
-      test.skip(true, "Deployed sandbox pay leg is founder/staging-gated (F9b)");
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 
     if (!pdpAvailable) {
-      test.skip(true, "No buyable PDP on deployed target for sandbox settle");
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "sandbox settle",
+        detail: "no buyable PDP on the deployed target",
+      });
+      test.skip(true, gate.reason);
       return;
     }
 
-    // Continue checkout → MoMo when the place-order path is wired on the target.
-    await page.goto(path("/checkout"));
+    // Continue checkout → MoMo with guards installed before CheckoutShell mounted.
     const momo = page.locator('[name="payment-method"][value="momo"]');
     if (await momo.count()) {
       await momo
@@ -165,12 +300,17 @@ test.describe("critical-path", () => {
       .catch(() => false);
 
     if (!reachedPay) {
-      test.info().annotations.push({
-        type: "gap",
-        description:
-          "Checkout place-order did not reach a payment surface — full sandbox settle remains LIVE_VERIFICATION (LIVE-06/VE-P07 ops).",
+      // Reached only when the Lenco sandbox leg is ACTIVE (see the F9b gate
+      // above), so by this point the pay path is supposed to work. Skipping
+      // here disguised a real product failure as an absent optional gate.
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "checkout place-order -> payment surface",
+        detail: "no payment surface appeared within 30s of place-order",
       });
-      test.skip(true, "Place-order → payment surface not reachable on this deploy");
+      enforceGate(gate);
+      test.info().annotations.push({ type: "gap", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 

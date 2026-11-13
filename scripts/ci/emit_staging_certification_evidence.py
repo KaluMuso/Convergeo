@@ -9,6 +9,7 @@ import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -21,6 +22,39 @@ from staging_deploy_provenance import (
     validate_staging_sha_proof_for_certification,
     verify_certifiable_deploy_run,
 )
+from staging_operation_certification import (
+    build_operation_certification_evidence,
+    read_operation_source,
+)
+
+OUTCOME_NAMES = (
+    "authorize",
+    "deploy",
+    "handoff",
+    "e2e",
+    "setup",
+    "browser",
+    "execution",
+    "matrix",
+    "cleanup",
+    "staging_ref",
+    "customer_probe",
+    "vendor_probe",
+)
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{path.name} must contain a JSON object")
+    return value
+
+
+def _load_json_array(path: Path) -> list[dict[str, Any]]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise ValueError(f"{path.name} must contain an array of JSON objects")
+    return value
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,48 +80,92 @@ def main(argv: list[str] | None = None) -> int:
         "--proof-fixture-file",
         type=Path,
         default=None,
-        help="Offline regression mode: read staging-sha-proof JSON from file",
+        help="Legacy offline regression mode: read staging-sha-proof JSON from file",
     )
+    parser.add_argument(
+        "--operation-metadata-dir",
+        type=Path,
+        default=None,
+        help="Authenticated staging-operation metadata written by github_handoff_metadata.cjs",
+    )
+    parser.add_argument("--focus-group", default="")
+    for outcome in OUTCOME_NAMES:
+        parser.add_argument(
+            f"--{outcome.replace('_', '-')}-outcome",
+            dest=f"{outcome}_outcome",
+            default="",
+        )
     args = parser.parse_args(argv)
 
     repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
     token = os.environ.get("GITHUB_TOKEN", "").strip()
 
     try:
-        if args.proof_fixture_file is not None:
-            proof = json.loads(args.proof_fixture_file.read_text(encoding="utf-8"))
-            deploy_run_id = args.staging_deploy_workflow_run_id.strip() or "111111111"
+        if args.operation_metadata_dir is not None:
+            metadata_dir = args.operation_metadata_dir
+            run = _load_json_object(metadata_dir / "run.json")
+            artifact = _load_json_object(metadata_dir / "artifact.json")
+            jobs = _load_json_array(metadata_dir / "jobs.json")
+            archive = (metadata_dir / "proof.zip").read_bytes()
+            proof, run_id, attempt = read_operation_source(
+                archive=archive,
+                run=run,
+                artifact=artifact,
+                jobs=jobs,
+                candidate_sha=args.candidate_sha,
+            )
+            if run_id != int(args.certification_run_id):
+                raise ValueError("operation run id does not match certification run id")
+            if attempt != args.certification_run_attempt:
+                raise ValueError("operation attempt does not match certification attempt")
+            evidence = build_operation_certification_evidence(
+                candidate_sha=args.candidate_sha,
+                run=run,
+                source_artifact=artifact,
+                proof=proof,
+                jobs=jobs,
+                focus_group=args.focus_group,
+                outcomes={
+                    outcome: str(getattr(args, f"{outcome}_outcome"))
+                    for outcome in OUTCOME_NAMES
+                },
+                certified_at=args.certified_at,
+            )
         else:
-            if not repository or not token:
-                print(
-                    "::error::GITHUB_REPOSITORY and GITHUB_TOKEN required",
-                    file=sys.stderr,
-                )
-                return 1
-            client = LiveGitHubActionsClient(repository=repository, token=token)
-            if args.staging_deploy_workflow_run_id.strip():
-                deploy_run = client.get_run(args.staging_deploy_workflow_run_id.strip())
-                verify_certifiable_deploy_run(deploy_run, candidate_sha=args.candidate_sha)
-                deploy_run_id = str(deploy_run["id"])
+            if args.proof_fixture_file is not None:
+                proof = json.loads(args.proof_fixture_file.read_text(encoding="utf-8"))
+                deploy_run_id = args.staging_deploy_workflow_run_id.strip() or "111111111"
             else:
-                deploy_run = discover_certifiable_deploy_run(
-                    client,
-                    candidate_sha=args.candidate_sha,
-                )
-                deploy_run_id = str(deploy_run["id"])
-            proof = download_staging_sha_proof(client, deploy_run_id=deploy_run_id)
+                if not repository or not token:
+                    print(
+                        "::error::GITHUB_REPOSITORY and GITHUB_TOKEN required",
+                        file=sys.stderr,
+                    )
+                    return 1
+                client = LiveGitHubActionsClient(repository=repository, token=token)
+                if args.staging_deploy_workflow_run_id.strip():
+                    deploy_run = client.get_run(args.staging_deploy_workflow_run_id.strip())
+                    verify_certifiable_deploy_run(deploy_run, candidate_sha=args.candidate_sha)
+                    deploy_run_id = str(deploy_run["id"])
+                else:
+                    deploy_run = discover_certifiable_deploy_run(
+                        client,
+                        candidate_sha=args.candidate_sha,
+                    )
+                    deploy_run_id = str(deploy_run["id"])
+                proof = download_staging_sha_proof(client, deploy_run_id=deploy_run_id)
 
-        derived = validate_staging_sha_proof_for_certification(
-            proof,
-            candidate_sha=args.candidate_sha,
-        )
-        evidence = build_staging_certification_evidence(
-            derived=derived,
-            staging_deploy_workflow_run_id=deploy_run_id,
-            certification_workflow_run_id=args.certification_run_id,
-            certification_run_attempt=args.certification_run_attempt,
-            certified_at=args.certified_at,
-        )
+            derived = validate_staging_sha_proof_for_certification(
+                proof,
+                candidate_sha=args.candidate_sha,
+            )
+            evidence = build_staging_certification_evidence(
+                derived=derived,
+                staging_deploy_workflow_run_id=deploy_run_id,
+                certification_workflow_run_id=args.certification_run_id,
+                certification_run_attempt=args.certification_run_attempt,
+                certified_at=args.certified_at,
+            )
     except (StagingDeployProvenanceError, ValueError, RuntimeError) as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return 1

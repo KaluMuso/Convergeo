@@ -9,14 +9,17 @@ Safety:
   - Seeds only synthetic stg-rv-* handles from the staging test-data register
   - Never copies production auth users, orders, payments, or KYC documents
 
-Usage:
+Usage (run via `uv run --project services/api python3 ...` — this script
+imports `supabase` to reach the Auth Admin API for canonical persona
+provisioning, so it needs that project's venv, not bare system python3):
   STAGING_SUPABASE_PROJECT_ID=iyasmrmbcrvlfxpzescb SUPABASE_DB_URL=<staging-db-url> \\
-    python scripts/seed_staging.py --env staging --apply
+    SUPABASE_SERVICE_ROLE_KEY=<staging-service-role-key> \\
+    uv run --project services/api python3 scripts/seed_staging.py --env staging --apply
 
-  python scripts/seed_staging.py --env staging --cleanup --apply
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --cleanup --apply
 
   # Default is dry-run (prints plan, touches nothing):
-  python scripts/seed_staging.py --env staging --dry-run
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run
 """
 
 from __future__ import annotations
@@ -28,7 +31,6 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +41,12 @@ from app.core.env_guards import (  # noqa: E402
     STAGING_SUPABASE_PROJECT_REF,
     StagingIsolationError,
 )
+from app.staging.auth_personas import (  # noqa: E402
+    AuthPersonaError,
+    ensure_auth_personas,
+    verify_auth_personas,
+)
+from app.staging.scanner_ticket import issue_scanner_certification_ticket  # noqa: E402
 from app.staging.seed_sql import (  # noqa: E402
     build_cleanup_sql,
     build_seed_sql,
@@ -47,13 +55,21 @@ from app.staging.seed_sql import (  # noqa: E402
 )
 from app.staging.synthetic_contract import (  # noqa: E402
     CATALOG_FIXTURES,
-    FIXTURES,
+    EVENTS,
+    FIXTURES,  # noqa: F401 - compatibility re-export
     KYC_FIXTURES_LEGACY,
     PERSONAS,
     SEED_PREFIX,
     assert_contract_valid,
+    fixture_version,
     guard_seed_targets,
 )
+from app.staging.ticket_credentials import (  # noqa: E402
+    TicketCredential,
+    primary_ticket_pin,
+)
+from app.staging.transactional import apply_cod_placed  # noqa: E402
+from supabase import create_client  # noqa: E402
 
 # Back-compat re-exports for tests importing the script module directly.
 CATALOG_FIXTURE = __import__(
@@ -132,6 +148,25 @@ def _connection_hint(dsn: str) -> str | None:
     )
 
 
+def _write_private_runtime_file(
+    path: Path, credentials: tuple[TicketCredential, ...]
+) -> None:
+    """Hand the run-scoped scanner PIN to the caller through a 0600 file.
+
+    A file — not stdout, not GITHUB_OUTPUT — so the value never passes through a
+    log buffer on its way out. The service-role key is deliberately NOT written
+    here: only the credential the scanner spec needs.
+    """
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Create with the restrictive mode from the start; never widen it afterwards.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump({"ticketPin": primary_ticket_pin(credentials)}, handle)
+    os.chmod(path, 0o600)
+
+
 def _die(msg: str) -> int:
     print(f"ERROR: {msg}", file=sys.stderr)
     return 1
@@ -196,11 +231,43 @@ def main() -> int:
         help="Apply inserts (requires reachable SUPABASE_DB_URL).",
     )
     parser.add_argument(
+        "--transactional-cod",
+        action="store_true",
+        help=(
+            "After seeding, place the canonical COD order through the real "
+            "order-creation service (create_orders_atomic). Requires --apply. "
+            "The static seed creates no orders; the vendor fulfilment journey "
+            "needs exactly one, and COD is the only state reachable without a "
+            "payment provider."
+        ),
+    )
+    parser.add_argument(
         "--cleanup",
         action="store_true",
         help="Delete only deterministic stg-rv-* contract rows before optional re-seed.",
     )
+    parser.add_argument(
+        "--private-file",
+        default=None,
+        help=(
+            "Write run-scoped scanner credentials (ticket PIN) to this path with "
+            "mode 0600. Requires SUPABASE_SERVICE_ROLE_KEY; never logged."
+        ),
+    )
+    parser.add_argument(
+        "--print-fixture-version",
+        action="store_true",
+        help="Print the canonical fixture contract hash and exit.",
+    )
     args = parser.parse_args()
+
+    if args.print_fixture_version:
+        try:
+            _validate_fixtures()
+        except StagingIsolationError as exc:
+            return _die(str(exc))
+        print(fixture_version())
+        return 0
 
     try:
         _validate_fixtures()
@@ -248,6 +315,8 @@ def main() -> int:
 
     _plan()
     print(f"  - catalogue products: {len(CATALOG_FIXTURES)}")
+    print(f"  - events: {len(EVENTS)} (organiser scanner journey)")
+    print(f"  - fixture version: {fixture_version()}")
 
     if args.dry_run or not mutating:
         print("DRY RUN — no database writes. Pass --apply to seed a verified staging DB.")
@@ -281,18 +350,87 @@ def main() -> int:
         if not args.apply:
             return 0
 
+    # Auth personas are provisioned through the Supabase Auth Admin API, not
+    # raw SQL (a hand-authored auth.users row is never a real Auth-managed
+    # user — GoTrue's phone-login signInWithOtp requires an actual phone
+    # IDENTITY, which only create_user() creates). Required for every
+    # --apply: public.profiles/vendors FK-reference auth.users.id, so this
+    # must run — and succeed — before build_seed_sql()'s SQL does.
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not service_role_key:
+        return _die(
+            "SUPABASE_SERVICE_ROLE_KEY is required for --apply — canonical Auth "
+            "personas are provisioned through the Supabase Auth Admin API"
+        )
+    if not supabase_url:
+        return _die(
+            "STAGING_SUPABASE_URL (or SUPABASE_URL) is required for --apply — "
+            "needed to reach the Supabase Auth Admin API"
+        )
+    try:
+        auth_client = create_client(supabase_url, service_role_key)
+    except Exception as exc:  # noqa: BLE001
+        return _die(f"cannot construct Supabase Auth Admin client: {exc}")
+
+    try:
+        outcomes = ensure_auth_personas(auth_client, personas=PERSONAS)
+    except AuthPersonaError as exc:
+        return _die(f"Auth persona provisioning failed (seed aborted): {exc}")
+    print(f"Auth personas: {outcomes}")
+
     seed = conn.run(build_seed_sql())
     if not seed.ok:
         return _die(seed.error or "seed SQL failed")
 
+    # The scanner fixture is a legitimate free RSVP, not a hand-inserted paid
+    # ticket.  This calls the same rsvp() service path as the application and
+    # produces a completed order item without creating or forging a payment.
+    try:
+        scanner_credential = issue_scanner_certification_ticket(auth_client)
+    except Exception as exc:  # noqa: BLE001
+        return _die(f"scanner certification RSVP failed: {exc}")
+    credentials = (scanner_credential,)
+
+    if args.private_file:
+        try:
+            _write_private_runtime_file(Path(args.private_file), credentials)
+        except OSError as exc:
+            return _die(f"cannot write private runtime file: {exc}")
+        # Path only — never the contents.
+        print(
+            "Environment-bound scanner credentials written to "
+            f"{args.private_file} (mode 0600)"
+        )
+
     try:
         _verify_contract(conn)
+        verify_auth_personas(auth_client, personas=PERSONAS)
+    except AuthPersonaError as exc:
+        return _die(f"seed verification failed: {exc}")
     except Exception as exc:  # noqa: BLE001
         return _die(f"seed verification failed: {exc}")
 
+    # Transactional fixture. Deliberately inside THIS step: it is the one place
+    # the staging service-role key is mapped, and the one mutating window the
+    # staging guards allow per run. It writes no order by hand — the order is
+    # created by create_orders_atomic, so it starts in `placed` with a real
+    # commission snapshot and audit trail and every later transition must go
+    # through the guarded state machine.
+    if args.transactional_cod:
+        try:
+            outcome = apply_cod_placed(auth_client)
+        except Exception as exc:  # noqa: BLE001
+            return _die(f"COD transactional fixture failed: {exc}")
+        placed = ", ".join(order["order_id"] for order in outcome["orders"])
+        print(
+            f"COD transactional fixture applied (replayed={outcome['replayed']}, "
+            f"orders={placed})"
+        )
+
     print(
         "Seed complete "
-        f"(staging, prefix={SEED_PREFIX}, products={len(CATALOG_FIXTURES)})"
+        f"(staging, prefix={SEED_PREFIX}, products={len(CATALOG_FIXTURES)}, "
+        f"events={len(EVENTS)}, fixture_version={fixture_version()})"
     )
     return 0
 

@@ -4,7 +4,7 @@
     "private.rate_counter_scope_manifest": true
   },
   "metrics": {
-    "rate_counter_scope_count": 78
+    "rate_counter_scope_count": 79
   },
   "columns": {
     "public.listing_view_dedup.surface": {

@@ -1,0 +1,567 @@
+"use client";
+
+import { formatK } from "@vergeo/i18n";
+import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+import {
+  estimateDelivery,
+  formatDeliveryEstimate,
+} from "../../../../../lib/delivery-estimate";
+import { catalogDeliveryLabels } from "../plp/delivery-labels";
+import { catalogLogisticsLabels } from "../plp/logistics-pills";
+
+import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+import { BuyerTrustPanel } from "./buyer-trust-panel";
+import { shouldShowComparison } from "./comparison-visibility";
+import { PdpGallery } from "./gallery";
+import { buildOfferPriceContext } from "./offer-price-context";
+import { PdpWishlistButton } from "./pdp-wishlist-button";
+import { useListingPurchase } from "./use-listing-purchase";
+import {
+  initialSelection,
+  missingGroups,
+  resolveVariant,
+  selectValue,
+  type ListingVariantOption,
+  type VariantOptionGroup,
+  type VariantSelection,
+} from "./variant-selection";
+import { VendorBlock } from "./vendor-block";
+
+import type { ComparisonLabels, ComparisonListing } from "./comparison";
+import type { ListingCondition } from "./condition-badge";
+import type { PickupLocationPickerLabels } from "./pickup-location-picker";
+import type { SaleUnit } from "../sale-quantity";
+import type { ContactVendorLabels } from "./contact-vendor-button";
+import type { PdpGalleryLabelStrings } from "./gallery-labels";
+import type { RelatedRailsLabels } from "./related-product-rails";
+import type { ReportListingLabels } from "./report-listing";
+import type { RequestQuoteLabels } from "./request-quote-button";
+
+// Server rendering retains the offer table; a single-seller PDP never loads its module.
+const Comparison = dynamic(() =>
+  import("./comparison").then((module) => module.Comparison),
+);
+
+/** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
+const ContactVendorButton = dynamic(
+  () =>
+    import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  { ssr: false },
+);
+
+const RequestQuoteButton = dynamic(
+  () => import("./request-quote-button").then((mod) => mod.RequestQuoteButton),
+  { ssr: false },
+);
+
+const ReportListing = dynamic(
+  () => import("./report-listing").then((mod) => mod.ReportListing),
+  {
+    ssr: false,
+  },
+);
+
+const RelatedProductRails = lazy(() =>
+  import("./related-product-rails").then((module) => ({
+    default: module.RelatedProductRails,
+  })),
+);
+
+/** Lazy — variant picker only matters once a listing has options; reserve height to avoid CLS. */
+const VariantPicker = dynamic(() => import("./variant-picker").then((mod) => mod.VariantPicker), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" className="min-h-24" />,
+});
+
+/** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
+const StickyMobileAtc = dynamic(
+  () => import("./sticky-mobile-atc").then((mod) => mod.StickyMobileAtc),
+  { ssr: false },
+);
+
+export type ProductListing = {
+  id: string;
+  title: string;
+  priceNgwee: number;
+  condition: ListingCondition;
+  productClass: string;
+  stockMode: "tracked" | "always_available";
+  stockQty: number | null;
+  lowStockThreshold?: number | null;
+  moq: number;
+  inStock: boolean;
+  saleUnit?: SaleUnit;
+  unitStepMilli?: number;
+  minSteps?: number;
+  leadTimeDays: number | null;
+  vendorCapacityPerWeek: number | null;
+  vendor: {
+    slug: string;
+    displayName: string;
+    preferredBadge: boolean;
+    ratingAvg: number | null;
+    ratingCount: number;
+    landmark: string | null;
+  };
+  images: Array<{ publicId: string; alt: string }>;
+  /** Colour/size axes; empty when the listing has no variants. */
+  optionGroups?: VariantOptionGroup[];
+  variants?: ListingVariantOption[];
+};
+
+const NO_GROUPS: VariantOptionGroup[] = [];
+const NO_VARIANTS: ListingVariantOption[] = [];
+
+export type PdpInteractiveBodyProps = {
+  relatedLabels?: RelatedRailsLabels;
+  locale: string;
+  productId: string;
+  productSlug: string;
+  productImages: Array<{ publicId: string; alt: string }>;
+  listings: ProductListing[];
+  comparisonListings: ComparisonListing[];
+  initialListingId?: string;
+  singleVendor: boolean;
+  cloudName?: string;
+  /** Serializable strings only — never pass functions across the RSC boundary. */
+  galleryLabels: PdpGalleryLabelStrings;
+  buyBoxLabels: BuyBoxLabels;
+  pickupLabels: PickupLocationPickerLabels;
+  comparisonLabels: ComparisonLabels;
+  vendorLabels: {
+    heading: string;
+    preferredBadge: string;
+    noReviews: string;
+    viewStore: string;
+  };
+  trustLabels: {
+    delivery: string;
+    pickup: string;
+    returns: string;
+    escrow: string;
+  };
+  wishlistLabels: {
+    add: string;
+    remove: string;
+    saved: string;
+  };
+  contactVendorLabels: ContactVendorLabels;
+  /** When false, the Contact Vendor CTA is omitted (fail-closed — BLK-202). */
+  contactVendorEnabled: boolean;
+  requestQuoteLabels: RequestQuoteLabels;
+  reportListingLabels: ReportListingLabels;
+  comparePageLabel: string;
+  /** Product title block rendered at the top of the buy-box column. */
+  headerSlot?: ReactNode;
+};
+
+function selectListingById(
+  listings: ProductListing[],
+  listingId: string | undefined,
+): ProductListing | null {
+  if (listings.length === 0) {
+    return null;
+  }
+  if (listingId) {
+    const selected = listings.find((listing) => listing.id === listingId);
+    if (selected) {
+      return selected;
+    }
+  }
+  return listings[0] ?? null;
+}
+
+export function PdpInteractiveBody({
+  locale,
+  productId,
+  productSlug,
+  productImages,
+  listings,
+  comparisonListings,
+  initialListingId,
+  singleVendor,
+  cloudName,
+  galleryLabels,
+  buyBoxLabels,
+  pickupLabels,
+  comparisonLabels,
+  vendorLabels,
+  trustLabels,
+  wishlistLabels,
+  contactVendorLabels,
+  contactVendorEnabled,
+  requestQuoteLabels,
+  reportListingLabels,
+  comparePageLabel,
+  headerSlot,
+  relatedLabels,
+}: PdpInteractiveBodyProps) {
+  const t = useTranslations("catalog");
+  const logisticsPillLabels = useMemo(() => catalogLogisticsLabels(t), [t]);
+  const buyBoxRef = useRef<HTMLElement | null>(null);
+  const [stickyAtcVisible, setStickyAtcVisible] = useState(false);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(
+    () => selectListingById(listings, initialListingId)?.id ?? null,
+  );
+
+  const selectedListing = useMemo(
+    () => selectListingById(listings, selectedListingId ?? undefined),
+    [listings, selectedListingId],
+  );
+
+  const selectedComparison = useMemo(
+    () =>
+      comparisonListings.find(
+        (listing) => listing.id === selectedListing?.id,
+      ) ?? null,
+    [comparisonListings, selectedListing?.id],
+  );
+
+  const optionGroups = selectedListing?.optionGroups ?? NO_GROUPS;
+  const listingVariants = selectedListing?.variants ?? NO_VARIANTS;
+  const hasVariants = optionGroups.length > 0 && listingVariants.length > 0;
+  const [variantSelection, setVariantSelection] = useState<VariantSelection>(() =>
+    hasVariants ? initialSelection(optionGroups, listingVariants) : {},
+  );
+  useEffect(() => {
+    // A different seller's listing has its own option ids.
+    setVariantSelection(hasVariants ? initialSelection(optionGroups, listingVariants) : {});
+  }, [hasVariants, listingVariants, optionGroups]);
+  const selectedVariant = useMemo(
+    () => (hasVariants ? resolveVariant(optionGroups, listingVariants, variantSelection) : null),
+    [hasVariants, listingVariants, optionGroups, variantSelection],
+  );
+  const handleVariantSelect = useCallback(
+    (groupId: string, valueId: string) =>
+      setVariantSelection((current) =>
+        selectValue(optionGroups, listingVariants, current, groupId, valueId),
+      ),
+    [listingVariants, optionGroups],
+  );
+  const missingOptionNames = hasVariants
+    ? missingGroups(optionGroups, variantSelection).map((group) => group.name)
+    : [];
+
+  const baseGalleryImages = useMemo(() => {
+    if (selectedListing && selectedListing.images.length > 0) {
+      return selectedListing.images;
+    }
+    return productImages;
+  }, [productImages, selectedListing]);
+
+  // Choosing a colour swaps the gallery to that variant's photo.
+  const variantImageId = selectedVariant?.imagePublicId ?? null;
+  const galleryImages = useMemo(() => {
+    if (!variantImageId || baseGalleryImages.some((image) => image.publicId === variantImageId)) {
+      return baseGalleryImages;
+    }
+    const alt = baseGalleryImages[0]?.alt ?? selectedListing?.title ?? "";
+    return [{ publicId: variantImageId, alt }, ...baseGalleryImages];
+  }, [baseGalleryImages, selectedListing?.title, variantImageId]);
+  const galleryActiveIndex = variantImageId
+    ? Math.max(
+        0,
+        galleryImages.findIndex((image) => image.publicId === variantImageId),
+      )
+    : undefined;
+
+  const buyBoxListing: BuyBoxListing | null = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    return {
+      id: selectedListing.id,
+      title: selectedListing.title,
+      priceNgwee: selectedVariant?.priceNgwee ?? selectedListing.priceNgwee,
+      condition: selectedListing.condition,
+      productClass: selectedListing.productClass,
+      stockMode: selectedListing.stockMode,
+      stockQty:
+        selectedVariant && selectedVariant.stockQty !== null
+          ? selectedVariant.stockQty
+          : selectedListing.stockQty,
+      lowStockThreshold: selectedListing.lowStockThreshold,
+      moq: selectedListing.moq,
+      inStock: selectedVariant
+        ? selectedListing.inStock && selectedVariant.inStock
+        : selectedListing.inStock,
+      saleUnit: selectedListing.saleUnit,
+      unitStepMilli: selectedListing.unitStepMilli,
+      minSteps: selectedListing.minSteps,
+      leadTimeDays: selectedListing.leadTimeDays,
+      vendorCapacityPerWeek: selectedListing.vendorCapacityPerWeek,
+    };
+  }, [selectedListing, selectedVariant]);
+
+  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels, locale, {
+    required: hasVariants,
+    variantId: selectedVariant?.id ?? null,
+    missingLabel: t("pdp.variants.required", {
+      options: missingOptionNames.join(t("pdp.variants.listSeparator")),
+    }),
+  });
+
+  const lightboxLabels = useMemo(
+    () => ({
+      open: t("pdp.lightbox.open"),
+      dialog: t("pdp.lightbox.dialog"),
+      close: t("pdp.lightbox.close"),
+      previous: galleryLabels.previous,
+      next: galleryLabels.next,
+      zoomIn: t("pdp.lightbox.zoomIn"),
+      zoomOut: t("pdp.lightbox.zoomOut"),
+      indicator: t.raw("pdp.gallery.indicator") as string,
+    }),
+    [galleryLabels.next, galleryLabels.previous, t],
+  );
+
+  const priceContextLabel = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    const context = buildOfferPriceContext(
+      selectedListing.priceNgwee,
+      comparisonListings.map((listing) => listing.priceNgwee),
+    );
+    if (!context) {
+      return null;
+    }
+    if (context.kind === "lowest") {
+      return t("pdp.buyBox.lowestPrice");
+    }
+    return t("pdp.buyBox.moreThanLowest", { diff: formatK(context.diffNgwee) });
+  }, [comparisonListings, selectedListing, t]);
+
+  const sellerRatingLabel = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    if (
+      selectedListing.vendor.ratingAvg !== null &&
+      selectedListing.vendor.ratingCount > 0
+    ) {
+      return t("pdp.vendor.rating", {
+        rating: selectedListing.vendor.ratingAvg,
+        count: selectedListing.vendor.ratingCount,
+      });
+    }
+    return vendorLabels.noReviews;
+  }, [selectedListing, t, vendorLabels.noReviews]);
+
+  const handleSelect = useCallback((listingId: string) => {
+    setSelectedListingId(listingId);
+  }, []);
+
+  const handleStickyVisibleChange = useCallback((visible: boolean) => {
+    setStickyAtcVisible(visible);
+  }, []);
+
+  const compareHref = shouldShowComparison(comparisonListings.length)
+    ? `/${locale}/compare?product=${encodeURIComponent(productSlug)}`
+    : null;
+
+  return (
+    /* Mobile (<1024px): gallery → buy-box → compare cards → vendor.
+       lg+: two-column grid — gallery left, sticky buy-box right; comparison table + vendor full width. */
+    <div
+      className={[
+        "flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)] lg:gap-8",
+        stickyAtcVisible ? "pb-28 lg:pb-0" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-testid="pdp-interactive-body"
+    >
+      <div className="min-w-0 md:col-start-1 md:row-start-1">
+        <PdpGallery
+          images={galleryImages}
+          cloudName={cloudName}
+          emptyLabel={galleryLabels.empty}
+          previousLabel={galleryLabels.previous}
+          nextLabel={galleryLabels.next}
+          indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
+          activeIndex={galleryActiveIndex}
+          lightboxLabels={lightboxLabels}
+        />
+      </div>
+
+      {buyBoxListing && selectedListing && purchase ? (
+        <div className="flex flex-col gap-3 md:sticky md:top-24 md:col-start-2 md:row-start-1">
+          {/* Title, brand and seller count sit beside the gallery (Amazon/Takealot). */}
+          {headerSlot}
+          <BuyBox
+            listing={buyBoxListing}
+            singleVendor={singleVendor}
+            labels={buyBoxLabels}
+            pickupLabels={pickupLabels}
+            locale={locale}
+            purchase={purchase}
+            buyBoxRef={buyBoxRef}
+            seller={{
+              displayName: selectedListing.vendor.displayName,
+              ratingLabel: sellerRatingLabel,
+              preferred: selectedListing.vendor.preferredBadge,
+            }}
+            preferredBadgeLabel={vendorLabels.preferredBadge}
+            priceContextLabel={priceContextLabel}
+            compareHref={compareHref}
+            compareLabel={comparePageLabel}
+            compareAtNgwee={selectedVariant?.compareAtNgwee ?? null}
+            variantSlot={
+              hasVariants ? (
+                <VariantPicker
+                  groups={optionGroups}
+                  variants={listingVariants}
+                  selection={variantSelection}
+                  onSelect={handleVariantSelect}
+                  showMissing={purchase.showMissingOptions}
+                />
+              ) : null
+            }
+            wishlistSlot={
+              <PdpWishlistButton
+                productId={productId}
+                productSlug={productSlug}
+                addLabel={wishlistLabels.add}
+                removeLabel={wishlistLabels.remove}
+                savedAnnounceLabel={wishlistLabels.saved}
+              />
+            }
+          />
+          {selectedListing.productClass === "E" ? (
+            <RequestQuoteButton
+              locale={locale}
+              listingId={selectedListing.id}
+              vendorName={selectedListing.vendor.displayName}
+              labels={requestQuoteLabels}
+              className="w-full"
+            />
+          ) : null}
+          <BuyerTrustPanel
+            sellerStatusLabel={t(
+              selectedListing.vendor.preferredBadge
+                ? "pdp.trust.preferredSeller"
+                : "pdp.trust.seller",
+              { name: selectedListing.vendor.displayName },
+            )}
+            deliveryAvailable={selectedComparison?.deliveryAvailable ?? false}
+            pickupAvailable={selectedComparison?.pickupAvailable ?? false}
+            logisticsPillLabels={logisticsPillLabels}
+            returnsLabel={trustLabels.returns}
+            returnsHref={`/${locale}/legal/returns`}
+            escrowLabel={trustLabels.escrow}
+            deliveryEstimate={formatDeliveryEstimate(
+              estimateDelivery({
+                deliveryAvailable:
+                  selectedComparison?.deliveryAvailable ?? false,
+                pickupAvailable: selectedComparison?.pickupAvailable ?? false,
+                fulfilmentMode: selectedListing.leadTimeDays
+                  ? "made_to_order"
+                  : "stocked",
+                leadTimeDays: selectedListing.leadTimeDays,
+                inStock: selectedListing.inStock,
+              }),
+              catalogDeliveryLabels((key) => t.raw(key)),
+            )}
+          />
+        </div>
+      ) : null}
+
+      {shouldShowComparison(comparisonListings.length) ? (
+        <div className="min-w-0 md:col-span-2">
+          <Comparison
+            listings={comparisonListings}
+            selectedListingId={selectedListingId}
+            labels={comparisonLabels}
+            logisticsPillLabels={logisticsPillLabels}
+            onSelect={handleSelect}
+          />
+        </div>
+      ) : null}
+
+      {selectedListing ? (
+        <div className="min-w-0 md:col-span-2">
+          <VendorBlock
+            locale={locale}
+            vendor={{
+              slug: selectedListing.vendor.slug,
+              displayName: selectedListing.vendor.displayName,
+              preferredBadge: selectedListing.vendor.preferredBadge,
+              ratingAvg: selectedListing.vendor.ratingAvg,
+              ratingCount: selectedListing.vendor.ratingCount,
+              landmark: selectedListing.vendor.landmark,
+            }}
+            heading={vendorLabels.heading}
+            preferredBadgeLabel={vendorLabels.preferredBadge}
+            noReviewsLabel={vendorLabels.noReviews}
+            ratingLabel={
+              selectedListing.vendor.ratingAvg !== null &&
+              selectedListing.vendor.ratingCount > 0
+                ? t("pdp.vendor.rating", {
+                    rating: selectedListing.vendor.ratingAvg,
+                    count: selectedListing.vendor.ratingCount,
+                  })
+                : vendorLabels.noReviews
+            }
+            viewStoreLabel={vendorLabels.viewStore}
+          />
+          {contactVendorEnabled ? (
+            <ContactVendorButton
+              locale={locale}
+              listingId={selectedListing.id}
+              vendorName={selectedListing.vendor.displayName}
+              labels={contactVendorLabels}
+            />
+          ) : null}
+          <ReportListing
+            listingId={selectedListing.id}
+            labels={reportListingLabels}
+          />
+        </div>
+      ) : null}
+
+      {buyBoxListing && purchase && buyBoxListing.inStock ? (
+        <StickyMobileAtc
+          listing={buyBoxListing}
+          labels={buyBoxLabels}
+          purchase={purchase}
+          observeRef={buyBoxRef}
+          ariaLabel={t("pdp.stickyAtc.ariaLabel")}
+          locale={locale}
+          onVisibleChange={handleStickyVisibleChange}
+        />
+      ) : null}
+      {relatedLabels ? (
+        <div id="pdp-related" className="min-w-0 scroll-mt-28 md:col-span-2">
+          <Suspense
+            fallback={
+              <p role="status" className="text-sm text-text-2">
+                {relatedLabels.loading}
+              </p>
+            }
+          >
+            <RelatedProductRails
+              locale={locale}
+              slug={productSlug}
+              listingId={selectedListing?.id ?? null}
+              labels={relatedLabels}
+              cloudName={cloudName}
+            />
+          </Suspense>
+        </div>
+      ) : null}
+    </div>
+  );
+}

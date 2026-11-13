@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -130,6 +130,11 @@ class FakeSupabaseClient:
             "audit_log": FakeTable(),
         }
 
+    def rpc(self, name: str, params: dict[str, Any]) -> MagicMock:
+        from tests.test_payment_state import FakeSupabaseClient as RpcFake
+
+        return RpcFake.rpc(cast(Any, self), name, params)
+
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
 
@@ -148,6 +153,7 @@ def _mock_auth(monkeypatch: pytest.MonkeyPatch, user_id: str) -> None:
 def _mock_supabase(monkeypatch: pytest.MonkeyPatch, fake: FakeSupabaseClient) -> MagicMock:
     service_wrapper = MagicMock()
     service_wrapper.client = fake
+    monkeypatch.setattr("app.core.auth.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.deps.get_supabase_service_client", lambda: service_wrapper)
     monkeypatch.setattr("app.supabase_client.get_supabase_service_client", lambda: service_wrapper)
     return service_wrapper
@@ -162,7 +168,7 @@ def _seed_group(
     *,
     customer_id: str = CUSTOMER_A_ID,
     total_ngwee: int = 25_000,
-    status: str = "completed",
+    status: str = "pending",
 ) -> None:
     fake.tables["checkout_groups"].rows.append(
         {
@@ -355,7 +361,7 @@ class TestPaymentRetry:
             )
         )
         monkeypatch.setattr(
-            "app.routers.payment_status.get_payment_strategy",
+            "app.services.payments.initiate.get",
             lambda _provider: strategy,
         )
 

@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.brand_theme import read_brand_theme
 from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
@@ -106,6 +107,9 @@ class DirectoryListingItem(BaseModel):
     lead_time_days: int | None = None
     in_stock: bool
     image_public_id: str | None = None
+    #: Storefront category chips; None for standalone (non-canonical) listings.
+    category_slug: str | None = None
+    category_name: str | None = None
 
 
 class ReviewsSummary(BaseModel):
@@ -128,6 +132,8 @@ class VendorProfileDetail(BaseModel):
     order_count: int = 0
     location: VendorLocationDetail | None = None
     locations: list[VendorLocationDetail] = Field(default_factory=list)
+    #: Storefront-only colours {primary, accent}, AA-clamped; None = platform palette.
+    brand_theme: dict[str, str | None] | None = None
     created_at: str | None = None
 
 
@@ -732,7 +738,7 @@ def get_vendor_profile(
         client.table("vendors")
         .select(
             "id, slug, display_name, description, logo_url, cover_url, whatsapp_msisdn, status, "
-            "kyc_tier, commercial_tier, preferred_badge, created_at, "
+            "kyc_tier, commercial_tier, preferred_badge, created_at, brand_theme, "
             "vendor_locations(landmark, lat, lng, hours)"
         )
         .eq("slug", slug)
@@ -769,7 +775,7 @@ def get_vendor_profile(
             "sale_unit, unit_step_milli, min_steps, fulfilment_mode, lead_time_days, "
             "vendor_capacity_per_week, stock_mode, stock_qty, moq, "
             "status, wholesale, "
-            "products(name, slug, status)"
+            "products(name, slug, status, categories(slug, name))"
         )
         .eq("vendor_id", vendor_id)
         .eq("status", "active")
@@ -816,17 +822,24 @@ def get_vendor_profile(
             if str(product.get("status") or "") != "active":
                 continue
         product_name = (
-            str(product.get("name") or "Listing")
-            if isinstance(product, dict)
-            else "Listing"
+            str(product.get("name") or "Listing") if isinstance(product, dict) else "Listing"
         )
         product_slug = product.get("slug") if isinstance(product, dict) else None
+        category = product.get("categories") if isinstance(product, dict) else None
+        category_slug = (
+            str(category["slug"]) if isinstance(category, dict) and category.get("slug") else None
+        )
+        category_name = (
+            str(category["name"]) if isinstance(category, dict) and category.get("name") else None
+        )
         fulfilment_mode = str(listing_row.get("fulfilment_mode") or "stocked")
         listings.append(
             DirectoryListingItem(
                 id=str(listing_row["id"]),
                 title=_listing_title(listing_row, product_name),
                 product_slug=str(product_slug) if product_slug else None,
+                category_slug=category_slug,
+                category_name=category_name,
                 price_ngwee=int(listing_row.get("price_ngwee") or 0),
                 condition=str(listing_row.get("condition") or "new"),
                 product_class=str(listing_row.get("product_class") or "A"),
@@ -875,6 +888,7 @@ def get_vendor_profile(
             logo_url=row.get("logo_url"),
             cover_url=row.get("cover_url"),
             whatsapp_msisdn=row.get("whatsapp_msisdn"),
+            brand_theme=read_brand_theme(row.get("brand_theme")),
             preferred_badge=preferred_badge,
             kyc_tier=effective_tier,
             commercial_tier=_parse_commercial_tier(row.get("commercial_tier")),

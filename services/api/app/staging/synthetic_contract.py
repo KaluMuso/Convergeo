@@ -44,6 +44,8 @@ PersonaKey = Literal[
 
 ProductKey = Literal["PRODUCT_A", "PRODUCT_B", "PRODUCT_C", "PRODUCT_D"]
 
+EventKey = Literal["EVENT_LAUNCH_EXPO"]
+
 VENDOR_STATUSES = frozenset({"draft", "pending_kyc", "active", "suspended"})
 VALID_KYC_TIERS = frozenset({1, 2, 3})
 KYC_RECORD_STATUSES = frozenset(
@@ -53,6 +55,20 @@ PRODUCT_STATUSES = frozenset({"pending_moderation", "active", "merged"})
 LISTING_STATUSES = frozenset({"draft", "active", "paused", "removed"})
 LISTING_CONDITIONS = frozenset({"new", "refurbished"})
 STOCK_MODES = frozenset({"tracked", "always_available"})
+
+# Domains mirror the live CHECK constraints (supabase/migrations/0004 and
+# 20260813063754_event_strategy_completion_foundation.sql). Kept as frozensets so
+# assert_contract_valid() fails here rather than at INSERT time on staging.
+EVENT_STATUSES = frozenset({"draft", "published", "cancelled", "completed"})
+EVENT_TYPES = frozenset(
+    {"standard", "single", "multi_day", "recurring", "free_rsvp", "private"}
+)
+EVENT_VISIBILITIES = frozenset({"public", "unlisted", "private"})
+EVENT_FEE_PAYERS = frozenset({"organiser", "buyer"})
+EVENT_INSTANCE_STATUSES = frozenset({"scheduled", "cancelled", "completed"})
+TICKET_TYPE_KINDS = frozenset({"fixed", "tier", "free_rsvp"})
+TICKET_PASS_KINDS = frozenset({"instance", "event_pass"})
+TICKET_STATUSES = frozenset({"issued", "checked_in", "transferred", "void"})
 
 FORBIDDEN_SUBSTRINGS = (
     PROD_SUPABASE_PROJECT_REF,
@@ -113,6 +129,59 @@ class KycFixture:
     status: str
     reviewed_by: str | None = None
     decision_reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TicketTypeFixture:
+    ticket_type_id: str
+    name: str
+    kind: str
+    pass_kind: str
+    price_ngwee: int
+    qty_cap: int | None
+    allocation: int
+    attendee_named: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class TicketFixture:
+    """A deterministic scanner-certification ticket identity.
+
+    The row is not inserted by the static SQL seed.  The staging seeder issues it
+    through the real free-RSVP service, then normalises the generated ticket id to
+    this canonical identity.  The random PIN issued by that production path is
+    recovered only into private run-time material and re-sealed for the canonical
+    id; no usable credential is committed here.
+    """
+
+    ticket_id: str
+    ticket_type_id: str
+    holder_key: PersonaKey
+    status: str
+
+
+@dataclass(frozen=True, slots=True)
+class EventFixture:
+    key: EventKey
+    event_id: str
+    slug: str
+    title: str
+    organiser_key: PersonaKey
+    instance_id: str
+    starts_at: str
+    ends_at: str
+    capacity: int
+    venue: str
+    city: str
+    landmark: str
+    lat: float
+    lng: float
+    event_type: str
+    status: str
+    visibility: str
+    platform_fee_payer: str
+    ticket_types: tuple[TicketTypeFixture, ...]
+    tickets: tuple[TicketFixture, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,6 +363,69 @@ VENDOR_LOCATIONS: tuple[VendorLocationFixture, ...] = (
         is_primary=True,
     ),
 )
+
+# Events (M10 / #657) — organiser is APPROVED_VENDOR_A so the vendor-portal
+# scanner journey reuses the same authenticated identity as vendor-sell.
+# `starts_at` is a fixed far-future instant, never `now()`: fixture identity must
+# not drift with wall-clock time.
+EVENTS: tuple[EventFixture, ...] = (
+    EventFixture(
+        key="EVENT_LAUNCH_EXPO",
+        event_id="e1000000-0000-4000-8000-000000000001",
+        slug=f"{SEED_PREFIX}-launch-expo",
+        title="Synthetic staging launch expo",
+        organiser_key="APPROVED_VENDOR_A",
+        instance_id="e2000000-0000-4000-8000-000000000001",
+        starts_at="2030-06-19T17:00:00+00:00",
+        ends_at="2030-06-19T21:00:00+00:00",
+        capacity=200,
+        venue=f"{SEED_PREFIX} expo hall",
+        city="Lusaka",
+        landmark=f"Opposite {SEED_PREFIX} expo hall main gate",
+        lat=-15.4067,
+        lng=28.2871,
+        event_type="standard",
+        status="published",
+        visibility="public",
+        platform_fee_payer="organiser",
+        ticket_types=(
+            TicketTypeFixture(
+                ticket_type_id="e3000000-0000-4000-8000-000000000001",
+                name="General admission",
+                kind="fixed",
+                pass_kind="instance",
+                price_ngwee=15000,
+                qty_cap=200,
+                allocation=199,
+            ),
+            TicketTypeFixture(
+                ticket_type_id="e3000000-0000-4000-8000-000000000002",
+                name="Scanner certification RSVP",
+                kind="free_rsvp",
+                pass_kind="instance",
+                price_ngwee=0,
+                qty_cap=20,
+                allocation=1,
+            ),
+        ),
+        tickets=(
+            TicketFixture(
+                ticket_id="e4000000-0000-4000-8000-000000000001",
+                ticket_type_id="e3000000-0000-4000-8000-000000000002",
+                holder_key="CUSTOMER_A",
+                status="issued",
+            ),
+        ),
+    ),
+)
+
+
+def event_fixture(key: EventKey | str) -> EventFixture:
+    for event in EVENTS:
+        if event.key == key:
+            return event
+    raise KeyError(f"unknown synthetic event fixture: {key}")
+
 
 def persona_by_key(key: PersonaKey | str) -> PersonaFixture:
     for persona in PERSONAS:
@@ -501,6 +633,16 @@ def all_synthetic_location_ids() -> frozenset[str]:
     return frozenset(loc.location_id for loc in VENDOR_LOCATIONS)
 
 
+def all_synthetic_event_ids() -> frozenset[str]:
+    return frozenset(event.event_id for event in EVENTS)
+
+
+def all_synthetic_ticket_ids() -> frozenset[str]:
+    return frozenset(
+        ticket.ticket_id for event in EVENTS for ticket in event.tickets
+    )
+
+
 def all_contract_uuid_literals() -> frozenset[str]:
     """Every deterministic identifier destined for a PostgreSQL uuid column."""
     ids: set[str] = set()
@@ -521,6 +663,13 @@ def all_contract_uuid_literals() -> frozenset[str]:
         for listing in product.listings:
             ids.add(listing.listing_id)
     ids.update(all_synthetic_location_ids())
+    for event in EVENTS:
+        ids.add(event.event_id)
+        ids.add(event.instance_id)
+        for ticket_type in event.ticket_types:
+            ids.add(ticket_type.ticket_type_id)
+        for ticket in event.tickets:
+            ids.add(ticket.ticket_id)
     from app.staging.seed_sql import IMAGE_IDS
 
     ids.update(IMAGE_IDS.values())
@@ -627,6 +776,149 @@ def assert_contract_valid() -> None:
     if len(product_a.listings) < 2:
         raise StagingIsolationError("product A requires multiseller listings")
 
+    for event in EVENTS:
+        blob = " ".join(
+            str(v) for v in (event.slug, event.title, event.venue, event.landmark)
+        )
+        _assert_no_production_markers(blob)
+        if SEED_PREFIX not in event.slug:
+            raise StagingIsolationError(
+                f"synthetic event slug missing seed prefix: {event.slug}"
+            )
+        organiser = persona_by_key(event.organiser_key)
+        if organiser.vendor_id not in vendor_ids:
+            raise StagingIsolationError("event organiser is not a seeded vendor")
+        if organiser.vendor_status != "active":
+            raise StagingIsolationError(
+                "event organiser must be an approved (active) synthetic vendor"
+            )
+        if event.status not in EVENT_STATUSES:
+            raise StagingIsolationError(f"invalid synthetic event status: {event.status}")
+        if event.event_type not in EVENT_TYPES:
+            raise StagingIsolationError(f"invalid synthetic event type: {event.event_type}")
+        if event.visibility not in EVENT_VISIBILITIES:
+            raise StagingIsolationError("invalid synthetic event visibility")
+        if event.platform_fee_payer not in EVENT_FEE_PAYERS:
+            raise StagingIsolationError("invalid synthetic event fee payer")
+        if event.capacity < 1:
+            raise StagingIsolationError("synthetic event capacity must be positive")
+        if event.ends_at <= event.starts_at:
+            raise StagingIsolationError("synthetic event must end after it starts")
+        if not event.ticket_types:
+            raise StagingIsolationError("synthetic event requires at least one ticket type")
+
+        type_ids = {t.ticket_type_id for t in event.ticket_types}
+        if sum(t.allocation for t in event.ticket_types) > event.capacity:
+            raise StagingIsolationError(
+                "ticket type allocations exceed instance capacity"
+            )
+        for ticket_type in event.ticket_types:
+            if ticket_type.kind not in TICKET_TYPE_KINDS:
+                raise StagingIsolationError("invalid synthetic ticket type kind")
+            if ticket_type.pass_kind not in TICKET_PASS_KINDS:
+                raise StagingIsolationError("invalid synthetic ticket pass kind")
+            # Mirrors ticket_types_free_rsvp_price_chk.
+            if ticket_type.kind == "free_rsvp" and ticket_type.price_ngwee != 0:
+                raise StagingIsolationError("free_rsvp ticket type must be priced zero")
+            if ticket_type.kind != "free_rsvp" and ticket_type.price_ngwee <= 0:
+                raise StagingIsolationError("paid ticket type must have a positive price")
+            if ticket_type.qty_cap is not None and ticket_type.qty_cap <= 0:
+                raise StagingIsolationError("ticket qty_cap must be positive when set")
+            if ticket_type.allocation < 0:
+                raise StagingIsolationError("ticket allocation must be non-negative")
+            if ticket_type.allocation > event.capacity:
+                raise StagingIsolationError("ticket allocation exceeds instance capacity")
+
+        if not event.tickets:
+            raise StagingIsolationError(
+                "synthetic event requires an issued ticket for the scanner journey"
+            )
+        for ticket in event.tickets:
+            if ticket.ticket_type_id not in type_ids:
+                raise StagingIsolationError("ticket references an unknown ticket type")
+            scanner_type = next(
+                t for t in event.ticket_types if t.ticket_type_id == ticket.ticket_type_id
+            )
+            if scanner_type.kind != "free_rsvp" or scanner_type.price_ngwee != 0:
+                raise StagingIsolationError(
+                    "scanner certification ticket must use a zero-price free_rsvp type"
+                )
+            if persona_by_key(ticket.holder_key).user_id not in user_ids:
+                raise StagingIsolationError("ticket holder is not a seeded persona")
+            if ticket.status not in TICKET_STATUSES:
+                raise StagingIsolationError(f"invalid synthetic ticket status: {ticket.status}")
+        # The scanner asserts verify-then-duplicate-reject, so the seeded ticket
+        # must start un-scanned.
+        if not any(t.status == "issued" for t in event.tickets):
+            raise StagingIsolationError(
+                "synthetic event needs an 'issued' ticket so a first scan can succeed"
+            )
+
+
+def canonical_contract_document() -> dict[str, Any]:
+    """The full canonical fixture contract as plain, order-stable data.
+
+    This is the single input to `fixture_version()` and to the generated
+    TypeScript constants, so both are provably derived from the same source.
+
+    Deliberately EXCLUDED: credentials and other private runtime material. The
+    ticket scanner PIN is freshly generated by the real RSVP service and exists
+    only as private runtime material; it is not fixture identity, so it must not
+    shift the version hash.
+    """
+
+    def _asdict(obj: Any) -> dict[str, Any]:
+        return {f.name: getattr(obj, f.name) for f in fields(obj)}
+
+    return {
+        "seedPrefix": SEED_PREFIX,
+        "syntheticImagePrefix": SYNTHETIC_IMAGE_PREFIX,
+        "personas": [_asdict(p) for p in PERSONAS],
+        "category": dict(CATEGORY_FIXTURE),
+        "products": [
+            {
+                **{k: v for k, v in _asdict(p).items() if k != "listings"},
+                "listings": [_asdict(listing) for listing in p.listings],
+            }
+            for p in CATALOG_FIXTURES
+        ],
+        "vendorLocations": [_asdict(loc) for loc in VENDOR_LOCATIONS],
+        "kycRecords": [_asdict(k) for k in KYC_FIXTURES],
+        "events": [
+            {
+                **{
+                    k: v
+                    for k, v in _asdict(e).items()
+                    if k not in {"ticket_types", "tickets"}
+                },
+                "ticket_types": [_asdict(t) for t in e.ticket_types],
+                "tickets": [_asdict(t) for t in e.tickets],
+            }
+            for e in EVENTS
+        ],
+    }
+
+
+def fixture_version() -> str:
+    """Stable content hash of the canonical fixture contract.
+
+    Same contract in, same hash out — across processes, machines and runs. It
+    changes if and only if the canonical fixture data changes, which is exactly
+    what lets a strict E2E run assert it is talking to the fixture generation it
+    was built against. Never derived from a timestamp or a run id.
+    """
+    import hashlib
+    import json
+
+    payload = json.dumps(
+        canonical_contract_document(),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
+
 
 def resolve_project_ref(
     *,
@@ -690,7 +982,17 @@ __all__ = [
     "CATALOG_FIXTURE",
     "CATALOG_FIXTURES",
     "CATEGORY_FIXTURE",
+    "EVENTS",
+    "EventFixture",
+    "EventKey",
     "FIXTURES",
+    "TicketFixture",
+    "TicketTypeFixture",
+    "all_synthetic_event_ids",
+    "all_synthetic_ticket_ids",
+    "canonical_contract_document",
+    "event_fixture",
+    "fixture_version",
     "KYC_FIXTURES",
     "KYC_FIXTURES_LEGACY",
     "PERSONAS",

@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../../lib/admin-translator";
 
 import { FlagQueue } from "./_components/FlagQueue";
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 export default async function FlagModerationPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.flags");
+  const t = await getAdminTranslator(locale, "admin.flags");
 
   return (
     <div className="space-y-4">

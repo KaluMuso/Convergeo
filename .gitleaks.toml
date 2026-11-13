@@ -67,46 +67,59 @@ paths = [
 ]
 
 [[allowlists]]
-description = "Coordinator gate inputs (PR #718 branch history): SHA-256 file digests keyed by path, not credentials"
+description = "RELCTRL-01 rejected self-attestation fixture — exact nonsecret SHA only"
 condition = "AND"
-paths = [
-  '''(?i)scripts/ci/coordinator-gate-inputs\.json$''',
-]
 regexTarget = "secret"
+paths = [
+  '''(?i)^scripts/ci/fixtures/merge-evidence-incident-640\.json$''',
+]
 regexes = [
-  '''^[a-f0-9]{64}$''',
+  '''^8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25$''',
 ]
 
 [[allowlists]]
-description = "Card checkout page test: SHA-256 digests of API source/fixture/lock files (branch history), not credentials"
+description = "Google's published Linux signing-key fingerprint in the Chrome verifier"
 condition = "AND"
-paths = [
-  '''(?i)apps/customer/app/\[locale\]/\(shop\)/checkout/card/\[paymentId\]/page\.test\.tsx$''',
-]
 regexTarget = "secret"
+paths = [
+  '''^scripts/ci/check_hosted_chrome\.sh$''',
+]
 regexes = [
-  '''^[a-f0-9]{64}$''',
+  '''^EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796$''',
 ]
 
 [[allowlists]]
-description = "Hosted Chrome check: published Google signing-certificate fingerprint (public colon-hex), not a credential"
+description = "Coordinator source inventory — verified nonsecret SHA-256 file digests (run 36862119439 plus release/2026-11 migration and source re-bindings)"
 condition = "AND"
-paths = [
-  '''(?i)scripts/ci/check_hosted_chrome\.sh$''',
-]
 regexTarget = "secret"
+paths = [
+  '''^scripts/ci/coordinator-gate-inputs\.json$''',
+]
 regexes = [
-  '''^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){15,}$''',
-  '''^[0-9A-F]{40}$''',
+  '''^eacfdbafdd8e7e6b7bdd4e7ceee40343bd5aeeecbbe3d436210555cbcfbc7623$''',
+  '''^aba99aeb7004a936e45f2776988939390e7bebb5556c67c52ff4927e6b42fb3c$''',
+  '''^d4bb97335de4ca133fb2e7074810c31f1b785c317bb806215602c4a78526eb57$''',
+  '''^f15d4dd28acff535709899d66187c4eb472dd2124c7321d4c666ff0bc04d093d$''',
+  '''^715f85f00c5dc17b1038f2a069f07df5165698124d9481b1df11b1c7fe0d6f76$''',
+  '''^e7df832a081eaf85a50401c53f5a7ff482c16e7cbeb137eb084c12c505b968b0$''',
+  '''^38be40533f59c15676525ee938bc879fc5cd15794168536740854b6a687d6242$''',
+  '''^67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f$''',
+  '''^0dd91a2de3cc22b656d7ab8fba1d1591b7376cabf9eb2e95eec068423563d083$''',
+  '''^71304b8b1509a95ce55548a815372975c98324e985b509568ad496bb87cb992d$''',
+  '''^6d63bfa85e3a280ffe4698390564aa09480180d1227ff6f25b3ce806d5068961$''',
+  '''^d412ae233b93fa2445c86d2b5c557956400a735d758c2077addfaf364ac2f02d$''',
+  '''^22a440e407e8163f48cde4e0eaf94f564ac8a4a7f0660d5317371c27c774f49d$''',
+  '''^6154699044dd19151a9b0859cc8125eceb8c97bea8472d65ddf1c6688870a376$''',
+  '''^403a962b7da76a2652238f50d3c924937c826ab65893a322d4eb92aa0ad87282$''',
 ]
 
 [[allowlists]]
-description = "API image workflow: 40-char git commit SHAs used as image tags, not credentials"
+description = "Published staging API image tag — exact public source commit"
 condition = "AND"
-paths = [
-  '''(?i)\.github/workflows/api-image\.yml$''',
-]
 regexTarget = "secret"
+paths = [
+  '''^\.github/workflows/api-image\.yml$''',
+]
 regexes = [
-  '''^[a-f0-9]{40}$''',
+  '''^cfe11ba8e5bb1893427ff256f4266a616230832f$''',
 ]

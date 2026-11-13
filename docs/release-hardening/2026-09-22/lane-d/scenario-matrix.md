@@ -1,0 +1,26 @@
+# D1 scenario and invariant matrix
+
+`LOCAL_DB_API` means the production FastAPI handler and payment/ledger code ran against disposable PostgreSQL 16 plus JWT-verified PostgREST 14, with **synthetic** Lenco messages/status. `UNIT_SIMULATED` means repository tests passed with fake provider and/or fake service client; it is not provider or DB certification. No provider sandbox, hosted CI, shared staging or production scenario ran.
+
+| Scenario | D1 result | Evidence and limit |
+| --- | --- | --- |
+| Successful payment and ledger receipt/escrow hold | `LOCAL_DB_API PASS` | `test_valid_duplicate_callback_posts_one_balanced_charge`: signed local callback; one `charge_received` for 25,000 ngwee with `platform_cash +25000`, `escrow -25000`, payment `success`. No actual provider balance. |
+| Declined/failed payment | `LOCAL_DB_API PASS` | `test_reordered_failed_and_success_callbacks_keep_one_charge` first applies a `collection.failed` event with no ledger posting. Provider decline code taxonomy is `UNIT_SIMULATED` in `test_lenco_client.py`. |
+| Invalid signature | `LOCAL_DB_API PASS` | HTTP 401; no stored event, payment transition or ledger row. |
+| Duplicate callback / response loss after ACK | `LOCAL_DB_API PASS` | Same signed event delivered twice; unique `(provider,event_id)`, one row, one balanced ledger receipt after repeated worker ticks. Lost **initiation** response remains `NOT_RUN`. |
+| Out-of-order failed/success/failed | `LOCAL_DB_API PASS` | Failed → late success posts once; subsequent failed stays success, one ledger receipt. |
+| Wrong amount / currency / provider reference / missing amount | `LOCAL_DB_API PASS` after repair | Signed mismatches remain pending with worker error, payment `ussd_pushed`, zero ledger. Red pre-repair proof: `1.00` callback for `250.00` payment caused success and full 25,000-ngwee credit. |
+| Wrong merchant reference / orphan callback | `LOCAL_DB_API PARTIAL` | Unknown reference cannot credit a payment, but S3 marks the unmatched event processed without an operator anomaly. Open recovery risk. |
+| Transfer event carrying successful status | `LOCAL_DB_API PASS` | `transfer.successful` cannot confirm a collection. |
+| Simultaneous worker processing / idempotent replay | `LOCAL_DB_API PASS` | Two real concurrent PostgREST clients process one stored event; exactly one balanced ledger transaction, final payment success. Repeated tick also one. No provider concurrency proof. |
+| Provider status query with wrong amount | `LOCAL_DB_API PASS` | Simulated `QueryStatusResult` through real reconciliation worker/PostgREST; error counted, no payment or ledger transition. No external status API call. |
+| Timeout / unknown initiation outcome | `UNIT_SIMULATED PARTIAL` | `test_lenco_client.py` tests request retry taxonomy; `test_payouts.py::test_retry_after_timeout_status_requery_no_double_pay` simulates re-query. Unknown collection initiation outcome + real provider response loss remain `NOT_RUN/BLOCKED_EXTERNAL`. |
+| Duplicate initiation/double-submit | `SOURCE_ONLY / NOT_RUN` | Unique salted merchant attempt references and checkout-scoped ledger idempotency exist; no real concurrent initiation/API double-submit drill in D1. |
+| Cancellation followed by success callback | **`LOCAL_DB_API FAIL` (expected red)** | `test_cancelled_payment_late_success_must_not_post` is `xfail`: S3 posts a ledger receipt before the guarded transition rejects `cancelled → success`. This is the next bounded repair; D1 intentionally does not fix a second gap. |
+| Full/partial refund and retry | `UNIT_SIMULATED`, provider `BLOCKED_EXTERNAL` | `test_refund_execute.py` and `test_refund_provider_authority.py` cover source-key replay, per-item override, payout authority with fakes. One DB unique-index test was not run. Native Lenco refund support not verified; product models refund through transfer. |
+| Reconciliation report and injected mismatch | `UNIT_SIMULATED`; DB migration `PASS` | `test_reconcile.py` detects injected amount/orphan/ledger differences with fake Lenco rows; fresh-DB report schema/unique-date test passed. No sandbox account/transaction statement. |
+| Seller payout failure and retry / eligible balance | `UNIT_SIMULATED`, provider `BLOCKED_EXTERNAL` | `test_payouts.py` covers status re-query after timeout, fail/hold, vendor balance/velocity and retry using fake provider/service client; no real transfer/payee evidence. |
+| Deferred unbalanced ledger posting / rollback | `LOCAL_DB_API PASS` | Direct one-leg posting fails the deferred PostgreSQL balance trigger at commit; the transaction header is absent after rollback. |
+| Hosted role/auth claims | `LOCAL_POSTGREST PASS`, hosted `NOT_RUN` | Synthetic JWTs verified by local PostgREST: service role sees payment, owner sees it, stranger does not, owner cannot update status. No real Supabase Auth issuance or hosted role test. |
+
+The local drill verifies no double posting and balanced integer-ngwee entries for the exercised collection paths. It does **not** verify provider-side no double charge, merchant custody, refund payout completion, seller payout eligibility against a real settlement account, or complete operator recovery. The cancellation xfail and silent orphan handling remain release blockers. No scenario is certified by mock-only success.

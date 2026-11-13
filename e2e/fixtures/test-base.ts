@@ -1,24 +1,66 @@
 import { test as base, expect } from "@playwright/test";
 
-import { THROTTLE } from "./env";
+import { hasBypassCredential, portalBypassConfig, THROTTLE } from "./env";
 import { applyFast3G } from "./network";
-import { resetSeed } from "./seed";
+import { applyPortalBypass, isPortalOrigin, resolveBypassSecret } from "./portal-bypass";
+import { verifyFixtureVersion } from "./seed";
 
 type Fixtures = {
   /** Auto-fixture: applies Fast-3G throttling on the throttled project. */
   fast3g: void;
+  /** Auto-fixture: per-origin Vercel Deployment Protection bypass. */
+  portalBypass: void;
 };
 
 /**
  * Shared test object. Extends Playwright's base test with:
  *  - `fast3g` auto-fixture: emulates Fast-3G on Chromium for the throttled
  *    project (viewport/mobile flags come from the project `use` block).
+ *  - `portalBypass` auto-fixture: sends the RIGHT project's Vercel protection
+ *    bypass secret per origin (see below).
  */
 export const test = base.extend<Fixtures>({
+  /**
+   * The ONE place a Vercel Deployment Protection bypass header is attached in
+   * the browser.
+   *
+   * Vercel issues a "Protection Bypass for Automation" secret per project, and
+   * specs navigate the vendor app on its own origin (vendor-sell,
+   * event-ticket), so a single global header can be wrong for that origin —
+   * and `extraHTTPHeaders` would broadcast it to Supabase and every third
+   * party besides. `playwright.config.ts` therefore sets no bypass header at
+   * all; this fixture resolves the right project's secret per origin
+   * (portal-specific, else the legacy repository-wide fallback) and engages
+   * whenever ANY bypass credential is configured, legacy-only included.
+   * Secrets are never logged or asserted on.
+   */
+  portalBypass: [
+    async ({ context }, use) => {
+      if (hasBypassCredential()) {
+        const config = portalBypassConfig();
+        // Matcher, not a `**/*` catch-all: only the three portal origins are
+        // intercepted at all, so a request to Supabase, the staging FastAPI or
+        // any third party is never rebuilt and can never carry a Vercel
+        // credential. `applyPortalBypass` fails closed a second time on the
+        // secret itself.
+        await context.route(
+          (url) => isPortalOrigin(url.toString(), config),
+          async (route) => {
+            // The header rewrite lives in the pure helper (unit-tested by
+            // scripts/qa/self-test/e2e-portal-bypass.test.mjs), including the
+            // `allHeaders()` — not `headers()` — rule that keeps the Supabase
+            // session Cookie on every rewritten request.
+            await applyPortalBypass(route, (target) => resolveBypassSecret(target, config));
+          },
+        );
+      }
+      await use();
+    },
+    { auto: true },
+  ],
   fast3g: [
     async ({ page, context }, use, testInfo) => {
-      const wantsThrottle =
-        THROTTLE && testInfo.project.name.toLowerCase().includes("3g");
+      const wantsThrottle = THROTTLE && testInfo.project.name.toLowerCase().includes("3g");
       if (wantsThrottle) {
         try {
           const client = await context.newCDPSession(page);
@@ -36,15 +78,20 @@ export const test = base.extend<Fixtures>({
 export { expect };
 
 /**
- * Run the deterministic seed reset once per worker before the specs execute.
- * Idempotent + a no-op (annotated) when the reset env is absent.
+ * Record which fixture generation this worker is running against.
+ *
+ * NON-DESTRUCTIVE by design. This hook runs once per spec file per project — 16
+ * files x 5 viewport projects — so the destructive reset that used to live here
+ * fired ~80 times per run, with workers deleting rows other workers were
+ * asserting on. The reset is now a single guarded workflow step before any
+ * browser starts; all this does is observe.
  */
 test.beforeAll(async () => {
-  const didReset = await resetSeed();
+  const verdict = verifyFixtureVersion();
   test.info().annotations.push({
-    type: "seed-reset",
-    description: didReset
-      ? "deterministic seed reset applied (idempotent)"
-      : "seed reset skipped — E2E_SEED_RESET_URL/E2E_SEED_TOKEN not set (founder/staging-gated)",
+    type: "fixture-version",
+    description: verdict.ok
+      ? "fixture generation verified (no destructive reset inside Playwright)"
+      : (verdict.reason ?? "fixture version verification failed"),
   });
 });

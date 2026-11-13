@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "test": "deno test --allow-env index.test.ts"
+    "test": "deno test --allow-env --no-lock index.test.ts"
   },
   "compilerOptions": {
     "strict": true

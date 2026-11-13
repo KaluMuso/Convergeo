@@ -10,6 +10,7 @@ export {
   STAGING_API_HOST,
   hostnameOfOrigin,
   isDeployedFrontendEnv,
+  isE2EMockSessionAllowed,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
   isStagingApiOrigin,
@@ -19,7 +20,7 @@ export {
   type DeploymentPlane,
   type PublicApiEnvKey,
 } from "./api-base-url";
-export { loadPublicEnv, type PublicEnv } from "./env";
+export { assertVercelPublicSupabaseEnv, loadPublicEnv, type PublicEnv } from "./env";
 export {
   buildConnectSrc,
   buildStaticSecurityHeaders,

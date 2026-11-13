@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+import { isVendorAuthSetupPath } from "../../../lib/password-recovery-path";
+
 import { VendorNav } from "./vendor-nav";
+import { VendorNotificationBell } from "./vendor-notification-bell";
 
 import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
 
@@ -16,7 +19,7 @@ type VendorShellProps = {
 };
 
 /**
- * Authenticated vendor chrome. Login and onboarding routes render bare children;
+ * Authenticated vendor chrome. Login and Auth setup routes render bare children;
  * all other routes get a responsive shell (desktop sidebar + mobile bottom nav).
  */
 export function VendorShell({ locale, capabilities, children }: VendorShellProps) {
@@ -24,7 +27,7 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
   const tCommon = useTranslations("common");
 
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  if (rest === "/login" || rest.startsWith("/login/")) {
+  if (rest === "/login" || rest.startsWith("/login/") || isVendorAuthSetupPath(pathname)) {
     return <>{children}</>;
   }
 
@@ -58,12 +61,15 @@ export function VendorShell({ locale, capabilities, children }: VendorShellProps
         <Link href={`/${locale}`} className="font-display text-base font-semibold text-display-ink">
           {tCommon("app.name")}
         </Link>
-        <ThemeToggle
-          label={tCommon("theme.label")}
-          lightLabel={tCommon("theme.light")}
-          darkLabel={tCommon("theme.dark")}
-          systemLabel={tCommon("theme.system")}
-        />
+        <div className="flex items-center gap-1">
+          <VendorNotificationBell locale={locale} />
+          <ThemeToggle
+            label={tCommon("theme.label")}
+            lightLabel={tCommon("theme.light")}
+            darkLabel={tCommon("theme.dark")}
+            systemLabel={tCommon("theme.system")}
+          />
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1">

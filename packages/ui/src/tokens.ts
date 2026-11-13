@@ -1,38 +1,81 @@
 /**
- * Vergeo5 design tokens. The light identity follows the audited offline reference;
- * the concrete dark palette follows the newer neutral-charcoal accessibility audit.
+ * Vergeo5 design tokens — "Copperbelt" system (storefront redesign, Nov 2026).
+ *
+ * DESIGN PLAN
+ * ───────────
+ * Subject: a Zambian marketplace whose promise is trust — your money is held
+ * by Vergeo5 until the order arrives. The identity borrows from the two
+ * materials Zambia is known for: malachite (deep, banded green — the trust
+ * colour, used for actions and the escrow story) and copper (the accent —
+ * price highlights, promos, "held by Vergeo5" seal, focus of attention).
+ *
+ * Colour (light)
+ *   ground  #F7F6F2  stone paper (cooler than the old cream — less "template")
+ *   surface #FFFFFF  cards / sheets
+ *   ink     #15201B  malachite-black body ink (15.5:1 on ground)
+ *   primary #0B5D45  malachite — buttons, links, active nav (7.9:1 white text)
+ *   accent  #A4501C  copper — promos, sale price, seal, rating stars (5.2:1)
+ *   panel   #0F2A21  malachite night — hero, footer, escrow panels
+ * Dark mode mirrors this on a green-charcoal ground (#121614) with a lifted
+ * malachite (#5FC49C) and copper (#E39255).
+ *
+ * Type
+ *   display Bricolage Grotesque (variable, latin subset) — a grotesk with ink
+ *           traps and optical character; set tight (-0.02em) at 600–800 for
+ *           headlines, prices and wordmark-adjacent UI. Legible at 360px on
+ *           low-end Android, unlike the hairline serif it replaces.
+ *   body    DM Sans — retained: highly legible, already cached, low bytes.
+ *   mono    JetBrains Mono — order IDs, OTP, USSD codes only.
+ *   Scale (1.25 minor third-ish, clamped for 360px): micro 11 · sm 13 ·
+ *   body 15 · h3 17 · h2 22→30 · h1 28→42 · hero 34→60.
+ *
+ * Layout & shape
+ *   Left-aligned content; 4px spacing grid; container 1400px, gutter 16/28.
+ *   Radii carry hierarchy: sm 8 (chips/inputs) · DEFAULT 12 (cards/buttons) ·
+ *   lg 16 (sheets/media) · xl 24 (hero + promo panels) · pill (badges/search).
+ *   Elevation keyed to malachite-black, three steps; hairline borders first,
+ *   shadow only for things that float (menus, sheets, toasts, hover lift).
+ *
+ * Principles
+ *   1. One bold thing: the malachite-night hero/escrow panels with the copper
+ *      seal. Everything else is quiet, white, and dense like a real store.
+ *   2. Trust is shown, not claimed: escrow steps, MoMo rails, verified badges
+ *      reuse the same seal + malachite vocabulary everywhere.
+ *   3. Every byte earns its place on 3G: one variable display face, no icon
+ *      font, CSS-only motion that collapses under reduced-motion.
  */
 
 export const tokens = {
   colors: {
-    bg: "#FAF7F2",
-    bg2: "#F3EDE3",
+    bg: "#F7F6F2",
+    bg2: "#EEEDE8",
     surface: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
-    border: "#E8DFD0",
-    panel: "#1C1308",
-    panel2: "#231C10",
-    panelText: "#F5EDD8",
-    panelMuted: "#B8A88A",
+    border: "#E3E1DA",
+    panel: "#0F2A21",
+    panel2: "#163A2E",
+    panelText: "#F3F0E8",
+    panelMuted: "#A9BFB4",
     panelBorder: "rgba(255,255,255,0.12)",
-    text: "#2A1F0E",
-    text2: "#6B5A3E",
-    // The reference's #9C8A72 is retained for decorative details only; this
-    // darker reference neutral meets AA for normal text on the warm ground.
-    text3: "#7A6A52",
-    displayInk: "#1C1308",
-    primary: "#4C5470",
-    primaryDeep: "#363C52",
-    primaryTint: "#D0D4E8",
-    accent: "#2D4A7A",
-    success: "#3A7A4A",
-    danger: "#C0392B",
-    warning: "#D4A020",
-    info: "#2A6A9A",
+    text: "#15201B",
+    text2: "#4A5550",
+    // Meets AA for normal text on ground (5.3:1) and on bg-2 (4.9:1).
+    text3: "#5E6963",
+    displayInk: "#0F2A21",
+    primary: "#0B5D45",
+    primaryDeep: "#08473A",
+    primaryTint: "#E3F0EA",
+    accent: "#A4501C",
+    accentDeep: "#7E3C12",
+    accentTint: "#F6E8DD",
+    success: "#1E7A4C",
+    danger: "#B3261E",
+    warning: "#B7791F",
+    info: "#1D5E8C",
     /** On-color for solid danger buttons (AA in light and dark). */
     onDanger: "#FFFFFF",
-    price: "#2A2118",
-    discount: "#C0392B",
+    price: "#15201B",
+    discount: "#B3261E",
     catBeauty: "#C9A88A",
     catHealth: "#7AAB8A",
     catFood: "#C9836A",
@@ -42,41 +85,42 @@ export const tokens = {
   },
   /** Concrete dark palette (warm charcoal). Mirrored in base.css [data-theme="dark"]. */
   darkColors: {
-    bg: "#141312",
-    bg2: "#1C1A18",
-    surface: "#22201E",
-    surfaceElevated: "#2A2826",
+    bg: "#121614",
+    bg2: "#181D1A",
+    surface: "#1B201D",
+    surfaceElevated: "#232925",
     border: "rgba(255,255,255,0.10)",
-    text: "#F2EDE6",
-    text2: "#B0A99F",
-    /** Raised for AA on dark surface (~4.76:1); was #8A837A (~4.34:1). */
-    text3: "#918A80",
-    displayInk: "#F2EDE6",
-    primary: "#7AA0D4",
-    primaryDeep: "#5A82B8",
-    primaryTint: "#2A323C",
-    accent: "#D4A04A",
-    price: "#F2EDE6",
-    discount: "#E57368",
+    text: "#E4E8E5",
+    text2: "#A8B1AC",
+    /** AA on dark surface (~5.5:1) and bg (~6.1:1). */
+    text3: "#8E9892",
+    displayInk: "#E4E8E5",
+    primary: "#5FC49C",
+    primaryDeep: "#4AAE88",
+    primaryTint: "#1D2C26",
+    accent: "#E39255",
+    price: "#E4E8E5",
+    discount: "#EF8A80",
     onDanger: "#FFFFFF",
-    primaryBtnFg: "#141312",
-    primaryBtnHover: "#8BB0DC",
+    primaryBtnFg: "#121614",
+    primaryBtnHover: "#78D0AD",
   },
   fonts: {
-    display: "'Cormorant Garamond', Georgia, serif",
-    displayAlt: "'DM Serif Display', Georgia, serif",
+    display: "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
+    /** Kept as an alias so existing `font-display-alt` utilities resolve. */
+    displayAlt: "'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif",
     body: "'DM Sans', system-ui, sans-serif",
     mono: "'JetBrains Mono', monospace",
   },
   fontSize: {
-    hero: "clamp(2.4rem, 4vw, 3.9rem)",
-    h1: "clamp(1.8rem, 3vw, 2.6rem)",
-    h2: "clamp(1.5rem, 2.4vw, 2.1rem)",
+    hero: "clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem)",
+    h1: "clamp(1.75rem, 1.35rem + 1.8vw, 2.625rem)",
+    h2: "clamp(1.375rem, 1.15rem + 1vw, 1.875rem)",
     h3: "1.0625rem",
     body: "0.9375rem",
     sm: "0.8125rem",
     micro: "0.6875rem",
-    price: "1.02rem",
+    price: "1.0625rem",
   },
   spacing: {
     0: "0px",
@@ -106,14 +150,15 @@ export const tokens = {
   borderRadius: {
     sm: "8px",
     DEFAULT: "12px",
-    lg: "18px",
+    lg: "16px",
+    xl: "24px",
     pill: "999px",
   },
   boxShadow: {
-    1: "0 4px 24px rgba(28,19,8,0.07)",
-    2: "0 8px 32px rgba(28,19,8,0.14)",
-    3: "0 12px 48px rgba(28,19,8,0.13)",
-    focusRing: "0 0 0 3px rgba(76,84,112,0.24)",
+    1: "0 1px 2px rgba(15,42,33,0.06), 0 2px 8px rgba(15,42,33,0.05)",
+    2: "0 2px 4px rgba(15,42,33,0.06), 0 8px 24px rgba(15,42,33,0.10)",
+    3: "0 4px 8px rgba(15,42,33,0.06), 0 20px 48px rgba(15,42,33,0.16)",
+    focusRing: "0 0 0 2px #FFFFFF, 0 0 0 4px rgba(11,93,69,0.55)",
   },
   transitionDuration: {
     fast: "150ms",
@@ -189,6 +234,21 @@ export const contrastPairs = [
     name: "accent-on-ground",
     foreground: tokens.colors.accent,
     background: tokens.colors.bg,
+  },
+  {
+    name: "accent-on-surface",
+    foreground: tokens.colors.accent,
+    background: tokens.colors.surface,
+  },
+  {
+    name: "accent-deep-on-accent-tint",
+    foreground: tokens.colors.accentDeep,
+    background: tokens.colors.accentTint,
+  },
+  {
+    name: "text-3-on-ground-2",
+    foreground: tokens.colors.text3,
+    background: tokens.colors.bg2,
   },
   {
     name: "panel-text-on-panel",

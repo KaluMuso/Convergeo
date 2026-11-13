@@ -6,18 +6,17 @@ import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useReducer,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { useTranslations } from "next-intl";
+import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
+  customerAuth,
+  getReadyCustomerSession,
+  initializeCustomerSession,
+} from "../../../../../lib/customer-session";
+import {
+  SALE_UNITS,
   formatMadeToOrderLeadTime,
   formatListingQuantity,
   type FulfilmentMode,
@@ -25,7 +24,26 @@ import {
   type SaleUnitLabels,
 } from "../sale-quantity";
 
-export const FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000;
+import {
+  closeMiniCart,
+  getCartItemCount,
+  openMiniCart,
+  setStoreState,
+  subscribeStore,
+  useCartStore,
+} from "./cart-store";
+import { VariantLineLabel } from "./variant-line-label";
+
+export {
+  CartNavTrigger,
+  closeMiniCart,
+  getCartItemCount,
+  openMiniCart,
+  setLastAddedMessage,
+  setStoreStateForTests,
+  useCartStore,
+  type CartNavTriggerProps,
+} from "./cart-store";
 
 export type ChangeNoticeKind = "price_changed" | "out_of_stock" | "qty_reduced";
 
@@ -53,6 +71,9 @@ export type CartLine = {
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;
   is_rfq_quote?: boolean;
+  listing_variant_id?: string | null;
+  /** Chosen options, e.g. [{group: "Colour", value: "Red"}]. */
+  variant_options?: Array<{ group: string; value: string }>;
 };
 
 export type VendorGroup = {
@@ -89,49 +110,310 @@ type RevalidateResponse = {
   has_changes: boolean;
 };
 
-type CartStoreState = {
-  cart: CartResponse | null;
-  notices: ChangeNotice[];
-  loading: boolean;
-  /** True when the last cart refresh failed (distinct from an empty cart). */
-  loadError: boolean;
-  drawerOpen: boolean;
-  lastAddedMessage: string | null;
+type CartAuth = {
+  scope: string;
+  token: string | null;
+  /** Customer auth transition generation when the identity barrier is active. */
+  generation: number | null;
+};
+type CartRequestContext = CartAuth & {
+  apiBaseUrl: string;
+  sessionVersion: number;
 };
 
-type CartStoreListener = () => void;
+let activeCartScope: string | null = null;
+// Once the mounted cart host starts the customer session, every cart request
+// takes its identity from the reconciled login transition: writes wait for the
+// guest-to-account merge, a failed merge blocks them, and responses that land
+// after an identity change are discarded. Before that, a direct session read
+// still isolates retry scopes.
+let identityBarrier = false;
+let cartSessionVersion = 0;
+let authReadSequence = 0;
+let observedAuthReadSequence = 0;
+const GUEST_GENERATION = "vergeo-cart-guest-generation:v2";
+let memoryGuestGeneration: number | null = null;
 
-async function getAccessToken(): Promise<string | null> {
-  const supabase = await getBrowserClient();
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+function guestGeneration(): number {
+  if (memoryGuestGeneration !== null) return memoryGuestGeneration;
+  try {
+    const value = Number(sessionStorage.getItem(GUEST_GENERATION) ?? "0");
+    memoryGuestGeneration = Number.isSafeInteger(value) && value >= 0 ? value : 0;
+  } catch {
+    memoryGuestGeneration = 0;
+  }
+  return memoryGuestGeneration;
 }
 
-async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function readSessionIdentity(): Promise<{
+  session: { access_token: string; user?: { id?: string } } | null;
+  generation: number | null;
+}> {
+  if (identityBarrier) {
+    const session = await getReadyCustomerSession();
+    const state = customerAuth.snapshot();
+    if (
+      state.loading ||
+      state.error ||
+      (state.session?.user.id ?? null) !== (session?.user.id ?? null)
+    ) {
+      throw new ApiError("cart.auth_transition_pending", "Cart is waiting for sign-in review", {
+        status: 409,
+      });
+    }
+    return { session, generation: state.generation };
+  }
+  const supabase = await getBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error)
+    throw new ApiError("network_error", "Cart session unavailable", {
+      status: 0,
+    });
+  return { session: data.session, generation: null };
+}
+
+async function readCartAuth(): Promise<CartAuth> {
+  const { session, generation } = await readSessionIdentity();
+  if (!session) return { scope: `guest:${guestGeneration()}`, token: null, generation };
+  const token = session.access_token;
+  const userId = session.user?.id;
+  if (!token || !userId) {
+    throw new ApiError("network_error", "Cart session unavailable", {
+      status: 0,
+    });
+  }
+  let sessionId: string | null = null;
+  let subject: string | null = null;
+  try {
+    const encoded = token.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/") ?? "";
+    const claims: unknown = JSON.parse(atob(encoded));
+    if (claims && typeof claims === "object" && "sub" in claims && typeof claims.sub === "string") {
+      subject = claims.sub;
+    }
+    if (claims && typeof claims === "object" && "session_id" in claims) {
+      const id = claims.session_id;
+      if (typeof id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(id)) sessionId = id;
+    }
+  } catch {
+    // Opaque/custom tokens are isolated by a fingerprint below, never persisted.
+  }
+  // This unverified JWT metadata only partitions retry keys. Server token
+  // verification and cart ownership remain the authorization authority.
+  if (subject !== null && subject !== userId) {
+    throw new ApiError("network_error", "Cart session identity unavailable", {
+      status: 0,
+    });
+  }
+  if (!sessionId) {
+    if (!crypto.subtle) {
+      throw new ApiError("network_error", "Cart session identity unavailable", {
+        status: 0,
+      });
+    }
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    sessionId = `token-${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  }
+  return { scope: `user:${JSON.stringify([userId, sessionId])}`, token, generation };
+}
+
+function observeCartAuth(auth: CartAuth): CartAuth & { sessionVersion: number } {
+  const previous = activeCartScope;
+  if (previous !== null && !previous.startsWith("guest:") && auth.scope.startsWith("guest:")) {
+    const generation = guestGeneration() + 1;
+    memoryGuestGeneration = generation;
+
+    try {
+      sessionStorage.setItem(GUEST_GENERATION, String(generation));
+    } catch {
+      /* Memory state still isolates observed switches. */
+    }
+  }
+  // Guest snapshots never carry an earlier generation back into the store.
+  if (auth.token === null) auth = { ...auth, scope: `guest:${guestGeneration()}` };
+  if (activeCartScope !== auth.scope) {
+    activeCartScope = auth.scope;
+    ++cartSessionVersion;
+    ++cartMutationVersion;
+    if (previous !== null) {
+      setStoreState({
+        cart: null,
+        notices: [],
+        loading: true,
+        loadError: false,
+        lastAddedMessage: null,
+      });
+    }
+  }
+  return { ...auth, sessionVersion: cartSessionVersion };
+}
+
+async function currentCartAuth(): Promise<CartAuth & { sessionVersion: number }> {
+  const sequence = ++authReadSequence;
+  const auth = await readCartAuth();
+  if (sequence < observedAuthReadSequence) {
+    throw new ApiError("cart.session_changed", "Cart session changed during request", {
+      status: 0,
+    });
+  }
+  observedAuthReadSequence = sequence;
+  return observeCartAuth(auth);
+}
+
+async function cartContext(): Promise<CartRequestContext> {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) {
+    throw new ApiError("network_error", "API unavailable", { status: 0 });
+  }
+  return { ...(await currentCartAuth()), apiBaseUrl };
+}
+
+function contextIsCurrent(context: CartRequestContext): boolean {
+  return context.scope === activeCartScope && context.sessionVersion === cartSessionVersion;
+}
+
+async function currentContextToken(context: CartRequestContext): Promise<string | null> {
+  const current = await currentCartAuth();
+  if (context.generation !== null && current.generation !== context.generation) {
+    throw new ApiError("cart.auth_transition_changed", "Cart identity changed; review your cart", {
+      status: 409,
+    });
+  }
+  if (current.scope !== context.scope || !contextIsCurrent(context)) {
+    throw new ApiError("cart.session_changed", "Cart session changed during request", {
+      status: 0,
+    });
+  }
+  return current.token;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNgwee(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isCartLine(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.listing_id === "string" &&
+    typeof value.vendor_id === "string" &&
+    typeof value.qty === "number" &&
+    Number.isSafeInteger(value.qty) &&
+    value.qty > 0 &&
+    isNgwee(value.unit_price_ngwee) &&
+    isNgwee(value.line_total_ngwee) &&
+    typeof value.wholesale === "boolean" &&
+    (value.title_override === null || typeof value.title_override === "string") &&
+    (value.sale_unit === undefined || SALE_UNITS.includes(value.sale_unit as SaleUnit)) &&
+    (value.unit_step_milli === undefined ||
+      (isNgwee(value.unit_step_milli) && value.unit_step_milli > 0)) &&
+    (value.min_steps === undefined || (isNgwee(value.min_steps) && value.min_steps > 0)) &&
+    (value.fulfilment_mode === undefined ||
+      value.fulfilment_mode === "stocked" ||
+      value.fulfilment_mode === "made_to_order") &&
+    (value.lead_time_days === undefined ||
+      value.lead_time_days === null ||
+      isNgwee(value.lead_time_days)) &&
+    (value.is_rfq_quote === undefined || typeof value.is_rfq_quote === "boolean")
+  );
+}
+
+function isChangeNotice(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.listing_id === "string" &&
+    typeof value.kind === "string" &&
+    ["price_changed", "out_of_stock", "qty_reduced"].includes(value.kind) &&
+    typeof value.requested_qty === "number" &&
+    Number.isSafeInteger(value.requested_qty) &&
+    (value.available_qty === null || isNgwee(value.available_qty)) &&
+    isNgwee(value.snapshot_price_ngwee) &&
+    (value.current_price_ngwee === null || isNgwee(value.current_price_ngwee))
+  );
+}
+
+function requireCartResponse(value: unknown): void {
+  if (
+    !isRecord(value) ||
+    typeof value.cart_id !== "string" ||
+    !value.cart_id ||
+    !Array.isArray(value.items) ||
+    !value.items.every(isCartLine) ||
+    !Array.isArray(value.vendor_groups) ||
+    !value.vendor_groups.every(
+      (group: unknown) =>
+        isRecord(group) &&
+        typeof group.vendor_id === "string" &&
+        (group.vendor_name === undefined ||
+          group.vendor_name === null ||
+          typeof group.vendor_name === "string") &&
+        Array.isArray(group.items) &&
+        group.items.every(isCartLine) &&
+        isNgwee(group.subtotal_ngwee) &&
+        typeof group.delivery_eligible === "boolean",
+    ) ||
+    !isNgwee(value.subtotal_ngwee) ||
+    !Array.isArray(value.conflicts) ||
+    !value.conflicts.every(
+      (conflict: unknown) =>
+        isRecord(conflict) &&
+        typeof conflict.listing_id === "string" &&
+        typeof conflict.code === "string" &&
+        typeof conflict.message_key === "string" &&
+        isRecord(conflict.details),
+    ) ||
+    (value.notices !== undefined &&
+      (!Array.isArray(value.notices) || !value.notices.every(isChangeNotice)))
+  ) {
+    throw new ApiError("invalid_response", "Cart response was malformed", {
+      status: 0,
+    });
+  }
+}
+
+async function cartRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  suppliedContext?: CartRequestContext,
+): Promise<T> {
+  const context = suppliedContext ?? (await cartContext());
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const token = await getAccessToken();
+  const token = await currentContextToken(context);
+  headers.delete("Authorization");
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
   let response: Response;
   try {
-    response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
+    response = await fetch(`${context.apiBaseUrl.replace(/\/$/, "")}${path}`, {
       ...init,
       headers,
       credentials: "include",
     });
   } catch {
-    throw new ApiError("network_error", "Network request failed", { status: 0 });
+    throw new ApiError("network_error", "Network request failed", {
+      status: 0,
+    });
   }
 
   const contentType = response.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
-  const payload: unknown = isJson ? await response.json() : null;
+  let payload: unknown;
+  try {
+    payload = isJson ? await response.json() : null;
+  } catch {
+    throw new ApiError("invalid_response", "Cart response was malformed", {
+      status: 0,
+    });
+  }
 
   if (!response.ok) {
     if (
@@ -140,23 +422,50 @@ async function cartRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
       "error" in payload &&
       typeof (payload as { error?: { code?: string; message?: string } }).error?.code === "string"
     ) {
-      const error = (payload as { error: { code: string; message: string; request_id?: string } })
-        .error;
+      const error = (
+        payload as {
+          error: { code: string; message: string; request_id?: string };
+        }
+      ).error;
       throw new ApiError(error.code, error.message, {
         requestId: error.request_id,
         status: response.status,
       });
     }
-    throw new ApiError("unknown_error", "Request failed", { status: response.status });
+    throw new ApiError("unknown_error", "Request failed", {
+      status: response.status,
+    });
   }
 
+  if (path === "/cart" || (path.startsWith("/cart/items") && !path.endsWith("/save-for-later"))) {
+    requireCartResponse(payload);
+  } else if (path.endsWith("/save-for-later")) {
+    requireCartResponse(isRecord(payload) ? payload.cart : null);
+    if (
+      !isRecord(payload) ||
+      ![payload.product_id, payload.product_slug].every(
+        (value) => value === undefined || value === null || typeof value === "string",
+      )
+    ) {
+      throw new ApiError("invalid_response", "Cart response was malformed", {
+        status: 0,
+      });
+    }
+  }
+  await currentContextToken(context);
   return payload as T;
 }
 
-async function fetchRevalidateNotices(): Promise<ChangeNotice[]> {
+async function fetchRevalidateNotices(context?: CartRequestContext): Promise<ChangeNotice[]> {
   try {
-    const result = await cartRequest<RevalidateResponse>("/cart/revalidate", { method: "POST" });
-    return result.notices ?? [];
+    const result = await cartRequest<RevalidateResponse>(
+      "/cart/revalidate",
+      { method: "POST" },
+      context,
+    );
+    return Array.isArray(result?.notices) && result.notices.every(isChangeNotice)
+      ? result.notices
+      : [];
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
       return [];
@@ -165,107 +474,288 @@ async function fetchRevalidateNotices(): Promise<ChangeNotice[]> {
   }
 }
 
-async function loadCartWithNotices(): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
-  const cart = await cartRequest<CartResponse>("/cart");
+async function loadCartWithNotices(
+  context: CartRequestContext,
+): Promise<{ cart: CartResponse; notices: ChangeNotice[] }> {
+  const cart = await cartRequest<CartResponse>("/cart", {}, context);
   if (cart.notices && cart.notices.length > 0) {
     return { cart, notices: cart.notices };
   }
-  const notices = await fetchRevalidateNotices();
+  const notices = await fetchRevalidateNotices(context);
   return { cart, notices };
 }
 
-let storeState: CartStoreState = {
-  cart: null,
-  notices: [],
-  // Start loading so the cart page does not flash an empty state before the
-  // first refresh completes (empty vs load-error must stay distinct).
-  loading: true,
-  loadError: false,
-  drawerOpen: false,
-  lastAddedMessage: null,
-};
+let cartMutationVersion = 0;
+let cartReadVersion = 0;
 
-const storeListeners = new Set<CartStoreListener>();
+type PendingCartAdd = { key: string; inFlight: boolean };
+const pendingAddKeys = new Map<string, PendingCartAdd[]>();
 
-function emitStore() {
-  storeListeners.forEach((listener) => listener());
-}
-
-function setStoreState(patch: Partial<CartStoreState>) {
-  storeState = { ...storeState, ...patch };
-  emitStore();
-}
-
-/** Test-only store reset/patch — not for production UI. */
-export function setStoreStateForTests(patch: Partial<CartStoreState>) {
-  setStoreState(patch);
-}
-
-function subscribeStore(listener: CartStoreListener): () => void {
-  storeListeners.add(listener);
-  return () => storeListeners.delete(listener);
-}
-
-function getStoreSnapshot(): CartStoreState {
-  return storeState;
-}
-
-export function getCartItemCount(cart: CartResponse | null): number {
-  if (!cart) {
-    return 0;
+function pendingCartAdds(slot: string): PendingCartAdd[] {
+  const current = pendingAddKeys.get(slot);
+  if (current) return current;
+  let keys: string[] = [];
+  try {
+    const saved = sessionStorage.getItem(slot);
+    if (saved) {
+      try {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed))
+          keys = parsed.filter((key): key is string => typeof key === "string");
+      } catch {
+        // Accept one key written by the earlier single-key client version.
+        if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(saved)) keys = [saved];
+      }
+    }
+  } catch {
+    // Storage may be disabled; the in-memory queue still covers this page.
   }
-  // Quantities can represent incompatible measures (for example kg and metres),
-  // so the cart badge counts distinct lines instead of adding unlike units.
-  return cart.items.length;
+  const pending = keys.map((key) => ({ key, inFlight: false }));
+  pendingAddKeys.set(slot, pending);
+  return pending;
+}
+
+function persistCartAdds(slot: string, pending: PendingCartAdd[]) {
+  if (pending.length === 0) pendingAddKeys.delete(slot);
+  try {
+    if (pending.length === 0) sessionStorage.removeItem(slot);
+    else sessionStorage.setItem(slot, JSON.stringify(pending.map(({ key }) => key)));
+  } catch {
+    // The in-memory queue remains available if storage is disabled.
+  }
+}
+
+async function cartAddKey(
+  body: string,
+  context: CartRequestContext,
+): Promise<{ key: string; slot: string }> {
+  // The server scopes claims by cart. A newly issued guest cookie or a
+  // guest-to-user merge can change that scope, even if this tab keeps its key.
+  const slot = `vergeo-cart-add:v2:${context.scope}:${body}`;
+  const pending = pendingCartAdds(slot);
+  let operation = pending.find(({ inFlight }) => !inFlight);
+  if (!operation) {
+    operation = { key: crypto.randomUUID(), inFlight: false };
+    pending.push(operation);
+  }
+  operation.inFlight = true;
+  persistCartAdds(slot, pending);
+  return { key: operation.key, slot };
+}
+
+function settleCartAddKey(slot: string, key: string, definitive: boolean) {
+  const pending = pendingCartAdds(slot);
+  const operation = pending.find((item) => item.key === key);
+  if (!operation) return;
+  if (definitive) pending.splice(pending.indexOf(operation), 1);
+  else operation.inFlight = false;
+  persistCartAdds(slot, pending);
+}
+
+let observedGeneration: number | null = null;
+let lastReadyUserId: string | null = null;
+customerAuth.subscribe(() => {
+  if (!identityBarrier) return;
+  const state = customerAuth.snapshot();
+  if (state.generation !== observedGeneration) {
+    observedGeneration = state.generation;
+    lastReadyUserId = null;
+    setStoreState({
+      cart: null,
+      notices: [],
+      loading: state.loading,
+      loadError: Boolean(state.error),
+      lastAddedMessage: null,
+    });
+  }
+  if (
+    !state.loading &&
+    !state.error &&
+    state.session &&
+    lastReadyUserId !== state.session.user.id
+  ) {
+    lastReadyUserId = state.session.user.id;
+    void refreshCart();
+  }
+});
+
+export function resetCartClientForTests() {
+  identityBarrier = false;
+  observedGeneration = null;
+  lastReadyUserId = null;
+  observedAuthReadSequence = ++authReadSequence;
+  ++cartSessionVersion;
+  ++cartMutationVersion;
+  ++cartReadVersion;
+  activeCartScope = null;
+  memoryGuestGeneration = null;
+  pendingAddKeys.clear();
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
+  const startingSessionVersion = cartSessionVersion;
+  let context: CartRequestContext;
+  try {
+    context = await cartContext();
+  } catch {
+    if (startingSessionVersion === cartSessionVersion)
+      setStoreState({ loading: false, loadError: true });
+    return null;
+  }
+  const version = cartMutationVersion;
+  const readVersion = ++cartReadVersion;
   setStoreState({ loading: true, loadError: false });
   try {
-    const { cart, notices } = await loadCartWithNotices();
-    setStoreState({ cart, notices, loading: false, loadError: false });
+    const { cart, notices } = await loadCartWithNotices(context);
+    if (
+      contextIsCurrent(context) &&
+      version === cartMutationVersion &&
+      readVersion === cartReadVersion
+    ) {
+      setStoreState({ cart, notices, loading: false, loadError: false });
+    }
     return cart;
   } catch {
-    setStoreState({ loading: false, loadError: true });
+    if (
+      contextIsCurrent(context) &&
+      version === cartMutationVersion &&
+      readVersion === cartReadVersion
+    ) {
+      setStoreState({ loading: false, loadError: true });
+    }
     return null;
   }
 }
+
+function publishCartMutation(
+  version: number,
+  context: CartRequestContext,
+  cart: CartResponse,
+  notices: ChangeNotice[],
+) {
+  if (!contextIsCurrent(context)) return;
+  if (version !== cartMutationVersion) {
+    // Overlapping mutations can complete out of order. Read the server's final
+    // cart instead of publishing an older response over the latest one.
+    void refreshCart();
+    return;
+  }
+  // Invalidate reads that started while this mutation was still pending.
+  ++cartMutationVersion;
+  setStoreState({ cart, notices, loading: false, loadError: false });
+}
+
+async function cartMutationRequest<T>(
+  path: string,
+  init: RequestInit,
+  context: CartRequestContext,
+): Promise<T> {
+  try {
+    return await cartRequest<T>(path, init, context);
+  } catch (error) {
+    // A failed or interrupted mutation may still have reached the server.
+    if (contextIsCurrent(context)) {
+      ++cartMutationVersion;
+      void refreshCart();
+    }
+    throw error;
+  }
+}
+
+export type AddCartItemLocationOptions = {
+  pickupLocationId?: string;
+  fulfilment?: "pickup" | "delivery";
+  /** Chosen colour/size variant; required by the API when the listing has options. */
+  listingVariantId?: string;
+};
 
 /**
  * Add to cart. `clipId` (M17-P05) is optional attribution, not a second cart:
  * the same endpoint, the same payload plus one field, and the server validates
  * the clip before crediting anything — the client cannot mint credit.
+ *
+ * `locationOptions` is required by the API (cart.pickup_location_required)
+ * whenever the listing is branch-tracked — the PDP's branch selector resolves
+ * it before calling this (see pdp/use-listing-purchase.ts); every other
+ * caller (PLP quick-add, wishlist, clips) omits it unchanged, same as before
+ * this option existed.
  */
 export async function addCartItem(
   listingId: string,
   qty: number,
   clipId?: string,
+  locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>("/cart/items", {
-    method: "POST",
-    body: JSON.stringify({ listing_id: listingId, qty, ...(clipId ? { clip_id: clipId } : {}) }),
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const body = JSON.stringify({
+    listing_id: listingId,
+    qty,
+    ...(clipId ? { clip_id: clipId } : {}),
+    ...(locationOptions?.pickupLocationId
+      ? { pickup_location_id: locationOptions.pickupLocationId }
+      : {}),
+    ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
+    ...(locationOptions?.listingVariantId
+      ? { listing_variant_id: locationOptions.listingVariantId }
+      : {}),
   });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  const { key, slot } = await cartAddKey(body, context);
+  let cart: CartResponse;
+  try {
+    cart = await cartMutationRequest<CartResponse>(
+      "/cart/items",
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body,
+      },
+      context,
+    );
+    settleCartAddKey(slot, key, true);
+  } catch (error) {
+    // Even a validation response can race a same-key request that committed.
+    // Reuse the key until a successful replay confirms this operation's state.
+    settleCartAddKey(
+      slot,
+      key,
+      error instanceof ApiError && error.code === "cart.idempotency_mismatch",
+    );
+    throw error;
+  }
+  const notices = cart.notices ?? (await fetchRevalidateNotices(context));
+  publishCartMutation(version, context, cart, notices);
   return cart;
 }
 
 export async function updateCartItemQty(listingId: string, qty: number): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ qty }),
-  });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(
+    `/cart/items/${listingId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ qty }),
+    },
+    context,
+  );
+  const notices = cart.notices ?? (await fetchRevalidateNotices(context));
+  publishCartMutation(version, context, cart, notices);
   return cart;
 }
 
 export async function removeCartItem(listingId: string): Promise<CartResponse> {
-  const cart = await cartRequest<CartResponse>(`/cart/items/${listingId}`, {
-    method: "DELETE",
-  });
-  const notices = cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart, notices });
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(
+    `/cart/items/${listingId}`,
+    {
+      method: "DELETE",
+    },
+    context,
+  );
+  const notices = cart.notices ?? (await fetchRevalidateNotices(context));
+  publishCartMutation(version, context, cart, notices);
   return cart;
 }
 
@@ -276,21 +766,26 @@ export type SaveForLaterResult = {
 };
 
 export async function saveCartItemForLater(listingId: string): Promise<SaveForLaterResult> {
-  const result = await cartRequest<{
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const result = await cartMutationRequest<{
     cart: CartResponse;
     product_id: string | null;
     product_slug: string | null;
-  }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" });
-  const notices = result.cart.notices ?? (await fetchRevalidateNotices());
-  setStoreState({ cart: result.cart, notices });
+  }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" }, context);
+  const notices = result.cart.notices ?? (await fetchRevalidateNotices(context));
+  publishCartMutation(version, context, result.cart, notices);
+  await currentContextToken(context);
 
   if (result.product_slug) {
     const { upsertWishlistLocal } = await import("../../../../../lib/wishlist-local");
+    const { syncWishlistWithServer } = await import("../../../../../lib/engagement-api");
+    // Dynamic imports can yield across an observed account/session switch.
+    await currentContextToken(context);
     upsertWishlistLocal({
       productId: result.product_id,
       slug: result.product_slug,
     });
-    const { syncWishlistWithServer } = await import("../../../../../lib/engagement-api");
     void syncWishlistWithServer();
   }
 
@@ -299,23 +794,6 @@ export async function saveCartItemForLater(listingId: string): Promise<SaveForLa
     product_id: result.product_id,
     product_slug: result.product_slug,
   };
-}
-
-export function openMiniCart() {
-  setStoreState({ drawerOpen: true });
-}
-
-export function closeMiniCart() {
-  setStoreState({ drawerOpen: false });
-}
-
-export function setLastAddedMessage(message: string | null) {
-  setStoreState({ lastAddedMessage: message });
-}
-
-export function useCartStore() {
-  const state = useSyncExternalStore(subscribeStore, getStoreSnapshot, getStoreSnapshot);
-  return state;
 }
 
 type CartContextValue = {
@@ -366,7 +844,6 @@ export function useCartActions(): CartContextValue {
 export type MiniCartLabels = {
   title: string;
   close: string;
-  itemCount: string;
   subtotal: string;
   total: string;
   viewCart: string;
@@ -478,38 +955,6 @@ export function MiniCartEmptyState({
   );
 }
 
-export type CartNavTriggerProps = {
-  labels: Pick<MiniCartLabels, "openCart">;
-  cartIcon: ReactNode;
-  className?: string;
-};
-
-export function CartNavTrigger({ labels, cartIcon, className }: CartNavTriggerProps) {
-  const { cart } = useCartStore();
-  const { openDrawer } = useCartActions();
-  const count = getCartItemCount(cart);
-
-  return (
-    <button
-      type="button"
-      className={
-        className ??
-        "relative inline-flex min-h-11 min-w-11 items-center justify-center rounded text-primary"
-      }
-      aria-label={labels.openCart}
-      data-testid="cart-nav-trigger"
-      onClick={openDrawer}
-    >
-      <span aria-hidden>{cartIcon}</span>
-      {count > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface">
-          {count > 99 ? "99+" : String(count)}
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
 type MiniCartDrawerProps = {
   locale: string;
   labels: MiniCartLabels;
@@ -518,6 +963,9 @@ type MiniCartDrawerProps = {
 export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
   const { cart, drawerOpen, lastAddedMessage, loadError, loading } = useCartStore();
   const { closeDrawer, refresh } = useCartActions();
+  // See CartPageView: `cart.itemCount` is an ICU plural, so it is formatted here
+  // rather than interpolated from a template label.
+  const tCheckout = useTranslations("checkout");
   const count = getCartItemCount(cart);
 
   useEffect(() => {
@@ -566,7 +1014,7 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
         ) : cart && count > 0 ? (
           <div className="flex flex-col gap-4 p-4">
             <p className="text-sm text-text-2" data-testid="mini-cart-count" aria-live="polite">
-              {labels.itemCount.replace("{count}", String(count))}
+              {tCheckout("cart.itemCount", { count })}
             </p>
             <ul className="flex flex-col gap-3">
               {cart.items.map((item) => {
@@ -582,6 +1030,12 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
                       <span className="block truncate">
                         {item.title_override ?? item.listing_id}
                       </span>
+                      <VariantLineLabel
+                        options={item.variant_options}
+                        template={tCheckout.raw("variant.option") as string}
+                        separator={tCheckout.raw("variant.separator") as string}
+                        testId={`mini-cart-variant-${item.listing_id}`}
+                      />
                       <span className="block text-xs text-text-2">
                         {labels.quantityValue.replace(
                           "{count}",
@@ -648,6 +1102,13 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
 
 export function CartHost({ locale, labels }: MiniCartDrawerProps) {
   const [, bump] = useReducer((value: number) => value + 1, 0);
+  // Set during render so the drawer's first refresh already waits for the
+  // reconciled customer session (child effects run before this host's).
+  identityBarrier = true;
+
+  useEffect(() => {
+    void initializeCustomerSession().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     return subscribeStore(() => bump());

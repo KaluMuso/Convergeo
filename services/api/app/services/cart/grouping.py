@@ -26,6 +26,9 @@ class CartLineView:
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
     is_rfq_quote: bool = False
+    listing_variant_id: str | None = None
+    #: ((group, value), ...) — e.g. (("Colour", "Red"), ("Size", "M")).
+    variant_options: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,3 +70,20 @@ def listing_vendor_map(listings: list[dict[str, Any]]) -> dict[str, str]:
         for row in listings
         if isinstance(row.get("id"), str) and isinstance(row.get("vendor_id"), str)
     }
+
+
+def line_variant_id(item: dict[str, Any]) -> str | None:
+    raw = item.get("listing_variant_id")
+    return str(raw) if isinstance(raw, str) and raw else None
+
+
+def line_variant_options(listing: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+    """Variant label pairs overlaid by ``store.fetch_listings_for_items``."""
+    raw = listing.get("_variant_options")
+    if not isinstance(raw, list):
+        return ()
+    return tuple(
+        (str(option["group"]), str(option["value"]))
+        for option in raw
+        if isinstance(option, dict) and option.get("group") and option.get("value")
+    )

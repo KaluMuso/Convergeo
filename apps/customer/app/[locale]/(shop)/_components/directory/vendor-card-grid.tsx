@@ -3,7 +3,6 @@ import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
 import {
-  vendorCommercialTier,
   vendorTrustForCard,
   type VendorLadderLabels,
 } from "./vendor-ladder-labels";
@@ -58,7 +57,9 @@ function formatVerifiedYear(createdAt: string | null | undefined): string {
     return String(new Date().getFullYear());
   }
   const year = new Date(createdAt).getFullYear();
-  return Number.isFinite(year) ? String(year) : String(new Date().getFullYear());
+  return Number.isFinite(year)
+    ? String(year)
+    : String(new Date().getFullYear());
 }
 
 function isCloudinaryPublicId(value: string): boolean {
@@ -87,9 +88,13 @@ function VendorLogo({ logoUrl }: { logoUrl: string }) {
   );
 }
 
-export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps) {
+export function VendorCardGrid({
+  locale,
+  vendors,
+  labels,
+}: VendorCardGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {vendors.map((vendor) => {
         const categoryText =
           vendor.categories.length > 0
@@ -100,7 +105,9 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
         const ratingValue =
           vendor.ratingAvg !== null && vendor.ratingCount > 0
             ? labels.rating
-                .replace("{rating}", vendor.ratingAvg.toFixed(1))
+                // The message declares `{rating, number, ::.1}`; match the whole
+                // argument, not just the bare name.
+                .replace(/\{rating[^}]*\}/, vendor.ratingAvg.toFixed(1))
                 .replace("{count}", String(vendor.ratingCount))
             : labels.noReviews;
         const verifiedLabel = labels.verifiedSince.replace(
@@ -111,7 +118,7 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
           { preferredBadge: vendor.preferredBadge, kycTier: vendor.kycTier },
           labels.trustLabels,
         );
-        const commercial = vendorCommercialTier(vendor.commercialTier, labels.trustLabels);
+        // Plan tier (Bronze…Platinum) is never shown to buyers.
         const trustLabel =
           trust.trust === "id_verified"
             ? verifiedLabel
@@ -129,11 +136,13 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
               name={vendor.displayName}
               categoryLabel={categoryText}
               locationLabel={vendor.landmark ?? labels.defaultLocation}
-              avatar={vendor.logoUrl ? <VendorLogo logoUrl={vendor.logoUrl} /> : undefined}
+              avatar={
+                vendor.logoUrl ? (
+                  <VendorLogo logoUrl={vendor.logoUrl} />
+                ) : undefined
+              }
               trust={trust.trust}
               trustLabel={trustLabel}
-              tier={commercial.tier}
-              tierLabel={commercial.tierLabel}
               stats={[
                 { label: labels.listings, value: String(vendor.listingCount) },
                 { label: labels.reviews, value: ratingValue },

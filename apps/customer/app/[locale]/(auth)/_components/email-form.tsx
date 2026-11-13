@@ -8,9 +8,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { parseAuthError } from "./auth-utils";
+import { describeAuthFailure, type AuthFailureStage } from "./auth-diagnostics";
+import { isPasswordLengthAllowed } from "./email-password-policy";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
+import type { ParsedAuthError } from "./auth-utils";
 import type { AuthPortal } from "@vergeo/auth/portal";
 
 type EmailFormLabels = {
@@ -26,14 +28,23 @@ type EmailFormLabels = {
   invalidCredentials: string;
   emailNotConfirmed: string;
   alreadyRegistered: string;
+  signupConfirmation?: string;
+  network?: string;
+  unavailable?: string;
   forgotPassword?: string;
 };
 
 function messageForAuthError(
-  parsed: ReturnType<typeof parseAuthError>,
+  parsed: ParsedAuthError,
   labels: EmailFormLabels,
   mode: "login" | "signup",
 ): string {
+  if (parsed.code === "network") {
+    return labels.network ?? labels.generic;
+  }
+  if (parsed.code === "client_unavailable" || parsed.code === "service_unavailable") {
+    return labels.unavailable ?? labels.generic;
+  }
   if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
     return labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds));
   }
@@ -70,6 +81,7 @@ export function EmailForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -88,30 +100,44 @@ export function EmailForm({
       return;
     }
 
-    if (password.length < 8) {
+    if (!isPasswordLengthAllowed(password, mode)) {
       setErrorMessage(labels.invalidPassword);
       return;
     }
 
     setLoading(true);
 
+    let stage: AuthFailureStage = "initialize";
+    const showFailure = (error: unknown) => {
+      const { parsed, diagnostic } = describeAuthFailure(error, stage, portal, mode);
+      console.warn("auth_failure", diagnostic);
+      setErrorMessage(messageForAuthError(parsed, labels, mode));
+    };
+
     try {
       const supabase = await getBrowserClient();
+      stage = "authenticate";
 
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          setErrorMessage(messageForAuthError(parseAuthError(error), labels, "signup"));
+          showFailure(error);
+          return;
+        }
+        if (!data.session) {
+          setPassword("");
+          setConfirmationPending(true);
           return;
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          setErrorMessage(messageForAuthError(parseAuthError(error), labels, "login"));
+          showFailure(error);
           return;
         }
       }
 
+      stage = "navigate";
       await navigateAfterPortalAuth({
         router,
         locale,
@@ -119,12 +145,20 @@ export function EmailForm({
         nextParam,
         fallbackPath: defaultNextPath,
       });
-    } catch {
-      setErrorMessage(labels.generic);
+    } catch (error) {
+      showFailure(error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (confirmationPending) {
+    return (
+      <p role="status" className="font-body text-sm text-text-2">
+        {labels.signupConfirmation ?? labels.emailNotConfirmed}
+      </p>
+    );
+  }
 
   return (
     <form className="flex w-full flex-col gap-4" onSubmit={(event) => void handleSubmit(event)}>

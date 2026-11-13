@@ -75,26 +75,27 @@ def _insert_event_with_instance(
     capacity: int = 1,
 ) -> str:
     slug = f"evt-{event_id[:8]}"
-    conn.run(
+    seeded = conn.run(
         f"""
+        BEGIN;
+        SET LOCAL role service_role;
+        SET LOCAL "request.jwt.claims" = '{{"role":"service_role"}}';
         INSERT INTO public.events (
           id, organiser_vendor_id, title, slug, venue, lat, lng, status
         ) VALUES (
           '{event_id}', '{organiser_vendor_id}', 'Test Event', '{slug}',
-          'Lusaka Showgrounds', -15.4167, 28.2833, 'draft'
+          'Lusaka Showgrounds', -15.4167, 28.2833, 'published'
         )
         ON CONFLICT (id) DO NOTHING;
-        """
-    )
-    conn.run(
-        f"""
         INSERT INTO public.event_instances (id, event_id, starts_at, capacity)
         VALUES (
           '{instance_id}', '{event_id}', '2026-12-01T18:00:00Z', {capacity}
         )
         ON CONFLICT (id) DO UPDATE SET capacity = EXCLUDED.capacity;
+        COMMIT;
         """
     )
+    assert seeded.ok, seeded.error
     return event_id
 
 
@@ -856,11 +857,13 @@ class TestAllocationApi:
                     "id": INSTANCE_1,
                     "event_id": seeded["event_id"],
                     "starts_at": "2026-12-01T18:00:00Z",
+                    "capacity": 10,
                 },
                 {
                     "id": INSTANCE_2,
                     "event_id": seeded["event_id"],
                     "starts_at": "2026-12-02T18:00:00Z",
+                    "capacity": 10,
                 },
             ]
         )

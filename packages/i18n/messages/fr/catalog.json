@@ -19,7 +19,11 @@
       "relevance": "Pertinence",
       "cheapest": "Prix le plus bas",
       "nearest": "Le plus proche",
-      "newest": "Le plus récent"
+      "newest": "Le plus récent",
+      "best": "Meilleure correspondance",
+      "verified": "Vendeurs vérifiés",
+      "bundles": "Lots",
+      "cheapestChip": "Moins cher"
     },
     "facets": {
       "heading": "Filtres",
@@ -90,7 +94,7 @@
     },
     "serviceBar": {
       "ariaLabel": "Informations sur la livraison et le retrait",
-      "message": "Livraison à Lusaka · Retrait national · Séquestre lorsque vous payez en ligne"
+      "message": "Paiement à la livraison · Livraison à Lusaka · Retrait national"
     },
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
@@ -203,6 +207,39 @@
       "seconds": "Sec",
       "expired": "Offre terminée",
       "ariaLabel": "Se termine dans {time}"
+    },
+    "feed": {
+      "sponsored": "Sponsorisé",
+      "sponsoredBy": "Sponsorisé par {advertiser}",
+      "adCta": "En savoir plus",
+      "loadingMore": "Chargement",
+      "end": "Vous avez tout vu",
+      "retry": "Réessayer",
+      "loadError": "Impossible de charger plus pour le moment.",
+      "forYouPersonal": "Sélectionné d'après vos visites",
+      "forYouTrending": "Tendances chez les acheteurs en Zambie",
+      "eventCapacity": "{filled}/{total} places",
+      "sections": {
+        "forYou": "Pour vous",
+        "servicesNearYou": "Services près de chez vous",
+        "bestElectronics": "Le meilleur de l'électronique",
+        "bestFashion": "Le meilleur de la mode",
+        "mens": "Homme",
+        "womens": "Femme",
+        "kids": "Enfants",
+        "underK100": "Bonnes affaires à moins de K100",
+        "techGadgets": "Gadgets high-tech",
+        "seasonalSummer": "Sélection été",
+        "eventsThisWeek": "Événements cette semaine",
+        "newArrivals": "Nouveautés",
+        "trending": "Tendances",
+        "topVendors": "Meilleurs vendeurs"
+      },
+      "stream": {
+        "title": "Populaire en ce moment",
+        "loadMore": "Voir plus",
+        "moreLoaded": "{count} articles de plus chargés."
+      }
     }
   },
   "pdp": {
@@ -251,7 +288,13 @@
     "related": {
       "heading": "Plus dans cette catégorie",
       "fromPrice": "À partir de {price}",
-      "vendorFallback": "Même catégorie"
+      "vendorFallback": "Même catégorie",
+      "vendorHeading": "Autres articles de {vendor}",
+      "categoryHeading": "Autres articles de cette catégorie",
+      "loading": "Chargement des recommandations…",
+      "unavailable": "Les recommandations sont temporairement indisponibles.",
+      "storeHeading": "Plus de cette boutique",
+      "similarHeading": "Similaires dans cette catégorie"
     },
     "recentlyViewed": {
       "heading": "Consultés récemment"
@@ -260,7 +303,12 @@
       "empty": "Pas encore d'images",
       "indicator": "Image {current} sur {total}",
       "previous": "Image précédente",
-      "next": "Image suivante"
+      "next": "Image suivante",
+      "zoomOpen": "Agrandir l’image",
+      "zoomClose": "Fermer la visionneuse",
+      "zoomTitle": "Images du produit",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Ajuster l’image"
     },
     "specs": {
       "heading": "Caractéristiques",
@@ -297,7 +345,16 @@
       "moreThanLowest": "{diff} de plus que l'offre la plus basse",
       "wishlistAdd": "Ajouter à la liste de souhaits",
       "wishlistRemove": "Retirer de la liste de souhaits",
-      "wishlistSaved": "Ajouté à la liste de souhaits"
+      "wishlistSaved": "Ajouté à la liste de souhaits",
+      "pickup": {
+        "heading": "Choisissez une agence de retrait",
+        "selectAria": "Agence de retrait",
+        "placeholder": "Sélectionnez une agence",
+        "loading": "Chargement des agences de retrait…",
+        "loadError": "Impossible de charger les agences de retrait. Réessayez.",
+        "unavailable": "Aucune agence de retrait n'est disponible pour cet article",
+        "required": "Choisissez une agence de retrait pour ajouter cet article"
+      }
     },
     "stickyAtc": {
       "ariaLabel": "Ajout rapide au panier"
@@ -343,6 +400,28 @@
         "misleading": "Trompeur ou inexact",
         "other": "Autre préoccupation"
       }
+    },
+    "variants": {
+      "groupLabel": "{group} : {value}",
+      "choose": "Choisir {group}",
+      "soldOut": "{value} (épuisé)",
+      "unavailable": "{value} (indisponible avec vos autres choix)",
+      "required": "Choisissez {options} pour ajouter cet article au panier",
+      "listSeparator": " et ",
+      "chooseOptions": "Choisir les options",
+      "wasPrice": "Avant",
+      "errors": {
+        "outOfStock": "Cette option vient d'être épuisée. Choisissez-en une autre ou réduisez la quantité.",
+        "unavailable": "Cette option n'est plus disponible. Choisissez-en une autre.",
+        "conflict": "Votre panier contient déjà cet article dans une autre option. Retirez-le d'abord du panier pour changer."
+      }
+    },
+    "lightbox": {
+      "open": "Afficher l'image en plein écran",
+      "dialog": "Visionneuse d'images",
+      "close": "Fermer la visionneuse",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière"
     }
   },
   "returnableBadge": {
@@ -431,5 +510,53 @@
     "errors": {
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
     }
+  },
+  "backInStock": {
+    "notifyMe": "M'avertir du retour en stock",
+    "subscribed": "Nous vous avertirons dès le retour en stock",
+    "failed": "Impossible de créer l'alerte. Réessayez.",
+    "seeSimilar": "Voir des articles similaires en stock",
+    "unavailable": "Actuellement indisponible"
+  },
+  "deals": {
+    "metaTitle": "Offres du jour",
+    "title": "Offres du jour",
+    "subtitle": "Prix limités de vendeurs vérifiés. Paiement protégé par séquestre.",
+    "endsIn": "Se termine dans {time}",
+    "ended": "Terminé",
+    "off": "-{percent} %",
+    "emptyTitle": "Aucune offre en cours",
+    "emptyBody": "De nouvelles offres arrivent souvent. Parcourez le catalogue en attendant.",
+    "browse": "Voir tous les produits",
+    "unavailable": "Les offres sont indisponibles. Réessayez bientôt."
+  },
+  "qa": {
+    "title": "Questions et réponses",
+    "empty": "Aucune question pour l'instant. Posez votre question au vendeur.",
+    "askLabel": "Votre question",
+    "askPlaceholder": "ex. Le chargeur est-il inclus ?",
+    "submit": "Demander",
+    "submitting": "Envoi…",
+    "signIn": "Connectez-vous pour poser une question",
+    "sent": "Question envoyée. Elle apparaîtra après vérification.",
+    "failed": "Impossible d'envoyer votre question. Réessayez.",
+    "tooShort": "Écrivez au moins 5 caractères.",
+    "sellerAnswer": "Vendeur",
+    "buyerAnswer": "Acheteur",
+    "loadFailed": "Les questions n'ont pas pu être chargées."
+  },
+  "saveSearch": {
+    "cta": "Enregistrer la recherche",
+    "saved": "Recherche enregistrée — nous vous alerterons des nouveautés",
+    "signIn": "Connectez-vous pour enregistrer des recherches",
+    "failed": "Impossible d'enregistrer cette recherche. Réessayez."
+  },
+  "delivery": {
+    "deliveryToday": "Livraison à Lusaka aujourd'hui",
+    "deliveryTomorrow": "Livraison à Lusaka demain",
+    "deliveryDays": "Livraison à Lusaka sous {min} à {max} jours",
+    "pickupToday": "Retrait aujourd'hui",
+    "pickupTomorrow": "Retrait demain",
+    "pickupDays": "Retrait sous {min} à {max} jours"
   }
 }

@@ -360,14 +360,15 @@ class TestCartReservationSweep:
         ids_fixture = json.loads(
             (Path(__file__).resolve().parent / "fixtures" / "demo" / "ids.json").read_text()
         )
-        category_id = ids_fixture["category_id"]
+        product_id = ids_fixture["products"]["phone"]
         db.run(
             f"""
             INSERT INTO public.vendor_listings (
-              id, vendor_id, category_id, title, slug, stock_mode, stock_qty, status
+              id, vendor_id, product_id, title_override, price_ngwee, condition,
+              stock_mode, stock_qty, status
             ) VALUES (
-              '{listing_id}', '{VENDOR_A}', '{category_id}',
-              'Sweep listing', 'sweep-{listing_id[:8]}',
+              '{listing_id}', '{VENDOR_A}', '{product_id}',
+              'Sweep listing', 10000, 'new',
               'tracked', 5, 'active'
             );
             """
@@ -546,7 +547,7 @@ class TestExpiredLicenceSweep:
         ids_fixture = json.loads(
             (Path(__file__).resolve().parent / "fixtures" / "demo" / "ids.json").read_text()
         )
-        category_id = ids_fixture["category_id"]
+        product_id = ids_fixture["products"]["phone"]
 
         db.run(
             f"""
@@ -558,10 +559,11 @@ class TestExpiredLicenceSweep:
         db.run(
             f"""
             INSERT INTO public.vendor_listings (
-              id, vendor_id, category_id, title, slug, stock_mode, stock_qty, status
+              id, vendor_id, product_id, title_override, price_ngwee, condition,
+              stock_mode, stock_qty, status
             ) VALUES (
-              '{listing_id}', '{VENDOR_A}', '{category_id}',
-              'Regulated listing', 'regulated-{listing_id[:8]}',
+              '{listing_id}', '{VENDOR_A}', '{product_id}',
+              'Regulated listing', 10000, 'new',
               'tracked', 3, 'active'
             );
             """

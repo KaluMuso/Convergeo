@@ -80,6 +80,7 @@
       "success": "Merci — votre message est en route. Nous vous recontacterons bientôt.",
       "errorGeneric": "Une erreur s'est produite. Veuillez réessayer, ou contactez-nous sur WhatsApp.",
       "errorRateLimited": "Vous avez déjà envoyé plusieurs messages. Veuillez patienter un instant avant d'en envoyer un autre.",
+      "errorUnavailable": "Nous ne pouvons pas recevoir de messages pour le moment. Écrivez-nous sur WhatsApp ou réessayez plus tard.",
       "validation": {
         "nameRequired": "Veuillez indiquer votre nom.",
         "nameTooLong": "Ce nom est trop long.",

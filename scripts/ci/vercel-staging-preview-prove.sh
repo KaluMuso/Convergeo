@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Deploy a Git-source Vercel Preview for one portal on the staging branch,
-# await READY, verify SHA/target/project, check API env wiring, and probe health.
+# await READY, verify SHA/target/project, then prove the EFFECTIVE DEPLOYED
+# CONFIGURATION from the live artifact's own /health response (primary,
+# blocking). Vercel's stored env-var config is also checked but only as a
+# secondary, non-blocking, informational signal — see
+# scripts/ci/vercel_preview_health_verify.py and vercel_preview_env_verify.py.
 #
 # Usage (from deploy-staging.yml or local with VERCEL_TOKEN):
 #   bash scripts/ci/vercel-staging-preview-prove.sh --portal customer
@@ -12,9 +16,35 @@
 #   GITHUB_SHA, GITHUB_REF_NAME (must be "staging" in CI)
 #   STAGING_API_BASE_URL and/or STAGING_API_HOST
 #
+# Vercel Deployment Protection (see scripts/ci/vercel_preview_access.py):
+#   Preview deployments sit behind Deployment Protection, so the health probe
+#   must authenticate with a "Protection Bypass for Automation" secret, sent as
+#   the x-vercel-protection-bypass header. A secret is issued PER VERCEL
+#   PROJECT and the three portals are three separate projects, so one portal's
+#   secret is never assumed to work for another. Precedence, highest first:
+#     VERCEL_PORTAL_BYPASS_SECRET                    (pre-scoped by the caller)
+#     VERCEL_AUTOMATION_BYPASS_SECRET_{CUSTOMER,VENDOR,ADMIN}
+#     VERCEL_AUTOMATION_BYPASS_SECRET                (legacy fallback only)
+#   The value is passed to curl through a mode-600 config file, never through
+#   argv, a URL, a query parameter, the evidence JSON, GITHUB_OUTPUT, or a log.
+#
 # Optional:
 #   GITHUB_OUTPUT — when set, writes url, deployment_id, sha outputs
 #   VERCEL_PREVIEW_PROVE_EVIDENCE — path for JSON evidence (default: $OUTPUT_DIR/evidence.json)
+#   --phase prepare|prove|all — split prepare/upload/prove in CI so the
+#     PRE_PROBE checkpoint is persisted before any health or alias probe.
+#   --checkpoint-file PATH — current-attempt sanitized checkpoint.
+#   --selection-file PATH — authenticated prior-attempt reuse decision.
+#   CUSTOMER_STAGING_STABLE_HOSTNAME — customer portal only. When set, once
+#     this exact deployment is proven to match GITHUB_SHA, alias this stable
+#     same-site hostname (e.g. customer.staging.vergeo5.com) to it via the
+#     Vercel API, then independently prove the alias is LIVE by re-running
+#     the same app/env/buildId/apiHost health fingerprint against the
+#     hostname itself (a 2xx alias response alone does not prove edge
+#     propagation finished) — see docs/ops/staging-samesite-guest-cart.md.
+#     A no-op (stable_hostname_status="not_configured") until set;
+#     fail-closed once set (a failed alias or failed live fingerprint fails
+#     this job, never silently skips).
 #
 set -euo pipefail
 
@@ -26,6 +56,9 @@ GITHUB_ORG="${GITHUB_ORG:-KaluMuso}"
 GITHUB_REPO="${GITHUB_REPO:-Convergeo}"
 HEALTH_LOCALE="${HEALTH_LOCALE:-en}"
 DRY_RUN=0
+PHASE="all"
+CHECKPOINT_FILE=""
+SELECTION_FILE=""
 
 usage() {
   sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -44,6 +77,18 @@ while [[ $# -gt 0 ]]; do
       OUTPUT_DIR="${2:-}"
       shift 2
       ;;
+    --phase)
+      PHASE="${2:-}"
+      shift 2
+      ;;
+    --checkpoint-file)
+      CHECKPOINT_FILE="${2:-}"
+      shift 2
+      ;;
+    --selection-file)
+      SELECTION_FILE="${2:-}"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -59,6 +104,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "${OUTPUT_DIR}"
+
+case "${PHASE}" in
+  prepare|prove|all) ;;
+  *) die "--phase must be prepare, prove, or all" ;;
+esac
+
+if [ -z "${CHECKPOINT_FILE}" ]; then
+  CHECKPOINT_FILE="${OUTPUT_DIR}/deployment-checkpoint.json"
+fi
 
 case "${PORTAL}" in
   customer)
@@ -97,10 +151,9 @@ if [ "${GITHUB_REF_NAME}" != "staging" ]; then
   die "GITHUB_REF_NAME must be staging, got ${GITHUB_REF_NAME}"
 fi
 
-case "${GITHUB_SHA}" in
-  [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
-  *) die "GITHUB_SHA is not a commit SHA" ;;
-esac
+if [[ ! "${GITHUB_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+  die "GITHUB_SHA must be an exact lowercase 40-hex commit SHA"
+fi
 
 if [ "${GITHUB_SHA}" = "latest" ]; then
   die "refusing image/deployment tag latest"
@@ -124,6 +177,23 @@ EXPECTED_API_HOST="$(printf '%s' "${API_BASE}" | sed -E 's#^https?://##; s#/.*##
 if [ "${DRY_RUN}" -eq 1 ]; then
   log "dry-run OK portal=${PORTAL} project=${VERCEL_NAME} api_env=${API_ENV_VAR}"
   exit 0
+fi
+
+GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
+GITHUB_REPOSITORY_ID="${GITHUB_REPOSITORY_ID:-}"
+GITHUB_RUN_ID="${GITHUB_RUN_ID:-}"
+GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-}"
+STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION:-}"
+if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] \
+  || [ "${GITHUB_REPOSITORY_ID}" != "1290591718" ]; then
+  die "untrusted GitHub repository identity"
+fi
+if [[ ! "${GITHUB_RUN_ID}" =~ ^[1-9][0-9]*$ ]] \
+  || [[ ! "${GITHUB_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]; then
+  die "GitHub run/attempt identity is required"
+fi
+if [[ ! "${STAGING_BUILD_CONFIG_REVISION}" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$ ]]; then
+  die "STAGING_BUILD_CONFIG_REVISION must be a non-secret versioned identity"
 fi
 
 vercel_api() {
@@ -168,68 +238,38 @@ vercel_api() {
 }
 
 verify_project_env() {
-  local env_json verdict host
-  verdict="verified"
-  if ! env_json="$(vercel_api GET "v9/projects/${PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}")"; then
+  local env_json tmp_env_json verdict
+  # decrypt=true: without it Vercel returns ciphertext for encrypted/secret/
+  # sensitive rows, not the plaintext value — this is not evidence of a leaked
+  # credential, it is the documented shape of an un-decrypted response.
+  # gitBranch=staging: server-side filter for branch-scoped Preview rows;
+  # vercel_preview_env_verify.py independently re-checks each row's own
+  # gitBranch field, so selection stays correct regardless of exactly which
+  # rows the filter returns.
+  if ! env_json="$(vercel_api GET "v9/projects/${PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}&decrypt=true&gitBranch=staging")"; then
     printf '%s' "BLOCKED_EXTERNAL"
     return 0
   fi
 
-  API_ENV_VAR="${API_ENV_VAR}" \
-  EXPECTED_API_HOST="${EXPECTED_API_HOST}" \
-  ENV_JSON="${env_json}" \
-  python3 - <<'PY'
-import json, os, sys
-
-var = os.environ["API_ENV_VAR"]
-expected_host = os.environ["EXPECTED_API_HOST"]
-doc = json.loads(os.environ["ENV_JSON"])
-rows = doc if isinstance(doc, list) else doc.get("envs", doc.get("environmentVariables", []))
-if not isinstance(rows, list):
-    print("BLOCKED_EXTERNAL")
-    sys.exit(0)
-
-def matches_preview(row):
-    target = row.get("target") or []
-    if isinstance(target, str):
-        target = [target]
-    targets = {t.lower() for t in target}
-    if "preview" not in targets and "development" not in targets:
-        return False
-    git_branch = row.get("gitBranch") or row.get("branch") or ""
-    if git_branch and git_branch != "staging":
-        return False
-    return True
-
-value = None
-for row in rows:
-    if row.get("key") != var:
-        continue
-    if not matches_preview(row):
-        continue
-    value = row.get("value") or ""
-    break
-
-if not value:
-    print("missing")
-    sys.exit(0)
-
-lower = value.lower()
-if "api.vergeo5.com" in lower or "localhost" in lower:
-    print("forbidden")
-    sys.exit(0)
-host = value.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0].lower()
-if host != expected_host.lower():
-    print(f"host_mismatch:{host}")
-    sys.exit(0)
-print("verified")
-PY
+  tmp_env_json="$(mktemp)"
+  printf '%s' "${env_json}" > "${tmp_env_json}"
+  verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_env_verify.py" \
+    --key "${API_ENV_VAR}" \
+    --git-branch staging \
+    --expected-host "${EXPECTED_API_HOST}" \
+    --env-json-file "${tmp_env_json}")"
+  rm -f "${tmp_env_json}"
+  printf '%s' "${verdict}"
 }
 
 create_deployment() {
   local payload
   payload="$(PROJECT_ID="${PROJECT_ID}" VERCEL_NAME="${VERCEL_NAME}" \
-    GITHUB_ORG="${GITHUB_ORG}" GITHUB_REPO="${GITHUB_REPO}" GITHUB_REF_NAME="${GITHUB_REF_NAME}" \
+    GITHUB_ORG="${GITHUB_ORG}" GITHUB_REPO="${GITHUB_REPO}" GITHUB_SHA="${GITHUB_SHA}" \
+    GITHUB_REF_NAME="${GITHUB_REF_NAME}" \
+    GITHUB_REPOSITORY_ID="${GITHUB_REPOSITORY_ID}" GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
+    GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT}" \
+    STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION}" \
     python3 - <<'PY'
 import json, os
 print(json.dumps({
@@ -240,6 +280,13 @@ print(json.dumps({
         "org": os.environ["GITHUB_ORG"],
         "repo": os.environ["GITHUB_REPO"],
         "ref": os.environ["GITHUB_REF_NAME"],
+        "sha": os.environ["GITHUB_SHA"],
+    },
+    "meta": {
+        "convergeoBuildConfigRevision": os.environ["STAGING_BUILD_CONFIG_REVISION"],
+        "convergeoRepositoryId": os.environ["GITHUB_REPOSITORY_ID"],
+        "convergeoSourceRunId": os.environ["GITHUB_RUN_ID"],
+        "convergeoCreationAttempt": os.environ["GITHUB_RUN_ATTEMPT"],
     },
 }))
 PY
@@ -252,40 +299,165 @@ parse_deployment_metadata() {
 import json, os
 doc = json.loads(os.environ["DEPLOYMENT_JSON"])
 meta = doc.get("meta") or {}
-print("\t".join([
+print("\x1f".join([
     doc.get("readyState") or doc.get("state") or "UNKNOWN",
     doc.get("target") or "preview",
     doc.get("projectId") or "",
     meta.get("githubCommitSha") or meta.get("gitCommitSha") or "",
     doc.get("url") or "",
     doc.get("id") or doc.get("uid") or "",
+    meta.get("convergeoBuildConfigRevision") or "",
+    str(meta.get("convergeoRepositoryId") or ""),
+    str(meta.get("convergeoSourceRunId") or ""),
+    str(meta.get("convergeoCreationAttempt") or ""),
 ]))
 PY
 }
 
-log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
-deployment="$(create_deployment)"
-deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
-import json, os, sys
+# Alias API confirmation is not live identity proof. Only the post-alias path
+# polls semantically: one 90s deadline, strict full buildId, exact staging plane.
+# The helper reuses the same portal-scoped bypass source; secrets stay private.
+prove_stable_hostname_health() {
+  local hostname="$1"
+  if ! python3 "${REPO_ROOT}/scripts/ci/vercel_stable_health_poll.py" \
+    --hostname "${hostname}" \
+    --health-path "${health_path}" \
+    --app "${APP_ID}" \
+    --expected-api-host "${EXPECTED_API_HOST}" \
+    --expected-sha "${GITHUB_SHA}" \
+    --deadline-seconds 90 \
+    --diagnostics-file "${OUTPUT_DIR}/stable-health-diagnostics.json"; then
+    die "stable-hostname fingerprint verification failed — see sanitized alias diagnostics (not certification evidence)"
+  fi
+  log "stable hostname ${hostname} health OK — exact live candidate SHA ${GITHUB_SHA}"
+}
+
+deployment=""
+deployment_id=""
+deployment_action=""
+deployment_origin_attempt=""
+deployment_create_calls=""
+reused_deployments=""
+
+if [ "${PHASE}" = "prepare" ] || [ "${PHASE}" = "all" ]; then
+  if [ -z "${SELECTION_FILE}" ]; then
+    SELECTION_FILE="${OUTPUT_DIR}/checkpoint-selection.json"
+    python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" select \
+      --portal "${PORTAL}" \
+      --project-id "${PROJECT_ID}" \
+      --candidate-sha "${GITHUB_SHA}" \
+      --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+      --run-id "${GITHUB_RUN_ID}" \
+      --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+      --output "${SELECTION_FILE}"
+  fi
+  IFS=$'\t' read -r selection_decision selected_deployment_id deployment_origin_attempt deployment_create_calls reused_deployments < <(
+    python3 - "${SELECTION_FILE}" <<'PY'
+import json, re, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+decision = value.get("decision")
+deployment_id = value.get("deployment_id") or "NONE"
+origin_attempt = value.get("origin_attempt")
+create_calls = value.get("deployment_create_calls")
+reused = value.get("reused_deployments")
+if decision not in {"create", "reuse"}:
+    raise SystemExit(1)
+if decision == "reuse" and re.fullmatch(r"dpl_[A-Za-z0-9]+", deployment_id) is None:
+    raise SystemExit(1)
+if not all(type(item) is int for item in (origin_attempt, create_calls, reused)):
+    raise SystemExit(1)
+print("\t".join(map(str, (decision, deployment_id, origin_attempt, create_calls, reused))))
+PY
+  )
+  if [ "${selection_decision}" = "reuse" ]; then
+    deployment_id="${selected_deployment_id}"
+    deployment_action="reused"
+    log "reusing authenticated deployment checkpoint; all live probes will run again"
+  else
+    log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
+    deployment="$(create_deployment)"
+    deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
+import json, os, re, sys
 doc = json.loads(os.environ["DEPLOYMENT_JSON"])
 deployment_id = doc.get("id") or doc.get("uid")
-if not deployment_id:
-    print("::error::create response missing deployment id", file=sys.stderr)
+if not isinstance(deployment_id, str) or re.fullmatch(r"dpl_[A-Za-z0-9]+", deployment_id) is None:
+    print("::error::create response missing valid deployment id", file=sys.stderr)
     raise SystemExit(1)
 print(deployment_id)
 PY
 )"
-log "deployment id ${deployment_id}"
+    deployment_action="created"
+  fi
+  python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" write \
+    --selection "${SELECTION_FILE}" \
+    --portal "${PORTAL}" \
+    --project-id "${PROJECT_ID}" \
+    --deployment-id "${deployment_id}" \
+    --candidate-sha "${GITHUB_SHA}" \
+    --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+    --run-id "${GITHUB_RUN_ID}" \
+    --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+    --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --output "${CHECKPOINT_FILE}"
+  log "PRE_PROBE checkpoint written immediately for deployment ${deployment_id}"
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    {
+      printf 'checkpoint_path=%s\n' "${CHECKPOINT_FILE}"
+      printf 'deployment_id=%s\n' "${deployment_id}"
+      printf 'deployment_action=%s\n' "${deployment_action}"
+      printf 'deployment_origin_attempt=%s\n' "${deployment_origin_attempt}"
+      printf 'deployment_create_calls=%s\n' "${deployment_create_calls}"
+      printf 'reused_deployments=%s\n' "${reused_deployments}"
+    } >> "${GITHUB_OUTPUT}"
+  fi
+  if [ "${PHASE}" = "prepare" ]; then
+    exit 0
+  fi
+fi
+
+if [ "${PHASE}" = "prove" ]; then
+  validation_dir="$(mktemp -d)"
+  validation_json="${validation_dir}/current.json"
+  python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" validate-current \
+    --checkpoint "${CHECKPOINT_FILE}" \
+    --portal "${PORTAL}" \
+    --project-id "${PROJECT_ID}" \
+    --candidate-sha "${GITHUB_SHA}" \
+    --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+    --run-id "${GITHUB_RUN_ID}" \
+    --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+    --output "${validation_json}"
+  IFS=$'\t' read -r deployment_id deployment_action deployment_origin_attempt deployment_create_calls reused_deployments < <(
+    python3 - "${validation_json}" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+print("\t".join(map(str, (
+    value["deployment_id"], value["decision"], value["origin_attempt"],
+    value["deployment_create_calls"], value["reused_deployments"],
+))))
+PY
+  )
+  rm -rf "${validation_dir}"
+  log "checkpoint validated; re-probing deployment ${deployment_id}"
+fi
 
 ready_state=""
 target=""
 project_id=""
 commit_sha=""
 deployment_url=""
+deployment_config_revision=""
+deployment_repository_id=""
+deployment_source_run_id=""
+deployment_creation_attempt=""
 
 for attempt in $(seq 1 60); do
   deployment="$(vercel_api GET "v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}")"
-  IFS=$'\t' read -r ready_state target project_id commit_sha deployment_url _ <<< "$(parse_deployment_metadata "${deployment}")"
+  IFS=$'\x1f' read -r ready_state target project_id commit_sha deployment_url observed_deployment_id \
+    deployment_config_revision deployment_repository_id deployment_source_run_id deployment_creation_attempt \
+    <<< "$(parse_deployment_metadata "${deployment}")"
 
   case "${target}" in
     preview) ;;
@@ -294,6 +466,17 @@ for attempt in $(seq 1 60); do
 
   if [ "${project_id}" != "${PROJECT_ID}" ]; then
     die "deployment project id does not match expected ${PORTAL} project"
+  fi
+  if [ "${observed_deployment_id}" != "${deployment_id}" ]; then
+    die "deployment metadata id does not match the checkpoint"
+  fi
+  if [ "${deployment_config_revision}" != "${STAGING_BUILD_CONFIG_REVISION}" ]; then
+    die "deployment configuration revision is missing or stale"
+  fi
+  if [ "${deployment_repository_id}" != "${GITHUB_REPOSITORY_ID}" ] \
+    || [ "${deployment_source_run_id}" != "${GITHUB_RUN_ID}" ] \
+    || [ "${deployment_creation_attempt}" != "${deployment_origin_attempt}" ]; then
+    die "deployment producer metadata does not match the trusted checkpoint"
   fi
 
   case "${ready_state}" in
@@ -324,76 +507,274 @@ fi
 preview_url="https://${deployment_url}"
 log "READY ${preview_url}"
 
+# Secondary, NON-BLOCKING signal: what Vercel's stored project config says.
+# Kept for informational/troubleshooting value (see vercel_preview_env_verify.py's
+# docstring for why Vercel can refuse to decrypt a row for reasons outside this
+# repo's control) — it must never fail the deploy. The PRIMARY, blocking proof
+# is the live artifact's own /health response, below.
 api_env_verdict="$(verify_project_env)"
-case "${api_env_verdict}" in
-  verified) log "API env ${API_ENV_VAR} verified for staging Preview" ;;
-  missing) die "Vercel Preview env ${API_ENV_VAR} missing for branch staging" ;;
-  forbidden) die "Vercel Preview env ${API_ENV_VAR} points at production or localhost" ;;
-  host_mismatch:*)
-    got_host="${api_env_verdict#host_mismatch:}"
-    die "Vercel Preview env ${API_ENV_VAR} host ${got_host} != expected ${EXPECTED_API_HOST}"
-    ;;
-  BLOCKED_EXTERNAL)
-    die "Vercel Preview env ${API_ENV_VAR} BLOCKED_EXTERNAL — cannot verify staging API wiring"
-    ;;
+log "env metadata (informational only, non-blocking): ${API_ENV_VAR} -> ${api_env_verdict}"
+env_metadata_status="${api_env_verdict}"
+
+# ==========================================================================
+# PRIMARY PROOF: effective deployed configuration, read from the live
+# artifact's own /health response — not Vercel's stored (and possibly
+# undecryptable) project settings. Blocking for all three portals.
+# See scripts/ci/vercel_preview_health_verify.py for the assertion contract.
+# ==========================================================================
+health_path="/${HEALTH_LOCALE}/health"
+health_url="${preview_url}${health_path}"
+health_body_file="${OUTPUT_DIR}/health.json"
+health_headers_file="${OUTPUT_DIR}/health-headers.txt"
+
+# Resolve this portal's Deployment Protection bypass secret. Presence is
+# checked one source at a time in precedence order; the values are never
+# compared to each other, so nothing here can reveal whether two projects
+# share a secret.
+portal_upper="$(printf '%s' "${PORTAL}" | tr '[:lower:]' '[:upper:]')"
+portal_secret_var="VERCEL_AUTOMATION_BYPASS_SECRET_${portal_upper}"
+BYPASS_SECRET=""
+BYPASS_SOURCE="none"
+BYPASS_SOURCE_VAR=""
+if [ -n "${VERCEL_PORTAL_BYPASS_SECRET:-}" ]; then
+  BYPASS_SECRET="${VERCEL_PORTAL_BYPASS_SECRET}"
+  BYPASS_SOURCE="portal_scoped"
+  BYPASS_SOURCE_VAR="VERCEL_PORTAL_BYPASS_SECRET"
+elif [ -n "${!portal_secret_var:-}" ]; then
+  BYPASS_SECRET="${!portal_secret_var}"
+  BYPASS_SOURCE="portal_specific"
+  BYPASS_SOURCE_VAR="${portal_secret_var}"
+elif [ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+  BYPASS_SECRET="${VERCEL_AUTOMATION_BYPASS_SECRET}"
+  BYPASS_SOURCE="fallback"
+  BYPASS_SOURCE_VAR="VERCEL_AUTOMATION_BYPASS_SECRET"
+fi
+
+# Only the SOURCE (kind + variable name) is ever logged — never the value.
+if [ "${BYPASS_SOURCE}" = "none" ]; then
+  log "protection bypass: none configured for ${PORTAL} (probe will be unauthenticated)"
+else
+  log "protection bypass: using ${BYPASS_SOURCE_VAR} (${BYPASS_SOURCE})"
+fi
+
+# The secret goes to curl via a mode-600 config file so it never appears in
+# argv (visible to `ps`), in a URL, or in any trace. `set -x` is deliberately
+# never enabled in this script; the config file is removed immediately after
+# the request in all paths. Only the two bypass headers live in the config —
+# every other flag stays on the command line, keeping the config-parsing
+# surface to the one thing that must not be in argv.
+health_curl_config="$(mktemp)"
+chmod 600 "${health_curl_config}"
+cleanup_health_curl_config() { rm -f "${health_curl_config}"; }
+trap cleanup_health_curl_config EXIT
+# Exactly the headers Vercel documents for a ONE-SHOT automation request:
+# `x-vercel-protection-bypass` alone (their own curl example sends nothing
+# else). `x-vercel-set-bypass-cookie` is documented as OPTIONAL and exists to
+# "maintain authorization across multiple requests or within iframes" — it is
+# for browser/follow-up flows such as Playwright, which keeps it. This probe
+# makes a single request that already carries the bypass header, so the cookie
+# header is not sent here; run #33 returned HTTP 307 on all three portals with
+# it set, and asking for a cookie is the one part of this request that has any
+# documented reason to involve a redirect.
+{
+  printf 'header = "Accept: application/json"\n'
+  if [ -n "${BYPASS_SECRET}" ]; then
+    printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
+  fi
+} > "${health_curl_config}"
+
+# deploy-staging run #32 failed all three portals here: curl exited non-zero
+# roughly 0.7s after READY, before any HTTP response, and the probe discarded
+# stderr — so the exact transport failure is UNKNOWN and no root cause can be
+# asserted from that run. Two independent corrections follow: retry genuinely
+# transient transport errors, and preserve curl's real diagnostic so a
+# deterministic failure is identifiable on the next run instead of being
+# retried blindly.
+#
+# Retry eligibility is decided by curl's exit code, classified against
+# libcurl's CURLE_* enum in scripts/ci/vercel_preview_access.py. Only
+# TRANSIENT_TRANSPORT codes retry; deterministic failures (malformed URL,
+# local read/write, certificate validation, anything unrecognised) fail
+# immediately. An HTTP response of ANY status is never retried — it means the
+# endpoint answered, and it goes to classify_access() below, so a 302
+# protection challenge still reaches the Deployment Protection classifier on
+# the first attempt.
+health_stderr_file="${OUTPUT_DIR}/health-curl-stderr.txt"
+
+# curl with --show-error and without -v never echoes request headers, so the
+# bypass secret cannot appear in its stderr. Redact defensively anyway, using
+# pure bash parameter expansion so the secret never reaches an argv or a pipe.
+sanitized_curl_error() {
+  local raw
+  raw="$(tr -d '\r' < "${health_stderr_file}" 2>/dev/null | tail -1)"
+  if [ -n "${BYPASS_SECRET}" ]; then
+    raw="${raw//${BYPASS_SECRET}/[redacted]}"
+  fi
+  printf '%s' "${raw}"
+}
+
+health_http=""
+health_rc=1
+health_exit_kind="NON_RETRYABLE_CURL"
+health_exit_name=""
+for health_attempt in 1 2 3 4 5; do
+  set +e
+  health_http="$(curl --config "${health_curl_config}" \
+    --silent --show-error --no-location \
+    --connect-timeout 15 --max-time 30 \
+    -o "${health_body_file}" -D "${health_headers_file}" -w '%{http_code}' \
+    "${health_url}" 2>"${health_stderr_file}")"
+  health_rc=$?
+  set -e
+
+  if [ "${health_rc}" -eq 0 ]; then
+    health_exit_kind="HTTP_RESPONSE"
+    break
+  fi
+
+  IFS=$'\t' read -r health_exit_kind health_exit_retryable health_exit_name < <(
+    python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify-curl-exit \
+      --code "${health_rc}"
+  )
+
+  log "health probe attempt ${health_attempt}/5 failed — curl exit ${health_rc} ${health_exit_name:-unknown} [${health_exit_kind}]: $(sanitized_curl_error)"
+
+  if [ "${health_exit_retryable}" != "1" ]; then
+    break
+  fi
+  if [ "${health_attempt}" -lt 5 ]; then
+    sleep $((health_attempt * 3))
+  fi
+done
+
+cleanup_health_curl_config
+trap - EXIT
+
+if [ "${health_rc}" -ne 0 ]; then
+  case "${health_exit_kind}" in
+    TRANSIENT_TRANSPORT)
+      die "TRANSIENT_TRANSPORT: ${PORTAL} health probe could not reach ${health_url} after 5 attempts — curl exit ${health_rc} ${health_exit_name:-unknown}: $(sanitized_curl_error). No HTTP response was ever received, so this is neither an application failure nor a Deployment Protection challenge."
+      ;;
+    *)
+      die "NON_RETRYABLE_CURL: ${PORTAL} health probe failed deterministically against ${health_url} — curl exit ${health_rc} ${health_exit_name:-unknown}: $(sanitized_curl_error). This class of curl error cannot be fixed by retrying; no HTTP response was received."
+      ;;
+  esac
+fi
+
+# Classify BEFORE asserting health: a Deployment Protection challenge must
+# never be reported as a broken application route (deploy-staging run #31,
+# where all three routes were in fact correct and only the probe's access was
+# missing). See scripts/ci/vercel_preview_access.py.
+health_location="$(sed -n 's/^[Ll]ocation:[[:space:]]*//p' "${health_headers_file}" | tr -d '\r' | tail -1)"
+bypass_present_flag=0
+if [ -n "${BYPASS_SECRET}" ]; then
+  bypass_present_flag=1
+fi
+
+access_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify \
+  --http-status "${health_http}" \
+  --location "${health_location}" \
+  --body-file "${health_body_file}" \
+  --bypass-present "${bypass_present_flag}" \
+  --print-detail)"
+
+# Safe response metadata on any non-2xx, so a redirect is diagnosable without
+# re-running: status line, whether a Location exists plus its host/path with
+# the query stripped, whether a Set-Cookie exists (never its value), and the
+# server header. Diagnostics only — it does not influence the verdict or
+# weaken the gate.
+case "${health_http}" in
+  2??) ;;
   *)
-    die "unexpected API env verdict: ${api_env_verdict}"
+    log "${PORTAL} response diagnostics: $(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" \
+      summarize-headers --headers-file "${health_headers_file}")"
     ;;
 esac
 
-health_path="/${HEALTH_LOCALE}/health"
-health_url="${preview_url}${health_path}"
-health_verdict="skipped"
-health_http=""
-health_body_file="${OUTPUT_DIR}/health.json"
+case "${access_verdict}" in
+  ok) ;;
+  blocked_external)
+    die "BLOCKED_EXTERNAL: ${PORTAL} Preview is behind Vercel Deployment Protection and the automation bypass is missing or invalid (HTTP ${health_http}). The application health route itself is NOT implicated. Configure the ${PORTAL} project's 'Protection Bypass for Automation' secret and expose it as ${portal_secret_var} (or VERCEL_PORTAL_BYPASS_SECRET for this job)."
+    ;;
+  app_error)
+    die "${PORTAL} health returned HTTP ${health_http} — application runtime failure in the deployed Preview, not a protection challenge"
+    ;;
+  not_json)
+    die "${PORTAL} health returned HTTP 200 but the body is not a JSON object — application or verifier failure"
+    ;;
+  *)
+    die "${PORTAL} health returned HTTP ${health_http} (verdict ${access_verdict}) — want 200 with a JSON body"
+    ;;
+esac
 
-set +e
-health_http="$(curl -sS -o "${health_body_file}" -w '%{http_code}' \
-  --connect-timeout 15 --max-time 30 "${health_url}" 2>/dev/null)"
-health_rc=$?
-set -e
+health_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_health_verify.py" \
+  --app "${APP_ID}" \
+  --expected-api-host "${EXPECTED_API_HOST}" \
+  --expected-sha "${GITHUB_SHA}" \
+  --health-json-file "${health_body_file}")"
 
-if [ "${health_rc}" -ne 0 ]; then
-  health_verdict="unreachable"
-  die "health probe failed to connect ${health_url}"
-fi
+case "${health_verdict}" in
+  ok) log "${PORTAL} health OK — effective apiHost verified for staging SHA ${GITHUB_SHA:0:12}" ;;
+  status) die "${PORTAL} health status is not ok" ;;
+  app) die "${PORTAL} health app field does not match this portal" ;;
+  env) die "${PORTAL} health env is not staging/preview" ;;
+  missing_host) die "${PORTAL} health apiHost is missing/empty — deployed app has no effective API configuration" ;;
+  forbidden_host) die "${PORTAL} health apiHost resolves to production or localhost — deployed app is wired to the wrong API" ;;
+  host_mismatch) die "${PORTAL} health apiHost did not match the expected staging host" ;;
+  sha_mismatch) die "${PORTAL} health buildId does not match candidate SHA ${GITHUB_SHA} — deployment may be stale" ;;
+  *) die "unexpected health verdict: ${health_verdict}" ;;
+esac
 
-if [ "${PORTAL}" = "admin" ]; then
-  if [ "${health_http}" = "403" ]; then
-    if grep -q "Cloudflare Access" "${health_body_file}" 2>/dev/null; then
-      health_verdict="cf_access_gate"
-      log "admin health returned 403 (CF Access gate — expected on Preview)"
-    else
-      die "admin health 403 without CF Access marker"
-    fi
-  elif [ "${health_http}" = "200" ]; then
-    health_verdict="ok"
-    log "admin health returned 200 (bypass or non-prod gate)"
-  else
-    die "admin health unexpected HTTP ${health_http}"
+# ==========================================================================
+# OPTIONAL: alias the stable same-site staging hostname to THIS exact,
+# SHA-proven deployment (customer portal only — see
+# docs/ops/staging-samesite-guest-cart.md). Guest-cart SameSite=Lax cookies
+# cannot survive the cross-site *.vercel.app Preview topology (Run #62);
+# the fix is a stable hostname sharing the API's registrable domain, kept
+# pointed at the current candidate SHA on every deploy rather than a
+# manually-clicked Vercel alias.
+#
+# Fail-closed only once configured: absent CUSTOMER_STAGING_STABLE_HOSTNAME
+# this step is a complete no-op (today's behavior, unchanged) — it never
+# blocks a deploy that hasn't opted in. Once an operator sets it (after the
+# one-time DNS + Vercel custom-domain setup the doc describes), a failure
+# to alias is a hard failure of this job: a customer deploy must never
+# silently leave the stable hostname pointed at a stale/wrong deployment.
+# ==========================================================================
+stable_hostname_status="not_configured"
+stable_hostname_url=""
+if [ "${PORTAL}" = "customer" ] && [ -n "${CUSTOMER_STAGING_STABLE_HOSTNAME:-}" ]; then
+  stable_hostname="${CUSTOMER_STAGING_STABLE_HOSTNAME}"
+  case "${stable_hostname}" in
+    *.vercel.app)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME must not be a *.vercel.app Preview host — that is the cross-site origin this hostname exists to replace"
+      ;;
+    *.vergeo5.com) ;;
+    *)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME (${stable_hostname}) must share the vergeo5.com registrable domain the staging API uses, or SameSite=Lax guest-cart cookies still cannot work"
+      ;;
+  esac
+  log "aliasing stable hostname ${stable_hostname} -> deployment ${deployment_id} (candidate SHA ${GITHUB_SHA:0:12})"
+  alias_payload="$(printf '{"alias":"%s"}' "${stable_hostname}")"
+  if ! alias_response="$(vercel_api POST "v2/deployments/${deployment_id}/aliases?teamId=${VERCEL_ORG_ID}" "${alias_payload}")"; then
+    die "failed to alias ${stable_hostname} to deployment ${deployment_id} — is the domain added to the ${VERCEL_NAME} Vercel project yet? (one-time operator setup — see docs/ops/staging-samesite-guest-cart.md)"
   fi
-else
-  if [ "${health_http}" != "200" ]; then
-    die "${PORTAL} health returned HTTP ${health_http}, want 200"
-  fi
-  PORTAL="${PORTAL}" HEALTH_BODY_FILE="${health_body_file}" python3 - <<'PY'
-import json, os, sys
-portal = os.environ["PORTAL"]
-with open(os.environ["HEALTH_BODY_FILE"], encoding="utf-8") as fh:
-    body = json.load(fh)
-if body.get("status") != "ok":
-    print(f"::error::health status={body.get('status')!r}", file=sys.stderr)
-    sys.exit(1)
-if body.get("app") != portal:
-    print(f"::error::health app={body.get('app')!r} want {portal}", file=sys.stderr)
-    sys.exit(1)
-env = body.get("env") or ""
-if env not in {"staging", "preview", "development"}:
-    print(f"::warning::health env={env!r}")
-print("ok")
+  aliased_value="$(ALIAS_JSON="${alias_response}" python3 - <<'PY'
+import json, os
+doc = json.loads(os.environ["ALIAS_JSON"])
+print(doc.get("alias") or "")
 PY
-  health_verdict="ok"
-  log "${PORTAL} health OK"
+)"
+  if [ "${aliased_value}" != "${stable_hostname}" ]; then
+    die "alias response did not confirm ${stable_hostname} was pointed at deployment ${deployment_id} (got '${aliased_value}') — refusing to report this as aliased"
+  fi
+  log "alias API confirmed ${stable_hostname} -> deployment ${deployment_id} — now proving the LIVE fingerprint (a 2xx alias response alone does not prove edge propagation is complete)"
+  # Exact-SHA proof is deployment API identity (above) PLUS this live
+  # fingerprint — never alias-response trust alone.
+  prove_stable_hostname_health "${stable_hostname}"
+  stable_hostname_status="verified"
+  stable_hostname_url="https://${stable_hostname}"
+  log "stable hostname verified: ${stable_hostname_url} -> deployment ${deployment_id} (proven SHA ${GITHUB_SHA:0:12}, live fingerprint confirmed)"
 fi
 
 EVIDENCE_PATH="${VERCEL_PREVIEW_PROVE_EVIDENCE:-${OUTPUT_DIR}/evidence.json}"
@@ -404,14 +785,27 @@ GITHUB_SHA="${GITHUB_SHA}" \
 deployment_id="${deployment_id}" \
 preview_url="${preview_url}" \
 commit_sha="${commit_sha}" \
-api_env_var="${API_ENV_VAR}" \
-api_env_verdict="${api_env_verdict}" \
-health_verdict="${health_verdict}" \
-health_http="${health_http}" \
+env_metadata_status="${env_metadata_status}" \
+bypass_source="${BYPASS_SOURCE}" \
+health_body_file="${health_body_file}" \
+stable_hostname_status="${stable_hostname_status}" \
+stable_hostname_url="${stable_hostname_url}" \
+STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION}" \
+deployment_action="${deployment_action}" \
+deployment_origin_attempt="${deployment_origin_attempt}" \
+deployment_create_calls="${deployment_create_calls}" \
+reused_deployments="${reused_deployments}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
 import json, os
 from datetime import UTC, datetime
+
+# Only the documented safe fields are read back out of health.json — never
+# an env value, token, key, or arbitrary env var (see route.ts for the
+# full contract each app's /health response is limited to). `bypass_source`
+# is the NAME/kind of the protection-bypass source used, never its value.
+with open(os.environ["health_body_file"], encoding="utf-8") as fh:
+    health_body = json.load(fh)
 
 doc = {
     "portal": os.environ["PORTAL"],
@@ -419,14 +813,29 @@ doc = {
     "project_id": os.environ["PROJECT_ID"],
     "candidate_sha": os.environ["GITHUB_SHA"],
     "deployment_id": os.environ["deployment_id"],
-    "deployment_url": os.environ["preview_url"],
-    "github_commit_sha": os.environ["commit_sha"],
+    "preview_url": os.environ["preview_url"],
+    "deployment_sha": os.environ["commit_sha"],
     "target": "preview",
-    "api_env_var": os.environ["api_env_var"],
-    "api_env_verdict": os.environ["api_env_verdict"],
-    "health_url": os.environ["preview_url"] + "/en/health",
-    "health_http": os.environ["health_http"],
-    "health_verdict": os.environ["health_verdict"],
+    "configuration_revision": os.environ["STAGING_BUILD_CONFIG_REVISION"],
+    "checkpoint_stage": "PRE_PROBE",
+    "deployment_action": os.environ["deployment_action"],
+    "deployment_origin_attempt": int(os.environ["deployment_origin_attempt"]),
+    "deployment_create_calls": int(os.environ["deployment_create_calls"]),
+    "reused_deployments": int(os.environ["reused_deployments"]),
+    "health_status": health_body.get("status"),
+    "health_app": health_body.get("app"),
+    "health_env": health_body.get("env"),
+    "health_build_id": health_body.get("buildId"),
+    "health_api_host": health_body.get("apiHost"),
+    "env_metadata_status": os.environ["env_metadata_status"],
+    "bypass_source": os.environ["bypass_source"],
+    # Customer-only, opt-in (see docs/ops/staging-samesite-guest-cart.md):
+    # "not_configured" until CUSTOMER_STAGING_STABLE_HOSTNAME is set,
+    # "verified" once this exact SHA-proven deployment_id is BOTH confirmed
+    # aliased AND proven live (app/env/buildId/apiHost fingerprint) on the
+    # stable same-site hostname — never alias-API-response trust alone.
+    "stable_hostname_status": os.environ["stable_hostname_status"],
+    "stable_hostname_url": os.environ["stable_hostname_url"] or None,
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 with open(os.environ["EVIDENCE_PATH"], "w", encoding="utf-8") as fh:
@@ -442,8 +851,14 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'url=%s\n' "${preview_url}"
     printf 'deployment_id=%s\n' "${deployment_id}"
     printf 'sha=%s\n' "${commit_sha}"
-    printf 'api_env_verdict=%s\n' "${api_env_verdict}"
+    printf 'env_metadata_status=%s\n' "${env_metadata_status}"
     printf 'health_verdict=%s\n' "${health_verdict}"
+    printf 'stable_hostname_status=%s\n' "${stable_hostname_status}"
+    printf 'stable_hostname_url=%s\n' "${stable_hostname_url}"
+    printf 'deployment_action=%s\n' "${deployment_action}"
+    printf 'deployment_origin_attempt=%s\n' "${deployment_origin_attempt}"
+    printf 'deployment_create_calls=%s\n' "${deployment_create_calls}"
+    printf 'reused_deployments=%s\n' "${reused_deployments}"
   } >> "${GITHUB_OUTPUT}"
 fi
 

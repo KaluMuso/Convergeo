@@ -28,6 +28,7 @@ from app.core.env_guards import StagingIsolationError  # noqa: E402
 from app.staging.synthetic_contract import guard_seed_targets  # noqa: E402
 from app.staging.transactional import (  # noqa: E402
     TransactionalState,
+    apply_cod_placed,
     assert_transactional_safe,
     classify_state,
     is_service_drivable,
@@ -47,7 +48,26 @@ def main() -> int:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Reserved for post-deploy QA; service states require API runtime.",
+        help=(
+            "Drive the state through its real service boundary. Implemented for "
+            "cod_placed only; every other state is classified external."
+        ),
+    )
+    parser.add_argument(
+        "--landmark",
+        default="",
+        help=(
+            "Override the delivery landmark for the COD fixture address; defaults to "
+            "the canonical contract value (Zambia landmark addressing)."
+        ),
+    )
+    parser.add_argument(
+        "--phone",
+        default="",
+        help=(
+            "Override the delivery contact phone; defaults to the canonical "
+            "CUSTOMER_A phone (E.164)."
+        ),
     )
     args = parser.parse_args()
 
@@ -85,12 +105,50 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        print(
-            "ERROR: --apply requires the staging API runtime at the deployed SHA; "
-            "run this driver from the QA harness that calls checkout/payment services.",
-            file=sys.stderr,
+        if state is not TransactionalState.COD_PLACED:
+            print(
+                f"ERROR: --apply is implemented for cod_placed only; {state.value} still "
+                "requires the QA harness that calls checkout/payment services.",
+                file=sys.stderr,
+            )
+            return 1
+        service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        supabase_url = os.environ.get("STAGING_SUPABASE_URL") or os.environ.get(
+            "SUPABASE_URL", ""
         )
-        return 1
+        if not service_role_key or not supabase_url:
+            print(
+                "ERROR: SUPABASE_SERVICE_ROLE_KEY and STAGING_SUPABASE_URL are required "
+                "for --apply",
+                file=sys.stderr,
+            )
+            return 1
+        if not os.environ.get("SUPABASE_DB_URL"):
+            print(
+                "ERROR: SUPABASE_DB_URL is required for --apply — create_orders_atomic "
+                "runs its guarded transaction over the database connection",
+                file=sys.stderr,
+            )
+            return 1
+
+        from supabase import create_client  # noqa: PLC0415
+
+        try:
+            client = create_client(supabase_url, service_role_key)
+            outcome = apply_cod_placed(
+                client,
+                landmark=args.landmark or None,
+                phone=args.phone or None,
+            )
+        except StagingIsolationError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        except Exception as exc:  # noqa: BLE001
+            print(f"ERROR: applying {state.value} failed: {exc}", file=sys.stderr)
+            return 1
+
+        print(json.dumps(outcome, indent=2, sort_keys=True))
+        return 0
 
     if spec.delivery == "external":
         print(

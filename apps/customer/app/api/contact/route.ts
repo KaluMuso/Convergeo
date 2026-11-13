@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-type ErrorCode = "invalid" | "rate_limited" | "bad_request" | "server_error";
+type ErrorCode = "invalid" | "rate_limited" | "bad_request" | "server_error" | "unavailable";
 
 function errorResponse(status: number, code: ErrorCode, details?: unknown): Response {
   return Response.json({ error: { code, message: code, details } }, { status });
@@ -23,7 +23,9 @@ function clientIp(request: NextRequest): string {
  * Contact → outbox handler. Owner-agnostic: this customer-app route validates and
  * rate-limits, then dispatches the message to support by email (Resend). There is no
  * public FastAPI contact endpoint to reuse, so this is the minimal owner-agnostic seam.
- * When Resend env is not configured (dev/preview), the message is logged and accepted.
+ * When Resend env is not configured: production returns 503 (`unavailable`, the form shows a
+ * translated message) so nothing is silently lost; outside production the message is logged
+ * and accepted so local dev works without secrets.
  */
 export async function POST(request: NextRequest): Promise<Response> {
   const rate = checkRateLimit(`contact:${clientIp(request)}`);
@@ -50,10 +52,18 @@ export async function POST(request: NextRequest): Promise<Response> {
   const { name, contact, message } = result.value;
   const apiKey = process.env.RESEND_API_KEY;
   const inbox = process.env.CONTACT_INBOX;
-  const from = process.env.CONTACT_FROM ?? "Vergeo5 <noreply@vergeo5.com>";
+  const production = process.env.NODE_ENV === "production";
+  const from =
+    process.env.CONTACT_FROM?.trim() || (production ? undefined : "Vergeo5 <noreply@vergeo5.com>");
 
-  if (!apiKey || !inbox) {
-    console.warn("[contact] Resend not configured — message accepted but not emailed.");
+  if (!apiKey || !inbox || !from) {
+    if (production) {
+      console.error(
+        "[contact] RESEND_API_KEY / CONTACT_INBOX / CONTACT_FROM missing in production.",
+      );
+      return errorResponse(503, "unavailable");
+    }
+    console.warn("[contact] Resend not configured — message accepted but not emailed (dev only).");
     return Response.json({ ok: true });
   }
 

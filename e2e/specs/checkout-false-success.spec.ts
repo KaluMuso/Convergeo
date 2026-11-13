@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+
 import { path } from "../fixtures/env";
 import {
   FIXTURE_GROUP_ID,
+  FIXTURE_ORDER_ID,
   FIXTURE_PAYMENT_ID,
   FORBIDDEN_SUCCESS_COPY,
   assertNoAccidentalRealMoney,
@@ -13,6 +16,22 @@ import {
   statusFixture,
 } from "../fixtures/payment-fixtures";
 import { expect, test } from "../fixtures/test-base";
+
+import type { Route } from "@playwright/test";
+
+// Browser service workers can send payment-status fetches directly to the real
+// API, bypassing Playwright's page.route fixture. Keep this provider-mock
+// contract on the page network path; authenticated flows have their own suite.
+test.use({ serviceWorkers: "block" });
+
+const checkoutMessages = JSON.parse(
+  readFileSync(new URL("../../packages/i18n/messages/en/checkout.json", import.meta.url), "utf8"),
+) as {
+  checkout: {
+    card: { successBody: string };
+    pending: { confirmingBody: string };
+  };
+};
 
 /**
  * VB-P07 / S6 / G4 — checkout honesty: pending/failed/unknown must never render
@@ -122,18 +141,109 @@ test.describe("checkout · false-success", () => {
   });
 
   test("MoMo provider success shows confirming — not a final paid claim", async ({ page }) => {
+    // Keep the shared guard tied to the real English catalogue: it must catch
+    // terminal success semantics while allowing the honest transitional copy.
+    expect(checkoutMessages.checkout.card.successBody).toMatch(FORBIDDEN_SUCCESS_COPY);
+    expect(checkoutMessages.checkout.pending.confirmingBody).not.toMatch(FORBIDDEN_SUCCESS_COPY);
+
     await installMockBuyerSession(page);
     await mockPaymentStatus(page, statusFixture({ status: "success", cod: false }));
 
-    await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+    /**
+     * Order-navigation isolation — deliberate, and scoped to THIS test.
+     *
+     * On a `success` poll the app correctly calls `router.replace` to
+     * `/account/orders/{order_id}` (ussd-wait.tsx): the order page, not this
+     * one, is where escrow/ledger state is authoritative. That destination is
+     * out of contract here. This spec's subject is payment-outcome HONESTY —
+     * that a provider success renders as "confirming", never as a final paid
+     * claim. Real purchase/order integration is other journeys' job.
+     *
+     * Following the redirect would drag this assertion into Account
+     * server-auth and order-data behaviour using FIXTURE_ORDER_ID, which the
+     * canonical staging seed deliberately never creates (scripts/seed_staging.py
+     * seeds no orders or payments), so the destination could only ever resolve
+     * to an unauthenticated/not-found surface — Run #68 captured exactly that:
+     * a final snapshot of the Customer "Sign in" page instead of the confirming
+     * state. That is an artefact of the fixture, not a product defect, and it
+     * must not be papered over by weakening Account authentication, enabling
+     * NEXT_PUBLIC_E2E_MOCK_SESSION on deployed staging, adding a production
+     * test bypass, changing Customer middleware, or suppressing the redirect in
+     * application code. None of those happen here.
+     *
+     * Instead the navigation is observed and held at the network boundary —
+     * the narrowest mechanism available — which both PROVES the app attempted
+     * the correct destination and keeps the confirming surface available while
+     * it is asserted. The held request is aborted only during cleanup. Route
+     * interception covers the RSC fetch and any document-navigation fallback
+     * alike.
+     */
+    // The orders index can be prefetched independently. Hold only this
+    // fixture's final destination, which is the hand-off under test.
+    const orderRoutePattern = `**/account/orders/${FIXTURE_ORDER_ID}**`;
+    const orderNavigations: string[] = [];
+    const heldNavigationSettlements = new Set<Promise<void>>();
+    let releaseOrderNavigation!: () => void;
+    const orderNavigationBarrier = new Promise<void>((resolve) => {
+      releaseOrderNavigation = resolve;
+    });
+    const holdOrderNavigation = async (route: Route) => {
+      let markSettled!: () => void;
+      const settled = new Promise<void>((resolve) => {
+        markSettled = resolve;
+      });
+      heldNavigationSettlements.add(settled);
 
-    // Brief honest confirming surface (CUST-08) before order redirect.
-    const confirming = page.getByTestId("payment-confirming");
-    await expect(confirming).toBeVisible({ timeout: 10_000 });
-    await expect(confirming.getByText(/not a final paid confirmation/i).first()).toBeVisible();
-    await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
-    await expect(page.getByTestId("payment-card-success")).toHaveCount(0);
-    await expect(confirming.getByRole("heading", { name: /order confirmed/i })).toHaveCount(0);
+      try {
+        // Recording the exact request URL is also the test-controlled signal
+        // that the application genuinely attempted its order hand-off.
+        orderNavigations.push(route.request().url());
+        await orderNavigationBarrier;
+        await route.abort();
+      } finally {
+        markSettled();
+        heldNavigationSettlements.delete(settled);
+      }
+    };
+
+    // Register before loading the pending page so no order hand-off can race
+    // past the observation boundary.
+    await page.route(orderRoutePattern, holdOrderNavigation);
+
+    try {
+      await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+
+      // Wait until router.replace has reached the held network boundary. From
+      // this point through the assertions below, the browser remains on the
+      // real pending page and its inherently transient confirming surface.
+      await expect.poll(() => orderNavigations.length, { timeout: 10_000 }).toBeGreaterThan(0);
+      await expect(page).toHaveURL(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+
+      const confirming = page.getByTestId("payment-confirming");
+      await expect(confirming).toBeVisible({ timeout: 10_000 });
+      await expect(confirming.getByText(/not a final paid confirmation/i).first()).toBeVisible();
+      await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
+      await expect(page.getByTestId("payment-card-success")).toHaveCount(0);
+      await expect(confirming.getByRole("heading", { name: /order confirmed/i })).toHaveCount(0);
+      await expect(page.getByText(FORBIDDEN_SUCCESS_COPY)).toHaveCount(0);
+
+      // "Confirming" is a transition, not a terminal screen: the attempted
+      // destinations must all target the exact locale-prefixed fixture order
+      // path. A matching ID in a query string is not routing evidence.
+      const expectedOrderPath = path(`/account/orders/${FIXTURE_ORDER_ID}`);
+      expect(
+        orderNavigations.every(
+          (recordedUrl) => new URL(recordedUrl).pathname === expectedOrderPath,
+        ),
+      ).toBe(true);
+    } finally {
+      // Always release the barrier, even after a failed assertion. Removing
+      // this test's handler prevents later requests from joining the hold;
+      // every request already inside it is then aborted and allowed to settle.
+      releaseOrderNavigation();
+      await page.unroute(orderRoutePattern, holdOrderNavigation);
+      await Promise.allSettled([...heldNavigationSettlements]);
+    }
   });
 
   test("COD confirmation never uses MoMo/card prepaid success copy", async ({ page }) => {

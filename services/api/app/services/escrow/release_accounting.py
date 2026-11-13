@@ -16,6 +16,13 @@ escrow for the order nets to zero.
 COD collects via ``cod_collected`` then the same capture→release pair with
 ``cod-commission-*`` / ``cod-release-*`` keys (unchanged by this module).
 
+Delivery fee: escrow holds items + delivery fee, but the platform books and pays
+the courier (D16), so the fee is captured to ``delivery_revenue`` with
+``DELIVERY_FEE_CAPTURE`` (key ``delivery-fee-<order_id>``, shared by the prepaid
+and COD paths) and the vendor's release gross is the item subtotal only:
+
+  charge(−items−fee) + capture(+commission) + delivery(+fee) + release(+net) = 0
+
 Fail-closed: invalid snapshots, active refunds, and ledger posting errors must
 never silently mark escrow released. Retries are idempotent via ledger keys.
 """
@@ -28,6 +35,8 @@ from typing import Any
 
 from app.services.commissions.engine import compute_order_commission, parse_snapshot_lines
 from app.services.db import SqlResult
+from app.services.ledger.engine import post_transaction
+from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.refunds.constants import ACTIVE_REFUND_STATUSES
 
@@ -105,17 +114,23 @@ class OrderReleaseLedgerSummary:
     commission_captured_ngwee: int
     vendor_released_ngwee: int
     refund_drained_ngwee: int
+    delivery_fee_captured_ngwee: int = 0
 
     @property
     def expected_net_after_commission(self) -> int:
-        return self.charge_received_ngwee - self.commission_captured_ngwee
-
-    @property
-    def balanced(self) -> bool:
-        """True when charge − commission − release − refunds nets to zero escrow drain."""
         return (
             self.charge_received_ngwee
             - self.commission_captured_ngwee
+            - self.delivery_fee_captured_ngwee
+        )
+
+    @property
+    def balanced(self) -> bool:
+        """True when charge − commission − delivery − release − refunds nets to zero."""
+        return (
+            self.charge_received_ngwee
+            - self.commission_captured_ngwee
+            - self.delivery_fee_captured_ngwee
             - self.vendor_released_ngwee
             - self.refund_drained_ngwee
             == 0
@@ -237,14 +252,95 @@ WHERE order_id = {order_sql}
 
 
 def remaining_escrow_ngwee(order_id: str) -> int:
-    """Escrow still held after charge − commission − release − refund drains."""
+    """Escrow still held after charge − commission − delivery − release − refund drains."""
     summary = summarize_order_release_ledger(order_id)
     return (
         summary.charge_received_ngwee
         - summary.commission_captured_ngwee
+        - summary.delivery_fee_captured_ngwee
         - summary.vendor_released_ngwee
         - summary.refund_drained_ngwee
     )
+
+
+def delivery_fee_capture_idempotency_key(order_id: str) -> str:
+    """One delivery-fee capture per order, shared by prepaid release and COD."""
+    return f"delivery-fee-{order_id}"
+
+
+def delivery_fee_already_captured(order_id: str) -> bool:
+    """True when the order's delivery fee already moved to ``delivery_revenue``.
+
+    Raises ``ReleaseAccountingError`` when the ledger cannot be queried.
+    """
+    key_sql = sql_literal(delivery_fee_capture_idempotency_key(order_id))
+    script = f"""
+SELECT count(*)::text
+FROM public.ledger_transactions
+WHERE idempotency_key = {key_sql};
+"""
+    result = run_sql_script(script)
+    return _require_count_row(result, error_code="ledger_lookup_failed") > 0
+
+
+def delivery_fee_refunded_ngwee(order_id: str) -> int:
+    """Delivery fee already handed back to the customer by PRE_RELEASE lane-1 refunds.
+
+    A lane-1 item return refunds the item plus the delivery fee out of escrow, so
+    that fee is no longer in escrow for ``delivery_revenue``. Failed refunds were
+    reversed (fee back in escrow) and are not counted. Lane 2 never refunds the
+    fee. Raises ``ReleaseAccountingError`` when the lookup fails (callers hold).
+    """
+    order_sql = _sql_uuid(order_id)
+    statuses_sql = ", ".join(sql_literal(status) for status in sorted(ACTIVE_REFUND_STATUSES))
+    script = f"""
+SELECT coalesce(sum(
+  CASE WHEN (breakdown->>'delivery_fee_ngwee') ~ '^[0-9]+$'
+    THEN (breakdown->>'delivery_fee_ngwee')::bigint ELSE 0 END
+), 0)::text
+FROM public.refunds
+WHERE order_id = {order_sql}
+  AND lane = 1
+  AND coalesce(breakdown->>'phase', '') = 'pre_release'
+  AND status IN ({statuses_sql});
+"""
+    result = run_sql_script(script)
+    return _require_count_row(result, error_code="refund_lookup_failed")
+
+
+def delivery_revenue_held_ngwee(order_id: str) -> int:
+    """Delivery fee this order still holds in ``delivery_revenue`` (captured − refunded).
+
+    Raises ``ReleaseAccountingError`` when the ledger cannot be queried.
+    """
+    order_sql = _sql_uuid(order_id)
+    script = f"""
+SELECT (-coalesce(sum(lp.amount_ngwee), 0))::text
+FROM public.ledger_transactions lt
+INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
+INNER JOIN public.ledger_accounts la ON la.id = lp.account_id
+WHERE lt.order_id = {order_sql}
+  AND la.kind = 'delivery_revenue';
+"""
+    result = run_sql_script(script)
+    return max(0, _require_count_row(result, error_code="ledger_lookup_failed"))
+
+
+def capture_order_delivery_fee(*, order_id: str, delivery_fee_ngwee: int) -> str | None:
+    """Post escrow → delivery_revenue for the order's delivery fee (idempotent).
+
+    Returns the ledger transaction id, or None when there is no fee (pickup,
+    free delivery). Ledger errors propagate (fail-closed: no vendor release).
+    """
+    if delivery_fee_ngwee <= 0:
+        return None
+    posted = post_transaction(
+        idempotency_key=delivery_fee_capture_idempotency_key(order_id),
+        template=LedgerTemplate.DELIVERY_FEE_CAPTURE,
+        order_id=order_id,
+        delivery_fee_ngwee=delivery_fee_ngwee,
+    )
+    return posted.id
 
 
 def order_has_refund_remainder(order_id: str) -> bool:
@@ -258,6 +354,7 @@ def order_has_refund_remainder(order_id: str) -> bool:
     remaining = (
         summary.charge_received_ngwee
         - summary.commission_captured_ngwee
+        - summary.delivery_fee_captured_ngwee
         - summary.vendor_released_ngwee
         - summary.refund_drained_ngwee
     )
@@ -327,7 +424,11 @@ SELECT
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'release_to_vendor'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
-  coalesce(sum(CASE WHEN lt.kind IN ('refund_lane1', 'refund_lane2')
+  -- Signed escrow legs: refund drains are debits (+); a refund_reversal (payout
+  -- definitively failed, C5) is the matching credit (−), netting the drain to 0.
+  coalesce(sum(CASE WHEN lt.kind IN ('refund_lane1', 'refund_lane2', 'refund_reversal')
+    THEN lp.amount_ngwee ELSE 0 END), 0)::text,
+  coalesce(sum(CASE WHEN lt.kind = 'delivery_fee_capture'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text
 FROM public.ledger_transactions lt
 INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
@@ -345,9 +446,9 @@ WHERE lt.order_id = {order_sql}
             refund_drained_ngwee=0,
         )
     # Each CASE sums |escrow legs|; charge/cod credit escrow once per txn so abs
-    # equals the economic amount. Commission/release debit escrow — abs likewise.
+    # equals the economic amount. Commission/delivery/release debit escrow — abs likewise.
     parts = result.rows[0].split("|")
-    if len(parts) != 4:
+    if len(parts) != 5:
         return OrderReleaseLedgerSummary(
             order_id=order_id,
             charge_received_ngwee=0,
@@ -361,6 +462,7 @@ WHERE lt.order_id = {order_sql}
         commission_captured_ngwee=int(parts[1]),
         vendor_released_ngwee=int(parts[2]),
         refund_drained_ngwee=int(parts[3]),
+        delivery_fee_captured_ngwee=int(parts[4]),
     )
 
 
@@ -368,7 +470,8 @@ def build_release_accounting_day_totals(*, report_date: str) -> dict[str, int]:
     """Day-scoped escrow release totals for the daily reconciliation summary.
 
     ``report_date`` is an ISO date (UTC day). Totals are absolute escrow-leg
-    amounts so gross, commission, and net are directly comparable.
+    amounts so gross, commission, delivery fee and net are directly comparable
+    (commission + delivery fee + vendor net = gross for fully settled orders).
     """
     day_sql = sql_literal(report_date)
     script = f"""
@@ -379,6 +482,8 @@ SELECT
   coalesce(sum(CASE WHEN lt.kind = 'commission_capture'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
   coalesce(sum(CASE WHEN lt.kind = 'release_to_vendor'
+    THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text,
+  coalesce(sum(CASE WHEN lt.kind = 'delivery_fee_capture'
     THEN abs(lp.amount_ngwee) ELSE 0 END), 0)::text
 FROM public.ledger_transactions lt
 INNER JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
@@ -387,22 +492,21 @@ WHERE la.kind = 'escrow'
   AND lt.created_at >= ({day_sql}::date)::timestamptz
   AND lt.created_at < (({day_sql}::date) + 1)::timestamptz;
 """
+    empty = {
+        "gross_collected_ngwee": 0,
+        "commission_captured_ngwee": 0,
+        "vendor_released_ngwee": 0,
+        "delivery_fee_captured_ngwee": 0,
+    }
     result = run_sql_script(script)
     if not result.ok or not result.rows:
-        return {
-            "gross_collected_ngwee": 0,
-            "commission_captured_ngwee": 0,
-            "vendor_released_ngwee": 0,
-        }
+        return empty
     parts = result.rows[0].split("|")
-    if len(parts) != 3:
-        return {
-            "gross_collected_ngwee": 0,
-            "commission_captured_ngwee": 0,
-            "vendor_released_ngwee": 0,
-        }
+    if len(parts) != 4:
+        return empty
     return {
         "gross_collected_ngwee": int(parts[0]),
         "commission_captured_ngwee": int(parts[1]),
         "vendor_released_ngwee": int(parts[2]),
+        "delivery_fee_captured_ngwee": int(parts[3]),
     }

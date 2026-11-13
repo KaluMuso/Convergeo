@@ -7,7 +7,9 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.listings.variants import snapshot_options
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
     PREPAID_PAYMENT_REQUIRED_EVENTS,
@@ -53,11 +55,19 @@ class ShipRequest(StrictModel):
     tracking_note: str = Field(min_length=1, max_length=2000)
 
 
+class OrderItemVariantOption(StrictModel):
+    group: str
+    value: str
+
+
 class OrderItemSummary(StrictModel):
     id: str
     title: str
     qty: int
     unit_price_ngwee: int
+    #: Chosen colour/size, from the immutable order-line snapshot.
+    variant_options: list[OrderItemVariantOption] = Field(default_factory=list)
+    variant_sku: str | None = None
 
 
 class OrderEventSummary(StrictModel):
@@ -178,17 +188,43 @@ def _is_paid_order(service_client: _ServiceRoleClient, order_row: dict[str, Any]
     return _order_has_successful_payment(service_client, checkout_group_id)
 
 
+def courier_dispatch_owns_shipping(order_id: str | None = None) -> bool:
+    """True when Vergeo5 courier dispatch, not the vendor, ships delivery orders.
+
+    The ``courier_dispatch`` flag puts every delivery order on the platform's
+    dispatch board, and an order with an in-flight dispatch is being carried by a
+    courier. In both cases a vendor ``ship`` would be a second shipping path: the
+    order would leave the board (``create_dispatch`` refuses ``shipped``) with no
+    handover code, and the courier's ``picked_up`` could no longer ship it.
+    """
+    from app.services.dispatch.service import is_courier_dispatch_enabled
+
+    if is_courier_dispatch_enabled():
+        return True
+    if order_id is None:
+        return False
+    result = run_sql_script(
+        "SELECT count(*)::text FROM public.dispatch_requests "
+        f"WHERE order_id = {sql_literal(order_id)}::uuid "
+        "AND status IN ('requested', 'accepted', 'picked_up');"
+    )
+    return bool(result.ok and result.rows and result.rows[0] != "0")
+
+
 def _available_vendor_actions(
     *,
     status: str,
     fulfilment: str,
     paid: bool = True,
     cod: bool = False,
+    courier_dispatch: bool = False,
 ) -> list[VendorActionName]:
     actions: list[VendorActionName] = []
     prepaid_unpaid = (not cod) and (not paid)
     for action_name, event in ACTION_EVENT_MAP.items():
         if prepaid_unpaid and event in PREPAID_PAYMENT_REQUIRED_EVENTS:
+            continue
+        if courier_dispatch and event == OrderEvent.SHIP:
             continue
         result = resolve_transition(
             from_status=OrderStatus(status),
@@ -201,22 +237,36 @@ def _available_vendor_actions(
     return actions
 
 
+def _variant_snapshot_of(row: dict[str, Any]) -> Any:
+    link = row.get("order_item_products")
+    if isinstance(link, list):
+        link = link[0] if link else None
+    return link.get("variant_snapshot") if isinstance(link, dict) else None
+
+
 def _load_order_items(service_client: _ServiceRoleClient, order_id: str) -> list[OrderItemSummary]:
     response = (
         service_client.client.table("order_items")
-        .select("id, qty, unit_price_ngwee, title_snapshot")
+        .select("id, qty, unit_price_ngwee, title_snapshot, order_item_products(variant_snapshot)")
         .eq("order_id", order_id)
         .execute()
     )
     items: list[OrderItemSummary] = []
     for row in _rows(response):
         title = row.get("title_snapshot")
+        snapshot = _variant_snapshot_of(row)
+        sku = snapshot.get("sku") if isinstance(snapshot, dict) else None
         items.append(
             OrderItemSummary(
                 id=str(row["id"]),
                 title=str(title).strip() if isinstance(title, str) and title.strip() else "Item",
                 qty=int(row["qty"]),
                 unit_price_ngwee=int(row["unit_price_ngwee"]),
+                variant_options=[
+                    OrderItemVariantOption(group=option["group"], value=option["value"])
+                    for option in snapshot_options(snapshot)
+                ],
+                variant_sku=str(sku) if isinstance(sku, str) and sku else None,
             )
         )
     return items
@@ -323,6 +373,7 @@ def _build_order_detail(
             fulfilment=fulfilment,
             paid=paid,
             cod=cod,
+            courier_dispatch=fulfilment == "delivery" and courier_dispatch_owns_shipping(order_id),
         ),
     )
 
@@ -388,6 +439,7 @@ def _execute_vendor_action(
             fulfilment=fulfilment,
             paid=paid,
             cod=cod,
+            courier_dispatch=fulfilment == "delivery" and courier_dispatch_owns_shipping(order_id),
         ),
     )
 
@@ -472,6 +524,15 @@ def ship_vendor_order(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     order_row = _load_order_row(service_client, order_id)
     _assert_vendor_owns_order(vendor_id=str(vendor["id"]), order_row=order_row)
+    if str(order_row.get("fulfilment")) == "delivery" and courier_dispatch_owns_shipping(
+        str(order_row["id"])
+    ):
+        raise AppError(
+            code="orders.courier_dispatch_ships",
+            message="Vergeo5 courier dispatch ships this order; hand the parcel to the rider",
+            http_status=409,
+            details={"message_key": "vendor.orders.courierDispatchShips"},
+        )
     return _execute_vendor_action(
         service_client=service_client,
         vendor_id=str(vendor["id"]),

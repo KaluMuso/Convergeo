@@ -2,7 +2,12 @@
 
 When a checkout group contains orders, collection is recorded as one
 ``escrow_hold`` ledger posting per order (integer ngwee, idempotent per
-``order_id``). Checkout groups with no orders yet fall back to a single
+``order_id``). Orders that carry a buyer-paid platform fee
+(``orders.platform_fee_ngwee`` — event tickets with fee payer = buyer) get a
+SEPARATE fee hold (``escrow-hold-fee-{order_id}``) so payment amount =
+items + delivery + platform fee reconciles, the fee stays refundable with the
+ticket, and event release captures it to ``commission_revenue`` (never to the
+organiser). Checkout groups with no orders yet fall back to a single
 checkout-scoped ``CHARGE_RECEIVED`` posting (legacy / test fixtures).
 """
 
@@ -35,6 +40,11 @@ class ServiceRoleClient(Protocol):
 class CheckoutOrderRow:
     order_id: str
     gross_ngwee: int
+    platform_fee_ngwee: int = 0
+
+    @property
+    def collected_ngwee(self) -> int:
+        return self.gross_ngwee + self.platform_fee_ngwee
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +58,10 @@ class EscrowFulfillmentResult:
 
 def escrow_hold_idempotency_key(order_id: str) -> str:
     return f"escrow-hold-{order_id}"
+
+
+def platform_fee_hold_idempotency_key(order_id: str) -> str:
+    return f"escrow-hold-fee-{order_id}"
 
 
 def _sql_uuid(value: str, field: str) -> str:
@@ -68,6 +82,9 @@ SELECT
       WHERE oi.order_id = o.id
     ), 0) + o.delivery_fee_ngwee
   )::text
+  -- to_jsonb read tolerates databases that predate the platform_fee_ngwee
+  -- column (20260816220000): the fee reads as 0 there instead of erroring.
+  || '|' || coalesce((to_jsonb(o) ->> 'platform_fee_ngwee')::bigint, 0)::text
 FROM public.orders o
 WHERE o.checkout_group_id = {cg_sql}
   AND o.status <> 'cancelled'
@@ -80,14 +97,20 @@ ORDER BY o.id ASC;
     for marker in result.rows:
         if "|" not in marker:
             continue
-        order_id, gross_raw = marker.split("|", 1)
+        parts = marker.split("|")
+        order_id = parts[0]
         try:
-            gross = int(gross_raw)
-        except ValueError:
+            gross = int(parts[1])
+            fee = int(parts[2]) if len(parts) > 2 and parts[2] else 0
+        except (IndexError, ValueError):
             continue
-        if gross <= 0:
+        if fee < 0:
+            raise LedgerError(f"negative platform fee on order {order_id}")
+        if gross + fee <= 0:
             continue
-        rows.append(CheckoutOrderRow(order_id=order_id, gross_ngwee=gross))
+        rows.append(
+            CheckoutOrderRow(order_id=order_id, gross_ngwee=gross, platform_fee_ngwee=fee)
+        )
     return rows
 
 
@@ -121,7 +144,8 @@ def fulfill_prepaid_checkout_escrow(
             created_count=1 if posted.created else 0,
         )
 
-    order_total = sum(row.gross_ngwee for row in orders)
+    # Payment amount = Σ(items + delivery + buyer-paid platform fee) per order.
+    order_total = sum(row.collected_ngwee for row in orders)
     if order_total != amount_ngwee:
         raise LedgerError(
             "checkout order gross does not match payment amount "
@@ -132,17 +156,32 @@ def fulfill_prepaid_checkout_escrow(
     created = 0
     for row in orders:
         UUID(row.order_id)  # validate
-        posted = post_transaction(
-            idempotency_key=escrow_hold_idempotency_key(row.order_id),
-            template=LedgerTemplate.ESCROW_HOLD,
-            checkout_group_id=checkout_group_id,
-            order_id=row.order_id,
-            payment_id=payment_id,
-            order_amount_ngwee=row.gross_ngwee,
-        )
-        txn_ids.append(posted.id)
-        if posted.created:
-            created += 1
+        if row.gross_ngwee > 0:
+            posted = post_transaction(
+                idempotency_key=escrow_hold_idempotency_key(row.order_id),
+                template=LedgerTemplate.ESCROW_HOLD,
+                checkout_group_id=checkout_group_id,
+                order_id=row.order_id,
+                payment_id=payment_id,
+                order_amount_ngwee=row.gross_ngwee,
+            )
+            txn_ids.append(posted.id)
+            if posted.created:
+                created += 1
+        if row.platform_fee_ngwee > 0:
+            # Separate fee leg: held in escrow on the order (refundable with the
+            # ticket), captured to commission_revenue at event release.
+            fee_posted = post_transaction(
+                idempotency_key=platform_fee_hold_idempotency_key(row.order_id),
+                template=LedgerTemplate.ESCROW_HOLD,
+                checkout_group_id=checkout_group_id,
+                order_id=row.order_id,
+                payment_id=payment_id,
+                order_amount_ngwee=row.platform_fee_ngwee,
+            )
+            txn_ids.append(fee_posted.id)
+            if fee_posted.created:
+                created += 1
 
     return EscrowFulfillmentResult(
         checkout_group_id=checkout_group_id,
@@ -167,3 +206,25 @@ WHERE checkout_group_id = {cg_sql}
     if not result.ok or not result.rows:
         return False
     return int(result.rows[0]) > 0
+
+
+def held_platform_fee_ngwee(order_id: str) -> int:
+    """Platform fee actually held in escrow for ``order_id`` (0 when none).
+
+    Read from the ledger (the fee-hold posting), not from ``orders``, so release
+    captures exactly what collection put into escrow.
+    """
+    UUID(order_id)
+    key_sql = "'" + platform_fee_hold_idempotency_key(order_id) + "'"
+    script = f"""
+SELECT coalesce(sum(abs(lp.amount_ngwee)), 0)::text
+FROM public.ledger_transactions lt
+JOIN public.ledger_postings lp ON lp.transaction_id = lt.id
+JOIN public.ledger_accounts la ON la.id = lp.account_id
+WHERE lt.idempotency_key = {key_sql}
+  AND la.kind = 'escrow';
+"""
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise LedgerError(f"platform fee hold lookup failed: {result.error or 'empty result'}")
+    return int(result.rows[0])

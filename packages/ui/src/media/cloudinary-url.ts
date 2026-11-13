@@ -1,3 +1,5 @@
+import { ciPerfMediaUrl } from "./ci-perf-fixture";
+
 const CLOUDINARY_HOST = "res.cloudinary.com";
 const DEFAULT_WIDTHS = [360, 720, 1080] as const;
 
@@ -35,6 +37,8 @@ export function sanitizePublicId(publicId: string): string {
 }
 
 export function cldUrl(publicId: string, options: CldUrlOptions): string {
+  const fixtureUrl = ciPerfMediaUrl(publicId, options.width);
+  if (fixtureUrl) return fixtureUrl;
   const safeId = sanitizePublicId(publicId);
   const cloud = resolveCloudName(options.cloudName);
   if (!cloud) {
@@ -48,6 +52,8 @@ export function cldUrl(publicId: string, options: CldUrlOptions): string {
 }
 
 export function cldLqipUrl(publicId: string, options?: { cloudName?: string }): string {
+  const fixtureUrl = ciPerfMediaUrl(publicId, 24);
+  if (fixtureUrl) return fixtureUrl;
   const safeId = sanitizePublicId(publicId);
   const cloud = resolveCloudName(options?.cloudName);
   if (!cloud) {

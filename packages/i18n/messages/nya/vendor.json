@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Analytics — Convergeo Vendor",
-      "description": "Onani kugulitsa kwanu, orders, and cart activity over the last 7 or Masiku 30, see your top listings, and gauge cart-to-order conversion."
+      "description": "Track sales, orders and cart/checkout event counts over 7 or 30 days, and compare independent order and activity totals."
     },
     "eyebrow": "Storefront yanu",
     "title": "Analytics",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "⚠ Sales",
       "orders": "Ma-order",
-      "views": "Activity ya cart"
+      "views": "Cart/checkout events"
     },
     "sparkline": {
       "sales": "⚠ Daily sales trend",
       "orders": "Daily orders trend",
-      "views": "Daily cart activity trend"
+      "views": "Daily cart/checkout event count"
     },
     "top": {
       "heading": "Listings zazikulu",
@@ -30,10 +30,11 @@
       "units": "{count, plural, one {# sold} other {# sold}}"
     },
     "conversion": {
-      "heading": "Conversion",
-      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# cart action} other {# cart actions}}",
-      "pct": "⚠ {pct}% cart-to-order",
-      "empty": "Not enough activity yet to estimate conversion."
+      "heading": "Order/activity ratio",
+      "summary": "{orders, plural, one {# non-cancelled order} other {# non-cancelled orders}}; {views, plural, one {# cart/checkout event} other {# cart/checkout events}} in this window.",
+      "pct": "{pct} orders per 100 cart/checkout events",
+      "empty": "No cart/checkout events in this window; the ratio is unavailable.",
+      "definition": "Counts cart-add and checkout-start events, not listing views or unique visitors. Orders and events are independent totals, not a conversion cohort; the ratio can exceed 100."
     },
     "errors": {
       "loadFailed": "Sitinathe kulodza your analytics. Yesaninso.",
@@ -290,7 +291,7 @@
       },
       "approved": {
         "title": "You are verified",
-        "body": "⚠ T1 KYC approved. You can create listings — buyers will see them once you publish.",
+        "body": "Your ID is verified. You can create listings — buyers see them once you publish.",
         "cta": "Create your first listing",
         "t2Link": "Upgrade to T2 (PACRA + TPIN)"
       },
@@ -325,7 +326,50 @@
       "notFound": "We could not find your vendor application.",
       "retryHint": "Onani connection yanu, then try again."
     },
-    "loading": "Ikuyenda…"
+    "loading": "Ikuyenda…",
+    "checklist": {
+      "heading": "Mndandanda wotsimikizira",
+      "progress": "{done} mwa {total} zatha",
+      "items": {
+        "business": {
+          "title": "Zambiri za bizinesi",
+          "why": "Your shop name and type, so buyers know who they're buying from."
+        },
+        "momo": {
+          "title": "Nambala ya mobile money",
+          "why": "We check the name on this number matches your NRC. Payouts will go here once they open."
+        },
+        "nrc": {
+          "title": "Chithunzi cha NRC",
+          "why": "Proves you are who you say you are. Never shown to buyers."
+        },
+        "selfie": {
+          "title": "Chithunzi chanu (selfie)",
+          "why": "Matched to your NRC photo so no one else can sell in your name."
+        },
+        "review": {
+          "title": "Kuwunika kwa Vergeo5",
+          "why": "Our team checks everything, usually within 1 working day, and lets you know the result."
+        }
+      },
+      "states": {
+        "not_started": "Simunayambe",
+        "saved": "Zasungidwa, sizinatumizidwe",
+        "submitted": "Zatumizidwa",
+        "under_review": "Zikuwunikidwa",
+        "approved": "Zavomerezedwa",
+        "rejected": "Zikufunika kukonzedwa"
+      },
+      "fix": {
+        "nrc": "How to fix: retake the NRC photo in daylight with all four corners in the frame.",
+        "selfie": "How to fix: retake the selfie facing the camera, without a hat or sunglasses.",
+        "review": "Fix the items marked above, then send again — you don't have to start over."
+      },
+      "reasonLabel": "Zimene gulu lathu lanena",
+      "ctaFinish": "Pitirizani kutsimikizira",
+      "ctaFix": "Konzani ndi kutumizanso",
+      "pendingNote": "You can look around while you wait. Your listings stay hidden from buyers until you're approved."
+    }
   },
   "listings": {
     "images": {
@@ -350,7 +394,7 @@
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
-      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+      "description": "Attach to the catalog, submit a new product, or save a standalone draft."
     },
     "title": "Create listing",
     "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
@@ -387,15 +431,33 @@
       "categoryPlaceholder": "Select category",
       "submit": "Tumizani for review",
       "submitting": "Tumizaniting…",
-      "moderationNotice": "Your listing stays in draft until our team approves the product."
+      "moderationNotice": "Your listing stays in draft until our team approves the product.",
+      "details": {
+        "about": "About this item",
+        "heading": "Product details",
+        "help": "Enter only details you can verify for this category. Include units as stated by the manufacturer. You can add dimensions, weight, measurements, style, features, materials, care or guide instructions. Leave unknown details blank. All details require moderation. Up to 32 details; names: 80 characters; values: 2,000; description: 5,000.",
+        "name": "Detail name",
+        "value": "Detail value",
+        "add": "Add detail",
+        "remove": "Remove detail",
+        "invalid": "Complete each detail with a unique name and value, or remove it. Keep the description and details within the displayed limits."
+      }
     },
     "quickList": {
       "heading": "Quick list",
-      "intro": "⚠ For commodities, unique items, and made-to-order offers that stand alone.",
+      "intro": "Save a draft for a unique used item or a made-to-order offer.",
       "titleLabel": "Listing title",
-      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "titlePlaceholder": "e.g. Used wooden chair",
       "publish": "Publish listing",
-      "publishing": "Publishing…"
+      "publishing": "Publishing…",
+      "descriptionLabel": "Listing description",
+      "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
+      "draftNotice": "Saving a draft does not publish the listing.",
+      "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft…",
+      "canonicalRequired": "Classes A, B and C require a catalog product. Select it in Catalog.",
+      "categoriesUnavailable": "Categories are unavailable. Try again later."
     },
     "fields": {
       "priceLabel": "⚠ Your price (ZMW)",
@@ -453,7 +515,8 @@
     "success": {
       "live": "Listing is live!",
       "moderation": "Tumizanited for review — we will notify you on WhatsApp.",
-      "evidence": "⚠ Draft saved. Add evidence photos before publishing."
+      "evidence": "⚠ Draft saved. Add evidence photos before publishing.",
+      "draft": "Draft saved. This listing is not live."
     },
     "errors": {
       "required": "This field is required",
@@ -467,7 +530,10 @@
       "authRequired": "Sign in to manage listings.",
       "permissionDenied": "Mulibe access to this vendor catalogue.",
       "notFound": "That listing was not found for your shop.",
-      "retryHint": "Onani connection yanu, then try again."
+      "retryHint": "Onani connection yanu, then try again.",
+      "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
+      "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
+      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
     },
     "import": {
       "meta": {
@@ -481,7 +547,9 @@
       "template": {
         "heading": "Download template",
         "body": "⚠ Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing. Leave product_id blank to get catalogue-match suggestions in the preview.",
-        "download": "Download CSV template"
+        "download": "Download CSV template",
+        "stockNote": "Imports set opening stock for new SKUs. Reimporting an existing SKU preserves its current stock, stock mode, and units; it does not restock reserved or sold units.",
+        "unitsHelp": "Prices and stock counts are per sale step. For 250 g steps use sale_unit kg and unit_step_milli 250; min_steps 4 means a minimum of 1 kg. Wholesale tiers are for verified business buyers and require each units."
       },
       "upload": {
         "heading": "Upload CSV",
@@ -498,7 +566,8 @@
         "details": "Details",
         "ok": "OK",
         "failed": "Failed",
-        "imported": "Imported"
+        "imported": "Imported",
+        "stockPreserved": "Listing updated; existing stock and stock mode were kept."
       },
       "preview": {
         "previewButton": "Preview rows",
@@ -511,7 +580,8 @@
         "attached": "Attached: {name}",
         "matched": "Matches: {name}",
         "detach": "Change",
-        "standalone": "No match — lists on its own"
+        "standalone": "No match — lists on its own",
+        "selectionRequired": "Select an active catalogue product before importing."
       },
       "apply": {
         "button": "Apply import",
@@ -521,7 +591,36 @@
         "uploadFailed": "Import failed. Check your file and try again.",
         "previewFailed": "Could not check your file. Yesaninso.",
         "no_file": "CSV file is required",
-        "no_payload": "Provide a CSV file or JSON rows"
+        "no_payload": "Provide a CSV file or JSON rows",
+        "templateFailed": "Could not download the template. Please try again.",
+        "invalidUnits": "Check the sale unit, quantity step and minimum quantity. Measured units cannot use wholesale tiers.",
+        "duplicateHeaders": "CSV column names must be unique.",
+        "notEditable": "This existing listing cannot be edited by import.",
+        "unitChange": "An import cannot change the units or minimum steps of an existing SKU.",
+        "productChange": "This SKU is already linked to a different product.",
+        "wholesaleEligibility": "Wholesale requires current approval at tier T2 and at least one valid price tier.",
+        "invalidListing": "These changes are not valid for the existing listing. Review its listing fields.",
+        "invalidTiers": "Price tiers must use positive quantities and strictly decreasing prices.",
+        "invalidBoolean": "Use true or false for boolean fields.",
+        "missingField": "Complete the required CSV fields, including SKU, title, price and tracked stock.",
+        "invalidInteger": "Prices, stock counts and quantity fields must be whole numbers.",
+        "invalidMinimum": "Prices and quantity steps must be positive; stock cannot be negative.",
+        "invalidProduct": "Select an active catalogue product.",
+        "unknownColumns": "The CSV has unsupported columns or extra cells. Use the downloaded template.",
+        "invalidStockMode": "Choose tracked or always available stock.",
+        "invalidCondition": "Choose new or refurbished condition.",
+        "invalidStatus": "Choose draft, active or paused status.",
+        "emptyCsv": "The CSV file is empty.",
+        "missingHeaders": "The CSV must include all required column headers.",
+        "rowLimit": "Import at most 500 data rows at a time.",
+        "prohibitedListing": "This item is prohibited. Review the listing content.",
+        "duplicateSku": "Each SKU must appear only once in the file.",
+        "listingCap": "Your listing limit has been reached. Update existing SKUs or review your verification tier.",
+        "fileSize": "The CSV must be no larger than 512,000 bytes.",
+        "invalidEncoding": "Save the CSV using UTF-8 encoding.",
+        "canonicalRequired": "Select a catalogue product before importing this new SKU.",
+        "databaseFailure": "This row could not be saved. Please try again or contact support.",
+        "unknownError": "This row needs review. Check the CSV fields and try again."
       }
     },
     "manage": {
@@ -565,7 +664,7 @@
         "delete": "Delete listing",
         "deleting": "Deleting…",
         "returnableLabel": "Accept returns",
-        "returnableHelp": "Lane-2 return policy for this listing.",
+        "returnableHelp": "Let buyers return this item within the window below if it isn't right.",
         "returnWindowLabel": "Return window (hours)",
         "compareAtLabel": "Compare-at price (ZMW)",
         "compareAtHelp": "Optional 'was' price, shown struck through on your listing. Leave blank for no sale; it must be higher than the price.",
@@ -593,13 +692,138 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       },
       "emptyTitle": "No listings yet",
-      "statusLabel": "Status"
+      "statusLabel": "Status",
+      "stock": {
+        "heading": "Adjust available stock",
+        "help": "Enter a change in sale steps, not a physical counted total. Reserved units are already excluded. Units and stock mode cannot be changed here. Branch provisioning requires the stock owner.",
+        "refresh": "Refresh availability",
+        "units": "Sale unit: {unit}; each step is {step}/1000 of that unit.",
+        "branch": "Branch",
+        "choose": "Select a branch",
+        "inactive": "Inactive",
+        "pooled": "Available pooled stock: {qty}",
+        "delta": "Change (+ received / − removed)",
+        "reason": "Reason",
+        "retry": "Retry the same operation",
+        "apply": "Apply adjustment",
+        "saved": "Recorded {old} → {next} available steps. Operation: {id}.",
+        "invalid": "Choose an active branch, a nonzero integer change and a reason.",
+        "conflict": "The adjustment was rejected. Refresh availability, review the branch and units, then submit a new adjustment.",
+        "retrySame": "The outcome is uncertain. Retry this same operation to retrieve its recorded result; do not create another adjustment.",
+        "loadFailed": "Could not load availability. Use Refresh to try again.",
+        "storageFailed": "Could not preserve the operation for a safe retry. Enable session storage before adjusting stock.",
+        "notTracked": "This listing does not use tracked stock.",
+        "authorityRequired": "Use the stock adjustment section. Existing stock, sale units and stock mode cannot be replaced in the listing editor."
+      },
+      "statusGuide": {
+        "heading": "What Draft, Live and Paused mean",
+        "draft": "Only you can see it. Finish the details and publish when ready.",
+        "active": "Buyers can find and order it.",
+        "paused": "Hidden from buyers. Resume it when you have stock again.",
+        "kycNote": "Until your verification is approved, buyers can't see any of your listings."
+      },
+      "statusHint": {
+        "draft": "Ndinu nokha mukuona",
+        "active": "Ogula angaone ndi kuyitanitsa",
+        "paused": "Yabisidwa kwa ogula"
+      }
     },
     "kycGate": {
       "title": "Verification still in progress",
-      "body": "⚠ Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
+      "body": "You can prepare listings now, but buyers only see them after your verification is approved.",
       "cta": "Check verification status",
       "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
+    },
+    "variants": {
+      "heading": "Colours, sizes and other options",
+      "intro": "Add options like Colour or Size. Each combination gets its own SKU, stock, price and photo.",
+      "loading": "Loading options…",
+      "loadFailed": "We couldn't load this listing's options.",
+      "saveFailed": "We couldn't save your options. Try again.",
+      "saved": "Options saved.",
+      "fixErrors": "Fix the highlighted fields, then save again.",
+      "groupLegend": "Option {number}",
+      "groupName": "Option name",
+      "groupNameHint": "For example Colour, Size or Storage.",
+      "showAsSwatches": "Show as colour swatches",
+      "valueLabel": "Choice {number}",
+      "swatchColour": "Colour",
+      "removeValue": "Remove choice {value}",
+      "remove": "Remove",
+      "addValue": "Add choice",
+      "removeGroup": "Remove option",
+      "addGroup": "Add another option",
+      "addFirstGroup": "Add colours or sizes",
+      "matrixHeading": "{count, plural, one {# combination} other {# combinations}}",
+      "priceHint": "Leave price empty to use the listing price (K{price}).",
+      "offered": "Offered",
+      "sku": "SKU",
+      "skuFor": "SKU for {variant}",
+      "stock": "Stock",
+      "stockFor": "Stock for {variant}",
+      "price": "Price (K)",
+      "priceFor": "Price for {variant}",
+      "photo": "Photo",
+      "photoFor": "Photo for {variant}",
+      "photoNone": "Listing photos",
+      "photoOption": "Photo {position}",
+      "save": "Save options",
+      "createOptIn": "This item comes in different colours or sizes (set them up after publishing)",
+      "unsupported": {
+        "classE": "Made-to-order listings use quote options instead of colours and sizes.",
+        "wholesale": "Wholesale listings can't have colour or size options yet.",
+        "measured": "Listings sold by measure can't have colour or size options yet."
+      },
+      "errors": {
+        "groupNameRequired": "Give this option a name, e.g. Colour or Size.",
+        "duplicateGroup": "Each option needs a different name.",
+        "valuesRequired": "Add at least one choice to this option.",
+        "valueLabelRequired": "Fill in this choice or remove it.",
+        "duplicateValue": "This choice is listed twice.",
+        "invalidSwatch": "Pick a colour for this swatch.",
+        "tooManyGroups": "You can add up to {max} options.",
+        "tooManyValues": "This option has too many choices.",
+        "tooManyVariants": "Too many combinations. Remove some choices.",
+        "variantsRequired": "Add choices so buyers have combinations to pick from.",
+        "activeVariantRequired": "Offer at least one combination.",
+        "invalidSku": "SKUs use letters, numbers, dots, dashes, slashes or underscores.",
+        "duplicateSku": "Each SKU must be different.",
+        "invalidStock": "Enter stock as a whole number.",
+        "stockRequired": "Enter how many you have of this combination.",
+        "invalidPrice": "Enter a price in kwacha, e.g. 250.00.",
+        "optionPerGroup": "Each combination needs one choice per option.",
+        "unknownValue": "This combination uses a choice that no longer exists.",
+        "duplicateCombination": "This combination is listed twice.",
+        "invalidCompareAt": "The 'was' price must be higher than the price.",
+        "imageNotOnListing": "Choose one of this listing's photos.",
+        "invalidStatus": "Choose whether this combination is offered.",
+        "invalidDisplay": "Choose how this option is shown.",
+        "groupsRequired": "Add an option first.",
+        "classEUnsupported": "Made-to-order listings use quote options instead.",
+        "wholesaleUnsupported": "Wholesale listings can't have colour or size options yet.",
+        "measuredUnsupported": "Listings sold by measure can't have colour or size options yet.",
+        "saveFailed": "We couldn't save your options. Try again."
+      },
+      "saving": "Saving…"
+    },
+    "guide": {
+      "heading": "Malangizo ogulitsa bwino",
+      "photos": {
+        "title": "Photos (up to 8)",
+        "body": "Use daylight and a plain background. The first photo is the cover buyers see. Show the front, back, labels and any marks or damage."
+      },
+      "title": {
+        "title": "Title",
+        "body": "Say what it is, the brand and the key detail, e.g. \"Samsung A15, 128GB, black\". No ALL CAPS and no phone numbers."
+      },
+      "price": {
+        "title": "Price in Kwacha",
+        "body": "Enter the full price the buyer pays, e.g. 1250 or 1250.50. Our commission comes out of this price."
+      },
+      "stock": {
+        "title": "Stock and options",
+        "body": "Enter how many you really have. Add options like size or colour when buyers must choose — each option keeps its own stock."
+      }
     }
   },
   "profile": {
@@ -713,6 +937,23 @@
       "permissionDenied": "Mulibe access to this storefront profile.",
       "notFound": "Storefront profile not found for this account.",
       "retryHint": "Onani connection yanu, then try again."
+    },
+    "brand": {
+      "title": "Storefront colours",
+      "help": "Your colours apply to your storefront page only. We adjust them automatically so text stays readable (WCAG AA).",
+      "primary": "Primary colour",
+      "primaryHelp": "Buttons and links on your store page",
+      "accent": "Accent colour",
+      "accentHelp": "Highlights and badges",
+      "contrast": "contrast {ratio}:1",
+      "reset": "Reset",
+      "adjusted": "We darkened that colour slightly so text on it stays readable.",
+      "extract": "Extract from logo",
+      "extracting": "Reading your logo…",
+      "needLogo": "Upload a logo first.",
+      "extractFailed": "Couldn't read colours from your logo. Pick them manually.",
+      "previewButton": "Add to cart",
+      "previewAccent": "New arrivals"
     }
   },
   "orders": {
@@ -746,12 +987,19 @@
     "items": {
       "heading": "Items",
       "qty": "Qty {qty}",
-      "empty": "No line items"
+      "empty": "No line items",
+      "variantOption": "{group}: {value}",
+      "variantSeparator": " · ",
+      "sku": "SKU {sku}"
     },
     "timeline": {
       "heading": "Nthawiline",
       "empty": "No events yet",
-      "note": "Note: {note}"
+      "note": "Note: {note}",
+      "stateDone": "zatha",
+      "stateCurrent": "gawo lapano",
+      "stateUpcoming": "zikubwera",
+      "srState": "({state})"
     },
     "actions": {
       "heading": "Actions",
@@ -773,7 +1021,14 @@
       "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
       "submitReject": "Reject with reason",
       "submitShip": "Mark as shipped",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "after": {
+        "confirm": "The customer is told you accepted. Next you'll pack it.",
+        "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
+        "pack": "The customer sees that you're preparing their order.",
+        "ship": "Tap when the rider has the parcel. Add the rider's name or phone.",
+        "ready_for_pickup": "The customer is told to come and collect it from you."
+      }
     },
     "success": {
       "confirmed": "Order confirmed.",
@@ -788,7 +1043,76 @@
       "forbidden": "You can only manage your own orders.",
       "invalidTransition": "That action is not available for this order.",
       "reasonRequired": "A reason is required when rejecting.",
-      "trackingRequired": "A tracking note is required when shipping."
+      "trackingRequired": "A tracking note is required when shipping.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "courier": {
+      "heading": "Courier",
+      "courier": "Assigned courier",
+      "reference": "Courier reference: {ref}",
+      "statuses": {
+        "requested": "Requested",
+        "accepted": "Accepted",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      },
+      "codDue": "Rider collects {amount} from the customer",
+      "handoverNote": "The customer confirms delivery with a code they give the rider."
+    },
+    "guide": {
+      "headingNow": "Zochita tsopano",
+      "headingNext": "Zomwe zichitike kenako",
+      "scanCta": "Open Scan to hand over",
+      "paidExplainer": "The customer has paid. Vergeo5 holds the money safely until the order is delivered.",
+      "unpaidExplainer": "The customer hasn't paid yet. Don't pack or send anything until payment shows as received.",
+      "cod": {
+        "body": "The customer pays the rider in cash when the order arrives. You don't collect any money yourself.",
+        "settlement": "Vergeo5 settles the order money with you — you don't need to chase the rider or the customer."
+      },
+      "steps": {
+        "confirm": {
+          "title": "Accept or reject this order",
+          "body": "The customer is waiting. Check you have every item, then accept. If you can't fulfil it, reject it with a reason."
+        },
+        "pack": {
+          "title": "Pack the items",
+          "body": "Tap Start packing when you begin. Check sizes and colours against the items list below."
+        },
+        "handToRider": {
+          "title": "Hand the parcel to the rider",
+          "body": "When the rider collects it, tap Mark shipped and add the rider's name or phone number."
+        },
+        "readyForPickup": {
+          "title": "Mark it ready for pickup",
+          "body": "When the parcel is packed and waiting at your shop, tap Ready for pickup. We tell the customer to come."
+        },
+        "awaitCollection": {
+          "title": "Waiting for the customer to collect",
+          "body": "When they arrive, scan their QR code or enter their PIN on the Scan page before you hand it over."
+        },
+        "awaitDelivery": {
+          "title": "On the way with the rider",
+          "body": "Nothing to do now. The customer gives the rider a code to confirm delivery."
+        },
+        "awaitConfirmation": {
+          "title": "Delivered",
+          "body": "The customer has a short time to report a problem. After that the order completes on its own."
+        },
+        "done": {
+          "title": "Order complete",
+          "body": "Nothing more to do on this order."
+        },
+        "cancelled": {
+          "title": "Order cancelled",
+          "body": "No further action. Don't send these items."
+        },
+        "unknown": {
+          "title": "Check this order",
+          "body": "Refresh to see the latest status."
+        }
+      }
     }
   },
   "home": {
@@ -807,7 +1131,7 @@
       "viewsCaption": "30 days",
       "orders": "Orders",
       "ordersCaption": "30 days",
-      "gmv": "GMV",
+      "gmv": "Sales",
       "gmvCaption": "30 days"
     },
     "needsAction": {
@@ -868,6 +1192,52 @@
       "ariaLabel": "Quick links",
       "listings": "Catalogue",
       "profile": "Profile"
+    },
+    "tasks": {
+      "heading": "Zochita zanu zotsatira",
+      "intro": "Yambani pamwamba — chofunika kwambiri chili patsogolo.",
+      "items": {
+        "kycFix": {
+          "title": "Fix your verification",
+          "body": "We couldn't approve one of your documents. See what to change — you don't have to start over."
+        },
+        "kycFinish": {
+          "title": "Finish your verification",
+          "body": "Buyers can't see your shop until we've checked your ID. It takes about 5 minutes."
+        },
+        "kycPending": {
+          "title": "Verification is being reviewed",
+          "body": "Nothing to do now. Our team usually replies within 1 working day."
+        },
+        "ordersWaiting": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Accept and pack before 14:00 so delivery orders go out with today's riders."
+        },
+        "ordersWaitingUrgent": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Less than an hour to the 14:00 dispatch cut-off — accept and pack now."
+        },
+        "ordersWaitingAfterCutoff": {
+          "title": "{count, plural, one {# order is waiting for you} other {# orders are waiting for you}}",
+          "body": "Today's 14:00 cut-off has passed. Get them ready now so they leave first on the next run."
+        },
+        "catalogueProducts": {
+          "title": "Check your products",
+          "body": "Keep stock and prices right so buyers never order something you don't have."
+        },
+        "catalogueServices": {
+          "title": "Check your services",
+          "body": "Keep prices and availability current, and reply to quote requests quickly."
+        },
+        "catalogueEvents": {
+          "title": "Check your events",
+          "body": "Make sure dates, ticket types and prices are right before you share your event."
+        },
+        "profile": {
+          "title": "Complete your shop profile",
+          "body": "A logo, opening hours and a short description help buyers trust you."
+        }
+      }
     }
   },
   "queue": {
@@ -900,7 +1270,37 @@
       "cancel": "Not now"
     },
     "errors": {
-      "loadFailed": "Could not load orders. Pull to refresh."
+      "loadFailed": "Could not load orders. Pull to refresh.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "emptyNeedsAction": {
+      "title": "Nothing waiting on you",
+      "body": "New orders show up here first. We also send you a WhatsApp message when one arrives."
+    },
+    "emptyFiltered": {
+      "title": "No orders in this view",
+      "body": "Try another tab, or go back to the orders that need you.",
+      "cta": "Show orders that need action"
+    },
+    "nextStep": {
+      "confirm": "Kenako: vomerezani kapena kanani",
+      "pack": "Kenako: pakani katundu",
+      "handToRider": "Kenako: perekani kwa woyendetsa",
+      "readyForPickup": "Kenako: lembani kuti yakonzeka",
+      "awaitCollection": "Kudikira kasitomala kuti atenge",
+      "awaitDelivery": "Ili ndi woyendetsa",
+      "awaitConfirmation": "Yafika — kudikira kasitomala",
+      "done": "Yatha",
+      "cancelled": "Yathetsedwa"
+    },
+    "cutoff": {
+      "before": "Dispatch cut-off 14:00 · {time} left",
+      "timeHoursMinutes": "{hours} h {minutes} min",
+      "timeMinutes": "{minutes} min",
+      "beforeBody": "Delivery orders accepted, packed and handed to the rider before 14:00 (Lusaka time) go out with today's riders.",
+      "urgentBody": "Less than an hour left — finish packing now to make today's riders.",
+      "after": "Today's 14:00 dispatch cut-off has passed",
+      "afterBody": "Delivery orders you prepare now go out on the next dispatch run. Pickup orders aren't affected."
     }
   },
   "payouts": {
@@ -922,6 +1322,10 @@
     "hold": {
       "noticeTitle": "⚠ Payouts paused for 24 hours",
       "noticeBody": "⚠ After changing your mobile-money number, payouts are held for 24 hours while we verify the change. You will be notified when payouts resume."
+    },
+    "paused": {
+      "noticeTitle": "⚠ Payouts are switched off for now",
+      "noticeBody": "⚠ No money is being sent to your mobile-money number yet. The balances below are still recorded in the ledger."
     },
     "history": {
       "heading": "⚠ Payout history",
@@ -973,7 +1377,27 @@
       "kycRequired": "⚠ Complete KYC before changing your payout method.",
       "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
       "rateLimited": "Too many requests. Try again shortly.",
-      "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow."
+      "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "pilot": {
+      "badge": "Sizinayambe",
+      "title": "Payouts aren't switched on during the pilot",
+      "body": "You won't receive payouts through this app yet, so there's no balance to show here. That's expected — nothing is wrong with your account.",
+      "meanwhileHeading": "How money works during the pilot",
+      "meanwhile": {
+        "cod": "Cash on delivery: the customer pays the rider in cash, and Vergeo5 settles with you.",
+        "prepaid": "Paid orders: Vergeo5 holds the customer's money safely until the order is delivered.",
+        "questions": "Questions about money owed to you? Ask the Vergeo5 pilot team."
+      },
+      "laterHeading": "What you'll see here later",
+      "later": {
+        "held": "Money held for orders that are still being delivered",
+        "released": "Money released to you and ready to pay out",
+        "history": "Every payout to your mobile-money number, with its status",
+        "statement": "A monthly statement you can download"
+      },
+      "notify": "We'll tell you on WhatsApp before payouts are switched on."
     }
   },
   "scan": {
@@ -1073,7 +1497,20 @@
         "hint": "Centre the ticket QR inside the frame",
         "loading": "Starting camera…",
         "denied": "Camera access blocked",
-        "deniedBody": "Allow camera access in your browser settings to scan tickets."
+        "deniedBody": "Allow camera access in your browser settings to scan tickets.",
+        "useManual": "Enter ticket PIN instead"
+      },
+      "manual": {
+        "heading": "Manual check-in",
+        "intro": "Enter the ticket ID and the 6-digit PIN printed on the guest's ticket.",
+        "ticketIdLabel": "Ticket ID",
+        "ticketIdPlaceholder": "Ticket ID from the guest's ticket",
+        "pinLabel": "6-digit ticket PIN",
+        "pinPlaceholder": "000000",
+        "submit": "Check in ticket",
+        "submitting": "Checking in…",
+        "useCamera": "Back to camera scan",
+        "offline": "Manual check-in needs a connection — the PIN is verified on the server."
       },
       "count": {
         "checkedIn": "{count, plural, one {# checked in} other {# checked in}}",
@@ -1116,7 +1553,29 @@
           "title": "Not a ticket code",
           "body": "This does not look like an event ticket QR."
         },
+        "invalidPin": {
+          "title": "Incorrect PIN",
+          "body": "That PIN does not match ticket {ticketId}. Check the guest's ticket and try again."
+        },
+        "unauthorized": {
+          "title": "Not permitted",
+          "body": "Your account cannot check in tickets for this event."
+        },
+        "manualOffline": {
+          "title": "You're offline",
+          "body": "Manual PIN check-in is verified on the server. Reconnect, or scan the ticket QR instead."
+        },
+        "holder": "Holder: {name}",
+        "tier": "Ticket: {name}",
+        "idCheck": "ID check ikufunika pa ticket iyi",
         "scanAnother": "Scan another"
+      },
+      "override": {
+        "cta": "Lowetsani ndi organiser override",
+        "reasonLabel": "Chifukwa (required)",
+        "reasonPlaceholder": "Phone yafa / QR siwerengeka",
+        "submitting": "Ikulemba override…",
+        "failed": "Override yalepheka. Onani kuti ticket iyi ili pa session iyi."
       },
       "recent": {
         "heading": "Recent scans",
@@ -1206,7 +1665,12 @@
       "platformFeeOptions": {
         "organiser": "Absorb it as the organiser",
         "buyer": "Show it as a buyer pass-through fee"
-      }
+      },
+      "city": "Mzinda",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Imagwiritsidwa pa city discovery filters. Landmark ndi GPS zikugwirabe addressing.",
+      "idCheckLabel": "Pemphani door staff kuti a-ID-check tickets zoposa K500",
+      "idCheckHelp": "Awonetsa ID-check hint pa scanner pa paid tickets kuyambira K500. Platform sisunga ID documents."
     },
     "instances": {
       "heading": "Tsikus & capacity",
@@ -1342,7 +1806,7 @@
       "namePlaceholder": "General Admission",
       "priceLabel": "⚠ Price (ZMW)",
       "pricePlaceholder": "75.00",
-      "priceHelp": "⚠ Enter amount in kwacha; stored as ngwee (no decimals in DB).",
+      "priceHelp": "Enter the price in Kwacha, e.g. 75 or 75.50.",
       "priceFreeHelp": "Free RSVP is always K0.00.",
       "qtyCapLabel": "Quantity cap (optional)",
       "qtyCapPlaceholder": "Unlimited",
@@ -1353,7 +1817,10 @@
       "soldLabel": "{count, plural, one {# sold} other {# sold}}",
       "attendeeNamedLabel": "Collect attendee names",
       "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
-      "attendeeNamedBadge": "Dzinas required"
+      "attendeeNamedBadge": "Dzinas required",
+      "perksLabel": "Perks (optional)",
+      "perksHelp": "Ziwonetsedwa kwa buyers — lounge, merch, drink tokens. Siyani blank ngati palibe.",
+      "perksPlaceholder": "e.g. Includes one drink token"
     },
     "actions": {
       "save": "Save type",
@@ -1565,6 +2032,8 @@
     "viewRoster": "View attendee roster",
     "sections": {
       "revenue": "⚠ Revenue",
+      "velocity": "Sales velocity",
+      "acquisition": "Acquisition source",
       "checkIn": "Check-in progress",
       "escrow": "⚠ Escrow",
       "salesByType": "⚠ Sales by ticket type"
@@ -1572,6 +2041,12 @@
     "labels": {
       "pending": "Ikudikira release",
       "released": "Released to you",
+      "soldLast24h": "Zogulitsidwa mu maola 24 apitawo",
+      "revenueLast24h": "Revenue mu maola 24 apitawo",
+      "projectedSold": "Projected sold mpaka start (kuchokera pa recent pace)",
+      "direct": "Direct / unknown",
+      "affiliateSource": "Affiliate {code}",
+      "acquisitionRow": "{orders, plural, one {# order} other {# orders}} · {revenue}",
       "eventStatus": "Event status",
       "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
     },
@@ -1580,6 +2055,31 @@
       "unauthorized": "Sign in as an organiser to view this dashboard.",
       "notFound": "Event not found.",
       "forbidden": "You may only view the dashboard for your own events."
+    },
+    "ops": {
+      "heading": "Team, promos, ndi tracking",
+      "intro": "Itanani door staff ndi foni, pangani percent promo codes, ndi kupanga tracking codes. Affiliate codes zimalembedwa pa checkout — sizilipidwa pano.",
+      "loadFailed": "Could not load organiser tools.",
+      "teamHeading": "Door team",
+      "revoke": "Chotsani",
+      "pendingInvite": "Pending {role} invite ku {phone}",
+      "phonePlaceholder": "Nambala ya foni",
+      "roleLabel": "Role",
+      "roleDoor": "Door",
+      "roleManager": "Manager",
+      "inviteCta": "Itanani",
+      "inviteFailed": "Situnathe kutumiza invite iyi.",
+      "shareToken": "Share uli one-time link: {path}?token={token}",
+      "promoHeading": "Promo codes",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Percent off",
+      "promoCta": "Pangani promo",
+      "promoFailed": "Situnathe kupanga promo iyi.",
+      "affiliateHeading": "Affiliate tracking codes",
+      "affiliateNote": "Codes zimalembedwa pa paid orders. Palibe affiliate payout mu version iyi.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Pangani code",
+      "affiliateFailed": "Situnathe kupanga tracking code iyi."
     }
   },
   "eventRoster": {
@@ -1680,7 +2180,11 @@
       "submit": "Submit for review",
       "submitting": "Submitting…",
       "submitted": "Submitted for review. Convergeo will check it shortly.",
-      "back": "Back to drafts"
+      "back": "Back to drafts",
+      "canonicalProduct": "Catalogue product",
+      "canonicalTitle": "Select the catalog product",
+      "canonicalIntro": "For branded items sold individually, choose the exact existing product. Variant, commodity, unique and made-to-order intake needs a separate listing flow.",
+      "saveBeforeSubmit": "Save your changes before selecting a product and submitting."
     },
     "fields": {
       "title": "Product name",
@@ -1722,7 +2226,14 @@
       "invalid_price": "The price is not valid.",
       "missing_quantity": "Add how many you have in stock.",
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
-      "unsupported_stock_mode": "That stock option is not supported."
+      "unsupported_stock_mode": "That stock option is not supported.",
+      "canonical_required": "Choose the matching active catalogue product before submitting this draft.",
+      "canonicalRequired": "Select an existing catalog product before submitting.",
+      "canonicalUnavailable": "This product is unavailable. Select an active catalog product.",
+      "unsupportedClass": "Intake currently supports Class A branded items only. Use the normal listing flow for other product classes.",
+      "canonicalCategory": "The product category is unavailable, prohibited or different from your draft.",
+      "canonicalConflict": "This draft was already submitted with a different catalog product.",
+      "unsupported_mapping": "Intake currently supports fixed-price individual items only. Use the normal listing flow for other units or made-to-order items."
     }
   },
   "clips": {

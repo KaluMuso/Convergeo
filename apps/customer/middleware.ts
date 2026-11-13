@@ -77,5 +77,15 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
+  // The previous matcher only ran on "/", locale-prefixed paths, and the CSP
+  // report endpoint — any other locale-less path (e.g. `/cart`, `/wishlist`,
+  // a stale bookmark, a bot hitting `/sw.js`) never reached `intlMiddleware`,
+  // so next-intl never got the chance to redirect it to `/{locale}/...`.
+  // Next's `/[locale]` dynamic segment then bound the raw first path segment
+  // (e.g. "cart", "sw.js") as the locale, which isn't a valid BCP-47 tag —
+  // `IntlMessageFormat` throws constructing any interpolated message with
+  // that locale, surfacing in production as `INVALID_MESSAGE` (5000+
+  // occurrences). Match every app path except Next internals, API routes,
+  // and files with an extension (static assets) so the redirect actually runs.
+  matcher: ["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

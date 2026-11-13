@@ -44,6 +44,7 @@ class ScanSyncTicket(StrictModel):
     ticket_id: str
     holder_name: str | None = None
     ticket_type_name: str
+    id_check_required: bool = False
     # Positional: window_sigs[i] corresponds to window (horizon_start_window + i).
     # Keeps the payload compact -- no need to repeat the window number per sig.
     window_sigs: list[str]
@@ -54,6 +55,7 @@ class ScanSyncResponse(StrictModel):
     event_id: str
     instance_id: str
     starts_at: datetime
+    event_title: str = ""
     window_seconds: int = Field(default=_WINDOW_SECONDS)
     horizon_start_window: int
     horizon_end_window: int
@@ -119,7 +121,7 @@ def _load_event_for_vendor(
 ) -> dict[str, Any]:
     response = (
         client.table("events")
-        .select("id, organiser_vendor_id, status")
+        .select("id, organiser_vendor_id, status, id_check_enabled, title")
         .eq("id", event_id)
         .maybe_single()
         .execute()
@@ -178,7 +180,7 @@ def _load_issued_tickets(client: Any, instance_id: str) -> list[dict[str, Any]]:
         client.table("tickets")
         .select(
             "id, status, order_item_id, qr_secret, pin_hash, holder_name, "
-            "ticket_types(name)"
+            "ticket_types(name, price_ngwee)"
         )
         .eq("instance_id", instance_id)
         .in_("status", list(_ISSUED_STATUSES))
@@ -187,13 +189,34 @@ def _load_issued_tickets(client: Any, instance_id: str) -> list[dict[str, Any]]:
     return [row for row in _rows(response) if row.get("order_item_id")]
 
 
-def _ticket_type_name(row: dict[str, Any]) -> str:
+_ID_CHECK_THRESHOLD_NGWEE = 50_000
+
+
+def _ticket_types_rel(row: dict[str, Any]) -> dict[str, Any] | None:
     related = row.get("ticket_types")
     if isinstance(related, dict):
-        return str(related.get("name") or "")
+        return related
     if isinstance(related, list) and related and isinstance(related[0], dict):
-        return str(related[0].get("name") or "")
+        return related[0]
+    return None
+
+
+def _ticket_type_name(row: dict[str, Any]) -> str:
+    related = _ticket_types_rel(row)
+    if related is not None:
+        return str(related.get("name") or "")
     return str(row.get("ticket_type_name") or "")
+
+
+def _id_check_required(row: dict[str, Any], *, event_enabled: bool) -> bool:
+    if not event_enabled:
+        return False
+    related = _ticket_types_rel(row)
+    price = related.get("price_ngwee") if related else row.get("ticket_price_ngwee")
+    try:
+        return int(price or 0) >= _ID_CHECK_THRESHOLD_NGWEE
+    except (TypeError, ValueError):
+        return False
 
 
 def compute_horizon_windows(starts_at: datetime) -> tuple[int, int]:
@@ -208,6 +231,8 @@ def build_scan_sync_response(
     event_id: str,
     instance: dict[str, Any],
     tickets: list[dict[str, Any]],
+    event_title: str = "",
+    id_check_enabled: bool = False,
 ) -> ScanSyncResponse:
     starts_at = _parse_starts_at(instance["starts_at"])
     horizon_start, horizon_end = compute_horizon_windows(starts_at)
@@ -227,6 +252,7 @@ def build_scan_sync_response(
                     str(row["holder_name"]) if row.get("holder_name") is not None else None
                 ),
                 ticket_type_name=_ticket_type_name(row),
+                id_check_required=_id_check_required(row, event_enabled=id_check_enabled),
                 window_sigs=sigs,
                 pin_hash_present=bool(row.get("pin_hash")),
             )
@@ -236,6 +262,7 @@ def build_scan_sync_response(
         event_id=event_id,
         instance_id=str(instance["id"]),
         starts_at=starts_at,
+        event_title=event_title,
         window_seconds=_WINDOW_SECONDS,
         horizon_start_window=horizon_start,
         horizon_end_window=horizon_end,
@@ -257,8 +284,14 @@ async def get_scan_sync(
     vendor_id = str(vendor["id"])
     client = service_client.client
 
-    _load_event_for_vendor(client, event_id=event_id, vendor_id=vendor_id)
+    event = _load_event_for_vendor(client, event_id=event_id, vendor_id=vendor_id)
     instance = _load_instance_for_event(client, instance_id=instance_id, event_id=event_id)
     tickets = _load_issued_tickets(client, instance_id)
 
-    return build_scan_sync_response(event_id=event_id, instance=instance, tickets=tickets)
+    return build_scan_sync_response(
+        event_id=event_id,
+        instance=instance,
+        tickets=tickets,
+        event_title=str(event.get("title") or ""),
+        id_check_enabled=bool(event.get("id_check_enabled")),
+    )

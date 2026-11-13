@@ -6,18 +6,26 @@ deltas (shared accounts); mutated config/rates restored in finally.
 
 from __future__ import annotations
 
+import time
 import uuid
 from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from typing import Any
 
+import psycopg
 import pytest
 from app.errors import AppError
 from app.services.commissions.engine import compute_order_commission
+from app.services.db import SqlResult
 from app.services.ledger.engine import account_balance_ngwee, post_transaction
 from app.services.ledger.templates import LedgerTemplate
+from app.services.notifications.dedupe import build_dedupe_key
 from app.services.rfq.engagement import (
+    ACCEPT_OUTBOX_EVENT,
     DEFAULT_SERVICE_COMMISSION_BPS,
     DEFAULT_SERVICE_DEPOSIT_PCT,
+    OUTBOX_CHANNEL,
     accept_idempotency_key,
     accept_quote,
     build_service_commission_snapshot,
@@ -31,6 +39,17 @@ from tests.rls.conftest import (
     schema_ready,
     seed_matrix_fixtures,
 )
+
+
+@pytest.fixture(autouse=True)
+def capture_accept_sql(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    from app.services.rfq import engagement
+    from tests.financial_observed_sql import capture_native_sql
+
+    monkeypatch.setattr(
+        engagement, "run_sql_script", capture_native_sql(request, label="rfq_accept")
+    )
+
 
 CUSTOMER_A = "11111111-1111-1111-1111-111111111111"
 OTHER_CUSTOMER = "22222222-2222-2222-2222-222222222222"
@@ -183,6 +202,82 @@ class TestDepositMath:
         assert commission == 30_000  # 12% of 250,000
 
 
+class TestAcceptExpirySourceGuard:
+    @pytest.mark.parametrize(
+        ("error", "expected_status"),
+        [("rfq_quote_expired_at_accept", 409), ("other database failure", 500)],
+    )
+    def test_expired_quote_transaction_failure_is_a_conflict(
+        self, monkeypatch: pytest.MonkeyPatch, error: str, expected_status: int
+    ) -> None:
+        from app.services.rfq import engagement
+
+        job_id = str(uuid.uuid4())
+        quote_id = str(uuid.uuid4())
+        vendor_id = str(uuid.uuid4())
+        monkeypatch.setattr(engagement, "_load_job", lambda _: (CUSTOMER_A, "quoted"))
+        monkeypatch.setattr(engagement, "_load_existing_accept", lambda _: None)
+        monkeypatch.setattr(
+            engagement,
+            "_load_quote",
+            lambda _: (job_id, vendor_id, 100_000, "submitted", CUSTOMER_A),
+        )
+        monkeypatch.setattr(engagement, "_read_config_int", lambda *_: 50)
+        monkeypatch.setattr(engagement, "_read_service_commission_bps", lambda: 1200)
+        scripts: list[str] = []
+
+        def expired_at_locked_row(script: str) -> SqlResult:
+            scripts.append(script)
+            return SqlResult(ok=False, rows=[], error=error)
+
+        monkeypatch.setattr(engagement, "run_sql_script", expired_at_locked_row)
+        with pytest.raises(AppError) as exc:
+            accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+
+        assert exc.value.http_status == expected_status
+        expected_code = "invalid_transition" if expected_status == 409 else "internal_error"
+        assert exc.value.code == expected_code
+        assert len(scripts) == 1
+        script = scripts[0]
+        quote_lock = script.index("status='submitted' FOR UPDATE")
+        deadline_check = script.index("clock_timestamp()")
+        first_insert = script.index("INSERT INTO public.checkout_groups")
+        assert quote_lock < deadline_check < first_insert
+
+    def test_accepted_replay_returns_before_expiry_eligibility(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.rfq import engagement
+
+        job_id = str(uuid.uuid4())
+        quote_id = str(uuid.uuid4())
+        replay = engagement.AcceptResult(
+            job_id=job_id,
+            quote_id=quote_id,
+            checkout_group_id=str(uuid.uuid4()),
+            order_id=str(uuid.uuid4()),
+            vendor_id=str(uuid.uuid4()),
+            deposit_order_item_id=str(uuid.uuid4()),
+            total_job_ngwee=100_000,
+            deposit_ngwee=50_000,
+            balance_ngwee=50_000,
+            commission_ngwee=12_000,
+            commission_rate_bps=1200,
+            replayed=True,
+        )
+        monkeypatch.setattr(engagement, "_load_job", lambda _: (CUSTOMER_A, "accepted"))
+        monkeypatch.setattr(engagement, "_load_existing_accept", lambda _: replay)
+        monkeypatch.setattr(
+            engagement, "_load_quote", lambda _: pytest.fail("replay must precede quote checks")
+        )
+        monkeypatch.setattr(
+            engagement, "run_sql_script", lambda _: pytest.fail("replay must not write")
+        )
+
+        result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+        assert result is replay
+
+
 # ---------------------------------------------------------------------------
 # DB-backed
 # ---------------------------------------------------------------------------
@@ -194,8 +289,9 @@ class TestAcceptDeposit:
         quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
 
@@ -225,10 +321,16 @@ class TestAcceptDeposit:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=180_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=180_000
+        )
 
         first = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+        # The original offer deadline does not invalidate an already accepted replay.
+        db.run(
+            f"UPDATE public.job_quotes SET expires_at = timezone('utc', now()) - interval '1 hour' "
+            f"WHERE id = '{quote_id}';"
+        )
         second = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
 
         assert second.replayed is True
@@ -242,27 +344,158 @@ class TestAcceptDeposit:
         )
         assert cnt.rows and cnt.rows[0] == "1"
 
-
-class TestTwoLegCommissionSingleCount:
-    def test_commission_counted_once_across_both_legs(
+    def test_expired_submitted_quote_does_not_create_money_spine(
         self, db: PgConn, db_url_env: None
     ) -> None:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
+        _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
+            amount_ngwee=180_000,
+        )
+        db.run(
+            f"UPDATE public.job_quotes SET expires_at = timezone('utc', now()) - interval '1 hour' "
+            f"WHERE id = '{quote_id}';"
+        )
+
+        with pytest.raises(AppError) as exc:
+            accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+        assert exc.value.http_status == 409
+        assert exc.value.code == "invalid_transition"
+        assert db.run(f"SELECT status FROM public.job_quotes WHERE id = '{quote_id}';").rows == [
+            "submitted"
+        ]
+        assert db.run(f"SELECT status FROM public.jobs WHERE id = '{job_id}';").rows == [
+            "quoted"
+        ]
+        key = accept_idempotency_key(quote_id)
+        assert db.run(
+            f"SELECT count(*)::text FROM public.checkout_groups WHERE idempotency_key = '{key}';"
+        ).rows == ["0"]
+        dedupe_key = build_dedupe_key(
+            ACCEPT_OUTBOX_EVENT, f"{job_id}:{quote_id}", OUTBOX_CHANNEL
+        )
+        assert db.run(
+            f"SELECT count(*)::text FROM public.notification_outbox "
+            f"WHERE dedupe_key = '{dedupe_key}';"
+        ).rows == ["0"]
+
+    def test_quote_expiring_during_lock_wait_is_not_accepted(
+        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.rfq import engagement
+
+        job_id = str(uuid.uuid4())
+        quote_id = str(uuid.uuid4())
+        _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
+            amount_ngwee=180_000,
+        )
+        db.run(
+            f"UPDATE public.job_quotes SET expires_at = clock_timestamp() + interval '1 day' "
+            f"WHERE id = '{quote_id}';"
+        )
+        original_run_sql = engagement.run_sql_script  # type: ignore[attr-defined]
+        accept_transaction_started = Event()
+
+        def watch_accept_transaction(script: str) -> Any:
+            if "DO $accept$" in script:
+                accept_transaction_started.set()
+            return original_run_sql(script)
+
+        monkeypatch.setattr(engagement, "run_sql_script", watch_accept_transaction)
+        with psycopg.connect(db.dsn) as lock_conn:
+            lock_conn.execute(
+                f"SELECT id FROM public.job_quotes WHERE id = '{quote_id}' FOR UPDATE"
+            )
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(
+                    accept_quote, _SERVICE, job_id=job_id, quote_id=quote_id,
+                    customer_id=CUSTOMER_A,
+                )
+                try:
+                    assert accept_transaction_started.wait(timeout=10)
+                    waiting = False
+                    for _ in range(100):
+                        waiters = db.run(
+                            "SELECT count(*)::text FROM pg_stat_activity "
+                            "WHERE wait_event_type = 'Lock' AND query LIKE '%DO $accept$%' "
+                            f"AND query LIKE '%{quote_id}%';"
+                        )
+                        waiting = waiters.ok and bool(waiters.rows) and int(waiters.rows[0]) >= 1
+                        if waiting:
+                            break
+                        time.sleep(0.05)
+                    assert waiting, "accept transaction never waited on the quote row lock"
+                    lock_conn.execute(
+                        f"UPDATE public.job_quotes SET expires_at = "
+                        f"clock_timestamp() + interval '0.2 seconds' WHERE id = '{quote_id}'"
+                    )
+                    time.sleep(0.5)
+                finally:
+                    lock_conn.commit()
+                with pytest.raises(AppError) as exc:
+                    future.result(timeout=10)
+
+        assert exc.value.http_status == 409
+        key = accept_idempotency_key(quote_id)
+        assert db.run(
+            f"SELECT count(*)::text FROM public.checkout_groups WHERE idempotency_key = '{key}';"
+        ).rows == ["0"]
+
+
+class TestTwoLegCommissionSingleCount:
+    def test_commission_counted_once_across_both_legs(self, db: PgConn, db_url_env: None) -> None:
+        job_id = str(uuid.uuid4())
+        quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
-        result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
+        # Pilot default is 100% upfront (no balance leg). Exercise the two-leg
+        # commission invariant with an explicit 50% deposit config.
+        prior = db.run(
+            "SELECT value::text FROM public.platform_config WHERE key = 'service_deposit_pct';"
+        )
+        db.run(
+            "INSERT INTO public.platform_config (key, value) "
+            "VALUES ('service_deposit_pct', '50'::jsonb) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;"
+        )
+        try:
+            result = accept_quote(
+                _SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A
+            )
+        finally:
+            if prior.ok and prior.rows:
+                db.run(
+                    f"UPDATE public.platform_config SET value = '{prior.rows[0]}'::jsonb "
+                    "WHERE key = 'service_deposit_pct';"
+                )
+            else:
+                db.run("DELETE FROM public.platform_config WHERE key = 'service_deposit_pct';")
+        assert result.balance_ngwee == total // 2
         expected_commission = total * DEFAULT_SERVICE_COMMISSION_BPS // 10_000
 
         # 12% of the TOTAL, computed once at accept.
         assert result.commission_ngwee == expected_commission
 
         # Create the balance leg on the SAME order (completion path helper).
+        from app.routers.job_completion import confirm_job_completion, mark_job_complete
+
+        owner_row = db.run(
+            f"SELECT owner_user_id::text FROM public.vendors WHERE id='{result.vendor_id}'"
+        )
+        assert owner_row.ok and owner_row.rows
+        mark_job_complete(result.job_id, owner_row.rows[0])
+        pending = confirm_job_completion(result.job_id, actor_id=CUSTOMER_A)
+        assert not pending.released
         balance = create_balance_item(result.order_id)
-        assert balance.created is True
+        assert balance.created is False
         assert balance.balance_ngwee == result.balance_ngwee
 
         # Gross across both legs == total; commission from the single snapshot unchanged.
@@ -292,8 +525,9 @@ class TestSnapshotImmunity:
         quote_id = str(uuid.uuid4())
         total = 400_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
 
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         before = result.commission_ngwee
@@ -323,8 +557,9 @@ class TestCancellationRefund:
         quote_id = str(uuid.uuid4())
         total = 250_000
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=total)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=total
+        )
         result = accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)
         deposit = result.deposit_ngwee
 
@@ -367,8 +602,9 @@ class TestOwnerAuthz:
         job_id = str(uuid.uuid4())
         quote_id = str(uuid.uuid4())
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
-        _seed_quote(db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db),
-                    amount_ngwee=120_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=job_id, vendor_id=_any_vendor_id(db), amount_ngwee=120_000
+        )
 
         with pytest.raises(AppError) as exc:
             accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=OTHER_CUSTOMER)
@@ -388,8 +624,9 @@ class TestOwnerAuthz:
         _seed_job(db, job_id=job_id, customer_id=CUSTOMER_A)
         _seed_job(db, job_id=other_job_id, customer_id=CUSTOMER_A)
         # Quote belongs to other_job_id, not job_id.
-        _seed_quote(db, quote_id=quote_id, job_id=other_job_id, vendor_id=vendor_id,
-                    amount_ngwee=90_000)
+        _seed_quote(
+            db, quote_id=quote_id, job_id=other_job_id, vendor_id=vendor_id, amount_ngwee=90_000
+        )
 
         with pytest.raises(AppError) as exc:
             accept_quote(_SERVICE, job_id=job_id, quote_id=quote_id, customer_id=CUSTOMER_A)

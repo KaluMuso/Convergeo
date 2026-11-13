@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "@vergeo/config";
 import React from "react";
@@ -63,10 +63,9 @@ function mockCameraDenied(): void {
 }
 
 async function submitPin(orderId: string, pin: string): Promise<void> {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText(/Order ID/i), orderId);
-  await user.type(screen.getByLabelText(/6-digit PIN/i), pin);
-  await user.click(screen.getByRole("button", { name: /Verify pickup/i }));
+  fireEvent.change(screen.getByLabelText(/Order ID/i), { target: { value: orderId } });
+  fireEvent.change(screen.getByLabelText(/6-digit PIN/i), { target: { value: pin } });
+  await userEvent.setup().click(screen.getByRole("button", { name: /Verify pickup/i }));
 }
 
 beforeEach(() => {

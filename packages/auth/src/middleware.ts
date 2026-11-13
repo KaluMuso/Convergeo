@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SetAllCookies } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { mergeSecureCookieOptions } from "./cookie-security";
-import { getRolesFromUser, hasRole, type AppRole } from "./roles";
+import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
+
+import type { SetAllCookies } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 
 export type AuthGate = "none" | "vendor" | "admin";
 export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
@@ -141,6 +142,15 @@ function copyMiddlewareRequestHeaders(source: NextResponse, target: NextResponse
   }
 }
 
+function copySessionCacheHeaders(source: NextResponse, target: NextResponse): void {
+  for (const header of ["cache-control", "expires", "pragma"]) {
+    const value = source.headers.get(header);
+    if (value !== null) {
+      target.headers.set(header, value);
+    }
+  }
+}
+
 export function applyReportOnlyCspNonce(
   request: NextRequest,
   response: NextResponse,
@@ -183,6 +193,11 @@ export function getLocaleFromPath(
   return defaultLocale;
 }
 
+/**
+ * Login, OTP, and password recovery stay reachable before a portal role is
+ * established. Recovery is limited to the request and confirm pages; the
+ * recovery session can exist before the user's portal role is available.
+ */
 export function isAuthExemptPath(pathname: string, locales: readonly string[]): boolean {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length < 2) {
@@ -194,7 +209,10 @@ export function isAuthExemptPath(pathname: string, locales: readonly string[]): 
     return false;
   }
 
-  return segments[1] === "login";
+  if (segments[1] === "reset-password") {
+    return segments.length === 2 || (segments.length === 3 && segments[2] === "confirm");
+  }
+  return segments[1] === "login" || segments[1] === "otp";
 }
 
 /**
@@ -214,6 +232,27 @@ export function isVendorOnboardingPath(pathname: string, locales: readonly strin
   }
 
   return segments[1] === "onboarding";
+}
+
+/**
+ * `/{locale}/health` — a portal's deployed-configuration proof (status/app/
+ * env/buildId/apiHost; never session, user, or secret data). Exported so
+ * each app's own middleware can decide, locally, whether and how to exempt
+ * it from that portal's auth/CF Access gates; this predicate only matches
+ * the path, it does not grant access on its own.
+ */
+export function isHealthCheckPath(pathname: string, locales: readonly string[]): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length !== 2) {
+    return false;
+  }
+
+  const locale = segments[0];
+  if (!locale || !locales.includes(locale)) {
+    return false;
+  }
+
+  return segments[1] === "health";
 }
 
 export function isAdminPermissionDeniedPath(pathname: string, locales: readonly string[]): boolean {
@@ -314,6 +353,8 @@ export function createPortalRedirect(
     redirect.cookies.set(cookie);
   });
 
+  copySessionCacheHeaders(sessionResponse, redirect);
+
   return redirect;
 }
 
@@ -321,6 +362,7 @@ export function mergeSessionCookies(source: NextResponse, target: NextResponse):
   source.cookies.getAll().forEach((cookie) => {
     target.cookies.set(cookie);
   });
+  copySessionCacheHeaders(source, target);
   return target;
 }
 
@@ -333,20 +375,33 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
     request,
   });
 
-  const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  const supabaseUrl = getSupabaseUrl();
+  const supabase = createServerClient(supabaseUrl, getSupabaseAnonKey(), {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
+      setAll(
+        cookiesToSet: Parameters<SetAllCookies>[0],
+        headersToSet: Parameters<SetAllCookies>[1],
+      ) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
+        const previousResponse = response;
         response = NextResponse.next({
           request,
         });
+        previousResponse.cookies.getAll().forEach((cookie) => {
+          response.cookies.set(cookie);
+        });
+        // @supabase/ssr sends cache headers only on the first write per client.
+        copySessionCacheHeaders(previousResponse, response);
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, mergeSecureCookieOptions(options));
+        });
+        Object.entries(headersToSet).forEach(([name, value]) => {
+          response.headers.set(name, value);
         });
       },
     },
@@ -359,6 +414,34 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
   return {
     response,
     user,
-    roles: getRolesFromUser(user),
+    roles: await resolveVerifiedRoles(supabase, user, `${supabaseUrl.replace(/\/+$/, "")}/auth/v1`),
   };
+}
+
+/** A failed or mismatched JWT verification must never grant a routing role. */
+async function resolveVerifiedRoles(
+  supabase: ReturnType<typeof createServerClient>,
+  user: User | null,
+  expectedIssuer: string,
+): Promise<AppRole[]> {
+  if (!user) return [];
+  try {
+    // getClaims verifies the token signature (or asks Auth for symmetric keys).
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return [];
+    const claims = data.claims as Record<string, unknown>;
+    if (
+      claims.sub !== user.id ||
+      claims.iss !== expectedIssuer ||
+      claims.aud !== "authenticated" ||
+      typeof claims.exp !== "number" ||
+      !Number.isFinite(claims.exp) ||
+      claims.exp <= Date.now() / 1000
+    ) {
+      return [];
+    }
+    return getRolesFromClaims(claims);
+  } catch {
+    return [];
+  }
 }

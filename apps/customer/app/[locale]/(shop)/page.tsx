@@ -8,6 +8,7 @@ import {
   buildWebSiteJsonLd,
   JsonLdScript,
 } from "@vergeo/ui/src/seo/json-ld";
+import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -27,6 +28,17 @@ import {
   loadHomeDefaultData,
   pickHeroVisualPublicId,
 } from "./_components/home-default";
+import { isRenderableSection } from "./_components/home-feed/feed-types";
+import {
+  buildFeedLabels,
+  HomeFeed,
+  loadHomeFeedFirstPage,
+} from "./_components/home-feed/home-feed";
+import {
+  HomeListingStream,
+  listingIdsOf,
+  loadHomeStreamFirstPage,
+} from "./_components/home-feed/home-stream";
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
@@ -65,13 +77,19 @@ export function generateStaticParams() {
 async function getCatalogTranslator(locale: string) {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({ locale, messages, namespace: "catalog" });
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
+  if (!LOCALES.includes(locale as Locale)) {
+    notFound();
+  }
   const resolvedSearchParams = await searchParams;
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   const t = await getCatalogTranslator(locale);
@@ -144,17 +162,32 @@ function renderCampaignSection(
 
 export default async function ShopHomePage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  // Belt-and-suspenders alongside the root layout's own guard: React can start
+  // rendering this segment concurrently with the layout, so relying solely on
+  // the layout's `notFound()` still lets an invalid locale (e.g. a bot request
+  // to a locale-less path the middleware matcher didn't catch) reach the
+  // `IntlMessageFormat` calls below, which throw for anything that isn't a
+  // valid BCP-47 tag — see apps/customer/middleware.ts.
+  if (!LOCALES.includes(locale as Locale)) {
+    notFound();
+  }
   const resolvedSearchParams = await searchParams;
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages] = await Promise.all([
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
     loadNamespace(locale as Locale, "directory"),
+    loadHomeFeedFirstPage(locale),
+    loadHomeStreamFirstPage(),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
+  // Card/rail labels cross into client components as serializable strings and are
+  // interpolated there, so messages holding `{…}` placeholders are read raw —
+  // `t()` cannot format them without values and falls back to the bare key path.
+  const raw = (key: string) => String(tRaw.raw(key));
   const tDirectory = createTranslator({
     locale,
     messages: { directory: directoryMessages } as AbstractIntlMessages,
@@ -183,26 +216,45 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   };
 
   const railLabels = {
-    vendor: t("plp.card.vendor"),
+    vendor: raw("plp.card.vendor"),
     noReviews: t("plp.card.noReviews"),
-    reviewCount: t("plp.card.reviewCount"),
+    reviewCount: raw("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
     quickAddError: t("plp.card.quickAddError"),
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
-    discount: t("plp.card.discount"),
+    discount: raw("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
     conditionUsed: t("plp.card.conditionUsed"),
     logistics: {
-      nearest: t("plp.card.pill.nearest"),
+      nearest: raw("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
     },
+  };
+
+  // Admin-governed feed (home_feed_sections) supersedes the hard-coded default
+  // rails whenever it resolves to at least one section; otherwise the legacy
+  // rails below remain the fallback (API down / feed not configured).
+  const useAdminFeed = feedPage.sections.some(isRenderableSection);
+  const feedLabels = buildFeedLabels(
+    tRaw as unknown as Parameters<typeof buildFeedLabels>[0],
+    railLabels,
+  );
+
+  const streamLabels = {
+    title: t("home.feed.stream.title"),
+    loadMore: t("home.feed.stream.loadMore"),
+    loading: t("home.feed.loadingMore"),
+    moreLoaded: raw("home.feed.stream.moreLoaded"),
+    endOfResults: t("home.feed.end"),
+    loadError: t("home.feed.loadError"),
+    retry: t("home.feed.retry"),
   };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.
@@ -234,6 +286,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
           t={t}
           brandName={brandName}
           visualPublicId={pickHeroVisualPublicId(defaultData.newest)}
+          sponsoredSlides={feedPage.carousel}
         />
       )}
 
@@ -257,12 +310,12 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         labels={{
           title: t("home.rails.recentTitle"),
           viewAll: t("home.rails.viewAll"),
-          viewProduct: t("home.rails.recentViewProduct"),
+          viewProduct: raw("home.rails.recentViewProduct"),
           view: t("home.rails.recentView"),
         }}
       />
 
-      {plan.showDefaultRails ? (
+      {plan.showDefaultRails && !useAdminFeed ? (
         <>
           <HomeProductRail
             id="home-rail-new"
@@ -278,7 +331,9 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             <HomeProductRail
               key={rail.category.id}
               id={`home-rail-${rail.category.slug}`}
-              title={t("home.rails.departmentTitle", { category: rail.category.name })}
+              title={t("home.rails.departmentTitle", {
+                category: rail.category.name,
+              })}
               viewAllHref={`/${locale}/c/${rail.category.slug}`}
               viewAllLabel={t("home.rails.viewAll")}
               listings={rail.listings}
@@ -293,7 +348,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
         : null}
 
-      {plan.showDefaultRails ? (
+      {plan.showDefaultRails && !useAdminFeed ? (
         <>
           <HomeServicesRail
             id="home-rail-services"
@@ -303,7 +358,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             services={defaultData.services}
             locale={locale}
             labels={{
-              provider: t("home.rails.services.provider"),
+              provider: raw("home.rails.services.provider"),
               fromPrice: t("home.rails.services.fromPrice"),
               noReviews: t("home.rails.services.noReviews"),
               view: t("home.rails.services.view"),
@@ -319,7 +374,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             labels={{
               listings: t("home.rails.vendors.listings"),
               reviews: t("home.rails.vendors.reviews"),
-              rating: t("home.rails.vendors.rating"),
+              rating: raw("home.rails.vendors.rating"),
               noReviews: t("home.rails.vendors.noReviews"),
               preferred: t("home.rails.vendors.preferred"),
               verified: t("home.rails.vendors.verified"),
@@ -332,6 +387,25 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       ) : null}
 
       {plan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
+
+      {/* Infinite feed is last so loading more never pushes static modules away. */}
+      {useAdminFeed ? (
+        <HomeFeed
+          page={feedPage}
+          locale={locale}
+          labels={feedLabels}
+          streamFollows={streamPage.items.length > 0}
+        />
+      ) : null}
+
+      {/* "Popular now": first batch is SSR; only later pages load on the client. */}
+      <HomeListingStream
+        page={streamPage}
+        sectionListingIds={listingIdsOf(feedPage.sections)}
+        locale={locale}
+        cardLabels={railLabels}
+        labels={streamLabels}
+      />
     </div>
   );
 }

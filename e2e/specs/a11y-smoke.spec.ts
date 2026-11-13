@@ -10,7 +10,9 @@ import { expect, test } from "../fixtures/test-base";
  */
 test.describe("a11y-smoke", () => {
   for (const route of ["/", "/cart", "/checkout"] as const) {
-    test(`axe critical/serious on ${route}`, async ({ page }) => {
+    test(`axe critical/serious on ${route}`, async ({ page }, testInfo) => {
+      const expectedViewport = testInfo.project.metadata.perfA11yViewport;
+      if (expectedViewport) expect(page.viewportSize()).toEqual(expectedViewport);
       await page.goto(path(route));
       await page.waitForLoadState("domcontentloaded");
 

@@ -29,6 +29,8 @@ __pycache__/
 
 # Coverage & logs
 coverage/
+# JUnit report emitted by the staging-cleanup DB regression CI step
+services/api/staging-cleanup-regression.xml
 *.log
 npm-debug.log*
 pnpm-debug.log*

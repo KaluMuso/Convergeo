@@ -17,6 +17,8 @@ export type EventBrowseItem = {
   spots_sold: number;
   spots_total: number;
   is_sold_out: boolean;
+  is_selling_fast?: boolean;
+  city?: string | null;
   organiser: {
     display_name: string;
     preferred_badge: boolean;
@@ -26,6 +28,7 @@ export type EventBrowseItem = {
 type EventGridLabels = {
   free: string;
   soldOut: string;
+  sellingFast: string;
   viewEvent: string;
   capacityTemplate: string;
   verified: string;
@@ -91,7 +94,11 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
                 )}
                 ctaLabel={labels.viewEvent}
                 badge={
-                  item.is_sold_out ? <Badge variant="sold_out" label={labels.soldOut} /> : undefined
+                  item.is_sold_out ? (
+                    <Badge variant="sold_out" label={labels.soldOut} />
+                  ) : item.is_selling_fast ? (
+                    <Badge variant="selling_fast" label={labels.sellingFast} />
+                  ) : undefined
                 }
                 verifiedBadge={
                   item.organiser.preferred_badge ? (

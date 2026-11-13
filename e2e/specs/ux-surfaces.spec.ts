@@ -46,9 +46,16 @@ test.describe("ux-surfaces · release certification", () => {
       .or(page.getByTestId("plp-empty"))
       .or(page.getByTestId("plp-unavailable"))
       .or(page.getByRole("heading", { name: /E2E Test Vendor|vendor|store/i }));
+    // isVisible({ timeout }) does NOT wait/retry despite the option — it is
+    // an instant DOM sample, so this raced the storefront's render and
+    // misclassified a fully-rendered catalog surface as missing (E2E run #52,
+    // RC-5: the failing attempt's own snapshot showed the complete storefront
+    // — heading, KYC badge, product tab, 3 products). waitFor() genuinely
+    // polls until the deadline.
     const visible = await surface
       .first()
-      .isVisible({ timeout: 20_000 })
+      .waitFor({ state: "visible", timeout: 20_000 })
+      .then(() => true)
       .catch(() => false);
     if (!visible && strictSyntheticRequired()) {
       throw new Error(`strictSyntheticRequired: vendor ${SEED.vendor.slug} surface missing`);
@@ -88,10 +95,19 @@ test.describe("ux-surfaces · release certification", () => {
   test("error state on invalid PDP is honest", async ({ page }) => {
     await page.goto(path("/p/this-product-definitely-does-not-exist-xyz"));
     await page.waitForLoadState("domcontentloaded");
+    // A genuinely nonexistent slug hits fetchProduct's "not_found" branch, which
+    // calls Next's notFound() and renders app/[locale]/not-found.tsx — copy is
+    // "We can't find that page" (marketing.notFound.heading), not "not found" /
+    // "no longer". "unavailable" alone still covers the in-page PDP "unavailable"
+    // state (catalog.pdp.unavailableTitle: "Product unavailable").
     await expect(
       page
         .getByTestId("pdp-unavailable")
-        .or(page.getByRole("heading", { name: /not found|unavailable|no longer/i }))
+        .or(
+          page.getByRole("heading", {
+            name: /not found|unavailable|no longer|can't find|can’t find/i,
+          }),
+        )
         .first(),
     ).toBeVisible({ timeout: 20_000 });
   });

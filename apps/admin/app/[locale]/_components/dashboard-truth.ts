@@ -31,8 +31,8 @@ export function isPayoutLiabilitiesEmpty(liabilities: PayoutLiabilities): boolea
 }
 
 /**
- * Reconciliation with no report must not render as "Balanced".
- * API historically returns status=green when report_id is null — UI treats that as unknown.
+ * Only explicit current certification can render as "Balanced".
+ * Missing, legacy, stale and noncertifying reports retain an unknown state.
  */
 export function reconciliationDisplayStatus(
   reconciliation: ReconciliationTile,
@@ -40,7 +40,12 @@ export function reconciliationDisplayStatus(
   if (reconciliation.has_mismatch || reconciliation.status === "red") {
     return "red";
   }
-  if (!reconciliation.report_id || !reconciliation.report_date) {
+  if (
+    reconciliation.status !== "green" ||
+    reconciliation.certifiable !== true ||
+    !reconciliation.report_id ||
+    !reconciliation.report_date
+  ) {
     return "unknown";
   }
   return "green";

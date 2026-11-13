@@ -62,20 +62,21 @@ Repository secret (or mirror `STAGING_CUSTOMER_URL` here for workflows outside t
 Set on the **OCI staging env file** (and only the subset required by the API).
 Values must be staging-specific — do not reuse production.
 
-| Name                               | Notes                                             |
-| ---------------------------------- | ------------------------------------------------- |
-| `LENCO_API_TOKEN`                  | **Sandbox** token only                            |
-| `LENCO_ENV`                        | Must be `sandbox`                                 |
-| `LENCO_ACCOUNT_ID`                 | Sandbox account                                   |
-| `LENCO_SANDBOX_BASE_URL`           | Optional override                                 |
-| `PAYMENTS_ENABLED`                 | `true` for sandbox drills                         |
-| `PAYMENTS_ALLOW_PRODUCTION`        | Must remain unset/`false`                         |
-| `WHATSAPP_*` / `AT_*` / `RESEND_*` | Staging-only or leave unset (outbound suppressed) |
-| `INTERNAL_*_TOKEN`                 | Staging-only cron/n8n tokens                      |
-| `CLOUDINARY_URL`                   | Staging/unsigned demo cloud preferred             |
-| `SENTRY_DSN`                       | Optional staging project DSN                      |
-| `STAGING_ALLOW_OUTBOUND`           | Default unset (suppressed)                        |
-| `STAGING_ALLOW_PAYOUTS`            | Default unset (suppressed)                        |
+| Name                               | Notes                                                       |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `LENCO_API_TOKEN`                  | **Sandbox** token only                                      |
+| `LENCO_ENV`                        | Must be `sandbox`                                           |
+| `LENCO_ACCOUNT_ID`                 | Sandbox account                                             |
+| `LENCO_SANDBOX_BASE_URL`           | Optional override                                           |
+| `PAYMENTS_ENABLED`                 | `true` for sandbox drills                                   |
+| `PAYMENTS_ALLOW_PRODUCTION`        | Must remain unset/`false`                                   |
+| `WHATSAPP_*` / `AT_*` / `RESEND_*` | Staging-only or leave unset (outbound suppressed)           |
+| `AT_ENVIRONMENT`                   | Must be `sandbox` on staging (`send-sms-otp` edge function) |
+| `INTERNAL_*_TOKEN`                 | Staging-only cron/n8n tokens                                |
+| `CLOUDINARY_URL`                   | Staging/unsigned demo cloud preferred                       |
+| `SENTRY_DSN`                       | Optional staging project DSN                                |
+| `STAGING_ALLOW_OUTBOUND`           | Default unset (suppressed)                                  |
+| `STAGING_ALLOW_PAYOUTS`            | Default unset (suppressed)                                  |
 
 ### n8n staging
 

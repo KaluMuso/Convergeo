@@ -17,6 +17,7 @@ from app.errors import AppError
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.dispatcher import has_any_channel_enabled
 from fastapi import APIRouter, Depends, Request
+from postgrest.exceptions import APIError
 
 router = APIRouter(prefix="/internal/n8n", tags=["internal-n8n"])
 
@@ -31,6 +32,7 @@ _BATCH_LIMIT = 100
 _MARKETING_EVENT_TYPES = frozenset(
     {"review_request", "kyc_nudge", "abandoned_cart"},
 )
+_ISOLATABLE_OUTBOX_ERRORS = frozenset({"23502", "23503", "23514"})
 
 KYC_STALLED_HOURS = 48
 REVIEW_REQUEST_HOURS = 24
@@ -103,7 +105,7 @@ def _is_feature_flag_enabled(client: Any, flag: str) -> bool:
     response = (
         _table(client, "feature_flags").select("enabled").eq("flag", flag).maybe_single().execute()
     )
-    data = response.data
+    data = response.data if response is not None else None
     if isinstance(data, dict):
         return bool(data.get("enabled"))
     return False
@@ -481,6 +483,48 @@ def _enqueue_items(
     return enqueued, skipped
 
 
+def _enqueue_low_stock_items(
+    client: Any, items: list[dict[str, Any]]
+) -> tuple[int, int, int]:
+    """Continue past individual insert failures, retaining the outbox dedupe gate."""
+    enqueued = skipped = failed = 0
+    for index, item in enumerate(items):
+        try:
+            row = enqueue_outbox_row(
+                client.client,
+                event_type="low_stock_alert",
+                entity_id=str(item["listing_id"]),
+                channel="whatsapp",
+                template="low_stock_alert",
+                payload=item,
+            )
+        except APIError as exc:
+            if getattr(exc, "code", None) not in _ISOLATABLE_OUTBOX_ERRORS:
+                # Permission, connection and other systemic failures must not
+                # fan out across the rest of the batch.
+                raise AppError(
+                    code="n8n_tick_enqueue_failure",
+                    message="Low-stock enqueue failed; remaining listings were not attempted",
+                    http_status=500,
+                    details={
+                        "count": len(items),
+                        "enqueued": enqueued,
+                        "skipped": skipped,
+                        "failed": failed + 1,
+                        "remaining": len(items) - index - 1,
+                    },
+                ) from exc
+            # A row-level constraint failure may follow successful inserts.
+            # Process remaining listings and fail the tick with counts only.
+            failed += 1
+            continue
+        if row is None:
+            skipped += 1
+        else:
+            enqueued += 1
+    return enqueued, skipped, failed
+
+
 @router.get(
     "/kyc-stalled",
     dependencies=[Depends(require_internal_n8n_token)],
@@ -555,13 +599,19 @@ async def low_stock_tick(
     supabase: Annotated[Any, Depends(get_supabase_client)],
 ) -> dict[str, Any]:
     items = fetch_low_stock(supabase)
-    enqueued, skipped = _enqueue_items(
-        supabase,
-        event_type="low_stock_alert",
-        template="low_stock_alert",
-        items=items,
-        entity_key="listing_id",
-    )
+    enqueued, skipped, failed = _enqueue_low_stock_items(supabase, items)
+    if failed:
+        raise AppError(
+            code="n8n_tick_partial_failure",
+            message="Low-stock tick could not enqueue every listing",
+            http_status=500,
+            details={
+                "count": len(items),
+                "enqueued": enqueued,
+                "skipped": skipped,
+                "failed": failed,
+            },
+        )
     return _tick_envelope(items, enqueued=enqueued, skipped=skipped)
 
 
@@ -647,3 +697,71 @@ async def preferred_badge_tick(
         "granted": granted,
         "revoked": revoked,
     }
+
+
+# --- Courier dispatch v1: stale-request founder alert -------------------------
+
+DISPATCH_STALE_MINUTES_KEY = "dispatch_stale_minutes"
+
+
+def fetch_stale_dispatches(client: Any) -> list[dict[str, Any]]:
+    """Dispatches ``requested`` > N minutes (default 45) with no courier acceptance.
+
+    Returns nothing while the ``courier_dispatch`` flag is off. Recipient is the
+    existing operator-alert channel (``FOUNDER_WHATSAPP_E164``) — the same one
+    the payout-failure alert uses.
+    """
+    from app.services.dispatch import service as dispatch_service
+
+    if not dispatch_service.is_courier_dispatch_enabled():
+        return []
+    minutes = _read_platform_config_int(
+        client,
+        DISPATCH_STALE_MINUTES_KEY,
+        dispatch_service.STALE_REQUESTED_MINUTES_DEFAULT,
+    )
+    founder_phone = _founder_phone_e164()
+    return [
+        {
+            "dispatch_id": str(row["dispatch_id"]),
+            "order_id": str(row["order_id"]),
+            "order_reference": str(row["order_reference"]),
+            "courier_name": str(row.get("courier_name") or ""),
+            "requested_at": str(row.get("requested_at") or ""),
+            "minutes_waiting": int(row.get("minutes_waiting") or 0),
+            "threshold_minutes": minutes,
+            "to": founder_phone,
+            "phone_e164": founder_phone,
+            "locale": "en",
+        }
+        for row in dispatch_service.list_stale_requested(minutes=max(minutes, 1))
+    ]
+
+
+@router.get(
+    "/dispatch-stale",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def dispatch_stale(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    return _envelope(fetch_stale_dispatches(supabase))
+
+
+@router.post(
+    "/dispatch-stale/tick",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def dispatch_stale_tick(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    """Enqueue ONE founder alert per stale dispatch (outbox dedupe on dispatch id)."""
+    items = fetch_stale_dispatches(supabase)
+    enqueued, skipped = _enqueue_items(
+        supabase,
+        event_type="dispatch_stale_alert",
+        template="dispatch_stale_alert",
+        items=items,
+        entity_key="dispatch_id",
+    )
+    return _tick_envelope(items, enqueued=enqueued, skipped=skipped)

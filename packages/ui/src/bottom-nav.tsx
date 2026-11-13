@@ -47,7 +47,7 @@ export function BottomNav({
     <nav
       aria-label={ariaLabel}
       className={mergeClasses(
-        "fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface",
+        "v-bottom-nav fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface",
         desktopHiddenClassName,
         className,
       )}
@@ -67,7 +67,10 @@ export function BottomNav({
                 item.active ? "text-primary" : "text-text-3",
               )}
             >
-              <span className="relative flex h-6 w-6 items-center justify-center" aria-hidden>
+              <span
+                className="v-bottom-nav__icon relative flex h-6 w-6 items-center justify-center"
+                aria-hidden
+              >
                 {item.icon}
                 {item.badge != null && item.badge > 0 ? (
                   <span
@@ -79,9 +82,6 @@ export function BottomNav({
                 ) : null}
               </span>
               <span className="truncate">{item.label}</span>
-              {item.active ? (
-                <span className="absolute bottom-1 h-1 w-1 rounded-pill bg-primary" aria-hidden />
-              ) : null}
             </LinkComponent>
           </li>
         ))}

@@ -1,0 +1,59 @@
+diff --git a/dist/compiled/@next/font/dist/google/find-font-files-in-css.js b/dist/compiled/@next/font/dist/google/find-font-files-in-css.js
+index ed5eb37c39d46110a37752e3304f3991f2a22cb0..be67491884c10ee507ff450de83c887b0c083635 100644
+--- a/dist/compiled/@next/font/dist/google/find-font-files-in-css.js
++++ b/dist/compiled/@next/font/dist/google/find-font-files-in-css.js
+@@ -22,9 +22,11 @@ function findFontFilesInCss(css, subsetsToPreload) {
+             const googleFontFileUrl = (_b = /src: url\((.+?)\)/.exec(line)) === null || _b === void 0 ? void 0 : _b[1];
+             if (googleFontFileUrl &&
+                 !fontFiles.some((foundFile) => foundFile.googleFontFileUrl === googleFontFileUrl)) {
++                const fontFileFormat = /format\(['"]?([a-z0-9-]+)['"]?\)/i.exec(line)?.[1]?.toLowerCase();
+                 // Found the font file in the @font-face declaration.
+                 fontFiles.push({
+                     googleFontFileUrl,
++                    fontFileFormat,
+                     preloadFontFile: !!(subsetsToPreload === null || subsetsToPreload === void 0 ? void 0 : subsetsToPreload.includes(currentSubset)),
+                 });
+             }
+diff --git a/dist/compiled/@next/font/dist/google/loader.js b/dist/compiled/@next/font/dist/google/loader.js
+index f8e585c491caac87501f66a307c0fac21e239c08..d5993dc006034bcb48340afc910e81f052d934bb 100644
+--- a/dist/compiled/@next/font/dist/google/loader.js
++++ b/dist/compiled/@next/font/dist/google/loader.js
+@@ -101,7 +101,7 @@ const nextFontGoogleFontLoader = async ({ functionName, data, emitFontFile, isDe
+         // Find font files to download, provide the array of subsets we want to preload if preloading is enabled
+         const fontFiles = (0, find_font_files_in_css_1.findFontFilesInCss)(fontFaceDeclarations, preload ? subsets : undefined);
+         // Download the font files extracted from the CSS
+-        const downloadedFiles = await Promise.all(fontFiles.map(async ({ googleFontFileUrl, preloadFontFile }) => {
++        const downloadedFiles = await Promise.all(fontFiles.map(async ({ googleFontFileUrl, fontFileFormat, preloadFontFile }) => {
+             const hasCachedFont = fontCache.has(googleFontFileUrl);
+             // Download the font file or get it from cache
+             const fontFileBuffer = hasCachedFont
+@@ -119,7 +119,28 @@ const nextFontGoogleFontLoader = async ({ functionName, data, emitFontFile, isDe
+             if (fontFileBuffer == null) {
+                 (0, next_font_error_1.nextFontError)(`Failed to fetch \`${fontFamily}\` from Google Fonts.`);
+             }
+-            const ext = /\.(woff|woff2|eot|ttf|otf)$/.exec(googleFontFileUrl)[1];
++            const fontPath = googleFontFileUrl.split(/[?#]/, 1)[0];
++            const urlExtension = /\.(woff|woff2|eot|ttf|otf)$/.exec(fontPath)?.[1];
++            let cssFormatExtension;
++            switch (fontFileFormat) {
++                case 'woff':
++                case 'woff2':
++                    cssFormatExtension = fontFileFormat;
++                    break;
++                case 'truetype':
++                    cssFormatExtension = 'ttf';
++                    break;
++                case 'opentype':
++                    cssFormatExtension = 'otf';
++                    break;
++                case 'embedded-opentype':
++                    cssFormatExtension = 'eot';
++                    break;
++            }
++            const ext = urlExtension || cssFormatExtension;
++            if (!ext) {
++                (0, next_font_error_1.nextFontError)(`Unsupported Google Fonts file format for \`${fontFamily}\`.`);
++            }
+             // Emit font file to .next/static/media
+             const selfHostedFileUrl = emitFontFile(fontFileBuffer, ext, preloadFontFile, !!adjustFontFallbackMetrics);
+             return {

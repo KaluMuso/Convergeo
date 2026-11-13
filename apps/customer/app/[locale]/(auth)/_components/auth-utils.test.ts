@@ -4,6 +4,7 @@ import authMessages from "../../../../../../packages/i18n/messages/en/auth.json"
 
 import {
   formatE164,
+  forwardableNextParam,
   isOnboardingComplete,
   isValidZambianMobile,
   maskPhone,
@@ -96,6 +97,45 @@ describe("auth-utils", () => {
     expect(isOnboardingComplete(null)).toBe(false);
     expect(isOnboardingComplete({ completed_at: null })).toBe(false);
     expect(isOnboardingComplete({ completed_at: "2026-07-23T12:00:00Z" })).toBe(true);
+  });
+});
+
+describe("forwardableNextParam", () => {
+  it("carries a safe same-origin, locale-prefixed destination forward", () => {
+    expect(forwardableNextParam("en", "/en/services")).toBe("/en/services");
+    expect(forwardableNextParam("en", "/en/events/synthetic-event/scan")).toBe(
+      "/en/events/synthetic-event/scan",
+    );
+    expect(forwardableNextParam("en", "/en")).toBe("/en");
+  });
+
+  it("returns null when there is nothing to carry (default behavior unchanged)", () => {
+    expect(forwardableNextParam("en", undefined)).toBeNull();
+    expect(forwardableNextParam("en", null)).toBeNull();
+    expect(forwardableNextParam("en", "")).toBeNull();
+  });
+
+  it("drops every open-redirect shape resolvePostAuthPath already rejects", () => {
+    // Same corpus as the resolvePostAuthPath case above: an attacker-controlled
+    // absolute URL must not even be echoed into the intermediate OTP URL, let
+    // alone become a post-auth redirect.
+    for (const hostile of [
+      "https://evil.test",
+      "//evil.example",
+      "javascript:alert(1)",
+      "%2F%2Fevil.example",
+      "/en/../../evil",
+      "/en\\evil.example",
+      "/fr/account",
+      "/english",
+      "not-a-path",
+    ]) {
+      expect(forwardableNextParam("en", hostile)).toBeNull();
+    }
+  });
+
+  it("never returns the internal rejection sentinel as a destination", () => {
+    expect(forwardableNextParam("en", "__vergeo_rejected_next__")).toBeNull();
   });
 });
 
