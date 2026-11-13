@@ -382,11 +382,12 @@ class TestTicketVerifyAuthzAndStatus:
         assert instance_exc.value.code == "ticket_wrong_instance"
         assert _ticket_status(db, ticket_id) == "issued"
 
-    def test_event_unpublished_between_validation_and_claim_is_rejected(
+    def test_event_unpublished_between_validation_and_claim_still_admits(
         self,
         db: PgConn,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Founder policy: unpublishing (back to draft) keeps sold tickets valid."""
         from app.routers import ticket_verify as ticket_verify_router
 
         fixture = _insert_event_with_ticket_type(db)
@@ -421,17 +422,92 @@ class TestTicketVerifyAuthzAndStatus:
             validate_then_unpublish,
         )
 
+        result = verify_and_check_in_ticket(
+            ticket_id=ticket_id,
+            vendor_id=SHOP_B,
+            code=code,
+            now=now,
+            expected_event_id=fixture["event_id"],
+            expected_instance_id=fixture["instance_id"],
+        )
+        assert result.to_status == "checked_in"
+        assert _ticket_status(db, ticket_id) == "checked_in"
+
+    def test_unpublished_event_admits_already_sold_ticket(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db)
+        ticket_id = str(uuid.uuid4())
+        secret = "unpublished-secret"
+        _insert_ticket(
+            db,
+            ticket_id=ticket_id,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qr_secret=secret,
+        )
+        assert db.run(
+            f"UPDATE public.events SET status = 'draft' WHERE id = '{fixture['event_id']}';"
+        ).ok
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(ticket_id=ticket_id, ticket_secret=secret, window=current_window(now))
+        result = verify_and_check_in_ticket(
+            ticket_id=ticket_id, vendor_id=SHOP_B, code=code, now=now
+        )
+        assert result.to_status == "checked_in"
+
+    def test_cancelled_event_refuses_ticket(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db)
+        ticket_id = str(uuid.uuid4())
+        secret = "cancelled-secret"
+        _insert_ticket(
+            db,
+            ticket_id=ticket_id,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qr_secret=secret,
+        )
+        assert db.run(
+            f"UPDATE public.events SET status = 'cancelled' WHERE id = '{fixture['event_id']}';"
+        ).ok
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(ticket_id=ticket_id, ticket_secret=secret, window=current_window(now))
         with pytest.raises(AppError) as exc:
-            verify_and_check_in_ticket(
-                ticket_id=ticket_id,
-                vendor_id=SHOP_B,
-                code=code,
-                now=now,
-                expected_event_id=fixture["event_id"],
-                expected_instance_id=fixture["instance_id"],
-            )
-        assert exc.value.code == "tickets.event_not_published"
-        assert _ticket_status(db, ticket_id) == "issued"
+            verify_and_check_in_ticket(ticket_id=ticket_id, vendor_id=SHOP_B, code=code, now=now)
+        assert exc.value.code == "tickets.event_cancelled"
+        assert _ticket_status(db, ticket_id) != "checked_in"
+
+    def test_event_cancelled_between_validation_and_claim_is_rejected(
+        self,
+        db: PgConn,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.routers import ticket_verify as ticket_verify_router
+
+        fixture = _insert_event_with_ticket_type(db)
+        ticket_id = str(uuid.uuid4())
+        secret = "cancel-race-secret"
+        _insert_ticket(
+            db,
+            ticket_id=ticket_id,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qr_secret=secret,
+        )
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(ticket_id=ticket_id, ticket_secret=secret, window=current_window(now))
+        original_validate = ticket_verify_router._validate_qr_credentials
+
+        def validate_then_cancel(**kwargs: Any) -> None:
+            original_validate(**kwargs)
+            assert db.run(
+                "UPDATE public.events SET status = 'cancelled' "
+                f"WHERE id = '{fixture['event_id']}';"
+            ).ok
+
+        monkeypatch.setattr(ticket_verify_router, "_validate_qr_credentials", validate_then_cancel)
+        with pytest.raises(AppError) as exc:
+            verify_and_check_in_ticket(ticket_id=ticket_id, vendor_id=SHOP_B, code=code, now=now)
+        assert exc.value.code == "tickets.event_cancelled"
+        assert _ticket_status(db, ticket_id) != "checked_in"
 
     def test_cross_organiser_denied(self, db: PgConn) -> None:
         ticket_id = str(uuid.uuid4())
@@ -745,6 +821,59 @@ class TestTicketVerifyEndToEnd:
             pin=pin,
         )
         assert result.to_status == "checked_in"
+
+    def test_paid_order_issues_and_admits_after_event_unpublished(self, db: PgConn) -> None:
+        """Payment confirmed after an admin unpublish: buyer still gets a valid ticket."""
+        fixture = _insert_event_with_ticket_type(db)
+        service = _ServiceWrapper()
+        checkout = add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qty=1,
+        )
+        payment_id = str(uuid.uuid4())
+        assert db.run(
+            f"""
+            INSERT INTO public.payments (
+              id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+            ) VALUES (
+              '{payment_id}', '{checkout.checkout_group_id}', 'lenco', 'mtn',
+              'pay-{payment_id[:8]}', 20000, 'success'
+            );
+            UPDATE public.events SET status = 'draft' WHERE id = '{fixture["event_id"]}';
+            """
+        ).ok
+        issued = issue_tickets_for_paid_order(service, checkout.order_id)
+        assert issued.issued_count == 1
+        ticket_id = checkout.claimed_ticket_ids[0]
+        # Existing credentials stay mutable (transfer re-key) while unpublished.
+        assert db.run(
+            f"UPDATE public.tickets SET holder_name = 'Mutale' WHERE id = '{ticket_id}';"
+        ).ok
+        row = db.run(f"SELECT qr_secret FROM public.tickets WHERE id = '{ticket_id}';")
+        assert row.ok and row.rows and row.rows[0]
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(
+            ticket_id=ticket_id, ticket_secret=row.rows[0], window=current_window(now)
+        )
+        result = verify_and_check_in_ticket(
+            ticket_id=ticket_id, vendor_id=SHOP_B, code=code, now=now
+        )
+        assert result.to_status == "checked_in"
+
+    def test_unpublished_event_takes_no_new_unpaid_claims(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db, status="draft")
+        result = db.run(
+            f"""
+            INSERT INTO public.tickets (instance_id, ticket_type_id, holder_user_id, status)
+            VALUES ('{fixture["instance_id"]}', '{fixture["ticket_type_id"]}',
+                    '{CUSTOMER_A}', 'issued');
+            """
+        )
+        assert not result.ok
+        assert "published" in (result.error or "")
 
     def test_unpaid_hold_cannot_check_in(self, db: PgConn) -> None:
         fixture = _insert_event_with_ticket_type(db)

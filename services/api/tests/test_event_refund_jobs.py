@@ -536,3 +536,117 @@ def test_tick_requires_internal_token() -> None:
             )
         assert ok.status_code == 200
         assert ok.json()["awaiting_payout"] == 1
+
+
+# --- fix/event-ticket-integrity: partial refunds must not collapse or over-refund ---
+
+
+def test_refund_idempotency_key_is_per_job_for_partial_sources() -> None:
+    from app.services.events.refund_jobs import refund_idempotency_key
+
+    organiser = refund_idempotency_key(
+        {
+            "event_id": EVENT_ID,
+            "order_id": ORDER_ID,
+            "source": SOURCE_ORGANISER_CANCEL,
+            "source_key": SOURCE_KEY_V1,
+        }
+    )
+    # Whole-order organiser key is unchanged (in-flight jobs keep their dedup key).
+    assert organiser == f"evt-refund-{EVENT_ID}-{ORDER_ID}"
+    ticket_1 = refund_idempotency_key(
+        {"event_id": EVENT_ID, "order_id": ORDER_ID, "source": "buyer_cancel", "source_key": "t1"}
+    )
+    ticket_2 = refund_idempotency_key(
+        {"event_id": EVENT_ID, "order_id": ORDER_ID, "source": "buyer_cancel", "source_key": "t2"}
+    )
+    opt_out = refund_idempotency_key(
+        {
+            "event_id": EVENT_ID,
+            "order_id": ORDER_ID,
+            "source": "reschedule_opt_out",
+            "source_key": "t1",
+        }
+    )
+    assert len({organiser, ticket_1, ticket_2, opt_out}) == 4
+
+
+def test_second_ticket_buyer_cancel_executes_its_own_refund(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before: every job of an order shared one execute_refund key, so ticket 2's
+    refund returned ticket 1's refund row and the buyer was never paid for it."""
+    state = FakeSqlState()
+    job = _banded_job("4750")
+    job["source_key"] = "ticket-2"
+    state.jobs[JOB_ID] = job
+    state.refunds[REFUND_ID] = "awaiting_payout"
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", state.run)
+    exec_result = RefundExecutionResult(
+        refund_id=REFUND_ID,
+        order_id=ORDER_ID,
+        lane=1,
+        phase=RefundPhase.PRE_RELEASE,
+        amount_ngwee=4_750,
+        payout_id=PAYOUT_ID,
+        lenco_reference="rfd-test",
+        ledger_transaction_ids=("ledger-1",),
+        breakdown={},
+        created=True,
+    )
+    with patch(
+        "app.services.events.refund_jobs.execute_refund", return_value=exec_result
+    ) as mocked:
+        process_event_refund_job(_destination_service(), JOB_ID)
+    key = mocked.call_args.kwargs["idempotency_key"]
+    assert key != f"evt-refund-{EVENT_ID}-{ORDER_ID}"
+    assert key.endswith("-buyer_cancel-ticket-2")
+
+
+def test_organiser_cancel_amount_nets_out_queued_partial_refunds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.events.refund_jobs import organiser_cancel_refund_amount_ngwee
+
+    def fake_sql(script: str) -> SqlResult:
+        normalized = " ".join(script.split())
+        if "FROM public.event_refund_jobs" in normalized and "source <>" in normalized:
+            assert "status <> 'dead'" in normalized
+            return SqlResult(ok=True, rows=["9500"])  # one K100 ticket refunded at 95%
+        if "order_items oi" in normalized:
+            return SqlResult(ok=True, rows=["30000"])  # 3 tickets x K100
+        raise AssertionError(normalized)
+
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", fake_sql)
+    # Remaining 2 tickets + the 5% admin fee withheld from the first → escrow drains to 0.
+    assert organiser_cancel_refund_amount_ngwee(ORDER_ID) == 20_500
+
+
+def test_organiser_cancel_amount_never_negative(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.events.refund_jobs import organiser_cancel_refund_amount_ngwee
+
+    def fake_sql(script: str) -> SqlResult:
+        if "source <>" in script:
+            return SqlResult(ok=True, rows=["30000"])
+        return SqlResult(ok=True, rows=["30000"])
+
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", fake_sql)
+    assert organiser_cancel_refund_amount_ngwee(ORDER_ID) == 0
+
+
+def test_organiser_cancel_job_stays_queued_while_payouts_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#780 interplay: cancellation queues the job; the kill switch leaves it queued."""
+    monkeypatch.setenv("PAYOUTS_ENABLED", "false")
+    state = FakeSqlState()
+    monkeypatch.setattr("app.services.events.refund_jobs.run_sql_script", state.run)
+    assert enqueue_organiser_cancel_refund_job(
+        event_id=EVENT_ID, order_id=ORDER_ID, customer_id=CUSTOMER_ID, amount_ngwee=25_000
+    )
+    with patch("app.services.events.refund_jobs.execute_refund") as mocked:
+        outcome = process_event_refund_job(_destination_service(), JOB_ID)
+    mocked.assert_not_called()
+    assert outcome.reason == "payouts_disabled"
+    assert state.jobs[JOB_ID]["status"] == "queued"
+    assert state.jobs[JOB_ID]["attempts"] == "0"
