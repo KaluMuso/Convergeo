@@ -33,6 +33,9 @@ ME = "GET /admin/me/permissions"
 PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     "finance.read": frozenset(
         {
+            "GET /admin/analytics/export",
+            "GET /admin/analytics/revenue",
+            "GET /admin/analytics/status",
             "GET /admin/disputes",
             "GET /admin/disputes/{dispute_id}",
             "GET /admin/disputes/{dispute_id}/notes",
@@ -43,6 +46,9 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     # D2 (founder, 2026-11-13): money operations without full `admin`. Reads included.
     "finance.operate": frozenset(
         {
+            "GET /admin/analytics/export",
+            "GET /admin/analytics/revenue",
+            "GET /admin/analytics/status",
             "GET /admin/disputes",
             "GET /admin/disputes/{dispute_id}",
             "GET /admin/disputes/{dispute_id}/notes",
@@ -133,6 +139,16 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "analytics.read": frozenset(
         {
+            "GET /admin/analytics/export",
+            "GET /admin/analytics/growth",
+            "GET /admin/analytics/insights",
+            "GET /admin/analytics/overview",
+            "GET /admin/analytics/products-funnel",
+            "GET /admin/analytics/search-demand",
+            "GET /admin/analytics/services-events",
+            "GET /admin/analytics/status",
+            "GET /admin/analytics/users",
+            "GET /admin/analytics/vendors",
             "GET /admin/clip-analytics",
             "GET /admin/dashboard",
             "GET /admin/governance/vendors",

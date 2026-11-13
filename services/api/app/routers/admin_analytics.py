@@ -26,7 +26,13 @@ from datetime import date, timedelta
 from typing import Annotated, Any, Final
 
 from anyio import to_thread
-from app.core.auth import require_role
+from app.core.auth import (
+    DASHBOARD_FINANCE_PERMISSIONS,
+    CurrentUser,
+    get_current_user,
+    load_admin_permissions,
+    require_role,
+)
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.services.analytics import flags as analytics_flags
@@ -37,6 +43,7 @@ from app.services.analytics.metrics import (
 )
 from app.services.analytics.reporting_day import reporting_today
 from app.services.orders.audit import run_sql_script, sql_literal
+from app.supabase_client import get_supabase_service_client
 from fastapi import APIRouter, Depends, Query
 
 analytics_router = APIRouter(
@@ -431,9 +438,39 @@ async def get_analytics_status() -> dict[str, Any]:
     return {"enabled": True, "data_through": data_through}
 
 
+_MONEY_COMMERCIAL_KEYS: Final = ("gmv_paid_ngwee", "aov_ngwee")
+
+
+def without_finance(payload: dict[str, Any]) -> dict[str, Any]:
+    """Overview for a caller without finance.read/operate (founder decision D3).
+
+    Order and checkout counts stay; paid order value, average order value and payment
+    reconciliation detail are withheld (``None``), and ``finance_visible`` says so.
+    """
+    out = dict(payload)
+    for block in ("commercial", "previous_commercial"):
+        commercial = dict(out[block])
+        for key in _MONEY_COMMERCIAL_KEYS:
+            commercial[key] = None
+        commercial["payments_reconciled"] = None
+        commercial["payment_mismatch_days"] = []
+        out[block] = commercial
+    out["daily"] = [{**day, "gmv_paid_ngwee": None} for day in out["daily"]]
+    out["finance_visible"] = False
+    return out
+
+
 @analytics_router.get("/overview")
-async def get_analytics_overview(start: FromQuery = None, end: ToQuery = None) -> dict[str, Any]:
-    return await _cached("overview", start, end, build_overview)
+async def get_analytics_overview(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    start: FromQuery = None,
+    end: ToQuery = None,
+) -> dict[str, Any]:
+    payload = await _cached("overview", start, end, build_overview)
+    granted = load_admin_permissions(user, get_supabase_service_client())
+    if DASHBOARD_FINANCE_PERMISSIONS & granted:
+        return {**payload, "finance_visible": True}
+    return without_finance(payload)
 
 
 @analytics_router.get("/search-demand")
