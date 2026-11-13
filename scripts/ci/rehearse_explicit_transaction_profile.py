@@ -67,6 +67,10 @@ REVIEWED_SUFFIX = (
     # intercity reference rate cards (additive).
     "20261113150000_logistics_phase1.sql",
     "20261113151000_intercity_rate_cards.sql",
+    # Area-pair delivery pricing: areas, area_distances (estimate), shadow log,
+    # address area/type, settings; seed of 63 Lusaka areas (additive).
+    "20261113220000_delivery_area_pricing.sql",
+    "20261113221000_delivery_areas_seed.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -620,9 +624,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 159 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 161 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 159 source migrations",
+            "disposable copy does not match 161 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -705,10 +709,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_159|PASS")
+                    print("failure_cleanup|restored_161|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 159 migrations",
+                        "error: disposable failure cleanup could not restore 161 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1061,7 +1065,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 159 migrations"
+                    "normal full replay did not restore 161 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

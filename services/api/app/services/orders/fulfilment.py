@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.errors import AppError
@@ -28,6 +29,9 @@ class StoredChoice:
     vendor_id: str
     fulfilment: Fulfilment
     delivery_zone: str | None
+    #: Live area-pair fee quoted at the fulfilment step (None: zone fee applies).
+    area_fee_ngwee: int | None = None
+    area_quoted_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,12 +81,53 @@ def parse_stored_choices(raw: object) -> dict[str, StoredChoice]:
             raise _not_confirmed()
         if vendor_id in choices:
             raise _not_confirmed()
+        area_fee, quoted_at = _stored_area_quote(entry)
         choices[vendor_id] = StoredChoice(
             vendor_id=vendor_id,
             fulfilment="delivery" if fulfilment == "delivery" else "pickup",
             delivery_zone=zone,
+            area_fee_ngwee=area_fee,
+            area_quoted_at=quoted_at,
         )
     return choices
+
+
+def _stored_area_quote(entry: Mapping[str, Any]) -> tuple[int | None, datetime | None]:
+    fee = entry.get("area_fee_ngwee")
+    raw_at = entry.get("area_quoted_at")
+    if fee is None and raw_at is None:
+        return None, None
+    if isinstance(fee, bool) or not isinstance(fee, int) or fee < 0 or not isinstance(raw_at, str):
+        raise _not_confirmed()
+    try:
+        quoted_at = datetime.fromisoformat(raw_at)
+    except ValueError as exc:
+        raise _not_confirmed() from exc
+    if quoted_at.tzinfo is None:
+        raise _not_confirmed()
+    return fee, quoted_at
+
+
+def stored_area_fees(
+    choices: Mapping[str, StoredChoice], *, now: datetime, ttl_minutes: int
+) -> dict[str, int] | None:
+    """Area-pair fees fixed at the fulfilment step, or None when the zone fee applies.
+
+    The price shown at checkout holds for ``ttl_minutes``; after that the buyer
+    confirms fulfilment again (never a silent re-price at order time).
+    """
+    quoted = {
+        v: c
+        for v, c in choices.items()
+        if c.fulfilment == "delivery" and c.area_fee_ngwee is not None
+    }
+    if not quoted:
+        return None
+    for choice in quoted.values():
+        assert choice.area_quoted_at is not None
+        if now - choice.area_quoted_at > timedelta(minutes=ttl_minutes):
+            raise _not_confirmed()
+    return {v: int(c.area_fee_ngwee or 0) for v, c in quoted.items()}
 
 
 def needs_delivery(choices: Mapping[str, StoredChoice]) -> bool:

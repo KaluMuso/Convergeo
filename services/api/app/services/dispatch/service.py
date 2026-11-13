@@ -1162,6 +1162,12 @@ SELECT json_build_object(
   'checkout_group_id', o.checkout_group_id,
   'address_id', o.address_id,
   'dropoff_landmark', a.landmark,
+  'dropoff_area', ar.name,
+  'dropoff_lat', coalesce(a.lat, ar.lat),
+  'dropoff_lng', coalesce(a.lng, ar.lng),
+  'address_type', a.address_type,
+  'pickup_lat', pl.lat,
+  'pickup_lng', pl.lng,
   'ready_at', o.ready_at,
   'deliver_together', o.deliver_together,
   'delivery_funding', o.delivery_funding,
@@ -1179,8 +1185,9 @@ SELECT json_build_object(
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
 LEFT JOIN public.addresses a ON a.id = o.address_id
+LEFT JOIN public.areas ar ON ar.slug = a.area_slug
 LEFT JOIN LATERAL (
-  SELECT vl.label, vl.area, vl.landmark
+  SELECT vl.label, vl.area, vl.landmark, vl.lat, vl.lng
   FROM public.vendor_locations vl
   WHERE vl.id = coalesce(
     o.pickup_location_id,

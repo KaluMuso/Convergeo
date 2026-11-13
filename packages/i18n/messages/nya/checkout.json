@@ -165,10 +165,27 @@
         "tip2": "Lembani area ndi street, ndi chinthu chosonyeza geti lanu, monga mtundu wake.",
         "tip3": "Siyani foni yanu ili on. Rider angakuyimbireni pa namba yanu kuti akupezeni.",
         "landmarkRequired": "Lembani landmark ndi area kuti rider akupezeni.",
-        "cutoffTitle": "Zidzatumizidwa liti?",
-        "cutoffBefore": "Mukatumiza order 14:00 isanakwane (nthawi ya Lusaka), zinthu zomwe zili mu stock zimatumizidwa lero, seller akatsimikiza.",
-        "cutoffAfter": "Nthawi yadutsa 14:00 ku Lusaka, choncho zinthu za mu stock zidzatumizidwa mawa, seller akatsimikiza.",
-        "cutoffMadeToOrder": "Zinthu zopangidwa pa order zimatumizidwa zikatha — onani nthawi ya chinthu chilichonse."
+        "cutoffTitle": "Itanitsani 14:00 isanakwane, mulandire lero",
+        "cutoffBefore": "Mukatumiza order 14:00 isanakwane (nthawi ya Lusaka), zinthu zomwe zili mu stock zimafika ku Lusaka lero, seller akatsimikiza.",
+        "cutoffAfter": "Nthawi yadutsa 14:00 ku Lusaka, choncho zinthu za mu stock zidzafika mawa, seller akatsimikiza.",
+        "cutoffMadeToOrder": "Zinthu zopangidwa pa order zimatumizidwa zikatha — onani nthawi ya chinthu chilichonse.",
+        "promiseToday": "Delivery lero, {start}–{end}",
+        "promiseTomorrow": "Delivery mawa, {start}–{end}",
+        "promiseLater": "Delivery pa {date}, {start}–{end}"
+      },
+      "area": {
+        "label": "Dera lanu",
+        "help": "Sankhani dera lanu kuti tiwerengere mtengo wochokera ku shop kufika kwa inu. Sikofunikira.",
+        "searchPlaceholder": "Sakani, mwachitsanzo Kabulonga",
+        "noMatch": "Palibe dera lofanana. Lembani chizindikiro pansipa.",
+        "notListed": "Dera lanu palibe? Dumphani ichi, lembani chizindikiro pansipa.",
+        "change": "Sinthani",
+        "selected": "Dera: {area}",
+        "unavailable": "Mndandanda wa madera sunatseguke. Chizindikiro pansipa chikwanira.",
+        "typeLabel": "Adilesi iyi ndi ya",
+        "home": "Kunyumba",
+        "work": "Kuntchito",
+        "workHelp": "Kuntchito timabweretsa mkati mwa sabata 16:45 isanakwane, ofesi ikadali yotsegula."
       }
     },
     "countdown": {

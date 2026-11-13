@@ -147,10 +147,27 @@
         "tip2": "Add your area and street, and something that marks your gate, like its colour.",
         "tip3": "Keep your phone on. The rider may call your checkout number to find you.",
         "landmarkRequired": "Add a landmark and area so the rider can find you.",
-        "cutoffTitle": "When will it be sent?",
-        "cutoffBefore": "Order before 14:00 (Lusaka time) and in-stock items are usually sent out today, once the seller confirms.",
-        "cutoffAfter": "It's after 14:00 in Lusaka, so in-stock items will usually be sent out tomorrow, once the seller confirms.",
-        "cutoffMadeToOrder": "Made-to-order items are sent once they're ready — see each item for its lead time."
+        "cutoffTitle": "Order before 2 pm, get it today",
+        "cutoffBefore": "Order before 2 pm (Lusaka time) and in-stock items are delivered in Lusaka today, once the seller confirms.",
+        "cutoffAfter": "It's after 2 pm in Lusaka, so in-stock items are delivered tomorrow, once the seller confirms.",
+        "cutoffMadeToOrder": "Made-to-order items are sent once they're ready — see each item for its lead time.",
+        "promiseToday": "Delivery today, {start}–{end}",
+        "promiseTomorrow": "Delivery tomorrow, {start}–{end}",
+        "promiseLater": "Delivery on {date}, {start}–{end}"
+      },
+      "area": {
+        "label": "Your area",
+        "help": "Pick your area so we can price the trip from the shop to you. Optional.",
+        "searchPlaceholder": "Search, e.g. Kabulonga",
+        "noMatch": "No area matches. Type your landmark below and we'll find you.",
+        "notListed": "Area not listed? Skip this and describe your landmark below.",
+        "change": "Change",
+        "selected": "Area: {area}",
+        "unavailable": "The area list didn't load. Your landmark below is enough.",
+        "typeLabel": "This address is",
+        "home": "Home",
+        "work": "Work",
+        "workHelp": "We deliver to work addresses on weekdays before 16:45, while the office is open."
       }
     },
     "countdown": {

@@ -87,6 +87,9 @@ PENDING_REPAIR_VERSIONS = {
     # intercity reference rate cards (additive).
     "20261113150000",
     "20261113151000",
+    # Area-pair delivery pricing schema + Lusaka area seed (additive).
+    "20261113220000",
+    "20261113221000",
 }
 
 

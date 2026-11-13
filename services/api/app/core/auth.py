@@ -242,6 +242,10 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/admin/logistics/margin-report"): "logistics.manage",
     ("GET", "/admin/logistics/intercity-rates"): "logistics.manage",
     ("GET", "/admin/logistics/cash/custody"): "logistics.manage",
+    # Area-pair pricing: operators see the switches and flip rain mode; turning
+    # shadow / live pricing on or off stays with full admins (not listed).
+    ("GET", "/admin/logistics/pricing-switches"): "logistics.manage",
+    ("PATCH", "/admin/logistics/rain-mode"): "logistics.manage",
     # Matching rider cash to the ledger is a finance power.
     ("POST", "/admin/logistics/cash/remittances"): "cod.reconcile",
     ("GET", "/admin/logistics/cash/cash-up"): "cod.reconcile",

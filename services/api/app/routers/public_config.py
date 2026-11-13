@@ -8,6 +8,7 @@ Routes (auto-discovered via the module-level ``router``):
 * ``GET /public/config/storefront`` — read-only storefront display thresholds from
   ``platform_config`` (free-delivery threshold, low-stock threshold) so the web UI
   never re-hard-codes values the API enforces.
+* ``GET /public/config/areas`` — Lusaka delivery areas for the address picker.
 """
 
 from __future__ import annotations
@@ -156,3 +157,42 @@ async def get_public_storefront_config(
             client, LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD
         ),
     )
+
+
+PUBLIC_AREAS_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=600"
+
+
+class PublicArea(StrictModel):
+    slug: str
+    name: str
+    aliases: list[str] = Field(default_factory=list)
+
+
+class PublicAreasResponse(StrictModel):
+    areas: list[PublicArea]
+
+
+@router.get("/areas", response_model=PublicAreasResponse)
+async def get_public_areas(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> PublicAreasResponse:
+    """Lusaka delivery areas for the address-form picker (names only, no prices)."""
+    rows = (
+        service_client.client.table("areas")
+        .select("slug, name, aliases")
+        .eq("active", True)
+        .order("name")
+        .execute()
+    ).data
+    areas = [
+        PublicArea(
+            slug=str(row["slug"]),
+            name=str(row["name"]),
+            aliases=[a for a in row.get("aliases") or [] if isinstance(a, str)],
+        )
+        for row in (rows if isinstance(rows, list) else [])
+        if isinstance(row, dict) and isinstance(row.get("slug"), str) and row.get("name")
+    ]
+    response.headers["Cache-Control"] = PUBLIC_AREAS_CACHE_CONTROL
+    return PublicAreasResponse(areas=areas)

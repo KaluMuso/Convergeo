@@ -193,6 +193,8 @@ export type Database = {
       }
       addresses: {
         Row: {
+          address_type: string
+          area_slug: string | null
           created_at: string
           id: string
           label: string | null
@@ -204,6 +206,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address_type?: string
+          area_slug?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -215,6 +219,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address_type?: string
+          area_slug?: string | null
           created_at?: string
           id?: string
           label?: string | null
@@ -225,7 +231,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "addresses_area_slug_fkey"
+            columns: ["area_slug"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       admin_roles: {
         Row: {
@@ -283,6 +297,98 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      area_distances: {
+        Row: {
+          computed_at: string
+          from_area: string
+          manual_override: boolean
+          minutes: number
+          road_km: number
+          source: string
+          to_area: string
+        }
+        Insert: {
+          computed_at?: string
+          from_area: string
+          manual_override?: boolean
+          minutes: number
+          road_km: number
+          source: string
+          to_area: string
+        }
+        Update: {
+          computed_at?: string
+          from_area?: string
+          manual_override?: boolean
+          minutes?: number
+          road_km?: number
+          source?: string
+          to_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_distances_from_area_fkey"
+            columns: ["from_area"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "area_distances_to_area_fkey"
+            columns: ["to_area"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      areas: {
+        Row: {
+          active: boolean
+          aliases: string[]
+          centroid_source: string
+          created_at: string
+          lat: number
+          lng: number
+          name: string
+          slug: string
+          updated_at: string
+          zone_key: string
+        }
+        Insert: {
+          active?: boolean
+          aliases?: string[]
+          centroid_source?: string
+          created_at?: string
+          lat: number
+          lng: number
+          name: string
+          slug: string
+          updated_at?: string
+          zone_key: string
+        }
+        Update: {
+          active?: boolean
+          aliases?: string[]
+          centroid_source?: string
+          created_at?: string
+          lat?: number
+          lng?: number
+          name?: string
+          slug?: string
+          updated_at?: string
+          zone_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "areas_zone_key_fkey"
+            columns: ["zone_key"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["zone_key"]
+          },
+        ]
       }
       ask_cache: {
         Row: {
@@ -1232,6 +1338,62 @@ export type Database = {
             columns: ["courier_partner_id"]
             isOneToOne: false
             referencedRelation: "courier_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_price_shadow_log: {
+        Row: {
+          area_fee_ngwee: number | null
+          charged_fee_ngwee: number
+          checkout_group_id: string | null
+          created_at: string
+          customer_area: string | null
+          id: string
+          mode: string
+          outcome: string
+          pickups: number
+          rain_mode: boolean
+          route_km: number | null
+          time_band: string | null
+          vendor_areas: string[]
+        }
+        Insert: {
+          area_fee_ngwee?: number | null
+          charged_fee_ngwee: number
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_area?: string | null
+          id?: string
+          mode: string
+          outcome: string
+          pickups?: number
+          rain_mode?: boolean
+          route_km?: number | null
+          time_band?: string | null
+          vendor_areas?: string[]
+        }
+        Update: {
+          area_fee_ngwee?: number | null
+          charged_fee_ngwee?: number
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_area?: string | null
+          id?: string
+          mode?: string
+          outcome?: string
+          pickups?: number
+          rain_mode?: boolean
+          route_km?: number | null
+          time_band?: string | null
+          vendor_areas?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_price_shadow_log_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
             referencedColumns: ["id"]
           },
         ]

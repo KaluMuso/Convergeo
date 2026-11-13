@@ -46,3 +46,40 @@ export type CategoryNode = {
   prohibited: boolean;
   position: number;
 };
+
+export type TimeBand = {
+  key: string;
+  start: string;
+  end: string;
+  multiplier_bps: number;
+};
+
+/** Area-pair price formula: integer ngwee / metres / basis points only. */
+export type AreaPricingSettings = {
+  base_per_km_ngwee: number;
+  stop_fee_ngwee: number;
+  intra_area_metres: number;
+  min_fee_ngwee: number;
+  max_fee_ngwee: number;
+  rain_multiplier_bps: number;
+  zone_bounds: boolean;
+  quote_ttl_minutes: number;
+  time_bands: TimeBand[];
+};
+
+export type AdminArea = {
+  slug: string;
+  name: string;
+  zone_key: string;
+  active: boolean;
+};
+
+export type AreaDistance = {
+  from_area: string;
+  to_area: string;
+  /** Decimal string (e.g. "3.15"), never a float. */
+  road_km: string;
+  minutes: number;
+  source: string;
+  manual_override: boolean;
+};

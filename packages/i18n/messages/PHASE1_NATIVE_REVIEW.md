@@ -30,6 +30,20 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **OG image tagline (2026-11-07):** `common.app.tagline` was added (EN/FR/ZH translated; bem/nya are AI-authored provisional wording — "Isoko lya mu Zambia — ukushita na escrow" / "Msika wa ku Zambia — kugula ndi escrow"). It renders in the social-share (Open Graph) image for each locale. Pending recorded native-speaker review; not a sign-off.
 
+**Area-pair delivery pricing (2026-11-13):** `checkout.fulfilment.area.*` (area picker, Home / Work, office-hours note) and `checkout.fulfilment.guide.{cutoffTitle,cutoffBefore,cutoffAfter,promiseToday,promiseTomorrow,promiseLater}` ("Order before 2 pm, get it today") carry **AI-authored draft** Bemba and Nyanja. They set what a buyer expects about delivery day and time, so a native reviewer must check them before production. Drafts to review:
+
+| Key                                | bem (draft)                                                                      | nya (draft)                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `guide.cutoffTitle`                | Tumeni order ilyo 14:00 tailafika, mukapokelela lelo                             | Itanitsani 14:00 isanakwane, mulandire lero                                        |
+| `guide.promiseToday`               | Delivery lelo, {start}–{end}                                                     | Delivery lero, {start}–{end}                                                       |
+| `guide.promiseTomorrow`            | Delivery mailo, {start}–{end}                                                    | Delivery mawa, {start}–{end}                                                       |
+| `area.label`                       | Incende yenu                                                                     | Dera lanu                                                                          |
+| `area.typeLabel` / `home` / `work` | Iyi adilesi ni / Ku ng'anda / Ku ncito                                           | Adilesi iyi ndi ya / Kunyumba / Kuntchito                                          |
+| `area.workHelp`                    | Ku ncito tuletako mu nshiku sha ncito ilyo 16:45 tailafika, ofeshi ilyo ishilwe. | Kuntchito timabweretsa mkati mwa sabata 16:45 isanakwane, ofesi ikadali yotsegula. |
+| `area.notListed`                   | Incende yenu taimoneka? Shaleni ici, lembeni icishibilo panshi.                  | Dera lanu palibe? Dumphani ichi, lembani chizindikiro pansipa.                     |
+
+The remaining `area.*` values (help, search, noMatch, change, selected, unavailable) are drafts of the same quality; see `bem/checkout.json` and `nya/checkout.json`. Admin dispatch keys (`dispatch.rain.*`, `dispatch.ready.{area,workAddress,openMaps}`) are EN-only like the rest of the admin dispatch board.
+
 ## Noindex removal criteria (authoritative)
 
 All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):

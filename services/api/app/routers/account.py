@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
@@ -27,6 +27,10 @@ class ProfilePatchRequest(BaseModel):
     locale: str | None = None
 
 
+AREA_SLUG_PATTERN = r"^[a-z0-9_]{2,40}$"
+AddressType = Literal["home", "work"]
+
+
 class AddressResponse(BaseModel):
     id: str
     label: str | None = None
@@ -34,6 +38,8 @@ class AddressResponse(BaseModel):
     lat: float | None = None
     lng: float | None = None
     phone: str | None = None
+    area_slug: str | None = None
+    address_type: AddressType = "home"
 
 
 class AddressCreateRequest(BaseModel):
@@ -42,6 +48,9 @@ class AddressCreateRequest(BaseModel):
     lat: float | None = None
     lng: float | None = None
     phone: str | None = Field(default=None, max_length=20)
+    #: Picked from ``GET /public/config/areas``; checked against active areas.
+    area_slug: str | None = Field(default=None, pattern=AREA_SLUG_PATTERN)
+    address_type: AddressType = "home"
 
 
 class AddressPatchRequest(BaseModel):
@@ -50,6 +59,8 @@ class AddressPatchRequest(BaseModel):
     lat: float | None = None
     lng: float | None = None
     phone: str | None = Field(default=None, max_length=20)
+    area_slug: str | None = Field(default=None, pattern=AREA_SLUG_PATTERN)
+    address_type: AddressType | None = None
 
 
 class NotificationPrefs(BaseModel):
@@ -97,6 +108,21 @@ def _parse_profile_row(row: dict[str, Any]) -> ProfileResponse:
     )
 
 
+def _ensure_area_exists(client: Any, area_slug: str) -> None:
+    """A picked area must be an active row of ``public.areas`` (readable by everyone)."""
+    response = (
+        client.table("areas").select("slug").eq("slug", area_slug).eq("active", True).execute()
+    )
+    rows = _extract_data(response)
+    if not isinstance(rows, list) or not rows:
+        raise AppError(
+            code="validation_error",
+            message="Unknown delivery area",
+            http_status=422,
+            details={"field": "area_slug"},
+        )
+
+
 def _parse_address_row(row: dict[str, Any]) -> AddressResponse:
     return AddressResponse(
         id=str(row["id"]),
@@ -105,6 +131,8 @@ def _parse_address_row(row: dict[str, Any]) -> AddressResponse:
         lat=row.get("lat"),
         lng=row.get("lng"),
         phone=row.get("phone"),
+        area_slug=row.get("area_slug") if isinstance(row.get("area_slug"), str) else None,
+        address_type="work" if row.get("address_type") == "work" else "home",
     )
 
 
@@ -250,7 +278,7 @@ async def list_addresses(
     client = _user_client(current_user)
     response = (
         client.table("addresses")
-        .select("id,label,landmark,lat,lng,phone")
+        .select("id,label,landmark,lat,lng,phone,area_slug,address_type")
         .eq("user_id", current_user.id)
         .order("created_at")
         .execute()
@@ -273,8 +301,12 @@ async def create_address(
         "lat": body.lat,
         "lng": body.lng,
         "phone": body.phone.strip() if body.phone else None,
+        "area_slug": body.area_slug,
+        "address_type": body.address_type,
     }
     client = _user_client(current_user)
+    if body.area_slug is not None:
+        _ensure_area_exists(client, body.area_slug)
     response = client.table("addresses").insert(payload).execute()
     rows = _extract_data(response)
     if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
@@ -294,7 +326,7 @@ async def get_address(
     client = _user_client(current_user)
     response = (
         client.table("addresses")
-        .select("id,user_id,label,landmark,lat,lng,phone")
+        .select("id,user_id,label,landmark,lat,lng,phone,area_slug,address_type")
         .eq("id", address_id)
         .maybe_single()
         .execute()
@@ -322,6 +354,8 @@ async def patch_address(
         and body.lat is None
         and body.lng is None
         and body.phone is None
+        and body.area_slug is None
+        and body.address_type is None
     ):
         raise AppError(
             code="validation_error",
@@ -332,7 +366,7 @@ async def patch_address(
     client = _user_client(current_user)
     existing_response = (
         client.table("addresses")
-        .select("id,user_id,label,landmark,lat,lng,phone")
+        .select("id,user_id,label,landmark,lat,lng,phone,area_slug,address_type")
         .eq("id", address_id)
         .maybe_single()
         .execute()
@@ -357,6 +391,11 @@ async def patch_address(
         updates["lng"] = body.lng
     if body.phone is not None:
         updates["phone"] = body.phone.strip() or None
+    if body.area_slug is not None:
+        _ensure_area_exists(client, body.area_slug)
+        updates["area_slug"] = body.area_slug
+    if body.address_type is not None:
+        updates["address_type"] = body.address_type
 
     response = client.table("addresses").update(updates).eq("id", address_id).execute()
     rows = _extract_data(response)

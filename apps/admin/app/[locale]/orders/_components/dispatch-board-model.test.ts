@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  googleMapsDirectionsUrl,
   actionsFor,
   groupReadyOrders,
   nextJobKind,
@@ -293,5 +294,42 @@ describe("courier form", () => {
       lusaka_a: { enabled: false, priceKwacha: "" },
       lusaka_b: { enabled: true, priceKwacha: "45.00" },
     });
+  });
+});
+
+describe("googleMapsDirectionsUrl (dispatcher link-out, no Maps API call)", () => {
+  const order = {
+    order_id: "o1",
+    order_reference: "ord-1",
+    status: "ready",
+    vendor_name: "Shop",
+    delivery_zone: "lusaka_a",
+    cod: false,
+    cod_amount_ngwee: 0,
+    subtotal_ngwee: 1000,
+    delivery_fee_ngwee: 3000,
+    item_count: 1,
+    created_at: "2026-11-13T10:00:00Z",
+    last_failed_reason: null,
+  };
+
+  it("routes shop pin to customer pin", () => {
+    const url = googleMapsDirectionsUrl({
+      ...order,
+      pickup_lat: -15.43,
+      pickup_lng: 28.305,
+      dropoff_lat: -15.425,
+      dropoff_lng: 28.327,
+    });
+    expect(url).toBe(
+      "https://www.google.com/maps/dir/?api=1&destination=-15.425000%2C28.327000&travelmode=driving&origin=-15.430000%2C28.305000",
+    );
+  });
+
+  it("falls back to the area name, and to nothing without a destination", () => {
+    const url = googleMapsDirectionsUrl({ ...order, dropoff_area: "Kabulonga" });
+    expect(url).toContain("destination=Kabulonga%2C+Lusaka%2C+Zambia");
+    expect(url).not.toContain("origin=");
+    expect(googleMapsDirectionsUrl(order)).toBeNull();
   });
 });

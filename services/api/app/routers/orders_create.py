@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
@@ -12,6 +13,7 @@ from app.routers.checkout import (
     _extract_data,
     _load_delivery_zones,
     _rederive_line_prices,
+    area_zone,
     compute_group_delivery_fee_ngwee,
     load_zone_fees,
     resolve_address_zone,
@@ -21,6 +23,7 @@ from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.logistics.area_pricing import load_settings
 from app.services.logistics.delivery_pricing import RawLine, price_checkout_delivery
 from app.services.orders.create import (
     CartLineInput,
@@ -36,6 +39,7 @@ from app.services.orders.fulfilment import (
     authoritative_vendor_groups,
     needs_delivery,
     parse_stored_choices,
+    stored_area_fees,
 )
 from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
 from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
@@ -217,7 +221,7 @@ def _load_own_address(
 ) -> dict[str, Any]:
     response = (
         service.client.table("addresses")
-        .select("id, landmark, lat, lng")
+        .select("id, landmark, lat, lng, area_slug")
         .eq("id", address_id)
         .eq("user_id", customer_id)
         .maybe_single()
@@ -256,13 +260,25 @@ def _authoritative_groups(
         zone_fees = load_zone_fees(zones)
         address = _load_own_address(service, address_id=address_id, customer_id=customer_id)
         landmark = address.get("landmark")
-        address_zone = resolve_address_zone(
-            service,
-            zones,
-            lat=_coord(address.get("lat")),
-            lng=_coord(address.get("lng")),
-            landmark=landmark if isinstance(landmark, str) else None,
+        slug = address.get("area_slug")
+        address_zone = area_zone(service, zones, slug if isinstance(slug, str) else None)
+        if address_zone is None:
+            address_zone = resolve_address_zone(
+                service,
+                zones,
+                lat=_coord(address.get("lat")),
+                lng=_coord(address.get("lng")),
+                landmark=landmark if isinstance(landmark, str) else None,
+            )
+    group_fees = (
+        stored_area_fees(
+            stored_choices,
+            now=datetime.now(UTC),
+            ttl_minutes=load_settings(service.client).quote_ttl_minutes,
         )
+        if any(choice.area_fee_ngwee is not None for choice in stored_choices.values())
+        else None
+    )
 
     def compute_fee(subtotal_ngwee: int, zone_key: str | None) -> int:
         return compute_group_delivery_fee_ngwee(
@@ -289,6 +305,7 @@ def _authoritative_groups(
             for vendor_id, choice in stored_choices.items()
         },
         zone_fees=zone_fees,
+        group_fees=group_fees,
     )
 
     return authoritative_vendor_groups(

@@ -120,6 +120,20 @@ def vendor_group_is_free(lines: Iterable[PricingLine], terms: VendorDeliveryTerm
     return bool(group) and all(line.free_delivery for line in group)
 
 
+def base_group_fee(
+    vendor_id: str,
+    zone: str | None,
+    zone_fees: Mapping[str, int],
+    group_fees: Mapping[str, int] | None = None,
+) -> int:
+    """The fee a delivered group costs before who-pays rules (0 when not delivered)."""
+    if zone is None:
+        return 0
+    if group_fees is not None and vendor_id in group_fees:
+        return _int(group_fees[vendor_id], "group fee")
+    return _int(zone_fees.get(zone, 0), "zone fee")
+
+
 def price_delivery_groups(
     *,
     lines: Sequence[PricingLine],
@@ -127,11 +141,14 @@ def price_delivery_groups(
     zone_fees: Mapping[str, int],
     vendor_terms: Mapping[str, VendorDeliveryTerms],
     policy: AutoFreeDeliveryPolicy,
+    group_fees: Mapping[str, int] | None = None,
 ) -> dict[str, GroupDeliveryPrice]:
     """Price every vendor group.
 
     ``delivery_zones`` maps each vendor in the checkout to its zone when the
     group is delivered, or ``None`` for pickup / no deliverable zone.
+    ``group_fees`` (area-pair pricing, live) replaces the zone fee of a delivered
+    group with its share of the consolidated area fee; funding rules still apply.
     """
     by_vendor: dict[str, list[PricingLine]] = {}
     for line in lines:
@@ -141,7 +158,7 @@ def price_delivery_groups(
     customer_paid: list[tuple[str, int]] = []
     for vendor_id in sorted(delivery_zones):
         zone = delivery_zones[vendor_id]
-        fee = _int(zone_fees.get(zone, 0), "zone fee") if zone is not None else 0
+        fee = base_group_fee(vendor_id, zone, zone_fees, group_fees)
         if zone is None or fee == 0:
             prices[vendor_id] = GroupDeliveryPrice(vendor_id, 0, "customer", 0)
             continue
@@ -315,6 +332,7 @@ def price_checkout_delivery(
     raw_lines: Sequence[RawLine],
     delivery_zones: Mapping[str, str | None],
     zone_fees: Mapping[str, int],
+    group_fees: Mapping[str, int] | None = None,
 ) -> dict[str, GroupDeliveryPrice]:
     """Load the facts and price every vendor group (fulfilment step + POST /orders)."""
     if not any(zone is not None for zone in delivery_zones.values()):
@@ -328,4 +346,5 @@ def price_checkout_delivery(
         zone_fees=zone_fees,
         vendor_terms=terms,
         policy=policy,
+        group_fees=group_fees,
     )

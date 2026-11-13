@@ -173,6 +173,7 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/home/ads/events"),
         ("GET", "/public/config/commission-rates"),
         ("GET", "/public/config/storefront"),
+        ("GET", "/public/config/areas"),
         ("GET", "/products/{slug}"),
         ("GET", "/products/{slug}/comparison"),
         ("GET", "/products/{slug}/related"),
