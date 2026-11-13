@@ -1,6 +1,7 @@
 "use client";
 
 import { ApiError, createApiClient } from "@vergeo/config";
+import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { Stepper } from "@vergeo/ui/src/stepper";
 import dynamic from "next/dynamic";
@@ -14,7 +15,7 @@ import {
   getReadyCustomerSession,
   useSession,
 } from "../../../../../lib/customer-session";
-import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
+import { classifyPlaceOrderError, placeOrder } from "../_lib/place-order";
 
 import {
   ContactStepIntro,
@@ -195,6 +196,8 @@ export type CheckoutShellLabels = {
   emptyCart: string;
   retry: string;
   backToCart: string;
+  /** `{cap}` — shown at checkout start when no payment method can take this total. */
+  overCodCapTemplate?: string;
 };
 
 function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -220,6 +223,7 @@ type ResolvedCheckoutLabels = {
   emptyCart: string;
   retry: string;
   backToCart: string;
+  overCodCap: ((cap: string) => string) | null;
 };
 
 function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
@@ -353,6 +357,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
     emptyCart: messages.emptyCart,
     retry: messages.retry,
     backToCart: messages.backToCart,
+    overCodCap: messages.overCodCapTemplate
+      ? (cap) => fillTemplate(messages.overCodCapTemplate ?? "", { cap })
+      : null,
   };
 }
 
@@ -409,6 +416,9 @@ function IdentityCheckoutShell({
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
+  // Formatted COD cap when this total can be paid no way at all (over the COD
+  // cap while online payments are off) — said up front, not at the payment step.
+  const [overCodCap, setOverCodCap] = useState<string | null>(null);
   const [idempotencyKey] = useState(() =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -457,7 +467,12 @@ function IdentityCheckoutShell({
             router.push(cartPath);
             return;
           }
-          if (error.details.notice_key === "checkout.checkout.stockUnavailable") {
+          if (
+            error.details.notice_key === "checkout.checkout.stockUnavailable" ||
+            error.details.redirect_to === "cart"
+          ) {
+            // Stock ran out or the cart needs review (price, minimum quantity,
+            // withdrawn listing): retrying here can never succeed.
             router.push(`${cartPath}?notice=stock_unavailable`);
             return;
           }
@@ -495,6 +510,34 @@ function IdentityCheckoutShell({
     initSession,
     step,
   ]);
+
+  const checkoutSessionId = checkoutSession?.session_id ?? null;
+  const accessToken = session?.access_token ?? null;
+  useEffect(() => {
+    if (!checkoutSessionId || !accessToken) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const client = createApiClient({
+          baseUrl: getApiBaseUrl(),
+          getToken: () => accessToken,
+        });
+        const options = await client.request<PaymentOptions>(
+          `/checkout/steps/payment-options?session_id=${encodeURIComponent(checkoutSessionId)}`,
+        );
+        if (cancelled || !isCurrent()) return;
+        const methods = options?.available_methods;
+        if (Array.isArray(methods) && methods.length === 0) {
+          setOverCodCap(formatK(options.cod_cap_ngwee, { locale: `${locale}-ZM` }));
+        }
+      } catch {
+        // Advisory only: the payment step still explains what is available.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, checkoutSessionId, isCurrent, locale]);
 
   const handleContactComplete = async () => {
     let nextToken: string | undefined;
@@ -594,6 +637,15 @@ function IdentityCheckoutShell({
         />
       ) : null}
 
+      {step === 1 && overCodCap && labels.overCodCap ? (
+        <div role="status" className="space-y-2" data-testid="checkout-over-cod-cap">
+          <p className="font-body text-sm text-danger">{labels.overCodCap(overCodCap)}</p>
+          <Link href={cartPath} className="font-body text-sm underline">
+            {labels.backToCart}
+          </Link>
+        </div>
+      ) : null}
+
       {step === 1 && checkoutSession && session?.access_token ? (
         <StepFulfilment
           locale={locale}
@@ -664,7 +716,36 @@ function IdentityCheckoutShell({
                 },
               });
             } catch (error) {
-              throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));
+              const failure = classifyPlaceOrderError(error);
+              if (failure.kind === "return_to_cart") {
+                // The hold lapsed or the cart moved on: only a fresh checkout can
+                // succeed, so explain it on the cart instead of looping here.
+                if (isCurrent()) router.push(`${cartPath}?notice=${failure.notice}`);
+                return;
+              }
+              if (failure.kind === "redo_fulfilment") {
+                // Choices recorded before this release, or an address that no
+                // longer prices into the quoted zone: confirm fulfilment again.
+                if (isCurrent()) {
+                  setFulfilmentTotals(null);
+                  setPaymentSelection(null);
+                  setPaymentOptions(null);
+                  setStep(1);
+                }
+                return;
+              }
+              throw new Error(
+                failure.kind === "cod_ineligible"
+                  ? labels.payment.codRejected
+                  : labels.review.placeOrderUnavailable,
+              );
+            }
+            if (paymentSelection.method === "cod") {
+              // The order took its lines out of the cart; refresh the shared
+              // store so the header badge stops counting what was just bought.
+              void import("../../_components/cart/mini-cart-drawer")
+                .then(({ refreshCart }) => refreshCart())
+                .catch(() => undefined);
             }
           }}
         />

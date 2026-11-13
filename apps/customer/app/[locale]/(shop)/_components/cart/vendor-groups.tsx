@@ -224,6 +224,8 @@ export type CartPageLabels = {
   /** 3-step escrow ladder (You pay → Held → Released); reuses checkout.review keys. */
   escrowSteps: string[];
   stockUnavailableNotice: string;
+  /** Shown when checkout sent the buyer back because their stock hold lapsed. */
+  reservationExpiredNotice: string;
   summaryHeading: string;
   vendor: VendorGroupLabels;
   line: CartLineItemLabels;
@@ -305,6 +307,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const stockNotice = searchParams.get("notice") === "stock_unavailable";
+  const reservationNotice = searchParams.get("notice") === "reservation_expired";
   const [freeDeliveryThresholdNgwee, setFreeDeliveryThresholdNgwee] = useState<number | null>(null);
 
   useEffect(() => {
@@ -422,6 +425,16 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
             data-testid="cart-stock-unavailable-notice"
           >
             {labels.stockUnavailableNotice}
+          </p>
+        ) : null}
+
+        {reservationNotice ? (
+          <p
+            className="rounded border border-warning/40 bg-warning/10 p-3 text-sm text-text"
+            role="status"
+            data-testid="cart-reservation-expired-notice"
+          >
+            {labels.reservationExpiredNotice}
           </p>
         ) : null}
 

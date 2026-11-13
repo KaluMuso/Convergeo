@@ -95,6 +95,8 @@
     "delete": "Delete address",
     "deleteConfirmTitle": "Delete this address?",
     "deleteConfirmBody": "This address will be removed from your account. Orders already placed are not affected.",
+    "deleteBlocked": "This address is on an order that has not been delivered yet. You can delete it once that order is complete.",
+    "deleteFailed": "Could not delete the address. Please try again.",
     "cancel": "Cancel",
     "requiredLandmark": "Landmark directions are required.",
     "error": "Could not save address. Please try again."

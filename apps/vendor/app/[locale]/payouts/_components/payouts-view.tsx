@@ -129,6 +129,17 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
         <p className="text-sm text-text-2">{t("payouts.intro")}</p>
       </header>
 
+      {balances?.payouts_paused ? (
+        <div
+          className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-text"
+          role="status"
+          data-testid="payouts-paused-notice"
+        >
+          <p className="font-medium">{t("payouts.paused.noticeTitle")}</p>
+          <p className="mt-1">{t("payouts.paused.noticeBody")}</p>
+        </div>
+      ) : null}
+
       {balances?.payouts_blocked ? (
         <div
           className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-text"

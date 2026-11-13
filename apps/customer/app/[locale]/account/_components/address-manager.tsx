@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiError } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { ConfirmDialog } from "@vergeo/ui/src/confirm-dialog";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
@@ -19,6 +20,9 @@ export type AddressManagerLabels = AddressFormLabels & {
   delete: string;
   deleteConfirmTitle: string;
   deleteConfirmBody: string;
+  /** The address is still the drop-off of an order that has not been delivered. */
+  deleteBlocked: string;
+  deleteFailed: string;
   saved: string;
 };
 
@@ -42,6 +46,7 @@ export function AddressManager({
   const [editing, setEditing] = useState<Address | "new" | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Address | null>(null);
   const [status, setStatus] = useState<string | undefined>();
+  const [deleteError, setDeleteError] = useState<string | undefined>();
 
   const refreshAddresses = async () => {
     const next = await api.listAddresses();
@@ -53,7 +58,18 @@ export function AddressManager({
     if (!deleteTarget) {
       return;
     }
-    await api.deleteAddress(deleteTarget.id);
+    setDeleteError(undefined);
+    try {
+      await api.deleteAddress(deleteTarget.id);
+    } catch (error) {
+      setStatus(undefined);
+      setDeleteError(
+        error instanceof ApiError && error.code === "account.address_in_use"
+          ? labels.deleteBlocked
+          : labels.deleteFailed,
+      );
+      return;
+    }
     setDeleteTarget(null);
     setStatus(labels.saved);
     await refreshAddresses();
@@ -98,6 +114,12 @@ export function AddressManager({
       {status ? (
         <p className="text-sm text-success" role="status">
           {status}
+        </p>
+      ) : null}
+
+      {deleteError ? (
+        <p className="text-sm text-danger" role="alert" data-testid="address-delete-error">
+          {deleteError}
         </p>
       ) : null}
 

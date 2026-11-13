@@ -37,7 +37,7 @@ export default async function AccountRecentPage({ params }: PageProps) {
         clearing: t("recent.clearing"),
         loading: t("common.loading"),
         remove: t("recent.remove"),
-        removeLabel: t("recent.removeLabel"),
+        removeLabel: String(t.raw("recent.removeLabel")),
         viewProduct: t("recent.viewProduct"),
       }}
     />
