@@ -78,6 +78,19 @@ export async function generateMetadata({
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
+        // Light/dark browser chrome get a tuned mark (soft contour vs. soft glow).
+        {
+          url: "/brand/convergeo-icon-light-32.png",
+          sizes: "32x32",
+          type: "image/png",
+          media: "(prefers-color-scheme: light)",
+        },
+        {
+          url: "/brand/convergeo-icon-dark-32.png",
+          sizes: "32x32",
+          type: "image/png",
+          media: "(prefers-color-scheme: dark)",
+        },
         { url: "/brand/convergeo-icon-192.png", sizes: "192x192", type: "image/png" },
         { url: "/brand/convergeo-icon-512.png", sizes: "512x512", type: "image/png" },
       ],
