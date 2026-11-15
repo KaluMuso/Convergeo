@@ -49,3 +49,7 @@ Agents: ≤4 rolling; sonnet for UI/copy, opus for money/authz/data-model, haiku
 - Money: integer ngwee; discount allocated pro-rata across lines for refunds/returns; commission on the discounted amount; free item must have stock reserved with the paid item; gift lines cannot be refunded on their own; COD cap applies to the paid total.
 - Customer: "Bundle & save" block on product/service/event pages, badge on cards, cart shows savings and the free item; offers hidden when the gift is out of stock.
 - Admin: view/pause any offer; abuse limits (max discount %, per-customer limits). Flag `bundles` default off.
+
+## 08:35 pricing decision
+- Business and Pro merged into one "Business" plan: K249/mo — unlimited listings, 5 staff, banner+video+colours storefront, WhatsApp catalogue sync + 500 broadcasts/mo + auto-replies, Google Sheets sync + automations/webhooks, sales & funnel reports + price comparison + exports, K100 monthly ad credit, faster payouts, branded ZRA invoices, priority support; extra shop +K89.
+- Final ladder: Free K0 · Starter K49 · Business K249 · Chain K1,500 · Enterprise K3,500 · Enterprise Plus K7,500 (all admin-editable; 15–20% off annual prepay).
