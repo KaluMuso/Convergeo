@@ -119,12 +119,10 @@ def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[s
     # direct hit is answered as though it never existed.
     #
     # This raises the SAME error object as an unknown id above — same code, same
-    # status, same message — and deliberately not `business.wholesale_forbidden`
-    # (403), which is what the B2B feed returns and what the B2B audit originally
-    # specified here. A 403 would confirm that the id names a real listing, which
-    # is all an id enumerator needs to map the B2B catalogue without ever
-    # qualifying as a buyer. 403 stays reserved for `?wholesale=true`, where the
-    # caller asserted business intent and refusing answers a question they asked.
+    # status, same message. A distinct 403 would confirm that the id names a real
+    # listing, which is all an id enumerator needs to map the B2B catalogue.
+    # Wholesale prices are vendor-app only, so no customer path passes
+    # `business_eligible=True`.
     #
     # Checked BEFORE the status check below so a wholesale-only listing gets one
     # uniform answer: an inactive wholesale listing must not be distinguishable

@@ -11,7 +11,6 @@ import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
-from app.services.business.access import BusinessAccess
 from app.services.kyc.caps import VendorCapLimits, VendorQuota, clear_vendor_cap_cache
 from app.services.orders.create import (
     CreatedOrder,
@@ -174,12 +173,6 @@ def _patch_order_create_price_context(
     monkeypatch.setattr(
         "app.routers.orders_create.fetch_listings_for_items",
         lambda items: {LISTING_ID: listing},
-    )
-    monkeypatch.setattr(
-        "app.routers.orders_create.resolve_business_eligibility",
-        lambda *_a, **_k: BusinessAccess(
-            user_id=CUSTOMER_ID, status=None, eligible=False
-        ),
     )
 
 
@@ -357,3 +350,89 @@ class TestFirstOrderCapOnOrderCreate:
 
         assert response.status_code == 200
         assert response.json()["total_ngwee"] == total
+
+
+class TestBusinessBuyerIsChargedRetail:
+    """Wholesale/tier pricing is vendor-app only: order creation never prices a
+    customer cart as a business buyer, so a stale wholesale line is blocked
+    (never honoured, never silently re-priced) and no order is created."""
+
+    def test_wholesale_tier_line_is_blocked_and_no_order_created(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        tier_price = 40_000
+        session_id = str(uuid.uuid4())
+        service = _mock_service(session_id=session_id, total_ngwee=tier_price)
+        user_client = _mock_user_client(unit_price_ngwee=tier_price)
+        monkeypatch.setattr(
+            "app.routers.orders_create.get_user_client", lambda *_a, **_k: user_client
+        )
+        wholesale_listing = {
+            **_listing_row(50_000),
+            "wholesale": True,
+            "moq": 1,
+            "price_tiers": [{"min_qty": 1, "price_ngwee": tier_price}],
+        }
+        monkeypatch.setattr(
+            "app.routers.orders_create.fetch_listings_for_items",
+            lambda items: {LISTING_ID: wholesale_listing},
+        )
+        created = {"value": False}
+
+        def _boom(**_kwargs: Any) -> CreateOrdersResult:
+            created["value"] = True
+            raise AssertionError("create_orders_atomic must not run for a wholesale line")
+
+        monkeypatch.setattr("app.routers.orders_create.create_orders_atomic", _boom)
+
+        response = _post_momo(
+            _client_with_service(service), session_id=session_id, total_ngwee=tier_price
+        )
+
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "checkout.cart_changed"
+        assert created["value"] is False
+
+    def test_retail_listing_with_tier_data_is_charged_retail_price(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        retail = 50_000
+        session_id = str(uuid.uuid4())
+        service = _mock_service(session_id=session_id, total_ngwee=retail)
+        monkeypatch.setattr(
+            "app.routers.orders_create.get_user_client",
+            lambda *_a, **_k: _mock_user_client(unit_price_ngwee=retail),
+        )
+        # Stray tier data on a non-wholesale listing must never discount it.
+        listing = {**_listing_row(retail), "price_tiers": [{"min_qty": 1, "price_ngwee": 1}]}
+        monkeypatch.setattr(
+            "app.routers.orders_create.fetch_listings_for_items",
+            lambda items: {LISTING_ID: listing},
+        )
+        seen: dict[str, Any] = {}
+
+        def _capture_rederive(items: Any, listings: Any, **kwargs: Any) -> Any:
+            seen.update(kwargs)
+            return items
+
+        monkeypatch.setattr("app.routers.orders_create._rederive_line_prices", _capture_rederive)
+        monkeypatch.setattr(
+            "app.services.kyc.caps.load_vendor_cap_limits_by_id",
+            lambda _sc, _vid, **_kw: _t1_limits(order_count=0),
+        )
+        monkeypatch.setattr(
+            "app.routers.orders_create.create_orders_atomic",
+            lambda **_kwargs: _fake_create_result(total_ngwee=retail),
+        )
+        monkeypatch.setattr(
+            "app.routers.orders_create.emit_order_placed_funnel", lambda **_kwargs: None
+        )
+
+        response = _post_momo(
+            _client_with_service(service), session_id=session_id, total_ngwee=retail
+        )
+
+        assert response.status_code == 200
+        assert seen["business_eligible"] is False

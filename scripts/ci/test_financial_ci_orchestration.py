@@ -68,8 +68,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: In-app notification center tables + triggers (additive, reversible).
         # + 1 reviewed: Listing fulfilment options + Class D may be sold new (additive, reversible).
         # + 2 reviewed: Events collaboration tables + rate-limit scopes (additive, reversible).
-        self.assertEqual(len(runner.FORWARD), 34)
-        self.assertEqual(len(set(runner.FORWARD)), 34)
+        # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
+        self.assertEqual(len(runner.FORWARD), 35)
+        self.assertEqual(len(set(runner.FORWARD)), 35)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

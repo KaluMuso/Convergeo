@@ -65,6 +65,8 @@ REVIEWED_SUFFIX = (
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000_rate_counter_scope_constraint_sync.sql",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000_listing_fulfilment_options_class_d_any_condition.sql",
     # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
@@ -624,9 +626,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 161 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 162 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 161 source migrations",
+            "disposable copy does not match 162 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -709,10 +711,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_161|PASS")
+                    print("failure_cleanup|restored_162|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 161 migrations",
+                        "error: disposable failure cleanup could not restore 162 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1065,7 +1067,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 161 migrations"
+                    "normal full replay did not restore 162 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

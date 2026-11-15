@@ -29,7 +29,10 @@ const DEFAULT_FIELDS: ListingFieldValues = {
 type QuickListFormProps = {
   client: ListingClient;
   wholesaleEnabled: boolean;
-  onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
+  onSuccess: (
+    response: ListingCreateResponse,
+    requiresEvidence: boolean,
+  ) => void;
   onError: (message: string) => void;
   onRequestCatalog: () => void;
   labels: {
@@ -73,7 +76,9 @@ export function QuickListForm({
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoryStatus, setCategoryStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [categoryStatus, setCategoryStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_FIELDS);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -111,7 +116,9 @@ export function QuickListForm({
       onError(labels.categoriesUnavailable);
       return;
     }
-    const nextErrors: Record<string, string> = { ...listingFieldErrors(fields, labels.fields) };
+    const nextErrors: Record<string, string> = {
+      ...listingFieldErrors(fields, labels.fields),
+    };
     if (!title.trim()) nextErrors.title_override = labels.required;
     if (!categories.some((category) => category.id === categoryId)) {
       nextErrors.category_id = labels.required;
@@ -126,15 +133,22 @@ export function QuickListForm({
     ) {
       nextErrors.defect_notes = labels.fields.defectNotesInvalid;
     }
-    const parsed = parseListingFieldValues(fields);
+    // Only parse once the structural checks pass: parsing an invalid unit or
+    // quantity throws, which would surface as an unhandled rejection.
+    const parsed =
+      Object.keys(nextErrors).length === 0
+        ? parseListingFieldValues(fields)
+        : null;
     if (
+      parsed &&
       fields.productClass === "E" &&
       !nextErrors.vendor_capacity_per_week &&
-      (parsed.vendorCapacityPerWeek ?? 0) < Math.max(parsed.minSteps, parsed.moq)
+      (parsed.vendorCapacityPerWeek ?? 0) <
+        Math.max(parsed.minSteps, parsed.moq)
     ) {
       nextErrors.vendor_capacity_per_week = labels.fields.capacityInvalid;
     }
-    if (Object.keys(nextErrors).length > 0) {
+    if (!parsed || Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       onError(labels.draftInvalid ?? labels.submitError);
       return;
@@ -193,7 +207,9 @@ export function QuickListForm({
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h2 className="font-display text-h4 text-display-ink">{labels.heading}</h2>
+        <h2 className="font-display text-h4 text-display-ink">
+          {labels.heading}
+        </h2>
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 
@@ -202,7 +218,11 @@ export function QuickListForm({
           <p role="note" className="text-sm text-text-2">
             {labels.canonicalRequired}
           </p>
-          <Button variant="secondary" loadingLabel={labels.catalogLabel} onClick={onRequestCatalog}>
+          <Button
+            variant="secondary"
+            loadingLabel={labels.catalogLabel}
+            onClick={onRequestCatalog}
+          >
             {labels.catalogLabel}
           </Button>
         </div>
@@ -242,7 +262,8 @@ export function QuickListForm({
               ))}
             </Select>
           </FormField>
-          {categoryStatus === "error" || (categoryStatus === "ready" && categories.length === 0) ? (
+          {categoryStatus === "error" ||
+          (categoryStatus === "ready" && categories.length === 0) ? (
             <p role="alert" className="text-sm text-danger">
               {labels.categoriesUnavailable}
             </p>
@@ -279,7 +300,9 @@ export function QuickListForm({
         size="lg"
         className="w-full"
         loading={submitting}
-        disabled={!standalone || categoryStatus !== "ready" || categories.length === 0}
+        disabled={
+          !standalone || categoryStatus !== "ready" || categories.length === 0
+        }
         loadingLabel={labels.savingDraft}
         onClick={() => void handleSaveDraft()}
       >
