@@ -37,7 +37,8 @@
     "services": "Services",
     "inventory": "Inventory",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "branches": "Branch verification"
   },
   "hubs": {
     "moderation": {
@@ -194,7 +195,8 @@
       "aiCapUsd": "AI monthly cap (USD)",
       "releaseDelivered": "Auto-release after delivered (hours)",
       "releaseShipped": "Auto-release after shipped (days)",
-      "dangerousHint": "COD cap changes affect new checkout eligibility only."
+      "dangerousHint": "COD cap changes affect new checkout eligibility only.",
+      "branchMinDistance": "Min. distance between branches (m)"
     },
     "flags": {
       "title": "Feature flags",
@@ -1855,7 +1857,18 @@
       "featuredSlots": "Featured slots",
       "analyticsDepth": "Analytics",
       "wholesaleTools": "Wholesale tools",
-      "active": "Active"
+      "active": "Active",
+      "includedShops": "Shops included (empty = unlimited)",
+      "extraShopPrice": "Extra shop (K/month, empty = not sold)",
+      "staffSeats": "Staff seats (empty = unlimited)",
+      "broadcasts": "WhatsApp broadcasts / month",
+      "adCredit": "Ad credit (K/month)",
+      "integrationsLevel": "Integrations",
+      "payoutSpeed": "Payout speed",
+      "supportLevel": "Support",
+      "officialStoreBadge": "Official store badge",
+      "clickAndCollect": "Click & collect",
+      "multiBranchStock": "Multi-branch stock"
     },
     "depth": {
       "basic": "Basic",
@@ -1879,7 +1892,12 @@
       "defaultInactive": "The default plan must stay active.",
       "defaultDelete": "The default plan cannot be deleted.",
       "inUse": "Vendors are on this plan. Deactivate it instead, or move them first.",
-      "planInactive": "That plan is not active."
+      "planInactive": "That plan is not active.",
+      "shopsInvalid": "Shops included must be a whole number from 1, or empty for unlimited.",
+      "extraShopPriceInvalid": "Enter the extra shop price in kwacha, or leave it empty.",
+      "seatsInvalid": "Staff seats must be a whole number, or empty for unlimited.",
+      "broadcastsInvalid": "Enter a whole number of broadcasts.",
+      "adCreditInvalid": "Enter the ad credit in kwacha."
     },
     "vendor": {
       "heading": "Vendor plan",
@@ -1904,6 +1922,127 @@
       "reason": "Reason",
       "save": "Save override",
       "remove": "Remove override"
+    },
+    "integrations": {
+      "none": "None",
+      "basic": "Basic",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Fast",
+      "priority": "Priority"
+    },
+    "support": {
+      "community": "Community",
+      "standard": "Standard",
+      "priority": "Priority",
+      "dedicated": "Dedicated"
+    }
+  },
+  "branches": {
+    "title": "Branch verification",
+    "subtitle": "Approve new shops of multi-branch businesses. Every decision is audited.",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "info_requested": "Info requested",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "kind": {
+      "physical": "Physical",
+      "online": "Online"
+    },
+    "queue": {
+      "filter": "Status",
+      "flagsLink": "Duplicate flags",
+      "loading": "Loading branches…",
+      "error": "Could not load branches.",
+      "permissionDenied": "You do not have access to branch verification.",
+      "retry": "Retry",
+      "empty": "No branches here.",
+      "evidence": "{count, plural, one {# evidence file} other {# evidence files}}",
+      "openFlags": "{count, plural, one {# open flag} other {# open flags}}"
+    },
+    "detail": {
+      "back": "Back to queue",
+      "business": "Business",
+      "legalName": "Legal name",
+      "registration": "Registration",
+      "pacraCertificate": "PACRA certificate",
+      "open": "Open",
+      "ownerKyc": "Owner KYC approved",
+      "yes": "Yes",
+      "no": "No",
+      "shop": "Shop",
+      "location": "Location",
+      "address": "Address",
+      "phone": "Phone",
+      "payout": "Payout",
+      "onHold": "on hold",
+      "plan": "Plan",
+      "planAddon": "{plan} · add-on {price}/month",
+      "planIncluded": "{plan} · included",
+      "evidence": "Evidence",
+      "noEvidence": "No evidence uploaded.",
+      "unavailable": "Preview unavailable",
+      "flags": "{count, plural, =0 {Duplicate flags} one {Duplicate flags (# open)} other {Duplicate flags (# open)}}",
+      "siblings": "Other branches of this business",
+      "primary": "main shop",
+      "note": "Note to the vendor (required to request info or reject)",
+      "flagsBlock": "Resolve the open duplicate flags before approving.",
+      "history": "History"
+    },
+    "actions": {
+      "approve": "Approve",
+      "requestInfo": "Request info",
+      "reject": "Reject"
+    },
+    "evidence": {
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises"
+    },
+    "proof": {
+      "lease": "Lease",
+      "utility_bill": "Utility bill",
+      "council_permit": "Council trading permit"
+    },
+    "flags": {
+      "title": "Duplicate flags",
+      "subtitle": "Possible duplicate shops found by name, phone, payout number, GPS or photo.",
+      "none": "No flags.",
+      "score": "match {score}%",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Resolution note",
+      "notePlaceholder": "Why is this (not) a duplicate?",
+      "clear": "Not a duplicate",
+      "confirm": "Confirm duplicate"
+    },
+    "flagKind": {
+      "name_similar": "Similar name",
+      "phone_match": "Same phone",
+      "payout_other_owner": "Payout number of another owner",
+      "payout_shared_same_owner": "Shared payout number (same owner)",
+      "gps_near_other_owner": "Another owner at this spot",
+      "image_duplicate": "Same shopfront photo"
+    },
+    "flagStatus": {
+      "open": "Open",
+      "cleared": "Cleared",
+      "confirmed": "Confirmed duplicate"
+    },
+    "errors": {
+      "noteRequired": "Write a short note (at least 3 characters).",
+      "openFlags": "Resolve the open duplicate flags first.",
+      "primary": "The main shop is verified through KYC.",
+      "flagResolved": "This flag is already resolved.",
+      "payoutOtherOwner": "A payout number can never be shared across owners.",
+      "noPacra": "This business has no PACRA number.",
+      "invalidTransition": "This branch is not ready for that decision.",
+      "permission": "You do not have permission for this action.",
+      "saveFailed": "Could not save the decision. Try again."
     }
   }
 }

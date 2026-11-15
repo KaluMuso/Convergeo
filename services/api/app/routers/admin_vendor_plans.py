@@ -52,6 +52,20 @@ MAX_LISTING_LIMIT = 1_000_000
 MAX_OVERRIDE_DAYS = 366
 PLAN_KEY_PATTERN = r"^[a-z][a-z0-9_]{1,31}$"
 AnalyticsDepth = Literal["basic", "standard", "advanced"]
+IntegrationsLevel = Literal["none", "basic", "sheets_webhooks", "api"]
+PayoutSpeed = Literal["standard", "fast", "priority"]
+SupportLevel = Literal["community", "standard", "priority", "dedicated"]
+# Multi-branch entitlements (20261115100000). Shops and staff seats are enforced
+# (flag multi_branch); the rest is stored for later features.
+ENTITLEMENT_COLUMNS = (
+    "included_shops, extra_shop_price_ngwee, staff_seats, whatsapp_broadcasts_per_month, "
+    "integrations_level, ad_credit_ngwee, payout_speed, support_level, official_store_badge, "
+    "click_and_collect, multi_branch_stock"
+)
+ADMIN_PLAN_COLUMNS = PLAN_COLUMNS + ", " + ENTITLEMENT_COLUMNS
+NULLABLE_PLAN_FIELDS = frozenset(
+    {"max_listings", "included_shops", "extra_shop_price_ngwee", "staff_seats"}
+)
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +106,9 @@ def _not_found(entity: str) -> AppError:
 
 
 def _load_plan_row(client: Any, plan_key: str) -> dict[str, Any]:
-    rows = _rows(client.table("vendor_plans").select(PLAN_COLUMNS).eq("key", plan_key).execute())
+    rows = _rows(
+        client.table("vendor_plans").select(ADMIN_PLAN_COLUMNS).eq("key", plan_key).execute()
+    )
     if not rows:
         raise _not_found("Vendor plan")
     return rows[0]
@@ -121,6 +137,17 @@ class PlanOut(BaseModel):
     active: bool
     position: int
     vendor_count: int = 0
+    included_shops: int | None = 1
+    extra_shop_price_ngwee: int | None = None
+    staff_seats: int | None = 0
+    whatsapp_broadcasts_per_month: int = 0
+    integrations_level: str = "none"
+    ad_credit_ngwee: int = 0
+    payout_speed: str = "standard"
+    support_level: str = "standard"
+    official_store_badge: bool = False
+    click_and_collect: bool = False
+    multi_branch_stock: bool = False
 
 
 class PlanCreate(StrictModel):
@@ -134,6 +161,17 @@ class PlanCreate(StrictModel):
     wholesale_tools: bool = False
     active: bool = True
     position: int = Field(default=0, ge=0, le=1000)
+    included_shops: int | None = Field(default=1, ge=1, le=10_000)
+    extra_shop_price_ngwee: NgweeInt | None = Field(default=None, le=MAX_PRICE_NGWEE)
+    staff_seats: int | None = Field(default=0, ge=0, le=10_000)
+    whatsapp_broadcasts_per_month: int = Field(default=0, ge=0, le=10_000_000)
+    integrations_level: IntegrationsLevel = "none"
+    ad_credit_ngwee: NgweeInt = Field(default=0, le=MAX_PRICE_NGWEE)
+    payout_speed: PayoutSpeed = "standard"
+    support_level: SupportLevel = "standard"
+    official_store_badge: bool = False
+    click_and_collect: bool = False
+    multi_branch_stock: bool = False
 
     @field_validator("name")
     @classmethod
@@ -157,13 +195,23 @@ class PlanUpdate(StrictModel):
     active: bool | None = None
     is_default: Literal[True] | None = None
     position: int | None = Field(default=None, ge=0, le=1000)
+    included_shops: int | None = Field(default=None, ge=1, le=10_000)
+    extra_shop_price_ngwee: NgweeInt | None = Field(default=None, le=MAX_PRICE_NGWEE)
+    staff_seats: int | None = Field(default=None, ge=0, le=10_000)
+    whatsapp_broadcasts_per_month: int | None = Field(default=None, ge=0, le=10_000_000)
+    integrations_level: IntegrationsLevel | None = None
+    ad_credit_ngwee: NgweeInt | None = Field(default=None, le=MAX_PRICE_NGWEE)
+    payout_speed: PayoutSpeed | None = None
+    support_level: SupportLevel | None = None
+    official_store_badge: bool | None = None
+    click_and_collect: bool | None = None
+    multi_branch_stock: bool | None = None
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> PlanUpdate:
         if not self.model_fields_set:
             raise ValueError("at least one field is required")
-        nullable = {"max_listings"}
-        for field in self.model_fields_set - nullable:
+        for field in self.model_fields_set - NULLABLE_PLAN_FIELDS:
             if getattr(self, field) is None:
                 raise ValueError(f"{field} cannot be null")
         if self.name is not None and not self.name.strip():
@@ -253,7 +301,17 @@ def _plan_out(row: dict[str, Any], vendor_count: int = 0) -> PlanOut:
         active=plan.active,
         position=plan.position,
         vendor_count=vendor_count,
+        **_entitlements(row),
     )
+
+
+def _entitlements(row: dict[str, Any]) -> dict[str, Any]:
+    """Entitlement columns as stored; absent keys fall back to PlanOut defaults."""
+    out: dict[str, Any] = {}
+    for key in ENTITLEMENT_COLUMNS.split(", "):
+        if key in row and (row[key] is not None or key in NULLABLE_PLAN_FIELDS):
+            out[key] = row[key]
+    return out
 
 
 def _assignment_out(row: dict[str, Any] | None) -> AssignmentOut | None:
@@ -304,7 +362,9 @@ async def list_vendor_plans(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[PlanOut]:
     client: Any = service_client.client
-    rows = _rows(client.table("vendor_plans").select(PLAN_COLUMNS).order("position").execute())
+    rows = _rows(
+        client.table("vendor_plans").select(ADMIN_PLAN_COLUMNS).order("position").execute()
+    )
     counts = _vendor_counts(client)
     return [_plan_out(row, counts.get(str(row.get("key")), 0)) for row in rows]
 

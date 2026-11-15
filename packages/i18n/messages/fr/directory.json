@@ -96,7 +96,11 @@
     "viewFeed": "Voir les nouveautés des boutiques suivies",
     "searchStore": "Rechercher chez {name}",
     "allCategories": "Tout",
-    "noMatches": "Aucun produit ne correspond. Essayez un autre mot ou une autre catégorie."
+    "noMatches": "Aucun produit ne correspond. Essayez un autre mot ou une autre catégorie.",
+    "otherBranches": "Autres succursales",
+    "otherBranchesAria": "Autres succursales de {name}",
+    "partOfBusiness": "Fait partie de {name}",
+    "branchWithLandmark": "{name} · {landmark}"
   },
   "listings": {
     "vendor": "Vendu par {vendor}",

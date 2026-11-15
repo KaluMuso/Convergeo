@@ -3,6 +3,7 @@ import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 export type AdminNavItemKey =
   | "home"
   | "kyc"
+  | "branches"
   | "moderation"
   | "disputes"
   | "support"
@@ -42,6 +43,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     key: "trust",
     items: [
       { key: "kyc", href: "kyc" },
+      { key: "branches", href: "branches" },
       { key: "moderation", href: "moderation" },
       { key: "disputes", href: "disputes" },
       { key: "support", href: "support" },

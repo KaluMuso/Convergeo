@@ -495,6 +495,41 @@ def test_admin_patch_unlimited_and_price(harness: Harness) -> None:
     assert audit_rows(harness)[0]["before"]["max_listings"] == 1000
 
 
+def test_admin_edits_multi_branch_entitlements(harness: Harness) -> None:
+    response = harness.client.patch(
+        "/admin/vendor-plans/business",
+        json={
+            "included_shops": None,
+            "extra_shop_price_ngwee": 8900,
+            "staff_seats": 5,
+            "integrations_level": "sheets_webhooks",
+            "ad_credit_ngwee": 10000,
+            "official_store_badge": True,
+        },
+        headers=AUTH,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["included_shops"] is None and body["extra_shop_price_ngwee"] == 8900
+    assert body["integrations_level"] == "sheets_webhooks" and body["official_store_badge"]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"integrations_level": "everything"},
+        {"extra_shop_price_ngwee": 89.5},  # float on money
+        {"extra_shop_price_ngwee": -1},
+        {"included_shops": 0},
+        {"payout_speed": None},
+    ],
+)
+def test_admin_entitlement_validation(harness: Harness, patch: dict[str, Any]) -> None:
+    response = harness.client.patch("/admin/vendor-plans/business", json=patch, headers=AUTH)
+    assert response.status_code == 422
+    assert audit_rows(harness) == []
+
+
 def test_admin_patch_rejects_empty_and_null_non_nullable(harness: Harness) -> None:
     assert (
         harness.client.patch("/admin/vendor-plans/free", json={}, headers=AUTH).status_code == 422

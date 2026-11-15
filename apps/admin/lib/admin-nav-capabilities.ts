@@ -19,6 +19,7 @@ export function resolveAdminNavCapabilities(
   return {
     home: has("analytics.read"),
     kyc: has("vendors.manage"),
+    branches: has("vendors.manage"),
     moderation: has("products.manage"),
     disputes: unrestricted,
     support: unrestricted,

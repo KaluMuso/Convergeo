@@ -96,7 +96,11 @@
     "viewFeed": "See new from stores you follow",
     "searchStore": "Search {name}",
     "allCategories": "All",
-    "noMatches": "No products match. Try another word or category."
+    "noMatches": "No products match. Try another word or category.",
+    "otherBranches": "Other branches",
+    "otherBranchesAria": "Other branches of {name}",
+    "partOfBusiness": "Part of {name}",
+    "branchWithLandmark": "{name} · {landmark}"
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",

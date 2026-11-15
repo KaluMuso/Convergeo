@@ -191,6 +191,19 @@ def test_branch_header_parsing_rejects_garbage() -> None:
     assert context.parse_branch_header("not-a-uuid") is None
     assert context.parse_branch_header("'; drop table vendors;--") is None
     assert context.parse_branch_header(BRANCH_A2.upper()) == BRANCH_A2
+    assert context.parse_branch_header(" Primary ") == context.PRIMARY
+
+
+def test_primary_header_narrows_to_the_primary_shop() -> None:
+    db = make_db()
+    token = context.set_acting_branch_id("primary")
+    try:
+        scoped = context.scope_owner_vendor_query(
+            db.table("vendors").select("id").eq("owner_user_id", OWNER_A)
+        )
+        assert [row["id"] for row in scoped.execute().data] == [BIZ_A]
+    finally:
+        context.reset_acting_branch_id(token)
 
 
 def test_scope_only_narrows_when_header_present() -> None:

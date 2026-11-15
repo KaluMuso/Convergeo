@@ -2,7 +2,8 @@
 
 An owner with several branches (all sharing ``vendors.owner_user_id``) picks the
 branch they are working on in the vendor app; the app sends it as the
-``X-Vendor-Branch`` header. The middleware below parses it into a context
+``X-Vendor-Branch`` header (a branch id, or ``primary`` until one is picked).
+The middleware below parses it into a context
 variable and :func:`scope_owner_vendor_query` narrows every "vendor owned by the
 caller" lookup to that branch.
 
@@ -22,13 +23,20 @@ from uuid import UUID
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 BRANCH_HEADER: Final = "x-vendor-branch"
+#: Header value meaning "my primary shop" — the vendor app's default before the
+#: owner picks a branch, so an owner with several shops never hits an ambiguous
+#: owner lookup.
+PRIMARY: Final = "primary"
 
 _acting_branch: ContextVar[str | None] = ContextVar("acting_branch_id", default=None)
 
+
 def parse_branch_header(raw: str | None) -> str | None:
-    """Return a canonical UUID string, or ``None`` for a missing/garbage value."""
+    """Canonical UUID string, ``PRIMARY``, or ``None`` for a missing/garbage value."""
     if not raw:
         return None
+    if raw.strip().lower() == PRIMARY:
+        return PRIMARY
     try:
         return str(UUID(raw.strip()))
     except (ValueError, AttributeError):
@@ -53,6 +61,9 @@ def scope_owner_vendor_query[QueryT](query: QueryT) -> QueryT:
     branch_id = acting_branch_id()
     if branch_id is None:
         return query
+    if branch_id == PRIMARY:
+        primary: QueryT = query.eq("is_primary_branch", True)  # type: ignore[attr-defined]
+        return primary
     narrowed: QueryT = query.eq("id", branch_id)  # type: ignore[attr-defined]
     return narrowed
 

@@ -18,7 +18,8 @@
     "support": "Support",
     "events": "Événements à haute valeur",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "branches": "Vérification des succursales"
   },
   "hubs": {
     "moderation": {
@@ -172,7 +173,8 @@
       "aiCapUsd": "Plafond IA mensuel (USD)",
       "releaseDelivered": "Libération automatique après livraison (heures)",
       "releaseShipped": "Libération automatique après expédition (jours)",
-      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
+      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes.",
+      "branchMinDistance": "Distance min. entre succursales (m)"
     },
     "flags": {
       "title": "Fonctionnalités (drapeaux)",
@@ -1194,7 +1196,18 @@
       "featuredSlots": "Emplacements mis en avant",
       "analyticsDepth": "Statistiques",
       "wholesaleTools": "Outils de vente en gros",
-      "active": "Active"
+      "active": "Active",
+      "includedShops": "Boutiques incluses (vide = illimité)",
+      "extraShopPrice": "Boutique supplémentaire (K/mois, vide = non vendue)",
+      "staffSeats": "Places employés (vide = illimité)",
+      "broadcasts": "Diffusions WhatsApp / mois",
+      "adCredit": "Crédit publicitaire (K/mois)",
+      "integrationsLevel": "Intégrations",
+      "payoutSpeed": "Vitesse de versement",
+      "supportLevel": "Assistance",
+      "officialStoreBadge": "Badge boutique officielle",
+      "clickAndCollect": "Retrait en magasin",
+      "multiBranchStock": "Stock multi-succursales"
     },
     "depth": {
       "basic": "Essentielles",
@@ -1218,7 +1231,12 @@
       "defaultInactive": "La formule par défaut doit rester active.",
       "defaultDelete": "La formule par défaut ne peut pas être supprimée.",
       "inUse": "Des vendeurs utilisent cette formule. Désactivez-la plutôt, ou déplacez-les d'abord.",
-      "planInactive": "Cette formule n'est pas active."
+      "planInactive": "Cette formule n'est pas active.",
+      "shopsInvalid": "Les boutiques incluses doivent être un nombre entier à partir de 1, ou vide pour illimité.",
+      "extraShopPriceInvalid": "Saisissez le prix de la boutique supplémentaire en kwacha, ou laissez vide.",
+      "seatsInvalid": "Les places employés doivent être un nombre entier, ou vide pour illimité.",
+      "broadcastsInvalid": "Saisissez un nombre entier de diffusions.",
+      "adCreditInvalid": "Saisissez le crédit publicitaire en kwacha."
     },
     "vendor": {
       "heading": "Formule du vendeur",
@@ -1243,6 +1261,127 @@
       "reason": "Motif",
       "save": "Enregistrer l'exception",
       "remove": "Retirer l'exception"
+    },
+    "integrations": {
+      "none": "Aucune",
+      "basic": "Basique",
+      "sheets_webhooks": "Sheets + webhooks",
+      "api": "API"
+    },
+    "payoutSpeed": {
+      "standard": "Standard",
+      "fast": "Rapide",
+      "priority": "Prioritaire"
+    },
+    "support": {
+      "community": "Communauté",
+      "standard": "Standard",
+      "priority": "Prioritaire",
+      "dedicated": "Dédiée"
+    }
+  },
+  "branches": {
+    "title": "Vérification des succursales",
+    "subtitle": "Approuvez les nouvelles boutiques des entreprises multi-sites. Chaque décision est auditée.",
+    "status": {
+      "draft": "Brouillon",
+      "pending_review": "En attente",
+      "info_requested": "Infos demandées",
+      "approved": "Approuvée",
+      "rejected": "Refusée"
+    },
+    "kind": {
+      "physical": "Physique",
+      "online": "En ligne"
+    },
+    "queue": {
+      "filter": "Statut",
+      "flagsLink": "Doublons signalés",
+      "loading": "Chargement des succursales…",
+      "error": "Impossible de charger les succursales.",
+      "permissionDenied": "Vous n'avez pas accès à la vérification des succursales.",
+      "retry": "Réessayer",
+      "empty": "Aucune succursale ici.",
+      "evidence": "{count, plural, one {# justificatif} other {# justificatifs}}",
+      "openFlags": "{count, plural, one {# signalement ouvert} other {# signalements ouverts}}"
+    },
+    "detail": {
+      "back": "Retour à la file",
+      "business": "Entreprise",
+      "legalName": "Raison sociale",
+      "registration": "Enregistrement",
+      "pacraCertificate": "Certificat PACRA",
+      "open": "Ouvrir",
+      "ownerKyc": "KYC du propriétaire approuvé",
+      "yes": "Oui",
+      "no": "Non",
+      "shop": "Boutique",
+      "location": "Emplacement",
+      "address": "Adresse",
+      "phone": "Téléphone",
+      "payout": "Versement",
+      "onHold": "suspendu",
+      "plan": "Forfait",
+      "planAddon": "{plan} · option {price}/mois",
+      "planIncluded": "{plan} · inclus",
+      "evidence": "Justificatifs",
+      "noEvidence": "Aucun justificatif envoyé.",
+      "unavailable": "Aperçu indisponible",
+      "flags": "{count, plural, =0 {Doublons signalés} one {Doublons signalés (# ouvert)} other {Doublons signalés (# ouverts)}}",
+      "siblings": "Autres succursales de cette entreprise",
+      "primary": "boutique principale",
+      "note": "Note au vendeur (obligatoire pour demander des infos ou refuser)",
+      "flagsBlock": "Traitez les doublons ouverts avant d'approuver.",
+      "history": "Historique"
+    },
+    "actions": {
+      "approve": "Approuver",
+      "requestInfo": "Demander des infos",
+      "reject": "Refuser"
+    },
+    "evidence": {
+      "storefront_photo": "Photo de la devanture",
+      "premises_proof": "Preuve des locaux"
+    },
+    "proof": {
+      "lease": "Bail",
+      "utility_bill": "Facture d'eau ou d'électricité",
+      "council_permit": "Permis commercial municipal"
+    },
+    "flags": {
+      "title": "Doublons signalés",
+      "subtitle": "Boutiques potentiellement en double détectées par nom, téléphone, numéro de versement, GPS ou photo.",
+      "none": "Aucun signalement.",
+      "score": "correspondance {score} %",
+      "pair": "{branch} ↔ {matched}",
+      "noteLabel": "Note de résolution",
+      "notePlaceholder": "Pourquoi est-ce (ou non) un doublon ?",
+      "clear": "Pas un doublon",
+      "confirm": "Confirmer le doublon"
+    },
+    "flagKind": {
+      "name_similar": "Nom similaire",
+      "phone_match": "Même téléphone",
+      "payout_other_owner": "Numéro de versement d'un autre propriétaire",
+      "payout_shared_same_owner": "Numéro de versement partagé (même propriétaire)",
+      "gps_near_other_owner": "Un autre propriétaire au même endroit",
+      "image_duplicate": "Même photo de devanture"
+    },
+    "flagStatus": {
+      "open": "Ouvert",
+      "cleared": "Levé",
+      "confirmed": "Doublon confirmé"
+    },
+    "errors": {
+      "noteRequired": "Écrivez une courte note (au moins 3 caractères).",
+      "openFlags": "Traitez d'abord les doublons ouverts.",
+      "primary": "La boutique principale est vérifiée via le KYC.",
+      "flagResolved": "Ce signalement est déjà traité.",
+      "payoutOtherOwner": "Un numéro de versement ne peut jamais être partagé entre propriétaires.",
+      "noPacra": "Cette entreprise n'a pas de numéro PACRA.",
+      "invalidTransition": "Cette succursale n'est pas prête pour cette décision.",
+      "permission": "Vous n'avez pas l'autorisation pour cette action.",
+      "saveFailed": "Impossible d'enregistrer la décision. Réessayez."
     }
   }
 }

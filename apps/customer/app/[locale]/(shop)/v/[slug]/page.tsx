@@ -27,8 +27,6 @@ import {
 } from "../../_components/directory/vendor-ladder-labels";
 import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
 
-
-
 import type { Metadata } from "next";
 
 export const revalidate = 3600;
@@ -93,6 +91,11 @@ type VendorProfileApiResponse = {
     rating_avg: number | null;
     rating_count: number;
   };
+  /** Multi-branch parent business + its other approved shops (flag-gated). */
+  business?: {
+    name: string;
+    other_branches: Array<{ slug: string; display_name: string; landmark: string | null }>;
+  } | null;
 };
 
 type PageProps = {
@@ -104,9 +107,7 @@ type DirectoryTranslator = {
   raw: (key: string) => unknown;
 };
 
-async function getDirectoryTranslator(
-  locale: string,
-): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
   const messages = {
@@ -121,9 +122,7 @@ async function getDirectoryTranslator(
   }) as unknown as DirectoryTranslator;
 }
 
-async function getCatalogTranslator(
-  locale: string,
-): Promise<DirectoryTranslator> {
+async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -138,9 +137,7 @@ async function getCatalogTranslator(
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(
-  slug: string,
-): Promise<VendorProfileApiResponse | null> {
+async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
     if (!url) {
@@ -185,9 +182,7 @@ function buildVendorJsonLd(
   });
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
@@ -260,15 +255,10 @@ function VendorServicesGrid({
             ) : null}
           </div>
           <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-text">
-              {service.title}
-            </p>
+            <p className="truncate text-sm font-medium text-text">{service.title}</p>
             {service.from_price_ngwee !== null ? (
               <p className="text-sm text-text-2">
-                {fromLabel.replace(
-                  "{price}",
-                  formatK(service.from_price_ngwee),
-                )}
+                {fromLabel.replace("{price}", formatK(service.from_price_ngwee))}
               </p>
             ) : null}
           </div>
@@ -305,9 +295,7 @@ function VendorEventsGrid({
             ) : null}
           </div>
           <div className="p-3">
-            <p className="truncate text-sm font-medium text-text">
-              {event.title}
-            </p>
+            <p className="truncate text-sm font-medium text-text">{event.title}</p>
           </div>
         </Link>
       ))}
@@ -339,13 +327,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const {
-    vendor,
-    listings,
-    services,
-    events,
-    reviews_summary: reviews,
-  } = profile;
+  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
   const ladderLabels = buildVendorLadderLabels(t);
   const trustRibbon = vendorTrustRibbon(
     { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
@@ -442,11 +424,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
     : null;
 
   const hoursEntries =
-    vendor.locations.length > 0
-      ? vendor.locations
-      : vendor.location
-        ? [vendor.location]
-        : [];
+    vendor.locations.length > 0 ? vendor.locations : vendor.location ? [vendor.location] : [];
   const aboutPanel =
     vendor.description || hoursEntries.length > 0 ? (
       <div className="grid gap-6 md:grid-cols-[3fr_2fr]">
@@ -556,18 +534,14 @@ export default async function VendorProfilePage({ params }: PageProps) {
               <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
                 {vendor.display_name}
               </h1>
-              <CornerRibbon
-                trust={trustRibbon.trust}
-                trustLabel={trustRibbon.trustLabel}
-              />
+              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
             </div>
             <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-2">
               {hasRating ? (
                 <span className="font-semibold text-text">
                   ★ {reviews.rating_avg?.toFixed(1)}{" "}
                   <span className="font-normal text-text-2">
-                    ({reviews.rating_count}{" "}
-                    {t("profile.statReviews").toLowerCase()})
+                    ({reviews.rating_count} {t("profile.statReviews").toLowerCase()})
                   </span>
                 </span>
               ) : null}
@@ -629,6 +603,36 @@ export default async function VendorProfilePage({ params }: PageProps) {
           </div>
         </div>
       </header>
+
+      {profile.business && profile.business.other_branches.length > 0 ? (
+        <nav
+          aria-label={t("profile.otherBranchesAria", { name: profile.business.name })}
+          className="space-y-2 px-1 sm:px-4"
+          data-testid="vendor-other-branches"
+        >
+          <p className="m-0 text-sm text-text-2">
+            {t("profile.partOfBusiness", { name: profile.business.name })}
+          </p>
+          <h2 className="m-0 text-sm font-semibold text-text">{t("profile.otherBranches")}</h2>
+          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+            {profile.business.other_branches.map((branch) => (
+              <li key={branch.slug}>
+                <Link
+                  href={`/${locale}/v/${encodeURIComponent(branch.slug)}`}
+                  className="inline-flex min-h-11 items-center rounded-pill border border-border bg-surface px-3 text-sm text-text no-underline hover:border-primary"
+                >
+                  {branch.landmark
+                    ? t("profile.branchWithLandmark", {
+                        name: branch.display_name,
+                        landmark: branch.landmark,
+                      })
+                    : branch.display_name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
 
       <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />
     </div>
