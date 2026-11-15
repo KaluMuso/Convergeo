@@ -1,6 +1,6 @@
 -- 2026-11 analytics/RBAC audit, decision D1 (founder-approved 2026-11-13).
 --
--- 20261115100000 made the six money tables read-only for the legacy `admin` role.
+-- 20261115140000 made the six money tables read-only for the legacy `admin` role.
 -- The same M03 pattern -- a permissive policy on has_role('admin') for INSERT/UPDATE/
 -- DELETE plus table write grants to `authenticated` -- remained on 75 more tables:
 -- orders and order lines, invoices and the invoice counter, KYC, vendors, disputes,

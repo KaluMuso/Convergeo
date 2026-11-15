@@ -7,7 +7,7 @@ Phase One findings (written before any change): [`phase1-findings.md`](./phase1-
 
 | Requirement                                             | Verdict                                   | Why                                                                                                                                                                                                                                                       |
 | ------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Access control on what exists (API, database, admin UI) | **CONDITIONALLY READY**                   | Every admin route and the money tables were exercised with real requests and real SQL. One high-severity path was found and closed on this branch (S1). Conditions: merge this branch, apply migration `20261115100000`, take the decisions in section G. |
+| Access control on what exists (API, database, admin UI) | **CONDITIONALLY READY**                   | Every admin route and the money tables were exercised with real requests and real SQL. One high-severity path was found and closed on this branch (S1). Conditions: merge this branch, apply migration `20261115140000`, take the decisions in section G. |
 | Analytics data accuracy                                 | **CONDITIONALLY READY for what is shown** | Nothing is simulated. One truncation bug fixed (A1). "GMV" is order value, not money received (A2).                                                                                                                                                       |
 | Analytics coverage and the brief's role model           | **NOT READY**                             | Most requested metrics, date filters, exports, an audit-log viewer and most specialised-role write scopes do not exist in the shipping code. v2 covers part of the analytics gap but is unmerged and admin-only.                                          |
 
@@ -71,7 +71,7 @@ Read, not merged or run. Adds an event envelope and registry, `analytics_event_l
 - v2 gates `/admin/analytics/*` with `require_role("admin","superadmin")` and adds nothing to the permission map, so a role with only `analytics.read` is refused on every v2 screen. Those routes also need rows in `tests/test_admin_role_route_matrix.py`, which fails on unclassified routes by design.
 - A1 was fixed by cherry-picking v2's own commits, so both sides carry the same change.
 - v2 also edits `tests/rls/test_matrix.py`, `test_schema_convergence.py` and `test_reconcile_staging_migrations.py`; expect mechanical conflicts.
-- Migration timestamps do not collide (v2: `20261112…`; here: `20261115100000`).
+- Migration timestamps do not collide (v2: `20261112…`; here: `20261115140000`).
 
 ---
 
@@ -201,7 +201,7 @@ Verified sound: anonymous, customer and vendor denial on all 128 admin routes; n
 ### Files
 
 - `services/api/app/routers/admin_dashboards.py`, `admin_translations.py`, `cod.py`
-- `supabase/migrations/20261115100000_admin_money_tables_read_only.sql` (idempotent; manual down documented in the file and exercised)
+- `supabase/migrations/20261115140000_admin_money_tables_read_only.sql` (idempotent; manual down documented in the file and exercised)
 - Tests added: `tests/test_admin_audit_coverage.py` (9), `tests/test_admin_role_route_matrix.py` (17), `tests/rls/test_admin_money_tables_read_only.py` (31), `tests/rls/test_admin_dashboard_counts_db.py` (from v2)
 - Tests changed: `tests/rls/test_matrix.py` (six tables now select-only for every signed-in persona), `tests/test_admin_translations.py` (fixture gains an audit sink), `tests/test_admin_dashboards.py`, `tests/test_internal_digest.py` (from v2), `tests/test_schema_convergence.py`, `tests/test_reconcile_staging_migrations.py` (inventory 153 → 154)
 

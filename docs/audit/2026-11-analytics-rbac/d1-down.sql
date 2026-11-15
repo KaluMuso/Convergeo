@@ -1,4 +1,4 @@
--- Manual down for 20261115100100_admin_direct_writes_read_only.sql (D1).
+-- Manual down for 20261115140100_admin_direct_writes_read_only.sql (D1).
 -- Generated 2026-11-13 from the pre-migration catalogue of a local replay of every
 -- earlier migration. Restores the dropped/recreated policies and the client grants.
 -- Hosted Supabase also grants ALL on public tables to anon/authenticated by default;

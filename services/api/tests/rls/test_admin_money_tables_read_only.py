@@ -1,7 +1,7 @@
 """Administrators read the money tables; only the service role writes them.
 
 2026-11 analytics/RBAC audit, finding S1. Before migration
-20261115100000_admin_money_tables_read_only.sql, a user holding the `admin` role could
+20261115140000_admin_money_tables_read_only.sql, a user holding the `admin` role could
 use their own browser token against PostgREST to insert a balanced ledger transaction,
 delete ledger accounts, or rewrite payment, payout and refund rows — bypassing the API's
 state machines, payout guards and audit_log. This suite fails on that earlier schema.

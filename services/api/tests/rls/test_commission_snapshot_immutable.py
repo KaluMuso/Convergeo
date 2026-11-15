@@ -6,7 +6,7 @@ release/payout math. It is written once on the order INSERT and never updated. T
 admin included) so the commission basis can never be silently rewritten; only the DB
 owner / superuser keeps an escape hatch.
 
-Since 20261115100100 (2026-11 RBAC D1) no browser token can UPDATE orders at all —
+Since 20261115140100 (2026-11 RBAC D1) no browser token can UPDATE orders at all —
 `admin` lost orders_admin_all and the dead UPDATE grant — so the trigger is proved
 with the API's own writer, `service_role`, and admin is checked at the privilege layer.
 

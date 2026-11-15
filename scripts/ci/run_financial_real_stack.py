@@ -69,18 +69,18 @@ FORWARD = [
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
-    "20261115100000_admin_money_tables_read_only.sql",
+    "20261115140000_admin_money_tables_read_only.sql",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
-    "20261115100100_admin_direct_writes_read_only.sql",
-    "20261115100200_admin_governance_audit_consent.sql",
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
     # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
-    "20261115110000_analytics_v2_foundation.sql",
-    "20261115110100_analytics_rollups.sql",
-    "20261115110200_analytics_commercial.sql",
-    "20261115110300_analytics_search_sessions.sql",
-    "20261115110400_analytics_lusaka_day.sql",
-    "20261115110500_analytics_search_daily_retention.sql",
-    "20261115110600_analytics_session_links.sql",
+    "20261115150000_analytics_v2_foundation.sql",
+    "20261115150100_analytics_rollups.sql",
+    "20261115150200_analytics_commercial.sql",
+    "20261115150300_analytics_search_sessions.sql",
+    "20261115150400_analytics_lusaka_day.sql",
+    "20261115150500_analytics_search_daily_retention.sql",
+    "20261115150600_analytics_session_links.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [

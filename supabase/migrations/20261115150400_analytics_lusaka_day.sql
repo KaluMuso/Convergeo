@@ -14,8 +14,8 @@
 -- (analytics_v2_rollups is OFF).
 --
 -- Down (manual, after analytics_v2_rollups is OFF and the 1B-06 code is reverted):
---   re-run the analytics_rollup_day definition from 20261115110300_analytics_search_sessions.sql
---   and the analytics_commercial_daily definition from 20261115110200_analytics_commercial.sql,
+--   re-run the analytics_rollup_day definition from 20261115150300_analytics_search_sessions.sql
+--   and the analytics_commercial_daily definition from 20261115150200_analytics_commercial.sql,
 --   then recompute affected days.
 
 -- ---------------------------------------------------------------------------

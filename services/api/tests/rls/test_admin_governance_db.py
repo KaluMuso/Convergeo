@@ -1,8 +1,8 @@
 """2026-11 admin governance, database layer (D1, S5 audit trail, D4, DPA consent).
 
-* D1 — migration 20261115100100: the legacy `admin` role reads but cannot write the
+* D1 — migration 20261115140100: the legacy `admin` role reads but cannot write the
   75 tables that kept the M03 `has_role('admin')` write policies; owners keep writing.
-* S5 — migration 20261115100200: audit_log is append-only for every role and records
+* S5 — migration 20261115140200: audit_log is append-only for every role and records
   the actor's roles at the time of the action.
 * D4 — deactivate_admin_account(): revoke every admin role, superadmin-only, audited,
   never self, never the last superadmin.

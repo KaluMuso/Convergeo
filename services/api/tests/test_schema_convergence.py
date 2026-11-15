@@ -99,18 +99,18 @@ POST_REPAIR_PENDING_VERSIONS = [
     # In-app notification center (additive, reversible).
     "20261113130000",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
-    "20261115100000",
+    "20261115140000",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
-    "20261115100100",
-    "20261115100200",
+    "20261115140100",
+    "20261115140200",
     # Analytics v2 (Intelligence 1A/1B), additive and flag-gated.
-    "20261115110000",
-    "20261115110100",
-    "20261115110200",
-    "20261115110300",
-    "20261115110400",
-    "20261115110500",
-    "20261115110600",
+    "20261115150000",
+    "20261115150100",
+    "20261115150200",
+    "20261115150300",
+    "20261115150400",
+    "20261115150500",
+    "20261115150600",
 ]
 
 def _module() -> Any:
@@ -173,18 +173,18 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         "20261109120000",
     ]
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
-    audit_s1 = ["20261115100000"]
+    audit_s1 = ["20261115140000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
-    governance = ["20261115100100", "20261115100200"]
+    governance = ["20261115140100", "20261115140200"]
     analytics_v2 = [
-        "20261115110000",
-        "20261115110100",
-        "20261115110200",
-        "20261115110300",
-        "20261115110400",
-        "20261115110500",
-        "20261115110600",
+        "20261115150000",
+        "20261115150100",
+        "20261115150200",
+        "20261115150300",
+        "20261115150400",
+        "20261115150500",
+        "20261115150600",
     ]
     assert actual_versions[-29:] == (
         repairs
