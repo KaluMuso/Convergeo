@@ -248,7 +248,10 @@ def customer_offer_use_counts(
         return {}
     rows = _rows(
         client.table("order_items")
-        .select("offer_id, order_id, orders!inner(customer_id, status)")
+        .select(
+            "offer_id, order_id, orders!inner(customer_id, status, "
+            "checkout_groups(status))"
+        )
         .in_("offer_id", ids)
         .eq("orders.customer_id", customer_id)
         .neq("orders.status", "cancelled")
@@ -256,6 +259,12 @@ def customer_offer_use_counts(
     )
     seen: dict[str, set[str]] = {}
     for row in rows:
+        order = row.get("orders")
+        group = order.get("checkout_groups") if isinstance(order, dict) else None
+        if isinstance(group, dict) and group.get("status") in ("expired", "abandoned"):
+            # Unpaid checkout that expired / was abandoned: never a redemption
+            # (same rule as the in-transaction count in orders/create.py).
+            continue
         seen.setdefault(str(row.get("offer_id")), set()).add(str(row.get("order_id")))
     return {offer_id: len(orders) for offer_id, orders in seen.items()}
 

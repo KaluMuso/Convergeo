@@ -152,8 +152,9 @@ _CLASS_E_CAPACITY_ERROR_RE = re.compile(
 # longer live, or its gift pool cannot cover the gift line.
 _OFFER_EXPIRED_MARKER = "FIXA_OFFER_EXPIRED"
 _OFFER_GIFT_MARKER = "FIXA_OFFER_GIFT_UNAVAILABLE"
+_OFFER_LIMIT_MARKER = "FIXA_OFFER_LIMIT_REACHED"
 _OFFER_ERROR_RE = re.compile(
-    r"FIXA_OFFER_(?P<kind>EXPIRED|GIFT_UNAVAILABLE):"
+    r"FIXA_OFFER_(?P<kind>EXPIRED|GIFT_UNAVAILABLE|LIMIT_REACHED):"
     r"(?P<offer_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
     re.IGNORECASE,
 )
@@ -181,11 +182,19 @@ def _offer_item_columns_sql(
     return columns, values
 
 
-def _lock_live_offers_sql(cart_lines: list[CartLineInput]) -> list[str]:
+def _lock_live_offers_sql(cart_lines: list[CartLineInput], customer_sql: str) -> list[str]:
     """Row-lock (id order) every offer that priced this cart; abort if one is not live.
 
     FOR UPDATE rather than FOR SHARE: a gift pool is updated later in the same
     tx, and two share-holders upgrading would deadlock.
+
+    The per-customer limit is enforced here, under that lock: a second order of
+    the same customer for the same offer blocks on the row lock until the first
+    commits, and the redemption count (a later statement, so a fresh READ
+    COMMITTED snapshot) then sees the first order. Two simultaneous orders can
+    never both pass. A redemption = a distinct order of this customer carrying
+    the offer, not cancelled, whose checkout did not expire unpaid / get
+    abandoned (the same rule ``store.customer_offer_use_counts`` reads).
     """
     offer_ids = sorted({str(line.offer_id) for line in cart_lines if line.offer_id})
     statements: list[str] = []
@@ -194,8 +203,11 @@ def _lock_live_offers_sql(cart_lines: list[CartLineInput]) -> list[str]:
         statements.append(
             f"""
 DO $offer$
+DECLARE
+  v_limit integer;
+  v_used integer;
 BEGIN
-  PERFORM 1 FROM public.offers o
+  SELECT o.per_customer_limit INTO v_limit FROM public.offers o
   WHERE o.id = {offer_sql}
     AND o.status = 'active'
     AND NOT o.paused_by_admin
@@ -204,6 +216,19 @@ BEGIN
   FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION '{_OFFER_EXPIRED_MARKER}:%', {sql_literal(offer_id)};
+  END IF;
+  IF v_limit IS NOT NULL THEN
+    SELECT count(DISTINCT oi.order_id)::integer INTO v_used
+    FROM public.order_items oi
+    JOIN public.orders ord ON ord.id = oi.order_id
+    LEFT JOIN public.checkout_groups cg ON cg.id = ord.checkout_group_id
+    WHERE oi.offer_id = {offer_sql}
+      AND ord.customer_id = {customer_sql}
+      AND ord.status <> 'cancelled'
+      AND coalesce(cg.status, '') NOT IN ('expired', 'abandoned');
+    IF v_used >= v_limit THEN
+      RAISE EXCEPTION '{_OFFER_LIMIT_MARKER}:%', {sql_literal(offer_id)};
+    END IF;
   END IF;
 END
 $offer$;
@@ -1045,7 +1070,7 @@ def create_orders_atomic(
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
 
     parent_item_by_cart_line: dict[str, str] = {}
-    statements.extend(_lock_live_offers_sql(cart_lines))
+    statements.extend(_lock_live_offers_sql(cart_lines, customer_sql))
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
         vendor_sql = sql_uuid(order.vendor_id, "vendor_id")
@@ -1209,15 +1234,20 @@ WHERE id = {session_sql};
             )
         offer_match = _OFFER_ERROR_RE.search(error)
         if offer_match is not None:
-            gift = offer_match.group("kind").upper() == "GIFT_UNAVAILABLE"
-            code = "offers.gift_out_of_stock" if gift else "offers.expired"
+            kind = offer_match.group("kind").upper()
+            code, message = {
+                "GIFT_UNAVAILABLE": (
+                    "offers.gift_out_of_stock",
+                    "The free gift for an offer in your cart has run out",
+                ),
+                "LIMIT_REACHED": (
+                    "offers.limit_reached",
+                    "You have already used this offer the maximum number of times",
+                ),
+            }.get(kind, ("offers.expired", "An offer in your cart is no longer available"))
             raise AppError(
                 code=code,
-                message=(
-                    "The free gift for an offer in your cart has run out"
-                    if gift
-                    else "An offer in your cart is no longer available"
-                ),
+                message=message,
                 http_status=409,
                 details={
                     "message_key": code,

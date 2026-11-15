@@ -2414,7 +2414,10 @@
       "status": "Status",
       "maxApplications": "Max times per order",
       "save": "Save offer",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "perCustomerLimit": "Uses per customer",
+      "perCustomerLimitHint": "How many orders one customer can use this offer on. Leave blank for no limit.",
+      "perCustomerLimitPlaceholder": "No limit"
     },
     "status": {
       "draft": "Draft",
@@ -2454,7 +2457,8 @@
       "tooManyActive": "You have reached the limit of active offers.",
       "giftStockBelowReserved": "Gift stock cannot go below the gifts already promised.",
       "typeImmutable": "The offer type cannot be changed.",
-      "rateLimited": "Too many changes. Wait a minute and try again."
+      "rateLimited": "Too many changes. Wait a minute and try again.",
+      "perCustomerLimitInvalid": "Enter a whole number from 1 to 1,000, or leave it blank."
     }
   }
 }

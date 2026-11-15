@@ -28,6 +28,7 @@ export function resolveAdminNavCapabilities(
     merch: has("ads.manage"),
     homeFeed: has("ads.manage"),
     advertising: has("ads.manage"),
+    offers: has("ads.manage"),
     clips: unrestricted,
     events: has("events.manage"),
     config: unrestricted,

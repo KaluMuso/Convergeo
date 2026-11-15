@@ -70,6 +70,10 @@ class OfferWriteRequest(StrictModel):
     pay_m: int | None = Field(default=None, ge=1, le=99)
     gift_stock_total: int | None = Field(default=None, ge=0, le=1_000_000)
     max_applications_per_order: int = Field(default=1, ge=1, le=20)
+    #: Orders per customer that may use this offer (None = unlimited). Mirrors
+    #: offers_per_customer_limit_check; enforced under the offer row lock at
+    #: order placement (services/orders/create.py).
+    per_customer_limit: int | None = Field(default=None, ge=1, le=1000)
     items: list[OfferItemIn] = Field(min_length=1, max_length=MAX_TRIGGERS + 1)
 
     @model_validator(mode="after")

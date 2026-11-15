@@ -10,8 +10,11 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from collections.abc import Generator
+import threading
+import time
+from collections.abc import Callable, Generator
 
+import psycopg
 import pytest
 from app.errors import AppError
 from app.services.offers.apply import expand_cart_lines_for_order
@@ -138,6 +141,17 @@ def _place(
     lines: list[tuple[str, int, int]],
 ) -> tuple[str, list[CartLineInput]]:
     """Price with offers, claim holds and place one COD pickup order; return session."""
+    session_id, expanded, place = _prepare(conn, service, lines)
+    place()
+    return session_id, expanded
+
+
+def _prepare(
+    conn: PgConn,
+    service: SupabaseServiceClient,
+    lines: list[tuple[str, int, int]],
+) -> tuple[str, list[CartLineInput], Callable[[], object]]:
+    """Price + claim holds for one session; return a callable that places it."""
     cart = [
         CartLineInput(
             cart_item_id=str(uuid.uuid4()),
@@ -164,24 +178,27 @@ def _place(
         assert claim_reservation(
             listing_id=listing_id, checkout_group_id=session_id, qty=qty, ttl_minutes=15
         ).claimed
-    create_orders_atomic(
-        client=service.client,
-        customer_id=CUSTOMER_ID,
-        session_id=session_id,
-        idempotency_key=f"idem-{session_id}",
-        payment_method="cod",
-        cart_lines=expanded,
-        vendor_groups=[
-            VendorFulfilmentInput(
-                vendor_id=VENDOR_A,
-                fulfilment="pickup",
-                delivery_zone=None,
-                delivery_fee_ngwee=0,
-                subtotal_ngwee=subtotal,
-            )
-        ],
-    )
-    return session_id, expanded
+
+    def place() -> object:
+        return create_orders_atomic(
+            client=service.client,
+            customer_id=CUSTOMER_ID,
+            session_id=session_id,
+            idempotency_key=f"idem-{session_id}",
+            payment_method="cod",
+            cart_lines=expanded,
+            vendor_groups=[
+                VendorFulfilmentInput(
+                    vendor_id=VENDOR_A,
+                    fulfilment="pickup",
+                    delivery_zone=None,
+                    delivery_fee_ngwee=0,
+                    subtotal_ngwee=subtotal,
+                )
+            ],
+        )
+
+    return session_id, expanded, place
 
 
 def _order_id(conn: PgConn, session_id: str) -> str:
@@ -583,3 +600,127 @@ class TestOfferGuardsAndRls:
         # Clients never see gift reservations.
         res = self._as(db, VENDOR_A_OWNER, "SELECT 1 FROM public.offer_gift_reservations")
         assert not getattr(res, "ok", True)
+
+
+@pytest.mark.usefixtures("db_url_env")
+class TestPerCustomerLimitRaceProof:
+    """The per-customer offer limit is enforced inside the order transaction.
+
+    The cart-side filter (``store.customer_offer_use_counts``) is stubbed to
+    "no prior use" so every checkout below is priced WITH the offer, exactly as
+    two tabs priced before either order exists; only the in-transaction check
+    stands between them and a second redemption.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _priced_before_any_order(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "app.services.offers.store.customer_offer_use_counts",
+            lambda *_args, **_kwargs: {},
+        )
+
+    def _limited_offer(self, db: PgConn, limit: int = 1) -> tuple[str, str]:
+        listing = _listing(db, price=5_000, stock=100)
+        offer_id = _offer(
+            db,
+            offer_type="buy_n_pay_m",
+            items=[("eligible", listing)],
+            extra={"buy_n": 2, "pay_m": 1, "per_customer_limit": limit},
+        )
+        return listing, offer_id
+
+    def _redemptions(self, db: PgConn, offer_id: str) -> int:
+        return int(
+            _scalar(
+                db,
+                "SELECT count(DISTINCT oi.order_id)::text FROM public.order_items oi "
+                "JOIN public.orders o ON o.id = oi.order_id "
+                f"WHERE oi.offer_id = '{offer_id}' AND o.customer_id = '{CUSTOMER_ID}' "
+                "AND o.status <> 'cancelled'",
+            )
+        )
+
+    def test_sequential_second_order_over_the_limit_is_refused(
+        self, db: PgConn, service: SupabaseServiceClient
+    ) -> None:
+        listing, offer_id = self._limited_offer(db)
+        # Both checkouts were priced with the offer before either was placed
+        # (two tabs): the cart-side filter cannot see the other order yet.
+        _, first_lines, place_first = _prepare(db, service, [(listing, 2, 5_000)])
+        _, second_lines, place_second = _prepare(db, service, [(listing, 2, 5_000)])
+        assert any(line.offer_id == offer_id for line in first_lines)
+        assert any(line.offer_id == offer_id for line in second_lines)
+        place_first()
+        with pytest.raises(AppError) as excinfo:
+            place_second()
+        assert excinfo.value.code == "offers.limit_reached"
+        assert excinfo.value.http_status == 409
+        assert self._redemptions(db, offer_id) == 1
+
+    def test_two_simultaneous_orders_on_two_connections_only_one_passes(
+        self, db: PgConn, service: SupabaseServiceClient
+    ) -> None:
+        listing, offer_id = self._limited_offer(db)
+        _, _, place_a = _prepare(db, service, [(listing, 2, 5_000)])
+        _, _, place_b = _prepare(db, service, [(listing, 2, 5_000)])
+
+        outcomes: list[object] = []
+
+        def run(place: Callable[[], object]) -> None:
+            try:
+                outcomes.append(place())
+            except AppError as exc:
+                outcomes.append(exc)
+
+        # A third connection holds the offer row lock so that both placements
+        # (each its own psql connection) are inside their transactions and
+        # blocked on the same row at the same moment, then lets them race.
+        with psycopg.connect(db.dsn, autocommit=False) as holder:
+            holder.execute(
+                "SELECT 1 FROM public.offers WHERE id = %s FOR UPDATE", (offer_id,)
+            )
+            threads = [threading.Thread(target=run, args=(p,)) for p in (place_a, place_b)]
+            for thread in threads:
+                thread.start()
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                waiting = int(
+                    _scalar(
+                        db,
+                        "SELECT count(*)::text FROM pg_stat_activity "
+                        "WHERE wait_event_type = 'Lock' AND datname = current_database() "
+                        "AND backend_type = 'client backend'",
+                    )
+                )
+                if waiting >= 2:
+                    break
+                time.sleep(0.05)
+            assert waiting >= 2, "both placements should be blocked on the offer lock"
+            holder.rollback()
+        for thread in threads:
+            thread.join(timeout=60)
+
+        errors = [o for o in outcomes if isinstance(o, AppError)]
+        successes = [o for o in outcomes if not isinstance(o, AppError)]
+        assert len(outcomes) == 2
+        assert len(successes) == 1, outcomes
+        assert len(errors) == 1 and errors[0].code == "offers.limit_reached"
+        assert self._redemptions(db, offer_id) == 1
+
+    def test_cancelled_order_frees_the_redemption(
+        self, db: PgConn, service: SupabaseServiceClient
+    ) -> None:
+        listing, offer_id = self._limited_offer(db)
+        session_id, _ = _place(db, service, [(listing, 2, 5_000)])
+        order_id = _order_id(db, session_id)
+        transition_order(
+            order_id=order_id,
+            event=OrderEvent.CANCEL,
+            actor_role=ActorRole.CUSTOMER,
+            actor_id=CUSTOMER_ID,
+            note="test",
+        )
+        _, lines, place = _prepare(db, service, [(listing, 2, 5_000)])
+        assert any(line.offer_id == offer_id for line in lines)
+        place()
+        assert self._redemptions(db, offer_id) == 1

@@ -221,6 +221,10 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/admin/flash-deals"): "ads.manage",
     ("POST", "/admin/flash-deals"): "ads.manage",
     ("PATCH", "/admin/flash-deals/{deal_id}"): "ads.manage",
+    # W8 vendor offers oversight (promotions live with flash deals / merch).
+    ("GET", "/admin/offers"): "ads.manage",
+    ("POST", "/admin/offers/{offer_id}/pause"): "ads.manage",
+    ("POST", "/admin/offers/{offer_id}/unpause"): "ads.manage",
     ("POST", "/admin/qa/{kind}/{item_id}/moderate"): "products.manage",
 }
 
