@@ -180,6 +180,15 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     rate_scope_sync = ["20261114050000"]
     audit_s1 = ["20261115140000"]
     governance = ["20261115140100", "20261115140200"]
+    analytics_v2 = [
+        "20261115150000",
+        "20261115150100",
+        "20261115150200",
+        "20261115150300",
+        "20261115150400",
+        "20261115150500",
+        "20261115150600",
+    ]
     assert actual_versions[-30:] == (
         repairs
         + post_repair
@@ -190,6 +199,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + rate_scope_sync
         + audit_s1
         + governance
+        + analytics_v2
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
