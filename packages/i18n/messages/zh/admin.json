@@ -3,7 +3,17 @@
   "shell": {
     "eyebrow": "Convergeo 运营",
     "environment": "加固管理源",
-    "signOut": "退出登录"
+    "signOut": "退出登录",
+    "account": {
+      "menuLabel": "账户菜单",
+      "unknownUser": "已登录",
+      "roleLine": "角色：{role}",
+      "roles": {
+        "superadmin": "超级管理员",
+        "admin": "管理员",
+        "custom": "自定义角色"
+      }
+    }
   },
   "nav": {
     "home": "仪表板",
@@ -77,6 +87,7 @@
     },
     "pages": {
       "common": "所有应用——共享界面、导航、主题",
+      "nav": "所有应用 — 导航标签",
       "auth": "所有应用——登录与注册",
       "catalog": "客户端——商品列表、详情、对比",
       "search": "客户端——搜索与建议",
@@ -317,7 +328,9 @@
       "cancel": "取消",
       "submitting": "正在保存决定…",
       "success": "决定已记录——商家将收到通知。",
-      "failure": "无法保存决定。"
+      "failure": "无法保存决定。",
+      "notFound": "未找到",
+      "notFoundBody": "此 KYC 申请不存在或已被删除。"
     },
     "reasons": {
       "blurry_document": "文件模糊或无法辨认",
@@ -388,7 +401,9 @@
     },
     "canonical": {
       "dialog": {
-        "details": "商品详情"
+        "details": "商品详情",
+        "failureRetryHint": "未保存任何内容。请检查网络后再次点击按钮；如果仍然失败，请刷新页面。",
+        "failureReference": "参考编号：{id}"
       }
     }
   },

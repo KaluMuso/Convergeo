@@ -26,11 +26,8 @@
       "rejected": "未验证",
       "suspended": "已暂停"
     },
-    "verifiedTitle": "企业模式已激活",
-    "verifiedBody": "您可以浏览并按阶梯价格购买批发用品。",
     "pendingTitle": "验证审核中",
     "pendingBody": "我们正在核实您的 PACRA 信息。通常需要 1–2 个工作日。",
-    "browseSupplies": "浏览用品",
     "legalNameLabel": "注册企业名称",
     "legalNamePlaceholder": "与您的 PACRA 证书上显示的一致",
     "registrationLabel": "PACRA 注册号",

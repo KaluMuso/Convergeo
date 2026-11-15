@@ -68,7 +68,7 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
-    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000_rate_counter_scope_constraint_sync.sql",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261115200000_pay_at_door.sql",
