@@ -180,7 +180,8 @@ TRANSITION_TABLE: tuple[TransitionSpec, ...] = (
         OrderStatus.PLACED,
         OrderEvent.CANCEL,
         OrderStatus.CANCELLED,
-        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN}),
+        # SYSTEM: the unpaid-prepaid auto-cancel sweeper (internal_order_jobs).
+        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN, ActorRole.SYSTEM}),
     ),
     TransitionSpec(
         OrderStatus.CONFIRMED,

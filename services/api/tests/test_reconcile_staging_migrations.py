@@ -116,6 +116,8 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261116000000",
 }
 
 
