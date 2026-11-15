@@ -31,6 +31,7 @@ type AccountHeaderClientProps = {
   locale: string;
   labels: AccountHeaderClientLabels;
   localeSwitcher: React.ReactNode;
+  notificationSlot?: React.ReactNode;
 };
 
 function formatCartCount(count: number): string {
@@ -58,6 +59,7 @@ export function AccountAppHeaderClient({
   locale,
   labels,
   localeSwitcher,
+  notificationSlot,
 }: AccountHeaderClientProps) {
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
@@ -96,17 +98,20 @@ export function AccountAppHeaderClient({
       cartLabel={labels.cart}
       cartCountLabel={cartCountLabel}
       accountMenuSlot={
-        <AccountHeaderMenu
-          locale={locale}
-          labels={{
-            accountMenuAria: labels.accountMenuAria,
-            accountOverview: labels.accountOverview,
-            accountOrders: labels.accountOrders,
-            accountPreferences: labels.accountPreferences,
-            signOut: labels.signOut,
-            signingOut: labels.signingOut,
-          }}
-        />
+        <>
+          {notificationSlot}
+          <AccountHeaderMenu
+            locale={locale}
+            labels={{
+              accountMenuAria: labels.accountMenuAria,
+              accountOverview: labels.accountOverview,
+              accountOrders: labels.accountOrders,
+              accountPreferences: labels.accountPreferences,
+              signOut: labels.signOut,
+              signingOut: labels.signingOut,
+            }}
+          />
+        </>
       }
       LinkComponent={Link}
     />

@@ -163,6 +163,8 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # the for_you section inside the handler) + fire-and-forget ad beacon that
         # only increments aggregates for live placements. Both IP rate-limited.
         ("GET", "/home/feed"),
+        # Popular-now listing stream: public, keyset cursor, IP rate-limited.
+        ("GET", "/home/stream"),
         # Public recommendation rails / live flash deals / published product Q&A —
         # read-only, IP rate-limited, same visibility rules as the PLP/PDP.
         ("GET", "/products/{slug}/recommendations"),

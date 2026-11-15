@@ -11,11 +11,11 @@
  *   node scripts/ci/e2e-staging-probe.mjs            # customer (default)
  *   node scripts/ci/e2e-staging-probe.mjs customer
  *   node scripts/ci/e2e-staging-probe.mjs vendor
+ *   node scripts/ci/e2e-staging-probe.mjs admin
  *
- * There is deliberately NO admin portal here: no current Playwright spec
- * navigates the admin origin, and admin identity is proven independently by
- * Deploy staging's own Vercel Preview proof. Add a portal entry below only when
- * a spec actually navigates it.
+ * Register a portal below only when a spec actually navigates it. Admin is
+ * registered because the pilot admin-operator journey navigates the admin
+ * origin directly (e2e/specs/pilot-vendor-admin.spec.ts).
  *
  * Exit codes:
  *   0 — PASS (probe succeeded; safe to run Playwright)
@@ -64,6 +64,13 @@ export const PORTALS = {
     baseUrlVar: "E2E_VENDOR_BASE_URL",
     expectedApp: "vendor",
     bypassVars: ["VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR", "VERCEL_AUTOMATION_BYPASS_SECRET"],
+    isReferenceOrigin: false,
+  },
+  admin: {
+    portal: "admin",
+    baseUrlVar: "E2E_ADMIN_BASE_URL",
+    expectedApp: "admin",
+    bypassVars: ["VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN", "VERCEL_AUTOMATION_BYPASS_SECRET"],
     isReferenceOrigin: false,
   },
 };

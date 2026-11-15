@@ -1,6 +1,7 @@
 import { hasAuditableKycRecord, type KycIntegrityInput } from "../../_lib/kyc-integrity";
 
 import type { KycStatus } from "../_lib/types";
+import type { ReactNode } from "react";
 
 export type StatusVariant = "pending" | "approved" | "rejected" | "resubmit";
 
@@ -62,6 +63,8 @@ type StatusScreenProps = {
   dashboardHref: string;
   listingsHref: string;
   resubmitHref: string;
+  /** Step-by-step checklist; when present it also carries the rejection reason. */
+  checklist?: ReactNode;
 };
 
 export function StatusScreen({
@@ -71,6 +74,7 @@ export function StatusScreen({
   dashboardHref,
   listingsHref,
   resubmitHref,
+  checklist,
 }: StatusScreenProps) {
   const copy =
     variant === "approved"
@@ -101,7 +105,7 @@ export function StatusScreen({
         <h2 className="text-lg font-semibold text-text">{copy.title}</h2>
         <p className="text-sm text-text-2">{copy.body}</p>
 
-        {variant === "rejected" && rejectionReason ? (
+        {variant === "rejected" && rejectionReason && !checklist ? (
           <div className="rounded bg-bg-2 p-3 text-sm">
             <p className="mb-1 font-medium text-text">{labels.rejected.reasonLabel}</p>
             <p className="m-0 text-text-2">{rejectionReason}</p>
@@ -111,6 +115,8 @@ export function StatusScreen({
         {variant === "rejected" ? (
           <p className="text-sm text-text-2">{labels.rejected.gateNotice}</p>
         ) : null}
+
+        {checklist}
 
         <a
           href={primaryHref}

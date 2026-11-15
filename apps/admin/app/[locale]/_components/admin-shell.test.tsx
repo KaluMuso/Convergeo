@@ -41,6 +41,8 @@ vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("@vergeo/ui/src/theme-toggle", () => ({ ThemeToggle: () => null }));
+// The notification bell polls its own API; these suites assert permission-shell fetches only.
+vi.mock("./admin-notification-bell", () => ({ AdminNotificationBell: () => null }));
 vi.mock("./sign-out-button", () => ({ SignOutButton: () => null }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

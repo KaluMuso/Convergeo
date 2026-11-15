@@ -160,6 +160,36 @@ export const SPEC_CLASSIFICATION: readonly SpecEntry[] = [
     rationale:
       "REQUIRED_STRICT vendor sell flow; navigates the vendor origin via requireVendorBaseUrl()/urlOn(), covered by the portalBypass auto-fixture on any project.",
   },
+  {
+    file: "locale-smoke.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "per-locale home/PDP raw-i18n and console scan; pins its own 360x800 viewport, independent of project viewport and network profile.",
+  },
+  {
+    file: "pilot-cod-checkout.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "mock-API COD checkout (under/over the K500 cap, confirmation honesty); pins 360x800, no network-profile assertion.",
+  },
+  {
+    file: "pilot-cod-journey.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "real-stack guest -> search -> PDP -> cart -> OTP -> COD -> tracking chain (OTP/approval gated); pins 360x800.",
+  },
+  {
+    file: "pilot-services-events.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "services RFQ (mock API) and guest event-ticket stopping point; functional, viewport-independent.",
+  },
+  {
+    file: "pilot-vendor-admin.spec.ts",
+    class: "BEHAVIORAL_ONCE",
+    rationale:
+      "vendor inbox/payouts and admin operator reads on separate portal origins (OTP / operator-credential gated); covered by the portalBypass auto-fixture.",
+  },
 ] as const;
 
 /** Which project name(s) a given class runs on. */

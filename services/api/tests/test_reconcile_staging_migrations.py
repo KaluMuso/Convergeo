@@ -83,6 +83,10 @@ PENDING_REPAIR_VERSIONS = {
     "20261113071000",
     # Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
     "20261113120500",
+    # In-app notification center tables + triggers (additive, reversible).
+    "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
     "20261115180000",

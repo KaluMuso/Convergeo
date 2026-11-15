@@ -22,6 +22,7 @@ import {
   resolveAdminActiveGroup,
   resolveAdminActiveItem,
 } from "./admin-nav-config";
+import { AdminNotificationBell } from "./admin-notification-bell";
 import { SignOutButton } from "./sign-out-button";
 
 type AdminShellProps = {
@@ -92,10 +93,14 @@ export function AdminShell({ locale, children }: AdminShellProps) {
   const activeKey = resolveAdminActiveItem(rest, visibleItems);
   const activeGroup = resolveAdminActiveGroup(rest, navGroups);
   const requested = resolveAdminActiveItem(rest);
+  // Personal, role-scoped surfaces every admin may open (the API filters to
+  // the caller's own rows), so they are not gated by nav permissions.
+  const isPersonalRoute = rest === "/notifications";
   const denied =
-    (requested === "roles" && !capabilities.roles) ||
-    (!grants?.unrestricted &&
-      (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags")));
+    !isPersonalRoute &&
+    ((requested === "roles" && !capabilities.roles) ||
+      (!grants?.unrestricted &&
+        (!requested || !capabilities[requested] || rest.startsWith("/moderation/flags"))));
 
   return (
     <div className="min-h-dvh bg-bg text-text">
@@ -107,6 +112,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
             <p className="text-xs text-panel-muted">{t("shell.environment")}</p>
           </div>
           <div className="flex items-center gap-2">
+            <AdminNotificationBell locale={locale} />
             <ThemeToggle
               label={tCommon("theme.label")}
               lightLabel={tCommon("theme.light")}

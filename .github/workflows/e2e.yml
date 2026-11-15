@@ -351,8 +351,7 @@ jobs:
       # Every portal Playwright navigates directly must prove the SAME
       # E2E_EXPECT_SHA before a single browser is installed. Both probes read
       # that one variable, so they cannot certify different candidates.
-      # No admin preflight: no current spec navigates the admin origin, and
-      # admin identity is proven independently by Deploy staging.
+      # Admin is probed because the pilot admin-operator journey navigates it.
       - name: Probe staging customer (identity + protection)
         id: customer_probe
         run: node scripts/ci/e2e-staging-probe.mjs customer
@@ -360,6 +359,10 @@ jobs:
       - name: Probe staging vendor (identity + protection)
         id: vendor_probe
         run: node scripts/ci/e2e-staging-probe.mjs vendor
+
+      - name: Probe staging admin (identity + protection)
+        id: admin_probe
+        run: node scripts/ci/e2e-staging-probe.mjs admin
 
       # ── Canonical synthetic seed — strict certification runs only ──────────
       # Exactly ONE destructive reset per run, before any browser exists. The

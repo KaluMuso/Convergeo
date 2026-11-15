@@ -20,6 +20,13 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.home_feed.models import AdEventBatch, AdEventResult, HomeFeedPage
 from app.services.home_feed.resolver import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, build_feed_page
+from app.services.home_feed.stream import (
+    MAX_CURSOR_LENGTH,
+    STREAM_DEFAULT_LIMIT,
+    STREAM_MAX_LIMIT,
+    HomeStreamPage,
+    build_stream_page,
+)
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query, Request, Response
 
@@ -29,6 +36,7 @@ router = APIRouter(prefix="/home", tags=["home-feed"])
 
 FEED_CACHE_TTL_SECONDS = 30
 FEED_CACHE_PREFIX = "home:feed:v1:"
+STREAM_CACHE_PREFIX = "home:stream:v1:"
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya", "fr", "zh"})
 
 
@@ -116,6 +124,42 @@ async def home_feed(
         )
     else:
         response.headers["Cache-Control"] = "private, no-store"
+    return page
+
+
+@router.get("/stream", response_model=HomeStreamPage)
+async def home_stream(
+    request: Request,
+    response: Response,
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+    cursor: Annotated[str | None, Query(max_length=MAX_CURSOR_LENGTH)] = None,
+    limit: Annotated[int, Query(ge=1, le=STREAM_MAX_LIMIT)] = STREAM_DEFAULT_LIMIT,
+) -> HomeStreamPage:
+    """Cursor-paginated "Popular now" listings that follow the home sections.
+
+    Identical for every shopper (no personalisation), so it is publicly
+    cacheable. A bad cursor is a 400 and never restarts the stream.
+    """
+    _rate_limit(
+        request,
+        supabase.client,
+        scope=PUBLIC_DISCOVERY_READ.scope,
+        limit=PUBLIC_DISCOVERY_READ.limit,
+        window=PUBLIC_DISCOVERY_READ.window,
+    )
+    cache_key = f"{STREAM_CACHE_PREFIX}{limit}:{cursor or '0'}"
+    cache_control = f"public, s-maxage={FEED_CACHE_TTL_SECONDS}, stale-while-revalidate=60"
+    cached = get_cached_json(cache_key)
+    if isinstance(cached, dict):
+        try:
+            page = HomeStreamPage.model_validate(cached)
+            response.headers["Cache-Control"] = cache_control
+            return page
+        except Exception:
+            pass
+    page = build_stream_page(supabase.client, cursor=cursor, limit=limit)
+    set_cached_json(cache_key, page.model_dump(mode="json"), ttl_seconds=FEED_CACHE_TTL_SECONDS)
+    response.headers["Cache-Control"] = cache_control
     return page
 
 

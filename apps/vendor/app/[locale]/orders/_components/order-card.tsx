@@ -9,6 +9,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
+import { HomeTaskList } from "../../_components/home-tasks";
+import { DashboardSkeleton, ListSkeleton } from "../../_components/vendor-skeletons";
+import { buildHomeTasks } from "../../_lib/home-tasks";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import {
@@ -21,10 +24,13 @@ import {
   Input,
   orderStatusTone,
   PriceBlock,
-  Spinner,
   StatusChip,
 } from "../../listings/new/_lib/ui";
+import { buildKycChecklist } from "../../onboarding/_lib/kyc-checklist";
 import { createKycClient } from "../../onboarding/_lib/kyc-client";
+import { isBoundByDispatchCutoff } from "../_lib/order-guidance";
+
+import { DispatchCutoffBanner, OrderNextStepHint, useDispatchCutoff } from "./order-guidance";
 
 import type { OrderActionResponse, VendorActionName } from "./action-bar";
 import type { KycApplication } from "../../onboarding/_lib/types";
@@ -261,6 +267,7 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
           <p className="mt-1 text-xs text-text-3">
             {t("queue.card.items", { count: order.item_count })}
           </p>
+          <OrderNextStepHint order={order} />
           <p className="mt-1 text-sm font-medium text-text">
             <PriceBlock ngwee={order.total_ngwee} />
           </p>
@@ -396,7 +403,9 @@ type OrdersQueueViewProps = {
 
 export function OrdersQueueView({ locale, initialStatus = "needs_action" }: OrdersQueueViewProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
+  const cutoff = useDispatchCutoff();
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [orders, setOrders] = useState<OrderQueueItem[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -485,13 +494,22 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
     void load({ background: true });
   };
 
-  if (sessionLoading || loading) {
+  if (sessionLoading || (loading && orders.length === 0)) {
+    return <ListSkeleton label={t("queue.loading")} />;
+  }
+
+  if (error && orders.length === 0) {
     return (
-      <div className="flex min-h-40 items-center justify-center">
-        <Spinner label={t("queue.loading")} />
-      </div>
+      <VendorErrorState
+        title={error}
+        body={t("queue.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => void load()}
+      />
     );
   }
+
+  const hasCutoffBoundOrder = orders.some((order) => isBoundByDispatchCutoff(order));
 
   return (
     <PullToRefreshList
@@ -504,12 +522,18 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
           <p className="text-sm text-text-2">{t("queue.intro")}</p>
         </header>
 
+        {hasCutoffBoundOrder ? <DispatchCutoffBanner cutoff={cutoff} /> : null}
+
         {offline ? (
-          <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text">
+          <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text" role="status">
             {t("queue.offlineNotice")}
           </p>
         ) : null}
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {error ? (
+          <p className="text-sm text-danger" role="alert">
+            {error}
+          </p>
+        ) : null}
         {refreshing ? <p className="text-xs text-text-3">{t("queue.refreshing")}</p> : null}
 
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -525,6 +549,7 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
                     ? "border-primary bg-primary text-[var(--primary-btn-fg)]"
                     : "border-border bg-surface text-text"
                 }`}
+                aria-pressed={active}
                 onClick={() => setStatusFilter(filter.key)}
               >
                 {filter.label}
@@ -535,15 +560,36 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
         </div>
 
         {orders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-2">
-            <p>{t("queue.empty")}</p>
-            <Link
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary"
-              href={`/${locale}`}
-            >
-              {t("queue.emptyCta")}
-            </Link>
-          </div>
+          statusFilter === "needs_action" ? (
+            <VendorEmptyState
+              title={t("queue.emptyNeedsAction.title")}
+              body={t("queue.emptyNeedsAction.body")}
+              action={
+                <Link
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                  href={`/${locale}`}
+                >
+                  {t("queue.emptyCta")}
+                </Link>
+              }
+              data-testid="vendor-queue-empty"
+            />
+          ) : (
+            <VendorEmptyState
+              title={t("queue.emptyFiltered.title")}
+              body={t("queue.emptyFiltered.body")}
+              action={
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                  onClick={() => setStatusFilter("needs_action")}
+                >
+                  {t("queue.emptyFiltered.cta")}
+                </button>
+              }
+              data-testid="vendor-queue-empty"
+            />
+          )
         ) : (
           <ul className="flex flex-col gap-3">
             {orders.map((order) => (
@@ -577,6 +623,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
+  const cutoff = useDispatchCutoff();
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
@@ -639,12 +686,8 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     void load();
   }, [load, session, sessionLoading]);
 
-  if (sessionLoading || loading) {
-    return (
-      <div className="flex min-h-40 items-center justify-center">
-        <Spinner label={t("home.loading")} />
-      </div>
-    );
+  if (sessionLoading || (loading && !dashboard)) {
+    return <DashboardSkeleton label={t("home.loading")} />;
   }
 
   if (!session) {
@@ -678,6 +721,11 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         kyc_record_status: kycApp.kyc_record_status,
       })
     : false;
+  // Home must agree with the stricter auditable check (tier + record status).
+  const checklistOverall = kycApp ? buildKycChecklist(kycApp).overall : null;
+  const kycOverall = checklistOverall === "approved" && !kycApproved ? "pending" : checklistOverall;
+  const waitingOrders = dashboard?.needs_action ?? [];
+  const hasDeliveryWaiting = waitingOrders.some((order) => isBoundByDispatchCutoff(order));
 
   // Prefer the strategy operating archetype. Fall back to the legacy merchandise
   // category for vendors onboarded before that dimension was collected.
@@ -733,6 +781,14 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     }
   }
 
+  const tasks = buildHomeTasks({
+    kycOverall,
+    needsActionCount: needsCount,
+    hasDeliveryWaiting,
+    cutoff,
+    sellerKind: isServicesVendor ? "services" : isEventOrganiser ? "events" : "products",
+  });
+
   return (
     <div className="flex flex-col gap-5 pb-8">
       <header className="space-y-1 px-1">
@@ -753,21 +809,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </p>
       ) : null}
 
-      {kycApp && !kycApproved ? (
-        <section
-          className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-text"
-          role="status"
-        >
-          <p className="font-medium">{t("home.kycBanner.title")}</p>
-          <p className="mt-1">{t("home.kycBanner.body")}</p>
-          <Link
-            className="mt-2 inline-flex min-h-11 items-center font-medium text-primary underline"
-            href={`/${locale}/onboarding/status`}
-          >
-            {t("home.kycBanner.cta")}
-          </Link>
-        </section>
-      ) : null}
+      <HomeTaskList locale={locale} tasks={tasks} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">

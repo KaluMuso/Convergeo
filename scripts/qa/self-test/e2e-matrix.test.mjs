@@ -76,14 +76,19 @@ const LOGICAL_TEST_COUNTS = {
   "staging-access-smoke.spec.ts": 1,
   "ux-surfaces.spec.ts": 8,
   "vendor-sell.spec.ts": 1,
+  "locale-smoke.spec.ts": 10,
+  "pilot-cod-checkout.spec.ts": 4,
+  "pilot-cod-journey.spec.ts": 1,
+  "pilot-services-events.spec.ts": 3,
+  "pilot-vendor-admin.spec.ts": 4,
 };
 
 describe("spec-classification — every spec is covered exactly once per intended project", () => {
-  it("SPEC_CLASSIFICATION and LOGICAL_TEST_COUNTS cover the same 16 files", () => {
+  it("SPEC_CLASSIFICATION and LOGICAL_TEST_COUNTS cover the same 21 files", () => {
     const classified = SPEC_CLASSIFICATION.map((e) => e.file).sort();
     const counted = Object.keys(LOGICAL_TEST_COUNTS).sort();
     assert.deepEqual(classified, counted);
-    assert.equal(classified.length, 16);
+    assert.equal(classified.length, 21);
   });
 
   it("no spec is assigned to zero projects", () => {
@@ -177,7 +182,7 @@ describe("Fast-3G coverage", () => {
 });
 
 describe("expected project-test count is deterministic", () => {
-  it("computes to exactly 66 total project-test instances (down from OLD_PROJECT_TESTS=325)", () => {
+  it("computes to exactly 88 total project-test instances (down from OLD_PROJECT_TESTS=325)", () => {
     let total = 0;
     const perProject = {};
     for (const project of allProjectNames()) {
@@ -190,18 +195,18 @@ describe("expected project-test count is deterministic", () => {
     }
     assert.deepEqual(perProject, {
       "mobile-360": 4,
-      "mobile-390": 43,
+      "mobile-390": 65,
       "mobile-430": 4,
       "tablet-768": 4,
       "desktop-1440": 4,
       "fast-3g": 7,
     });
-    assert.equal(total, 66);
+    assert.equal(total, 88);
   });
 
-  it("computes to exactly 50 distinct logical tests (source-level identities)", () => {
+  it("computes to exactly 72 distinct logical tests (source-level identities)", () => {
     const total = Object.values(LOGICAL_TEST_COUNTS).reduce((a, b) => a + b, 0);
-    assert.equal(total, 50);
+    assert.equal(total, 72);
   });
 });
 

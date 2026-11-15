@@ -131,6 +131,22 @@ describe("service-worker runtime-cache rules", () => {
     expect(ruleByName("api").handler).toBeInstanceOf(NetworkFirst);
   });
 
+  it("never caches the per-user notification center API", () => {
+    for (const path of [
+      "/me/notifications/unseen-count?audience=customer",
+      "/me/notifications?audience=customer&limit=20",
+      "/me/web-push",
+    ]) {
+      expect(firstRuleName(path, { origin: API_ORIGIN, method: "GET", sameOrigin: false })).toBe(
+        "notifications-network-only",
+      );
+    }
+    expect(ruleByName("notifications-network-only").handler).toBeInstanceOf(NetworkOnly);
+    expect(
+      firstRuleName("/me/notifications", { origin: APP_ORIGIN, method: "GET", sameOrigin: true }),
+    ).not.toBe("notifications-network-only");
+  });
+
   it("folds the M10 ticket-wallet fragment into this SW (coexistence)", () => {
     expect(firstRuleName("/en/account/tickets", { destination: "document" })).toBe(
       "ticket-wallet-pages",

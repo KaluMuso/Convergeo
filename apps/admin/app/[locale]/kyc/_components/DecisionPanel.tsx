@@ -3,10 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { ConfirmModal } from "../../_components/ConfirmModal";
+
 import { type KycDetail, type RejectReasonTemplate, kycApi } from "./api";
 
 type DecisionPanelProps = {
   detail: KycDetail;
+  /** Review checklist complete; approving is blocked until it is. */
+  checklistComplete?: boolean;
   onDecided: () => void;
 };
 
@@ -41,11 +45,11 @@ const REGULATED_CLASSES = [
   "financial_services",
 ] as const;
 
-export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
+export function DecisionPanel({ detail, checklistComplete = true, onDecided }: DecisionPanelProps) {
   const td = useTranslations("admin.kyc.detail");
   const tr = useTranslations("admin.kyc.reasons");
   const [mode, setMode] = useState<DecisionMode | null>(null);
-  const [reasonTemplate, setReasonTemplate] = useState<RejectReasonTemplate>("blurry_document");
+  const [reasonTemplate, setReasonTemplate] = useState<RejectReasonTemplate | "">("");
   const [freeText, setFreeText] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -72,7 +76,8 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
     );
   };
 
-  const submit = async () => {
+  const submit = async (): Promise<boolean> => {
+    if ((mode === "reject" || mode === "resubmit") && !reasonTemplate) return false;
     setSubmitting(true);
     setError(null);
     setMessage(null);
@@ -100,7 +105,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         await kycApi.request(`/admin/kyc/${detail.id}/reject`, {
           method: "POST",
           body: JSON.stringify({
-            reason_template: reasonTemplate,
+            reason_template: reasonTemplate as RejectReasonTemplate,
             free_text: freeText || null,
           }),
         });
@@ -108,7 +113,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         await kycApi.request(`/admin/kyc/${detail.id}/request-resubmit`, {
           method: "POST",
           body: JSON.stringify({
-            reason_template: reasonTemplate,
+            reason_template: reasonTemplate as RejectReasonTemplate,
             free_text: freeText || null,
             docs_requested: docsRequested,
           }),
@@ -127,15 +132,42 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
       setMessage(td("success"));
       setMode(null);
       onDecided();
+      return true;
     } catch {
       setError(td("failure"));
+      return false;
     } finally {
       setSubmitting(false);
     }
   };
 
+  const closeMode = () => {
+    setMode(null);
+    setError(null);
+  };
+  const reasonMissing =
+    (mode === "reject" || mode === "resubmit") &&
+    (!reasonTemplate || (reasonTemplate === "other" && !freeText.trim()));
+  const lifecycleMissing =
+    (mode === "suspend" || mode === "revoke") && lifecycleReason.trim().length < 3;
+  const approveMissing =
+    mode === "approve" && detail.tier >= 2 && (!expiryDate || licenceNumber.trim().length < 3);
+  const modeTitle = mode
+    ? {
+        approve: td("approve"),
+        reject: td("reject"),
+        resubmit: td("requestResubmit"),
+        start_review: td("startReview"),
+        suspend: td("suspend"),
+        revoke: td("revoke"),
+      }[mode]
+    : "";
+  const vendorSees = [reasonTemplate ? tr(reasonTemplate) : null, freeText.trim() || null]
+    .filter(Boolean)
+    .join(" — ");
+
   return (
-    <section className="space-y-4 rounded-md border border-border p-4">
+    <section className="space-y-4 rounded-lg border border-border bg-surface p-4">
       <h2 className="text-sm font-semibold text-text">{td("decisions")}</h2>
 
       {detail.reviewed_at ? (
@@ -167,7 +199,8 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
           <>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-md bg-success px-4 text-sm font-medium text-white"
+              disabled={!checklistComplete}
+              className="inline-flex min-h-11 items-center rounded-md bg-success px-4 text-sm font-medium text-on-danger disabled:opacity-50"
               onClick={() => setMode("approve")}
             >
               {td("approve")}
@@ -208,175 +241,187 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         ) : null}
       </div>
 
-      {mode === "approve" ? (
+      {!checklistComplete && reviewable ? (
+        <p className="text-xs text-muted" data-testid="checklist-hint">
+          {td("checklistHint")}
+        </p>
+      ) : null}
+
+      {message ? (
+        <p role="status" className="text-sm text-success">
+          {message}
+        </p>
+      ) : null}
+
+      <ConfirmModal
+        open={mode !== null}
+        title={modeTitle}
+        destructive={mode === "reject" || mode === "revoke" || mode === "suspend"}
+        confirmLabel={modeTitle}
+        canConfirm={!submitting && !reasonMissing && !lifecycleMissing && !approveMissing}
+        onConfirm={submit}
+        onClose={closeMode}
+        error={error}
+        data-testid="kyc-confirm"
+        summary={
+          <div className="space-y-2">
+            <p>{td("vendorWillBeNotified", { vendor: detail.vendor_display_name })}</p>
+            {mode === "reject" || mode === "resubmit" ? (
+              <p className="rounded-md bg-bg p-2 text-xs" data-testid="vendor-sees">
+                <span className="font-medium text-text">{td("vendorSees")}</span>{" "}
+                {vendorSees || td("vendorSeesEmpty")}
+              </p>
+            ) : null}
+          </div>
+        }
+      >
         <div className="space-y-3">
-          <p className="text-sm text-muted">{td("confirmApprove", { tier: detail.tier })}</p>
-          {detail.tier >= 2 ? (
-            <>
-              <p className="text-sm text-warning">{td("licenseRequired")}</p>
+          {mode === "approve" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">{td("confirmApprove", { tier: detail.tier })}</p>
+              {detail.tier >= 2 ? (
+                <>
+                  <p className="text-sm text-warning">{td("licenseRequired")}</p>
+                  <label className="block space-y-1 text-sm">
+                    <span>{td("expiryDate")}</span>
+                    <input
+                      className="min-h-11 w-full rounded-md border border-border px-2"
+                      type="date"
+                      value={expiryDate}
+                      onChange={(event) => setExpiryDate(event.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span>{td("licenseBody")}</span>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-border px-2"
+                      value={licenseBody}
+                      onChange={(event) => setLicenseBody(event.target.value as typeof licenseBody)}
+                    >
+                      {LICENSE_BODIES.map((body) => (
+                        <option key={body} value={body}>
+                          {td(`licenseBodies.${body}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span>{td("regulatedClass")}</span>
+                    <select
+                      className="min-h-11 w-full rounded-md border border-border px-2"
+                      value={regulatedClass}
+                      onChange={(event) =>
+                        setRegulatedClass(event.target.value as typeof regulatedClass)
+                      }
+                    >
+                      {REGULATED_CLASSES.map((regulatedClassKey) => (
+                        <option key={regulatedClassKey} value={regulatedClassKey}>
+                          {td(`regulatedClasses.${regulatedClassKey}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block space-y-1 text-sm">
+                    <span>{td("licenceNumber")}</span>
+                    <input
+                      className="min-h-11 w-full rounded-md border border-border px-2"
+                      value={licenceNumber}
+                      onChange={(event) => setLicenceNumber(event.target.value)}
+                      required
+                    />
+                  </label>
+                </>
+              ) : null}
               <label className="block space-y-1 text-sm">
-                <span>{td("expiryDate")}</span>
-                <input
-                  className="min-h-11 w-full rounded-md border border-border px-2"
-                  type="date"
-                  value={expiryDate}
-                  onChange={(event) => setExpiryDate(event.target.value)}
-                  required
+                <span>{td("reviewerNotes")}</span>
+                <textarea
+                  className="min-h-20 w-full rounded-md border border-border p-2"
+                  value={reviewerNotes}
+                  onChange={(event) => setReviewerNotes(event.target.value)}
                 />
               </label>
+            </div>
+          ) : null}
+
+          {mode === "start_review" || mode === "suspend" || mode === "revoke" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                {mode === "start_review"
+                  ? td("confirmStartReview")
+                  : mode === "suspend"
+                    ? td("confirmSuspend")
+                    : td("confirmRevoke")}
+              </p>
+              {mode !== "start_review" ? (
+                <label className="block space-y-1 text-sm">
+                  <span>{td("lifecycleReason")}</span>
+                  <textarea
+                    className="min-h-20 w-full rounded-md border border-border p-2"
+                    value={lifecycleReason}
+                    onChange={(event) => setLifecycleReason(event.target.value)}
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
+
+          {mode === "reject" || mode === "resubmit" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                {mode === "reject" ? td("confirmReject") : td("confirmResubmit")}
+              </p>
               <label className="block space-y-1 text-sm">
-                <span>{td("licenseBody")}</span>
+                <span>{td("reasonTemplate")}</span>
                 <select
                   className="min-h-11 w-full rounded-md border border-border px-2"
-                  value={licenseBody}
-                  onChange={(event) => setLicenseBody(event.target.value as typeof licenseBody)}
-                >
-                  {LICENSE_BODIES.map((body) => (
-                    <option key={body} value={body}>
-                      {td(`licenseBodies.${body}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span>{td("regulatedClass")}</span>
-                <select
-                  className="min-h-11 w-full rounded-md border border-border px-2"
-                  value={regulatedClass}
+                  value={reasonTemplate}
+                  required
                   onChange={(event) =>
-                    setRegulatedClass(event.target.value as typeof regulatedClass)
+                    setReasonTemplate(event.target.value as RejectReasonTemplate)
                   }
                 >
-                  {REGULATED_CLASSES.map((regulatedClassKey) => (
-                    <option key={regulatedClassKey} value={regulatedClassKey}>
-                      {td(`regulatedClasses.${regulatedClassKey}`)}
+                  <option value="">{td("reasonPlaceholder")}</option>
+                  {REASON_TEMPLATES.map((template) => (
+                    <option key={template} value={template}>
+                      {tr(template)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="block space-y-1 text-sm">
-                <span>{td("licenceNumber")}</span>
-                <input
-                  className="min-h-11 w-full rounded-md border border-border px-2"
-                  value={licenceNumber}
-                  onChange={(event) => setLicenceNumber(event.target.value)}
-                  required
+                <span>{reasonTemplate === "other" ? td("freeTextRequired") : td("freeText")}</span>
+                <textarea
+                  className="min-h-20 w-full rounded-md border border-border p-2"
+                  value={freeText}
+                  onChange={(event) => setFreeText(event.target.value)}
                 />
               </label>
-            </>
-          ) : null}
-          <label className="block space-y-1 text-sm">
-            <span>{td("reviewerNotes")}</span>
-            <textarea
-              className="min-h-20 w-full rounded-md border border-border p-2"
-              value={reviewerNotes}
-              onChange={(event) => setReviewerNotes(event.target.value)}
-            />
-          </label>
-        </div>
-      ) : null}
-
-      {mode === "start_review" || mode === "suspend" || mode === "revoke" ? (
-        <div className="space-y-3">
-          <p className="text-sm text-muted">
-            {mode === "start_review"
-              ? td("confirmStartReview")
-              : mode === "suspend"
-                ? td("confirmSuspend")
-                : td("confirmRevoke")}
-          </p>
-          {mode !== "start_review" ? (
-            <label className="block space-y-1 text-sm">
-              <span>{td("lifecycleReason")}</span>
-              <textarea
-                className="min-h-20 w-full rounded-md border border-border p-2"
-                value={lifecycleReason}
-                onChange={(event) => setLifecycleReason(event.target.value)}
-              />
-            </label>
+              {mode === "resubmit" ? (
+                <fieldset className="space-y-2 text-sm">
+                  <legend>{td("docsRequested")}</legend>
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      checked={docsRequested.includes("nrc")}
+                      type="checkbox"
+                      onChange={() => toggleDoc("nrc")}
+                    />
+                    {td("nrc")}
+                  </label>
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      checked={docsRequested.includes("selfie")}
+                      type="checkbox"
+                      onChange={() => toggleDoc("selfie")}
+                    />
+                    {td("selfie")}
+                  </label>
+                </fieldset>
+              ) : null}
+            </div>
           ) : null}
         </div>
-      ) : null}
-
-      {mode === "reject" || mode === "resubmit" ? (
-        <div className="space-y-3">
-          <p className="text-sm text-muted">
-            {mode === "reject" ? td("confirmReject") : td("confirmResubmit")}
-          </p>
-          <label className="block space-y-1 text-sm">
-            <span>{td("reasonTemplate")}</span>
-            <select
-              className="min-h-11 w-full rounded-md border border-border px-2"
-              value={reasonTemplate}
-              onChange={(event) => setReasonTemplate(event.target.value as RejectReasonTemplate)}
-            >
-              {REASON_TEMPLATES.map((template) => (
-                <option key={template} value={template}>
-                  {tr(template)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block space-y-1 text-sm">
-            <span>{td("freeText")}</span>
-            <textarea
-              className="min-h-20 w-full rounded-md border border-border p-2"
-              value={freeText}
-              onChange={(event) => setFreeText(event.target.value)}
-            />
-          </label>
-          {mode === "resubmit" ? (
-            <fieldset className="space-y-2 text-sm">
-              <legend>{td("docsRequested")}</legend>
-              <label className="flex min-h-11 items-center gap-2">
-                <input
-                  checked={docsRequested.includes("nrc")}
-                  type="checkbox"
-                  onChange={() => toggleDoc("nrc")}
-                />
-                {td("nrc")}
-              </label>
-              <label className="flex min-h-11 items-center gap-2">
-                <input
-                  checked={docsRequested.includes("selfie")}
-                  type="checkbox"
-                  onChange={() => toggleDoc("selfie")}
-                />
-                {td("selfie")}
-              </label>
-            </fieldset>
-          ) : null}
-        </div>
-      ) : null}
-
-      {mode ? (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={
-              submitting ||
-              ((mode === "suspend" || mode === "revoke") && lifecycleReason.trim().length < 3) ||
-              (mode === "approve" &&
-                detail.tier >= 2 &&
-                (!expiryDate || licenceNumber.trim().length < 3))
-            }
-            className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
-            onClick={() => void submit()}
-          >
-            {submitting ? td("submitting") : td("confirmAction")}
-          </button>
-          <button
-            type="button"
-            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-            onClick={() => setMode(null)}
-          >
-            {td("cancel")}
-          </button>
-        </div>
-      ) : null}
-
-      {message ? <p className="text-sm text-success">{message}</p> : null}
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      </ConfirmModal>
     </section>
   );
 }

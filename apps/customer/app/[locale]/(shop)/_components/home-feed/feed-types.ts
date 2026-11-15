@@ -205,3 +205,23 @@ export function isRenderableSection(section: FeedSection): boolean {
     section.vendors.length > 0
   );
 }
+
+/** Wire type for `GET /home/stream` (services/api/app/services/home_feed/stream.py). */
+export type HomeStreamPage = {
+  items: FeedListingWire[];
+  next_cursor: string | null;
+};
+
+/** Small pages: ~6 cards is ~3 rows at 360px and a modest JSON payload on 3G. */
+export const HOME_STREAM_PAGE_SIZE = 6;
+
+export type StreamLabels = {
+  title: string;
+  loadMore: string;
+  loading: string;
+  /** Raw template with `{count}`; announced via aria-live after each load. */
+  moreLoaded: string;
+  endOfResults: string;
+  loadError: string;
+  retry: string;
+};

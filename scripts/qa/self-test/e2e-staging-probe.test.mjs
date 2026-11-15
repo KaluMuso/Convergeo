@@ -326,13 +326,20 @@ function strictEnvFor(overrides = {}) {
 }
 
 describe("e2e-staging-probe portal registry", () => {
-  it("knows customer and vendor only — admin has no directly-navigated spec", () => {
-    assert.deepEqual(Object.keys(PORTALS).sort(), ["customer", "vendor"]);
-    assert.equal(resolvePortal("admin"), null);
+  it("knows exactly the directly-navigated portals: customer, vendor and admin", () => {
+    assert.deepEqual(Object.keys(PORTALS).sort(), ["admin", "customer", "vendor"]);
+    assert.equal(resolvePortal("admin")?.expectedApp, "admin");
+    assert.equal(resolvePortal("courier"), null);
+  });
+
+  it("strict admin probe with no admin target → FAIL, never a silent pass", async () => {
+    const r = await probeStagingAccess(strictEnvFor(), { portal: "admin" });
+    assert.equal(r.verdict, "FAIL");
+    assert.match(r.detail, /E2E_ADMIN_BASE_URL is not set/);
   });
 
   it("unknown portal → FAIL rather than defaulting to customer", async () => {
-    const r = await probeStagingAccess(strictEnvFor(), { portal: "admin" });
+    const r = await probeStagingAccess(strictEnvFor(), { portal: "courier" });
     assert.equal(r.verdict, "FAIL");
     assert.match(r.detail, /unknown portal/i);
   });

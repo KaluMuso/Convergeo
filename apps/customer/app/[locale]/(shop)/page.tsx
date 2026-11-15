@@ -34,6 +34,11 @@ import {
   HomeFeed,
   loadHomeFeedFirstPage,
 } from "./_components/home-feed/home-feed";
+import {
+  HomeListingStream,
+  listingIdsOf,
+  loadHomeStreamFirstPage,
+} from "./_components/home-feed/home-stream";
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
@@ -170,12 +175,13 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages, directoryMessages, feedPage] = await Promise.all([
+  const [tRaw, merch, baseMessages, directoryMessages, feedPage, streamPage] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
     loadNamespace(locale as Locale, "directory"),
     loadHomeFeedFirstPage(locale),
+    loadHomeStreamFirstPage(),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
   // Card/rail labels cross into client components as serializable strings and are
@@ -240,6 +246,16 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     tRaw as unknown as Parameters<typeof buildFeedLabels>[0],
     railLabels,
   );
+
+  const streamLabels = {
+    title: t("home.feed.stream.title"),
+    loadMore: t("home.feed.stream.loadMore"),
+    loading: t("home.feed.loadingMore"),
+    moreLoaded: raw("home.feed.stream.moreLoaded"),
+    endOfResults: t("home.feed.end"),
+    loadError: t("home.feed.loadError"),
+    retry: t("home.feed.retry"),
+  };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.
   const earlyCampaignKeys = plan.campaignSectionKeys.filter(
@@ -373,7 +389,23 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       {plan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
 
       {/* Infinite feed is last so loading more never pushes static modules away. */}
-      {useAdminFeed ? <HomeFeed page={feedPage} locale={locale} labels={feedLabels} /> : null}
+      {useAdminFeed ? (
+        <HomeFeed
+          page={feedPage}
+          locale={locale}
+          labels={feedLabels}
+          streamFollows={streamPage.items.length > 0}
+        />
+      ) : null}
+
+      {/* "Popular now": first batch is SSR; only later pages load on the client. */}
+      <HomeListingStream
+        page={streamPage}
+        sectionListingIds={listingIdsOf(feedPage.sections)}
+        locale={locale}
+        cardLabels={railLabels}
+        labels={streamLabels}
+      />
     </div>
   );
 }

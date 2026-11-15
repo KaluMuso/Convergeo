@@ -45,15 +45,19 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   // The vendor dashboard's client views call useTranslations("vendor"), so the
   // namespace must live on the app-wide provider — the shared request config
   // only ships `common`, which previously left those views rendering raw keys.
-  const [baseMessages, vendorMessages, serviceMessages] = await Promise.all([
+  const [baseMessages, vendorMessages, serviceMessages, notificationMessages] = await Promise.all([
     getMessages(),
     loadNamespace(locale as Locale, "vendor"),
     loadNamespace(locale as Locale, "services"),
+    loadNamespace(locale as Locale, "notifications"),
   ]);
+  const notificationsAll = notificationMessages as Record<string, unknown>;
   const messages = {
     ...baseMessages,
     vendor: vendorMessages,
     services: serviceMessages,
+    // Notification center copy only — not the WhatsApp/SMS/email templates.
+    notifications: { center: notificationsAll.center, inApp: notificationsAll.inApp },
   };
   const navCapabilities = await resolveVendorNavCapabilities();
 

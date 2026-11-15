@@ -237,6 +237,11 @@
         "newArrivals": "New arrivals",
         "trending": "Trending now",
         "topVendors": "Top vendors"
+      },
+      "stream": {
+        "title": "Popular now",
+        "loadMore": "Load more",
+        "moreLoaded": "{count} more items loaded."
       }
     }
   },

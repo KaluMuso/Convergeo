@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+import { EmptyBlock, LoadingBlock } from "../../_components/StateBlocks";
 
 import { type VendorQueueItem, kycApi } from "./api";
 import { KycReviewDialog } from "./KycReviewDialog";
@@ -44,7 +45,7 @@ export function KycQueue({ locale }: KycQueueProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-muted">{t("loading")}</p>;
+    return <LoadingBlock label={t("loading")} />;
   }
 
   if (error) {
@@ -61,9 +62,13 @@ export function KycQueue({ locale }: KycQueueProps) {
 
   return (
     <div className="space-y-3">
-      {message ? <p className="text-sm text-success">{message}</p> : null}
+      {message ? (
+        <p role="status" className="text-sm text-success">
+          {message}
+        </p>
+      ) : null}
       {items.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <EmptyBlock title={t("empty")} body={t("emptyHint")} />
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
