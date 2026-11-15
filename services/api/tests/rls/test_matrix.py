@@ -3397,7 +3397,7 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
-    # Pay at the door (20261113183000): SELECT granted to authenticated behind an
+    # Pay at the door (20261115200000): SELECT granted to authenticated behind an
     # admin-only policy (non-admins read zero rows); anon revoked; every write is
     # service-role only (no client INSERT/UPDATE/DELETE grant).
     **{

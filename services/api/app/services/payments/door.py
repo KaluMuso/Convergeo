@@ -22,10 +22,17 @@ Money (integer ngwee; Lenco amounts parsed with ``Decimal`` in ``money.py``):
   out) under ``door-exception-<attempt_id>``. The order is never revived; ops
   refunds by payout.
 
+Crash safety: the move to ``successful`` and the settle-or-exception decision
+commit in ONE transaction (:func:`_succeed_and_decide`), so money that arrived
+is never left without a decision. Only the keyed ledger post follows in a
+separate step; :func:`poll_open_attempts` and every refresh re-run it for any
+successful attempt whose booking is missing (:func:`_unfinished_success_ids`),
+and no new prompt or cash fallback is accepted while one is outstanding.
+
 Every step is idempotent: attempts are guarded rows (DB trigger), settlement
-is a compare-and-set on ``door_payment_sessions`` (write-once), ledger posts are
-keyed, and an exception is unique per attempt — so duplicate webhooks, a
-webhook racing a poll, or a retry after a crash all converge on one outcome.
+is write-once on ``door_payment_sessions``, ledger posts are keyed, and an
+exception is unique per attempt — so duplicate webhooks, a webhook racing a
+poll, or a retry after a crash all converge on one outcome.
 
 With the flag OFF nothing here changes existing behaviour: handover codes show
 as before and :func:`handover_released` is always True.
@@ -64,6 +71,9 @@ logger = logging.getLogger(__name__)
 PAY_AT_DOOR_FLAG = "pay_at_door"
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_ATTEMPT_TTL_SECONDS = 120
+# After a prompt expires Lenco may still report a late approval; cash is refused
+# while an expired prompt is younger than ttl + grace and not final at Lenco.
+DEFAULT_CASH_GRACE_SECONDS = 180
 DEFAULT_COD_CAP_NGWEE = 50_000
 PHONE_RE = re.compile(r"^\+260[79]\d{8}$")
 PAYABLE_ORDER_STATUSES = frozenset({OrderStatus.SHIPPED.value})
@@ -159,6 +169,10 @@ def max_attempts() -> int:
 
 def attempt_ttl_seconds() -> int:
     return max(_config_int("pay_at_door_attempt_ttl_seconds", DEFAULT_ATTEMPT_TTL_SECONDS), 30)
+
+
+def cash_grace_seconds() -> int:
+    return _config_int("pay_at_door_cash_grace_seconds", DEFAULT_CASH_GRACE_SECONDS)
 
 
 def cash_cap_ngwee() -> int:
@@ -563,71 +577,205 @@ def apply_observation(
             provider_reference=provider_ref,
         )
     elif incoming == "successful" and attempt.status in OPEN_STATUSES:
-        _transition_attempt(
+        _succeed_and_decide(
             attempt,
-            "successful",
-            actor_id=SYSTEM_ACTOR_ID,
             note=f"Lenco {source}: successful",
             observed_amount_ngwee=observed,
+            currency_ok=currency_ok,
             observation_source=source,
             provider_reference=provider_ref,
         )
 
     attempt = _load_attempt(attempt.id)
     if attempt.status == "successful":
-        # Duplicate / late observations converge here: the decision is made once
-        # and every later call only heals a ledger post a crash interrupted. A
-        # non-success observation never undoes a success.
+        # Duplicate / late observations converge here: the decision was made
+        # once (with the success, atomically) and every later call only heals a
+        # ledger post a crash interrupted. A non-success never undoes a success.
         return _settle_or_except(
             attempt, currency_ok=currency_ok if incoming == "successful" else True
         )
     return ObservationOutcome(attempt.id, attempt.status, False, None)
 
 
-def _settle_or_except(attempt: DoorAttempt, *, currency_ok: bool) -> ObservationOutcome:
-    """Decide (once) whether a successful attempt settles its order. Idempotent."""
-    session = load_session(attempt.dispatch_request_id)
-    if session is not None and session.settled_attempt_id == attempt.id:
-        _book_collection(attempt)
-        return ObservationOutcome(attempt.id, attempt.status, True, None)
-    existing = _exception_for(attempt.id)
-    if existing is not None:
-        _book_exception(attempt, str(existing["id"]))
-        return ObservationOutcome(attempt.id, attempt.status, False, str(existing["reason"]))
+def _decide_sql(attempt_id: str, *, currency_ok: bool) -> str:
+    """Statements (run inside a caller's transaction) that decide, once, what a
+    successful attempt does: settle its session, or open an exception.
 
-    reason: ExceptionReason | None = None
-    if not currency_ok:
-        reason = "currency_mismatch"
-    elif attempt.observed_amount_ngwee is None or (
-        attempt.observed_amount_ngwee != attempt.amount_ngwee
-    ):
-        # Partial (or over-) payments never settle an order.
-        reason = "amount_mismatch"
-    elif _settle_cas(
-        dispatch_id=attempt.dispatch_request_id,
-        via="mobile_money",
-        attempt_id=attempt.id,
-        actor_id=SYSTEM_ACTOR_ID,
-    ):
-        _book_collection(attempt)
-        return ObservationOutcome(attempt.id, attempt.status, True, None)
-    else:
-        latest = load_session(attempt.dispatch_request_id)
-        if latest is not None and latest.settled_attempt_id == attempt.id:
-            _book_collection(attempt)
-            return ObservationOutcome(attempt.id, attempt.status, True, None)
-        reason = (
-            "already_settled"
-            if latest is not None and latest.settled_via is not None
-            else "order_not_payable"
+    Settles only when the money is ZMW, the exact amount, no exception exists
+    for the attempt, the session is unsettled and the order is still payable;
+    otherwise inserts the exception (unique per attempt) and audits it. A no-op
+    when the attempt is not successful or already decided.
+    """
+    attempt = sql_uuid(attempt_id, "attempt_id")
+    ok = "true" if currency_ok else "false"
+    statuses = ", ".join(sql_literal(s) for s in sorted(PAYABLE_ORDER_STATUSES))
+    return f"""
+SELECT set_config('{DOOR_NOTE_GUC}', 'Settled at the door (mobile_money)', true);
+UPDATE public.door_payment_sessions s
+SET settled_via = 'mobile_money', settled_attempt_id = a.id,
+    settled_at = timezone('utc', now()), settled_by = {_actor_sql(SYSTEM_ACTOR_ID)}
+FROM public.door_payment_attempts a
+WHERE a.id = {attempt}
+  AND a.status = 'successful'
+  AND {ok}
+  AND a.observed_amount_ngwee = a.amount_ngwee
+  AND s.dispatch_request_id = a.dispatch_request_id
+  AND s.settled_via IS NULL
+  AND NOT EXISTS (SELECT 1 FROM public.door_payment_exceptions e WHERE e.attempt_id = a.id)
+  AND EXISTS (SELECT 1 FROM public.orders o WHERE o.id = s.order_id AND o.status IN ({statuses}));
+WITH ins AS (
+  INSERT INTO public.door_payment_exceptions (
+    attempt_id, order_id, reason, expected_amount_ngwee, observed_amount_ngwee
+  )
+  SELECT a.id, a.order_id,
+         CASE
+           WHEN NOT {ok} THEN 'currency_mismatch'
+           WHEN a.observed_amount_ngwee IS NULL
+                OR a.observed_amount_ngwee <> a.amount_ngwee THEN 'amount_mismatch'
+           WHEN s.settled_via IS NOT NULL THEN 'already_settled'
+           ELSE 'order_not_payable'
+         END,
+         a.amount_ngwee, a.observed_amount_ngwee
+  FROM public.door_payment_attempts a
+  LEFT JOIN public.door_payment_sessions s ON s.dispatch_request_id = a.dispatch_request_id
+  WHERE a.id = {attempt}
+    AND a.status = 'successful'
+    AND s.settled_attempt_id IS DISTINCT FROM a.id
+  ON CONFLICT (attempt_id) DO NOTHING
+  RETURNING id, attempt_id, order_id, reason
+), aud AS (
+  INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+  SELECT NULL, 'door_payment.exception.opened', 'door_payment', ins.id, NULL,
+         json_build_object('attempt_id', ins.attempt_id, 'order_id', ins.order_id,
+                           'reason', ins.reason)::jsonb
+  FROM ins
+)
+SELECT json_build_object('opened_exception', ins.id, 'reason', ins.reason)::text FROM ins;
+"""
+
+
+def _succeed_and_decide(
+    attempt: DoorAttempt,
+    *,
+    note: str,
+    observed_amount_ngwee: int | None,
+    currency_ok: bool,
+    observation_source: str,
+    provider_reference: str | None,
+) -> bool:
+    """CAS the attempt to ``successful`` AND decide its outcome in one transaction.
+
+    A crash can no longer leave a successful attempt with neither a settlement
+    nor an exception. False when the attempt moved on meanwhile.
+    """
+    if (attempt.status, "successful") not in ATTEMPT_TRANSITIONS:
+        return False
+    sets = [
+        "status = 'successful'",
+        f"observation_source = {sql_literal(observation_source)}",
+    ]
+    if observed_amount_ngwee is not None:
+        sets.append(f"observed_amount_ngwee = {int(observed_amount_ngwee)}")
+    if provider_reference:
+        sets.append(
+            f"provider_reference = coalesce(provider_reference, "
+            f"{sql_literal(provider_reference[:128])})"
         )
-    exception_id = _open_exception(attempt, reason)
-    _book_exception(attempt, exception_id)
+    rows = json_rows(
+        f"""
+BEGIN;
+{_door_context_sql(actor_id=SYSTEM_ACTOR_ID, note=note)}
+UPDATE public.door_payment_attempts
+SET {", ".join(sets)}
+WHERE id = {sql_uuid(attempt.id, "attempt_id")} AND status = {sql_literal(attempt.status)}
+RETURNING json_build_object('moved', true)::text;
+{_decide_sql(attempt.id, currency_ok=currency_ok)}
+COMMIT;
+""",
+        context="door attempt success",
+    )
+    for row in rows:
+        if row.get("opened_exception"):
+            _alert_exception_opened(attempt, str(row.get("reason")), observed_amount_ngwee)
+    return any(row.get("moved") for row in rows)
+
+
+def _alert_exception_opened(
+    attempt: DoorAttempt, reason: str, observed_amount_ngwee: int | None
+) -> None:
     logger.warning(
         "door payment exception",
         extra={"alert": "door_payment_exception", "attempt_id": attempt.id, "reason": reason},
     )
-    return ObservationOutcome(attempt.id, attempt.status, False, reason)
+    if observed_amount_ngwee is None or observed_amount_ngwee <= 0:
+        # Lenco says money arrived but we cannot read a ZMW amount: it cannot be
+        # booked to suspense automatically, so it must never sit off the ledger
+        # silently. High severity: ops books it by hand from Lenco's statement.
+        logger.error(
+            "door payment received an unbookable amount",
+            extra={
+                "alert": "door_payment_unbooked_receipt",
+                "severity": "high",
+                "attempt_id": attempt.id,
+                "order_id": attempt.order_id,
+                "reason": reason,
+            },
+        )
+
+
+def _decision_for(attempt_id: str) -> dict[str, Any] | None:
+    """The committed outcome of a successful attempt, or None if undecided."""
+    rows = json_rows(
+        f"""
+SELECT json_build_object(
+  'settled', s.settled_attempt_id IS NOT NULL,
+  'exception_id', e.id, 'reason', e.reason
+)::text
+FROM public.door_payment_attempts a
+LEFT JOIN public.door_payment_sessions s
+  ON s.dispatch_request_id = a.dispatch_request_id AND s.settled_attempt_id = a.id
+LEFT JOIN public.door_payment_exceptions e ON e.attempt_id = a.id
+WHERE a.id = {sql_uuid(attempt_id, "attempt_id")};
+""",
+        context="door decision lookup",
+    )
+    if not rows or (not rows[0].get("settled") and not rows[0].get("exception_id")):
+        return None
+    return rows[0]
+
+
+def _settle_or_except(attempt: DoorAttempt, *, currency_ok: bool) -> ObservationOutcome:
+    """Book the decided outcome of a successful attempt. Idempotent.
+
+    The decision normally committed together with the success. If it is
+    missing (a row from before that, or a manual repair) it is made here, in
+    one transaction, from the recorded observation: a recorded amount implies
+    it was read as ZMW, so ``currency_ok`` only labels an unreadable one.
+    """
+    decision = _decision_for(attempt.id)
+    if decision is None:
+        rows = json_rows(
+            f"""
+BEGIN;
+{_door_context_sql(actor_id=SYSTEM_ACTOR_ID, note="Door payment decision (recovery)")}
+{_decide_sql(attempt.id, currency_ok=currency_ok)}
+COMMIT;
+""",
+            context="door decision",
+        )
+        for row in rows:
+            if row.get("opened_exception"):
+                _alert_exception_opened(
+                    attempt, str(row.get("reason")), attempt.observed_amount_ngwee
+                )
+        decision = _decision_for(attempt.id)
+        if decision is None:
+            raise RuntimeError("door payment decision missing after decide")
+    if decision.get("settled"):
+        _book_collection(attempt)
+        return ObservationOutcome(attempt.id, attempt.status, True, None)
+    _book_exception(attempt, str(decision["exception_id"]))
+    return ObservationOutcome(attempt.id, attempt.status, False, str(decision["reason"]))
 
 
 def collection_idempotency_key(order_id: str) -> str:
@@ -676,42 +824,6 @@ def _transaction_id(idempotency_key: str) -> str | None:
         f"WHERE idempotency_key = {sql_literal(idempotency_key)};"
     )
     return result.rows[0] if result.ok and result.rows else None
-
-
-def _open_exception(attempt: DoorAttempt, reason: ExceptionReason) -> str:
-    observed = (
-        str(int(attempt.observed_amount_ngwee))
-        if attempt.observed_amount_ngwee is not None
-        else "NULL"
-    )
-    rows = json_rows(
-        f"""
-WITH ins AS (
-  INSERT INTO public.door_payment_exceptions (
-    attempt_id, order_id, reason, expected_amount_ngwee, observed_amount_ngwee
-  ) VALUES (
-    {sql_uuid(attempt.id, "attempt_id")}, {sql_uuid(attempt.order_id, "order_id")},
-    {sql_literal(reason)}, {int(attempt.amount_ngwee)}, {observed}
-  )
-  ON CONFLICT (attempt_id) DO NOTHING
-  RETURNING id
-)
-SELECT json_build_object('id', id)::text FROM ins
-UNION ALL
-SELECT json_build_object('id', e.id)::text FROM public.door_payment_exceptions e
-WHERE e.attempt_id = {sql_uuid(attempt.id, "attempt_id")}
-LIMIT 1;
-""",
-        context="door exception open",
-    )
-    if not rows:
-        raise RuntimeError("door exception insert failed")
-    _audit(
-        action="door_payment.exception.opened",
-        entity_id=str(rows[0]["id"]),
-        after={"attempt_id": attempt.id, "order_id": attempt.order_id, "reason": reason},
-    )
-    return str(rows[0]["id"])
 
 
 def _book_exception(attempt: DoorAttempt, exception_id: str) -> str | None:
@@ -826,13 +938,74 @@ def _default_phone(order_id: str) -> str | None:
     return result.rows[0].strip()
 
 
+# A successful attempt whose money is not fully accounted for: undecided
+# (neither settlement nor exception), settled but the collection not booked, or
+# an exception with a bookable amount but no suspense posting. ``a`` = attempt.
+_UNFINISHED_SUCCESS_SQL = """
+a.status = 'successful' AND (
+  (NOT EXISTS (SELECT 1 FROM public.door_payment_sessions s
+               WHERE s.dispatch_request_id = a.dispatch_request_id
+                 AND s.settled_attempt_id = a.id)
+   AND NOT EXISTS (SELECT 1 FROM public.door_payment_exceptions e WHERE e.attempt_id = a.id))
+  OR (EXISTS (SELECT 1 FROM public.door_payment_sessions s
+              WHERE s.dispatch_request_id = a.dispatch_request_id
+                AND s.settled_attempt_id = a.id)
+      AND NOT EXISTS (SELECT 1 FROM public.ledger_transactions t
+                      WHERE t.idempotency_key = 'cod-collect-' || a.order_id::text))
+  OR EXISTS (SELECT 1 FROM public.door_payment_exceptions e
+             WHERE e.attempt_id = a.id AND e.ledger_transaction_id IS NULL
+               AND e.reason <> 'currency_mismatch'
+               AND coalesce(a.observed_amount_ngwee, 0) > 0)
+)"""
+
+
+def _unfinished_success_ids(dispatch_id: str) -> set[str]:
+    rows = json_rows(
+        "SELECT json_build_object('id', a.id)::text FROM public.door_payment_attempts a "
+        f"WHERE a.dispatch_request_id = {sql_uuid(dispatch_id, 'dispatch_id')} "
+        f"AND {_UNFINISHED_SUCCESS_SQL};",
+        context="door unfinished successes",
+    )
+    return {str(row["id"]) for row in rows}
+
+
+def _undecided_successes(
+    session: DoorSession | None, attempts: list[DoorAttempt]
+) -> list[DoorAttempt]:
+    """Successful attempts with neither a settlement nor an exception yet."""
+    return [
+        a
+        for a in attempts
+        if a.status == "successful"
+        and (session is None or session.settled_attempt_id != a.id)
+        and _exception_for(a.id) is None
+    ]
+
+
+def _heal_success(attempt: DoorAttempt) -> None:
+    """Finish a successful attempt a crash interrupted (decision and/or booking)."""
+    try:
+        _settle_or_except(attempt, currency_ok=True)
+    except Exception:
+        logger.exception(
+            "door payment settlement recovery failed",
+            extra={"alert": "door_payment_settlement_stuck", "attempt_id": attempt.id},
+        )
+
+
 async def _refresh_open_attempts(
     attempts: list[DoorAttempt], strategy: PaymentStrategy
 ) -> list[DoorAttempt]:
-    """Query Lenco for open attempts; expire unanswered prompts past the TTL."""
+    """Query Lenco for open attempts; expire unanswered prompts past the TTL;
+    finish any successful attempt whose settlement or booking was interrupted."""
     ttl = attempt_ttl_seconds()
     changed = False
+    unfinished = _unfinished_success_ids(attempts[0].dispatch_request_id) if attempts else set()
     for attempt in attempts:
+        if attempt.id in unfinished:
+            _heal_success(attempt)
+            changed = True
+            continue
         if attempt.status not in OPEN_STATUSES:
             continue
         await _query_and_apply(attempt, strategy)
@@ -905,6 +1078,10 @@ def _status_from(
     exception_open = any(
         _exception_for(a.id) is not None for a in attempts if a.status == "successful"
     )
+    # Money arrived but its settlement is not decided yet (crash window): show
+    # it as pending and refuse new prompts and cash until it is.
+    undecided = settled_via is None and bool(_undecided_successes(session, attempts))
+    late_window = settled_via is None and _late_answer_retry_after(attempts) > 0
     if settled_via == "mobile_money":
         state = "paid"
     elif settled_via == "cash":
@@ -913,7 +1090,7 @@ def _status_from(
         state = "not_at_door"
     elif not arrived:
         state = "awaiting_arrival"
-    elif in_flight:
+    elif in_flight or undecided:
         state = "pending"
     elif latest is not None and latest.status in {"failed", "expired"}:
         state = "failed"
@@ -924,6 +1101,8 @@ def _status_from(
         settled_via is None
         and dispatch.status is DispatchStatus.PICKED_UP
         and not in_flight
+        and not undecided
+        and not late_window
         and dispatch.cod_amount_ngwee <= cash_cap_ngwee()
     )
     return DoorStatus(
@@ -1020,6 +1199,7 @@ async def request_door_payment(
             "A payment prompt is already waiting on the phone",
             details={"retry_after": max(attempt_ttl_seconds() - in_flight[-1].age_seconds, 1)},
         )
+    _refuse_while_undecided(refreshed, attempts)
     if len(attempts) >= max_attempts():
         raise DoorPaymentError(
             "door_payment_attempts_exhausted",
@@ -1099,8 +1279,45 @@ COMMIT;
     return door_status(dispatch)
 
 
-def settle_with_cash(*, dispatch_id: str, actor_id: str) -> DoorStatus:
+def _refuse_while_undecided(session: DoorSession | None, attempts: list[DoorAttempt]) -> None:
+    """Money already arrived for this door but is not settled yet: a new prompt
+    or cash now would charge the customer twice."""
+    if _undecided_successes(session, attempts):
+        logger.error(
+            "door payment received but not settled; refusing a second charge",
+            extra={
+                "alert": "door_payment_settlement_stuck",
+                "dispatch_id": attempts[0].dispatch_request_id,
+            },
+        )
+        raise DoorPaymentError(
+            "door_payment_in_flight",
+            "A payment was received and is still being confirmed",
+            details={"reason": "settlement_pending", "retry_after": 30},
+        )
+
+
+def _late_answer_retry_after(attempts: list[DoorAttempt]) -> int:
+    """Seconds until no expired prompt can plausibly still be approved (0 = none).
+
+    An ``expired`` attempt stays open at Lenco; a customer can still approve it
+    late. Within ttl + grace of its creation (and while Lenco has not reported
+    it final, i.e. it is still ``expired`` here) cash is refused.
+    """
+    window = attempt_ttl_seconds() + cash_grace_seconds()
+    remaining = [window - a.age_seconds for a in attempts if a.status == "expired"]
+    return max([r for r in remaining if r > 0], default=0)
+
+
+async def settle_with_cash(
+    *, dispatch_id: str, actor_id: str, strategy: PaymentStrategy
+) -> DoorStatus:
     """Cash fallback chosen at the door (ops for the rider), within the cash cap.
+
+    Lenco is asked first about every open (incl. expired) prompt: a late
+    approval settles by mobile money instead, and cash is refused while an
+    expired prompt is inside its grace window or a received payment is still
+    unsettled — otherwise the customer could pay twice.
 
     Releases the handover code. The cash itself is booked later by ops through
     the existing COD confirmation once the rider remits it.
@@ -1122,10 +1339,26 @@ def settle_with_cash(*, dispatch_id: str, actor_id: str) -> DoorStatus:
             "This order is already paid",
             details={"settled_via": session.settled_via},
         )
-    if any(a.status in IN_FLIGHT for a in list_attempts(dispatch_id)):
+    attempts = await _refresh_open_attempts(list_attempts(dispatch_id), strategy)
+    refreshed = load_session(dispatch_id)
+    if refreshed is not None and refreshed.settled_via is not None:
+        raise DoorPaymentError(
+            "door_payment_already_settled",
+            "This order is already paid",
+            details={"settled_via": refreshed.settled_via},
+        )
+    if any(a.status in IN_FLIGHT for a in attempts):
         raise DoorPaymentError(
             "door_payment_in_flight",
             "A payment prompt is still waiting; check its status first",
+        )
+    _refuse_while_undecided(refreshed, attempts)
+    retry_after = _late_answer_retry_after(attempts)
+    if retry_after > 0:
+        raise DoorPaymentError(
+            "door_payment_in_flight",
+            "The last prompt may still be approved; wait before taking cash",
+            details={"reason": "late_answer_possible", "retry_after": retry_after},
         )
     if not _settle_cas(dispatch_id=dispatch_id, via="cash", attempt_id=None, actor_id=actor_id):
         latest = load_session(dispatch_id)
@@ -1164,6 +1397,61 @@ def on_handover_delivered(*, dispatch_id: str, order_id: str) -> None:
             "pay-at-door release after handover failed",
             extra={"alert": "door_payment_release_failed", "order_id": order_id},
         )
+
+
+# ---------------------------------------------------------------------------
+# Rider cash guard (logistics / remittance integration point)
+# ---------------------------------------------------------------------------
+
+
+def _mobile_money_settlement_for_order(order_id: str) -> DoorAttempt | None:
+    rows = json_rows(
+        f"SELECT {_ATTEMPT_JSON}::text FROM public.door_payment_sessions s "
+        "JOIN public.door_payment_attempts a ON a.id = s.settled_attempt_id "
+        f"WHERE s.order_id = {sql_uuid(order_id, 'order_id')} "
+        "AND s.settled_via = 'mobile_money' LIMIT 1;",
+        context="door mobile money settlement lookup",
+    )
+    return _attempt_from(rows[0]) if rows else None
+
+
+def paid_by_mobile_money(order_id: str) -> bool:
+    """True when the order was paid at the door by verified mobile money."""
+    return _mobile_money_settlement_for_order(order_id) is not None
+
+
+def book_door_collection_for_order(order_id: str) -> bool:
+    """If the order was paid at the door by mobile money, book (idempotently)
+    its ``door_payment_collected`` under the shared ``cod-collect-*`` key.
+
+    Called by the cash COD confirmation BEFORE it posts, so a door-paid order's
+    collection key is always taken by the mobile-money template and can never
+    be recorded as cash the rider collected and must remit.
+    """
+    attempt = _mobile_money_settlement_for_order(order_id)
+    if attempt is None:
+        return False
+    _book_collection(attempt)
+    return True
+
+
+def rider_cash_due_ngwee(dispatch: DispatchRow) -> int:
+    """Cash the rider must collect at the door and remit for this dispatch.
+
+    0 when nothing is collectable, when the order was paid by mobile money at
+    the door, or while a received mobile-money payment is still being settled.
+    Rider custody / remittance tracking must use this, never the raw
+    ``cod_amount_ngwee`` snapshot.
+    """
+    if not applies_to(dispatch):
+        return 0
+    session = load_session(dispatch.id)
+    if session is not None and session.settled_via == "mobile_money":
+        return 0
+    if session is None or session.settled_via is None:
+        if _undecided_successes(session, list_attempts(dispatch.id)):
+            return 0
+    return int(dispatch.cod_amount_ngwee)
 
 
 # ---------------------------------------------------------------------------
@@ -1267,16 +1555,23 @@ RETURNING json_build_object('id', id)::text;
 
 async def poll_open_attempts(strategy: PaymentStrategy, *, limit: int = 50) -> int:
     """Reconciliation tick: close webhook gaps for open door attempts."""
+    # Unfinished successes first (money in, not fully settled/booked: a crash
+    # between steps) — no age limit, money must never be left off the books.
     rows = json_rows(
         f"SELECT {_ATTEMPT_JSON}::text FROM public.door_payment_attempts a "
-        "WHERE a.status IN ('initiated', 'pushed', 'expired') "
-        "AND a.created_at > timezone('utc', now()) - interval '2 days' "
-        f"ORDER BY a.updated_at ASC LIMIT {int(limit)};",
+        f"WHERE ({_UNFINISHED_SUCCESS_SQL}) "
+        "OR (a.status IN ('initiated', 'pushed', 'expired') "
+        "    AND a.created_at > timezone('utc', now()) - interval '2 days') "
+        f"ORDER BY (a.status = 'successful') DESC, a.updated_at ASC LIMIT {int(limit)};",
         context="door open attempts",
     )
     for row in rows:
+        attempt = _attempt_from(row)
         try:
-            await _query_and_apply(_attempt_from(row), strategy)
+            if attempt.status == "successful":
+                _heal_success(attempt)
+            else:
+                await _query_and_apply(attempt, strategy)
         except Exception:
             logger.exception("door attempt poll failed", extra={"attempt_id": row.get("id")})
     return len(rows)

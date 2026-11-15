@@ -81,6 +81,7 @@ class FakeLenco:
         self.status: dict[str, tuple[str, str, str]] = {}
         self.init_status = CollectionStatus.PAY_OFFLINE
         self.init_error: PaymentProviderError | None = None
+        self.query_error: PaymentProviderError | None = None
 
     async def initiate_collection(
         self, request: InitiateCollectionRequest
@@ -98,6 +99,8 @@ class FakeLenco:
         )
 
     async def query_status(self, request: QueryStatusRequest) -> ProviderResult:
+        if self.query_error is not None:
+            raise self.query_error
         observed = self.status.get(request.reference)
         if observed is None:
             return ProviderResult(
@@ -674,7 +677,7 @@ class TestDoorFailures:
         assert exc.value.code == "door_payment_in_flight"
         # Cash cannot be chosen while a prompt may still be approved.
         with pytest.raises(AppError) as exc:
-            door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
         assert exc.value.code == "door_payment_in_flight"
 
         _sql(
@@ -693,7 +696,9 @@ class TestDoorFailures:
         with pytest.raises(AppError) as exc:
             await _request(dispatch_id, lenco, role="admin")
         assert exc.value.code == "door_payment_attempts_exhausted"
-        status = door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+        status = await door.settle_with_cash(
+            dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco
+        )
         assert status.state == "cash"
 
     async def test_network_loss_at_initiation_then_poll_confirms(
@@ -797,7 +802,9 @@ class TestDoorFailures:
             _BACKDATE_SQL.format(dispatch_id=dispatch_id),
         )
         await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
-        status = door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+        status = await door.settle_with_cash(
+            dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco
+        )
         assert status.state == "cash"
         view = dispatch_service.party_dispatch_view(order_id, include_handover_code=True)
         assert view is not None and view["handover_code"] == _code(db, dispatch_id)
@@ -830,7 +837,7 @@ class TestDoorFailures:
         _set_config(db, "cod_cap_ngwee", TOTAL_NGWEE - 1)
         _order_id, dispatch_id = _at_door(db)
         with pytest.raises(AppError) as exc:
-            door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
         assert exc.value.code == "door_payment_cash_over_cap"
         assert door.door_status(fetch_dispatch(dispatch_id)).cash_allowed is False
 
@@ -838,7 +845,7 @@ class TestDoorFailures:
         self, db: PgConn, lenco: FakeLenco
     ) -> None:
         _order_id, dispatch_id = _at_door(db)
-        door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID)
+        await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
         result = db.run(
             "UPDATE public.door_payment_sessions SET settled_via = 'mobile_money', "
             f"settled_attempt_id = gen_random_uuid() WHERE dispatch_request_id = '{dispatch_id}';"
@@ -866,6 +873,296 @@ class TestDoorFailures:
             f"UPDATE public.door_payment_attempts SET amount_ngwee = 1 WHERE id = '{attempt.id}';"
         )
         assert not amount.ok
+
+
+def _backdate(db: PgConn, dispatch_id: str, seconds: int) -> None:
+    _sql(
+        db,
+        "UPDATE public.door_payment_attempts "
+        f"SET created_at = created_at - interval '{int(seconds)} seconds' "
+        f"WHERE dispatch_request_id = '{dispatch_id}';",
+    )
+
+
+def _success_data(reference: str, amount_ngwee: int = TOTAL_NGWEE) -> dict[str, Any]:
+    return _webhook("collection.successful", reference, amount_ngwee, "successful")["data"]
+
+
+# ---------------------------------------------------------------------------
+# Crash windows: money received must always end settled (or excepted) + booked
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("flag_on")
+class TestDoorCrashSafety:
+    async def test_success_and_decision_commit_together_or_not_at_all(
+        self, db: PgConn, lenco: FakeLenco, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        # The decision step fails inside the transaction: the success rolls back too.
+        monkeypatch.setattr(door, "_decide_sql", lambda *_a, **_k: "SELECT 1/0;")
+        with pytest.raises(RuntimeError):
+            door.apply_webhook(event_name="collection.successful", data=_success_data(reference))
+        assert _attempts(dispatch_id)[-1].status == "pushed"
+        monkeypatch.undo()
+        # Lenco's retry (webhook redelivery) then settles normally.
+        outcome = door.apply_webhook(
+            event_name="collection.successful", data=_success_data(reference)
+        )
+        assert outcome is not None and outcome.settled is True
+        assert door.load_session(dispatch_id).settled_via == "mobile_money"  # type: ignore[union-attr]
+        assert _by_account(db, order_id)["platform_cash"] == TOTAL_NGWEE
+
+    async def test_crash_before_collection_post_is_healed_by_the_poll_tick(
+        self, db: PgConn, lenco: FakeLenco, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+
+        def crash(_attempt: Any) -> str:
+            raise RuntimeError("process killed before the ledger post")
+
+        monkeypatch.setattr(door, "_book_collection", crash)
+        with pytest.raises(RuntimeError):
+            door.apply_webhook(event_name="collection.successful", data=_success_data(reference))
+        monkeypatch.undo()
+        # Decision is durable (settled by mobile money); only the post is missing.
+        assert door.load_session(dispatch_id).settled_via == "mobile_money"  # type: ignore[union-attr]
+        assert "door_payment_collected" not in {t for t, _a, _n in _postings(db, order_id)}
+        # No second charge: settled means no new prompt and no cash.
+        with pytest.raises(AppError) as exc:
+            await _request(dispatch_id, lenco, role="admin")
+        assert exc.value.code == "door_payment_already_settled"
+        with pytest.raises(AppError) as exc:
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert exc.value.code == "door_payment_already_settled"
+        assert len(lenco.initiated) == 1
+
+        # The reconciliation tick revisits successful attempts and books the money.
+        await door.poll_open_attempts(lenco)
+        totals = _by_account(db, order_id)
+        assert totals["platform_cash"] == TOTAL_NGWEE and totals["cod_receivable"] == 0
+        assert sum(totals.values()) == 0
+        # And converges: a second tick posts nothing new.
+        before = _postings(db, order_id)
+        await door.poll_open_attempts(lenco)
+        assert _postings(db, order_id) == before
+
+    async def test_undecided_success_blocks_new_prompt_and_cash_until_healed(
+        self, db: PgConn, lenco: FakeLenco, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        attempt = _attempts(dispatch_id)[-1]
+        # A successful attempt with neither settlement nor exception (a row
+        # written before the atomic decision, or a manual repair).
+        _sql(
+            db,
+            "UPDATE public.door_payment_attempts SET status = 'successful', "
+            f"observed_amount_ngwee = {TOTAL_NGWEE}, observation_source = 'webhook' "
+            f"WHERE id = '{attempt.id}';",
+        )
+
+        def broken(*_a: Any, **_k: Any) -> Any:
+            raise RuntimeError("settlement still failing")
+
+        monkeypatch.setattr(door, "_settle_or_except", broken)
+        status = door.door_status(fetch_dispatch(dispatch_id))
+        assert status.state == "pending"
+        assert status.can_request is False and status.cash_allowed is False
+        with pytest.raises(AppError) as exc:
+            await _request(dispatch_id, lenco, role="admin")
+        assert exc.value.code == "door_payment_in_flight"
+        assert exc.value.details["reason"] == "settlement_pending"
+        with pytest.raises(AppError) as exc:
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert exc.value.details["reason"] == "settlement_pending"
+        assert len(lenco.initiated) == 1  # never prompted twice
+        assert door.load_session(dispatch_id).settled_via is None  # type: ignore[union-attr]
+        assert door.rider_cash_due_ngwee(fetch_dispatch(dispatch_id)) == 0
+        monkeypatch.undo()
+
+        await door.poll_open_attempts(lenco)
+        assert door.load_session(dispatch_id).settled_attempt_id == attempt.id  # type: ignore[union-attr]
+        assert _by_account(db, order_id)["platform_cash"] == TOTAL_NGWEE
+        assert door.door_status(fetch_dispatch(dispatch_id)).state == "paid"
+
+    async def test_undecided_success_is_settled_by_the_customer_refresh(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        attempt = _attempts(dispatch_id)[-1]
+        _sql(
+            db,
+            "UPDATE public.door_payment_attempts SET status = 'successful', "
+            f"observed_amount_ngwee = {TOTAL_NGWEE} WHERE id = '{attempt.id}';",
+        )
+        status = await _request(dispatch_id, lenco, role="admin")
+        assert status.state == "paid"
+        assert len(lenco.initiated) == 1
+        assert _by_account(db, order_id)["platform_cash"] == TOTAL_NGWEE
+
+    async def test_crash_before_suspense_post_is_healed(
+        self, db: PgConn, lenco: FakeLenco, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        partial = TOTAL_NGWEE - 5_000
+
+        def crash(*_a: Any, **_k: Any) -> None:
+            raise RuntimeError("process killed before the suspense post")
+
+        monkeypatch.setattr(door, "_book_exception", crash)
+        with pytest.raises(RuntimeError):
+            door.apply_webhook(
+                event_name="collection.successful", data=_success_data(reference, partial)
+            )
+        monkeypatch.undo()
+        assert _exceptions(db, order_id) == [f"amount_mismatch|{partial}|false"]
+        await door.poll_open_attempts(lenco)
+        assert _exceptions(db, order_id) == [f"amount_mismatch|{partial}|true"]
+        assert _by_account(db, order_id)["door_payment_suspense"] == -partial
+
+    async def test_unparseable_success_amount_raises_high_severity_alert(
+        self, db: PgConn, lenco: FakeLenco, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        data = _success_data(reference)
+        data["amount"] = "four hundred"
+        with caplog.at_level("ERROR", logger=door.logger.name):
+            outcome = door.apply_webhook(event_name="collection.successful", data=data)
+        assert outcome is not None and outcome.exception_reason == "amount_mismatch"
+        alerts = [
+            r for r in caplog.records if getattr(r, "alert", "") == "door_payment_unbooked_receipt"
+        ]
+        assert alerts and getattr(alerts[0], "severity", "") == "high"
+        assert _exceptions(db, order_id) == ["amount_mismatch||false"]
+        assert _postings(db, order_id) == []
+        # Replays neither re-alert nor invent a booking.
+        caplog.clear()
+        with caplog.at_level("ERROR", logger=door.logger.name):
+            door.apply_webhook(event_name="collection.successful", data=data)
+        assert not [
+            r for r in caplog.records if getattr(r, "alert", "") == "door_payment_unbooked_receipt"
+        ]
+
+    async def test_mobile_money_paid_order_is_never_rider_cash(
+        self, db: PgConn, lenco: FakeLenco, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        assert door.rider_cash_due_ngwee(fetch_dispatch(dispatch_id)) == TOTAL_NGWEE
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+
+        def crash(_attempt: Any) -> str:
+            raise RuntimeError("crash before the door collection post")
+
+        monkeypatch.setattr(door, "_book_collection", crash)
+        with pytest.raises(RuntimeError):
+            door.apply_webhook(event_name="collection.successful", data=_success_data(reference))
+        monkeypatch.undo()
+        assert door.paid_by_mobile_money(order_id) is True
+        assert door.rider_cash_due_ngwee(fetch_dispatch(dispatch_id)) == 0
+        # Handover → COD drain. The collection key is taken by the door template
+        # first, so it can never be booked as rider cash (cod_collected).
+        dispatch_service.verify_handover_code(
+            dispatch_id=dispatch_id, code=_code(db, dispatch_id), actor_id=ADMIN_ID
+        )
+        kinds = {t for t, _a, _n in _postings(db, order_id)}
+        assert "door_payment_collected" in kinds and "cod_collected" not in kinds
+        assert _order_status(db, order_id) == "completed"
+        assert sum(_by_account(db, order_id).values()) == 0
+
+    async def test_cash_settled_order_is_rider_cash(self, db: PgConn, lenco: FakeLenco) -> None:
+        _order_id, dispatch_id = _at_door(db)
+        await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert door.rider_cash_due_ngwee(fetch_dispatch(dispatch_id)) == TOTAL_NGWEE
+
+
+# ---------------------------------------------------------------------------
+# Cash after an expired prompt: Lenco is asked first; grace window
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("flag_on")
+class TestCashAfterExpiredPrompt:
+    async def test_late_approval_found_before_cash_settles_by_mobile_money(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        _backdate(db, dispatch_id, 150)  # past the 120 s TTL
+        await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
+        assert _attempts(dispatch_id)[-1].status == "expired"
+
+        lenco.pay(reference)  # the customer approves the old prompt late
+        with pytest.raises(AppError) as exc:
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert exc.value.code == "door_payment_already_settled"
+        assert exc.value.details["settled_via"] == "mobile_money"
+        assert door.load_session(dispatch_id).settled_via == "mobile_money"  # type: ignore[union-attr]
+        assert _by_account(db, order_id)["platform_cash"] == TOTAL_NGWEE
+        assert door.rider_cash_due_ngwee(fetch_dispatch(dispatch_id)) == 0
+
+    async def test_cash_refused_inside_grace_window_then_allowed(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        _order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        _backdate(db, dispatch_id, 150)
+        await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
+        status = door.door_status(fetch_dispatch(dispatch_id))
+        assert status.latest_attempt_status == "expired" and status.cash_allowed is False
+
+        with pytest.raises(AppError) as exc:
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert exc.value.code == "door_payment_in_flight"
+        assert exc.value.details["reason"] == "late_answer_possible"
+        assert 0 < exc.value.details["retry_after"] <= 180
+        assert door.load_session(dispatch_id).settled_via is None  # type: ignore[union-attr]
+
+        _backdate(db, dispatch_id, 200)  # now past ttl + grace, still pending at Lenco
+        status = await door.settle_with_cash(
+            dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco
+        )
+        assert status.state == "cash"
+
+    async def test_cash_refused_when_lenco_unreachable_inside_grace(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        _order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        _backdate(db, dispatch_id, 150)
+        await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
+        lenco.query_error = PaymentProviderError(
+            "timeout", "read timed out", kind=ProviderErrorKind.TRANSPORT
+        )
+        with pytest.raises(AppError) as exc:
+            await door.settle_with_cash(dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco)
+        assert exc.value.details["reason"] == "late_answer_possible"
+
+    async def test_failed_expired_prompt_does_not_hold_cash(
+        self, db: PgConn, lenco: FakeLenco
+    ) -> None:
+        _order_id, dispatch_id = _at_door(db)
+        await _request(dispatch_id, lenco, role="admin")
+        reference = _attempts(dispatch_id)[-1].lenco_reference
+        _backdate(db, dispatch_id, 150)
+        await door.poll_door_payment(dispatch_id=dispatch_id, strategy=lenco)
+        lenco.status[reference] = ("failed", ngwee_to_major_str(TOTAL_NGWEE), "ZMW")
+        status = await door.settle_with_cash(
+            dispatch_id=dispatch_id, actor_id=ADMIN_ID, strategy=lenco
+        )
+        assert status.state == "cash"
+        assert _attempts(dispatch_id)[-1].status == "failed"
 
 
 # ---------------------------------------------------------------------------

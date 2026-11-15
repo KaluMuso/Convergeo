@@ -503,6 +503,13 @@ def confirm_cod_collection(
 
     txn_ids: list[str] = []
 
+    # Pay at the door: an order paid by verified mobile money must never be
+    # booked as cash the rider collected (and owes). Book its door collection
+    # first under the shared cod-collect key; the post below then resolves to it.
+    from app.services.payments import door as door_payments
+
+    door_payments.book_door_collection_for_order(order_id)
+
     collected = post_transaction(
         idempotency_key=collect_key,
         template=(

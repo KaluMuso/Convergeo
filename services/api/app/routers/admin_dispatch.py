@@ -758,17 +758,23 @@ async def poll_door_payment(
 @dispatch_router.post(
     "/requests/{dispatch_id}/door-payment/cash", response_model=DoorPaymentAdminOut
 )
-def settle_door_with_cash(
+async def settle_door_with_cash(
     dispatch_id: UUID,
     admin: Annotated[CurrentUser, Depends(require_role("admin"))],
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> DoorPaymentAdminOut:
     """Cash fallback (within ``cod_cap_ngwee``): releases the handover code.
 
-    The cash is booked later through the usual COD confirmation after remittance.
+    Lenco is asked about earlier prompts first, so a late mobile-money approval
+    is never followed by cash. The cash is booked later through the usual COD
+    confirmation after remittance.
     """
     _require_door_flags()
-    status = door_payments.settle_with_cash(dispatch_id=str(dispatch_id), actor_id=admin.id)
+    status = await door_payments.settle_with_cash(
+        dispatch_id=str(dispatch_id),
+        actor_id=admin.id,
+        strategy=get_payment_strategy(LENCO_PROVIDER),
+    )
     recorder.record(
         action="admin.dispatch.door_payment.cash",
         entity_type="dispatch_request",

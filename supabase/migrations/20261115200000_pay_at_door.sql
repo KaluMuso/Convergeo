@@ -24,8 +24,9 @@
 -- (trigger), actor + note from transaction-local GUCs app.door_actor / app.door_note.
 -- Writes are service-role only; admins may read; customers see the API projection.
 --
--- Additive only: new tables, functions, triggers, one ledger account kind + row,
--- one feature_flags row, one platform_config row.
+-- Additive only: new tables, functions, triggers, one ledger account kind (the
+-- existing kind check is WIDENED, never restated) + row, one feature_flags row,
+-- platform_config rows.
 --
 -- Down (manual; safe while unused — ledger_postings is ON DELETE RESTRICT, so the
 -- account delete fails closed once money has moved):
@@ -34,13 +35,28 @@
 --   drop function public.guard_door_payment_sessions_update(),
 --     public.guard_door_payment_attempts_update(), public.audit_door_payment_change();
 --   delete from public.ledger_accounts where kind = 'door_payment_suspense' and vendor_id is null;
---   alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
---   alter table public.ledger_accounts add constraint ledger_accounts_kind_check
---     check (kind in ('platform_cash', 'escrow', 'commission_revenue',
---                     'vendor_payable', 'cod_receivable', 'fees', 'delivery_revenue'));
+--   -- Narrow ledger_accounts_kind_check by removing ONLY this kind, keeping every
+--   -- kind other migrations added (e.g. marketing_expense, organiser_receivable):
+--   do $$
+--   declare def text; kinds text[];
+--   begin
+--     select pg_get_constraintdef(c.oid) into def from pg_constraint c
+--      where c.conrelid = 'public.ledger_accounts'::regclass
+--        and c.conname = 'ledger_accounts_kind_check';
+--     kinds := array(
+--       select distinct btrim(k)
+--         from (select regexp_split_to_table(btrim(m[1], '{}'), ',') as k
+--                 from regexp_matches(def, '''([^'']+)''', 'g') as m) s
+--        where btrim(k) not in ('', 'door_payment_suspense')
+--        order by 1);
+--     alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
+--     execute format('alter table public.ledger_accounts add constraint ledger_accounts_kind_check '
+--                    'check (kind in (%s))',
+--                    (select string_agg(quote_literal(k), ', ' order by k) from unnest(kinds) k));
+--   end $$;
 --   delete from public.feature_flags where flag = 'pay_at_door';
 --   delete from public.platform_config where key in ('pay_at_door_max_attempts',
---     'pay_at_door_attempt_ttl_seconds');
+--     'pay_at_door_attempt_ttl_seconds', 'pay_at_door_cash_grace_seconds');
 
 -- ---------------------------------------------------------------------------
 -- 1. Sessions (one per delivery dispatch)
@@ -161,13 +177,18 @@ create trigger door_payment_attempts_set_updated_at
 
 -- ---------------------------------------------------------------------------
 -- 5. Guards (service role only; immutable money fields; legal transitions)
+--
+-- The guard and audit functions are SECURITY DEFINER with search_path = '' so a
+-- caller cannot shadow anything they reference: every relation/function is
+-- schema-qualified (public., auth., pg_catalog.); pg_catalog operators resolve
+-- implicitly.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.guard_door_payment_sessions_update()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   jwt_role text := coalesce(auth.jwt() ->> 'role', '');
@@ -201,7 +222,7 @@ create or replace function public.guard_door_payment_attempts_update()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   jwt_role text := coalesce(auth.jwt() ->> 'role', '');
@@ -237,7 +258,7 @@ begin
       using errcode = '23514';
   end if;
   if new.status in ('successful', 'failed') then
-    new.completed_at := coalesce(new.completed_at, timezone('utc', now()));
+    new.completed_at := coalesce(new.completed_at, pg_catalog.timezone('utc', pg_catalog.now()));
   end if;
   return new;
 end;
@@ -256,11 +277,11 @@ create or replace function public.audit_door_payment_change()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
-  actor_raw text := nullif(current_setting('app.door_actor', true), '');
-  note_raw text := nullif(current_setting('app.door_note', true), '');
+  actor_raw text := nullif(pg_catalog.current_setting('app.door_actor', true), '');
+  note_raw text := nullif(pg_catalog.current_setting('app.door_note', true), '');
   actor_id uuid;
   entity uuid;
   action_name text;
@@ -278,11 +299,11 @@ begin
       before_doc := null;
     elsif new.status is distinct from old.status then
       action_name := 'door_payment.attempt.' || new.status;
-      before_doc := jsonb_build_object('status', old.status);
+      before_doc := pg_catalog.jsonb_build_object('status', old.status);
     else
       return new;
     end if;
-    after_doc := jsonb_build_object(
+    after_doc := pg_catalog.jsonb_build_object(
       'status', new.status, 'order_id', new.order_id, 'amount_ngwee', new.amount_ngwee,
       'operator', new.operator, 'failure_reason', new.failure_reason,
       'observed_amount_ngwee', new.observed_amount_ngwee,
@@ -294,14 +315,14 @@ begin
       before_doc := null;
     elsif new.settled_via is distinct from old.settled_via then
       action_name := 'door_payment.session.settled';
-      before_doc := jsonb_build_object('settled_via', old.settled_via);
+      before_doc := pg_catalog.jsonb_build_object('settled_via', old.settled_via);
     elsif new.arrived_at is distinct from old.arrived_at then
       action_name := 'door_payment.session.arrived';
-      before_doc := jsonb_build_object('arrived_at', old.arrived_at);
+      before_doc := pg_catalog.jsonb_build_object('arrived_at', old.arrived_at);
     else
       return new;
     end if;
-    after_doc := jsonb_build_object(
+    after_doc := pg_catalog.jsonb_build_object(
       'order_id', new.order_id, 'amount_ngwee', new.amount_ngwee,
       'arrived_at', new.arrived_at, 'settled_via', new.settled_via,
       'settled_attempt_id', new.settled_attempt_id, 'note', note_raw);
@@ -364,13 +385,44 @@ grant all on public.door_payment_exceptions to service_role;
 -- 8. Ledger: suspense account for exception money
 -- ---------------------------------------------------------------------------
 
-alter table public.ledger_accounts drop constraint if exists ledger_accounts_kind_check;
-alter table public.ledger_accounts add constraint ledger_accounts_kind_check
-  check (kind in (
-    'platform_cash', 'escrow', 'commission_revenue',
-    'vendor_payable', 'cod_receivable', 'fees',
-    'delivery_revenue', 'door_payment_suspense'
-  ));
+-- WIDEN the existing check instead of restating a fixed list: read the kinds the
+-- constraint allows right now and re-add it with their union plus ours. This
+-- composes with sibling migrations that add other kinds (marketing_expense,
+-- organiser_receivable, ...) in whatever order they replay.
+do $$
+declare
+  def text;
+  kinds text[];
+begin
+  select pg_get_constraintdef(c.oid) into def
+    from pg_constraint c
+   where c.conrelid = 'public.ledger_accounts'::regclass
+     and c.conname = 'ledger_accounts_kind_check';
+  if def is null then
+    raise exception 'ledger_accounts_kind_check is missing; refusing to guess the allowed kinds';
+  end if;
+  -- Quoted literals in the deparsed check: ARRAY['a'::text, ...] (from IN lists)
+  -- or a single '{a,b}'::text[] array literal; both are split into kinds.
+  kinds := array(
+    select distinct btrim(k)
+      from (
+        select regexp_split_to_table(btrim(m[1], '{}'), ',') as k
+          from regexp_matches(def, '''([^'']+)''', 'g') as m
+        union all
+        select 'door_payment_suspense'
+      ) s
+     where btrim(k) <> ''
+     order by 1);
+  if array_length(kinds, 1) < 2 then
+    raise exception 'could not parse ledger_accounts_kind_check: %', def;
+  end if;
+  alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
+  execute format(
+    'alter table public.ledger_accounts add constraint ledger_accounts_kind_check '
+    'check (kind in (%s))',
+    (select string_agg(quote_literal(k), ', ' order by k) from unnest(kinds) as k));
+end
+$$;
 
 insert into public.ledger_accounts (id, kind)
 values ('c7000000-0000-0000-0000-000000000008', 'door_payment_suspense')
@@ -394,5 +446,8 @@ insert into public.platform_config (key, value, description) values
   ('pay_at_door_max_attempts', '3'::jsonb,
    'Most mobile-money prompts per delivery before the rider must switch to the cash fallback.'),
   ('pay_at_door_attempt_ttl_seconds', '120'::jsonb,
-   'Seconds an unanswered mobile-money prompt stays live before a new one may be sent.')
+   'Seconds an unanswered mobile-money prompt stays live before a new one may be sent.'),
+  ('pay_at_door_cash_grace_seconds', '180'::jsonb,
+   'Seconds after a prompt expires during which the cash fallback is refused while Lenco '
+   'still reports it pending (a late approval would charge the customer twice).')
 on conflict (key) do nothing;
