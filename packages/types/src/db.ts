@@ -1800,7 +1800,7 @@ export type Database = {
           actor_user_id?: string | null
           created_at?: string
           from_status?: string | null
-          id?: number
+          id?: never
           reason?: string | null
           request_id: string
           to_status: string
@@ -1811,12 +1811,20 @@ export type Database = {
           actor_user_id?: string | null
           created_at?: string
           from_status?: string | null
-          id?: number
+          id?: never
           reason?: string | null
           request_id?: string
           to_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_audit_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "event_collab_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_collab_organiser_prefs: {
         Row: {
@@ -1840,7 +1848,22 @@ export type Database = {
           updated_at?: string
           vendor_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_organiser_prefs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_organiser_prefs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_collab_requests: {
         Row: {
@@ -1894,7 +1917,43 @@ export type Database = {
           submitted_at?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_proposer_vendor_id_fkey"
+            columns: ["proposer_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_proposer_vendor_id_fkey"
+            columns: ["proposer_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_gmv_reservations: {
         Row: {
@@ -2274,7 +2333,50 @@ export type Database = {
           event_id?: string
           organiser_vendor_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_revenue_splits_co_host_vendor_id_fkey"
+            columns: ["co_host_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_co_host_vendor_id_fkey"
+            columns: ["co_host_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_collaboration_request_id_fkey"
+            columns: ["collaboration_request_id"]
+            isOneToOne: true
+            referencedRelation: "event_collab_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_settlement_snapshots: {
         Row: {
@@ -7440,7 +7542,6 @@ export type Database = {
         Args: { p_vendor_id: string }
         Returns: number
       }
-      expand_search_terms: { Args: { p_query: string }; Returns: string }
       event_collab_record_create: {
         Args: { p_actor_user_id: string; p_request_id: string }
         Returns: undefined
@@ -7477,6 +7578,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      expand_search_terms: { Args: { p_query: string }; Returns: string }
       expire_checkout_group_if_unpaid: {
         Args: { p_checkout_id: string; p_terminal_status: string }
         Returns: boolean
