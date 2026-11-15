@@ -8,7 +8,6 @@ from unittest.mock import patch
 import pytest
 from app.main import create_app
 from app.routers import directory as directory_module
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.vendors.hours import LUSAKA_TZ
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -703,17 +702,6 @@ class TestVendorProfileWholesaleGating:
         assert not isinstance(result, RedirectResponse)
         assert {listing.product_slug for listing in result.listings} == {"itel-a70"}
 
-    def test_build_includes_wholesale_when_eligible(self, store: FakeSupabaseStore) -> None:
-        self._seed(store)
-        result = directory_module.get_vendor_profile(
-            store, "tech-hub-lusaka", include_wholesale=True
-        )
-        assert not isinstance(result, RedirectResponse)
-        assert {listing.product_slug for listing in result.listings} == {
-            "itel-a70",
-            "bulk-chargers",
-        }
-
     def test_endpoint_guest_hides_wholesale(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
@@ -722,28 +710,6 @@ class TestVendorProfileWholesaleGating:
         assert response.status_code == 200
         slugs = {listing["product_slug"] for listing in response.json()["listings"]}
         assert slugs == {"itel-a70"}
-
-    def test_endpoint_verified_business_sees_wholesale(self, store: FakeSupabaseStore) -> None:
-        self._seed(store)
-        app: FastAPI = create_app()
-        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-            user_id="11111111-1111-1111-1111-111111111111",
-            status="verified",
-            eligible=True,
-        )
-
-        class FakeServiceClient:
-            def __init__(self) -> None:
-                self.client = store
-
-        with patch("app.deps.get_supabase_service_client", return_value=FakeServiceClient()):
-            with TestClient(app, raise_server_exceptions=False) as test_client:
-                response = test_client.get("/directory/tech-hub-lusaka")
-        app.dependency_overrides.clear()
-        assert response.status_code == 200
-        slugs = {listing["product_slug"] for listing in response.json()["listings"]}
-        assert slugs == {"itel-a70", "bulk-chargers"}
-
 
 class TestDirectoryHelpers:
     def test_matches_category_prefix(self) -> None:

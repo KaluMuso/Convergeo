@@ -10,7 +10,17 @@
     "mobileMenuClose": "Close",
     "permissionError": "Unable to verify admin permissions.",
     "permissionChecking": "Checking permissions…",
-    "permissionDenied": "You do not have access to this admin section."
+    "permissionDenied": "You do not have access to this admin section.",
+    "account": {
+      "menuLabel": "Account menu",
+      "unknownUser": "Signed in",
+      "roleLine": "Role: {role}",
+      "roles": {
+        "superadmin": "Super admin",
+        "admin": "Admin",
+        "custom": "Custom role"
+      }
+    }
   },
   "nav": {
     "groups": {
@@ -100,6 +110,7 @@
     },
     "pages": {
       "common": "All apps — shared UI, navigation, theme",
+      "nav": "All apps — navigation labels",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
       "clips": "Customer — Vergeo Clips feed, playback and shoppable overlay",
@@ -396,7 +407,9 @@
       "vendorSeesEmpty": "(choose a reason)",
       "noDocuments": "No documents were uploaded.",
       "openFullSize": "Open full size",
-      "refreshDocs": "Refresh links"
+      "refreshDocs": "Refresh links",
+      "notFound": "Not found",
+      "notFoundBody": "This KYC application does not exist or was removed."
     },
     "reasons": {
       "blurry_document": "Document is blurry or unreadable",
@@ -473,7 +486,9 @@
         "submitting": "Saving…",
         "success": "Decision recorded.",
         "failure": "Could not save decision.",
-        "details": "Product details"
+        "details": "Product details",
+        "failureRetryHint": "Nothing was saved. Check your connection and press the button again, or reload the page if it keeps failing.",
+        "failureReference": "Reference: {id}"
       }
     },
     "related": {

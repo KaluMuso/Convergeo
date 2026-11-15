@@ -85,6 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
     "20261115140000",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
