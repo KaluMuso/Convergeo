@@ -336,6 +336,10 @@ class RoleDbQuery(FakeQuery):
     def ilike(self, *_args: Any) -> RoleDbQuery:
         return self
 
+    def insert(self, *_args: Any, **_kwargs: Any) -> RoleDbQuery:
+        # Denied-attempt audit writes (audit_log) land here; the fake records no rows.
+        return self
+
     def execute(self) -> SimpleNamespace:
         if self.table == "user_roles":
             if self.user_id is not None:
@@ -366,7 +370,7 @@ class RoleDbService(FakeService):
         self.resource_reads: list[str] = []
 
     def table(self, name: str) -> RoleDbQuery:
-        if name not in {"user_roles", "admin_roles"}:
+        if name not in {"user_roles", "admin_roles", "audit_log"}:
             self.resource_reads.append(name)
         return RoleDbQuery(self.db, name)
 
