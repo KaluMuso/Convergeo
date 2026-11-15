@@ -13,6 +13,20 @@ SUPPLIES_STACK_BPS = 300
 FREE_EVENTS_CATEGORY = "free_events"
 
 
+class FreeOrderCommissionError(ValueError):
+    """Raised when commission is attempted on a free (zero-price) order."""
+
+
+def snapshot_is_free(snapshot: Mapping[str, Any]) -> bool:
+    """True for a free order (explicit flag, or every line is a free-events line)."""
+    if snapshot.get("is_free") is True:
+        return True
+    lines = parse_snapshot_lines(snapshot)
+    return bool(lines) and all(
+        str(line.get("category_key")) == FREE_EVENTS_CATEGORY for line in lines
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CommissionLineResult:
     listing_id: str | None
@@ -120,7 +134,13 @@ def capture_order_commission(
     idempotency_key_prefix: str,
     payment_id: str | None = None,
 ) -> CommissionCaptureResult:
-    """Compute snapshot commission and post per-line ``commission_capture`` ledger entries."""
+    """Compute snapshot commission and post per-line ``commission_capture`` ledger entries.
+
+    Free orders never reach the ledger: attempting it is a bug, so it fails loudly
+    (the DB trigger ``ledger_transactions_reject_free_order`` backs this up).
+    """
+    if snapshot_is_free(commission_snapshot):
+        raise FreeOrderCommissionError(f"order {order_id} is free; no commission allowed")
     commission = compute_order_commission(commission_snapshot)
     posted_ids: list[str] = []
 

@@ -48,7 +48,8 @@
     "requestQuoteHint": "描述您的需求，获取匹配服务商的报价。",
     "provider": "服务商",
     "providerCta": "查看服务商资料",
-    "imageAlt": "作品集照片 {position}"
+    "imageAlt": "作品集照片 {position}",
+    "free": "免费"
   },
   "vendor": {
     "eyebrow": "服务",
@@ -81,13 +82,16 @@
       "save": "保存",
       "publish": "发布",
       "pause": "暂停",
-      "saving": "保存中…"
+      "saving": "保存中…",
+      "isFreeLabel": "这是免费的",
+      "isFreeHint": "无价格、无佣金、无需付款。客户发送预约请求，由你接受。"
     },
     "errors": {
       "loadFailed": "无法加载服务。",
       "saveFailed": "无法保存服务。",
       "titleInvalid": "请输入至少两个字符的标题。",
-      "authRequired": "登录以管理您的服务。"
+      "authRequired": "登录以管理您的服务。",
+      "freeHasPrice": "免费服务不能设置价格。"
     }
   },
   "postJob": {
@@ -297,5 +301,18 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "freeBooking": {
+    "title": "预约此免费服务",
+    "intro": "无需付款。发送请求后，服务商会进行确认。",
+    "cta": "申请预约",
+    "submitting": "发送中…",
+    "sent": "请求已发送，服务商将尽快确认。",
+    "errors": {
+      "authRequired": "请登录后申请此服务。",
+      "alreadyRequested": "你已有一个待处理的该服务请求。",
+      "rateLimited": "请求过多，请稍候再试。",
+      "generic": "无法发送请求，请重试。"
+    }
   }
 }

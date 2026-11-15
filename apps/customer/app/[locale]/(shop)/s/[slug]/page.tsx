@@ -16,6 +16,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { BookService } from "./_components/book-service";
+import { RequestFreeService } from "./_components/request-free-service";
 import { ServiceQuoteCta } from "./_components/service-quote-cta";
 import { ServiceReviewsSection } from "./_components/service-reviews-section";
 
@@ -31,6 +32,7 @@ type ServiceDetail = {
   description: string | null;
   service_area: string | null;
   from_price_ngwee: number | null;
+  is_free?: boolean;
   bookable: boolean;
   booking_price_ngwee: number | null;
   portfolio_images: string[];
@@ -228,6 +230,9 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               {service.provider.preferred_badge ? (
                 <Badge variant="public" label={t("browse.preferredBadge")} />
               ) : null}
+              {service.is_free ? (
+                <Badge variant="free" label={t("detail.free")} />
+              ) : null}
             </div>
             <div className="space-y-3">
               <h1 className="font-display text-hero text-display-ink">
@@ -237,11 +242,13 @@ export default async function ServiceDetailPage({ params }: PageProps) {
                 <p className="text-sm text-text-2">{service.service_area}</p>
               ) : null}
               <p className="text-lg font-semibold text-text">
-                {service.from_price_ngwee !== null
-                  ? t("detail.fromPrice", {
-                      price: formatK(service.from_price_ngwee),
-                    })
-                  : t("detail.askForQuote")}
+                {service.is_free
+                  ? t("detail.free")
+                  : service.from_price_ngwee !== null
+                    ? t("detail.fromPrice", {
+                        price: formatK(service.from_price_ngwee),
+                      })
+                    : t("detail.askForQuote")}
               </p>
             </div>
           </div>
@@ -374,6 +381,10 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:h-fit">
+          {service.is_free ? (
+            <RequestFreeService locale={locale} serviceId={service.id} />
+          ) : null}
+
           {service.bookable && service.booking_price_ngwee ? (
             <BookService
               locale={locale}
@@ -396,7 +407,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               </p>
             </div>
 
-            {isQuoteBased ? (
+            {service.is_free ? null : isQuoteBased ? (
               <ServiceQuoteCta
                 locale={locale}
                 serviceId={service.id}

@@ -114,8 +114,13 @@
       "oversell": "Taikaliko",
       "attendeeNamesRequired": "Lembeni ishina pa ticket cimo cimo.",
       "attendeeNamesMismatch": "Lembeni ishina limo fye pa ticket cimo.",
-      "promoInvalid": "Uyu promo code tauli valid pa iyi event."
-    }
+      "promoInvalid": "Uyu promo code tauli valid pa iyi event.",
+      "rsvpCap": "⚠ You can reserve at most 4 free spots.",
+      "rsvpInProgress": "⚠ Your RSVP is already being processed.",
+      "rateLimited": "⚠ Too many requests. Please wait a moment."
+    },
+    "going": "⚠ You're going",
+    "viewTicket": "⚠ View ticket"
   },
   "wallet": {
     "title": "Tickets shandi",

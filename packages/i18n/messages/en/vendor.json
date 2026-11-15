@@ -1820,7 +1820,9 @@
       "attendeeNamedBadge": "Names required",
       "perksLabel": "Perks (optional)",
       "perksHelp": "Shown to buyers — lounge access, merch, drink tokens. Leave blank if none.",
-      "perksPlaceholder": "e.g. Includes one drink token"
+      "perksPlaceholder": "e.g. Includes one drink token",
+      "isFreeLabel": "This is free",
+      "isFreeHint": "Guests RSVP instead of paying. They still get a QR ticket and capacity applies."
     },
     "actions": {
       "save": "Save type",

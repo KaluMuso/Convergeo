@@ -114,8 +114,13 @@
       "oversell": "已无法购买",
       "attendeeNamesRequired": "请为每张门票输入姓名。",
       "attendeeNamesMismatch": "请为每张门票输入且仅输入一个姓名。",
-      "promoInvalid": "此优惠码不适用于该活动。"
-    }
+      "promoInvalid": "此优惠码不适用于该活动。",
+      "rsvpCap": "每人最多可预约 4 个免费名额。",
+      "rsvpInProgress": "你的预约正在处理中。",
+      "rateLimited": "请求过多，请稍候再试。"
+    },
+    "going": "你已报名",
+    "viewTicket": "查看门票"
   },
   "wallet": {
     "title": "我的门票",

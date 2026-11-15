@@ -114,8 +114,13 @@
       "oversell": "No longer available",
       "attendeeNamesRequired": "Enter a name for each ticket.",
       "attendeeNamesMismatch": "Enter exactly one name per ticket.",
-      "promoInvalid": "That promo code is not valid for this event."
-    }
+      "promoInvalid": "That promo code is not valid for this event.",
+      "rsvpCap": "You can reserve at most 4 free spots.",
+      "rsvpInProgress": "Your RSVP is already being processed.",
+      "rateLimited": "Too many requests. Please wait a moment."
+    },
+    "going": "You're going",
+    "viewTicket": "View ticket"
   },
   "wallet": {
     "title": "My tickets",

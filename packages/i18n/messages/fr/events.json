@@ -114,8 +114,13 @@
       "oversell": "Plus disponible",
       "attendeeNamesRequired": "Saisissez un nom pour chaque billet.",
       "attendeeNamesMismatch": "Saisissez exactement un nom par billet.",
-      "promoInvalid": "Ce code promo n'est pas valable pour cet événement."
-    }
+      "promoInvalid": "Ce code promo n'est pas valable pour cet événement.",
+      "rsvpCap": "Vous pouvez réserver au maximum 4 places gratuites.",
+      "rsvpInProgress": "Votre réservation est déjà en cours de traitement.",
+      "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+    },
+    "going": "Vous y allez",
+    "viewTicket": "Voir le billet"
   },
   "wallet": {
     "title": "Mes billets",
