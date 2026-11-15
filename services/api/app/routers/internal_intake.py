@@ -200,19 +200,14 @@ def collect_metrics(service_client: ServiceRoleClient) -> dict[str, Any]:
     """Read-only operational counters for the digest. Never mutates anything."""
     dispositions: dict[str, int] = {name: 0 for name in sorted(state_machine.DISPOSITIONS)}
     for row in _rows(
-        _table(service_client, EVENTS_TABLE)
-        .select("disposition")
-        .eq("kind", "ingestion")
-        .execute()
+        _table(service_client, EVENTS_TABLE).select("disposition").eq("kind", "ingestion").execute()
     ):
         name = row.get("disposition")
         if isinstance(name, str) and name in dispositions:
             dispositions[name] += 1
 
     statuses: dict[str, int] = {name: 0 for name in sorted(state_machine.SESSION_STATUSES)}
-    for row in _rows(
-        _table(service_client, SESSIONS_TABLE).select("status, listing_id").execute()
-    ):
+    for row in _rows(_table(service_client, SESSIONS_TABLE).select("status, listing_id").execute()):
         name = row.get("status")
         if isinstance(name, str) and name in statuses:
             statuses[name] += 1

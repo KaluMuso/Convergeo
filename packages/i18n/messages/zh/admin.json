@@ -17,6 +17,7 @@
   },
   "nav": {
     "home": "仪表板",
+    "analytics": "数据分析",
     "kyc": "KYC 队列",
     "business": "商户",
     "moderation": "内容审核",
@@ -28,7 +29,9 @@
     "support": "客服",
     "events": "高价值活动",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "管理员账户",
+    "auditLog": "审计日志"
   },
   "hubs": {
     "moderation": {
@@ -765,9 +768,9 @@
     "emptyTrafficBody": "来自实时 API 的 GMV、订单流水线、漏斗与账本负债均为零——这些不是占位分析数据。",
     "emptyTrafficDependency": "非零磁贴缺少的后端依赖：真实结账/订单量、账本分录（MR-B01）以及对账报告。",
     "gmv": {
-      "title": "商品交易总额（GMV）",
-      "subtitle": "商品交易总额（不含已取消订单）",
-      "empty": "K0.00——账本支撑的汇总中尚无未取消订单。"
+      "title": "订单金额（未取消）",
+      "subtitle": "所有未取消订单的商品与配送费合计，无论是否付款。这不是已收款项，也不是平台收入。",
+      "empty": "K0.00——尚无未取消的订单。"
     },
     "payoutLiabilities": {
       "title": "结算负债",
@@ -847,7 +850,9 @@
         "orders_placed": "下单",
         "orders_completed": "完成订单"
       }
-    }
+    },
+    "financeWithheldTitle": "财务数据已隐藏",
+    "financeWithheldBody": "托管余额、待付款项和对账需要 finance.read 权限。如工作需要，请联系超级管理员。"
   },
   "disputes": {
     "title": "纠纷控制台",
@@ -1216,6 +1221,160 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "auditLogUi": {
+    "title": "审计日志",
+    "subtitle": "所有已记录的管理操作，最新的在前。只读：条目不能修改或删除。",
+    "permissionDenied": "需要 audit.read 权限才能查看审计日志。",
+    "filters": "审计日志筛选",
+    "actor": "操作者账户 ID",
+    "action": "操作（以点结尾表示一类，例如 admin.orders.）",
+    "resource": "资源类型",
+    "resourceId": "资源 ID",
+    "outcome": "结果",
+    "outcomeAny": "全部结果",
+    "outcomeSuccess": "成功",
+    "outcomeDenied": "被拒绝",
+    "outcomeFailed": "失败",
+    "from": "开始日期",
+    "to": "结束日期",
+    "apply": "应用筛选",
+    "reset": "清除筛选",
+    "maskingNote": "电话、邮箱、姓名、地址和验证码均已遮盖。",
+    "loading": "正在加载审计条目…",
+    "empty": "没有符合筛选条件的条目。",
+    "loadFailed": "无法加载审计日志。",
+    "invalid": "请检查筛选条件：ID 必须完整。",
+    "when": "时间：{at}",
+    "who": "操作者：{actor}（{roles}）",
+    "system": "系统",
+    "noRoles": "无角色记录",
+    "what": "对象：{resource} {id}",
+    "reason": "原因：{reason}",
+    "requestId": "请求 {id}",
+    "details": "变更前后",
+    "more": "加载更早的条目"
+  },
+  "accountsUi": {
+    "title": "管理员账户",
+    "subtitle": "所有持有管理员角色的人员及其姓名和邮箱。",
+    "deactivateHelp": "停用会一次性撤销该账户的全部管理员角色，并将您的原因写入审计日志。在其下一次请求时生效。最后一位超级管理员不能被移除，您也不能停用自己。",
+    "manageRolesLink": "分配或撤销单个角色",
+    "permissionDenied": "只有超级管理员可以管理管理员账户。",
+    "loading": "正在加载管理员账户…",
+    "loadFailed": "无法加载管理员账户。",
+    "mutationFailed": "账户未被停用，请重试。",
+    "lastSuperadmin": "这是最后一位超级管理员，无法停用。",
+    "retry": "重试",
+    "empty": "没有账户持有管理员角色。",
+    "noName": "资料中无姓名",
+    "noEmail": "无邮箱记录",
+    "roles": "角色：{roles}",
+    "selfNote": "这是您的账户。",
+    "reason": "停用原因（必填）",
+    "deactivate": "停用",
+    "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。"
+  },
+  "analytics": {
+    "title": "数据分析",
+    "subtitle": "汇总的平台与购物者行为数据。不显示任何个人购物者或原始搜索文本。",
+    "tabs": {
+      "label": "分析栏目",
+      "overview": "概览",
+      "search": "搜索与需求",
+      "products": "商品与转化漏斗",
+      "insights": "洞察"
+    },
+    "range": {
+      "label": "日期范围",
+      "days": "最近 {days} 天"
+    },
+    "loading": "正在加载分析数据…",
+    "error": "无法加载分析数据。",
+    "retry": "重试",
+    "permissionDenied": "只有平台管理员可以查看分析数据。",
+    "disabled": {
+      "title": "数据分析未启用",
+      "body": "每日汇总已关闭（功能开关 analytics_v2_rollups）。启用之前，此处不会收集或显示任何数据。"
+    },
+    "dataThrough": "行为数据截至 {day}（UTC）。订单和付款为实时数据。",
+    "dataPending": "行为数据尚未汇总。订单和付款为实时数据。",
+    "insufficient": "数据不足（至少需要 {n}）",
+    "notAvailable": "—",
+    "empty": "此范围内没有数据。",
+    "delta": {
+      "none": "没有上一周期的基准",
+      "value": "较上一周期 {change}"
+    },
+    "columns": {
+      "day": "日期",
+      "term": "搜索词",
+      "product": "商品",
+      "page": "页面类型"
+    },
+    "session": {
+      "rule": "无活动 30 分钟后会话结束。",
+      "activeSpan": "平均活跃时长",
+      "estimatedEnd": "会话结束时间根据最后一次活动估算，并非站内停留时间。",
+      "duration": "{minutes} 分 {seconds} 秒"
+    },
+    "overview": {
+      "commercialTitle": "订单与付款",
+      "commercialHint": "仅来自订单和付款数据。已付款指付款成功。",
+      "behaviourTitle": "购物者行为",
+      "dailyTitle": "每日已付款 GMV",
+      "reconciliation": {
+        "mismatch": "以下日期的付款与已付款结账不一致：{days}。请先核查付款再使用这些数字。"
+      },
+      "kpi": {
+        "gmvPaid": "已付款 GMV",
+        "ordersPaid": "已付款订单",
+        "aov": "平均已付款结账金额",
+        "checkoutsStarted": "已开始结账",
+        "ordersPlacedHint": "已下单 {placed} 笔",
+        "sessions": "会话",
+        "visitorDays": "访客日",
+        "bounceRate": "跳出率",
+        "searches": "搜索次数",
+        "zeroResultShare": "无结果搜索占比"
+      }
+    },
+    "search": {
+      "kNotice": "在此范围内搜索少于 {k} 次的词会归入“其他”，且从不显示。",
+      "zeroResults": "无结果搜索",
+      "zeroTitle": "有人搜索但未找到",
+      "zeroHint": "目录尚未满足的需求。",
+      "topTitle": "热门搜索词",
+      "other": "其他：{terms} 个词，{searches} 次搜索"
+    },
+    "products": {
+      "funnelTitle": "转化漏斗",
+      "funnelHint": "浏览步骤来自会话；结账和订单步骤来自订单和付款。",
+      "shareOfSessions": "占会话的 {share}",
+      "steps": {
+        "sessions": "会话",
+        "search_sessions": "有搜索的会话",
+        "product_view_sessions": "有商品浏览的会话",
+        "cart_adds": "加入购物车",
+        "checkouts_started": "已开始结账",
+        "orders_placed": "已下单",
+        "orders_paid": "已付款订单"
+      },
+      "topTitle": "浏览最多的商品",
+      "views": "浏览次数",
+      "unnamed": "未命名商品",
+      "pageViewsTitle": "按页面类型的浏览量",
+      "entryTitle": "入口页面"
+    },
+    "insights": {
+      "placeholder": "自动洞察将在后续版本推出。目前此处列出数据质量检查。",
+      "none": "此范围内没有数据质量问题。",
+      "kinds": {
+        "payment_mismatch": "{day} 的付款与已付款结账不一致。",
+        "rollup_failed": "{day} 的每日汇总失败。",
+        "rollup_stale": "汇总已滞后（最新：{day}）。"
+      }
     }
   }
 }

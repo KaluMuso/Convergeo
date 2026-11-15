@@ -42,10 +42,7 @@ class PayoutsDisabledError(AppError):
     def __init__(self) -> None:
         super().__init__(
             code="payouts_disabled",
-            message=(
-                "Vendor payouts are temporarily unavailable. "
-                "Please try again later."
-            ),
+            message=("Vendor payouts are temporarily unavailable. Please try again later."),
             http_status=503,
         )
 

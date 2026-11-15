@@ -45,9 +45,7 @@ class BookingResponse(StrictModel):
     replayed: bool
 
 
-def _rate_limit_book(
-    request: Request, user_id: str, service_client: _ServiceRoleClient
-) -> None:
+def _rate_limit_book(request: Request, user_id: str, service_client: _ServiceRoleClient) -> None:
     ip = get_client_ip(request)
     allowed_ip, retry_ip = bump_rate_counter(
         scope="service_book_ip",

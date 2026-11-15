@@ -353,9 +353,7 @@ async def explain_clip_ranking(
         )
 
     breakdown = ranking.explain(rows[0]).as_dict()
-    breakdown["formula"] = (
-        "freshness_decay(published_at) * (1 + log(1+likes) + 2*log(1+orders))"
-    )
+    breakdown["formula"] = "freshness_decay(published_at) * (1 + log(1+likes) + 2*log(1+orders))"
     breakdown["freshness_half_life_hours"] = ranking.FRESHNESS_HALF_LIFE_HOURS
     breakdown["max_per_vendor_per_page"] = ranking.MAX_PER_VENDOR_PER_PAGE
     return breakdown

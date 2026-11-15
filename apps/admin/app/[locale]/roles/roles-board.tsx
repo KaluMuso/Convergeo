@@ -13,13 +13,18 @@ import {
 
 const PERMISSIONS = [
   "finance.read",
+  "finance.operate",
   "events.manage",
   "products.manage",
   "services.read",
+  "services.manage",
   "vendors.manage",
   "ads.manage",
   "analytics.read",
   "inventory.read",
+  "support.manage",
+  "logistics.manage",
+  "audit.read",
 ] as const;
 
 type RolesResponse = { roles: AdminRole[]; assignments: AdminRoleAssignment[] };
@@ -140,6 +145,10 @@ export function RolesBoard() {
       <header>
         <h1 className="font-serif text-xl">{t("title")}</h1>
         <p className="text-sm text-muted">{t("subtitle")}</p>
+        <p className="text-sm text-muted" data-testid="roles-deactivate-help">
+          {t("deactivateHelp")}
+        </p>
+        <p className="text-sm text-muted">{t("permissionsHelp")}</p>
       </header>
       {error ? (
         <p role="alert" className="text-error">

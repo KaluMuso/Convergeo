@@ -29,6 +29,7 @@ import { Spinner } from "../_lib/ui";
 import { BusinessBasicsStep } from "./business-basics-step";
 import { KycDocsStep } from "./kyc-docs-step";
 import { ReviewStep } from "./review-step";
+import { StepActions } from "./step-actions";
 import { StepProgress } from "./step-progress";
 
 import type {
@@ -100,6 +101,11 @@ function AccountOnboardingFlow({
   const [fatalErrorKey, setFatalErrorKey] = useState<string | null>(null);
   const [resubmitMode, setResubmitMode] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [savingLater, setSavingLater] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<{
+    kind: "saved" | "savedLocal";
+    text: string;
+  } | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
@@ -248,6 +254,7 @@ function AccountOnboardingFlow({
       // Editing/back navigation cancels the UI effects of work from the old step.
       navigationGeneration.current += 1;
       setError(null);
+      setSaveNotice(null);
       setCurrentStep(step);
       updateDraft({ step });
     },
@@ -298,6 +305,44 @@ function AccountOnboardingFlow({
       }
     }
   }, [draft, goToStep, isCurrentSession, isCurrentOperation, kycClient, sessionGeneration, t]);
+
+  const handleSaveLater = useCallback(async () => {
+    if (!draft || !isCurrentSession(sessionGeneration) || pending.current.submit) {
+      return;
+    }
+    // Everything typed is already mirrored to this device; this also pushes the
+    // business basics to the server so the draft follows the vendor across devices.
+    writeLocalDraft(userId, draft);
+    const basics = {
+      ...(draft.businessName.trim() ? { business_name: draft.businessName.trim() } : {}),
+      ...(draft.businessCategory.trim() ? { archetype: draft.businessCategory.trim() } : {}),
+      ...(draft.businessArchetype.trim()
+        ? { business_archetype: draft.businessArchetype.trim() }
+        : {}),
+    };
+    setError(null);
+    if (Object.keys(basics).length === 0) {
+      setSaveNotice({ kind: "savedLocal", text: t("onboarding.saveLater.savedLocal") });
+      return;
+    }
+    setSavingLater(true);
+    try {
+      const app = await kycClient.saveDraft(basics);
+      if (!isCurrentSession(sessionGeneration)) {
+        return;
+      }
+      setApplication(app);
+      setSaveNotice({ kind: "saved", text: t("onboarding.saveLater.saved") });
+    } catch {
+      if (isCurrentSession(sessionGeneration)) {
+        setSaveNotice({ kind: "savedLocal", text: t("onboarding.saveLater.savedLocal") });
+      }
+    } finally {
+      if (isCurrentSession(sessionGeneration)) {
+        setSavingLater(false);
+      }
+    }
+  }, [draft, isCurrentSession, kycClient, sessionGeneration, t, userId]);
 
   const handleKycContinue = useCallback(() => {
     if (!draft || !isCurrentSession(sessionGeneration) || pending.current.upload) {
@@ -613,6 +658,21 @@ function AccountOnboardingFlow({
           }}
         />
       ) : null}
+
+      <StepActions
+        showBack={!resubmitMode && currentStep > 0}
+        onBack={() => goToStep(Math.max(currentStep - 1, 0))}
+        onSaveLater={() => {
+          void handleSaveLater();
+        }}
+        saving={savingLater}
+        notice={saveNotice}
+        labels={{
+          back: t("onboarding.back"),
+          saveLater: t("onboarding.saveLater.cta"),
+          saving: t("onboarding.saveLater.saving"),
+        }}
+      />
     </div>
   );
 }
