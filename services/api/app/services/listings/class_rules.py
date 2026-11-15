@@ -17,9 +17,7 @@ def is_made_to_order_listing(listing: dict[str, Any]) -> bool:
 
 
 def is_used_class_listing(listing: dict[str, Any]) -> bool:
-    product_class = str(listing.get("product_class") or "A")
-    if product_class == "D":
-        return True
+    """Only second-hand stock needs photo evidence; Class D may be new."""
     return str(listing.get("condition") or "") == "used"
 
 
@@ -57,18 +55,6 @@ def validate_listing_purchasable_for_cart(
         )
 
     if is_used_class_listing(listing):
-        condition = str(listing.get("condition") or "")
-        if condition == "new":
-            raise AppError(
-                code="cart.class_d_invalid_condition",
-                message="Used listings cannot be sold as new",
-                http_status=400,
-                details={
-                    "message_key": "cart.class_d_invalid_condition",
-                    "listing_id": str(listing.get("id", "")),
-                    "retry": False,
-                },
-            )
         if evidence_image_count < 1:
             raise AppError(
                 code="cart.class_d_missing_evidence",

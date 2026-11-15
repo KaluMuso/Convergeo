@@ -115,9 +115,7 @@ def _persist_draft(
         .execute()
     )
     if existing:
-        _table(service_client, DRAFT_TABLE).update(payload).eq(
-            "session_id", session_id
-        ).execute()
+        _table(service_client, DRAFT_TABLE).update(payload).eq("session_id", session_id).execute()
     else:
         _table(service_client, DRAFT_TABLE).insert(payload).execute()
 
@@ -142,9 +140,9 @@ def _persist_draft(
             # to rule/model by a later inbound message.
             if prior and str(prior[0].get("source")) == FieldSource.VENDOR_TYPED.value:
                 continue
-            _table(service_client, PROVENANCE_TABLE).update(row).eq(
-                "session_id", session_id
-            ).eq("field_name", entry.field_name).execute()
+            _table(service_client, PROVENANCE_TABLE).update(row).eq("session_id", session_id).eq(
+                "field_name", entry.field_name
+            ).execute()
         else:
             _table(service_client, PROVENANCE_TABLE).insert(row).execute()
 
@@ -242,9 +240,7 @@ def progress_session(
     # A prohibited draft can never advance toward review, and a duplicate is
     # held for a human to look at rather than progressed automatically.
     ready = not questions and not result.blocked and duplicate is None
-    target = (
-        state_machine.READY_FOR_VENDOR_REVIEW if ready else state_machine.NEEDS_DETAILS
-    )
+    target = state_machine.READY_FOR_VENDOR_REVIEW if ready else state_machine.NEEDS_DETAILS
 
     if from_status == target:
         return current
@@ -255,6 +251,4 @@ def progress_session(
         logger.info("intake session not advanceable", extra={"session_id": session_id})
         return current
 
-    return state_machine.transition(
-        service_client, session_id=session_id, to_status=target
-    )
+    return state_machine.transition(service_client, session_id=session_id, to_status=target)

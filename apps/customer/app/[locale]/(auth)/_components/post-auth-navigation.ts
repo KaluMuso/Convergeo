@@ -2,6 +2,7 @@
 
 import { emitToastKey } from "@vergeo/ui/src/toast";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { getReadyCustomerSession } from "../../../../lib/customer-session";
 import { createAccountApiClient } from "../../account/_components/account-api";
 
@@ -56,6 +57,14 @@ export async function navigateAfterPortalAuth({
   }
 
   try {
+    // analytics_v2 sign-in link (1A-08): best-effort, lazy chunk, anonymous session id only.
+    const accessToken = session.access_token;
+    void import("@vergeo/analytics/identify")
+      .then(({ identifyAnalyticsSession }) =>
+        identifyAnalyticsSession({ apiBaseUrl: getApiBaseUrl(), accessToken }),
+      )
+      .catch(() => undefined);
+
     const api = createAccountApiClient(() => session.access_token);
     const preferences = await api.getPreferences();
     const destination = resolveCustomerPostAuthPath(

@@ -126,17 +126,10 @@ def compute_badge_metrics(
         upheld_disputes = _count_rows(disputes_response)
 
     reviews_response = (
-        client.table("reviews")
-        .select("rating, order_item_id")
-        .eq("status", "published")
-        .execute()
+        client.table("reviews").select("rating, order_item_id").eq("status", "published").execute()
     )
     reviews = _rows(reviews_response)
-    order_items_response = (
-        client.table("order_items")
-        .select("id, order_id")
-        .execute()
-    )
+    order_items_response = client.table("order_items").select("id, order_id").execute()
     order_items = _rows(order_items_response)
     order_id_by_item = {
         str(item["id"]): str(item["order_id"])
@@ -149,9 +142,7 @@ def compute_badge_metrics(
         if str(order_id_by_item.get(str(review.get("order_item_id")), "")) in vendor_order_ids
         and isinstance(review.get("rating"), int)
     ]
-    average_rating = (
-        sum(vendor_ratings) / len(vendor_ratings) if vendor_ratings else None
-    )
+    average_rating = sum(vendor_ratings) / len(vendor_ratings) if vendor_ratings else None
 
     dispute_rate = upheld_disputes / total_orders
     cancel_rate = cancelled_orders / total_orders
@@ -211,9 +202,7 @@ def apply_preferred_badge_for_vendor(
     after = {"preferred_badge": bool(after_row.get("preferred_badge"))}
 
     action = (
-        "vendor.preferred_badge.grant"
-        if should_have_badge
-        else "vendor.preferred_badge.revoke"
+        "vendor.preferred_badge.grant" if should_have_badge else "vendor.preferred_badge.revoke"
     )
     write_kyc_audit_log(
         service_client,

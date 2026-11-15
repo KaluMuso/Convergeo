@@ -56,10 +56,11 @@ describe("listing unit-step conversion", () => {
 });
 
 describe("product-class form rules", () => {
-  it("forces Class D to used condition", () => {
-    expect(applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" }).condition).toBe(
-      "used",
-    );
+  it("lets Class D be sold as new without forcing used", () => {
+    const fields = applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" });
+    expect(fields.condition).toBe("new");
+    const used = applyListingFieldPatch(fields, { condition: "used" });
+    expect(used.condition).toBe("used");
   });
 
   it("forces Class E to made-to-order fulfilment", () => {
@@ -241,6 +242,9 @@ async function fillDraft(productClass: "D" | "E") {
     target: { value: "1,234.56" },
   });
   if (productClass === "D") {
+    fireEvent.change(input(vendorMessages.listings.fields.conditionLabel), {
+      target: { value: "used" },
+    });
     fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
       target: { value: " Synthetic wear marks " },
     });
@@ -321,6 +325,8 @@ describe("QuickList draft request contract", () => {
         min_steps: 1,
         condition: productClass === "D" ? "used" : "new",
         defect_notes: productClass === "D" ? "Synthetic wear marks" : null,
+        condition_detail: productClass === "D" ? "used_good" : null,
+        fulfilment_options: ["lusaka_delivery", "pickup_shop"],
         fulfilment_mode: productClass === "E" ? "made_to_order" : "stocked",
         lead_time_days: productClass === "E" ? 7 : null,
         vendor_capacity_per_week: productClass === "E" ? 10 : null,
@@ -343,9 +349,9 @@ describe("QuickList draft request contract", () => {
       });
       saveDraft();
       expect(view.client.createListing).not.toHaveBeenCalled();
-      expect(view.onError).toHaveBeenCalledWith(
-        vendorMessages.listings.quickList.descriptionInvalid,
-      );
+      // Field-level: the reason is shown next to the field, with a summary above.
+      expect(view.onError).toHaveBeenCalledOnce();
+      expect(screen.getByText(vendorMessages.listings.quickList.descriptionInvalid)).toBeTruthy();
     },
   );
   it("accepts exactly 20 Unicode code points and rejects five-emoji used disclosure", async () => {
@@ -359,9 +365,8 @@ describe("QuickList draft request contract", () => {
     });
     saveDraft();
     expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenLastCalledWith(
-      vendorMessages.listings.fields.defectNotesInvalid,
-    );
+    expect(view.onError).toHaveBeenCalled();
+    expect(screen.getByText(vendorMessages.listings.fields.defectNotesInvalid)).toBeTruthy();
     fireEvent.change(input(vendorMessages.listings.fields.defectNotesLabel), {
       target: { value: "😀".repeat(10) },
     });
@@ -385,7 +390,8 @@ describe("QuickList draft request contract", () => {
     );
     saveDraft();
     expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenCalledWith(vendorMessages.listings.errors.required);
+    expect(view.onError).toHaveBeenCalledOnce();
+    expect(screen.getAllByText(vendorMessages.listings.errors.required).length).toBeGreaterThan(0);
   });
   it.each(["failed", "empty"])("blocks saving when categories are %s", async (state) => {
     const client = makeClient();
@@ -461,7 +467,8 @@ describe("QuickList draft request contract", () => {
     });
     saveDraft();
     expect(view.client.createListing).not.toHaveBeenCalled();
-    expect(view.onError).toHaveBeenCalledWith(vendorMessages.listings.fields.capacityInvalid);
+    expect(view.onError).toHaveBeenCalledOnce();
+    expect(screen.getByText(vendorMessages.listings.fields.capacityInvalid)).toBeTruthy();
   });
   it("prevents duplicate dispatch while a draft request is pending", async () => {
     const view = mountQuick();

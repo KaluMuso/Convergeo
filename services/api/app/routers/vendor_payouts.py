@@ -568,10 +568,7 @@ async def change_payout_method(
         "payout_hold_until": hold_until.isoformat(),
     }
     response = (
-        service_client.client.table("vendors")
-        .update(update_payload)
-        .eq("id", vendor_id)
-        .execute()
+        service_client.client.table("vendors").update(update_payload).eq("id", vendor_id).execute()
     )
     updated = _single_row(response)
     if updated is None and not _rows(response):

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  doorPaymentActions,
   actionsFor,
   buildCourierPayload,
   canNotify,
@@ -249,5 +250,40 @@ describe("courier form", () => {
       lusaka_a: { enabled: false, priceKwacha: "" },
       lusaka_b: { enabled: true, priceKwacha: "45.00" },
     });
+  });
+});
+
+describe("doorPaymentActions (pay at the door)", () => {
+  const base = { status: "picked_up" as const, cod_amount_ngwee: 45_000 };
+
+  it("offers arrival, prompt and cash before anything happened", () => {
+    expect(doorPaymentActions({ ...base, door_payment_state: null })).toEqual([
+      "arrived",
+      "request",
+      "cash",
+    ]);
+  });
+
+  it("only offers a status check while a prompt is live", () => {
+    expect(doorPaymentActions({ ...base, door_payment_state: "pending" })).toEqual(["poll"]);
+  });
+
+  it("offers nothing once settled or in exception, or for prepaid / not picked up", () => {
+    for (const state of ["paid", "cash", "exception"] as const) {
+      expect(doorPaymentActions({ ...base, door_payment_state: state })).toEqual([]);
+    }
+    expect(doorPaymentActions({ ...base, cod_amount_ngwee: 0, door_payment_state: null })).toEqual(
+      [],
+    );
+    expect(doorPaymentActions({ ...base, status: "accepted", door_payment_state: null })).toEqual(
+      [],
+    );
+  });
+
+  it("allows a retry or cash after a failed prompt", () => {
+    expect(doorPaymentActions({ ...base, door_payment_state: "failed" })).toEqual([
+      "request",
+      "cash",
+    ]);
   });
 });

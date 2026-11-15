@@ -150,7 +150,8 @@
         "cutoffBefore": "Order before 14:00 (Lusaka time) and in-stock items are usually sent out today, once the seller confirms.",
         "cutoffAfter": "It's after 14:00 in Lusaka, so in-stock items will usually be sent out tomorrow, once the seller confirms.",
         "cutoffMadeToOrder": "Made-to-order items are sent once they're ready — see each item for its lead time."
-      }
+      },
+      "notOffered": "This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Items reserved for",
@@ -243,6 +244,11 @@
         "deliveryNoLandmark": "Lusaka delivery",
         "pickupFromSeller": "You'll collect from the seller",
         "placeOrderCod": "Place order — pay on delivery"
+      },
+      "deliveryConsent": {
+        "label": "Share my name, phone and address with the delivery partner to deliver this order",
+        "hint": "Optional. A licensed courier may deliver your order. Without this, Vergeo5 staff deliver it or call you first. Change it any time in Account → Privacy.",
+        "saveFailed": "We couldn't save this choice. You can still place your order."
       }
     },
     "pending": {

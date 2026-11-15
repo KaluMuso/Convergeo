@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 161
+MIGRATION_COUNT = 176
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -49,6 +49,29 @@ POST_REPAIR_ORDER = [
     "20261113130000",
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
     "20261114050000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100",
+    "20261115140200",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000",
+    "20261115150100",
+    "20261115150200",
+    "20261115150300",
+    "20261115150400",
+    "20261115150500",
+    "20261115150600",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261115210000",
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
