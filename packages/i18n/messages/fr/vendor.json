@@ -2021,7 +2021,7 @@
       "edit": "Modifier",
       "archive": "Archiver",
       "giftStock": "Cadeaux restants : {available} sur {total}",
-      "notInCart": "Pour l'instant, le paiement applique les offres aux produits ; celle-ci est affichée mais pas encore appliquée."
+      "notInCart": "Le paiement applique les offres aux produits et aux billets d'événement ; les offres avec un service, ou un cadeau déclenché par un événement, sont affichées mais pas encore appliquées."
     },
     "types": {
       "bxgy": {

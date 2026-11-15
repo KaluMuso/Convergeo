@@ -2339,7 +2339,7 @@
       "edit": "Edit",
       "archive": "Archive",
       "giftStock": "Gifts left: {available} of {total}",
-      "notInCart": "Checkout applies offers to products for now; this one is shown but not yet applied."
+      "notInCart": "Checkout applies offers to products and event tickets; offers with a service, or a free gift triggered by an event, are shown but not yet applied."
     },
     "types": {
       "bxgy": {

@@ -2021,7 +2021,7 @@
       "edit": "编辑",
       "archive": "归档",
       "giftStock": "剩余赠品：{available} / {total}",
-      "notInCart": "结账目前只对商品应用优惠；此优惠会展示，但暂不生效。"
+      "notInCart": "结账时会对商品和活动门票应用优惠；含服务的优惠，或由活动触发的赠品，会显示但暂不生效。"
     },
     "types": {
       "bxgy": {
