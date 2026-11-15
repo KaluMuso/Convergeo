@@ -29,7 +29,7 @@ def inputs() -> dict[str, Any]:
     data: dict[str, Any] = json.loads(INPUTS.read_text())
     if data.get("schema") != "convergeo.coordinator.new-proposal.v1":
         raise RuntimeError("Unknown coordinator input contract")
-    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 322)):
+    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 323)):
         if len(data[key]) != count or len(set(data[key])) != count:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
