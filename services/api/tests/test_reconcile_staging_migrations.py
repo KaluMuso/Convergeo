@@ -85,6 +85,11 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115100000",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115100100",
+    "20261115100200",
 }
 
 

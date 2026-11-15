@@ -286,12 +286,7 @@ def _persist_vendor_basics(
         patch["business_archetype"] = business_archetype
     if not patch:
         return None
-    response = (
-        service_client.client.table("vendors")
-        .update(patch)
-        .eq("id", vendor_id)
-        .execute()
-    )
+    response = service_client.client.table("vendors").update(patch).eq("id", vendor_id).execute()
     return _row_from_response(response)
 
 
@@ -377,9 +372,7 @@ def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchRespon
         phone=str(payload.get("phone", "")),
         operator=str(payload.get("operator", "")),
         resolved_name=(
-            str(payload["resolved_name"])
-            if isinstance(payload.get("resolved_name"), str)
-            else None
+            str(payload["resolved_name"]) if isinstance(payload.get("resolved_name"), str) else None
         ),
         legal_name=str(payload.get("legal_name", "")),
         match_score=float(payload.get("match_score", 0.0)),
@@ -406,11 +399,7 @@ def _build_status_response(
         vendor_row=vendor,
     )
     # Never surface a bare stored tier as the capability tier when orphaned.
-    public_tier = (
-        eligibility.effective_tier
-        if eligibility.is_auditable_approved
-        else None
-    )
+    public_tier = eligibility.effective_tier if eligibility.is_auditable_approved else None
     return KycStatusResponse(
         application_status=application_status,
         vendor_status=str(vendor.get("status", "draft")),
@@ -508,16 +497,10 @@ async def update_kyc_draft(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> KycStatusResponse:
     """Persist business basics for the caller's draft/pending application."""
-    if (
-        body.business_name is None
-        and body.archetype is None
-        and body.business_archetype is None
-    ):
+    if body.business_name is None and body.archetype is None and body.business_archetype is None:
         raise AppError(
             code="validation_error",
-            message=(
-                "At least one of business_name, archetype, or business_archetype is required"
-            ),
+            message=("At least one of business_name, archetype, or business_archetype is required"),
             http_status=422,
         )
     vendor = _load_vendor_for_owner(service_client, current_user.id)
@@ -571,7 +554,8 @@ async def submit_kyc(
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
         kyc_record_id=kyc_record_id,
-        momo_name_match=_serialize_momo_match(momo_result.to_json()) or MomoNameMatchResponse(
+        momo_name_match=_serialize_momo_match(momo_result.to_json())
+        or MomoNameMatchResponse(
             phone=body.momo_phone,
             operator=momo_result.operator,
             resolved_name=momo_result.resolved_name,
@@ -631,7 +615,8 @@ async def resubmit_kyc(
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
         kyc_record_id=str(result["kyc_record"]["id"]),
-        momo_name_match=_serialize_momo_match(momo_result.to_json()) or MomoNameMatchResponse(
+        momo_name_match=_serialize_momo_match(momo_result.to_json())
+        or MomoNameMatchResponse(
             phone=body.momo_phone,
             operator=momo_result.operator,
             resolved_name=momo_result.resolved_name,

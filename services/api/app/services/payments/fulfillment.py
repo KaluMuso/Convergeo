@@ -108,9 +108,7 @@ ORDER BY o.id ASC;
             raise LedgerError(f"negative platform fee on order {order_id}")
         if gross + fee <= 0:
             continue
-        rows.append(
-            CheckoutOrderRow(order_id=order_id, gross_ngwee=gross, platform_fee_ngwee=fee)
-        )
+        rows.append(CheckoutOrderRow(order_id=order_id, gross_ngwee=gross, platform_fee_ngwee=fee))
     return rows
 
 
@@ -123,8 +121,8 @@ def fulfill_prepaid_checkout_escrow(
 ) -> EscrowFulfillmentResult:
     """Post per-order ``escrow_hold`` rows for a successful prepaid collection.
 
-  Idempotent per ``order_id``. When the checkout has no orders, posts a single
-  checkout-scoped ``CHARGE_RECEIVED`` instead (test fixtures / edge cases).
+    Idempotent per ``order_id``. When the checkout has no orders, posts a single
+    checkout-scoped ``CHARGE_RECEIVED`` instead (test fixtures / edge cases).
     """
     _ = service_client
     orders = _fetch_checkout_orders(checkout_group_id)

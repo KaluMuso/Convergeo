@@ -163,6 +163,16 @@
       "success": "Compte supprimé",
       "returnToLogin": "Votre compte a été supprimé. Retour à la connexion",
       "error": "Nous n'avons pas pu supprimer votre compte. Vérifiez le code et réessayez."
+    },
+    "deliveryConsent": {
+      "title": "Partage avec les partenaires de livraison",
+      "description": "Vergeo5 confie certaines livraisons à des coursiers agréés. Pour livrer votre commande, le coursier a besoin de votre nom, de votre numéro de téléphone et de votre adresse de livraison. Nous ne les partageons qu'avec votre accord. Le retrait en boutique n'en a jamais besoin.",
+      "label": "Partager mon nom, mon téléphone et mon adresse avec le partenaire de livraison pour livrer mes commandes",
+      "grantedAt": "Autorisé le {at}. Vous pouvez le désactiver à tout moment.",
+      "notGranted": "Non autorisé. L'équipe Vergeo5 livre elle-même ou vous demande avant de faire appel à un coursier.",
+      "loading": "Chargement de votre choix…",
+      "loadFailed": "Impossible de charger votre choix. Réessayez plus tard.",
+      "saveFailed": "Impossible d'enregistrer votre choix. Réessayez."
     }
   },
   "common": {

@@ -100,5 +100,17 @@
     "retry": "Try again",
     "loadMore": "Show more",
     "viewFeed": "See new from stores you follow"
+  },
+  "privacy": {
+    "deliveryConsent": {
+      "title": "Ukwabana amashina ne ba delivery",
+      "description": "Vergeo5 ibomfya ama-courier ayakwata licence pa ma-delivery yamo. Pa kuleta order yenu, courier alefwaya ishina lyenu, nambala ya foni ne address ya delivery. Tulabapeela fye nga mwasuminisha. Pickup tailefwaya ifi.",
+      "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta ama-order yandi",
+      "grantedAt": "Mwasuminishe pa {at}. Kuti mwaleka ilyo lyonse.",
+      "notGranted": "Tamusuminishe. Abantu ba Vergeo5 balaleta order beka, nangu balamwipusha ilyo bashilabomfya courier.",
+      "loading": "Ilekete…",
+      "loadFailed": "Twafilwa ukusanga ifyo mwasala. Esheni na kabili.",
+      "saveFailed": "Twafilwa ukusunga ifyo mwasala. Esheni na kabili."
+    }
   }
 }

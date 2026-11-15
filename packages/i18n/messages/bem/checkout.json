@@ -292,6 +292,11 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mukasenda ku seller",
         "placeOrderCod": "Tumeni order — lipileni pa delivery"
+      },
+      "deliveryConsent": {
+        "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order",
+        "hint": "Te ca kukakatila. Courier uwakwata licence kuti aleta order yenu. Nga tamusuminishe, abantu ba Vergeo5 e balaleta nangu balamwita intanshi. Kuti mwalula pa Account → Privacy.",
+        "saveFailed": "Twafilwa ukusunga ifi mwasala. Kuti mwatwalilila ukushita order."
       }
     },
     "stepAnnouncement": "Step {current} ya {total}",

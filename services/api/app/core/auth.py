@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import lru_cache
@@ -141,22 +142,35 @@ MODERATOR_ROLES = frozenset({"superadmin", "moderator", "admin"})
 ADMIN_PERMISSIONS = frozenset(
     {
         "finance.read",
+        "finance.operate",
         "events.manage",
         "products.manage",
         "services.read",
+        "services.manage",
         "vendors.manage",
         "ads.manage",
         "analytics.read",
         "inventory.read",
+        "support.manage",
+        "logistics.manage",
+        "audit.read",
     }
 )
 
+# Permissions the legacy unrestricted `admin` role does NOT receive implicitly. Reading
+# the audit trail is a superadmin oversight duty (founder decision 2026-11-13); a
+# superadmin may still grant it to anyone through an `rbac_*` role.
+ADMIN_ROLE_EXCLUDED_PERMISSIONS = frozenset({"audit.read"})
 
-_ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
-    ("GET", "/admin/orders/search"): "finance.read",
-    ("GET", "/admin/orders/{order_id}"): "finance.read",
-    ("GET", "/admin/disputes"): "finance.read",
-    ("GET", "/admin/disputes/{dispute_id}"): "finance.read",
+# Dashboard tiles that expose money held, liabilities and reconciliation detail (D3).
+DASHBOARD_FINANCE_PERMISSIONS = frozenset({"finance.read", "finance.operate"})
+
+
+_ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
+    ("GET", "/admin/orders/search"): ("finance.read", "finance.operate"),
+    ("GET", "/admin/orders/{order_id}"): ("finance.read", "finance.operate", "logistics.manage"),
+    ("GET", "/admin/disputes"): ("finance.read", "finance.operate", "support.manage"),
+    ("GET", "/admin/disputes/{dispute_id}"): ("finance.read", "finance.operate", "support.manage"),
     ("GET", "/admin/events/high-value-queue"): "events.manage",
     ("POST", "/admin/events/{event_id}/high-value-verify"): "events.manage",
     ("GET", "/admin/products/duplicates"): "products.manage",
@@ -166,7 +180,7 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("POST", "/admin/products/merge"): "products.manage",
     ("PUT", "/admin/products/{product_id}/relations"): "products.manage",
     ("PATCH", "/admin/products/canonical/{product_id}/status"): "products.manage",
-    ("GET", "/admin/services"): "services.read",
+    ("GET", "/admin/services"): ("services.read", "services.manage"),
     ("GET", "/admin/inventory"): "inventory.read",
     ("GET", "/admin/vendors"): "vendors.manage",
     ("GET", "/admin/vendors/{vendor_id}/kyc"): "vendors.manage",
@@ -222,12 +236,71 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("POST", "/admin/flash-deals"): "ads.manage",
     ("PATCH", "/admin/flash-deals/{deal_id}"): "ads.manage",
     ("POST", "/admin/qa/{kind}/{item_id}/moderate"): "products.manage",
+    # D2: money operations. Superadmin and admin keep them; no second approver yet.
+    ("POST", "/admin/refunds/execute"): "finance.operate",
+    ("POST", "/admin/orders/{order_id}/escrow"): "finance.operate",
+    ("POST", "/admin/orders/{order_id}/intervene"): "finance.operate",
+    ("POST", "/admin/orders/{order_id}/cod/confirm-collection"): "finance.operate",
+    ("POST", "/admin/orders/{order_id}/cod/refuse-collection"): "finance.operate",
+    ("POST", "/admin/disputes/{dispute_id}/decide"): "finance.operate",
+    ("GET", "/admin/disputes/{dispute_id}/notes"): (
+        "finance.read",
+        "finance.operate",
+        "support.manage",
+    ),
+    ("POST", "/admin/disputes/{dispute_id}/notes"): ("finance.operate", "support.manage"),
+    # Customer support: masked lookup, contact log, outbound message.
+    ("GET", "/admin/support/lookup"): "support.manage",
+    ("GET", "/admin/support/log"): "support.manage",
+    ("POST", "/admin/support/send"): "support.manage",
+    # Logistics: courier dispatch board and manual dispatch (routes on this branch only).
+    ("POST", "/admin/orders/{order_id}/dispatch"): "logistics.manage",
+    ("GET", "/admin/dispatch/board"): "logistics.manage",
+    ("GET", "/admin/dispatch/couriers"): "logistics.manage",
+    ("POST", "/admin/dispatch/couriers"): "logistics.manage",
+    ("PATCH", "/admin/dispatch/couriers/{courier_id}"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests"): "logistics.manage",
+    ("GET", "/admin/dispatch/requests/{dispatch_id}"): "logistics.manage",
+    ("GET", "/admin/dispatch/requests/{dispatch_id}/message"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/handover"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/notify"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/transition"): "logistics.manage",
+    # Services: listings, RFQ moderation, providers.
+    ("PATCH", "/admin/services/{service_id}/status"): "services.manage",
+    ("GET", "/admin/service-providers"): "services.manage",
+    ("GET", "/admin/rfq/jobs"): "services.manage",
+    ("POST", "/admin/rfq/jobs/{job_id}/close"): "services.manage",
+    # Events: listings, organisers, unpublish and cancellation.
+    ("GET", "/admin/events"): "events.manage",
+    ("GET", "/admin/events/organisers"): "events.manage",
+    ("POST", "/admin/events/{event_id}/unpublish"): "events.manage",
+    ("POST", "/admin/events/{event_id}/cancel"): "events.manage",
+    # Audit trail: superadmin, or a role holding audit.read (never implied by `admin`).
+    ("GET", "/admin/audit-log"): "audit.read",
 }
 
 
-def admin_permission_for_request(path_template: str, method: str) -> str | None:
-    """Explicit route inventory. Unknown and payment mutation routes deny."""
-    return _ADMIN_ROUTE_PERMISSIONS.get((method, path_template))
+def _normalise_route_spec(
+    spec: dict[tuple[str, str], str | tuple[str, ...]],
+) -> dict[tuple[str, str], frozenset[str]]:
+    out: dict[tuple[str, str], frozenset[str]] = {}
+    for key, value in spec.items():
+        permissions = frozenset((value,) if isinstance(value, str) else value)
+        unknown = permissions - ADMIN_PERMISSIONS
+        if not permissions or unknown:
+            raise RuntimeError(f"Route {key} maps to unknown permission(s): {sorted(unknown)}")
+        out[key] = permissions
+    return out
+
+
+_ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], frozenset[str]] = _normalise_route_spec(
+    _ADMIN_ROUTE_PERMISSION_SPEC
+)
+
+
+def admin_permissions_for_request(path_template: str, method: str) -> frozenset[str]:
+    """Explicit route inventory: any one listed permission admits. Unknown routes deny."""
+    return _ADMIN_ROUTE_PERMISSIONS.get((method, path_template), frozenset())
 
 
 def _admin_route_template(request: Request) -> str:
@@ -240,12 +313,53 @@ def _admin_route_template(request: Request) -> str:
     return template if template.startswith("/admin/") else "/admin" + template
 
 
+_ADMIN_LIKE_ROLES = frozenset({"superadmin", "admin", "moderator"})
+_denial_logger = logging.getLogger("app.admin.denied")
+
+
+def holds_admin_like_role(user: CurrentUser) -> bool:
+    return bool(user.roles & _ADMIN_LIKE_ROLES) or any(
+        role.startswith("rbac_") for role in user.roles
+    )
+
+
+def record_denied_admin_attempt(request: Request, user: CurrentUser) -> None:
+    """Append an `outcome = denied` audit row for an operator refused on an admin route.
+
+    Only operators (fixed admin roles or an `rbac_*` role) are recorded: customers and
+    vendors probing /admin are noise, already answered 403. Best effort — the refusal
+    stands whether or not the row is written.
+    """
+    if not holds_admin_like_role(user):
+        return
+    route = _admin_route_template(request) or request.url.path
+    request_id = getattr(request.state, "request_id", None)
+    try:
+        get_supabase_service_client().client.table("audit_log").insert(
+            {
+                "actor": user.id,
+                "action": "admin.access.denied",
+                "entity_type": "admin_route",
+                "entity_id": None,
+                "before": None,
+                "after": {"method": request.method, "route": route},
+                "actor_roles": sorted(user.roles),
+                "outcome": "denied",
+                "request_id": request_id if isinstance(request_id, str) else None,
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001 - audit of a refusal must never turn into a 500
+        _denial_logger.warning("admin denial audit write failed", exc_info=True)
+
+
 def load_admin_permissions(
     user: CurrentUser, service_client: SupabaseServiceClient
 ) -> frozenset[str]:
     """Read current grants from the same user_roles snapshot used for identity."""
-    if "superadmin" in user.roles or "admin" in user.roles:
+    if "superadmin" in user.roles:
         return ADMIN_PERMISSIONS
+    if "admin" in user.roles:
+        return ADMIN_PERMISSIONS - ADMIN_ROLE_EXCLUDED_PERMISSIONS
     base_permissions = (
         frozenset({"products.manage", "vendors.manage"})
         if "moderator" in user.roles
@@ -275,9 +389,10 @@ async def require_admin_scope(
     """Gate every route mounted on the shared admin router, including new ones."""
     if user.roles.intersection({"superadmin", "admin"}):
         return user
-    permission = admin_permission_for_request(_admin_route_template(request), request.method)
-    if permission and permission in load_admin_permissions(user, get_supabase_service_client()):
+    permissions = admin_permissions_for_request(_admin_route_template(request), request.method)
+    if permissions & load_admin_permissions(user, get_supabase_service_client()):
         return user
+    record_denied_admin_attempt(request, user)
     raise AppError(code="forbidden", message="Insufficient admin permissions", http_status=403)
 
 
@@ -305,14 +420,17 @@ def require_role(*required_roles: str) -> Callable[..., Awaitable[CurrentUser]]:
             and required.intersection({"admin", "moderator"})
             and any(role.startswith("rbac_") for role in current_user.roles)
         ):
-            permission = admin_permission_for_request(
+            permissions = admin_permissions_for_request(
                 _admin_route_template(request), request.method
             )
-            if permission:
-                allowed = permission in load_admin_permissions(
-                    current_user, get_supabase_service_client()
+            if permissions:
+                allowed = bool(
+                    permissions
+                    & load_admin_permissions(current_user, get_supabase_service_client())
                 )
         if not allowed:
+            if request.url.path.startswith("/admin"):
+                record_denied_admin_attempt(request, current_user)
             raise AppError(
                 code="forbidden",
                 message="Insufficient permissions for this action",
@@ -322,3 +440,20 @@ def require_role(*required_roles: str) -> Callable[..., Awaitable[CurrentUser]]:
         return current_user
 
     return _require_role
+
+
+async def require_route_permission(
+    request: Request,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> CurrentUser:
+    """Grant by the route map only — no blanket pass for the unrestricted `admin` role.
+
+    Used where the founder withheld a duty from `admin` (the audit-log viewer): the
+    effective permission set of `admin` excludes it, while `superadmin` holds every
+    permission and an `rbac_*` role may be granted it explicitly.
+    """
+    permissions = admin_permissions_for_request(_admin_route_template(request), request.method)
+    if permissions and permissions & load_admin_permissions(user, get_supabase_service_client()):
+        return user
+    record_denied_admin_attempt(request, user)
+    raise AppError(code="forbidden", message="Insufficient admin permissions", http_status=403)

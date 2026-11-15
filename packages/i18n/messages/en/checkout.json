@@ -244,6 +244,11 @@
         "deliveryNoLandmark": "Lusaka delivery",
         "pickupFromSeller": "You'll collect from the seller",
         "placeOrderCod": "Place order — pay on delivery"
+      },
+      "deliveryConsent": {
+        "label": "Share my name, phone and address with the delivery partner to deliver this order",
+        "hint": "Optional. A licensed courier may deliver your order. Without this, Vergeo5 staff deliver it or call you first. Change it any time in Account → Privacy.",
+        "saveFailed": "We couldn't save this choice. You can still place your order."
       }
     },
     "pending": {

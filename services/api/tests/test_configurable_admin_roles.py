@@ -17,7 +17,7 @@ import jwt
 import psycopg
 import pytest
 from app.core.admin_audit import get_admin_audit_recorder
-from app.core.auth import CurrentUser, admin_permission_for_request, get_current_user
+from app.core.auth import CurrentUser, admin_permissions_for_request, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
 from app.supabase_client import get_supabase_service_client
@@ -100,17 +100,18 @@ def role_client(
 @pytest.mark.parametrize(
     "path,method,expected",
     [
-        ("/admin/orders/search", "GET", "finance.read"),
-        ("/admin/orders/{order_id}/cod/confirm-collection", "POST", None),
-        ("/admin/refunds", "POST", None),
-        ("/admin/events/high-value-queue", "GET", "events.manage"),
-        ("/admin/products/merge", "POST", "products.manage"),
-        ("/admin/roles", "GET", None),
-        ("/admin/unknown", "GET", None),
+        ("/admin/orders/search", "GET", {"finance.read", "finance.operate"}),
+        # D2 (2026-11-13): COD confirmation is a finance operation, never finance.read.
+        ("/admin/orders/{order_id}/cod/confirm-collection", "POST", {"finance.operate"}),
+        ("/admin/refunds", "POST", set()),
+        ("/admin/events/high-value-queue", "GET", {"events.manage"}),
+        ("/admin/products/merge", "POST", {"products.manage"}),
+        ("/admin/roles", "GET", set()),
+        ("/admin/unknown", "GET", set()),
     ],
 )
-def test_explicit_scope_map(path: str, method: str, expected: str | None) -> None:
-    assert admin_permission_for_request(path, method) == expected
+def test_explicit_scope_map(path: str, method: str, expected: set[str]) -> None:
+    assert admin_permissions_for_request(path, method) == expected
 
 
 def test_finance_role_cannot_reach_other_or_money_routes(
@@ -150,6 +151,7 @@ def test_finance_grants_are_read_only(
     response = client.get("/admin/me/permissions")
     assert response.status_code == 200
     assert response.json() == {
+        "user_id": "00000000-0000-0000-0000-000000000002",
         "permissions": ["finance.read"],
         "can_manage_roles": False,
         "unrestricted": False,
@@ -582,6 +584,7 @@ def test_disposable_distinct_roles_and_role_union(role_api: RoleApiHarness) -> N
     assert role_api.grants("other_operator")["permissions"] == ["services.read"]
     role_api.assign("rbac_services")
     grants = role_api.grants()
+    grants.pop("user_id", None)  # identity echo added 2026-11-13; not a grant
     assert grants == {
         "permissions": ["finance.read", "services.read"],
         "can_manage_roles": False,

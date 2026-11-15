@@ -235,18 +235,16 @@ class _ListingRow(BaseModel):
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    return (
-        EARTH_RADIUS_M
-        * math.acos(
-            min(
-                1.0,
-                max(
-                    -1.0,
-                    math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
-                    * math.cos(math.radians(lng2) - math.radians(lng1))
-                    + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
-                ),
-            )
+    return EARTH_RADIUS_M * math.acos(
+        min(
+            1.0,
+            max(
+                -1.0,
+                math.cos(math.radians(lat1))
+                * math.cos(math.radians(lat2))
+                * math.cos(math.radians(lng2) - math.radians(lng1))
+                + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
+            ),
         )
     )
 
@@ -368,9 +366,7 @@ def _response_rows(response: Any) -> list[dict[str, Any]]:
 def _fetch_search_documents(client: Any, category_path: str | None) -> list[_SearchDocRow]:
     query = (
         client.table("search_documents")
-        .select(
-            "entity_id,title,category_path,price_min_ngwee,lat,lng,boost_signals,updated_at"
-        )
+        .select("entity_id,title,category_path,price_min_ngwee,lat,lng,boost_signals,updated_at")
         .eq("entity_kind", "listing")
         .eq("is_public", True)
     )
@@ -512,9 +508,7 @@ def get_standalone_listing(
     title_raw = row.get("title_override")
     title = title_raw.strip() if isinstance(title_raw, str) else ""
     vendor_name_raw = vendor.get("display_name") if vendor is not None else None
-    vendor_name = (
-        vendor_name_raw.strip() if isinstance(vendor_name_raw, str) else ""
-    )
+    vendor_name = vendor_name_raw.strip() if isinstance(vendor_name_raw, str) else ""
     if vendor is None or not title or not vendor_name:
         raise _standalone_listing_not_found()
 
@@ -558,9 +552,7 @@ def get_standalone_listing(
             row.get("fulfilment_mode") or "stocked"
         ),
         lead_time_days=int(lead_time_raw) if lead_time_raw is not None else None,
-        vendor_capacity_per_week=(
-            int(capacity_raw) if capacity_raw is not None else None
-        ),
+        vendor_capacity_per_week=(int(capacity_raw) if capacity_raw is not None else None),
         stock_mode=str(row.get("stock_mode") or "tracked"),  # type: ignore[arg-type]
         stock_qty=int(stock_qty_raw) if stock_qty_raw is not None else None,
         moq=int(row.get("moq") or 1),
@@ -605,10 +597,7 @@ def _customer_released_product_classes(client: Any) -> set[str]:
     }
     try:
         response = (
-            client.table("feature_flags")
-            .select("flag,enabled")
-            .in_("flag", list(flags))
-            .execute()
+            client.table("feature_flags").select("flag,enabled").in_("flag", list(flags)).execute()
         )
         rows = _response_rows(response)
     except Exception:  # pragma: no cover - defensive fail-closed boundary

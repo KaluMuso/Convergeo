@@ -18,7 +18,9 @@
     "support": "客服",
     "events": "高价值活动",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "管理员账户",
+    "auditLog": "审计日志"
   },
   "hubs": {
     "moderation": {
@@ -706,9 +708,9 @@
     "emptyTrafficBody": "来自实时 API 的 GMV、订单流水线、漏斗与账本负债均为零——这些不是占位分析数据。",
     "emptyTrafficDependency": "非零磁贴缺少的后端依赖：真实结账/订单量、账本分录（MR-B01）以及对账报告。",
     "gmv": {
-      "title": "商品交易总额（GMV）",
-      "subtitle": "商品交易总额（不含已取消订单）",
-      "empty": "K0.00——账本支撑的汇总中尚无未取消订单。"
+      "title": "订单金额（未取消）",
+      "subtitle": "所有未取消订单的商品与配送费合计，无论是否付款。这不是已收款项，也不是平台收入。",
+      "empty": "K0.00——尚无未取消的订单。"
     },
     "payoutLiabilities": {
       "title": "结算负债",
@@ -788,7 +790,9 @@
         "orders_placed": "下单",
         "orders_completed": "完成订单"
       }
-    }
+    },
+    "financeWithheldTitle": "财务数据已隐藏",
+    "financeWithheldBody": "托管余额、待付款项和对账需要 finance.read 权限。如工作需要，请联系超级管理员。"
   },
   "disputes": {
     "title": "纠纷控制台",
@@ -1158,5 +1162,58 @@
     "placeholders": {
       "path": "/c/electronics"
     }
+  },
+  "auditLogUi": {
+    "title": "审计日志",
+    "subtitle": "所有已记录的管理操作，最新的在前。只读：条目不能修改或删除。",
+    "permissionDenied": "需要 audit.read 权限才能查看审计日志。",
+    "filters": "审计日志筛选",
+    "actor": "操作者账户 ID",
+    "action": "操作（以点结尾表示一类，例如 admin.orders.）",
+    "resource": "资源类型",
+    "resourceId": "资源 ID",
+    "outcome": "结果",
+    "outcomeAny": "全部结果",
+    "outcomeSuccess": "成功",
+    "outcomeDenied": "被拒绝",
+    "outcomeFailed": "失败",
+    "from": "开始日期",
+    "to": "结束日期",
+    "apply": "应用筛选",
+    "reset": "清除筛选",
+    "maskingNote": "电话、邮箱、姓名、地址和验证码均已遮盖。",
+    "loading": "正在加载审计条目…",
+    "empty": "没有符合筛选条件的条目。",
+    "loadFailed": "无法加载审计日志。",
+    "invalid": "请检查筛选条件：ID 必须完整。",
+    "when": "时间：{at}",
+    "who": "操作者：{actor}（{roles}）",
+    "system": "系统",
+    "noRoles": "无角色记录",
+    "what": "对象：{resource} {id}",
+    "reason": "原因：{reason}",
+    "requestId": "请求 {id}",
+    "details": "变更前后",
+    "more": "加载更早的条目"
+  },
+  "accountsUi": {
+    "title": "管理员账户",
+    "subtitle": "所有持有管理员角色的人员及其姓名和邮箱。",
+    "deactivateHelp": "停用会一次性撤销该账户的全部管理员角色，并将您的原因写入审计日志。在其下一次请求时生效。最后一位超级管理员不能被移除，您也不能停用自己。",
+    "manageRolesLink": "分配或撤销单个角色",
+    "permissionDenied": "只有超级管理员可以管理管理员账户。",
+    "loading": "正在加载管理员账户…",
+    "loadFailed": "无法加载管理员账户。",
+    "mutationFailed": "账户未被停用，请重试。",
+    "lastSuperadmin": "这是最后一位超级管理员，无法停用。",
+    "retry": "重试",
+    "empty": "没有账户持有管理员角色。",
+    "noName": "资料中无姓名",
+    "noEmail": "无邮箱记录",
+    "roles": "角色：{roles}",
+    "selfNote": "这是您的账户。",
+    "reason": "停用原因（必填）",
+    "deactivate": "停用",
+    "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。"
   }
 }

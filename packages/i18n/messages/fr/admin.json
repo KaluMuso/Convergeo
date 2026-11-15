@@ -18,7 +18,9 @@
     "support": "Support",
     "events": "Événements à haute valeur",
     "homeFeed": "Home feed",
-    "advertising": "Advertising"
+    "advertising": "Advertising",
+    "accounts": "Comptes admin",
+    "auditLog": "Journal d'audit"
   },
   "hubs": {
     "moderation": {
@@ -706,9 +708,9 @@
     "emptyTrafficBody": "GMV, pipeline, entonnoir et passifs du grand livre sont tous à zéro via l'API live — ce ne sont pas des analytics fictives.",
     "emptyTrafficDependency": "Dépendance backend manquante pour des tuiles non nulles : volume réel de checkout/commandes, écritures du grand livre (MR-B01) et rapports de rapprochement.",
     "gmv": {
-      "title": "GMV",
-      "subtitle": "Volume brut de transactions (commandes non annulées)",
-      "empty": "K0,00 — aucune commande non annulée dans l'agrégat adossé au grand livre."
+      "title": "Valeur des commandes (non annulées)",
+      "subtitle": "Articles plus livraison de chaque commande non annulée, payée ou non. Ce n'est ni l'argent reçu ni le revenu de la plateforme.",
+      "empty": "K0,00 — aucune commande non annulée pour l'instant."
     },
     "payoutLiabilities": {
       "title": "Passifs de versement",
@@ -788,7 +790,9 @@
         "orders_placed": "Commandes passées",
         "orders_completed": "Commandes terminées"
       }
-    }
+    },
+    "financeWithheldTitle": "Chiffres financiers masqués",
+    "financeWithheldBody": "Le séquestre, les montants dus et le rapprochement exigent la permission finance.read. Demandez-la à un superadmin si votre travail l'exige."
   },
   "disputes": {
     "title": "Console des litiges",
@@ -1158,5 +1162,58 @@
     "placeholders": {
       "path": "/c/electronics"
     }
+  },
+  "auditLogUi": {
+    "title": "Journal d'audit",
+    "subtitle": "Chaque action admin enregistrée, la plus récente en premier. Lecture seule : rien ne peut être modifié ni supprimé.",
+    "permissionDenied": "La permission audit.read est requise pour lire le journal d'audit.",
+    "filters": "Filtres du journal d'audit",
+    "actor": "ID du compte auteur",
+    "action": "Action (terminez par un point pour une famille, ex. admin.orders.)",
+    "resource": "Type de ressource",
+    "resourceId": "ID de la ressource",
+    "outcome": "Résultat",
+    "outcomeAny": "Tous les résultats",
+    "outcomeSuccess": "Réussi",
+    "outcomeDenied": "Refusé",
+    "outcomeFailed": "Échoué",
+    "from": "Du",
+    "to": "Au",
+    "apply": "Appliquer",
+    "reset": "Effacer les filtres",
+    "maskingNote": "Numéros, e-mails, noms, adresses et codes sont masqués.",
+    "loading": "Chargement du journal…",
+    "empty": "Aucune entrée ne correspond à ces filtres.",
+    "loadFailed": "Le journal d'audit n'a pas pu être chargé.",
+    "invalid": "Vérifiez les filtres : les ID doivent être complets.",
+    "when": "Quand : {at}",
+    "who": "Qui : {actor} ({roles})",
+    "system": "système",
+    "noRoles": "aucun rôle enregistré",
+    "what": "Quoi : {resource} {id}",
+    "reason": "Motif : {reason}",
+    "requestId": "Requête {id}",
+    "details": "Avant et après",
+    "more": "Entrées plus anciennes"
+  },
+  "accountsUi": {
+    "title": "Comptes admin",
+    "subtitle": "Toutes les personnes ayant un rôle admin, avec nom et e-mail.",
+    "deactivateHelp": "Désactiver retire tous les rôles admin du compte d'un coup et inscrit votre motif au journal d'audit. L'effet est immédiat à sa prochaine requête. Le dernier superadmin ne peut pas être retiré et vous ne pouvez pas vous désactiver vous-même.",
+    "manageRolesLink": "Attribuer ou retirer un seul rôle",
+    "permissionDenied": "Seul un superadmin peut gérer les comptes admin.",
+    "loading": "Chargement des comptes…",
+    "loadFailed": "Les comptes admin n'ont pas pu être chargés.",
+    "mutationFailed": "Le compte n'a pas été désactivé. Réessayez.",
+    "lastSuperadmin": "C'est le dernier superadmin : il ne peut pas être désactivé.",
+    "retry": "Réessayer",
+    "empty": "Aucun compte n'a de rôle admin.",
+    "noName": "Pas de nom sur le profil",
+    "noEmail": "Pas d'e-mail enregistré",
+    "roles": "Rôles : {roles}",
+    "selfNote": "C'est votre compte.",
+    "reason": "Motif de la désactivation (obligatoire)",
+    "deactivate": "Désactiver",
+    "confirmDeactivate": "Désactiver {name} ? Ces rôles seront retirés : {roles}."
   }
 }

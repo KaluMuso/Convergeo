@@ -241,6 +241,11 @@
         "deliveryNoLandmark": "卢萨卡送货",
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
+      },
+      "deliveryConsent": {
+        "label": "同意将我的姓名、电话和地址提供给配送合作方，用于配送此订单",
+        "hint": "可选。持证快递员可能配送您的订单。若不同意，将由 Vergeo5 员工配送或先致电您。可随时在“账户 → 隐私”中更改。",
+        "saveFailed": "无法保存此选择。您仍可以下单。"
       }
     },
     "pending": {

@@ -428,9 +428,7 @@ async def create_orders(
     # Totals from cart lines (authoritative) + per-vendor delivery fee.
     per_vendor_subtotal: dict[str, int] = defaultdict(int)
     for line in cart_lines:
-        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(
-            line.qty, line.unit_price_ngwee
-        )
+        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(line.qty, line.unit_price_ngwee)
     delivery_by_vendor = {group.vendor_id: group.delivery_fee_ngwee for group in vendor_groups}
     vendor_order_totals = {
         vendor_id: subtotal + delivery_by_vendor.get(vendor_id, 0)
