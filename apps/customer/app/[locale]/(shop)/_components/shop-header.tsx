@@ -10,7 +10,6 @@ import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { HeaderThemeToggle } from "./header-theme-toggle";
 import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
-import { useBusinessEligibility } from "./use-business-eligibility";
 
 import type { SearchInputLabels } from "./search/search-input";
 
@@ -33,7 +32,6 @@ export type ShopHeaderLabels = {
   services: string;
   events: string;
   askVergeo: string;
-  supplies: string;
   account: string;
   cart: string;
   cartWithCount: string;
@@ -76,7 +74,6 @@ export function ShopHeader({
 }: ShopHeaderProps) {
   const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
-  const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
     // Defer cart hydration until after first paint so header mount does not
@@ -150,7 +147,6 @@ export function ShopHeader({
     ...link,
     href: withMerchPreviewParam(link.href, previewToken),
   }));
-  const suppliesHref = withMerchPreviewParam(`/${locale}/supplies`, previewToken);
   const accountHref = withMerchPreviewParam(`/${locale}/account`, previewToken);
 
   const logo = (
@@ -264,13 +260,6 @@ export function ShopHeader({
                 </Link>
               </li>
             ))}
-            {eligibleForSupplies ? (
-              <li className="shrink-0">
-                <Link href={suppliesHref} className={navLinkClassName}>
-                  {labels.supplies}
-                </Link>
-              </li>
-            ) : null}
           </ul>
         </div>
       </nav>
