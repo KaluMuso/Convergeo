@@ -3459,6 +3459,29 @@ EXPECTATIONS: TableExpectations = {
             "vendor_business_staff",
         )
     },
+    # Paid extras (20261115230000): active catalogue readable by signed-in users;
+    # owners read their OWN shops' requests/history (isolation in
+    # test_plan_limits_extras_rls.py). Writes are API-only; anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "vendor_extras",
+            "vendor_extras_requests",
+            "vendor_extras_request_events",
+        )
+    },
 }
 
 MATRIX_SUMMARY: Counter[str] = Counter()

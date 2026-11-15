@@ -177,12 +177,22 @@ def test_product_images_public_for_active_product_only(seeded: PgConn) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Listing admission trigger: least(KYC cap, plan cap)
+# Listing triggers: KYC cap on admission, plan cap on ACTIVE listings (publish)
 # ---------------------------------------------------------------------------
 def _counted_listings(db: PgConn, vendor_id: str) -> int:
     result = db.run(
         "SELECT count(*) FROM public.vendor_listings "
         f"WHERE vendor_id = '{vendor_id}' AND status IN ('draft', 'active', 'paused')"
+    )
+    assert result.ok, result.error
+    return int(result.rows[0])
+
+
+def _active_listings(db: PgConn, vendor_id: str) -> int:
+    """The plan limit counts ACTIVE listings only (20261115230000); drafts are free."""
+    result = db.run(
+        "SELECT count(*) FROM public.vendor_listings "
+        f"WHERE vendor_id = '{vendor_id}' AND status = 'active'"
     )
     assert result.ok, result.error
     return int(result.rows[0])
@@ -199,7 +209,7 @@ def _admission(db: PgConn, *, setup: str, stock_qty: int = 1) -> SqlResult:
         INSERT INTO public.vendor_listings
           (vendor_id, product_id, product_class, price_ngwee, condition, stock_mode,
            stock_qty, status)
-          VALUES ('{VENDOR_A}', '{PHONE}', 'A', 150000, 'new', 'tracked', {stock_qty}, 'draft');
+          VALUES ('{VENDOR_A}', '{PHONE}', 'A', 150000, 'new', 'tracked', {stock_qty}, 'active');
         SELECT 'admitted';
         ROLLBACK;
         """,
@@ -219,28 +229,28 @@ FLAG_OFF = "UPDATE public.feature_flags SET enabled = false WHERE flag = 'vendor
 
 
 def test_plan_cap_refuses_new_listing_at_limit(seeded: PgConn) -> None:
-    count = _counted_listings(seeded, VENDOR_A)
+    count = _active_listings(seeded, VENDOR_A)
     result = _admission(seeded, setup=FLAG_ON + _plan_at(count))
     assert not result.ok
     assert result.sqlstate == "PT403"
-    assert "listing_cap_exceeded" in (result.error or "")
+    assert "listing_plan_limit_reached" in (result.error or "")
 
 
 def test_plan_cap_counts_listings_not_stock(seeded: PgConn) -> None:
-    count = _counted_listings(seeded, VENDOR_A)
+    count = _active_listings(seeded, VENDOR_A)
     result = _admission(seeded, setup=FLAG_ON + _plan_at(count + 1), stock_qty=1_000_000)
     assert result.ok, result.error
     assert result.rows[-1] == "admitted"
 
 
 def test_flag_off_ignores_plan_cap(seeded: PgConn) -> None:
-    count = _counted_listings(seeded, VENDOR_A)
+    count = _active_listings(seeded, VENDOR_A)
     result = _admission(seeded, setup=FLAG_OFF + _plan_at(count))
     assert result.ok, result.error
 
 
 def test_unlimited_override_lifts_plan_cap(seeded: PgConn) -> None:
-    count = _counted_listings(seeded, VENDOR_A)
+    count = _active_listings(seeded, VENDOR_A)
     override = f"""
         INSERT INTO public.vendor_plan_overrides (vendor_id, unlimited_listings, expires_at, reason)
           VALUES ('{VENDOR_A}', true, now() + interval '1 day', 'launch promo');
@@ -250,7 +260,7 @@ def test_unlimited_override_lifts_plan_cap(seeded: PgConn) -> None:
 
 
 def test_expired_override_is_ignored(seeded: PgConn) -> None:
-    count = _counted_listings(seeded, VENDOR_A)
+    count = _active_listings(seeded, VENDOR_A)
     override = f"""
         INSERT INTO public.vendor_plan_overrides (vendor_id, unlimited_listings, expires_at, reason)
           VALUES ('{VENDOR_A}', true, now() - interval '1 minute', 'expired promo');

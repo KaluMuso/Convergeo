@@ -6516,6 +6516,7 @@ export type Database = {
           pacra_verified_by: string | null
           registration_type: string
           status: string
+          trial_ends_at: string
           updated_at: string
         }
         Insert: {
@@ -6529,6 +6530,7 @@ export type Database = {
           pacra_verified_by?: string | null
           registration_type?: string
           status?: string
+          trial_ends_at?: string
           updated_at?: string
         }
         Update: {
@@ -6542,6 +6544,7 @@ export type Database = {
           pacra_verified_by?: string | null
           registration_type?: string
           status?: string
+          trial_ends_at?: string
           updated_at?: string
         }
         Relationships: [
@@ -6557,6 +6560,155 @@ export type Database = {
             columns: ["pacra_verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_extras: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          key: string
+          name: string
+          position: number
+          price_is_placeholder: boolean
+          price_max_ngwee: number | null
+          price_ngwee: number | null
+          pricing: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          key: string
+          name: string
+          position?: number
+          price_is_placeholder?: boolean
+          price_max_ngwee?: number | null
+          price_ngwee?: number | null
+          pricing?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          key?: string
+          name?: string
+          position?: number
+          price_is_placeholder?: boolean
+          price_max_ngwee?: number | null
+          price_ngwee?: number | null
+          pricing?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vendor_extras_request_events: {
+        Row: {
+          actor: string | null
+          actor_role: string
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          quoted_price_ngwee: number | null
+          request_id: string
+          to_status: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_role: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          quoted_price_ngwee?: number | null
+          request_id: string
+          to_status: string
+        }
+        Update: {
+          actor?: string | null
+          actor_role?: string
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          quoted_price_ngwee?: number | null
+          request_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_extras_request_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_extras_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_extras_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          decided_at: string | null
+          extra_key: string
+          id: string
+          note: string | null
+          quantity: number
+          quoted_price_ngwee: number | null
+          requested_by: string
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          decided_at?: string | null
+          extra_key: string
+          id?: string
+          note?: string | null
+          quantity?: number
+          quoted_price_ngwee?: number | null
+          requested_by: string
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          decided_at?: string | null
+          extra_key?: string
+          id?: string
+          note?: string | null
+          quantity?: number
+          quoted_price_ngwee?: number | null
+          requested_by?: string
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_extras_requests_extra_key_fkey"
+            columns: ["extra_key"]
+            isOneToOne: false
+            referencedRelation: "vendor_extras"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "vendor_extras_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -7777,6 +7929,10 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
+      business_trial_ends_at: {
+        Args: { p_vendor_id: string }
+        Returns: string
+      }
       cart_guest_token: { Args: never; Returns: string }
       cart_merge_authority: {
         Args: {
@@ -8144,6 +8300,17 @@ export type Database = {
         }
         Returns: Json
       }
+      transition_vendor_extras_request: {
+        Args: {
+          p_actor: string
+          p_actor_role: string
+          p_note?: string
+          p_quoted_price_ngwee?: number
+          p_request_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
       vendor_branch_dedup_scan: {
         Args: { p_vendor_id: string }
         Returns: number
@@ -8151,6 +8318,10 @@ export type Database = {
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {
         Args: { p_class: string; p_vendor_id: string }
+        Returns: boolean
+      }
+      vendor_plan_fee_accrues: {
+        Args: { p_at?: string; p_vendor_id: string }
         Returns: boolean
       }
       vendor_plan_listing_cap: { Args: { p_vendor_id: string }; Returns: number }

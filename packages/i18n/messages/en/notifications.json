@@ -188,11 +188,16 @@
       "kyc_rejected": "Your verification needs changes. Open it to see why.",
       "rfq_received": "A customer asked you for a quote.",
       "job_matched": "A new job matches your services.",
-      "dispute_opened": "A customer opened a dispute on order {ref}. Please respond."
+      "dispute_opened": "A customer opened a dispute on order {ref}. Please respond.",
+      "extras_quoted": "We sent you a quote for {name}.",
+      "extras_approved": "Your request for {name} is approved.",
+      "extras_fulfilled": "{name} is done.",
+      "extras_cancelled": "Your request for {name} was cancelled."
     },
     "admin": {
       "kyc_submitted": "New KYC submission waiting for review.",
-      "dispute_opened": "New dispute opened on order {ref}."
+      "dispute_opened": "New dispute opened on order {ref}.",
+      "extras_requested": "A seller requested an extra: {name}."
     }
   }
 }

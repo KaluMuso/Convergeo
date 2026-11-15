@@ -22,6 +22,7 @@ const FREE = {
   key: "free",
   name: "Free",
   price_ngwee: 0,
+  annual_price_ngwee: 0,
   max_listings: 25,
   max_images_per_listing: 8,
   featured_slots: 0,
@@ -29,7 +30,14 @@ const FREE = {
   wholesale_tools: false,
 };
 
-const STARTER = { ...FREE, key: "starter", name: "Starter", price_ngwee: 4900, max_listings: 150 };
+const STARTER = {
+  ...FREE,
+  key: "starter",
+  name: "Starter",
+  price_ngwee: 4900,
+  annual_price_ngwee: 49980,
+  max_listings: 200,
+};
 
 function status(overrides: Partial<VendorPlanStatus>): VendorPlanStatus {
   return {
@@ -44,6 +52,10 @@ function status(overrides: Partial<VendorPlanStatus>): VendorPlanStatus {
     limited_by: "plan",
     override_expires_at: null,
     upgrade_options: [],
+    plans: [],
+    annual_discount_pct: 15,
+    trial_ends_at: null,
+    in_trial: false,
     ...overrides,
   };
 }
@@ -71,7 +83,7 @@ describe("PlanUsageCard", () => {
   it("shows usage without an upgrade prompt below the limit", async () => {
     request.mockResolvedValue(status({}));
     render(<PlanUsageCard />);
-    expect(await screen.findByText('plans.usage:{"count":3,"max":25}')).toBeTruthy();
+    expect(await screen.findByText('plans.usageActive:{"count":3,"max":25}')).toBeTruthy();
     expect(screen.queryByTestId("vendor-plan-upgrade")).toBeNull();
     expect(screen.getByText("plans.free")).toBeTruthy();
   });

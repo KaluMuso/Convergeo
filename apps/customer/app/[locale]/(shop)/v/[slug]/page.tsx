@@ -17,6 +17,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { ShareLinkButton } from "../../../_components/share-link-button";
 import { FollowVendorButton } from "../../_components/directory/follow-vendor-button";
+import { OtherBranches, type OtherBranch } from "../../_components/directory/other-branches";
 import {
   StorefrontProducts,
   type StorefrontListing,
@@ -94,7 +95,7 @@ type VendorProfileApiResponse = {
   /** Multi-branch parent business + its other approved shops (flag-gated). */
   business?: {
     name: string;
-    other_branches: Array<{ slug: string; display_name: string; landmark: string | null }>;
+    other_branches: OtherBranch[];
   } | null;
 };
 
@@ -605,33 +606,24 @@ export default async function VendorProfilePage({ params }: PageProps) {
       </header>
 
       {profile.business && profile.business.other_branches.length > 0 ? (
-        <nav
-          aria-label={t("profile.otherBranchesAria", { name: profile.business.name })}
-          className="space-y-2 px-1 sm:px-4"
-          data-testid="vendor-other-branches"
-        >
-          <p className="m-0 text-sm text-text-2">
-            {t("profile.partOfBusiness", { name: profile.business.name })}
-          </p>
-          <h2 className="m-0 text-sm font-semibold text-text">{t("profile.otherBranches")}</h2>
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-            {profile.business.other_branches.map((branch) => (
-              <li key={branch.slug}>
-                <Link
-                  href={`/${locale}/v/${encodeURIComponent(branch.slug)}`}
-                  className="inline-flex min-h-11 items-center rounded-pill border border-border bg-surface px-3 text-sm text-text no-underline hover:border-primary"
-                >
-                  {branch.landmark
-                    ? t("profile.branchWithLandmark", {
-                        name: branch.display_name,
-                        landmark: branch.landmark,
-                      })
-                    : branch.display_name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <OtherBranches
+          locale={locale}
+          branches={profile.business.other_branches}
+          labels={{
+            heading: t("profile.otherBranches"),
+            aria: t("profile.otherBranchesAria", { name: profile.business.name }),
+            partOf: t("profile.partOfBusiness", { name: profile.business.name }),
+            openNow: t("profile.branchOpenNow"),
+            closedNow: t("profile.branchClosedNow"),
+            hours: t("profile.branchHours"),
+            hoursLine: (day, hours) => t("profile.hoursLine", { day, hours }),
+            phone: t("profile.branchPhone"),
+            map: t("profile.branchMap"),
+            visit: (name) => t("profile.branchVisit", { name }),
+            kmAway: String(t.raw("profile.branchKmAway")),
+            metresAway: String(t.raw("profile.branchMetresAway")),
+          }}
+        />
       ) : null}
 
       <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />

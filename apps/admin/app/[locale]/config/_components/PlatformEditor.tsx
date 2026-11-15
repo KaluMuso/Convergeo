@@ -17,6 +17,7 @@ const PLATFORM_LABEL_KEYS: Record<string, string> = {
   release_after_delivered_hours: "platform.releaseDelivered",
   release_after_shipped_days: "platform.releaseShipped",
   branch_min_sibling_distance_m: "platform.branchMinDistance",
+  plan_annual_discount_pct: "platform.planAnnualDiscount",
 };
 
 const DANGEROUS_KEYS = new Set(["cod_cap_ngwee"]);

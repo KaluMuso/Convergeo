@@ -91,6 +91,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261114030100",
     # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
     "20261115100000",
+    # Plan limits on active listings, trials, paid extras (additive, reversible).
+    "20261115230000",
 }
 
 

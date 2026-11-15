@@ -160,11 +160,16 @@
       "kyc_rejected": "您的认证需要修改。打开查看原因。",
       "rfq_received": "有顾客向您询价。",
       "job_matched": "有新的工作与您的服务匹配。",
-      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。"
+      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。",
+      "extras_quoted": "我们已为 {name} 向您报价。",
+      "extras_approved": "您对 {name} 的申请已获批准。",
+      "extras_fulfilled": "{name} 已完成。",
+      "extras_cancelled": "您对 {name} 的申请已取消。"
     },
     "admin": {
       "kyc_submitted": "有新的 KYC 申请待审核。",
-      "dispute_opened": "订单 {ref} 有新的争议。"
+      "dispute_opened": "订单 {ref} 有新的争议。",
+      "extras_requested": "有卖家申请了增值服务：{name}。"
     }
   }
 }

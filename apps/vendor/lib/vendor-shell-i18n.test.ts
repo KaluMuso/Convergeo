@@ -32,6 +32,8 @@ const SHELL_NAV_KEYS = [
   "payouts",
   "disputes",
   "intake",
+  "plan",
+  "extras",
 ] as const;
 
 const SHELL_GROUP_KEYS = ["operate", "sell", "business"] as const;

@@ -174,11 +174,16 @@
       "kyc_rejected": "Kutsimikizira kwanu kukufunika kusintha. Tsegulani kuti muone chifukwa.",
       "rfq_received": "Kasitomala wakupemphani quote.",
       "job_matched": "Ntchito yatsopano ikugwirizana ndi ma-service anu.",
-      "dispute_opened": "Kasitomala watsegula mkangano pa order {ref}. Chonde yankhani."
+      "dispute_opened": "Kasitomala watsegula mkangano pa order {ref}. Chonde yankhani.",
+      "extras_quoted": "⚠ We sent you a quote for {name}.",
+      "extras_approved": "⚠ Your request for {name} is approved.",
+      "extras_fulfilled": "⚠ {name} is done.",
+      "extras_cancelled": "⚠ Your request for {name} was cancelled."
     },
     "admin": {
       "kyc_submitted": "KYC yatsopano ikudikira kuunikidwa.",
-      "dispute_opened": "Mkangano watsopano pa order {ref}."
+      "dispute_opened": "Mkangano watsopano pa order {ref}.",
+      "extras_requested": "⚠ A seller requested an extra: {name}."
     }
   }
 }

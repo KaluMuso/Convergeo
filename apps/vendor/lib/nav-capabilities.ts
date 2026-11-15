@@ -18,6 +18,8 @@ const CORE_VISIBLE: VendorNavItemKey[] = [
   "reviews",
   "profile",
   "disputes",
+  "plan",
+  "extras",
 ];
 
 function coreCapabilities(): VendorNavCapabilities {
@@ -38,6 +40,8 @@ function coreCapabilities(): VendorNavCapabilities {
     payouts: false,
     disputes: true,
     intake: false,
+    plan: true,
+    extras: true,
   };
 }
 

@@ -37,5 +37,7 @@ export function resolveAdminNavCapabilities(
     roles: canManageRoles,
     services: has("services.read"),
     inventory: has("inventory.read"),
+    extras: has("vendors.manage"),
+    trials: unrestricted,
   };
 }

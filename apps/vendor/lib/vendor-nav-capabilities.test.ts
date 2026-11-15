@@ -29,6 +29,8 @@ function allVisible(): VendorNavCapabilities {
     payouts: true,
     disputes: true,
     intake: true,
+    plan: true,
+    extras: true,
   };
 }
 
@@ -93,6 +95,8 @@ describe("mobile More menu", () => {
       payouts: false,
       disputes: false,
       intake: false,
+      plan: false,
+      extras: false,
     };
     const groups = filterVendorNavGroups(caps);
     expect(buildVendorMobilePrimary(groups)).toEqual(["home", "orders", "listings"]);

@@ -179,6 +179,9 @@ _ADMIN_ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("POST", "/admin/branches/{branch_id}/reject"): "vendors.manage",
     ("POST", "/admin/branches/flags/{flag_id}/resolve"): "vendors.manage",
     ("POST", "/admin/branches/businesses/{business_id}/pacra"): "vendors.manage",
+    # Extras request queue (catalogue prices + trials stay admin-only).
+    ("GET", "/admin/extras/requests"): "vendors.manage",
+    ("POST", "/admin/extras/requests/{request_id}/transition"): "vendors.manage",
     ("GET", "/admin/vendors"): "vendors.manage",
     ("GET", "/admin/vendors/{vendor_id}/kyc"): "vendors.manage",
     ("PATCH", "/admin/vendors/{vendor_id}/status"): "vendors.manage",

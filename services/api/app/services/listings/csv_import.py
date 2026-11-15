@@ -719,7 +719,10 @@ def import_listing_rows(
                     row=index,
                     ok=False,
                     errors=[
-                        "listings.import.errors.listingCap"
+                        "listings.import.errors.planLimit"
+                        if getattr(exc, "code", None) == "PT403"
+                        and getattr(exc, "message", None) == "listing_plan_limit_reached"
+                        else "listings.import.errors.listingCap"
                         if getattr(exc, "code", None) == "PT403"
                         and getattr(exc, "message", None) == "listing_cap_exceeded"
                         else "listings.import.errors.databaseFailure"

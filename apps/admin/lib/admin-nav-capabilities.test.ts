@@ -81,7 +81,7 @@ describe("admin navigation from current API permissions", () => {
     ["finance.read", ["orders"]],
     ["events.manage", ["events"]],
     ["products.manage", ["moderation"]],
-    ["vendors.manage", ["kyc", "branches", "intake", "business"]],
+    ["vendors.manage", ["kyc", "branches", "intake", "business", "extras"]],
     ["ads.manage", ["merch", "homeFeed", "advertising"]],
     ["analytics.read", ["home"]],
     ["services.read", ["services"]],
@@ -98,6 +98,7 @@ describe("admin navigation from current API permissions", () => {
       "intake",
       "orders",
       "business",
+      "extras",
     ]);
     const caps = resolveAdminNavCapabilities(["finance.read", "analytics.read"]);
     expect(caps.disputes).toBe(false);
@@ -112,7 +113,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("intake");
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
-    expect(keys).toHaveLength(19);
+    expect(keys).toHaveLength(21);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });

@@ -622,7 +622,8 @@
         "invalidEncoding": "Save the CSV using UTF-8 encoding.",
         "canonicalRequired": "Select a catalogue product before importing this new SKU.",
         "databaseFailure": "This row could not be saved. Please try again or contact support.",
-        "unknownError": "This row needs review. Check the CSV fields and try again."
+        "unknownError": "This row needs review. Check the CSV fields and try again.",
+        "planLimit": "⚠ Your plan's limit on live listings is reached. Import this row as a draft, or upgrade your plan."
       }
     },
     "manage": {
@@ -2139,7 +2140,9 @@
       "reviews": "Reviews",
       "payouts": "Payouts",
       "disputes": "Disputes",
-      "intake": "Ama-draft ya WhatsApp"
+      "intake": "Ama-draft ya WhatsApp",
+      "plan": "⚠ Plan",
+      "extras": "⚠ Extras"
     }
   },
   "intake": {
@@ -2344,7 +2347,22 @@
     "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
     "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
     "photoLimitReached": "Your plan allows {max} photos per listing. Upgrade your plan to add more.",
-    "billingUnavailable": "Plan payments aren't available yet. Our team will help you upgrade."
+    "billingUnavailable": "Plan payments aren't available yet. Our team will help you upgrade.",
+    "usageActive": "⚠ {count} of {max} live listings",
+    "publishLimitReached": "⚠ Your plan allows {max} live listings. Save this one as a draft, or upgrade your plan to publish more. Nothing already live is removed.",
+    "trialNoCharge": "⚠ No plan fee is charged during your free trial.",
+    "picker": {
+      "title": "⚠ Plans",
+      "intro": "⚠ Compare plans. Prices are per shop. Drafts never count towards your listing limit.",
+      "loading": "⚠ Loading plans…",
+      "unavailable": "⚠ Plans are not available yet.",
+      "annualNote": "⚠ Pay for a year up front and save {pct}%.",
+      "perYear": "⚠ or {price}/year (save {pct}%)",
+      "current": "⚠ Your plan",
+      "listings": "⚠ Up to {max} live listings",
+      "listingsUnlimited": "⚠ Unlimited live listings",
+      "seeExtras": "⚠ See paid extras"
+    }
   },
   "branches": {
     "title": "My businesses & shops",
@@ -2479,6 +2497,60 @@
       "network": "No connection. Check your data and try again.",
       "locationDenied": "We could not read your location. Enter it by hand.",
       "generic": "Something went wrong. Please try again."
+    },
+    "shops": {
+      "heading": "⚠ {count, plural, one {Your shop} other {Your # shops}}",
+      "otherBranchesLive": "⚠ Customers see your other live shops under \"Other branches\" on each shop page, with location, hours, phone and a map link.",
+      "otherBranchesHint": "⚠ When you have more than one live shop, each shop page shows the others under \"Other branches\".",
+      "viewShop": "⚠ View shop page",
+      "notListedYet": "⚠ Not visible to customers yet."
+    }
+  },
+  "trial": {
+    "banner": "⚠ Free until {date}",
+    "detail": "⚠ No plan fee is charged during your trial."
+  },
+  "extras": {
+    "title": "⚠ Extras",
+    "intro": "⚠ Paid services to help your shop grow. Ask for one and our team will get back to you.",
+    "loading": "⚠ Loading extras…",
+    "noPayment": "⚠ Nothing is charged here. A request tells our team, who will confirm the price with you first.",
+    "requested": "⚠ Done. We'll be in touch.",
+    "indicativePrice": "⚠ Starting price; our team confirms the final price.",
+    "teamNote": "⚠ Note from our team: {note}",
+    "unit": {
+      "one_off": "⚠ one-off",
+      "per_month": "⚠ per month",
+      "per_item": "⚠ per item"
+    },
+    "price": {
+      "fixed": "⚠ {price} {unit}",
+      "range": "⚠ {min} – {max} {unit}",
+      "paygFrom": "⚠ Pay as you go, from {price} {unit}",
+      "payg": "⚠ Pay as you go",
+      "onRequest": "⚠ Price on request"
+    },
+    "status": {
+      "requested": "⚠ Requested. Our team will reply soon.",
+      "quoted": "⚠ Our team sent a quote.",
+      "quotedWithPrice": "⚠ Quote: {price}. Accept to go ahead.",
+      "approved": "⚠ Approved. We're on it.",
+      "fulfilled": "⚠ Done.",
+      "cancelled": "⚠ Cancelled."
+    },
+    "actions": {
+      "request": "⚠ Request",
+      "accept": "⚠ Accept quote",
+      "cancel": "⚠ Cancel request",
+      "working": "⚠ Working…"
+    },
+    "errors": {
+      "load": "⚠ Could not load extras. Try again later.",
+      "alreadyRequested": "⚠ You already have an open request for this.",
+      "rateLimited": "⚠ Too many requests. Please wait a moment.",
+      "notFound": "⚠ This extra is no longer available.",
+      "invalidTransition": "⚠ This request can't be changed now.",
+      "generic": "⚠ Something went wrong. Try again."
     }
   }
 }

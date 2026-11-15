@@ -38,6 +38,8 @@ describe("vendor-nav-config", () => {
       payouts: true,
       disputes: true,
       intake: false,
+      plan: false,
+      extras: false,
     };
     const keys = filterVendorNavGroups(caps).flatMap((g) => g.items.map((i) => i.key));
     expect(keys).not.toContain("clips");
@@ -62,6 +64,8 @@ describe("vendor-nav-config", () => {
       payouts: false,
       disputes: false,
       intake: false,
+      plan: false,
+      extras: false,
     };
     expect(buildVendorMobilePrimary(filterVendorNavGroups(caps))).toEqual([
       "home",

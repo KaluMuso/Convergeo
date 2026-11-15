@@ -160,11 +160,16 @@
       "kyc_rejected": "Votre vérification nécessite des modifications. Ouvrez-la pour en savoir plus.",
       "rfq_received": "Un client vous a demandé un devis.",
       "job_matched": "Une nouvelle mission correspond à vos services.",
-      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre."
+      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre.",
+      "extras_quoted": "Nous vous avons envoyé un devis pour {name}.",
+      "extras_approved": "Votre demande pour {name} est approuvée.",
+      "extras_fulfilled": "{name} est terminé.",
+      "extras_cancelled": "Votre demande pour {name} a été annulée."
     },
     "admin": {
       "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",
-      "dispute_opened": "Nouveau litige ouvert sur la commande {ref}."
+      "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
+      "extras_requested": "Un vendeur a demandé une option : {name}."
     }
   }
 }
