@@ -885,7 +885,10 @@ def _backdate(db: PgConn, dispatch_id: str, seconds: int) -> None:
 
 
 def _success_data(reference: str, amount_ngwee: int = TOTAL_NGWEE) -> dict[str, Any]:
-    return _webhook("collection.successful", reference, amount_ngwee, "successful")["data"]
+    data: dict[str, Any] = _webhook(
+        "collection.successful", reference, amount_ngwee, "successful"
+    )["data"]
+    return data
 
 
 # ---------------------------------------------------------------------------
