@@ -3380,6 +3380,9 @@ EXPECTATIONS: TableExpectations = {
     "webhook_events": client_invisible(),
     "payment_collection_receipts": client_invisible(),
     "payment_collection_exceptions": client_invisible(),
+    # Organiser advance undertakings and debts: service_role only (no client grant).
+    "organiser_advance_undertakings": client_invisible(),
+    "organiser_advance_debts": client_invisible(),
     "cart_merge_receipts": client_invisible(),
     # Notification center (20261113130000). Own-row SELECT; the only client UPDATE
     # grant is the (seen_at, read_at) column pair, so the generic
