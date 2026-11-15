@@ -4,17 +4,11 @@ from typing import Any
 
 import pytest
 from app.errors import AppError
-from app.main import create_app
 from app.routers.admin_business import _enqueue_business_notification
-from app.routers.catalog import list_wholesale_supplies
 from app.services.business.access import (
-    BusinessAccess,
-    get_business_access,
-    require_wholesale_access,
     resolve_business_eligibility,
 )
 from app.services.business.store import upsert_application
-from fastapi.testclient import TestClient
 
 USER = "11111111-1111-1111-1111-111111111111"
 
@@ -216,17 +210,6 @@ class TestResolver:
         assert eligible == {"verified"}
 
 
-class TestRequireWholesaleAccess:
-    def test_allows_verified(self) -> None:
-        require_wholesale_access(BusinessAccess(user_id=USER, status="verified", eligible=True))
-
-    def test_blocks_consumer(self) -> None:
-        with pytest.raises(AppError) as exc:
-            require_wholesale_access(BusinessAccess(user_id=USER, status=None, eligible=False))
-        assert exc.value.code == "business.wholesale_forbidden"
-        assert exc.value.http_status == 403
-
-
 # --- Application lifecycle --------------------------------------------------
 class TestUpsertApplication:
     def test_new_application_is_pending(self) -> None:
@@ -271,62 +254,6 @@ class TestUpsertApplication:
         assert exc.value.http_status == 409
 
 
-# --- Wholesale supplies feed ------------------------------------------------
-def _supplies_store() -> dict[str, list[dict[str, Any]]]:
-    return {
-        "vendor_listings": [
-            {
-                "id": "L1",
-                "vendor_id": "V1",
-                "product_id": "P1",
-                "title_override": "WL1",
-                "condition": "new",
-                "price_ngwee": 50_000,
-                "moq": 10,
-                "price_tiers": [{"min_qty": 10, "price_ngwee": 45_000}],
-                "status": "active",
-                "wholesale": True,
-            },
-            {
-                "id": "L2",
-                "vendor_id": "V2",  # suspended vendor — must be excluded
-                "product_id": None,
-                "title_override": "WL2",
-                "condition": "new",
-                "price_ngwee": 30_000,
-                "moq": 5,
-                "price_tiers": None,
-                "status": "active",
-                "wholesale": True,
-            },
-        ],
-        "vendors": [
-            {"id": "V1", "slug": "v1", "display_name": "Vendor One", "status": "active"},
-            {"id": "V2", "slug": "v2", "display_name": "Vendor Two", "status": "suspended"},
-        ],
-        "products": [{"id": "P1", "slug": "p1", "name": "Product One", "status": "active"}],
-        "listing_images": [
-            {"listing_id": "L1", "cloudinary_public_id": "img1", "position": 1}
-        ],
-    }
-
-
-class TestWholesaleSupplies:
-    def test_only_active_vendor_listings_with_b2b_fields(self) -> None:
-        client = FakeClient(_supplies_store())
-        response = list_wholesale_supplies(client, limit=48)
-        assert response.total == 1
-        item = response.items[0]
-        assert item.id == "L1"
-        assert item.title == "Product One"
-        assert item.product_slug == "p1"
-        assert item.vendor_name == "Vendor One"
-        assert item.wholesale is True
-        assert item.moq == 10
-        assert item.price_tiers == [{"min_qty": 10, "price_ngwee": 45_000}]
-        assert item.image_public_id == "img1"
-
-
 class TestAdminBusinessNotification:
     def test_verify_enqueues_email_to_buyer(self) -> None:
         store: dict[str, list[dict[str, Any]]] = {"notification_outbox": []}
@@ -358,35 +285,12 @@ class TestAdminBusinessNotification:
         assert store["notification_outbox"] == []
 
 
-class TestWholesaleEndpointGating:
-    def test_guest_wholesale_request_is_forbidden(self) -> None:
-        from app.deps import get_supabase_client
+class TestNoCustomerWholesaleSurface:
+    """Wholesale prices are vendor-app only: the customer gate and feed are gone."""
 
-        app = create_app()
-        app.dependency_overrides[get_supabase_client] = lambda: _service(_supplies_store())
-        try:
-            with TestClient(app, raise_server_exceptions=False) as client:
-                response = client.get("/catalog/listings?wholesale=true")
-        finally:
-            app.dependency_overrides.clear()
-        assert response.status_code == 403
-        assert response.json()["error"]["code"] == "business.wholesale_forbidden"
+    def test_wholesale_feed_and_gate_removed(self) -> None:
+        import app.routers.catalog as catalog
+        import app.services.business.access as access
 
-    def test_verified_business_sees_supplies(self) -> None:
-        from app.deps import get_supabase_client
-
-        app = create_app()
-        app.dependency_overrides[get_supabase_client] = lambda: _service(_supplies_store())
-        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-            user_id=USER, status="verified", eligible=True
-        )
-        try:
-            with TestClient(app, raise_server_exceptions=False) as client:
-                response = client.get("/catalog/listings?wholesale=true")
-        finally:
-            app.dependency_overrides.clear()
-        assert response.status_code == 200
-        body = response.json()
-        assert body["total"] == 1
-        assert body["items"][0]["wholesale"] is True
-        assert body["items"][0]["moq"] == 10
+        assert not hasattr(catalog, "list_wholesale_supplies")
+        assert not hasattr(access, "require_wholesale_access")

@@ -53,6 +53,7 @@ from app.services.orders.state import (
     ActorRole,
     OrderEvent,
     OrderStatus,
+    assert_order_actor_authorized,
     transition_order,
 )
 
@@ -152,9 +153,7 @@ LIMIT 1;
     return result.rows[0]
 
 
-def _cod_receivable_opened_template(
-    *, receivable_ngwee: int, vendor_id: str
-) -> TemplateResult:
+def _cod_receivable_opened_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
     """Order-time COD receivable paired with escrow (prepaid pipeline without Lenco).
 
     Debit cod_receivable (vendor) (+receivable).
@@ -170,9 +169,7 @@ def _cod_receivable_opened_template(
     return TemplateResult(kind=COD_RECEIVABLE_OPENED, legs=legs)
 
 
-def _cod_receivable_reversed_template(
-    *, receivable_ngwee: int, vendor_id: str
-) -> TemplateResult:
+def _cod_receivable_reversed_template(*, receivable_ngwee: int, vendor_id: str) -> TemplateResult:
     """Reverse an open COD receivable on refused/uncollected delivery.
 
     Debit escrow (+receivable).
@@ -592,12 +589,32 @@ def refuse_cod_collection(
     reversal_key = reversal_idempotency_key(order_id)
     existing = _fetch_transaction_by_idempotency_key(reversal_key)
     if existing is not None:
+        if ctx.status == OrderStatus.CANCELLED.value:
+            return CodRefusalResult(
+                order_id=order_id,
+                collectable_ngwee=ctx.collectable_ngwee,
+                reversal_transaction_id=existing,
+                from_status=ctx.status,
+                to_status=OrderStatus.CANCELLED.value,
+                created=False,
+            )
+        # The reversal was posted but the cancel did not land (the transition failed
+        # or the process died between the two steps). Finish the cancel now instead
+        # of reporting CANCELLED while the order is still open. The reversal is not
+        # re-posted: its idempotency key already exists.
+        outcome = transition_order(
+            order_id=order_id,
+            event=OrderEvent.CANCEL,
+            actor_role=actor_role,
+            actor_id=actor_id,
+            note=note,
+        )
         return CodRefusalResult(
             order_id=order_id,
             collectable_ngwee=ctx.collectable_ngwee,
             reversal_transaction_id=existing,
-            from_status=ctx.status,
-            to_status=OrderStatus.CANCELLED.value,
+            from_status=outcome.from_status.value,
+            to_status=outcome.to_status.value,
             created=False,
         )
 
@@ -608,6 +625,9 @@ def refuse_cod_collection(
             http_status=409,
             details={"status": ctx.status, "allowed": sorted(_REFUSAL_STATUSES)},
         )
+
+    # Refuse an unauthorised actor before anything is posted to the ledger.
+    assert_order_actor_authorized(order_id=order_id, actor_role=actor_role, actor_id=actor_id)
 
     receivable_key = receivable_idempotency_key(order_id)
     if _fetch_transaction_by_idempotency_key(receivable_key) is None:

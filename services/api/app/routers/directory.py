@@ -8,7 +8,6 @@ from typing import Annotated, Any, Literal, Protocol, cast
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.brand_theme import read_brand_theme
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
     fetch_demo_listing_ids,
@@ -731,8 +730,6 @@ def _fetch_vendor_events(client: Any, vendor_id: str) -> list[VendorEventItem]:
 def get_vendor_profile(
     client: Any,
     slug: str,
-    *,
-    include_wholesale: bool = False,
 ) -> VendorProfileResponse | RedirectResponse:
     vendor_response = (
         client.table("vendors")
@@ -783,10 +780,9 @@ def get_vendor_profile(
         .execute()
     )
     listing_rows = listings_response.data or []
-    if not include_wholesale:
-        # Wholesale-only listings are B2B supplies: hidden from the vendor's
-        # public storefront unless the caller is a verified business buyer.
-        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
+    # Wholesale prices live only in the vendor app: wholesale listings are
+    # never part of the customer-facing storefront.
+    listing_rows = [row for row in listing_rows if not row.get("wholesale")]
     listing_ids = [str(item["id"]) for item in listing_rows if item.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
     if demo_listing_ids:
@@ -943,9 +939,8 @@ async def list_directory(
 async def get_directory_vendor(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> VendorProfileResponse | RedirectResponse:
     cleaned = _sanitize_query(slug)
     if not cleaned:
         raise AppError("vendor.not_found", "Vendor not found", 404)
-    return get_vendor_profile(supabase.client, cleaned, include_wholesale=access.eligible)
+    return get_vendor_profile(supabase.client, cleaned)
