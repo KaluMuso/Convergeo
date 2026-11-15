@@ -765,8 +765,8 @@ SELECT json_build_object(
   'failed_attempts', h.failed_attempts,
   'verified', h.verified_at IS NOT NULL,
   'locked_seconds', CASE
-     WHEN h.locked_until IS NOT NULL AND h.locked_until > timezone('utc', now())
-     THEN ceil(extract(epoch FROM (h.locked_until - timezone('utc', now()))))::int
+     WHEN h.locked_until IS NOT NULL AND h.locked_until > now()
+     THEN ceil(extract(epoch FROM (h.locked_until - now())))::int
      ELSE 0 END
 )::text
 FROM public.dispatch_requests d
@@ -795,14 +795,14 @@ SET failed_attempts = CASE
       ELSE h.failed_attempts + 1 END,
     locked_until = CASE
       WHEN h.failed_attempts + 1 >= {HANDOVER_MAX_ATTEMPTS}
-      THEN timezone('utc', now()) + interval '{HANDOVER_LOCKOUT_MINUTES} minutes'
+      THEN now() + interval '{HANDOVER_LOCKOUT_MINUTES} minutes'
       ELSE h.locked_until END
 WHERE h.dispatch_request_id = {dispatch_sql}
   AND h.verified_at IS NULL
-  AND (h.locked_until IS NULL OR h.locked_until <= timezone('utc', now()))
+  AND (h.locked_until IS NULL OR h.locked_until <= now())
 RETURNING json_build_object(
   'failed_attempts', h.failed_attempts,
-  'locked', h.locked_until IS NOT NULL AND h.locked_until > timezone('utc', now())
+  'locked', h.locked_until IS NOT NULL AND h.locked_until > now()
 )::text;
 COMMIT;
 """,
@@ -833,7 +833,7 @@ def _claim_handover(
         custody_sql = (
             f", cod_collected_ngwee = {amount}"
             f", cod_collected_method = {sql_literal(str(custody['cod_collected_method']))}"
-            ", cod_collected_at = timezone('utc', now())"
+            ", cod_collected_at = now()"
         )
     rows = json_rows(
         f"""
@@ -846,12 +846,12 @@ WITH locked AS (
   WHERE d.id = {dispatch_sql}
     AND d.status = 'picked_up'
     AND h.verified_at IS NULL
-    AND (h.locked_until IS NULL OR h.locked_until <= timezone('utc', now()))
+    AND (h.locked_until IS NULL OR h.locked_until <= now())
   FOR UPDATE
 ),
 claimed AS (
   UPDATE public.dispatch_handover_codes h
-  SET verified_at = timezone('utc', now()), failed_attempts = 0
+  SET verified_at = now(), failed_attempts = 0
   FROM locked l
   WHERE h.dispatch_request_id = l.id
   RETURNING h.dispatch_request_id
@@ -989,7 +989,7 @@ def _bump_notify_count(dispatch_id: str) -> int:
         f"""
 BEGIN;
 UPDATE public.dispatch_requests
-SET notify_count = notify_count + 1, last_notified_at = timezone('utc', now())
+SET notify_count = notify_count + 1, last_notified_at = now()
 WHERE id = {dispatch_sql} AND status IN ('requested', 'accepted')
 RETURNING json_build_object('notify_count', notify_count)::text;
 COMMIT;
@@ -1247,7 +1247,7 @@ SELECT json_build_object(
   'vendor_name', v.display_name,
   'order_status', o.status,
   'delivery_zone', o.delivery_zone,
-  'handover_locked', coalesce(h.locked_until > timezone('utc', now()), false)
+  'handover_locked', coalesce(h.locked_until > now(), false)
 )::text
 FROM public.dispatch_requests d
 JOIN public.courier_partners c ON c.id = d.courier_partner_id
@@ -1255,7 +1255,7 @@ JOIN public.orders o ON o.id = d.order_id
 JOIN public.vendors v ON v.id = o.vendor_id
 LEFT JOIN public.dispatch_handover_codes h ON h.dispatch_request_id = d.id
 WHERE d.status IN ('requested', 'accepted', 'picked_up')
-   OR d.updated_at >= timezone('utc', now()) - interval '{int(recent_hours)} hours'
+   OR d.updated_at >= now() - interval '{int(recent_hours)} hours'
 ORDER BY d.requested_at DESC
 LIMIT {int(limit)};
 """,
@@ -1298,12 +1298,12 @@ SELECT json_build_object(
   'order_id', d.order_id,
   'courier_name', c.name,
   'requested_at', d.requested_at,
-  'minutes_waiting', floor(extract(epoch FROM (timezone('utc', now()) - d.requested_at)) / 60)::int
+  'minutes_waiting', floor(extract(epoch FROM (now() - d.requested_at)) / 60)::int
 )::text
 FROM public.dispatch_requests d
 JOIN public.courier_partners c ON c.id = d.courier_partner_id
 WHERE d.status = 'requested'
-  AND d.requested_at <= timezone('utc', now()) - interval '{int(minutes)} minutes'
+  AND d.requested_at <= now() - interval '{int(minutes)} minutes'
 ORDER BY d.requested_at ASC
 LIMIT 100;
 """,
@@ -1510,7 +1510,7 @@ def record_actual_cost(*, dispatch_id: str, cost_ngwee: int, actor_id: str) -> D
 BEGIN;
 UPDATE public.dispatch_requests
 SET actual_cost_ngwee = {cost_ngwee},
-    cost_recorded_at = timezone('utc', now()),
+    cost_recorded_at = now(),
     cost_recorded_by = {actor_sql}
 WHERE id = {dispatch_sql}
   AND status IN ('picked_up', 'delivered', 'failed', 'cancelled')
@@ -1552,15 +1552,15 @@ SELECT json_build_object(
   'status', d.status,
   'courier_name', c.name,
   'since', CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END,
-  'minutes_waiting', floor(extract(epoch FROM (timezone('utc', now()) -
+  'minutes_waiting', floor(extract(epoch FROM (now() -
       CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END)) / 60)::int
 )::text
 FROM public.dispatch_requests d
 JOIN public.courier_partners c ON c.id = d.courier_partner_id
 WHERE (d.status = 'accepted'
-       AND d.accepted_at <= timezone('utc', now()) - interval '{int(accepted)} minutes')
+       AND d.accepted_at <= now() - interval '{int(accepted)} minutes')
    OR (d.status = 'picked_up'
-       AND d.picked_up_at <= timezone('utc', now()) - interval '{int(picked)} minutes')
+       AND d.picked_up_at <= now() - interval '{int(picked)} minutes')
 ORDER BY CASE d.status WHEN 'accepted' THEN d.accepted_at ELSE d.picked_up_at END ASC
 LIMIT 100;
 """,

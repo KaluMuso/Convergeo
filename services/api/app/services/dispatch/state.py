@@ -333,7 +333,7 @@ def apply_dispatch_transition(
             raise ValueError(f"column {column!r} is not settable on transition")
         if column == "cod_collected_ngwee":
             # Cash custody is write-once (DB guard) and stamped in the same UPDATE.
-            assignments.append("cod_collected_at = timezone('utc', now())")
+            assignments.append("cod_collected_at = now()")
         if value is None:
             assignments.append(f"{column} = NULL")
         elif isinstance(value, int) and not isinstance(value, bool):

@@ -56,12 +56,12 @@ def list_unconfirmed_vendor_orders() -> list[dict[str, Any]]:
 SELECT json_build_object(
   'order_id', o.id,
   'vendor_name', v.display_name,
-  'minutes_waiting', floor(extract(epoch FROM (timezone('utc', now()) - o.created_at)) / 60)::int
+  'minutes_waiting', floor(extract(epoch FROM (now() - o.created_at)) / 60)::int
 )::text
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
 WHERE o.status = 'placed'
-  AND o.created_at <= timezone('utc', now()) - interval '{int(minutes)} minutes'
+  AND o.created_at <= now() - interval '{int(minutes)} minutes'
   AND (o.cod OR EXISTS (
     SELECT 1 FROM public.payments p
     WHERE p.checkout_group_id = o.checkout_group_id AND p.status = 'success'))
@@ -91,7 +91,7 @@ WHERE o.status = '{status}'
   AND EXISTS (
     SELECT 1 FROM public.order_events e
     WHERE e.order_id = o.id AND e.to_status = '{status}'
-      AND e.created_at >= timezone('utc', now())
+      AND e.created_at >= now()
                           - interval '{CUSTOMER_MESSAGE_LOOKBACK_HOURS} hours')
 ORDER BY o.updated_at DESC
 LIMIT 200;

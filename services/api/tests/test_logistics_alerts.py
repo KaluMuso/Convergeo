@@ -46,6 +46,10 @@ def test_silent_vendor_and_stalled_rider_alert_once_per_item(db: PgConn) -> None
         f"UPDATE public.orders SET created_at = now() - interval '3 hours' WHERE id = '{silent}';",
     )
     fresh = _make_order(db, status="placed")
+    # orders.created_at defaults to timezone('utc', now()) on a timestamptz column, which is
+    # shifted by the session offset on a non-UTC server (e.g. a local Africa/Lusaka cluster).
+    # Pin it so "fresh" is genuinely fresh whatever the server timezone is.
+    _sql_ok(db, f"UPDATE public.orders SET created_at = now() WHERE id = '{fresh}';")
     _order, _courier, stalled = _create(db)
     _advance_to_picked_up(stalled)
     _sql_ok(

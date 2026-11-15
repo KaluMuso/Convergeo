@@ -609,6 +609,61 @@ class TestHandoverCodeDb:
         dispatch_service.verify_handover_code(dispatch_id=dispatch_id, code=code, actor_id=ADMIN_ID)
         assert _order_status(db, order_id) == "delivered"
 
+    @pytest.mark.parametrize("tz", ["Pacific/Kiritimati", "Pacific/Pago_Pago"])
+    def test_lockout_and_stale_clock_are_server_timezone_independent(
+        self, db: PgConn, tz: str
+    ) -> None:
+        """Lock/stale windows must not shift with the server timezone (+14h / -11h)."""
+        dbname = _sql_ok(db, "SELECT current_database();")[0]
+        _order, _courier, dispatch_id = _create(db)
+        _advance_to_picked_up(dispatch_id)
+        code = _handover_code(db, dispatch_id)
+        _sql_ok(db, f"ALTER DATABASE \"{dbname}\" SET timezone TO '{tz}';")
+        try:
+            wrong = _wrong_code(code)
+            for _ in range(4):
+                with pytest.raises(AppError):
+                    dispatch_service.verify_handover_code(
+                        dispatch_id=dispatch_id, code=wrong, actor_id=ADMIN_ID
+                    )
+            with pytest.raises(AppError) as exc:
+                dispatch_service.verify_handover_code(
+                    dispatch_id=dispatch_id, code=wrong, actor_id=ADMIN_ID
+                )
+            assert exc.value.code == "dispatch_handover_locked"
+            # Lock is ~HANDOVER_LOCKOUT_MINUTES, never hours off.
+            retry = exc.value.details["retry_after"]
+            assert 0 < retry <= dispatch_service.HANDOVER_LOCKOUT_MINUTES * 60
+            # A just-requested dispatch is not "stale"; a 50-minute-old one is.
+            assert all(
+                row["dispatch_id"] != dispatch_id
+                for row in dispatch_service.list_stale_requested(minutes=45)
+            )
+            _order2, _courier2, aged = _create(db)
+            _sql_ok(
+                db,
+                "UPDATE public.dispatch_requests SET requested_at = now() - interval '50 minutes' "
+                f"WHERE id = '{aged}';",
+            )
+            stale = [
+                r
+                for r in dispatch_service.list_stale_requested(minutes=45)
+                if r["dispatch_id"] == aged
+            ]
+            assert len(stale) == 1 and 49 <= stale[0]["minutes_waiting"] <= 51
+            # Expiry restores verification; the wrong-code lock never let the order move.
+            _sql_ok(
+                db,
+                "UPDATE public.dispatch_handover_codes "
+                "SET locked_until = now() - interval '1 minute' "
+                f"WHERE dispatch_request_id = '{dispatch_id}';",
+            )
+            dispatch_service.verify_handover_code(
+                dispatch_id=dispatch_id, code=code, actor_id=ADMIN_ID
+            )
+        finally:
+            _sql_ok(db, f'ALTER DATABASE "{dbname}" RESET timezone;')
+
     def test_code_is_single_use(self, db: PgConn) -> None:
         _order_id, _courier, dispatch_id = _create(db)
         _advance_to_picked_up(dispatch_id)
