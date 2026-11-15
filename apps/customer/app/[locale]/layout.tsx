@@ -267,9 +267,6 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                   conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
                   priceLine: String(tCheckout.raw("cart.mergePriceLine")),
                   unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
-                  wholesaleTerms: String(
-                    tCheckout.raw("cart.mergeWholesaleTerms"),
-                  ),
                   priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
                   accountChoice: tCheckout("cart.mergeAccountChoice"),
                   guestChoice: tCheckout("cart.mergeGuestChoice"),
