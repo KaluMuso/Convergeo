@@ -873,14 +873,13 @@ def _other_offers_by_product(
     client: Any,
     vendor_id: str,
     product_ids: list[str],
-    *,
-    include_wholesale: bool,
 ) -> dict[str, tuple[int, int]]:
     """{product_id: (other_shop_count, lowest_other_price_ngwee)}.
 
     "Never trap the customer on one shop": counts other *active* shops' active
-    listings of the same canonical product, with the same wholesale and demo
-    gating as the comparison endpoint.
+    retail listings of the same canonical product. Wholesale prices are
+    vendor-app only (founder decision), so wholesale rows never count, for
+    anyone; demo listings are excluded as in the comparison endpoint.
     """
     if not product_ids:
         return {}
@@ -896,7 +895,7 @@ def _other_offers_by_product(
         for row in (response.data or [])
         if isinstance(row, dict)
         and str(row.get("vendor_id") or "") != vendor_id
-        and (include_wholesale or not row.get("wholesale"))
+        and not row.get("wholesale")
         and isinstance(row.get("vendors"), dict)
         and row["vendors"].get("status") == "active"
     ]
@@ -1073,7 +1072,6 @@ def get_vendor_profile(
         sorted(
             {str(item["product_id"]) for item in listing_rows if item.get("product_id") is not None}
         ),
-        include_wholesale=include_wholesale,
     )
 
     listings: list[DirectoryListingItem] = []

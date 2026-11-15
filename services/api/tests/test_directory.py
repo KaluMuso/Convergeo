@@ -911,6 +911,41 @@ class TestBusinessHome:
         assert listing["other_offers_count"] == 1
         assert listing["other_min_price_ngwee"] == 430_000
 
+    def test_verified_business_never_sees_wholesale_in_other_offers(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        # Wholesale prices are vendor-app only: even an eligible business buyer
+        # gets retail-only "other shops" counts and lowest price.
+        seed_active_vendor(store)
+        store.vendor_listings[0]["vendors"] = {"status": "active"}
+        store.vendor_listings += [
+            self._other_shop_listing(listing_id="o-1", price_ngwee=430_000),
+            self._other_shop_listing(
+                listing_id="o-4",
+                vendor_id="dddddddd-dddd-dddd-dddd-dddddddddddd",
+                price_ngwee=90_000,
+                wholesale=True,
+            ),
+        ]
+        app: FastAPI = create_app()
+        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
+            user_id="11111111-1111-1111-1111-111111111111",
+            status="verified",
+            eligible=True,
+        )
+
+        class FakeServiceClient:
+            def __init__(self) -> None:
+                self.client = store
+
+        with patch("app.deps.get_supabase_service_client", return_value=FakeServiceClient()):
+            with TestClient(app, raise_server_exceptions=False) as test_client:
+                payload = test_client.get("/directory/tech-hub-lusaka").json()
+        app.dependency_overrides.clear()
+        listing = next(item for item in payload["listings"] if item["id"] == LISTING_A)
+        assert listing["other_offers_count"] == 1
+        assert listing["other_min_price_ngwee"] == 430_000
+
     def test_own_listing_alone_has_no_compare_offers(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
