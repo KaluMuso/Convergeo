@@ -95,6 +95,10 @@ class ReleaseStaleClaimsResult:
     ttl_minutes: int
 
 
+# Paid issuance honours events unpublished after purchase (draft); see below.
+PAID_ISSUANCE_EVENT_STATUSES = frozenset({"published", "draft"})
+
+
 def _validate_uuid(value: str, field: str) -> None:
     if not _UUID_RE.match(value):
         raise AppError(
@@ -655,6 +659,21 @@ def add_ticket_to_checkout(
         platform_fee=fee,
     )
 
+    # Reserve the promo use atomically (row-locked in the DB) BEFORE claiming
+    # capacity, so an exhausted code fails the checkout without holding seats.
+    if promo_id and discount > 0:
+        try:
+            record_promo_redemption(
+                promo_id=promo_id,
+                event_id=str(ctx["event"]["id"]),
+                order_id=order_id,
+                customer_id=customer_id,
+                discount_ngwee=discount,
+            )
+        except AppError:
+            release_gmv_reservation(checkout_group_id)
+            raise
+
     claim = claim_ticket_or_raise(
         service_client,
         instance_id=instance_id,
@@ -678,14 +697,6 @@ def add_ticket_to_checkout(
         affiliate_code=affiliate_code,
     )
     _update_commission_snapshot(order_id, final_snapshot)
-    if promo_id and discount > 0:
-        record_promo_redemption(
-            promo_id=promo_id,
-            event_id=str(ctx["event"]["id"]),
-            order_id=order_id,
-            customer_id=customer_id,
-            discount_ngwee=discount,
-        )
 
     subtotal = charged
     return TicketCheckoutResult(
@@ -924,7 +935,10 @@ WHERE oi.order_id = {order_sql}
         if len(parts) != 6:
             raise RuntimeError("unexpected ticket order item row shape")
         order_item_id, qty_raw, instance_id, ticket_type_id, event_id, event_status = parts
-        if event_status != "published":
+        # A paid order on an event unpublished after purchase (draft) is still
+        # honoured — the buyer paid and unpublishing keeps sold tickets valid.
+        # Only cancelled/completed events block issuance.
+        if event_status not in PAID_ISSUANCE_EVENT_STATUSES:
             raise AppError(
                 code="tickets.event_not_published",
                 message="Tickets cannot be issued for an unavailable event",
@@ -1196,7 +1210,7 @@ WHERE coalesce(counts.issued, 0) < oi.qty
     JOIN public.events blocked_e ON blocked_e.id = blocked_ei.event_id
     WHERE blocked_oi.order_id = o.id
       AND blocked_oi.item_kind = 'ticket'
-      AND blocked_e.status <> 'published'
+      AND blocked_e.status NOT IN ('published', 'draft')
   )
 GROUP BY o.id
 ORDER BY o.id;

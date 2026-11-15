@@ -268,6 +268,8 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # Organiser advance debts (#796): unrestricted roles only, never delegated.
+        "GET /admin/event-advance-debts",
         "GET /admin/flags",
         "GET /admin/health",
         "GET /admin/translations/overrides",
@@ -285,6 +287,7 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/clips/{clip_id}/takedown",
         "POST /admin/config/categories/reorder",
         "POST /admin/echo",
+        "POST /admin/event-advance-debts/repayments",
         "POST /admin/flags/{flag_id}/dismiss",
         "POST /admin/flags/{flag_id}/escalate-suspend",
         "POST /admin/flags/{flag_id}/remove",

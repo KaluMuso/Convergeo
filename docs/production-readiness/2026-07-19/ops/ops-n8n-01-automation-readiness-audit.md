@@ -128,6 +128,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `release-job.json`                | Escrow release              | no                      | DORMANT                                                               |
 | `event-release.json`              | Event escrow release        | no                      | DORMANT                                                               |
 | `event-refund-jobs.json`          | Event cancellation refunds  | no                      | DORMANT (Prompt G; inactive until F4 + F9b sandbox proof)             |
+| `event-advance-debts.json`        | Overdue organiser advances  | no                      | DORMANT (inactive; only matters once `event_organiser_advance` is ON) |
 | `tickets-issue.json`              | Ticket issuance             | no                      | DORMANT                                                               |
 | `tickets-release.json`            | Ticket hold release         | no                      | DORMANT                                                               |
 | `reservation-sweeper.json`        | Reservation sweeper         | no                      | DORMANT                                                               |
