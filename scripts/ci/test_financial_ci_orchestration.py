@@ -66,13 +66,15 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 3 reviewed pilot-fix migrations (#777).
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
         # + 1 reviewed: In-app notification center tables + triggers (additive, reversible).
+        # + 1 reviewed: Listing fulfilment options + Class D may be sold new (additive, reversible).
+        # + 2 reviewed: Events collaboration tables + rate-limit scopes (additive, reversible).
         # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
         # + 3 reviewed: audit S1 money tables read-only; admin governance D1 + permissions/
         #   audit_log/deactivation/consent (all additive).
         # + 7 reviewed: analytics v2 foundation, rollups, commercial, search sessions,
         #   Lusaka day, search-daily retention, session links (additive, flag-gated).
-        self.assertEqual(len(runner.FORWARD), 42)
-        self.assertEqual(len(set(runner.FORWARD)), 42)
+        self.assertEqual(len(runner.FORWARD), 45)
+        self.assertEqual(len(set(runner.FORWARD)), 45)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

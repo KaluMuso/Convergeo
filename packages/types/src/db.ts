@@ -1950,6 +1950,120 @@ export type Database = {
           },
         ]
       }
+      event_collab_audit: {
+        Row: {
+          action: string
+          actor_role: string
+          actor_user_id: string | null
+          created_at: string
+          from_status: string | null
+          id: number
+          reason: string | null
+          request_id: string
+          to_status: string
+        }
+        Insert: {
+          action: string
+          actor_role: string
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: number
+          reason?: string | null
+          request_id: string
+          to_status: string
+        }
+        Update: {
+          action?: string
+          actor_role?: string
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: number
+          reason?: string | null
+          request_id?: string
+          to_status?: string
+        }
+        Relationships: []
+      }
+      event_collab_organiser_prefs: {
+        Row: {
+          accepts_requests: boolean
+          blurb: string | null
+          created_at: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          accepts_requests?: boolean
+          blurb?: string | null
+          created_at?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          accepts_requests?: boolean
+          blurb?: string | null
+          created_at?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: []
+      }
+      event_collab_requests: {
+        Row: {
+          checklist: Json
+          created_at: string
+          decided_at: string | null
+          event_draft: Json
+          event_id: string | null
+          id: string
+          organiser_note: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at: string | null
+          readiness_pct: number
+          revenue_share_bps: number | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          decided_at?: string | null
+          event_draft?: Json
+          event_id?: string | null
+          id?: string
+          organiser_note?: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at?: string | null
+          readiness_pct?: number
+          revenue_share_bps?: number | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          decided_at?: string | null
+          event_draft?: Json
+          event_id?: string | null
+          id?: string
+          organiser_note?: string | null
+          organiser_vendor_id?: string
+          proposer_vendor_id?: string
+          published_at?: string | null
+          readiness_pct?: number
+          revenue_share_bps?: number | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_gmv_reservations: {
         Row: {
           amount_ngwee: number
@@ -2302,6 +2416,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      event_revenue_splits: {
+        Row: {
+          co_host_share_bps: number
+          co_host_vendor_id: string
+          collaboration_request_id: string
+          created_at: string
+          event_id: string
+          organiser_vendor_id: string
+        }
+        Insert: {
+          co_host_share_bps: number
+          co_host_vendor_id: string
+          collaboration_request_id: string
+          created_at?: string
+          event_id: string
+          organiser_vendor_id: string
+        }
+        Update: {
+          co_host_share_bps?: number
+          co_host_vendor_id?: string
+          collaboration_request_id?: string
+          created_at?: string
+          event_id?: string
+          organiser_vendor_id?: string
+        }
+        Relationships: []
       }
       event_settlement_snapshots: {
         Row: {
@@ -6607,6 +6748,7 @@ export type Database = {
           defect_notes: string | null
           description: string | null
           fulfilment_mode: string
+          fulfilment_options: string[]
           id: string
           imei: string | null
           lead_time_days: number | null
@@ -6648,6 +6790,7 @@ export type Database = {
           defect_notes?: string | null
           description?: string | null
           fulfilment_mode?: string
+          fulfilment_options?: string[]
           id?: string
           imei?: string | null
           lead_time_days?: number | null
@@ -6689,6 +6832,7 @@ export type Database = {
           defect_notes?: string | null
           description?: string | null
           fulfilment_mode?: string
+          fulfilment_options?: string[]
           id?: string
           imei?: string | null
           lead_time_days?: number | null
@@ -7530,6 +7674,42 @@ export type Database = {
         Returns: number
       }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
+      event_collab_record_create: {
+        Args: { p_actor_user_id: string; p_request_id: string }
+        Returns: undefined
+      }
+      event_collab_transition: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_event_slug?: string
+          p_reason?: string
+          p_request_id: string
+        }
+        Returns: {
+          checklist: Json
+          created_at: string
+          decided_at: string | null
+          event_draft: Json
+          event_id: string | null
+          id: string
+          organiser_note: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at: string | null
+          readiness_pct: number
+          revenue_share_bps: number | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "event_collab_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       expire_checkout_group_if_unpaid: {
         Args: { p_checkout_id: string; p_terminal_status: string }
         Returns: boolean

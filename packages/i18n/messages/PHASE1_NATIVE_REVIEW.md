@@ -152,3 +152,15 @@ Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privac
 - `account.privacy.analytics.gpc` (shown when the browser sends Global Privacy Control; switch is off and disabled)
   - bem: "Browser yenu iletuma Global Privacy Control, ico analytics ilekwa. Tulesunga ico browser yenu ilanda."
   - nya: "Browser yanu ikutumiza Global Privacy Control, choncho analytics yazimitsidwa. Timalemekeza zomwe browser yanu yasankha."
+**Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
+
+- Field-level listing errors and hints: `vendor.listings.fieldErrors.*`, `vendor.listings.errors.{draftInvalid,publishBlocked}`, the new `vendor.listings.fields.*` hints (condition/Class D explanation, defect notes, fulfilment options: Lusaka delivery, pickup at shop or branch, nationwide pickup, made-to-order lead time).
+- Removed listing state: `vendor.listings.manage.removed.*`.
+- Single name for verification, "Verify your ID" (`vendor.onboarding.steps.kyc`, `onboarding.kyc.heading`, `onboarding.status.heading`, `home.kycBanner.*`, `home.tasks.items.kyc*.title`, `listings.kycGate.cta`, `payouts.errors.kycRequired`, `events.errors.kyc_required`) rewritten in EN, fr, zh; bem/nya carry the EN wording.
+- Onboarding: `vendor.onboarding.back`, `vendor.onboarding.saveLater.*`.
+- Settings page: `vendor.shell.nav.settings`, `vendor.settings.*` (language names are endonyms and identical in every locale).
+- Scanner with a blocked camera: `vendor.scan.camera.{deniedNote,retry}`, `vendor.scan.eventCheckIn.camera.{deniedNote,retry}`.
+- Organiser gate on the Events page: `vendor.events.gate.*` (Become an organiser / Run an event with a verified organiser, collaboration is a "coming soon" stub), `vendor.events.errors.{recurrenceRuleRequired,recurrenceSeedRequired}` (previously hardcoded English).
+- Checkout: `checkout.checkout.fulfilment.notOffered` (shown when a seller does not offer delivery or pickup for an item).
+
+**Events collaboration (2026-11-15, flag `events_collaboration`):** EN is authoritative; fr/zh are full translations. In bem/nya every new key is an **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review: `vendor.events.collab.*` (proposal form, readiness checklist, equipment/permit states, revenue-share explanation, organiser inbox, approve/decline/changes copy, errors), `vendor.events.gate.collaborate.open` and `vendor.settings.collab.*`. The revenue-share and accountability wording is money/trust copy; a wrong vernacular guess costs more than English does.
