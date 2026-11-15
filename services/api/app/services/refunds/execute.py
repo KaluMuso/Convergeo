@@ -659,34 +659,42 @@ def execute_refund(
             {"order_id": order_id},
         )
 
-    coupon_share = _coupon_share(
-        service_client,
-        order=order,
-        order_id=order_id,
-        refunded_items_ngwee=(
-            item_ngwee_override
-            if item_ngwee_override is not None
-            else _order_item_total_ngwee(service_client, order_id)
-        ),
-    )
-    refund_amount, lane1, lane2 = _compute_lane_amounts(
-        service_client=service_client,
-        order=order,
-        order_id=order_id,
-        lane=lane,
-        return_transport_ngwee=return_transport_ngwee,
-        item_ngwee_override=item_ngwee_override,
-        delivery_fee_ngwee_override=delivery_fee_ngwee_override,
-        coupon_share=coupon_share,
+    refunded_items_ngwee = (
+        item_ngwee_override
+        if item_ngwee_override is not None
+        else _order_item_total_ngwee(service_client, order_id)
     )
 
-    if refund_amount <= 0:
-        raise AppError(
-            "refund_amount_zero",
-            "Computed refund amount is zero",
-            422,
-            {"order_id": order_id, "lane": lane},
+    def _amounts() -> tuple[
+        CouponRefundShare, int, Lane1RefundAmount | None, Lane2RefundBreakdown | None
+    ]:
+        share = _coupon_share(
+            service_client,
+            order=order,
+            order_id=order_id,
+            refunded_items_ngwee=refunded_items_ngwee,
         )
+        amount, l1, l2 = _compute_lane_amounts(
+            service_client=service_client,
+            order=order,
+            order_id=order_id,
+            lane=lane,
+            return_transport_ngwee=return_transport_ngwee,
+            item_ngwee_override=item_ngwee_override,
+            delivery_fee_ngwee_override=delivery_fee_ngwee_override,
+            coupon_share=share,
+        )
+        if amount <= 0:
+            raise AppError(
+                "refund_amount_zero",
+                "Computed refund amount is zero",
+                422,
+                {"order_id": order_id, "lane": lane},
+            )
+        return share, amount, l1, l2
+
+    # Fail fast before claiming the gate (a zero refund must never claim it).
+    coupon_share, refund_amount, lane1, lane2 = _amounts()
 
     # D17 single-drain: decide phase under the shared order escrow gate so a
     # concurrent release cannot also drain escrow after we chose PRE_RELEASE.
@@ -711,6 +719,11 @@ def execute_refund(
         if gate_decision.phase == "post_release"
         else RefundPhase.PRE_RELEASE
     )
+    if coupon_share.discount_ngwee > 0:
+        # The coupon share already returned by earlier refunds on this order is
+        # re-read now that the order money gate is decided, so a refund that
+        # committed while we waited on the gate is counted (no double return).
+        coupon_share, refund_amount, lane1, lane2 = _amounts()
 
     # Event phased releases post release_to_vendor for ~50% net while the rest
     # remains in escrow. The gate treats ANY release_to_vendor as post_release,

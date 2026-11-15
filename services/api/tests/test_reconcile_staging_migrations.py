@@ -85,8 +85,12 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
-    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261115190000",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261115190100",
 }
 
 

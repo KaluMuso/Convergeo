@@ -472,3 +472,220 @@ UPDATE public.checkout_groups SET status = 'expired' WHERE id = '{checkout_id}';
         )
         == "1"
     )
+
+
+# ---------------------------------------------------------------------------
+# Unpaid order cancelled / payment failed or expired → reserved use released
+# ---------------------------------------------------------------------------
+
+
+def _unpaid_discounted_order(
+    db: PgConn, coupon_id: str, *, customer: str = CUSTOMER_A
+) -> tuple[str, str, str]:
+    """Order placed with a reserved coupon and an in-flight (unpaid) payment."""
+    paid = ITEMS + DELIVERY - DISCOUNT
+    checkout_id = str(uuid.uuid4())
+    order_id = str(uuid.uuid4())
+    payment_id = str(uuid.uuid4())
+    _ok(
+        db,
+        f"""
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee,
+  status, coupon_id, coupon_code, discount_ngwee
+) VALUES (
+  '{checkout_id}', '{customer}', 'chk-{checkout_id}', {ITEMS}, {DELIVERY}, {paid},
+  'completed', '{coupon_id}', 'X', {DISCOUNT}
+);
+SELECT public.reserve_coupon_redemption('{coupon_id}', '{customer}', '{checkout_id}', {DISCOUNT});
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, status, fulfilment, delivery_fee_ngwee,
+  cod, commission_snapshot, coupon_redemption_id, coupon_discount_ngwee, coupon_funder
+) VALUES (
+  '{order_id}', '{checkout_id}', '{VENDOR_A}', '{customer}', 'placed', 'delivery',
+  {DELIVERY}, false, '{{"lines": []}}'::jsonb,
+  (SELECT id FROM public.coupon_redemptions WHERE checkout_group_id = '{checkout_id}'),
+  {DISCOUNT}, 'platform'
+);
+INSERT INTO public.order_items (id, order_id, item_kind, qty, unit_price_ngwee)
+VALUES ('{uuid.uuid4()}', '{order_id}', 'product', 2, {ITEMS // 2});
+INSERT INTO public.payments (
+  id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+) VALUES (
+  '{payment_id}', '{checkout_id}', 'lenco', 'mtn', 'ord-{payment_id}', {paid}, 'ussd_pushed'
+);
+""",
+    )
+    return checkout_id, order_id, payment_id
+
+
+def _redemption_status(db: PgConn, checkout_id: str) -> str:
+    return _scalar(
+        db,
+        f"SELECT status FROM public.coupon_redemptions WHERE checkout_group_id = '{checkout_id}'",
+    )
+
+
+def _committed(db: PgConn) -> int:
+    return int(_scalar(db, "SELECT coalesce(sum(committed_ngwee), 0) FROM public.promo_budgets"))
+
+
+def _uses(db: PgConn, coupon_id: str) -> int:
+    return int(_scalar(db, f"SELECT uses_count FROM public.coupons WHERE id = '{coupon_id}'"))
+
+
+def test_failed_payment_then_cancel_makes_coupon_reusable_and_restores_budget(
+    db: PgConn,
+) -> None:
+    from app.services.orders.state import ActorRole, OrderEvent, transition_order
+
+    _set_budget(db, 5_000)
+    coupon_id = _coupon(db, total_limit=1, per_user_limit=1, amount_ngwee=DISCOUNT)
+    checkout_id, order_id, payment_id = _unpaid_discounted_order(db, coupon_id)
+    assert (_uses(db, coupon_id), _committed(db)) == (1, DISCOUNT)
+
+    # Payment fails: the checkout stays retryable, so the use is still held.
+    _ok(db, f"UPDATE public.payments SET status = 'failed' WHERE id = '{payment_id}';")
+    assert _redemption_status(db, checkout_id) == "reserved"
+    blocked = _reserve(db, coupon_id, CUSTOMER_A, _checkout(db), DISCOUNT)
+    assert not blocked.ok and "COUPON_LIMIT" in (blocked.error or "")
+
+    # The customer cancels the unpaid order through the guarded transition.
+    transition_order(
+        order_id=order_id,
+        event=OrderEvent.CANCEL,
+        actor_role=ActorRole.CUSTOMER,
+        actor_id=CUSTOMER_A,
+        note="changed my mind",
+    )
+    assert _scalar(db, f"SELECT status FROM public.orders WHERE id = '{order_id}'") == "cancelled"
+    assert _redemption_status(db, checkout_id) == "released"
+    assert (_uses(db, coupon_id), _committed(db)) == (0, 0)
+    audit = _scalar(
+        db,
+        "SELECT after->>'reason' FROM public.audit_log "
+        "WHERE action = 'coupon_redemption.transition' AND entity_id = "
+        f"(SELECT id FROM public.coupon_redemptions WHERE checkout_group_id = '{checkout_id}')",
+    )
+    assert audit == "order_cancelled"
+
+    # Per-user AND total limits are free again: the same customer reuses it.
+    again = _reserve(db, coupon_id, CUSTOMER_A, _checkout(db), DISCOUNT)
+    assert again.ok, again.error
+    assert (_uses(db, coupon_id), _committed(db)) == (1, DISCOUNT)
+
+    # Double release is a no-op: neither the use nor the budget is given back twice.
+    redemption = _scalar(
+        db,
+        f"SELECT id FROM public.coupon_redemptions WHERE checkout_group_id = '{checkout_id}'",
+    )
+    assert (
+        _scalar(
+            db,
+            f"SELECT public.coupon_redemption_transition('{redemption}', 'released', NULL, "
+            "'replay');",
+        )
+        == "f"
+    )
+    assert (
+        _scalar(
+            db,
+            f"SELECT private.release_dead_coupon_redemptions('{checkout_id}', NULL, 'replay');",
+        )
+        == "0"
+    )
+    _ok(db, f"UPDATE public.payments SET status = 'expired' WHERE id = '{payment_id}';")
+    assert (_uses(db, coupon_id), _committed(db)) == (1, DISCOUNT)
+
+
+def test_payment_expiry_alone_keeps_the_reservation_for_a_retry(db: PgConn) -> None:
+    _set_budget(db, 5_000)
+    coupon_id = _coupon(db, total_limit=1, amount_ngwee=DISCOUNT)
+    checkout_id, _, payment_id = _unpaid_discounted_order(db, coupon_id)
+    _ok(db, f"UPDATE public.payments SET status = 'expired' WHERE id = '{payment_id}';")
+    assert _redemption_status(db, checkout_id) == "reserved"
+    assert (_uses(db, coupon_id), _committed(db)) == (1, DISCOUNT)
+
+
+def test_payment_expiry_after_cancellation_releases(db: PgConn) -> None:
+    """A cancellation that left the redemption reserved is released on expiry."""
+    _set_budget(db, 5_000)
+    coupon_id = _coupon(db, total_limit=1, amount_ngwee=DISCOUNT)
+    checkout_id, order_id, payment_id = _unpaid_discounted_order(db, coupon_id)
+    # Cancel without the release trigger (as a pre-fix row would be) ...
+    _ok(
+        db,
+        f"""
+BEGIN;
+ALTER TABLE public.orders DISABLE TRIGGER orders_release_coupon_on_cancel;
+UPDATE public.orders SET status = 'cancelled' WHERE id = '{order_id}';
+ALTER TABLE public.orders ENABLE TRIGGER orders_release_coupon_on_cancel;
+COMMIT;
+""",
+    )
+    assert _redemption_status(db, checkout_id) == "reserved"
+    # ... then the in-flight attempt expires: nothing can pay any more.
+    _ok(db, f"UPDATE public.payments SET status = 'expired' WHERE id = '{payment_id}';")
+    assert _redemption_status(db, checkout_id) == "released"
+    assert (_uses(db, coupon_id), _committed(db)) == (0, 0)
+
+
+def test_cancelling_a_paid_order_leaves_the_applied_redemption(db: PgConn) -> None:
+    checkout_id, order_id, _ = _discounted_order(db, funder="platform")
+    _ok(
+        db,
+        f"""
+BEGIN;
+SELECT pg_advisory_xact_lock(hashtext('order_escrow:' || '{order_id}'));
+UPDATE public.orders SET status = 'cancelled' WHERE id = '{order_id}';
+COMMIT;
+""",
+    )
+    assert _redemption_status(db, checkout_id) == "applied"
+
+
+def test_rate_scopes_for_coupons_gifts_birthdays_are_accepted(db: PgConn) -> None:
+    key = f"coupon-scope-test-{uuid.uuid4()}"
+    try:
+        for scope in (
+            "coupon_attempt_user",
+            "coupon_attempt_ip",
+            "gift_write",
+            "birthday_write",
+        ):
+            result = db.run(
+                f"SELECT allowed FROM public.bump_rate_counter('{scope}', '{key}', "
+                "interval '1 minute', 5);"
+            )
+            assert result.ok, result.error
+            assert result.rows[-1] == "t"
+        # The rebuilt constraint still allows every pre-existing scope.
+        for scope in ("notifications_read", "checkout_group_read_user", "write_standard"):
+            result = db.run(
+                f"SELECT allowed FROM public.bump_rate_counter('{scope}', '{key}', "
+                "interval '1 minute', 5);"
+            )
+            assert result.ok, result.error
+    finally:
+        # Leave no rows behind that an older scope list would reject on re-replay.
+        db.run(f"DELETE FROM public.rate_counters WHERE key = '{key}';")
+
+
+def test_ledger_kind_constraint_was_widened_not_restated(db: PgConn) -> None:
+    definition = _scalar(
+        db,
+        "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+        "WHERE conrelid = 'public.ledger_accounts'::regclass "
+        "AND conname = 'ledger_accounts_kind_check'",
+    )
+    for kind in (
+        "platform_cash",
+        "escrow",
+        "commission_revenue",
+        "vendor_payable",
+        "cod_receivable",
+        "fees",
+        "delivery_revenue",
+        "marketing_expense",
+    ):
+        assert f"'{kind}'" in definition, kind

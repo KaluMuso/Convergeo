@@ -20,11 +20,18 @@
 -- Redemptions are reserved inside the order-creation transaction under a
 -- row lock on the coupon (`reserve_coupon_redemption`), so total and per-user
 -- limits cannot be overused under concurrency. Payment success applies them;
--- checkout expiry/abandonment releases them. Every transition goes through
--- `coupon_redemption_transition` and is written to audit_log.
+-- checkout expiry/abandonment, cancellation of every unpaid order carrying one,
+-- and a failed/expired payment once those orders are cancelled release them.
+-- Every transition goes through `coupon_redemption_transition` and is written
+-- to audit_log.
 --
 -- Additive only. Down (manual, only while no ledger posting references
 -- marketing_expense and no order carries a coupon):
+--   drop trigger if exists orders_release_coupon_on_cancel on public.orders;
+--   drop trigger if exists payments_release_coupon_on_terminal on public.payments;
+--   drop function if exists private.orders_release_coupon_on_cancel();
+--   drop function if exists private.payments_release_coupon_on_terminal();
+--   drop function if exists private.release_dead_coupon_redemptions(uuid, uuid, text);
 --   drop trigger if exists checkout_groups_release_coupon_redemptions on public.checkout_groups;
 --   drop trigger if exists payments_coupon_gift_on_success on public.payments;
 --   drop function if exists private.checkout_groups_release_coupon_redemptions();
@@ -43,7 +50,23 @@
 --   delete from public.platform_config where key in
 --     ('promo_monthly_budget_ngwee','vendor_coupon_max_percent_bps','birthday_coupon');
 --   delete from public.ledger_accounts where kind = 'marketing_expense' and vendor_id is null;
---   (then restore ledger_accounts_kind_check from 20261113120500)
+--   -- Narrow ledger_accounts_kind_check by removing ONLY marketing_expense (every
+--   -- kind other migrations added is kept):
+--   do $d$ declare v text[]; begin
+--     select array_agg(distinct m[1] order by m[1]) into v
+--     from pg_constraint c
+--     cross join lateral regexp_matches(pg_get_constraintdef(c.oid), '''([^'']+)''', 'g') m
+--     where c.conrelid = 'public.ledger_accounts'::regclass
+--       and c.conname = 'ledger_accounts_kind_check' and m[1] <> 'marketing_expense';
+--     alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
+--     execute format('alter table public.ledger_accounts add constraint '
+--       'ledger_accounts_kind_check check (kind in (%s))',
+--       (select string_agg(quote_literal(k), ', ' order by k) from unnest(v) k));
+--   end $d$;
+--   -- Rate scopes (section 0b): only once no rate_counters row uses them, delete
+--   -- birthday_write, coupon_attempt_ip, coupon_attempt_user, gift_write from
+--   -- private.rate_counter_scope_manifest and rebuild rate_counters_scope_check
+--   -- from the manifest without them.
 
 -- ---------------------------------------------------------------------------
 -- 0. Flags + config (all default OFF / conservative)
@@ -69,16 +92,78 @@ insert into public.platform_config (key, value, description) values
 on conflict (key) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- 0b. Rate-limit scopes used by routers/checkout_extras.py (coupon_attempt_user,
+--     coupon_attempt_ip, gift_write) and routers/account_birthday.py
+--     (birthday_write). bump_rate_counter rejects a scope missing from the
+--     manifest or from rate_counters_scope_check (HTTP 500), so register them in
+--     the manifest AND rebuild the constraint from the full manifest unioned with
+--     everything the current constraint allows: no existing scope is dropped.
+-- ---------------------------------------------------------------------------
+
+insert into private.rate_counter_scope_manifest (scope) values
+  ('birthday_write'),
+  ('coupon_attempt_ip'),
+  ('coupon_attempt_user'),
+  ('gift_write')
+on conflict (scope) do nothing;
+
+do $$
+declare
+  v_scopes text[];
+begin
+  select array_agg(distinct u.s order by u.s) into v_scopes
+  from (
+    select scope as s from private.rate_counter_scope_manifest
+    union
+    select m[1]
+    from pg_constraint c
+    cross join lateral regexp_matches(pg_get_constraintdef(c.oid), '''([^'']+)''', 'g') as m
+    where c.conrelid = 'public.rate_counters'::regclass
+      and c.conname = 'rate_counters_scope_check'
+  ) u;
+  alter table public.rate_counters drop constraint if exists rate_counters_scope_check;
+  execute format(
+    'alter table public.rate_counters add constraint rate_counters_scope_check '
+    'check (scope in (%s))',
+    (select string_agg(quote_literal(x), ', ' order by x) from unnest(v_scopes) as x)
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- 1. Ledger: marketing_expense (platform account)
 -- ---------------------------------------------------------------------------
 
-alter table public.ledger_accounts drop constraint if exists ledger_accounts_kind_check;
-alter table public.ledger_accounts add constraint ledger_accounts_kind_check
-  check (kind in (
-    'platform_cash', 'escrow', 'commission_revenue',
-    'vendor_payable', 'cod_receivable', 'fees',
-    'delivery_revenue', 'marketing_expense'
-  ));
+-- WIDEN the existing constraint (never restate a fixed list): other migrations
+-- add their own kinds the same way, so a hard-coded rebuild here would silently
+-- drop theirs (or theirs would drop ours). Read the kinds currently allowed and
+-- re-add the constraint with that union plus marketing_expense. Idempotent.
+-- The rebuilt constraint keeps the `kind in (...)` literal-list form, so the next
+-- widening migration can read it back the same way.
+do $$
+declare
+  v_kinds text[];
+begin
+  select coalesce(array_agg(distinct m[1] order by m[1]), array[]::text[])
+  into v_kinds
+  from pg_constraint c
+  cross join lateral regexp_matches(pg_get_constraintdef(c.oid), '''([^'']+)''', 'g') as m
+  where c.conrelid = 'public.ledger_accounts'::regclass
+    and c.conname = 'ledger_accounts_kind_check';
+  if cardinality(v_kinds) = 0 then
+    raise exception 'ledger_accounts_kind_check not found or empty; refusing to rebuild';
+  end if;
+  if not ('marketing_expense' = any (v_kinds)) then
+    v_kinds := v_kinds || 'marketing_expense'::text;
+  end if;
+  alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
+  execute format(
+    'alter table public.ledger_accounts add constraint ledger_accounts_kind_check '
+    'check (kind in (%s))',
+    (select string_agg(quote_literal(k), ', ' order by k) from unnest(v_kinds) as k)
+  );
+end;
+$$;
 
 insert into public.ledger_accounts (id, kind)
 values ('c8000000-0000-0000-0000-000000000008', 'marketing_expense')
@@ -498,6 +583,120 @@ create trigger payments_coupon_gift_on_success
   for each row
   when (new.status = 'success' and old.status is distinct from 'success')
   execute function private.payments_coupon_gift_on_success();
+
+-- Unpaid order cancelled / payment failed or expired → give reserved uses back.
+-- Redemptions are reserved when orders are placed (the checkout is then
+-- 'completed', so the checkout expiry trigger above never fires for them). A
+-- reservation is dead once nothing can still pay for it: no successful payment
+-- in its checkout AND every order carrying it is cancelled. While any such
+-- order is still open the reservation stays (a failed or expired attempt may be
+-- retried on the same checkout). A paid order's redemption is 'applied' and is
+-- never touched here (refunds return the platform share in their own
+-- transaction). Idempotent: only 'reserved' rows are released, each through the
+-- guarded transition (row lock + audit), which restores uses_count (total and
+-- per-user limits count reserved/applied rows) and promo_budgets.committed_ngwee.
+create or replace function private.release_dead_coupon_redemptions(
+  p_checkout_group_id uuid,
+  p_actor uuid,
+  p_reason text
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_released integer := 0;
+begin
+  if p_checkout_group_id is null then
+    return 0;
+  end if;
+  if exists (
+    select 1 from public.payments p
+    where p.checkout_group_id = p_checkout_group_id and p.status = 'success'
+  ) then
+    return 0;
+  end if;
+  for v_id in
+    select r.id from public.coupon_redemptions r
+    where r.checkout_group_id = p_checkout_group_id
+      and r.status = 'reserved'
+      and exists (select 1 from public.orders o where o.coupon_redemption_id = r.id)
+      and not exists (
+        select 1 from public.orders o
+        where o.coupon_redemption_id = r.id and o.status <> 'cancelled'
+      )
+    order by r.id
+  loop
+    if public.coupon_redemption_transition(v_id, 'released', p_actor, p_reason) then
+      v_released := v_released + 1;
+    end if;
+  end loop;
+  return v_released;
+end;
+$$;
+
+revoke all on function private.release_dead_coupon_redemptions(uuid, uuid, text)
+  from public, anon, authenticated;
+
+-- Guarded order cancellation (transition_order / vendor reject): same
+-- transaction as the status update, after the stock-release trigger.
+create or replace function private.orders_release_coupon_on_cancel()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_actor uuid;
+begin
+  begin
+    v_actor := nullif(current_setting('app.order_actor', true), '')::uuid;
+  exception when invalid_text_representation then
+    v_actor := null;
+  end;
+  perform private.release_dead_coupon_redemptions(
+    new.checkout_group_id, v_actor, 'order_cancelled');
+  return new;
+end;
+$$;
+
+revoke all on function private.orders_release_coupon_on_cancel()
+  from public, anon, authenticated;
+
+create trigger orders_release_coupon_on_cancel
+  after update of status on public.orders
+  for each row
+  when (new.status = 'cancelled' and old.status is distinct from new.status
+        and new.coupon_redemption_id is not null)
+  execute function private.orders_release_coupon_on_cancel();
+
+-- Guarded payment transition to failed / expired / cancelled: releases only
+-- when the orders were already cancelled (e.g. cancelled while the attempt was
+-- still in flight); otherwise the checkout stays retryable and keeps its use.
+create or replace function private.payments_release_coupon_on_terminal()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform private.release_dead_coupon_redemptions(
+    new.checkout_group_id, null, 'payment_' || new.status);
+  return new;
+end;
+$$;
+
+revoke all on function private.payments_release_coupon_on_terminal()
+  from public, anon, authenticated;
+
+create trigger payments_release_coupon_on_terminal
+  after update of status on public.payments
+  for each row
+  when (new.status in ('failed', 'expired', 'cancelled')
+        and old.status is distinct from new.status)
+  execute function private.payments_release_coupon_on_terminal();
 
 -- ---------------------------------------------------------------------------
 -- 4. Birthdays (separate from profiles: optional, consented marketing data)

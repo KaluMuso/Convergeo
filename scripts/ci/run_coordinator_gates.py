@@ -34,8 +34,8 @@ def inputs() -> dict[str, Any]:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / "supabase/migrations").glob("*.sql"))}
-    if len(actual) != 159 or actual != data["migrations"]:
-        raise RuntimeError("Qualified 159-input source inventory differs")
+    if len(actual) != 161 or actual != data["migrations"]:
+        raise RuntimeError("Qualified 161-input source inventory differs")
     if any(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != digest
            for path, digest in data["source_sha256"].items()):
         raise RuntimeError("Retained test/runner source binding differs")

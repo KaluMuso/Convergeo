@@ -330,6 +330,65 @@ def test_partial_return_gets_proportional_share() -> None:
     assert share.discount_ngwee == 1_000
 
 
+def test_coupon_returned_so_far_is_reread_under_the_money_gate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refund that lands while we wait on the gate is counted (no double return)."""
+    calls: list[str] = []
+    returned = iter([0, 1_000])
+
+    def returned_so_far(*_: Any) -> int:
+        calls.append("returned_so_far")
+        return next(returned)
+
+    def gate(order_id: str) -> Any:
+        calls.append("gate")
+        return SimpleNamespace(phase="pre_release", claimed=True)
+
+    class _Stop(Exception):
+        pass
+
+    def summarize(order_id: str) -> Any:
+        raise _Stop
+
+    monkeypatch.setattr(refund_mod, "_find_existing_refund", lambda *_a, **_k: None)
+    monkeypatch.setattr(refund_mod, "assert_customer_refund_allowed", lambda **_k: None)
+    monkeypatch.setattr(
+        refund_mod,
+        "_fetch_order",
+        lambda *_a: {
+            "vendor_id": VENDOR,
+            "delivery_fee_ngwee": 0,
+            "cod": False,
+            "coupon_discount_ngwee": 2_000,
+            "coupon_funder": "platform",
+        },
+    )
+    monkeypatch.setattr(refund_mod, "_order_item_total_ngwee", lambda *_a: 20_000)
+    monkeypatch.setattr(refund_mod, "_coupon_returned_so_far", returned_so_far)
+    monkeypatch.setattr(refund_mod, "decide_refund_phase_under_gate", gate)
+    monkeypatch.setattr(refund_mod, "summarize_order_release_ledger", summarize)
+
+    seen: dict[str, Any] = {}
+    original = refund_mod._compute_lane_amounts
+
+    def compute(**kwargs: Any) -> Any:
+        seen["share"] = kwargs["coupon_share"]
+        return original(**kwargs)
+
+    monkeypatch.setattr(refund_mod, "_compute_lane_amounts", compute)
+    with pytest.raises(_Stop):
+        refund_mod.execute_refund(
+            service_client=SimpleNamespace(client=None),
+            order_id="o-1",
+            lane=1,
+            customer_momo="0971234567",
+        )
+    assert calls == ["returned_so_far", "gate", "returned_so_far"]
+    # The post-gate read (1_000 already returned) decides the share.
+    assert seen["share"].discount_ngwee == 1_000
+
+
 # --- birthdays ---------------------------------------------------------------------
 
 

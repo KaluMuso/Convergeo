@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 159
+MIGRATION_COUNT = 161
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -49,6 +49,10 @@ POST_REPAIR_ORDER = [
     "20261113130000",
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
     "20261114050000",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261115190000",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261115190100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]
