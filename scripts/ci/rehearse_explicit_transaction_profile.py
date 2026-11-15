@@ -66,9 +66,9 @@ REVIEWED_SUFFIX = (
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
-    "20261114030000_vendor_plans.sql",
+    "20261115095000_vendor_plans.sql",
     # Shared canonical photos + sha256 dedup (additive, reversible).
-    "20261114030100_shared_canonical_photos.sql",
+    "20261115095100_shared_canonical_photos.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

@@ -48,9 +48,9 @@ POST_REPAIR_ORDER = [
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
-    "20261114030000",
+    "20261115095000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
-    "20261114030100",
+    "20261115095100",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

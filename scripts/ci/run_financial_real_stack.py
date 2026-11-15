@@ -69,9 +69,9 @@ FORWARD = [
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
-    "20261114030000_vendor_plans.sql",
+    "20261115095000_vendor_plans.sql",
     # Shared canonical photos + sha256 dedup (additive, reversible).
-    "20261114030100_shared_canonical_photos.sql",
+    "20261115095100_shared_canonical_photos.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
