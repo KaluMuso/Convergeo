@@ -66,10 +66,10 @@ REVIEWED_SUFFIX = (
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
-    "20261115100000_admin_money_tables_read_only.sql",
+    "20261115140000_admin_money_tables_read_only.sql",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
-    "20261115100100_admin_direct_writes_read_only.sql",
-    "20261115100200_admin_governance_audit_consent.sql",
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

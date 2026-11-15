@@ -309,7 +309,7 @@ INSERT INTO public.orders (
           '{fulfilment}', {str(cod).lower()}, '{zone}', '{address_id}', {DELIVERY_FEE_NGWEE});
 INSERT INTO public.order_items (order_id, item_kind, qty, unit_price_ngwee, title_snapshot)
 VALUES {item_rows};
--- Zambia DPA (20261115100200): courier dispatch needs the customer's current consent.
+-- Zambia DPA (20261115140200): courier dispatch needs the customer's current consent.
 INSERT INTO public.privacy_consents (user_id, purpose, version, granted, source)
 VALUES ('{customer_id}', 'delivery_partner_share', '2026-11-13',
         {str(delivery_consent).lower()}, 'checkout');

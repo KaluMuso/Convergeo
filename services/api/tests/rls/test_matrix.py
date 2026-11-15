@@ -77,7 +77,7 @@ def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
 def service_write_money_table() -> PersonaExpectations:
     """Ledger, payments, payouts and refunds: clients read their own rows, nobody writes.
 
-    20261115100000 (2026-11 RBAC audit, S1) replaced the M03 `<table>_admin_all` policy
+    20261115140000 (2026-11 RBAC audit, S1) replaced the M03 `<table>_admin_all` policy
     with an admin SELECT policy and revoked INSERT/UPDATE/DELETE from anon and
     authenticated. Before it, ADMIN was `all_permit()` — an admin browser token could
     fabricate ledger postings through PostgREST — and the other authenticated personas
@@ -3209,7 +3209,7 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
-    # 20261115100200: append-only consent log. Owners read their own rows; the API
+    # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.
     "privacy_consents": {
         Persona.ANON: deny_all(),
@@ -3222,7 +3222,7 @@ EXPECTATIONS: TableExpectations = {
 }
 
 
-# 20261115100100 (2026-11 RBAC audit, D1): the legacy `admin` role lost its direct
+# 20261115140100 (2026-11 RBAC audit, D1): the legacy `admin` role lost its direct
 # write policies on 75 tables, and client write grants that no remaining policy can
 # use were revoked. Cells written above as literals were flipped in place; the cells
 # below come from shared builders, so they are tightened here, one by one. Every

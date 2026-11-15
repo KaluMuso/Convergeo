@@ -99,10 +99,10 @@ POST_REPAIR_PENDING_VERSIONS = [
     # In-app notification center (additive, reversible).
     "20261113130000",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
-    "20261115100000",
+    "20261115140000",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
-    "20261115100100",
-    "20261115100200",
+    "20261115140100",
+    "20261115140200",
 ]
 
 def _module() -> Any:
@@ -165,10 +165,10 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         "20261109120000",
     ]
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
-    audit_s1 = ["20261115100000"]
+    audit_s1 = ["20261115140000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
-    governance = ["20261115100100", "20261115100200"]
+    governance = ["20261115140100", "20261115140200"]
     assert actual_versions[-22:] == (
         repairs
         + post_repair

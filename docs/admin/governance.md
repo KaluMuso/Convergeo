@@ -39,7 +39,7 @@ the API — do not rely on it.
 
 ## Database posture (D1)
 
-Migration `20261115100100_admin_direct_writes_read_only.sql` removed every
+Migration `20261115140100_admin_direct_writes_read_only.sql` removed every
 `has_role('admin')` write policy on public tables (75 tables, after S1's six money
 tables). Admins read through `<table>_admin_select`; every admin write goes through the
 API as `service_role`, past state machines and the audit log. Manual down:
