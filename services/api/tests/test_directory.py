@@ -880,8 +880,8 @@ class TestBusinessHome:
     def test_verified_business_never_sees_wholesale_in_other_offers(
         self, store: FakeSupabaseStore
     ) -> None:
-        # Wholesale prices are vendor-app only: even an eligible business buyer
-        # gets retail-only "other shops" counts and lowest price.
+        # Wholesale prices are vendor-app only (#812 removed the customer-side
+        # business access gate): "other shops" counts and lowest price are retail.
         seed_active_vendor(store)
         store.vendor_listings[0]["vendors"] = {"status": "active"}
         store.vendor_listings += [
@@ -894,11 +894,6 @@ class TestBusinessHome:
             ),
         ]
         app: FastAPI = create_app()
-        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-            user_id="11111111-1111-1111-1111-111111111111",
-            status="verified",
-            eligible=True,
-        )
 
         class FakeServiceClient:
             def __init__(self) -> None:
