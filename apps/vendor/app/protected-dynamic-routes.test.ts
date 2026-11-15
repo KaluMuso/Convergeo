@@ -121,6 +121,13 @@ const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
     keeps: ["generateMetadata", "setRequestLocale", "ServiceEditView"],
   },
   {
+    // W8 bundles & offers: flag-gated (`bundles`, default off), owner-scoped.
+    label: "ƒ /[locale]/offers/[id]/edit",
+    segments: ["[locale]", "offers", "[id]", "edit"],
+    param: "id",
+    keeps: ["generateMetadata", "setRequestLocale", "OfferEditView"],
+  },
+  {
     // Flag-gated (waha_vendor_intake, default off) and still request-specific:
     // isIntakeRouteAccessible() reads cookies(), the flag, auth.getUser() and
     // the vendor allowlist. A disabled route must 404 cleanly, not risk a
@@ -280,7 +287,7 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
       .sort();
 
     expect(discovered).toEqual(covered);
-    expect(discovered).toHaveLength(11);
+    expect(discovered).toHaveLength(12);
   });
 
   it("no ancestor segment forces these routes back to static", () => {

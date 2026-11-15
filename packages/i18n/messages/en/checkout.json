@@ -81,7 +81,11 @@
     "mergeApply": "Accept current prices and remove unavailable items",
     "mergeRetry": "Retry cart merge",
     "mergeSignOut": "Sign out",
-    "mergeFailure": "We could not finish securing your cart. Your items are still saved."
+    "mergeFailure": "We could not finish securing your cart. Your items are still saved.",
+    "offerSavings": "Offer savings",
+    "offerSaving": "Offer saving {amount}",
+    "offerGift": "Free gift: {title} × {qty}",
+    "offerGiftWorth": "Worth {value} — free with your offer"
   },
   "checkout": {
     "pageTitle": "Checkout",

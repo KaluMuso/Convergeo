@@ -78,7 +78,11 @@
     "mergeApply": "接受当前价格并移除不可用商品",
     "mergeRetry": "重试购物车合并",
     "mergeSignOut": "退出登录",
-    "mergeFailure": "无法完成购物车保护。您的商品仍已保存。"
+    "mergeFailure": "无法完成购物车保护。您的商品仍已保存。",
+    "offerSavings": "优惠节省",
+    "offerSaving": "优惠节省 {amount}",
+    "offerGift": "赠品：{title} × {qty}",
+    "offerGiftWorth": "价值 {value}，随优惠免费赠送"
   },
   "checkout": {
     "pageTitle": "结账",

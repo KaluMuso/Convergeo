@@ -22,6 +22,7 @@ from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.offers.apply import expand_cart_lines_for_order
 from app.services.orders.create import (
     CartLineInput,
     CreateOrdersResult,
@@ -414,6 +415,14 @@ async def create_orders(
                 variant_snapshot=variant_snapshot,
             )
         )
+
+    # W8 offers (flag `bundles`): re-priced from live offers with the same engine
+    # the fulfilment step used for the session total; split / gift lines carry
+    # the frozen offer pricing into order_items. A mismatch with the session
+    # (offer ended in between) surfaces as orders.totals_mismatch below.
+    cart_lines, _priced = expand_cart_lines_for_order(
+        cart_lines, service.client, customer_id=current_user.id
+    )
 
     vendor_groups = _authoritative_groups(
         service,

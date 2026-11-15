@@ -4,6 +4,8 @@ import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
 
+import type { OfferBadge } from "../offers/offer-badge";
+
 export type CatalogListing = {
   id: string;
   title: string;
@@ -27,6 +29,8 @@ export type CatalogListing = {
   productClass?: string;
   fulfilmentMode?: string;
   leadTimeDays?: number | null;
+  /** W8 offers: live offer this listing takes part in (flag `bundles`). */
+  offerBadge?: OfferBadge;
 };
 
 type ListingGridLabels = ListingCardLabels;

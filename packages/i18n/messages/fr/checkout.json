@@ -78,7 +78,11 @@
     "mergeApply": "Accepter les prix actuels et retirer les articles indisponibles",
     "mergeRetry": "Réessayer la fusion du panier",
     "mergeSignOut": "Se déconnecter",
-    "mergeFailure": "Nous n'avons pas pu sécuriser votre panier. Vos articles sont toujours enregistrés."
+    "mergeFailure": "Nous n'avons pas pu sécuriser votre panier. Vos articles sont toujours enregistrés.",
+    "offerSavings": "Économies sur les offres",
+    "offerSaving": "Économie {amount}",
+    "offerGift": "Cadeau offert : {title} × {qty}",
+    "offerGiftWorth": "Valeur {value} — offert avec votre offre"
   },
   "checkout": {
     "pageTitle": "Paiement",

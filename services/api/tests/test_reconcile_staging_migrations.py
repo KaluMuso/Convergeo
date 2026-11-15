@@ -85,6 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # W8 bundles & offers (additive, reversible).
+    "20261115120000",
 }
 
 

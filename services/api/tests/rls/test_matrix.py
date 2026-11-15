@@ -3397,6 +3397,38 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # W8 bundles & offers (20261115120000). Public SELECT of live offers; the
+    # owner vendor and admin hold ALL policies (non-owners match zero rows on
+    # the WHERE-false update/delete probes -> permit; a DEFAULT VALUES insert
+    # fails WITH CHECK -> deny, except admin who passes RLS and then hits NOT
+    # NULL -> permit). Gift reservations are service-role only.
+    "offers": {
+        Persona.ANON: select_only(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+            )
+        },
+        Persona.ADMIN: all_permit(),
+    },
+    "offer_items": {
+        Persona.ANON: select_only(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+            )
+        },
+        Persona.ADMIN: all_permit(),
+    },
+    "offer_gift_reservations": client_invisible(),
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -52,6 +53,7 @@ from app.services.listings.variants import (
     overlay_listing_for_variant,
     resolve_variant_for_purchase,
 )
+from app.services.offers.apply import OfferPricing, price_line_views
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
@@ -59,6 +61,8 @@ from jwt.exceptions import InvalidTokenError
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from supabase import Client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
@@ -134,6 +138,27 @@ class CartLineResponse(BaseModel):
     is_rfq_quote: bool = False
     listing_variant_id: str | None = None
     variant_options: list[VariantOptionResponse] = Field(default_factory=list)
+    #: W8 offers — list total before the offer (None when no offer priced the line).
+    list_line_total_ngwee: int | None = None
+    offer_id: str | None = None
+
+
+class OfferGiftResponse(BaseModel):
+    offer_id: str
+    listing_id: str
+    qty: int
+    title: str | None = None
+    reference_unit_price_ngwee: int
+
+
+class AppliedOfferResponse(BaseModel):
+    offer_id: str
+    offer_type: str
+    title: str
+    vendor_id: str
+    discount_ngwee: int
+    gift_qty: int
+    applications: int
 
 
 class VendorGroupResponse(BaseModel):
@@ -141,6 +166,8 @@ class VendorGroupResponse(BaseModel):
     items: list[CartLineResponse]
     subtotal_ngwee: int
     delivery_eligible: bool
+    gifts: list[OfferGiftResponse] = Field(default_factory=list)
+    savings_ngwee: int = 0
 
 
 class MergeConflictResponse(BaseModel):
@@ -166,6 +193,8 @@ class CartResponse(BaseModel):
     subtotal_ngwee: int
     conflicts: list[MergeConflictResponse] = Field(default_factory=list)
     notices: list[ChangeNoticeResponse] = Field(default_factory=list)
+    savings_ngwee: int = 0
+    offers: list[AppliedOfferResponse] = Field(default_factory=list)
 
 
 class RevalidateResponse(BaseModel):
@@ -398,7 +427,19 @@ def _cart_response(
         items=prepared.items,
         listings_by_id=listings_by_id,
         conflicts=merged_conflicts or None,
+        customer_id=customer_id,
     )
+
+
+def _price_cart_offers(
+    line_views: list[CartLineView], customer_id: str | None
+) -> tuple[list[CartLineView], OfferPricing | None]:
+    """W8: apply live offers to the cart view; never fails the cart read."""
+    try:
+        return price_line_views(line_views, service_db_client(), customer_id=customer_id)
+    except Exception:
+        logger.warning("cart.offer_pricing_failed", exc_info=True)
+        return line_views, None
 
 
 def _build_cart_response(
@@ -407,6 +448,7 @@ def _build_cart_response(
     items: list[dict[str, Any]],
     listings_by_id: dict[str, dict[str, Any]],
     conflicts: list[MergeConflict] | None = None,
+    customer_id: str | None = None,
 ) -> CartResponse:
     line_views: list[CartLineView] = []
     for item in items:
@@ -450,9 +492,12 @@ def _build_cart_response(
             )
         )
 
+    line_views, offer_pricing = _price_cart_offers(line_views, customer_id)
     vendor_groups = group_by_vendor(line_views)
-    subtotal = cart_subtotal_ngwee(
-        [(line.qty, line.unit_price_ngwee) for line in line_views],
+    subtotal = (
+        sum(line.line_total_ngwee for line in line_views)
+        if offer_pricing is not None
+        else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
     )
 
     return CartResponse(
@@ -479,6 +524,8 @@ def _build_cart_response(
                 is_rfq_quote=line.is_rfq_quote,
                 listing_variant_id=line.listing_variant_id,
                 variant_options=_variant_option_responses(line),
+                list_line_total_ngwee=line.list_line_total_ngwee,
+                offer_id=line.offer_id,
             )
             for line in line_views
         ],
@@ -507,15 +554,46 @@ def _build_cart_response(
                         is_rfq_quote=item.is_rfq_quote,
                         listing_variant_id=item.listing_variant_id,
                         variant_options=_variant_option_responses(item),
+                        list_line_total_ngwee=item.list_line_total_ngwee,
+                        offer_id=item.offer_id,
                     )
                     for item in group.items
                 ],
                 subtotal_ngwee=group.subtotal_ngwee,
                 delivery_eligible=group.delivery_eligible,
+                gifts=[
+                    OfferGiftResponse(
+                        offer_id=gift.offer_id,
+                        listing_id=gift.listing_id,
+                        qty=gift.qty,
+                        title=gift.title,
+                        reference_unit_price_ngwee=gift.reference_unit_price_ngwee,
+                    )
+                    for gift in (
+                        offer_pricing.gifts_for_vendor(group.vendor_id) if offer_pricing else []
+                    )
+                ],
+                savings_ngwee=sum(
+                    (item.list_line_total_ngwee or item.line_total_ngwee) - item.line_total_ngwee
+                    for item in group.items
+                ),
             )
             for group in vendor_groups
         ],
         subtotal_ngwee=subtotal,
+        savings_ngwee=offer_pricing.priced.savings_ngwee if offer_pricing else 0,
+        offers=[
+            AppliedOfferResponse(
+                offer_id=application.offer_id,
+                offer_type=application.offer_type,
+                title=application.title,
+                vendor_id=application.vendor_id,
+                discount_ngwee=application.discount_ngwee,
+                gift_qty=application.gift_qty,
+                applications=application.applications,
+            )
+            for application in (offer_pricing.priced.applications if offer_pricing else ())
+        ],
         conflicts=[
             MergeConflictResponse(
                 listing_id=conflict.listing_id,

@@ -25,6 +25,7 @@ from app.services.cart.read_path import listing_cart_access_conflict, variant_st
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.offers.apply import OfferPricing, price_line_views
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
@@ -126,6 +127,17 @@ class CartLineOut(BaseModel):
     defect_notes: str | None = None
     listing_variant_id: str | None = None
     variant_options: list[VariantOptionOut] = Field(default_factory=list)
+    #: W8 offers — list total before the offer; None when no offer priced the line.
+    list_line_total_ngwee: int | None = None
+    offer_id: str | None = None
+
+
+class OfferGiftOut(BaseModel):
+    offer_id: str
+    listing_id: str
+    qty: int
+    title: str | None = None
+    reference_unit_price_ngwee: int
 
 
 class PickupLocationOut(BaseModel):
@@ -142,6 +154,8 @@ class VendorGroupOut(BaseModel):
     subtotal_ngwee: int
     delivery_eligible: bool
     pickup_location: PickupLocationOut | None = None
+    gifts: list[OfferGiftOut] = Field(default_factory=list)
+    savings_ngwee: int = 0
 
 
 class ReservationClaimOut(BaseModel):
@@ -729,6 +743,21 @@ def _build_line_views(
     return line_views
 
 
+def _gift_outs(pricing: OfferPricing | None, vendor_id: str) -> list[OfferGiftOut]:
+    if pricing is None:
+        return []
+    return [
+        OfferGiftOut(
+            offer_id=gift.offer_id,
+            listing_id=gift.listing_id,
+            qty=gift.qty,
+            title=gift.title,
+            reference_unit_price_ngwee=gift.reference_unit_price_ngwee,
+        )
+        for gift in pricing.gifts_for_vendor(vendor_id)
+    ]
+
+
 def _fetch_checkout_group(
     service: ServiceRoleClient, session_id: str, customer_id: str
 ) -> dict[str, Any]:
@@ -926,11 +955,18 @@ async def create_checkout_session(
     )
 
     line_views = _build_line_views(items, listings)
+    line_views, offer_pricing = price_line_views(
+        line_views, service.client, customer_id=current_user.id
+    )
     vendor_groups = group_by_vendor(
         line_views,
         free_delivery_threshold_ngwee=_load_free_delivery_threshold(service),
     )
-    subtotal = cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
+    subtotal = (
+        sum(line.line_total_ngwee for line in line_views)
+        if offer_pricing is not None
+        else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
+    )
 
     try:
         _supersede_own_pending_sessions(current_user.id)
@@ -1052,12 +1088,19 @@ async def create_checkout_session(
                             VariantOptionOut(group=group_name, value=value)
                             for group_name, value in item.variant_options
                         ],
+                        list_line_total_ngwee=item.list_line_total_ngwee,
+                        offer_id=item.offer_id,
                     )
                     for item in group.items
                 ],
                 subtotal_ngwee=group.subtotal_ngwee,
                 delivery_eligible=group.delivery_eligible,
                 pickup_location=pickup_locations.get(group.vendor_id),
+                gifts=_gift_outs(offer_pricing, group.vendor_id),
+                savings_ngwee=sum(
+                    (item.list_line_total_ngwee or item.line_total_ngwee) - item.line_total_ngwee
+                    for item in group.items
+                ),
             )
             for group in vendor_groups
         ],
@@ -1163,6 +1206,10 @@ async def validate_fulfilment_step(
     items = _fetch_cart_items(user_client, str(cart["id"]))
     listings = fetch_listings_for_items(items)
     line_views = _build_line_views(items, listings)
+    # Same offer engine as the session and order placement (W8, flag `bundles`).
+    line_views, _offer_pricing = price_line_views(
+        line_views, service.client, customer_id=current_user.id
+    )
     free_threshold = _load_free_delivery_threshold(service)
     vendor_groups = group_by_vendor(line_views, free_delivery_threshold_ngwee=free_threshold)
     groups_by_vendor = {group.vendor_id: group for group in vendor_groups}

@@ -25,6 +25,7 @@ import { Suspense } from "react";
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
+import { PdpOfferBox } from "../../_components/offers/pdp-offer-box";
 import {
   fetchProduct,
   productCacheTag,
@@ -533,6 +534,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     fetchProductReviews(product.id),
   ]);
   const selectedListing = selectListing(product.listings, listingId);
+  // W8 "Bundle & save": offers of the listing being bought (flag `bundles`).
+  const offerListingId = selectedListing?.id ?? product.listings[0]?.id ?? null;
   const singleVendor = product.listing_count === 1;
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
@@ -883,6 +886,34 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           />
         </>
       )}
+
+      {offerListingId ? (
+        <Suspense fallback={null}>
+          <PdpOfferBox
+            listingId={offerListingId}
+            labels={{
+              heading: t("offers.box.heading"),
+              itemLine: String(t.raw("offers.box.itemLine")),
+              youPay: String(t.raw("offers.box.youPay")),
+              youSave: String(t.raw("offers.box.youSave")),
+              freeGift: String(t.raw("offers.box.freeGift")),
+              badge: {
+                bxgy: String(t.raw("offers.badge.bxgy")),
+                bundlePercent: String(t.raw("offers.badge.bundlePercent")),
+                bundleFixed: t("offers.badge.bundleFixed"),
+                buyNPayM: String(t.raw("offers.badge.buyNPayM")),
+                freeGift: t("offers.badge.freeGift"),
+              },
+              addAll: {
+                addAll: t("offers.box.addAll"),
+                adding: t("offers.box.adding"),
+                added: t("offers.box.added"),
+                failed: t("offers.box.failed"),
+              },
+            }}
+          />
+        </Suspense>
+      ) : null}
 
       <PdpDetailsTabs
         labels={{

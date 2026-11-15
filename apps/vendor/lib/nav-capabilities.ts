@@ -1,5 +1,9 @@
 import { probeApiRoute } from "./api-route-probe";
-import { isClipsRouteAccessible, isIntakeRouteAccessible } from "./route-capabilities";
+import {
+  isBundlesRouteAccessible,
+  isClipsRouteAccessible,
+  isIntakeRouteAccessible,
+} from "./route-capabilities";
 
 import type { VendorNavItemKey } from "../app/[locale]/_components/vendor-nav-config";
 
@@ -38,6 +42,7 @@ function coreCapabilities(): VendorNavCapabilities {
     payouts: false,
     disputes: true,
     intake: false,
+    offers: false,
   };
 }
 
@@ -45,7 +50,7 @@ function coreCapabilities(): VendorNavCapabilities {
  * Resolve vendor navigation capabilities for the current request.
  *
  * Sources (fail closed):
- * - `feature_flags.clips`, `feature_flags.waha_vendor_intake` via Supabase
+ * - `feature_flags.clips`, `feature_flags.waha_vendor_intake`, `feature_flags.bundles` via Supabase
  * - `platform_config.waha_intake_vendor_allowlist` for intake (authenticated)
  * - Anonymous API probes for routes that may lag deploy (`/rfq`, `/jobs`, payouts, pickup)
  */
@@ -53,13 +58,14 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
   const caps = coreCapabilities();
 
   try {
-    const [clips, intake, rfq, jobs, payouts, scan] = await Promise.all([
+    const [clips, intake, rfq, jobs, payouts, scan, offers] = await Promise.all([
       isClipsRouteAccessible(),
       isIntakeRouteAccessible(),
       probeApiRoute("/rfq"),
       probeApiRoute("/jobs"),
       probeApiRoute("/vendor/payouts"),
       probeApiRoute("/vendor/pickup/verify"),
+      isBundlesRouteAccessible(),
     ]);
 
     caps.clips = clips;
@@ -68,6 +74,7 @@ export async function resolveVendorNavCapabilities(): Promise<VendorNavCapabilit
     caps.jobs = jobs;
     caps.payouts = payouts;
     caps.scan = scan;
+    caps.offers = offers;
 
     for (const key of CORE_VISIBLE) {
       caps[key] = true;
