@@ -10,6 +10,8 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.writer import get_writer
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.stock.claim import run_sql_script, sql_uuid
 
@@ -122,6 +124,40 @@ RETURNING id::text;
     return bool(result.rows)
 
 
+def build_record_event_sql(
+    *,
+    stage: FunnelStage,
+    checkout_group_id: str | None,
+    snapshot: dict[str, Any],
+    customer_id: str | None = None,
+) -> str:
+    """The idempotent funnel INSERT (validated inputs only; raises ValueError)."""
+    if checkout_group_id is not None:
+        _validate_uuid(checkout_group_id, "checkout_group_id")
+    if customer_id is not None:
+        _validate_uuid(customer_id, "customer_id")
+
+    group_sql = (
+        "null" if checkout_group_id is None else sql_uuid(checkout_group_id, "checkout_group_id")
+    )
+    customer_sql = "null" if customer_id is None else sql_uuid(customer_id, "customer_id")
+    snapshot_sql = _sql_json(snapshot)
+
+    if checkout_group_id is None:
+        return f"""
+INSERT INTO public.funnel_events (stage, checkout_group_id, customer_id, snapshot)
+VALUES ('{stage}', null, {customer_sql}, {snapshot_sql})
+RETURNING id::text, stage, created_at::text;
+"""
+    return f"""
+INSERT INTO public.funnel_events (stage, checkout_group_id, customer_id, snapshot)
+VALUES ('{stage}', {group_sql}, {customer_sql}, {snapshot_sql})
+ON CONFLICT (checkout_group_id, stage) WHERE checkout_group_id IS NOT NULL
+DO NOTHING
+RETURNING id::text, stage, created_at::text;
+"""
+
+
 def record_event(
     *,
     stage: FunnelStage,
@@ -133,33 +169,12 @@ def record_event(
 
     Returns the inserted row, or None when the stage was already recorded.
     """
-    if checkout_group_id is not None:
-        _validate_uuid(checkout_group_id, "checkout_group_id")
-    if customer_id is not None:
-        _validate_uuid(customer_id, "customer_id")
-
-    group_sql = (
-        "null"
-        if checkout_group_id is None
-        else sql_uuid(checkout_group_id, "checkout_group_id")
+    insert_sql = build_record_event_sql(
+        stage=stage,
+        checkout_group_id=checkout_group_id,
+        snapshot=snapshot,
+        customer_id=customer_id,
     )
-    customer_sql = "null" if customer_id is None else sql_uuid(customer_id, "customer_id")
-    snapshot_sql = _sql_json(snapshot)
-
-    if checkout_group_id is None:
-        insert_sql = f"""
-INSERT INTO public.funnel_events (stage, checkout_group_id, customer_id, snapshot)
-VALUES ('{stage}', null, {customer_sql}, {snapshot_sql})
-RETURNING id::text, stage, created_at::text;
-"""
-    else:
-        insert_sql = f"""
-INSERT INTO public.funnel_events (stage, checkout_group_id, customer_id, snapshot)
-VALUES ('{stage}', {group_sql}, {customer_sql}, {snapshot_sql})
-ON CONFLICT (checkout_group_id, stage) WHERE checkout_group_id IS NOT NULL
-DO NOTHING
-RETURNING id::text, stage, created_at::text;
-"""
     result = run_sql_script(insert_sql)
     if not result.ok:
         raise RuntimeError(f"funnel record_event failed: {result.error}")
@@ -183,8 +198,22 @@ def record_event_best_effort(
 
     Returns the inserted row, or ``None`` when the stage was already recorded OR the
     write failed. Server operational analytics — written regardless of consent.
+
+    analytics_v2 (1A-05): when ``analytics_v2_collect`` is ON the same idempotent SQL is
+    handed to the bounded per-worker analytics writer instead of running inline, so the
+    INSERT never blocks the async request's event loop or competes for the request's
+    pool connection; the return value is then always ``None`` (no caller uses it).
     """
     try:
+        if collect_v2_enabled():
+            script = build_record_event_sql(
+                stage=stage,
+                checkout_group_id=checkout_group_id,
+                snapshot=snapshot,
+                customer_id=customer_id,
+            )
+            get_writer().submit_sql(script, kind=f"funnel_{stage}")
+            return None
         return record_event(
             stage=stage,
             checkout_group_id=checkout_group_id,
@@ -264,9 +293,7 @@ WHERE checkout_group_id = {group_sql};
         for row in lines_result.rows:
             line_parts = row.split("|")
             if len(line_parts) == 2:
-                snapshot["lines"].append(
-                    {"listing_id": line_parts[0], "qty": int(line_parts[1])}
-                )
+                snapshot["lines"].append({"listing_id": line_parts[0], "qty": int(line_parts[1])})
     return snapshot
 
 

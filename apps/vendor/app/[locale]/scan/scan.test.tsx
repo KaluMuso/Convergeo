@@ -140,6 +140,15 @@ describe("ScanView flows", () => {
     });
   });
 
+  it("leads with the PIN form and keeps the blocked-camera note below it", async () => {
+    render(<ScanView />);
+
+    const pin = await screen.findByTestId("scan-pin-fallback");
+    const note = await screen.findByTestId("scan-camera-denied");
+    expect(pin.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("scan-camera-retry")).toBeInTheDocument();
+  });
+
   it("renders verify failure for generic errors", async () => {
     verifyPinMock.mockRejectedValue(
       new ApiError("pickup_invalid_pin", "Invalid pickup PIN", { status: 422 }),

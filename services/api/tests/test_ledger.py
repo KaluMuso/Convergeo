@@ -100,6 +100,16 @@ def _build_template_args(
             return {"collected_ngwee": gross, "vendor_id": VENDOR_A}
         case LedgerTemplate.DOOR_PAYMENT_EXCEPTION:
             return {"received_ngwee": gross}
+        case LedgerTemplate.EVENT_ADVANCE_RECOVERY:
+            return {
+                "advance_ngwee": gross,
+                "platform_restore_ngwee": rng.randint(0, gross),
+                "vendor_id": VENDOR_A,
+            }
+        case LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET:
+            return {"amount_ngwee": gross, "vendor_id": VENDOR_A}
+        case LedgerTemplate.ORGANISER_RECEIVABLE_REPAID:
+            return {"amount_ngwee": gross, "vendor_id": VENDOR_A}
         case _:
             raise AssertionError(f"unhandled template {template}")
 

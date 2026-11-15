@@ -38,7 +38,7 @@ export default async function NewClipPage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-0 sm:p-4">
+    <main className="mx-auto flex w-full max-w-lg flex-col p-0 sm:px-4 sm:py-3">
       <ClipComposer />
     </main>
   );

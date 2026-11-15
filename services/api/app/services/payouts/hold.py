@@ -22,8 +22,7 @@ class EscrowHoldNotElapsedError(AppError):
         super().__init__(
             code="escrow_hold_not_elapsed",
             message=(
-                "Payouts are held for 48 hours after payment collection "
-                "for buyer protection."
+                "Payouts are held for 48 hours after payment collection for buyer protection."
             ),
             http_status=409,
             details={

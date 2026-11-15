@@ -88,6 +88,27 @@ PENDING_REPAIR_VERSIONS = {
     # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100",
+    "20261115140200",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000",
+    "20261115150100",
+    "20261115150200",
+    "20261115150300",
+    "20261115150400",
+    "20261115150500",
+    "20261115150600",
+    # Event ticket integrity: ticket validity, promo limit, advance receivable.
+    "20261115210000",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261115200000",
 }

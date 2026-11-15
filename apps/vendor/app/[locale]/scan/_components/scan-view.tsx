@@ -150,24 +150,6 @@ export function ScanView(_props: ScanViewProps) {
 
       {showScanner ? (
         <>
-          {cameraDenied ? (
-            <div
-              data-testid="scan-camera-denied"
-              style={{
-                borderRadius: "var(--r)",
-                border: "1px dashed var(--border)",
-                padding: "var(--sp-3)",
-                fontSize: "var(--fs-small)",
-                color: "var(--text-2)",
-              }}
-            >
-              <p style={{ margin: 0, fontWeight: 600, color: "var(--text)" }}>
-                {t("scan.camera.denied")}
-              </p>
-              <p style={{ margin: "var(--sp-1) 0 0" }}>{t("scan.camera.deniedBody")}</p>
-            </div>
-          ) : null}
-
           {showCamera ? (
             <CameraScanner
               disabled={!online || isVerifying}
@@ -209,6 +191,43 @@ export function ScanView(_props: ScanViewProps) {
               {t("scan.camera.usePin")}
             </button>
           )}
+
+          {cameraDenied ? (
+            <div
+              data-testid="scan-camera-denied"
+              style={{
+                borderRadius: "var(--r)",
+                border: "1px dashed var(--border)",
+                padding: "var(--sp-3)",
+                fontSize: "var(--fs-small)",
+                color: "var(--text-2)",
+              }}
+            >
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: "var(--text)" }}>{t("scan.camera.denied")}.</strong>{" "}
+                {t("scan.camera.deniedNote")}
+              </p>
+              <button
+                type="button"
+                data-testid="scan-camera-retry"
+                onClick={() => {
+                  setCameraDenied(false);
+                  setScanMode("camera");
+                }}
+                style={{
+                  minHeight: "2.75rem",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--primary)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                {t("scan.camera.retry")}
+              </button>
+            </div>
+          ) : null}
         </>
       ) : null}
 

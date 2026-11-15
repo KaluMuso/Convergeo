@@ -330,6 +330,8 @@ def _seed_migration_sql() -> str:
             "20261113120500_delivery_revenue_ledger_account.sql",
             # Pay at the door: suspense for money that cannot settle an order.
             "20261115200000_pay_at_door.sql",
+            # Organiser receivable for recovered event advances (provisioned lazily).
+            "20261115210000_event_ticket_integrity.sql",
         )
     )
 

@@ -530,24 +530,6 @@ export function ScannerView({ eventId }: ScannerViewProps) {
         />
       ) : null}
 
-      {cameraDenied ? (
-        <div
-          data-testid="event-scan-camera-denied-notice"
-          style={{
-            borderRadius: "var(--r)",
-            border: "1px dashed var(--border)",
-            padding: "var(--sp-3)",
-            fontSize: "var(--fs-small)",
-            color: "var(--text-2)",
-          }}
-        >
-          <p style={{ margin: 0, fontWeight: 600, color: "var(--text)" }}>
-            {t("scan.eventCheckIn.camera.denied")}
-          </p>
-          <p style={{ margin: "var(--sp-1) 0 0" }}>{t("scan.eventCheckIn.camera.deniedBody")}</p>
-        </div>
-      ) : null}
-
       {showScanner && !showManual ? (
         <>
           <CameraScanner
@@ -589,6 +571,45 @@ export function ScannerView({ eventId }: ScannerViewProps) {
                 }
           }
         />
+      ) : null}
+
+      {cameraDenied ? (
+        <div
+          data-testid="event-scan-camera-denied-notice"
+          style={{
+            borderRadius: "var(--r)",
+            border: "1px dashed var(--border)",
+            padding: "var(--sp-3)",
+            fontSize: "var(--fs-small)",
+            color: "var(--text-2)",
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            <strong style={{ color: "var(--text)" }}>
+              {t("scan.eventCheckIn.camera.denied")}.
+            </strong>{" "}
+            {t("scan.eventCheckIn.camera.deniedNote")}
+          </p>
+          <button
+            type="button"
+            data-testid="event-scan-camera-retry"
+            onClick={() => {
+              setCameraDenied(false);
+              setScanMode("camera");
+            }}
+            style={{
+              minHeight: "2.75rem",
+              border: "none",
+              background: "transparent",
+              color: "var(--primary)",
+              fontWeight: 600,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            {t("scan.eventCheckIn.camera.retry")}
+          </button>
+        </div>
       ) : null}
 
       <RecentScans items={recent} />
