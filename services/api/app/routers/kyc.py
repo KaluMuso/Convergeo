@@ -17,6 +17,7 @@ from app.services.kyc.state_machine import (
     transition_resubmit,
     transition_submit,
 )
+from app.services.vendors.slug import is_placeholder_slug, unique_vendor_slug
 from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, Field, field_validator
 
@@ -268,6 +269,32 @@ def _draft_slug_for_owner(owner_user_id: str) -> str:
     return f"draft-{compact}"
 
 
+def _readable_slug_if_placeholder(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+    business_name: str,
+) -> str | None:
+    """A readable slug when the vendor still has the ``draft-...`` placeholder.
+
+    The vendor's one-time slug change (``caps_snapshot.slug_locked``) is not
+    consumed by this system rename.
+    """
+    try:
+        response = (
+            service_client.client.table("vendors")
+            .select("slug")
+            .eq("id", vendor_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return None
+    row = _row_from_response(response)
+    if row is None or not is_placeholder_slug(str(row.get("slug") or "")):
+        return None
+    return unique_vendor_slug(service_client, business_name, vendor_id=vendor_id)
+
+
 def _persist_vendor_basics(
     service_client: ServiceRoleClient,
     vendor_id: str,
@@ -284,6 +311,10 @@ def _persist_vendor_basics(
         patch["archetype"] = archetype
     if business_archetype:
         patch["business_archetype"] = business_archetype
+    if business_name:
+        slug = _readable_slug_if_placeholder(service_client, vendor_id, business_name)
+        if slug is not None:
+            patch["slug"] = slug
     if not patch:
         return None
     response = service_client.client.table("vendors").update(patch).eq("id", vendor_id).execute()
@@ -314,7 +345,11 @@ def _create_draft_vendor(
 ) -> dict[str, Any]:
     """Insert one draft vendors row for the owner. Never assigns user_roles.vendor."""
     display_name = business_name or _DEFAULT_DRAFT_DISPLAY_NAME
-    slug = _draft_slug_for_owner(owner_user_id)
+    slug = (
+        unique_vendor_slug(service_client, business_name)
+        if business_name
+        else _draft_slug_for_owner(owner_user_id)
+    )
     payload: dict[str, Any] = {
         "owner_user_id": owner_user_id,
         "slug": slug,

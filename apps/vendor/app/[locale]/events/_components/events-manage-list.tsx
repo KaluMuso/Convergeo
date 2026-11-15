@@ -6,7 +6,11 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createEventsClient, type EventSummary } from "../_lib/events-client";
+import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Badge, Spinner } from "../_lib/ui";
+import { createCollabClient, type CollabFlagStatus } from "../collaborate/_lib/collab-client";
+
+import { OrganiserGate } from "./organiser-gate";
 
 type EventsManageListProps = {
   locale: string;
@@ -34,9 +38,12 @@ export function EventsManageList({ locale }: EventsManageListProps) {
   const [items, setItems] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notOrganiser, setNotOrganiser] = useState(false);
+  const [collab, setCollab] = useState<CollabFlagStatus | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
+  const collabClient = useMemo(() => createCollabClient(getToken), [getToken]);
 
   useEffect(() => {
     if (sessionLoading) {
@@ -49,6 +56,13 @@ export function EventsManageList({ locale }: EventsManageListProps) {
 
     let cancelled = false;
     setLoading(true);
+    // Collaboration availability is advisory: any failure keeps the flag-off UI.
+    collabClient
+      .getStatus()
+      .then((status) => {
+        if (!cancelled) setCollab(status);
+      })
+      .catch(() => undefined);
     eventsClient
       .listEvents()
       .then((response) => {
@@ -57,10 +71,16 @@ export function EventsManageList({ locale }: EventsManageListProps) {
           setError(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t("events.errors.loadFailed"));
+      .catch((caught: unknown) => {
+        if (cancelled) {
+          return;
         }
+        if (isNotOrganiserError(caught)) {
+          setNotOrganiser(true);
+          setError(null);
+          return;
+        }
+        setError(t("events.errors.loadFailed"));
       })
       .finally(() => {
         if (!cancelled) {
@@ -71,7 +91,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
     return () => {
       cancelled = true;
     };
-  }, [eventsClient, session, sessionLoading, t]);
+  }, [eventsClient, collabClient, session, sessionLoading, t]);
 
   if (sessionLoading || loading) {
     return (
@@ -83,6 +103,10 @@ export function EventsManageList({ locale }: EventsManageListProps) {
 
   if (!session) {
     return <p className="text-sm text-text-2">{t("events.errors.authRequired")}</p>;
+  }
+
+  if (notOrganiser) {
+    return <OrganiserGate locale={locale} collaborationEnabled={collab?.enabled === true} />;
   }
 
   return (
@@ -103,17 +127,21 @@ export function EventsManageList({ locale }: EventsManageListProps) {
         </div>
       </header>
 
+      {collab?.enabled && collab.can_organise ? (
+        <Link
+          href={`/${locale}/events/requests`}
+          data-testid="events-collab-inbox-link"
+          className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+        >
+          {t("events.collab.inbox.link")}
+        </Link>
+      ) : null}
+
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
           <p className="text-sm text-text-2">{t("events.list.empty")}</p>
-          <Link
-            href={`/${locale}/events/new`}
-            className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary"
-          >
-            {t("events.list.createCta")}
-          </Link>
         </div>
       ) : (
         <ul className="space-y-3">

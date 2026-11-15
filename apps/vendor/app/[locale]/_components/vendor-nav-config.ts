@@ -16,7 +16,8 @@ export type VendorNavItemKey =
   | "profile"
   | "payouts"
   | "disputes"
-  | "intake";
+  | "intake"
+  | "settings";
 
 export type VendorNavGroupKey = "operate" | "sell" | "business";
 
@@ -71,6 +72,7 @@ export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
       { key: "payouts", href: "/payouts" },
       { key: "disputes", href: "/disputes" },
       { key: "intake", href: "/intake" },
+      { key: "settings", href: "/settings" },
     ],
   },
 ];

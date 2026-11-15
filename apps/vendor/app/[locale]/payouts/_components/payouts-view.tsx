@@ -151,7 +151,7 @@ function LivePayoutsView({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <p className="text-sm text-text-2">{t("payouts.eyebrow")}</p>
         <h1 className="font-display text-2xl font-semibold">{t("payouts.title")}</h1>

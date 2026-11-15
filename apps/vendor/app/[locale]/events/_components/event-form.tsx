@@ -22,6 +22,7 @@ import {
   type EventVisibility,
   type PlatformFeePayer,
 } from "../_lib/events-client";
+import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
 
 import { EventImagePicker } from "./image-picker";
@@ -32,6 +33,7 @@ import {
   type InstanceDraft,
   validateInstanceDrafts,
 } from "./instance-editor";
+import { OrganiserGate } from "./organiser-gate";
 
 const EVENT_TYPE_VALUES: EventType[] = ["single", "multi_day", "recurring", "free_rsvp", "private"];
 
@@ -92,6 +94,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<"publish" | "cancel" | "end" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notOrganiser, setNotOrganiser] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -179,11 +182,11 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     }
 
     if (eventType === "recurring" && (!recurrenceRule.trim() || !recurrenceTimezone.trim())) {
-      setError("Recurring events need an RRULE and timezone.");
+      setError(t("events.errors.recurrenceRuleRequired"));
       return;
     }
     if (eventType === "recurring" && instances.length !== 1) {
-      setError("A recurring series needs one seed date; future dates are generated automatically.");
+      setError(t("events.errors.recurrenceSeedRequired"));
       return;
     }
 
@@ -218,6 +221,10 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
       setInstances(updated.event.instances.map((row) => toInstanceDraft(row)));
       setNotice(t("events.form.saved"));
     } catch (caught) {
+      if (isNotOrganiserError(caught)) {
+        setNotOrganiser(true);
+        return;
+      }
       if (caught instanceof ApiError) {
         const messageKey = caught.details.message_key;
         if (typeof messageKey === "string" && messageKey.startsWith("vendor.events.errors.")) {
@@ -269,6 +276,10 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
 
   if (!session) {
     return <p className="text-sm text-text-2">{t("events.errors.authRequired")}</p>;
+  }
+
+  if (notOrganiser) {
+    return <OrganiserGate locale={locale} />;
   }
 
   const readOnly = status === "cancelled" || status === "completed";

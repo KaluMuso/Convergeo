@@ -62,6 +62,14 @@ class EventOrganiserResponse(BaseModel):
     description: str | None = None
 
 
+class EventCoHostResponse(BaseModel):
+    """Co-host of a collaboration event (never carries the revenue split)."""
+
+    slug: str
+    display_name: str
+    logo_url: str | None = None
+
+
 class EventInstanceResponse(BaseModel):
     id: str
     starts_at: datetime
@@ -167,6 +175,7 @@ class EventDetailResponse(BaseModel):
     is_free: bool = False
     is_sold_out: bool = False
     organiser: EventOrganiserResponse
+    co_host: EventCoHostResponse | None = None
 
 
 class EventAccessUnlockRequest(BaseModel):
@@ -801,6 +810,46 @@ def _rate_limit_access_unlock(request: Request, client: Any) -> None:
         )
 
 
+def _fetch_co_host(client: Any, event_id: str) -> EventCoHostResponse | None:
+    """Co-host vendor of a published collaboration event, best effort (display only)."""
+    try:
+        split = (
+            client.table("event_revenue_splits")
+            .select("co_host_vendor_id")
+            .eq("event_id", event_id)
+            .maybe_single()
+            .execute()
+        )
+        split_row = getattr(split, "data", None)
+        if not isinstance(split_row, dict) or not isinstance(
+            split_row.get("co_host_vendor_id"), str
+        ):
+            return None
+        vendor = (
+            client.table("vendors")
+            .select("slug, display_name, logo_url, status")
+            .eq("id", split_row["co_host_vendor_id"])
+            .maybe_single()
+            .execute()
+        )
+        row = getattr(vendor, "data", None)
+        if (
+            not isinstance(row, dict)
+            or row.get("status") != "active"
+            or not isinstance(row.get("slug"), str)
+            or not isinstance(row.get("display_name"), str)
+        ):
+            return None
+        logo = row.get("logo_url")
+        return EventCoHostResponse(
+            slug=row["slug"],
+            display_name=row["display_name"],
+            logo_url=logo if isinstance(logo, str) else None,
+        )
+    except Exception:
+        return None
+
+
 def build_detail_response(
     client: Any, slug: str, *, access_proof: str | None = None
 ) -> EventDetailResponse:
@@ -885,6 +934,7 @@ def build_detail_response(
             now=now,
         ),
         organiser=organiser,
+        co_host=_fetch_co_host(client, event_id),
     )
 
 
