@@ -1090,6 +1090,7 @@
 
 .v-card--product .v-price-was {
   font-size: var(--fs-micro);
+  margin-inline-start: var(--sp-1);
 }
 
 .v-card__discount {
