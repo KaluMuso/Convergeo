@@ -578,6 +578,14 @@ def custody_fields(
     A cash job must record exactly the snapshot amount: a short or over
     collection is never booked by an operator (a person resolves it as a
     shortfall). A prepaid job must not record cash.
+
+    Integration note (PR #795, pay at the door by MoMo): this branch has no
+    "settled by a door MoMo payment" concept yet. Every collection recorded here
+    becomes rider custody (``courier_cash_exposure_ngwee`` 'held', remittance
+    required) — including ``cod_collected_method='mobile_money'``. When #795
+    lands, this function MUST refuse (or record as non-custody) a collection for
+    an order already settled by a door MoMo payment, so money that went straight
+    to Lenco is never treated as cash the rider must remit.
     """
     expected = dispatch.cod_amount_ngwee
     if expected <= 0:

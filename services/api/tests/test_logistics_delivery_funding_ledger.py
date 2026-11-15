@@ -10,11 +10,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 import pytest
+from app.services.db import SqlResult
 from app.services.escrow.release import evaluate_and_release
 from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
     delivery_funding_idempotency_key,
+    platform_subsidy_cap_ngwee,
     post_order_delivery_funding,
 )
 from app.services.ledger.engine import account_balance_ngwee
@@ -54,9 +58,11 @@ def _set_funding(conn: PgConn, order_id: str, funding: str, funded: int) -> None
     assert result.ok, result.error
 
 
-def _released_order(conn: PgConn, *, funding: str, funded: int) -> str:
+def _released_order(conn: PgConn, *, funding: str, funded: int, group_id: str | None = None) -> str:
     order_id = str(uuid.uuid4())
-    _insert_order(conn, order_id=order_id, group_id=str(uuid.uuid4()), status="completed")
+    _insert_order(
+        conn, order_id=order_id, group_id=group_id or str(uuid.uuid4()), status="completed"
+    )
     _set_funding(conn, order_id, funding, funded)
     now = datetime(2026, 11, 13, 12, 0, tzinfo=UTC)
     _insert_order_event(
@@ -159,6 +165,104 @@ class TestDeliveryFundingAtRelease:
             f"delivery_funded_ngwee = 3000 WHERE id = '{order_id}';"
         )
         assert not refused.ok
+
+
+def _second_vendor(conn: PgConn) -> str:
+    """Another seeded vendor (one order per vendor per checkout group)."""
+    result = conn.run(
+        f"SELECT id::text FROM public.vendors WHERE id <> '{VENDOR_A}' ORDER BY id LIMIT 1;"
+    )
+    assert result.ok and result.rows, result.error
+    return result.rows[0]
+
+
+def _move_to_vendor(conn: PgConn, order_id: str, vendor_id: str) -> None:
+    moved = conn.run(f"UPDATE public.orders SET vendor_id = '{vendor_id}' WHERE id = '{order_id}';")
+    assert moved.ok, moved.error
+
+
+def _subsidy_posted(conn: PgConn, order_id: str) -> int:
+    key = delivery_funding_idempotency_key(order_id)
+    result = conn.run(
+        "SELECT coalesce(sum(lp.amount_ngwee), 0)::text FROM public.ledger_postings lp "
+        "JOIN public.ledger_transactions lt ON lt.id = lp.transaction_id "
+        "JOIN public.ledger_accounts la ON la.id = lp.account_id "
+        f"WHERE lt.idempotency_key = '{key}' AND la.kind = 'commission_revenue';"
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
+
+
+class TestPlatformSubsidyCappedAtRelease:
+    """Checkout judged eligibility on the whole basket; release caps on what was earned."""
+
+    def test_cancelled_sibling_caps_subsidy_to_half_of_captured_commission(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        group_id = str(uuid.uuid4())
+        # The big order of the basket was cancelled: its commission is never earned.
+        sibling = str(uuid.uuid4())
+        _insert_order(db, order_id=sibling, group_id=group_id, status="cancelled")
+        _move_to_vendor(db, sibling, _second_vendor(db))
+        waived = COMMISSION_NGEWEE  # more than 50% of this order's own commission
+        order_id = _released_order(db, funding="platform", funded=waived, group_id=group_id)
+        commission = account_balance_ngwee(COMMISSION_ID)
+
+        result = evaluate_and_release(_SERVICE, order_id, now=datetime(2026, 11, 13, tzinfo=UTC))
+
+        assert result.outcome == "released"
+        cap = COMMISSION_NGEWEE * 5_000 // 10_000
+        assert _subsidy_posted(db, order_id) == cap < waived
+        # Net commission kept is never below the half the rule leaves the platform.
+        assert account_balance_ngwee(COMMISSION_ID) == commission - COMMISSION_NGEWEE + cap
+        assert _ledger_net(db) == 0
+
+    def test_sibling_subsidy_consumes_the_shared_basket_budget(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        group_id = str(uuid.uuid4())
+        now = datetime(2026, 11, 13, tzinfo=UTC)
+        first = _released_order(db, funding="platform", funded=7_000, group_id=group_id)
+        assert evaluate_and_release(_SERVICE, first, now=now).outcome == "released"
+        # Free the (group, vendor) slot so the sibling can reuse the seeded payable.
+        _move_to_vendor(db, first, _second_vendor(db))
+        second = _released_order(db, funding="platform", funded=12_000, group_id=group_id)
+        assert evaluate_and_release(_SERVICE, second, now=now).outcome == "released"
+
+        budget = 2 * COMMISSION_NGEWEE * 5_000 // 10_000
+        assert _subsidy_posted(db, first) == 7_000
+        assert _subsidy_posted(db, second) == budget - 7_000
+        assert _subsidy_posted(db, first) + _subsidy_posted(db, second) == budget
+        # Idempotent: re-running never tops up past the cap.
+        post_order_delivery_funding(order_id=second)
+        assert _funding_txns(db, second) == 1
+        assert _ledger_net(db) == 0
+
+
+def test_subsidy_cap_lookup_failure_fails_closed() -> None:
+    with (
+        patch(
+            "app.services.escrow.release_accounting.run_sql_script",
+            return_value=SqlResult(ok=False, rows=[], error="boom"),
+        ),
+        pytest.raises(ReleaseAccountingError, match="delivery_subsidy_lookup_failed"),
+    ):
+        platform_subsidy_cap_ngwee(order_id=str(uuid.uuid4()), funded_ngwee=FEE)
+
+
+def test_no_earned_commission_posts_no_subsidy() -> None:
+    order_id = str(uuid.uuid4())
+    rows = [f"platform|{FEE}|{VENDOR_A}|delivery", "0|0|5000"]
+    with (
+        patch(
+            "app.services.escrow.release_accounting.run_sql_script",
+            side_effect=[SqlResult(ok=True, rows=[r]) for r in rows],
+        ),
+        patch("app.services.escrow.release_accounting.post_transaction") as post,
+    ):
+        assert post_order_delivery_funding(order_id=order_id) is None
+    post.assert_not_called()
+    assert platform_subsidy_cap_ngwee(order_id=order_id, funded_ngwee=0) == 0
 
 
 def test_funding_templates_balance_and_refuse_bad_money() -> None:
