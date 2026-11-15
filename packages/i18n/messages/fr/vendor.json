@@ -1714,7 +1714,187 @@
         "title": "Organiser un événement avec un organisateur vérifié",
         "body": "Associez-vous à un organisateur déjà vérifié et laissez-le gérer la billetterie de votre événement.",
         "cta": "Demander une collaboration",
-        "soon": "Bientôt disponible. Nous vous préviendrons à l'ouverture des demandes de collaboration."
+        "soon": "Bientôt disponible. Nous vous préviendrons à l'ouverture des demandes de collaboration.",
+        "open": "Proposer un événement à un organisateur"
+      }
+    },
+    "collab": {
+      "meta": {
+        "title": "Organiser un événement avec un organisateur — Convergeo",
+        "description": "Proposez un événement à un organisateur vérifié et menez-le ensemble."
+      },
+      "loading": "Chargement…",
+      "untitled": "Événement sans titre",
+      "status": {
+        "draft": "Brouillon",
+        "submitted": "Envoyée",
+        "changes_requested": "Modifications demandées",
+        "approved": "Approuvée",
+        "declined": "Refusée",
+        "published": "Publiée"
+      },
+      "readiness": {
+        "label": "Préparation",
+        "value": "{pct} % prêt"
+      },
+      "hub": {
+        "title": "Organiser un événement avec un organisateur",
+        "intro": "Proposez un événement à un organisateur vérifié. Il gère la billetterie et vous apparaissez comme co-hôte une fois la demande approuvée.",
+        "newCta": "Proposer un événement",
+        "inboxCta": "Boîte de l'organisateur",
+        "empty": "Vous n'avez encore proposé aucun événement."
+      },
+      "inbox": {
+        "title": "Demandes de collaboration",
+        "intro": "Des vendeurs qui souhaitent organiser un événement sous votre compte vérifié.",
+        "empty": "Aucune demande pour l'instant. Activez les demandes dans les Paramètres pour que les vendeurs vous trouvent.",
+        "link": "Demandes de collaboration"
+      },
+      "list": {
+        "from": "De {name}",
+        "to": "À {name}",
+        "open": "Ouvrir"
+      },
+      "form": {
+        "title": "Proposer un événement",
+        "editTitle": "Mettre à jour votre proposition",
+        "intro": "Choisissez un organisateur, décrivez l'événement et remplissez la liste de préparation. L'organisateur décide de le mener ou non.",
+        "organiser": {
+          "search": "Rechercher un organisateur",
+          "none": "Aucun organisateur n'accepte de demandes pour le moment.",
+          "fixed": "Organisateur : {name}"
+        },
+        "event": {
+          "title": "Nom de l'événement",
+          "category": "Catégorie",
+          "categoryPlaceholder": "Choisir une catégorie",
+          "city": "Ville",
+          "description": "Description"
+        },
+        "saveDraft": "Enregistrer le brouillon",
+        "submit": "Envoyer à l'organisateur",
+        "saving": "Enregistrement…",
+        "submitting": "Envoi…",
+        "saved": "Brouillon enregistré.",
+        "submitted": "Envoyé à l'organisateur."
+      },
+      "sections": {
+        "organiser": "Organisateur",
+        "event": "Événement",
+        "venue": "Lieu",
+        "schedule": "Date et heure",
+        "capacity": "Capacité",
+        "equipment": "Équipement",
+        "permits": "Autorisations",
+        "tiers": "Catégories de billets",
+        "share": "Partage des revenus"
+      },
+      "checklist": {
+        "choose": "Choisir…",
+        "venue": {
+          "name": "Nom du lieu",
+          "landmark": "Point de repère",
+          "lat": "Latitude",
+          "lng": "Longitude",
+          "useLocation": "Utiliser ma position actuelle",
+          "locationFailed": "Impossible de lire votre position. Saisissez les coordonnées."
+        },
+        "schedule": {
+          "starts": "Début",
+          "ends": "Fin"
+        },
+        "capacity": {
+          "label": "Nombre d'invités"
+        },
+        "equipment": {
+          "help": "Indiquez ce qui est prêt et ce qu'il reste à organiser.",
+          "items": {
+            "sound": "Sonorisation",
+            "stage": "Scène",
+            "power": "Électricité ou groupe électrogène",
+            "seating": "Places assises",
+            "security": "Sécurité"
+          },
+          "states": {
+            "ready": "Prêt",
+            "needed": "À prévoir",
+            "not_needed": "Pas nécessaire"
+          }
+        },
+        "permits": {
+          "help": "Certains lieux et événements exigent une autorisation de la commune ou de la police.",
+          "label": "Autorisations",
+          "note": "Remarque (facultatif)",
+          "states": {
+            "obtained": "Obtenue",
+            "pending": "Demandée, en attente",
+            "not_required": "Non requise"
+          }
+        },
+        "tiers": {
+          "name": "Nom de la catégorie",
+          "price": "Prix (K)",
+          "qty": "Billets (facultatif)",
+          "add": "Ajouter une catégorie de billets",
+          "remove": "Retirer la catégorie"
+        },
+        "share": {
+          "help": "La part des revenus de billetterie que vous proposez pour vous comme co-hôte. L'organisateur reste responsable des revenus et des paiements. Les paiements ne sont pas encore actifs ; la part est seulement enregistrée.",
+          "label": "Votre part (%)",
+          "invalid": "Saisissez un pourcentage entre 0 et 100.",
+          "preview": "Co-hôte {cohost} % · Organisateur {organiser} %"
+        }
+      },
+      "fieldErrors": {
+        "required": "est obligatoire",
+        "must_be_future": "doit être dans le futur",
+        "must_be_after_start": "doit être après le début",
+        "exceeds_capacity": "dépasse la capacité"
+      },
+      "detail": {
+        "changesAsked": "L'organisateur demande des modifications",
+        "declinedReason": "Motif du refus",
+        "summary": "Résumé",
+        "done": "Terminé",
+        "open": "Encore ouvert",
+        "accountability": "L'organisateur est responsable des revenus de billetterie et des paiements. La part du co-hôte est enregistrée pour plus tard.",
+        "reasonLabel": "Motif (communiqué au vendeur)",
+        "approve": "Approuver",
+        "decline": "Refuser",
+        "askChanges": "Demander des modifications",
+        "cancel": "Annuler",
+        "publish": "Publier l'événement",
+        "waiting": "En attente de la décision de l'organisateur.",
+        "approvedWaiting": "Approuvée. L'organisateur publiera l'événement.",
+        "openEvent": "Ouvrir l'événement publié",
+        "publishedCoHost": "Publié par {name}. Vous apparaissez comme co-hôte.",
+        "history": "Historique",
+        "back": "Retour"
+      },
+      "audit": {
+        "create": "Brouillon créé",
+        "submit": "Envoyée à l'organisateur",
+        "approve": "Approuvée",
+        "decline": "Refusée",
+        "request_changes": "Modifications demandées",
+        "publish": "Publiée"
+      },
+      "errors": {
+        "checklistIncomplete": "Terminez ces éléments avant l'envoi :",
+        "forbidden": "Vous ne pouvez pas faire cela sur cette demande.",
+        "kycRequired": "Vérifiez votre identité avant d'organiser des événements.",
+        "invalidTransition": "Cette demande a déjà évolué. Actualisez et vérifiez son statut.",
+        "invalidInput": "Vérifiez les informations et réessayez.",
+        "notFound": "Demande introuvable.",
+        "conflict": "Cela entre en conflit avec un enregistrement existant.",
+        "rateLimited": "Trop de requêtes. Patientez un instant puis réessayez.",
+        "disabled": "La collaboration sur les événements n'est pas encore disponible.",
+        "organiserUnavailable": "Cet organisateur n'accepte pas de demandes pour le moment.",
+        "pastStart": "L'heure de début est déjà passée. Demandez au vendeur de la mettre à jour.",
+        "disputeSuspended": "La publication d'événements payants est suspendue après des litiges confirmés.",
+        "highValue": "Cet événement nécessite un appel de vérification avant publication. Contactez le support Convergeo.",
+        "generic": "Un problème est survenu. Réessayez.",
+        "pickOrganiser": "Choisissez d'abord un organisateur."
       }
     }
   },
@@ -2133,6 +2313,14 @@
         "fr": "Français",
         "zh": "中文"
       }
+    },
+    "collab": {
+      "heading": "Collaboration sur les événements",
+      "body": "Permettez aux vendeurs de vous envoyer des demandes pour organiser leurs événements sous votre compte vérifié.",
+      "notOrganiser": "Seuls les organisateurs vérifiés peuvent recevoir des demandes de collaboration.",
+      "toggle": "Accepter les demandes de collaboration",
+      "inbox": "Ouvrir la boîte de demandes",
+      "saveFailed": "Enregistrement impossible. Réessayez."
     }
   }
 }

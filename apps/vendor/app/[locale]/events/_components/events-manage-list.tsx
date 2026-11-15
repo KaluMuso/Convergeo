@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createEventsClient, type EventSummary } from "../_lib/events-client";
 import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Badge, Spinner } from "../_lib/ui";
+import { createCollabClient, type CollabFlagStatus } from "../collaborate/_lib/collab-client";
 
 import { OrganiserGate } from "./organiser-gate";
 
@@ -38,9 +39,11 @@ export function EventsManageList({ locale }: EventsManageListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notOrganiser, setNotOrganiser] = useState(false);
+  const [collab, setCollab] = useState<CollabFlagStatus | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
+  const collabClient = useMemo(() => createCollabClient(getToken), [getToken]);
 
   useEffect(() => {
     if (sessionLoading) {
@@ -53,6 +56,13 @@ export function EventsManageList({ locale }: EventsManageListProps) {
 
     let cancelled = false;
     setLoading(true);
+    // Collaboration availability is advisory: any failure keeps the flag-off UI.
+    collabClient
+      .getStatus()
+      .then((status) => {
+        if (!cancelled) setCollab(status);
+      })
+      .catch(() => undefined);
     eventsClient
       .listEvents()
       .then((response) => {
@@ -81,7 +91,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
     return () => {
       cancelled = true;
     };
-  }, [eventsClient, session, sessionLoading, t]);
+  }, [eventsClient, collabClient, session, sessionLoading, t]);
 
   if (sessionLoading || loading) {
     return (
@@ -96,7 +106,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
   }
 
   if (notOrganiser) {
-    return <OrganiserGate locale={locale} />;
+    return <OrganiserGate locale={locale} collaborationEnabled={collab?.enabled === true} />;
   }
 
   return (
@@ -116,6 +126,16 @@ export function EventsManageList({ locale }: EventsManageListProps) {
           </Link>
         </div>
       </header>
+
+      {collab?.enabled && collab.can_organise ? (
+        <Link
+          href={`/${locale}/events/requests`}
+          data-testid="events-collab-inbox-link"
+          className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
+        >
+          {t("events.collab.inbox.link")}
+        </Link>
+      ) : null}
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
