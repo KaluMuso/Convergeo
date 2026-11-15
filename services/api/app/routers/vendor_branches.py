@@ -40,7 +40,7 @@ from app.services.branches.rules import (
     slugify_branch,
 )
 from app.services.kyc.state_machine import ServiceRoleClient
-from app.services.vendor_plans.resolver import PLAN_COLUMNS
+from app.services.vendor_plans.resolver import PLAN_COLUMNS, TRIAL_PLAN_KEY, vendor_in_trial
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -152,6 +152,8 @@ def _business_plan(client: Any, branches: list[dict[str, Any]]) -> dict[str, Any
         )
         if assigned:
             plan_key = str(assigned[0].get("plan_key"))
+    if primary is not None and vendor_in_trial(client, str(primary["id"])):
+        plan_key = TRIAL_PLAN_KEY  # pilot trial = Business entitlements
     query = client.table("vendor_plans").select(BRANCH_PLAN_COLUMNS)
     query = query.eq("key", plan_key) if plan_key else query.eq("is_default", True)
     rows = _rows(query.execute())

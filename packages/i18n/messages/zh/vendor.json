@@ -2189,7 +2189,7 @@
     }
   },
   "trial": {
-    "banner": "{date} 前免费",
+    "banner": "{date} 前免费使用商业版套餐",
     "detail": "试用期间不收取套餐费用。"
   },
   "extras": {

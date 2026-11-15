@@ -17,6 +17,10 @@ from tests.rls.conftest import Persona, PgConn, RoleSession, SqlResult, _extract
 VENDOR_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 VENDOR_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 PHONE = "b0000000-0000-0000-0000-000000000001"
+END_TRIAL = (
+    "UPDATE public.vendor_businesses SET trial_ends_at = now() - interval '1 second' "
+    f"WHERE id = (SELECT business_id FROM public.vendors WHERE id = '{VENDOR_A}');"
+)
 FLAG_ON = "UPDATE public.feature_flags SET enabled = true WHERE flag = 'vendor_plans';"
 
 
@@ -53,6 +57,7 @@ def _plan_cap(cap: int) -> str:
     return f"""
         {FLAG_ON}
         DELETE FROM public.vendor_plan_overrides WHERE vendor_id = '{VENDOR_A}';
+        {END_TRIAL}
         -- Plenty of KYC room so only the plan can bind.
         UPDATE public.vendor_quotas SET max_listings = 9999;
         INSERT INTO public.vendor_plans (key, name, max_listings) VALUES ('rls_cap', 'Cap', {cap});
@@ -184,20 +189,20 @@ def test_flag_off_and_unlimited_plans_never_block_publish(db: PgConn) -> None:
 def test_existing_businesses_backfilled_with_trial(db: PgConn) -> None:
     result = db.run(
         "SELECT count(*) FILTER (WHERE trial_ends_at IS NULL), "
-        "bool_and(trial_ends_at > now() + interval '50 days') FROM public.vendor_businesses"
+        "bool_and(trial_ends_at > now() + interval '25 days' AND trial_ends_at < now() + interval '32 days') FROM public.vendor_businesses"
     )
     assert result.ok, result.error
     assert result.rows[0] == "0|t"
 
 
-def test_new_business_trial_is_signup_plus_two_months(db: PgConn) -> None:
+def test_new_business_trial_is_signup_plus_one_month(db: PgConn) -> None:
     result = _rolled_back(
         db,
         f"""
         INSERT INTO public.vendor_businesses (id, owner_user_id, legal_name, created_at, trial_ends_at)
           SELECT gen_random_uuid(), owner_user_id, 'Trial Test', '2026-11-15 09:00+00', '2030-01-01'
           FROM public.vendors WHERE id = '{VENDOR_A}'
-          RETURNING trial_ends_at = '2027-01-15 09:00+00';
+          RETURNING trial_ends_at = '2026-12-15 09:00+00';
         """,
     )
     assert result.ok, result.error
@@ -358,3 +363,57 @@ def test_extras_rls_isolation(db: PgConn) -> None:
     assert catalogue.ok and catalogue.rows[-1] == "12"  # active catalogue is readable
     assert not anon.ok and anon.sqlstate == "42501"
     assert not write.ok and write.sqlstate == "42501"
+
+
+# ---------------------------------------------------------------------------
+# Trial = Business entitlements
+# ---------------------------------------------------------------------------
+def _free_seller(cap: int = 20) -> str:
+    """Vendor A on a Free-like plan with `cap` active listings, trial still running."""
+    return (
+        _plan_cap(cap).replace(END_TRIAL, "")
+        + f"UPDATE public.vendor_businesses SET trial_ends_at = now() + interval '10 days' "
+        f"WHERE id = (SELECT business_id FROM public.vendors WHERE id = '{VENDOR_A}');"
+    )
+
+
+def test_free_seller_in_trial_can_publish_past_free_limit(db: PgConn) -> None:
+    cap = _active_count(db)  # the Free-like plan is full: cap == current actives
+    result = _rolled_back(
+        db,
+        _free_seller(cap)
+        + _insert("active")
+        + _insert("active")
+        + f"SELECT public.vendor_plan_listing_cap('{VENDOR_A}') IS NULL;",
+    )
+    assert result.ok, result.error
+    assert result.rows[-1] == "t"  # Business: unlimited
+
+
+def test_trial_resolves_business_without_touching_assignment(db: PgConn) -> None:
+    result = _rolled_back(
+        db,
+        _free_seller()
+        + f"""
+        SELECT public.business_plan_key(business_id) FROM public.vendors WHERE id = '{VENDOR_A}';
+        SELECT plan_key FROM public.vendor_plan_assignments WHERE vendor_id = '{VENDOR_A}';
+        """,
+    )
+    assert result.ok, result.error
+    assert result.rows[-2:] == ["business", "rls_cap"]
+
+
+def test_limit_applies_again_after_trial_ends(db: PgConn) -> None:
+    cap = _active_count(db)
+    # END_TRIAL is part of _plan_cap: same shape as the refused-publish test.
+    result = _rolled_back(db, _plan_cap(cap) + _insert("active"))
+    assert not result.ok
+    assert result.sqlstate == "PT403"
+    assert "listing_plan_limit_reached" in (result.error or "")
+    ended = _rolled_back(
+        db,
+        _plan_cap(cap)
+        + f"SELECT public.business_plan_key(business_id) FROM public.vendors WHERE id = '{VENDOR_A}';",
+    )
+    assert ended.ok, ended.error
+    assert ended.rows[-1] == "rls_cap"

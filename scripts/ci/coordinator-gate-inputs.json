@@ -567,7 +567,7 @@
     "20261114030000_vendor_plans.sql": "c9ce1934beb07af8cd3177baafc95778cba3085085ce80aecf89efc0cce06848",
     "20261114030100_shared_canonical_photos.sql": "d20f9759eb5cc71a0d24366afb1216594fc301a071579fc625a9100b03b40fe7",
     "20261115100000_multi_branch_businesses.sql": "f6a39fea564aa8dc589a70e41cc40b69ef247a101fdd62c0df50f47eb9a0878e",
-    "20261115230000_plan_limits_trials_extras.sql": "687633dca1c6819802b70558de3d295ee653306540a2c45c465e5d6d7dc5b90c"
+    "20261115230000_plan_limits_trials_extras.sql": "f3358fe8cded7a15a3510b78e2cc6afbb470d0cf15ffaf8a577f98f71a3078d7"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

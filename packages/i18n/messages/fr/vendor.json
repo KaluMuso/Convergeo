@@ -2189,7 +2189,7 @@
     }
   },
   "trial": {
-    "banner": "Gratuit jusqu'au {date}",
+    "banner": "Forfait Business gratuit jusqu'au {date}",
     "detail": "Aucun frais de forfait pendant votre essai."
   },
   "extras": {

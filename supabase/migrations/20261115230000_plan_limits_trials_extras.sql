@@ -16,8 +16,12 @@
 --    `vendor_extras_request_events`, admin + vendor in-app notifications).
 --    No money is collected.
 -- 4. Pilot free trial: `vendor_businesses.trial_ends_at` (the business is the
---    billing owner of every shop, #807). New businesses: created_at + 2 months
---    (trigger). Existing businesses: migration time + 2 months.
+--    billing owner of every shop, #807). New businesses: created_at + 1 month
+--    (trigger). Existing businesses: migration time + 1 month. While
+--    trial_ends_at > now() the EFFECTIVE plan is Business (listing cap, staff
+--    seats, shop limit...): vendor_plan_listing_cap() and business_plan_key()
+--    resolve to it. The stored assignment is untouched; after the trial the
+--    assigned plan (Free by default) applies again.
 --    `vendor_plan_fee_accrues(vendor, at)` is the billing seam: no plan fee
 --    accrues while the trial runs.
 --
@@ -25,6 +29,8 @@
 --   drop trigger vendor_listing_publish_guard on public.vendor_listings;
 --   drop function public.guard_vendor_listing_publish();
 --   recreate guard_vendor_listing_admission() from 20261114030000 (plan cap on admission);
+--   -- restore the pre-trial resolvers from 20261114030000 / 20261115100000
+--   --   (vendor_plan_listing_cap, business_plan_key) before dropping the helpers below.
 --   drop function public.vendor_plan_fee_accrues(uuid, timestamptz),
 --     public.business_trial_ends_at(uuid), public.transition_vendor_extras_request(
 --       uuid, text, uuid, text, text, bigint), private.in_app_from_extras_request() cascade;
@@ -133,19 +139,19 @@ on conflict (key) do nothing;
 -- ---------------------------------------------------------------------------
 -- 4. Pilot free trial (on the business = billing owner of every shop)
 -- ---------------------------------------------------------------------------
--- The volatile default backfills existing rows with migration time + 2 months.
+-- The volatile default backfills existing rows with migration time + 1 month.
 alter table public.vendor_businesses
-  add column trial_ends_at timestamptz not null default (now() + interval '2 months');
+  add column trial_ends_at timestamptz not null default (now() + interval '1 month');
 
 comment on column public.vendor_businesses.trial_ends_at is
-  'Free trial end: no plan fee accrues before it. Signup + 2 months; admin may extend or end (audited).';
+  'Free trial end: no plan fee accrues before it. Signup + 1 month; Business plan entitlements while it runs; admin may extend or end (audited).';
 
 create function public.vendor_business_trial_default() returns trigger
 language plpgsql set search_path = pg_catalog, public
 as $$
 begin
-  -- Signup + 2 months (created_at is the business/shop signup time).
-  new.trial_ends_at := coalesce(new.created_at, now()) + interval '2 months';
+  -- Signup + 1 month (created_at is the business/shop signup time).
+  new.trial_ends_at := coalesce(new.created_at, now()) + interval '1 month';
   return new;
 end;
 $$;
@@ -168,6 +174,74 @@ returns boolean
 language sql stable security definer set search_path = pg_catalog, public
 as $$
   select coalesce(public.business_trial_ends_at(p_vendor_id) <= p_at, true)
+$$;
+
+-- Effective entitlements during the trial: Business. Replaces the resolvers
+-- from 20261114030000 / 20261115100000 (same signatures; trial check added).
+create or replace function public.vendor_plan_listing_cap(p_vendor_id uuid) returns integer
+language plpgsql stable security definer set search_path = pg_catalog, public
+as $$
+declare
+  v_enabled boolean;
+  v_unlimited boolean;
+  v_cap integer;
+  v_trial_found boolean;
+begin
+  select ff.enabled into v_enabled from public.feature_flags ff where ff.flag = 'vendor_plans';
+  if not coalesce(v_enabled, false) then
+    return null;
+  end if;
+
+  -- Pilot trial: Business entitlements (unlimited listings) until trial_ends_at.
+  if coalesce(public.business_trial_ends_at(p_vendor_id) > now(), false) then
+    select p.max_listings, true into v_cap, v_trial_found
+      from public.vendor_plans p where p.key = 'business';
+    if coalesce(v_trial_found, false) then
+      return v_cap;
+    end if;
+  end if;
+
+  select o.unlimited_listings, o.max_listings into v_unlimited, v_cap
+    from public.vendor_plan_overrides o
+    where o.vendor_id = p_vendor_id and o.expires_at > now();
+  if found then
+    if v_unlimited then
+      return null;
+    end if;
+    if v_cap is not null then
+      return v_cap;
+    end if;
+  end if;
+
+  select p.max_listings into v_cap
+    from public.vendor_plan_assignments a
+    join public.vendor_plans p on p.key = a.plan_key
+    where a.vendor_id = p_vendor_id;
+  if found then
+    return v_cap;
+  end if;
+
+  select p.max_listings into v_cap from public.vendor_plans p where p.is_default;
+  return v_cap;
+end;
+$$;
+
+create or replace function public.business_plan_key(p_business_id uuid) returns text
+language sql stable security definer set search_path = pg_catalog, public
+as $$
+  select case
+    when exists (select 1 from public.vendor_businesses b
+                  where b.id = p_business_id and b.trial_ends_at > now())
+     and exists (select 1 from public.vendor_plans p where p.key = 'business')
+      then 'business'
+    else coalesce(
+      (select a.plan_key from public.vendors v
+         join public.vendor_plan_assignments a on a.vendor_id = v.id
+        where v.business_id = p_business_id and v.is_primary_branch
+        limit 1),
+      (select p.key from public.vendor_plans p where p.is_default limit 1)
+    )
+  end
 $$;
 
 revoke all on function public.vendor_business_trial_default() from public, anon, authenticated;

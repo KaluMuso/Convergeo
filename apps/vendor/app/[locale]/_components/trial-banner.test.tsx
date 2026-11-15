@@ -27,7 +27,7 @@ describe("TrialBanner", () => {
     expect(formatTrialEnd("not a date", "en")).toBeNull();
   });
 
-  it("shows Free until {date} during the trial", async () => {
+  it("shows the Free Business plan banner during the trial", async () => {
     request.mockResolvedValue({
       in_trial: true,
       trial_ends_at: "2027-01-15T09:00:00Z",

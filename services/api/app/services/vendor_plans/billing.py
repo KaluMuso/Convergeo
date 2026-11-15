@@ -53,7 +53,7 @@ class BillingNotConfigured:
 
 
 DEFAULT_ANNUAL_DISCOUNT_PCT = 15
-TRIAL_MONTHS = 2
+TRIAL_MONTHS = 1
 
 
 def annual_price_ngwee(monthly_ngwee: int, discount_pct: int) -> int:

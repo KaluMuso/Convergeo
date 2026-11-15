@@ -9,7 +9,7 @@ import { getApiBaseUrl } from "../../../lib/api-base-url";
 
 type TrialStatus = { in_trial?: boolean; trial_ends_at?: string | null };
 
-/** "Free until 15 Jan 2027" — formatted in the vendor's locale, Lusaka time. */
+/** "Free Business plan until 15 Jan 2027" — formatted in the vendor's locale, Lusaka time. */
 export function formatTrialEnd(iso: string, locale: string): string | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;

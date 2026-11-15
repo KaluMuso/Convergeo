@@ -168,12 +168,17 @@ def test_annual_price_rejects_bad_input(monthly: int, pct: int) -> None:
         annual_price_ngwee(monthly, pct)
 
 
-def test_trial_is_signup_plus_two_calendar_months() -> None:
+def test_trial_is_signup_plus_one_calendar_month() -> None:
     signup = datetime(2026, 11, 15, 9, 30, tzinfo=UTC)
-    assert trial_end_for_signup(signup) == datetime(2027, 1, 15, 9, 30, tzinfo=UTC)
-    # Day clamps like Postgres interval arithmetic (Dec 31 -> Feb 28).
+    assert trial_end_for_signup(signup) == datetime(2026, 12, 15, 9, 30, tzinfo=UTC)
+    # Day clamps like Postgres interval arithmetic (Jan 31 -> Feb 28).
+    assert trial_end_for_signup(datetime(2027, 1, 31, tzinfo=UTC)) == datetime(
+        2027, 2, 28, tzinfo=UTC
+    )
+    assert trial_end_for_signup(datetime(2028, 1, 31, tzinfo=UTC)) == datetime(
+        2028, 2, 29, tzinfo=UTC
+    )
     assert add_months(datetime(2026, 12, 31, tzinfo=UTC), 2) == datetime(2027, 2, 28, tzinfo=UTC)
-    assert add_months(datetime(2027, 12, 31, tzinfo=UTC), 2) == datetime(2028, 2, 29, tzinfo=UTC)
 
 
 def test_no_plan_fee_during_trial_and_full_fee_after() -> None:
