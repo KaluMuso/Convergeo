@@ -884,7 +884,7 @@ jobs:
           import xml.etree.ElementTree as ET
           from collections import Counter
           cases = ET.parse("rbac-backend.xml").getroot().findall(".//testcase")
-          assert len(cases) == 167, f"Expected 167 RBAC acceptance cases, got {len(cases)}"
+          assert len(cases) == 170, f"Expected 170 RBAC acceptance cases, got {len(cases)}"
           assert all(c.find("skipped") is None and c.find("failure") is None and c.find("error") is None for c in cases), "RBAC acceptance contains a skipped or failed case"
           names = Counter(c.attrib["name"].split("[", 1)[0] for c in cases)
           for name, expected in {
@@ -897,7 +897,7 @@ jobs:
               "test_disposable_revocation_and_update_use_unchanged_jwt": 1,
           }.items():
               assert names[name] == expected, (name, names[name], expected)
-          print("PASS: 167 RBAC acceptance cases, zero skips; all 13 SQL contracts included")
+          print("PASS: 170 RBAC acceptance cases, zero skips; all 13 SQL contracts included")
           PY
 
       - name: Concurrent last-superadmin protection (disposable replay DB)
