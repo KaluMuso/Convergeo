@@ -40,3 +40,12 @@ Agents: ≤4 rolling; sonnet for UI/copy, opus for money/authz/data-model, haiku
 - Pricing: add Chain/Enterprise tiers for large retailers (Shoprite, Game, Woolworths, Home Essentials) up to ~K7,500/mo; branches are a paid add-on on lower tiers. Admin-editable (builds on vendor_plans, #798).
 - W7 Customer app redesign (sonnet): denser, marketplace-grade layout inspired by Alibaba/Amazon/eBay/Takealot references — compact sticky header with prominent search, category tiles grid, deal/discount rails, trust strip, product cards with price + discount badge + rating, back-to-top, reduced whitespace; keep ≤150 KB route budget and 3G performance.
 - Models: sonnet default; haiku for checks/audits; opus (low/medium effort) for money/authz/data-model; fable only for hardest tasks.
+
+## W8 Bundles & offers (opus low/medium for money; builds on coupons #792)
+- Vendor-created offers across products, services and events (own shop only):
+  - Buy X get Y free (e.g. buy item → free item; book service → free lotion; event ticket → free shirt).
+  - Bundle price: pay for item + N others at a % off (e.g. 75% off the add-ons) or a fixed bundle price.
+  - Buy N for the price of M; free gift while stocks last.
+- Money: integer ngwee; discount allocated pro-rata across lines for refunds/returns; commission on the discounted amount; free item must have stock reserved with the paid item; gift lines cannot be refunded on their own; COD cap applies to the paid total.
+- Customer: "Bundle & save" block on product/service/event pages, badge on cards, cart shows savings and the free item; offers hidden when the gift is out of stock.
+- Admin: view/pause any offer; abuse limits (max discount %, per-customer limits). Flag `bundles` default off.
