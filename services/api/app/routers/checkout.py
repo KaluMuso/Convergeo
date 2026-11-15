@@ -12,6 +12,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
 from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import (
@@ -23,9 +24,19 @@ from app.services.cart.grouping import (
 from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.cart.read_path import listing_cart_access_conflict, variant_stock_conflict
 from app.services.cart.store import fetch_listings_for_items
+from app.services.cart.tickets import (
+    claim_session_holds,
+    load_cart_ticket_lines,
+    release_session_holds,
+    require_purchasable,
+    reserve_ticket_gmv,
+    ticket_platform_fee_ngwee,
+    ticket_subtotal_ngwee,
+)
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.events.gmv_reservation import release_gmv_reservation
 from app.services.listings.class_rules import listing_lead_time_days
-from app.services.offers.apply import OfferPricing, price_line_views
+from app.services.offers.apply import OfferPricing, price_unified
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
@@ -173,6 +184,13 @@ class CheckoutSessionResponse(BaseModel):
     subtotal_ngwee: int
     reservations: list[ReservationClaimOut]
     contact_skipped: bool = False
+    #: Unified checkout: event tickets (own order, prepaid only).
+    ticket_lines: list[TicketLineOut] = Field(default_factory=list)
+    #: Buyer-paid ticket platform fee (0 unless the organiser passes it on).
+    platform_fee_ngwee: int = 0
+    total_ngwee: int = 0
+    #: False when the cart holds event tickets (they are never cash on delivery).
+    cod_allowed: bool = True
 
 
 class SessionStatusResponse(BaseModel):
@@ -207,7 +225,8 @@ class FulfilmentAddress(BaseModel):
 class FulfilmentStepRequest(BaseModel):
     session_id: str
     address: FulfilmentAddress | None = None
-    groups: list[GroupFulfilmentChoice] = Field(min_length=1)
+    #: One choice per product vendor; empty only for a tickets-only checkout.
+    groups: list[GroupFulfilmentChoice] = Field(default_factory=list, max_length=50)
 
 
 class GroupFulfilmentResult(BaseModel):
@@ -226,6 +245,9 @@ class FulfilmentStepResponse(BaseModel):
     subtotal_ngwee: int
     delivery_fee_ngwee: int
     total_ngwee: int
+    #: Unified checkout: event-ticket subtotal (inside subtotal_ngwee) and fee.
+    ticket_subtotal_ngwee: int = 0
+    platform_fee_ngwee: int = 0
     resolved_zone_key: str | None = None
     pickup_only: bool = False
 
@@ -811,6 +833,14 @@ def _release_session_holds(session_id: str) -> int:
     for listing_id in sorted({row for row in held.rows if row}):
         if release_reservation(listing_id=listing_id, checkout_group_id=session_id).released:
             released += 1
+    # Unified checkout: void the session's unconsumed ticket claims and free its
+    # GMV headroom (both idempotent; no-ops for a products-only session). Best
+    # effort like the stock path: the stale-claim / GMV sweepers reclaim at TTL.
+    try:
+        released += release_session_holds(session_id)
+        release_gmv_reservation(session_id)
+    except Exception:
+        logger.warning("checkout.release_ticket_holds_failed", exc_info=True)
     return released
 
 
@@ -834,8 +864,14 @@ WITH superseded AS (
   SET status = 'abandoned'
   WHERE cg.customer_id = {customer_sql}
     AND cg.status = 'pending'
-    AND EXISTS (
-      SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.checkout_ticket_holds th
+        WHERE th.checkout_group_id = cg.id AND th.status = 'held'
+      )
     )
     AND NOT EXISTS (SELECT 1 FROM public.orders o WHERE o.checkout_group_id = cg.id)
     AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.checkout_group_id = cg.id)
@@ -933,13 +969,15 @@ async def create_checkout_session(
 
     cart_id = str(cart["id"])
     items = _fetch_cart_items(user_client, cart_id)
-    if not items:
+    ticket_lines = load_cart_ticket_lines(cart_id, client=service.client)
+    if not items and not ticket_lines:
         raise AppError(
             code="checkout.cart_empty",
             message="Your cart is empty",
             http_status=400,
             details={"redirect_to": "cart"},
         )
+    require_purchasable(ticket_lines)
 
     listings = fetch_listings_for_items(items)
 
@@ -955,18 +993,21 @@ async def create_checkout_session(
     )
 
     line_views = _build_line_views(items, listings)
-    line_views, offer_pricing = price_line_views(
-        line_views, service.client, customer_id=current_user.id
+    line_views, ticket_lines, offer_pricing = price_unified(
+        line_views, ticket_lines, service.client, customer_id=current_user.id
     )
     vendor_groups = group_by_vendor(
         line_views,
         free_delivery_threshold_ngwee=_load_free_delivery_threshold(service),
     )
-    subtotal = (
+    product_subtotal = (
         sum(line.line_total_ngwee for line in line_views)
         if offer_pricing is not None
         else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
     )
+    ticket_subtotal = ticket_subtotal_ngwee(ticket_lines)
+    platform_fee = ticket_platform_fee_ngwee(ticket_lines)
+    subtotal = product_subtotal + ticket_subtotal
 
     try:
         _supersede_own_pending_sessions(current_user.id)
@@ -983,7 +1024,8 @@ async def create_checkout_session(
             "idempotency_key": idempotency_key,
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": 0,
-            "total_ngwee": subtotal,
+            "platform_fee_ngwee": platform_fee,
+            "total_ngwee": subtotal + platform_fee,
             "status": "pending",
         }
     ).execute()
@@ -1029,6 +1071,34 @@ async def create_checkout_session(
                     "notice_key": "checkout.checkout.stockUnavailable",
                 },
             )
+
+    if ticket_lines:
+        # Same oversell-safe claim (instance row lock) and Tier-1 GMV reservation
+        # as a ticket bought alone; a failure leaves no hold behind.
+        try:
+            claim_session_holds(
+                service.client,
+                checkout_group_id=session_id,
+                customer_id=current_user.id,
+                lines=ticket_lines,
+            )
+            reserve_ticket_gmv(
+                service.client,
+                checkout_group_id=session_id,
+                organiser_vendor_id=ticket_lines[0].vendor_id,
+                event_id=ticket_lines[0].event_id,
+                amount_ngwee=ticket_subtotal,
+                ttl_minutes=ttl_min,
+            )
+        except Exception:
+            expire_checkout_group_if_unpaid(
+                service.client, checkout_group_id=session_id, terminal_status="abandoned"
+            )
+            try:
+                _release_session_holds(session_id)
+            except Exception:
+                logger.warning("checkout.release_partial_holds_failed", exc_info=True)
+            raise
 
     expires_at = datetime.now(UTC) + timedelta(minutes=ttl_min)
     vendor_ids = [group.vendor_id for group in vendor_groups]
@@ -1107,6 +1177,10 @@ async def create_checkout_session(
         subtotal_ngwee=subtotal,
         reservations=reservations,
         contact_skipped=contact_skipped,
+        ticket_lines=[ticket_line_out(line) for line in ticket_lines],
+        platform_fee_ngwee=platform_fee,
+        total_ngwee=subtotal + platform_fee,
+        cod_allowed=not ticket_lines,
     )
 
 
@@ -1204,11 +1278,14 @@ async def validate_fulfilment_step(
         )
 
     items = _fetch_cart_items(user_client, str(cart["id"]))
+    ticket_lines = load_cart_ticket_lines(str(cart["id"]), client=service.client)
+    require_purchasable(ticket_lines)
     listings = fetch_listings_for_items(items)
     line_views = _build_line_views(items, listings)
-    # Same offer engine as the session and order placement (W8, flag `bundles`).
-    line_views, _offer_pricing = price_line_views(
-        line_views, service.client, customer_id=current_user.id
+    # Same offer engine as the session and order placement (W8, flag `bundles`);
+    # event tickets are priced in the same pass (unified checkout).
+    line_views, ticket_lines, _offer_pricing = price_unified(
+        line_views, ticket_lines, service.client, customer_id=current_user.id
     )
     free_threshold = _load_free_delivery_threshold(service)
     vendor_groups = group_by_vendor(line_views, free_delivery_threshold_ngwee=free_threshold)
@@ -1296,11 +1373,15 @@ async def validate_fulfilment_step(
             )
         )
 
-    total = subtotal + total_delivery_fee
+    ticket_subtotal = ticket_subtotal_ngwee(ticket_lines)
+    platform_fee = ticket_platform_fee_ngwee(ticket_lines)
+    subtotal += ticket_subtotal
+    total = subtotal + total_delivery_fee + platform_fee
     service.client.table("checkout_groups").update(
         {
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": total_delivery_fee,
+            "platform_fee_ngwee": platform_fee,
             "total_ngwee": total,
             # POST /orders re-prices from these server-recorded choices; the
             # groups a client sends there are only checked against them.
@@ -1323,4 +1404,6 @@ async def validate_fulfilment_step(
         total_ngwee=total,
         resolved_zone_key=resolved_zone,
         pickup_only=pickup_only,
+        ticket_subtotal_ngwee=ticket_subtotal,
+        platform_fee_ngwee=platform_fee,
     )

@@ -118,7 +118,9 @@ class OfferWriteRequest(StrictModel):
                 errors["items"] = "exactly_one_anchor"
             elif not 1 <= roles.count("addon") <= MAX_ADDONS:
                 errors["items"] = "addons_required"
-            elif any(i.item_kind != "product" for i in self.items):
+            elif any(i.item_kind == "service" for i in self.items):
+                # Products and event tickets share the unified cart; services
+                # are still booked on their own flow.
                 errors["items"] = "bundle_products_only"
             if self.bundle_pricing is None:
                 errors["bundle_pricing"] = "required"
@@ -135,7 +137,7 @@ class OfferWriteRequest(StrictModel):
         else:  # buy_n_pay_m
             if not 1 <= roles.count("eligible") <= MAX_ELIGIBLE:
                 errors["items"] = "eligible_required"
-            elif any(i.item_kind != "product" for i in self.items):
+            elif any(i.item_kind == "service" for i in self.items):
                 errors["items"] = "buy_n_pay_m_products_only"
             if self.buy_n is None:
                 errors["buy_n"] = "required"

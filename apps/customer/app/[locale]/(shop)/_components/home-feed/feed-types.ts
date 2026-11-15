@@ -3,6 +3,7 @@
  * plus pure mappers shared by the server renderer and the lazy client loader.
  * No server-only imports — this module is bundled into the client chunk.
  */
+import type { OfferBadge, OfferBadgeLabels } from "../offers/offer-badge";
 import type { CatalogListing } from "../plp/listing-grid";
 
 export type FeedListingWire = {
@@ -25,6 +26,8 @@ export type FeedListingWire = {
   unit_step_milli?: number;
   min_steps?: number;
   product_class?: string;
+  /** W8 live offer (flag `bundles`), attached server-side by the API. */
+  offer_badge?: OfferBadge | null;
 };
 
 export type FeedServiceWire = {
@@ -147,6 +150,8 @@ export type FeedLabels = {
       delivery: string;
       pickup: string;
     };
+    /** catalog.offers.badge.* — W8 offer pill on feed cards. */
+    offerBadge?: OfferBadgeLabels;
   };
 };
 
@@ -171,6 +176,7 @@ export function mapFeedListing(item: FeedListingWire): CatalogListing {
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
     productClass: item.product_class,
+    offerBadge: item.offer_badge ?? undefined,
   };
 }
 

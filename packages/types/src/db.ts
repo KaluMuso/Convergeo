@@ -675,6 +675,42 @@ export type Database = {
           },
         ]
       }
+      cart_ticket_items: {
+        Row: {
+          attendee_names: Json | null
+          cart_id: string
+          created_at: string
+          event_id: string
+          id: string
+          instance_id: string
+          qty: number
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendee_names?: Json | null
+          cart_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          instance_id: string
+          qty: number
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendee_names?: Json | null
+          cart_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          instance_id?: string
+          qty?: number
+          ticket_type_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       carts: {
         Row: {
           created_at: string
@@ -834,6 +870,54 @@ export type Database = {
           status?: string
           subtotal_ngwee?: number
           total_ngwee?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      checkout_ticket_holds: {
+        Row: {
+          cart_ticket_item_id: string
+          checkout_group_id: string
+          created_at: string
+          event_id: string
+          id: string
+          instance_id: string
+          order_id: string | null
+          organiser_vendor_id: string
+          qty: number
+          status: string
+          ticket_ids: string[]
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          cart_ticket_item_id: string
+          checkout_group_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          instance_id: string
+          order_id?: string | null
+          organiser_vendor_id: string
+          qty: number
+          status?: string
+          ticket_ids: string[]
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          cart_ticket_item_id?: string
+          checkout_group_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          instance_id?: string
+          order_id?: string | null
+          organiser_vendor_id?: string
+          qty?: number
+          status?: string
+          ticket_ids?: string[]
+          ticket_type_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -4441,6 +4525,7 @@ export type Database = {
           fulfilment: string
           fx_snapshot: Json
           id: string
+          order_lane: string
           pickup_collected_at: string | null
           pickup_pin_hash: string | null
           pickup_qr_secret: string | null
@@ -4462,6 +4547,7 @@ export type Database = {
           fulfilment: string
           fx_snapshot?: Json
           id?: string
+          order_lane?: string
           pickup_collected_at?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
@@ -4483,6 +4569,7 @@ export type Database = {
           fulfilment?: string
           fx_snapshot?: Json
           id?: string
+          order_lane?: string
           pickup_collected_at?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null

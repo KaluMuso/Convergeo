@@ -8,6 +8,7 @@ from uuid import UUID
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
+from app.schemas.offers import OfferBadgeOut
 from app.services.business.access import (
     BusinessAccess,
     get_business_access,
@@ -78,6 +79,9 @@ class CatalogListingItem(BaseModel):
     wholesale: bool | None = None
     moq: int | None = None
     price_tiers: list[dict[str, Any]] | None = None
+    #: W8 live offer this listing takes part in (flag `bundles`); attached
+    #: server-side by surfaces that render cards (home feed, stream).
+    offer_badge: OfferBadgeOut | None = None
 
 
 class CatalogListResponse(BaseModel):

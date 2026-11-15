@@ -242,14 +242,18 @@ def load_live_offer_rows(
 def customer_offer_use_counts(
     client: Any, *, customer_id: str, offer_ids: Iterable[str]
 ) -> dict[str, int]:
-    """Orders (not cancelled) per offer for one customer — per-customer limit."""
+    """Redemptions per offer for one customer — per-customer limit.
+
+    A redemption is a checkout (not an order: a product + ticket bundle places
+    two orders in one checkout) with a non-cancelled order carrying the offer.
+    """
     ids = sorted(set(offer_ids))
     if not ids:
         return {}
     rows = _rows(
         client.table("order_items")
         .select(
-            "offer_id, order_id, orders!inner(customer_id, status, "
+            "offer_id, order_id, orders!inner(customer_id, status, checkout_group_id, "
             "checkout_groups(status))"
         )
         .in_("offer_id", ids)
@@ -265,7 +269,10 @@ def customer_offer_use_counts(
             # Unpaid checkout that expired / was abandoned: never a redemption
             # (same rule as the in-transaction count in orders/create.py).
             continue
-        seen.setdefault(str(row.get("offer_id")), set()).add(str(row.get("order_id")))
+        redemption = (
+            order.get("checkout_group_id") if isinstance(order, dict) else None
+        ) or row.get("order_id")
+        seen.setdefault(str(row.get("offer_id")), set()).add(str(redemption))
     return {offer_id: len(orders) for offer_id, orders in seen.items()}
 
 

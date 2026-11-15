@@ -3429,6 +3429,24 @@ EXPECTATIONS: TableExpectations = {
         Persona.ADMIN: all_permit(),
     },
     "offer_gift_reservations": client_invisible(),
+    # Unified cart (20261115220000): ticket lines are read by their cart owner
+    # (RLS-scoped SELECT); every write is service-role only like cart_items, so
+    # client INSERT/UPDATE/DELETE are permission denials. Anon has no grant.
+    # Session ticket holds are service-role only.
+    "cart_ticket_items": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
+    "checkout_ticket_holds": client_invisible(),
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),

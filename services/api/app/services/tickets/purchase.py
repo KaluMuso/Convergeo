@@ -723,12 +723,33 @@ def _ticket_secrets(ticket_id: str) -> tuple[str, str]:
     return qr_secret, pin_hash
 
 
-def _link_claimed_tickets(order_item_id: str, ticket_ids: tuple[str, ...]) -> int:
-    if not ticket_ids:
+def _link_claimed_tickets(
+    order_item_id: str,
+    ticket_ids: tuple[str, ...],
+    *,
+    instance_id: str | None = None,
+    ticket_type_id: str | None = None,
+    limit: int | None = None,
+) -> int:
+    """Link up to ``limit`` unlinked claims of this item's type and instance to it.
+
+    An order with several ticket lines (unified checkout, or a line split by an
+    offer) carries all its claim ids in one snapshot: each line takes only the
+    claims of its own (type, instance) and never more than its quantity, so the
+    claims are shared out exactly and no extra ticket is minted.
+    """
+    if not ticket_ids or (limit is not None and limit <= 0):
         return 0
     item_sql = sql_uuid(order_item_id, "order_item_id")
+    scope_sql = ""
+    if instance_id is not None:
+        scope_sql += f"\n  AND instance_id = {sql_uuid(instance_id, 'instance_id')}"
+    if ticket_type_id is not None:
+        scope_sql += f"\n  AND ticket_type_id = {sql_uuid(ticket_type_id, 'ticket_type_id')}"
     linked = 0
     for ticket_id in ticket_ids:
+        if limit is not None and linked >= limit:
+            break
         tid_sql = sql_uuid(ticket_id, "ticket_id")
         qr_secret, pin_hash = _ticket_secrets(ticket_id)
         result = run_sql_script(
@@ -740,7 +761,7 @@ SET
   pin_hash = {_sql_text(pin_hash)}
 WHERE id = {tid_sql}
   AND order_item_id IS NULL
-  AND status <> 'void'
+  AND status <> 'void'{scope_sql}
 RETURNING id::text;
 """
         )
@@ -951,7 +972,13 @@ WHERE oi.order_id = {order_sql}
 
         linked = 0
         if claim_ids:
-            linked = _link_claimed_tickets(order_item_id, claim_ids)
+            linked = _link_claimed_tickets(
+                order_item_id,
+                claim_ids,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                limit=needed,
+            )
             existing += linked
             needed = max(0, qty - existing)
 

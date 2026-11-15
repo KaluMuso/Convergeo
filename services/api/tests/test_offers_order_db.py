@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import json
 import os
-import uuid
 import threading
 import time
+import uuid
 from collections.abc import Callable, Generator
 
 import psycopg

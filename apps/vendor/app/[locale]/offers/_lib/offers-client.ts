@@ -94,11 +94,12 @@ export const TYPE_ROLES: Record<
     { role: "trigger", kinds: ["product", "service", "event"], max: 20 },
     { role: "reward", kinds: ["product"], max: 1 },
   ],
+  // Event tickets share the unified cart with products; services do not yet.
   bundle: [
-    { role: "anchor", kinds: ["product"], max: 1 },
-    { role: "addon", kinds: ["product"], max: 5 },
+    { role: "anchor", kinds: ["product", "event"], max: 1 },
+    { role: "addon", kinds: ["product", "event"], max: 5 },
   ],
-  buy_n_pay_m: [{ role: "eligible", kinds: ["product"], max: 20 }],
+  buy_n_pay_m: [{ role: "eligible", kinds: ["product", "event"], max: 20 }],
 };
 
 /** Largest per-customer limit the API accepts (offers_per_customer_limit_check). */

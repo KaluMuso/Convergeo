@@ -270,6 +270,93 @@ def test_service_or_event_offer_is_not_cart_applicable() -> None:
     assert price_cart([line(C1, L1, 1, 1_000)], [offer]).applications == ()
 
 
+EVENT = "e0e00000-0000-4000-8000-00000000000e"
+
+
+def ticket(key: str, qty: int, unit: int, vendor: str = VENDOR_A) -> PricingLine:
+    return PricingLine(
+        key=key,
+        listing_id=EVENT,
+        vendor_id=vendor,
+        qty=qty,
+        unit_price_ngwee=unit,
+        item_kind="event",
+    )
+
+
+def test_unified_cart_applicability_by_kind() -> None:
+    def offer(offer_type: str, items: tuple[OfferItemDef, ...]) -> OfferDef:
+        return OfferDef(
+            id=OFFER, vendor_id=VENDOR_A, offer_type=offer_type, title="x", items=items
+        )
+
+    assert offer(
+        "bundle", (OfferItemDef("anchor", "product", L1), OfferItemDef("addon", "event", EVENT))
+    ).cart_applicable
+    assert offer("buy_n_pay_m", (OfferItemDef("eligible", "event", EVENT),)).cart_applicable
+    # Services are not in the unified cart yet; a product gift needs a product trigger.
+    assert not offer(
+        "bundle", (OfferItemDef("anchor", "product", L1), OfferItemDef("addon", "service", L2))
+    ).cart_applicable
+    assert not offer(
+        "free_gift",
+        (OfferItemDef("trigger", "event", EVENT), OfferItemDef("reward", "product", GIFT)),
+    ).cart_applicable
+
+
+def test_bundle_spans_a_product_and_event_tickets_with_exact_allocation() -> None:
+    offer = OfferDef(
+        id=OFFER,
+        vendor_id=VENDOR_A,
+        offer_type="bundle",
+        title="Gig + tee",
+        items=(OfferItemDef("anchor", "product", L1), OfferItemDef("addon", "event", EVENT, 2)),
+        bundle_pricing="fixed_price",
+        bundle_price_ngwee=30_001,
+    )
+    lines = [line(C1, L1, 1, 10_000), ticket("t", 2, 15_050)]
+    priced = price_cart(lines, [offer])
+    list_total = 10_000 + 2 * 15_050
+    assert priced.subtotal_ngwee == 30_001
+    assert sum(o.list_total_ngwee for o in priced.lines.values()) == list_total
+    assert priced.lines["t"].offer_id == OFFER and priced.lines[C1].offer_id == OFFER
+    # Whole-ngwee order lines for the tickets, summing to the allocated total.
+    parts = split_line_units(priced.lines["t"].final_total_ngwee, 2)
+    assert sum(q * u for q, u in parts) == priced.lines["t"].final_total_ngwee
+    assert all(u >= 1 for _, u in parts)
+
+
+def test_event_items_never_match_a_product_line_with_the_same_id() -> None:
+    offer = OfferDef(
+        id=OFFER,
+        vendor_id=VENDOR_A,
+        offer_type="buy_n_pay_m",
+        title="2 for 1",
+        items=(OfferItemDef("eligible", "event", L1),),
+        buy_n=2,
+        pay_m=1,
+    )
+    # A product line whose listing id happens to equal the event id: kinds differ.
+    assert price_cart([line(C1, L1, 2, 1_000)], [offer]).applications == ()
+    tickets = price_cart(
+        [PricingLine("t", L1, VENDOR_A, 2, 1_000, item_kind="event")], [offer]
+    )
+    assert tickets.subtotal_ngwee == 1_000
+
+
+def test_another_vendors_event_offer_never_prices_my_tickets() -> None:
+    offer = OfferDef(
+        id=OFFER,
+        vendor_id=VENDOR_B,
+        offer_type="buy_n_pay_m",
+        title="2 for 1",
+        items=(OfferItemDef("eligible", "event", EVENT),),
+        buy_n=2,
+        pay_m=1,
+    )
+    assert price_cart([ticket("t", 2, 1_000, vendor=VENDOR_A)], [offer]).applications == ()
+
+
 def test_discount_over_admin_cap_is_skipped() -> None:
     lines = [
         line(C1, L1, 1, 1_000),

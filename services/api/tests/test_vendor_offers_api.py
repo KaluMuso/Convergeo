@@ -584,3 +584,82 @@ def test_admin_offer_routes_follow_the_permission_map(
     assert api.post(
         "/admin/offers/not-a-uuid/pause", json={}, headers=H()
     ).status_code == 404
+
+
+def test_card_surfaces_share_server_side_badges(
+    api: TestClient, fake: FakeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Home feed, stream, search and storefront read the same fail-closed badges."""
+    from app.routers.home_feed import _attach_offer_badges as attach_feed
+    from app.routers.search import _attach_offer_badges as attach_search
+    from app.services.offers import badges as badges_mod
+    from app.services.search import SearchHit, SearchResponse
+
+    offer_id = api.post(
+        "/vendor/offers", json=bundle_body(starts_at="2026-01-01T00:00:00+00:00"), headers=H()
+    ).json()["id"]
+    for row in fake.table("vendor_listings").rows:
+        row["product_id"] = {LA1: "c1000000-0000-4000-8000-00000000000c"}.get(row["id"])
+
+    # Listing cards (home feed sections + stream): anchor and add-on are badged.
+    listings = [MagicMock(id=LA1, offer_badge=None), MagicMock(id=LB1, offer_badge=None)]
+    attach_feed(fake, listings)
+    assert listings[0].offer_badge.offer_id == offer_id
+    assert listings[0].offer_badge.addon_percent_off == 75
+    assert listings[1].offer_badge is None
+
+    # Storefront: only that vendor's live offers.
+    assert set(badges_mod.vendor_listing_badges(fake, VENDOR_A)) == {LA1, LA2}
+    assert badges_mod.vendor_listing_badges(fake, VENDOR_B) == {}
+
+    # Search: a product hit is badged through its active listing; a listing hit directly.
+    def hit(kind: str, entity_id: str) -> SearchHit:
+        return SearchHit(
+            id=f"{kind}:{entity_id}",
+            entity_kind=kind,
+            entity_id=entity_id,
+            title="x",
+            rrf_score=1.0,
+        )
+
+    response = SearchResponse(
+        query="kit",
+        expanded_query="kit",
+        page=1,
+        page_size=20,
+        total=3,
+        results=[
+            hit("product", "c1000000-0000-4000-8000-00000000000c"),
+            hit("listing", LA2),
+            hit("vendor", VENDOR_A),
+        ],
+        degraded=False,
+    )
+    attach_search(fake, response)
+    assert [h.offer_badge.offer_id if h.offer_badge else None for h in response.results] == [
+        offer_id,
+        offer_id,
+        None,
+    ]
+
+    # Admin pause removes the badge on every surface.
+    next(r for r in fake.table("offers").rows if r["id"] == offer_id)["paused_by_admin"] = True
+    assert badges_mod.listing_badges(fake, [LA1]) == {}
+    assert badges_mod.vendor_listing_badges(fake, VENDOR_A) == {}
+
+
+def test_card_badges_fail_closed(fake: FakeClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.offers import badges as badges_mod
+
+    fake.table("feature_flags").rows[0]["enabled"] = False
+    assert badges_mod.listing_badges(fake, [LA1]) == {}
+    assert badges_mod.product_badges(fake, ["c1000000-0000-4000-8000-00000000000c"]) == {}
+    fake.table("feature_flags").rows[0]["enabled"] = True
+
+    def boom(*_a: Any, **_k: Any) -> Any:
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(badges_mod, "load_live_offer_rows", boom)
+    fake.table("offer_items").rows.append({"offer_id": "x", "listing_id": LA1})
+    assert badges_mod.listing_badges(fake, [LA1]) == {}
+    assert badges_mod.vendor_listing_badges(fake, VENDOR_A) == {}

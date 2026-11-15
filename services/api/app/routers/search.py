@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.offers.badges import listing_badges, product_badges
 from app.services.search import SearchResponse, SuggestResponse, run_search, run_suggest
 from app.services.search.nearby import (
     DEFAULT_RADIUS_KM,
@@ -62,7 +63,7 @@ async def search(
 ) -> SearchResponse:
     if lat is not None and lng is not None:
         _rate_limit_geo_read(request, supabase)
-    return await run_search(
+    response = await run_search(
         supabase.client,
         query=q,
         kind=kind,
@@ -78,6 +79,24 @@ async def search(
         user_lng=lng if lat is not None else None,
         include_kind_totals=include_kind_totals,
     )
+    _attach_offer_badges(supabase.client, response)
+    return response
+
+
+def _attach_offer_badges(client: Any, response: SearchResponse) -> None:
+    """W8: offer pills on product / listing hits (fail closed, flag `bundles`)."""
+    product_ids = [h.entity_id for h in response.results if h.entity_kind == "product"]
+    listing_ids = [h.entity_id for h in response.results if h.entity_kind == "listing"]
+    if not product_ids and not listing_ids:
+        return
+    by_product = product_badges(client, product_ids) if product_ids else {}
+    by_listing = listing_badges(client, listing_ids) if listing_ids else {}
+    for hit in response.results:
+        key = hit.entity_id.lower()
+        if hit.entity_kind == "product":
+            hit.offer_badge = by_product.get(key)
+        elif hit.entity_kind == "listing":
+            hit.offer_badge = by_listing.get(key)
 
 
 @router.get("/nearby", response_model=NearbyResponse)

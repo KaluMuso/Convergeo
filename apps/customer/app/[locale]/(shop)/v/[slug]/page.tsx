@@ -25,6 +25,7 @@ import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
+import { buildOfferBadgeLabels, type OfferBadge } from "../../_components/offers/offer-badge";
 import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
 
 
@@ -75,6 +76,8 @@ type VendorProfileApiResponse = {
     lead_time_days: number | null;
     category_slug?: string | null;
     category_name?: string | null;
+    /** W8 live offer (flag `bundles`), attached server-side by the API. */
+    offer_badge?: OfferBadge | null;
   }>;
   services: Array<{
     id: string;
@@ -375,6 +378,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
     productClass: listing.product_class,
     fulfilmentMode: listing.fulfilment_mode,
     leadTimeDays: listing.lead_time_days,
+    offerBadge: listing.offer_badge ?? undefined,
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
@@ -406,6 +410,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionRefurbished: t("listings.conditionRefurbished"),
             conditionUsed: tCatalog("plp.card.conditionUsed"),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
+            offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),

@@ -5,8 +5,9 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AdminOffer } from "./api";
 import { OffersBoard } from "./OffersBoard";
+
+import type { AdminOffer } from "./api";
 
 const mocks = vi.hoisted(() => ({
   t: (key: string) => key,

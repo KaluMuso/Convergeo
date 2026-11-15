@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.offers import OfferBadgeOut
 from app.services.analytics.search_log import log_search_query
 from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search.embedding_client import (
@@ -66,6 +67,9 @@ class SearchHit(StrictModel):
     # Whether any branch of the resolved vendor is open now (Africa/Lusaka clock).
     # ``None`` when hours are not published — never treated as closed.
     is_open_now: bool | None = None
+    #: W8 live offer on this product (any active listing) or listing; flag
+    #: `bundles`. Attached by the search router, never part of ranking.
+    offer_badge: OfferBadgeOut | None = None
 
 
 class SearchKindTotals(StrictModel):

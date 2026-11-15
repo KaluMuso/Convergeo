@@ -67,8 +67,9 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
         # + 1 reviewed: In-app notification center tables + triggers (additive, reversible).
         # + 1 reviewed: W8 bundles & offers (additive, reversible).
-        self.assertEqual(len(runner.FORWARD), 32)
-        self.assertEqual(len(set(runner.FORWARD)), 32)
+        # + 1 reviewed: Unified cart slice 1 (additive, reversible).
+        self.assertEqual(len(runner.FORWARD), 33)
+        self.assertEqual(len(set(runner.FORWARD)), 33)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

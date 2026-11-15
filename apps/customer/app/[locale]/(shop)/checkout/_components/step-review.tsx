@@ -52,6 +52,12 @@ export type ReviewStepLabels = {
   nextCod: string;
   /** UX pass 4 — COD-specific review copy. Templates use {amount} / {landmark}. */
   codGuide?: ReviewCodGuideLabels;
+  /** Unified checkout: line-type captions, ticket line template, ticket fee row. */
+  typeProducts?: string;
+  typeEventTickets?: string;
+  /** "{type} × {qty}" */
+  ticketLine?: string;
+  platformFee?: string;
 };
 
 export type ReviewCodGuideLabels = {
@@ -107,6 +113,11 @@ export function StepReview({
   const [loading, setLoading] = useState(false);
 
   const amountLocale = `${locale}-ZM`;
+  // Server-computed total = subtotal + delivery + buyer ticket fee; show the fee row.
+  const platformFee = Math.max(
+    0,
+    totals.total_ngwee - totals.subtotal_ngwee - totals.delivery_fee_ngwee,
+  );
   const placeOrderAvailable = typeof onPlaceOrder === "function";
 
   const paymentLabel = (() => {
@@ -199,6 +210,14 @@ export function StepReview({
         <h3 className="font-body text-sm font-semibold uppercase tracking-wide text-text-3">
           {labels.lineItems}
         </h3>
+        {session.vendor_groups.length > 0 && labels.typeProducts ? (
+          <p
+            className="m-0 font-body text-xs font-semibold uppercase tracking-wide text-text-3"
+            data-testid="review-type-products"
+          >
+            {labels.typeProducts}
+          </p>
+        ) : null}
         {session.vendor_groups.map((group) => (
           <div
             key={group.vendor_id}
@@ -263,6 +282,37 @@ export function StepReview({
             </ul>
           </div>
         ))}
+        {(session.ticket_lines ?? []).length > 0 ? (
+          <div
+            className="space-y-2 rounded-card border border-border bg-surface p-4"
+            data-testid="review-ticket-group"
+          >
+            <p className="m-0 font-body text-xs font-semibold uppercase tracking-wide text-text-3">
+              {labels.typeEventTickets ?? ""}
+            </p>
+            <ul className="space-y-2">
+              {(session.ticket_lines ?? []).map((line) => (
+                <li
+                  key={line.id}
+                  className="flex items-start justify-between gap-2 text-sm"
+                  data-testid={`review-ticket-line-${line.id}`}
+                >
+                  <span className="min-w-0 break-words font-body text-text-2">
+                    <span className="block text-text">{line.event_title}</span>
+                    <span className="text-text-3">
+                      {(labels.ticketLine ?? "{type} × {qty}")
+                        .replace("{type}", line.type_name)
+                        .replace("{qty}", String(line.qty))}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-text">
+                    {formatK(line.line_total_ngwee, { locale: amountLocale })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
@@ -274,6 +324,12 @@ export function StepReview({
           <span>{labels.deliveryFees}</span>
           <span>{formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}</span>
         </div>
+        {platformFee > 0 && labels.platformFee ? (
+          <div className="flex justify-between gap-3" data-testid="review-platform-fee">
+            <span>{labels.platformFee}</span>
+            <span>{formatK(platformFee, { locale: amountLocale })}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-3 font-semibold text-text">
           <span>{labels.total}</span>
           <span>{formatK(totals.total_ngwee, { locale: amountLocale })}</span>

@@ -16,7 +16,6 @@ from app.deps import get_supabase_client
 from app.routers.admin_base import router as admin_router
 from app.schemas.base import StrictModel
 from app.schemas.offers import AdminOfferPauseRequest, OfferOut
-from app.services.offers.store import offer_is_live
 from app.services.offers.manage import (
     load_items_for,
     load_offer_rows,
@@ -24,6 +23,7 @@ from app.services.offers.manage import (
     targets_for_item_rows,
     to_offer_out,
 )
+from app.services.offers.store import offer_is_live
 from fastapi import APIRouter, Depends, Query
 
 offers_admin_router = APIRouter(prefix="/offers", tags=["admin-offers"])

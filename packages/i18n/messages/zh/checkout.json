@@ -82,7 +82,26 @@
     "offerSavings": "优惠节省",
     "offerSaving": "优惠节省 {amount}",
     "offerGift": "赠品：{title} × {qty}",
-    "offerGiftWorth": "价值 {value}，随优惠免费赠送"
+    "offerGiftWorth": "价值 {value}，随优惠免费赠送",
+    "types": {
+      "products": "商品",
+      "eventTickets": "活动门票",
+      "services": "服务"
+    },
+    "tickets": {
+      "line": "{type} × {qty}",
+      "remove": "移除",
+      "removeLabel": "移除 {title} 的门票",
+      "unavailable": "这些门票已无法购买。请移除后再结账。",
+      "platformFee": "票务服务费",
+      "prepaidOnly": "活动门票需在线支付（移动钱包或银行卡），不支持货到付款。",
+      "oneEvent": "您的购物车中已有其他活动或其他场次的门票。请先结算或移除它们。",
+      "added": "门票已加入购物车",
+      "addToCart": "加入购物车",
+      "adding": "正在加入…",
+      "addFailed": "无法添加这些门票，请重试。",
+      "signInRequired": "请登录后再将门票加入购物车。"
+    }
   },
   "checkout": {
     "pageTitle": "结账",
@@ -205,7 +224,8 @@
         "capNote": "货到付款适用于不超过 {cap} 的订单。",
         "overCap": "您的订单总额为 {total}。如需货到付款，请移除部分商品，或分成每笔不超过 {cap} 的订单。",
         "editCart": "编辑购物车"
-      }
+      },
+      "codNotForTickets": "订单包含活动门票时，不支持货到付款。"
     },
     "review": {
       "title": "确认您的订单",
@@ -245,7 +265,11 @@
         "deliveryNoLandmark": "卢萨卡送货",
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
-      }
+      },
+      "typeProducts": "商品",
+      "typeEventTickets": "活动门票",
+      "ticketLine": "{type} × {qty}",
+      "platformFee": "票务服务费"
     },
     "pending": {
       "pageTitle": "批准付款",
@@ -313,6 +337,9 @@
       "widgetUnavailable": "银行卡付款暂时不可用。请尝试移动支付或稍后重试。",
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
+    },
+    "tickets": {
+      "unavailable": "购物车中的某张门票已无法购买，请检查购物车。"
     }
   },
   "variant": {

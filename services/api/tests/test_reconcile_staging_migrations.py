@@ -87,6 +87,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113130000",
     # W8 bundles & offers (additive, reversible).
     "20261115120000",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261115220000",
 }
 
 

@@ -177,6 +177,10 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
     review: {
       title: t("checkout.review.title"),
       subtitle: t("checkout.review.subtitle"),
+      typeProducts: t("checkout.review.typeProducts"),
+      typeEventTickets: t("checkout.review.typeEventTickets"),
+      ticketLine: String(t.raw("checkout.review.ticketLine")),
+      platformFee: t("checkout.review.platformFee"),
       lineItems: t("checkout.review.lineItems"),
       qtyTemplate: String(t.raw("checkout.review.qty")),
       variantOption: String(t.raw("variant.option")),
