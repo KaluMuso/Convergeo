@@ -68,7 +68,7 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
-    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000_rate_counter_scope_constraint_sync.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
