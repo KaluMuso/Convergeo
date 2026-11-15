@@ -85,6 +85,11 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500",
+    "20261115235600",
 }
 
 
