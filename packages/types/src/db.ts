@@ -6406,6 +6406,7 @@ export type Database = {
           defect_notes: string | null
           description: string | null
           fulfilment_mode: string
+          fulfilment_options: string[]
           id: string
           imei: string | null
           lead_time_days: number | null
@@ -6447,6 +6448,7 @@ export type Database = {
           defect_notes?: string | null
           description?: string | null
           fulfilment_mode?: string
+          fulfilment_options?: string[]
           id?: string
           imei?: string | null
           lead_time_days?: number | null
@@ -6488,6 +6490,7 @@ export type Database = {
           defect_notes?: string | null
           description?: string | null
           fulfilment_mode?: string
+          fulfilment_options?: string[]
           id?: string
           imei?: string | null
           lead_time_days?: number | null

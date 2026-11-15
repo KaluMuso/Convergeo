@@ -112,6 +112,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       pickupAtTemplate: String(t.raw("checkout.fulfilment.pickupAt")),
       pickupHoursTemplate: String(t.raw("checkout.fulfilment.pickupHours")),
       outsideZone: t("checkout.fulfilment.outsideZone"),
+      notOffered: t("checkout.fulfilment.notOffered"),
       mixedHint: t("checkout.fulfilment.mixedHint"),
       continue: t("checkout.fulfilment.continue"),
       subtotal: t("checkout.fulfilment.subtotal"),

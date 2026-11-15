@@ -100,6 +100,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113130000",
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
 ]
 
 def _module() -> Any:
@@ -142,7 +144,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 159
+    assert len(sql_files) == len(migrations) == 160
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -165,7 +167,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
     rate_scope_sync = ["20261114050000"]
-    assert actual_versions[-20:] == (
+    listing_fulfilment = ["20261115090000"]
+    assert actual_versions[-21:] == (
         repairs
         + post_repair
         + queued_features
@@ -173,6 +176,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + money_dispatch
         + notification_center
         + rate_scope_sync
+        + listing_fulfilment
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

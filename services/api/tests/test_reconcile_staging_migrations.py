@@ -87,6 +87,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113130000",
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
 }
 
 

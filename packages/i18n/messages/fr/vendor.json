@@ -117,7 +117,7 @@
           "description": "Créez votre compte vendeur sur mobile ou ordinateur — sans frais initiaux."
         },
         "kyc": {
-          "title": "Vérifiez avec le KYC T1",
+          "title": "Vérifiez votre identité",
           "description": "Téléversez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile money. Approbation le jour même."
         },
         "list": {
@@ -192,15 +192,15 @@
   "onboarding": {
     "meta": {
       "title": "Onboarding invitation vendeur — Convergeo",
-      "description": "Complétez votre candidature vendeur sur invitation et le KYC T1. Les annonces restent verrouillées jusqu'à l'approbation admin."
+      "description": "Complétez votre candidature vendeur sur invitation et vérifiez votre identité. Les annonces restent verrouillées jusqu'à l'approbation de l'administrateur."
     },
     "invite": {
       "eyebrow": "Bêta invitation / concierge",
-      "body": "Vous terminez une candidature vendeur sur invitation. Catalogue, versements et tableau de bord restent verrouillés jusqu'à l'approbation KYC et l'accès vendeur."
+      "body": "Vous terminez une candidature vendeur sur invitation. Catalogue, versements et tableau de bord restent verrouillés tant que Convergeo n'a pas vérifié votre identité et accordé l'accès vendeur."
     },
     "steps": {
       "business": "Entreprise",
-      "kyc": "Vérifier l'identité",
+      "kyc": "Vérifiez votre identité",
       "review": "Récapitulatif"
     },
     "stepAnnouncement": "Étape {current} sur {total}",
@@ -224,7 +224,7 @@
       "saving": "Enregistrement…"
     },
     "kyc": {
-      "heading": "Vérification T1",
+      "heading": "Vérifiez votre identité",
       "intro": "Importez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile-money. Rien n'est publié avant approbation.",
       "nrcLabel": "Photo du NRC",
       "nrcHelp": "Photographiez le recto de votre carte nationale d'identité (NRC) sous un bon éclairage.",
@@ -266,10 +266,10 @@
       "submitting": "Soumission…",
       "editBusiness": "Modifier l'entreprise",
       "editDocs": "Modifier les documents",
-      "gateNotice": "Vos annonces restent masquées jusqu'à l'approbation du KYC."
+      "gateNotice": "Vos annonces restent masquées tant que votre identité n'est pas vérifiée."
     },
     "status": {
-      "heading": "Statut de vérification",
+      "heading": "Vérifiez votre identité",
       "pending": {
         "title": "En cours d'examen",
         "body": "Nous vérifions vos documents. Vous recevrez une notification WhatsApp une fois terminé.",
@@ -314,7 +314,7 @@
     },
     "loading": "Chargement…",
     "checklist": {
-      "heading": "Liste de vérification",
+      "heading": "Ce qu’il faut pour vérifier votre identité",
       "progress": "{done} sur {total} terminés",
       "items": {
         "business": {
@@ -352,9 +352,16 @@
         "review": "Corrigez les éléments signalés ci-dessus, puis renvoyez — inutile de tout recommencer."
       },
       "reasonLabel": "Message de notre équipe",
-      "ctaFinish": "Continuer la vérification",
+      "ctaFinish": "Vérifiez votre identité",
       "ctaFix": "Corriger et renvoyer",
       "pendingNote": "Vous pouvez explorer l'application en attendant. Vos annonces restent cachées aux acheteurs jusqu'à l'approbation."
+    },
+    "back": "Retour",
+    "saveLater": {
+      "cta": "Enregistrer et continuer plus tard",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré. Revenez quand vous voulez, vous reprendrez ici.",
+      "savedLocal": "Enregistré sur cet appareil. Revenez sur ce téléphone pour reprendre là où vous vous êtes arrêté."
     }
   },
   "listings": {
@@ -438,7 +445,7 @@
       "publishing": "Publication…",
       "descriptionLabel": "Description de l’annonce",
       "descriptionHelp": "Décrivez cet article ou cette offre en au moins 20 caractères.",
-      "draftNotice": "Enregistrer un brouillon ne publie pas l’annonce.",
+      "draftNotice": "Enregistrer un brouillon ne publie jamais l'annonce. Les règles de catégorie et de lancement ne s'appliquent qu'à la publication.",
       "descriptionInvalid": "Saisissez au moins 20 caractères, sans compter les espaces au début et à la fin.",
       "saveDraft": "Enregistrer le brouillon",
       "savingDraft": "Enregistrement du brouillon…",
@@ -494,9 +501,25 @@
       "wholesaleHelp": "Entreprises vérifiées T2+ uniquement",
       "wholesaleMeasureUnavailable": "Les paliers de gros ne sont pas encore disponibles pour les annonces vendues à la mesure.",
       "moqLabel": "Quantité minimale de commande",
-      "evidenceDraftNotice": "Les annonces d'occasion et de classe D sont enregistrées en brouillon. Ajoutez au moins une photo de preuve avant de publier.",
+      "evidenceDraftNotice": "Les annonces d'occasion sont enregistrées en brouillon. Ajoutez au moins une photo avant de publier.",
       "saveDraft": "Enregistrer le brouillon et ajouter des photos",
-      "savingDraft": "Enregistrement du brouillon…"
+      "savingDraft": "Enregistrement du brouillon…",
+      "classHintD": "Article unique ou autonome. Il peut être neuf, reconditionné ou d'occasion. Il nécessite sa propre catégorie et une description d'au moins 20 caractères.",
+      "classHintE": "Sur commande : indiquez un délai et une capacité hebdomadaire. Le stock n'est pas compté et l'article reste disponible.",
+      "conditionUsedHint": "Les articles d'occasion nécessitent une courte description de l'usure ou des défauts et au moins une photo avant la mise en ligne. Les articles neufs et reconditionnés n'en ont pas besoin.",
+      "conditionGradeLabel": "État",
+      "gradeExcellent": "Excellent",
+      "gradeGood": "Bon",
+      "gradeFair": "Correct",
+      "gradeParts": "Pour pièces / hors service",
+      "fulfilmentLockedHint": "Les articles de classe E sont toujours sur commande ; un délai est donc obligatoire.",
+      "fulfilmentOptionsLabel": "Comment les acheteurs peuvent-ils recevoir cet article ?",
+      "fulfilmentOptionsHelp": "Cochez toutes les options proposées. Au paiement, seules les options acceptées par tous les articles de la commande sont affichées.",
+      "fulfilmentOptionsInvalid": "Choisissez au moins un mode de réception pour cet article.",
+      "optionLusakaDelivery": "Livraison à Lusaka",
+      "optionPickupShop": "Retrait dans ma boutique ou mon agence",
+      "optionPickupNationwide": "Retrait national (les acheteurs de tout le pays peuvent venir chercher)",
+      "stockLockedHint": "Les articles sur commande ne sont pas comptés en stock ; ils sont toujours disponibles."
     },
     "success": {
       "live": "L'annonce est en ligne !",
@@ -519,7 +542,9 @@
       "retryHint": "Vérifiez votre connexion, puis réessayez.",
       "canonicalRequired": "Les classes A, B et C nécessitent un produit du catalogue. Utilisez l’association au catalogue ou la création d’un produit.",
       "standaloneDetailsRequired": "Sélectionnez une catégorie et ajoutez une description d’au moins 20 caractères pour cette annonce autonome.",
-      "policyBlocked": "Cette annonce ne peut pas être publiée selon la politique de catégorie ou de lancement actuelle. Vérifiez ses champs et contactez l’assistance si nécessaire."
+      "policyBlocked": "Cette annonce ne peut pas être publiée selon les règles actuelles de catégorie ou de lancement. Votre brouillon est conservé. Contactez le support si besoin.",
+      "draftInvalid": "Impossible d'enregistrer ce brouillon. Corrigez les champs signalés et réessayez.",
+      "publishBlocked": "Cette annonce ne peut pas encore être publiée. Corrigez les champs signalés. Vous pouvez toujours l'enregistrer en brouillon."
     },
     "import": {
       "meta": {
@@ -708,12 +733,17 @@
         "draft": "Visible par vous seul",
         "active": "Visible et commandable par les acheteurs",
         "paused": "Caché aux acheteurs"
+      },
+      "removed": {
+        "title": "Cette annonce a été supprimée",
+        "body": "Elle n'est plus visible par les acheteurs et ne peut plus être modifiée. Les commandes passées conservent son historique.",
+        "back": "Retour aux annonces"
       }
     },
     "kycGate": {
       "title": "Vérification en cours",
       "body": "Vous pouvez préparer vos annonces dès maintenant, mais les acheteurs ne les verront qu'après l'approbation de votre vérification.",
-      "cta": "Voir le statut de vérification",
+      "cta": "Vérifiez votre identité",
       "wholesaleLocked": "Les prix de gros se débloquent après une vérification T2 auditable."
     },
     "variants": {
@@ -806,6 +836,37 @@
         "title": "Stock et options",
         "body": "Indiquez la quantité réellement disponible. Ajoutez des options (taille, couleur) quand l'acheteur doit choisir — chaque option a son propre stock."
       }
+    },
+    "fieldErrors": {
+      "class_not_released": "Cette classe de produit n'est pas encore ouverte à la vente.",
+      "category_policy_blocked": "Cette catégorie n'autorise pas cette classe de produit pour les annonces en ligne.",
+      "kyc_tier_too_low": "Votre niveau de vérification est inférieur à celui requis pour cette catégorie. Vérifiez votre identité pour continuer.",
+      "category_required": "Choisissez une catégorie.",
+      "canonical_product_required": "Associez un produit du catalogue pour cette classe.",
+      "description_too_short": "Décrivez l'article en au moins 20 caractères.",
+      "condition_grade_mismatch": "Choisissez un état cohérent avec la condition.",
+      "defect_notes_required": "Décrivez l'usure ou les défauts en au moins 10 caractères.",
+      "lead_time_required": "Indiquez un délai en jours pour les articles sur commande.",
+      "lead_time_invalid": "Le délai doit être compris entre 1 et 365 jours.",
+      "lead_time_not_allowed": "Le délai ne s'applique qu'aux articles sur commande.",
+      "capacity_required": "La capacité hebdomadaire est requise pour les articles sur commande (classe E).",
+      "capacity_too_low": "La capacité hebdomadaire doit couvrir la quantité minimale d'achat.",
+      "capacity_not_allowed": "La capacité hebdomadaire ne s'applique qu'à la classe E.",
+      "title_required": "Saisissez un titre.",
+      "standalone_required": "Cette classe est une offre autonome, non liée à un produit du catalogue.",
+      "fulfilment_options_invalid": "Choisissez au moins un mode de réception.",
+      "compare_at_too_low": "Le prix barré doit être supérieur au prix.",
+      "evidence_required": "Ajoutez au moins une photo de l'article avant la mise en ligne.",
+      "prohibited_listing": "Cet article ou cette catégorie ne peut pas être vendu sur Vergeo5.",
+      "listing_rejected": "L'annonce a été refusée. Vérifiez les détails et réessayez.",
+      "stock_qty_required": "Indiquez le nombre d'unités disponibles.",
+      "unit_step_each": "Les articles vendus à la pièce utilisent un pas de 1.",
+      "wholesale_measure": "Le prix de gros n'est pas disponible pour les articles vendus à la mesure.",
+      "class_e_made_to_order": "Les articles de classe E doivent être sur commande.",
+      "return_window_required": "Indiquez le délai de retour en heures.",
+      "spec_invalid": "Vérifiez les détails du produit saisis.",
+      "product_required": "Choisissez un produit du catalogue.",
+      "fulfilment_not_offered": "Le vendeur ne propose pas cette option pour un article de votre commande."
     }
   },
   "profile": {
@@ -1127,9 +1188,9 @@
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "kycBanner": {
-      "title": "Terminer la vérification",
-      "body": "Votre boutique n'est pas marquée vérifiée tant que le KYC n'est pas approuvé avec un dossier auditable.",
-      "cta": "Voir le statut KYC"
+      "title": "Vérifiez votre identité",
+      "body": "Votre boutique n'est pas marquée vérifiée tant que votre identité n'est pas approuvée avec un enregistrement auditable.",
+      "cta": "Vérifiez votre identité"
     },
     "shortcuts": {
       "ariaLabel": "Raccourcis",
@@ -1144,15 +1205,15 @@
       "intro": "Commencez en haut : le plus urgent est en premier.",
       "items": {
         "kycFix": {
-          "title": "Corrigez votre vérification",
+          "title": "Corrigez votre vérification d’identité",
           "body": "Nous n'avons pas pu valider l'un de vos documents. Voyez quoi changer — inutile de tout recommencer."
         },
         "kycFinish": {
-          "title": "Terminez votre vérification",
+          "title": "Vérifiez votre identité",
           "body": "Les acheteurs ne voient pas votre boutique tant que nous n'avons pas vérifié votre identité. Cela prend environ 5 minutes."
         },
         "kycPending": {
-          "title": "Votre vérification est en cours d'examen",
+          "title": "Votre identité est en cours d’examen",
           "body": "Rien à faire pour l'instant. Notre équipe répond en général sous 1 jour ouvré."
         },
         "ordersWaiting": {
@@ -1320,7 +1381,7 @@
       "methodFailed": "Impossible de mettre à jour la méthode de versement. Réessayez.",
       "otpFailed": "Code de vérification invalide ou expiré.",
       "nameMismatch": "Ce nom MoMo ne correspond pas à votre nom légal vérifié.",
-      "kycRequired": "Complétez le KYC avant de changer de méthode de versement.",
+      "kycRequired": "Vérifiez votre identité avant de changer de méthode de versement.",
       "payoutsPaused": "Les versements sont suspendus après un changement de méthode de versement.",
       "rateLimited": "Trop de requêtes. Réessayez sous peu.",
       "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain.",
@@ -1364,7 +1425,9 @@
       "loading": "Démarrage de la caméra…",
       "denied": "Accès à la caméra bloqué",
       "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur, ou saisissez plutôt le PIN du client.",
-      "usePin": "Saisir le PIN à la place"
+      "usePin": "Saisir le PIN à la place",
+      "deniedNote": "Saisissez le code PIN de retrait ci-dessus, ou autorisez l'accès à la caméra dans les réglages du navigateur pour scanner.",
+      "retry": "Réessayer la caméra"
     },
     "pin": {
       "heading": "Saisir le PIN de retrait",
@@ -1444,7 +1507,9 @@
         "loading": "Démarrage de la caméra…",
         "denied": "Accès à la caméra bloqué",
         "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets.",
-        "useManual": "Saisir plutôt le PIN du billet"
+        "useManual": "Saisir plutôt le PIN du billet",
+        "deniedNote": "Saisissez le code PIN du billet ci-dessus, ou autorisez l'accès à la caméra dans les réglages du navigateur pour scanner.",
+        "retry": "Réessayer la caméra"
       },
       "manual": {
         "heading": "Enregistrement manuel",
@@ -1628,12 +1693,29 @@
       "actionFailed": "Échec de l'action. Réessayez.",
       "notFound": "Événement introuvable.",
       "required": "Ce champ est obligatoire",
-      "kyc_required": "Complétez la vérification KYC avant de créer des événements.",
+      "kyc_required": "Vérifiez votre identité avant de créer des événements.",
       "capacity_below_sold": "La capacité ne peut pas être inférieure aux billets déjà vendus.",
       "past_instance": "Reportez les dates passées avant de publier.",
       "ends_before_starts": "L'heure de fin doit être postérieure à l'heure de début.",
       "not_editable": "Cet événement ne peut plus être modifié.",
-      "invalid_transition": "Cette action n'est pas disponible pour cet événement."
+      "invalid_transition": "Cette action n'est pas disponible pour cet événement.",
+      "recurrenceRuleRequired": "Les événements récurrents nécessitent une règle de répétition et un fuseau horaire.",
+      "recurrenceSeedRequired": "Une série récurrente nécessite une date de départ. Les dates suivantes sont créées automatiquement."
+    },
+    "gate": {
+      "title": "Les événements sont réservés aux organisateurs vérifiés",
+      "intro": "Votre compte n'est pas encore configuré pour organiser des événements. Choisissez la voie qui vous convient.",
+      "become": {
+        "title": "Devenir organisateur",
+        "body": "Vérifiez votre identité une fois pour créer des événements, vendre des billets et enregistrer les invités.",
+        "cta": "Devenir organisateur"
+      },
+      "collaborate": {
+        "title": "Organiser un événement avec un organisateur vérifié",
+        "body": "Associez-vous à un organisateur déjà vérifié et laissez-le gérer la billetterie de votre événement.",
+        "cta": "Demander une collaboration",
+        "soon": "Bientôt disponible. Nous vous préviendrons à l'ouverture des demandes de collaboration."
+      }
     }
   },
   "tickets": {
@@ -1997,7 +2079,8 @@
       "home": "Accueil",
       "listings": "Annonces",
       "orders": "Commandes",
-      "profile": "Profil"
+      "profile": "Profil",
+      "settings": "Paramètres"
     }
   },
   "intake": {
@@ -2006,6 +2089,50 @@
     },
     "errors": {
       "canonical_required": "Choisissez le produit actif correspondant dans le catalogue avant de soumettre ce brouillon."
+    }
+  },
+  "settings": {
+    "meta": {
+      "title": "Paramètres — Convergeo Vendeur",
+      "description": "Compte, notifications, mode de versement et langue."
+    },
+    "title": "Paramètres",
+    "intro": "Compte, notifications, mode de versement et langue au même endroit.",
+    "account": {
+      "heading": "Compte",
+      "signedInAs": "Connecté en tant que",
+      "unknown": "Compte inconnu",
+      "changePassword": "Changer le mot de passe",
+      "editProfile": "Modifier le profil de la boutique",
+      "signOut": "Se déconnecter",
+      "signingOut": "Déconnexion…",
+      "signOutFailed": "Déconnexion impossible. Réessayez."
+    },
+    "notifications": {
+      "heading": "Notifications",
+      "body": "Consultez vos alertes et choisissez où recevoir les mises à jour de commande.",
+      "open": "Ouvrir les notifications",
+      "whatsapp": "Numéro WhatsApp"
+    },
+    "payout": {
+      "heading": "Mode de versement",
+      "pilot": "Les versements ne sont pas encore activés. Votre mode de versement s'affichera ici une fois actifs.",
+      "loading": "Chargement du mode de versement…",
+      "loadFailed": "Impossible de charger votre mode de versement.",
+      "current": "{rail} mobile money · {number}",
+      "none": "Aucun mode de versement pour le moment.",
+      "change": "Changer de mode de versement"
+    },
+    "language": {
+      "heading": "Langue",
+      "label": "Langue de l'application",
+      "names": {
+        "en": "English",
+        "bem": "Bemba",
+        "nya": "Nyanja",
+        "fr": "Français",
+        "zh": "中文"
+      }
     }
   }
 }

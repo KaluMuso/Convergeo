@@ -147,7 +147,8 @@
         "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock partent généralement aujourd'hui, après confirmation du vendeur.",
         "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock partiront généralement demain, après confirmation du vendeur.",
         "cutoffMadeToOrder": "Les articles sur commande partent dès qu'ils sont prêts — voyez le délai de chaque article."
-      }
+      },
+      "notOffered": "Ce vendeur ne propose pas cette option de remise pour un article de votre panier."
     },
     "countdown": {
       "label": "Articles réservés pendant",
