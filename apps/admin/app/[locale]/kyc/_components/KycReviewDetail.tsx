@@ -1,9 +1,9 @@
 "use client";
 
+import { ApiError } from "@vergeo/config";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-
 
 import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
@@ -26,16 +26,23 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [notFound, setNotFound] = useState(false);
   const [checks, setChecks] = useState<KycChecks>(EMPTY_CHECKS);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     setPermissionDenied(false);
+    setNotFound(false);
     try {
       const data = await kycApi.request<KycDetail>(`/admin/kyc/${kycId}`);
       setDetail(data);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setNotFound(true);
+        setDetail(null);
+        return;
+      }
       const failure = resolveQueueLoadFailure(err);
       setPermissionDenied(failure.permissionDenied);
       setError(t(failure.messageKey));
@@ -51,6 +58,21 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
 
   if (loading) {
     return <LoadingBlock label={t("loading")} rows={4} />;
+  }
+
+  if (notFound) {
+    return (
+      <div className="space-y-2" role="alert" data-testid="admin-not-found">
+        <h1 className="font-serif text-xl text-text">{t("notFound")}</h1>
+        <p className="text-sm text-muted">{t("notFoundBody")}</p>
+        <Link
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+          href={`/${locale}/kyc`}
+        >
+          {t("back")}
+        </Link>
+      </div>
+    );
   }
 
   if (error || !detail) {

@@ -5,7 +5,6 @@ from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.cart.store import fetch_listing
 from app.services.inventory.location_stock import (
     fetch_branch_stock_rows,
@@ -437,8 +436,6 @@ def _variant_payload(
 def build_product_detail(
     client: Any,
     slug: str,
-    *,
-    include_wholesale: bool = False,
 ) -> ProductDetailResponse | RedirectResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None and _UUID_RE.match(slug):
@@ -489,20 +486,15 @@ def build_product_detail(
         .execute()
     )
     listing_rows = listings_response.data or []
-    if not include_wholesale:
-        # Wholesale-only listings are B2B supplies: hidden from the consumer
-        # product page (gallery, vendor comparison, count) unless the caller is
-        # a verified business buyer.
-        retail_rows = [row for row in listing_rows if not row.get("wholesale")]
-        # D36: when the filter empties the page, the product is wholesale-only
-        # for this caller and must be indistinguishable from one that does not
-        # exist. Rendering a listing-less page would confirm the product is
-        # real and merely withheld, which is the disclosure D36 forbids — an id
-        # enumerator could map the B2B catalogue without ever qualifying as a
-        # buyer. Same treatment the demo filter already applies below.
-        if listing_rows and not retail_rows:
-            raise AppError("product.not_found", "Product not found", 404)
-        listing_rows = retail_rows
+    # Wholesale prices live only in the vendor app: wholesale listings never
+    # reach the customer product page (gallery, vendor comparison, count).
+    retail_rows = [row for row in listing_rows if not row.get("wholesale")]
+    # When the filter empties the page, the product is wholesale-only and must
+    # be indistinguishable from one that does not exist (D36): a listing-less
+    # page would confirm the product is real and merely withheld.
+    if listing_rows and not retail_rows:
+        raise AppError("product.not_found", "Product not found", 404)
+    listing_rows = retail_rows
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     # D25 / VC-P06: hide demo seed inventory on the public PDP. When every
@@ -857,14 +849,13 @@ class PickupLocationsResponse(BaseModel):
 async def get_pickup_locations(
     listing_id: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> PickupLocationsResponse:
     """Active branches carrying a branch-tracked listing — the Customer PDP's
     required-pickup-branch selector reads this before Add to Cart.
 
     Same existence/visibility rule cart mutations already enforce (D36): an
     id the caller isn't eligible to see is answered as though it never
-    existed, so this never leaks whether a wholesale-gated listing exists.
+    existed, so this never leaks whether a wholesale listing exists.
 
     `branch_tracked=false` (legacy pooled listing) always returns an empty
     `locations` list — the PDP needs no selection for those. A genuinely
@@ -872,7 +863,7 @@ async def get_pickup_locations(
     an empty list with `branch_tracked=true`, so the caller can render an
     honest "no pickup branch available" state instead of a fabricated one.
     """
-    fetch_listing(listing_id, business_eligible=access.eligible)
+    fetch_listing(listing_id)
 
     if not is_branch_tracked(listing_id):
         return PickupLocationsResponse(listing_id=listing_id, branch_tracked=False, locations=[])
@@ -910,9 +901,8 @@ async def get_pickup_locations(
 async def get_product(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ProductDetailResponse | RedirectResponse:
-    result = build_product_detail(supabase.client, slug, include_wholesale=access.eligible)
+    result = build_product_detail(supabase.client, slug)
     if isinstance(result, RedirectResponse):
         return result
     return result

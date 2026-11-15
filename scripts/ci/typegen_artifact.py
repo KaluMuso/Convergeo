@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 168
+MIGRATION_COUNT = 169
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -47,6 +47,8 @@ POST_REPAIR_ORDER = [
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
     "20261115140000",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).

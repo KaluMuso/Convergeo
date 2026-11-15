@@ -2,7 +2,6 @@ import { loadNamespace, type Locale } from "@vergeo/i18n";
 import {
   IconAccount,
   IconAsk,
-  IconCart,
   IconHome,
   IconOrders,
   IconSearch,
@@ -81,13 +80,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
     },
   ];
 
-  const suppliesItem = {
-    key: "supplies",
-    icon: <IconCart />,
-    label: t("shop.supplies"),
-    href: `/${locale}/supplies`,
-  };
-
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <TopUtilityBarSlot locale={locale} />
@@ -129,7 +121,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           services: t("shop.services"),
           events: t("shop.events"),
           askVergeo: t("shop.askVergeo"),
-          supplies: t("shop.supplies"),
           account: t("shop.account"),
           cart: t("shop.cart"),
           // Interpolated with the live cart count in the header client component.
@@ -168,7 +159,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         items={bottomItems}
         ariaLabel={t("shop.bottomAriaLabel")}
         locale={locale}
-        suppliesItem={suppliesItem}
       />
       <LazyCartHostSlot locale={locale} />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}

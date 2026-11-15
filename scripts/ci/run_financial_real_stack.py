@@ -68,6 +68,8 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000_rate_counter_scope_constraint_sync.sql",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
     "20261115140000_admin_money_tables_read_only.sql",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
@@ -453,7 +455,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 168 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 169 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

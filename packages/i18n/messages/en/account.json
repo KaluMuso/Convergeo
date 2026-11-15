@@ -27,11 +27,8 @@
       "rejected": "Not verified",
       "suspended": "Suspended"
     },
-    "verifiedTitle": "Business mode is active",
-    "verifiedBody": "You can browse and buy wholesale supplies with tier pricing.",
     "pendingTitle": "Verification in review",
     "pendingBody": "We're checking your PACRA details. This usually takes 1–2 business days.",
-    "browseSupplies": "Browse supplies",
     "legalNameLabel": "Registered business name",
     "legalNamePlaceholder": "As shown on your PACRA certificate",
     "registrationLabel": "PACRA registration number",

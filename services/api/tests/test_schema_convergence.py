@@ -98,6 +98,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113120500",
     # In-app notification center (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000",
     # Analytics/RBAC audit S1: admin read-only on money tables (additive).
     "20261115140000",
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
@@ -153,7 +155,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 168
+    assert len(sql_files) == len(migrations) == 169
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -173,29 +175,21 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         "20261109120000",
     ]
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
-    audit_s1 = ["20261115140000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
+    rate_scope_sync = ["20261114050000"]
+    audit_s1 = ["20261115140000"]
     governance = ["20261115140100", "20261115140200"]
-    analytics_v2 = [
-        "20261115150000",
-        "20261115150100",
-        "20261115150200",
-        "20261115150300",
-        "20261115150400",
-        "20261115150500",
-        "20261115150600",
-    ]
-    assert actual_versions[-29:] == (
+    assert actual_versions[-30:] == (
         repairs
         + post_repair
         + queued_features
         + pilot_fixes
         + money_dispatch
         + notification_center
+        + rate_scope_sync
         + audit_s1
         + governance
-        + analytics_v2
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
