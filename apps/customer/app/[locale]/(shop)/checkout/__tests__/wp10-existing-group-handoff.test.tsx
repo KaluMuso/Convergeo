@@ -190,7 +190,7 @@ describe("WP10H existing checkout group handoff", () => {
 
   it("preserves the empty-product-cart redirect when no handoff is supplied", async () => {
     await visitCheckout({});
-    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/en/cart"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/en/cart"));
     expect(mocks.request).toHaveBeenCalledWith("/checkout/session", { method: "POST" });
     expect(mocks.network).not.toHaveBeenCalled();
   });

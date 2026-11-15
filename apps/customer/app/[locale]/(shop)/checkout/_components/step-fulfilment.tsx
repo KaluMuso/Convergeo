@@ -15,6 +15,7 @@ import {
   getReadyCustomerSession,
   useSession,
 } from "../../../../../lib/customer-session";
+import { useCartStore } from "../../_components/cart/cart-store";
 import { classifyPlaceOrderError, placeOrder } from "../_lib/place-order";
 
 import {
@@ -25,8 +26,9 @@ import {
 } from "./step-contact";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
+
 import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
-import type { FulfilmentMode, SaleUnit } from "../../_components/sale-quantity";
+import type { FulfilmentMode, LeadTimePhrases, SaleUnit } from "../../_components/sale-quantity";
 
 /** Lazy — step 3 is only reached after contact + fulfilment; keeps /checkout first-load JS in budget. */
 const StepPayment = dynamic(() => import("./step-payment").then((mod) => mod.StepPayment), {
@@ -182,6 +184,9 @@ export type CheckoutShellLabels = {
     variantSeparator?: string;
     saleUnits: ReviewStepLabels["saleUnits"];
     madeToOrderLeadTime: string;
+    leadTimeWhen?: LeadTimePhrases;
+    estimatedReady?: string;
+    estimatedDelivery?: string;
     subtotal: string;
     deliveryFees: string;
     total: string;
@@ -342,6 +347,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       variantSeparator: messages.review.variantSeparator,
       saleUnits: messages.review.saleUnits,
       madeToOrderLeadTime: messages.review.madeToOrderLeadTime,
+      leadTimeWhen: messages.review.leadTimeWhen,
+      estimatedReady: messages.review.estimatedReady,
+      estimatedDelivery: messages.review.estimatedDelivery,
       subtotal: messages.review.subtotal,
       deliveryFees: messages.review.deliveryFees,
       total: messages.review.total,
@@ -473,8 +481,10 @@ function IdentityCheckoutShell({
         });
         if (!isCurrent()) return;
         if (!response.vendor_groups.length) {
-          setErrorMessage(labels.error);
+          // An empty cart is not an error: send the shopper to the cart, which
+          // owns the empty state and the way back into the catalogue.
           started.current = false;
+          router.replace(cartPath);
           return;
         }
         setCheckoutSession(response);
@@ -486,7 +496,7 @@ function IdentityCheckoutShell({
         started.current = false;
         if (error instanceof ApiError) {
           if (error.code === "checkout.cart_empty") {
-            router.push(cartPath);
+            router.replace(cartPath);
             return;
           }
           if (
@@ -506,6 +516,20 @@ function IdentityCheckoutShell({
     },
     [cartPath, labels.error, router, isCurrent, session?.user.phone],
   );
+
+  // Empty cart before a checkout session exists: never show the contact form for
+  // nothing to buy. Once a session exists the cart is reserved by it (and is
+  // legitimately emptied when the order is placed), so the guard steps aside.
+  const cartStore = useCartStore();
+  const cartIsEmpty =
+    !checkoutSession &&
+    !cartStore.loading &&
+    !cartStore.loadError &&
+    cartStore.cart !== null &&
+    cartStore.cart.items.length === 0;
+  useEffect(() => {
+    if (cartIsEmpty) router.replace(cartPath);
+  }, [cartIsEmpty, cartPath, router]);
 
   useEffect(() => {
     if (
@@ -612,6 +636,23 @@ function IdentityCheckoutShell({
       )}
     </div>
   );
+
+  if (cartIsEmpty) {
+    return (
+      <div className="space-y-4" data-testid="checkout-empty-cart">
+        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
+        <p role="status" className="font-body text-body text-text-2">
+          {labels.emptyCart}
+        </p>
+        <Link
+          href={cartPath}
+          className="inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
+          {labels.backToCart}
+        </Link>
+      </div>
+    );
+  }
 
   if (busy) {
     // Preserve the Stepper and form geometry (Run #68 CLS) while rendering the

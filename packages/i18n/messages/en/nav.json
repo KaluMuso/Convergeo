@@ -34,7 +34,8 @@
     "contact": "Contact",
     "help": "Help",
     "sell": "Sell on Convergeo",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "account": "My account"
   },
   "account": {
     "ariaLabel": "Account navigation",

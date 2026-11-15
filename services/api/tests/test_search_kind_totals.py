@@ -18,7 +18,9 @@ def _hit(entity_kind: str, entity_id: str = "1") -> SearchHit:
             "id": entity_id,
             "entity_kind": entity_kind,
             "entity_id": entity_id,
-            "title": "Sample",
+            "title": "Phone sample",
+            "price_min_ngwee": 10000,
+            "price_max_ngwee": 10000,
             "rrf_score": 1.0,
         }
     )

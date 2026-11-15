@@ -2,10 +2,22 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../../../lib/page-title";
+
+import type { Metadata } from "next";
+
 type LayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "checkout", "checkout.card.pageTitle", {
+    index: false,
+    follow: false,
+  });
+}
 
 /**
  * Client i18n provider scoped to the card-payment return page. This page is a

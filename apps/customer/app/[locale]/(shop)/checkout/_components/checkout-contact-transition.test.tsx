@@ -181,9 +181,9 @@ it("does not present an empty vendor response as usable fulfilment", async () =>
       : normal(url, init),
   );
   await start();
-  expect(await screen.findByRole("alert")).toHaveTextContent(m.error);
+  // An empty cart is not an error: send the buyer back to the cart with an empty state.
+  await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/en/cart"));
   expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Back to cart" })).toHaveAttribute("href", "/en/cart");
 });
 
 for (const verified of [false, "error"]) {

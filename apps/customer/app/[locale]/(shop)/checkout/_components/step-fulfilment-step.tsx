@@ -66,6 +66,7 @@ export function StepFulfilment({
     subtotal_ngwee: number;
     delivery_fee_ngwee: number;
     total_ngwee: number;
+    groups?: FulfilmentGroupResult[];
   } | null>(null);
 
   const handleExpired = useCallback(() => {
@@ -157,6 +158,13 @@ export function StepFulfilment({
   );
   // Lusaka clock, read once per render; the copy is advisory (vendor confirms dispatch).
   const afterCutoff = lusakaHour(new Date()) >= LUSAKA_CUTOFF_HOUR;
+  // The same-day cut-off is a Lusaka dispatch promise: only for delivery, and only
+  // while the address is (or may still be) inside a Lusaka delivery zone. Pickup
+  // orders and addresses the API placed outside every zone never see it.
+  const outsideZone =
+    errorMessage === labels.outsideZone ||
+    (totals?.groups ?? []).some((group) => group.fulfilment === "delivery" && !group.delivery_zone);
+  const showDispatchCutoff = Boolean(guide) && deliverySelected && !outsideZone;
 
   return (
     <div className="space-y-5">
@@ -174,7 +182,7 @@ export function StepFulfilment({
         <p className="font-body text-xs text-text-3">{guide?.groupHint ?? labels.mixedHint}</p>
       </div>
 
-      {guide ? (
+      {showDispatchCutoff && guide ? (
         <div
           className="space-y-1 rounded-card border border-border bg-bg-2 px-4 py-3"
           data-testid="checkout-dispatch-cutoff"

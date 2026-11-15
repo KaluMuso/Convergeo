@@ -8,6 +8,7 @@ import {
   formatSaleIncrement,
   resolveMinimumSteps,
   resolveSaleUnit,
+  type LeadTimePhrases,
   type SaleUnitLabels,
 } from "../sale-quantity";
 
@@ -21,6 +22,7 @@ export type CartLineItemLabels = QtyStepperLabels & {
   unitPriceMeasured: string;
   saleUnits: SaleUnitLabels;
   madeToOrderLeadTime: string;
+  leadTimeWhen?: LeadTimePhrases;
   lineTotal: string;
   quotedPriceBadge: string;
   remove: string;
@@ -76,6 +78,7 @@ export function CartLineItem({
     item.fulfilment_mode,
     item.lead_time_days,
     labels.madeToOrderLeadTime,
+    labels.leadTimeWhen,
   );
 
   return (

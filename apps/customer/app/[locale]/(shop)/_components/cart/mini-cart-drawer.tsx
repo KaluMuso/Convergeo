@@ -22,6 +22,7 @@ import {
   type FulfilmentMode,
   type SaleUnit,
   type SaleUnitLabels,
+  type LeadTimePhrases,
 } from "../sale-quantity";
 
 import {
@@ -859,6 +860,7 @@ export type MiniCartLabels = {
   quantityValue: string;
   saleUnits: SaleUnitLabels;
   madeToOrderLeadTime: string;
+  leadTimeWhen?: LeadTimePhrases;
 };
 
 export type CartEmptyTrustLabels = {
@@ -1022,6 +1024,7 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
                   item.fulfilment_mode,
                   item.lead_time_days,
                   labels.madeToOrderLeadTime,
+                  labels.leadTimeWhen,
                 );
 
                 return (

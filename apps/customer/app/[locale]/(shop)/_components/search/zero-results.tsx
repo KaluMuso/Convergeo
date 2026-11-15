@@ -9,6 +9,11 @@ export type CategorySuggestion = {
 
 export type ZeroResultsLabels = {
   title: string;
+  /** Short explanation under the title (spelling hint / what was searched). */
+  body?: string;
+  /** Shown with `resetHref` when a tab or filters narrowed the search to nothing. */
+  resetLabel?: string;
+  resetHref?: string;
   suggestionsTitle: string;
   categoriesTitle: string;
   suggestionTerms: string[];
@@ -29,6 +34,22 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
     <div className="space-y-6" data-testid="search-zero-results">
       <div className="rounded-lg border border-border bg-surface p-4 text-center">
         <p className="font-medium text-text">{labels.title}</p>
+        {labels.body ? (
+          <p className="mt-1 text-sm text-text-2" data-testid="search-zero-results-body">
+            {labels.body}
+          </p>
+        ) : null}
+        {labels.resetHref && labels.resetLabel ? (
+          <LinkButton
+            href={labels.resetHref}
+            variant="secondary"
+            className="mt-3 rounded-lg text-sm text-primary hover:border-primary"
+            data-testid="search-zero-results-reset"
+            LinkComponent={Link}
+          >
+            {labels.resetLabel}
+          </LinkButton>
+        ) : null}
       </div>
 
       <section aria-labelledby="search-suggestion-terms">

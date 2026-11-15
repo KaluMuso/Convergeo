@@ -26,6 +26,7 @@ const lineLabels = {
   unitPriceMeasured: checkoutMessages.cart.unitPriceMeasured,
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
+  leadTimeWhen: checkoutMessages.cart.leadTimeWhen,
   lineTotal: checkoutMessages.cart.lineTotal,
   quotedPriceBadge: checkoutMessages.cart.quotedPriceBadge,
   remove: checkoutMessages.cart.remove,
@@ -280,7 +281,7 @@ describe("VendorGroups", () => {
     );
 
     expect(screen.getByTestId("cart-line-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready in 7 days",
+      "Made to order · ready within a week",
     );
   });
 

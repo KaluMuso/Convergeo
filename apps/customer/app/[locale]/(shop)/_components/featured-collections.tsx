@@ -71,7 +71,7 @@ function parseCollections(payload: Record<string, unknown>, locale: string): Col
                 typeof item.image_public_id === "string" ? item.image_public_id : undefined,
               ngwee: typeof item.ngwee === "number" ? item.ngwee : 0,
               vendorLabel:
-                typeof item.vendor_label === "string" ? item.vendor_label : "Vergeo5 vendor",
+                typeof item.vendor_label === "string" ? item.vendor_label : "Convergeo vendor",
             },
           ];
         })

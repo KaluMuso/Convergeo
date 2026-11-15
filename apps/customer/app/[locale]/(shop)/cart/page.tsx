@@ -3,17 +3,21 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { CartPageSkeleton } from "../_components/cart/cart-page-skeleton";
 import { CartPageView, type CartPageLabels } from "../_components/cart/vendor-groups";
+import { readLeadTimePhrases } from "../_components/sale-quantity";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "checkout", "cart.title", { index: false, follow: false });
+}
 
 type CartPageProps = {
   params: Promise<{ locale: string }>;
@@ -53,11 +57,7 @@ export default async function CartPage({ params }: CartPageProps) {
     loadErrorRetry: t("cart.loadErrorRetry"),
     multiSellerNote: t("cart.multiSellerNote"),
     escrowTeaser: t("cart.escrowTeaser"),
-    escrowSteps: [
-      t("checkout.review.escrowStep1"),
-      t("checkout.review.escrowStep2"),
-      t("checkout.review.escrowStep3"),
-    ],
+    escrowSteps: [t("cart.codStep1"), t("cart.codStep2"), t("cart.codStep3")],
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
@@ -90,6 +90,7 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
+      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
       lineTotal: raw("cart.lineTotal"),
       quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
@@ -135,6 +136,7 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
+      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
     },
   };
 

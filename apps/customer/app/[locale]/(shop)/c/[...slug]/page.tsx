@@ -18,11 +18,17 @@ import {
 } from "../../../../../lib/api-base-url";
 import { fetchJson } from "../../../../../lib/fetch-json";
 import { BackToTop } from "../../_components/back-to-top";
-import { buildCategoryTree } from "../../_components/category-tree";
+import {
+  buildCategoryTree,
+  categoryDisplayName,
+} from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
-import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
+import {
+  catalogDeliveryLabels,
+  catalogMadeToOrderLabels,
+} from "../../_components/plp/delivery-labels";
 import {
   FacetPanel,
   type FacetCounts,
@@ -120,17 +126,6 @@ function slugToCategoryPath(slug: string[]): string | undefined {
   return slug.join("/");
 }
 
-function categoryTitleFromPath(path: string | undefined): string {
-  if (!path) {
-    return "";
-  }
-  const leaf = path.split("/").at(-1) ?? path;
-  return leaf
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function buildCatalogQuery(
   categoryPath: string | undefined,
   searchParams: Record<string, string | string[] | undefined>,
@@ -213,8 +208,12 @@ export async function generateMetadata({
   const resolvedSearch = await searchParams;
   const t = await getCatalogTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
+  const metaCategories = await fetchCategoriesResult();
   const categoryName =
-    categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+    categoryDisplayName(
+      metaCategories.ok ? metaCategories.categories : [],
+      categoryPath?.split("/").at(-1),
+    ) || t("plp.defaultCategory");
 
   const canonicalPath = buildLocaleCanonical(locale, "c", ...slug);
   const hasFilters = Object.keys(resolvedSearch).some(
@@ -251,8 +250,12 @@ export default async function CategoryPlpPage({
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
+  const categoriesResult = await fetchCategoriesResult();
   const categoryName =
-    categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+    categoryDisplayName(
+      categoriesResult.ok ? categoriesResult.categories : [],
+      categoryPath?.split("/").at(-1),
+    ) || t("plp.defaultCategory");
   const queryString = buildCatalogQuery(categoryPath, resolvedSearch);
   const catalog = await fetchCatalog(queryString);
   const catalogUnavailable = catalog === null;
@@ -270,7 +273,6 @@ export default async function CategoryPlpPage({
   const total = catalog?.total ?? 0;
   const apiBaseUrl = getApiBaseUrl();
 
-  const categoriesResult = await fetchCategoriesResult();
   const categoryTree =
     categoriesResult.ok && categoriesResult.categories.length > 0
       ? buildCategoryTree(categoriesResult.categories)
@@ -333,6 +335,7 @@ export default async function CategoryPlpPage({
       pickup: t("plp.card.pill.pickup"),
     },
     delivery: catalogDeliveryLabels((key) => t.raw(key)),
+    madeToOrder: catalogMadeToOrderLabels((key) => t.raw(key)),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [

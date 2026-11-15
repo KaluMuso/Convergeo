@@ -68,6 +68,7 @@ const labels = {
   quantityValue: checkoutMessages.cart.qtyValue,
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
+  leadTimeWhen: checkoutMessages.cart.leadTimeWhen,
 };
 
 /**
@@ -201,7 +202,7 @@ describe("MiniCartDrawer a11y", () => {
     renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(await screen.findByTestId("mini-cart-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready in 10 days",
+      "Made to order · ready in about 10 days",
     );
   });
 });

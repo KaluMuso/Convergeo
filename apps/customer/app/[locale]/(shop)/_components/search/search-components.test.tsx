@@ -318,6 +318,56 @@ describe("ZeroResults", () => {
     );
   });
 
+  it("shows the explanation and a reset link when a tab or filter narrowed the search", () => {
+    render(
+      <ZeroResults
+        query="shirt"
+        locale="en"
+        labels={{
+          title: 'No results for "shirt"',
+          body: "Check the spelling or try a more general word.",
+          resetLabel: "Clear filters and tabs",
+          resetHref: "/en/search?q=shirt",
+          suggestionsTitle: "Try searching for",
+          categoriesTitle: "Browse categories",
+          suggestionTerms: [],
+          categories: [],
+          askVergeoTitle: "Ask Vergeo",
+          askVergeoTeaser: "Not sure what to search?",
+          askVergeoSlotLabel: "Ask Vergeo assistant slot",
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("search-zero-results-body")).toHaveTextContent("Check the spelling");
+    expect(screen.getByTestId("search-zero-results-reset")).toHaveAttribute(
+      "href",
+      "/en/search?q=shirt",
+    );
+  });
+
+  it("omits the reset link when nothing narrowed the search", () => {
+    render(
+      <ZeroResults
+        query="zzzz"
+        locale="en"
+        labels={{
+          title: "No results",
+          suggestionsTitle: "Try searching for",
+          categoriesTitle: "Browse categories",
+          suggestionTerms: [],
+          categories: [],
+          askVergeoTitle: "Ask Vergeo",
+          askVergeoTeaser: "Not sure what to search?",
+          askVergeoSlotLabel: "Ask Vergeo assistant slot",
+        }}
+      />,
+    );
+
+    expect(screen.queryByTestId("search-zero-results-reset")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("search-zero-results-body")).not.toBeInTheDocument();
+  });
+
   it("hides the category block when the categories API gave nothing", () => {
     render(
       <ZeroResults

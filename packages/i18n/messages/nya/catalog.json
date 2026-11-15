@@ -17,10 +17,10 @@
       "sampleListing": "Listing ya sample"
     },
     "hero": {
-      "escrowLine": "Chitetezo cha ogula ndi escrow pamene payment ya online ilipo — ikusungidwa ndi Convergeo mpaka kutumiza, kenako yatsimikizidwa.",
-      "escrowStep1": "Mwalipira",
-      "escrowStep2": "Ikusungidwa ndi Convergeo",
-      "escrowStep3": "Yatsimikizidwa pa kutumiza",
+      "escrowLine": "⚠ Pay cash when your order arrives. Online payment is coming soon.",
+      "escrowStep1": "⚠ You order",
+      "escrowStep2": "⚠ We deliver",
+      "escrowStep3": "⚠ You pay on arrival",
       "eyebrow": "Marketplace ya Zambia",
       "fallbackSubtitle": "Fananizani ogulitsa, konzeni delivery ya Lusaka kapena pickup nationwide, ndi pezani zomwe zili pafupi.",
       "fallbackTitle": "Gulani zinthu, services, ndi events mu Zambia",
@@ -56,7 +56,7 @@
       }
     },
     "meta": {
-      "description": "Gulani zinthu, bookani services, ndi pezani events mu Zambia pa Convergeo.",
+      "description": "⚠ Compare sellers, book services, and find events across Zambia on Convergeo — pay cash on delivery, Lusaka delivery, nationwide pickup.",
       "title": "Pezani Zambia"
     },
     "serviceBar": {
@@ -96,7 +96,7 @@
     },
     "trust": {
       "ariaLabel": "Chifukwa chiyeni mugule pa Convergeo",
-      "escrow": "Pamene payment ya online ilipo, Convergeo imasunga ndalama yanu mpaka kutumiza",
+      "escrow": "⚠ Pay when it arrives — cash on delivery during the pilot",
       "fulfillment": "Delivery ya Lusaka kapena pickup nationwide pamene listing imalola",
       "returns": "Malangizo a returns ndi refunds pa ma-order oyenera",
       "sellers": "Ma-profiles a ogulitsa ndi status yomwe mungaone"
@@ -263,7 +263,7 @@
     },
     "trust": {
       "delivery": "Delivery ilipo kwa wogulitsa uyu",
-      "escrow": "Pamene payment ya online ilipo, Convergeo imasunga ndalama yanu mpaka kutumiza. COD ingaperekedwe pa ma-order oyenera.",
+      "escrow": "⚠ Pay when it arrives with cash on delivery on eligible orders. Online payment is coming soon.",
       "pickup": "Pickup ilipo kwa wogulitsa uyu",
       "preferredSeller": "Wogulitsa preferred — {name}",
       "returns": "Returns ndi refunds",
@@ -462,7 +462,7 @@
   "deals": {
     "metaTitle": "Today's deals",
     "title": "Today's deals",
-    "subtitle": "Limited-time prices from verified sellers. Paid safely through escrow.",
+    "subtitle": "⚠ Limited-time prices from verified sellers. Pay when it arrives.",
     "endsIn": "Ends in {time}",
     "ended": "Ended",
     "off": "-{percent}%",
@@ -499,5 +499,16 @@
     "pickupToday": "Pickup today",
     "pickupTomorrow": "Pickup tomorrow",
     "pickupDays": "Pickup in {min}–{max} days"
+  },
+  "madeToOrder": {
+    "when": {
+      "oneDay": "⚠ within a day",
+      "days": "⚠ in about {count} days",
+      "oneWeek": "⚠ within a week",
+      "weeks": "⚠ in about {count} weeks",
+      "oneMonth": "⚠ in about a month",
+      "months": "⚠ in about {count} months"
+    },
+    "badge": "⚠ Made to order · ready {when}"
   }
 }

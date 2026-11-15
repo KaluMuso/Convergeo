@@ -100,7 +100,7 @@
       "common": "All apps — shared UI, navigation, theme",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
-      "clips": "Customer — Vergeo Clips feed, playback and shoppable overlay",
+      "clips": "Customer — Convergeo Clips feed, playback and shoppable overlay",
       "search": "Customer — search and suggestions",
       "checkout": "Customer — cart and checkout",
       "orders": "Customer & vendor — order history and queue",
@@ -584,7 +584,7 @@
     },
     "presets": {
       "slate": {
-        "name": "Vergeo Slate",
+        "name": "Convergeo Slate",
         "blurb": "The signature deep-blue brand palette. The default all year round."
       },
       "harvest": {

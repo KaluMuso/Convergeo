@@ -13,7 +13,10 @@ import { Suspense } from "react";
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
-import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
+import {
+  fetchCategoriesResult,
+  type CategoryRow,
+} from "../_components/merch-data";
 import { buildTopCategorySuggestions } from "../_components/search/category-suggestions";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { PopularSearches } from "../_components/search/popular-searches";
@@ -326,6 +329,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   for (const [key, value] of encodeSearchFilters(filterState).entries()) {
     retryParams.set(key, value);
   }
+  // A tab or filter that narrows a query to nothing offers a one-tap way back to
+  // the unfiltered query; a plain zero-result search has nothing to reset.
+  const zeroResetHref =
+    query &&
+    (activeKind !== "all" ||
+      encodeSearchFilters(filterState).toString().length > 0)
+      ? `/${locale}/search?q=${encodeURIComponent(query)}`
+      : undefined;
   const retryHref =
     retryParams.toString().length > 0
       ? `/${locale}/search?${retryParams.toString()}`
@@ -523,6 +534,9 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           locale={locale}
           labels={{
             title: t("noResults.title", { query: view.query }),
+            body: t("noResults.body"),
+            resetLabel: t("noResults.reset"),
+            resetHref: zeroResetHref,
             suggestionsTitle: t("noResults.suggestionsTitle"),
             categoriesTitle: t("noResults.categoriesTitle"),
             suggestionTerms,

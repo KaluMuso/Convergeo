@@ -3,6 +3,7 @@ import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 
+import { buildPageMetadata } from "../../../../lib/page-title";
 import { getAccountAccessToken, getAccountTranslator } from "../_components/account-server";
 
 import { createBusinessApiClient, type BusinessStatus } from "./_components/business-api";
@@ -10,12 +11,14 @@ import { BusinessApplyForm } from "./_components/business-apply-form";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return buildPageMetadata(locale, "account", "business.title", { index: false, follow: false });
+}
 
 type PageProps = {
   params: Promise<{ locale: string }>;

@@ -49,9 +49,15 @@ describe("Phase-1 bem/nya homepage trust + hero escrow", () => {
     expect(screen.getByTestId("home-trust-escrow")).not.toHaveTextContent(
       "When online payment is available",
     );
-    expect(messages.home.hero.escrowStep1).not.toBe("You pay");
-    expect(messages.home.hero.escrowStep2).toContain("Convergeo");
-    expect(messages.home.hero.escrowStep3).not.toBe("Released on delivery");
+    // COD-only pilot: the ladder is order -> deliver -> pay on arrival, never "Held by ...".
+    for (const step of [
+      messages.home.hero.escrowStep1,
+      messages.home.hero.escrowStep2,
+      messages.home.hero.escrowStep3,
+    ]) {
+      expect(step.length).toBeGreaterThan(0);
+      expect(step).not.toMatch(/held by|released on delivery/i);
+    }
   });
 });
 
@@ -70,7 +76,8 @@ describe("Phase-1 bem/nya PDP purchase copy", () => {
     expect(t("pdp.buyBox.quantityLabel")).toBe(messages.pdp.buyBox.quantityLabel);
     expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
     expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
-    expect(t("pdp.trust.escrow")).toContain("Convergeo");
+    expect(t("pdp.trust.escrow")).toBe(messages.pdp.trust.escrow);
+    expect(t("pdp.trust.escrow")).not.toMatch(/vergeo5/i);
     expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
   });
 });

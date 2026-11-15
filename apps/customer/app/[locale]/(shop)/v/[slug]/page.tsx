@@ -25,9 +25,10 @@ import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
-import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
-
-
+import {
+  catalogDeliveryLabels,
+  catalogMadeToOrderLabels,
+} from "../../_components/plp/delivery-labels";
 
 import type { Metadata } from "next";
 
@@ -406,6 +407,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionRefurbished: t("listings.conditionRefurbished"),
             conditionUsed: tCatalog("plp.card.conditionUsed"),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
+            madeToOrder: catalogMadeToOrderLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),

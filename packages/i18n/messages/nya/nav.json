@@ -24,7 +24,7 @@
     "directory": "Malo a ogulitsa",
     "services": "Ntchito",
     "events": "Zochitika",
-    "askVergeo": "Funsa Vergeo",
+    "askVergeo": "Funsa Convergeo",
     "supplies": "Za business",
     "browseChipsAria": "Yang'anani ndi gawo"
   },
@@ -34,7 +34,8 @@
     "contact": "Titandizireni",
     "help": "Thandizo",
     "sell": "Gulitsani pa Convergeo",
-    "signIn": "Lowani"
+    "signIn": "Lowani",
+    "account": "Akaunti"
   },
   "account": {
     "ariaLabel": "Navigation ya account",

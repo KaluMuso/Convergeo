@@ -89,3 +89,22 @@ export function getVendorPortalUrl(locale: string): string | null {
 
   return `${base}/${locale}`;
 }
+
+/**
+ * Canonical vendor-portal origin used for the invite sign-in links on /sell when
+ * `NEXT_PUBLIC_VENDOR_APP_URL` is not configured. The invite flow only needs the
+ * sign-in page, so these links never fail closed (a disabled button on /sell made
+ * invited sellers unable to continue). Never localhost.
+ */
+export const DEFAULT_VENDOR_APP_ORIGIN = "https://vendor.vergeo5.com";
+
+export const VENDOR_LOGIN_PATH = "/login";
+
+/**
+ * Locale-aware vendor sign-in URL for invited sellers. Prefers the configured
+ * origin; otherwise the canonical production origin (dev: local vendor server).
+ */
+export function getVendorLoginUrl(locale: string): string {
+  const base = getVendorAppUrl() ?? DEFAULT_VENDOR_APP_ORIGIN;
+  return `${base}/${locale}${VENDOR_LOGIN_PATH}`;
+}

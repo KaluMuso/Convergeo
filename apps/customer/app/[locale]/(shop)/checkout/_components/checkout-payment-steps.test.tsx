@@ -52,6 +52,9 @@ const reviewLabels = {
   qtyTemplate: checkoutMessages.checkout.review.qty,
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
+  leadTimeWhen: checkoutMessages.cart.leadTimeWhen,
+  estimatedReady: checkoutMessages.checkout.review.estimatedReady,
+  estimatedDelivery: checkoutMessages.checkout.review.estimatedDelivery,
   subtotal: checkoutMessages.checkout.review.subtotal,
   deliveryFees: checkoutMessages.checkout.review.deliveryFees,
   total: checkoutMessages.checkout.review.total,
@@ -206,7 +209,39 @@ describe("StepReview", () => {
     );
 
     expect(screen.getByTestId("checkout-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready in 12 days",
+      "Made to order · ready in about 12 days",
+    );
+    expect(screen.getByTestId("checkout-estimate-listing-1")).toHaveTextContent(
+      /^Estimated ready by /,
+    );
+  });
+
+  it("says a 7-day lead time in words, not as a day count", () => {
+    const weekSession: CheckoutSession = {
+      ...sampleSession,
+      vendor_groups: sampleSession.vendor_groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          fulfilment_mode: "made_to_order",
+          lead_time_days: 7,
+        })),
+      })),
+    };
+
+    render(
+      <StepReview
+        locale="en"
+        session={weekSession}
+        totals={totalsAboveCap}
+        payment={{ method: "cod", rail: null, payer_number: null }}
+        labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("checkout-lead-time-listing-1")).toHaveTextContent(
+      "Made to order · ready within a week",
     );
   });
 

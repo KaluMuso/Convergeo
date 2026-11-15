@@ -18,7 +18,7 @@
     "lineTotal": "Total de la ligne : {amount}",
     "unitPrice": "{amount} l'unité",
     "unitPriceMeasured": "{amount} par {quantity}",
-    "madeToOrderLeadTime": "Fabriqué sur commande · prêt sous {days} jours",
+    "madeToOrderLeadTime": "Fabriqué sur commande · prêt {when}",
     "saleUnits": {
       "each": "article",
       "metre": "m",
@@ -78,7 +78,18 @@
     "mergeApply": "Accepter les prix actuels et retirer les articles indisponibles",
     "mergeRetry": "Réessayer la fusion du panier",
     "mergeSignOut": "Se déconnecter",
-    "mergeFailure": "Nous n'avons pas pu sécuriser votre panier. Vos articles sont toujours enregistrés."
+    "mergeFailure": "Nous n'avons pas pu sécuriser votre panier. Vos articles sont toujours enregistrés.",
+    "codStep1": "Vous commandez",
+    "codStep2": "Nous livrons",
+    "codStep3": "Vous payez à l'arrivée",
+    "leadTimeWhen": {
+      "oneDay": "sous 24 heures",
+      "days": "dans environ {count} jours",
+      "oneWeek": "sous une semaine",
+      "weeks": "dans environ {count} semaines",
+      "oneMonth": "dans environ un mois",
+      "months": "dans environ {count} mois"
+    }
   },
   "checkout": {
     "pageTitle": "Paiement",
@@ -94,7 +105,7 @@
       "title": "Vos coordonnées",
       "subtitle": "Nous les utiliserons pour envoyer les mises à jour de commande sur WhatsApp ou SMS.",
       "phoneLabel": "Numéro de mobile",
-      "phoneHelp": "MTN, Airtel ou Zamtel — nous enverrons un code à usage unique.",
+      "phoneHelp": "MTN, Airtel ou Zamtel — nous l'utiliserons pour confirmer votre livraison.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Indicatif du pays",
       "nationalNumber": "Numéro de mobile",
@@ -218,7 +229,7 @@
       "railMtn": "MTN",
       "railAirtel": "Airtel",
       "payerNumber": "Payeur : {number}",
-      "escrowTitle": "Comment votre paiement est protégé",
+      "escrowTitle": "Comment ça marche",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Convergeo",
       "escrowStep3": "Versé à la livraison",
@@ -241,7 +252,9 @@
         "deliveryNoLandmark": "Livraison à Lusaka",
         "pickupFromSeller": "Vous la récupérerez chez le vendeur",
         "placeOrderCod": "Commander — payer à la livraison"
-      }
+      },
+      "estimatedReady": "Prêt vers le {date}",
+      "estimatedDelivery": "Livraison estimée vers le {date}"
     },
     "pending": {
       "pageTitle": "Approuver le paiement",

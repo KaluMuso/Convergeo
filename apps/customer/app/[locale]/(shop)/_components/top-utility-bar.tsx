@@ -22,9 +22,10 @@ export type TopUtilityBarLabels = {
 export type TopUtilityBarLinks = {
   phoneHref: string | null;
   emailHref: string;
-  facebook: string;
-  twitter: string;
-  instagram: string;
+  /** Profile URLs; `null` hides that network's icon. */
+  facebook: string | null;
+  twitter: string | null;
+  instagram: string | null;
 };
 
 type TopUtilityBarProps = {
@@ -149,33 +150,39 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
         </div>
 
         <nav aria-label={labels.socialAria} className="flex shrink-0 items-center gap-0.5">
-          <a
-            href={links.facebook}
-            className={socialClass}
-            aria-label={labels.facebookAria}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <SocialIcon kind="facebook" />
-          </a>
-          <a
-            href={links.twitter}
-            className={socialClass}
-            aria-label={labels.twitterAria}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <SocialIcon kind="twitter" />
-          </a>
-          <a
-            href={links.instagram}
-            className={socialClass}
-            aria-label={labels.instagramAria}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <SocialIcon kind="instagram" />
-          </a>
+          {links.facebook ? (
+            <a
+              href={links.facebook}
+              className={socialClass}
+              aria-label={labels.facebookAria}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <SocialIcon kind="facebook" />
+            </a>
+          ) : null}
+          {links.twitter ? (
+            <a
+              href={links.twitter}
+              className={socialClass}
+              aria-label={labels.twitterAria}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <SocialIcon kind="twitter" />
+            </a>
+          ) : null}
+          {links.instagram ? (
+            <a
+              href={links.instagram}
+              className={socialClass}
+              aria-label={labels.instagramAria}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <SocialIcon kind="instagram" />
+            </a>
+          ) : null}
           <a href={links.emailHref} className={socialClass} aria-label={labels.emailAria}>
             <SocialIcon kind="mail" />
           </a>
