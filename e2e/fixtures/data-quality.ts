@@ -111,9 +111,6 @@ export async function scanDemoBadges(page: Page): Promise<DataQualityIssue[]> {
 
 /** Scan for wholesale tier leakage on retail surfaces. */
 export async function scanWholesaleLeakage(page: Page): Promise<DataQualityIssue[]> {
-  const onSupplies = /\/supplies/.test(page.url());
-  if (onSupplies) return [];
-
   const body = (await page.locator("main, [role='main'], body").first().textContent()) ?? "";
   const issues: DataQualityIssue[] = [];
   for (const pat of WHOLESALE_LEAK_PATTERNS) {

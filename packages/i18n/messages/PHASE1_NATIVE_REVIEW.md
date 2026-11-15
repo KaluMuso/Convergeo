@@ -24,7 +24,7 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **W8 bundles & offers (2026-11-15):** `vendor.offers.*`, `vendor.shell.nav.offers`, `catalog.offers.*` and `checkout.cart.{offerSavings,offerSaving,offerGift,offerGiftWorth}` were added to bem/nya as **EN passthrough prefixed with `⚠ `** for key parity. Treat these subtrees as untranslated until a native reviewer signs them off. The surface is behind the `bundles` flag (default off).
 
-**CCP-03e verticals (2026-07-20):** `services`, `events`, `directory`, `supplies` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
+**CCP-03e verticals (2026-07-20):** `services`, `events`, `directory` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
 
 **Catalog selection and canonical details (2026-10-01):** `events.filters.subcategoryLabel` and `vendor.listings.newCanonical.details.{about,heading,help,name,value,add,remove,invalid}` in both bem/nya are **English fallback values**, copied from EN for key parity. These 18 entries remain untranslated pending native-speaker review; their presence is not translation approval.
 

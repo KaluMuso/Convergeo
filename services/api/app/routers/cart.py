@@ -14,7 +14,6 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import (
     CartLineView,
@@ -279,11 +278,11 @@ async def _optional_current_user(request: Request) -> CurrentUser | None:
 
 
 def _business_eligible_for_user(user_id: str | None) -> bool:
-    """Verified-business gate for wholesale pricing. Guests are never eligible."""
-    if not user_id:
-        return False
-    row = fetch_business_buyer(service_db_client(), user_id)
-    return bool(row and row.get("status") == "verified")
+    """Wholesale/tier pricing is vendor-app only (founder decision): no customer
+    cart is ever priced as a business buyer, whatever the account's business
+    status. Wholesale listings are therefore rejected and every line stays at
+    retail. Kept as one seam so no cart path can drift back to a status lookup."""
+    return False
 
 
 def _resolve_guest_token(request: Request, settings: Settings) -> str | None:
@@ -1706,7 +1705,7 @@ async def merge_cart_on_login(
             if isinstance(stock_rows, list)
             else []
         )
-        business_eligible = authority.get("business_status") == "verified"
+        business_eligible = _business_eligible_for_user(current_user.id)
 
         _, current_conflicts = merge_cart_items(
             user_items=user_items,
