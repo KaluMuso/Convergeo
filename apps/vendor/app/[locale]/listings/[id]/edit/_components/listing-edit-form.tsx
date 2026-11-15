@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { notify } from "@vergeo/ui/src/toast";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -14,12 +15,15 @@ import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/li
 import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
+  listingFieldErrors,
   parseListingFieldValues,
   requiresListingEvidence,
-  validateListingFields,
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
+import { buildListingFieldLabels, readFieldErrorMessages } from "../../../new/_lib/field-labels";
+import { describeListingError } from "../../../new/_lib/listing-errors";
 import { milliToUnitInput } from "../../../new/_lib/measure";
+import { FULFILMENT_OPTIONS, USED_GRADES } from "../../../new/_lib/types";
 import { Badge, Button, FormField, Input, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
@@ -65,66 +69,19 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const manageClient = useMemo(() => createManageClient(getToken), [getToken]);
 
   const fieldLabels = useMemo(
-    () => ({
-      priceLabel: t("listings.fields.priceLabel"),
-      pricePlaceholder: t("listings.fields.pricePlaceholder"),
-      priceHelp: t("listings.fields.priceHelp"),
-      pricePerStepHelp: t("listings.fields.pricePerStepHelp"),
-      priceInvalid: t("listings.fields.priceInvalid"),
-      productClassLabel: t("listings.fields.productClassLabel"),
-      classA: t("listings.fields.classA"),
-      classB: t("listings.fields.classB"),
-      classC: t("listings.fields.classC"),
-      classD: t("listings.fields.classD"),
-      classE: t("listings.fields.classE"),
-      standaloneClassHint: t("listings.fields.standaloneClassHint"),
-      saleUnitLabel: t("listings.fields.saleUnitLabel"),
-      unitEach: t("listings.fields.unitEach"),
-      unitMetre: t("listings.fields.unitMetre"),
-      unitKg: t("listings.fields.unitKg"),
-      unitLitre: t("listings.fields.unitLitre"),
-      unitBag: t("listings.fields.unitBag"),
-      unitSqm: t("listings.fields.unitSqm"),
-      unitStepLabel: t("listings.fields.unitStepLabel"),
-      unitStepHelp: t("listings.fields.unitStepHelp"),
-      unitStepInvalid: t("listings.fields.unitStepInvalid"),
-      minStepsLabel: t("listings.fields.minStepsLabel"),
-      conditionLabel: t("listings.fields.conditionLabel"),
-      conditionNew: t("listings.fields.conditionNew"),
-      conditionRefurbished: t("listings.fields.conditionRefurbished"),
-      conditionUsed: t("listings.fields.conditionUsed"),
-      defectNotesLabel: t("listings.fields.defectNotesLabel"),
-      defectNotesPlaceholder: t("listings.fields.defectNotesPlaceholder"),
-      defectNotesHelp: t("listings.fields.defectNotesHelp"),
-      defectNotesInvalid: t("listings.fields.defectNotesInvalid"),
-      fulfilmentLabel: t("listings.fields.fulfilmentLabel"),
-      fulfilmentStocked: t("listings.fields.fulfilmentStocked"),
-      fulfilmentMadeToOrder: t("listings.fields.fulfilmentMadeToOrder"),
-      leadTimeLabel: t("listings.fields.leadTimeLabel"),
-      leadTimeHelp: t("listings.fields.leadTimeHelp"),
-      leadTimeInvalid: t("listings.fields.leadTimeInvalid"),
-      capacityLabel: t("listings.fields.capacityLabel"),
-      capacityHelp: t("listings.fields.capacityHelp"),
-      capacityInvalid: t("listings.fields.capacityInvalid"),
-      stockModeLabel: t("listings.fields.stockModeLabel"),
-      stockTracked: t("listings.fields.stockTracked"),
-      stockAlways: t("listings.fields.stockAlways"),
-      stockQtyLabel: t("listings.fields.stockQtyLabel"),
-      wholesaleLabel: t("listings.fields.wholesaleLabel"),
-      wholesaleHelp: t("listings.fields.wholesaleHelp"),
-      wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
-      moqLabel: t("listings.fields.moqLabel"),
-      evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
-      saveDraft: t("listings.fields.saveDraft"),
-      savingDraft: t("listings.fields.savingDraft"),
-      required: t("listings.errors.required"),
-    }),
+    () => buildListingFieldLabels(t as unknown as (key: string) => string),
+    [t],
+  );
+
+  const fieldErrorMessages = useMemo(
+    () => readFieldErrorMessages(t.raw("listings.fieldErrors")),
     [t],
   );
 
@@ -154,7 +111,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           unitStep: milliToUnitInput(row.unit_step_milli ?? 1_000),
           minSteps: String(row.min_steps ?? 1),
           condition: row.condition,
+          conditionDetail: (USED_GRADES as readonly string[]).includes(row.condition_detail ?? "")
+            ? (row.condition_detail as (typeof USED_GRADES)[number])
+            : "used_good",
           defectNotes: row.defect_notes ?? "",
+          fulfilmentOptions:
+            row.fulfilment_options && row.fulfilment_options.length > 0
+              ? FULFILMENT_OPTIONS.filter((option) => row.fulfilment_options?.includes(option))
+              : ["lusaka_delivery", "pickup_shop"],
           fulfilmentMode: row.fulfilment_mode ?? "stocked",
           leadTimeDays: row.lead_time_days === null ? "" : String(row.lead_time_days ?? ""),
           vendorCapacityPerWeek:
@@ -229,11 +193,13 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     if (!fieldValues) {
       return;
     }
-    const validationError = validateListingFields(fieldValues, fieldLabels);
-    if (validationError) {
-      setError(validationError);
+    const clientErrors = listingFieldErrors(fieldValues, fieldLabels);
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      setError(t("listings.errors.draftInvalid"));
       return;
     }
+    setFieldErrors({});
     const priceTiers = buildPriceTiers();
     if (fieldValues.wholesale && priceTiers === null) {
       setError(t("listings.errors.invalid_tiers"));
@@ -276,6 +242,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         min_steps: parsed.minSteps,
         condition: fieldValues.condition,
         defect_notes: parsed.defectNotes,
+        condition_detail: parsed.conditionDetail,
+        fulfilment_options: fieldValues.fulfilmentOptions,
         fulfilment_mode: fieldValues.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
@@ -307,9 +275,22 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         : t("listings.manage.edit.saved");
       setNotice(savedNotice);
       notify.success(savedNotice);
-    } catch {
-      setError(t("listings.manage.errors.saveFailed"));
-      notify.error(t("listings.manage.errors.saveFailed"));
+    } catch (caught: unknown) {
+      const result = describeListingError(
+        caught,
+        {
+          standaloneRequired: t("listings.errors.standalone_required"),
+          draftInvalid: t("listings.errors.draftInvalid"),
+          publishBlocked: t("listings.errors.publishBlocked"),
+          fieldErrors: fieldErrorMessages,
+          fallback: t("listings.manage.errors.saveFailed"),
+        },
+        listing?.status === "active" ? "publish" : "draft",
+      );
+      setFieldErrors(result.fields);
+      const summary = [result.message, ...result.unplaced].join(" ");
+      setError(summary);
+      notify.error(summary);
     } finally {
       setSaving(false);
     }
@@ -336,9 +317,22 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       }));
       setNotice(t("listings.manage.edit.saved"));
       notify.success(t("listings.manage.edit.saved"));
-    } catch {
-      setError(t("listings.manage.errors.saveFailed"));
-      notify.error(t("listings.manage.errors.saveFailed"));
+    } catch (caught: unknown) {
+      const result = describeListingError(
+        caught,
+        {
+          standaloneRequired: t("listings.errors.standalone_required"),
+          draftInvalid: t("listings.errors.draftInvalid"),
+          publishBlocked: t("listings.errors.publishBlocked"),
+          fieldErrors: fieldErrorMessages,
+          fallback: t("listings.manage.errors.saveFailed"),
+        },
+        listing.status === "draft" ? "publish" : "draft",
+      );
+      setFieldErrors(result.fields);
+      const summary = [result.message, ...result.unplaced].join(" ");
+      setError(summary);
+      notify.error(summary);
     } finally {
       setActionLoading(null);
     }
@@ -392,6 +386,24 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     );
   }
 
+  if (listing.status === "removed") {
+    return (
+      <div className="flex flex-col gap-3" data-testid="listing-removed-state">
+        <h1 className="text-xl font-semibold text-text">{t("listings.manage.removed.title")}</h1>
+        <p className="text-sm text-text-2">{listing.title}</p>
+        <p className="text-sm text-text-2" role="status">
+          {t("listings.manage.removed.body")}
+        </p>
+        <Link
+          href={`/${locale}/listings`}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text"
+        >
+          {t("listings.manage.removed.back")}
+        </Link>
+      </div>
+    );
+  }
+
   const statusLabel =
     listing.status === "active"
       ? t("listings.manage.status.active")
@@ -399,7 +411,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         ? t("listings.manage.status.paused")
         : t("listings.manage.status.draft");
   const evidenceRequired = requiresListingEvidence(fieldValues);
-  const persistedEvidenceRequired = listing.product_class === "D" || listing.condition === "used";
+  const persistedEvidenceRequired = listing.condition === "used";
   const hasEvidence = (listing.images?.length ?? 0) > 0;
   const minimumEvidenceImages =
     listing.status === "active" && (persistedEvidenceRequired || evidenceRequired) ? 1 : 0;
@@ -447,6 +459,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         }
         wholesaleEnabled={fieldValues.wholesale}
         labels={fieldLabels}
+        errors={fieldErrors}
         allowStandaloneClasses={listing.product_id === null}
       />
 

@@ -169,7 +169,8 @@
         "cutoffBefore": "Mukatumiza order 14:00 isanakwane (nthawi ya Lusaka), zinthu zomwe zili mu stock zimatumizidwa lero, seller akatsimikiza.",
         "cutoffAfter": "Nthawi yadutsa 14:00 ku Lusaka, choncho zinthu za mu stock zidzatumizidwa mawa, seller akatsimikiza.",
         "cutoffMadeToOrder": "Zinthu zopangidwa pa order zimatumizidwa zikatha — onani nthawi ya chinthu chilichonse."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Zinthu zasungidwa kwa",

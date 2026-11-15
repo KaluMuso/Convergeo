@@ -12,6 +12,7 @@ import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/
 import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { ListingTipsPanel } from "../../_components/listing-guide";
+import { buildListingFieldLabels, readFieldErrorMessages } from "../_lib/field-labels";
 import { createListingClient } from "../_lib/listing-client";
 import { Spinner, Switch, Tabs } from "../_lib/ui";
 
@@ -69,60 +70,12 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     : false;
 
   const fieldLabels = useMemo(
-    () => ({
-      priceLabel: t("listings.fields.priceLabel"),
-      pricePlaceholder: t("listings.fields.pricePlaceholder"),
-      priceHelp: t("listings.fields.priceHelp"),
-      pricePerStepHelp: t("listings.fields.pricePerStepHelp"),
-      priceInvalid: t("listings.fields.priceInvalid"),
-      productClassLabel: t("listings.fields.productClassLabel"),
-      classA: t("listings.fields.classA"),
-      classB: t("listings.fields.classB"),
-      classC: t("listings.fields.classC"),
-      classD: t("listings.fields.classD"),
-      classE: t("listings.fields.classE"),
-      standaloneClassHint: t("listings.fields.standaloneClassHint"),
-      saleUnitLabel: t("listings.fields.saleUnitLabel"),
-      unitEach: t("listings.fields.unitEach"),
-      unitMetre: t("listings.fields.unitMetre"),
-      unitKg: t("listings.fields.unitKg"),
-      unitLitre: t("listings.fields.unitLitre"),
-      unitBag: t("listings.fields.unitBag"),
-      unitSqm: t("listings.fields.unitSqm"),
-      unitStepLabel: t("listings.fields.unitStepLabel"),
-      unitStepHelp: t("listings.fields.unitStepHelp"),
-      unitStepInvalid: t("listings.fields.unitStepInvalid"),
-      minStepsLabel: t("listings.fields.minStepsLabel"),
-      conditionLabel: t("listings.fields.conditionLabel"),
-      conditionNew: t("listings.fields.conditionNew"),
-      conditionRefurbished: t("listings.fields.conditionRefurbished"),
-      conditionUsed: t("listings.fields.conditionUsed"),
-      defectNotesLabel: t("listings.fields.defectNotesLabel"),
-      defectNotesPlaceholder: t("listings.fields.defectNotesPlaceholder"),
-      defectNotesHelp: t("listings.fields.defectNotesHelp"),
-      defectNotesInvalid: t("listings.fields.defectNotesInvalid"),
-      fulfilmentLabel: t("listings.fields.fulfilmentLabel"),
-      fulfilmentStocked: t("listings.fields.fulfilmentStocked"),
-      fulfilmentMadeToOrder: t("listings.fields.fulfilmentMadeToOrder"),
-      leadTimeLabel: t("listings.fields.leadTimeLabel"),
-      leadTimeHelp: t("listings.fields.leadTimeHelp"),
-      leadTimeInvalid: t("listings.fields.leadTimeInvalid"),
-      capacityLabel: t("listings.fields.capacityLabel"),
-      capacityHelp: t("listings.fields.capacityHelp"),
-      capacityInvalid: t("listings.fields.capacityInvalid"),
-      stockModeLabel: t("listings.fields.stockModeLabel"),
-      stockTracked: t("listings.fields.stockTracked"),
-      stockAlways: t("listings.fields.stockAlways"),
-      stockQtyLabel: t("listings.fields.stockQtyLabel"),
-      wholesaleLabel: t("listings.fields.wholesaleLabel"),
-      wholesaleHelp: t("listings.fields.wholesaleHelp"),
-      wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
-      moqLabel: t("listings.fields.moqLabel"),
-      evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
-      saveDraft: t("listings.fields.saveDraft"),
-      savingDraft: t("listings.fields.savingDraft"),
-      required: t("listings.errors.required"),
-    }),
+    () => buildListingFieldLabels(t as unknown as (key: string) => string),
+    [t],
+  );
+
+  const fieldErrorMessages = useMemo(
+    () => readFieldErrorMessages(t.raw("listings.fieldErrors")),
     [t],
   );
 
@@ -263,6 +216,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
                   commission: commissionLabels,
                   submitError: t("listings.errors.submitFailed"),
                   standaloneRequired: t("listings.errors.standalone_required"),
+                  draftInvalid: t("listings.errors.draftInvalid"),
+                  publishBlocked: t("listings.errors.publishBlocked"),
+                  fieldErrors: fieldErrorMessages,
                 }}
               />
             </>
@@ -307,6 +263,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             commission: commissionLabels,
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
+            draftInvalid: t("listings.errors.draftInvalid"),
+            fieldErrors: fieldErrorMessages,
             required: t("listings.errors.required"),
           }}
         />
@@ -348,6 +306,8 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             submitError: t("listings.errors.submitFailed"),
             standaloneRequired: t("listings.errors.standalone_required"),
             policyBlocked: t("listings.errors.policyBlocked"),
+            draftInvalid: t("listings.errors.draftInvalid"),
+            fieldErrors: fieldErrorMessages,
             required: t("listings.errors.required"),
           }}
         />

@@ -6,7 +6,10 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createEventsClient, type EventSummary } from "../_lib/events-client";
+import { isNotOrganiserError } from "../_lib/organiser-gate";
 import { Badge, Spinner } from "../_lib/ui";
+
+import { OrganiserGate } from "./organiser-gate";
 
 type EventsManageListProps = {
   locale: string;
@@ -34,6 +37,7 @@ export function EventsManageList({ locale }: EventsManageListProps) {
   const [items, setItems] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notOrganiser, setNotOrganiser] = useState(false);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
@@ -57,10 +61,16 @@ export function EventsManageList({ locale }: EventsManageListProps) {
           setError(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t("events.errors.loadFailed"));
+      .catch((caught: unknown) => {
+        if (cancelled) {
+          return;
         }
+        if (isNotOrganiserError(caught)) {
+          setNotOrganiser(true);
+          setError(null);
+          return;
+        }
+        setError(t("events.errors.loadFailed"));
       })
       .finally(() => {
         if (!cancelled) {
@@ -83,6 +93,10 @@ export function EventsManageList({ locale }: EventsManageListProps) {
 
   if (!session) {
     return <p className="text-sm text-text-2">{t("events.errors.authRequired")}</p>;
+  }
+
+  if (notOrganiser) {
+    return <OrganiserGate locale={locale} />;
   }
 
   return (
@@ -108,12 +122,6 @@ export function EventsManageList({ locale }: EventsManageListProps) {
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
           <p className="text-sm text-text-2">{t("events.list.empty")}</p>
-          <Link
-            href={`/${locale}/events/new`}
-            className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary"
-          >
-            {t("events.list.createCta")}
-          </Link>
         </div>
       ) : (
         <ul className="space-y-3">

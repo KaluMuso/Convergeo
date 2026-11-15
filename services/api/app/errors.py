@@ -10,6 +10,7 @@ from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic_core import PydanticCustomError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,49 @@ def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     )
 
 
+def field_value_error(field: str, message: str, code: str | None = None) -> PydanticCustomError:
+    """A validator error that names the request field it belongs to.
+
+    Pydantic model-level validators otherwise report ``loc=("body",)``; carrying
+    the field in ``ctx`` lets :func:`validation_error_handler` return
+    field-level errors the client can render next to the right input.
+    """
+    return PydanticCustomError(
+        "field_error",
+        message.replace("{", "(").replace("}", ")"),
+        {"field": field, "code": code or field},
+    )
+
+
+def _field_errors_from_validation(errors: list[Any]) -> list[dict[str, str]]:
+    fields: list[dict[str, str]] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        ctx = error.get("ctx")
+        field: str | None = None
+        code: str | None = None
+        if isinstance(ctx, dict) and isinstance(ctx.get("field"), str):
+            field = str(ctx["field"])
+            code = str(ctx.get("code") or field)
+        else:
+            loc = [part for part in error.get("loc", ()) if isinstance(part, str)]
+            if loc and loc[0] in {"body", "query", "path"}:
+                loc = loc[1:]
+            if loc:
+                field = ".".join(loc)
+        message = str(error.get("msg", "Invalid value"))
+        message = message.removeprefix("Value error, ")
+        fields.append(
+            {
+                "field": field or "_form",
+                "code": code or str(error.get("type", "invalid")),
+                "message": message,
+            }
+        )
+    return fields
+
+
 def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     request_id = get_request_id(request)
     return JSONResponse(
@@ -80,7 +124,10 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
             # field/model validator (e.g. NgweeInt float rejection) carries the raw
             # exception in ``ctx``, which json.dumps cannot serialize — without this
             # such validation errors surface as a 500 instead of a 422.
-            details={"errors": jsonable_encoder(exc.errors())},
+            details={
+                "errors": jsonable_encoder(exc.errors()),
+                "fields": _field_errors_from_validation(jsonable_encoder(exc.errors())),
+            },
         ),
         headers={"X-Request-ID": request_id},
     )

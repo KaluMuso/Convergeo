@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EventForm } from "../../../_components/event-form";
+import { OrganiserGate } from "../../../_components/organiser-gate";
 import { createEventsClient, type EventDetail } from "../../../_lib/events-client";
+import { isNotOrganiserError } from "../../../_lib/organiser-gate";
 import { Spinner } from "../../../_lib/ui";
 
 type EventEditViewProps = {
@@ -19,6 +21,7 @@ export function EventEditView({ locale, eventId }: EventEditViewProps) {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notOrganiser, setNotOrganiser] = useState(false);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const eventsClient = useMemo(() => createEventsClient(getToken), [getToken]);
@@ -42,10 +45,16 @@ export function EventEditView({ locale, eventId }: EventEditViewProps) {
           setError(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t("events.errors.loadFailed"));
+      .catch((caught: unknown) => {
+        if (cancelled) {
+          return;
         }
+        if (isNotOrganiserError(caught)) {
+          setNotOrganiser(true);
+          setError(null);
+          return;
+        }
+        setError(t("events.errors.loadFailed"));
       })
       .finally(() => {
         if (!cancelled) {
@@ -64,6 +73,10 @@ export function EventEditView({ locale, eventId }: EventEditViewProps) {
         <Spinner label={t("events.list.loading")} />
       </div>
     );
+  }
+
+  if (notOrganiser) {
+    return <OrganiserGate locale={locale} />;
   }
 
   if (error) {

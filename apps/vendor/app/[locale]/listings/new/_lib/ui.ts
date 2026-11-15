@@ -10,3 +10,4 @@ export { Tabs } from "../../../../../../../packages/ui/src/tabs";
 export { PriceBlock } from "../../../../../../../packages/ui/src/price-block";
 export { Badge } from "../../../../../../../packages/ui/src/badge";
 export { StatusChip, orderStatusTone } from "../../../../../../../packages/ui/src/status-chip";
+export { Checkbox } from "../../../../../../../packages/ui/src/checkbox";

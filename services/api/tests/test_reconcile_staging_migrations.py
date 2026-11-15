@@ -85,6 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
 }
 
 
