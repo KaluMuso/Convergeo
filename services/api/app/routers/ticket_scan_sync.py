@@ -141,10 +141,12 @@ def _load_event_for_vendor(
             http_status=403,
             details={"message_key": "vendor.scan.errors.forbidden", "event_id": event_id},
         )
-    if row.get("status") != "published":
+    # Unpublished (draft) events keep their sold tickets valid, so gate staff must
+    # still be able to download scan data; cancelled/completed events cannot.
+    if row.get("status") not in {"published", "draft"}:
         raise AppError(
             code="tickets.event_not_published",
-            message="Scan data is only available for published events",
+            message="Scan data is only available for live events",
             http_status=409,
             details={"message_key": "vendor.scan.errors.event_not_published"},
         )

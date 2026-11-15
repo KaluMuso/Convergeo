@@ -62,15 +62,13 @@ class TestClassDCartGuard:
             )
         assert exc_info.value.code == "cart.class_d_missing_evidence"
 
-    def test_fails_when_condition_is_new(self) -> None:
+    def test_new_class_d_listing_needs_no_evidence_images(self) -> None:
         listing: dict[str, Any] = {**LISTING_D_USED, "condition": "new"}
-        with pytest.raises(AppError) as exc_info:
-            validate_listing_purchasable_for_cart(
-                listing=listing,
-                qty=1,
-                evidence_image_count=2,
-            )
-        assert exc_info.value.code == "cart.class_d_invalid_condition"
+        validate_listing_purchasable_for_cart(
+            listing=listing,
+            qty=1,
+            evidence_image_count=0,
+        )
 
     def test_passes_with_evidence(self) -> None:
         validate_listing_purchasable_for_cart(

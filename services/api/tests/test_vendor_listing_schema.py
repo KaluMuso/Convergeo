@@ -1,37 +1,35 @@
 from __future__ import annotations
 
 import pytest
-from app.schemas.vendor_listing import VendorListing, VendorListingEvidenceImage
+from app.schemas.vendor_listing import VendorListing
 from pydantic import ValidationError
 
 
-def test_class_d_rejects_new_condition() -> None:
+@pytest.mark.parametrize("condition", ["new", "refurbished"])
+def test_class_d_allows_new_and_refurbished_condition(condition: str) -> None:
+    listing = VendorListing(
+        product_class="D",
+        condition=condition,  # type: ignore[arg-type]
+        stock_mode="tracked",
+        stock_qty=1,
+        price_ngwee=10_000,
+    )
+    assert listing.condition == condition
+
+
+def test_class_d_used_still_requires_defect_notes_with_field_error() -> None:
     with pytest.raises(ValidationError) as exc_info:
         VendorListing(
             product_class="D",
-            condition="new",
+            condition="used",
             stock_mode="tracked",
             stock_qty=1,
             price_ngwee=10_000,
-            evidence_images=[
-                VendorListingEvidenceImage(cloudinary_public_id="used/item-1"),
-            ],
-            defect_notes="Minor scratch on corner panel",
+            status="draft",
         )
-    assert "Class D listings require condition used" in str(exc_info.value)
-
-
-def test_class_d_rejects_refurbished_condition() -> None:
-    with pytest.raises(ValidationError) as exc_info:
-        VendorListing(
-            product_class="D",
-            condition="refurbished",
-            stock_mode="tracked",
-            stock_qty=1,
-            price_ngwee=10_000,
-            defect_notes="Minor scratch on corner panel",
-        )
-    assert "Class D listings require condition used" in str(exc_info.value)
+    ctx = exc_info.value.errors()[0]["ctx"]
+    assert ctx["field"] == "defect_notes"
+    assert ctx["code"] == "defect_notes_required"
 
 
 def test_draft_class_d_can_be_created_before_evidence_upload() -> None:

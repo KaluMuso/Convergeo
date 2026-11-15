@@ -32,6 +32,7 @@ const SHELL_NAV_KEYS = [
   "payouts",
   "disputes",
   "intake",
+  "settings",
   "offers",
 ] as const;
 

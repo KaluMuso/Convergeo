@@ -191,7 +191,8 @@
         "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
         "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
         "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Ifintu fyasungwa pa",
@@ -315,6 +316,11 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mukasenda ku seller",
         "placeOrderCod": "Tumeni order — lipileni pa delivery"
+      },
+      "deliveryConsent": {
+        "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order",
+        "hint": "Te ca kukakatila. Courier uwakwata licence kuti aleta order yenu. Nga tamusuminishe, abantu ba Vergeo5 e balaleta nangu balamwita intanshi. Kuti mwalula pa Account → Privacy.",
+        "saveFailed": "Twafilwa ukusunga ifi mwasala. Kuti mwatwalilila ukushita order."
       },
       "typeProducts": "⚠ Products",
       "typeEventTickets": "⚠ Event tickets",

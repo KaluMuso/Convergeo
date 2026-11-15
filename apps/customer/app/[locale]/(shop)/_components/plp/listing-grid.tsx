@@ -5,6 +5,7 @@ import { shouldShowSampleListingBadge } from "../demo-listing";
 import { ListingCard, type ListingCardLabels } from "./listing-card";
 
 import type { OfferBadge } from "../offers/offer-badge";
+import type { ReactNode } from "react";
 
 export type CatalogListing = {
   id: string;
@@ -44,9 +45,12 @@ type ListingGridProps = {
   /** Injectable for tests; defaults to production-safe sample gate. */
   showSampleBadge?: boolean;
   density?: "default" | "compact";
+  /** Optional per-card action rendered under the card (e.g. storefront compare). */
+  renderFooter?: (listing: CatalogListing) => ReactNode;
 };
 
-const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+const LISTING_MEDIA_SIZES =
+  "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
 
 /**
  * Catalog product grid — media is rendered here (RSC-safe static Cloudinary) and
@@ -59,6 +63,7 @@ export function ListingGrid({
   priorityCount = 2,
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
+  renderFooter,
 }: ListingGridProps) {
   return (
     <div
@@ -79,7 +84,7 @@ export function ListingGrid({
           />
         ) : undefined;
 
-        return (
+        const card = (
           <ListingCard
             key={listing.id}
             locale={locale}
@@ -89,6 +94,16 @@ export function ListingGrid({
             showSampleBadge={showSampleBadge}
             density={density}
           />
+        );
+        const footer = renderFooter?.(listing);
+        if (!footer) {
+          return card;
+        }
+        return (
+          <div key={listing.id} className="flex min-w-0 flex-col gap-1.5">
+            {card}
+            {footer}
+          </div>
         );
       })}
     </div>

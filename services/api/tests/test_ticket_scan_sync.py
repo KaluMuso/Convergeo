@@ -300,16 +300,29 @@ class TestScanSyncPayload:
 
 
 class TestScanSyncOrganiserScope:
-    def test_non_published_event_returns_409(
-        self, organiser_client: TestClient, fake_client: FakeSupabaseClient
+    @pytest.mark.parametrize("status", ["cancelled", "completed"])
+    def test_closed_event_returns_409(
+        self, organiser_client: TestClient, fake_client: FakeSupabaseClient, status: str
     ) -> None:
-        _seed_event(fake_client, status="draft")
+        _seed_event(fake_client, status=status)
         _seed_tickets(fake_client)
 
         response = organiser_client.get(_sync_url(), headers=_auth_headers(TOKEN_A))
 
         assert response.status_code == 409
         assert response.json()["error"]["code"] == "tickets.event_not_published"
+
+    def test_unpublished_event_still_serves_scan_data(
+        self, organiser_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        """Unpublished (draft) keeps sold tickets valid, so the gate can still prepare."""
+        _seed_event(fake_client, status="draft")
+        _seed_tickets(fake_client)
+
+        response = organiser_client.get(_sync_url(), headers=_auth_headers(TOKEN_A))
+
+        assert response.status_code == 200
+        assert response.json()["tickets"]
 
     def test_cross_organiser_returns_403(
         self, organiser_client: TestClient, fake_client: FakeSupabaseClient

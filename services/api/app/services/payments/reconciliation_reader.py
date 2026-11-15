@@ -93,9 +93,7 @@ class PostgrestReconciliationReader:
             for row in page:
                 identity = _text(row.get(order_by))
                 if identity is None:
-                    raise RuntimeError(
-                        f"PostgREST {table} row has no stable {order_by} identity"
-                    )
+                    raise RuntimeError(f"PostgREST {table} row has no stable {order_by} identity")
                 if identity in seen:
                     raise RuntimeError(
                         f"PostgREST {table} pagination repeated {order_by}={identity!r}"
@@ -166,25 +164,13 @@ class PostgrestReconciliationReader:
         txn_by_id = self._index(transactions, "id")
 
         payment_ids = sorted(
-            {
-                value
-                for row in transactions
-                if (value := _text(row.get("payment_id"))) is not None
-            }
+            {value for row in transactions if (value := _text(row.get("payment_id"))) is not None}
         )
         payout_ids = sorted(
-            {
-                value
-                for row in transactions
-                if (value := _text(row.get("payout_id"))) is not None
-            }
+            {value for row in transactions if (value := _text(row.get("payout_id"))) is not None}
         )
         refund_ids = sorted(
-            {
-                value
-                for row in transactions
-                if (value := _text(row.get("refund_id"))) is not None
-            }
+            {value for row in transactions if (value := _text(row.get("refund_id"))) is not None}
         )
 
         payments = (
@@ -214,11 +200,7 @@ class PostgrestReconciliationReader:
             filters=day_filters,
         )
         exception_payment_ids = sorted(
-            {
-                value
-                for row in exceptions
-                if (value := _text(row.get("payment_id"))) is not None
-            }
+            {value for row in exceptions if (value := _text(row.get("payment_id"))) is not None}
         )
         missing_exception_payment_ids = [
             value for value in exception_payment_ids if value not in payment_ids
@@ -438,12 +420,8 @@ class PostgrestReconciliationReader:
                     "provider_status": snapshot.get("transfer_status"),
                 }
             )
-        pending = tuple(
-            row for row in transfer_rows if row["status"] in {"pending", "processing"}
-        )
-        terminal = tuple(
-            row for row in transfer_rows if row["status"] in {"paid", "failed"}
-        )
+        pending = tuple(row for row in transfer_rows if row["status"] in {"pending", "processing"})
+        terminal = tuple(row for row in transfer_rows if row["status"] in {"paid", "failed"})
 
         source_rows = {
             "accounts": accounts,

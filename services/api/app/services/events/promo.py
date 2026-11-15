@@ -1,4 +1,8 @@
-"""Promo-code discount math. Redemption is recorded by the purchase path."""
+"""Promo-code discount math. Redemption is recorded by the purchase path.
+
+The pre-check in ``resolve_promo_discount`` is advisory (fast feedback); the
+usage limit is enforced atomically when ``record_promo_redemption`` inserts.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +13,8 @@ from app.errors import AppError
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 DiscountKind = Literal["percent", "fixed"]
+
+PROMO_LIMIT_REACHED_MARKER = "event_promo_redemption_limit_reached"
 
 
 def apply_promo_discount(
@@ -169,4 +175,13 @@ ON CONFLICT (order_id) DO NOTHING;
 """
     )
     if not result.ok:
+        # The DB trigger (enforce_event_promo_redemption_limit) locks the promo row
+        # and re-counts, so concurrent checkouts can never exceed max_redemptions.
+        if PROMO_LIMIT_REACHED_MARKER in (result.error or ""):
+            raise AppError(
+                code="promo_exhausted",
+                message="This promo code has been fully redeemed",
+                http_status=422,
+                details={"message_key": "events.ticketPurchase.errors.promoInvalid"},
+            )
         raise RuntimeError(f"promo redemption insert failed: {result.error}")

@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-import { listingCreateErrorMessage } from "../_lib/listing-errors";
+import { describeListingError } from "../_lib/listing-errors";
 import { Button, Spinner } from "../_lib/ui";
 
 import { CommissionBanner } from "./commission-banner";
 import {
   DEFAULT_LISTING_FIELDS,
   ListingFields,
+  listingFieldErrors,
   parseListingFieldValues,
   requiresListingEvidence,
-  validateListingFields,
   type ListingFieldValues,
 } from "./listing-fields";
 
@@ -34,6 +34,9 @@ type AttachFormProps = {
     commission: Parameters<typeof CommissionBanner>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    draftInvalid?: string;
+    publishBlocked?: string;
+    fieldErrors?: Record<string, string>;
   };
 };
 
@@ -49,6 +52,7 @@ export function AttachForm({
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_LISTING_FIELDS);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -76,11 +80,16 @@ export function AttachForm({
   }, [client, labels.submitError, onError, productId]);
 
   const handlePublish = async () => {
-    const validationError = validateListingFields(fields, labels.fields);
-    if (validationError) {
-      onError(validationError);
+    const clientErrors = listingFieldErrors(fields, labels.fields);
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      onError(
+        (requiresListingEvidence(fields) ? labels.draftInvalid : labels.publishBlocked) ??
+          labels.submitError,
+      );
       return;
     }
+    setFieldErrors({});
 
     setSubmitting(true);
     try {
@@ -96,6 +105,8 @@ export function AttachForm({
         min_steps: parsed.minSteps,
         condition: fields.condition,
         defect_notes: parsed.defectNotes,
+        condition_detail: parsed.conditionDetail,
+        fulfilment_options: fields.fulfilmentOptions,
         fulfilment_mode: fields.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
@@ -107,12 +118,19 @@ export function AttachForm({
       });
       onSuccess(response, response.requires_evidence ?? requiresEvidence);
     } catch (caught: unknown) {
-      onError(
-        listingCreateErrorMessage(caught, {
+      const result = describeListingError(
+        caught,
+        {
           standaloneRequired: labels.standaloneRequired,
+          draftInvalid: labels.draftInvalid,
+          publishBlocked: labels.publishBlocked,
+          fieldErrors: labels.fieldErrors,
           fallback: labels.submitError,
-        }),
+        },
+        requiresListingEvidence(fields) ? "draft" : "publish",
       );
+      setFieldErrors(result.fields);
+      onError([result.message, ...result.unplaced].join(" "));
     } finally {
       setSubmitting(false);
     }
@@ -160,6 +178,7 @@ export function AttachForm({
         onChange={(patch) => setFields((current) => ({ ...current, ...patch }))}
         wholesaleEnabled={wholesaleEnabled}
         labels={labels.fields}
+        errors={fieldErrors}
         allowStandaloneClasses={false}
       />
 

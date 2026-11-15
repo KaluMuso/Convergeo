@@ -4,9 +4,13 @@ import { useMemo, useState } from "react";
 
 import { ListingGrid, type CatalogListing } from "../plp/listing-grid";
 
+import { CompareOtherShopsLink, type StorefrontCompare } from "./business-home/compare-other-shops";
+
 export type StorefrontListing = CatalogListing & {
   categorySlug?: string | null;
   categoryName?: string | null;
+  /** "Compare with other shops" — null when no other shop sells it. */
+  compare?: StorefrontCompare | null;
 };
 
 type StorefrontProductsProps = {
@@ -117,7 +121,15 @@ export function StorefrontProducts({
           {labels.noMatches}
         </p>
       ) : (
-        <ListingGrid locale={locale} listings={visible} labels={gridLabels} />
+        <ListingGrid
+          locale={locale}
+          listings={visible}
+          labels={gridLabels}
+          renderFooter={(listing) => {
+            const compare = (listing as StorefrontListing).compare;
+            return compare ? <CompareOtherShopsLink compare={compare} /> : null;
+          }}
+        />
       )}
     </div>
   );

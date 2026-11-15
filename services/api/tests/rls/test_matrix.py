@@ -63,6 +63,29 @@ def client_invisible_noop_update() -> PersonaExpectations:
     }
 
 
+def admin_read_noop_update() -> PersonaExpectations:
+    """Admin-read / service-write table without generic update-probe columns (1B rollups).
+
+    authenticated: SELECT grant + admin-only policy (non-admins see zero rows → permit),
+    no write grant (insert/delete → deny). anon: no grant. The update probe is a no-op.
+    """
+    authenticated: dict[Verb, Outcome] = {
+        "select": "permit",
+        "insert": "deny",
+        "update": "permit",
+        "delete": "deny",
+    }
+    anon: dict[Verb, Outcome] = {
+        "select": "deny",
+        "insert": "deny",
+        "update": "permit",
+        "delete": "deny",
+    }
+    return {
+        persona: dict(anon if persona is Persona.ANON else authenticated) for persona in Persona
+    }
+
+
 def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
     """SELECT + all write grants to authenticated, but only an admin SELECT policy.
 
@@ -72,6 +95,26 @@ def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
     (0018), whose write grants to authenticated are effectively dead.
     """
     return {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
+
+
+def service_write_money_table() -> PersonaExpectations:
+    """Ledger, payments, payouts and refunds: clients read their own rows, nobody writes.
+
+    20261115140000 (2026-11 RBAC audit, S1) replaced the M03 `<table>_admin_all` policy
+    with an admin SELECT policy and revoked INSERT/UPDATE/DELETE from anon and
+    authenticated. Before it, ADMIN was `all_permit()` — an admin browser token could
+    fabricate ledger postings through PostgREST — and the other authenticated personas
+    reached `UPDATE/DELETE ... WHERE false` as RLS-filtered no-ops. Every client write is
+    now a hard permission denial; the API writes as service_role.
+    """
+    return {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    }
 
 
 def public_read_admin_write() -> PersonaExpectations:
@@ -162,7 +205,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -181,6 +224,23 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    # Convergeo Intelligence 1A-02: v2 raw event log — RLS FORCE, service_role only, no
+    # grant to anon/authenticated: select/insert/delete are permission-denied for every
+    # persona. The table has none of the generic update-probe columns (id/created_at/…),
+    # so the `UPDATE … WHERE false` probe errors on the column, not on privilege — the
+    # same harness limitation as intake_field_provenance, hence the noop-update shape.
+    "analytics_event_log": client_invisible_noop_update(),
+    # Convergeo Intelligence 1A-08: anonymous-session -> customer links. service_role only
+    # (no client grant, RLS FORCE); same noop-update probe shape as analytics_event_log.
+    "analytics_session_links": client_invisible_noop_update(),
+    # Convergeo Intelligence 1B-01: daily rollups — admin read, service_role write. Same
+    # grant shape as analytics_events (authenticated SELECT grant + admin-only policy →
+    # non-admins see zero rows; no client write grant; anon nothing). Like
+    # analytics_event_log, the tables have none of the generic update-probe columns, so
+    # the `UPDATE … WHERE false` probe cannot hit a privilege check (noop → permit).
+    "analytics_daily_rollup": admin_read_noop_update(),
+    "analytics_search_daily": admin_read_noop_update(),
+    "analytics_rollup_runs": admin_read_noop_update(),
     "ask_cache": client_invisible(),
     "ask_spend_monthly": {
         Persona.ANON: deny_all(),
@@ -269,25 +329,25 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: all_permit(),
     },
@@ -375,7 +435,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -422,7 +482,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "deny",
             "delete": "permit",
         },
@@ -504,7 +564,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "deny",
             "delete": "permit",
         },
@@ -544,7 +604,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "deny",
             "delete": "permit",
         },
@@ -585,7 +645,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
@@ -669,32 +729,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "checkout_groups": {
@@ -745,32 +805,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "config_audit": {
@@ -821,32 +881,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     # Courier dispatch v1: admin-only directory (non-admin probes match 0 rows; INSERT hits the admin WITH CHECK).
@@ -860,32 +920,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     # Courier dispatch v1: admin-only service areas.
@@ -899,32 +959,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     # Courier dispatch v1: admin SELECT policy only; writes are service-role (no client grant).
@@ -965,6 +1025,24 @@ EXPECTATIONS: TableExpectations = {
             "update": "deny",
             "delete": "deny",
         },
+    },
+    # Event collaboration: party and admin SELECT only (D1); writes go through the API.
+    "event_collab_organiser_prefs": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "event_collab_requests": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "event_revenue_splits": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    # Event collaboration audit: append-only, SELECT for parties and admins.
+    "event_collab_audit": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     # Courier dispatch v1: trigger-written audit; admin SELECT only.
     "dispatch_request_events": {
@@ -1054,32 +1132,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "event_categories": {
@@ -1136,7 +1214,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -1282,7 +1360,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -1297,32 +1375,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "flags": {
@@ -1335,32 +1413,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "funnel_events": {
@@ -1389,32 +1467,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "invoices": {
@@ -1427,32 +1505,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "job_quotes": {
@@ -1466,31 +1544,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     "jobs": {
@@ -1526,7 +1604,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -1541,148 +1619,37 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "ledger_accounts": {
-        Persona.ANON: {
-            "select": "deny",
             "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "ledger_postings": {
-        Persona.ANON: {
-            "select": "deny",
             "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "ledger_transactions": {
-        Persona.ANON: {
-            "select": "deny",
             "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
+    "ledger_accounts": service_write_money_table(),
+    "ledger_postings": service_write_money_table(),
+    "ledger_transactions": service_write_money_table(),
     # R02-P15. Vendor-scoped listing view aggregates; service-role write only.
     "listing_analytics": {
         Persona.ANON: deny_all(),
@@ -1725,7 +1692,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -1823,32 +1790,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "notification_outbox": {
@@ -1899,32 +1866,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "order_item_products": {
@@ -1938,31 +1905,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     "order_item_services": {
@@ -1976,31 +1943,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     # 20261113071000: per-item stock consumption ledger for cancel-time release.
@@ -2018,31 +1985,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     "order_items": {
@@ -2055,32 +2022,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "order_money_gates": {
@@ -2103,110 +2070,36 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "payments": {
-        Persona.ANON: {
-            "select": "deny",
             "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
-    "payouts": {
-        Persona.ANON: {
-            "select": "deny",
             "insert": "deny",
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
+    "payments": service_write_money_table(),
+    "payouts": service_write_money_table(),
     "platform_config": {
         Persona.ANON: {
             "select": "deny",
@@ -2217,32 +2110,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "translation_overrides": {
@@ -2342,31 +2235,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     "prohibited_categories": {
@@ -2379,32 +2272,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "rate_counters": client_invisible(),
@@ -2434,44 +2327,7 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: admin_read_orphan_write_grants(),
         Persona.ADMIN: admin_read_orphan_write_grants(),
     },
-    "refunds": {
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
-    },
+    "refunds": service_write_money_table(),
     "returns": {
         Persona.ANON: {
             "select": "deny",
@@ -2482,32 +2338,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "review_aggregates": {
@@ -2663,7 +2519,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -2727,32 +2583,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "ticket_transfers": {
@@ -2833,7 +2689,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -2921,7 +2777,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -3097,7 +2953,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -3135,7 +2991,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -3276,7 +3132,7 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -3291,32 +3147,32 @@ EXPECTATIONS: TableExpectations = {
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
+            "update": "deny",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
         },
     },
     "vendors": {
@@ -3330,31 +3186,31 @@ EXPECTATIONS: TableExpectations = {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
-            "delete": "permit",
+            "delete": "deny",
         },
     },
     # ---------------------------------------------------------------------
@@ -3380,6 +3236,9 @@ EXPECTATIONS: TableExpectations = {
     "webhook_events": client_invisible(),
     "payment_collection_receipts": client_invisible(),
     "payment_collection_exceptions": client_invisible(),
+    # Organiser advance undertakings and debts: service_role only (no client grant).
+    "organiser_advance_undertakings": client_invisible(),
+    "organiser_advance_debts": client_invisible(),
     "cart_merge_receipts": client_invisible(),
     # Notification center (20261113130000). Own-row SELECT; the only client UPDATE
     # grant is the (seen_at, read_at) column pair, so the generic
@@ -3397,11 +3256,34 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # Pay at the door (20261115200000): SELECT granted to authenticated behind an
+    # admin-only policy (non-admins read zero rows); anon revoked; every write is
+    # service-role only (no client INSERT/UPDATE/DELETE grant).
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "door_payment_sessions",
+            "door_payment_attempts",
+            "door_payment_exceptions",
+        )
+    },
     # W8 bundles & offers (20261115120000). Public SELECT of live offers; the
-    # owner vendor and admin hold ALL policies (non-owners match zero rows on
-    # the WHERE-false update/delete probes -> permit; a DEFAULT VALUES insert
-    # fails WITH CHECK -> deny, except admin who passes RLS and then hits NOT
-    # NULL -> permit). Gift reservations are service-role only.
+    # owner vendor holds ALL policies and admins a SELECT policy (D1: no admin
+    # writes). Non-owners and admins match zero rows on the WHERE-false
+    # update/delete probes -> permit; a DEFAULT VALUES insert fails WITH CHECK
+    # -> deny. Gift reservations are service-role only.
     "offers": {
         Persona.ANON: select_only(),
         **{
@@ -3411,9 +3293,9 @@ EXPECTATIONS: TableExpectations = {
                 Persona.OTHER_CUSTOMER,
                 Persona.VENDOR,
                 Persona.OTHER_VENDOR,
+                Persona.ADMIN,
             )
         },
-        Persona.ADMIN: all_permit(),
     },
     "offer_items": {
         Persona.ANON: select_only(),
@@ -3424,9 +3306,9 @@ EXPECTATIONS: TableExpectations = {
                 Persona.OTHER_CUSTOMER,
                 Persona.VENDOR,
                 Persona.OTHER_VENDOR,
+                Persona.ADMIN,
             )
         },
-        Persona.ADMIN: all_permit(),
     },
     "offer_gift_reservations": client_invisible(),
     # Unified cart (20261115220000): ticket lines are read by their cart owner
@@ -3461,7 +3343,55 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # 20261115140200: append-only consent log. Owners read their own rows; the API
+    # writes as service_role, so no client holds a write grant.
+    "privacy_consents": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
 }
+
+
+# 20261115140100 (2026-11 RBAC audit, D1): the legacy `admin` role lost its direct
+# write policies on 75 tables, and client write grants that no remaining policy can
+# use were revoked. Cells written above as literals were flipped in place; the cells
+# below come from shared builders, so they are tightened here, one by one. Every
+# change moves a cell from permit to deny.
+_D1_DENIED_CELLS: tuple[tuple[str, Persona, Verb], ...] = (
+    ("business_buyers", Persona.ADMIN, "delete"),
+    ("business_buyers", Persona.ADMIN, "insert"),
+    ("reviews", Persona.ADMIN, "delete"),
+    ("reviews", Persona.CUSTOMER, "delete"),
+    ("reviews", Persona.OTHER_CUSTOMER, "delete"),
+    ("reviews", Persona.OTHER_VENDOR, "delete"),
+    ("reviews", Persona.VENDOR, "delete"),
+    ("service_reviews", Persona.ADMIN, "delete"),
+    ("service_reviews", Persona.CUSTOMER, "delete"),
+    ("service_reviews", Persona.OTHER_CUSTOMER, "delete"),
+    ("service_reviews", Persona.OTHER_VENDOR, "delete"),
+    ("service_reviews", Persona.VENDOR, "delete"),
+    ("tickets", Persona.ADMIN, "delete"),
+    ("tickets", Persona.ADMIN, "insert"),
+    ("tickets", Persona.ADMIN, "update"),
+    ("tickets", Persona.CUSTOMER, "delete"),
+    ("tickets", Persona.CUSTOMER, "update"),
+    ("tickets", Persona.OTHER_CUSTOMER, "delete"),
+    ("tickets", Persona.OTHER_CUSTOMER, "update"),
+    ("tickets", Persona.OTHER_VENDOR, "delete"),
+    ("tickets", Persona.OTHER_VENDOR, "update"),
+    ("tickets", Persona.VENDOR, "delete"),
+    ("tickets", Persona.VENDOR, "update"),
+    ("user_recently_viewed", Persona.ADMIN, "insert"),
+    ("user_saves", Persona.ADMIN, "insert"),
+    ("user_wishlist", Persona.ADMIN, "insert"),
+)
+for _table, _persona, _verb in _D1_DENIED_CELLS:
+    assert EXPECTATIONS[_table][_persona][_verb] == "permit", (_table, _persona, _verb)
+    EXPECTATIONS[_table][_persona] = {**EXPECTATIONS[_table][_persona], _verb: "deny"}
 
 MATRIX_SUMMARY: Counter[str] = Counter()
 

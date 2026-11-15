@@ -504,15 +504,22 @@ create policy offers_owner_all
       select 1 from public.vendors v
       where v.id = offers.vendor_id and v.owner_user_id = (select auth.uid())
     )
-    or public.has_role('admin')
   )
   with check (
     exists (
       select 1 from public.vendors v
       where v.id = offers.vendor_id and v.owner_user_id = (select auth.uid())
     )
-    or public.has_role('admin')
   );
+
+-- D1 (20261115140100): no admin write policy; admins read every offer here and
+-- act through the API (service role).
+drop policy if exists offers_admin_select on public.offers;
+create policy offers_admin_select
+  on public.offers
+  for select
+  to authenticated
+  using (public.has_role('admin'));
 
 drop policy if exists offer_items_public_select on public.offer_items;
 create policy offer_items_public_select
@@ -545,7 +552,6 @@ create policy offer_items_owner_all
       join public.vendors v on v.id = o.vendor_id
       where o.id = offer_items.offer_id and v.owner_user_id = (select auth.uid())
     )
-    or public.has_role('admin')
   )
   with check (
     exists (
@@ -554,8 +560,14 @@ create policy offer_items_owner_all
       join public.vendors v on v.id = o.vendor_id
       where o.id = offer_items.offer_id and v.owner_user_id = (select auth.uid())
     )
-    or public.has_role('admin')
   );
+
+drop policy if exists offer_items_admin_select on public.offer_items;
+create policy offer_items_admin_select
+  on public.offer_items
+  for select
+  to authenticated
+  using (public.has_role('admin'));
 
 revoke all on public.offers from anon, authenticated;
 grant select, insert, update, delete on public.offers to authenticated;

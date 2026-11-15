@@ -85,6 +85,12 @@ const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
     keeps: ["generateMetadata", "setRequestLocale", "VendorDisputeDetailView"],
   },
   {
+    label: "ƒ /[locale]/events/collaborate/[id]",
+    segments: ["[locale]", "events", "collaborate", "[id]"],
+    param: "id",
+    keeps: ["generateMetadata", "setRequestLocale", "CollabDetail"],
+  },
+  {
     label: "ƒ /[locale]/events/[id]/dashboard",
     segments: ["[locale]", "events", "[id]", "dashboard"],
     param: "id",
@@ -287,7 +293,7 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
       .sort();
 
     expect(discovered).toEqual(covered);
-    expect(discovered).toHaveLength(12);
+    expect(discovered).toHaveLength(13);
   });
 
   it("no ancestor segment forces these routes back to static", () => {

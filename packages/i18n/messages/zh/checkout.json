@@ -170,7 +170,8 @@
         "cutoffBefore": "在14:00（卢萨卡时间）前下单，现货商品通常在卖家确认后当天发出。",
         "cutoffAfter": "卢萨卡时间已过14:00，现货商品通常会在卖家确认后于明天发出。",
         "cutoffMadeToOrder": "定制商品在制作完成后发出——请查看每件商品的制作周期。"
-      }
+      },
+      "notOffered": "卖家不为您购物车中的某件商品提供该交付方式。"
     },
     "countdown": {
       "label": "商品已预留",
@@ -264,6 +265,11 @@
         "deliveryNoLandmark": "卢萨卡送货",
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
+      },
+      "deliveryConsent": {
+        "label": "同意将我的姓名、电话和地址提供给配送合作方，用于配送此订单",
+        "hint": "可选。持证快递员可能配送您的订单。若不同意，将由 Vergeo5 员工配送或先致电您。可随时在“账户 → 隐私”中更改。",
+        "saveFailed": "无法保存此选择。您仍可以下单。"
       },
       "typeProducts": "商品",
       "typeEventTickets": "活动门票",
