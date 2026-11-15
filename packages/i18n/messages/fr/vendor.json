@@ -2260,7 +2260,8 @@
       "listings": "Annonces",
       "orders": "Commandes",
       "profile": "Profil",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "offers": "Offres"
     }
   },
   "intake": {
@@ -2321,6 +2322,136 @@
       "toggle": "Accepter les demandes de collaboration",
       "inbox": "Ouvrir la boîte de demandes",
       "saveFailed": "Enregistrement impossible. Réessayez."
+    }
+  },
+  "offers": {
+    "loading": "Chargement des offres…",
+    "backToList": "← Offres",
+    "unknownItem": "Article plus disponible",
+    "list": {
+      "title": "Offres",
+      "intro": "Lots, un acheté = un offert et cadeaux sur vos propres produits, services et événements.",
+      "create": "Nouvelle offre",
+      "empty": "Aucune offre. Créez-en une pour afficher un badge promo sur vos produits.",
+      "edit": "Modifier",
+      "archive": "Archiver",
+      "giftStock": "Cadeaux restants : {available} sur {total}",
+      "notInCart": "Pour l'instant, le paiement applique les offres aux produits ; celle-ci est affichée mais pas encore appliquée."
+    },
+    "types": {
+      "bxgy": {
+        "label": "Achetez X, Y offert",
+        "hint": "Achetez des articles, un autre est offert."
+      },
+      "bundle": {
+        "label": "Prix du lot",
+        "hint": "Des articles vendus ensemble, moins cher."
+      },
+      "buy_n_pay_m": {
+        "label": "Achetez N, payez M",
+        "hint": "Par exemple 3 pour le prix de 2."
+      },
+      "free_gift": {
+        "label": "Cadeau offert",
+        "hint": "Un cadeau dans la limite du stock réservé."
+      }
+    },
+    "roles": {
+      "trigger": {
+        "label": "Le client achète",
+        "hint": "N'importe lequel de ces éléments compte (produits, services ou événements)."
+      },
+      "reward": {
+        "label": "Article offert",
+        "hint": "Le produit offert. Réservez son stock ci-dessous."
+      },
+      "anchor": {
+        "label": "Article principal",
+        "hint": "Au prix plein dans un lot à % de remise sur les compléments."
+      },
+      "addon": {
+        "label": "Compléments",
+        "hint": "Jusqu'à 5 produits vendus avec l'article principal."
+      },
+      "eligible": {
+        "label": "Articles concernés",
+        "hint": "Toute combinaison de ces produits compte pour N ; les moins chers sont offerts."
+      }
+    },
+    "kinds": {
+      "product": "Produit",
+      "service": "Service",
+      "event": "Événement"
+    },
+    "form": {
+      "createTitle": "Nouvelle offre",
+      "editTitle": "Modifier l'offre",
+      "typeLabel": "Type d'offre",
+      "titleLabel": "Nom de l'offre",
+      "buyQty": "Le client achète (qté)",
+      "getQty": "Offert (qté)",
+      "bundlePricing": "Tarif du lot",
+      "bundlePercent": "% de remise sur les compléments",
+      "bundleFixed": "Prix fixe du lot",
+      "addonPercent": "Remise sur les compléments (%)",
+      "addonPercentHint": "L'article principal reste au prix plein.",
+      "bundlePrice": "Prix du lot (K)",
+      "bundlePriceHint": "Ce que le client paie pour l'ensemble.",
+      "buyN": "Achetez (N)",
+      "payM": "Payez (M)",
+      "giftStock": "Cadeaux réservés",
+      "giftStockHint": "L'offre s'arrête quand ils sont épuisés.",
+      "giftStockReserved": "{reserved} déjà promis à des commandes",
+      "itemQty": "Quantité",
+      "removeItem": "Retirer",
+      "addItem": "Ajouter un article…",
+      "startsAt": "Début",
+      "endsAt": "Fin (facultatif)",
+      "endsAtHint": "Laissez vide pour la laisser active jusqu'à sa mise en pause.",
+      "status": "Statut",
+      "maxApplications": "Nombre max. par commande",
+      "save": "Enregistrer l'offre",
+      "saving": "Enregistrement…"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "Active",
+      "paused": "En pause",
+      "archived": "Archivée",
+      "live": "En cours",
+      "adminPaused": "Mise en pause par Vergeo5"
+    },
+    "summary": {
+      "bxgy": "{buy} achetés, {get} offerts",
+      "bundlePercent": "-{percent} % sur les compléments",
+      "bundleFixed": "Lot à {price}",
+      "buyNPayM": "{n} pour le prix de {m}",
+      "freeGift": "Cadeau dans la limite des stocks"
+    },
+    "preview": {
+      "heading": "Ce que paie le client",
+      "pays": "Le client paie {pay} au lieu de {list}",
+      "saves": "Économie de {amount}",
+      "gift": "Plus {qty} cadeau(x) d'une valeur de {value}",
+      "commissionNote": "La commission est calculée sur le montant remisé.",
+      "empty": "Ajoutez des articles pour voir le prix."
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger vos offres.",
+      "saveFailed": "Impossible d'enregistrer l'offre. Réessayez.",
+      "authRequired": "Connectez-vous pour gérer les offres.",
+      "notFound": "Offre introuvable.",
+      "invalidPrice": "Saisissez un prix de lot valide.",
+      "disabled": "Les offres ne sont pas encore disponibles.",
+      "itemNotFound": "Un des articles est introuvable.",
+      "itemForbidden": "Les offres n'utilisent que vos propres produits, services et événements.",
+      "itemUnavailable": "Un des articles n'est plus disponible.",
+      "discountTooLarge": "Cette remise dépasse le maximum autorisé.",
+      "noSaving": "Le prix du lot doit être inférieur au total des articles.",
+      "tooManyActive": "Vous avez atteint la limite d'offres actives.",
+      "giftStockBelowReserved": "Le stock de cadeaux ne peut pas descendre sous les cadeaux déjà promis.",
+      "typeImmutable": "Le type d'offre ne peut pas être modifié.",
+      "rateLimited": "Trop de modifications. Patientez une minute et réessayez."
     }
   }
 }

@@ -103,6 +103,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000",
+    # W8 bundles & offers (additive, reversible).
+    "20261115120000",
     # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
     "20261115130000",
     # Events collaboration rate-limit scopes (additive, reversible).
@@ -169,7 +171,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 176
+    assert len(sql_files) == len(migrations) == 177
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -193,6 +195,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     notification_center = ["20261113130000"]
     rate_scope_sync = ["20261114050000"]
     listing_fulfilment = ["20261115090000"]
+    bundles_offers = ["20261115120000"]
     events_collaboration = ["20261115130000", "20261115130100"]
     audit_s1 = ["20261115140000"]
     governance = ["20261115140100", "20261115140200"]
@@ -208,7 +211,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pay_at_door = ["20261115200000"]
     event_integrity = ["20261115210000"]
     business_home = ["20261115235500", "20261115235600"]
-    assert actual_versions[-37:] == (
+    assert actual_versions[-38:] == (
         repairs
         + post_repair
         + queued_features
@@ -217,6 +220,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + notification_center
         + rate_scope_sync
         + listing_fulfilment
+        + bundles_offers
         + events_collaboration
         + audit_s1
         + governance

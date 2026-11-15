@@ -2260,7 +2260,8 @@
       "listings": "商品",
       "orders": "订单",
       "profile": "资料",
-      "settings": "设置"
+      "settings": "设置",
+      "offers": "优惠"
     }
   },
   "intake": {
@@ -2321,6 +2322,136 @@
       "toggle": "接受合作申请",
       "inbox": "打开申请收件箱",
       "saveFailed": "保存失败，请重试。"
+    }
+  },
+  "offers": {
+    "loading": "正在加载优惠…",
+    "backToList": "← 优惠",
+    "unknownItem": "商品已不可用",
+    "list": {
+      "title": "优惠",
+      "intro": "为您自己的商品、服务和活动设置组合价、买赠和赠品。",
+      "create": "新建优惠",
+      "empty": "还没有优惠。创建一个即可在商品上显示优惠标签。",
+      "edit": "编辑",
+      "archive": "归档",
+      "giftStock": "剩余赠品：{available} / {total}",
+      "notInCart": "结账目前只对商品应用优惠；此优惠会展示，但暂不生效。"
+    },
+    "types": {
+      "bxgy": {
+        "label": "买X送Y",
+        "hint": "购买商品，再送一件。"
+      },
+      "bundle": {
+        "label": "组合价",
+        "hint": "多件一起购买更便宜。"
+      },
+      "buy_n_pay_m": {
+        "label": "买N付M",
+        "hint": "例如买3件付2件。"
+      },
+      "free_gift": {
+        "label": "赠品",
+        "hint": "预留库存送完即止。"
+      }
+    },
+    "roles": {
+      "trigger": {
+        "label": "顾客购买",
+        "hint": "以下任意一项均可（商品、服务或活动）。"
+      },
+      "reward": {
+        "label": "赠送商品",
+        "hint": "免费赠送的商品，请在下方预留库存。"
+      },
+      "anchor": {
+        "label": "主商品",
+        "hint": "在“加购件打折”组合中按原价计算。"
+      },
+      "addon": {
+        "label": "加购件",
+        "hint": "最多5件与主商品一起销售的商品。"
+      },
+      "eligible": {
+        "label": "参与商品",
+        "hint": "这些商品任意组合都计入N件，价格最低的免费。"
+      }
+    },
+    "kinds": {
+      "product": "商品",
+      "service": "服务",
+      "event": "活动"
+    },
+    "form": {
+      "createTitle": "新建优惠",
+      "editTitle": "编辑优惠",
+      "typeLabel": "优惠类型",
+      "titleLabel": "优惠名称",
+      "buyQty": "顾客购买（数量）",
+      "getQty": "免费获得（数量）",
+      "bundlePricing": "组合定价",
+      "bundlePercent": "加购件百分比折扣",
+      "bundleFixed": "固定组合价",
+      "addonPercent": "加购件折扣（%）",
+      "addonPercentHint": "主商品保持原价。",
+      "bundlePrice": "组合价（K）",
+      "bundlePriceHint": "顾客为整套支付的金额。",
+      "buyN": "购买（N）",
+      "payM": "支付（M）",
+      "giftStock": "预留赠品",
+      "giftStockHint": "赠品送完后优惠自动停止。",
+      "giftStockReserved": "已有 {reserved} 件承诺给订单",
+      "itemQty": "数量",
+      "removeItem": "移除",
+      "addItem": "添加商品…",
+      "startsAt": "开始时间",
+      "endsAt": "结束时间（可选）",
+      "endsAtHint": "留空则一直有效，直到您暂停。",
+      "status": "状态",
+      "maxApplications": "每单最多次数",
+      "save": "保存优惠",
+      "saving": "正在保存…"
+    },
+    "status": {
+      "draft": "草稿",
+      "active": "启用",
+      "paused": "已暂停",
+      "archived": "已归档",
+      "live": "进行中",
+      "adminPaused": "已被 Vergeo5 暂停"
+    },
+    "summary": {
+      "bxgy": "买{buy}送{get}",
+      "bundlePercent": "加购件减{percent}%",
+      "bundleFixed": "组合价 {price}",
+      "buyNPayM": "买{n}付{m}",
+      "freeGift": "赠品送完即止"
+    },
+    "preview": {
+      "heading": "顾客需支付",
+      "pays": "顾客支付 {pay}，原价 {list}",
+      "saves": "节省 {amount}",
+      "gift": "另送 {qty} 件赠品，价值 {value}",
+      "commissionNote": "佣金按折后金额收取。",
+      "empty": "添加商品后可查看价格。"
+    },
+    "errors": {
+      "loadFailed": "无法加载您的优惠。",
+      "saveFailed": "无法保存优惠，请重试。",
+      "authRequired": "请登录以管理优惠。",
+      "notFound": "未找到该优惠。",
+      "invalidPrice": "请输入有效的组合价。",
+      "disabled": "优惠功能尚未开放。",
+      "itemNotFound": "找不到其中一件商品。",
+      "itemForbidden": "优惠只能使用您自己的商品、服务和活动。",
+      "itemUnavailable": "其中一件商品已不可用。",
+      "discountTooLarge": "折扣超过允许的上限。",
+      "noSaving": "组合价必须低于各商品总价。",
+      "tooManyActive": "进行中的优惠已达上限。",
+      "giftStockBelowReserved": "赠品库存不能低于已承诺的数量。",
+      "typeImmutable": "优惠类型不能更改。",
+      "rateLimited": "修改过于频繁，请稍候再试。"
     }
   }
 }

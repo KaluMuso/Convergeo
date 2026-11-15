@@ -2400,7 +2400,8 @@
       "payouts": "Payouts",
       "disputes": "Disputes",
       "intake": "Ama-draft ya WhatsApp",
-      "settings": "⚠ Settings"
+      "settings": "⚠ Settings",
+      "offers": "⚠ Offers"
     }
   },
   "intake": {
@@ -2639,6 +2640,136 @@
       "toggle": "⚠ Accept collaboration requests",
       "inbox": "⚠ Open request inbox",
       "saveFailed": "⚠ Could not save. Try again."
+    }
+  },
+  "offers": {
+    "loading": "⚠ Loading offers…",
+    "backToList": "⚠ ← Offers",
+    "unknownItem": "⚠ Item no longer available",
+    "list": {
+      "title": "⚠ Offers",
+      "intro": "⚠ Bundles, buy-one-get-one and free gifts on your own products, services and events.",
+      "create": "⚠ New offer",
+      "empty": "⚠ No offers yet. Create one to show a deal badge on your products.",
+      "edit": "⚠ Edit",
+      "archive": "⚠ Archive",
+      "giftStock": "⚠ Gifts left: {available} of {total}",
+      "notInCart": "⚠ Checkout applies offers to products for now; this one is shown but not yet applied."
+    },
+    "types": {
+      "bxgy": {
+        "label": "⚠ Buy X get Y free",
+        "hint": "⚠ Buy items, get another item free."
+      },
+      "bundle": {
+        "label": "⚠ Bundle price",
+        "hint": "⚠ Items sold together for less."
+      },
+      "buy_n_pay_m": {
+        "label": "⚠ Buy N, pay for M",
+        "hint": "⚠ For example 3 for the price of 2."
+      },
+      "free_gift": {
+        "label": "⚠ Free gift",
+        "hint": "⚠ A gift while your set-aside stock lasts."
+      }
+    },
+    "roles": {
+      "trigger": {
+        "label": "⚠ Customer buys",
+        "hint": "⚠ Any of these qualifies (products, services or events)."
+      },
+      "reward": {
+        "label": "⚠ Free item",
+        "hint": "⚠ The product given free. Set its stock aside below."
+      },
+      "anchor": {
+        "label": "⚠ Main item",
+        "hint": "⚠ Charged at full price in a % off add-ons bundle."
+      },
+      "addon": {
+        "label": "⚠ Add-ons",
+        "hint": "⚠ Up to 5 products sold with the main item."
+      },
+      "eligible": {
+        "label": "⚠ Items that count",
+        "hint": "⚠ Any mix of these products counts towards N; the cheapest are free."
+      }
+    },
+    "kinds": {
+      "product": "⚠ Product",
+      "service": "⚠ Service",
+      "event": "⚠ Event"
+    },
+    "form": {
+      "createTitle": "⚠ New offer",
+      "editTitle": "⚠ Edit offer",
+      "typeLabel": "⚠ Offer type",
+      "titleLabel": "⚠ Offer name",
+      "buyQty": "⚠ Customer buys (qty)",
+      "getQty": "⚠ Gets free (qty)",
+      "bundlePricing": "⚠ Bundle pricing",
+      "bundlePercent": "⚠ % off the add-ons",
+      "bundleFixed": "⚠ Fixed bundle price",
+      "addonPercent": "⚠ Discount on add-ons (%)",
+      "addonPercentHint": "⚠ The main item stays at full price.",
+      "bundlePrice": "⚠ Bundle price (K)",
+      "bundlePriceHint": "⚠ What the customer pays for the whole set.",
+      "buyN": "⚠ Buy (N)",
+      "payM": "⚠ Pay for (M)",
+      "giftStock": "⚠ Gifts set aside",
+      "giftStockHint": "⚠ The offer stops when these run out.",
+      "giftStockReserved": "⚠ {reserved} already promised to orders",
+      "itemQty": "⚠ Quantity",
+      "removeItem": "⚠ Remove",
+      "addItem": "⚠ Add an item…",
+      "startsAt": "⚠ Starts",
+      "endsAt": "⚠ Ends (optional)",
+      "endsAtHint": "⚠ Leave empty to run until you pause it.",
+      "status": "⚠ Status",
+      "maxApplications": "⚠ Max times per order",
+      "save": "⚠ Save offer",
+      "saving": "⚠ Saving…"
+    },
+    "status": {
+      "draft": "⚠ Draft",
+      "active": "⚠ Active",
+      "paused": "⚠ Paused",
+      "archived": "⚠ Archived",
+      "live": "⚠ Live",
+      "adminPaused": "⚠ Paused by Vergeo5"
+    },
+    "summary": {
+      "bxgy": "⚠ Buy {buy}, get {get} free",
+      "bundlePercent": "⚠ {percent}% off add-ons",
+      "bundleFixed": "⚠ Bundle for {price}",
+      "buyNPayM": "⚠ {n} for the price of {m}",
+      "freeGift": "⚠ Free gift while stocks last"
+    },
+    "preview": {
+      "heading": "⚠ What the customer pays",
+      "pays": "⚠ Customer pays {pay} instead of {list}",
+      "saves": "⚠ Saves {amount}",
+      "gift": "⚠ Plus {qty} free gift(s) worth {value}",
+      "commissionNote": "⚠ Commission is charged on the discounted amount.",
+      "empty": "⚠ Add items to see the price."
+    },
+    "errors": {
+      "loadFailed": "⚠ Could not load your offers.",
+      "saveFailed": "⚠ Could not save the offer. Try again.",
+      "authRequired": "⚠ Sign in to manage offers.",
+      "notFound": "⚠ Offer not found.",
+      "invalidPrice": "⚠ Enter a valid bundle price.",
+      "disabled": "⚠ Offers are not available yet.",
+      "itemNotFound": "⚠ One of the items was not found.",
+      "itemForbidden": "⚠ Offers can only use your own products, services and events.",
+      "itemUnavailable": "⚠ One of the items is no longer available.",
+      "discountTooLarge": "⚠ This discount is above the allowed maximum.",
+      "noSaving": "⚠ The bundle price must be below the items' total.",
+      "tooManyActive": "⚠ You have reached the limit of active offers.",
+      "giftStockBelowReserved": "⚠ Gift stock cannot go below the gifts already promised.",
+      "typeImmutable": "⚠ The offer type cannot be changed.",
+      "rateLimited": "⚠ Too many changes. Wait a minute and try again."
     }
   }
 }

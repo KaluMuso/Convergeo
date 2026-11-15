@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 176
+MIGRATION_COUNT = 177
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -51,6 +51,8 @@ POST_REPAIR_ORDER = [
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000",
+    # W8 bundles & offers (additive, reversible).
+    "20261115120000",
     # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
     "20261115130000",
     # Events collaboration rate-limit scopes (additive, reversible).

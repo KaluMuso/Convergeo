@@ -30,6 +30,7 @@ function allVisible(): VendorNavCapabilities {
     disputes: true,
     intake: true,
     settings: true,
+    offers: true,
   };
 }
 
@@ -62,6 +63,7 @@ describe("filterVendorNavGroups", () => {
       jobs: false,
       clips: false,
       reviews: false,
+      offers: false,
     });
     expect(groups.some((group) => group.key === "sell")).toBe(false);
   });
@@ -95,6 +97,7 @@ describe("mobile More menu", () => {
       disputes: false,
       intake: false,
       settings: false,
+      offers: false,
     };
     const groups = filterVendorNavGroups(caps);
     expect(buildVendorMobilePrimary(groups)).toEqual(["home", "orders", "listings"]);

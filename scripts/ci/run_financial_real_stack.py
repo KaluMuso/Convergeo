@@ -72,6 +72,8 @@ FORWARD = [
     "20261114050000_rate_counter_scope_constraint_sync.sql",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000_listing_fulfilment_options_class_d_any_condition.sql",
+    # W8 bundles & offers: offers, offer items, gift reservations, order snapshot (additive).
+    "20261115120000_bundles_offers.sql",
     # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
     "20261115130000_event_collaboration.sql",
     # Events collaboration rate-limit scopes (additive, reversible).
@@ -468,7 +470,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 176 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 177 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

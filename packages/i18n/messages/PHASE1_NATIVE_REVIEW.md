@@ -22,6 +22,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Listing variants + PDP zoom (2026-11-07):** `catalog.pdp.variants` and `catalog.pdp.lightbox` are Phase-1 critical, so bem/nya carry **draft** translations (loanword style matching the existing PDP copy: cart, picture, screen) — they decide what a buyer picks and pays for, so a native reviewer must sign them off before bem/nya are indexed. `checkout.variant`, `orders.detail.variantOption|variantSeparator`, `vendor.listings.variants` and `vendor.orders.items.variantOption|variantSeparator|sku` are **EN passthrough** for key parity; treat those subtrees as untranslated until signed off.
 
+**W8 bundles & offers (2026-11-15):** `vendor.offers.*`, `vendor.shell.nav.offers`, `catalog.offers.*` and `checkout.cart.{offerSavings,offerSaving,offerGift,offerGiftWorth}` were added to bem/nya as **EN passthrough prefixed with `⚠ `** for key parity. Treat these subtrees as untranslated until a native reviewer signs them off. The surface is behind the `bundles` flag (default off).
+
 **CCP-03e verticals (2026-07-20):** `services`, `events`, `directory` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
 
 **Catalog selection and canonical details (2026-10-01):** `events.filters.subcategoryLabel` and `vendor.listings.newCanonical.details.{about,heading,help,name,value,add,remove,invalid}` in both bem/nya are **English fallback values**, copied from EN for key parity. These 18 entries remain untranslated pending native-speaker review; their presence is not translation approval.

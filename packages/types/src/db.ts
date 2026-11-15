@@ -4542,6 +4542,228 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_gift_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          offer_id: string
+          order_id: string
+          order_item_id: string
+          qty: number
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offer_id: string
+          order_id: string
+          order_item_id: string
+          qty: number
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offer_id?: string
+          order_id?: string
+          order_item_id?: string
+          qty?: number
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_gift_reservations_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_gift_reservations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_gift_reservations_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: true
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_items: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          id: string
+          item_kind: string
+          listing_id: string | null
+          offer_id: string
+          qty: number
+          role: string
+          service_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          item_kind: string
+          listing_id?: string | null
+          offer_id: string
+          qty?: number
+          role: string
+          service_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          item_kind?: string
+          listing_id?: string | null
+          offer_id?: string
+          qty?: number
+          role?: string
+          service_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_items_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          addon_percent_off: number | null
+          admin_note: string | null
+          bundle_price_ngwee: number | null
+          bundle_pricing: string | null
+          buy_n: number | null
+          buy_qty: number | null
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          get_qty: number | null
+          gift_stock_reserved: number
+          gift_stock_total: number | null
+          id: string
+          max_applications_per_order: number
+          offer_type: string
+          paused_by_admin: boolean
+          pay_m: number | null
+          per_customer_limit: number | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          vendor_id: string
+        }
+        Insert: {
+          addon_percent_off?: number | null
+          admin_note?: string | null
+          bundle_price_ngwee?: number | null
+          bundle_pricing?: string | null
+          buy_n?: number | null
+          buy_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          get_qty?: number | null
+          gift_stock_reserved?: number
+          gift_stock_total?: number | null
+          id?: string
+          max_applications_per_order?: number
+          offer_type: string
+          paused_by_admin?: boolean
+          pay_m?: number | null
+          per_customer_limit?: number | null
+          starts_at?: string
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          vendor_id: string
+        }
+        Update: {
+          addon_percent_off?: number | null
+          admin_note?: string | null
+          bundle_price_ngwee?: number | null
+          bundle_pricing?: string | null
+          buy_n?: number | null
+          buy_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          get_qty?: number | null
+          gift_stock_reserved?: number
+          gift_stock_total?: number | null
+          id?: string
+          max_applications_per_order?: number
+          offer_type?: string
+          paused_by_admin?: boolean
+          pay_m?: number | null
+          per_customer_limit?: number | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "offers_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_events: {
         Row: {
           actor: string | null
@@ -4798,7 +5020,13 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_offer_gift: boolean
           item_kind: string
+          list_unit_price_ngwee: number | null
+          offer_discount_ngwee: number
+          offer_id: string | null
+          offer_parent_item_id: string | null
+          offer_snapshot: Json
           order_id: string
           product_snapshot: Json
           qty: number
@@ -4809,7 +5037,13 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_offer_gift?: boolean
           item_kind: string
+          list_unit_price_ngwee?: number | null
+          offer_discount_ngwee?: number
+          offer_id?: string | null
+          offer_parent_item_id?: string | null
+          offer_snapshot?: Json
           order_id: string
           product_snapshot?: Json
           qty: number
@@ -4820,7 +5054,13 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_offer_gift?: boolean
           item_kind?: string
+          list_unit_price_ngwee?: number | null
+          offer_discount_ngwee?: number
+          offer_id?: string | null
+          offer_parent_item_id?: string | null
+          offer_snapshot?: Json
           order_id?: string
           product_snapshot?: Json
           qty?: number
@@ -4829,6 +5069,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "order_items_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_offer_parent_item_id_fkey"
+            columns: ["offer_parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
@@ -8243,6 +8497,15 @@ export type Database = {
       release_ask_reservation: {
         Args: { p_reservation_id: string }
         Returns: boolean
+      }
+      release_offer_gift_reservations: {
+        Args: {
+          p_action: string
+          p_after: Json
+          p_before: Json
+          p_order_id: string
+        }
+        Returns: undefined
       }
       reserve_ask_quota: {
         Args: {

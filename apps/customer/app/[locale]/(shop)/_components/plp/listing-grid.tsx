@@ -4,6 +4,7 @@ import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
 
+import type { OfferBadge } from "../offers/offer-badge";
 import type { ReactNode } from "react";
 
 export type CatalogListing = {
@@ -29,6 +30,8 @@ export type CatalogListing = {
   productClass?: string;
   fulfilmentMode?: string;
   leadTimeDays?: number | null;
+  /** W8 offers: live offer this listing takes part in (flag `bundles`). */
+  offerBadge?: OfferBadge;
 };
 
 type ListingGridLabels = ListingCardLabels;
@@ -46,7 +49,8 @@ type ListingGridProps = {
   renderFooter?: (listing: CatalogListing) => ReactNode;
 };
 
-const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
+const LISTING_MEDIA_SIZES =
+  "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
 
 /**
  * Catalog product grid — media is rendered here (RSC-safe static Cloudinary) and

@@ -90,6 +90,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000",
+    # W8 bundles & offers (additive, reversible).
+    "20261115120000",
     # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
     "20261115130000",
     # Events collaboration rate-limit scopes (additive, reversible).

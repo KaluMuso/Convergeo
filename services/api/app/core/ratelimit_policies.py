@@ -388,6 +388,14 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /tickets/{ticket_id}/transfer": STANDARD_WRITE,
     "POST /telemetry/frontend-errors": TELEMETRY_FRONTEND_ERRORS,
     "POST /telemetry/views": TELEMETRY_VIEWS,
+    # W8 offers (flag `bundles`). In-router enforcement uses the per-vendor
+    # `vendor_offers_write` scope (30/min); admin pause/unpause is ADMIN_WRITE.
+    "POST /vendor/offers": STANDARD_WRITE,
+    "POST /vendor/offers/preview": STANDARD_WRITE,
+    "PATCH /vendor/offers/{offer_id}": STANDARD_WRITE,
+    "DELETE /vendor/offers/{offer_id}": STANDARD_WRITE,
+    "POST /offers/{offer_id}/pause": ADMIN_WRITE,
+    "POST /offers/{offer_id}/unpause": ADMIN_WRITE,
     "POST /vendor/collections": STANDARD_WRITE,
     "PATCH /vendor/collections/{collection_id}": STANDARD_WRITE,
     "DELETE /vendor/collections/{collection_id}": STANDARD_WRITE,

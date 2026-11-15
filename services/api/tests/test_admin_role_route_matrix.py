@@ -268,6 +268,10 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # W8 offers moderation (#814, flag off): not delegated to rbac roles yet.
+        "GET /admin/offers",
+        "POST /admin/offers/{offer_id}/pause",
+        "POST /admin/offers/{offer_id}/unpause",
         # Pay at the door (#795, flag off): not delegated to rbac roles until a
         # founder decision maps them (logistics.manage / finance.operate).
         "GET /admin/dispatch/door-payment/exceptions",
