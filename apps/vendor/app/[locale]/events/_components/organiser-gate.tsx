@@ -5,14 +5,16 @@ import { useTranslations } from "next-intl";
 
 type OrganiserGateProps = {
   locale: string;
+  /** `events_collaboration` flag (read from the API; false keeps the coming-soon stub). */
+  collaborationEnabled?: boolean;
 };
 
 /**
  * Shown instead of "Could not load events" when the account is not an
  * organiser. Two honest paths: become one (verify your ID) or run an event
- * with a verified organiser (collaboration requests are coming soon).
+ * with a verified organiser (live when the `events_collaboration` flag is on).
  */
-export function OrganiserGate({ locale }: OrganiserGateProps) {
+export function OrganiserGate({ locale, collaborationEnabled = false }: OrganiserGateProps) {
   const t = useTranslations("vendor");
 
   return (
@@ -43,16 +45,28 @@ export function OrganiserGate({ locale }: OrganiserGateProps) {
       <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
         <h2 className="text-base font-semibold text-text">{t("events.gate.collaborate.title")}</h2>
         <p className="text-sm text-text-2">{t("events.gate.collaborate.body")}</p>
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          data-testid="organiser-gate-collaborate"
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text-3"
-        >
-          {t("events.gate.collaborate.cta")}
-        </button>
-        <p className="text-xs text-text-3">{t("events.gate.collaborate.soon")}</p>
+        {collaborationEnabled ? (
+          <Link
+            href={`/${locale}/events/collaborate`}
+            data-testid="organiser-gate-collaborate"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
+          >
+            {t("events.gate.collaborate.open")}
+          </Link>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              data-testid="organiser-gate-collaborate"
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text-3"
+            >
+              {t("events.gate.collaborate.cta")}
+            </button>
+            <p className="text-xs text-text-3">{t("events.gate.collaborate.soon")}</p>
+          </>
+        )}
       </div>
     </section>
   );

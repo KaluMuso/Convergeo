@@ -1782,6 +1782,179 @@ export type Database = {
           },
         ]
       }
+      event_collab_audit: {
+        Row: {
+          action: string
+          actor_role: string
+          actor_user_id: string | null
+          created_at: string
+          from_status: string | null
+          id: number
+          reason: string | null
+          request_id: string
+          to_status: string
+        }
+        Insert: {
+          action: string
+          actor_role: string
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          reason?: string | null
+          request_id: string
+          to_status: string
+        }
+        Update: {
+          action?: string
+          actor_role?: string
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          reason?: string | null
+          request_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_audit_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "event_collab_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_collab_organiser_prefs: {
+        Row: {
+          accepts_requests: boolean
+          blurb: string | null
+          created_at: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          accepts_requests?: boolean
+          blurb?: string | null
+          created_at?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          accepts_requests?: boolean
+          blurb?: string | null
+          created_at?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_organiser_prefs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_organiser_prefs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_collab_requests: {
+        Row: {
+          checklist: Json
+          created_at: string
+          decided_at: string | null
+          event_draft: Json
+          event_id: string | null
+          id: string
+          organiser_note: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at: string | null
+          readiness_pct: number
+          revenue_share_bps: number | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          decided_at?: string | null
+          event_draft?: Json
+          event_id?: string | null
+          id?: string
+          organiser_note?: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at?: string | null
+          readiness_pct?: number
+          revenue_share_bps?: number | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          decided_at?: string | null
+          event_draft?: Json
+          event_id?: string | null
+          id?: string
+          organiser_note?: string | null
+          organiser_vendor_id?: string
+          proposer_vendor_id?: string
+          published_at?: string | null
+          readiness_pct?: number
+          revenue_share_bps?: number | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_collab_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_proposer_vendor_id_fkey"
+            columns: ["proposer_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_collab_requests_proposer_vendor_id_fkey"
+            columns: ["proposer_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_gmv_reservations: {
         Row: {
           amount_ngwee: number
@@ -2131,6 +2304,76 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_revenue_splits: {
+        Row: {
+          co_host_share_bps: number
+          co_host_vendor_id: string
+          collaboration_request_id: string
+          created_at: string
+          event_id: string
+          organiser_vendor_id: string
+        }
+        Insert: {
+          co_host_share_bps: number
+          co_host_vendor_id: string
+          collaboration_request_id: string
+          created_at?: string
+          event_id: string
+          organiser_vendor_id: string
+        }
+        Update: {
+          co_host_share_bps?: number
+          co_host_vendor_id?: string
+          collaboration_request_id?: string
+          created_at?: string
+          event_id?: string
+          organiser_vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_revenue_splits_co_host_vendor_id_fkey"
+            columns: ["co_host_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_co_host_vendor_id_fkey"
+            columns: ["co_host_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_collaboration_request_id_fkey"
+            columns: ["collaboration_request_id"]
+            isOneToOne: true
+            referencedRelation: "event_collab_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_revenue_splits_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -7298,6 +7541,42 @@ export type Database = {
       ensure_vendor_ledger_accounts: {
         Args: { p_vendor_id: string }
         Returns: number
+      }
+      event_collab_record_create: {
+        Args: { p_actor_user_id: string; p_request_id: string }
+        Returns: undefined
+      }
+      event_collab_transition: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_event_slug?: string
+          p_reason?: string
+          p_request_id: string
+        }
+        Returns: {
+          checklist: Json
+          created_at: string
+          decided_at: string | null
+          event_draft: Json
+          event_id: string | null
+          id: string
+          organiser_note: string | null
+          organiser_vendor_id: string
+          proposer_vendor_id: string
+          published_at: string | null
+          readiness_pct: number
+          revenue_share_bps: number | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "event_collab_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
       expire_checkout_group_if_unpaid: {

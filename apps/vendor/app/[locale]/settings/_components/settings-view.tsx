@@ -9,7 +9,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { maskMsisdn, swapLocaleInPath } from "../../../../lib/locale-path";
 import { isVendorPayoutsEnabled } from "../../../../lib/payouts-availability";
-import { Button, FormField, Select } from "../../listings/new/_lib/ui";
+import { createCollabClient, type CollabFlagStatus } from "../../events/collaborate/_lib/collab-client";
+import { Button, FormField, Select, Switch } from "../../listings/new/_lib/ui";
 import { createPayoutsClient } from "../../payouts/_lib/payouts-client";
 
 import type { PayoutBalances } from "../../payouts/_lib/payouts-client";
@@ -59,6 +60,38 @@ export function SettingsView({ locale }: Props) {
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const payoutsClient = useMemo(() => createPayoutsClient(getToken), [getToken]);
+  const collabClient = useMemo(() => createCollabClient(getToken), [getToken]);
+  const [collab, setCollab] = useState<CollabFlagStatus | null>(null);
+  const [collabSaving, setCollabSaving] = useState(false);
+  const [collabFailed, setCollabFailed] = useState(false);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    let cancelled = false;
+    collabClient
+      .getStatus()
+      .then((status) => {
+        if (!cancelled) setCollab(status);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [collabClient, session]);
+
+  const toggleCollab = async (next: boolean) => {
+    setCollabSaving(true);
+    setCollabFailed(false);
+    try {
+      setCollab(await collabClient.setOrganiserSettings(next));
+    } catch {
+      setCollabFailed(true);
+    } finally {
+      setCollabSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!payoutsLive || !session) {
@@ -199,6 +232,36 @@ export function SettingsView({ locale }: Props) {
           </Link>
         ) : null}
       </Section>
+
+      {collab?.enabled ? (
+        <Section id="collab" title={t("settings.collab.heading")}>
+          <p className="text-sm text-text-2">
+            {collab.can_organise ? t("settings.collab.body") : t("settings.collab.notOrganiser")}
+          </p>
+          {collab.can_organise ? (
+            <Switch
+              label={t("settings.collab.toggle")}
+              checked={collab.accepts_requests}
+              disabled={collabSaving}
+              data-testid="settings-collab-toggle"
+              onChange={(event) => void toggleCollab(event.target.checked)}
+            />
+          ) : null}
+          {collab.can_organise && collab.accepts_requests ? (
+            <Link
+              href={`/${locale}/events/requests`}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+            >
+              {t("settings.collab.inbox")}
+            </Link>
+          ) : null}
+          {collabFailed ? (
+            <p role="alert" className="text-sm text-danger">
+              {t("settings.collab.saveFailed")}
+            </p>
+          ) : null}
+        </Section>
+      ) : null}
 
       <Section id="language" title={t("settings.language.heading")}>
         <FormField label={t("settings.language.label")}>

@@ -966,6 +966,24 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    # Event collaboration: party and admin SELECT only (D1); writes go through the API.
+    "event_collab_organiser_prefs": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "event_collab_requests": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "event_revenue_splits": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    # Event collaboration audit: append-only, SELECT for parties and admins.
+    "event_collab_audit": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Courier dispatch v1: trigger-written audit; admin SELECT only.
     "dispatch_request_events": {
         Persona.ANON: {

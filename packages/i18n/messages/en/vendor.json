@@ -1801,7 +1801,187 @@
         "title": "Run an event with a verified organiser",
         "body": "Partner with an organiser who is already verified and let them host the tickets for your event.",
         "cta": "Request a collaboration",
-        "soon": "Coming soon. We will notify you when collaboration requests open."
+        "soon": "Coming soon. We will notify you when collaboration requests open.",
+        "open": "Propose an event to an organiser"
+      }
+    },
+    "collab": {
+      "meta": {
+        "title": "Run an event with an organiser — Convergeo",
+        "description": "Propose an event to a verified organiser and run it together."
+      },
+      "loading": "Loading…",
+      "untitled": "Untitled event",
+      "status": {
+        "draft": "Draft",
+        "submitted": "Sent",
+        "changes_requested": "Changes needed",
+        "approved": "Approved",
+        "declined": "Declined",
+        "published": "Published"
+      },
+      "readiness": {
+        "label": "Readiness",
+        "value": "{pct}% ready"
+      },
+      "hub": {
+        "title": "Run an event with an organiser",
+        "intro": "Propose an event to a verified organiser. They host the tickets and you appear as co-host once they approve.",
+        "newCta": "Propose an event",
+        "inboxCta": "Organiser inbox",
+        "empty": "You have not proposed any events yet."
+      },
+      "inbox": {
+        "title": "Collaboration requests",
+        "intro": "Vendors who want to run an event under your verified account.",
+        "empty": "No requests yet. Turn on requests in Settings so vendors can find you.",
+        "link": "Collaboration requests"
+      },
+      "list": {
+        "from": "From {name}",
+        "to": "To {name}",
+        "open": "Open"
+      },
+      "form": {
+        "title": "Propose an event",
+        "editTitle": "Update your proposal",
+        "intro": "Choose an organiser, describe the event and fill in the readiness checklist. The organiser decides whether to run it.",
+        "organiser": {
+          "search": "Search organisers",
+          "none": "No organisers are accepting requests right now.",
+          "fixed": "Organiser: {name}"
+        },
+        "event": {
+          "title": "Event name",
+          "category": "Category",
+          "categoryPlaceholder": "Choose a category",
+          "city": "City",
+          "description": "Description"
+        },
+        "saveDraft": "Save draft",
+        "submit": "Send to organiser",
+        "saving": "Saving…",
+        "submitting": "Sending…",
+        "saved": "Draft saved.",
+        "submitted": "Sent to the organiser."
+      },
+      "sections": {
+        "organiser": "Organiser",
+        "event": "Event",
+        "venue": "Venue",
+        "schedule": "Date and time",
+        "capacity": "Capacity",
+        "equipment": "Equipment",
+        "permits": "Permits",
+        "tiers": "Ticket tiers",
+        "share": "Revenue share"
+      },
+      "checklist": {
+        "choose": "Choose…",
+        "venue": {
+          "name": "Venue name",
+          "landmark": "Landmark",
+          "lat": "Latitude",
+          "lng": "Longitude",
+          "useLocation": "Use my current location",
+          "locationFailed": "Could not read your location. Type the coordinates instead."
+        },
+        "schedule": {
+          "starts": "Starts",
+          "ends": "Ends"
+        },
+        "capacity": {
+          "label": "Number of guests"
+        },
+        "equipment": {
+          "help": "Say what is ready and what still needs arranging.",
+          "items": {
+            "sound": "Sound system",
+            "stage": "Stage",
+            "power": "Power or generator",
+            "seating": "Seating",
+            "security": "Security"
+          },
+          "states": {
+            "ready": "Ready",
+            "needed": "Still needed",
+            "not_needed": "Not needed"
+          }
+        },
+        "permits": {
+          "help": "Some venues and events need a council or police permit.",
+          "label": "Permits",
+          "note": "Note (optional)",
+          "states": {
+            "obtained": "Obtained",
+            "pending": "Applied, waiting",
+            "not_required": "Not required"
+          }
+        },
+        "tiers": {
+          "name": "Tier name",
+          "price": "Price (K)",
+          "qty": "Tickets (optional)",
+          "add": "Add a ticket tier",
+          "remove": "Remove tier"
+        },
+        "share": {
+          "help": "The share of ticket revenue you propose for yourself as co-host. The organiser stays accountable for ticket revenue and payouts. Payouts are not live yet; this is only recorded.",
+          "label": "Your share (%)",
+          "invalid": "Enter a percentage from 0 to 100.",
+          "preview": "Co-host {cohost}% · Organiser {organiser}%"
+        }
+      },
+      "fieldErrors": {
+        "required": "is required",
+        "must_be_future": "must be in the future",
+        "must_be_after_start": "must be after the start",
+        "exceeds_capacity": "is more than the capacity"
+      },
+      "detail": {
+        "changesAsked": "The organiser asked for changes",
+        "declinedReason": "Reason for declining",
+        "summary": "Summary",
+        "done": "Done",
+        "open": "Still open",
+        "accountability": "The organiser is accountable for ticket revenue and payouts. The co-host share is recorded for later.",
+        "reasonLabel": "Reason (shared with the vendor)",
+        "approve": "Approve",
+        "decline": "Decline",
+        "askChanges": "Ask for changes",
+        "cancel": "Cancel",
+        "publish": "Publish event",
+        "waiting": "Waiting for the organiser to decide.",
+        "approvedWaiting": "Approved. The organiser will publish the event.",
+        "openEvent": "Open the published event",
+        "publishedCoHost": "Published by {name}. You are shown as co-host.",
+        "history": "History",
+        "back": "Back"
+      },
+      "audit": {
+        "create": "Draft created",
+        "submit": "Sent to organiser",
+        "approve": "Approved",
+        "decline": "Declined",
+        "request_changes": "Changes requested",
+        "publish": "Published"
+      },
+      "errors": {
+        "checklistIncomplete": "Finish these items before sending:",
+        "forbidden": "You cannot do that on this request.",
+        "kycRequired": "Verify your ID before organising events.",
+        "invalidTransition": "This request has already moved on. Refresh and check its status.",
+        "invalidInput": "Check the details and try again.",
+        "notFound": "Request not found.",
+        "conflict": "That conflicts with an existing record.",
+        "rateLimited": "Too many requests. Wait a moment and try again.",
+        "disabled": "Event collaboration is not available yet.",
+        "organiserUnavailable": "That organiser is not accepting requests right now.",
+        "pastStart": "The start time has already passed. Ask the vendor to update it.",
+        "disputeSuspended": "Ticketed publishing is paused after upheld event disputes.",
+        "highValue": "This event needs a verification call before it can be published. Contact Convergeo support.",
+        "generic": "Something went wrong. Try again.",
+        "pickOrganiser": "Choose an organiser first."
       }
     }
   },
@@ -2451,6 +2631,14 @@
         "fr": "Français",
         "zh": "中文"
       }
+    },
+    "collab": {
+      "heading": "Event collaboration",
+      "body": "Let vendors send you requests to run their events under your verified account.",
+      "notOrganiser": "Only verified organisers can receive collaboration requests.",
+      "toggle": "Accept collaboration requests",
+      "inbox": "Open request inbox",
+      "saveFailed": "Could not save. Try again."
     }
   }
 }
