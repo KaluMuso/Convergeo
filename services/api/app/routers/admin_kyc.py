@@ -368,7 +368,9 @@ def _load_kyc_record_row(
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None (not an empty response) when no
+    # row matches, so reading `.data` blindly turns an unknown id into a 500.
+    data = response.data if response is not None else None
     row: dict[str, Any] | None
     if isinstance(data, dict):
         row = data
@@ -389,7 +391,9 @@ def _load_vendor_row(service_client: ServiceRoleClient, vendor_id: str) -> dict[
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None (not an empty response) when no
+    # row matches, so reading `.data` blindly turns an unknown id into a 500.
+    data = response.data if response is not None else None
     row: dict[str, Any] | None
     if isinstance(data, dict):
         row = data
@@ -521,7 +525,8 @@ def _upsert_verified_licence_on_approve(
         .maybe_single()
         .execute()
     )
-    row = existing.data if isinstance(existing.data, dict) else None
+    existing_data = existing.data if existing is not None else None
+    row = existing_data if isinstance(existing_data, dict) else None
     payload = {
         "vendor_id": vendor_id,
         "regulated_class": regulated_class,
