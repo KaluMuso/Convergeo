@@ -1,5 +1,6 @@
 "use client";
 
+import { formatK } from "@vergeo/i18n";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -13,7 +14,6 @@ import {
 import { type CollabRequest } from "../_lib/collab-client";
 import {
   bpsToPercent,
-  ngweeToKwachaText,
   normaliseChecklist,
   normaliseDraft,
   readinessItems,
@@ -209,10 +209,7 @@ export function CollabDetail({ locale, requestId }: Props) {
             {checklist.tiers.length === 0
               ? "-"
               : checklist.tiers
-                  .map(
-                    (tier) =>
-                      `${tier.name} (K${ngweeToKwachaText(tier.price_ngwee)})`,
-                  )
+                  .map((tier) => `${tier.name} (${formatK(tier.price_ngwee)})`)
                   .join(", ")}
           </dd>
           <dt className="text-text-2">{t("events.collab.sections.share")}</dt>
