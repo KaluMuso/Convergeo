@@ -32,11 +32,11 @@ export function MobileHeaderSearch({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-full items-center gap-2 rounded-pill border border-border bg-bg/80 px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+        className="flex h-11 w-full items-center gap-2 rounded-pill border-2 border-primary bg-surface px-4 text-sm text-text-2 shadow-1 transition-colors hover:border-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
         aria-label={triggerLabel}
         data-testid="mobile-header-search-trigger"
       >
-        <IconSearch className="text-text-2" aria-hidden />
+        <IconSearch className="text-primary" aria-hidden />
         <span className="truncate">{labels.placeholder}</span>
       </button>
 

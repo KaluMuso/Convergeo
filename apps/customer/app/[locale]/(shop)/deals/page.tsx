@@ -7,7 +7,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
+import { dealToListing, fetchDeals } from "../_components/deals-data";
 import {
   catalogDeliveryLabels,
   catalogMadeToOrderLabels,
@@ -20,51 +21,7 @@ import type { Metadata } from "next";
 
 export const revalidate = 60;
 
-type DealItem = {
-  deal_id: string;
-  starts_at: string;
-  ends_at: string;
-  deal_price_ngwee: number;
-  reference_price_ngwee: number;
-  discount_percent: number;
-  listing: {
-    id: string;
-    title: string;
-    product_slug: string | null;
-    vendor_name: string;
-    price_ngwee: number;
-    condition: string;
-    in_stock: boolean;
-    image_public_id: string | null;
-    rating: number;
-    review_count: number;
-    distance_m: number | null;
-    delivery_available?: boolean;
-    pickup_available?: boolean;
-  };
-};
-
-type DealsResponse = { server_time: string; items: DealItem[] };
-
 type PageProps = { params: Promise<{ locale: string }> };
-
-async function fetchDeals(): Promise<DealsResponse | null> {
-  const url = absoluteApiUrl("/deals?limit=48");
-  if (!url) {
-    return null;
-  }
-  try {
-    const response = await fetch(url, {
-      next: { revalidate, tags: ["deals"] },
-    });
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as DealsResponse;
-  } catch {
-    return null;
-  }
-}
 
 async function getTranslator(locale: string) {
   const base = await getMessages();
@@ -93,26 +50,10 @@ export default async function DealsPage({ params }: PageProps) {
     notFound();
   }
   setRequestLocale(locale);
-  const [t, data] = await Promise.all([getTranslator(locale), fetchDeals()]);
+  const [t, data] = await Promise.all([getTranslator(locale), fetchDeals(48)]);
   const items = data?.items ?? [];
 
-  const listings: CatalogListing[] = items.map((deal) => ({
-    id: deal.listing.id,
-    title: deal.listing.title,
-    productSlug: deal.listing.product_slug,
-    vendorName: deal.listing.vendor_name,
-    priceNgwee: deal.deal_price_ngwee,
-    oldNgwee: deal.reference_price_ngwee,
-    condition: deal.listing.condition,
-    inStock: deal.listing.in_stock,
-    imagePublicId: deal.listing.image_public_id,
-    rating: deal.listing.rating,
-    reviewCount: deal.listing.review_count,
-    distanceM: deal.listing.distance_m,
-    belowMedian: false,
-    deliveryAvailable: deal.listing.delivery_available ?? false,
-    pickupAvailable: deal.listing.pickup_available ?? false,
-  }));
+  const listings: CatalogListing[] = items.map(dealToListing);
 
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 pb-8">
@@ -166,6 +107,7 @@ export default async function DealsPage({ params }: PageProps) {
               madeToOrder: catalogMadeToOrderLabels((key) => t.raw(key)),
             }}
           />
+          <BackToTop label={t("plp.backToTop")} />
         </>
       )}
     </div>

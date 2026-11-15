@@ -106,7 +106,7 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
       />,
     );
     const grid = screen.getByTestId("home-category-grid");
-    expect(grid).toHaveClass("md:grid-cols-4", "lg:grid-cols-6", "xl:grid-cols-8");
+    expect(grid).toHaveClass("md:grid-cols-6", "lg:grid-cols-8", "xl:grid-cols-10");
   });
 
   it("uses an approved merch image when provided", () => {

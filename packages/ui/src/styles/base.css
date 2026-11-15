@@ -1066,20 +1066,35 @@
 
 .v-card__title--compact {
   font-size: var(--fs-sm);
+  line-height: 1.3;
 }
 
 .v-card__vendor {
   color: var(--text-3);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-micro);
+  line-height: 1.3;
 }
 
 .v-card--product [data-testid="price-block"] {
   font-family: var(--font-display);
 }
 
+/* Dense marketplace card: flat border, smaller price, tight meta lines. */
+.v-card--product {
+  box-shadow: none;
+}
+
+.v-card--product .v-price {
+  font-size: var(--fs-price);
+}
+
+.v-card--product .v-price-was {
+  font-size: var(--fs-micro);
+}
+
 .v-card__discount {
   display: inline-block;
-  padding: 2px var(--sp-2);
+  padding: 1px var(--sp-1);
   border-radius: var(--r-sm);
   background: var(--discount);
   color: var(--on-danger);

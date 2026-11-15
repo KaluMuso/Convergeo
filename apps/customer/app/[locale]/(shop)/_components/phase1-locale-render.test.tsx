@@ -28,14 +28,11 @@ function trustLabels(messages: typeof bemCatalog, locale: string) {
     namespace: "catalog",
   });
   return {
-    ariaLabel: t("home.trust.ariaLabel"),
-    sellers: t("home.trust.sellers"),
-    fulfillment: t("home.trust.fulfillment"),
-    returns: t("home.trust.returns"),
-    escrow: t("home.trust.escrow"),
-    escrowStep1: t("home.hero.escrowStep1"),
-    escrowStep2: t("home.hero.escrowStep2"),
-    escrowStep3: t("home.hero.escrowStep3"),
+    ariaLabel: t("home.trustStrip.ariaLabel"),
+    cod: t("home.trustStrip.cod"),
+    verified: t("home.trustStrip.verified"),
+    lusaka: t("home.trustStrip.lusaka"),
+    returns: t("home.trustStrip.returns"),
   };
 }
 
@@ -43,12 +40,9 @@ describe("Phase-1 bem/nya homepage trust + hero escrow", () => {
   it.each([
     ["bem", bemCatalog],
     ["nya", nyaCatalog],
-  ] as const)("%s trust strip uses vernacular (not English)", (locale, messages) => {
+  ] as const)("%s trust strip renders its (flagged placeholder) copy", (locale, messages) => {
     render(<HomeTrustStrip labels={trustLabels(messages, locale)} />);
-    expect(screen.getByTestId("home-trust-escrow")).toHaveTextContent(messages.home.trust.escrow);
-    expect(screen.getByTestId("home-trust-escrow")).not.toHaveTextContent(
-      "When online payment is available",
-    );
+    expect(screen.getByTestId("home-trust-cod")).toHaveTextContent(messages.home.trustStrip.cod);
     // COD-only pilot: the ladder is order -> deliver -> pay on arrival, never "Held by ...".
     for (const step of [
       messages.home.hero.escrowStep1,

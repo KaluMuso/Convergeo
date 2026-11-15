@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BackToTop } from "./_components/back-to-top";
 import { BannerRow } from "./_components/banner-row";
 import { CategoryGrid } from "./_components/category-grid";
 import { buildVendorLadderLabels } from "./_components/directory/vendor-ladder-labels";
@@ -44,6 +45,7 @@ import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail"
 import { HomeTrustStrip } from "./_components/home-trust-strip";
 import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
 import { MerchPreviewBanner } from "./_components/merch-preview-banner";
+import { catalogDeliveryLabels, catalogMadeToOrderLabels } from "./_components/plp/delivery-labels";
 
 import type { Metadata } from "next";
 
@@ -205,14 +207,11 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const plan = planHomeLayout(merch.slots, merch.categories, defaultData);
 
   const trustLabels = {
-    ariaLabel: t("home.trust.ariaLabel"),
-    sellers: t("home.trust.sellers"),
-    fulfillment: t("home.trust.fulfillment"),
-    returns: t("home.trust.returns"),
-    escrow: t("home.trust.escrow"),
-    escrowStep1: t("home.hero.escrowStep1"),
-    escrowStep2: t("home.hero.escrowStep2"),
-    escrowStep3: t("home.hero.escrowStep3"),
+    ariaLabel: t("home.trustStrip.ariaLabel"),
+    cod: t("home.trustStrip.cod"),
+    verified: t("home.trustStrip.verified"),
+    lusaka: t("home.trustStrip.lusaka"),
+    returns: t("home.trustStrip.returns"),
   };
 
   const railLabels = {
@@ -230,6 +229,8 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
     conditionUsed: t("plp.card.conditionUsed"),
+    delivery: catalogDeliveryLabels((key) => String(tRaw.raw(key))),
+    madeToOrder: catalogMadeToOrderLabels((key) => String(tRaw.raw(key))),
     logistics: {
       nearest: raw("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),
@@ -273,7 +274,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const brandName = tCommon("app.name");
 
   return (
-    <div className="flex flex-col gap-6 lg:gap-10">
+    <div className="flex flex-col gap-4 lg:gap-6">
       <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
       {merch.isPreviewMode ? <MerchPreviewBanner message={t("home.merchPreview.banner")} /> : null}
       {plan.useCampaignHero ? (
@@ -301,6 +302,18 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         />
       ) : null}
 
+      {/* Existing GET /deals only; hides itself when there are no live deals. */}
+      <HomeProductRail
+        id="home-rail-deals"
+        title={t("home.dealsRail.title")}
+        viewAllHref={`/${locale}/deals`}
+        viewAllLabel={t("home.rails.viewAll")}
+        listings={defaultData.deals}
+        locale={locale}
+        labels={railLabels}
+        priorityCount={2}
+      />
+
       {earlyCampaignKeys.map((sectionKey) =>
         renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
       )}
@@ -325,7 +338,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             listings={defaultData.newest}
             locale={locale}
             labels={railLabels}
-            priorityCount={2}
+            priorityCount={0}
           />
           {defaultData.departmentRails.map((rail) => (
             <HomeProductRail
@@ -406,6 +419,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         cardLabels={railLabels}
         labels={streamLabels}
       />
+      <BackToTop label={t("plp.backToTop")} />
     </div>
   );
 }

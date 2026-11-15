@@ -159,6 +159,7 @@ describe("pickRailDepartments", () => {
 
 describe("hasDefaultHomeContent", () => {
   const emptyData: HomeDefaultData = {
+    deals: [],
     newest: [],
     departmentRails: [],
     services: [],
@@ -176,6 +177,7 @@ describe("hasDefaultHomeContent", () => {
   it("is true when the new-listings rail has data", () => {
     expect(
       hasDefaultHomeContent([], {
+        deals: [],
         newest: [makeListing()],
         departmentRails: [],
         services: [],
@@ -187,6 +189,7 @@ describe("hasDefaultHomeContent", () => {
   it("is true when only a department rail has data", () => {
     expect(
       hasDefaultHomeContent([], {
+        deals: [],
         newest: [],
         departmentRails: [{ category: makeCategory(), listings: [makeListing()] }],
         services: [],
