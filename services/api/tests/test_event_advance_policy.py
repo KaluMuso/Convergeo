@@ -640,3 +640,376 @@ class TestRepaymentConcurrency:
             )
         assert _receivable(verified_organiser) == advance
         assert _ledger_globally_balanced(db)
+
+
+def _repaid_key(vendor_id: str, ref: str) -> str:
+    return f"organiser-receivable-repaid-{vendor_id}-{ref}"
+
+
+class TestCrashRetryDerivesFromLedger:
+    """Ledger post committed but the debt allocation was lost (old two-transaction path)."""
+
+    def test_repayment_retry_after_crash_heals_debt_and_audits_once(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        ref = f"crash-{order_id[:8]}"
+        # Crash simulation: the repayment credit is in the ledger, the process died
+        # before touching organiser_advance_debts.
+        post_transaction(
+            idempotency_key=_repaid_key(verified_organiser, ref),
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
+            amount_ngwee=advance,
+            vendor_id=verified_organiser,
+        )
+        assert _receivable(verified_organiser) == 0
+        assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+
+        # Finance retries with the same reference: no 409, no double post, debt healed.
+        txn_id = ap.record_organiser_repayment(
+            vendor_id=verified_organiser,
+            amount_ngwee=advance,
+            actor_user_id=VENDOR_B_OWNER_ID,
+            reference=ref,
+        )
+        assert txn_id
+        assert _receivable(verified_organiser) == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        ap.record_organiser_repayment(
+            vendor_id=verified_organiser,
+            amount_ngwee=advance,
+            actor_user_id=VENDOR_B_OWNER_ID,
+            reference=ref,
+        )
+        audited = _scalar(
+            db,
+            "SELECT count(*)::text FROM public.audit_log "
+            f"WHERE action = '{ap.AUDIT_RECEIVABLE_REPAID}' AND after ->> 'txn_id' = '{txn_id}';",
+        )
+        assert audited == "1"
+        assert _ledger_globally_balanced(db)
+
+    def test_sweeper_never_suspends_when_ledger_shows_debt_repaid(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        # Crash leftover: repaid in the ledger, debt row still open, and NO retry.
+        post_transaction(
+            idempotency_key=_repaid_key(verified_organiser, f"lost-{order_id[:8]}"),
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
+            amount_ngwee=advance,
+            vendor_id=verified_organiser,
+        )
+        assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        assert _scalar(
+            db, f"SELECT status FROM public.vendors WHERE id = '{verified_organiser}';"
+        ) == ("active")
+
+    def test_sweeper_uses_ledger_outstanding_for_partial_crash_leftover(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        post_transaction(
+            idempotency_key=_repaid_key(verified_organiser, f"part-lost-{order_id[:8]}"),
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
+            amount_ngwee=advance - 100,
+            vendor_id=verified_organiser,
+        )
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 1
+        assert _debt(db, order_id) == f"open|{advance}|{advance - 100}|true|true"
+        outstanding = _scalar(
+            db,
+            "SELECT after ->> 'outstanding_ngwee' FROM public.audit_log "
+            f"WHERE entity_id = '{verified_organiser}' AND action = '{ap.AUDIT_DEBT_OVERDUE}' "
+            "ORDER BY at DESC, id DESC LIMIT 1;",
+        )
+        assert outstanding == "100"
+
+    def test_offset_after_crash_heals_debt_without_double_offset(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        # Organiser earns money again (offset held off), then an offset posts and the
+        # process dies before allocating (old two-transaction path).
+        _event_id, other_order, starts_at = _seed_early_order(db, verified_organiser)
+        monkeypatch.setattr(ap, "offset_organiser_receivable", lambda _vendor: 0)
+        evaluate_event_release(_SERVICE, other_order, now=starts_at + timedelta(days=30))
+        monkeypatch.undo()
+        post_transaction(
+            idempotency_key=f"organiser-receivable-offset-{verified_organiser}-crash-{order_id}",
+            template=LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET,
+            amount_ngwee=advance,
+            vendor_id=verified_organiser,
+        )
+        assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+        # Next offset tick: nothing left to offset, but the debt is reconciled.
+        assert ap.offset_organiser_receivable(verified_organiser) == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        assert _receivable(verified_organiser) == 0
+        assert _ledger_globally_balanced(db)
+
+    def test_offset_posts_and_allocates_in_one_transaction(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A failure after the post (inside its transaction) leaves neither behind."""
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        _event_id, other_order, starts_at = _seed_early_order(db, verified_organiser)
+        assert ap.organiser_advance_decision(verified_organiser).bps == 0  # debt blocks
+        original = ap._finalize_sql
+
+        def broken_finalize(**kwargs: object) -> str:
+            return original(**kwargs) + "SELECT 1/0;"  # type: ignore[arg-type]
+
+        monkeypatch.setattr(ap, "_finalize_sql", broken_finalize)
+        # Full post-event release of the second order credits vendor_payable, then the
+        # offset runs (and fails inside its transaction).
+        released = evaluate_event_release(_SERVICE, other_order, now=starts_at + timedelta(days=30))
+        assert released.outcome == "released"
+        assert _receivable(verified_organiser) == advance  # offset rolled back whole
+        assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+        monkeypatch.setattr(ap, "_finalize_sql", original)
+        assert ap.offset_organiser_receivable(verified_organiser) == advance
+        assert _receivable(verified_organiser) == 0
+        assert _debt(db, order_id) == f"settled|{advance}|{advance}|false|false"
+        assert _ledger_globally_balanced(db)
+
+
+class TestRecoveryRequiresPolicyAndUndertaking:
+    def _released_then_cancelled(
+        self, db: PgConn, vendor_id: str, monkeypatch: pytest.MonkeyPatch
+    ) -> tuple[str, int]:
+        # Old unconditional 50% release: phase 1 posted regardless of the policy.
+        monkeypatch.setattr(
+            "app.services.escrow.event_release.resolve_advance_bps", lambda _vendor: 5_000
+        )
+        event_id, order_id, starts_at = _seed_early_order(db, vendor_id)
+        advance = evaluate_event_release(
+            _SERVICE, order_id, now=starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+        ).net_ngwee
+        assert advance > 0
+        assert db.run(f"UPDATE public.events SET status = 'cancelled' WHERE id = '{event_id}';").ok
+        return order_id, advance
+
+    def _no_recovery(self, db: PgConn, order_id: str) -> None:
+        assert summarize_order_release_ledger(order_id).advance_recovered_ngwee == 0
+        assert (
+            _scalar(
+                db,
+                "SELECT count(*)::text FROM public.organiser_advance_debts "
+                f"WHERE order_id = '{order_id}';",
+            )
+            == "0"
+        )
+
+    def test_flag_off_creates_no_debt(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id, _advance = self._released_then_cancelled(db, verified_organiser, monkeypatch)
+        _set_flag(db, False)
+        try:
+            result = ap.recover_event_advance(
+                order_id=order_id, vendor_id=verified_organiser, event_id=str(uuid.uuid4())
+            )
+            assert result.posted is False and result.advance_ngwee == 0
+            self._no_recovery(db, order_id)
+            assert _receivable(verified_organiser) == 0
+        finally:
+            _set_flag(db, True)
+
+    def test_no_undertaking_creates_no_debt(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert db.run(
+            "DELETE FROM public.organiser_advance_undertakings "
+            f"WHERE vendor_id = '{verified_organiser}';"
+        ).ok
+        order_id, _advance = self._released_then_cancelled(db, verified_organiser, monkeypatch)
+        before = _audit_count(db, verified_organiser, "vendor.suspended")
+        evaluate_event_release(_SERVICE, order_id, now=datetime(2026, 12, 15, tzinfo=UTC))
+        self._no_recovery(db, order_id)
+        assert _receivable(verified_organiser) == 0
+        ap.enforce_overdue_advance_debts(now=_late())
+        assert _audit_count(db, verified_organiser, "vendor.suspended") == before
+
+    def test_advance_released_before_undertaking_is_excluded(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Legacy advance (pre-policy release), undertaking signed only afterwards."""
+        assert db.run(
+            "DELETE FROM public.organiser_advance_undertakings "
+            f"WHERE vendor_id = '{verified_organiser}';"
+        ).ok
+        assert db.run(
+            "DELETE FROM public.audit_log "
+            f"WHERE entity_id = '{verified_organiser}' "
+            f"AND action = '{ap.AUDIT_UNDERTAKING_ACCEPTED}';"
+        ).ok
+        order_id, _advance = self._released_then_cancelled(db, verified_organiser, monkeypatch)
+        ap.accept_advance_undertaking(vendor_id=verified_organiser, actor_user_id=VENDOR_B_OWNER_ID)
+        assert not ap.advance_recovery_eligible(order_id=order_id, vendor_id=verified_organiser)
+        evaluate_event_release(_SERVICE, order_id, now=datetime(2026, 12, 15, tzinfo=UTC))
+        self._no_recovery(db, order_id)
+
+    def test_refund_job_path_skips_unagreed_advance(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.events.refund_jobs import _recover_advance_for_job
+
+        _set_flag(db, False)
+        try:
+            order_id, _advance = self._released_then_cancelled(db, verified_organiser, monkeypatch)
+            _recover_advance_for_job({"order_id": order_id, "event_id": str(uuid.uuid4())})
+            self._no_recovery(db, order_id)
+        finally:
+            _set_flag(db, True)
+
+    def test_sweeper_is_gated_on_flag(self, db: PgConn, verified_organiser: str) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        _set_flag(db, False)
+        try:
+            result = ap.enforce_overdue_advance_debts(now=_late())
+            assert (result.debts_flagged, result.vendors_suspended) == (0, 0)
+            assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+        finally:
+            _set_flag(db, True)
+        assert ap.enforce_overdue_advance_debts(now=_late()).vendors_suspended == 1
+
+    def test_sweeper_skips_debt_without_undertaking(
+        self, db: PgConn, verified_organiser: str
+    ) -> None:
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        assert db.run(
+            "DELETE FROM public.organiser_advance_undertakings "
+            f"WHERE vendor_id = '{verified_organiser}';"
+        ).ok
+        result = ap.enforce_overdue_advance_debts(now=_late())
+        assert result.vendors_suspended == 0
+        assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+
+
+class TestOffsetSerialisedWithPayouts:
+    def test_payout_reserved_after_read_is_not_double_spent(
+        self, db: PgConn, verified_organiser: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.payouts.reservation import reserve_payout_row
+
+        order_id, advance = _seed_overdue_debt(db, verified_organiser)
+        _event_id, other_order, starts_at = _seed_early_order(db, verified_organiser)
+        # Releasing the second order would offset at once; hold the offset off so the
+        # organiser has unreserved money owed and an open debt.
+        monkeypatch.setattr(ap, "offset_organiser_receivable", lambda _vendor: 0)
+        assert (
+            evaluate_event_release(_SERVICE, other_order, now=starts_at + timedelta(days=30))
+        ).outcome == "released"
+        monkeypatch.undo()
+        stale = ap._vendor_payable_available_ngwee(verified_organiser)
+        assert stale > 0
+        payout_id = str(uuid.uuid4())
+
+        def stale_read(vendor_id: str) -> int:
+            # A payout reserves the whole balance right after our unlocked read.
+            reserve_payout_row(
+                payout_id=payout_id,
+                vendor_id=vendor_id,
+                amount_ngwee=stale,
+                rail="mtn",
+                lenco_reference=f"po-{payout_id[:8]}",
+                resolve_snapshot={},
+            )
+            return stale
+
+        monkeypatch.setattr(ap, "_vendor_payable_available_ngwee", stale_read)
+        try:
+            assert ap.offset_organiser_receivable(verified_organiser) == 0
+            assert _receivable(verified_organiser) == advance  # nothing double-spent
+            assert _debt(db, order_id) == f"open|{advance}|0|false|false"
+            assert _ledger_globally_balanced(db)
+        finally:
+            assert db.run(f"DELETE FROM public.payouts WHERE id = '{payout_id}';").ok
+
+
+class TestMigrationShape:
+    def test_ledger_kind_check_is_widened_union(self, db: PgConn, db_url_env: None) -> None:
+        definition = _scalar(
+            db,
+            "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+            "WHERE conrelid = 'public.ledger_accounts'::regclass "
+            "AND conname = 'ledger_accounts_kind_check';",
+        )
+        for kind in (
+            "platform_cash",
+            "escrow",
+            "commission_revenue",
+            "vendor_payable",
+            "cod_receivable",
+            "fees",
+            "delivery_revenue",
+            "organiser_receivable",
+        ):
+            assert f"'{kind}'" in definition
+
+    def test_widening_composes_with_other_kind_migrations(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        """Another migration adds a kind first; replaying ours keeps it (no clobber)."""
+        from pathlib import Path
+
+        sql = (
+            Path(__file__).resolve().parents[3]
+            / "supabase/migrations/20261115210000_event_ticket_integrity.sql"
+        ).read_text()
+        start = sql.index("do $widen$")
+        end = sql.index("$widen$;", start) + len("$widen$;")
+        widen = sql[start:end]
+        result = db.run(
+            f"""
+BEGIN;
+ALTER TABLE public.ledger_accounts DROP CONSTRAINT ledger_accounts_kind_check;
+ALTER TABLE public.ledger_accounts ADD CONSTRAINT ledger_accounts_kind_check CHECK (kind IN (
+  'platform_cash', 'escrow', 'commission_revenue', 'vendor_payable', 'cod_receivable',
+  'fees', 'delivery_revenue', 'organiser_receivable', 'marketing_expense'));
+{widen}
+SELECT pg_get_constraintdef(oid) FROM pg_constraint
+WHERE conrelid = 'public.ledger_accounts'::regclass AND conname = 'ledger_accounts_kind_check';
+ROLLBACK;
+"""
+        )
+        assert result.ok, result.error
+        assert "'marketing_expense'" in result.rows[-1]
+        assert "'organiser_receivable'" in result.rows[-1]
+        assert "'delivery_revenue'" in result.rows[-1]
+        reversed_order = db.run(
+            f"""
+BEGIN;
+ALTER TABLE public.ledger_accounts DROP CONSTRAINT ledger_accounts_kind_check;
+ALTER TABLE public.ledger_accounts ADD CONSTRAINT ledger_accounts_kind_check CHECK (kind IN (
+  'platform_cash', 'escrow', 'commission_revenue', 'vendor_payable', 'cod_receivable',
+  'fees', 'delivery_revenue', 'door_payment_suspense')) NOT VALID;
+{widen}
+SELECT pg_get_constraintdef(oid) FROM pg_constraint
+WHERE conrelid = 'public.ledger_accounts'::regclass AND conname = 'ledger_accounts_kind_check';
+ROLLBACK;
+"""
+        )
+        assert reversed_order.ok, reversed_order.error
+        assert "'door_payment_suspense'" in reversed_order.rows[-1]
+        assert "'organiser_receivable'" in reversed_order.rows[-1]
+
+    def test_security_definer_functions_pin_empty_search_path(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        for fn in (
+            "require_published_event_for_issued_ticket",
+            "enforce_event_promo_redemption_limit",
+        ):
+            config = _scalar(
+                db,
+                "SELECT array_to_string(proconfig, ',') FROM pg_proc "
+                f"WHERE proname = '{fn}' AND pronamespace = 'public'::regnamespace;",
+            )
+            assert config in {'search_path=""', "search_path=''"}, (fn, config)

@@ -38,6 +38,12 @@ hold) or whose order escrow is not funded.
 
 ## If an event with an advance is cancelled
 
+Recovery only applies when the flag is ON **and** the organiser accepted the advance
+undertaking before the first pre-event release on that order. Advances released before
+the policy (the old unconditional 50% release) or before the organiser agreed never
+become a receivable, a debt or a suspension; those orders keep the pre-policy refund
+handling (admin review).
+
 1. The release sweep (and the refund job, before it pays) posts `event_advance_recovery`:
    the organiser's advance becomes an `organiser_receivable` and the platform hands back
    its captured commission and fee. The order's escrow again holds the full ticket price.
@@ -46,10 +52,17 @@ hold) or whose order escrow is not funded.
 3. An `organiser_advance_debts` row records the debt (due after the repayment window).
 4. The receivable is netted automatically against any money the platform owes the
    organiser (`organiser_receivable_offset`). Cash repayments confirmed by finance are
-   posted with `record_organiser_repayment` (`organiser_receivable_repaid`).
+   posted with `record_organiser_repayment` (`organiser_receivable_repaid`). Each ledger
+   post commits together with the debt allocation and its audit row; the offset also
+   takes the per-vendor payout lock, so it can never spend money a payout reserved. Debt
+   allocations are always re-derived from the `organiser_receivable` ledger balance, so a
+   retry after a crash converges instead of double-counting.
 5. `POST /internal/event-advance-debts/tick` (cron, `INTERNAL_EVENT_ADVANCE_DEBTS_TOKEN`)
    suspends organisers with an overdue debt, blacklists the debt (no future advances) and
-   flags it for legal follow-up. Every step writes `audit_log`.
+   flags it for legal follow-up. Every step writes `audit_log`. It runs only while the
+   flag is ON, first re-derives each debt from the receivable ledger balance in the same
+   transaction, and never acts on an organiser whose receivable balance is zero or who
+   has no undertaking.
 
 Every entry is a balanced ledger transaction.
 

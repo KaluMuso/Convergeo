@@ -52,8 +52,23 @@
 --   DROP TABLE IF EXISTS public.organiser_advance_undertakings;
 --   DELETE FROM public.ledger_accounts la WHERE la.kind = 'organiser_receivable'
 --     AND NOT EXISTS (SELECT 1 FROM public.ledger_postings lp WHERE lp.account_id = la.id);
---   -- then restore both ledger_accounts checks from
---   -- 20261113120500_delivery_revenue_ledger_account.sql / 0006_money.sql.
+--   -- Narrow ledger_accounts_kind_check by removing ONLY 'organiser_receivable'
+--   -- (kinds other migrations added stay):
+--   DO $narrow$
+--   DECLARE v_kinds text[];
+--   BEGIN
+--     SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) INTO v_kinds
+--     FROM pg_catalog.pg_constraint c,
+--          regexp_matches(pg_get_constraintdef(c.oid), '''([^'']+)''', 'g') AS m
+--     WHERE c.conrelid = 'public.ledger_accounts'::regclass
+--       AND c.conname = 'ledger_accounts_kind_check'
+--       AND m[1] <> 'organiser_receivable';
+--     ALTER TABLE public.ledger_accounts DROP CONSTRAINT ledger_accounts_kind_check;
+--     EXECUTE format('ALTER TABLE public.ledger_accounts ADD CONSTRAINT '
+--       'ledger_accounts_kind_check CHECK (kind IN (%s))',
+--       (SELECT string_agg(quote_literal(k), ', ' ORDER BY k) FROM unnest(v_kinds) k));
+--   END $narrow$;
+--   -- and restore ledger_accounts_vendor_kind_check from 0006_money.sql.
 --   DROP TRIGGER IF EXISTS event_promo_redemptions_enforce_limit
 --     ON public.event_promo_redemptions;
 --   DROP FUNCTION IF EXISTS public.enforce_event_promo_redemption_limit();
@@ -64,7 +79,7 @@ create or replace function public.require_published_event_for_issued_ticket()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_event_status text;
@@ -137,7 +152,7 @@ create or replace function public.enforce_event_promo_redemption_limit()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   v_max integer;
@@ -212,13 +227,44 @@ create trigger event_promo_redemptions_enforce_limit
 -- Unpaid past event_advance_repayment_days -> vendor suspended, debt blacklisted
 -- and flagged for legal follow-up (API sweeper, audited).
 
-alter table public.ledger_accounts drop constraint if exists ledger_accounts_kind_check;
-alter table public.ledger_accounts add constraint ledger_accounts_kind_check
-  check (kind in (
-    'platform_cash', 'escrow', 'commission_revenue',
-    'vendor_payable', 'cod_receivable', 'fees',
-    'delivery_revenue', 'organiser_receivable'
-  ));
+-- WIDEN ledger_accounts_kind_check: read the kinds it currently allows from
+-- pg_constraint and re-add it with the union + 'organiser_receivable'. Never a
+-- hardcoded list, so this composes with any other migration that widens the same
+-- check (e.g. marketing_expense, door_payment_suspense) in either replay order.
+do $widen$
+declare
+  v_def text;
+  v_kinds text[];
+begin
+  select pg_get_constraintdef(c.oid)
+  into v_def
+  from pg_catalog.pg_constraint c
+  where c.conrelid = 'public.ledger_accounts'::regclass
+    and c.conname = 'ledger_accounts_kind_check';
+
+  if v_def is null then
+    raise exception 'ledger_accounts_kind_check is missing; refusing to guess its kinds';
+  end if;
+
+  select coalesce(array_agg(distinct m[1] order by m[1]), array[]::text[])
+  into v_kinds
+  from regexp_matches(v_def, '''([^'']+)''', 'g') as m;
+
+  if 'organiser_receivable' = any (v_kinds) then
+    return;
+  end if;
+  v_kinds := array_append(v_kinds, 'organiser_receivable');
+
+  alter table public.ledger_accounts drop constraint ledger_accounts_kind_check;
+  -- Element-wise literals (renders as ARRAY['..'::text, ...]) so the next widening
+  -- migration can parse the list back out the same way.
+  execute format(
+    'alter table public.ledger_accounts add constraint ledger_accounts_kind_check '
+    'check (kind in (%s))',
+    (select string_agg(quote_literal(k), ', ' order by k) from unnest(v_kinds) as k)
+  );
+end
+$widen$;
 
 alter table public.ledger_accounts drop constraint if exists ledger_accounts_vendor_kind_check;
 alter table public.ledger_accounts add constraint ledger_accounts_vendor_kind_check check (

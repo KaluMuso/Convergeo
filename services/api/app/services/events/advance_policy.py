@@ -75,6 +75,7 @@ AUDIT_RECEIVABLE_REPAID = "event_advance.receivable_repaid"
 AUDIT_DEBT_OVERDUE = "event_advance.debt_overdue_suspended"
 SUSPEND_REASON = "event_advance_debt_overdue"
 RECEIVABLE_OVERDRAWN = "organiser_receivable_overdrawn"
+OFFSET_STALE = "organiser_offset_stale"
 
 
 def _uuid_sql(value: str) -> str:
@@ -259,29 +260,53 @@ def recover_event_advance(
     released to the organiser for this order.
     """
     summary = summarize_order_release_ledger(order_id)
-    created = False
+    instant = (now or datetime.now(UTC)).astimezone(UTC)
     if summary.advance_recovered_ngwee > 0:
-        # Ledger already posted (e.g. a crash before the debt row): re-derive the
-        # organiser's share from the recovery transaction and finish idempotently.
+        # Ledger already posted (an older run that died before the debt row): re-derive
+        # the organiser's share from the recovery transaction and finish idempotently.
         advance = _recovered_advance_ngwee(order_id)
         restore = summary.advance_recovered_ngwee - advance
-    else:
-        advance = summary.vendor_released_ngwee
-        restore = summary.commission_captured_ngwee
         if advance <= 0:
             return AdvanceRecoveryResult(order_id, 0, 0, posted=False)
-        _ensure_receivable_account(vendor_id)
-        created = post_transaction(
-            idempotency_key=advance_recovery_key(order_id),
-            template=LedgerTemplate.EVENT_ADVANCE_RECOVERY,
-            order_id=order_id,
-            advance_ngwee=advance,
-            platform_restore_ngwee=restore,
-            vendor_id=vendor_id,
-        ).created
+        _run_debt_sql(_open_debt_sql(vendor_id, event_id, order_id, advance, restore, instant))
+        offset_organiser_receivable(vendor_id)
+        return AdvanceRecoveryResult(order_id, advance, restore, posted=False)
+
+    advance = summary.vendor_released_ngwee
+    restore = summary.commission_captured_ngwee
     if advance <= 0:
         return AdvanceRecoveryResult(order_id, 0, 0, posted=False)
-    instant = (now or datetime.now(UTC)).astimezone(UTC)
+    if not advance_recovery_eligible(order_id=order_id, vendor_id=vendor_id):
+        # Legacy / unagreed advance (e.g. the old unconditional 50% release, or the
+        # flag is off): never turn it into a debt the organiser never agreed to. The
+        # refund job keeps its pre-policy handling for this order.
+        logger.warning(
+            "advance recovery skipped: not under the advance undertaking",
+            extra={"order_id": order_id, "vendor_id": vendor_id},
+        )
+        return AdvanceRecoveryResult(order_id, 0, 0, posted=False)
+    _ensure_receivable_account(vendor_id)
+    debt_sql = _open_debt_sql(vendor_id, event_id, order_id, advance, restore, instant)
+    # Ledger recovery, debt row, audit and allocation commit in ONE transaction.
+    posted = post_transaction(
+        idempotency_key=advance_recovery_key(order_id),
+        template=LedgerTemplate.EVENT_ADVANCE_RECOVERY,
+        order_id=order_id,
+        advance_ngwee=advance,
+        platform_restore_ngwee=restore,
+        vendor_id=vendor_id,
+        followup_sql=debt_sql,
+    )
+    if not posted.created:
+        _run_debt_sql(debt_sql)
+    offset_organiser_receivable(vendor_id)
+    return AdvanceRecoveryResult(order_id, advance, restore, posted=posted.created)
+
+
+def _open_debt_sql(
+    vendor_id: str, event_id: str, order_id: str, advance: int, restore: int, instant: datetime
+) -> str:
+    """Debt row (once per order) + its audit row + ledger-derived allocation."""
     due_at = instant + timedelta(days=load_repayment_days())
     after = json.dumps(
         {
@@ -292,9 +317,7 @@ def recover_event_advance(
             "due_at": due_at.isoformat(),
         }
     )
-    result = run_sql_script(
-        f"""
-BEGIN;
+    return f"""
 WITH ins AS (
   INSERT INTO public.organiser_advance_debts (vendor_id, event_id, order_id, amount_ngwee, due_at)
   VALUES ({_uuid_sql(vendor_id)}, {_uuid_sql(event_id)}, {_uuid_sql(order_id)}, {int(advance)},
@@ -306,13 +329,120 @@ INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, aft
 SELECT {_uuid_sql(SYSTEM_ACTOR_ID)}, {sql_literal(AUDIT_RECEIVABLE_OPENED)}, 'vendor',
        {_uuid_sql(vendor_id)}, NULL, {sql_literal(after)}::jsonb
 FROM ins;
-COMMIT;
+{_reconcile_debts_sql(_uuid_sql(vendor_id))}
 """
-    )
+
+
+def _run_debt_sql(sql: str) -> None:
+    result = run_sql_script(f"BEGIN;\n{sql}\nCOMMIT;")
     if not result.ok:
         raise RuntimeError(f"record advance debt failed: {result.error}")
-    offset_organiser_receivable(vendor_id)
-    return AdvanceRecoveryResult(order_id, advance, restore, posted=created)
+
+
+def advance_recovery_eligible(*, order_id: str, vendor_id: str) -> bool:
+    """May a released advance on this order become an organiser receivable/debt?
+
+    Only when the advance policy is ON and the organiser signed the advance
+    undertaking BEFORE the first pre-event release on this order. Advances released
+    before the policy took effect (the old unconditional 50% release) or before the
+    organiser agreed are excluded. Fails closed (False) on any lookup failure.
+    """
+    if not is_advance_enabled():
+        return False
+    vendor_sql = _uuid_sql(vendor_id)
+    result = run_sql_script(
+        f"""
+WITH accepted AS (
+  SELECT least(
+    (SELECT min(a.at) FROM public.audit_log a
+     WHERE a.action = {sql_literal(AUDIT_UNDERTAKING_ACCEPTED)}
+       AND a.entity_type = 'vendor' AND a.entity_id = {vendor_sql}),
+    (SELECT u.accepted_at FROM public.organiser_advance_undertakings u
+     WHERE u.vendor_id = {vendor_sql})
+  ) AS since
+),
+released AS (
+  SELECT min(lt.created_at) AS first_at
+  FROM public.ledger_transactions lt
+  WHERE lt.order_id = {_uuid_sql(order_id)} AND lt.kind = 'release_to_vendor'
+)
+SELECT (
+  EXISTS (SELECT 1 FROM public.organiser_advance_undertakings u WHERE u.vendor_id = {vendor_sql})
+  AND accepted.since IS NOT NULL
+  AND released.first_at IS NOT NULL
+  AND released.first_at >= accepted.since
+)::text
+FROM accepted, released;
+"""
+    )
+    if not result.ok or not result.rows:
+        logger.error("advance recovery eligibility lookup failed: %s", result.error)
+        return False
+    return result.rows[0].strip().lower() in {"t", "true"}
+
+
+def _reconcile_debts_sql(vendors_sql: str) -> str:
+    """Idempotently re-derive open debts from the organiser_receivable ledger balance.
+
+    ``vendors_sql`` is a trusted SQL list/subquery of vendor ids. The receivable
+    balance is what the organiser still owes; it is attributed to that vendor's OPEN
+    debts newest-first (equivalently: every offset/repayment settled the oldest debt
+    first), capped at each debt's amount. Values are ABSOLUTE, never increments, so a
+    re-run after a crash, a retry or a concurrent run converges on the ledger.
+    ``settled`` and ``written_off`` debts are terminal and never touched. Locks the
+    receivable account rows (the same row lock the overdraw guard takes) and then the
+    open debt rows, so reconcilers serialise with credits. A DO block: no rows out.
+    """
+    return f"""
+DO $reconcile$
+BEGIN
+  PERFORM 1 FROM public.ledger_accounts la
+  WHERE la.kind = 'organiser_receivable' AND la.vendor_id IN ({vendors_sql})
+  ORDER BY la.id FOR UPDATE;
+  PERFORM 1 FROM public.organiser_advance_debts d
+  WHERE d.vendor_id IN ({vendors_sql}) AND d.status = 'open'
+  ORDER BY d.id FOR UPDATE;
+  WITH owed AS (
+    SELECT la.vendor_id, greatest(0, coalesce(sum(lp.amount_ngwee), 0))::bigint AS balance
+    FROM public.ledger_accounts la
+    LEFT JOIN public.ledger_postings lp ON lp.account_id = la.id
+    WHERE la.kind = 'organiser_receivable' AND la.vendor_id IN ({vendors_sql})
+    GROUP BY la.vendor_id
+  ),
+  newest_first AS (
+    SELECT d.id, d.vendor_id, d.amount_ngwee,
+           sum(d.amount_ngwee) OVER (
+             PARTITION BY d.vendor_id ORDER BY d.created_at DESC, d.id DESC
+           ) AS running
+    FROM public.organiser_advance_debts d
+    WHERE d.vendor_id IN ({vendors_sql}) AND d.status = 'open'
+  ),
+  alloc AS (
+    SELECT n.id,
+           n.amount_ngwee - least(
+             n.amount_ngwee,
+             greatest(0, coalesce(o.balance, 0) - (n.running - n.amount_ngwee))
+           )::bigint AS recovered
+    FROM newest_first n
+    LEFT JOIN owed o ON o.vendor_id = n.vendor_id
+  )
+  UPDATE public.organiser_advance_debts d
+  SET recovered_ngwee = a.recovered,
+      status = CASE WHEN a.recovered = d.amount_ngwee THEN 'settled' ELSE 'open' END
+  FROM alloc a
+  WHERE d.id = a.id
+    AND d.status = 'open'
+    AND (d.recovered_ngwee <> a.recovered OR a.recovered = d.amount_ngwee);
+END
+$reconcile$;
+"""
+
+
+def reconcile_advance_debts(vendor_id: str) -> None:
+    """Heal ``organiser_advance_debts`` from the ledger (crash/retry safe)."""
+    result = run_sql_script(f"BEGIN;\n{_reconcile_debts_sql(_uuid_sql(vendor_id))}\nCOMMIT;")
+    if not result.ok:
+        raise RuntimeError(f"advance debt reconcile failed: {result.error}")
 
 
 def _recovered_advance_ngwee(order_id: str) -> int:
@@ -361,40 +491,6 @@ WHERE vendor_id = {_uuid_sql(vendor_id)}
     return max(0, owed - int(reserved.rows[0]))
 
 
-def _apply_recovered_to_debts(vendor_id: str, amount_ngwee: int) -> None:
-    """FIFO-allocate a recovered amount across the organiser's open debts."""
-    vendor_sql = _uuid_sql(vendor_id)
-    result = run_sql_script(
-        f"""
-BEGIN;
-SELECT id FROM public.organiser_advance_debts
-WHERE vendor_id = {vendor_sql} AND status = 'open'
-FOR UPDATE;
-WITH open_debts AS (
-  SELECT id, amount_ngwee - recovered_ngwee AS outstanding,
-         sum(amount_ngwee - recovered_ngwee) OVER (ORDER BY created_at, id) AS running
-  FROM public.organiser_advance_debts
-  WHERE vendor_id = {vendor_sql} AND status = 'open'
-),
-alloc AS (
-  SELECT id,
-         least(outstanding, greatest(0, {int(amount_ngwee)} - (running - outstanding)))
-           AS take
-  FROM open_debts
-)
-UPDATE public.organiser_advance_debts d
-SET recovered_ngwee = d.recovered_ngwee + a.take,
-    status = CASE WHEN d.recovered_ngwee + a.take = d.amount_ngwee
-                  THEN 'settled' ELSE d.status END
-FROM alloc a
-WHERE d.id = a.id AND a.take > 0;
-COMMIT;
-"""
-    )
-    if not result.ok:
-        raise RuntimeError(f"advance debt allocation failed: {result.error}")
-
-
 def _ledger_state_tag(vendor_id: str) -> str:
     result = run_sql_script(
         f"""
@@ -412,8 +508,109 @@ ORDER BY la.kind;
     return "-".join(row.replace(":", "") for row in result.rows)
 
 
+def _payout_lock_sql(vendor_id: str) -> str:
+    """Same per-vendor advisory xact lock as ``payouts.reservation.reserve_payout_row``."""
+    return (
+        "SELECT pg_advisory_xact_lock(hashtext('vendor_payout_reserve:' || "
+        f"{_uuid_sql(vendor_id)}::text));"
+    )
+
+
+def _offset_precondition_sql(vendor_id: str, amount_ngwee: int) -> str:
+    """Serialise with payout reservation and re-check availability under the lock.
+
+    ``_vendor_payable_available_ngwee`` reads payouts without a lock; a payout reserved
+    between that read and the offset would otherwise let both spend the same credit.
+    Under the payout advisory lock nothing can reserve concurrently, so this re-check
+    is authoritative; a shortfall aborts the whole posting.
+    """
+    vendor_sql = _uuid_sql(vendor_id)
+    return f"""
+{_payout_lock_sql(vendor_id)}
+DO $offset_guard$
+DECLARE
+  v_owed bigint;
+  v_reserved bigint;
+BEGIN
+  SELECT greatest(0, -coalesce(sum(lp.amount_ngwee), 0)) INTO v_owed
+  FROM public.ledger_accounts la
+  JOIN public.ledger_postings lp ON lp.account_id = la.id
+  WHERE la.kind = 'vendor_payable' AND la.vendor_id = {vendor_sql};
+
+  SELECT coalesce(sum(p.amount_ngwee), 0) INTO v_reserved
+  FROM public.payouts p
+  WHERE p.vendor_id = {vendor_sql}
+    AND p.status IN ('pending', 'processing')
+    AND coalesce(p.resolve_snapshot ->> 'kind', '') <> 'customer_refund'
+    AND coalesce((p.resolve_snapshot ->> 'deferred')::boolean, false) = false;
+
+  IF v_owed - v_reserved < {int(amount_ngwee)} THEN
+    RAISE EXCEPTION '{OFFSET_STALE}' USING ERRCODE = 'P0001';
+  END IF;
+END
+$offset_guard$;
+"""
+
+
+def _audit_once_sql(
+    *, vendor_id: str, action: str, idempotency_key: str, actor: str, extra: dict[str, object]
+) -> str:
+    """Audit row for the ledger txn under ``idempotency_key``, written at most once.
+
+    Amount comes from the posted organiser_receivable credit (not the caller's
+    estimate) so a replay records what actually moved.
+    """
+    vendor_sql = _uuid_sql(vendor_id)
+    action_sql = sql_literal(action)
+    return f"""
+INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+SELECT {_uuid_sql(actor)}, {action_sql}, 'vendor', {vendor_sql}, NULL,
+       {sql_literal(json.dumps(extra))}::jsonb
+       || jsonb_build_object(
+            'txn_id', lt.id::text,
+            'amount_ngwee', (
+              SELECT -sum(lp.amount_ngwee) FROM public.ledger_postings lp
+              JOIN public.ledger_accounts la ON la.id = lp.account_id
+              WHERE lp.transaction_id = lt.id AND la.kind = 'organiser_receivable'
+            )
+          )
+FROM public.ledger_transactions lt
+WHERE lt.idempotency_key = {sql_literal(idempotency_key)}
+  AND NOT EXISTS (
+    SELECT 1 FROM public.audit_log a
+    WHERE a.action = {action_sql} AND a.entity_type = 'vendor'
+      AND a.entity_id = {vendor_sql} AND a.after ->> 'txn_id' = lt.id::text
+  );
+"""
+
+
+def _finalize_sql(
+    *, vendor_id: str, action: str, idempotency_key: str, actor: str, extra: dict[str, object]
+) -> str:
+    """Debt allocation + audit, in the posting transaction (or replayed standalone)."""
+    return _reconcile_debts_sql(_uuid_sql(vendor_id)) + _audit_once_sql(
+        vendor_id=vendor_id,
+        action=action,
+        idempotency_key=idempotency_key,
+        actor=actor,
+        extra=extra,
+    )
+
+
+def _run_finalize(sql: str) -> None:
+    result = run_sql_script(f"BEGIN;\n{sql}\nCOMMIT;")
+    if not result.ok:
+        raise RuntimeError(f"advance debt finalize failed: {result.error}")
+
+
 def offset_organiser_receivable(vendor_id: str) -> int:
-    """Net the organiser's receivable against unreserved money owed to them."""
+    """Net the organiser's receivable against unreserved money owed to them.
+
+    Ledger post, FIFO debt allocation and audit commit in ONE transaction, serialised
+    with payout reservation (advisory lock + re-check). Debts are always reconciled
+    from the ledger first, so a debt left stale by an earlier crash heals here.
+    """
+    reconcile_advance_debts(vendor_id)
     receivable = organiser_receivable_balance_ngwee(vendor_id)
     if receivable <= 0:
         return 0
@@ -423,24 +620,59 @@ def offset_organiser_receivable(vendor_id: str) -> int:
         return 0
     # Key binds to the observed ledger state (posting counts on both accounts): a
     # concurrent run on the same state dedupes, any later state gets a fresh key.
+    key = f"organiser-receivable-offset-{vendor_id}-{_ledger_state_tag(vendor_id)}"
+    finalize = _finalize_sql(
+        vendor_id=vendor_id,
+        action=AUDIT_RECEIVABLE_OFFSET,
+        idempotency_key=key,
+        actor=SYSTEM_ACTOR_ID,
+        extra={},
+    )
     try:
         posted = post_transaction(
-            idempotency_key=(
-                f"organiser-receivable-offset-{vendor_id}-{_ledger_state_tag(vendor_id)}"
-            ),
+            idempotency_key=key,
             template=LedgerTemplate.ORGANISER_RECEIVABLE_OFFSET,
             amount_ngwee=amount,
             vendor_id=vendor_id,
+            precondition_sql=_offset_precondition_sql(vendor_id, amount),
+            followup_sql=finalize,
         )
     except LedgerError as exc:
-        if RECEIVABLE_OVERDRAWN in str(exc):
-            return 0  # a concurrent repayment/offset already settled it
+        if RECEIVABLE_OVERDRAWN in str(exc) or OFFSET_STALE in str(exc):
+            # A concurrent repayment/offset or payout got there first; next tick
+            # recomputes from the new state.
+            return 0
         raise
     if not posted.created:
+        _run_finalize(finalize)
         return 0
-    _apply_recovered_to_debts(vendor_id, amount)
-    _audit(vendor_id, AUDIT_RECEIVABLE_OFFSET, {"amount_ngwee": amount, "txn_id": posted.id})
     return amount
+
+
+def _replayed_repayment(vendor_id: str, reference: str, actor_user_id: str) -> str | None:
+    """Same finance reference already posted: heal allocation/audit, return its txn id."""
+    ref = reference.strip()
+    if not ref:
+        return None
+    key = f"organiser-receivable-repaid-{vendor_id}-{ref}"
+    found = run_sql_script(
+        "SELECT id::text FROM public.ledger_transactions "
+        f"WHERE idempotency_key = {sql_literal(key)} LIMIT 1;"
+    )
+    if not found.ok:
+        raise RuntimeError(f"repayment replay lookup failed: {found.error}")
+    if not found.rows:
+        return None
+    _run_finalize(
+        _finalize_sql(
+            vendor_id=vendor_id,
+            action=AUDIT_RECEIVABLE_REPAID,
+            idempotency_key=key,
+            actor=actor_user_id,
+            extra={"reference": ref},
+        )
+    )
+    return found.rows[0]
 
 
 def record_organiser_repayment(
@@ -457,6 +689,9 @@ def record_organiser_repayment(
         raise AppError(
             code="validation_error", message="amount_ngwee must be positive", http_status=422
         )
+    replayed = _replayed_repayment(vendor_id, reference, actor_user_id)
+    if replayed is not None:
+        return replayed
     receivable = organiser_receivable_balance_ngwee(vendor_id)
     if amount_ngwee > receivable:
         raise AppError(
@@ -468,12 +703,21 @@ def record_organiser_repayment(
     ref = reference.strip()
     if not ref:
         raise AppError(code="validation_error", message="reference is required", http_status=422)
+    key = f"organiser-receivable-repaid-{vendor_id}-{ref}"
+    finalize = _finalize_sql(
+        vendor_id=vendor_id,
+        action=AUDIT_RECEIVABLE_REPAID,
+        idempotency_key=key,
+        actor=actor_user_id,
+        extra={"reference": ref},
+    )
     try:
         posted = post_transaction(
-            idempotency_key=f"organiser-receivable-repaid-{vendor_id}-{ref}",
+            idempotency_key=key,
             template=LedgerTemplate.ORGANISER_RECEIVABLE_REPAID,
             amount_ngwee=amount_ngwee,
             vendor_id=vendor_id,
+            followup_sql=finalize,
         )
     except LedgerError as exc:
         if RECEIVABLE_OVERDRAWN not in str(exc):
@@ -484,29 +728,11 @@ def record_organiser_repayment(
             http_status=409,
             details={"receivable_ngwee": max(0, organiser_receivable_balance_ngwee(vendor_id))},
         ) from exc
-    if posted.created:
-        _apply_recovered_to_debts(vendor_id, amount_ngwee)
-        _audit(
-            vendor_id,
-            AUDIT_RECEIVABLE_REPAID,
-            {"amount_ngwee": amount_ngwee, "reference": ref, "txn_id": posted.id},
-            actor=actor_user_id,
-        )
+    if not posted.created:
+        # Replay of an already-posted repayment (e.g. retry after a crash): the
+        # allocation/audit are idempotent, so finish them now.
+        _run_finalize(finalize)
     return posted.id
-
-
-def _audit(
-    vendor_id: str, action: str, after: dict[str, object], *, actor: str = SYSTEM_ACTOR_ID
-) -> None:
-    result = run_sql_script(
-        f"""
-INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
-VALUES ({_uuid_sql(actor)}, {sql_literal(action)}, 'vendor', {_uuid_sql(vendor_id)}, NULL,
-        {sql_literal(json.dumps(after))}::jsonb);
-"""
-    )
-    if not result.ok:
-        raise RuntimeError(f"advance audit failed: {result.error}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -524,32 +750,60 @@ def enforce_overdue_advance_debts(*, now: datetime | None = None) -> OverdueEnfo
     ``event_advance.debt_overdue_suspended`` audit row per vendor. Idempotent (already
     flagged debts are skipped). A debt fully repaid before ``due_at`` is ``settled``
     and never reaches this sweep.
+
+    Never trusts the debt rows alone: in the same transaction it first re-derives
+    every candidate debt's allocation from the ``organiser_receivable`` ledger (so a
+    repayment/offset whose debt update was lost to a crash still counts), and only
+    flags a vendor whose receivable ledger balance is still positive and who signed
+    the advance undertaking. The reported outstanding is capped at that balance.
+    Gated on ``feature_flags.event_organiser_advance``: while off, nobody is flagged.
     """
+    if not is_advance_enabled():
+        return OverdueEnforcementResult(debts_flagged=0, vendors_suspended=0)
     instant = (now or datetime.now(UTC)).astimezone(UTC)
     now_sql = f"{sql_literal(instant.isoformat())}::timestamptz"
     actor_sql = _uuid_sql(SYSTEM_ACTOR_ID)
+    candidates_sql = f"""SELECT c.vendor_id FROM public.organiser_advance_debts c
+    WHERE c.status = 'open' AND c.due_at <= {now_sql} AND c.blacklisted_at IS NULL"""
     result = run_sql_script(
         f"""
 BEGIN;
+{_reconcile_debts_sql(candidates_sql)}
+CREATE TEMP TABLE _advance_receivable ON COMMIT DROP AS
+SELECT la.vendor_id, coalesce(sum(lp.amount_ngwee), 0)::bigint AS balance
+FROM public.ledger_accounts la
+LEFT JOIN public.ledger_postings lp ON lp.account_id = la.id
+WHERE la.kind = 'organiser_receivable' AND la.vendor_id IS NOT NULL
+GROUP BY la.vendor_id;
 CREATE TEMP TABLE _advance_overdue (
   vendor_id uuid NOT NULL, id uuid NOT NULL, outstanding bigint NOT NULL
 ) ON COMMIT DROP;
 WITH overdue AS (
-  UPDATE public.organiser_advance_debts
+  UPDATE public.organiser_advance_debts d
   SET suspended_at = {now_sql},
       blacklisted_at = {now_sql},
       legal_followup_at = {now_sql}
-  WHERE status = 'open'
-    AND due_at <= {now_sql}
-    AND blacklisted_at IS NULL
-  RETURNING vendor_id, id, amount_ngwee - recovered_ngwee AS outstanding
+  WHERE d.status = 'open'
+    AND d.due_at <= {now_sql}
+    AND d.blacklisted_at IS NULL
+    AND d.recovered_ngwee < d.amount_ngwee
+    AND EXISTS (
+      SELECT 1 FROM _advance_receivable r
+      WHERE r.vendor_id = d.vendor_id AND r.balance > 0
+    )
+    AND EXISTS (
+      SELECT 1 FROM public.organiser_advance_undertakings u WHERE u.vendor_id = d.vendor_id
+    )
+  RETURNING d.vendor_id, d.id, d.amount_ngwee - d.recovered_ngwee AS outstanding
 )
 INSERT INTO _advance_overdue (vendor_id, id, outstanding)
 SELECT vendor_id, id, outstanding FROM overdue;
 CREATE TEMP TABLE _advance_overdue_vendors ON COMMIT DROP AS
-SELECT vendor_id, sum(outstanding)::bigint AS outstanding,
-       array_agg(id::text ORDER BY id) AS debt_ids
-FROM _advance_overdue GROUP BY vendor_id;
+SELECT o.vendor_id, least(sum(o.outstanding), max(r.balance))::bigint AS outstanding,
+       array_agg(o.id::text ORDER BY o.id) AS debt_ids
+FROM _advance_overdue o
+JOIN _advance_receivable r ON r.vendor_id = o.vendor_id
+GROUP BY o.vendor_id;
 CREATE TEMP TABLE _advance_suspensions ON COMMIT DROP AS
 SELECT p.vendor_id,
        public.transition_vendor_suspend(
