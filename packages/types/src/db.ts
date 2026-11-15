@@ -6730,6 +6730,13 @@ export type Database = {
             foreignKeyName: "vendor_plan_assignments_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_plan_assignments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -6773,6 +6780,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vendor_plan_overrides_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "vendor_plan_overrides_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -7764,7 +7778,10 @@ export type Database = {
         Args: { p_class: string; p_vendor_id: string }
         Returns: boolean
       }
-      vendor_plan_listing_cap: { Args: { p_vendor_id: string }; Returns: number }
+      vendor_plan_listing_cap: {
+        Args: { p_vendor_id: string }
+        Returns: number
+      }
       vendor_replace_listing_variants: {
         Args: { p_groups: Json; p_listing_id: string; p_variants: Json }
         Returns: Json
