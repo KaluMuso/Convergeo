@@ -13,6 +13,7 @@ from app.services.offers.apply import expand_priced_lines
 from app.services.offers.engine import (
     OfferDef,
     OfferItemDef,
+    OfferType,
     PricingLine,
     price_cart,
 )
@@ -285,7 +286,7 @@ def ticket(key: str, qty: int, unit: int, vendor: str = VENDOR_A) -> PricingLine
 
 
 def test_unified_cart_applicability_by_kind() -> None:
-    def offer(offer_type: str, items: tuple[OfferItemDef, ...]) -> OfferDef:
+    def offer(offer_type: OfferType, items: tuple[OfferItemDef, ...]) -> OfferDef:
         return OfferDef(
             id=OFFER, vendor_id=VENDOR_A, offer_type=offer_type, title="x", items=items
         )

@@ -405,7 +405,8 @@ def _with_ticket_holds(service: MagicMock) -> MagicMock:
             chain = table.select.return_value.eq.return_value.limit.return_value
             chain.execute.return_value = MagicMock(data=[{"id": str(uuid.uuid4())}])
             return table
-        return base(name)
+        result: MagicMock = base(name)
+        return result
 
     service.client.table.side_effect = table_side_effect
     return service
