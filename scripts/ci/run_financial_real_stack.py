@@ -93,6 +93,9 @@ FORWARD = [
     "20261115200000_pay_at_door.sql",
     # Event ticket integrity: ticket validity, promo limit, advance receivable (additive).
     "20261115210000_event_ticket_integrity.sql",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500_business_home_offers_flag.sql",
+    "20261115235600_business_home_section_flags.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -465,7 +468,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 174 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 176 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

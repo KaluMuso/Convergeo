@@ -111,6 +111,9 @@ PENDING_REPAIR_VERSIONS = {
     "20261115200000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
     "20261115210000",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500",
+    "20261115235600",
 }
 
 

@@ -25,6 +25,7 @@ import { Suspense } from "react";
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
+import { OtherShopsRail } from "../../_components/elsewhere/other-shops-rail";
 import {
   fetchProduct,
   productCacheTag,
@@ -911,6 +912,18 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       />
 
       <LazyProductQuestions productSlug={product.slug} locale={locale} />
+
+      {/* Founder rule: related items from OTHER shops, not only this one. */}
+      {selectedListing ? (
+        <Suspense fallback={null}>
+          <OtherShopsRail
+            locale={locale}
+            vendorSlug={selectedListing.vendor.slug}
+            lead="product"
+            focusProductSlug={product.slug}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

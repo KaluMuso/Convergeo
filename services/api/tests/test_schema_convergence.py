@@ -124,6 +124,9 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261115200000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
     "20261115210000",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500",
+    "20261115235600",
 ]
 
 def _module() -> Any:
@@ -166,7 +169,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 174
+    assert len(sql_files) == len(migrations) == 176
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -204,7 +207,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     ]
     pay_at_door = ["20261115200000"]
     event_integrity = ["20261115210000"]
-    assert actual_versions[-35:] == (
+    business_home = ["20261115235500", "20261115235600"]
+    assert actual_versions[-37:] == (
         repairs
         + post_repair
         + queued_features
@@ -219,6 +223,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + analytics_v2
         + pay_at_door
         + event_integrity
+        + business_home
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 
