@@ -164,8 +164,7 @@ class TestPickupLocationsEndpoint:
         """Same D36 rule fetch_listing already enforces for cart mutations — a listing
         an ineligible caller can't see must not leak location data either."""
 
-        def _wholesale_forbidden(listing_id: str, *, business_eligible: bool) -> dict[str, Any]:
-            assert business_eligible is False
+        def _wholesale_forbidden(listing_id: str) -> dict[str, Any]:
             raise AppError(
                 code="cart.listing_not_found",
                 message="Listing not found",

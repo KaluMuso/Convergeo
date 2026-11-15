@@ -85,6 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261115095000",
     # Shared canonical photos + sha256 dedup (additive, reversible).

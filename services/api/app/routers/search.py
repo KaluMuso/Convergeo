@@ -71,7 +71,6 @@ async def search(
         price_max_ngwee=price_max_ngwee,
         page=page,
         page_size=page_size,
-        include_wholesale=access.eligible,
         user_id=access.user_id,
         # Only a complete lat/lng pair drives proximity ranking; a lone coord is ignored.
         user_lat=lat if lng is not None else None,
@@ -116,5 +115,4 @@ async def suggest(
         query=q,
         kind=kind,
         limit=limit,
-        include_wholesale=access.eligible,
     )

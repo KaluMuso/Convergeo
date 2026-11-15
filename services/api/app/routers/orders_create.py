@@ -18,7 +18,6 @@ from app.routers.checkout import (
     resolve_address_zone,
 )
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
-from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
@@ -379,11 +378,11 @@ async def create_orders(
     listings_by_id = fetch_listings_for_items(
         [dict(item) for item in items if isinstance(item, dict)]
     )
-    access = resolve_business_eligibility(current_user.id, service)
+    # Wholesale/tier pricing is vendor-app only: always re-derive at retail.
     items = _rederive_line_prices(
         [dict(item) for item in items if isinstance(item, dict)],
         listings_by_id,
-        business_eligible=access.eligible,
+        business_eligible=False,
         service=service,
         customer_id=current_user.id,
     )
