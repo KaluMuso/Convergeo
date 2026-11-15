@@ -7,6 +7,7 @@
   },
   "nav": {
     "home": "仪表板",
+    "analytics": "数据分析",
     "kyc": "KYC 队列",
     "business": "商户",
     "moderation": "内容审核",
@@ -1215,5 +1216,106 @@
     "reason": "停用原因（必填）",
     "deactivate": "停用",
     "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。"
+  },
+  "analytics": {
+    "title": "数据分析",
+    "subtitle": "汇总的平台与购物者行为数据。不显示任何个人购物者或原始搜索文本。",
+    "tabs": {
+      "label": "分析栏目",
+      "overview": "概览",
+      "search": "搜索与需求",
+      "products": "商品与转化漏斗",
+      "insights": "洞察"
+    },
+    "range": {
+      "label": "日期范围",
+      "days": "最近 {days} 天"
+    },
+    "loading": "正在加载分析数据…",
+    "error": "无法加载分析数据。",
+    "retry": "重试",
+    "permissionDenied": "只有平台管理员可以查看分析数据。",
+    "disabled": {
+      "title": "数据分析未启用",
+      "body": "每日汇总已关闭（功能开关 analytics_v2_rollups）。启用之前，此处不会收集或显示任何数据。"
+    },
+    "dataThrough": "行为数据截至 {day}（UTC）。订单和付款为实时数据。",
+    "dataPending": "行为数据尚未汇总。订单和付款为实时数据。",
+    "insufficient": "数据不足（至少需要 {n}）",
+    "notAvailable": "—",
+    "empty": "此范围内没有数据。",
+    "delta": {
+      "none": "没有上一周期的基准",
+      "value": "较上一周期 {change}"
+    },
+    "columns": {
+      "day": "日期",
+      "term": "搜索词",
+      "product": "商品",
+      "page": "页面类型"
+    },
+    "session": {
+      "rule": "无活动 30 分钟后会话结束。",
+      "activeSpan": "平均活跃时长",
+      "estimatedEnd": "会话结束时间根据最后一次活动估算，并非站内停留时间。",
+      "duration": "{minutes} 分 {seconds} 秒"
+    },
+    "overview": {
+      "commercialTitle": "订单与付款",
+      "commercialHint": "仅来自订单和付款数据。已付款指付款成功。",
+      "behaviourTitle": "购物者行为",
+      "dailyTitle": "每日已付款 GMV",
+      "reconciliation": {
+        "mismatch": "以下日期的付款与已付款结账不一致：{days}。请先核查付款再使用这些数字。"
+      },
+      "kpi": {
+        "gmvPaid": "已付款 GMV",
+        "ordersPaid": "已付款订单",
+        "aov": "平均已付款结账金额",
+        "checkoutsStarted": "已开始结账",
+        "ordersPlacedHint": "已下单 {placed} 笔",
+        "sessions": "会话",
+        "visitorDays": "访客日",
+        "bounceRate": "跳出率",
+        "searches": "搜索次数",
+        "zeroResultShare": "无结果搜索占比"
+      }
+    },
+    "search": {
+      "kNotice": "在此范围内搜索少于 {k} 次的词会归入“其他”，且从不显示。",
+      "zeroResults": "无结果搜索",
+      "zeroTitle": "有人搜索但未找到",
+      "zeroHint": "目录尚未满足的需求。",
+      "topTitle": "热门搜索词",
+      "other": "其他：{terms} 个词，{searches} 次搜索"
+    },
+    "products": {
+      "funnelTitle": "转化漏斗",
+      "funnelHint": "浏览步骤来自会话；结账和订单步骤来自订单和付款。",
+      "shareOfSessions": "占会话的 {share}",
+      "steps": {
+        "sessions": "会话",
+        "search_sessions": "有搜索的会话",
+        "product_view_sessions": "有商品浏览的会话",
+        "cart_adds": "加入购物车",
+        "checkouts_started": "已开始结账",
+        "orders_placed": "已下单",
+        "orders_paid": "已付款订单"
+      },
+      "topTitle": "浏览最多的商品",
+      "views": "浏览次数",
+      "unnamed": "未命名商品",
+      "pageViewsTitle": "按页面类型的浏览量",
+      "entryTitle": "入口页面"
+    },
+    "insights": {
+      "placeholder": "自动洞察将在后续版本推出。目前此处列出数据质量检查。",
+      "none": "此范围内没有数据质量问题。",
+      "kinds": {
+        "payment_mismatch": "{day} 的付款与已付款结账不一致。",
+        "rollup_failed": "{day} 的每日汇总失败。",
+        "rollup_stale": "汇总已滞后（最新：{day}）。"
+      }
+    }
   }
 }

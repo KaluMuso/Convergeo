@@ -19,9 +19,13 @@ from app.services.search.query_builder import (
     MAX_PAGE_SIZE,
     SearchKind,
 )
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+# Anonymous analytics_v2 session id (OD-8): lets the term k-threshold count distinct
+# sessions. Optional, unauthenticated, never used for authz; validated as a UUID downstream.
+AnalyticsSessionHeader = Annotated[str | None, Header(alias="X-Analytics-Session", max_length=36)]
 
 # Geo endpoints are cheap per call but enumerable — cap aggressively per IP.
 _GEO_RATE_LIMIT_PER_MINUTE = 20
@@ -59,6 +63,7 @@ async def search(
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     include_kind_totals: Annotated[bool, Query()] = False,
+    analytics_session: AnalyticsSessionHeader = None,
 ) -> SearchResponse:
     if lat is not None and lng is not None:
         _rate_limit_geo_read(request, supabase)
@@ -77,6 +82,7 @@ async def search(
         user_lat=lat if lng is not None else None,
         user_lng=lng if lat is not None else None,
         include_kind_totals=include_kind_totals,
+        analytics_session_id=analytics_session,
     )
 
 

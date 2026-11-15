@@ -74,9 +74,16 @@ CLOUDINARY_WEBHOOK = RateLimitPolicy(
 
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
-# limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
+# limiter outage never drops analytics. Enforced in routers/analytics_collect.py — with
+# feature flag analytics_v2_collect ON the endpoint instead uses the in-process
+# token buckets there (no DB write per beacon; per worker, see plan §R-C).
 PUBLIC_BEACON = RateLimitPolicy(
     scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
+)
+# Signed-in sign-in link (POST /analytics/identify): fires once per v2 session after login.
+# Keyed per user and enforced fail-open in routers/analytics_identify.py.
+ANALYTICS_IDENTIFY = RateLimitPolicy(
+    scope="analytics_identify_user", limit=20, window=timedelta(minutes=1)
 )
 # Public browser error beacon from Next.js error boundaries (navigator.sendBeacon).
 TELEMETRY_FRONTEND_ERRORS = RateLimitPolicy(
@@ -188,6 +195,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /admin/orders/{order_id}/cod/confirm-collection": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/refuse-collection": PAYMENT_WRITE,
     "POST /analytics/collect": PUBLIC_BEACON,
+    "POST /analytics/identify": ANALYTICS_IDENTIFY,
     "POST /ask": STANDARD_WRITE,
     "POST /auth/guard/otp-quota": SENSITIVE_WRITE,
     "POST /beta/feedback": STANDARD_WRITE,
@@ -234,6 +242,8 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /webhooks/cloudinary": CLOUDINARY_WEBHOOK,
     "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
+    "POST /internal/analytics/v2-retention-tick": INTERNAL_CRON,
+    "POST /internal/analytics/rollup-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,

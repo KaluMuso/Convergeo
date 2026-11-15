@@ -111,6 +111,14 @@
       "loading": "Dikirani…",
       "loadFailed": "Talephera kupeza zomwe munasankha. Yesaninso.",
       "saveFailed": "Talephera kusunga zomwe munasankha. Yesaninso."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "Tithandizeni kukonza Convergeo potilola momwe mumagwiritsira ntchito, mwachitsanzo masamba omwe mumawerenga.",
+      "toggleLabel": "Gawani zomwe mumagwiritsa ntchito",
+      "on": "Yayatsidwa: titha kuona masamba omwe mumapitako ndi kuwalumikiza ku akaunti yanu mukalowa. Maulalo amachotsedwa pakatha masiku 30.",
+      "off": "Yazimitsidwa: timasunga chiwerengero chopanda dzina chokha, monga kuti anthu angati aona tsamba. Palibe mbiri ya zomwe mwachita, ndipo palibe cholumikizidwa ndi inu.",
+      "gpc": "Browser yanu ikutumiza Global Privacy Control, choncho analytics yazimitsidwa. Timalemekeza zomwe browser yanu yasankha."
     }
   }
 }
