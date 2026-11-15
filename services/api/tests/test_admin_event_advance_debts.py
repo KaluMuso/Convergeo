@@ -107,7 +107,10 @@ def test_non_admins_are_denied(monkeypatch: pytest.MonkeyPatch, roles: frozenset
             json={"vendor_id": VENDOR_ID, "amount_ngwee": 100, "reference": "bank-1"},
         )
         assert response.status_code == 403
-        assert harness.repayments == [] and harness.audit_rows == []
+        # #808 records an operator's refused admin attempt (admin.access.denied);
+        # nothing else may be written.
+        written = [r for r in harness.audit_rows if r.get("action") != "admin.access.denied"]
+        assert harness.repayments == [] and written == []
 
 
 def test_list_passes_filters(admin: tuple[TestClient, Harness]) -> None:
@@ -188,7 +191,10 @@ def test_repayment_route_has_payment_rate_limit() -> None:
 
 
 def test_routes_are_not_delegated_to_admin_permission_roles() -> None:
-    from app.core.auth import admin_permission_for_request
+    from app.core.auth import admin_permissions_for_request
 
-    assert admin_permission_for_request("/admin/event-advance-debts", "GET") is None
-    assert admin_permission_for_request("/admin/event-advance-debts/repayments", "POST") is None
+    assert admin_permissions_for_request("/admin/event-advance-debts", "GET") == frozenset()
+    assert (
+        admin_permissions_for_request("/admin/event-advance-debts/repayments", "POST")
+        == frozenset()
+    )

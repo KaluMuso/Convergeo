@@ -259,9 +259,6 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("POST", "/admin/orders/{order_id}/cod/confirm-collection"): "finance.operate",
     ("POST", "/admin/orders/{order_id}/cod/refuse-collection"): "finance.operate",
     ("POST", "/admin/disputes/{dispute_id}/decide"): "finance.operate",
-    # Event organiser advance debts (#796): receivable view and recorded repayments.
-    ("GET", "/admin/event-advance-debts"): ("finance.read", "finance.operate"),
-    ("POST", "/admin/event-advance-debts/repayments"): "finance.operate",
     ("GET", "/admin/disputes/{dispute_id}/notes"): (
         "finance.read",
         "finance.operate",

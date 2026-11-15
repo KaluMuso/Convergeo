@@ -844,10 +844,14 @@ class TestRecoveryRequiresPolicyAndUndertaking:
             "DELETE FROM public.organiser_advance_undertakings "
             f"WHERE vendor_id = '{verified_organiser}';"
         ).ok
+        # audit_log is append-only (#808 trigger); this disposable-DB fixture rewinds
+        # history with triggers disabled for the one statement.
         assert db.run(
+            "SET session_replication_role = replica; "
             "DELETE FROM public.audit_log "
             f"WHERE entity_id = '{verified_organiser}' "
-            f"AND action = '{ap.AUDIT_UNDERTAKING_ACCEPTED}';"
+            f"AND action = '{ap.AUDIT_UNDERTAKING_ACCEPTED}'; "
+            "SET session_replication_role = origin;"
         ).ok
         order_id, _advance = self._released_then_cancelled(db, verified_organiser, monkeypatch)
         ap.accept_advance_undertaking(vendor_id=verified_organiser, actor_user_id=VENDOR_B_OWNER_ID)
