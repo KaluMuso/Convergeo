@@ -986,21 +986,18 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
-    # Event collaboration: party SELECT, admin ALL; writes go through the API.
+    # Event collaboration: party and admin SELECT only (D1); writes go through the API.
     "event_collab_organiser_prefs": {
         Persona.ANON: deny_all(),
-        **{p: malformed_write_probe() for p in Persona if p not in (Persona.ANON, Persona.ADMIN)},
-        Persona.ADMIN: all_permit(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     "event_collab_requests": {
         Persona.ANON: deny_all(),
-        **{p: malformed_write_probe() for p in Persona if p not in (Persona.ANON, Persona.ADMIN)},
-        Persona.ADMIN: all_permit(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     "event_revenue_splits": {
         Persona.ANON: deny_all(),
-        **{p: malformed_write_probe() for p in Persona if p not in (Persona.ANON, Persona.ADMIN)},
-        Persona.ADMIN: all_permit(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     # Event collaboration audit: append-only, SELECT for parties and admins.
     "event_collab_audit": {
