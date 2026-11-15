@@ -76,6 +76,11 @@ FORWARD = [
     "20261115130000_event_collaboration.sql",
     # Events collaboration rate-limit scopes (additive, reversible).
     "20261115130100_event_collaboration_rate_scopes.sql",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000_admin_money_tables_read_only.sql",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
@@ -448,7 +453,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 162 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 165 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

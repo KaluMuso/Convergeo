@@ -93,6 +93,11 @@ PENDING_REPAIR_VERSIONS = {
     "20261115130000",
     # Events collaboration rate-limit scopes (additive, reversible).
     "20261115130100",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100",
+    "20261115140200",
 }
 
 

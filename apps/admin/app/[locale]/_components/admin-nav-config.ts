@@ -18,6 +18,8 @@ export type AdminNavItemKey =
   | "translations"
   | "theme"
   | "roles"
+  | "accounts"
+  | "auditLog"
   | "services"
   | "inventory";
 
@@ -69,6 +71,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "translations", href: "translations" },
       { key: "theme", href: "theme" },
       { key: "roles", href: "roles" },
+      { key: "accounts", href: "accounts" },
+      { key: "auditLog", href: "audit-log" },
     ],
   },
 ];

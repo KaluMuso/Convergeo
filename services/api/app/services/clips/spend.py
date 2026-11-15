@@ -123,9 +123,7 @@ def monthly_cap_usd_micros(service_client: ServiceRoleClient) -> int:
 def unit_rates(service_client: ServiceRoleClient) -> dict[str, Decimal]:
     """Unit costs in USD, as ``Decimal``. Invalid entries fall back, never crash."""
     raw = _read_config(service_client, RATES_KEY)
-    rates: dict[str, Decimal] = {
-        name: Decimal(value) for name, value in DEFAULT_RATES.items()
-    }
+    rates: dict[str, Decimal] = {name: Decimal(value) for name, value in DEFAULT_RATES.items()}
     if isinstance(raw, dict):
         for name, value in raw.items():
             try:
@@ -154,14 +152,11 @@ def delivery_cost_micros(service_client: ServiceRoleClient, *, bytes_served: int
     return _usd_to_micros(rate * gigabytes)
 
 
-def _month_row(
-    service_client: ServiceRoleClient, month_key: str
-) -> dict[str, Any] | None:
+def _month_row(service_client: ServiceRoleClient, month_key: str) -> dict[str, Any] | None:
     rows = _rows(
         service_client.client.table(SPEND_TABLE)
         .select(
-            "month_key, total_usd_micros, clips_transcoded, "
-            "bytes_served, killed_at, admin_reset_at"
+            "month_key, total_usd_micros, clips_transcoded, bytes_served, killed_at, admin_reset_at"
         )
         .eq("month_key", month_key)
         .maybe_single()
@@ -186,9 +181,7 @@ def current_month_total_micros(
     return 0
 
 
-def is_killed(
-    service_client: ServiceRoleClient, *, month_key: str | None = None
-) -> bool:
+def is_killed(service_client: ServiceRoleClient, *, month_key: str | None = None) -> bool:
     """Whether uploads are currently paused for the month.
 
     A reset that is *newer than* the kill re-opens the month. Comparing the two
@@ -247,9 +240,7 @@ def record_spend(
     return current_month_total_micros(service_client, month_key=key)
 
 
-def reset_kill_switch(
-    service_client: ServiceRoleClient, *, month_key: str | None = None
-) -> bool:
+def reset_kill_switch(service_client: ServiceRoleClient, *, month_key: str | None = None) -> bool:
     """Operator reversal. Recorded, not destructive — see :func:`is_killed`."""
     response = service_client.client.rpc(
         "reset_clip_kill_switch", {"p_month_key": month_key or current_month_key()}

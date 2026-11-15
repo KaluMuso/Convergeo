@@ -100,5 +100,17 @@
     "retry": "Try again",
     "loadMore": "Show more",
     "viewFeed": "See new from stores you follow"
+  },
+  "privacy": {
+    "deliveryConsent": {
+      "title": "Kugawana zambiri ndi a delivery",
+      "description": "Vergeo5 imagwiritsa ntchito ma courier okhala ndi licence pa ma delivery ena. Kuti abweretse order yanu, courier amafuna dzina lanu, nambala ya foni ndi address ya delivery. Timawapatsa pokhapokha mutalola. Pickup sifuna izi.",
+      "label": "Patsani courier dzina langa, foni ndi address kuti abweretse ma order anga",
+      "grantedAt": "Munalola pa {at}. Mungathe kuzimitsa nthawi iliyonse.",
+      "notGranted": "Simunalole. Antchito a Vergeo5 adzabweretsa order okha, kapena adzakufunsani asanagwiritse ntchito courier.",
+      "loading": "Dikirani…",
+      "loadFailed": "Talephera kupeza zomwe munasankha. Yesaninso.",
+      "saveFailed": "Talephera kusunga zomwe munasankha. Yesaninso."
+    }
   }
 }

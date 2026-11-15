@@ -10,7 +10,13 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Protocol, cast
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.deps import get_supabase_client
+from app.core.auth import (
+    DASHBOARD_FINANCE_PERMISSIONS,
+    CurrentUser,
+    get_current_user,
+    load_admin_permissions,
+)
+from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
 from app.services.ask.spend import (
@@ -108,8 +114,12 @@ class FunnelSnapshotOut(BaseModel):
 class DashboardOut(BaseModel):
     gmv_ngwee: int
     orders_by_status: OrdersByStatusOut
-    payout_liabilities: PayoutLiabilitiesOut
-    reconciliation: ReconciliationTileOut
+    # D3 (2026-11 RBAC audit): escrow held, unpaid liabilities and the reconciliation
+    # report are finance data. Callers without finance.read / finance.operate get null
+    # here and `finance_visible = false`; the aggregate cache always holds them.
+    payout_liabilities: PayoutLiabilitiesOut | None
+    reconciliation: ReconciliationTileOut | None
+    finance_visible: bool = True
     counts: CatalogCountsOut
     ai_usage: AiUsageTileOut
     funnel: FunnelSnapshotOut
@@ -211,14 +221,43 @@ def _count_table(service_client: ServiceRoleClient, table: str) -> int:
     return len(_rows(response))
 
 
-def _orders_by_status(service_client: ServiceRoleClient) -> OrdersByStatusOut:
-    response = service_client.client.table("orders").select("status").execute()
-    counts = OrdersByStatusOut()
-    for row in _rows(response):
-        status = str(row.get("status", ""))
-        if hasattr(counts, status):
-            setattr(counts, status, getattr(counts, status) + 1)
-    return counts
+_ORDER_STATUSES: tuple[str, ...] = (
+    "placed",
+    "confirmed",
+    "processing",
+    "ready",
+    "shipped",
+    "delivered",
+    "completed",
+    "cancelled",
+)
+
+
+def _sql_counts(script: str, *, what: str) -> list[int]:
+    """Run a one-row ``count(*) FILTER (...)`` aggregate and return its integer columns.
+
+    1B-02: dashboard counts are SQL aggregates, not PostgREST row selects — a PostgREST
+    select is capped at ``max_rows`` (1,000 on Supabase) and silently under-reports.
+    """
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise AppError(
+            code="dashboard_query_failed",
+            message=f"Failed to compute {what}",
+            http_status=500,
+            details={"error": result.error},
+        )
+    return [int(part) for part in result.rows[0].split("|")]
+
+
+def _orders_by_status(service_client: ServiceRoleClient | None = None) -> OrdersByStatusOut:
+    del service_client  # kept for call-site compatibility; counts come from SQL
+    filters = ",\n  ".join(
+        f"count(*) FILTER (WHERE status = '{status}')" for status in _ORDER_STATUSES
+    )
+    script = f"SELECT concat_ws('|',\n  {filters}\n) FROM public.orders;"
+    counts = _sql_counts(script, what="orders by status")
+    return OrdersByStatusOut(**dict(zip(_ORDER_STATUSES, counts, strict=True)))
 
 
 def _latest_reconciliation(service_client: ServiceRoleClient) -> ReconciliationTileOut:
@@ -337,31 +376,23 @@ def _ai_monthly_cap_usd(service_client: ServiceRoleClient) -> int:
     return DEFAULT_AI_MONTHLY_CAP_USD
 
 
-def _funnel_snapshot(service_client: ServiceRoleClient) -> FunnelSnapshotOut:
-    checkout_response = service_client.client.table("checkout_groups").select("status").execute()
-    checkout_started = 0
-    checkout_completed = 0
-    for row in _rows(checkout_response):
-        status = str(row.get("status", ""))
-        if status in {"pending", "completed", "abandoned", "expired"}:
-            checkout_started += 1
-        if status == "completed":
-            checkout_completed += 1
-
-    orders_response = service_client.client.table("orders").select("status").execute()
-    orders_placed = 0
-    orders_completed = 0
-    for row in _rows(orders_response):
-        status = str(row.get("status", ""))
-        if status != "cancelled":
-            orders_placed += 1
-        if status == "completed":
-            orders_completed += 1
-
+def _funnel_snapshot(service_client: ServiceRoleClient | None = None) -> FunnelSnapshotOut:
+    del service_client  # kept for call-site compatibility; counts come from SQL
+    script = """
+SELECT concat_ws('|',
+  (SELECT count(*) FILTER (
+     WHERE status IN ('pending', 'completed', 'abandoned', 'expired')
+   ) FROM public.checkout_groups),
+  (SELECT count(*) FILTER (WHERE status = 'completed') FROM public.checkout_groups),
+  (SELECT count(*) FILTER (WHERE status <> 'cancelled') FROM public.orders),
+  (SELECT count(*) FILTER (WHERE status = 'completed') FROM public.orders)
+);
+"""
+    started, completed, placed, orders_completed = _sql_counts(script, what="funnel snapshot")
     return FunnelSnapshotOut(
-        checkout_started=checkout_started,
-        checkout_completed=checkout_completed,
-        orders_placed=orders_placed,
+        checkout_started=started,
+        checkout_completed=completed,
+        orders_placed=placed,
         orders_completed=orders_completed,
     )
 
@@ -425,11 +456,35 @@ def _get_cached_dashboard(service_client: ServiceRoleClient) -> DashboardOut:
     return payload
 
 
+def _without_finance(payload: DashboardOut) -> DashboardOut:
+    return payload.model_copy(
+        update={"payout_liabilities": None, "reconciliation": None, "finance_visible": False}
+    )
+
+
+def _cached_dashboard_without_finance(service_client: ServiceRoleClient) -> DashboardOut:
+    """Serve the shared aggregate without the per-request reconciliation read."""
+    global _cache_payload, _cache_expires_at
+    now = time.monotonic()
+    with _cache_lock:
+        cached = _cache_payload if now < _cache_expires_at else None
+    if cached is None:
+        cached = build_dashboard(service_client)
+        with _cache_lock:
+            _cache_payload = cached
+            _cache_expires_at = now + DASHBOARD_CACHE_TTL_SECONDS
+    return _without_finance(cached)
+
+
 @dashboard_router.get("", response_model=DashboardOut)
 async def get_admin_dashboard(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> DashboardOut:
-    return _get_cached_dashboard(service_client)
+    granted = load_admin_permissions(user, cast(SupabaseServiceClient, service_client))
+    if DASHBOARD_FINANCE_PERMISSIONS & granted:
+        return _get_cached_dashboard(service_client)
+    return _cached_dashboard_without_finance(service_client)
 
 
 admin_router.include_router(dashboard_router)

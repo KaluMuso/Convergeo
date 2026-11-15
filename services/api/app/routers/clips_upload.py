@@ -246,8 +246,6 @@ async def create_clip(
             str(signed["notification_url"]) if signed.get("notification_url") else None
         ),
         eager_notification_url=(
-            str(signed["eager_notification_url"])
-            if signed.get("eager_notification_url")
-            else None
+            str(signed["eager_notification_url"]) if signed.get("eager_notification_url") else None
         ),
     )

@@ -11,6 +11,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.deps import get_supabase_client
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -79,11 +80,30 @@ class _FakeQuery:
         return MagicMock(data=[dict(r) for r in rows])
 
 
+class _AuditQuery:
+    """Sink for the audit_log row every override mutation must now write."""
+
+    def __init__(self, sink: list[dict[str, Any]]) -> None:
+        self._sink = sink
+        self._row: dict[str, Any] = {}
+
+    def insert(self, row: dict[str, Any]) -> _AuditQuery:
+        self._row = row
+        return self
+
+    def execute(self) -> MagicMock:
+        self._sink.append(self._row)
+        return MagicMock(data=[self._row])
+
+
 class _FakeClient:
     def __init__(self) -> None:
         self.rows: list[dict[str, Any]] = []
+        self.audit_rows: list[dict[str, Any]] = []
 
-    def table(self, _name: str) -> _FakeQuery:
+    def table(self, _name: str) -> _FakeQuery | _AuditQuery:
+        if _name == "audit_log":
+            return _AuditQuery(self.audit_rows)
         return _FakeQuery(self.rows)
 
 
@@ -93,6 +113,9 @@ def api_client() -> Generator[TestClient, None, None]:
     wrapper = MagicMock()
     wrapper.client = _FakeClient()
     app.dependency_overrides[get_supabase_client] = lambda: wrapper
+    app.dependency_overrides[get_admin_audit_recorder] = lambda: AdminAuditRecorder(
+        ADMIN_ID, wrapper
+    )
 
     with patch(
         "app.core.auth.verify_supabase_jwt",

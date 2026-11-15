@@ -231,9 +231,7 @@ def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[Sear
     if not wholesale_ids:
         return hits
     return [
-        hit
-        for hit in hits
-        if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
+        hit for hit in hits if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
     ]
 
 
@@ -299,9 +297,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     event_slugs: dict[str, str] = {}
 
     if product_ids:
-        response = (
-            client.table("products").select("id, slug").in_("id", product_ids).execute()
-        )
+        response = client.table("products").select("id, slug").in_("id", product_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -346,9 +342,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 listing_slugs[listing_id] = row_slug.strip()
 
     if vendor_ids:
-        response = (
-            client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
-        )
+        response = client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -356,9 +350,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 vendor_slugs[str(entity_id)] = row_slug.strip()
 
     if event_ids:
-        response = (
-            client.table("events").select("id, slug").in_("id", event_ids).execute()
-        )
+        response = client.table("events").select("id, slug").in_("id", event_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -418,9 +410,7 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * _EARTH_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
 
 
-def _geo_rerank(
-    hits: list[SearchHit], *, user_lat: float, user_lng: float
-) -> list[SearchHit]:
+def _geo_rerank(hits: list[SearchHit], *, user_lat: float, user_lng: float) -> list[SearchHit]:
     """Stamp ``distance_km`` and re-sort by an rrf_score blended with a bounded
     proximity boost. Hits without coordinates get no boost and are never dropped;
     the stable sort preserves original RRF order among ties."""

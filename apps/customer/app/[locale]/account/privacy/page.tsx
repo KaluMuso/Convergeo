@@ -11,6 +11,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { clearUserCaches } from "../../../../lib/clear-user-caches";
+import {
+  type DeliveryConsent,
+  isConsentCurrent,
+  loadDeliveryConsent,
+  saveDeliveryConsent,
+} from "../../../../lib/delivery-consent";
 
 const API_BASE_URL = getApiBaseUrl();
 const DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT";
@@ -40,6 +46,7 @@ export default function AccountPrivacyPage() {
   return (
     <div className="flex w-full max-w-lg flex-col gap-8">
       <PrivacyIntro locale={locale} />
+      <DeliveryConsentSection locale={locale} />
       <ExportSection locale={locale} />
       <DeleteSection locale={locale} />
     </div>
@@ -64,6 +71,82 @@ function PrivacyIntro({ locale }: { locale: string }) {
         {t("retentionNote")}
       </p>
     </>
+  );
+}
+
+function DeliveryConsentSection({ locale }: { locale: string }) {
+  const t = useTranslations("account.privacy.deliveryConsent");
+  const [consent, setConsent] = useState<DeliveryConsent | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    loadDeliveryConsent().then(
+      (value) => {
+        if (active) {
+          setConsent(value);
+          setLoaded(true);
+        }
+      },
+      () => {
+        if (active) {
+          setError(t("loadFailed"));
+          setLoaded(true);
+        }
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
+  const granted = isConsentCurrent(consent);
+
+  const toggle = async (next: boolean) => {
+    setSaving(true);
+    setError(null);
+    try {
+      setConsent(await saveDeliveryConsent(next, "settings"));
+    } catch {
+      setError(t("saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="delivery-consent-heading"
+      className="space-y-3 rounded-xl border border-border p-4"
+    >
+      <h2 id="delivery-consent-heading" className="text-lg font-semibold">
+        {t("title")}
+      </h2>
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
+      <label className="flex min-h-11 items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 h-5 w-5"
+          checked={granted}
+          disabled={!loaded || saving}
+          onChange={(event) => void toggle(event.target.checked)}
+          data-testid="delivery-consent-toggle"
+        />
+        <span>{t("label")}</span>
+      </label>
+      <p className="text-xs text-muted" role="status">
+        {!loaded
+          ? t("loading")
+          : granted && consent?.recorded_at
+            ? t("grantedAt", {
+                at: new Date(consent.recorded_at).toLocaleDateString(`${locale}-ZM`),
+              })
+            : t("notGranted")}
+      </p>
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+    </section>
   );
 }
 
