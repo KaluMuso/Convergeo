@@ -250,12 +250,12 @@ revoke all on public.event_collab_requests from public, anon, authenticated;
 revoke all on public.event_collab_audit from public, anon, authenticated;
 revoke all on public.event_revenue_splits from public, anon, authenticated;
 
--- Clients read; every write goes through the API (service role). Admins get
--- full table access through RLS; the status guard still applies to them.
-grant select, insert, update, delete on public.event_collab_organiser_prefs to authenticated;
-grant select, insert, update, delete on public.event_collab_requests to authenticated;
+-- Clients (parties and admins) read; every write goes through the API (service
+-- role). Admin access is read-only (D1, 20261115140100: no admin write policies).
+grant select on public.event_collab_organiser_prefs to authenticated;
+grant select on public.event_collab_requests to authenticated;
 grant select on public.event_collab_audit to authenticated;
-grant select, insert, update, delete on public.event_revenue_splits to authenticated;
+grant select on public.event_revenue_splits to authenticated;
 grant all on public.event_collab_organiser_prefs to service_role;
 grant all on public.event_collab_requests to service_role;
 grant all on public.event_collab_audit to service_role;
@@ -272,11 +272,10 @@ create policy event_collab_prefs_owner_select
     )
   );
 
-create policy event_collab_prefs_admin_all
+create policy event_collab_prefs_admin_select
   on public.event_collab_organiser_prefs
-  for all to authenticated
-  using (public.has_role('admin'))
-  with check (public.has_role('admin'));
+  for select to authenticated
+  using (public.has_role('admin'));
 
 -- The proposing vendor and the chosen organiser can read the request.
 create policy event_collab_requests_party_select
@@ -293,11 +292,10 @@ create policy event_collab_requests_party_select
     )
   );
 
-create policy event_collab_requests_admin_all
+create policy event_collab_requests_admin_select
   on public.event_collab_requests
-  for all to authenticated
-  using (public.has_role('admin'))
-  with check (public.has_role('admin'));
+  for select to authenticated
+  using (public.has_role('admin'));
 
 create policy event_collab_audit_party_select
   on public.event_collab_audit
@@ -331,11 +329,10 @@ create policy event_revenue_splits_party_select
     )
   );
 
-create policy event_revenue_splits_admin_all
+create policy event_revenue_splits_admin_select
   on public.event_revenue_splits
-  for all to authenticated
-  using (public.has_role('admin'))
-  with check (public.has_role('admin'));
+  for select to authenticated
+  using (public.has_role('admin'));
 
 -- ---------------------------------------------------------------------------
 -- 6. The guarded state machine
