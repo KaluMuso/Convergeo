@@ -33,3 +33,10 @@ Agents: ≤4 rolling; sonnet for UI/copy, opus for money/authz/data-model, haiku
 - Founder supplied notes on Next.js 16.x, Tailwind 4.3, FastAPI 0.16x features. FIRST verify versions/claims against official release notes; apply security patches immediately.
 - Adopt within current majors now (Tailwind container queries, has-/user-invalid, scrollbar & tabular-nums, motion-safe; FastAPI param models, router-level deps, native OpenTelemetry, SSE for live order feed, OpenAPI→TS client).
 - Next 15→16 (proxy.ts, Cache Components, updateTag) = separate upgrade branch with full CI + bundle/Lighthouse gates; not mixed with feature work.
+
+## 08:01 founder decisions
+- Multi-branch: branches of the SAME verified owner may share one MoMo payout number, subject to admin review; different owners never share.
+- Events: non-organiser sees "Become an organiser" OR "Run an event with a verified organiser" (approved).
+- Pricing: add Chain/Enterprise tiers for large retailers (Shoprite, Game, Woolworths, Home Essentials) up to ~K7,500/mo; branches are a paid add-on on lower tiers. Admin-editable (builds on vendor_plans, #798).
+- W7 Customer app redesign (sonnet): denser, marketplace-grade layout inspired by Alibaba/Amazon/eBay/Takealot references — compact sticky header with prominent search, category tiles grid, deal/discount rails, trust strip, product cards with price + discount badge + rating, back-to-top, reduced whitespace; keep ≤150 KB route budget and 3G performance.
+- Models: sonnet default; haiku for checks/audits; opus (low/medium effort) for money/authz/data-model; fable only for hardest tasks.
