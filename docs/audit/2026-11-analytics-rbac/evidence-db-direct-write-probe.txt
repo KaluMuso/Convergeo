@@ -1,0 +1,95 @@
+===== persona admin
+-- update feature_flags rows:
+13
+-- update platform_config rows:
+30
+-- update commission_rates rows:
+9
+-- read ledger_accounts rows:
+4
+-- fabricate balanced ledger transaction (insert txn + 2 postings) rows:
+2
+-- delete ledger_accounts rows:
+4
+-- read vendors/orders/payments/payouts/kyc_records/profiles/addresses counts:
+5|13
+-- flip payments flag specifically:
+36: ERROR:  column "key" does not exist at character 65
+-- audit rows written by triggers during this txn (as owner):
+0
+===== persona moderator
+-- update feature_flags rows:
+0
+-- update platform_config rows:
+0
+-- update commission_rates rows:
+0
+-- read ledger_accounts rows:
+0
+-- fabricate balanced ledger transaction (insert txn + 2 postings) rows:
+29: ERROR:  new row violates row-level security policy for table "ledger_transactions"
+-- delete ledger_accounts rows:
+0
+-- read vendors/orders/payments/payouts/kyc_records/profiles/addresses counts:
+1|13
+-- flip payments flag specifically:
+36: ERROR:  column "key" does not exist at character 65
+-- audit rows written by triggers during this txn (as owner):
+0
+===== persona rbac_fin
+-- update feature_flags rows:
+0
+-- update platform_config rows:
+0
+-- update commission_rates rows:
+0
+-- read ledger_accounts rows:
+0
+-- fabricate balanced ledger transaction (insert txn + 2 postings) rows:
+29: ERROR:  new row violates row-level security policy for table "ledger_transactions"
+-- delete ledger_accounts rows:
+0
+-- read vendors/orders/payments/payouts/kyc_records/profiles/addresses counts:
+1|13
+-- flip payments flag specifically:
+36: ERROR:  column "key" does not exist at character 65
+-- audit rows written by triggers during this txn (as owner):
+0
+===== persona superadmin
+-- update feature_flags rows:
+0
+-- update platform_config rows:
+0
+-- update commission_rates rows:
+0
+-- read ledger_accounts rows:
+0
+-- fabricate balanced ledger transaction (insert txn + 2 postings) rows:
+29: ERROR:  new row violates row-level security policy for table "ledger_transactions"
+-- delete ledger_accounts rows:
+0
+-- read vendors/orders/payments/payouts/kyc_records/profiles/addresses counts:
+1|13
+-- flip payments flag specifically:
+36: ERROR:  column "key" does not exist at character 65
+-- audit rows written by triggers during this txn (as owner):
+0
+===== persona customer
+-- update feature_flags rows:
+0
+-- update platform_config rows:
+0
+-- update commission_rates rows:
+0
+-- read ledger_accounts rows:
+0
+-- fabricate balanced ledger transaction (insert txn + 2 postings) rows:
+29: ERROR:  new row violates row-level security policy for table "ledger_transactions"
+-- delete ledger_accounts rows:
+0
+-- read vendors/orders/payments/payouts/kyc_records/profiles/addresses counts:
+1|13
+-- flip payments flag specifically:
+36: ERROR:  column "key" does not exist at character 65
+-- audit rows written by triggers during this txn (as owner):
+0

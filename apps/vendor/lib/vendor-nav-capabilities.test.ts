@@ -29,6 +29,7 @@ function allVisible(): VendorNavCapabilities {
     payouts: true,
     disputes: true,
     intake: true,
+    settings: true,
     offers: true,
   };
 }
@@ -95,6 +96,7 @@ describe("mobile More menu", () => {
       payouts: false,
       disputes: false,
       intake: false,
+      settings: false,
       offers: false,
     };
     const groups = filterVendorNavGroups(caps);

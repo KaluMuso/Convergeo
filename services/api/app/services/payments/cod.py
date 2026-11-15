@@ -504,6 +504,13 @@ def confirm_cod_collection(
 
     txn_ids: list[str] = []
 
+    # Pay at the door: an order paid by verified mobile money must never be
+    # booked as cash the rider collected (and owes). Book its door collection
+    # first under the shared cod-collect key; the post below then resolves to it.
+    from app.services.payments import door as door_payments
+
+    door_payments.book_door_collection_for_order(order_id)
+
     collected = post_transaction(
         idempotency_key=collect_key,
         template=(
@@ -616,6 +623,15 @@ def refuse_cod_collection(
             from_status=outcome.from_status.value,
             to_status=outcome.to_status.value,
             created=False,
+        )
+
+    if _fetch_transaction_by_idempotency_key(collection_idempotency_key(order_id)) is not None:
+        # Paid at the door (mobile money) before handover: the money is in, so a
+        # refusal now is a refund (payout), never a silent receivable reversal.
+        raise CodError(
+            code="cod_already_collected",
+            message="This order is already paid; handle the refusal as a refund",
+            http_status=409,
         )
 
     if ctx.status not in _REFUSAL_STATUSES:

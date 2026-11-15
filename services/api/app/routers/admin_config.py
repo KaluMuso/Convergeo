@@ -45,7 +45,15 @@ INT_PLATFORM_KEYS = frozenset(
         *AI_DAILY_QUOTA_BOUNDS,
     }
 )
-EDITABLE_PLATFORM_KEYS = NGWEE_PLATFORM_KEYS | INT_PLATFORM_KEYS
+# Tiered organiser pre-event advance (services/events/advance_policy.py). The whole
+# feature stays behind feature_flags.event_organiser_advance (default OFF).
+EVENT_ADVANCE_BOUNDS: dict[str, tuple[int, int]] = {
+    "event_verified_organiser_advance_bps": (0, 5_000),
+    "event_advance_min_kyc_tier": (1, 3),
+    "event_advance_min_successful_events": (0, 50),
+    "event_advance_repayment_days": (1, 90),
+}
+EDITABLE_PLATFORM_KEYS = NGWEE_PLATFORM_KEYS | INT_PLATFORM_KEYS | frozenset(EVENT_ADVANCE_BOUNDS)
 
 config_router = APIRouter(prefix="/config", tags=["admin-config"])
 
@@ -150,8 +158,8 @@ def validate_platform_value(key: str, value: int) -> None:
             )
         return
 
-    if key in AI_DAILY_QUOTA_BOUNDS:
-        low, high = AI_DAILY_QUOTA_BOUNDS[key]
+    if key in AI_DAILY_QUOTA_BOUNDS or key in EVENT_ADVANCE_BOUNDS:
+        low, high = AI_DAILY_QUOTA_BOUNDS.get(key) or EVENT_ADVANCE_BOUNDS[key]
         if value < low or value > high:
             raise AppError(
                 code="validation_error",
@@ -329,10 +337,7 @@ async def list_commission_rates(
     service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CommissionRateOut]:
     response = (
-        _table(service_client, "commission_rates")
-        .select("*")
-        .order("category_key")
-        .execute()
+        _table(service_client, "commission_rates").select("*").order("category_key").execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     return [CommissionRateOut.model_validate(row) for row in rows]
@@ -428,10 +433,7 @@ async def update_delivery_zone(
         )
 
     response = (
-        _table(service_client, "delivery_zones")
-        .update(patch)
-        .eq("zone_key", zone_key)
-        .execute()
+        _table(service_client, "delivery_zones").update(patch).eq("zone_key", zone_key).execute()
     )
     after_row = _single_row(response.data, entity="delivery_zone", key=zone_key)
 
@@ -570,9 +572,7 @@ async def update_feature_flag(
 def _load_categories(service_client: Any) -> list[dict[str, Any]]:
     response = (
         _table(service_client, "categories")
-        .select(
-            "id,parent_id,name,slug,path,commission_key,prohibited,position"
-        )
+        .select("id,parent_id,name,slug,path,commission_key,prohibited,position")
         .order("position")
         .execute()
     )

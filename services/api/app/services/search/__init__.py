@@ -8,7 +8,8 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
-from app.services.analytics.search_log import log_search_query
+from app.services.analytics.flags import collect_v2_enabled
+from app.services.analytics.search_log import log_search_query, redact_term
 from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search.embedding_client import (
     fetch_query_embedding,
@@ -231,9 +232,7 @@ def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[Sear
     if not wholesale_ids:
         return hits
     return [
-        hit
-        for hit in hits
-        if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
+        hit for hit in hits if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
     ]
 
 
@@ -299,9 +298,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     event_slugs: dict[str, str] = {}
 
     if product_ids:
-        response = (
-            client.table("products").select("id, slug").in_("id", product_ids).execute()
-        )
+        response = client.table("products").select("id, slug").in_("id", product_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -346,9 +343,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 listing_slugs[listing_id] = row_slug.strip()
 
     if vendor_ids:
-        response = (
-            client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
-        )
+        response = client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -356,9 +351,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 vendor_slugs[str(entity_id)] = row_slug.strip()
 
     if event_ids:
-        response = (
-            client.table("events").select("id, slug").in_("id", event_ids).execute()
-        )
+        response = client.table("events").select("id, slug").in_("id", event_ids).execute()
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
@@ -390,10 +383,13 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
 
 
 def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | None) -> None:
+    # analytics_v2 (1A-06): the raw query can carry a phone number or e-mail; once the
+    # collect flag is on, application logs get the redacted form too (plan §R-E).
+    logged_query = redact_term(query) if collect_v2_enabled() else query
     logger.info(
         "search_zero_result",
         extra={
-            "query": query,
+            "query": logged_query,
             "filters": filters,
             "kind": kind,
             "zero_result": True,
@@ -418,9 +414,7 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * _EARTH_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
 
 
-def _geo_rerank(
-    hits: list[SearchHit], *, user_lat: float, user_lng: float
-) -> list[SearchHit]:
+def _geo_rerank(hits: list[SearchHit], *, user_lat: float, user_lng: float) -> list[SearchHit]:
     """Stamp ``distance_km`` and re-sort by an rrf_score blended with a bounded
     proximity boost. Hits without coordinates get no boost and are never dropped;
     the stable sort preserves original RRF order among ties."""
@@ -455,6 +449,7 @@ async def run_search(
     user_lat: float | None = None,
     user_lng: float | None = None,
     include_kind_totals: bool = False,
+    analytics_session_id: str | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -552,6 +547,7 @@ async def run_search(
             entity_counts=dict(Counter(hit.entity_kind for hit in display_hits)),
             zero_result=total == 0,
             user_id=user_id,
+            session_id=analytics_session_id,
         )
 
     if total == 0 and trimmed:

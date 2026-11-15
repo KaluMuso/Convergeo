@@ -85,6 +85,12 @@ const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
     keeps: ["generateMetadata", "setRequestLocale", "VendorDisputeDetailView"],
   },
   {
+    label: "ƒ /[locale]/events/collaborate/[id]",
+    segments: ["[locale]", "events", "collaborate", "[id]"],
+    param: "id",
+    keeps: ["generateMetadata", "setRequestLocale", "CollabDetail"],
+  },
+  {
     label: "ƒ /[locale]/events/[id]/dashboard",
     segments: ["[locale]", "events", "[id]", "dashboard"],
     param: "id",

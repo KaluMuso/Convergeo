@@ -125,9 +125,7 @@ def _rows(response: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _rate_limit(
-    service_client: ServiceRoleClient, *, scope: str, key: str, limit: int
-) -> None:
+def _rate_limit(service_client: ServiceRoleClient, *, scope: str, key: str, limit: int) -> None:
     allowed, retry_after = bump_rate_counter(
         scope=scope,
         key=key,
@@ -152,9 +150,7 @@ def _not_found(clip_id: str) -> AppError:
     )
 
 
-def _load_published_clip(
-    service_client: ServiceRoleClient, clip_id: str
-) -> dict[str, Any]:
+def _load_published_clip(service_client: ServiceRoleClient, clip_id: str) -> dict[str, Any]:
     """Engagement targets a *published* clip or nothing.
 
     Same 404 for "no such clip" and "not published": a distinct status would let

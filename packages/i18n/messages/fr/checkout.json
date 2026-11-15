@@ -151,7 +151,8 @@
         "cutoffBefore": "Commandez avant 14 h (heure de Lusaka) : les articles en stock partent généralement aujourd'hui, après confirmation du vendeur.",
         "cutoffAfter": "Il est plus de 14 h à Lusaka : les articles en stock partiront généralement demain, après confirmation du vendeur.",
         "cutoffMadeToOrder": "Les articles sur commande partent dès qu'ils sont prêts — voyez le délai de chaque article."
-      }
+      },
+      "notOffered": "Ce vendeur ne propose pas cette option de remise pour un article de votre panier."
     },
     "countdown": {
       "label": "Articles réservés pendant",
@@ -244,6 +245,11 @@
         "deliveryNoLandmark": "Livraison à Lusaka",
         "pickupFromSeller": "Vous la récupérerez chez le vendeur",
         "placeOrderCod": "Commander — payer à la livraison"
+      },
+      "deliveryConsent": {
+        "label": "Partager mon nom, mon téléphone et mon adresse avec le partenaire de livraison pour livrer cette commande",
+        "hint": "Facultatif. Un coursier agréé peut livrer votre commande. Sans cet accord, l'équipe Vergeo5 la livre ou vous appelle d'abord. Modifiable à tout moment dans Compte → Confidentialité.",
+        "saveFailed": "Impossible d'enregistrer ce choix. Vous pouvez quand même passer commande."
       }
     },
     "pending": {

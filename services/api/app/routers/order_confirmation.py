@@ -442,9 +442,9 @@ async def sign_order_evidence_upload(
     path = f"orders/{current_user.id}/{order_id}/evidence-{int(time.time())}.{extension}"
 
     try:
-        result = (
-            service_client.client.storage.from_(ORDER_EVIDENCE_BUCKET).create_signed_upload_url(path)
-        )
+        result = service_client.client.storage.from_(
+            ORDER_EVIDENCE_BUCKET
+        ).create_signed_upload_url(path)
     except Exception as exc:  # noqa: BLE001
         raise AppError(
             code="storage_error",

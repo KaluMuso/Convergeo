@@ -152,6 +152,10 @@ class VendorGroupOut(BaseModel):
     items: list[CartLineOut]
     subtotal_ngwee: int
     delivery_eligible: bool
+    # What every listing in the group lets the buyer choose; the fulfilment
+    # step hides a route the seller does not offer instead of failing later.
+    delivery_offered: bool = True
+    pickup_offered: bool = True
     pickup_location: PickupLocationOut | None = None
     gifts: list[OfferGiftOut] = Field(default_factory=list)
     savings_ngwee: int = 0
@@ -544,6 +548,98 @@ def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> di
         for row in rows
         if isinstance(row, dict) and row.get("id")
     }
+
+
+_PICKUP_OPTIONS = frozenset({"pickup_shop", "pickup_nationwide"})
+_DEFAULT_LISTING_FULFILMENT = ("lusaka_delivery", "pickup_shop")
+
+
+def _listing_fulfilment_options(
+    service: ServiceRoleClient,
+    listing_ids: list[str],
+) -> dict[str, set[str]]:
+    """Fulfilment routes each listing offers; legacy rows get delivery + pickup."""
+    if not listing_ids:
+        return {}
+    response = (
+        service.client.table("vendor_listings")
+        .select("id, fulfilment_options")
+        .in_("id", sorted(set(listing_ids)))
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    options_by_listing: dict[str, set[str]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        raw = row.get("fulfilment_options")
+        options_by_listing[str(row.get("id"))] = (
+            {str(option) for option in raw}
+            if isinstance(raw, list) and raw
+            else set(_DEFAULT_LISTING_FULFILMENT)
+        )
+    return options_by_listing
+
+
+def _group_offered_routes(
+    items: list[Any] | tuple[Any, ...],
+    options_by_listing: dict[str, set[str]],
+) -> tuple[bool, bool]:
+    """(delivery_offered, pickup_offered): a route is offered only if every line offers it."""
+    delivery = True
+    pickup = True
+    for item in items:
+        offered = options_by_listing.get(str(item.listing_id), set(_DEFAULT_LISTING_FULFILMENT))
+        delivery = delivery and "lusaka_delivery" in offered
+        pickup = pickup and bool(offered & _PICKUP_OPTIONS)
+    return delivery, pickup
+
+
+def _enforce_listing_fulfilment_options(
+    service: ServiceRoleClient,
+    groups_by_vendor: dict[str, Any],
+    choices_by_vendor: dict[str, Any],
+) -> None:
+    """Refuse a hand-over route a vendor did not offer for a line in the group.
+
+    Each listing declares ``fulfilment_options``; a vendor group can only use a
+    route that every line in it offers. Rows without the column (older data)
+    fall back to the pre-existing behaviour: delivery and pickup both offered.
+    """
+    listing_ids = [
+        str(item.listing_id) for group in groups_by_vendor.values() for item in group.items
+    ]
+    if not listing_ids:
+        return
+    options_by_listing = _listing_fulfilment_options(service, listing_ids)
+    for vendor_id, group in groups_by_vendor.items():
+        choice = choices_by_vendor[vendor_id]
+        for item in group.items:
+            offered = options_by_listing.get(str(item.listing_id), set(_DEFAULT_LISTING_FULFILMENT))
+            allowed = (
+                "lusaka_delivery" in offered
+                if choice.fulfilment == "delivery"
+                else bool(offered & _PICKUP_OPTIONS)
+            )
+            if not allowed:
+                raise AppError(
+                    code="checkout.fulfilment_not_offered",
+                    message="The seller does not offer this hand-over option for an item",
+                    http_status=422,
+                    details={
+                        "message_key": "checkout.fulfilment.notOffered",
+                        "vendor_id": vendor_id,
+                        "listing_id": str(item.listing_id),
+                        "fulfilment": choice.fulfilment,
+                        "fields": [
+                            {
+                                "field": "fulfilment",
+                                "code": "fulfilment_not_offered",
+                                "message": "The seller does not offer this option for an item.",
+                            }
+                        ],
+                    },
+                )
 
 
 def _fetch_vendor_locations(
@@ -1057,6 +1153,15 @@ async def create_checkout_session(
         },
     )
 
+    offered_options = _listing_fulfilment_options(
+        service,
+        [str(item.listing_id) for group in vendor_groups for item in group.items],
+    )
+    offered_by_vendor = {
+        group.vendor_id: _group_offered_routes(group.items, offered_options)
+        for group in vendor_groups
+    }
+
     return CheckoutSessionResponse(
         session_id=session_id,
         expires_at=expires_at,
@@ -1095,6 +1200,8 @@ async def create_checkout_session(
                 ],
                 subtotal_ngwee=group.subtotal_ngwee,
                 delivery_eligible=group.delivery_eligible,
+                delivery_offered=offered_by_vendor[group.vendor_id][0],
+                pickup_offered=offered_by_vendor[group.vendor_id][1],
                 pickup_location=pickup_locations.get(group.vendor_id),
                 gifts=_gift_outs(offer_pricing, group.vendor_id),
                 savings_ngwee=sum(
@@ -1256,6 +1363,8 @@ async def validate_fulfilment_step(
                             "pickup_only": True,
                         },
                     )
+
+    _enforce_listing_fulfilment_options(service, groups_by_vendor, choices_by_vendor)
 
     pickup_locations = _fetch_vendor_locations(service, list(groups_by_vendor))
     results: list[GroupFulfilmentResult] = []

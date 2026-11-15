@@ -42,6 +42,23 @@ function formatHours(hours: Record<string, unknown>): string {
   return entries.map(([day, value]) => `${day}: ${String(value)}`).join(", ");
 }
 
+/** First route the buyer can actually use: delivery when eligible and offered, else pickup. */
+export function defaultFulfilment(group: {
+  delivery_eligible: boolean;
+  delivery_offered?: boolean;
+  pickup_offered?: boolean;
+}): "delivery" | "pickup" {
+  const deliveryOffered = group.delivery_offered !== false;
+  const pickupOffered = group.pickup_offered !== false;
+  if (group.delivery_eligible && deliveryOffered) {
+    return "delivery";
+  }
+  if (pickupOffered) {
+    return "pickup";
+  }
+  return deliveryOffered ? "delivery" : "pickup";
+}
+
 export function StepFulfilment({
   locale,
   session,
@@ -57,7 +74,7 @@ export function StepFulfilment({
   const [choices, setChoices] = useState<GroupChoice[]>(
     session.vendor_groups.map((group) => ({
       vendor_id: group.vendor_id,
-      fulfilment: group.delivery_eligible ? "delivery" : "pickup",
+      fulfilment: defaultFulfilment(group),
     })),
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -248,7 +265,10 @@ export function StepFulfilment({
                     name={`fulfilment-${group.vendor_id}`}
                     label={labels.delivery}
                     checked={fulfilment === "delivery"}
-                    disabled={!group.delivery_eligible}
+                    disabled={
+                      (!group.delivery_eligible && group.pickup_offered !== false) ||
+                      group.delivery_offered === false
+                    }
                     aria-describedby={
                       guide ? `fulfilment-help-delivery-${group.vendor_id}` : undefined
                     }
@@ -270,6 +290,7 @@ export function StepFulfilment({
                     name={`fulfilment-${group.vendor_id}`}
                     label={labels.pickup}
                     checked={fulfilment === "pickup"}
+                    disabled={group.pickup_offered === false}
                     aria-describedby={
                       guide ? `fulfilment-help-pickup-${group.vendor_id}` : undefined
                     }
@@ -297,7 +318,13 @@ export function StepFulfilment({
                 </div>
               ) : null}
 
-              {!group.delivery_eligible ? (
+              {group.delivery_offered === false || group.pickup_offered === false ? (
+                <p className="font-body text-xs text-text-2" data-testid="fulfilment-not-offered">
+                  {labels.notOffered}
+                </p>
+              ) : null}
+
+              {!group.delivery_eligible && group.delivery_offered !== false ? (
                 <p className="font-body text-xs text-text-2">{labels.outsideZone}</p>
               ) : null}
             </section>
