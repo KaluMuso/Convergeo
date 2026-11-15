@@ -118,6 +118,11 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "dispatch_stale_alert":
         payload["courier_name"] = "TownStar"
         payload["minutes_waiting"] = 47
+    elif template_id == "order_cancelled":
+        payload["orders_url"] = "https://vergeo5.com/en/account/orders"
+    elif template_id == "vendor_order_unconfirmed_alert":
+        payload["vendor_name"] = "Kamwala Trading"
+        payload["minutes_waiting"] = 35
     return payload
 
 

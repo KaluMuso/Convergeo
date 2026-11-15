@@ -966,6 +966,15 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    # Logistics phase 1: admin SELECT policy only; writes are service-role.
+    "courier_remittances": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "intercity_rate_cards": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Courier dispatch v1: trigger-written audit; admin SELECT only.
     "dispatch_request_events": {
         Persona.ANON: {
