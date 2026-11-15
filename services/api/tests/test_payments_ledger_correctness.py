@@ -329,7 +329,7 @@ def _seed_migration_sql() -> str:
             # Platform delivery revenue (pilot money fix): the fee is not vendor money.
             "20261113120500_delivery_revenue_ledger_account.sql",
             # Organiser receivable for recovered event advances (provisioned lazily).
-            "20261113174500_event_ticket_integrity.sql",
+            "20261115210000_event_ticket_integrity.sql",
         )
     )
 

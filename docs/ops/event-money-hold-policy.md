@@ -2,7 +2,7 @@
 
 Founder policy (2026-11-13). Code: `services/api/app/services/escrow/event_release.py`,
 `services/api/app/services/events/advance_policy.py`. Schema: migration
-`20261113174500_event_ticket_integrity.sql`.
+`20261115210000_event_ticket_integrity.sql`.
 
 ## Kill switch
 

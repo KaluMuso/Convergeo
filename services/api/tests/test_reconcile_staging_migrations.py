@@ -85,8 +85,10 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
-    "20261113174500",
+    "20261115210000",
 }
 
 
