@@ -98,6 +98,14 @@ PENDING_REPAIR_VERSIONS = {
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
     "20261115140100",
     "20261115140200",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000",
+    "20261115150100",
+    "20261115150200",
+    "20261115150300",
+    "20261115150400",
+    "20261115150500",
+    "20261115150600",
 }
 
 

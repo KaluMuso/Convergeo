@@ -19,6 +19,8 @@ export function resolveAdminNavCapabilities(
   const any = (...wanted: string[]) => wanted.some(has);
   return {
     home: has("analytics.read"),
+    // Analytics dashboards: operational tabs need analytics.read, money tabs finance.read (D3).
+    analytics: any("analytics.read", "finance.read", "finance.operate"),
     kyc: has("vendors.manage"),
     moderation: has("products.manage"),
     disputes: any("finance.operate", "support.manage"),

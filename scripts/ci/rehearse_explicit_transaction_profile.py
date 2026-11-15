@@ -78,6 +78,14 @@ REVIEWED_SUFFIX = (
     # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
     "20261115140100_admin_direct_writes_read_only.sql",
     "20261115140200_admin_governance_audit_consent.sql",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000_analytics_v2_foundation.sql",
+    "20261115150100_analytics_rollups.sql",
+    "20261115150200_analytics_commercial.sql",
+    "20261115150300_analytics_search_sessions.sql",
+    "20261115150400_analytics_lusaka_day.sql",
+    "20261115150500_analytics_search_daily_retention.sql",
+    "20261115150600_analytics_session_links.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -631,9 +639,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 165 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 172 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 165 source migrations",
+            "disposable copy does not match 172 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -716,10 +724,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_165|PASS")
+                    print("failure_cleanup|restored_172|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 165 migrations",
+                        "error: disposable failure cleanup could not restore 172 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1072,7 +1080,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 165 migrations"
+                    "normal full replay did not restore 172 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

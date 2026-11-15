@@ -29,6 +29,7 @@ import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shel
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
 import { LazyFloatingActions } from "./_components/lazy-floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
+import { PageViewTracker } from "./_components/page-view-tracker";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
 import type { FloatingActionsLabels } from "./_components/floating-actions";
@@ -260,6 +261,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               <AnalyticsProvider
                 measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
               />
+              {/* analytics_v2 page_view (no-op unless NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1). */}
+              <PageViewTracker />
               <CustomerAuthBarrier
                 labels={{
                   title: tCheckout("cart.mergeRecoveryTitle"),

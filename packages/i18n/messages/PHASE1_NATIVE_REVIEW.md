@@ -132,6 +132,26 @@ In **bem/nya**, only short labels and headings carry **AI-authored provisional d
 **Over-COD-cap checkout notice (2026-11-13):** `checkout.checkout.overCodCap` (shown at checkout start when the total is over the COD cap while online payments are off) has AI-authored provisional Bemba/Nyanja drafts — bem: "Order yenu yacila pali {cap}, ifyo cash on delivery ingasuma. Payment ya online teyaisa nomba. Fumyeni fimo mu cart pa kuti mupwishe ukushita." · nya: "Order yanu yaposa {cap}, ndalama zomwe cash on delivery ingalipire. Payment ya online silipo pano. Chotsani zinthu zina mu cart kuti mumalize kugula." Pending native-speaker review.
 **Delivery-partner consent (2026-11-13, Zambia DPA):** `checkout.checkout.review.deliveryConsent.{label,hint,saveFailed}` (critical `checkout.review` prefix) and `account.privacy.deliveryConsent.*` (privacy settings toggle) have AI-authored provisional Bemba/Nyanja drafts (loanword style: courier, address, order, delivery, pickup, licence). Key lines — bem label: "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order"; nya label: "Patsani courier dzina langa, foni ndi address kuti abweretse order iyi". This is consent wording under the Data Protection Act: it must be reviewed by a native speaker **and** checked against the legal notice before the pilot relies on it. Pending review; not a sign-off.
 
+## Analytics opt-out (1A-09, 2026-11-12)
+
+Draft bem/nya for the `/account/privacy` Analytics switch. These govern a privacy choice, so a native reviewer must confirm that "off" really reads as "we keep only anonymous counts, nothing is linked to you". "Analytics" and "browser" are kept as loanwords.
+
+- `account.privacy.analytics.title` (bem, nya): "Analytics"
+- `account.privacy.analytics.description`
+  - bem: "Tumwafwe ukusuma Convergeo pa kutwebelela ukumona ifyo mubomfya, nga amapeji mwingila."
+  - nya: "Tithandizeni kukonza Convergeo potilola momwe mumagwiritsira ntchito, mwachitsanzo masamba omwe mumawerenga."
+- `account.privacy.analytics.toggleLabel`
+  - bem: "Ukwabana ifyo mubomfya"
+  - nya: "Gawani zomwe mumagwiritsa ntchito"
+- `account.privacy.analytics.on`
+  - bem: "Kuli: tulemona amapeji mwingila, kabili panuma ya kwingila tulemulumanya ku akaunti yenu. Ifilumanya fisulwa panuma ya matazi 30."
+  - nya: "Yayatsidwa: titha kuona masamba omwe mumapitako ndi kuwalumikiza ku akaunti yanu mukalowa. Maulalo amachotsedwa pakatha masiku 30."
+- `account.privacy.analytics.off`
+  - bem: "Cilekwa: tusunga fye ubwingi bwa bantu (anonymous counts), nga bangaye bamona peji. Takuli ifyo mwacita ifisungwa, kabili takuli cilumenwe kuli imwe."
+  - nya: "Yazimitsidwa: timasunga chiwerengero chopanda dzina chokha, monga kuti anthu angati aona tsamba. Palibe mbiri ya zomwe mwachita, ndipo palibe cholumikizidwa ndi inu."
+- `account.privacy.analytics.gpc` (shown when the browser sends Global Privacy Control; switch is off and disabled)
+  - bem: "Browser yenu iletuma Global Privacy Control, ico analytics ilekwa. Tulesunga ico browser yenu ilanda."
+  - nya: "Browser yanu ikutumiza Global Privacy Control, choncho analytics yazimitsidwa. Timalemekeza zomwe browser yanu yasankha."
 **Vendor listing + onboarding QA pass (2026-11-15, `fix/vendor-listing-onboarding`):** EN is authoritative; fr/zh are full translations. In bem/nya the following new `vendor.*` keys are **EN passthrough** (marked with the `⚠ ` prefix) pending native-speaker review, because they explain listing rules, fulfilment, identity verification or settings and a wrong vernacular guess costs a vendor more than English does:
 
 - Field-level listing errors and hints: `vendor.listings.fieldErrors.*`, `vendor.listings.errors.{draftInvalid,publishBlocked}`, the new `vendor.listings.fields.*` hints (condition/Class D explanation, defect notes, fulfilment options: Lusaka delivery, pickup at shop or branch, nationwide pickup, made-to-order lead time).
