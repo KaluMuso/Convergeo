@@ -51,7 +51,9 @@ export function buildListingFieldLabels(t: Translate): ListingFieldLabels {
     stockQtyLabel: t("listings.fields.stockQtyLabel"),
     wholesaleLabel: t("listings.fields.wholesaleLabel"),
     wholesaleHelp: t("listings.fields.wholesaleHelp"),
-    wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
+    wholesaleMeasureUnavailable: t(
+      "listings.fields.wholesaleMeasureUnavailable",
+    ),
     moqLabel: t("listings.fields.moqLabel"),
     evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
     saveDraft: t("listings.fields.saveDraft"),
@@ -75,6 +77,12 @@ export function buildListingFieldLabels(t: Translate): ListingFieldLabels {
     required: t("listings.errors.required"),
   };
 }
+
+/**
+ * Message-object key read with `t.raw` (an object of code -> text, not a leaf, so
+ * it is not a literal `t()` key for the i18n missing-key sweep).
+ */
+export const FIELD_ERRORS_KEY = "listings.fieldErrors";
 
 /** vendor.listings.fieldErrors.* : server field-error code -> localized text. */
 export function readFieldErrorMessages(raw: unknown): Record<string, string> {
