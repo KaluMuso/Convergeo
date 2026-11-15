@@ -8,6 +8,7 @@ from typing import Annotated, Any, cast
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.badge import payout_velocity_window_start
 from app.services.kyc.eligibility import cap_tier_for_quotas, resolve_vendor_eligibility
 from app.services.kyc.state_machine import ServiceRoleClient
@@ -221,9 +222,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

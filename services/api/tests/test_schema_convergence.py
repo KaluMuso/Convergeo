@@ -102,6 +102,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261114030000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261114030100",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261115100000",
 ]
 
 def _module() -> Any:
@@ -144,7 +146,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 160
+    assert len(sql_files) == len(migrations) == 161
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -167,7 +169,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
     capacity_plans_photos = ["20261114030000", "20261114030100"]
-    assert actual_versions[-21:] == (
+    multi_branch = ["20261115100000"]
+    assert actual_versions[-22:] == (
         repairs
         + post_repair
         + queued_features
@@ -175,6 +178,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + money_dispatch
         + notification_center
         + capacity_plans_photos
+        + multi_branch
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

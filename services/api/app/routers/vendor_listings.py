@@ -18,6 +18,7 @@ from app.schemas.vendor_listing import (
     StockMode,
     VendorListing,
 )
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.kyc.caps import VendorCapLimits, require_listing_cap
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
@@ -191,9 +192,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

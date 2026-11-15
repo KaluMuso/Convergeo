@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.branches.rules import multi_branch_enabled
 from app.services.brand_theme import read_brand_theme
 from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
@@ -152,8 +153,23 @@ class VendorEventItem(BaseModel):
     image_public_id: str | None = None
 
 
+class BranchLink(BaseModel):
+    slug: str
+    display_name: str
+    landmark: str | None = None
+
+
+class BusinessSummary(BaseModel):
+    """Parent business of a multi-branch storefront (flag ``multi_branch``)."""
+
+    name: str
+    other_branches: list[BranchLink] = Field(default_factory=list)
+
+
 class VendorProfileResponse(BaseModel):
     vendor: VendorProfileDetail
+    #: Only when ``multi_branch`` is on and the business has other approved shops.
+    business: BusinessSummary | None = None
     listings: list[DirectoryListingItem] = Field(default_factory=list)
     services: list[VendorServiceItem] = Field(default_factory=list)
     events: list[VendorEventItem] = Field(default_factory=list)
@@ -738,7 +754,7 @@ def get_vendor_profile(
         client.table("vendors")
         .select(
             "id, slug, display_name, description, logo_url, cover_url, whatsapp_msisdn, status, "
-            "kyc_tier, commercial_tier, preferred_badge, created_at, brand_theme, "
+            "kyc_tier, commercial_tier, preferred_badge, created_at, brand_theme, business_id, "
             "vendor_locations(landmark, lat, lng, hours)"
         )
         .eq("slug", slug)
@@ -902,7 +918,63 @@ def get_vendor_profile(
         services=services,
         events=events,
         reviews_summary=ReviewsSummary(rating_avg=rating_avg, rating_count=rating_count),
+        business=_business_summary(client, row),
     )
+
+
+def _business_summary(client: Any, row: dict[str, Any]) -> BusinessSummary | None:
+    """Parent business + other live branches. Never fails the storefront."""
+    business_id = row.get("business_id")
+    if not business_id:
+        return None
+    try:
+        if not multi_branch_enabled(client):
+            return None
+        siblings = (
+            client.table("vendors")
+            .select("slug, display_name, status, branch_status, vendor_locations(landmark)")
+            .eq("business_id", str(business_id))
+            .neq("id", str(row.get("id")))
+            .eq("status", "active")
+            .eq("branch_status", "approved")
+            .order("display_name")
+            .limit(20)
+            .execute()
+            .data
+        ) or []
+        if not siblings:
+            return None
+        business = (
+            client.table("vendor_businesses")
+            .select("legal_name")
+            .eq("id", str(business_id))
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+    except Exception:  # noqa: BLE001 — optional enrichment
+        return None
+    name = business[0].get("legal_name") if business and isinstance(business[0], dict) else None
+    links: list[BranchLink] = []
+    for sibling in siblings:
+        if not isinstance(sibling, dict) or not sibling.get("slug"):
+            continue
+        locations = sibling.get("vendor_locations") or []
+        landmark = (
+            locations[0].get("landmark")
+            if locations and isinstance(locations[0], dict)
+            else None
+        )
+        links.append(
+            BranchLink(
+                slug=str(sibling["slug"]),
+                display_name=str(sibling.get("display_name") or sibling["slug"]),
+                landmark=landmark,
+            )
+        )
+    if not links:
+        return None
+    return BusinessSummary(name=str(name or row.get("display_name") or ""), other_branches=links)
 
 
 @router.get("", response_model=DirectoryListResponse)

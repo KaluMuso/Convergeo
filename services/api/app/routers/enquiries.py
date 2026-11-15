@@ -31,6 +31,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.business.access import fetch_business_buyer
 from app.services.moderation.contact_strip import strip_contacts
 from app.services.moderation.prohibited import screen_listing
@@ -350,9 +351,10 @@ def _vendor_owner_user_id(service_client: _ServiceRoleClient, vendor_id: str) ->
 
 def _vendor_id_owned_by(service_client: _ServiceRoleClient, user_id: str) -> str | None:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id")
-        .eq("owner_user_id", user_id)
+        .eq("owner_user_id", user_id))
         .maybe_single()
         .execute()
     )

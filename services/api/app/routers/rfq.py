@@ -16,6 +16,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.business.access import fetch_business_buyer
 from app.services.moderation.contact_strip import strip_contacts
 from app.services.moderation.prohibited import screen_listing
@@ -617,9 +618,10 @@ async def list_rfq_threads(
         query = query.eq("customer_id", current_user.id)
     else:
         vendor_resp = (
-            service_client.client.table("vendors")
+            scope_owner_vendor_query(
+                service_client.client.table("vendors")
             .select("id")
-            .eq("owner_user_id", current_user.id)
+            .eq("owner_user_id", current_user.id))
             .limit(1)
             .execute()
         )
