@@ -68,10 +68,10 @@ POST_REPAIR_ORDER = [
     "20261115150400",
     "20261115150500",
     "20261115150600",
-    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
-    "20261115210000",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261115200000",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261115210000",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

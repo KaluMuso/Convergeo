@@ -86,10 +86,10 @@ REVIEWED_SUFFIX = (
     "20261115150400_analytics_lusaka_day.sql",
     "20261115150500_analytics_search_daily_retention.sql",
     "20261115150600_analytics_session_links.sql",
-    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
-    "20261115210000_event_ticket_integrity.sql",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261115200000_pay_at_door.sql",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261115210000_event_ticket_integrity.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

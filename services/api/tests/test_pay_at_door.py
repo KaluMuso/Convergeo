@@ -327,6 +327,9 @@ INSERT INTO public.orders (
           '{snapshot}'::jsonb);
 INSERT INTO public.order_items (order_id, item_kind, qty, unit_price_ngwee, title_snapshot)
 VALUES ('{order_id}', 'product', 1, {SUBTOTAL_NGWEE}, 'Rice cooker');
+-- Zambia DPA (20261115140200): courier dispatch needs the customer's current consent.
+INSERT INTO public.privacy_consents (user_id, purpose, version, granted, source)
+VALUES ('{customer_id}', 'delivery_partner_share', '2026-11-13', true, 'checkout');
 COMMIT;
 """,
     )

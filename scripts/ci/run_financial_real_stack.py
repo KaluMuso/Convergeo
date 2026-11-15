@@ -89,10 +89,10 @@ FORWARD = [
     "20261115150400_analytics_lusaka_day.sql",
     "20261115150500_analytics_search_daily_retention.sql",
     "20261115150600_analytics_session_links.sql",
-    # Event ticket integrity: ticket validity, promo limit, advance receivable (additive).
-    "20261115210000_event_ticket_integrity.sql",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261115200000_pay_at_door.sql",
+    # Event ticket integrity: ticket validity, promo limit, advance receivable (additive).
+    "20261115210000_event_ticket_integrity.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [
