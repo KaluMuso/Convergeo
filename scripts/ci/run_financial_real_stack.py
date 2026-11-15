@@ -68,8 +68,8 @@ FORWARD = [
     "20261113120500_delivery_revenue_ledger_account.sql",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261113150000_logistics_phase1.sql",
-    "20261113151000_intercity_rate_cards.sql",
+    "20261115180000_logistics_phase1.sql",
+    "20261115180100_intercity_rate_cards.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [

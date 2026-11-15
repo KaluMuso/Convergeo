@@ -85,8 +85,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261113120500",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261113150000",
-    "20261113151000",
+    "20261115180000",
+    "20261115180100",
 }
 
 

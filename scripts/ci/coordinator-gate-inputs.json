@@ -562,8 +562,8 @@
     "20261113070000_checkout_fulfilment_choices.sql": "d7956ba99d13659f5b78d6886dd2b18f3dc37f3b6ff800023d8971d50a378b92",
     "20261113071000_order_cancel_stock_release.sql": "6a707332ff7839e8afbd4fb36c4fc9852fad74c4a19492037d6aeb477c3e4350",
     "20261113120500_delivery_revenue_ledger_account.sql": "76144826d81dac54f17d1a47330939751ae314acd0ae750af8bd82b63327ce72",
-    "20261113150000_logistics_phase1.sql": "37e92c532c194685ec00363b5bd0a8c9f34af9e917d67a14f5eb9d61e2938b88",
-    "20261113151000_intercity_rate_cards.sql": "b609e432bdf510f7593dbec8e58932d10fca3ae2d73ee66ec8a5e92075ac360c"
+    "20261115180000_logistics_phase1.sql": "37e92c532c194685ec00363b5bd0a8c9f34af9e917d67a14f5eb9d61e2938b88",
+    "20261115180100_intercity_rate_cards.sql": "b609e432bdf510f7593dbec8e58932d10fca3ae2d73ee66ec8a5e92075ac360c"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

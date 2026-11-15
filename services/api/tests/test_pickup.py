@@ -350,7 +350,7 @@ class TestMigration0017:
         assert result.ok
         assert result.rows == [
             "pickup_collected_at",
-            # Logistics phase 1 (20261113150000): branch the rider collects from.
+            # Logistics phase 1 (20261115180000): branch the rider collects from.
             "pickup_location_id",
             "pickup_pin_hash",
             "pickup_qr_secret",

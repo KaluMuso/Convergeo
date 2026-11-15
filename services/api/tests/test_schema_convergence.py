@@ -98,8 +98,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113120500",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
-    "20261113150000",
-    "20261113151000",
+    "20261115180000",
+    "20261115180100",
 ]
 
 def _module() -> Any:
@@ -163,7 +163,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     ]
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
-    logistics = ["20261113150000", "20261113151000"]
+    logistics = ["20261115180000", "20261115180100"]
     assert actual_versions[-20:] == (
         repairs + post_repair + queued_features + pilot_fixes + money_dispatch + logistics
     )
