@@ -293,7 +293,7 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
       .sort();
 
     expect(discovered).toEqual(covered);
-    expect(discovered).toHaveLength(12);
+    expect(discovered).toHaveLength(13);
   });
 
   it("no ancestor segment forces these routes back to static", () => {
