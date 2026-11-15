@@ -98,6 +98,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113120500",
     # In-app notification center (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261113183000",
 ]
@@ -164,6 +166,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
+    rate_scope_sync = ["20261114050000"]
     pay_at_door = ["20261113183000"]
     assert actual_versions[-20:] == (
         repairs
@@ -172,6 +175,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + pilot_fixes
         + money_dispatch
         + notification_center
+        + rate_scope_sync
         + pay_at_door
     )
     assert all(path.stat().st_size > 0 for path in sql_files)

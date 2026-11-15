@@ -66,6 +66,7 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 3 reviewed pilot-fix migrations (#777).
         # + 1 reviewed: Pilot money/dispatch fixes: delivery_revenue ledger account kind + seed (additive).
         # + 1 reviewed: In-app notification center tables + triggers (additive, reversible).
+        # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
         # + 1 reviewed: Pay at the door tables + suspense account (additive, flag off).
         self.assertEqual(len(runner.FORWARD), 32)
         self.assertEqual(len(set(runner.FORWARD)), 32)

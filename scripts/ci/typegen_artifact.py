@@ -47,6 +47,8 @@ POST_REPAIR_ORDER = [
     "20261113120500",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000",
     # Pay at the door: door payment tables + suspense account (additive, flag off).
     "20261113183000",
 ]
