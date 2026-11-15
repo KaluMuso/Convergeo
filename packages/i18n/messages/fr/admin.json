@@ -3,7 +3,17 @@
   "shell": {
     "eyebrow": "Opérations Convergeo",
     "environment": "Origine admin durcie",
-    "signOut": "Déconnexion"
+    "signOut": "Déconnexion",
+    "account": {
+      "menuLabel": "Menu du compte",
+      "unknownUser": "Connecté",
+      "roleLine": "Rôle : {role}",
+      "roles": {
+        "superadmin": "Super admin",
+        "admin": "Admin",
+        "custom": "Rôle personnalisé"
+      }
+    }
   },
   "nav": {
     "home": "Tableau de bord",
@@ -78,6 +88,7 @@
     },
     "pages": {
       "common": "Toutes les applications — UI partagée, navigation, thème",
+      "nav": "Toutes les apps — libellés de navigation",
       "auth": "Toutes les applications — connexion et inscription",
       "catalog": "Client — fiches produits, détail, comparaison",
       "search": "Client — recherche et suggestions",
@@ -318,7 +329,9 @@
       "cancel": "Annuler",
       "submitting": "Enregistrement de la décision…",
       "success": "Décision enregistrée — le vendeur sera notifié.",
-      "failure": "Impossible d'enregistrer la décision."
+      "failure": "Impossible d'enregistrer la décision.",
+      "notFound": "Introuvable",
+      "notFoundBody": "Ce dossier KYC n'existe pas ou a été supprimé."
     },
     "reasons": {
       "blurry_document": "Le document est flou ou illisible",
@@ -389,7 +402,9 @@
     },
     "canonical": {
       "dialog": {
-        "details": "Détails du produit"
+        "details": "Détails du produit",
+        "failureRetryHint": "Rien n'a été enregistré. Vérifiez votre connexion et réessayez, ou rechargez la page si l'erreur persiste.",
+        "failureReference": "Référence : {id}"
       }
     }
   },

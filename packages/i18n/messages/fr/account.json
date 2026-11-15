@@ -26,11 +26,8 @@
       "rejected": "Non vérifié",
       "suspended": "Suspendu"
     },
-    "verifiedTitle": "Le mode entreprise est actif",
-    "verifiedBody": "Vous pouvez parcourir et acheter des fournitures en gros avec des prix par palier.",
     "pendingTitle": "Vérification en cours d'examen",
     "pendingBody": "Nous vérifions vos informations PACRA. Cela prend généralement 1–2 jours ouvrables.",
-    "browseSupplies": "Parcourir les fournitures",
     "legalNameLabel": "Nom d'entreprise enregistré",
     "legalNamePlaceholder": "Tel qu'indiqué sur votre certificat PACRA",
     "registrationLabel": "Numéro d'enregistrement PACRA",

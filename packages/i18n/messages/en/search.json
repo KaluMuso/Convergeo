@@ -20,7 +20,6 @@
     "products": "Products",
     "services": "Services",
     "events": "Events",
-    "supplies": "Supplies",
     "vendors": "Vendors",
     "count": "{label} ({count})"
   },

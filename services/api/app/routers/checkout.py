@@ -13,7 +13,6 @@ from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
-from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import (
     CartLineView,
@@ -983,11 +982,12 @@ async def create_checkout_session(
 
     # B0-P02a: prices re-derived before any money number is computed. Raises
     # 409 checkout.cart_changed on divergence; see _rederive_line_prices.
-    access = resolve_business_eligibility(current_user.id, service)
+    # Wholesale/tier pricing is vendor-app only: checkout always re-derives at
+    # retail, so a verified business buyer is charged the same as anyone else.
     items = _rederive_line_prices(
         items,
         listings,
-        business_eligible=access.eligible,
+        business_eligible=False,
         service=service,
         customer_id=current_user.id,
     )
