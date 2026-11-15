@@ -268,6 +268,15 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # Pay at the door (#795, flag off): not delegated to rbac roles until a
+        # founder decision maps them (logistics.manage / finance.operate).
+        "GET /admin/dispatch/door-payment/exceptions",
+        "GET /admin/dispatch/requests/{dispatch_id}/door-payment",
+        "POST /admin/dispatch/door-payment/exceptions/{exception_id}/resolve",
+        "POST /admin/dispatch/requests/{dispatch_id}/door-payment/arrived",
+        "POST /admin/dispatch/requests/{dispatch_id}/door-payment/cash",
+        "POST /admin/dispatch/requests/{dispatch_id}/door-payment/poll",
+        "POST /admin/dispatch/requests/{dispatch_id}/door-payment/request",
         # Organiser advance debts (#796): unrestricted roles only, never delegated.
         "GET /admin/event-advance-debts",
         "GET /admin/flags",

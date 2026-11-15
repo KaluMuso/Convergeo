@@ -69,13 +69,14 @@ class FinancialOrchestrationControls(unittest.TestCase):
         # + 1 reviewed: Listing fulfilment options + Class D may be sold new (additive, reversible).
         # + 2 reviewed: Events collaboration tables + rate-limit scopes (additive, reversible).
         # + 1 reviewed: Rate-limit scope constraint re-sync (additive, hotfix-ported).
+        # + 1 reviewed: Pay at the door tables + suspense account (additive, flag off).
         # + 1 reviewed: Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
         # + 3 reviewed: audit S1 money tables read-only; admin governance D1 + permissions/
         #   audit_log/deactivation/consent (all additive).
         # + 7 reviewed: analytics v2 foundation, rollups, commercial, search sessions,
         #   Lusaka day, search-daily retention, session links (additive, flag-gated).
-        self.assertEqual(len(runner.FORWARD), 46)
-        self.assertEqual(len(set(runner.FORWARD)), 46)
+        self.assertEqual(len(runner.FORWARD), 47)
+        self.assertEqual(len(set(runner.FORWARD)), 47)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)

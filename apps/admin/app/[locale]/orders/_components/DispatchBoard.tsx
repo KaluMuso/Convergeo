@@ -116,6 +116,7 @@ export function DispatchBoard() {
                 key={dispatch.id}
                 dispatch={dispatch}
                 flagEnabled={board.flag_enabled}
+                doorPaymentEnabled={Boolean(board.door_payment_enabled)}
                 onChanged={reload}
               />
             ))}
@@ -134,6 +135,7 @@ export function DispatchBoard() {
                 key={dispatch.id}
                 dispatch={dispatch}
                 flagEnabled={board.flag_enabled}
+                doorPaymentEnabled={Boolean(board.door_payment_enabled)}
                 onChanged={reload}
               />
             ))}

@@ -107,6 +107,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261115150400",
     "20261115150500",
     "20261115150600",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
     "20261115210000",
 }

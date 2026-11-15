@@ -89,6 +89,8 @@ FORWARD = [
     "20261115150400_analytics_lusaka_day.sql",
     "20261115150500_analytics_search_daily_retention.sql",
     "20261115150600_analytics_session_links.sql",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000_pay_at_door.sql",
     # Event ticket integrity: ticket validity, promo limit, advance receivable (additive).
     "20261115210000_event_ticket_integrity.sql",
 ]
@@ -463,7 +465,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 173 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 174 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

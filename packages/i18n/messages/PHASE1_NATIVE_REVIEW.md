@@ -28,6 +28,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Product-detail recommendations and image viewer (2026-10-04):** `catalog.pdp.related.{vendorHeading,categoryHeading,loading,unavailable}` and `catalog.pdp.gallery.{zoomOpen,zoomClose,zoomTitle,zoomIn,zoomOut}` now have AI-authored provisional Bemba and Nyanja wording for key and ICU completeness. A second AI reviewer checked source-label alignment and confirmed that both `vendorHeading` values retain `{vendor}` while flagging uncertain wording; this is **not** fluent or native-speaker approval. In particular, the image-viewer controls and Bemba zoom wording remain uncertain. Keep these 18 values pending recorded native-speaker review before production; do not mark the sign-off table complete or change SEO publication based on CI passing.
 
+**Pay at the door (2026-11-13):** `orders.doorPay.*` (19 values incl. `errors.*`) has AI-authored **draft** Bemba and Nyanja wording, loanword style ("rider", "mobile money", "cash", "PIN"). This is money/USSD copy: it tells a buyer when to approve a mobile-money prompt and when to hand over their code, so a wrong word can cost money. Check especially `pending`, `paid`, `cash`, `noAttemptsLeft` and the plural forms of `attemptsLeft`. The surface is behind `pay_at_door` (default off). Pending recorded native-speaker review; not a sign-off.
+
 **OG image tagline (2026-11-07):** `common.app.tagline` was added (EN/FR/ZH translated; bem/nya are AI-authored provisional wording — "Isoko lya mu Zambia — ukushita na escrow" / "Msika wa ku Zambia — kugula ndi escrow"). It renders in the social-share (Open Graph) image for each locale. Pending recorded native-speaker review; not a sign-off.
 
 ## Noindex removal criteria (authoritative)

@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 173
+MIGRATION_COUNT = 174
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -68,6 +68,8 @@ POST_REPAIR_ORDER = [
     "20261115150400",
     "20261115150500",
     "20261115150600",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000",
     # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
     "20261115210000",
 ]

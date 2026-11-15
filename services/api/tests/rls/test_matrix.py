@@ -3256,6 +3256,29 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # Pay at the door (20261115200000): SELECT granted to authenticated behind an
+    # admin-only policy (non-admins read zero rows); anon revoked; every write is
+    # service-role only (no client INSERT/UPDATE/DELETE grant).
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "door_payment_sessions",
+            "door_payment_attempts",
+            "door_payment_exceptions",
+        )
+    },
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),
