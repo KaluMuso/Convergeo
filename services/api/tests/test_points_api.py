@@ -68,12 +68,12 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]
     monkeypatch.setattr("app.routers.points.bump_rate_counter", lambda **_: (True, 0))
     app = create_app()
     with TestClient(app, raise_server_exceptions=False) as c:
-        c.app_ref = app  # type: ignore[attr-defined]
+        c.app_ref = app
         yield c
 
 
 def _login(c: TestClient, fake: _Fake) -> None:
-    app = c.app_ref  # type: ignore[attr-defined]
+    app = c.app_ref
     wrapper = MagicMock()
     wrapper.client = fake
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
