@@ -218,7 +218,7 @@ jobs:
             exit 0
           fi
           printf 'shard %s: %s files\n' "${{ matrix.shard }}" "${#files[@]}"
-          uv run pytest -n auto --dist=loadfile "${files[@]}"
+          uv run pytest -n auto --dist=loadfile --durations=0 --durations-min=1.0 "${files[@]}"
         env:
           DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
           SUPABASE_URL: https://example.supabase.co

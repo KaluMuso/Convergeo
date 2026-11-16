@@ -64,7 +64,7 @@ def test_python_api_context_aggregates_every_shard() -> None:
         "tests/test_merchant_review_boundaries_db.py",
     ):
         assert f"--ignore {ignored}" in shard
-    assert 'uv run pytest -n auto --dist=loadfile "${files[@]}"' in shard
+    assert 'uv run pytest -n auto --dist=loadfile --durations=0 --durations-min=1.0 "${files[@]}"' in shard
     assert "continue-on-error" not in shard
     assert _gate_lines(shard.split("    steps:", maxsplit=1)[0]) == [
         _tier_gate("run_python")
