@@ -257,8 +257,10 @@ language plpgsql security definer set search_path = pg_catalog, public
 as $$
 declare
   jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+  -- D1 (20261115140100): admins act through the API as service_role; a direct
+  -- admin write is an ordinary client write here.
   v_privileged boolean := session_user in ('postgres', 'supabase_admin')
-    or jwt_role = 'service_role' or public.has_role('admin');
+    or jwt_role = 'service_role';
   v_business public.vendor_businesses%rowtype;
   v_count integer;
   v_limit integer;
@@ -323,8 +325,10 @@ language plpgsql security definer set search_path = pg_catalog, public
 as $$
 declare
   jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+  -- D1 (20261115140100): admins act through the API as service_role; a direct
+  -- admin write is an ordinary client write here.
   v_privileged boolean := session_user in ('postgres', 'supabase_admin')
-    or jwt_role = 'service_role' or public.has_role('admin');
+    or jwt_role = 'service_role';
 begin
   if not v_privileged and (
     new.business_id is distinct from old.business_id

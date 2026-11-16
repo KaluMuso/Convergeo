@@ -592,7 +592,7 @@
     "20261115235600_business_home_section_flags.sql": "be21e21ad9ea3354de483b3a47835a03312c91496033af36342c21181fc58172",
     "20261116110000_vendor_plans.sql": "c9ce1934beb07af8cd3177baafc95778cba3085085ce80aecf89efc0cce06848",
     "20261116110100_shared_canonical_photos.sql": "d20f9759eb5cc71a0d24366afb1216594fc301a071579fc625a9100b03b40fe7",
-    "20261116120000_multi_branch_businesses.sql": "bd755f4b28b1f0570bd5abbf7c3382e32c6bdb0083cea46af1a1b1d8382d5c0f"
+    "20261116120000_multi_branch_businesses.sql": "2461c663a22ddd58da8963f16c3dc5aebb62694ba0b1883dc8b698c00ed484ef"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

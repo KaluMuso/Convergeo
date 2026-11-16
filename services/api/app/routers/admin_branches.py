@@ -18,7 +18,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_role
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.ratelimit_policies import ADMIN_WRITE
 from app.deps import get_supabase_client
@@ -30,7 +30,13 @@ from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, field_validator
 
-branches_router = APIRouter(prefix="/branches", tags=["admin-branches"])
+# require_role("admin"): admins, plus rbac roles holding vendors.manage; never the
+# fixed moderator role (consistent with the other vendors.manage decision routes).
+branches_router = APIRouter(
+    prefix="/branches",
+    tags=["admin-branches"],
+    dependencies=[Depends(require_role("admin"))],
+)
 
 SIGNED_URL_TTL_S = 300
 QueueStatus = Literal["pending_review", "info_requested", "draft", "approved", "rejected"]
