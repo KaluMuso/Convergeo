@@ -100,12 +100,12 @@ create policy event_rsvps_organiser_select
     )
   );
 
-create policy event_rsvps_admin_all
+-- D1 (20261115140100): admins read; every write goes through the API.
+create policy event_rsvps_admin_select
   on public.event_rsvps
-  for all
+  for select
   to authenticated
-  using (public.has_role('admin'))
-  with check (public.has_role('admin'));
+  using (public.has_role('admin'));
 
 revoke all on public.event_rsvps from anon;
 grant select on public.event_rsvps to authenticated;
@@ -203,12 +203,12 @@ create policy service_free_bookings_vendor_select
     )
   );
 
-create policy service_free_bookings_admin_all
+-- D1 (20261115140100): admins read; every write goes through the API.
+create policy service_free_bookings_admin_select
   on public.service_free_bookings
-  for all
+  for select
   to authenticated
-  using (public.has_role('admin'))
-  with check (public.has_role('admin'));
+  using (public.has_role('admin'));
 
 revoke all on public.service_free_bookings from anon;
 grant select on public.service_free_bookings to authenticated;
@@ -286,17 +286,16 @@ stable
 security definer
 set search_path = ''
 as $$
+  -- A genuinely free order: created by the RSVP / free-booking paths (snapshot
+  -- is_free = true), no delivery fee, and no line with a price. A zero-commission
+  -- category (e.g. free_events) is NOT free: its paid tickets still move money.
   select coalesce((
     select (o.commission_snapshot ->> 'is_free') = 'true'
-        or (
-          jsonb_typeof(o.commission_snapshot -> 'lines') = 'array'
-          and jsonb_array_length(o.commission_snapshot -> 'lines') > 0
-          and not exists (
-            select 1
-            from jsonb_array_elements(o.commission_snapshot -> 'lines') l
-            where (l ->> 'category_key') is distinct from 'free_events'
-          )
-        )
+       and coalesce(o.delivery_fee_ngwee, 0) = 0
+       and not exists (
+         select 1 from public.order_items oi
+         where oi.order_id = o.id and oi.unit_price_ngwee > 0
+       )
     from public.orders o
     where o.id = p_order_id
   ), false);
