@@ -118,6 +118,18 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "dispatch_stale_alert":
         payload["courier_name"] = "TownStar"
         payload["minutes_waiting"] = 47
+    elif template_id == "gift_recipient_notice":
+        payload["recipient_name"] = "Mary"
+        payload["sender_name"] = "Chanda"
+        payload["shop_name"] = "Kamwala Trading"
+    elif template_id == "gift_ready_pickup":
+        payload["shop_name"] = "Kamwala Trading"
+        payload["pickup_pin"] = "482913"
+    elif template_id == "birthday_greeting":
+        payload["coupon_code"] = "BDAY-ABC123"
+        payload["amount_ngwee"] = 2_000
+        payload["min_spend_ngwee"] = 20_000
+        payload["valid_days"] = 14
     return payload
 
 

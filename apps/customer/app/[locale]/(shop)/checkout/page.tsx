@@ -8,9 +8,14 @@ import { LazyTicketCheckout } from "./_components/lazy-ticket-checkout";
 import { CheckoutShell } from "./_components/step-fulfilment";
 import { resolveGroupParam } from "./_lib/group-checkout";
 
+import type { CheckoutExtrasLabels } from "./_components/checkout-extras";
 import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
+
+// Message-object nodes read with t.raw (objects, not leaf keys for the i18n sweep).
+const COUPON_LABELS_KEY = "checkout.coupon";
+const GIFT_LABELS_KEY = "checkout.gift";
 
 export const metadata: Metadata = {
   robots: {
@@ -234,6 +239,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
         pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
         placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
       },
+      discount: t.raw("checkout.review.discount") as string,
+    },
+    extras: {
+      coupon: t.raw(COUPON_LABELS_KEY) as CheckoutExtrasLabels["coupon"],
+      gift: t.raw(GIFT_LABELS_KEY) as CheckoutExtrasLabels["gift"],
     },
     countdown: {
       label: t("checkout.countdown.label"),

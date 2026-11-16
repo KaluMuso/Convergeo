@@ -5,8 +5,13 @@ import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { fetchStorefrontConfig } from "../../../../lib/storefront-config";
 import { createAccountApiClient } from "../../account/_components/account-api";
-import { getLocaleSwitcherLabels } from "../../account/_components/account-server";
+import {
+  getAccountTranslator,
+  getLocaleSwitcherLabels,
+} from "../../account/_components/account-server";
+import { BirthdayForm, type BirthdayLabels } from "../../account/_components/birthday-form";
 import { isOnboardingComplete, resolvePostAuthPath } from "../_components/auth-utils";
 
 import { WelcomeForm, type WelcomeFormLabels } from "./_components/welcome-form";
@@ -58,6 +63,9 @@ export default async function WelcomePage({ params, searchParams }: PageProps) {
   const messages = { ...baseMessages, auth: authMessages } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "auth" });
   const localeSwitcherLabels = await getLocaleSwitcherLabels(locale);
+  // Optional, separately consented birthday treat (flag `birthday_greetings`).
+  const birthdaysEnabled = (await fetchStorefrontConfig()).birthdays;
+  const accountT = await getAccountTranslator(locale);
 
   const labels: WelcomeFormLabels = {
     languageLabel: t("welcome.languageLabel"),
@@ -89,6 +97,14 @@ export default async function WelcomePage({ params, searchParams }: PageProps) {
         localeSwitcherLabels={localeSwitcherLabels}
         nextParam={next}
       />
+
+      {birthdaysEnabled && accessToken ? (
+        <BirthdayForm
+          accessToken={accessToken}
+          initial={null}
+          labels={accountT.raw("birthday") as BirthdayLabels}
+        />
+      ) : null}
     </div>
   );
 }
