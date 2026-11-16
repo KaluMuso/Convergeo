@@ -110,6 +110,8 @@ def _build_template_args(
             return {"amount_ngwee": gross, "vendor_id": VENDOR_A}
         case LedgerTemplate.ORGANISER_RECEIVABLE_REPAID:
             return {"amount_ngwee": gross, "vendor_id": VENDOR_A}
+        case LedgerTemplate.COUPON_FUNDING:
+            return {"discount_ngwee": gross}
         case _:
             raise AssertionError(f"unhandled template {template}")
 

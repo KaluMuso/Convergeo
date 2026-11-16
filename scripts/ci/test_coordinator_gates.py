@@ -104,9 +104,10 @@ class CoordinatorControls(unittest.TestCase):
 
     def test_db_only_modules_retain_blocking_owners(self) -> None:
         workflow = (gates.ROOT / ".github/workflows/ci.yml").read_text()
-        broad = re.search(r"(?ms)^  python:\n.*?(?=^  [a-z0-9-]+:)", workflow)
+        broad = re.search(r"(?ms)^  python-shard:\n.*?(?=^  [a-z0-9-]+:)", workflow)
         assert broad is not None
-        self.assertEqual(re.findall(r"--ignore=([^\s]+)", broad.group()), [
+        ignored = re.findall(r"--ignore[= ](tests/\w+\.py)", broad.group())
+        self.assertEqual(list(dict.fromkeys(ignored)), [
             "tests/test_authz_matrix.py", "tests/test_f1_payout_real_stack.py",
             "tests/test_vendor_stock_adjustment_db.py",
             "tests/test_merchant_review_boundaries_db.py"])
@@ -121,7 +122,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(contract["review_db"]), 18)
         self.assertEqual(len(contract["ui"]), 6)
         self.assertEqual(len(contract["normal"]), 330)
-        self.assertEqual(len(contract["migrations"]), 180)
+        self.assertEqual(len(contract["migrations"]), 182)
         self.assertEqual(sum(map(len, financial.financial_identities().values())), 813)
 
     def test_local_host_rejected_before_resource_allocation(self) -> None:
@@ -155,7 +156,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(prefix), 131)
         self.assertIn("20260929120003_adopt_existing_service_obligations.sql", prefix)
         self.assertNotIn(gates.F3_MIGRATION, prefix)
-        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 48)
+        self.assertEqual(len([n for n in contract["migrations"] if n > gates.F3_MIGRATION]), 50)
 
     def test_mounted_false_success_partial_skip_duplicate_and_exit_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
