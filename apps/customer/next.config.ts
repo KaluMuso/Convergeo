@@ -172,3 +172,4 @@ const nextConfig: NextConfig = {
 // an async chunk (`app/sentry-init.tsx` → dynamic `import('@sentry/nextjs')`). Client
 // source-map upload runs as a separate gated build step — see docs/ops/observability.md.
 export default withNextIntl(withSerwist(nextConfig));
+// ci probe
