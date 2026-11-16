@@ -116,6 +116,8 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261116010000",
 }
 
 

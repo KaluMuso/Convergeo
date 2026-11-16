@@ -204,7 +204,11 @@
       "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
       "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
       "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
-      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée.",
+      "order_cancelled": "La commande {ref} a été annulée. Tout paiement sera remboursé.",
+      "order_completed": "La commande {ref} est terminée. Merci d'avoir acheté sur Convergeo !",
+      "payment_failed": "Votre paiement n'a pas abouti. Ouvrez vos commandes pour réessayer.",
+      "dispute_resolved": "Le litige sur la commande {ref} est résolu. Ouvrez-le pour voir le résultat."
     },
     "vendor": {
       "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",
@@ -214,7 +218,10 @@
       "kyc_rejected": "Votre vérification nécessite des modifications. Ouvrez-la pour en savoir plus.",
       "rfq_received": "Un client vous a demandé un devis.",
       "job_matched": "Une nouvelle mission correspond à vos services.",
-      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre."
+      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre.",
+      "payout_sent": "Votre versement est en route vers votre numéro mobile money.",
+      "payout_failed": "Votre versement n'a pas pu être envoyé. Vérifiez votre numéro de versement.",
+      "quote_accepted": "Un client a accepté votre devis. Ouvrez-le pour démarrer le travail."
     },
     "admin": {
       "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",

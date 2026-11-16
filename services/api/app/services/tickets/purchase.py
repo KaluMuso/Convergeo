@@ -850,6 +850,22 @@ VALUES
     return qty
 
 
+def _notify_tickets_issued(order_id: str, instance_id: str) -> None:
+    """ticket_issued after the tickets committed. Best-effort; deduped per order."""
+    try:
+        from app.services.notifications.lifecycle import notify_tickets_issued
+
+        title_result = run_sql_script(
+            "SELECT e.title FROM public.event_instances i "
+            "JOIN public.events e ON e.id = i.event_id "
+            f"WHERE i.id = {sql_uuid(instance_id, 'instance_id')};"
+        )
+        title = title_result.rows[0].strip() if title_result.ok and title_result.rows else ""
+        notify_tickets_issued(order_id, title)
+    except Exception:
+        return
+
+
 def issue_tickets_for_paid_order(
     service_client: Any,
     order_id: str,
@@ -984,6 +1000,9 @@ WHERE oi.order_id = {order_sql}
         names = _load_attendee_names(order_item_id)
         if names:
             _assign_holder_names(order_item_id, names)
+
+    if total_issued > 0:
+        _notify_tickets_issued(order_id, item_rows[0][2])
 
     return IssueTicketsResult(
         order_id=order_id,

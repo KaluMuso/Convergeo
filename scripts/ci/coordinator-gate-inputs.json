@@ -582,7 +582,8 @@
     "20261115200000_pay_at_door.sql": "19b29e0ea43917a8ae2699e0296de63a621c6c8f45db88c32ab2fcf922c5447e",
     "20261115210000_event_ticket_integrity.sql": "9460fb97d3c207bcbb82689c298be089f41f53610575e061b2b61908233c0978",
     "20261115235500_business_home_offers_flag.sql": "661fa429b86138f5e8adfab9052c293002ed6e0017e4c70c9e672d0d13335e9d",
-    "20261115235600_business_home_section_flags.sql": "be21e21ad9ea3354de483b3a47835a03312c91496033af36342c21181fc58172"
+    "20261115235600_business_home_section_flags.sql": "be21e21ad9ea3354de483b3a47835a03312c91496033af36342c21181fc58172",
+    "20261116010000_in_app_never_silent_events.sql": "351190517f3bc88e297d623596ab2aa5e08d98db3d20a954bdbd3317021a644c"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -598,7 +599,7 @@
     "scripts/ci/critical-real-stack-nodes.txt": "19b1ce00d621f4fe39c521e799f31f23fdbd6d8a736e07525bee5b4444abb496",
     "scripts/ci/migration-replay.sh": "9556f94d0ab002c8eb3e2f7e200d52ccf72e56d7479489ecd7fecf2281dedaed",
     "scripts/ci/run-critical-real-stack.sh": "cd904fc1a974e33ccb6c043440ff99b5367d4e83bcde62572d5e4ecd908f73f5",
-    "scripts/ci/run_financial_real_stack.py": "d25adb747491e0f9d3cccd2903a85ff00e26164b5f018650bc36251549334320",
+    "scripts/ci/run_financial_real_stack.py": "6f02b5315a54d8a05b44ab93d1e1a800f98af08a53144343d7a8493a2348ca1d",
     "scripts/drills/f2_collection_manifest.py": "655cdeafbaf6017870dadb9677a3e7315bc7d25f245528440048220ecb8c782e",
     "scripts/drills/f2_real_stack_report.py": "ac274ad1292f6998e17514d268c3c9bc0692730122c2ca2e46c7c76891ca75c8",
     "scripts/drills/f2_upgrade_probe.py": "b3a4217b38cee19d68d6de336fc2fbe1cdf12dcc3e2f5b87ad9eb5a780306e91",

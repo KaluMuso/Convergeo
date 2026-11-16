@@ -204,7 +204,11 @@
       "order_ready_pickup": "订单 {ref} 可以自提了。打开查看您的取货码。",
       "order_delivered": "订单 {ref} 已送达。体验如何？",
       "quote_received": "您收到了新的报价。请在应用中比较并接受。",
-      "ticket_issued": "您的门票已就绪。入场时请出示二维码。"
+      "ticket_issued": "您的门票已就绪。入场时请出示二维码。",
+      "order_cancelled": "订单 {ref} 已取消。已付款项将被退还。",
+      "order_completed": "订单 {ref} 已完成。感谢您在 Convergeo 购物！",
+      "payment_failed": "您的付款未成功。请打开订单重试。",
+      "dispute_resolved": "订单 {ref} 的纠纷已解决。打开查看结果。"
     },
     "vendor": {
       "order_placed": "新订单 {ref}。请确认后开始处理。",
@@ -214,7 +218,10 @@
       "kyc_rejected": "您的认证需要修改。打开查看原因。",
       "rfq_received": "有顾客向您询价。",
       "job_matched": "有新的工作与您的服务匹配。",
-      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。"
+      "dispute_opened": "顾客对订单 {ref} 发起了争议，请及时回复。",
+      "payout_sent": "您的提现款项正在汇往您的移动支付号码。",
+      "payout_failed": "您的提现款项发送失败。请检查收款号码。",
+      "quote_accepted": "有顾客接受了您的报价。打开即可开始工作。"
     },
     "admin": {
       "kyc_submitted": "有新的 KYC 申请待审核。",

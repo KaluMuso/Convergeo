@@ -666,7 +666,7 @@ def test_render_sms_body_covers_lifecycle_templates() -> None:
     for template in SMS_TEMPLATES:
         body = render_sms_body(template, payload)
         assert body is not None
-        assert body.startswith(("Vergeo5", "Convergeo"))
+        assert body.startswith("Convergeo")
     assert "ord-77" in (render_sms_body("order_confirmed", payload) or "")
     assert "K1500.00" in (render_sms_body("payment_received", payload) or "")
     assert render_sms_body("unknown_template", payload) is None
@@ -706,7 +706,7 @@ def test_service_quote_accepted_renders_on_sms_and_email_fallback() -> None:
     # SMS/email use ngwee_to_major_str (no thousands grouping); WhatsApp uses formatK.
     sms_body = render_sms_body("service_quote_accepted", payload)
     assert sms_body is not None
-    assert sms_body.startswith("Vergeo5")
+    assert sms_body.startswith("Convergeo")
     assert "K1250.00" in sms_body  # deposit
     assert "K2500.00" in sms_body  # total
 

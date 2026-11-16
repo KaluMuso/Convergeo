@@ -218,7 +218,11 @@
       "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
       "order_delivered": "Order {ref} yafika. Cali shani?",
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
-      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
+      "order_cancelled": "⚠ Order {ref} was cancelled. Any payment will be refunded.",
+      "order_completed": "⚠ Order {ref} is complete. Thank you for shopping with Convergeo!",
+      "payment_failed": "⚠ Your payment did not go through. Open your orders to try again.",
+      "dispute_resolved": "⚠ The dispute on order {ref} is resolved. Open it to see the outcome."
     },
     "vendor": {
       "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",
@@ -228,7 +232,10 @@
       "kyc_rejected": "Ukusuminishiwa kwenu kulefwaya ukwalula. Kufyeni mumone umulandu.",
       "rfq_received": "Kasita alomba quote kuli imwe.",
       "job_matched": "Incito iipya ilinganya na ma-service yenu.",
-      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke."
+      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke.",
+      "payout_sent": "⚠ Your payout is on its way to your mobile money number.",
+      "payout_failed": "⚠ Your payout could not be sent. Check your payout number.",
+      "quote_accepted": "⚠ A customer accepted your quote. Open it to start the job."
     },
     "admin": {
       "kyc_submitted": "KYC iipya ilelolela ukumonwa.",
