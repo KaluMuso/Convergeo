@@ -60,6 +60,17 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "otp_login": TemplateClass.TRANSACTIONAL,
     "event_cancelled": TemplateClass.TRANSACTIONAL,
     "event_schedule_changed": TemplateClass.TRANSACTIONAL,
+    # Never-silent lifecycle events (E1/E4) — transactional, never deferred.
+    "rfq_quoted": TemplateClass.TRANSACTIONAL,
+    "service_quote_accepted": TemplateClass.TRANSACTIONAL,
+    "order_cancelled": TemplateClass.TRANSACTIONAL,
+    "payment_failed": TemplateClass.TRANSACTIONAL,
+    "order_completed": TemplateClass.TRANSACTIONAL,
+    "ticket_issued": TemplateClass.TRANSACTIONAL,
+    "dispute_opened": TemplateClass.TRANSACTIONAL,
+    "dispute_resolved": TemplateClass.TRANSACTIONAL,
+    "payout_sent": TemplateClass.TRANSACTIONAL,
+    "payout_failed": TemplateClass.TRANSACTIONAL,
     # Email receipts & KYC outcomes
     "payment_receipt": TemplateClass.TRANSACTIONAL,
     "order_receipt": TemplateClass.TRANSACTIONAL,

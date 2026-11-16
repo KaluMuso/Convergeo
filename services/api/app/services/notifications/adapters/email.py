@@ -217,6 +217,107 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    "rfq_quoted": {
+        "en": {
+            "subject_key": "notifications.email.rfq_quoted.subject",
+            "subject": "You received a quote on Convergeo",
+            "body_key": "notifications.email.rfq_quoted.body",
+            "body": (
+                "<p>A provider sent you a quote of <strong>K{quote_price}</strong>.</p>"
+                "<p>Open the Convergeo app to review and accept it.</p>"
+            ),
+        },
+    },
+    "order_cancelled": {
+        "en": {
+            "subject_key": "notifications.email.order_cancelled.subject",
+            "subject": "Your Convergeo order {order_id} was cancelled",
+            "body_key": "notifications.email.order_cancelled.body",
+            "body": (
+                "<p>Your order was cancelled.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p>{refund_detail}</p>"
+            ),
+        },
+    },
+    "payment_failed": {
+        "en": {
+            "subject_key": "notifications.email.payment_failed.subject",
+            "subject": "Your Convergeo payment did not go through",
+            "body_key": "notifications.email.payment_failed.body",
+            "body": (
+                "<p>Your payment of K{amount} did not go through.</p>"
+                "<p>If you were charged, please contact support and we will sort it out.</p>"
+                "<p>You can try again: {retry_url}</p>"
+            ),
+        },
+    },
+    "order_completed": {
+        "en": {
+            "subject_key": "notifications.email.order_completed.subject",
+            "subject": "Your Convergeo order {order_id} is complete",
+            "body_key": "notifications.email.order_completed.body",
+            "body": (
+                "<p>Your order {order_id} is complete.</p>"
+                "<p>Thank you for shopping with Convergeo.</p>"
+            ),
+        },
+    },
+    "ticket_issued": {
+        "en": {
+            "subject_key": "notifications.email.ticket_issued.subject",
+            "subject": "Your ticket for {event_title} is ready",
+            "body_key": "notifications.email.ticket_issued.body",
+            "body": (
+                "<p>Your ticket for <strong>{event_title}</strong> is ready.</p>"
+                "<p>Open My tickets in the Convergeo app and show the QR code at the door.</p>"
+            ),
+        },
+    },
+    "dispute_opened": {
+        "en": {
+            "subject_key": "notifications.email.dispute_opened.subject",
+            "subject": "A dispute was opened on order {order_id}",
+            "body_key": "notifications.email.dispute_opened.body",
+            "body": (
+                "<p>A customer opened a dispute on order {order_id}.</p>"
+                "<p>Open the vendor app to read the details and respond.</p>"
+            ),
+        },
+    },
+    "dispute_resolved": {
+        "en": {
+            "subject_key": "notifications.email.dispute_resolved.subject",
+            "subject": "The dispute on order {order_id} is resolved",
+            "body_key": "notifications.email.dispute_resolved.body",
+            "body": (
+                "<p>The dispute on order {order_id} is resolved.</p><p>{resolution_summary}</p>"
+            ),
+        },
+    },
+    "payout_sent": {
+        "en": {
+            "subject_key": "notifications.email.payout_sent.subject",
+            "subject": "Your Convergeo payout of K{amount} is on its way",
+            "body_key": "notifications.email.payout_sent.body",
+            "body": (
+                "<p>Your payout of K{amount} is on its way to your {destination_label}.</p>"
+                "<p>It should arrive shortly. Thank you for selling on Convergeo.</p>"
+            ),
+        },
+    },
+    "payout_failed": {
+        "en": {
+            "subject_key": "notifications.email.payout_failed.subject",
+            "subject": "Your Convergeo payout of K{amount} could not be sent",
+            "body_key": "notifications.email.payout_failed.body",
+            "body": (
+                "<p>Your payout of K{amount} could not be sent.</p>"
+                "<p>{failure_hint}</p>"
+                "<p>We will retry once your details are correct.</p>"
+            ),
+        },
+    },
 }
 
 
@@ -271,6 +372,21 @@ def render_email_html(
         "description_preview": html.escape(str(payload.get("description_preview") or "")),
         "track_url": html.escape(str(payload.get("track_url") or "")),
         "review_url": html.escape(str(payload.get("review_url") or "")),
+        "quote_price": html.escape(_ngwee_field(payload, "quote_price_ngwee")),
+        "refund_detail": html.escape(
+            str(payload.get("refund_detail") or "If you already paid, we will handle your refund.")
+        ),
+        "retry_url": html.escape(str(payload.get("retry_url") or "open the Convergeo app")),
+        "event_title": html.escape(str(payload.get("event_title") or "your event")),
+        "resolution_summary": html.escape(
+            str(payload.get("resolution_summary") or "Open the app to see the outcome.")
+        ),
+        "destination_label": html.escape(
+            str(payload.get("destination_label") or "mobile money number")
+        ),
+        "failure_hint": html.escape(
+            str(payload.get("failure_hint") or "Please check your payout number in the vendor app.")
+        ),
         "deposit": html.escape(_ngwee_field(payload, "deposit_ngwee")),
         "total": html.escape(_ngwee_field(payload, "total_job_ngwee")),
         "dispatch_message": "<br>".join(

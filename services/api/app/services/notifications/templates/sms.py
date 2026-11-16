@@ -117,6 +117,55 @@ def _dispatch_stale_alert(p: Mapping[str, Any]) -> str:
     return f"Vergeo5 ops: {ref} with {courier} not accepted after {minutes} min."
 
 
+def _order_cancelled(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "your order")
+    return f"Convergeo: order {ref} was cancelled. If you paid, we will handle your refund."
+
+
+def _payment_failed(p: Mapping[str, Any]) -> str:
+    amount = _amount(p, "amount_ngwee", "total_ngwee")
+    return f"Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+
+
+def _order_completed(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "your order")
+    return f"Convergeo: order {ref} is complete. Thank you for shopping with us!"
+
+
+def _ticket_issued(p: Mapping[str, Any]) -> str:
+    title = _text(p, "event_title", "your event")
+    return f'Convergeo: your ticket for "{title}" is ready. Open My tickets to show the QR.'
+
+
+def _dispute_opened(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "an order")
+    return f"Convergeo: a dispute was opened on order {ref}. Open the vendor app to respond."
+
+
+def _dispute_resolved(p: Mapping[str, Any]) -> str:
+    ref = _text(p, "order_reference", "your order")
+    return f"Convergeo: the dispute on order {ref} is resolved. Open the app to see the outcome."
+
+
+def _payout_sent(p: Mapping[str, Any]) -> str:
+    amount = _amount(p, "amount_ngwee")
+    dest = _text(p, "destination_label", "mobile money number")
+    return f"Convergeo: your payout of K{amount} is on its way to your {dest}."
+
+
+def _payout_failed(p: Mapping[str, Any]) -> str:
+    amount = _amount(p, "amount_ngwee")
+    return (
+        f"Convergeo: your payout of K{amount} could not be sent. "
+        "Check your payout number in the vendor app."
+    )
+
+
+def _rfq_quoted(p: Mapping[str, Any]) -> str:
+    price = _amount(p, "quote_price_ngwee")
+    return f"Convergeo: you received a quote of K{price}. Open the app to review it."
+
+
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_confirmed": _order_confirmed,
     "payment_received": _payment_received,
@@ -125,11 +174,20 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_delivered": _order_delivered,
     "vendor_new_order": _vendor_new_order,
     "rfq_job_broadcast": _rfq_job_broadcast,
+    "rfq_quoted": _rfq_quoted,
     "service_quote_accepted": _service_quote_accepted,
     "event_cancelled": _event_cancelled,
     "event_schedule_changed": _event_schedule_changed,
     "courier_dispatch_request": _courier_dispatch_request,
     "dispatch_stale_alert": _dispatch_stale_alert,
+    "order_cancelled": _order_cancelled,
+    "payment_failed": _payment_failed,
+    "order_completed": _order_completed,
+    "ticket_issued": _ticket_issued,
+    "dispute_opened": _dispute_opened,
+    "dispute_resolved": _dispute_resolved,
+    "payout_sent": _payout_sent,
+    "payout_failed": _payout_failed,
 }
 
 

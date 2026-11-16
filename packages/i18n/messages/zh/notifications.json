@@ -33,6 +33,36 @@
     },
     "otp_login": {
       "body": "您的 Convergeo 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
+    },
+    "order_cancelled": {
+      "body": "您的 Convergeo 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
+    },
+    "payment_failed": {
+      "body": "您的 {amount} 付款未成功。如已被扣款，请联系客服，我们会处理。重试：{retry_url} 回复 STOP 即可退订。"
+    },
+    "order_completed": {
+      "body": "您的 Convergeo 订单 {order_reference} 已完成。感谢您的购买！查看订单：{order_url} 回复 STOP 即可退订。"
+    },
+    "ticket_issued": {
+      "body": "您的 {event_title} 门票已就绪。入场时出示二维码：{ticket_url} 回复 STOP 即可退订。"
+    },
+    "dispute_opened": {
+      "body": "有顾客对订单 {order_reference} 发起了纠纷。请打开商家应用查看并回复。"
+    },
+    "dispute_resolved": {
+      "body": "您的订单 {order_reference} 的纠纷已解决。{resolution_summary} 回复 STOP 即可退订。"
+    },
+    "payout_sent": {
+      "body": "您的 {amount} 提现款项正在汇往您的 {destination_label}。"
+    },
+    "payout_failed": {
+      "body": "您的 {amount} 提现款项发送失败。{failure_hint} 信息更正后我们会重试。"
+    },
+    "rfq_quoted": {
+      "body": "您在 Convergeo 收到了 {quote_price} 的报价。请打开应用查看。回复 STOP 即可退订。"
+    },
+    "service_quote_accepted": {
+      "body": "好消息！您的报价已被接受。{deposit} 定金（工作总额 {total}）已存入 Convergeo 托管。请打开应用开始工作。"
     }
   },
   "sms": {
@@ -71,6 +101,30 @@
     },
     "payout_failure_alert": {
       "body": "Convergeo 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+    },
+    "order_cancelled": {
+      "body": "Convergeo：订单 {order_reference} 已取消。如已付款，我们会处理退款。"
+    },
+    "payment_failed": {
+      "body": "Convergeo：您的 K{amount} 付款未成功。请打开应用重试。"
+    },
+    "order_completed": {
+      "body": "Convergeo：订单 {order_reference} 已完成。感谢您的购买！"
+    },
+    "ticket_issued": {
+      "body": "Convergeo：您的“{event_title}”门票已就绪。打开“我的门票”出示二维码。"
+    },
+    "dispute_opened": {
+      "body": "Convergeo：订单 {order_reference} 被发起纠纷。请打开商家应用回复。"
+    },
+    "dispute_resolved": {
+      "body": "Convergeo：订单 {order_reference} 的纠纷已解决。请打开应用查看结果。"
+    },
+    "payout_sent": {
+      "body": "Convergeo：您的 K{amount} 提现款项正在汇往您的 {destination_label}。"
+    },
+    "payout_failed": {
+      "body": "Convergeo：您的 K{amount} 提现款项发送失败。请在商家应用中检查收款号码。"
     }
   },
   "email": {

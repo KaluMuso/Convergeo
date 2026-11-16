@@ -26,6 +26,14 @@ WhatsAppTemplateId = Literal[
     "event_schedule_changed",
     "courier_dispatch_request",
     "dispatch_stale_alert",
+    "order_cancelled",
+    "payment_failed",
+    "order_completed",
+    "ticket_issued",
+    "dispute_opened",
+    "dispute_resolved",
+    "payout_sent",
+    "payout_failed",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -268,6 +276,76 @@ def _map_dispatch_stale_alert(payload: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _optional_str(payload: Mapping[str, Any], key: str, *, fallback: str) -> str:
+    """Single-line optional slot; Meta rejects empty body parameters and newlines."""
+    value = payload.get(key)
+    if isinstance(value, str) and value.strip():
+        return " ".join(value.split())
+    return fallback
+
+
+def _map_order_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "order_reference"),
+        _optional_str(
+            payload,
+            "refund_detail",
+            fallback="If you already paid, Convergeo will handle your refund and keep you updated.",
+        ),
+    )
+
+
+def _map_payment_failed(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        format_k(_require_int(payload, "amount_ngwee")),
+        _optional_str(payload, "retry_url", fallback="your orders in the Convergeo app"),
+    )
+
+
+def _map_order_completed(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "order_reference"),
+        _optional_str(payload, "order_url", fallback="the Convergeo app"),
+    )
+
+
+def _map_ticket_issued(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "event_title"),
+        _optional_str(payload, "ticket_url", fallback="My tickets in the Convergeo app"),
+    )
+
+
+def _map_dispute_opened(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Vendor-facing. The reason text stays in the app (free text, possibly sensitive).
+    return (_require_str(payload, "order_reference"),)
+
+
+def _map_dispute_resolved(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "order_reference"),
+        _optional_str(payload, "resolution_summary", fallback="Open the app to see the outcome."),
+    )
+
+
+def _map_payout_sent(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        format_k(_require_int(payload, "amount_ngwee")),
+        _optional_str(payload, "destination_label", fallback="mobile money number"),
+    )
+
+
+def _map_payout_failed(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        format_k(_require_int(payload, "amount_ngwee")),
+        _optional_str(
+            payload,
+            "failure_hint",
+            fallback="Please check your payout number in the vendor app.",
+        ),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -362,6 +440,46 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="dispatch_stale_alert",
         meta_template_name="dispatch_stale_alert",
         map_variables=_map_dispatch_stale_alert,
+    ),
+    "order_cancelled": WhatsAppTemplateDefinition(
+        template_id="order_cancelled",
+        meta_template_name="order_cancelled",
+        map_variables=_map_order_cancelled,
+    ),
+    "payment_failed": WhatsAppTemplateDefinition(
+        template_id="payment_failed",
+        meta_template_name="payment_failed",
+        map_variables=_map_payment_failed,
+    ),
+    "order_completed": WhatsAppTemplateDefinition(
+        template_id="order_completed",
+        meta_template_name="order_completed",
+        map_variables=_map_order_completed,
+    ),
+    "ticket_issued": WhatsAppTemplateDefinition(
+        template_id="ticket_issued",
+        meta_template_name="ticket_issued",
+        map_variables=_map_ticket_issued,
+    ),
+    "dispute_opened": WhatsAppTemplateDefinition(
+        template_id="dispute_opened",
+        meta_template_name="dispute_opened",
+        map_variables=_map_dispute_opened,
+    ),
+    "dispute_resolved": WhatsAppTemplateDefinition(
+        template_id="dispute_resolved",
+        meta_template_name="dispute_resolved",
+        map_variables=_map_dispute_resolved,
+    ),
+    "payout_sent": WhatsAppTemplateDefinition(
+        template_id="payout_sent",
+        meta_template_name="payout_sent",
+        map_variables=_map_payout_sent,
+    ),
+    "payout_failed": WhatsAppTemplateDefinition(
+        template_id="payout_failed",
+        meta_template_name="payout_failed",
+        map_variables=_map_payout_failed,
     ),
 }
 

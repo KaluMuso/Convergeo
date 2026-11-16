@@ -47,6 +47,36 @@
     },
     "dispatch_stale_alert": {
       "body": "Convergeo ops: dispatch {order_reference} with {courier_name} has waited {minutes_waiting} min without courier acceptance. Check the dispatch board."
+    },
+    "order_cancelled": {
+      "body": "Your Convergeo order {order_reference} was cancelled. {refund_detail} Reply STOP to opt out."
+    },
+    "payment_failed": {
+      "body": "Your payment of {amount} did not go through. If you were charged, contact support and we will sort it out. Try again: {retry_url} Reply STOP to opt out."
+    },
+    "order_completed": {
+      "body": "Your Convergeo order {order_reference} is complete. Thank you for shopping with us! See it here: {order_url} Reply STOP to opt out."
+    },
+    "ticket_issued": {
+      "body": "Your ticket for {event_title} is ready. Show the QR code at the door: {ticket_url} Reply STOP to opt out."
+    },
+    "dispute_opened": {
+      "body": "A customer opened a dispute on order {order_reference}. Open the vendor app to read it and respond."
+    },
+    "dispute_resolved": {
+      "body": "The dispute on your order {order_reference} is resolved. {resolution_summary} Reply STOP to opt out."
+    },
+    "payout_sent": {
+      "body": "Your payout of {amount} is on its way to your {destination_label}."
+    },
+    "payout_failed": {
+      "body": "Your payout of {amount} could not be sent. {failure_hint} We will retry once your details are correct."
+    },
+    "rfq_quoted": {
+      "body": "You received a quote of {quote_price} on Convergeo. Open the app to review it. Reply STOP to opt out."
+    },
+    "service_quote_accepted": {
+      "body": "Good news! Your quote was accepted. A deposit of {deposit} (job total {total}) is secured in Convergeo escrow. Open the app to start the job."
     }
   },
   "sms": {
@@ -91,6 +121,30 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo: \"{event_title}\" details updated. Date: {event_date}. Venue: {venue}. Check the app."
+    },
+    "order_cancelled": {
+      "body": "Convergeo: order {order_reference} was cancelled. If you paid, we will handle your refund."
+    },
+    "payment_failed": {
+      "body": "Convergeo: your payment of K{amount} did not go through. Open the app to try again."
+    },
+    "order_completed": {
+      "body": "Convergeo: order {order_reference} is complete. Thank you for shopping with us!"
+    },
+    "ticket_issued": {
+      "body": "Convergeo: your ticket for \"{event_title}\" is ready. Open My tickets to show the QR."
+    },
+    "dispute_opened": {
+      "body": "Convergeo: a dispute was opened on order {order_reference}. Open the vendor app to respond."
+    },
+    "dispute_resolved": {
+      "body": "Convergeo: the dispute on order {order_reference} is resolved. Open the app to see the outcome."
+    },
+    "payout_sent": {
+      "body": "Convergeo: your payout of K{amount} is on its way to your {destination_label}."
+    },
+    "payout_failed": {
+      "body": "Convergeo: your payout of K{amount} could not be sent. Check your payout number in the vendor app."
     }
   },
   "email": {

@@ -33,6 +33,36 @@
     },
     "otp_login": {
       "body": "Votre code de connexion Convergeo est {otp_code}. Il expire dans 10 minutes. Ne partagez pas ce code."
+    },
+    "order_cancelled": {
+      "body": "Votre commande Convergeo {order_reference} a été annulée. {refund_detail} Répondez STOP pour vous désabonner."
+    },
+    "payment_failed": {
+      "body": "Votre paiement de {amount} n'a pas abouti. Si vous avez été débité, contactez le support et nous réglerons cela. Réessayez : {retry_url} Répondez STOP pour vous désabonner."
+    },
+    "order_completed": {
+      "body": "Votre commande Convergeo {order_reference} est terminée. Merci pour votre achat ! Voir la commande : {order_url} Répondez STOP pour vous désabonner."
+    },
+    "ticket_issued": {
+      "body": "Votre billet pour {event_title} est prêt. Présentez le code QR à l'entrée : {ticket_url} Répondez STOP pour vous désabonner."
+    },
+    "dispute_opened": {
+      "body": "Un client a ouvert un litige sur la commande {order_reference}. Ouvrez l'application vendeur pour le lire et répondre."
+    },
+    "dispute_resolved": {
+      "body": "Le litige sur votre commande {order_reference} est résolu. {resolution_summary} Répondez STOP pour vous désabonner."
+    },
+    "payout_sent": {
+      "body": "Votre versement de {amount} est en route vers votre {destination_label}."
+    },
+    "payout_failed": {
+      "body": "Votre versement de {amount} n'a pas pu être envoyé. {failure_hint} Nous réessaierons dès que vos informations seront correctes."
+    },
+    "rfq_quoted": {
+      "body": "Vous avez reçu un devis de {quote_price} sur Convergeo. Ouvrez l'application pour le consulter. Répondez STOP pour vous désabonner."
+    },
+    "service_quote_accepted": {
+      "body": "Bonne nouvelle ! Votre devis a été accepté. Un acompte de {deposit} (total du travail {total}) est sécurisé dans le séquestre Convergeo. Ouvrez l'application pour démarrer."
     }
   },
   "sms": {
@@ -71,6 +101,30 @@
     },
     "payout_failure_alert": {
       "body": "Échec du versement Convergeo : {vendor_name} {amount} réf {lenco_reference}. Vérifiez dans l'admin."
+    },
+    "order_cancelled": {
+      "body": "Convergeo : la commande {order_reference} a été annulée. Si vous avez payé, nous gérons le remboursement."
+    },
+    "payment_failed": {
+      "body": "Convergeo : votre paiement de K{amount} n'a pas abouti. Ouvrez l'application pour réessayer."
+    },
+    "order_completed": {
+      "body": "Convergeo : la commande {order_reference} est terminée. Merci pour votre achat !"
+    },
+    "ticket_issued": {
+      "body": "Convergeo : votre billet pour « {event_title} » est prêt. Ouvrez Mes billets pour montrer le QR."
+    },
+    "dispute_opened": {
+      "body": "Convergeo : un litige a été ouvert sur la commande {order_reference}. Ouvrez l'application vendeur pour répondre."
+    },
+    "dispute_resolved": {
+      "body": "Convergeo : le litige sur la commande {order_reference} est résolu. Ouvrez l'application pour voir le résultat."
+    },
+    "payout_sent": {
+      "body": "Convergeo : votre versement de K{amount} est en route vers votre {destination_label}."
+    },
+    "payout_failed": {
+      "body": "Convergeo : votre versement de K{amount} n'a pas pu être envoyé. Vérifiez votre numéro de versement dans l'application vendeur."
     }
   },
   "email": {

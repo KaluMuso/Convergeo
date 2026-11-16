@@ -666,7 +666,7 @@ def test_render_sms_body_covers_lifecycle_templates() -> None:
     for template in SMS_TEMPLATES:
         body = render_sms_body(template, payload)
         assert body is not None
-        assert body.startswith("Vergeo5")
+        assert body.startswith(("Vergeo5", "Convergeo"))
     assert "ord-77" in (render_sms_body("order_confirmed", payload) or "")
     assert "K1500.00" in (render_sms_body("payment_received", payload) or "")
     assert render_sms_body("unknown_template", payload) is None

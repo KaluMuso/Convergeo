@@ -118,6 +118,20 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "dispatch_stale_alert":
         payload["courier_name"] = "TownStar"
         payload["minutes_waiting"] = 47
+    elif template_id == "order_cancelled":
+        payload["refund_detail"] = "Your refund is being processed."
+    elif template_id in {"payment_failed", "payout_failed"}:
+        payload["amount_ngwee"] = MONEY_NGEWEE
+    elif template_id == "payout_sent":
+        payload["amount_ngwee"] = MONEY_NGEWEE
+        payload["destination_label"] = "MTN number ending 1234"
+    elif template_id == "order_completed":
+        payload["order_url"] = FIXTURE_TRACK
+    elif template_id == "ticket_issued":
+        payload["event_title"] = "Jazz Night"
+        payload["ticket_url"] = "https://vergeo5.com/en/account/tickets"
+    elif template_id == "dispute_resolved":
+        payload["resolution_summary"] = "We refunded you in full."
     return payload
 
 
