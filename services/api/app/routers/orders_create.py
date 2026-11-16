@@ -20,6 +20,13 @@ from app.routers.checkout import (
 )
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
 from app.services.cart.store import fetch_listings_for_items
+from app.services.cart.tickets import (
+    TicketCartLine,
+    load_cart_ticket_lines,
+    load_session_holds,
+    match_holds,
+    require_purchasable,
+)
 from app.services.cart.totals import line_total_ngwee
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
 from app.services.coupons.store import (
@@ -31,7 +38,7 @@ from app.services.coupons.store import (
     require_flag,
 )
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
-from app.services.offers.apply import expand_cart_lines_for_order
+from app.services.offers.apply import expand_unified_for_order
 from app.services.orders.create import (
     CartLineInput,
     CouponOrderPlan,
@@ -49,6 +56,7 @@ from app.services.orders.fulfilment import (
     parse_stored_choices,
 )
 from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
+from app.services.orders.ticket_lane import build_ticket_order
 from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -78,7 +86,8 @@ class CreateOrderRequest(BaseModel):
     rail: str | None = None
     payer_number: str | None = Field(default=None, max_length=20)
     address_id: str | None = None
-    groups: list[VendorGroupRequest] = Field(min_length=1)
+    #: One entry per product vendor. Empty only for a tickets-only checkout.
+    groups: list[VendorGroupRequest] = Field(default_factory=list, max_length=50)
 
 
 class CreatedOrderItemOut(BaseModel):
@@ -432,11 +441,13 @@ async def create_orders(
         )
 
     user_client = get_user_client(current_user.token, settings)
+    ticket_lines: list[TicketCartLine] = []
     try:
         cart = _fetch_active_cart_by_user(user_client, current_user.id)
         cart_id = str(cart["id"])
         items = _fetch_cart_items(user_client, cart_id)
-        if not items:
+        ticket_lines = load_cart_ticket_lines(cart_id, client=service.client)
+        if not items and not ticket_lines:
             raise AppError(
                 code="checkout.cart_empty",
                 message="Your cart is empty",
@@ -500,9 +511,25 @@ async def create_orders(
     # the fulfilment step used for the session total; split / gift lines carry
     # the frozen offer pricing into order_items. A mismatch with the session
     # (offer ended in between) surfaces as orders.totals_mismatch below.
-    cart_lines, _priced = expand_cart_lines_for_order(
-        cart_lines, service.client, customer_id=current_user.id
+    # Unified checkout: event tickets are priced in the same engine pass (an
+    # offer may span a product and a ticket) and must be exactly covered by the
+    # capacity the session claimed. Tickets are prepaid only.
+    ticket_order = None
+    if ticket_lines:
+        require_purchasable(ticket_lines)
+        if body.method == "cod":
+            raise AppError(
+                code="checkout.cod_not_allowed",
+                message="Event tickets must be paid online",
+                http_status=422,
+                details={"message_key": "checkout.payment.codNotForTickets", "field": "method"},
+            )
+        holds = match_holds(ticket_lines, load_session_holds(body.session_id))
+    cart_lines, priced_tickets, _priced = expand_unified_for_order(
+        cart_lines, ticket_lines, service.client, customer_id=current_user.id
     )
+    if ticket_lines:
+        ticket_order = build_ticket_order(priced_tickets, holds)
 
     vendor_groups = _authoritative_groups(
         service,
@@ -545,6 +572,7 @@ async def create_orders(
         address_id=body.address_id,
         coupon=coupon_plan,
         is_gift=is_gift,
+        ticket_order=ticket_order,
     )
 
     # Fire-and-forget funnel event (order_placed); server operational, consent-independent.

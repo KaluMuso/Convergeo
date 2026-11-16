@@ -151,6 +151,7 @@ def _header_payload(body: OfferWriteRequest) -> dict[str, Any]:
         "pay_m": body.pay_m,
         "gift_stock_total": body.gift_stock_total,
         "max_applications_per_order": body.max_applications_per_order,
+        "per_customer_limit": body.per_customer_limit,
     }
 
 

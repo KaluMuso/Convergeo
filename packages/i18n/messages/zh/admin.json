@@ -32,6 +32,7 @@
     "advertising": "Advertising",
     "accounts": "管理员账户",
     "auditLog": "审计日志",
+    "offers": "优惠活动",
     "coupons": "优惠券"
   },
   "hubs": {
@@ -1411,6 +1412,71 @@
         "operatorUnsupported": "只有 MTN 和 Airtel 号码可以接收付款提示。",
         "required": "交接前必须完成付款。"
       }
+    }
+  },
+  "offers": {
+    "title": "商家优惠",
+    "subtitle": "查看所有商家的组合与优惠。管理员暂停会立即停止优惠，商家无法自行解除。",
+    "loading": "正在加载优惠…",
+    "error": "无法加载优惠。",
+    "permissionDenied": "您无权查看优惠。",
+    "permissionDeniedHint": "请向超级管理员申请广告权限。",
+    "retry": "重试",
+    "empty": "没有符合筛选条件的优惠。",
+    "listLabel": "优惠",
+    "truncated": "仅显示前 200 条优惠。请缩小筛选范围查看其余内容。",
+    "vendor": "商家：{name}",
+    "window": "{starts} 至 {ends}",
+    "windowOpen": "自 {starts} 起，无结束日期",
+    "perCustomer": "每位顾客 {count} 次",
+    "perCustomerUnlimited": "每位顾客不限次数",
+    "giftStock": "赠品已用 {reserved}/{total}",
+    "note": "管理员备注：{note}",
+    "pausedToast": "优惠已暂停。",
+    "unpausedToast": "已解除管理员暂停。",
+    "filters": {
+      "label": "筛选优惠",
+      "state": "状态",
+      "status": "商家设置状态",
+      "type": "类型",
+      "search": "标题",
+      "searchPlaceholder": "搜索标题",
+      "apply": "搜索",
+      "all": "全部"
+    },
+    "state": {
+      "live": "进行中",
+      "admin_paused": "已被管理员暂停",
+      "scheduled": "待开始",
+      "ended": "已结束"
+    },
+    "status": {
+      "draft": "草稿",
+      "active": "已启用",
+      "paused": "商家已暂停",
+      "archived": "已归档"
+    },
+    "type": {
+      "bundle": "组合",
+      "buy_n_pay_m": "买 N 付 M",
+      "bxgy": "买 X 送 Y",
+      "free_gift": "赠品"
+    },
+    "actions": {
+      "pause": "暂停",
+      "unpause": "解除暂停",
+      "pauseTitle": "暂停此优惠？",
+      "unpauseTitle": "解除管理员暂停？",
+      "pauseBody": "“{title}”将立即停止在购物车和结账中生效。已下的订单保持原价。",
+      "unpauseBody": "如果商家仍启用该优惠且在有效期内，“{title}”将重新生效。",
+      "noteLabel": "备注（仅管理员可见）",
+      "notePlaceholder": "为什么要更改此优惠？",
+      "audited": "此操作将记录在审计日志中。",
+      "cancel": "取消",
+      "submitting": "正在保存…",
+      "confirmPause": "暂停优惠",
+      "confirmUnpause": "解除暂停",
+      "failure": "无法更新优惠，请重试。"
     }
   },
   "coupons": {

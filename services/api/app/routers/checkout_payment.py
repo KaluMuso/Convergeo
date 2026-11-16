@@ -230,6 +230,29 @@ def _validate_payment_method(
     )
 
 
+def _session_has_tickets(service: ServiceRoleClient, session_id: str) -> bool:
+    """Unified checkout: event tickets in the session (they are prepaid only)."""
+    response = (
+        service.client.table("checkout_ticket_holds")
+        .select("id")
+        .eq("checkout_group_id", session_id)
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    return isinstance(data, list) and len(data) > 0
+
+
+def _reject_cod_for_tickets(method: str) -> None:
+    if method == "cod":
+        raise AppError(
+            code="checkout.cod_not_allowed",
+            message="Event tickets must be paid online",
+            http_status=422,
+            details={"message_key": "checkout.payment.codNotForTickets", "field": "method"},
+        )
+
+
 @router.get("/steps/payment-options", response_model=PaymentOptionsResponse)
 async def get_payment_options(
     session_id: str,
@@ -243,8 +266,14 @@ async def get_payment_options(
     discount_raw = group.get("discount_ngwee", 0)
     discount = discount_raw if isinstance(discount_raw, int) else 0
     coupon_code = group.get("coupon_code") if discount > 0 else None
-    # Coupons and gifts are prepaid only: a discounted or gift checkout never offers COD.
-    cod_eligible = total <= cod_cap and discount == 0 and not _is_gift_checkout(service, session_id)
+    # COD only within the cap (D9), never for event tickets, and never for a
+    # discounted (coupon) or gift checkout: those are prepaid only.
+    cod_eligible = (
+        total <= cod_cap
+        and discount == 0
+        and not _is_gift_checkout(service, session_id)
+        and not _session_has_tickets(service, session_id)
+    )
 
     return PaymentOptionsResponse(
         session_id=session_id,
@@ -272,6 +301,9 @@ async def validate_payment_method(
     if body.method == "cod":
         _reject_cod_for_coupon_or_gift(service, body.session_id, group)
 
+    has_tickets = _session_has_tickets(service, body.session_id)
+    if has_tickets:
+        _reject_cod_for_tickets(body.method)
     rail_value = body.rail
     validated_rail, validated_payer = _validate_payment_method(
         method=body.method,
@@ -298,5 +330,5 @@ async def validate_payment_method(
         delivery_fee_ngwee=delivery_fee,
         total_ngwee=total,
         cod_cap_ngwee=cod_cap,
-        cod_eligible=total <= cod_cap,
+        cod_eligible=total <= cod_cap and not has_tickets,
     )

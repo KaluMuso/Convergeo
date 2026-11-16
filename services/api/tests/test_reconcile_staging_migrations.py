@@ -115,6 +115,8 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
     # Coupons, gift orders, birthday greetings (additive; flags default off).
     "20261116100000",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).

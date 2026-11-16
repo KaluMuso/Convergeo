@@ -85,6 +85,25 @@
     "offerSaving": "⚠ Offer saving {amount}",
     "offerGift": "⚠ Free gift: {title} × {qty}",
     "offerGiftWorth": "⚠ Worth {value} — free with your offer",
+    "types": {
+      "products": "⚠ Products",
+      "eventTickets": "⚠ Event tickets",
+      "services": "⚠ Services"
+    },
+    "tickets": {
+      "line": "⚠ {type} × {qty}",
+      "remove": "⚠ Remove",
+      "removeLabel": "⚠ Remove tickets for {title}",
+      "unavailable": "⚠ These tickets can no longer be bought. Remove them to check out.",
+      "platformFee": "⚠ Ticket service fee",
+      "prepaidOnly": "⚠ Event tickets are paid online (mobile money or card) and are not available for cash on delivery.",
+      "oneEvent": "⚠ Your cart already has tickets for another event or date. Check those out first, or remove them.",
+      "added": "⚠ Tickets added to your cart",
+      "addToCart": "⚠ Add to cart",
+      "adding": "⚠ Adding…",
+      "addFailed": "⚠ Could not add these tickets. Try again.",
+      "signInRequired": "⚠ Sign in to add tickets to your cart."
+    },
     "mergeWholesaleTerms": "Kugula zambiri kumafuna osachepera {moq}."
   },
   "checkout": {
@@ -219,7 +238,8 @@
         "capNote": "Cash on delivery ilipo pa ma-order ofika {cap}.",
         "overCap": "Order yanu yonse ndi {total}. Kuti mulipire cash on delivery, chotsani zinthu zina kapena tumizani ma-order osiyana a {cap} kapena pansi.",
         "editCart": "Konzani cart"
-      }
+      },
+      "codNotForTickets": "⚠ Cash on delivery is not available when your order includes event tickets."
     },
     "pending": {
       "cancelledBody": "Mwadana mobile money prompt. Mutha kuyesanso kapena sankhani payment method ina pa checkout.",
@@ -303,6 +323,10 @@
         "hint": "Sikokakamiza. Courier wokhala ndi licence angabweretse order yanu. Mukapanda kulola, antchito a Vergeo5 adzabweretsa kapena adzakuyimbirani kaye. Mungasinthe pa Account → Privacy.",
         "saveFailed": "Talephera kusunga zomwe mwasankha. Mungathebe kuyika order."
       },
+      "typeProducts": "⚠ Products",
+      "typeEventTickets": "⚠ Event tickets",
+      "ticketLine": "⚠ {type} × {qty}",
+      "platformFee": "⚠ Ticket service fee",
       "discount": "Kuponi {code}"
     },
     "stepAnnouncement": "Step {current} ya {total}",
@@ -322,6 +346,9 @@
       "subtitle": "Tsimikizani prompt ya {amount} pa phone yanu kuti mumalize payment.",
       "title": "Onani phone yanu",
       "waiting": "Tikudikira approval…"
+    },
+    "tickets": {
+      "unavailable": "⚠ A ticket in your cart is no longer available. Review your cart."
     },
     "coupon": {
       "toggle": "Kodi muli ndi kuponi?",

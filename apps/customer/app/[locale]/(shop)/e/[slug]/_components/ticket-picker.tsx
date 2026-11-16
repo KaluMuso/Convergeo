@@ -111,6 +111,8 @@ export function TicketPicker({
   const [attendeeNames, setAttendeeNames] = useState<string[]>([]);
   const [promoCode, setPromoCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
@@ -288,6 +290,49 @@ export function TicketPicker({
     selectedType,
     t,
   ]);
+
+  // Unified cart: put the tickets in the cart next to products and pay once.
+  // The cart module is loaded on demand so the event page bundle stays lean.
+  const handleAddToCart = useCallback(async () => {
+    setError(null);
+    setMessage(null);
+    setAddedToCart(false);
+    if (!selectedInstance || !selectedType || selectedType.is_free) {
+      return;
+    }
+    const token = await checkAuth();
+    if (!token) {
+      setError(t("loginRequired"));
+      return;
+    }
+    if (selectedType.attendee_named && !attendeeNamesComplete(attendeeNames, qty)) {
+      setError(t("errors.attendeeNamesRequired"));
+      return;
+    }
+    setAdding(true);
+    try {
+      const cart = await import("../../../_components/cart/mini-cart-drawer");
+      await cart.putCartTicketLine({
+        instanceId: selectedInstance.id,
+        ticketTypeId: selectedType.id,
+        qty,
+        ...(selectedType.attendee_named
+          ? { attendeeNames: cleanedAttendeeNames(attendeeNames, qty) }
+          : {}),
+        ...(eventAccessProof ? { eventAccessProof } : {}),
+      });
+      setAddedToCart(true);
+      setMessage(t("addedToCart"));
+    } catch (caught) {
+      const code =
+        caught && typeof caught === "object" && "code" in caught
+          ? String((caught as { code: unknown }).code)
+          : null;
+      setError(t(`errors.${ticketPurchaseErrorKey(code)}`));
+    } finally {
+      setAdding(false);
+    }
+  }, [attendeeNames, checkAuth, eventAccessProof, qty, selectedInstance, selectedType, t]);
 
   if (ticketTypes.length === 0) {
     return null;
@@ -507,6 +552,31 @@ export function TicketPicker({
       >
         {selectedType?.is_free ? t("freeRsvpCta") : t("payCta")}
       </Button>
+
+      {selectedType && !selectedType.is_free ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={!canSubmit || adding}
+          loading={adding}
+          loadingLabel={t("addingToCart")}
+          data-testid="ticket-add-to-cart"
+          onClick={() => {
+            void handleAddToCart();
+          }}
+        >
+          {t("addToCart")}
+        </Button>
+      ) : null}
+
+      {addedToCart ? (
+        <p className="text-center text-sm">
+          <Link href={`/${locale}/cart`} className="font-semibold text-primary">
+            {t("viewCart")}
+          </Link>
+        </p>
+      ) : null}
 
       {message ? <p className="text-center text-sm text-success">{message}</p> : null}
       {error ? <p className="text-center text-sm text-danger">{error}</p> : null}

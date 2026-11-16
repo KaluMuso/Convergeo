@@ -48,3 +48,14 @@ export function offerBadgeLabel(badge: OfferBadge, labels: OfferBadgeLabels): st
       return null;
   }
 }
+
+/** Serializable badge labels from a translator scoped to the `catalog` namespace. */
+export function buildOfferBadgeLabels(raw: (key: string) => unknown): OfferBadgeLabels {
+  return {
+    bxgy: String(raw("offers.badge.bxgy")),
+    bundlePercent: String(raw("offers.badge.bundlePercent")),
+    bundleFixed: String(raw("offers.badge.bundleFixed")),
+    buyNPayM: String(raw("offers.badge.buyNPayM")),
+    freeGift: String(raw("offers.badge.freeGift")),
+  };
+}
