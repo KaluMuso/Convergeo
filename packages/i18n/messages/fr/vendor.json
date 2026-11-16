@@ -1063,6 +1063,7 @@
       "submitReject": "Rejeter avec motif",
       "submitShip": "Marquer comme expédiée",
       "cancel": "Annuler",
+      "ready_for_collection": "Prêt pour le livreur",
       "after": {
         "confirm": "Le client est informé que vous avez accepté. Ensuite, vous emballerez.",
         "reject": "La commande est annulée et le client en est informé. Vergeo5 gère l'éventuel remboursement.",

@@ -42,6 +42,9 @@
     },
     "birthday_greeting": {
       "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
+    },
+    "order_cancelled": {
+      "body": "您的 Convergeo 订单 {order_reference} 已取消。详情及退款：{orders_url} 回复 STOP 退订。"
     }
   },
   "sms": {
@@ -80,6 +83,9 @@
     },
     "payout_failure_alert": {
       "body": "Convergeo 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+    },
+    "order_cancelled": {
+      "body": "Convergeo：订单 {order_reference} 已取消。详情：{orders_url}"
     }
   },
   "email": {

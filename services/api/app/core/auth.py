@@ -154,6 +154,7 @@ ADMIN_PERMISSIONS = frozenset(
         "support.manage",
         "logistics.manage",
         "audit.read",
+        "cod.reconcile",
     }
 )
 
@@ -273,8 +274,10 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("GET", "/admin/support/lookup"): "support.manage",
     ("GET", "/admin/support/log"): "support.manage",
     ("POST", "/admin/support/send"): "support.manage",
-    # Logistics: courier dispatch board and manual dispatch (routes on this branch only).
+    # Logistics: courier dispatch board and manual dispatch.
     ("POST", "/admin/orders/{order_id}/dispatch"): "logistics.manage",
+    # Logistics phase 1: limited logistics login (dispatch board, couriers,
+    # jobs, codes, cost) without escrow / refunds / payouts / KYC power.
     ("GET", "/admin/dispatch/board"): "logistics.manage",
     ("GET", "/admin/dispatch/couriers"): "logistics.manage",
     ("POST", "/admin/dispatch/couriers"): "logistics.manage",
@@ -282,9 +285,18 @@ _ADMIN_ROUTE_PERMISSION_SPEC: dict[tuple[str, str], str | tuple[str, ...]] = {
     ("POST", "/admin/dispatch/requests"): "logistics.manage",
     ("GET", "/admin/dispatch/requests/{dispatch_id}"): "logistics.manage",
     ("GET", "/admin/dispatch/requests/{dispatch_id}/message"): "logistics.manage",
-    ("POST", "/admin/dispatch/requests/{dispatch_id}/handover"): "logistics.manage",
     ("POST", "/admin/dispatch/requests/{dispatch_id}/notify"): "logistics.manage",
     ("POST", "/admin/dispatch/requests/{dispatch_id}/transition"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/handover"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/complete"): "logistics.manage",
+    ("POST", "/admin/dispatch/requests/{dispatch_id}/returned"): "logistics.manage",
+    ("PATCH", "/admin/dispatch/requests/{dispatch_id}/cost"): "logistics.manage",
+    ("GET", "/admin/logistics/margin-report"): "logistics.manage",
+    ("GET", "/admin/logistics/intercity-rates"): "logistics.manage",
+    ("GET", "/admin/logistics/cash/custody"): "logistics.manage",
+    # Matching rider cash to the ledger is a finance power.
+    ("POST", "/admin/logistics/cash/remittances"): "cod.reconcile",
+    ("GET", "/admin/logistics/cash/cash-up"): "cod.reconcile",
     # Services: listings, RFQ moderation, providers.
     ("PATCH", "/admin/services/{service_id}/status"): "services.manage",
     ("GET", "/admin/service-providers"): "services.manage",

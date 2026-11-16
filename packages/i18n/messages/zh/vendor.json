@@ -1063,6 +1063,7 @@
       "submitReject": "填写原因并拒绝",
       "submitShip": "标记为已发货",
       "cancel": "取消",
+      "ready_for_collection": "可交给骑手",
       "after": {
         "confirm": "系统会通知顾客您已接单。下一步是打包。",
         "reject": "订单将被取消并告知顾客原因。如需退款由 Vergeo5 处理。",

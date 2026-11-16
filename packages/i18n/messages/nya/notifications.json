@@ -50,6 +50,9 @@
     },
     "birthday_greeting": {
       "body": "Happy birthday from Convergeo! Use code {coupon_code} for {amount} off orders of {min_spend} or more, valid {valid_days} days. Reply STOP to opt out."
+    },
+    "order_cancelled": {
+      "body": "Oda yanu ya Convergeo {order_reference} yathetsedwa. Zambiri ndi kubwezeredwa ndalama: {orders_url} Lembani STOP kuti musiye."
     }
   },
   "sms": {
@@ -94,6 +97,9 @@
     },
     "event_schedule_changed": {
       "body": "Convergeo: \"{event_title}\" zambiri zasinthidwa. Tsiku: {event_date}. Venue: {venue}. Onani mu app."
+    },
+    "order_cancelled": {
+      "body": "Convergeo: oda {order_reference} yathetsedwa. Zambiri: {orders_url}"
     }
   },
   "email": {

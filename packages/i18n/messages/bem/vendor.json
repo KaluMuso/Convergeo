@@ -1083,6 +1083,7 @@
       "submitReject": "Reject with reason",
       "submitShip": "Mark as shipped",
       "cancel": "Cancel",
+      "ready_for_collection": "Naipekanya kuli rider",
       "after": {
         "confirm": "The customer is told you accepted. Next you'll pack it.",
         "reject": "The order is cancelled and the customer is told why. Vergeo5 handles any refund.",
