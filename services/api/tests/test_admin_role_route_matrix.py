@@ -272,6 +272,11 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # Coupons (#792, flag off): platform coupon management stays with the
+        # unrestricted roles until a founder decision maps it to a permission.
+        "GET /admin/coupons",
+        "PATCH /admin/coupons/{coupon_id}",
+        "POST /admin/coupons",
         # Pay at the door (#795, flag off): not delegated to rbac roles until a
         # founder decision maps them (logistics.manage / finance.operate).
         "GET /admin/dispatch/door-payment/exceptions",
