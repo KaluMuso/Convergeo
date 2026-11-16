@@ -164,7 +164,8 @@
       "order_ready_pickup": "Order {ref} naipwa ukuteyanishiwa, isenda. Kufyeni mumone code.",
       "order_delivered": "Order {ref} yafika. Cali shani?",
       "quote_received": "Mwapokelela quote iipya. Linganyeni no kusuminisha mu app.",
-      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi."
+      "ticket_issued": "Tiketi yenu naipwa. Langisheni QR code pa mwinshi.",
+      "points_earned": "⚠ You earned {points} points. You now have {balance}."
     },
     "vendor": {
       "order_placed": "Order iipya {ref}. Isuminisheni pa kutampa.",
@@ -174,7 +175,8 @@
       "kyc_rejected": "Ukusuminishiwa kwenu kulefwaya ukwalula. Kufyeni mumone umulandu.",
       "rfq_received": "Kasita alomba quote kuli imwe.",
       "job_matched": "Incito iipya ilinganya na ma-service yenu.",
-      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke."
+      "dispute_opened": "Kasita aleta ubwafya pa order {ref}. Mwaiseni mwasuke.",
+      "vendor_weekly_digest": "⚠ Your week: {orders} orders, {sales} in sales, {followers} new followers."
     },
     "admin": {
       "kyc_submitted": "KYC iipya ilelolela ukumonwa.",

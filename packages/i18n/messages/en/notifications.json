@@ -178,7 +178,8 @@
       "order_ready_pickup": "Order {ref} is ready for pickup. Open it to see your pickup code.",
       "order_delivered": "Order {ref} was delivered. How did it go?",
       "quote_received": "You received a new quote. Compare and accept it in the app.",
-      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate."
+      "ticket_issued": "Your ticket is ready. Open it to show the QR code at the gate.",
+      "points_earned": "You earned {points} points. You now have {balance}."
     },
     "vendor": {
       "order_placed": "New order {ref}. Confirm it to start.",
@@ -188,7 +189,8 @@
       "kyc_rejected": "Your verification needs changes. Open it to see why.",
       "rfq_received": "A customer asked you for a quote.",
       "job_matched": "A new job matches your services.",
-      "dispute_opened": "A customer opened a dispute on order {ref}. Please respond."
+      "dispute_opened": "A customer opened a dispute on order {ref}. Please respond.",
+      "vendor_weekly_digest": "Your week: {orders} orders, {sales} in sales, {followers} new followers."
     },
     "admin": {
       "kyc_submitted": "New KYC submission waiting for review.",

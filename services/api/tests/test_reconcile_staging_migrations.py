@@ -116,6 +116,9 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261116020000",
+    "20261116020100",
 }
 
 

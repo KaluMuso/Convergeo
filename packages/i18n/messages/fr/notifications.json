@@ -150,7 +150,8 @@
       "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
       "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
       "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
-      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée.",
+      "points_earned": "Vous avez gagné {points} points. Vous en avez maintenant {balance}."
     },
     "vendor": {
       "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",
@@ -160,7 +161,8 @@
       "kyc_rejected": "Votre vérification nécessite des modifications. Ouvrez-la pour en savoir plus.",
       "rfq_received": "Un client vous a demandé un devis.",
       "job_matched": "Une nouvelle mission correspond à vos services.",
-      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre."
+      "dispute_opened": "Un client a ouvert un litige sur la commande {ref}. Merci de répondre.",
+      "vendor_weekly_digest": "Votre semaine : {orders} commandes, {sales} de ventes, {followers} nouveaux abonnés."
     },
     "admin": {
       "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",

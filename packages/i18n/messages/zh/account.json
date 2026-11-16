@@ -261,5 +261,31 @@
     "retry": "重试",
     "loadMore": "显示更多",
     "viewFeed": "查看关注店铺的新品"
+  },
+  "rewards": {
+    "title": "奖励",
+    "description": "订单和评价可获得 Convergeo 积分。",
+    "balanceLabel": "您的积分",
+    "balance": "{points, plural, other {# 积分}}",
+    "progress": "{remaining, plural, =0 {您已达到奖励优惠券门槛。} other {距离下一张奖励优惠券还差 # 积分}}",
+    "progressAria": "下一张奖励优惠券的进度",
+    "redeemSoon": "积分兑换优惠券即将上线。积分不能兑换现金。",
+    "historyTitle": "记录",
+    "historyEmpty": "还没有积分。完成第一笔订单或评价即可开始累积。",
+    "reason": {
+      "order_completed": "订单完成",
+      "review": "发表评价",
+      "reversal": "退款或退货",
+      "redeem": "兑换优惠券",
+      "expire": "已过期",
+      "admin_adjust": "调整"
+    },
+    "howTitle": "如何赚取积分",
+    "howOrders": "每支付 K1 得 1 积分，订单送达且退货期结束后到账。",
+    "howReviews": "每条经过验证的评价都可获得积分，与星级无关。附照片可多得一些。",
+    "howRules": "退款和退货会扣回该订单的积分。积分在 12 个月无活动后过期。",
+    "errors": {
+      "rateLimited": "请求过多，请稍后再试。"
+    }
   }
 }

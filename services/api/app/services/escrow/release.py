@@ -31,6 +31,7 @@ from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.orders.state import SYSTEM_ACTOR_ID
+from app.services.points.ledger import try_award_after_release
 
 DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48
 DEFAULT_RELEASE_AFTER_SHIPPED_DAYS = 7
@@ -600,6 +601,9 @@ def evaluate_and_release(
         if amounts.net_ngwee > 0
         else None
     )
+    # Convergeo Points hook: earns now if the return window has also passed,
+    # otherwise the points sweep picks it up later. Never raises.
+    try_award_after_release(order_id)
     return ReleaseResult(
         order_id=order_id,
         outcome="released",

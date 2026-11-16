@@ -261,5 +261,31 @@
     "retry": "Réessayer",
     "loadMore": "Afficher plus",
     "viewFeed": "Voir les nouveautés des boutiques suivies"
+  },
+  "rewards": {
+    "title": "Récompenses",
+    "description": "Points Convergeo pour vos commandes et vos avis.",
+    "balanceLabel": "Vos points",
+    "balance": "{points, plural, one {# point} other {# points}}",
+    "progress": "{remaining, plural, =0 {Vous avez atteint un coupon de récompense.} one {Encore # point avant votre prochain coupon} other {Encore # points avant votre prochain coupon}}",
+    "progressAria": "Progression vers le prochain coupon",
+    "redeemSoon": "L'échange de points contre des coupons arrive bientôt. Les points n'ont aucune valeur en espèces.",
+    "historyTitle": "Historique",
+    "historyEmpty": "Pas encore de points. Votre première commande ou votre premier avis lance le compteur.",
+    "reason": {
+      "order_completed": "Commande terminée",
+      "review": "Avis publié",
+      "reversal": "Remboursement ou retour",
+      "redeem": "Échangé contre un coupon",
+      "expire": "Expiré",
+      "admin_adjust": "Ajustement"
+    },
+    "howTitle": "Comment gagner des points",
+    "howOrders": "1 point pour chaque K1 payé, ajouté une fois la commande livrée et le délai de retour écoulé.",
+    "howReviews": "Des points pour chaque avis vérifié, quelle que soit la note. Une photo rapporte un peu plus.",
+    "howRules": "Les remboursements et retours retirent les points de la commande. Les points expirent après 12 mois sans activité.",
+    "errors": {
+      "rateLimited": "Trop de requêtes. Réessayez dans un instant."
+    }
   }
 }
