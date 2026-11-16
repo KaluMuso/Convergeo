@@ -3,6 +3,7 @@ import { setRequestLocale } from "next-intl/server";
 
 import { getAdminTranslator } from "../../../lib/admin-translator";
 
+import { AdvanceDebts } from "./_components/AdvanceDebts";
 import { HighValueQueue } from "./_components/HighValueQueue";
 
 type PageProps = {
@@ -25,6 +26,7 @@ export default async function HighValueEventsPage({ params }: PageProps) {
         <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
       <HighValueQueue />
+      <AdvanceDebts />
     </div>
   );
 }

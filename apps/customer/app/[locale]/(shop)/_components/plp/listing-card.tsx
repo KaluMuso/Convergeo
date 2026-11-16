@@ -22,6 +22,7 @@ import {
   isDemoListingPublicId,
   shouldShowSampleListingBadge,
 } from "../demo-listing";
+import { offerBadgeLabel, type OfferBadgeLabels } from "../offers/offer-badge";
 
 
 import {
@@ -73,6 +74,8 @@ export type ListingCardLabels = {
   logistics?: LogisticsPillLabels;
   /** catalog.delivery.* — renders "Delivery in Lusaka tomorrow" style line. */
   delivery?: DeliveryEstimateLabels;
+  /** catalog.offers.badge.* — W8 offer pill ("Buy 2 get 1 free"). */
+  offerBadge?: OfferBadgeLabels;
 };
 
 /** Map listing.condition to a label; unknown values render nothing (no invention). */
@@ -143,11 +146,17 @@ export function ListingCard({
   const sampleLabel = labels.sampleListing;
   const href = listingCardHref(locale, listing);
   const quickAddQuantity = listingQuickAddQuantity(listing.minSteps);
+  const offerLabel =
+    listing.offerBadge && labels.offerBadge
+      ? offerBadgeLabel(listing.offerBadge, labels.offerBadge)
+      : null;
 
   const badge = !listing.inStock ? (
     <Badge variant="sold_out" label={labels.outOfStock} />
   ) : isDemo && sampleLabel && showSampleBadge ? (
     <Badge variant="sample" label={sampleLabel} />
+  ) : offerLabel ? (
+    <Badge variant="promotion" label={offerLabel} />
   ) : undefined;
 
   const wishlistLabel =

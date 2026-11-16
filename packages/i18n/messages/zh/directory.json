@@ -96,7 +96,36 @@
     "viewFeed": "查看关注店铺的新品",
     "searchStore": "在 {name} 中搜索",
     "allCategories": "全部",
-    "noMatches": "没有匹配的商品，换个关键词或分类试试。"
+    "noMatches": "没有匹配的商品，换个关键词或分类试试。",
+    "home": {
+      "storyHeading": "我们的故事",
+      "findUsHeading": "找到我们",
+      "directions": "路线",
+      "directionsTo": "前往 {place} 的路线",
+      "openNow": "营业中",
+      "closedNow": "已打烊",
+      "hoursNotShared": "尚未提供营业时间",
+      "hoursRange": "{opens}–{closes}",
+      "dayMon": "周一",
+      "dayTue": "周二",
+      "dayWed": "周三",
+      "dayThu": "周四",
+      "dayFri": "周五",
+      "daySat": "周六",
+      "daySun": "周日",
+      "compareOthers": "{count, plural, other {与另外 # 家店比较}}",
+      "compareFrom": "{price} 起",
+      "compareAria": "在其他店铺比较 {title}",
+      "verifiedOnly": "只有通过 Convergeo 在此购买过的顾客才能评价。",
+      "clipsHeading": "短视频",
+      "clipWatch": "观看短视频",
+      "offersHeading": "优惠",
+      "offersEnds": "截止 {date}",
+      "serviceBook": "以 {price} 预订",
+      "serviceQuote": "询价",
+      "serviceArea": "服务区域：{area}",
+      "browseOtherShops": "查看类似的其他店铺"
+    }
   },
   "listings": {
     "vendor": "由 {vendor} 销售",
@@ -108,5 +137,14 @@
     "distance": "相距 {distance}",
     "conditionNew": "全新",
     "conditionRefurbished": "翻新"
+  },
+  "elsewhere": {
+    "heading": "其他店铺",
+    "atShop": "店铺：{shop}",
+    "inStock": "有货",
+    "outOfStock": "缺货",
+    "kindProduct": "商品",
+    "kindService": "服务",
+    "kindEvent": "活动"
   }
 }

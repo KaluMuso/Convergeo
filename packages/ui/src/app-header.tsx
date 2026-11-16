@@ -47,7 +47,6 @@ export type AppHeaderProps = {
   /** Primary nav links (Directory, Services, …) — desktop row. */
   navLinks?: AppHeaderNavLink[];
   /** Gated Supplies link — rendered inside the desktop nav list when provided. */
-  suppliesSlot?: ReactNode;
   localeSwitcher?: ReactNode;
   /** Auth variant: “Back to shop” / Help link. */
   secondaryLink?: ReactNode;
@@ -141,7 +140,6 @@ export function AppHeader({
   desktopSearchSlot,
   categoriesSlot,
   navLinks = [],
-  suppliesSlot,
   localeSwitcher,
   secondaryLink,
   signInSlot,
@@ -356,7 +354,7 @@ export function AppHeader({
           <div className="min-w-0 max-w-3xl flex-1 xl:max-w-4xl">{desktopSearchSlot}</div>
         ) : null}
 
-        {(features.showCategories && categoriesSlot) || navLinks.length > 0 || suppliesSlot ? (
+        {(features.showCategories && categoriesSlot) || navLinks.length > 0 ? (
           <ul className="flex shrink-0 list-none items-center gap-0.5 p-0">
             {features.showCategories && categoriesSlot ? <li>{categoriesSlot}</li> : null}
             {navLinks.map((link) => (
@@ -366,7 +364,6 @@ export function AppHeader({
                 </LinkComponent>
               </li>
             ))}
-            {suppliesSlot}
           </ul>
         ) : null}
 

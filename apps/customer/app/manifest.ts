@@ -31,7 +31,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       {
-        src: "/brand/convergeo-icon-512.png",
+        src: "/brand/convergeo-icon-maskable-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

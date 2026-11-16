@@ -83,12 +83,12 @@ select extensions.ok(
   'used listings require meaningful defect notes'
 );
 select extensions.ok(
-  exists (
+  not exists (
     select 1 from pg_constraint
     where conrelid = 'public.vendor_listings'::regclass
       and conname = 'vendor_listings_class_d_condition_check'
   ),
-  'Class D is constrained to used condition'
+  'Class D may be new, refurbished or used (relaxed by 20261115090000)'
 );
 select extensions.ok(
   exists (

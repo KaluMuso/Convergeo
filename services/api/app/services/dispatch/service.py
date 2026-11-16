@@ -55,6 +55,7 @@ from app.services.orders.state import (
     sql_uuid,
     transition_order,
 )
+from app.services.payments import door as door_payments
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,8 @@ SELECT json_build_object(
     FROM public.addresses a WHERE a.id = o.address_id
   ),
   'customer_phone', pr.phone,
-  'customer_name', pr.display_name
+  'customer_name', pr.display_name,
+  'delivery_consent', public.has_delivery_partner_consent(o.customer_id)
 )::text
 FROM public.orders o
 JOIN public.vendors v ON v.id = o.vendor_id
@@ -161,6 +163,22 @@ WHERE o.id = {order_sql};
     row = rows[0]
     row["cod_amount_ngwee"] = compute_cod_amount_ngwee(row)
     return row
+
+
+def require_delivery_partner_consent(order_ctx: dict[str, Any]) -> None:
+    """Zambia DPA: a third-party courier gets the customer's name, phone and address only
+    with the customer's current in-app consent (founder decision 2026-11-13). The same
+    rule is enforced by the dispatch_requests_require_delivery_consent trigger."""
+    if order_ctx.get("delivery_consent") is not True:
+        raise AppError(
+            code="delivery_consent_required",
+            message=(
+                "The customer has not agreed to share their delivery details with a "
+                "courier. Ask them to allow it in the app, or deliver with Vergeo5 staff."
+            ),
+            http_status=409,
+            details={"message_key": "admin.dispatch.errors.consentRequired"},
+        )
 
 
 def compute_cod_amount_ngwee(order_ctx: dict[str, Any]) -> int:
@@ -248,6 +266,8 @@ def create_dispatch(
             http_status=409,
         )
 
+    require_delivery_partner_consent(order)
+
     courier = load_courier(courier_partner_id)
     if not courier.get("active"):
         raise AppError(code="courier_inactive", message="Courier is inactive", http_status=409)
@@ -291,6 +311,10 @@ COMMIT;
 """
     result = run_sql_script(script)
     if not result.ok:
+        if "dispatch_requests_delivery_consent" in (result.error or "") or (
+            "has not consented to sharing delivery details" in (result.error or "")
+        ):
+            require_delivery_partner_consent({"delivery_consent": False})
         if "dispatch_requests_one_active_per_order" in (result.error or "") or (
             "dispatch_requests_one_delivered_per_order" in (result.error or "")
         ):
@@ -413,6 +437,8 @@ def transition_dispatch_admin(
             )
         fields["failure_reason"] = failure_reason.strip()[:500]
     if to_status is DispatchStatus.DELIVERED:
+        # Pay at the door (flag): no handover of an unpaid COD parcel, by any path.
+        door_payments.require_handover_released(dispatch)
         # Ops-confirmed delivery without the customer's code needs photo proof.
         if not pod_photo_public_id:
             raise AppError(
@@ -443,6 +469,8 @@ def transition_dispatch_admin(
         actor_id=actor_id,
         note=f"[courier-dispatch] {to_status.value} ({dispatch_id})",
     )
+    if to_status is DispatchStatus.DELIVERED:
+        door_payments.on_handover_delivered(dispatch_id=dispatch_id, order_id=dispatch.order_id)
     return AdminTransitionResult(transition=outcome, order_status=order_status)
 
 
@@ -631,6 +659,9 @@ def verify_handover_code(
             details={"from_status": status.value, "to_status": DispatchStatus.DELIVERED.value},
         )
 
+    # Pay at the door (flag): the code is withheld until paid, so refuse it too.
+    door_payments.require_handover_released(fetch_dispatch(dispatch_id))
+
     if not hmac.compare_digest(cleaned.encode(), str(state["code"]).encode()):
         remaining, locked_for = _record_failed_attempt(dispatch_id)
         if locked_for > 0:
@@ -651,6 +682,7 @@ def verify_handover_code(
         actor_id=actor_id,
         note=f"[courier-dispatch] handover code verified ({dispatch_id})",
     )
+    door_payments.on_handover_delivered(dispatch_id=dispatch_id, order_id=order_id)
     return HandoverResult(dispatch_id=dispatch_id, order_id=order_id, order_status=order_status)
 
 
@@ -663,6 +695,9 @@ def build_dispatch_message(dispatch_id: str) -> tuple[DispatchRow, dict[str, Any
     dispatch = fetch_dispatch(dispatch_id)
     courier = load_courier(dispatch.courier_partner_id)
     order_ctx = load_order_dispatch_context(dispatch.order_id)
+    # The message carries the customer's name, phone and address: a consent withdrawn
+    # after dispatch stops any further copy or notification.
+    require_delivery_partner_consent(order_ctx)
     # The COD figure on the message is the dispatch snapshot, not a recompute.
     order_ctx["cod_amount_ngwee"] = dispatch.cod_amount_ngwee
     order_ctx["courier_reference"] = dispatch.courier_reference
@@ -812,7 +847,11 @@ def party_dispatch_view(order_id: str, *, include_handover_code: bool) -> dict[s
         "timeline": _timeline_from_row(dispatch),
         "handover_code": None,
     }
-    if include_handover_code and dispatch.status in ACTIVE_STATUSES:
+    if (
+        include_handover_code
+        and dispatch.status in ACTIVE_STATUSES
+        and door_payments.handover_released(dispatch)
+    ):
         dispatch_sql = sql_uuid(dispatch.id, "dispatch_id")
         result = run_sql_script(
             "SELECT code FROM public.dispatch_handover_codes "

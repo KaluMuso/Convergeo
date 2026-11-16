@@ -136,7 +136,7 @@ def _birthday_greeting(p: Mapping[str, Any]) -> str:
     code = _text(p, "coupon_code")
     days = _text(p, "valid_days", "14")
     return (
-        f"Happy birthday from Vergeo5! Use code {code} for K{_amount(p, 'amount_ngwee')} off "
+        f"Vergeo5: happy birthday! Use code {code} for K{_amount(p, 'amount_ngwee')} off "
         f"orders of K{_amount(p, 'min_spend_ngwee')} or more, valid {days} days. "
         "Reply STOP to opt out."
     )

@@ -100,11 +100,7 @@ def _now() -> str:
 
 def load_clip(service_client: ServiceRoleClient, clip_id: str) -> dict[str, Any]:
     rows = _rows(
-        _table(service_client, CLIPS_TABLE)
-        .select("*")
-        .eq("id", clip_id)
-        .maybe_single()
-        .execute()
+        _table(service_client, CLIPS_TABLE).select("*").eq("id", clip_id).maybe_single().execute()
     )
     if not rows:
         raise AppError(
@@ -231,18 +227,14 @@ def start_screening(
     service_client: ServiceRoleClient, *, clip_id: str, actor_id: str | None = None
 ) -> dict[str, Any]:
     """Upload finished — hand the clip to the automated screen (M17-P02)."""
-    return transition(
-        service_client, clip_id=clip_id, to_status=SCREENING, actor_id=actor_id
-    )
+    return transition(service_client, clip_id=clip_id, to_status=SCREENING, actor_id=actor_id)
 
 
 def pass_screening(
     service_client: ServiceRoleClient, *, clip_id: str, actor_id: str | None = None
 ) -> dict[str, Any]:
     """Automated screen passed — queue for the human reviewer (D-V8)."""
-    return transition(
-        service_client, clip_id=clip_id, to_status=PENDING_REVIEW, actor_id=actor_id
-    )
+    return transition(service_client, clip_id=clip_id, to_status=PENDING_REVIEW, actor_id=actor_id)
 
 
 def reject(
@@ -262,9 +254,7 @@ def publish(
     service_client: ServiceRoleClient, *, clip_id: str, actor_id: str | None = None
 ) -> dict[str, Any]:
     """Approve — the only path that makes a clip publicly visible (D-V8)."""
-    return transition(
-        service_client, clip_id=clip_id, to_status=PUBLISHED, actor_id=actor_id
-    )
+    return transition(service_client, clip_id=clip_id, to_status=PUBLISHED, actor_id=actor_id)
 
 
 def take_down(

@@ -47,7 +47,6 @@
     "mergeConflictLine": "Icintu {listing}: {code}",
     "mergePriceLine": "{item}: {previous} → {current} cimo cimo × {quantity} = {total} yonse",
     "mergeUnnamedItem": "Icintu #{id}",
-    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}.",
     "mergePriceNeedsReview": "Iyi quote tayasuminishiwe pano; ilefumishiwa mu cart. Ilolesheni nakabili ilyo tamulashita.",
     "mergeAccountChoice": "Sungani pickup ya account",
     "mergeGuestChoice": "Bomfyeni pickup ya guest",
@@ -81,7 +80,12 @@
     "updating": "Ileluka…",
     "vendorGroup": "Ashitisha vendor",
     "vendorSubtotal": "Subtotal ya vendor: {amount}",
-    "viewCart": "Loleni cart"
+    "viewCart": "Loleni cart",
+    "offerSavings": "⚠ Offer savings",
+    "offerSaving": "⚠ Offer saving {amount}",
+    "offerGift": "⚠ Free gift: {title} × {qty}",
+    "offerGiftWorth": "⚠ Worth {value} — free with your offer",
+    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}."
   },
   "checkout": {
     "card": {
@@ -169,7 +173,8 @@
         "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
         "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
         "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Ifintu fyasungwa pa",
@@ -292,6 +297,11 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mukasenda ku seller",
         "placeOrderCod": "Tumeni order — lipileni pa delivery"
+      },
+      "deliveryConsent": {
+        "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order",
+        "hint": "Te ca kukakatila. Courier uwakwata licence kuti aleta order yenu. Nga tamusuminishe, abantu ba Vergeo5 e balaleta nangu balamwita intanshi. Kuti mwalula pa Account → Privacy.",
+        "saveFailed": "Twafilwa ukusunga ifi mwasala. Kuti mwatwalilila ukushita order."
       },
       "discount": "Kuponi {code}"
     },

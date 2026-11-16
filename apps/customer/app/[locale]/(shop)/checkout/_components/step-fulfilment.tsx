@@ -63,6 +63,9 @@ export type VendorGroupSession = {
   }>;
   subtotal_ngwee: number;
   delivery_eligible: boolean;
+  /** False when a listing in the group does not offer this route (default true). */
+  delivery_offered?: boolean;
+  pickup_offered?: boolean;
   pickup_location: PickupLocation | null;
 };
 
@@ -90,6 +93,8 @@ export type FulfilmentStepLabels = {
   pickupAt: (landmark: string) => string;
   pickupHours: (hours: string) => string;
   outsideZone: string;
+  /** Shown when the seller does not offer a hand-over route for an item. */
+  notOffered?: string;
   mixedHint: string;
   continue: string;
   subtotal: string;
@@ -199,6 +204,7 @@ export type CheckoutShellLabels = {
     escrowStep3: string;
     consentLabel: string;
     consentRequired: string;
+    deliveryConsent?: { label: string; hint: string; saveFailed: string };
     placeOrder: string;
     loading: string;
     placingOrder: string;
@@ -297,6 +303,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       pickupAt: (landmark) => fillTemplate(messages.fulfilment.pickupAtTemplate, { landmark }),
       pickupHours: (hours) => fillTemplate(messages.fulfilment.pickupHoursTemplate, { hours }),
       outsideZone: messages.fulfilment.outsideZone,
+      notOffered: messages.fulfilment.notOffered,
       mixedHint: messages.fulfilment.mixedHint,
       continue: messages.fulfilment.continue,
       subtotal: messages.fulfilment.subtotal,
@@ -363,6 +370,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       escrowStep3: messages.review.escrowStep3,
       consentLabel: messages.review.consentLabel,
       consentRequired: messages.review.consentRequired,
+      deliveryConsent: messages.review.deliveryConsent,
       placeOrder: messages.review.placeOrder,
       loading: messages.review.loading,
       placingOrder: messages.review.placingOrder,

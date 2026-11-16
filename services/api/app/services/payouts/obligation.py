@@ -168,9 +168,7 @@ def validate_transfer_observation(
         raise PayoutObservationMismatch(payout_id, "intended_debit_account_missing")
     if observation.debit_account_id != debit_account_id:
         reason = (
-            "debit_account_missing"
-            if observation.debit_account_id is None
-            else "debit_account"
+            "debit_account_missing" if observation.debit_account_id is None else "debit_account"
         )
         raise PayoutObservationMismatch(payout_id, reason)
 

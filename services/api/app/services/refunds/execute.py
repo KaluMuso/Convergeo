@@ -599,6 +599,11 @@ def _resume_processing_refund(
     )
 
 
+def _order_advance_recovered(order_id: str) -> bool:
+    summary = summarize_order_release_ledger(order_id)
+    return summary.advance_recovered_ngwee > 0
+
+
 def execute_refund(
     *,
     service_client: ServiceRoleClient,
@@ -719,6 +724,12 @@ def execute_refund(
         if gate_decision.phase == "post_release"
         else RefundPhase.PRE_RELEASE
     )
+    # Cancelled event whose pre-event advance was recovered into escrow
+    # (event_advance_recovery): the buyer is refunded from escrow like a pre-release
+    # refund; the organiser's share is already an organiser_receivable, so no
+    # vendor clawback is posted.
+    if phase == RefundPhase.POST_RELEASE and _order_advance_recovered(order_id):
+        phase = RefundPhase.PRE_RELEASE
     if coupon_share.discount_ngwee > 0:
         # The coupon share already returned by earlier refunds on this order is
         # re-read now that the order money gate is decided, so a refund that
@@ -738,6 +749,7 @@ def execute_refund(
             - summary.delivery_fee_captured_ngwee
             - summary.vendor_released_ngwee
             - summary.refund_drained_ngwee
+            + summary.advance_recovered_ngwee
         )
         if remaining_escrow_ngwee > 0:
             raise AppError(
@@ -762,6 +774,7 @@ def execute_refund(
                 - summary.delivery_fee_captured_ngwee
                 - summary.vendor_released_ngwee
                 - summary.refund_drained_ngwee
+                + summary.advance_recovered_ngwee
             )
             if refund_amount + coupon_share.promo_return_ngwee > remaining_escrow_ngwee:
                 raise AppError(

@@ -337,6 +337,19 @@ def _make_stub_handler(public_jwk: dict[str, Any]) -> type[BaseHTTPRequestHandle
                 self._send(b"[]")
 
         def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b""
+            if "/rest/v1/audit_log" in self.path:
+                # The admin audit recorder requires PostgREST to return the inserted
+                # row (Prefer: return=representation); echo it back with an id.
+                payload = json.loads(raw or b"{}")
+                rows = payload if isinstance(payload, list) else [payload]
+                echoed = [
+                    {"id": f"00000000-0000-4000-8000-{i:012d}", **row}
+                    for i, row in enumerate(rows, start=1)
+                ]
+                self._send(json.dumps(echoed).encode())
+                return
             self._send(b"[]")
 
         def log_message(self, *args: object) -> None:  # silence per-request logging

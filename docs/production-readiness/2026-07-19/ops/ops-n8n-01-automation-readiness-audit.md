@@ -128,6 +128,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `release-job.json`                | Escrow release                              | no                      | DORMANT                                                               |
 | `event-release.json`              | Event escrow release                        | no                      | DORMANT                                                               |
 | `event-refund-jobs.json`          | Event cancellation refunds                  | no                      | DORMANT (Prompt G; inactive until F4 + F9b sandbox proof)             |
+| `event-advance-debts.json`        | Overdue organiser advances                  | no                      | DORMANT (inactive; only matters once `event_organiser_advance` is ON) |
 | `tickets-issue.json`              | Ticket issuance                             | no                      | DORMANT                                                               |
 | `tickets-release.json`            | Ticket hold release                         | no                      | DORMANT                                                               |
 | `reservation-sweeper.json`        | Reservation sweeper                         | no                      | DORMANT                                                               |
@@ -143,6 +144,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `funnel-abandon.json`             | Analytics                                   | no                      | DORMANT                                                               |
 | `birthday-greetings.json`         | Growth / DPA (flag-gated, added 2026-11-13) | no                      | DORMANT                                                               |
 | `analytics-retention.json`        | Analytics / DPA                             | no                      | DORMANT                                                               |
+| `analytics-rollup.json`           | Analytics (Intelligence 1B)                 | no                      | DORMANT (ships `active: false`; flag-gated by `analytics_v2_rollups`) |
 | `export-purge.json`               | DPA data-export purge                       | no                      | DORMANT                                                               |
 | `embeddings-cron.json`            | Search/AI                                   | no                      | DORMANT                                                               |
 | `uptime-alert.json`               | Observability                               | no                      | DORMANT                                                               |

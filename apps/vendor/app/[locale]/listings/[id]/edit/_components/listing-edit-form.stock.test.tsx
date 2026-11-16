@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingEditForm } from "./listing-edit-form";
 
 const mocks = vi.hoisted(() => ({
-  translate: (key: string) => key,
+  translate: Object.assign((key: string) => key, { raw: () => ({}) }),
   session: { access_token: "test-token", user: { id: "owner" } },
   client: {
     getListing: vi.fn(),

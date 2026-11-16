@@ -19,7 +19,6 @@ from app.routers.checkout import (
     resolve_address_zone,
 )
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
-from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
@@ -32,6 +31,7 @@ from app.services.coupons.store import (
     require_flag,
 )
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.offers.apply import expand_cart_lines_for_order
 from app.services.orders.create import (
     CartLineInput,
     CouponOrderPlan,
@@ -460,11 +460,11 @@ async def create_orders(
     listings_by_id = fetch_listings_for_items(
         [dict(item) for item in items if isinstance(item, dict)]
     )
-    access = resolve_business_eligibility(current_user.id, service)
+    # Wholesale/tier pricing is vendor-app only: always re-derive at retail.
     items = _rederive_line_prices(
         [dict(item) for item in items if isinstance(item, dict)],
         listings_by_id,
-        business_eligible=access.eligible,
+        business_eligible=False,
         service=service,
         customer_id=current_user.id,
     )
@@ -495,6 +495,14 @@ async def create_orders(
                 variant_snapshot=variant_snapshot,
             )
         )
+
+    # W8 offers (flag `bundles`): re-priced from live offers with the same engine
+    # the fulfilment step used for the session total; split / gift lines carry
+    # the frozen offer pricing into order_items. A mismatch with the session
+    # (offer ended in between) surfaces as orders.totals_mismatch below.
+    cart_lines, _priced = expand_cart_lines_for_order(
+        cart_lines, service.client, customer_id=current_user.id
+    )
 
     vendor_groups = _authoritative_groups(
         service,

@@ -13,6 +13,10 @@ import type { GroupCheckoutLabels } from "./_components/group-checkout";
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
 import type { Metadata } from "next";
 
+// Message-object nodes read with t.raw (objects, not leaf keys for the i18n sweep).
+const COUPON_LABELS_KEY = "checkout.coupon";
+const GIFT_LABELS_KEY = "checkout.gift";
+
 export const metadata: Metadata = {
   robots: {
     index: false,
@@ -113,6 +117,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       pickupAtTemplate: String(t.raw("checkout.fulfilment.pickupAt")),
       pickupHoursTemplate: String(t.raw("checkout.fulfilment.pickupHours")),
       outsideZone: t("checkout.fulfilment.outsideZone"),
+      notOffered: t("checkout.fulfilment.notOffered"),
       mixedHint: t("checkout.fulfilment.mixedHint"),
       continue: t("checkout.fulfilment.continue"),
       subtotal: t("checkout.fulfilment.subtotal"),
@@ -207,6 +212,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       escrowStep3: t("checkout.review.escrowStep3"),
       consentLabel: t("checkout.review.consentLabel"),
       consentRequired: t("checkout.review.consentRequired"),
+      deliveryConsent: {
+        label: t("checkout.review.deliveryConsent.label"),
+        hint: t("checkout.review.deliveryConsent.hint"),
+        saveFailed: t("checkout.review.deliveryConsent.saveFailed"),
+      },
       placeOrder: t("checkout.review.placeOrder"),
       loading: t("checkout.review.loading"),
       placingOrder: t("checkout.review.placingOrder"),
@@ -228,8 +238,8 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       discount: t.raw("checkout.review.discount") as string,
     },
     extras: {
-      coupon: t.raw("checkout.coupon") as CheckoutExtrasLabels["coupon"],
-      gift: t.raw("checkout.gift") as CheckoutExtrasLabels["gift"],
+      coupon: t.raw(COUPON_LABELS_KEY) as CheckoutExtrasLabels["coupon"],
+      gift: t.raw(GIFT_LABELS_KEY) as CheckoutExtrasLabels["gift"],
     },
     countdown: {
       label: t("checkout.countdown.label"),

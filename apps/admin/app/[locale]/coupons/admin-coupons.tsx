@@ -7,6 +7,9 @@ import { useCallback } from "react";
 
 import { rolesApi } from "../../../lib/roles-api";
 
+// Message-object node read with t.raw (an object, not a leaf key for the i18n sweep).
+const MANAGER_LABELS_KEY = "manager";
+
 function errorKeyOf(error: unknown): string | null {
   if (!(error instanceof ApiError)) return null;
   if (error.code === "feature_disabled") return "disabled";
@@ -28,7 +31,7 @@ export function AdminCoupons() {
       <CouponManager
         mode="platform"
         locale={locale}
-        labels={t.raw("manager") as CouponManagerLabels}
+        labels={t.raw(MANAGER_LABELS_KEY) as CouponManagerLabels}
         basePath="/admin/coupons"
         request={request}
         errorKeyOf={errorKeyOf}

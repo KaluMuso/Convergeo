@@ -8,6 +8,9 @@ import { useCallback } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
+// Message-object node read with t.raw (an object, not a leaf key for the i18n sweep).
+const MANAGER_LABELS_KEY = "manager";
+
 function errorKeyOf(error: unknown): string | null {
   if (!(error instanceof ApiError)) return null;
   if (error.code === "feature_disabled") return "disabled";
@@ -36,7 +39,7 @@ export function VendorCoupons({ locale }: { locale: string }) {
     <CouponManager
       mode="vendor"
       locale={locale}
-      labels={t.raw("manager") as CouponManagerLabels}
+      labels={t.raw(MANAGER_LABELS_KEY) as CouponManagerLabels}
       basePath="/vendor/coupons"
       request={request}
       errorKeyOf={errorKeyOf}
