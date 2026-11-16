@@ -223,7 +223,7 @@ def test_payment_failed_hook_never_changes_the_outcome(
     monkeypatch.setattr(lc, "notify_payment_failed", notify)
     client = SimpleNamespace(client=object())
     result = state.apply_payment_status(
-        client,  # type: ignore[arg-type]
+        client,
         payment_id=PAYMENT_ID,
         incoming_status=state.PaymentStatus.FAILED,
         actor_id=VENDOR_OWNER_ID,
