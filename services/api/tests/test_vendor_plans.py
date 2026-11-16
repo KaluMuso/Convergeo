@@ -647,7 +647,8 @@ def test_plan_admin_routes_deny_non_admins(
         kwargs["json"] = body
     response = getattr(harness.client, method)(url, **kwargs)
     assert response.status_code == 403
-    assert audit_rows(harness) == []
+    # #808 logs a refused operator attempt (admin.access.denied); nothing else.
+    assert [r for r in audit_rows(harness) if r.get("action") != "admin.access.denied"] == []
 
 
 @pytest.mark.parametrize(("method", "url", "body"), ADMIN_ROUTES)

@@ -97,6 +97,10 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "products.manage": frozenset(
         {
+            # Shared canonical photos (#798).
+            "DELETE /admin/products/{product_id}/images/{image_id}",
+            "GET /admin/products/{product_id}/images",
+            "POST /admin/products/{product_id}/images",
             "GET /admin/products/canonical",
             "GET /admin/products/duplicates",
             "GET /admin/products/search",
@@ -268,6 +272,15 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
+        # Vendor listing plans (#798, flag off): commercial config, unrestricted only.
+        "DELETE /admin/vendor-plans/{plan_key}",
+        "DELETE /admin/vendors/{vendor_id}/plan/override",
+        "GET /admin/vendor-plans",
+        "GET /admin/vendors/{vendor_id}/plan",
+        "PATCH /admin/vendor-plans/{plan_key}",
+        "POST /admin/vendor-plans",
+        "PUT /admin/vendors/{vendor_id}/plan",
+        "PUT /admin/vendors/{vendor_id}/plan/override",
         # W8 offers moderation (#814, flag off): not delegated to rbac roles yet.
         "GET /admin/offers",
         "POST /admin/offers/{offer_id}/pause",
