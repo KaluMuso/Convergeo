@@ -3279,7 +3279,7 @@ EXPECTATIONS: TableExpectations = {
             "door_payment_exceptions",
         )
     },
-    # Convergeo Points (20261116020000): SELECT own rows only (RLS); no client
+    # Convergeo Points (20261116160000): SELECT own rows only (RLS); no client
     # INSERT/UPDATE/DELETE grant — writes only via private.points_* definers.
     "points_ledger": {
         Persona.ANON: deny_all(),

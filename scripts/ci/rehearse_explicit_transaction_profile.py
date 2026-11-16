@@ -95,11 +95,11 @@ REVIEWED_SUFFIX = (
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500_business_home_offers_flag.sql",
     "20261115235600_business_home_section_flags.sql",
-    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
-    "20261116020000_loyalty_points.sql",
-    "20261116020100_vendor_weekly_digest.sql",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000_unified_cart_event_tickets.sql",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261116160000_loyalty_points.sql",
+    "20261116160100_vendor_weekly_digest.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

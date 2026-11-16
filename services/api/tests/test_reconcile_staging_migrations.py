@@ -116,11 +116,11 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
-    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
-    "20261116020000",
-    "20261116020100",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261116160000",
+    "20261116160100",
 }
 
 
