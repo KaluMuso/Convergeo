@@ -42,10 +42,15 @@ def fingerprint(order: str, payment: str) -> list[str]:
 # 20261115120000_bundles_offers order_items (no offer, zero discount, not a gift);
 # 20261116090000_unified_cart_event_tickets orders.order_lane ('goods' = the only
 # lane that existed before tickets joined the cart).
+# 20261116100000_coupons_gifts_birthdays checkout_groups/orders coupon columns.
 ADDITIVE_NEUTRAL_DEFAULTS: dict[str, Any] = {
     "offer_snapshot": {},
     "offer_discount_ngwee": 0,
     "is_offer_gift": False,
+    # 20261116100000_coupons_gifts_birthdays: no coupon discount, not a gift order.
+    "discount_ngwee": 0,
+    "coupon_discount_ngwee": 0,
+    "is_gift": False,
     "order_lane": "goods",
 }
 

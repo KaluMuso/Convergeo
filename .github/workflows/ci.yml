@@ -10,9 +10,12 @@ on:
     # every scheduled trigger; other jobs are unchanged and simply re-run green.
     - cron: "17 2 * * *"
 
+# Supersede a pull request's older run when it is pushed again. Pushes (master,
+# release), the nightly schedule and manual runs get a run-unique group, so they
+# are never cancelled and never replaced while queued.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -23,8 +26,46 @@ env:
   QUALIFICATION_SHA: ${{ startsWith(github.head_ref, 'codex/coordinator-ci-review-') && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  changes:
+    # CI-SPEED: decides which tiers a change needs. Required checks must always
+    # report, so there is no workflow-level `paths:` filter; expensive jobs gate
+    # themselves on these outputs (a job skipped by `if:` reports "skipped", which
+    # counts as passing for required checks). Fail-open: if this job fails, every
+    # gated job runs (see `needs.changes.result != 'success'` in each `if:`).
+    name: Detect changed tiers
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      run_js: ${{ steps.scope.outputs.run_js }}
+      run_python: ${{ steps.scope.outputs.run_python }}
+      run_security: ${{ steps.scope.outputs.run_security }}
+      run_db_light: ${{ steps.scope.outputs.run_db_light }}
+      run_typegen: ${{ steps.scope.outputs.run_typegen }}
+      run_heavy: ${{ steps.scope.outputs.run_heavy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.QUALIFICATION_SHA }}
+          fetch-depth: 0
+
+      - name: Tier selection unit tests
+        working-directory: scripts/ci
+        run: python3 -m unittest test_detect_ci_scope -v
+
+      - name: Decide tiers from the changed paths
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: python3 scripts/ci/detect_ci_scope.py
+
   js:
     name: JavaScript / TypeScript
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_js == 'true') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -85,15 +126,37 @@ jobs:
       - name: Loopback / wrong-plane guard unit tests
         run: node --test scripts/ci/check-no-loopback-api.test.mjs
 
+      - name: Cache Next.js build cache
+        # CI-SPEED: Next's incremental compiler cache (webpack/SWC), keyed on the
+        # lockfile with a source-hash tail; falls back to the newest lockfile match.
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: apps/*/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/**/*.ts', 'apps/**/*.tsx', 'packages/**/*.ts', 'packages/**/*.tsx') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
       - name: Fail if frontend bundles ship a loopback or wrong-plane API origin
         run: node scripts/ci/check-no-loopback-api.mjs --require-affected --filter="${{ steps.turbo.outputs.filter }}"
 
-  python:
-    name: Python API
+  python-shard:
+    # CI-SPEED: the broad pytest suite (~55 min serial, DB tests skip without a
+    # database) is split into time-balanced file shards (scripts/ci/pytest-file-weights.json), each run in parallel with
+    # pytest-xdist (`--dist=loadfile`: a file's tests never straddle workers). The
+    # suite needs no shared database or port: DB-backed files skip here and run in
+    # their own isolated jobs. The required context "Python API" is the aggregator
+    # job below, so the required check name is unchanged.
+    name: API tests shard ${{ matrix.shard }}/3
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_python == 'true') }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     defaults:
       run:
         working-directory: services/api
@@ -118,10 +181,22 @@ jobs:
         run: uv sync --dev --frozen
 
       - name: Ruff
+        if: matrix.shard == 1
         run: uv run ruff check .
 
       - name: Mypy
+        if: matrix.shard == 1
         run: uv run mypy app tests scripts
+
+      - name: Shard partition covers every test file exactly once
+        run: >-
+          python3 ../../scripts/ci/shard_pytest_files.py --total 3 --check
+          --weights ../../scripts/ci/pytest-file-weights.json
+          --spread tests/test_admin_role_route_matrix.py
+          --ignore tests/test_authz_matrix.py
+          --ignore tests/test_f1_payout_real_stack.py
+          --ignore tests/test_vendor_stock_adjustment_db.py
+          --ignore tests/test_merchant_review_boundaries_db.py
 
       - name: Pytest
         # Blocking broad suite (testpaths=tests). The route x role authorization
@@ -130,11 +205,62 @@ jobs:
         # security, integration or deny-path test. F1 real-stack has its dedicated
         # fresh/upgrade owner and fails (rather than skips) without that stack.
         # Merchant stock SQL has the separate 26-identity mandatory owner below.
-        run: uv run pytest --ignore=tests/test_authz_matrix.py --ignore=tests/test_f1_payout_real_stack.py --ignore=tests/test_vendor_stock_adjustment_db.py --ignore=tests/test_merchant_review_boundaries_db.py
+        # A documentation-only change runs just the tests that read docs/.
+        # The admin role x route matrix is one 11-minute file of independent
+        # parametrized identities (DB-free, inert fakes), so it alone is spread
+        # per-test across the workers; every other file stays pinned to one worker.
+        run: |
+          mapfile -t listed < <(python3 ../../scripts/ci/shard_pytest_files.py --total 3 --shard "${{ matrix.shard }}" \
+            --weights ../../scripts/ci/pytest-file-weights.json \
+            --spread tests/test_admin_role_route_matrix.py \
+            --ignore tests/test_authz_matrix.py \
+            --ignore tests/test_f1_payout_real_stack.py \
+            --ignore tests/test_vendor_stock_adjustment_db.py \
+            --ignore tests/test_merchant_review_boundaries_db.py)
+          files=()
+          spread=()
+          for entry in "${listed[@]}"; do
+            case "${entry}" in
+              spread:*) spread+=("${entry#spread:}") ;;
+              *) files+=("${entry}") ;;
+            esac
+          done
+          if [ "${DOCS_ONLY}" = "true" ]; then
+            if [ "${#files[@]}" -gt 0 ]; then
+              mapfile -t files < <(grep -lE 'docs/|"docs"' "${files[@]}" || true)
+            fi
+            if [ "${#spread[@]}" -gt 0 ]; then
+              mapfile -t spread < <(grep -lE 'docs/|"docs"' "${spread[@]}" || true)
+            fi
+          fi
+          printf 'shard %s: %s pinned files, %s spread files\n' "${{ matrix.shard }}" "${#files[@]}" "${#spread[@]}"
+          if [ "${#files[@]}" -eq 0 ] && [ "${#spread[@]}" -eq 0 ]; then
+            echo "skipped: no relevant tests in this shard for a documentation-only change"
+            exit 0
+          fi
+          if [ "${#files[@]}" -gt 0 ]; then
+            uv run pytest -n auto --dist=loadfile --durations=0 --durations-min=1.0 "${files[@]}"
+          fi
+          if [ "${#spread[@]}" -gt 0 ]; then
+            uv run pytest -n auto --dist=load --durations=0 --durations-min=1.0 "${spread[@]}"
+          fi
         env:
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           SUPABASE_ANON_KEY: test-anon-key
+
+  python:
+    # Required check context "Python API" (master ruleset). Aggregates the shards.
+    name: Python API
+    needs: python-shard
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: All API test shards passed
+        run: |
+          echo "python-shard result: ${{ needs.python-shard.result }}"
+          test "${{ needs.python-shard.result }}" = "success"
 
   ask-evals:
     name: Ask Vergeo grounding evals
@@ -656,6 +782,8 @@ jobs:
           if-no-files-found: error
   security-gates:
     name: Security gates (headers + authz matrix)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_security == 'true') }}
     # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
     # Keep this job name stable: it is a required master-branch check context.
     runs-on: ubuntu-latest
@@ -703,7 +831,10 @@ jobs:
         # Isolation-clean: dependency overrides and guards short-circuit before DB
         # calls. JUnit is checked below so an empty or skipped matrix cannot pass.
         working-directory: services/api
-        run: uv run pytest tests/test_authz_matrix.py -q --junitxml=authz-matrix.xml
+        # CI-SPEED: parametrized cases are independent and DB-free, so they are spread
+        # across the runner's cores (xdist merges every worker into one JUnit file; the
+        # identity check below still proves each expected case ran, none skipped).
+        run: uv run pytest tests/test_authz_matrix.py -n auto -q --junitxml=authz-matrix.xml
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
@@ -785,6 +916,8 @@ jobs:
 
   migrations:
     name: Migration replay (fast)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -909,7 +1042,11 @@ jobs:
 
   db:
     name: Database / typegen drift
-    needs: migrations
+    needs: [changes, migrations]
+    # CI-SPEED: the ~45 min migration-ledger proof depends only on schema/typegen
+    # inputs; it runs on master pushes, schema or CI-script changes, and API changes
+    # into master. Migration replay (above) still runs for every API change.
+    if: ${{ !cancelled() && needs.migrations.result != 'failure' && (needs.changes.result != 'success' || needs.changes.outputs.run_typegen == 'true') }}
     runs-on: ubuntu-latest
     # config.toml uses env() substitution for the enabled send_sms auth hook and
     # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
@@ -926,7 +1063,7 @@ jobs:
       EXPECTED_VECTOR_VERSION: "0.8.2"
       EXPECTED_PG_GRAPHQL_VERSION: "1.6.1"
       EXPECTED_PGCRYPTO_VERSION: "1.3"
-      EXPECTED_TYPEGEN_MIGRATION_COUNT: "178"
+      EXPECTED_TYPEGEN_MIGRATION_COUNT: "180"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -1072,6 +1209,8 @@ jobs:
 
   rls:
     name: RLS isolation matrix
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -1168,6 +1307,8 @@ jobs:
 
   critical-real-stack:
     name: Critical real-stack execution (88 identities)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -1220,6 +1361,8 @@ jobs:
 
   financial-real-stack:
     name: Financial real-stack execution (fresh and upgrade)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -1282,6 +1425,8 @@ jobs:
 
   coordinator-acceptance:
     name: Coordinator acceptance (${{ matrix.gate }})
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_heavy == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -1313,6 +1458,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - name: Setup pinned Python
         uses: actions/setup-python@v7
         with:
@@ -1353,6 +1500,8 @@ jobs:
 
   money-db-triggers:
     name: Money DB-trigger integration
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.run_db_light == 'true') }}
     runs-on: ubuntu-latest
     # Release-accounting, release-idempotency and reconciliation DB tests exercise the
     # SQL-trigger money path (zero-sum, guarded release ordering, recon report uniqueness).
