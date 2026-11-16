@@ -139,6 +139,27 @@ class TestCombinedCompleteAndCustody:
             _complete(created.dispatch.id, _handover_code(db, created.dispatch.id), 500)
         assert exc.value.code == "dispatch_cod_not_expected"
 
+    def test_door_momo_paid_job_is_never_rider_custody(
+        self, db: PgConn, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """#795: an order paid by mobile money at the door owes no rider cash."""
+        _order_id, _courier, dispatch_id = _create(db)
+        _advance_to_picked_up(dispatch_id)
+        dispatch = fetch_dispatch(dispatch_id)
+        assert dispatch.cod_amount_ngwee == COD_TOTAL_NGWEE
+        monkeypatch.setattr(dispatch_service.door_payments, "rider_cash_due_ngwee", lambda _d: 0)
+        assert (
+            dispatch_service.custody_fields(
+                dispatch, cod_collected_ngwee=None, cod_collected_method=None
+            )
+            == {}
+        )
+        with pytest.raises(AppError) as exc:
+            dispatch_service.custody_fields(
+                dispatch, cod_collected_ngwee=COD_TOTAL_NGWEE, cod_collected_method="cash"
+            )
+        assert exc.value.code == "dispatch_cod_not_expected"
+
     def test_custody_is_write_once_in_the_database(self, db: PgConn) -> None:
         _order_id, _courier, dispatch_id = _create(db)
         _advance_to_picked_up(dispatch_id)
@@ -531,20 +552,22 @@ class TestLimitedLogisticsLogin:
 
 
 def test_route_inventory_gives_logistics_dispatch_but_not_money() -> None:
-    from app.core.auth import admin_permission_for_request
+    from app.core.auth import admin_permissions_for_request
 
-    assert admin_permission_for_request("/admin/dispatch/board", "GET") == "logistics.manage"
-    assert (
-        admin_permission_for_request("/admin/dispatch/requests/{dispatch_id}/complete", "POST")
-        == "logistics.manage"
-    )
-    assert (
-        admin_permission_for_request("/admin/logistics/cash/remittances", "POST") == "cod.reconcile"
-    )
-    # Escrow / refunds / COD confirmation stay full-admin (not in the inventory).
+    assert admin_permissions_for_request("/admin/dispatch/board", "GET") == {"logistics.manage"}
+    assert admin_permissions_for_request(
+        "/admin/dispatch/requests/{dispatch_id}/complete", "POST"
+    ) == {"logistics.manage"}
+    assert admin_permissions_for_request("/admin/logistics/cash/remittances", "POST") == {
+        "cod.reconcile"
+    }
+    # Escrow / refunds / COD confirmation / payouts never open to the logistics role
+    # (#808 maps the money routes to finance.operate or keeps them full-admin).
     for method, path in (
         ("POST", "/admin/orders/{order_id}/cod/confirm-collection"),
         ("POST", "/admin/refunds/{refund_id}/approve"),
         ("POST", "/admin/payouts/run"),
     ):
-        assert admin_permission_for_request(path, method) is None
+        granted = admin_permissions_for_request(path, method)
+        assert "logistics.manage" not in granted
+        assert "cod.reconcile" not in granted
