@@ -96,7 +96,36 @@
     "viewFeed": "See new from stores you follow",
     "searchStore": "Search {name}",
     "allCategories": "All",
-    "noMatches": "No products match. Try another word or category."
+    "noMatches": "No products match. Try another word or category.",
+    "home": {
+      "storyHeading": "Ilyashi lyesu",
+      "findUsHeading": "Uko twaba",
+      "directions": "Directions",
+      "directionsTo": "Directions to {place}",
+      "openNow": "Open now",
+      "closedNow": "Closed now",
+      "hoursNotShared": "Opening hours not shared yet",
+      "hoursRange": "{opens}–{closes}",
+      "dayMon": "Mon",
+      "dayTue": "Tue",
+      "dayWed": "Wed",
+      "dayThu": "Thu",
+      "dayFri": "Fri",
+      "daySat": "Sat",
+      "daySun": "Sun",
+      "compareOthers": "{count, plural, one {Compare with # other shop} other {Compare with # other shops}}",
+      "compareFrom": "from {price}",
+      "compareAria": "Compare {title} at other shops",
+      "verifiedOnly": "Only customers who bought here through Convergeo can leave a review.",
+      "clipsHeading": "Clips",
+      "clipWatch": "Watch clip",
+      "offersHeading": "Offers",
+      "offersEnds": "Ends {date}",
+      "serviceBook": "Book for {price}",
+      "serviceQuote": "Ipusheni umutengo",
+      "serviceArea": "Serves {area}",
+      "browseOtherShops": "See other shops like this"
+    }
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",
@@ -108,5 +137,14 @@
     "distance": "{distance} ukutali",
     "conditionNew": "Cipya",
     "conditionRefurbished": "Yakonzedwa"
+  },
+  "elsewhere": {
+    "heading": "From other shops",
+    "atShop": "at {shop}",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "kindProduct": "Product",
+    "kindService": "Service",
+    "kindEvent": "Event"
   }
 }

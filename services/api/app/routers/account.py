@@ -128,11 +128,7 @@ def _extract_onboarding(raw: Any) -> OnboardingState:
     interests_raw = onboarding.get("interests")
     interests: list[str] = []
     if isinstance(interests_raw, list):
-        interests = [
-            str(item)
-            for item in interests_raw
-            if str(item) in VALID_ONBOARDING_INTERESTS
-        ]
+        interests = [str(item) for item in interests_raw if str(item) in VALID_ONBOARDING_INTERESTS]
     completed_at = onboarding.get("completed_at")
     return OnboardingState(
         interests=interests,
@@ -382,11 +378,7 @@ async def delete_address(
 ) -> None:
     client = _user_client(current_user)
     existing_response = (
-        client.table("addresses")
-        .select("id,user_id")
-        .eq("id", address_id)
-        .maybe_single()
-        .execute()
+        client.table("addresses").select("id,user_id").eq("id", address_id).maybe_single().execute()
     )
     existing = _extract_data(existing_response)
     if not isinstance(existing, dict):
@@ -480,10 +472,7 @@ async def patch_preferences(
     merged = _merge_notif_prefs(raw_prefs, NotificationPrefs(**merged_channels))
 
     response = (
-        client.table("profiles")
-        .update({"notif_prefs": merged})
-        .eq("id", current_user.id)
-        .execute()
+        client.table("profiles").update({"notif_prefs": merged}).eq("id", current_user.id).execute()
     )
     rows = _extract_data(response)
     if isinstance(rows, list) and rows and isinstance(rows[0], dict):
@@ -497,9 +486,7 @@ async def complete_onboarding(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> PreferencesResponse:
     invalid = [
-        interest
-        for interest in body.interests
-        if interest not in VALID_ONBOARDING_INTERESTS
+        interest for interest in body.interests if interest not in VALID_ONBOARDING_INTERESTS
     ]
     if invalid:
         raise AppError(
@@ -536,12 +523,7 @@ async def complete_onboarding(
     if body.locale is not None:
         profile_updates["locale"] = _validate_locale(body.locale)
 
-    response = (
-        client.table("profiles")
-        .update(profile_updates)
-        .eq("id", current_user.id)
-        .execute()
-    )
+    response = client.table("profiles").update(profile_updates).eq("id", current_user.id).execute()
     rows = _extract_data(response)
     if isinstance(rows, list) and rows and isinstance(rows[0], dict):
         return _preferences_response(rows[0].get("notif_prefs"))
@@ -702,8 +684,8 @@ async def post_recently_viewed(
             if isinstance(row, dict) and row.get("product_id")
         ]
         if drop_ids:
-            client.table("user_recently_viewed").delete().eq(
-                "user_id", current_user.id
-            ).in_("product_id", drop_ids).execute()
+            client.table("user_recently_viewed").delete().eq("user_id", current_user.id).in_(
+                "product_id", drop_ids
+            ).execute()
 
     return await get_recently_viewed(current_user)

@@ -74,6 +74,18 @@ export type CartLine = {
   listing_variant_id?: string | null;
   /** Chosen options, e.g. [{group: "Colour", value: "Red"}]. */
   variant_options?: Array<{ group: string; value: string }>;
+  /** W8 offers: total before the offer; absent/null when no offer priced the line. */
+  list_line_total_ngwee?: number | null;
+  offer_id?: string | null;
+};
+
+/** W8 offers: a free gift the pricing engine added (price 0, reference value shown). */
+export type CartOfferGift = {
+  offer_id: string;
+  listing_id: string;
+  qty: number;
+  title: string | null;
+  reference_unit_price_ngwee: number;
 };
 
 export type VendorGroup = {
@@ -83,6 +95,8 @@ export type VendorGroup = {
   items: CartLine[];
   subtotal_ngwee: number;
   delivery_eligible: boolean;
+  gifts?: CartOfferGift[];
+  savings_ngwee?: number;
 };
 
 /** Prefer API vendor_name; fall back to truncated vendor_id. */
@@ -103,6 +117,8 @@ export type CartResponse = {
     details: Record<string, unknown>;
   }>;
   notices?: ChangeNotice[];
+  /** W8 offers: total discount across the cart (0 when `bundles` is off). */
+  savings_ngwee?: number;
 };
 
 type RevalidateResponse = {

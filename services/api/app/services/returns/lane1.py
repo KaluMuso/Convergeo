@@ -592,6 +592,20 @@ def list_vendor_pending_returns(
         if str(row.get("order_id")) in order_ids
     }
 
+    gifts_by_parent: dict[str, list[dict[str, Any]]] = {}
+    for gift in item_by_id.values():
+        parent = gift.get("offer_parent_item_id")
+        if gift.get("is_offer_gift") is True and isinstance(parent, str):
+            qty = int(gift.get("qty") or 0)
+            gifts_by_parent.setdefault(parent, []).append(
+                {
+                    "order_item_id": str(gift["id"]),
+                    "qty": qty,
+                    "title": gift.get("title_snapshot"),
+                    "reference_value_ngwee": qty * int(gift.get("list_unit_price_ngwee") or 0),
+                }
+            )
+
     returns_response = (
         service_client.client.table("returns")
         .select("*")
@@ -620,6 +634,7 @@ def list_vendor_pending_returns(
                 "item_qty": item.get("qty", 1),
                 "created_at": ret.get("created_at"),
                 "order_created_at": order.get("created_at"),
+                "bundled_gifts": gifts_by_parent.get(str(item["id"]), []),
             }
         )
     pending.sort(key=lambda row: str(row.get("created_at", "")), reverse=True)

@@ -44,6 +44,22 @@ class CartLineInput:
     #: DB trigger re-checks it belongs to the listing) and its immutable label.
     listing_variant_id: str | None = None
     variant_snapshot: dict[str, Any] | None = None
+    #: W8 offers. A cart line an offer priced may be split into two order lines
+    #: with integral unit prices; only the first consumes the checkout hold
+    #: (for ``reservation_qty`` units, the whole cart line). Gift lines are
+    #: price 0, never consume a hold, and reserve from the offer's gift pool.
+    consumes_reservation: bool = True
+    reservation_qty: int | None = None
+    offer_id: str | None = None
+    offer_snapshot: dict[str, Any] | None = None
+    list_unit_price_ngwee: int | None = None
+    offer_discount_ngwee: int = 0
+    is_offer_gift: bool = False
+    offer_parent_cart_item_id: str | None = None
+
+    @property
+    def hold_qty(self) -> int:
+        return self.reservation_qty if self.reservation_qty is not None else self.qty
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +146,95 @@ _CLASS_E_CAPACITY_ERROR_RE = re.compile(
     r"(?P<remaining>\d+):(?P<requested>\d+)",
     re.IGNORECASE,
 )
+
+
+# W8 offers: raised inside the order tx when an offer that priced the cart is no
+# longer live, or its gift pool cannot cover the gift line.
+_OFFER_EXPIRED_MARKER = "FIXA_OFFER_EXPIRED"
+_OFFER_GIFT_MARKER = "FIXA_OFFER_GIFT_UNAVAILABLE"
+_OFFER_ERROR_RE = re.compile(
+    r"FIXA_OFFER_(?P<kind>EXPIRED|GIFT_UNAVAILABLE):"
+    r"(?P<offer_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+    re.IGNORECASE,
+)
+
+
+def _offer_item_columns_sql(
+    line: CartLineInput, *, parent_item_id: str | None
+) -> tuple[str, str]:
+    """Extra order_items columns that freeze the offer pricing on the line."""
+    if line.offer_id is None:
+        return "", ""
+    columns = ", offer_id, offer_snapshot, offer_discount_ngwee, is_offer_gift"
+    values = (
+        f", {sql_uuid(line.offer_id, 'offer_id')}"
+        f", {_sql_json(line.offer_snapshot or {})}::jsonb"
+        f", {int(line.offer_discount_ngwee)}"
+        f", {'true' if line.is_offer_gift else 'false'}"
+    )
+    if line.list_unit_price_ngwee is not None:
+        columns += ", list_unit_price_ngwee"
+        values += f", {int(line.list_unit_price_ngwee)}"
+    if parent_item_id is not None:
+        columns += ", offer_parent_item_id"
+        values += f", {sql_uuid(parent_item_id, 'offer_parent_item_id')}"
+    return columns, values
+
+
+def _lock_live_offers_sql(cart_lines: list[CartLineInput]) -> list[str]:
+    """Row-lock (id order) every offer that priced this cart; abort if one is not live.
+
+    FOR UPDATE rather than FOR SHARE: a gift pool is updated later in the same
+    tx, and two share-holders upgrading would deadlock.
+    """
+    offer_ids = sorted({str(line.offer_id) for line in cart_lines if line.offer_id})
+    statements: list[str] = []
+    for offer_id in offer_ids:
+        offer_sql = sql_uuid(offer_id, "offer_id")
+        statements.append(
+            f"""
+DO $offer$
+BEGIN
+  PERFORM 1 FROM public.offers o
+  WHERE o.id = {offer_sql}
+    AND o.status = 'active'
+    AND NOT o.paused_by_admin
+    AND o.starts_at <= timezone('utc', now())
+    AND (o.ends_at IS NULL OR o.ends_at > timezone('utc', now()))
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '{_OFFER_EXPIRED_MARKER}:%', {sql_literal(offer_id)};
+  END IF;
+END
+$offer$;
+"""
+        )
+    return statements
+
+
+def _reserve_offer_gift_sql(*, offer_id: str, order_id: str, order_item_id: str, qty: int) -> str:
+    offer_sql = sql_uuid(offer_id, "offer_id")
+    qty_sql = str(int(qty))
+    return f"""
+DO $gift$
+DECLARE
+  v_updated int;
+BEGIN
+  UPDATE public.offers
+  SET gift_stock_reserved = gift_stock_reserved + {qty_sql}
+  WHERE id = {offer_sql}
+    AND gift_stock_total IS NOT NULL
+    AND gift_stock_reserved + {qty_sql} <= gift_stock_total;
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  IF v_updated = 0 THEN
+    RAISE EXCEPTION '{_OFFER_GIFT_MARKER}:%', {sql_literal(offer_id)};
+  END IF;
+  INSERT INTO public.offer_gift_reservations (offer_id, order_id, order_item_id, qty)
+  VALUES ({offer_sql}, {sql_uuid(order_id, "order_id")},
+          {sql_uuid(order_item_id, "order_item_id")}, {qty_sql});
+END
+$gift$;
+"""
 
 
 def _lock_and_recheck_sql(session_sql: str, customer_sql: str) -> str:
@@ -365,9 +470,13 @@ def _clear_ordered_cart_lines_sql(cart_lines: list[CartLineInput], customer_sql:
     added in another tab after checkout started was never ordered and stays.
     Prepaid checkouts keep their cart until the payment outcome is known.
     """
-    if not cart_lines:
+    # Offer gift lines have no cart row; a split offer line shares one cart row.
+    cart_item_ids = list(
+        dict.fromkeys(line.cart_item_id for line in cart_lines if not line.is_offer_gift)
+    )
+    if not cart_item_ids:
         return ""
-    item_ids = ", ".join(sql_uuid(line.cart_item_id, "cart_item_id") for line in cart_lines)
+    item_ids = ", ".join(sql_uuid(item_id, "cart_item_id") for item_id in cart_item_ids)
     return f"""
 DELETE FROM public.cart_items ci
 USING public.carts c
@@ -935,6 +1044,8 @@ def create_orders_atomic(
         )
     statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
 
+    parent_item_by_cart_line: dict[str, str] = {}
+    statements.extend(_lock_live_offers_sql(cart_lines))
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
         vendor_sql = sql_uuid(order.vendor_id, "vendor_id")
@@ -973,12 +1084,19 @@ INSERT INTO public.orders (
                     f", {sql_uuid(line.listing_variant_id, 'listing_variant_id')}"
                     f", {_sql_json(line.variant_snapshot or {})}::jsonb"
                 )
+            offer_columns, offer_values = _offer_item_columns_sql(
+                line, parent_item_id=parent_item_by_cart_line.get(
+                    line.offer_parent_cart_item_id or ""
+                )
+            )
+            if not line.is_offer_gift:
+                parent_item_by_cart_line.setdefault(line.cart_item_id, item.order_item_id)
             statements.append(
                 f"""
 INSERT INTO public.order_items (
-  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+  id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot{offer_columns}
 ) VALUES (
-  {item_sql}, {order_sql}, 'product', {item.qty}, {item.unit_price_ngwee}, {title_sql}
+  {item_sql}, {order_sql}, 'product', {item.qty}, {item.unit_price_ngwee}, {title_sql}{offer_values}
 );
 INSERT INTO public.order_item_products (order_item_id, listing_id{product_columns})
 VALUES ({item_sql}, {listing_sql}{product_values});
@@ -1012,29 +1130,48 @@ INSERT INTO public.notification_outbox (
     # Per-variant stock: lock + decrement each chosen variant in UUID order (no
     # deadlocks across overlapping carts); a sold-out variant aborts the tx.
     for line in sorted(
-        (line for line in cart_lines if line.listing_variant_id is not None),
+        (
+            line
+            for line in cart_lines
+            if line.listing_variant_id is not None and line.consumes_reservation
+        ),
         key=lambda line: str(line.listing_variant_id),
     ):
         variant_sql = sql_uuid(str(line.listing_variant_id), "listing_variant_id")
         statements.append(
-            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.qty)});"
+            f"SELECT public.consume_listing_variant_stock({variant_sql}, {int(line.hold_qty)});"
         )
 
-    placed_item_by_cart_line: dict[str, tuple[str, str]] = {
-        line.cart_item_id: (order.order_id, item.order_item_id)
+    placed_lines: list[tuple[CartLineInput, str, str]] = [
+        (line, order.order_id, item.order_item_id)
         for order, vendor_lines in planned_orders
         for item, line in zip(order.items, vendor_lines, strict=True)
-    }
-    for line in cart_lines:
-        placed_order_id, placed_item_id = placed_item_by_cart_line[line.cart_item_id]
+    ]
+    for line, placed_order_id, placed_item_id in placed_lines:
+        if not line.consumes_reservation:
+            continue
         statements.append(
             _consume_reservation_conditional_sql(
                 checkout_group_id=session_id,
                 listing_id=line.listing_id,
-                qty=line.qty,
+                qty=line.hold_qty,
                 order_id=placed_order_id,
                 order_item_id=placed_item_id,
                 listing_variant_id=line.listing_variant_id,
+            )
+        )
+    # Gift pools: conditional UPDATE in offer-id order (same order as the cancel
+    # trigger) — a pool can never be reserved past its total, even under races.
+    for line, placed_order_id, placed_item_id in sorted(
+        (entry for entry in placed_lines if entry[0].is_offer_gift),
+        key=lambda entry: (str(entry[0].offer_id), entry[2]),
+    ):
+        statements.append(
+            _reserve_offer_gift_sql(
+                offer_id=str(line.offer_id),
+                order_id=placed_order_id,
+                order_item_id=placed_item_id,
+                qty=line.qty,
             )
         )
     statements.append(_consume_reservations_sql(session_id))
@@ -1069,6 +1206,25 @@ WHERE id = {session_sql};
                 message="Delivery address was not found for this account",
                 http_status=422,
                 details={"field": "address_id"},
+            )
+        offer_match = _OFFER_ERROR_RE.search(error)
+        if offer_match is not None:
+            gift = offer_match.group("kind").upper() == "GIFT_UNAVAILABLE"
+            code = "offers.gift_out_of_stock" if gift else "offers.expired"
+            raise AppError(
+                code=code,
+                message=(
+                    "The free gift for an offer in your cart has run out"
+                    if gift
+                    else "An offer in your cart is no longer available"
+                ),
+                http_status=409,
+                details={
+                    "message_key": code,
+                    "offer_id": offer_match.group("offer_id"),
+                    "redirect_to": "cart",
+                    "retry": False,
+                },
             )
         variant_match = _VARIANT_STOCK_ERROR_RE.search(error)
         if variant_match is not None:

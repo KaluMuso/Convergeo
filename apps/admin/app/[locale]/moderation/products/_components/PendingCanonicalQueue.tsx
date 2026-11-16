@@ -1,9 +1,11 @@
 "use client";
 
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { notify } from "@vergeo/ui/src/toast";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { decisionFailureReference, withDecisionRetry } from "../../../../../lib/decision-retry";
 import { AdminLoadFailure } from "../../../_components/AdminLoadFailure";
 import { resolveQueueLoadFailure } from "../../../_components/queue-load-failure";
 
@@ -29,6 +31,9 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionHint, setActionHint] = useState<string | null>(null);
+  // A ref, not state: two fast clicks land before React re-renders with `submitting`.
+  const inFlight = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +60,7 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
     setMode("view");
     setReason("");
     setActionError(null);
+    setActionHint(null);
   };
 
   const submit = async (status: "active" | "rejected") => {
@@ -64,20 +70,46 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
     if (status === "rejected" && reason.trim().length < 3) {
       return;
     }
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
     setSubmitting(true);
     setActionError(null);
+    setActionHint(null);
     try {
-      await patchCanonicalProductStatus(selected.id, {
-        status,
-        reason: status === "rejected" ? reason.trim() : null,
-      });
+      // The decision is idempotent server-side, so one automatic retry (after forcing a
+      // fresh session token) is safe and hides a stale-token or dropped first request.
+      await withDecisionRetry(
+        () =>
+          patchCanonicalProductStatus(selected.id, {
+            status,
+            reason: status === "rejected" ? reason.trim() : null,
+          }),
+        {
+          beforeRetry: async () => {
+            const client = await getBrowserClient();
+            await client.auth.refreshSession();
+          },
+        },
+      );
       closeDialog();
       setMessage(t("dialog.success"));
       notify.success(t("dialog.success"));
       await load();
-    } catch {
+    } catch (err) {
       setActionError(t("dialog.failure"));
+      const reference = decisionFailureReference(err);
+      setActionHint(
+        [
+          t("dialog.failureRetryHint"),
+          reference ? t("dialog.failureReference", { id: reference }) : null,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -200,7 +232,12 @@ export function PendingCanonicalQueue({ locale }: PendingCanonicalQueueProps) {
               </label>
             ) : null}
 
-            {actionError ? <p className="mt-2 text-sm text-danger">{actionError}</p> : null}
+            {actionError ? (
+              <div className="mt-2 space-y-0.5" role="alert">
+                <p className="text-sm text-danger">{actionError}</p>
+                {actionHint ? <p className="text-xs text-muted">{actionHint}</p> : null}
+              </div>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button

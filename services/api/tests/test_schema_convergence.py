@@ -98,6 +98,37 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261113120500",
     # In-app notification center (additive, reversible).
     "20261113130000",
+    # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
+    "20261114050000",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000",
+    # W8 bundles & offers (additive, reversible).
+    "20261115120000",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100",
+    "20261115140200",
+    # Analytics v2 (Intelligence 1A/1B), additive and flag-gated.
+    "20261115150000",
+    "20261115150100",
+    "20261115150200",
+    "20261115150300",
+    "20261115150400",
+    "20261115150500",
+    "20261115150600",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000",
+    # Event ticket integrity: ticket validity, promo limit, advance receivable.
+    "20261115210000",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500",
+    "20261115235600",
 ]
 
 def _module() -> Any:
@@ -140,7 +171,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 158
+    assert len(sql_files) == len(migrations) == 177
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -162,13 +193,41 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
-    assert actual_versions[-19:] == (
+    rate_scope_sync = ["20261114050000"]
+    listing_fulfilment = ["20261115090000"]
+    bundles_offers = ["20261115120000"]
+    events_collaboration = ["20261115130000", "20261115130100"]
+    audit_s1 = ["20261115140000"]
+    governance = ["20261115140100", "20261115140200"]
+    analytics_v2 = [
+        "20261115150000",
+        "20261115150100",
+        "20261115150200",
+        "20261115150300",
+        "20261115150400",
+        "20261115150500",
+        "20261115150600",
+    ]
+    pay_at_door = ["20261115200000"]
+    event_integrity = ["20261115210000"]
+    business_home = ["20261115235500", "20261115235600"]
+    assert actual_versions[-38:] == (
         repairs
         + post_repair
         + queued_features
         + pilot_fixes
         + money_dispatch
         + notification_center
+        + rate_scope_sync
+        + listing_fulfilment
+        + bundles_offers
+        + events_collaboration
+        + audit_s1
+        + governance
+        + analytics_v2
+        + pay_at_door
+        + event_integrity
+        + business_home
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

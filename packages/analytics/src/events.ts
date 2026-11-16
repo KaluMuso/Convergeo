@@ -45,6 +45,23 @@ export interface AnalyticsEventMap {
     order_count: number;
     total_ngwee: MoneyNgwee;
   };
+  /** v2 (registry `events.v2.json`): a product was shared. */
+  product_share: {
+    product_id: string;
+    channel: "whatsapp" | "copy" | "native" | "other";
+  };
+  /** v2: a recommendation slot rendered a product (Stage 3 surfaces register here). */
+  recommendation_impression: {
+    product_id: string;
+    slot: string;
+    rank: number;
+  };
+  /** v2: a recommended product was clicked. */
+  recommendation_click: {
+    product_id: string;
+    slot: string;
+    rank: number;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventMap;

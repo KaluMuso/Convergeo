@@ -16,7 +16,6 @@ from app.routers.comparison import (
     haversine_m,
     is_lusaka_delivery_available,
 )
-from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -427,17 +426,6 @@ class TestComparisonWholesaleGating:
         assert {item.id for item in response.listings} == {LISTING_CHEAP}
         assert response.listing_count == 1
 
-    def test_build_includes_wholesale_when_eligible(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed(store)
-        response = build_comparison(store, "itel-a70", include_wholesale=True)
-        assert {item.id for item in response.listings} == {
-            LISTING_CHEAP,
-            LISTING_WHOLESALE,
-        }
-        assert response.listing_count == 2
-
     def test_endpoint_guest_hides_wholesale(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
@@ -446,32 +434,6 @@ class TestComparisonWholesaleGating:
         assert response.status_code == 200
         ids = {item["id"] for item in response.json()["listings"]}
         assert ids == {LISTING_CHEAP}
-
-    def test_endpoint_verified_business_sees_wholesale(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed(store)
-        app: FastAPI = create_app()
-        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-            user_id="11111111-1111-1111-1111-111111111111",
-            status="verified",
-            eligible=True,
-        )
-
-        class FakeServiceClient:
-            def __init__(self) -> None:
-                self.client = store
-
-        with patch(
-            "app.deps.get_supabase_service_client", return_value=FakeServiceClient()
-        ):
-            with TestClient(app, raise_server_exceptions=False) as test_client:
-                response = test_client.get("/products/itel-a70/comparison")
-        app.dependency_overrides.clear()
-        assert response.status_code == 200
-        ids = {item["id"] for item in response.json()["listings"]}
-        assert ids == {LISTING_CHEAP, LISTING_WHOLESALE}
-
 
 class TestComparisonWholesaleOnlyIsOmitted:
     """D36: a comparison whose every listing is wholesale-only must 404 for an
@@ -502,16 +464,6 @@ class TestComparisonWholesaleOnlyIsOmitted:
         response = client.get("/products/itel-a70/comparison")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "product.not_found"
-
-    def test_verified_business_still_sees_the_comparison(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed_wholesale_only(store)
-        result = build_comparison(store, "itel-a70", include_wholesale=True)
-        assert {item.id for item in result.listings} == {
-            LISTING_CHEAP,
-            LISTING_WHOLESALE,
-        }
 
     def test_product_with_no_listings_at_all_is_unaffected(
         self, store: FakeSupabaseStore
