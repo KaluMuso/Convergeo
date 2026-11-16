@@ -129,6 +129,8 @@ def test_unmatched_landmark_gets_the_configured_zone_and_its_fee(post_fulfilment
         {
             "subtotal_ngwee": 10_000,
             "delivery_fee_ngwee": 4500,
+            # Unified checkout: no event tickets in this cart -> no ticket fee.
+            "platform_fee_ngwee": 0,
             "total_ngwee": 14_500,
             # POST /orders re-prices from these recorded choices.
             "fulfilment_choices": [

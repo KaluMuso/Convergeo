@@ -10,9 +10,13 @@ Rules
 -----
 * One offer per cart line (no stacking). Offers are evaluated in a fixed
   order: bundle, buy_n_pay_m, bxgy, free_gift; within a type by offer id.
-* Only product lines are priced here — the cart only holds vendor listings.
-  An offer that needs a service or event item is not cart-applicable
-  (``cart_applicable`` False); its storefront badge is suppressed too.
+* Product lines and event-ticket lines are priced here (the unified cart holds
+  both; a ticket line carries ``item_kind="event"`` and the event id as its
+  ref). An offer that needs a service item is not cart-applicable
+  (``cart_applicable`` False) — services are still booked on their own flow —
+  and its storefront badge is suppressed too. bundle and buy_n_pay_m may mix
+  products and event tickets; bxgy / free_gift stay product-only (the free gift
+  is a product shipped in a goods order, so its trigger must be one too).
 * bundle: sets = min(line qty // item qty) over anchor + add-ons. Percent mode
   discounts the add-ons only (floor(addon_total * pct / 100)), allocated across
   the add-on lines; fixed mode allocates (set list total - bundle price) across
@@ -48,10 +52,12 @@ DEFAULT_MAX_DISCOUNT_PCT = 90
 @dataclass(frozen=True, slots=True)
 class PricingLine:
     key: str
+    #: Listing id for a product line; event id for an event-ticket line.
     listing_id: str
     vendor_id: str
     qty: int
     unit_price_ngwee: int
+    item_kind: ItemKind = "product"
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,8 +94,13 @@ class OfferDef:
 
     @property
     def cart_applicable(self) -> bool:
-        """True when every item that must be bought (and the reward) is a product."""
-        return all(item.item_kind == "product" for item in self.items)
+        """True when the unified cart can honour it: products and event tickets
+        only (no service item) and any reward is a product."""
+        if self.offer_type in ("bxgy", "free_gift"):
+            # A free product gift ships in a goods order with its own fulfilment
+            # choice; a ticket-triggered gift is not applied in this slice.
+            return all(item.item_kind == "product" for item in self.items)
+        return all(item.item_kind in ("product", "event") for item in self.items)
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,15 +186,18 @@ def offer_snapshot(offer: OfferDef) -> dict[str, Any]:
 
 class _Claims:
     def __init__(self, lines: list[PricingLine]) -> None:
-        self.by_listing: dict[tuple[str, str], list[PricingLine]] = {}
+        self.by_ref: dict[tuple[str, str, str], list[PricingLine]] = {}
         for line in lines:
-            self.by_listing.setdefault((line.vendor_id, line.listing_id), []).append(line)
+            self.by_ref.setdefault((line.vendor_id, line.item_kind, line.listing_id), []).append(
+                line
+            )
         self.claimed: set[str] = set()
 
-    def free_lines(self, vendor_id: str, listing_id: str) -> list[PricingLine]:
+    def free_lines(self, vendor_id: str, item: OfferItemDef) -> list[PricingLine]:
+        """Unclaimed cart lines matching an offer item (same kind and ref)."""
         return [
             line
-            for line in self.by_listing.get((vendor_id, listing_id), [])
+            for line in self.by_ref.get((vendor_id, item.item_kind, item.ref_id), [])
             if line.key not in self.claimed
         ]
 
@@ -211,7 +225,7 @@ def _price_bundle(
         return None
     members: list[tuple[OfferItemDef, PricingLine]] = []
     for item in (*anchors, *addons):
-        candidates = claims.free_lines(offer.vendor_id, item.ref_id)
+        candidates = claims.free_lines(offer.vendor_id, item)
         if not candidates:
             return None
         # Deterministic: the line with the most units, then by key.
@@ -276,7 +290,7 @@ def _price_buy_n_pay_m(
     lines: list[PricingLine] = []
     seen: set[str] = set()
     for item in offer.items_with_role("eligible"):
-        for line in claims.free_lines(offer.vendor_id, item.ref_id):
+        for line in claims.free_lines(offer.vendor_id, item):
             if line.key not in seen:
                 seen.add(line.key)
                 lines.append(line)
@@ -347,7 +361,7 @@ def _price_gift(
     lines: list[PricingLine] = []
     seen: set[str] = set()
     for item in triggers:
-        for line in claims.free_lines(offer.vendor_id, item.ref_id):
+        for line in claims.free_lines(offer.vendor_id, item):
             if line.key not in seen:
                 seen.add(line.key)
                 lines.append(line)

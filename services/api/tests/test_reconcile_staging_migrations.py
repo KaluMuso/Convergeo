@@ -119,6 +119,8 @@ PENDING_REPAIR_VERSIONS = {
     # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
     "20261116020000",
     "20261116020100",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 }
 
 

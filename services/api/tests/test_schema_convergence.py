@@ -132,6 +132,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
     "20261116020000",
     "20261116020100",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 ]
 
 def _module() -> Any:
@@ -174,7 +176,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 179
+    assert len(sql_files) == len(migrations) == 180
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -215,7 +217,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     event_integrity = ["20261115210000"]
     business_home = ["20261115235500", "20261115235600"]
     points_digest = ["20261116020000", "20261116020100"]
-    assert actual_versions[-40:] == (
+    unified_cart = ["20261116090000"]
+    assert actual_versions[-41:] == (
         repairs
         + post_repair
         + queued_features
@@ -233,6 +236,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + event_integrity
         + business_home
         + points_digest
+        + unified_cart
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

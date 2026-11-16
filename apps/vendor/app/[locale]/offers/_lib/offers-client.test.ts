@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { isoToLocalInput, localInputToIso, payloadForType, TYPE_ROLES } from "./offers-client";
+import {
+  isoToLocalInput,
+  localInputToIso,
+  MAX_PER_CUSTOMER_LIMIT,
+  parsePerCustomerLimit,
+  payloadForType,
+  TYPE_ROLES,
+} from "./offers-client";
 
 const LISTING = "a1000000-0000-4000-8000-000000000001";
 
@@ -70,5 +77,41 @@ describe("datetime-local round trip", () => {
     expect(isoToLocalInput(iso)).toBe("2026-12-01T09:30");
     expect(localInputToIso("")).toBeNull();
     expect(isoToLocalInput(null)).toBe("");
+  });
+});
+
+describe("parsePerCustomerLimit", () => {
+  it("treats blank as unlimited", () => {
+    expect(parsePerCustomerLimit("")).toBeNull();
+    expect(parsePerCustomerLimit("   ")).toBeNull();
+  });
+
+  it("accepts whole numbers from 1 to 1000", () => {
+    expect(parsePerCustomerLimit("1")).toBe(1);
+    expect(parsePerCustomerLimit(" 25 ")).toBe(25);
+    expect(parsePerCustomerLimit(String(MAX_PER_CUSTOMER_LIMIT))).toBe(1000);
+  });
+
+  it("rejects zero, negatives, decimals, text and values above the cap", () => {
+    for (const raw of ["0", "-1", "1.5", "abc", "1001", "1e3"]) {
+      expect(parsePerCustomerLimit(raw)).toBe("invalid");
+    }
+  });
+
+  it("is sent with the payload for every offer type", () => {
+    const payload = payloadForType({
+      offer_type: "buy_n_pay_m",
+      title: "3 for 2",
+      status: "active",
+      buy_n: 3,
+      pay_m: 2,
+      per_customer_limit: 2,
+      items: [],
+    });
+    expect(payload.per_customer_limit).toBe(2);
+    expect(
+      payloadForType({ offer_type: "free_gift", title: "x", status: "draft", items: [] })
+        .per_customer_limit,
+    ).toBeNull();
   });
 });

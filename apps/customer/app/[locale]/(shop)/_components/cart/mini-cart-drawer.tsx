@@ -105,11 +105,37 @@ export function vendorGroupLabel(group: Pick<VendorGroup, "vendor_id" | "vendor_
   return name && name.length > 0 ? name : group.vendor_id.slice(0, 8);
 }
 
+/** Unified cart: an event-ticket line (its own order and payment rules). */
+export type CartTicketLine = {
+  id: string;
+  item_type: "event_ticket";
+  event_id: string;
+  event_title: string;
+  event_slug?: string | null;
+  ticket_type_id: string;
+  type_name: string;
+  instance_id: string;
+  starts_at?: string | null;
+  vendor_id: string;
+  qty: number;
+  unit_price_ngwee: number;
+  line_total_ngwee: number;
+  list_line_total_ngwee?: number | null;
+  offer_id?: string | null;
+};
+
 export type CartResponse = {
   cart_id: string;
   items: CartLine[];
   vendor_groups: VendorGroup[];
+  /** Products + event tickets, after offers. */
   subtotal_ngwee: number;
+  ticket_lines?: CartTicketLine[];
+  unavailable_ticket_line_ids?: string[];
+  /** Buyer-paid ticket service fee (0 unless the organiser passes it on). */
+  platform_fee_ngwee?: number;
+  /** False when tickets are in the cart (never cash on delivery). */
+  cod_allowed?: boolean;
   conflicts: Array<{
     listing_id: string;
     code: string;
@@ -337,6 +363,20 @@ function isCartLine(value: unknown): boolean {
   );
 }
 
+function isCartTicketLine(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.event_title === "string" &&
+    typeof value.type_name === "string" &&
+    typeof value.qty === "number" &&
+    Number.isSafeInteger(value.qty) &&
+    value.qty > 0 &&
+    isNgwee(value.unit_price_ngwee) &&
+    isNgwee(value.line_total_ngwee)
+  );
+}
+
 function isChangeNotice(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -382,7 +422,9 @@ function requireCartResponse(value: unknown): void {
         isRecord(conflict.details),
     ) ||
     (value.notices !== undefined &&
-      (!Array.isArray(value.notices) || !value.notices.every(isChangeNotice)))
+      (!Array.isArray(value.notices) || !value.notices.every(isChangeNotice))) ||
+    (value.ticket_lines !== undefined &&
+      (!Array.isArray(value.ticket_lines) || !value.ticket_lines.every(isCartTicketLine)))
   ) {
     throw new ApiError("invalid_response", "Cart response was malformed", {
       status: 0,
@@ -772,6 +814,46 @@ export async function removeCartItem(listingId: string): Promise<CartResponse> {
   );
   const notices = cart.notices ?? (await fetchRevalidateNotices(context));
   publishCartMutation(version, context, cart, notices);
+  return cart;
+}
+
+/** Unified cart: add (or set the quantity of) an event-ticket line. Signed-in only. */
+export async function putCartTicketLine(input: {
+  instanceId: string;
+  ticketTypeId: string;
+  qty: number;
+  attendeeNames?: string[];
+  eventAccessProof?: string;
+}): Promise<CartResponse> {
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(
+    "/cart/tickets",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        instance_id: input.instanceId,
+        ticket_type_id: input.ticketTypeId,
+        qty: input.qty,
+        ...(input.attendeeNames ? { attendee_names: input.attendeeNames } : {}),
+        ...(input.eventAccessProof ? { event_access_proof: input.eventAccessProof } : {}),
+      }),
+    },
+    context,
+  );
+  publishCartMutation(version, context, cart, cart.notices ?? []);
+  return cart;
+}
+
+export async function removeCartTicketLine(lineId: string): Promise<CartResponse> {
+  const context = await cartContext();
+  const version = ++cartMutationVersion;
+  const cart = await cartMutationRequest<CartResponse>(
+    `/cart/tickets/${encodeURIComponent(lineId)}`,
+    { method: "DELETE" },
+    context,
+  );
+  publishCartMutation(version, context, cart, cart.notices ?? []);
   return cart;
 }
 

@@ -58,7 +58,7 @@ export function getCartItemCount(cart: CartResponse | null): number {
   }
   // Quantities can represent incompatible measures (for example kg and metres),
   // so the cart badge counts distinct lines instead of adding unlike units.
-  return cart.items.length;
+  return cart.items.length + (cart.ticket_lines?.length ?? 0);
 }
 
 export function openMiniCart() {
