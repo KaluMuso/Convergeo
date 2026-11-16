@@ -118,9 +118,10 @@ PENDING_REPAIR_VERSIONS = {
     "20261115235600",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261116110000",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100",
     # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
     "20261116120000",
-    "20261116110100",
 }
 
 

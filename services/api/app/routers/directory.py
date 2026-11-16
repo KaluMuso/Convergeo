@@ -8,8 +8,8 @@ from uuid import UUID
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.branches.rules import multi_branch_enabled
 from app.routers.comparison import is_lusaka_delivery_available
+from app.services.branches.rules import multi_branch_enabled
 from app.services.brand_theme import read_brand_theme
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
