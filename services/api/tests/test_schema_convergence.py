@@ -129,10 +129,10 @@ POST_REPAIR_PENDING_VERSIONS = [
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
-    # In-app rows for never-silent lifecycle templates (additive, reversible).
-    "20261116010000",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261116170000",
 ]
 
 def _module() -> Any:
@@ -215,8 +215,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pay_at_door = ["20261115200000"]
     event_integrity = ["20261115210000"]
     business_home = ["20261115235500", "20261115235600"]
-    never_silent = ["20261116010000"]
     unified_cart = ["20261116090000"]
+    never_silent = ["20261116170000"]
     assert actual_versions[-40:] == (
         repairs
         + post_repair
@@ -234,8 +234,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + pay_at_door
         + event_integrity
         + business_home
-        + never_silent
         + unified_cart
+        + never_silent
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

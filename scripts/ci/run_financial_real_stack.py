@@ -98,10 +98,10 @@ FORWARD = [
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500_business_home_offers_flag.sql",
     "20261115235600_business_home_section_flags.sql",
-    # In-app rows for never-silent lifecycle templates (additive, reversible).
-    "20261116010000_in_app_never_silent_events.sql",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000_unified_cart_event_tickets.sql",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261116170000_in_app_never_silent_events.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [

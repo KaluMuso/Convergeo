@@ -116,10 +116,10 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
-    # In-app rows for never-silent lifecycle templates (additive, reversible).
-    "20261116010000",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261116170000",
 }
 
 
