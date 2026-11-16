@@ -168,7 +168,7 @@ class DispatchRow:
     delivered_at: str | None
     failed_at: str | None
     cancelled_at: str | None
-    # Logistics phase 1 (migration 20261115180000).
+    # Logistics phase 1 (migration 20261116180000).
     direction: str = "delivery"
     attempt_no: int = 1
     failure_code: str | None = None

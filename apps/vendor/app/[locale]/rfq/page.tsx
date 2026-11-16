@@ -163,7 +163,7 @@ export default function VendorRfqPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-3">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
         <p className="text-sm text-text-2">{t("intro")}</p>

@@ -75,7 +75,10 @@ for (const productClass of ["D", "E"]) {
     });
     await screen.findByRole("option", { name: "Furniture" });
     await waitFor(() =>
-      expect((screen.getByRole("combobox", { name: labels.categoryLabel }) as HTMLSelectElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("combobox", { name: labels.categoryLabel }) as HTMLSelectElement)
+          .disabled,
+      ).toBe(false),
     );
     fireEvent.change(screen.getByRole("combobox", { name: labels.categoryLabel }), {
       target: { value: "category" },
@@ -86,6 +89,9 @@ for (const productClass of ["D", "E"]) {
       },
     });
     if (productClass === "D") {
+      fireEvent.change(screen.getByLabelText(labels.fields.conditionLabel), {
+        target: { value: "used" },
+      });
       fireEvent.change(screen.getByLabelText(labels.fields.defectNotesLabel), {
         target: { value: "A visible scratch on the arm." },
       });

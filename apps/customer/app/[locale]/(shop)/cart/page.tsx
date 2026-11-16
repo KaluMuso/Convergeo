@@ -61,6 +61,17 @@ export default async function CartPage({ params }: CartPageProps) {
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
+    offerSavings: t("cart.offerSavings"),
+    tickets: {
+      typeProducts: t("cart.types.products"),
+      typeEventTickets: t("cart.types.eventTickets"),
+      line: raw("cart.tickets.line"),
+      remove: t("cart.tickets.remove"),
+      removeLabel: raw("cart.tickets.removeLabel"),
+      unavailable: t("cart.tickets.unavailable"),
+      platformFee: t("cart.tickets.platformFee"),
+      prepaidOnly: t("cart.tickets.prepaidOnly"),
+    },
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
       vendorSubtotal: raw("cart.vendorSubtotal"),
@@ -71,6 +82,8 @@ export default async function CartPage({ params }: CartPageProps) {
       freeDeliveryProgress: raw("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
       sellerIndex: raw("cart.sellerIndex"),
+      offerGift: raw("cart.offerGift"),
+      offerGiftWorth: raw("cart.offerGiftWorth"),
     },
     line: {
       decrease: t("cart.qtyDecrease"),
@@ -99,6 +112,7 @@ export default async function CartPage({ params }: CartPageProps) {
       outOfStockLine: t("cart.outOfStockLine"),
       variantOption: raw("variant.option"),
       variantSeparator: raw("variant.separator"),
+      offerSaving: raw("cart.offerSaving"),
     },
     notices: {
       title: t("cart.noticesTitle"),

@@ -22,6 +22,18 @@ from app.settings import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 ViewKind = Literal["impression", "pdp_view"]
+Surface = Literal["home", "plp", "storefront", "pdp", "unknown"]
+
+#: Values accepted by ``record_listing_view`` (migration 20260813160100).
+SURFACES: frozenset[str] = frozenset({"home", "plp", "storefront", "pdp", "unknown"})
+
+
+def normalize_surface(value: str | None) -> Surface:
+    """Unknown or missing surfaces collapse to ``unknown`` (never rejected)."""
+    if value in SURFACES:
+        return value  # type: ignore[return-value]
+    return "unknown"
+
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -107,8 +119,18 @@ def _utc_today() -> date:
     return datetime.now(tz=UTC).date()
 
 
-def _dedup_key(*, session_id: str, listing_id: str, day: date, view_kind: ViewKind) -> str:
-    return f"lv:{day.isoformat()}:{view_kind}:{session_id}:{listing_id}"
+def _dedup_key(
+    *,
+    session_id: str,
+    listing_id: str,
+    day: date,
+    view_kind: ViewKind,
+    surface: Surface = "unknown",
+) -> str:
+    base = f"lv:{day.isoformat()}:{view_kind}:{session_id}:{listing_id}"
+    # v1 keys are unchanged; only an attributed surface extends the key (matches the
+    # DB dedup PK, which includes surface).
+    return base if surface == "unknown" else f"{base}:{surface}"
 
 
 def _record_one(
@@ -118,19 +140,43 @@ def _record_one(
     day: date,
     view_kind: ViewKind,
     redis_store: _DedupStore | None,
+    surface: Surface = "unknown",
+    viewer_user_id: str | None = None,
 ) -> bool:
     """Record a single view. Returns True when counted (not deduped)."""
     if redis_store is not None:
-        key = _dedup_key(session_id=session_id, listing_id=listing_id, day=day, view_kind=view_kind)
+        key = _dedup_key(
+            session_id=session_id,
+            listing_id=listing_id,
+            day=day,
+            view_kind=view_kind,
+            surface=surface,
+        )
         if not redis_store.try_claim(key):
             return False
 
-    script = f"""
+    if surface == "unknown" and viewer_user_id is None:
+        # v1 call shape, byte-identical to before analytics_v2 (surface defaults).
+        script = f"""
 SELECT public.record_listing_view(
   {sql_literal(session_id)}::uuid,
   {sql_literal(listing_id)}::uuid,
   {sql_literal(day.isoformat())}::date,
   {sql_literal(view_kind)}
+)::text;
+"""
+    else:
+        viewer_sql = (
+            f"{sql_literal(viewer_user_id)}::uuid" if viewer_user_id is not None else "NULL::uuid"
+        )
+        script = f"""
+SELECT public.record_listing_view(
+  {sql_literal(session_id)}::uuid,
+  {sql_literal(listing_id)}::uuid,
+  {sql_literal(day.isoformat())}::date,
+  {sql_literal(view_kind)},
+  {sql_literal(surface)},
+  {viewer_sql}
 )::text;
 """
     result = run_sql_script(script)
@@ -147,14 +193,23 @@ def record_listing_views(
     session_id: str | None,
     listing_ids: list[str],
     view_kind: ViewKind,
+    surface: str | None = None,
+    viewer_user_id: str | None = None,
 ) -> int:
-    """Record one or more listing views. Returns the number newly counted."""
+    """Record one or more listing views. Returns the number newly counted.
+
+    ``surface`` and ``viewer_user_id`` are analytics_v2 attribution (plan 1A-06): the
+    caller passes them only when ``analytics_v2_collect`` is on. A ``viewer_user_id``
+    that owns the listing's vendor is not counted (vendor self-view, enforced in SQL).
+    """
     if not listing_ids:
         return 0
     if session_id is None:
         return 0
 
     session = _valid_uuid(session_id, field="session_id")
+    surface_value = normalize_surface(surface)
+    viewer = _valid_uuid(viewer_user_id, field="viewer_user_id") if viewer_user_id else None
     day = _utc_today()
     redis_store = _resolve_dedup_store()
 
@@ -174,6 +229,8 @@ def record_listing_views(
             day=day,
             view_kind=view_kind,
             redis_store=redis_store,
+            surface=surface_value,
+            viewer_user_id=viewer,
         ):
             counted += 1
     return counted

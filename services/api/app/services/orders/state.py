@@ -475,6 +475,48 @@ def _validate_snapshot_transition(
     return resolved.to_status
 
 
+def _order_authority_sql(actor_role: ActorRole, actor_sql: str, *, logistics: bool = False) -> str:
+    """SQL predicate over order alias ``o``: does this actor hold authority on it.
+
+    ``logistics`` (logistics phase 1): an ADMIN logistics event is also open to a
+    restricted admin whose rbac_* role grants ``logistics.manage``.
+    """
+    return {
+        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
+        ActorRole.VENDOR: (
+            "EXISTS (SELECT 1 FROM public.vendors v "
+            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
+        ),
+        ActorRole.ADMIN: (
+            f"public.has_admin_permission({actor_sql}, 'logistics.manage')"
+            if logistics
+            else (
+                "EXISTS (SELECT 1 FROM public.user_roles ur "
+                f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
+            )
+        ),
+        ActorRole.SYSTEM: "true",  # identity checked by callers; internal trusted caller only
+    }[actor_role]
+
+
+def assert_order_actor_authorized(*, order_id: str, actor_role: ActorRole, actor_id: str) -> None:
+    """Read-only mirror of the authority check inside ``transition_order``.
+
+    Lets a caller that must post a second aggregate (e.g. a ledger reversal) before
+    the transition refuse an unauthorised actor first, so nothing is posted for them.
+    ``transition_order`` still enforces authority atomically; this only refuses earlier.
+    """
+    _validate_actor_id(actor_role, actor_id)
+    order_sql = sql_uuid(order_id, "order_id")
+    actor_sql = sql_uuid(actor_id, "actor_id")
+    result = run_sql_script(
+        f"SELECT 1 FROM public.orders o WHERE o.id={order_sql} "
+        f"AND ({_order_authority_sql(actor_role, actor_sql)});"
+    )
+    if not result.ok or not result.rows:
+        raise AppError(code="forbidden", message="Order actor is not authorized", http_status=403)
+
+
 def transition_order(
     *,
     order_id: str,
@@ -515,23 +557,12 @@ def transition_order(
     from_status = snapshot.status.value
     actor_sql = sql_uuid(actor_id, "actor_id")
     # Roles alone and a caller-supplied refund_path flag are not order authority.
-    authority_sql = {
-        ActorRole.CUSTOMER: f"o.customer_id = {actor_sql}",
-        ActorRole.VENDOR: (
-            "EXISTS (SELECT 1 FROM public.vendors v "
-            f"WHERE v.id=o.vendor_id AND v.owner_user_id={actor_sql})"
-        ),
-        ActorRole.ADMIN: (
-            f"public.has_admin_permission({actor_sql}, 'logistics.manage')"
-            if event in LOGISTICS_ADMIN_EVENTS
-            or (return_restock and snapshot.status == OrderStatus.SHIPPED)
-            else (
-                "EXISTS (SELECT 1 FROM public.user_roles ur "
-                f"WHERE ur.user_id={actor_sql} AND ur.role IN ('admin','superadmin'))"
-            )
-        ),
-        ActorRole.SYSTEM: "true",  # identity checked above; internal trusted caller only
-    }[actor_role]
+    authority_sql = _order_authority_sql(
+        actor_role,
+        actor_sql,
+        logistics=event in LOGISTICS_ADMIN_EVENTS
+        or (return_restock and snapshot.status == OrderStatus.SHIPPED),
+    )
     cancellation = event in CANCELLATION_EVENTS
     refund_authority = refund_path and actor_role in {ActorRole.ADMIN, ActorRole.VENDOR}
     update_script = f"""

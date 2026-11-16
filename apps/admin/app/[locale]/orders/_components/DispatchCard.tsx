@@ -16,6 +16,8 @@ import {
   type DispatchAction,
   FAILURE_CODES,
   type FailureCode,
+  doorPaymentActions,
+  riderCashDueNgwee,
   isHandoverCodeWellFormed,
   isPodPublicIdWellFormed,
   isStale,
@@ -29,15 +31,34 @@ import {
 type DispatchCardProps = {
   dispatch: Dispatch;
   flagEnabled: boolean;
+  doorPaymentEnabled?: boolean;
   onChanged: () => void;
+};
+
+const DOOR_ERROR_KEYS: Record<string, string> = {
+  door_payment_in_flight: "inFlight",
+  door_payment_attempts_exhausted: "attemptsExhausted",
+  door_payment_cash_over_cap: "cashOverCap",
+  door_payment_already_settled: "alreadySettled",
+  door_payment_order_not_payable: "orderNotPayable",
+  door_payment_invalid_phone: "invalidPhone",
+  door_payment_operator_unsupported: "operatorUnsupported",
+  door_payment_required: "required",
 };
 
 type MessageState = { text: string; whatsappTo: string | null } | null;
 
-export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardProps) {
+export function DispatchCard({
+  dispatch,
+  flagEnabled,
+  doorPaymentEnabled = false,
+  onChanged,
+}: DispatchCardProps) {
   const t = useTranslations("admin.dispatch");
   const [openAction, setOpenAction] = useState<DispatchAction | null>(null);
-  const [courierRef, setCourierRef] = useState(dispatch.courier_reference ?? "");
+  const [courierRef, setCourierRef] = useState(
+    dispatch.courier_reference ?? "",
+  );
   const [reason, setReason] = useState("");
   const [podId, setPodId] = useState("");
   const [code, setCode] = useState("");
@@ -45,10 +66,16 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
-  const [failureCode, setFailureCode] = useState<FailureCode>("customer_unavailable");
-  const [cashText, setCashText] = useState(ngweeToKwachaText(dispatch.cod_amount_ngwee || null));
+  const [failureCode, setFailureCode] = useState<FailureCode>(
+    "customer_unavailable",
+  );
+  const cashDue = riderCashDueNgwee(dispatch);
+  const paidAtDoor = dispatch.cod_amount_ngwee > 0 && cashDue === 0;
+  const [cashText, setCashText] = useState(ngweeToKwachaText(cashDue || null));
   const [cashMethod, setCashMethod] = useState<"cash" | "mobile_money">("cash");
-  const [costText, setCostText] = useState(ngweeToKwachaText(dispatch.actual_cost_ngwee ?? null));
+  const [costText, setCostText] = useState(
+    ngweeToKwachaText(dispatch.actual_cost_ngwee ?? null),
+  );
 
   const actions = flagEnabled ? actionsFor(dispatch) : [];
   const stale = isStale(dispatch);
@@ -71,20 +98,35 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
       setError(t("errors.invalidTransition"));
       return;
     }
+    if (err instanceof ApiError && err.code in DOOR_ERROR_KEYS) {
+      setError(t(`doorPayment.errors.${DOOR_ERROR_KEYS[err.code]}`));
+      return;
+    }
     if (err instanceof ApiError && err.code === "feature_disabled") {
       setError(t("errors.disabled"));
       return;
     }
     const classified = classifyAdminRequestError(err);
-    setError(classified.kind === "permission" ? t("errors.permissionDenied") : t("errors.generic"));
+    setError(
+      classified.kind === "permission"
+        ? t("errors.permissionDenied")
+        : t("errors.generic"),
+    );
   };
 
-  const run = async (path: string, body: Record<string, unknown>, success?: string) => {
+  const run = async (
+    path: string,
+    body: Record<string, unknown>,
+    success?: string,
+  ) => {
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      await ordersApi.request(path, { method: "POST", body: JSON.stringify(body) });
+      await ordersApi.request(path, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
       setOpenAction(null);
       if (success) setNotice(success);
       onChanged();
@@ -106,8 +148,8 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
         setError(t("errors.podFormat"));
         return;
       }
-      const cash = dispatch.cod_amount_ngwee > 0 ? kwachaTextToNgwee(cashText) : null;
-      if (dispatch.cod_amount_ngwee > 0 && (cash === null || Number.isNaN(cash))) {
+      const cash = cashDue > 0 ? kwachaTextToNgwee(cashText) : null;
+      if (cashDue > 0 && (cash === null || Number.isNaN(cash))) {
         setError(t("errors.codRequired"));
         return;
       }
@@ -117,7 +159,7 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
           handover_code: proofIsCode ? code.trim() : null,
           pod_photo_public_id: proofIsCode ? null : podId.trim(),
           cod_collected_ngwee: cash,
-          cod_collected_method: dispatch.cod_amount_ngwee > 0 ? cashMethod : null,
+          cod_collected_method: cashDue > 0 ? cashMethod : null,
         },
         t("complete.success"),
       );
@@ -141,10 +183,13 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
       setBusy(true);
       setError(null);
       try {
-        await ordersApi.request(`/admin/dispatch/requests/${dispatch.id}/cost`, {
-          method: "PATCH",
-          body: JSON.stringify({ actual_cost_ngwee: cost }),
-        });
+        await ordersApi.request(
+          `/admin/dispatch/requests/${dispatch.id}/cost`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ actual_cost_ngwee: cost }),
+          },
+        );
         setOpenAction(null);
         setNotice(t("cost.success"));
         onChanged();
@@ -163,10 +208,13 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
       setBusy(true);
       setError(null);
       try {
-        await ordersApi.request(`/admin/dispatch/requests/${dispatch.id}/handover`, {
-          method: "POST",
-          body: JSON.stringify({ code: code.trim() }),
-        });
+        await ordersApi.request(
+          `/admin/dispatch/requests/${dispatch.id}/handover`,
+          {
+            method: "POST",
+            body: JSON.stringify({ code: code.trim() }),
+          },
+        );
         setCode("");
         setOpenAction(null);
         setNotice(t("handover.success"));
@@ -175,11 +223,18 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
         if (err instanceof ApiError) {
           const handover = classifyHandoverError(err);
           if (handover.kind === "invalid") {
-            setError(t("errors.handoverInvalid", { count: handover.attemptsRemaining ?? 0 }));
+            setError(
+              t("errors.handoverInvalid", {
+                count: handover.attemptsRemaining ?? 0,
+              }),
+            );
             return;
           }
           if (handover.kind === "locked") {
-            const minutes = Math.max(1, Math.ceil((handover.retryAfter ?? 60) / 60));
+            const minutes = Math.max(
+              1,
+              Math.ceil((handover.retryAfter ?? 60) / 60),
+            );
             setError(t("errors.handoverLocked", { minutes }));
             return;
           }
@@ -219,11 +274,18 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
     setError(null);
     setNotice(null);
     try {
-      const result = await ordersApi.request<{ enqueued: boolean; text: string }>(
-        `/admin/dispatch/requests/${dispatch.id}/notify`,
-        { method: "POST", body: JSON.stringify({ channel }) },
+      const result = await ordersApi.request<{
+        enqueued: boolean;
+        text: string;
+      }>(`/admin/dispatch/requests/${dispatch.id}/notify`, {
+        method: "POST",
+        body: JSON.stringify({ channel }),
+      });
+      setNotice(
+        result.enqueued
+          ? t("notify.queued", { channel })
+          : t("notify.duplicate"),
       );
-      setNotice(result.enqueued ? t("notify.queued", { channel }) : t("notify.duplicate"));
       onChanged();
     } catch (err) {
       fail(err);
@@ -236,9 +298,10 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
     setError(null);
     setNotice(null);
     try {
-      const result = await ordersApi.request<{ text: string; whatsapp_to: string | null }>(
-        `/admin/dispatch/requests/${dispatch.id}/message`,
-      );
+      const result = await ordersApi.request<{
+        text: string;
+        whatsapp_to: string | null;
+      }>(`/admin/dispatch/requests/${dispatch.id}/message`);
       setMessage({ text: result.text, whatsappTo: result.whatsapp_to });
       try {
         await navigator.clipboard.writeText(result.text);
@@ -251,7 +314,9 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
     }
   };
 
-  const shareUrl = message ? whatsAppShareUrl(message.whatsappTo, message.text) : null;
+  const shareUrl = message
+    ? whatsAppShareUrl(message.whatsappTo, message.text)
+    : null;
 
   return (
     <li
@@ -261,9 +326,14 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
-          <p className="font-mono text-sm text-text">{dispatch.order_reference}</p>
+          <p className="font-mono text-sm text-text">
+            {dispatch.order_reference}
+          </p>
           <p className="text-xs text-muted">
-            {t("active.meta", { courier: dispatch.courier_name, vendor: dispatch.vendor_name })}
+            {t("active.meta", {
+              courier: dispatch.courier_name,
+              vendor: dispatch.vendor_name,
+            })}
           </p>
         </div>
         <span className="rounded-full border border-border px-2 py-0.5 text-xs text-text">
@@ -285,29 +355,39 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
           <div>
             <p className={dispatch.remitted ? "text-success" : "text-warning"}>
               {dispatch.remitted
-                ? t("active.cashRemitted", { amount: formatK(dispatch.cod_collected_ngwee) })
-                : t("active.cashHeld", { amount: formatK(dispatch.cod_collected_ngwee) })}
+                ? t("active.cashRemitted", {
+                    amount: formatK(dispatch.cod_collected_ngwee),
+                  })
+                : t("active.cashHeld", {
+                    amount: formatK(dispatch.cod_collected_ngwee),
+                  })}
             </p>
           </div>
         ) : null}
         {dispatch.actual_cost_ngwee != null ? (
           <div>
             <p className="text-muted">
-              {t("active.actualCost", { amount: formatK(dispatch.actual_cost_ngwee) })}
+              {t("active.actualCost", {
+                amount: formatK(dispatch.actual_cost_ngwee),
+              })}
             </p>
           </div>
         ) : null}
         <div>
           <p className="text-text">
-            {dispatch.cod_amount_ngwee > 0
-              ? t("active.codDue", { amount: formatK(dispatch.cod_amount_ngwee) })
-              : t("active.prepaid")}
+            {cashDue > 0
+              ? t("active.codDue", { amount: formatK(cashDue) })
+              : paidAtDoor
+                ? t("doorPayment.states.paid")
+                : t("active.prepaid")}
           </p>
         </div>
         {dispatch.quoted_price_ngwee !== null ? (
           <div>
             <p className="text-muted">
-              {t("active.quoted", { amount: formatK(dispatch.quoted_price_ngwee) })}
+              {t("active.quoted", {
+                amount: formatK(dispatch.quoted_price_ngwee),
+              })}
             </p>
           </div>
         ) : null}
@@ -323,13 +403,17 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
             <p className={stale ? "font-medium text-warning" : "text-muted"}>
               {stale
                 ? t("active.stale")
-                : t("active.requestedAgo", { minutes: minutesWaiting(dispatch.requested_at) })}
+                : t("active.requestedAgo", {
+                    minutes: minutesWaiting(dispatch.requested_at),
+                  })}
             </p>
           </div>
         ) : null}
         {dispatch.notify_count > 0 ? (
           <div>
-            <p className="text-muted">{t("active.notified", { count: dispatch.notify_count })}</p>
+            <p className="text-muted">
+              {t("active.notified", { count: dispatch.notify_count })}
+            </p>
           </div>
         ) : null}
         {dispatch.failure_reason ? (
@@ -353,7 +437,52 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
             <p className="text-warning">{t("active.locked")}</p>
           </div>
         ) : null}
+        {doorPaymentEnabled && dispatch.door_payment_state ? (
+          <div>
+            <p
+              className={
+                dispatch.door_payment_state === "paid" ||
+                dispatch.door_payment_state === "cash"
+                  ? "text-success"
+                  : dispatch.door_payment_state === "exception" ||
+                      dispatch.door_payment_state === "failed"
+                    ? "text-warning"
+                    : "text-muted"
+              }
+              data-testid="door-payment-state"
+            >
+              {t(`doorPayment.states.${dispatch.door_payment_state}`)}
+            </p>
+          </div>
+        ) : null}
       </div>
+
+      {flagEnabled &&
+      doorPaymentEnabled &&
+      doorPaymentActions(dispatch).length > 0 ? (
+        <div
+          className="flex flex-wrap gap-2"
+          aria-label={t("doorPayment.title")}
+        >
+          {doorPaymentActions(dispatch).map((action) => (
+            <button
+              key={action}
+              type="button"
+              className="rounded border border-border px-3 py-1 text-sm"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  `/admin/dispatch/requests/${dispatch.id}/door-payment/${action}`,
+                  {},
+                  t(`doorPayment.done.${action}`),
+                )
+              }
+            >
+              {t(`doorPayment.actions.${action}`)}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {flagEnabled && canNotify(dispatch) ? (
         <div className="flex flex-wrap gap-2">
@@ -385,7 +514,9 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
 
       {message ? (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted">{t("notify.messageTitle")}</p>
+          <p className="text-xs font-medium text-muted">
+            {t("notify.messageTitle")}
+          </p>
           <textarea
             readOnly
             className="min-h-32 w-full rounded-md border border-border px-3 py-2 font-mono text-xs"
@@ -412,7 +543,9 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
               key={action}
               type="button"
               className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
-                openAction === action ? "border-primary text-primary" : "border-border text-text"
+                openAction === action
+                  ? "border-primary text-primary"
+                  : "border-border text-text"
               }`}
               onClick={() => {
                 setError(null);
@@ -445,9 +578,13 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                   maxLength={6}
                   value={code}
                   placeholder={t("handover.placeholder")}
-                  onChange={(change) => setCode(change.target.value.replace(/[^0-9]/g, ""))}
+                  onChange={(change) =>
+                    setCode(change.target.value.replace(/[^0-9]/g, ""))
+                  }
                 />
-                <span className="block text-xs text-muted">{t("complete.proofHelp")}</span>
+                <span className="block text-xs text-muted">
+                  {t("complete.proofHelp")}
+                </span>
               </label>
               {code.trim().length === 0 ? (
                 <label className="block space-y-1 text-sm">
@@ -461,11 +598,11 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                   />
                 </label>
               ) : null}
-              {dispatch.cod_amount_ngwee > 0 ? (
+              {cashDue > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   <label className="block flex-1 space-y-1 text-sm">
                     <span className="text-muted">
-                      {t("complete.cashLabel", { amount: formatK(dispatch.cod_amount_ngwee) })}
+                      {t("complete.cashLabel", { amount: formatK(cashDue) })}
                     </span>
                     <input
                       className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
@@ -475,23 +612,33 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                     />
                   </label>
                   <label className="block space-y-1 text-sm">
-                    <span className="text-muted">{t("complete.methodLabel")}</span>
+                    <span className="text-muted">
+                      {t("complete.methodLabel")}
+                    </span>
                     <select
                       className="min-h-11 w-full rounded-md border border-border px-3"
                       value={cashMethod}
                       onChange={(change) =>
                         setCashMethod(
-                          change.target.value === "mobile_money" ? "mobile_money" : "cash",
+                          change.target.value === "mobile_money"
+                            ? "mobile_money"
+                            : "cash",
                         )
                       }
                     >
                       <option value="cash">{t("complete.methodCash")}</option>
-                      <option value="mobile_money">{t("complete.methodMobileMoney")}</option>
+                      <option value="mobile_money">
+                        {t("complete.methodMobileMoney")}
+                      </option>
                     </select>
                   </label>
                 </div>
               ) : (
-                <p className="text-xs text-muted">{t("complete.prepaidHelp")}</p>
+                <p className="text-xs text-muted">
+                  {paidAtDoor
+                    ? t("doorPayment.states.paid")
+                    : t("complete.prepaidHelp")}
+                </p>
               )}
             </div>
           ) : null}
@@ -505,7 +652,9 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                 placeholder={t("returned.notePlaceholder")}
                 onChange={(change) => setReason(change.target.value)}
               />
-              <span className="block text-xs text-muted">{t("returned.help")}</span>
+              <span className="block text-xs text-muted">
+                {t("returned.help")}
+              </span>
             </label>
           ) : null}
           {openAction === "recordCost" ? (
@@ -530,9 +679,13 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                 maxLength={6}
                 value={code}
                 placeholder={t("handover.placeholder")}
-                onChange={(change) => setCode(change.target.value.replace(/[^0-9]/g, ""))}
+                onChange={(change) =>
+                  setCode(change.target.value.replace(/[^0-9]/g, ""))
+                }
               />
-              <span className="block text-xs text-muted">{t("handover.help")}</span>
+              <span className="block text-xs text-muted">
+                {t("handover.help")}
+              </span>
             </label>
           ) : null}
           {openAction === "accept" || openAction === "pickUp" ? (
@@ -554,7 +707,9 @@ export function DispatchCard({ dispatch, flagEnabled, onChanged }: DispatchCardP
                 className="min-h-11 w-full rounded-md border border-border px-3"
                 value={failureCode}
                 onChange={(change) => {
-                  const next = FAILURE_CODES.find((value) => value === change.target.value);
+                  const next = FAILURE_CODES.find(
+                    (value) => value === change.target.value,
+                  );
                   if (next) setFailureCode(next);
                 }}
               >

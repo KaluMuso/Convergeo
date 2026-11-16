@@ -165,11 +165,20 @@ def post_transaction(
     payment_id: str | None = None,
     payout_id: str | None = None,
     refund_id: str | None = None,
+    precondition_sql: str | None = None,
+    followup_sql: str | None = None,
     **event_args: Any,
 ) -> PostedTransaction:
     """Post a balanced ledger transaction from a template (sole write path).
 
     Same idempotency_key returns the existing transaction without double-posting.
+
+    ``precondition_sql`` runs inside the posting transaction before the insert (locks,
+    a guard ``DO`` block that raises to abort); ``followup_sql`` runs after it, before
+    COMMIT, so derived state is written atomically with the postings. Both are
+    trusted, caller-built SQL and must not return rows. Neither runs when the key
+    already exists (the early idempotent return) — callers needing that re-run the
+    follow-up themselves, so it must be idempotent.
     """
     key = idempotency_key.strip()
     if not key:
@@ -212,6 +221,7 @@ def post_transaction(
 
     script = f"""
 BEGIN;
+{precondition_sql or ""}
 WITH ins AS (
   INSERT INTO public.ledger_transactions (
     id,
@@ -247,6 +257,7 @@ posted AS (
   RETURNING transaction_id
 )
 SELECT id::text FROM ins;
+{followup_sql or ""}
 COMMIT;
 """
     insert_result = run_sql_script(script)

@@ -8,6 +8,7 @@ from collections.abc import Generator
 from typing import Any
 
 import pytest
+from app.errors import AppError
 from app.services.ledger.engine import account_balance_ngwee
 from app.services.ledger.templates import commission_ngwee_from_bps
 from app.services.orders.state import ActorRole, OrderStatus
@@ -23,6 +24,8 @@ from app.services.payments.cod import (
 )
 from tests.rls.conftest import (
     MIGRATIONS_DIR,
+    PERSONA_UIDS,
+    Persona,
     PgConn,
     apply_migrations,
     resolve_db_url,
@@ -32,6 +35,10 @@ from tests.rls.conftest import (
 
 VENDOR_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 CUSTOMER_ID = "11111111-1111-1111-1111-111111111111"
+# Seeded by seed_matrix_fixtures with an admin user_roles row. The order state
+# machine only authorises an ADMIN actor that holds that DB role, so a random
+# UUID is (correctly) refused with 403.
+ADMIN_ID = str(PERSONA_UIDS[Persona.ADMIN])
 PLATFORM_CASH_ID = "c1000000-0000-0000-0000-000000000001"
 ESCROW_ID = "c2000000-0000-0000-0000-000000000002"
 COMMISSION_ID = "c3000000-0000-0000-0000-000000000003"
@@ -179,6 +186,14 @@ def _transaction_posting_sum(db: PgConn, idempotency_key: str) -> int:
         JOIN public.ledger_transactions t ON t.id = p.transaction_id
         WHERE t.idempotency_key = '{idempotency_key}';
         """
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
+
+
+def _ledger_txn_count(db: PgConn, order_id: str) -> int:
+    result = db.run(
+        f"SELECT count(*)::text FROM public.ledger_transactions WHERE order_id = '{order_id}';"
     )
     assert result.ok and result.rows
     return int(result.rows[0])
@@ -339,7 +354,7 @@ class TestCodRefusalReversal:
         result = refuse_cod_collection(
             order_id=order_id,
             actor_role=ActorRole.ADMIN,
-            actor_id=str(uuid.uuid4()),
+            actor_id=ADMIN_ID,
             note="Customer refused delivery",
         )
 
@@ -351,6 +366,119 @@ class TestCodRefusalReversal:
 
         status = db.run(f"SELECT status FROM public.orders WHERE id = '{order_id}';")
         assert status.ok and status.rows == [OrderStatus.CANCELLED.value]
+
+    def test_refusal_by_actor_without_admin_role_is_forbidden(self, db: PgConn) -> None:
+        order_id = str(uuid.uuid4())
+        subtotal = 45_000
+        snapshot = {
+            "lines": [
+                _snapshot_line(
+                    category_key="groceries",
+                    rate_bps=500,
+                    line_total_ngwee=subtotal,
+                )
+            ]
+        }
+        _insert_cod_order(
+            db,
+            order_id=order_id,
+            subtotal_ngwee=subtotal,
+            delivery_fee_ngwee=5_000,
+            commission_snapshot=snapshot,
+            status="shipped",
+        )
+
+        cod_before = account_balance_ngwee(COD_RECEIVABLE_ID)
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        with pytest.raises(AppError) as excinfo:
+            refuse_cod_collection(
+                order_id=order_id,
+                actor_role=ActorRole.ADMIN,
+                actor_id=str(uuid.uuid4()),
+                note="Not an admin",
+            )
+
+        assert excinfo.value.http_status == 403
+        status = db.run(f"SELECT status FROM public.orders WHERE id = '{order_id}';")
+        assert status.ok and status.rows == [OrderStatus.SHIPPED.value]
+        # Nothing may be posted for an unauthorised actor (no receivable, no reversal).
+        assert _ledger_txn_count(db, order_id) == 0
+        assert account_balance_ngwee(COD_RECEIVABLE_ID) == cod_before
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+
+    def test_retry_after_failed_transition_cancels_once_and_reverses_once(
+        self, db: PgConn, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        order_id = str(uuid.uuid4())
+        subtotal = 45_000
+        snapshot = {
+            "lines": [
+                _snapshot_line(
+                    category_key="groceries",
+                    rate_bps=500,
+                    line_total_ngwee=subtotal,
+                )
+            ]
+        }
+        _insert_cod_order(
+            db,
+            order_id=order_id,
+            subtotal_ngwee=subtotal,
+            delivery_fee_ngwee=5_000,
+            commission_snapshot=snapshot,
+            status="shipped",
+        )
+        cod_before = account_balance_ngwee(COD_RECEIVABLE_ID)
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+
+        def failing_transition(**_: Any) -> Any:
+            raise RuntimeError("transition failed after reversal")
+
+        monkeypatch.setattr("app.services.payments.cod.transition_order", failing_transition)
+        with pytest.raises(RuntimeError):
+            refuse_cod_collection(
+                order_id=order_id,
+                actor_role=ActorRole.ADMIN,
+                actor_id=ADMIN_ID,
+                note="Customer refused delivery",
+            )
+        # The reversal landed but the order is still open.
+        status = db.run(f"SELECT status FROM public.orders WHERE id = '{order_id}';")
+        assert status.ok and status.rows == [OrderStatus.SHIPPED.value]
+
+        monkeypatch.undo()
+        retry = refuse_cod_collection(
+            order_id=order_id,
+            actor_role=ActorRole.ADMIN,
+            actor_id=ADMIN_ID,
+            note="Customer refused delivery",
+        )
+
+        assert retry.created is False
+        assert retry.from_status == OrderStatus.SHIPPED.value
+        assert retry.to_status == OrderStatus.CANCELLED.value
+        status = db.run(f"SELECT status FROM public.orders WHERE id = '{order_id}';")
+        assert status.ok and status.rows == [OrderStatus.CANCELLED.value]
+
+        reversals = db.run(
+            f"SELECT count(*)::text FROM public.ledger_transactions "
+            f"WHERE idempotency_key = '{reversal_idempotency_key(order_id)}';"
+        )
+        assert reversals.ok and reversals.rows == ["1"]
+        assert _transaction_posting_sum(db, reversal_idempotency_key(order_id)) == 0
+        assert account_balance_ngwee(COD_RECEIVABLE_ID) == cod_before
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+
+        # A further replay is a pure no-op.
+        txn_count_before = _ledger_txn_count(db, order_id)
+        again = refuse_cod_collection(
+            order_id=order_id,
+            actor_role=ActorRole.ADMIN,
+            actor_id=ADMIN_ID,
+            note="Customer refused delivery",
+        )
+        assert again.created is False
+        assert _ledger_txn_count(db, order_id) == txn_count_before
 
 
 @pytest.mark.usefixtures("db_url_env")

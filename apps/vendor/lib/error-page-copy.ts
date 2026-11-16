@@ -1,8 +1,9 @@
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@vergeo/i18n";
+
 import bemCommon from "../../../packages/i18n/messages/bem/common.json";
 import enCommon from "../../../packages/i18n/messages/en/common.json";
 import frCommon from "../../../packages/i18n/messages/fr/common.json";
 import nyaCommon from "../../../packages/i18n/messages/nya/common.json";
-import { DEFAULT_LOCALE, LOCALES, type Locale } from "@vergeo/i18n";
 
 type ErrorPageCopy = (typeof enCommon)["errorPage"];
 

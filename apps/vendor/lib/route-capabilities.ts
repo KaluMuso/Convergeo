@@ -6,6 +6,7 @@ import { parseStringAllowlist, readFeatureFlag } from "./feature-flags";
 const INTAKE_FLAG = "waha_vendor_intake";
 const INTAKE_ALLOWLIST_KEY = "waha_intake_vendor_allowlist";
 const CLIPS_FLAG = "clips";
+const BUNDLES_FLAG = "bundles";
 
 async function resolveVendorIdForUser(userId: string | null): Promise<string | null> {
   if (!userId) {
@@ -31,6 +32,17 @@ export async function isClipsRouteAccessible(): Promise<boolean> {
     const cookieStore = await cookies();
     const supabase = createServerClient(cookieStore);
     return await readFeatureFlag(supabase, CLIPS_FLAG);
+  } catch {
+    return false;
+  }
+}
+
+/** Whether the vendor offers (W8 bundles) route may render (server-side, fail closed). */
+export async function isBundlesRouteAccessible(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    return await readFeatureFlag(supabase, BUNDLES_FLAG);
   } catch {
     return false;
   }

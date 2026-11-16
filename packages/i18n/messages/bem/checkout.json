@@ -47,7 +47,6 @@
     "mergeConflictLine": "Icintu {listing}: {code}",
     "mergePriceLine": "{item}: {previous} → {current} cimo cimo × {quantity} = {total} yonse",
     "mergeUnnamedItem": "Icintu #{id}",
-    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}.",
     "mergePriceNeedsReview": "Iyi quote tayasuminishiwe pano; ilefumishiwa mu cart. Ilolesheni nakabili ilyo tamulashita.",
     "mergeAccountChoice": "Sungani pickup ya account",
     "mergeGuestChoice": "Bomfyeni pickup ya guest",
@@ -81,7 +80,30 @@
     "updating": "Ileluka…",
     "vendorGroup": "Ashitisha vendor",
     "vendorSubtotal": "Subtotal ya vendor: {amount}",
-    "viewCart": "Loleni cart"
+    "viewCart": "Loleni cart",
+    "offerSavings": "⚠ Offer savings",
+    "offerSaving": "⚠ Offer saving {amount}",
+    "offerGift": "⚠ Free gift: {title} × {qty}",
+    "offerGiftWorth": "⚠ Worth {value} — free with your offer",
+    "types": {
+      "products": "⚠ Products",
+      "eventTickets": "⚠ Event tickets",
+      "services": "⚠ Services"
+    },
+    "tickets": {
+      "line": "⚠ {type} × {qty}",
+      "remove": "⚠ Remove",
+      "removeLabel": "⚠ Remove tickets for {title}",
+      "unavailable": "⚠ These tickets can no longer be bought. Remove them to check out.",
+      "platformFee": "⚠ Ticket service fee",
+      "prepaidOnly": "⚠ Event tickets are paid online (mobile money or card) and are not available for cash on delivery.",
+      "oneEvent": "⚠ Your cart already has tickets for another event or date. Check those out first, or remove them.",
+      "added": "⚠ Tickets added to your cart",
+      "addToCart": "⚠ Add to cart",
+      "adding": "⚠ Adding…",
+      "addFailed": "⚠ Could not add these tickets. Try again.",
+      "signInRequired": "⚠ Sign in to add tickets to your cart."
+    }
   },
   "checkout": {
     "card": {
@@ -169,7 +191,8 @@
         "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
         "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
         "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Ifintu fyasungwa pa",
@@ -214,7 +237,8 @@
         "capNote": "Cash on delivery ilipo ku ma-order ayafika {cap}.",
         "overCap": "Order yenu yonse ni {total}. Pa kulipila cash on delivery, fumyamo ifintu fimo nangu tumeni ama-order ayalekanalekana aya {cap} nangu panono.",
         "editCart": "Lungikeni cart"
-      }
+      },
+      "codNotForTickets": "⚠ Cash on delivery is not available when your order includes event tickets."
     },
     "pending": {
       "cancelledBody": "Mwakana mobile money prompt. Mungawesha limbi nangu saleni payment method yambi pa checkout.",
@@ -292,7 +316,16 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mukasenda ku seller",
         "placeOrderCod": "Tumeni order — lipileni pa delivery"
-      }
+      },
+      "deliveryConsent": {
+        "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order",
+        "hint": "Te ca kukakatila. Courier uwakwata licence kuti aleta order yenu. Nga tamusuminishe, abantu ba Vergeo5 e balaleta nangu balamwita intanshi. Kuti mwalula pa Account → Privacy.",
+        "saveFailed": "Twafilwa ukusunga ifi mwasala. Kuti mwatwalilila ukushita order."
+      },
+      "typeProducts": "⚠ Products",
+      "typeEventTickets": "⚠ Event tickets",
+      "ticketLine": "⚠ {type} × {qty}",
+      "platformFee": "⚠ Ticket service fee"
     },
     "stepAnnouncement": "Step {current} ya {total}",
     "steps": {
@@ -311,6 +344,9 @@
       "subtitle": "Suminisheni prompt ya {amount} pa phone yenu pakuti mukomplete payment.",
       "title": "Loleni phone yenu",
       "waiting": "Tuletekele approval…"
+    },
+    "tickets": {
+      "unavailable": "⚠ A ticket in your cart is no longer available. Review your cart."
     }
   },
   "variant": {

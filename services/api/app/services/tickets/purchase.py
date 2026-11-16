@@ -95,6 +95,10 @@ class ReleaseStaleClaimsResult:
     ttl_minutes: int
 
 
+# Paid issuance honours events unpublished after purchase (draft); see below.
+PAID_ISSUANCE_EVENT_STATUSES = frozenset({"published", "draft"})
+
+
 def _validate_uuid(value: str, field: str) -> None:
     if not _UUID_RE.match(value):
         raise AppError(
@@ -655,6 +659,21 @@ def add_ticket_to_checkout(
         platform_fee=fee,
     )
 
+    # Reserve the promo use atomically (row-locked in the DB) BEFORE claiming
+    # capacity, so an exhausted code fails the checkout without holding seats.
+    if promo_id and discount > 0:
+        try:
+            record_promo_redemption(
+                promo_id=promo_id,
+                event_id=str(ctx["event"]["id"]),
+                order_id=order_id,
+                customer_id=customer_id,
+                discount_ngwee=discount,
+            )
+        except AppError:
+            release_gmv_reservation(checkout_group_id)
+            raise
+
     claim = claim_ticket_or_raise(
         service_client,
         instance_id=instance_id,
@@ -678,14 +697,6 @@ def add_ticket_to_checkout(
         affiliate_code=affiliate_code,
     )
     _update_commission_snapshot(order_id, final_snapshot)
-    if promo_id and discount > 0:
-        record_promo_redemption(
-            promo_id=promo_id,
-            event_id=str(ctx["event"]["id"]),
-            order_id=order_id,
-            customer_id=customer_id,
-            discount_ngwee=discount,
-        )
 
     subtotal = charged
     return TicketCheckoutResult(
@@ -723,12 +734,33 @@ def _ticket_secrets(ticket_id: str) -> tuple[str, str]:
     return qr_secret, pin_hash
 
 
-def _link_claimed_tickets(order_item_id: str, ticket_ids: tuple[str, ...]) -> int:
-    if not ticket_ids:
+def _link_claimed_tickets(
+    order_item_id: str,
+    ticket_ids: tuple[str, ...],
+    *,
+    instance_id: str | None = None,
+    ticket_type_id: str | None = None,
+    limit: int | None = None,
+) -> int:
+    """Link up to ``limit`` unlinked claims of this item's type and instance to it.
+
+    An order with several ticket lines (unified checkout, or a line split by an
+    offer) carries all its claim ids in one snapshot: each line takes only the
+    claims of its own (type, instance) and never more than its quantity, so the
+    claims are shared out exactly and no extra ticket is minted.
+    """
+    if not ticket_ids or (limit is not None and limit <= 0):
         return 0
     item_sql = sql_uuid(order_item_id, "order_item_id")
+    scope_sql = ""
+    if instance_id is not None:
+        scope_sql += f"\n  AND instance_id = {sql_uuid(instance_id, 'instance_id')}"
+    if ticket_type_id is not None:
+        scope_sql += f"\n  AND ticket_type_id = {sql_uuid(ticket_type_id, 'ticket_type_id')}"
     linked = 0
     for ticket_id in ticket_ids:
+        if limit is not None and linked >= limit:
+            break
         tid_sql = sql_uuid(ticket_id, "ticket_id")
         qr_secret, pin_hash = _ticket_secrets(ticket_id)
         result = run_sql_script(
@@ -740,7 +772,7 @@ SET
   pin_hash = {_sql_text(pin_hash)}
 WHERE id = {tid_sql}
   AND order_item_id IS NULL
-  AND status <> 'void'
+  AND status <> 'void'{scope_sql}
 RETURNING id::text;
 """
         )
@@ -924,7 +956,10 @@ WHERE oi.order_id = {order_sql}
         if len(parts) != 6:
             raise RuntimeError("unexpected ticket order item row shape")
         order_item_id, qty_raw, instance_id, ticket_type_id, event_id, event_status = parts
-        if event_status != "published":
+        # A paid order on an event unpublished after purchase (draft) is still
+        # honoured — the buyer paid and unpublishing keeps sold tickets valid.
+        # Only cancelled/completed events block issuance.
+        if event_status not in PAID_ISSUANCE_EVENT_STATUSES:
             raise AppError(
                 code="tickets.event_not_published",
                 message="Tickets cannot be issued for an unavailable event",
@@ -951,7 +986,13 @@ WHERE oi.order_id = {order_sql}
 
         linked = 0
         if claim_ids:
-            linked = _link_claimed_tickets(order_item_id, claim_ids)
+            linked = _link_claimed_tickets(
+                order_item_id,
+                claim_ids,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                limit=needed,
+            )
             existing += linked
             needed = max(0, qty - existing)
 
@@ -1196,7 +1237,7 @@ WHERE coalesce(counts.issued, 0) < oi.qty
     JOIN public.events blocked_e ON blocked_e.id = blocked_ei.event_id
     WHERE blocked_oi.order_id = o.id
       AND blocked_oi.item_kind = 'ticket'
-      AND blocked_e.status <> 'published'
+      AND blocked_e.status NOT IN ('published', 'draft')
   )
 GROUP BY o.id
 ORDER BY o.id;

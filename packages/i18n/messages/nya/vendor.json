@@ -118,7 +118,7 @@
           "description": "⚠ Create your vendor account on mobile or desktop — no upfront fees."
         },
         "kyc": {
-          "title": "⚠ Verify with T1 KYC",
+          "title": "⚠ Verify your ID",
           "description": "Upload your NRC and a selfie. We match your mobile-money name. Same-day approval."
         },
         "list": {
@@ -193,15 +193,15 @@
   "onboarding": {
     "meta": {
       "title": "Seller invite onboarding — Convergeo",
-      "description": "⚠ Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
+      "description": "⚠ Complete your invite-only seller application and verify your ID. Listings stay locked until admin approval."
     },
     "invite": {
       "eyebrow": "Invite / concierge beta",
-      "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo approves your KYC and grants seller access."
+      "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo verifies your ID and grants seller access."
     },
     "steps": {
       "business": "Business",
-      "kyc": "Verify ID",
+      "kyc": "⚠ Verify your ID",
       "review": "Review"
     },
     "stepAnnouncement": "⚠ Step {current} of {total}",
@@ -235,7 +235,7 @@
       "saving": "Saving…"
     },
     "kyc": {
-      "heading": "T1 verification",
+      "heading": "⚠ Verify your ID",
       "intro": "Upload your NRC and a selfie. We match your mobile-money name. Nothing goes public until approved.",
       "nrcLabel": "NRC photo",
       "nrcHelp": "Capture the front of your National Registration Card in good light.",
@@ -280,10 +280,10 @@
       "submitting": "Tumizaniting…",
       "editBusiness": "Edit business",
       "editDocs": "Edit documents",
-      "gateNotice": "⚠ Your listings stay hidden until KYC is approved."
+      "gateNotice": "⚠ Your listings stay hidden until your ID is verified."
     },
     "status": {
-      "heading": "Verification status",
+      "heading": "⚠ Verify your ID",
       "pending": {
         "title": "Under review",
         "body": "We are verifying your documents. You will get a WhatsApp update when done.",
@@ -369,6 +369,13 @@
       "ctaFinish": "Pitirizani kutsimikizira",
       "ctaFix": "Konzani ndi kutumizanso",
       "pendingNote": "You can look around while you wait. Your listings stay hidden from buyers until you're approved."
+    },
+    "back": "⚠ Back",
+    "saveLater": {
+      "cta": "⚠ Save and continue later",
+      "saving": "⚠ Saving…",
+      "saved": "⚠ Saved. Come back any time and you will pick up right here.",
+      "savedLocal": "⚠ Saved on this device. Come back on this phone to pick up where you left off."
     }
   },
   "listings": {
@@ -452,7 +459,7 @@
       "publishing": "Publishing…",
       "descriptionLabel": "Listing description",
       "descriptionHelp": "Describe this specific item or offer in at least 20 characters.",
-      "draftNotice": "Saving a draft does not publish the listing.",
+      "draftNotice": "⚠ Saving a draft never publishes the listing. Category and release rules only apply when you publish.",
       "descriptionInvalid": "Enter at least 20 characters, excluding spaces at the start and end.",
       "saveDraft": "Save draft",
       "savingDraft": "Saving draft…",
@@ -508,9 +515,25 @@
       "wholesaleHelp": "T2+ verified businesses only",
       "wholesaleMeasureUnavailable": "⚠ Wholesale tiers for per-measure listings are not available yet.",
       "moqLabel": "Minimum order quantity",
-      "evidenceDraftNotice": "⚠ Used and Class D listings are saved as drafts. Upload at least one evidence photo before publishing.",
+      "evidenceDraftNotice": "⚠ Used listings are saved as drafts. Upload at least one evidence photo before publishing.",
       "saveDraft": "⚠ Save draft and add photos",
-      "savingDraft": "⚠ Saving draft…"
+      "savingDraft": "⚠ Saving draft…",
+      "classHintD": "⚠ One-of-a-kind or standalone item. It can be new, refurbished or used. It needs its own category and a description of at least 20 characters.",
+      "classHintE": "⚠ Made to order: set a lead time and a weekly capacity. Stock is not counted and the item stays available.",
+      "conditionUsedHint": "⚠ Used items need a short description of wear or defects and at least one photo before they can go live. New and refurbished items need neither.",
+      "conditionGradeLabel": "⚠ Condition grade",
+      "gradeExcellent": "⚠ Excellent",
+      "gradeGood": "⚠ Good",
+      "gradeFair": "⚠ Fair",
+      "gradeParts": "⚠ For parts / not working",
+      "fulfilmentLockedHint": "⚠ Class E items are always made to order, so a lead time is required.",
+      "fulfilmentOptionsLabel": "⚠ How can buyers get this item?",
+      "fulfilmentOptionsHelp": "⚠ Choose every option you offer. Checkout only shows options that every item in the order supports.",
+      "fulfilmentOptionsInvalid": "⚠ Choose at least one way for buyers to get this item.",
+      "optionLusakaDelivery": "⚠ Delivery in Lusaka",
+      "optionPickupShop": "⚠ Pickup at my shop or branch",
+      "optionPickupNationwide": "⚠ Nationwide pickup (buyers anywhere in Zambia can collect)",
+      "stockLockedHint": "⚠ Made-to-order items are not stock-counted, so they are always available."
     },
     "success": {
       "live": "Listing is live!",
@@ -533,7 +556,9 @@
       "retryHint": "Onani connection yanu, then try again.",
       "canonicalRequired": "Classes A, B and C require a catalogue product. Use Attach to catalogue or Create catalogue product.",
       "standaloneDetailsRequired": "Select a category and add a description of at least 20 characters for this standalone listing.",
-      "policyBlocked": "This listing cannot currently be published under the category or release policy. Review its fields and contact support if needed."
+      "policyBlocked": "⚠ This listing can't be published under the current category or release rules. Your draft is safe. Contact support if you need it live.",
+      "draftInvalid": "⚠ We couldn't save this draft. Fix the highlighted fields and try again.",
+      "publishBlocked": "⚠ This listing can't go live yet. Fix the highlighted fields. You can still save it as a draft."
     },
     "import": {
       "meta": {
@@ -726,12 +751,17 @@
         "draft": "Ndinu nokha mukuona",
         "active": "Ogula angaone ndi kuyitanitsa",
         "paused": "Yabisidwa kwa ogula"
+      },
+      "removed": {
+        "title": "⚠ This listing was removed",
+        "body": "⚠ It is no longer visible to buyers and cannot be edited. Past orders keep their record of it.",
+        "back": "⚠ Back to listings"
       }
     },
     "kycGate": {
       "title": "Verification still in progress",
       "body": "You can prepare listings now, but buyers only see them after your verification is approved.",
-      "cta": "Check verification status",
+      "cta": "⚠ Verify your ID",
       "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
     },
     "variants": {
@@ -824,6 +854,37 @@
         "title": "Stock and options",
         "body": "Enter how many you really have. Add options like size or colour when buyers must choose — each option keeps its own stock."
       }
+    },
+    "fieldErrors": {
+      "class_not_released": "⚠ This product class is not open for public sale yet.",
+      "category_policy_blocked": "⚠ This category does not allow that product class for live listings.",
+      "kyc_tier_too_low": "⚠ Your verification level is below what this category requires to go live. Verify your ID to continue.",
+      "category_required": "⚠ Choose a category.",
+      "canonical_product_required": "⚠ Attach a catalogue product for this class.",
+      "description_too_short": "⚠ Describe the item in at least 20 characters.",
+      "condition_grade_mismatch": "⚠ Choose a grade that matches the condition.",
+      "defect_notes_required": "⚠ Describe any wear or defects in at least 10 characters.",
+      "lead_time_required": "⚠ Enter a lead time in days for made-to-order items.",
+      "lead_time_invalid": "⚠ Lead time must be between 1 and 365 days.",
+      "lead_time_not_allowed": "⚠ Lead time only applies to made-to-order items.",
+      "capacity_required": "⚠ Weekly capacity is required for made-to-order (Class E) items.",
+      "capacity_too_low": "⚠ Weekly capacity must cover the minimum purchase quantity.",
+      "capacity_not_allowed": "⚠ Weekly capacity only applies to Class E items.",
+      "title_required": "⚠ Enter a title.",
+      "standalone_required": "⚠ This class is a standalone offer, not attached to a catalogue product.",
+      "fulfilment_options_invalid": "⚠ Choose at least one way for buyers to get this item.",
+      "compare_at_too_low": "⚠ The compare-at price must be higher than the price.",
+      "evidence_required": "⚠ Add at least one photo of the item before it goes live.",
+      "prohibited_listing": "⚠ This item or category cannot be sold on Vergeo5.",
+      "listing_rejected": "⚠ The listing was rejected. Check the details and try again.",
+      "stock_qty_required": "⚠ Enter how many units you have.",
+      "unit_step_each": "⚠ Items sold by the piece use a step of 1.",
+      "wholesale_measure": "⚠ Wholesale is not available for items sold by measure.",
+      "class_e_made_to_order": "⚠ Class E items must be made to order.",
+      "return_window_required": "⚠ Enter the return window in hours.",
+      "spec_invalid": "⚠ Check the product details you entered.",
+      "product_required": "⚠ Choose a catalogue product.",
+      "fulfilment_not_offered": "⚠ The seller does not offer this option for an item in your order."
     }
   },
   "profile": {
@@ -843,9 +904,9 @@
     },
     "fields": {
       "displayNameLabel": "Display name",
-      "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Tell buyers what you sell and why they should choose you…",
-      "descriptionHelp": "Aim for at least 50 characters — it helps buyers trust your shop.",
+      "descriptionLabel": "Your story",
+      "descriptionPlaceholder": "Who you are, since when, and what customers know you for…",
+      "descriptionHelp": "Keep it short — about 60 words. It shows at the top of your shop page as “Our story”.",
       "whatsappLabel": "WhatsApp number",
       "whatsappPlaceholder": "e.g. 0977 123456",
       "whatsappHelp": "Optional. Buyers can message you directly — shown as a “Chat on WhatsApp” button on your storefront.",
@@ -1185,9 +1246,9 @@
       "retryHint": "Onani connection yanu, then try again."
     },
     "kycBanner": {
-      "title": "Finish verification",
-      "body": "⚠ Your shop is not marked verified until KYC is approved with an auditable record.",
-      "cta": "⚠ View KYC status"
+      "title": "⚠ Verify your ID",
+      "body": "⚠ Your shop is not marked verified until your ID is approved with an auditable record.",
+      "cta": "⚠ Verify your ID"
     },
     "shortcuts": {
       "ariaLabel": "Quick links",
@@ -1199,15 +1260,15 @@
       "intro": "Yambani pamwamba — chofunika kwambiri chili patsogolo.",
       "items": {
         "kycFix": {
-          "title": "Fix your verification",
+          "title": "⚠ Fix your ID verification",
           "body": "We couldn't approve one of your documents. See what to change — you don't have to start over."
         },
         "kycFinish": {
-          "title": "Finish your verification",
+          "title": "⚠ Verify your ID",
           "body": "Buyers can't see your shop until we've checked your ID. It takes about 5 minutes."
         },
         "kycPending": {
-          "title": "Verification is being reviewed",
+          "title": "⚠ Your ID is being reviewed",
           "body": "Nothing to do now. Our team usually replies within 1 working day."
         },
         "ordersWaiting": {
@@ -1375,7 +1436,7 @@
       "methodFailed": "⚠ Could not update payout method. Try again.",
       "otpFailed": "Invalid or expired verification code.",
       "nameMismatch": "That MoMo name does not match your verified legal name.",
-      "kycRequired": "⚠ Complete KYC before changing your payout method.",
+      "kycRequired": "⚠ Verify your ID before changing your payout method.",
       "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
       "rateLimited": "Too many requests. Try again shortly.",
       "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow.",
@@ -1419,7 +1480,9 @@
       "loading": "Starting camera…",
       "denied": "Camera access blocked",
       "deniedBody": "Allow camera access in your browser settings, or enter the customer's PIN instead.",
-      "usePin": "Enter PIN instead"
+      "usePin": "Enter PIN instead",
+      "deniedNote": "⚠ Enter the pickup PIN above, or allow camera access in your browser settings to scan.",
+      "retry": "⚠ Try the camera again"
     },
     "pin": {
       "heading": "Enter pickup PIN",
@@ -1499,7 +1562,9 @@
         "loading": "Starting camera…",
         "denied": "Camera access blocked",
         "deniedBody": "Allow camera access in your browser settings to scan tickets.",
-        "useManual": "Enter ticket PIN instead"
+        "useManual": "Enter ticket PIN instead",
+        "deniedNote": "⚠ Enter the ticket PIN above, or allow camera access in your browser settings to scan.",
+        "retry": "⚠ Try the camera again"
       },
       "manual": {
         "heading": "Manual check-in",
@@ -1716,12 +1781,209 @@
       "actionFailed": "Action failed. Try again.",
       "notFound": "Event not found.",
       "required": "This field is required",
-      "kyc_required": "⚠ Complete KYC verification before creating events.",
+      "kyc_required": "⚠ Verify your ID before creating events.",
       "capacity_below_sold": "Capacity cannot be lower than tickets already sold.",
       "past_instance": "Move past dates forward before publishing.",
       "ends_before_starts": "End time must be after the start time.",
       "not_editable": "This event can no longer be edited.",
-      "invalid_transition": "That action is not available for this event."
+      "invalid_transition": "That action is not available for this event.",
+      "recurrenceRuleRequired": "⚠ Recurring events need a repeat rule and a timezone.",
+      "recurrenceSeedRequired": "⚠ A recurring series needs one starting date. Future dates are created for you."
+    },
+    "gate": {
+      "title": "⚠ Events are for verified organisers",
+      "intro": "⚠ Your account is not set up to run events yet. Pick the route that fits you.",
+      "become": {
+        "title": "⚠ Become an organiser",
+        "body": "⚠ Verify your ID once and you can create events, sell tickets and check guests in.",
+        "cta": "⚠ Become an organiser"
+      },
+      "collaborate": {
+        "title": "⚠ Run an event with a verified organiser",
+        "body": "⚠ Partner with an organiser who is already verified and let them host the tickets for your event.",
+        "cta": "⚠ Request a collaboration",
+        "soon": "⚠ Coming soon. We will notify you when collaboration requests open.",
+        "open": "⚠ Propose an event to an organiser"
+      }
+    },
+    "collab": {
+      "meta": {
+        "title": "⚠ Run an event with an organiser — Convergeo",
+        "description": "⚠ Propose an event to a verified organiser and run it together."
+      },
+      "loading": "⚠ Loading…",
+      "untitled": "⚠ Untitled event",
+      "status": {
+        "draft": "⚠ Draft",
+        "submitted": "⚠ Sent",
+        "changes_requested": "⚠ Changes needed",
+        "approved": "⚠ Approved",
+        "declined": "⚠ Declined",
+        "published": "⚠ Published"
+      },
+      "readiness": {
+        "label": "⚠ Readiness",
+        "value": "⚠ {pct}% ready"
+      },
+      "hub": {
+        "title": "⚠ Run an event with an organiser",
+        "intro": "⚠ Propose an event to a verified organiser. They host the tickets and you appear as co-host once they approve.",
+        "newCta": "⚠ Propose an event",
+        "inboxCta": "⚠ Organiser inbox",
+        "empty": "⚠ You have not proposed any events yet."
+      },
+      "inbox": {
+        "title": "⚠ Collaboration requests",
+        "intro": "⚠ Vendors who want to run an event under your verified account.",
+        "empty": "⚠ No requests yet. Turn on requests in Settings so vendors can find you.",
+        "link": "⚠ Collaboration requests"
+      },
+      "list": {
+        "from": "⚠ From {name}",
+        "to": "⚠ To {name}",
+        "open": "⚠ Open"
+      },
+      "form": {
+        "title": "⚠ Propose an event",
+        "editTitle": "⚠ Update your proposal",
+        "intro": "⚠ Choose an organiser, describe the event and fill in the readiness checklist. The organiser decides whether to run it.",
+        "organiser": {
+          "search": "⚠ Search organisers",
+          "none": "⚠ No organisers are accepting requests right now.",
+          "fixed": "⚠ Organiser: {name}"
+        },
+        "event": {
+          "title": "⚠ Event name",
+          "category": "⚠ Category",
+          "categoryPlaceholder": "⚠ Choose a category",
+          "city": "⚠ City",
+          "description": "⚠ Description"
+        },
+        "saveDraft": "⚠ Save draft",
+        "submit": "⚠ Send to organiser",
+        "saving": "⚠ Saving…",
+        "submitting": "⚠ Sending…",
+        "saved": "⚠ Draft saved.",
+        "submitted": "⚠ Sent to the organiser."
+      },
+      "sections": {
+        "organiser": "⚠ Organiser",
+        "event": "⚠ Event",
+        "venue": "⚠ Venue",
+        "schedule": "⚠ Date and time",
+        "capacity": "⚠ Capacity",
+        "equipment": "⚠ Equipment",
+        "permits": "⚠ Permits",
+        "tiers": "⚠ Ticket tiers",
+        "share": "⚠ Revenue share"
+      },
+      "checklist": {
+        "choose": "⚠ Choose…",
+        "venue": {
+          "name": "⚠ Venue name",
+          "landmark": "⚠ Landmark",
+          "lat": "⚠ Latitude",
+          "lng": "⚠ Longitude",
+          "useLocation": "⚠ Use my current location",
+          "locationFailed": "⚠ Could not read your location. Type the coordinates instead."
+        },
+        "schedule": {
+          "starts": "⚠ Starts",
+          "ends": "⚠ Ends"
+        },
+        "capacity": {
+          "label": "⚠ Number of guests"
+        },
+        "equipment": {
+          "help": "⚠ Say what is ready and what still needs arranging.",
+          "items": {
+            "sound": "⚠ Sound system",
+            "stage": "⚠ Stage",
+            "power": "⚠ Power or generator",
+            "seating": "⚠ Seating",
+            "security": "⚠ Security"
+          },
+          "states": {
+            "ready": "⚠ Ready",
+            "needed": "⚠ Still needed",
+            "not_needed": "⚠ Not needed"
+          }
+        },
+        "permits": {
+          "help": "⚠ Some venues and events need a council or police permit.",
+          "label": "⚠ Permits",
+          "note": "⚠ Note (optional)",
+          "states": {
+            "obtained": "⚠ Obtained",
+            "pending": "⚠ Applied, waiting",
+            "not_required": "⚠ Not required"
+          }
+        },
+        "tiers": {
+          "name": "⚠ Tier name",
+          "price": "⚠ Price (K)",
+          "qty": "⚠ Tickets (optional)",
+          "add": "⚠ Add a ticket tier",
+          "remove": "⚠ Remove tier"
+        },
+        "share": {
+          "help": "⚠ The share of ticket revenue you propose for yourself as co-host. The organiser stays accountable for ticket revenue and payouts. Payouts are not live yet; this is only recorded.",
+          "label": "⚠ Your share (%)",
+          "invalid": "⚠ Enter a percentage from 0 to 100.",
+          "preview": "⚠ Co-host {cohost}% · Organiser {organiser}%"
+        }
+      },
+      "fieldErrors": {
+        "required": "⚠ is required",
+        "must_be_future": "⚠ must be in the future",
+        "must_be_after_start": "⚠ must be after the start",
+        "exceeds_capacity": "⚠ is more than the capacity"
+      },
+      "detail": {
+        "changesAsked": "⚠ The organiser asked for changes",
+        "declinedReason": "⚠ Reason for declining",
+        "summary": "⚠ Summary",
+        "done": "⚠ Done",
+        "open": "⚠ Still open",
+        "accountability": "⚠ The organiser is accountable for ticket revenue and payouts. The co-host share is recorded for later.",
+        "reasonLabel": "⚠ Reason (shared with the vendor)",
+        "approve": "⚠ Approve",
+        "decline": "⚠ Decline",
+        "askChanges": "⚠ Ask for changes",
+        "cancel": "⚠ Cancel",
+        "publish": "⚠ Publish event",
+        "waiting": "⚠ Waiting for the organiser to decide.",
+        "approvedWaiting": "⚠ Approved. The organiser will publish the event.",
+        "openEvent": "⚠ Open the published event",
+        "publishedCoHost": "⚠ Published by {name}. You are shown as co-host.",
+        "history": "⚠ History",
+        "back": "⚠ Back"
+      },
+      "audit": {
+        "create": "⚠ Draft created",
+        "submit": "⚠ Sent to organiser",
+        "approve": "⚠ Approved",
+        "decline": "⚠ Declined",
+        "request_changes": "⚠ Changes requested",
+        "publish": "⚠ Published"
+      },
+      "errors": {
+        "checklistIncomplete": "⚠ Finish these items before sending:",
+        "forbidden": "⚠ You cannot do that on this request.",
+        "kycRequired": "⚠ Verify your ID before organising events.",
+        "invalidTransition": "⚠ This request has already moved on. Refresh and check its status.",
+        "invalidInput": "⚠ Check the details and try again.",
+        "notFound": "⚠ Request not found.",
+        "conflict": "⚠ That conflicts with an existing record.",
+        "rateLimited": "⚠ Too many requests. Wait a moment and try again.",
+        "disabled": "⚠ Event collaboration is not available yet.",
+        "organiserUnavailable": "⚠ That organiser is not accepting requests right now.",
+        "pastStart": "⚠ The start time has already passed. Ask the vendor to update it.",
+        "disputeSuspended": "⚠ Ticketed publishing is paused after upheld event disputes.",
+        "highValue": "⚠ This event needs a verification call before it can be published. Contact Convergeo support.",
+        "generic": "⚠ Something went wrong. Try again.",
+        "pickOrganiser": "⚠ Choose an organiser first."
+      }
     }
   },
   "tickets": {
@@ -2138,7 +2400,9 @@
       "reviews": "Reviews",
       "payouts": "Payouts",
       "disputes": "Disputes",
-      "intake": "Ma-draft a WhatsApp"
+      "intake": "Ma-draft a WhatsApp",
+      "settings": "⚠ Settings",
+      "offers": "⚠ Offers"
     }
   },
   "intake": {
@@ -2320,11 +2584,197 @@
       "weeklyCap": "You've reached your clip limit for this week.",
       "rateLimited": "Too many requests. Please wait a moment.",
       "uploadFailed": "The upload didn't finish. Your clip is saved — tap retry to send it again without picking the file twice.",
-      "notVerified": "Clips are for verified sellers. Finish your verification to start posting.",
+      "notVerified": "⚠ Clips are for verified sellers. Verify your ID to start posting.",
       "linkNotOwned": "You can only link your own products.",
       "linkLimit": "A clip can link at most 3 products.",
       "linkNotActive": "Only an active product can be linked."
     },
     "durationSeconds": "{seconds}s"
+  },
+  "settings": {
+    "meta": {
+      "title": "⚠ Settings — Convergeo Vendor",
+      "description": "⚠ Account, notifications, payout method and language."
+    },
+    "title": "⚠ Settings",
+    "intro": "⚠ Account, notifications, payout method and language in one place.",
+    "account": {
+      "heading": "⚠ Account",
+      "signedInAs": "⚠ Signed in as",
+      "unknown": "⚠ Unknown account",
+      "changePassword": "⚠ Change password",
+      "editProfile": "⚠ Edit shop profile",
+      "signOut": "⚠ Sign out",
+      "signingOut": "⚠ Signing out…",
+      "signOutFailed": "⚠ Could not sign you out. Try again."
+    },
+    "notifications": {
+      "heading": "⚠ Notifications",
+      "body": "⚠ See your alerts and choose where order updates reach you.",
+      "open": "⚠ Open notifications",
+      "whatsapp": "⚠ WhatsApp number"
+    },
+    "payout": {
+      "heading": "⚠ Payout method",
+      "pilot": "⚠ Payouts are not switched on yet. Your payout method will show here once they are.",
+      "loading": "⚠ Loading payout method…",
+      "loadFailed": "⚠ Could not load your payout method.",
+      "current": "⚠ {rail} mobile money · {number}",
+      "none": "⚠ No payout method yet.",
+      "change": "⚠ Change payout method"
+    },
+    "language": {
+      "heading": "⚠ Language",
+      "label": "⚠ App language",
+      "names": {
+        "en": "English",
+        "bem": "Bemba",
+        "nya": "Nyanja",
+        "fr": "Français",
+        "zh": "中文"
+      }
+    },
+    "collab": {
+      "heading": "⚠ Event collaboration",
+      "body": "⚠ Let vendors send you requests to run their events under your verified account.",
+      "notOrganiser": "⚠ Only verified organisers can receive collaboration requests.",
+      "toggle": "⚠ Accept collaboration requests",
+      "inbox": "⚠ Open request inbox",
+      "saveFailed": "⚠ Could not save. Try again."
+    }
+  },
+  "offers": {
+    "loading": "⚠ Loading offers…",
+    "backToList": "⚠ ← Offers",
+    "unknownItem": "⚠ Item no longer available",
+    "list": {
+      "title": "⚠ Offers",
+      "intro": "⚠ Bundles, buy-one-get-one and free gifts on your own products, services and events.",
+      "create": "⚠ New offer",
+      "empty": "⚠ No offers yet. Create one to show a deal badge on your products.",
+      "edit": "⚠ Edit",
+      "archive": "⚠ Archive",
+      "giftStock": "⚠ Gifts left: {available} of {total}",
+      "notInCart": "⚠ Checkout applies offers to products and event tickets; offers with a service, or a free gift triggered by an event, are shown but not yet applied."
+    },
+    "types": {
+      "bxgy": {
+        "label": "⚠ Buy X get Y free",
+        "hint": "⚠ Buy items, get another item free."
+      },
+      "bundle": {
+        "label": "⚠ Bundle price",
+        "hint": "⚠ Items sold together for less."
+      },
+      "buy_n_pay_m": {
+        "label": "⚠ Buy N, pay for M",
+        "hint": "⚠ For example 3 for the price of 2."
+      },
+      "free_gift": {
+        "label": "⚠ Free gift",
+        "hint": "⚠ A gift while your set-aside stock lasts."
+      }
+    },
+    "roles": {
+      "trigger": {
+        "label": "⚠ Customer buys",
+        "hint": "⚠ Any of these qualifies (products, services or events)."
+      },
+      "reward": {
+        "label": "⚠ Free item",
+        "hint": "⚠ The product given free. Set its stock aside below."
+      },
+      "anchor": {
+        "label": "⚠ Main item",
+        "hint": "⚠ Charged at full price in a % off add-ons bundle."
+      },
+      "addon": {
+        "label": "⚠ Add-ons",
+        "hint": "⚠ Up to 5 products sold with the main item."
+      },
+      "eligible": {
+        "label": "⚠ Items that count",
+        "hint": "⚠ Any mix of these products counts towards N; the cheapest are free."
+      }
+    },
+    "kinds": {
+      "product": "⚠ Product",
+      "service": "⚠ Service",
+      "event": "⚠ Event"
+    },
+    "form": {
+      "createTitle": "⚠ New offer",
+      "editTitle": "⚠ Edit offer",
+      "typeLabel": "⚠ Offer type",
+      "titleLabel": "⚠ Offer name",
+      "buyQty": "⚠ Customer buys (qty)",
+      "getQty": "⚠ Gets free (qty)",
+      "bundlePricing": "⚠ Bundle pricing",
+      "bundlePercent": "⚠ % off the add-ons",
+      "bundleFixed": "⚠ Fixed bundle price",
+      "addonPercent": "⚠ Discount on add-ons (%)",
+      "addonPercentHint": "⚠ The main item stays at full price.",
+      "bundlePrice": "⚠ Bundle price (K)",
+      "bundlePriceHint": "⚠ What the customer pays for the whole set.",
+      "buyN": "⚠ Buy (N)",
+      "payM": "⚠ Pay for (M)",
+      "giftStock": "⚠ Gifts set aside",
+      "giftStockHint": "⚠ The offer stops when these run out.",
+      "giftStockReserved": "⚠ {reserved} already promised to orders",
+      "itemQty": "⚠ Quantity",
+      "removeItem": "⚠ Remove",
+      "addItem": "⚠ Add an item…",
+      "startsAt": "⚠ Starts",
+      "endsAt": "⚠ Ends (optional)",
+      "endsAtHint": "⚠ Leave empty to run until you pause it.",
+      "status": "⚠ Status",
+      "maxApplications": "⚠ Max times per order",
+      "save": "⚠ Save offer",
+      "saving": "⚠ Saving…",
+      "perCustomerLimit": "⚠ Uses per customer",
+      "perCustomerLimitHint": "⚠ How many orders one customer can use this offer on. Leave blank for no limit.",
+      "perCustomerLimitPlaceholder": "⚠ No limit"
+    },
+    "status": {
+      "draft": "⚠ Draft",
+      "active": "⚠ Active",
+      "paused": "⚠ Paused",
+      "archived": "⚠ Archived",
+      "live": "⚠ Live",
+      "adminPaused": "⚠ Paused by Vergeo5"
+    },
+    "summary": {
+      "bxgy": "⚠ Buy {buy}, get {get} free",
+      "bundlePercent": "⚠ {percent}% off add-ons",
+      "bundleFixed": "⚠ Bundle for {price}",
+      "buyNPayM": "⚠ {n} for the price of {m}",
+      "freeGift": "⚠ Free gift while stocks last"
+    },
+    "preview": {
+      "heading": "⚠ What the customer pays",
+      "pays": "⚠ Customer pays {pay} instead of {list}",
+      "saves": "⚠ Saves {amount}",
+      "gift": "⚠ Plus {qty} free gift(s) worth {value}",
+      "commissionNote": "⚠ Commission is charged on the discounted amount.",
+      "empty": "⚠ Add items to see the price."
+    },
+    "errors": {
+      "loadFailed": "⚠ Could not load your offers.",
+      "saveFailed": "⚠ Could not save the offer. Try again.",
+      "authRequired": "⚠ Sign in to manage offers.",
+      "notFound": "⚠ Offer not found.",
+      "invalidPrice": "⚠ Enter a valid bundle price.",
+      "disabled": "⚠ Offers are not available yet.",
+      "itemNotFound": "⚠ One of the items was not found.",
+      "itemForbidden": "⚠ Offers can only use your own products, services and events.",
+      "itemUnavailable": "⚠ One of the items is no longer available.",
+      "discountTooLarge": "⚠ This discount is above the allowed maximum.",
+      "noSaving": "⚠ The bundle price must be below the items' total.",
+      "tooManyActive": "⚠ You have reached the limit of active offers.",
+      "giftStockBelowReserved": "⚠ Gift stock cannot go below the gifts already promised.",
+      "typeImmutable": "⚠ The offer type cannot be changed.",
+      "rateLimited": "⚠ Too many changes. Wait a minute and try again.",
+      "perCustomerLimitInvalid": "⚠ Enter a whole number from 1 to 1,000, or leave it blank."
+    }
   }
 }

@@ -24,9 +24,7 @@ KYC_RECORD_STATUSES = frozenset(
     }
 )
 REVIEWABLE_STATUSES = frozenset({"submitted", "under_review", "pending"})
-VENDOR_STATUSES = frozenset(
-    {"draft", "pending_kyc", "active", "suspended", "suspended_compliance"}
-)
+VENDOR_STATUSES = frozenset({"draft", "pending_kyc", "active", "suspended", "suspended_compliance"})
 VALID_TIERS = frozenset({1, 2, 3})
 
 

@@ -32,6 +32,10 @@ class CartLineView:
     listing_variant_id: str | None = None
     #: ((group, value), ...) — e.g. (("Colour", "Red"), ("Size", "M")).
     variant_options: tuple[tuple[str, str], ...] = ()
+    #: W8 offers: list total before the offer (None when no offer priced the
+    #: line) and the offer that priced it. ``line_total_ngwee`` is what is paid.
+    list_line_total_ngwee: int | None = None
+    offer_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

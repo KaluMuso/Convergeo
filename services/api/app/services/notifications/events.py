@@ -54,9 +54,7 @@ EVENT_REGISTRY: dict[str, NotificationMapping | None] = {
     "dispute_resolved": None,  # dispute templates not built yet
     # --- Events / ticketing --------------------------------------------
     "event_cancelled": NotificationMapping("event_cancelled", Audience.CUSTOMER),
-    "event_schedule_changed": NotificationMapping(
-        "event_schedule_changed", Audience.CUSTOMER
-    ),
+    "event_schedule_changed": NotificationMapping("event_schedule_changed", Audience.CUSTOMER),
     "ticket_issued": None,  # ticket templates not built yet
     "ticket_transferred": None,  # ticket templates not built yet
     # --- Services / RFQ -------------------------------------------------

@@ -383,9 +383,7 @@ LIMIT 1;
         delivered_at=delivered_at,
         shipped_at=shipped_at,
         has_escrow_evidence=(
-            True
-            if is_cod
-            else _has_escrow_ledger_evidence(order_id, checkout_group_id)
+            True if is_cod else _has_escrow_ledger_evidence(order_id, checkout_group_id)
         ),
     )
 
