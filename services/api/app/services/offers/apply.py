@@ -8,6 +8,7 @@ from typing import Any
 
 from app.errors import AppError
 from app.services.cart.grouping import CartLineView
+from app.services.cart.tickets import TicketCartLine, with_pricing
 from app.services.offers.allocation import split_line_units
 from app.services.offers.engine import (
     GiftOutcome,
@@ -35,6 +36,13 @@ class OfferPricing:
         return [a for a in self.priced.applications if a.vendor_id == vendor_id]
 
 
+TICKET_KEY_PREFIX = "ticket:"
+
+
+def ticket_key(line: TicketCartLine) -> str:
+    return f"{TICKET_KEY_PREFIX}{line.id}"
+
+
 def price_line_views(
     views: list[CartLineView],
     client: Any,
@@ -42,33 +50,59 @@ def price_line_views(
     customer_id: str | None = None,
 ) -> tuple[list[CartLineView], OfferPricing | None]:
     """Re-price cart views with live offers; unchanged views when flag is off."""
+    priced_views, _tickets, pricing = price_unified(views, [], client, customer_id=customer_id)
+    return priced_views, pricing
+
+
+def price_unified(
+    views: list[CartLineView],
+    ticket_lines: list[TicketCartLine],
+    client: Any,
+    *,
+    customer_id: str | None = None,
+) -> tuple[list[CartLineView], list[TicketCartLine], OfferPricing | None]:
+    """Price product views and event-ticket lines together (one engine pass).
+
+    Ticket lines enter the engine as ``item_kind="event"`` keyed by event id,
+    so an offer mixing a product and an event ticket (bundle / buy N pay M)
+    prices across both kinds with one exact allocation. Unchanged inputs when
+    the flag is off or nothing applies.
+    """
     eligible = [v for v in views if not v.is_rfq_quote and v.qty > 0 and v.unit_price_ngwee > 0]
-    if not eligible:
-        return views, None
-    loaded = load_offers_for_pricing(
-        client, {v.vendor_id for v in eligible}, customer_id=customer_id
-    )
+    tickets = [t for t in ticket_lines if t.available and t.qty > 0 and t.unit_price_ngwee > 0]
+    if not eligible and not tickets:
+        return views, ticket_lines, None
+    vendor_ids = {v.vendor_id for v in eligible} | {t.vendor_id for t in tickets}
+    loaded = load_offers_for_pricing(client, vendor_ids, customer_id=customer_id)
     if loaded is None:
-        return views, None
+        return views, ticket_lines, None
     offers, cap = loaded
     if not offers:
-        return views, None
-    priced = price_cart(
-        [
-            PricingLine(
-                key=v.id,
-                listing_id=v.listing_id,
-                vendor_id=v.vendor_id,
-                qty=v.qty,
-                unit_price_ngwee=v.unit_price_ngwee,
-            )
-            for v in eligible
-        ],
-        offers,
-        max_discount_pct=cap,
-    )
+        return views, ticket_lines, None
+    lines = [
+        PricingLine(
+            key=v.id,
+            listing_id=v.listing_id,
+            vendor_id=v.vendor_id,
+            qty=v.qty,
+            unit_price_ngwee=v.unit_price_ngwee,
+        )
+        for v in eligible
+    ] + [
+        PricingLine(
+            key=ticket_key(t),
+            listing_id=t.event_id,
+            vendor_id=t.vendor_id,
+            qty=t.qty,
+            unit_price_ngwee=t.unit_price_ngwee,
+            item_kind="event",
+        )
+        for t in tickets
+    ]
+    priced = price_cart(lines, offers, max_discount_pct=cap)
     if not priced.applications:
-        return views, None
+        return views, ticket_lines, None
+    snapshots = {a.offer_id: a.snapshot for a in priced.applications}
     out: list[CartLineView] = []
     for view in views:
         outcome = priced.lines.get(view.id)
@@ -83,7 +117,41 @@ def price_line_views(
                 offer_id=outcome.offer_id,
             )
         )
-    return out, OfferPricing(priced=priced)
+    out_tickets: list[TicketCartLine] = []
+    for line in ticket_lines:
+        outcome = priced.lines.get(ticket_key(line))
+        if outcome is None or outcome.offer_id is None:
+            out_tickets.append(line)
+            continue
+        out_tickets.append(
+            with_pricing(
+                line,
+                line_total_ngwee=outcome.final_total_ngwee,
+                offer_id=outcome.offer_id,
+                offer_snapshot={
+                    **snapshots.get(outcome.offer_id, {}),
+                    "line_list_total_ngwee": outcome.list_total_ngwee,
+                    "line_final_total_ngwee": outcome.final_total_ngwee,
+                    "line_qty": line.qty,
+                },
+            )
+        )
+    return out, out_tickets, OfferPricing(priced=priced)
+
+
+def split_ticket_line(line: TicketCartLine) -> list[tuple[int, int]]:
+    """(qty, unit price) order lines for a ticket cart line; exact total, >= 1 ngwee each."""
+    if line.offer_id is None:
+        return [(line.qty, line.unit_price_ngwee)]
+    parts = split_line_units(line.total_ngwee, line.qty)
+    if any(unit <= 0 for _, unit in parts):
+        raise AppError(
+            code="offers.invalid_allocation",
+            message="Offer pricing produced an invalid line",
+            http_status=409,
+            details={"cart_ticket_item_id": line.id, "retry": True},
+        )
+    return parts
 
 
 def gift_key(gift: GiftOutcome) -> str:
@@ -100,17 +168,36 @@ def expand_cart_lines_for_order(
 
     Returns the input unchanged when the flag is off or no offer applies.
     """
-    eligible = [line for line in cart_lines if line.qty > 0 and line.unit_price_ngwee > 0]
-    if not eligible:
-        return cart_lines, None
-    loaded = load_offers_for_pricing(
-        client, {line.vendor_id for line in eligible}, customer_id=customer_id
+    expanded, _tickets, priced = expand_unified_for_order(
+        cart_lines, [], client, customer_id=customer_id
     )
+    return expanded, priced
+
+
+def expand_unified_for_order(
+    cart_lines: list[CartLineInput],
+    ticket_lines: list[TicketCartLine],
+    client: Any,
+    *,
+    customer_id: str,
+) -> tuple[list[CartLineInput], list[TicketCartLine], PricedCart | None]:
+    """Placement pricing for products and event tickets in one engine pass.
+
+    Product lines come back expanded into order lines (split / gift lines);
+    ticket lines come back carrying their discounted total and offer snapshot
+    (``split_ticket_line`` turns them into order lines).
+    """
+    eligible = [line for line in cart_lines if line.qty > 0 and line.unit_price_ngwee > 0]
+    tickets = [t for t in ticket_lines if t.available and t.qty > 0 and t.unit_price_ngwee > 0]
+    if not eligible and not tickets:
+        return cart_lines, ticket_lines, None
+    vendor_ids = {line.vendor_id for line in eligible} | {t.vendor_id for t in tickets}
+    loaded = load_offers_for_pricing(client, vendor_ids, customer_id=customer_id)
     if loaded is None:
-        return cart_lines, None
+        return cart_lines, ticket_lines, None
     offers, cap = loaded
     if not offers:
-        return cart_lines, None
+        return cart_lines, ticket_lines, None
     priced = price_cart(
         [
             PricingLine(
@@ -121,13 +208,44 @@ def expand_cart_lines_for_order(
                 unit_price_ngwee=line.unit_price_ngwee,
             )
             for line in eligible
+        ]
+        + [
+            PricingLine(
+                key=ticket_key(t),
+                listing_id=t.event_id,
+                vendor_id=t.vendor_id,
+                qty=t.qty,
+                unit_price_ngwee=t.unit_price_ngwee,
+                item_kind="event",
+            )
+            for t in tickets
         ],
         offers,
         max_discount_pct=cap,
     )
     if not priced.applications:
-        return cart_lines, None
-    return expand_priced_lines(cart_lines, priced), priced
+        return cart_lines, ticket_lines, None
+    snapshots = {a.offer_id: a.snapshot for a in priced.applications}
+    priced_tickets: list[TicketCartLine] = []
+    for line in ticket_lines:
+        outcome = priced.lines.get(ticket_key(line))
+        if outcome is None or outcome.offer_id is None:
+            priced_tickets.append(line)
+            continue
+        priced_tickets.append(
+            with_pricing(
+                line,
+                line_total_ngwee=outcome.final_total_ngwee,
+                offer_id=outcome.offer_id,
+                offer_snapshot={
+                    **snapshots.get(outcome.offer_id, {}),
+                    "line_list_total_ngwee": outcome.list_total_ngwee,
+                    "line_final_total_ngwee": outcome.final_total_ngwee,
+                    "line_qty": line.qty,
+                },
+            )
+        )
+    return expand_priced_lines(cart_lines, priced), priced_tickets, priced
 
 
 def expand_priced_lines(cart_lines: list[CartLineInput], priced: PricedCart) -> list[CartLineInput]:

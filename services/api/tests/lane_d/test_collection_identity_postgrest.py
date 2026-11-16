@@ -240,9 +240,11 @@ def test_postgrest_honors_service_and_customer_claims() -> None:
     stranger = customer_client(str(uuid4()))
     assert len(owner.table("payments").select("id").eq("id", payment_id).execute().data) == 1
     assert stranger.table("payments").select("id").eq("id", payment_id).execute().data == []
-    assert owner.table("payments").update({"status": "success"}).eq(
-        "id", payment_id
-    ).execute().data == []
+    # 20261115140000 revoked every client write grant on the money tables, so the
+    # owner's browser token is refused outright (42501) instead of RLS matching 0 rows.
+    with pytest.raises(APIError) as denied:
+        owner.table("payments").update({"status": "success"}).eq("id", payment_id).execute()
+    assert denied.value.code == "42501"
     assert _money_state(payment_id) == (0, 0, 0, "ussd_pushed")
 
 

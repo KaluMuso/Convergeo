@@ -193,6 +193,10 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "GET /admin/merch/hero-variants",
             "GET /admin/merch/preview-url",
             "GET /admin/merch/slots",
+            # W8 offers moderation (#817 maps it to ads.manage).
+            "GET /admin/offers",
+            "POST /admin/offers/{offer_id}/pause",
+            "POST /admin/offers/{offer_id}/unpause",
             "PATCH /admin/ads/placements/{placement_id}",
             "PATCH /admin/flash-deals/{deal_id}",
             "PATCH /admin/home-feed/sections/{section_id}",
@@ -268,10 +272,6 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "GET /admin/config/delivery-zones",
         "GET /admin/config/flags",
         "GET /admin/config/platform",
-        # W8 offers moderation (#814, flag off): not delegated to rbac roles yet.
-        "GET /admin/offers",
-        "POST /admin/offers/{offer_id}/pause",
-        "POST /admin/offers/{offer_id}/unpause",
         # Pay at the door (#795, flag off): not delegated to rbac roles until a
         # founder decision maps them (logistics.manage / finance.operate).
         "GET /admin/dispatch/door-payment/exceptions",
