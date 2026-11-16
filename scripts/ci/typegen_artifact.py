@@ -48,7 +48,7 @@ POST_REPAIR_ORDER = [
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
-    "20261115170000",
+    "20261116130000",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

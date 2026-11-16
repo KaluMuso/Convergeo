@@ -69,7 +69,7 @@ FORWARD = [
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
-    "20261115170000_free_events_services.sql",
+    "20261116130000_free_events_services.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [

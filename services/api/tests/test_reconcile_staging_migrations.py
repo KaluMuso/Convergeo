@@ -86,7 +86,7 @@ PENDING_REPAIR_VERSIONS = {
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
-    "20261115170000",
+    "20261116130000",
 }
 
 

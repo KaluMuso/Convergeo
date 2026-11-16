@@ -99,7 +99,7 @@ POST_REPAIR_PENDING_VERSIONS = [
     # In-app notification center (additive, reversible).
     "20261113130000",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
-    "20261115170000",
+    "20261116130000",
 ]
 
 def _module() -> Any:
@@ -164,7 +164,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     pilot_fixes = ["20261113060000", "20261113070000", "20261113071000"]
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
-    free_events_services = ["20261115170000"]
+    free_events_services = ["20261116130000"]
     assert actual_versions[-20:] == (
         repairs
         + post_repair

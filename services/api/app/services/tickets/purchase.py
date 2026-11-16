@@ -412,7 +412,7 @@ def _build_ticket_commission_snapshot(
     }
     if is_free:
         # Free orders carry no money: the DB refuses ledger rows / payment intents
-        # for them (private.order_is_free, 20261115170000).
+        # for them (private.order_is_free, 20261116130000).
         snapshot["is_free"] = True
         snapshot["rate_bps"] = 0
     if claimed_ticket_ids:

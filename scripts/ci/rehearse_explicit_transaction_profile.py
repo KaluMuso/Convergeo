@@ -66,7 +66,7 @@ REVIEWED_SUFFIX = (
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
-    "20261115170000_free_events_services.sql",
+    "20261116130000_free_events_services.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
