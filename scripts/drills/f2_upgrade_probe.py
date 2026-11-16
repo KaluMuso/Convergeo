@@ -39,11 +39,14 @@ def fingerprint(order: str, payment: str) -> list[str]:
 
 # Reviewed additive NOT NULL columns whose declared default is the neutral "no
 # effect" value, so legacy rows read it after the upgrade without any backfill:
-# 20261115120000_bundles_offers order_items (no offer, zero discount, not a gift).
+# 20261115120000_bundles_offers order_items (no offer, zero discount, not a gift);
+# 20261116090000_unified_cart_event_tickets orders.order_lane ('goods' = the only
+# lane that existed before tickets joined the cart).
 ADDITIVE_NEUTRAL_DEFAULTS: dict[str, Any] = {
     "offer_snapshot": {},
     "offer_discount_ngwee": 0,
     "is_offer_gift": False,
+    "order_lane": "goods",
 }
 
 
