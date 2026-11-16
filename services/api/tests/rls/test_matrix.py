@@ -1032,6 +1032,9 @@ EXPECTATIONS: TableExpectations = {
         **{p: select_only() for p in Persona if p is not Persona.ANON},
     },
     "intercity_rate_cards": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Event collaboration: party and admin SELECT only (D1); writes go through the API.
     "event_collab_organiser_prefs": {
         Persona.ANON: deny_all(),

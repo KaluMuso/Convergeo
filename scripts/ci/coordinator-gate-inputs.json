@@ -624,7 +624,7 @@
     "services/api/tests/rls/test_force_rls_d32.py": "e048db6d6377bc08baadc7e7315972cf865399644b2b7381c7752ff6ea9be76a",
     "services/api/tests/rls/test_intake_force_rls.py": "5538c60345b6298dd4cd2dfc3822f1bfe0fec3782f7642dfbfd7ea5943d48dc3",
     "services/api/tests/rls/test_launch_table_access.py": "67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f",
-    "services/api/tests/rls/test_matrix.py": "9c3251e1762eb315d37ca096784bb875ecdb30b986aaf40355a69ccf2712deab",
+    "services/api/tests/rls/test_matrix.py": "0bf0f12bc653bf75f9dd70f83d774e017f6e338337a6ac852e9db69e98f7cde8",
     "services/api/tests/rls/test_no_untested_tables.py": "0b98732ac77e83dbcb94db6b968d2cd7c30da6c8b91f882134f311d27d3abaa1",
     "services/api/tests/rls/test_privileged_function_grants.py": "edbe0a48370bd2c0d262cbe923ea34f4f842bd28ec4a2327a529f34e09d7643b",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",
