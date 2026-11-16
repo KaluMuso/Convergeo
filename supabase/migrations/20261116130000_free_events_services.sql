@@ -65,7 +65,9 @@ create table public.event_rsvps (
   user_id uuid not null references auth.users (id) on delete cascade,
   instance_id uuid not null references public.event_instances (id) on delete cascade,
   ticket_type_id uuid not null references public.ticket_types (id) on delete cascade,
-  order_id uuid references public.orders (id) on delete set null,
+  -- cascade: an RSVP whose order is gone would otherwise block a new RSVP
+  -- forever (the replay path finds no order). NULL only while being issued.
+  order_id uuid references public.orders (id) on delete cascade,
   qty int not null check (qty between 1 and 4),
   created_at timestamptz not null default timezone('utc', now()),
   primary key (event_id, user_id)

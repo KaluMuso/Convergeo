@@ -590,7 +590,7 @@
     "20261115210000_event_ticket_integrity.sql": "9460fb97d3c207bcbb82689c298be089f41f53610575e061b2b61908233c0978",
     "20261115235500_business_home_offers_flag.sql": "661fa429b86138f5e8adfab9052c293002ed6e0017e4c70c9e672d0d13335e9d",
     "20261115235600_business_home_section_flags.sql": "be21e21ad9ea3354de483b3a47835a03312c91496033af36342c21181fc58172",
-    "20261116130000_free_events_services.sql": "4f2157b147b018124fe6eaf081e2840acc3e062c9977d5a9fb4865618f282987"
+    "20261116130000_free_events_services.sql": "c609d61f7de6b1c51600da82d521670f322ebda3a3ddd46888af9027eb3de05d"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
