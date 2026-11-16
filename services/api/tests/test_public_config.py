@@ -238,6 +238,9 @@ def test_storefront_config_returns_platform_config_values(
         "free_delivery_threshold_ngwee": 0,
         "auto_free_delivery_threshold_ngwee": 2_000_000,
         "low_stock_threshold": 8,
+        "coupons_enabled": False,
+        "gift_orders_enabled": False,
+        "birthday_greetings_enabled": False,
     }
     assert "s-maxage" in response.headers.get("cache-control", "")
 
@@ -266,4 +269,7 @@ def test_storefront_config_ignores_malformed_values(monkeypatch: pytest.MonkeyPa
         "free_delivery_threshold_ngwee": 0,
         "auto_free_delivery_threshold_ngwee": 1_500_000,
         "low_stock_threshold": 5,
+        "coupons_enabled": False,
+        "gift_orders_enabled": False,
+        "birthday_greetings_enabled": False,
     }

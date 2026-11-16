@@ -86,6 +86,7 @@ PENDING_REPAIR_VERSIONS = {
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000",
     # Rate-limit scope re-sync: notification/checkout-group scopes (additive, reversible).
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Listing fulfilment options + Class D may be sold new (additive, reversible).
     "20261115090000",
@@ -117,6 +118,10 @@ PENDING_REPAIR_VERSIONS = {
     "20261115235600",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000",
+    # Coupons, gift orders, birthday greetings (additive; flags default off).
+    "20261116100000",
+    # Coupons: collection net of the coupon + coupon_funding leg (additive).
+    "20261116100100",
     # Logistics phase 1: dispatch attempts/returns/custody, delivery funding, permissions;
     # intercity reference rate cards (additive).
     "20261116180000",

@@ -18,6 +18,12 @@ from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.schemas.base import StrictModel
+from app.services.coupons.store import (
+    BIRTHDAY_FLAG,
+    COUPONS_FLAG,
+    GIFT_ORDERS_FLAG,
+    flag_enabled,
+)
 from app.services.logistics.delivery_pricing import DEFAULT_AUTO_FREE_THRESHOLD_NGWEE
 from fastapi import APIRouter, Depends, Response
 from pydantic import Field
@@ -119,6 +125,10 @@ class PublicStorefrontConfigResponse(StrictModel):
     #: Retail basket at/above which delivery is free automatically (< 500 kg).
     auto_free_delivery_threshold_ngwee: int = Field(ge=0)
     low_stock_threshold: int = Field(ge=0)
+    #: Growth features (default OFF). The API enforces each flag again on every call.
+    coupons_enabled: bool = False
+    gift_orders_enabled: bool = False
+    birthday_greetings_enabled: bool = False
 
 
 def _read_config_int(client: Any, key: str, default: int) -> int:
@@ -155,4 +165,7 @@ async def get_public_storefront_config(
         low_stock_threshold=_read_config_int(
             client, LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD
         ),
+        coupons_enabled=flag_enabled(service_client, COUPONS_FLAG),
+        gift_orders_enabled=flag_enabled(service_client, GIFT_ORDERS_FLAG),
+        birthday_greetings_enabled=flag_enabled(service_client, BIRTHDAY_FLAG),
     )
