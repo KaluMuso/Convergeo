@@ -205,6 +205,51 @@ def enqueue_organiser_cancel_refund_job(
     )
 
 
+def refund_idempotency_key(job: dict[str, str]) -> str:
+    """execute_refund dedup key for one job.
+
+    The whole-order organiser-cancel job keeps the original order-scoped key. Partial
+    sources (buyer cancel / reschedule opt-out are per ticket) get a per-job key:
+    sharing the order key made the 2nd ticket's refund of a multi-ticket order — or
+    the organiser-cancel refund of the remaining tickets — collapse onto the first
+    refund and silently pay nothing.
+    """
+    base = f"evt-refund-{job['event_id']}-{job['order_id']}"
+    if job.get("source") == SOURCE_ORGANISER_CANCEL and job.get("source_key") == SOURCE_KEY_V1:
+        return base
+    return f"{base}-{job.get('source', '')}-{job.get('source_key', '')}"
+
+
+def partial_refund_jobs_amount_ngwee(order_id: str) -> int:
+    """Sum of live (non-dead) partial refund jobs already queued for an order."""
+    order_sql = sql_uuid(order_id, "order_id")
+    organiser_sql = sql_literal(SOURCE_ORGANISER_CANCEL)
+    result = run_sql_script(
+        f"""
+SELECT coalesce(sum(amount_ngwee), 0)::text
+FROM public.event_refund_jobs
+WHERE order_id = {order_sql}
+  AND source <> {organiser_sql}
+  AND status <> 'dead';
+"""
+    )
+    if not result.ok or not result.rows:
+        raise RuntimeError(f"partial refund jobs query failed: {result.error}")
+    return int(result.rows[0])
+
+
+def organiser_cancel_refund_amount_ngwee(order_id: str) -> int:
+    """Whole-order refund for an organiser cancel, net of per-ticket refunds already queued.
+
+    Tickets the buyer already cancelled (or opted out of on reschedule) have their own
+    job; refunding the full order again would over-refund. The buyer-cancel admin fee
+    those jobs withheld is returned here, so escrow drains to zero when the event is
+    cancelled ("if the event does not take place, ticket payments are refunded").
+    """
+    total = order_ticket_refund_amount_ngwee(order_id)
+    return max(0, total - partial_refund_jobs_amount_ngwee(order_id))
+
+
 def load_customer_refund_destination(
     service_client: ServiceRoleClient,
     *,
@@ -424,6 +469,18 @@ def _sync_awaiting_job(
     return EventRefundJobProcessResult(job["id"], "awaiting_payout", "still_in_flight")
 
 
+def _recover_advance_for_job(job: dict[str, str]) -> None:
+    from app.services.events.advance_policy import recover_event_advance
+
+    order_sql = sql_uuid(job["order_id"], "order_id")
+    loaded = run_sql_script(f"SELECT vendor_id::text FROM public.orders WHERE id = {order_sql};")
+    if not loaded.ok or not loaded.rows:
+        raise RuntimeError(f"order vendor lookup failed: {loaded.error}")
+    recover_event_advance(
+        order_id=job["order_id"], vendor_id=loaded.rows[0].strip(), event_id=job["event_id"]
+    )
+
+
 def process_event_refund_job(
     service_client: ServiceRoleClient,
     job_id: str,
@@ -472,7 +529,7 @@ def process_event_refund_job(
         return EventRefundJobProcessResult(job_id, "needs_destination", "missing_customer_momo")
 
     phone, rail = destination
-    idempotency_key = f"evt-refund-{job['event_id']}-{job['order_id']}"
+    idempotency_key = refund_idempotency_key(job)
 
     # C4: the job amount is the policy-banded refund (full / minus admin fee / 50%)
     # computed at enqueue time, already inclusive of any buyer-paid platform fee and
@@ -487,6 +544,11 @@ def process_event_refund_job(
         return EventRefundJobProcessResult(job_id, "manual_review", "invalid_job_amount")
 
     try:
+        if job.get("source") == SOURCE_ORGANISER_CANCEL:
+            # A verified organiser may have received a pre-event advance: recover it
+            # into escrow as an organiser receivable first, so the buyer is refunded
+            # in full from escrow (idempotent; no-op when nothing was released).
+            _recover_advance_for_job(job)
         result: RefundExecutionResult = execute_refund(
             service_client=cast(RefundServiceClient, service_client),
             order_id=job["order_id"],

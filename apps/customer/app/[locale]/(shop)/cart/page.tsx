@@ -61,6 +61,7 @@ export default async function CartPage({ params }: CartPageProps) {
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
+    offerSavings: t("cart.offerSavings"),
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
       vendorSubtotal: raw("cart.vendorSubtotal"),
@@ -71,6 +72,8 @@ export default async function CartPage({ params }: CartPageProps) {
       freeDeliveryProgress: raw("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
       sellerIndex: raw("cart.sellerIndex"),
+      offerGift: raw("cart.offerGift"),
+      offerGiftWorth: raw("cart.offerGiftWorth"),
     },
     line: {
       decrease: t("cart.qtyDecrease"),
@@ -99,6 +102,7 @@ export default async function CartPage({ params }: CartPageProps) {
       outOfStockLine: t("cart.outOfStockLine"),
       variantOption: raw("variant.option"),
       variantSeparator: raw("variant.separator"),
+      offerSaving: raw("cart.offerSaving"),
     },
     notices: {
       title: t("cart.noticesTitle"),

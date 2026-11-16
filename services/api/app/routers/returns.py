@@ -12,6 +12,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.offers.returns_guard import assert_not_offer_gift
 from app.services.returns import lane1 as lane1_service
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -54,6 +55,13 @@ class ReturnPreviewResponse(StrictModel):
     lane2_reason: str | None = None
 
 
+class BundledGiftOut(StrictModel):
+    order_item_id: str
+    qty: int
+    title: str | None = None
+    reference_value_ngwee: int
+
+
 class VendorReturnQueueItem(StrictModel):
     id: str
     order_id: str
@@ -66,6 +74,10 @@ class VendorReturnQueueItem(StrictModel):
     item_qty: int
     created_at: str | None = None
     order_created_at: str | None = None
+    #: W8: free gifts that came with this line; they travel back with it (the
+    #: refund never includes them — their price was 0) and the vendor sees
+    #: their reference value.
+    bundled_gifts: list[BundledGiftOut] = Field(default_factory=list)
 
 
 class VendorRespondRequest(StrictModel):
@@ -123,6 +135,7 @@ async def preview_return(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ReturnPreviewResponse:
+    assert_not_offer_gift(service_client, order_item_id)
     if lane == 1:
         preview = lane1_service.preview_lane1_breakdown(
             service_client,
@@ -211,6 +224,7 @@ async def submit_return(
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> SubmitReturnResponse:
     _rate_limit_returns(request, current_user.id, service_client)
+    assert_not_offer_gift(service_client, body.order_item_id)
 
     if body.lane == 1:
         row = lane1_service.create_lane1_return(

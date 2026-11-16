@@ -180,9 +180,7 @@ async def process_embedding_tick(
     """Claim queued jobs, embed document text, and write search_documents.embedding."""
     # Fail closed before claiming: a missing key must not burn the queue to dead.
     if embedding_settings().api_key is None:
-        logger.error(
-            "OPENROUTER_API_KEY not configured; skipping embedding tick without claiming"
-        )
+        logger.error("OPENROUTER_API_KEY not configured; skipping embedding tick without claiming")
         return TickResult(processed=0, dead=0, cost_usd=0.0)
 
     claimed = _claim_jobs(service, limit=limit)

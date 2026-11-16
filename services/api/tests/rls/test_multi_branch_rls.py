@@ -1,4 +1,4 @@
-"""Multi-branch businesses at the database (migration 20261115100000).
+"""Multi-branch businesses at the database (migration 20261116120000).
 
 Proves, against the real migrated schema:
   * backfill: every vendor is a business (same id) with one primary approved branch;

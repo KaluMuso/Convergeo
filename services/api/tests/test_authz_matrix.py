@@ -130,6 +130,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # Guest-cookie owner resolution at the dependency; handler rejects guests
         # (401) because accepting a quoted RFQ requires a signed-in customer.
         ("POST", "/cart/rfq/{rfq_id}/accept"),
+        # Public offer badges / listing offers (W8): read-only, flag-gated, IP rate-limited.
+        ("GET", "/offers/badges"),
+        ("GET", "/offers/listing/{listing_id}"),
         ("GET", "/catalog/listings"),
         ("GET", "/catalog/listings/{listing_id}"),
         ("GET", "/categories"),
@@ -146,6 +149,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/clips/{clip_id}/ranking"),
         ("GET", "/directory"),
         ("GET", "/directory/{slug}"),
+        # "From other shops" rail under product/service/event pages: public
+        # retail items from other ACTIVE shops only (no wholesale, no demo).
+        ("GET", "/directory/{slug}/elsewhere"),
         # Public discovery BFF + anonymized aggregates (IP rate-limited).
         ("GET", "/discovery/home"),
         ("GET", "/discovery/popular-searches"),

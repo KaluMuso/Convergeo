@@ -41,8 +41,8 @@ def reserve_payout_row(
 ) -> None:
     """Reserve vendor balance by inserting a payout row under an advisory xact lock.
 
-    Raises ``AppError`` with code ``insufficient_released_balance`` when the vendor
-  does not have enough released balance net of pending/processing payouts.
+      Raises ``AppError`` with code ``insufficient_released_balance`` when the vendor
+    does not have enough released balance net of pending/processing payouts.
     """
     if amount_ngwee <= 0:
         raise AppError(

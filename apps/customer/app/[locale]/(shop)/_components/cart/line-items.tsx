@@ -31,6 +31,8 @@ export type CartLineItemLabels = QtyStepperLabels & {
   /** "{group}: {value}" for the chosen colour/size. */
   variantOption?: string;
   variantSeparator?: string;
+  /** W8: "Offer saving {amount}" under a line an offer priced. */
+  offerSaving?: string;
 };
 
 type CartLineItemProps = {
@@ -58,6 +60,10 @@ export function CartLineItem({
 }: CartLineItemProps) {
   const title = item.title_override ?? item.listing_id;
   const outOfStock = isOutOfStock(notice);
+  const offerDiscount =
+    typeof item.list_line_total_ngwee === "number"
+      ? Math.max(0, item.list_line_total_ngwee - item.line_total_ngwee)
+      : 0;
   const maxQty = notice?.kind === "qty_reduced" ? (notice.available_qty ?? item.qty) : 99;
   const saleUnit = resolveSaleUnit(item.sale_unit);
   const minimum = resolveMinimumSteps(item.min_steps);
@@ -112,9 +118,27 @@ export function CartLineItem({
             </p>
           ) : null}
         </div>
-        <p className="shrink-0 font-mono text-sm font-semibold text-text">
-          {labels.lineTotal.replace("{amount}", formatK(item.line_total_ngwee))}
-        </p>
+        <div className="flex shrink-0 flex-col items-end">
+          {offerDiscount > 0 ? (
+            <s
+              className="font-mono text-xs text-text-3"
+              data-testid={`cart-line-list-${item.listing_id}`}
+            >
+              {formatK(item.list_line_total_ngwee ?? 0)}
+            </s>
+          ) : null}
+          <p className="m-0 font-mono text-sm font-semibold text-text">
+            {labels.lineTotal.replace("{amount}", formatK(item.line_total_ngwee))}
+          </p>
+          {offerDiscount > 0 && labels.offerSaving ? (
+            <p
+              className="m-0 text-xs font-medium text-success"
+              data-testid={`cart-line-offer-saving-${item.listing_id}`}
+            >
+              {labels.offerSaving.replace("{amount}", formatK(offerDiscount))}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

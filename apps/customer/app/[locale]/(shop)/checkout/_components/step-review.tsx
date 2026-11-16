@@ -5,6 +5,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { isConsentCurrent, saveDeliveryConsent } from "../../../../../lib/delivery-consent";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,
@@ -52,6 +53,14 @@ export type ReviewStepLabels = {
   nextCod: string;
   /** UX pass 4 — COD-specific review copy. Templates use {amount} / {landmark}. */
   codGuide?: ReviewCodGuideLabels;
+  /** Zambia DPA notice: share delivery details with the courier (optional choice). */
+  deliveryConsent?: ReviewDeliveryConsentLabels;
+};
+
+export type ReviewDeliveryConsentLabels = {
+  label: string;
+  hint: string;
+  saveFailed: string;
 };
 
 export type ReviewCodGuideLabels = {
@@ -103,6 +112,10 @@ export function StepReview({
   const submittingRef = useRef(false);
   const nextId = useId();
   const [consent, setConsent] = useState(false);
+  const [shareConsent, setShareConsent] = useState(false);
+  const [shareSaving, setShareSaving] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const hasDelivery = fulfilment?.groups.some((group) => group.fulfilment === "delivery") ?? false;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -334,6 +347,34 @@ export function StepReview({
         >
           {labels.placeOrderUnavailable}
         </p>
+      ) : null}
+
+      {hasDelivery && labels.deliveryConsent ? (
+        <div className="space-y-1" data-testid="checkout-delivery-consent">
+          <Checkbox
+            id="checkout-delivery-consent"
+            label={labels.deliveryConsent.label}
+            checked={shareConsent}
+            disabled={shareSaving}
+            onChange={(event) => {
+              const next = event.target.checked;
+              setShareSaving(true);
+              setShareError(null);
+              void saveDeliveryConsent(next, "checkout")
+                .then(
+                  (saved) => setShareConsent(isConsentCurrent(saved)),
+                  () => setShareError(labels.deliveryConsent?.saveFailed ?? null),
+                )
+                .finally(() => setShareSaving(false));
+            }}
+          />
+          <p className="font-body text-xs text-muted">{labels.deliveryConsent.hint}</p>
+          {shareError ? (
+            <p role="alert" className="font-body text-xs text-danger">
+              {shareError}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <Checkbox

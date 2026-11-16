@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { notify } from "@vergeo/ui/src/toast";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,20 +10,41 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { VendorErrorState } from "../../../../_components/async-state";
 import { ListSkeleton } from "../../../../_components/vendor-skeletons";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
-import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
-import { ListingTipsPanel, ListingVisibilityHint } from "../../../_components/listing-guide";
+import {
+  ImageManager,
+  type ListingImageRecord,
+} from "../../../_components/image-manager";
+import {
+  ListingTipsPanel,
+  ListingVisibilityHint,
+} from "../../../_components/listing-guide";
 import { VariantsEditor } from "../../../_components/variants-editor";
 import {
   ListingFields,
+  listingFieldErrors,
   parseListingFieldValues,
   requiresListingEvidence,
-  validateListingFields,
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
+import {
+  buildListingFieldLabels,
+  FIELD_ERRORS_KEY,
+  readFieldErrorMessages,
+} from "../../../new/_lib/field-labels";
+import { describeListingError } from "../../../new/_lib/listing-errors";
 import { milliToUnitInput } from "../../../new/_lib/measure";
+import { FULFILMENT_OPTIONS, USED_GRADES } from "../../../new/_lib/types";
 import { Badge, Button, FormField, Input, Switch } from "../../../new/_lib/ui";
-import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
-import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
+import {
+  createManageClient,
+  type ListingSummary,
+  type PriceTier,
+} from "../_lib/manage-client";
+import {
+  isValidZmwDecimal,
+  ngweeToZmwInput,
+  zmwDecimalToNgwee,
+} from "../_lib/money";
 
 import { StockEditor } from "./stock-editor";
 
@@ -52,7 +74,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [listing, setListing] = useState<ListingSummary | null>(null);
-  const [fieldValues, setFieldValues] = useState<ListingFieldValues | null>(null);
+  const [fieldValues, setFieldValues] = useState<ListingFieldValues | null>(
+    null,
+  );
   const [returnable, setReturnable] = useState(false);
   const [returnWindowHours, setReturnWindowHours] = useState("");
   const [compareAtZmw, setCompareAtZmw] = useState("");
@@ -65,66 +89,22 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
   const manageClient = useMemo(() => createManageClient(getToken), [getToken]);
 
   const fieldLabels = useMemo(
-    () => ({
-      priceLabel: t("listings.fields.priceLabel"),
-      pricePlaceholder: t("listings.fields.pricePlaceholder"),
-      priceHelp: t("listings.fields.priceHelp"),
-      pricePerStepHelp: t("listings.fields.pricePerStepHelp"),
-      priceInvalid: t("listings.fields.priceInvalid"),
-      productClassLabel: t("listings.fields.productClassLabel"),
-      classA: t("listings.fields.classA"),
-      classB: t("listings.fields.classB"),
-      classC: t("listings.fields.classC"),
-      classD: t("listings.fields.classD"),
-      classE: t("listings.fields.classE"),
-      standaloneClassHint: t("listings.fields.standaloneClassHint"),
-      saleUnitLabel: t("listings.fields.saleUnitLabel"),
-      unitEach: t("listings.fields.unitEach"),
-      unitMetre: t("listings.fields.unitMetre"),
-      unitKg: t("listings.fields.unitKg"),
-      unitLitre: t("listings.fields.unitLitre"),
-      unitBag: t("listings.fields.unitBag"),
-      unitSqm: t("listings.fields.unitSqm"),
-      unitStepLabel: t("listings.fields.unitStepLabel"),
-      unitStepHelp: t("listings.fields.unitStepHelp"),
-      unitStepInvalid: t("listings.fields.unitStepInvalid"),
-      minStepsLabel: t("listings.fields.minStepsLabel"),
-      conditionLabel: t("listings.fields.conditionLabel"),
-      conditionNew: t("listings.fields.conditionNew"),
-      conditionRefurbished: t("listings.fields.conditionRefurbished"),
-      conditionUsed: t("listings.fields.conditionUsed"),
-      defectNotesLabel: t("listings.fields.defectNotesLabel"),
-      defectNotesPlaceholder: t("listings.fields.defectNotesPlaceholder"),
-      defectNotesHelp: t("listings.fields.defectNotesHelp"),
-      defectNotesInvalid: t("listings.fields.defectNotesInvalid"),
-      fulfilmentLabel: t("listings.fields.fulfilmentLabel"),
-      fulfilmentStocked: t("listings.fields.fulfilmentStocked"),
-      fulfilmentMadeToOrder: t("listings.fields.fulfilmentMadeToOrder"),
-      leadTimeLabel: t("listings.fields.leadTimeLabel"),
-      leadTimeHelp: t("listings.fields.leadTimeHelp"),
-      leadTimeInvalid: t("listings.fields.leadTimeInvalid"),
-      capacityLabel: t("listings.fields.capacityLabel"),
-      capacityHelp: t("listings.fields.capacityHelp"),
-      capacityInvalid: t("listings.fields.capacityInvalid"),
-      stockModeLabel: t("listings.fields.stockModeLabel"),
-      stockTracked: t("listings.fields.stockTracked"),
-      stockAlways: t("listings.fields.stockAlways"),
-      stockQtyLabel: t("listings.fields.stockQtyLabel"),
-      wholesaleLabel: t("listings.fields.wholesaleLabel"),
-      wholesaleHelp: t("listings.fields.wholesaleHelp"),
-      wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
-      moqLabel: t("listings.fields.moqLabel"),
-      evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
-      saveDraft: t("listings.fields.saveDraft"),
-      savingDraft: t("listings.fields.savingDraft"),
-      required: t("listings.errors.required"),
-    }),
+    () => buildListingFieldLabels(t as unknown as (key: string) => string),
+    [t],
+  );
+
+  const fieldErrorMessages = useMemo(
+    () => readFieldErrorMessages(t.raw(FIELD_ERRORS_KEY)),
     [t],
   );
 
@@ -154,11 +134,25 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           unitStep: milliToUnitInput(row.unit_step_milli ?? 1_000),
           minSteps: String(row.min_steps ?? 1),
           condition: row.condition,
+          conditionDetail: (USED_GRADES as readonly string[]).includes(
+            row.condition_detail ?? "",
+          )
+            ? (row.condition_detail as (typeof USED_GRADES)[number])
+            : "used_good",
           defectNotes: row.defect_notes ?? "",
+          fulfilmentOptions:
+            row.fulfilment_options && row.fulfilment_options.length > 0
+              ? FULFILMENT_OPTIONS.filter((option) =>
+                  row.fulfilment_options?.includes(option),
+                )
+              : ["lusaka_delivery", "pickup_shop"],
           fulfilmentMode: row.fulfilment_mode ?? "stocked",
-          leadTimeDays: row.lead_time_days === null ? "" : String(row.lead_time_days ?? ""),
+          leadTimeDays:
+            row.lead_time_days === null ? "" : String(row.lead_time_days ?? ""),
           vendorCapacityPerWeek:
-            row.vendor_capacity_per_week === null ? "" : String(row.vendor_capacity_per_week ?? ""),
+            row.vendor_capacity_per_week === null
+              ? ""
+              : String(row.vendor_capacity_per_week ?? ""),
           stockMode: row.stock_mode,
           stockQty: row.stock_qty === null ? "" : String(row.stock_qty),
           wholesale: row.wholesale,
@@ -166,9 +160,15 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         });
         setReturnable(row.returnable);
         setReturnWindowHours(
-          row.return_window_hours === null ? "" : String(row.return_window_hours),
+          row.return_window_hours === null
+            ? ""
+            : String(row.return_window_hours),
         );
-        setCompareAtZmw(row.compare_at_ngwee === null ? "" : ngweeToZmwInput(row.compare_at_ngwee));
+        setCompareAtZmw(
+          row.compare_at_ngwee === null
+            ? ""
+            : ngweeToZmwInput(row.compare_at_ngwee),
+        );
         setTiers(tiersFromListing(row));
         setError(null);
       })
@@ -216,7 +216,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         const previous = parsed[index - 1];
         return (
           previous !== undefined &&
-          (tier.min_qty <= previous.min_qty || tier.price_ngwee >= previous.price_ngwee)
+          (tier.min_qty <= previous.min_qty ||
+            tier.price_ngwee >= previous.price_ngwee)
         );
       })
     ) {
@@ -229,11 +230,13 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     if (!fieldValues) {
       return;
     }
-    const validationError = validateListingFields(fieldValues, fieldLabels);
-    if (validationError) {
-      setError(validationError);
+    const clientErrors = listingFieldErrors(fieldValues, fieldLabels);
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      setError(t("listings.errors.draftInvalid"));
       return;
     }
+    setFieldErrors({});
     const priceTiers = buildPriceTiers();
     if (fieldValues.wholesale && priceTiers === null) {
       setError(t("listings.errors.invalid_tiers"));
@@ -262,7 +265,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     setNotice(null);
     try {
       const parsed = parseListingFieldValues(fieldValues);
-      const compareAtNgwee = trimmedCompareAt === "" ? null : zmwDecimalToNgwee(trimmedCompareAt);
+      const compareAtNgwee =
+        trimmedCompareAt === "" ? null : zmwDecimalToNgwee(trimmedCompareAt);
       if (compareAtNgwee !== null && compareAtNgwee <= parsed.priceNgwee) {
         setError(t("listings.manage.edit.compareAtTooLow"));
         return;
@@ -276,6 +280,8 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         min_steps: parsed.minSteps,
         condition: fieldValues.condition,
         defect_notes: parsed.defectNotes,
+        condition_detail: parsed.conditionDetail,
+        fulfilment_options: fieldValues.fulfilmentOptions,
         fulfilment_mode: fieldValues.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
@@ -297,7 +303,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
               ...current,
               stockMode: response.listing.stock_mode,
               stockQty:
-                response.listing.stock_qty === null ? "" : String(response.listing.stock_qty),
+                response.listing.stock_qty === null
+                  ? ""
+                  : String(response.listing.stock_qty),
             }
           : current,
       );
@@ -307,9 +315,22 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         : t("listings.manage.edit.saved");
       setNotice(savedNotice);
       notify.success(savedNotice);
-    } catch {
-      setError(t("listings.manage.errors.saveFailed"));
-      notify.error(t("listings.manage.errors.saveFailed"));
+    } catch (caught: unknown) {
+      const result = describeListingError(
+        caught,
+        {
+          standaloneRequired: t("listings.errors.standalone_required"),
+          draftInvalid: t("listings.errors.draftInvalid"),
+          publishBlocked: t("listings.errors.publishBlocked"),
+          fieldErrors: fieldErrorMessages,
+          fallback: t("listings.manage.errors.saveFailed"),
+        },
+        listing?.status === "active" ? "publish" : "draft",
+      );
+      setFieldErrors(result.fields);
+      const summary = [result.message, ...result.unplaced].join(" ");
+      setError(summary);
+      notify.error(summary);
     } finally {
       setSaving(false);
     }
@@ -320,7 +341,11 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       return;
     }
     setActionLoading(
-      listing.status === "draft" ? "publish" : listing.status === "paused" ? "unpause" : "pause",
+      listing.status === "draft"
+        ? "publish"
+        : listing.status === "paused"
+          ? "unpause"
+          : "pause",
     );
     setError(null);
     try {
@@ -336,9 +361,22 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       }));
       setNotice(t("listings.manage.edit.saved"));
       notify.success(t("listings.manage.edit.saved"));
-    } catch {
-      setError(t("listings.manage.errors.saveFailed"));
-      notify.error(t("listings.manage.errors.saveFailed"));
+    } catch (caught: unknown) {
+      const result = describeListingError(
+        caught,
+        {
+          standaloneRequired: t("listings.errors.standalone_required"),
+          draftInvalid: t("listings.errors.draftInvalid"),
+          publishBlocked: t("listings.errors.publishBlocked"),
+          fieldErrors: fieldErrorMessages,
+          fallback: t("listings.manage.errors.saveFailed"),
+        },
+        listing.status === "draft" ? "publish" : "draft",
+      );
+      setFieldErrors(result.fields);
+      const summary = [result.message, ...result.unplaced].join(" ");
+      setError(summary);
+      notify.error(summary);
     } finally {
       setActionLoading(null);
     }
@@ -352,7 +390,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       const response = await manageClient.deleteListing(listingId);
       if (response.paused_instead) {
         setNotice(t("listings.manage.delete.paused_instead"));
-        setListing((current) => (current ? { ...current, status: response.status } : current));
+        setListing((current) =>
+          current ? { ...current, status: response.status } : current,
+        );
       } else {
         setNotice(t("listings.manage.delete.removed"));
         router.push(`/${locale}/listings`);
@@ -392,6 +432,26 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     );
   }
 
+  if (listing.status === "removed") {
+    return (
+      <div className="flex flex-col gap-3" data-testid="listing-removed-state">
+        <h1 className="text-xl font-semibold text-text">
+          {t("listings.manage.removed.title")}
+        </h1>
+        <p className="text-sm text-text-2">{listing.title}</p>
+        <p className="text-sm text-text-2" role="status">
+          {t("listings.manage.removed.body")}
+        </p>
+        <Link
+          href={`/${locale}/listings`}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text"
+        >
+          {t("listings.manage.removed.back")}
+        </Link>
+      </div>
+    );
+  }
+
   const statusLabel =
     listing.status === "active"
       ? t("listings.manage.status.active")
@@ -399,19 +459,27 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         ? t("listings.manage.status.paused")
         : t("listings.manage.status.draft");
   const evidenceRequired = requiresListingEvidence(fieldValues);
-  const persistedEvidenceRequired = listing.product_class === "D" || listing.condition === "used";
+  const persistedEvidenceRequired = listing.condition === "used";
   const hasEvidence = (listing.images?.length ?? 0) > 0;
   const minimumEvidenceImages =
-    listing.status === "active" && (persistedEvidenceRequired || evidenceRequired) ? 1 : 0;
-  const activationBlocked = listing.status !== "active" && evidenceRequired && !hasEvidence;
+    listing.status === "active" &&
+    (persistedEvidenceRequired || evidenceRequired)
+      ? 1
+      : 0;
+  const activationBlocked =
+    listing.status !== "active" && evidenceRequired && !hasEvidence;
 
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-text">{t("listings.manage.edit.title")}</h1>
+        <h1 className="text-xl font-semibold text-text">
+          {t("listings.manage.edit.title")}
+        </h1>
         <p className="text-sm text-text-2">{listing.title}</p>
         <div className="flex items-center gap-2 pt-1">
-          <span className="text-xs text-text-2">{t("listings.manage.statusLabel")}</span>
+          <span className="text-xs text-text-2">
+            {t("listings.manage.statusLabel")}
+          </span>
           <Badge
             variant={
               listing.status === "active"
@@ -443,14 +511,21 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         inventoryReadOnly
         values={fieldValues}
         onChange={(patch) =>
-          setFieldValues((current) => (current ? { ...current, ...patch } : current))
+          setFieldValues((current) =>
+            current ? { ...current, ...patch } : current,
+          )
         }
         wholesaleEnabled={fieldValues.wholesale}
         labels={fieldLabels}
+        errors={fieldErrors}
         allowStandaloneClasses={listing.product_id === null}
       />
 
-      <StockEditor listingId={listingId} client={manageClient} ownerId={session?.user.id ?? ""} />
+      <StockEditor
+        listingId={listingId}
+        client={manageClient}
+        ownerId={session?.user.id ?? ""}
+      />
 
       <FormField
         label={t("listings.manage.edit.compareAtLabel")}
@@ -470,7 +545,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
             <p className="text-sm font-medium text-text">
               {t("listings.manage.edit.returnableLabel")}
             </p>
-            <p className="text-xs text-text-2">{t("listings.manage.edit.returnableHelp")}</p>
+            <p className="text-xs text-text-2">
+              {t("listings.manage.edit.returnableHelp")}
+            </p>
           </div>
           <Switch
             label={t("listings.manage.edit.returnableLabel")}
@@ -529,9 +606,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
 
       {fieldValues.wholesale ? (
         <div className="space-y-3 rounded-lg border border-border p-3">
-          <p className="text-sm font-medium text-text">{t("listings.manage.edit.tierHeading")}</p>
+          <p className="text-sm font-medium text-text">
+            {t("listings.manage.edit.tierHeading")}
+          </p>
           {tiers.map((tier, index) => (
-            <div key={`tier-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <div
+              key={`tier-${index}`}
+              className="grid grid-cols-[1fr_1fr_auto] gap-2"
+            >
               <FormField label={t("listings.manage.edit.tierQtyLabel")}>
                 <Input
                   inputMode="numeric"
@@ -539,7 +621,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
                   onChange={(event) =>
                     setTiers((current) =>
                       current.map((row, rowIndex) =>
-                        rowIndex === index ? { ...row, minQty: event.target.value } : row,
+                        rowIndex === index
+                          ? { ...row, minQty: event.target.value }
+                          : row,
                       ),
                     )
                   }
@@ -552,7 +636,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
                   onChange={(event) =>
                     setTiers((current) =>
                       current.map((row, rowIndex) =>
-                        rowIndex === index ? { ...row, priceZmw: event.target.value } : row,
+                        rowIndex === index
+                          ? { ...row, priceZmw: event.target.value }
+                          : row,
                       ),
                     )
                   }
@@ -564,7 +650,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
                 className="mt-6 min-h-11"
                 loadingLabel={t("listings.manage.edit.saving")}
                 onClick={() =>
-                  setTiers((current) => current.filter((_, rowIndex) => rowIndex !== index))
+                  setTiers((current) =>
+                    current.filter((_, rowIndex) => rowIndex !== index),
+                  )
                 }
               >
                 {t("listings.manage.edit.removeTier")}
@@ -576,7 +664,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
             variant="secondary"
             className="min-h-11 w-full"
             loadingLabel={t("listings.manage.edit.saving")}
-            onClick={() => setTiers((current) => [...current, { minQty: "", priceZmw: "" }])}
+            onClick={() =>
+              setTiers((current) => [...current, { minQty: "", priceZmw: "" }])
+            }
           >
             {t("listings.manage.edit.addTier")}
           </Button>
@@ -591,7 +681,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         loadingLabel={t("listings.manage.edit.saving")}
         onClick={() => void handleSave()}
       >
-        {saving ? t("listings.manage.edit.saving") : t("listings.manage.edit.save")}
+        {saving
+          ? t("listings.manage.edit.saving")
+          : t("listings.manage.edit.save")}
       </Button>
 
       <Button
@@ -600,7 +692,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         className="min-h-11 w-full"
         disabled={actionLoading !== null || activationBlocked}
         loading={
-          actionLoading === "publish" || actionLoading === "pause" || actionLoading === "unpause"
+          actionLoading === "publish" ||
+          actionLoading === "pause" ||
+          actionLoading === "unpause"
         }
         loadingLabel={
           actionLoading === "publish"

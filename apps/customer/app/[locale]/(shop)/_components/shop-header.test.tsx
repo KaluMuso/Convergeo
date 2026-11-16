@@ -6,20 +6,14 @@ import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-
 import { ShopHeader } from "./shop-header";
 
-const eligible = vi.fn<() => boolean>();
 const cartMocks = vi.hoisted(() => ({
   refreshCart: vi.fn().mockResolvedValue(null),
   openMiniCart: vi.fn(),
   setStoreState: vi.fn(),
 }));
 vi.mock("./cart/mini-cart-drawer", () => cartMocks);
-
-vi.mock("./use-business-eligibility", () => ({
-  useBusinessEligibility: () => eligible(),
-}));
 
 vi.mock("./category-mega-menu", () => ({
   CategoryMegaMenu: ({ labels }: { labels: { trigger: string } }) => (
@@ -89,7 +83,6 @@ const labels = {
   services: "Services",
   events: "Events",
   askVergeo: "Ask Vergeo",
-  supplies: "Supplies",
   account: "Account",
   cart: "Cart",
   cartWithCount: "Cart, {count} items",
@@ -106,7 +99,6 @@ const labels = {
 
 describe("ShopHeader", () => {
   it("exposes search-forward primary nav with Directory and without theme control", () => {
-    eligible.mockReturnValue(false);
     render(<ShopHeader locale="en" labels={labels} />);
 
     expect(screen.getByTestId("shop-header")).toBeInTheDocument();
@@ -128,14 +120,7 @@ describe("ShopHeader", () => {
     expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();
   });
 
-  it("shows gated Supplies link for eligible business buyers", () => {
-    eligible.mockReturnValue(true);
-    render(<ShopHeader locale="en" labels={labels} />);
-    expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
-  });
-
   it("offers the appearance quick toggle when theme labels are provided", () => {
-    eligible.mockReturnValue(false);
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockReturnValue({
@@ -159,7 +144,6 @@ describe("ShopHeader", () => {
   });
 
   it("matches the approved desktop chrome structure snapshot", () => {
-    eligible.mockReturnValue(false);
     const { container } = render(<ShopHeader locale="en" labels={labels} />);
     expect(container.firstChild).toMatchSnapshot();
   });

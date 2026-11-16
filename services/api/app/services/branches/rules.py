@@ -1,6 +1,6 @@
 """Multi-branch rules shared by the vendor and admin routers.
 
-The database (migration 20261115100000) is the authority for every limit:
+The database (migration 20261116120000) is the authority for every limit:
 shop allowance, unregistered single shop, sibling distance, payout ownership,
 branch state machine. This module mirrors the arithmetic for friendly previews
 (quotes, distance hints) and maps database refusals to stable API errors with

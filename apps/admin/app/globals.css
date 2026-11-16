@@ -17,3 +17,87 @@ body {
     background-color var(--dur) var(--ease-std),
     color var(--dur) var(--ease-std);
 }
+
+/*
+ * Admin density. The shell scrolls inside `.admin-main` (its own scroll container),
+ * so these rules tighten the generous per-page Tailwind spacing and make tables
+ * scannable. Values come from the packages/ui spacing tokens (--sp-*), not ad-hoc px.
+ * Unlayered rules intentionally win over Tailwind's layered utilities.
+ */
+.admin-main {
+  --admin-gap: var(--sp-3);
+  --admin-cell-y: var(--sp-2);
+  --admin-cell-x: var(--sp-2);
+}
+
+.admin-main .space-y-8 > :not(:last-child),
+.admin-main .space-y-6 > :not(:last-child) {
+  margin-block-end: var(--sp-4);
+}
+
+.admin-main .space-y-5 > :not(:last-child),
+.admin-main .space-y-4 > :not(:last-child) {
+  margin-block-end: var(--sp-3);
+}
+
+.admin-main .space-y-3 > :not(:last-child) {
+  margin-block-end: var(--sp-2);
+}
+
+.admin-main .gap-8,
+.admin-main .gap-6 {
+  gap: var(--sp-4);
+}
+
+.admin-main .gap-5,
+.admin-main .gap-4 {
+  gap: var(--sp-3);
+}
+
+.admin-main .p-6,
+.admin-main .p-5 {
+  padding: var(--sp-4);
+}
+
+.admin-main .p-4 {
+  padding: var(--sp-3);
+}
+
+.admin-main .py-8,
+.admin-main .py-6 {
+  padding-block: var(--sp-4);
+}
+
+/* Tables: compact rows, tabular figures (money and counts line up), sticky header. */
+.admin-main table {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-main th,
+.admin-main td {
+  padding-block: var(--admin-cell-y);
+  padding-inline: var(--admin-cell-x);
+}
+
+.admin-main thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--surface);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+/*
+ * A horizontally scrolling wrapper is also a vertical scroll container, which would pin
+ * the sticky header to the wrapper instead of the page. Give wrapped tables a bounded
+ * height so their header sticks while the rows scroll.
+ */
+.admin-main .overflow-x-auto {
+  max-height: calc(100dvh - 11rem);
+  overflow-y: auto;
+}
+
+.admin-main .tabular-nums,
+.admin-main [data-money] {
+  font-variant-numeric: tabular-nums;
+}
