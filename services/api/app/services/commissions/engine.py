@@ -18,13 +18,12 @@ class FreeOrderCommissionError(ValueError):
 
 
 def snapshot_is_free(snapshot: Mapping[str, Any]) -> bool:
-    """True for a free order (explicit flag, or every line is a free-events line)."""
-    if snapshot.get("is_free") is True:
-        return True
-    lines = parse_snapshot_lines(snapshot)
-    return bool(lines) and all(
-        str(line.get("category_key")) == FREE_EVENTS_CATEGORY for line in lines
-    )
+    """True only for a genuinely free order (the RSVP / free-booking paths set is_free).
+
+    The zero-commission ``free_events`` category is NOT free: its paid tickets
+    still carry money and must post ledger legs (mirrors private.order_is_free).
+    """
+    return snapshot.get("is_free") is True
 
 
 @dataclass(frozen=True, slots=True)

@@ -286,15 +286,26 @@ stable
 security definer
 set search_path = ''
 as $$
-  -- A genuinely free order: created by the RSVP / free-booking paths (snapshot
-  -- is_free = true), no delivery fee, and no line with a price. A zero-commission
-  -- category (e.g. free_events) is NOT free: its paid tickets still move money.
+  -- A genuinely free order: an RSVP (snapshot is_free = true), no delivery fee,
+  -- and every line is a ticket of a zero-priced free_rsvp ticket type (price 0,
+  -- ticket_types_free_rsvp_price_chk). Lines carry a 1-ngwee placeholder only
+  -- because order_items requires a positive unit price. A zero-commission
+  -- category (free_events) is NOT free: its paid tickets still move money.
   select coalesce((
     select (o.commission_snapshot ->> 'is_free') = 'true'
        and coalesce(o.delivery_fee_ngwee, 0) = 0
+       and exists (select 1 from public.order_items oi where oi.order_id = o.id)
        and not exists (
          select 1 from public.order_items oi
-         where oi.order_id = o.id and oi.unit_price_ngwee > 0
+         where oi.order_id = o.id
+           and not exists (
+             select 1
+             from public.order_item_tickets oit
+             join public.ticket_types tt on tt.id = oit.ticket_type_id
+             where oit.order_item_id = oi.id
+               and tt.kind = 'free_rsvp'
+               and tt.price_ngwee = 0
+           )
        )
     from public.orders o
     where o.id = p_order_id

@@ -1,5 +1,7 @@
 """Free events (RSVP) + free services (request/accept) — money, abuse, authz paths."""
 
+# Imported pytest fixtures (db, service) are re-bound as test parameters.
+# ruff: noqa: F811
 from __future__ import annotations
 
 import uuid

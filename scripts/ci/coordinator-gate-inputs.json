@@ -590,7 +590,7 @@
     "20261115210000_event_ticket_integrity.sql": "9460fb97d3c207bcbb82689c298be089f41f53610575e061b2b61908233c0978",
     "20261115235500_business_home_offers_flag.sql": "661fa429b86138f5e8adfab9052c293002ed6e0017e4c70c9e672d0d13335e9d",
     "20261115235600_business_home_section_flags.sql": "be21e21ad9ea3354de483b3a47835a03312c91496033af36342c21181fc58172",
-    "20261116130000_free_events_services.sql": "5235fc6f8a84a5c2cd6887ee2c67c1e0f387abed71b5b2d995f3ef642eba1e11"
+    "20261116130000_free_events_services.sql": "4f2157b147b018124fe6eaf081e2840acc3e062c9977d5a9fb4865618f282987"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
@@ -622,7 +622,7 @@
     "services/api/tests/rls/test_force_rls_d32.py": "e048db6d6377bc08baadc7e7315972cf865399644b2b7381c7752ff6ea9be76a",
     "services/api/tests/rls/test_intake_force_rls.py": "5538c60345b6298dd4cd2dfc3822f1bfe0fec3782f7642dfbfd7ea5943d48dc3",
     "services/api/tests/rls/test_launch_table_access.py": "67904985726b87e0605b084f21cae223e448b81a34bab8dffef7bbd3dca1510f",
-    "services/api/tests/rls/test_matrix.py": "86a90f2553875bbc7113afb9ef6bc57f5cb15638dba4a8ec271d6b3c9a72a9c6",
+    "services/api/tests/rls/test_matrix.py": "819c0423a84ac81af32e4da0ac458638ee81784d74993c8ea281d95120883d58",
     "services/api/tests/rls/test_no_untested_tables.py": "0b98732ac77e83dbcb94db6b968d2cd7c30da6c8b91f882134f311d27d3abaa1",
     "services/api/tests/rls/test_privileged_function_grants.py": "edbe0a48370bd2c0d262cbe923ea34f4f842bd28ec4a2327a529f34e09d7643b",
     "services/api/tests/rls/test_review_reply_guard.py": "ce37dc42cb7b037a79cdf39afe6738c36ae3ed8f5b906d0a36104a5bb5503cad",

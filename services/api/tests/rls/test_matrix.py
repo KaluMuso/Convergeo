@@ -3311,6 +3311,16 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "offer_gift_reservations": client_invisible(),
+    # Free events / services (#813): SELECT-only grants with owner, organiser /
+    # provider and admin read policies; writes go through the API (service role).
+    "event_rsvps": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "service_free_bookings": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Web Push subscriptions: API writes for the caller; clients read/delete own.
     "web_push_subscriptions": {
         Persona.ANON: deny_all(),
