@@ -39,6 +39,9 @@ export type VendorGroupLabels = {
   freeDeliveryUnlocked: string;
   /** e.g. "Seller {index} of {total}" — shown when multi-seller. */
   sellerIndex?: string;
+  /** W8: "Free gift: {title} × {qty}" and "Worth {value} — free with your offer". */
+  offerGift?: string;
+  offerGiftWorth?: string;
 };
 
 type VendorGroupsProps = {
@@ -190,6 +193,34 @@ export function VendorGroups({
                   onSaveForLater={onSaveForLater}
                 />
               ))}
+              {labels.offerGift
+                ? (group.gifts ?? []).map((gift) => (
+                    <div
+                      key={`${gift.offer_id}-${gift.listing_id}`}
+                      className="flex items-start justify-between gap-3 rounded border border-success/40 bg-success/10 p-3"
+                      data-testid={`cart-offer-gift-${gift.listing_id}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="m-0 truncate text-sm font-medium text-text">
+                          {(labels.offerGift ?? "")
+                            .replace("{title}", gift.title ?? "")
+                            .replace("{qty}", String(gift.qty))}
+                        </p>
+                        {labels.offerGiftWorth ? (
+                          <p className="m-0 text-xs text-text-2">
+                            {labels.offerGiftWorth.replace(
+                              "{value}",
+                              formatK(gift.qty * gift.reference_unit_price_ngwee),
+                            )}
+                          </p>
+                        ) : null}
+                      </div>
+                      <p className="m-0 shrink-0 font-mono text-sm font-semibold text-success">
+                        {formatK(0)}
+                      </p>
+                    </div>
+                  ))
+                : null}
             </div>
           </section>
         );
@@ -227,6 +258,8 @@ export type CartPageLabels = {
   /** Shown when checkout sent the buyer back because their stock hold lapsed. */
   reservationExpiredNotice: string;
   summaryHeading: string;
+  /** W8: "You save" row in the order summary when an offer applied. */
+  offerSavings?: string;
   vendor: VendorGroupLabels;
   line: CartLineItemLabels;
   notices: ChangeNoticeLabels;
@@ -490,6 +523,17 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
               {formatK(cart.subtotal_ngwee)}
             </span>
           </div>
+          {(cart.savings_ngwee ?? 0) > 0 && labels.offerSavings ? (
+            <div
+              className="flex items-center justify-between gap-3"
+              data-testid="cart-offer-savings"
+            >
+              <span className="text-sm text-success">{labels.offerSavings}</span>
+              <span className="font-mono text-sm text-success">
+                {`-${formatK(cart.savings_ngwee ?? 0)}`}
+              </span>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-3 border-t border-border pt-2">
             <span className="font-medium text-text">{labels.total}</span>
             <span

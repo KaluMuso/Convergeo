@@ -212,18 +212,11 @@ def _service_order_completed(client: _ServiceRoleClient, job_id: str) -> bool:
         .eq("job_id", job_id)
         .execute()
     )
-    order_item_ids = [
-        str(row["order_item_id"])
-        for row in _rows(links)
-        if row.get("order_item_id")
-    ]
+    order_item_ids = [str(row["order_item_id"]) for row in _rows(links) if row.get("order_item_id")]
     if not order_item_ids:
         return False
     items = (
-        client.client.table("order_items")
-        .select("order_id")
-        .in_("id", order_item_ids)
-        .execute()
+        client.client.table("order_items").select("order_id").in_("id", order_item_ids).execute()
     )
     order_ids = [str(row["order_id"]) for row in _rows(items) if row.get("order_id")]
     if not order_ids:
@@ -238,9 +231,7 @@ def _service_order_completed(client: _ServiceRoleClient, job_id: str) -> bool:
     return len(_rows(orders)) > 0
 
 
-def _existing_review(
-    client: _ServiceRoleClient, job_id: str
-) -> dict[str, Any] | None:
+def _existing_review(client: _ServiceRoleClient, job_id: str) -> dict[str, Any] | None:
     response = (
         client.client.table("service_reviews")
         .select(REVIEW_SELECT_COLUMNS)
@@ -325,9 +316,7 @@ async def submit_service_review(
     }
     try:
         insert_response = (
-            service_client.client.table("service_reviews")
-            .insert(insert_payload)
-            .execute()
+            service_client.client.table("service_reviews").insert(insert_payload).execute()
         )
     except Exception as exc:
         if _is_unique_violation(exc):
@@ -340,9 +329,7 @@ async def submit_service_review(
         raise
     inserted = _rows(insert_response)
     if not inserted:
-        raise AppError(
-            code="internal_error", message="Failed to create review", http_status=500
-        )
+        raise AppError(code="internal_error", message="Failed to create review", http_status=500)
     return _to_service_review_response(inserted[0])
 
 
@@ -405,9 +392,7 @@ async def service_review_eligibility(
         within_edit_window = deadline is not None and datetime.now(tz=UTC) <= deadline
 
     can_review = (
-        completed
-        and provider_vendor_id is not None
-        and (existing is None or within_edit_window)
+        completed and provider_vendor_id is not None and (existing is None or within_edit_window)
     )
     return ServiceReviewEligibility(
         job_id=job_id,
@@ -474,7 +459,5 @@ async def submit_service_vendor_reply(
     )
     updated = _rows(update_response)
     if not updated:
-        raise AppError(
-            code="internal_error", message="Failed to save reply", http_status=500
-        )
+        raise AppError(code="internal_error", message="Failed to save reply", http_status=500)
     return _to_service_review_response(updated[0])

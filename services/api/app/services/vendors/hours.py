@@ -52,7 +52,19 @@ def _parse_hhmm(value: str) -> time | None:
 
 
 def parse_span(raw: Any) -> tuple[time, time] | None:
-    """Parse ``"09:00-17:00"`` into a (open, close) pair, or None if unusable."""
+    """Parse ``"09:00-17:00"`` into a (open, close) pair, or None if unusable.
+
+    The vendor profile editor saves the object shape
+    ``{"open": "09:00", "close": "17:00", "closed": false}``; that is accepted
+    too (``closed: true`` or missing times stay closed — fail closed).
+    """
+    if isinstance(raw, dict):
+        if raw.get("closed") is True:
+            return None
+        opens_raw, closes_raw = raw.get("open"), raw.get("close")
+        if not isinstance(opens_raw, str) or not isinstance(closes_raw, str):
+            return None
+        raw = f"{opens_raw}-{closes_raw}"
     if not isinstance(raw, str):
         return None
     parts = raw.split("-")
@@ -134,3 +146,23 @@ def next_open_at(
         if candidate >= local:
             return candidate
     return None
+
+
+def weekly_schedule(hours: Any) -> list[tuple[str, str, str]]:
+    """Open days in Monday→Sunday order as ``(day, "HH:MM", "HH:MM")``.
+
+    Accepts both stored shapes (string spans and the editor's objects) so the
+    storefront never has to know about either. Unusable or closed days are
+    simply absent — the same fail-closed reading as :func:`is_open_at`.
+    """
+    if not isinstance(hours, dict):
+        return []
+    week: list[tuple[str, str, str]] = []
+    for day in DAY_KEYS:
+        span = parse_span(hours.get(day))
+        if span is None:
+            continue
+        opens, closes = span
+        close_label = "24:00" if closes == time(23, 59, 59) else closes.strftime("%H:%M")
+        week.append((day, opens.strftime("%H:%M"), close_label))
+    return week

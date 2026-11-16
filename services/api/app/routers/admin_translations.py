@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
+from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.schemas.base import StrictModel
@@ -76,6 +77,7 @@ def upsert_override(
     body: OverridePutRequest,
     user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
 ) -> OverrideRow:
     payload = {
         "locale": body.locale,
@@ -90,6 +92,20 @@ def upsert_override(
         .execute()
     )
     rows = [row for row in (response.data or []) if isinstance(row, dict)]
+    # Translation overrides change user-facing copy on every app; the write must be
+    # attributable. A failed audit insert fails the request (the upsert is idempotent).
+    recorder.record(
+        action="admin.translation.upsert",
+        entity_type="translation_override",
+        entity_id=None,
+        before=None,
+        after={
+            "locale": body.locale,
+            "namespace": body.namespace,
+            "message_key": body.message_key,
+            "value": body.value,
+        },
+    )
     if rows:
         return _to_override(rows[0])
     # Fake clients may not echo the row; reflect the request.
@@ -105,18 +121,33 @@ def upsert_override(
 def delete_override(
     user: Annotated[CurrentUser, Depends(require_role("admin"))],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
     locale: Annotated[str, Query(min_length=2, max_length=16)],
     namespace: Annotated[str, Query(min_length=1, max_length=64)],
     message_key: Annotated[str, Query(min_length=1, max_length=200)],
 ) -> Response:
     del user
-    (
+    response = (
         service_client.client.table("translation_overrides")
         .delete()
         .eq("locale", locale)
         .eq("namespace", namespace)
         .eq("message_key", message_key)
         .execute()
+    )
+    deleted = [row for row in (response.data or []) if isinstance(row, dict)]
+    # A delete otherwise leaves no trace at all (the row and its updated_by are gone).
+    recorder.record(
+        action="admin.translation.delete",
+        entity_type="translation_override",
+        entity_id=None,
+        before={
+            "locale": locale,
+            "namespace": namespace,
+            "message_key": message_key,
+            "value": deleted[0].get("value") if deleted else None,
+        },
+        after=None,
     )
     return Response(status_code=204)
 

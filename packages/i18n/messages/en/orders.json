@@ -248,5 +248,30 @@
     "beforeDispatch": "Want to change or cancel? Contact support with your order number before it's sent out.",
     "afterDispatch": "Something wrong with your order? Contact support with your order number.",
     "contactCta": "Contact support"
+  },
+  "doorPay": {
+    "title": "Pay at the door",
+    "intro": "Pay {amount} by mobile money when the rider is at your door, after you check your items.",
+    "amountDue": "Pay {amount} by mobile money at the door, after you check your items.",
+    "waitingRider": "The payment button appears here when the rider says they have arrived.",
+    "payNow": "Pay now on your phone",
+    "sending": "Sending the payment prompt…",
+    "otherNumber": "Pay from another number",
+    "phoneLabel": "MTN or Airtel number",
+    "phoneHelp": "The prompt goes to this number. Zamtel numbers cannot receive it yet.",
+    "pending": "Check your phone and enter your PIN to approve the payment.",
+    "checkStatus": "Check payment status",
+    "checking": "Checking…",
+    "failed": "The payment did not go through. You can try again or use another number.",
+    "attemptsLeft": "{count, plural, one {# try left} other {# tries left}}",
+    "noAttemptsLeft": "No more tries. The rider can take cash, up to the cash limit.",
+    "paid": "Paid. Your handover code is now shown above. Give it to the rider.",
+    "cash": "Pay the rider {amount} in cash, then give them your handover code.",
+    "errors": {
+      "invalidPhone": "Enter a Zambian MTN or Airtel number.",
+      "operatorUnsupported": "This number cannot receive the prompt. Use an MTN or Airtel number.",
+      "inFlight": "A prompt is already on your phone. Approve it, or wait a moment and try again.",
+      "generic": "Something went wrong. Check your connection and try again."
+    }
   }
 }

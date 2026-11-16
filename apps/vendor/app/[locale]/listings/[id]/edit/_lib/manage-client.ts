@@ -5,13 +5,15 @@ import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import type { VariantsPayload } from "../../../_lib/variant-matrix";
 import type {
   FulfilmentMode,
+  FulfilmentOption,
   ListingCondition,
   ProductClass,
   SaleUnit,
+  UsedGrade,
 } from "../../../new/_lib/types";
 
 export type StockMode = "tracked" | "always_available";
-export type ListingStatus = "draft" | "active" | "paused";
+export type ListingStatus = "draft" | "active" | "paused" | "removed";
 
 export type PriceTier = {
   min_qty: number;
@@ -29,6 +31,8 @@ export type ListingSummary = {
   min_steps?: number;
   condition: ListingCondition;
   defect_notes?: string | null;
+  condition_detail?: string | null;
+  fulfilment_options?: FulfilmentOption[];
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;
   vendor_capacity_per_week?: number | null;
@@ -57,6 +61,8 @@ export type ListingUpdatePayload = {
   min_steps?: number;
   condition?: ListingCondition;
   defect_notes?: string | null;
+  condition_detail?: UsedGrade | null;
+  fulfilment_options?: FulfilmentOption[];
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;
   vendor_capacity_per_week?: number | null;
@@ -67,7 +73,7 @@ export type ListingUpdatePayload = {
   moq?: number;
   returnable?: boolean;
   return_window_hours?: number | null;
-  status?: ListingStatus;
+  status?: Exclude<ListingStatus, "removed">;
 };
 
 export type CartRevalidationSummary = {

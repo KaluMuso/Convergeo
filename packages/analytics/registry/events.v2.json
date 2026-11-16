@@ -1,0 +1,77 @@
+{
+  "$comment": "Convergeo Intelligence — analytics v2 event registry (single source of truth). Python (services/api/app/services/analytics/envelope.py) and TypeScript (packages/analytics/src/v2/envelope.ts) assert parity with this file in tests. Prop specs: 'uuid' | 'uuid!' (required) | 'bool' | 'int' (0..1e9) | 'key' ([a-z0-9_.-]{1,48}) | 'enum:a|b'. Unknown props are dropped server-side; PII keys are always rejected. Money is never accepted from the client (authoritative tables only). A breaking prop change bumps 'version'.",
+  "envelope_version": 2,
+  "events": {
+    "session_start": {
+      "version": 1,
+      "entity_type": null,
+      "entity_prop": null,
+      "props": {
+        "entry_page_key": "key",
+        "referrer_kind": "enum:direct|search|social|internal|other"
+      }
+    },
+    "page_view": {
+      "version": 1,
+      "entity_type": null,
+      "entity_prop": null,
+      "props": {}
+    },
+    "search": {
+      "version": 1,
+      "entity_type": null,
+      "entity_prop": null,
+      "props": {
+        "zero_result": "bool",
+        "result_count": "int"
+      }
+    },
+    "product_view": {
+      "version": 1,
+      "entity_type": "product",
+      "entity_prop": "product_id",
+      "props": {
+        "product_id": "uuid!",
+        "listing_id": "uuid"
+      }
+    },
+    "product_share": {
+      "version": 1,
+      "entity_type": "product",
+      "entity_prop": "product_id",
+      "props": {
+        "product_id": "uuid!",
+        "channel": "enum:whatsapp|copy|native|other"
+      }
+    },
+    "recommendation_impression": {
+      "version": 1,
+      "entity_type": "product",
+      "entity_prop": "product_id",
+      "props": {
+        "product_id": "uuid!",
+        "slot": "key",
+        "rank": "int"
+      }
+    },
+    "recommendation_click": {
+      "version": 1,
+      "entity_type": "product",
+      "entity_prop": "product_id",
+      "props": {
+        "product_id": "uuid!",
+        "slot": "key",
+        "rank": "int"
+      }
+    }
+  },
+  "server_recorded": [
+    "cart_add",
+    "cart_remove",
+    "checkout_start",
+    "step_complete",
+    "payment_start",
+    "order_placed"
+  ],
+  "source_apps": ["customer", "vendor", "admin", "server"]
+}

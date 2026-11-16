@@ -73,10 +73,10 @@ def detect_momo_operator(phone: str) -> MomoOperator:
 
 
 async def resolve_momo_account_name(
-  phone: str,
-  operator: MomoOperator | None = None,
-  *,
-  client: httpx.AsyncClient | None = None,
+    phone: str,
+    operator: MomoOperator | None = None,
+    *,
+    client: httpx.AsyncClient | None = None,
 ) -> dict[str, Any]:
     token = os.environ.get("LENCO_API_TOKEN", "").strip()
     if not token:

@@ -473,12 +473,11 @@ class TestGuardTrigger:
             """
         )
         db.run("RESET SESSION AUTHORIZATION;")
-        # RLS denies vendor UPDATE (0 rows) before the guard trigger; status must stay put.
+        # 20261115140100 revoked client UPDATE on orders, so the vendor token is refused
+        # by the table grant (42501) before RLS or the guard trigger; status must stay put.
         assert _order_status(db, order_id) == "placed"
-        if result.ok:
-            assert "UPDATE 0" in result.rows or result.rows == ["UPDATE 0"]
-        else:
-            assert "order status is server-controlled" in (result.error or "")
+        assert not result.ok
+        assert result.sqlstate == "42501", result.error
 
 
 @pytest.mark.usefixtures("db", "db_url_env")

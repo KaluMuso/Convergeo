@@ -117,7 +117,7 @@
           "description": "在手机或电脑上创建商家账户——无需预付费用。"
         },
         "kyc": {
-          "title": "完成 T1 KYC 认证",
+          "title": "验证您的身份",
           "description": "上传您的 NRC 和一张自拍。我们会核对您的移动支付实名信息。当天即可通过。"
         },
         "list": {
@@ -192,15 +192,15 @@
   "onboarding": {
     "meta": {
       "title": "卖家邀请入驻 — Convergeo",
-      "description": "完成邀请制卖家申请与 T1 KYC。商品上架在管理员批准前保持锁定。"
+      "description": "完成邀请制卖家申请并验证您的身份。商品上架在管理员批准前保持锁定。"
     },
     "invite": {
       "eyebrow": "邀请 / 礼宾试用",
-      "body": "您正在完成卖家邀请申请。目录、结算与商家控制台在 Convergeo 批准 KYC 并授予卖家权限前保持锁定。"
+      "body": "您正在完成卖家邀请申请。在 Convergeo 验证您的身份并授予卖家权限前，目录、结算与商家控制台保持锁定。"
     },
     "steps": {
       "business": "商户",
-      "kyc": "验证身份",
+      "kyc": "验证您的身份",
       "review": "核对"
     },
     "stepAnnouncement": "第 {current} 步，共 {total} 步",
@@ -224,7 +224,7 @@
       "saving": "保存中…"
     },
     "kyc": {
-      "heading": "T1 身份验证",
+      "heading": "验证您的身份",
       "intro": "上传您的 NRC 和一张自拍照。我们会核对您的移动支付账户姓名。审核通过前不会公开任何信息。",
       "nrcLabel": "NRC 照片",
       "nrcHelp": "在光线充足处拍摄您国民登记证（NRC）的正面。",
@@ -266,10 +266,10 @@
       "submitting": "提交中…",
       "editBusiness": "编辑商户信息",
       "editDocs": "编辑证件",
-      "gateNotice": "在 KYC 审核通过前，您的商品将保持隐藏。"
+      "gateNotice": "在您的身份通过验证前，商品将保持隐藏。"
     },
     "status": {
-      "heading": "身份验证状态",
+      "heading": "验证您的身份",
       "pending": {
         "title": "审核中",
         "body": "我们正在验证您的证件。完成后您将收到 WhatsApp 通知。",
@@ -314,7 +314,7 @@
     },
     "loading": "加载中…",
     "checklist": {
-      "heading": "认证清单",
+      "heading": "验证身份所需材料",
       "progress": "已完成 {done}/{total}",
       "items": {
         "business": {
@@ -352,9 +352,16 @@
         "review": "修改上面标出的项目后重新提交——无需从头开始。"
       },
       "reasonLabel": "审核团队的说明",
-      "ctaFinish": "继续认证",
+      "ctaFinish": "验证您的身份",
       "ctaFix": "修改并重新提交",
       "pendingNote": "等待期间您可以先熟悉后台。通过审核前，买家看不到您的商品。"
+    },
+    "back": "返回",
+    "saveLater": {
+      "cta": "保存，稍后继续",
+      "saving": "正在保存…",
+      "saved": "已保存。随时回来，即可从这里继续。",
+      "savedLocal": "已保存在此设备上。请用这部手机回来，即可从中断处继续。"
     }
   },
   "listings": {
@@ -438,7 +445,7 @@
       "publishing": "发布中…",
       "descriptionLabel": "商品描述",
       "descriptionHelp": "请具体描述此商品，至少 20 个字符。",
-      "draftNotice": "保存草稿不会发布商品。",
+      "draftNotice": "保存草稿不会发布商品。类别和发布规则仅在发布时适用。",
       "descriptionInvalid": "请输入至少 20 个字符，开头和结尾的空格不计入。",
       "saveDraft": "保存草稿",
       "savingDraft": "正在保存草稿…",
@@ -494,9 +501,25 @@
       "wholesaleHelp": "仅限 T2+ 认证商家",
       "wholesaleMeasureUnavailable": "按计量销售的商品暂不支持批发价格档位。",
       "moqLabel": "最小起订量",
-      "evidenceDraftNotice": "二手和 D 类商品会保存为草稿。发布前请至少上传一张凭证照片。",
+      "evidenceDraftNotice": "二手商品会先保存为草稿。发布前请至少上传一张实物照片。",
       "saveDraft": "保存草稿并添加照片",
-      "savingDraft": "正在保存草稿…"
+      "savingDraft": "正在保存草稿…",
+      "classHintD": "独一无二或独立商品。可以是全新、翻新或二手。需要单独选择类别，并填写至少 20 个字符的描述。",
+      "classHintE": "按订单制作：设置备货时间和每周产能。不统计库存，商品始终可订。",
+      "conditionUsedHint": "二手商品上架前需要简要说明磨损或瑕疵，并至少提供一张照片。全新和翻新商品无需这些。",
+      "conditionGradeLabel": "成色等级",
+      "gradeExcellent": "极好",
+      "gradeGood": "良好",
+      "gradeFair": "一般",
+      "gradeParts": "仅供拆件 / 无法使用",
+      "fulfilmentLockedHint": "E 类商品始终按订单制作，因此必须填写备货时间。",
+      "fulfilmentOptionsLabel": "买家如何获得此商品？",
+      "fulfilmentOptionsHelp": "勾选您提供的所有方式。结账时只显示订单内所有商品都支持的方式。",
+      "fulfilmentOptionsInvalid": "请至少选择一种买家获取方式。",
+      "optionLusakaDelivery": "卢萨卡市内配送",
+      "optionPickupShop": "到我的店铺或分店自提",
+      "optionPickupNationwide": "全国自提（赞比亚各地买家均可提货）",
+      "stockLockedHint": "按订单制作的商品不统计库存，因此始终可订。"
     },
     "success": {
       "live": "商品已上架！",
@@ -519,7 +542,9 @@
       "retryHint": "请检查网络后重试。",
       "canonicalRequired": "A、B、C 类必须关联目录商品。请使用关联目录或创建目录商品。",
       "standaloneDetailsRequired": "请为独立商品选择类别，并添加至少 20 个字符的描述。",
-      "policyBlocked": "当前类别或发布政策不允许发布此商品。请检查字段，必要时联系支持。"
+      "policyBlocked": "按当前类别或发布规则，此商品暂无法上架。您的草稿已安全保存。如需上架请联系客服。",
+      "draftInvalid": "无法保存此草稿。请修正标出的字段后重试。",
+      "publishBlocked": "此商品暂时无法上架。请修正标出的字段，您仍可先保存为草稿。"
     },
     "import": {
       "meta": {
@@ -708,12 +733,17 @@
         "draft": "仅您可见",
         "active": "买家可见并可下单",
         "paused": "对买家隐藏"
+      },
+      "removed": {
+        "title": "此商品已被移除",
+        "body": "买家已看不到此商品，也无法再编辑。历史订单仍保留其记录。",
+        "back": "返回商品列表"
       }
     },
     "kycGate": {
       "title": "认证仍在进行",
       "body": "您现在就可以准备商品，但只有在认证通过后买家才能看到。",
-      "cta": "查看认证状态",
+      "cta": "验证您的身份",
       "wholesaleLocked": "批发价需在可审计的 T2 认证后解锁。"
     },
     "variants": {
@@ -806,6 +836,37 @@
         "title": "库存和选项",
         "body": "填写您实际拥有的数量。买家需要选择时（如尺码、颜色）请添加选项——每个选项单独计算库存。"
       }
+    },
+    "fieldErrors": {
+      "class_not_released": "此商品类别暂未开放公开销售。",
+      "category_policy_blocked": "此类别不允许该商品类别上架。",
+      "kyc_tier_too_low": "您的认证级别低于此类别上架要求。请先验证身份。",
+      "category_required": "请选择类别。",
+      "canonical_product_required": "此类别需要关联目录商品。",
+      "description_too_short": "请用至少 20 个字符描述商品。",
+      "condition_grade_mismatch": "请选择与成色相符的等级。",
+      "defect_notes_required": "请用至少 10 个字符说明磨损或瑕疵。",
+      "lead_time_required": "按订单制作的商品请填写备货天数。",
+      "lead_time_invalid": "备货时间须在 1 至 365 天之间。",
+      "lead_time_not_allowed": "备货时间仅适用于按订单制作的商品。",
+      "capacity_required": "按订单制作（E 类）的商品必须填写每周产能。",
+      "capacity_too_low": "每周产能须不低于最小购买数量。",
+      "capacity_not_allowed": "每周产能仅适用于 E 类商品。",
+      "title_required": "请输入标题。",
+      "standalone_required": "此类别为独立商品，不关联目录商品。",
+      "fulfilment_options_invalid": "请至少选择一种买家获取方式。",
+      "compare_at_too_low": "对比价必须高于售价。",
+      "evidence_required": "上架前请至少添加一张商品照片。",
+      "prohibited_listing": "此商品或类别不可在 Vergeo5 销售。",
+      "listing_rejected": "商品被拒绝。请检查详情后重试。",
+      "stock_qty_required": "请填写库存数量。",
+      "unit_step_each": "按件销售的商品步长为 1。",
+      "wholesale_measure": "按计量销售的商品不支持批发。",
+      "class_e_made_to_order": "E 类商品必须按订单制作。",
+      "return_window_required": "请填写退货期限（小时）。",
+      "spec_invalid": "请检查您填写的商品详情。",
+      "product_required": "请选择目录商品。",
+      "fulfilment_not_offered": "卖家对订单中的某件商品不提供此方式。"
     }
   },
   "profile": {
@@ -825,9 +886,9 @@
     },
     "fields": {
       "displayNameLabel": "显示名称",
-      "descriptionLabel": "简介",
-      "descriptionPlaceholder": "告诉买家您销售什么，以及为何选择您…",
-      "descriptionHelp": "建议至少 50 个字符，有助于买家信任您的店铺。",
+      "descriptionLabel": "您的故事",
+      "descriptionPlaceholder": "您是谁、从何时开始经营、顾客因什么认识您…",
+      "descriptionHelp": "简短即可，约 60 个字。它会显示在店铺页面顶部的“我们的故事”中。",
       "whatsappLabel": "WhatsApp 号码",
       "whatsappPlaceholder": "例如：0977 123456",
       "whatsappHelp": "可选。买家可直接给您发消息，在您的店铺上显示为“在 WhatsApp 上聊天”按钮。",
@@ -1127,9 +1188,9 @@
       "retryHint": "请检查网络后重试。"
     },
     "kycBanner": {
-      "title": "完成认证",
-      "body": "在 KYC 获批并有可审计记录之前，店铺不会标记为已认证。",
-      "cta": "查看 KYC 状态"
+      "title": "验证您的身份",
+      "body": "在您的身份通过审核并留有可审计记录之前，店铺不会标记为已认证。",
+      "cta": "验证您的身份"
     },
     "shortcuts": {
       "ariaLabel": "快捷入口",
@@ -1144,15 +1205,15 @@
       "intro": "从上往下做——最紧急的排在最前面。",
       "items": {
         "kycFix": {
-          "title": "修正您的认证资料",
+          "title": "修正您的身份验证资料",
           "body": "您的一份资料未能通过审核。查看需要修改的地方——无需从头开始。"
         },
         "kycFinish": {
-          "title": "完成身份认证",
+          "title": "验证您的身份",
           "body": "在我们核实您的身份之前，买家看不到您的店铺。大约需要 5 分钟。"
         },
         "kycPending": {
-          "title": "认证正在审核中",
+          "title": "您的身份正在审核中",
           "body": "现在无需操作。我们的团队通常会在 1 个工作日内回复。"
         },
         "ordersWaiting": {
@@ -1320,7 +1381,7 @@
       "methodFailed": "无法更新结算方式。请重试。",
       "otpFailed": "验证码无效或已过期。",
       "nameMismatch": "该 MoMo 实名与您已认证的法定姓名不符。",
-      "kycRequired": "更改结算方式前请先完成 KYC。",
+      "kycRequired": "更改结算方式前请先验证您的身份。",
       "payoutsPaused": "更改结算方式后结算已暂停。",
       "rateLimited": "请求过于频繁。请稍后重试。",
       "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。",
@@ -1364,7 +1425,9 @@
       "loading": "正在启动摄像头…",
       "denied": "摄像头访问被阻止",
       "deniedBody": "请在浏览器设置中允许摄像头访问，或改为输入客户的 PIN。",
-      "usePin": "改为输入 PIN"
+      "usePin": "改为输入 PIN",
+      "deniedNote": "请在上方输入取货 PIN，或在浏览器设置中允许使用相机后扫码。",
+      "retry": "重试相机"
     },
     "pin": {
       "heading": "输入取货 PIN",
@@ -1444,7 +1507,9 @@
         "loading": "正在启动摄像头…",
         "denied": "摄像头访问被阻止",
         "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。",
-        "useManual": "改为输入门票 PIN"
+        "useManual": "改为输入门票 PIN",
+        "deniedNote": "请在上方输入票券 PIN，或在浏览器设置中允许使用相机后扫码。",
+        "retry": "重试相机"
       },
       "manual": {
         "heading": "手动签到",
@@ -1628,12 +1693,209 @@
       "actionFailed": "操作失败。请重试。",
       "notFound": "未找到活动。",
       "required": "此字段为必填项",
-      "kyc_required": "创建活动前请先完成 KYC 认证。",
+      "kyc_required": "创建活动前请先验证您的身份。",
       "capacity_below_sold": "容量不能低于已售门票数量。",
       "past_instance": "发布前请将已过去的日期改到未来。",
       "ends_before_starts": "结束时间必须晚于开始时间。",
       "not_editable": "此活动已无法编辑。",
-      "invalid_transition": "该操作不适用于此活动。"
+      "invalid_transition": "该操作不适用于此活动。",
+      "recurrenceRuleRequired": "重复活动需要填写重复规则和时区。",
+      "recurrenceSeedRequired": "重复系列只需一个起始日期，后续日期将自动生成。"
+    },
+    "gate": {
+      "title": "活动仅限已认证的主办方",
+      "intro": "您的账户尚未开通举办活动的权限，请选择适合您的方式。",
+      "become": {
+        "title": "成为主办方",
+        "body": "完成一次身份验证后，即可创建活动、售票并为宾客核销入场。",
+        "cta": "成为主办方"
+      },
+      "collaborate": {
+        "title": "与已认证主办方合作办活动",
+        "body": "与已认证的主办方合作，由对方为您的活动承办票务。",
+        "cta": "申请合作",
+        "soon": "即将上线，合作申请开放时我们会通知您。",
+        "open": "向主办方提议活动"
+      }
+    },
+    "collab": {
+      "meta": {
+        "title": "与主办方合作办活动 — Convergeo",
+        "description": "向已认证的主办方提议活动，并共同举办。"
+      },
+      "loading": "加载中…",
+      "untitled": "未命名活动",
+      "status": {
+        "draft": "草稿",
+        "submitted": "已发送",
+        "changes_requested": "需要修改",
+        "approved": "已批准",
+        "declined": "已拒绝",
+        "published": "已发布"
+      },
+      "readiness": {
+        "label": "准备进度",
+        "value": "已准备 {pct}%"
+      },
+      "hub": {
+        "title": "与主办方合作办活动",
+        "intro": "向已认证的主办方提议活动。对方负责票务，批准后您将显示为联合主办方。",
+        "newCta": "提议活动",
+        "inboxCta": "主办方收件箱",
+        "empty": "您还没有提议过活动。"
+      },
+      "inbox": {
+        "title": "合作申请",
+        "intro": "希望在您的已认证账户下举办活动的商家。",
+        "empty": "暂无申请。请在设置中开启接收申请，商家才能找到您。",
+        "link": "合作申请"
+      },
+      "list": {
+        "from": "来自 {name}",
+        "to": "发给 {name}",
+        "open": "查看"
+      },
+      "form": {
+        "title": "提议活动",
+        "editTitle": "更新您的提议",
+        "intro": "选择主办方，描述活动并填写准备清单。是否举办由主办方决定。",
+        "organiser": {
+          "search": "搜索主办方",
+          "none": "目前没有主办方接受申请。",
+          "fixed": "主办方：{name}"
+        },
+        "event": {
+          "title": "活动名称",
+          "category": "分类",
+          "categoryPlaceholder": "选择分类",
+          "city": "城市",
+          "description": "活动介绍"
+        },
+        "saveDraft": "保存草稿",
+        "submit": "发送给主办方",
+        "saving": "保存中…",
+        "submitting": "发送中…",
+        "saved": "草稿已保存。",
+        "submitted": "已发送给主办方。"
+      },
+      "sections": {
+        "organiser": "主办方",
+        "event": "活动",
+        "venue": "场地",
+        "schedule": "日期和时间",
+        "capacity": "容量",
+        "equipment": "设备",
+        "permits": "许可",
+        "tiers": "票档",
+        "share": "收入分成"
+      },
+      "checklist": {
+        "choose": "请选择…",
+        "venue": {
+          "name": "场地名称",
+          "landmark": "地标",
+          "lat": "纬度",
+          "lng": "经度",
+          "useLocation": "使用我的当前位置",
+          "locationFailed": "无法获取您的位置，请手动输入坐标。"
+        },
+        "schedule": {
+          "starts": "开始时间",
+          "ends": "结束时间"
+        },
+        "capacity": {
+          "label": "宾客人数"
+        },
+        "equipment": {
+          "help": "说明哪些已就绪，哪些还需要安排。",
+          "items": {
+            "sound": "音响系统",
+            "stage": "舞台",
+            "power": "供电或发电机",
+            "seating": "座位",
+            "security": "安保"
+          },
+          "states": {
+            "ready": "已就绪",
+            "needed": "仍需安排",
+            "not_needed": "不需要"
+          }
+        },
+        "permits": {
+          "help": "部分场地和活动需要市政或警方许可。",
+          "label": "许可",
+          "note": "备注（可选）",
+          "states": {
+            "obtained": "已取得",
+            "pending": "已申请，等待中",
+            "not_required": "无需许可"
+          }
+        },
+        "tiers": {
+          "name": "票档名称",
+          "price": "价格（K）",
+          "qty": "票数（可选）",
+          "add": "添加票档",
+          "remove": "删除票档"
+        },
+        "share": {
+          "help": "您作为联合主办方为自己提议的票务收入占比。票务收入和付款仍由主办方负责。付款功能尚未上线，此处仅作记录。",
+          "label": "您的分成（%）",
+          "invalid": "请输入 0 到 100 之间的百分比。",
+          "preview": "联合主办方 {cohost}% · 主办方 {organiser}%"
+        }
+      },
+      "fieldErrors": {
+        "required": "为必填项",
+        "must_be_future": "必须是将来的时间",
+        "must_be_after_start": "必须晚于开始时间",
+        "exceeds_capacity": "超过了容量"
+      },
+      "detail": {
+        "changesAsked": "主办方要求修改",
+        "declinedReason": "拒绝原因",
+        "summary": "概要",
+        "done": "已完成",
+        "open": "未完成",
+        "accountability": "票务收入和付款由主办方负责。联合主办方的分成仅作记录，留待日后结算。",
+        "reasonLabel": "原因（将告知商家）",
+        "approve": "批准",
+        "decline": "拒绝",
+        "askChanges": "要求修改",
+        "cancel": "取消",
+        "publish": "发布活动",
+        "waiting": "正在等待主办方决定。",
+        "approvedWaiting": "已批准，主办方将发布该活动。",
+        "openEvent": "查看已发布的活动",
+        "publishedCoHost": "由 {name} 发布，您显示为联合主办方。",
+        "history": "记录",
+        "back": "返回"
+      },
+      "audit": {
+        "create": "已创建草稿",
+        "submit": "已发送给主办方",
+        "approve": "已批准",
+        "decline": "已拒绝",
+        "request_changes": "已要求修改",
+        "publish": "已发布"
+      },
+      "errors": {
+        "checklistIncomplete": "发送前请完成以下事项：",
+        "forbidden": "您无权对此申请执行该操作。",
+        "kycRequired": "举办活动前请先验证您的身份。",
+        "invalidTransition": "该申请状态已变化，请刷新后查看。",
+        "invalidInput": "请检查信息后重试。",
+        "notFound": "未找到该申请。",
+        "conflict": "与现有记录冲突。",
+        "rateLimited": "请求过于频繁，请稍后再试。",
+        "disabled": "活动合作功能暂未开放。",
+        "organiserUnavailable": "该主办方目前不接受申请。",
+        "pastStart": "开始时间已过，请让商家更新。",
+        "disputeSuspended": "因活动纠纷成立，售票发布已暂停。",
+        "highValue": "该活动需要先进行核实通话才能发布，请联系 Convergeo 支持。",
+        "generic": "出了点问题，请重试。",
+        "pickOrganiser": "请先选择主办方。"
+      }
     }
   },
   "tickets": {
@@ -1999,7 +2261,9 @@
       "home": "首页",
       "listings": "商品",
       "orders": "订单",
-      "profile": "资料"
+      "profile": "资料",
+      "settings": "设置",
+      "offers": "优惠"
     }
   },
   "intake": {
@@ -2008,6 +2272,188 @@
     },
     "errors": {
       "canonical_required": "提交此草稿前，请选择目录中对应的在售商品。"
+    }
+  },
+  "settings": {
+    "meta": {
+      "title": "设置 — Convergeo 商家",
+      "description": "账户、通知、结算方式和语言。"
+    },
+    "title": "设置",
+    "intro": "账户、通知、结算方式和语言集中在此。",
+    "account": {
+      "heading": "账户",
+      "signedInAs": "当前登录",
+      "unknown": "未知账户",
+      "changePassword": "修改密码",
+      "editProfile": "编辑店铺资料",
+      "signOut": "退出登录",
+      "signingOut": "正在退出…",
+      "signOutFailed": "无法退出登录，请重试。"
+    },
+    "notifications": {
+      "heading": "通知",
+      "body": "查看提醒，并选择订单动态的接收渠道。",
+      "open": "打开通知",
+      "whatsapp": "WhatsApp 号码"
+    },
+    "payout": {
+      "heading": "结算方式",
+      "pilot": "结算功能尚未开启，开启后您的结算方式将显示在此。",
+      "loading": "正在加载结算方式…",
+      "loadFailed": "无法加载您的结算方式。",
+      "current": "{rail} 移动支付 · {number}",
+      "none": "尚未设置结算方式。",
+      "change": "更改结算方式"
+    },
+    "language": {
+      "heading": "语言",
+      "label": "应用语言",
+      "names": {
+        "en": "English",
+        "bem": "Bemba",
+        "nya": "Nyanja",
+        "fr": "Français",
+        "zh": "中文"
+      }
+    },
+    "collab": {
+      "heading": "活动合作",
+      "body": "允许商家向您发送申请，在您的已认证账户下举办活动。",
+      "notOrganiser": "只有已认证的主办方才能接收合作申请。",
+      "toggle": "接受合作申请",
+      "inbox": "打开申请收件箱",
+      "saveFailed": "保存失败，请重试。"
+    }
+  },
+  "offers": {
+    "loading": "正在加载优惠…",
+    "backToList": "← 优惠",
+    "unknownItem": "商品已不可用",
+    "list": {
+      "title": "优惠",
+      "intro": "为您自己的商品、服务和活动设置组合价、买赠和赠品。",
+      "create": "新建优惠",
+      "empty": "还没有优惠。创建一个即可在商品上显示优惠标签。",
+      "edit": "编辑",
+      "archive": "归档",
+      "giftStock": "剩余赠品：{available} / {total}",
+      "notInCart": "结账目前只对商品应用优惠；此优惠会展示，但暂不生效。"
+    },
+    "types": {
+      "bxgy": {
+        "label": "买X送Y",
+        "hint": "购买商品，再送一件。"
+      },
+      "bundle": {
+        "label": "组合价",
+        "hint": "多件一起购买更便宜。"
+      },
+      "buy_n_pay_m": {
+        "label": "买N付M",
+        "hint": "例如买3件付2件。"
+      },
+      "free_gift": {
+        "label": "赠品",
+        "hint": "预留库存送完即止。"
+      }
+    },
+    "roles": {
+      "trigger": {
+        "label": "顾客购买",
+        "hint": "以下任意一项均可（商品、服务或活动）。"
+      },
+      "reward": {
+        "label": "赠送商品",
+        "hint": "免费赠送的商品，请在下方预留库存。"
+      },
+      "anchor": {
+        "label": "主商品",
+        "hint": "在“加购件打折”组合中按原价计算。"
+      },
+      "addon": {
+        "label": "加购件",
+        "hint": "最多5件与主商品一起销售的商品。"
+      },
+      "eligible": {
+        "label": "参与商品",
+        "hint": "这些商品任意组合都计入N件，价格最低的免费。"
+      }
+    },
+    "kinds": {
+      "product": "商品",
+      "service": "服务",
+      "event": "活动"
+    },
+    "form": {
+      "createTitle": "新建优惠",
+      "editTitle": "编辑优惠",
+      "typeLabel": "优惠类型",
+      "titleLabel": "优惠名称",
+      "buyQty": "顾客购买（数量）",
+      "getQty": "免费获得（数量）",
+      "bundlePricing": "组合定价",
+      "bundlePercent": "加购件百分比折扣",
+      "bundleFixed": "固定组合价",
+      "addonPercent": "加购件折扣（%）",
+      "addonPercentHint": "主商品保持原价。",
+      "bundlePrice": "组合价（K）",
+      "bundlePriceHint": "顾客为整套支付的金额。",
+      "buyN": "购买（N）",
+      "payM": "支付（M）",
+      "giftStock": "预留赠品",
+      "giftStockHint": "赠品送完后优惠自动停止。",
+      "giftStockReserved": "已有 {reserved} 件承诺给订单",
+      "itemQty": "数量",
+      "removeItem": "移除",
+      "addItem": "添加商品…",
+      "startsAt": "开始时间",
+      "endsAt": "结束时间（可选）",
+      "endsAtHint": "留空则一直有效，直到您暂停。",
+      "status": "状态",
+      "maxApplications": "每单最多次数",
+      "save": "保存优惠",
+      "saving": "正在保存…"
+    },
+    "status": {
+      "draft": "草稿",
+      "active": "启用",
+      "paused": "已暂停",
+      "archived": "已归档",
+      "live": "进行中",
+      "adminPaused": "已被 Vergeo5 暂停"
+    },
+    "summary": {
+      "bxgy": "买{buy}送{get}",
+      "bundlePercent": "加购件减{percent}%",
+      "bundleFixed": "组合价 {price}",
+      "buyNPayM": "买{n}付{m}",
+      "freeGift": "赠品送完即止"
+    },
+    "preview": {
+      "heading": "顾客需支付",
+      "pays": "顾客支付 {pay}，原价 {list}",
+      "saves": "节省 {amount}",
+      "gift": "另送 {qty} 件赠品，价值 {value}",
+      "commissionNote": "佣金按折后金额收取。",
+      "empty": "添加商品后可查看价格。"
+    },
+    "errors": {
+      "loadFailed": "无法加载您的优惠。",
+      "saveFailed": "无法保存优惠，请重试。",
+      "authRequired": "请登录以管理优惠。",
+      "notFound": "未找到该优惠。",
+      "invalidPrice": "请输入有效的组合价。",
+      "disabled": "优惠功能尚未开放。",
+      "itemNotFound": "找不到其中一件商品。",
+      "itemForbidden": "优惠只能使用您自己的商品、服务和活动。",
+      "itemUnavailable": "其中一件商品已不可用。",
+      "discountTooLarge": "折扣超过允许的上限。",
+      "noSaving": "组合价必须低于各商品总价。",
+      "tooManyActive": "进行中的优惠已达上限。",
+      "giftStockBelowReserved": "赠品库存不能低于已承诺的数量。",
+      "typeImmutable": "优惠类型不能更改。",
+      "rateLimited": "修改过于频繁，请稍候再试。"
     }
   }
 }

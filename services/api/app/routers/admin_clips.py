@@ -185,11 +185,7 @@ def _age_hours(value: Any, *, now: datetime | None = None) -> float:
 
 def _load_clip(service_client: ServiceRoleClient, clip_id: str) -> dict[str, Any]:
     rows = _rows(
-        _table(service_client, CLIPS_TABLE)
-        .select("*")
-        .eq("id", clip_id)
-        .maybe_single()
-        .execute()
+        _table(service_client, CLIPS_TABLE).select("*").eq("id", clip_id).maybe_single().execute()
     )
     if not rows:
         raise AppError(

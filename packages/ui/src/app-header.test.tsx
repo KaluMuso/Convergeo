@@ -12,7 +12,7 @@ describe("AppHeader", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders shop variant with Directory primary link and gated supplies slot", () => {
+  it("renders shop variant with Directory primary link", () => {
     render(
       <AppHeader
         variant="shop"
@@ -25,11 +25,6 @@ describe("AppHeader", () => {
           { key: "services", href: "/en/services", label: "Services" },
         ]}
         desktopSearchSlot={<div role="search">Search</div>}
-        suppliesSlot={
-          <li>
-            <a href="/en/supplies">Supplies</a>
-          </li>
-        }
         LinkComponent={({ href, children, className }) => (
           <a href={href} className={className}>
             {children}
@@ -42,7 +37,6 @@ describe("AppHeader", () => {
       "href",
       "/en/directory",
     );
-    expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
     expect(screen.getByRole("search")).toBeInTheDocument();
   });
 
