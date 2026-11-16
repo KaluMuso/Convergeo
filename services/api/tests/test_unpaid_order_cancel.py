@@ -53,7 +53,8 @@ def _status(db: PgConn, order_id: str) -> str:
 def _run(client: TestClient) -> dict[str, int]:
     response = client.post(PATH, json={"limit": 200}, headers=HEADERS)
     assert response.status_code == 200, response.text
-    return response.json()
+    body: dict[str, int] = response.json()
+    return body
 
 
 @pytest.fixture(autouse=True)
