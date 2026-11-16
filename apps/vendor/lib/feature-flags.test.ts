@@ -4,7 +4,10 @@ import { parseStringAllowlist } from "./feature-flags";
 
 describe("parseStringAllowlist", () => {
   it("parses json arrays", () => {
-    expect(parseStringAllowlist(["vendor-a", "vendor-b"])).toEqual(["vendor-a", "vendor-b"]);
+    expect(parseStringAllowlist(["vendor-a", "vendor-b"])).toEqual([
+      "vendor-a",
+      "vendor-b",
+    ]);
   });
 
   it("parses json-encoded strings", () => {
