@@ -106,7 +106,8 @@ class CoordinatorControls(unittest.TestCase):
         workflow = (gates.ROOT / ".github/workflows/ci.yml").read_text()
         broad = re.search(r"(?ms)^  python-shard:\n.*?(?=^  [a-z0-9-]+:)", workflow)
         assert broad is not None
-        self.assertEqual(list(dict.fromkeys(re.findall(r"--ignore[= ](tests/\w+\.py)", broad.group()))), [
+        ignored = re.findall(r"--ignore[= ](tests/\w+\.py)", broad.group())
+        self.assertEqual(list(dict.fromkeys(ignored)), [
             "tests/test_authz_matrix.py", "tests/test_f1_payout_real_stack.py",
             "tests/test_vendor_stock_adjustment_db.py",
             "tests/test_merchant_review_boundaries_db.py"])

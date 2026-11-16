@@ -29,7 +29,8 @@ class DetectCiScopeTests(unittest.TestCase):
     def test_docs_only_skips_everything_heavy(self) -> None:
         result = pr(["docs/plan/00-status.md", "README.md", "prompts/x.md"], base="master")
         self.assertTrue(result["docs_only"])
-        for key in ("run_js", "run_security", "run_db_light", "run_typegen", "run_heavy", "run_perf"):
+        for key in ("run_js", "run_security", "run_db_light", "run_typegen",
+                    "run_heavy", "run_perf"):
             self.assertFalse(result[key], key)
         self.assertTrue(result["run_python"])  # reduced doc-truth run
 
@@ -44,7 +45,9 @@ class DetectCiScopeTests(unittest.TestCase):
         for path in (".github/workflows/ci.yml", "scripts/ci/run-critical-real-stack.sh",
                      "services/api/uv.lock"):
             result = pr([path])
-            self.assertTrue(result["run_typegen"] and result["run_heavy"] and result["run_perf"], path)
+            self.assertTrue(
+                result["run_typegen"] and result["run_heavy"] and result["run_perf"], path
+            )
 
     def test_frontend_only_skips_db_and_real_stack(self) -> None:
         result = pr(["apps/customer/app/page.tsx"], base="master")
