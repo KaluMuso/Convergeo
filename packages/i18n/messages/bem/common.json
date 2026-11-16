@@ -109,5 +109,8 @@
   "paymentTrust": {
     "footerSeal": "Lipileni mu cash ilyo order yafika",
     "footerPaymentNote": "Cash on delivery · Ukulipila pa intaneti kukesa"
+  },
+  "codTrust": {
+    "line": "⚠ You pay on delivery → We deliver → You confirm"
   }
 }

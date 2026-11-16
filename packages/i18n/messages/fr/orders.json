@@ -106,7 +106,9 @@
     "confirming": "Confirmation…",
     "done": "Vous avez confirmé la réception",
     "doneBody": "Le paiement a été versé au vendeur.",
-    "error": "Impossible de confirmer la réception. Veuillez réessayer."
+    "error": "Impossible de confirmer la réception. Veuillez réessayer.",
+    "bodyCod": "En confirmant, vous nous indiquez que votre commande est arrivée. Ne confirmez qu'après avoir tout reçu et payé le vendeur.",
+    "doneBodyCod": "Merci de votre confirmation. Votre commande est terminée."
   },
   "report": {
     "title": "Signaler un problème",
@@ -255,5 +257,22 @@
       "inFlight": "Une demande est déjà sur votre téléphone. Approuvez-la ou patientez un instant.",
       "generic": "Une erreur s'est produite. Vérifiez votre connexion et réessayez."
     }
+  },
+  "buyAgain": {
+    "button": "Racheter",
+    "loading": "Ajout au panier…",
+    "error": "Impossible d'ajouter ces articles. Veuillez réessayer.",
+    "rateLimited": "Trop de tentatives. Patientez un instant puis réessayez.",
+    "added": "Ajoutés à votre panier : {count}",
+    "nothingAdded": "Rien n'a pu être ajouté à votre panier.",
+    "skippedTitle": "Non ajoutés",
+    "skipped": {
+      "unavailable": "Plus disponible",
+      "out_of_stock": "En rupture de stock",
+      "variant_unavailable": "Cette option n'est plus disponible"
+    },
+    "priceChangeTitle": "Les prix ont changé depuis votre dernière commande",
+    "priceChangeLine": "{title} : avant {previous}, maintenant {current}",
+    "goToCart": "Vérifier le panier et commander"
   }
 }

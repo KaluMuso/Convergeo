@@ -5,8 +5,11 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { AccountListBoundary } from "../../_components/account-list-boundary";
 import { getAccountListSession } from "../../_components/account-list-server";
+import { BuyAgain } from "../_components/buy-again";
+import { buildBuyAgainLabels } from "../_components/buy-again-labels";
 import { InvoiceLinkBlock } from "../_components/invoice-link";
 import { OrderTimeline } from "../_components/order-timeline";
 import {
@@ -46,7 +49,10 @@ type PageProps = {
 };
 
 export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale, id: "00000000-0000-0000-0000-000000000000" }));
+  return LOCALES.map((locale) => ({
+    locale,
+    id: "00000000-0000-0000-0000-000000000000",
+  }));
 }
 
 export default async function AccountOrderDetailPage({ params }: PageProps) {
@@ -60,7 +66,10 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
   const { accountId, accessToken } = await getAccountListSession(locale);
   const baseMessages = await getMessages();
   const ordersMessages = await loadNamespace(locale as Locale, "orders");
-  const messages = { ...baseMessages, orders: ordersMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    orders: ordersMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "orders" }) as {
     (key: string, values?: Record<string, string | number>): string;
     /** Unformatted message, for templates the client fills in itself. */
@@ -78,6 +87,8 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     }
     throw error;
   }
+
+  const isCod = order.payment_mode === "cod";
 
   const timelineLabels = {
     title: t("timeline.title"),
@@ -172,6 +183,13 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           {order.payment_mode === "cod" ? t("list.paymentCod") : t("list.paymentPrepaid")}
         </p>
       </header>
+
+      {isCod ? (
+        <CodTrustLine
+          text={createTranslator({ locale, messages, namespace: "codTrust" })("line")}
+          testId="order-cod-trust"
+        />
+      ) : null}
 
       <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
 
@@ -303,7 +321,10 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
                   >
                     {item.variant_options
                       .map((option) =>
-                        t("detail.variantOption", { group: option.group, value: option.value }),
+                        t("detail.variantOption", {
+                          group: option.group,
+                          value: option.value,
+                        }),
                       )
                       .join(t("detail.variantSeparator"))}
                   </span>
@@ -341,18 +362,29 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
         }}
       />
 
+      <BuyAgain
+        orderId={order.id}
+        accessToken={accessToken}
+        locale={locale}
+        status={order.status}
+        labels={buildBuyAgainLabels(t)}
+      />
+
       <ConfirmReceivedBlock
         orderId={order.id}
         accessToken={accessToken}
         status={order.status}
         labels={{
           title: t("confirm.title"),
-          body: t("confirm.body"),
-          trust: t("confirm.trust"),
+          // COD never touches escrow: no "held/released" wording on cash orders.
+          body: isCod ? t("confirm.bodyCod") : t("confirm.body"),
+          trust: isCod
+            ? createTranslator({ locale, messages, namespace: "codTrust" })("line")
+            : t("confirm.trust"),
           button: t("confirm.button"),
           confirming: t("confirm.confirming"),
           done: t("confirm.done"),
-          doneBody: t("confirm.doneBody"),
+          doneBody: isCod ? t("confirm.doneBodyCod") : t("confirm.doneBody"),
           error: t("confirm.error"),
         }}
       />

@@ -95,4 +95,3 @@ Registry source: `services/api/app/services/notifications/templates/whatsapp.py`
 > Your payout of {{1}} could not be sent. {{2}} We will retry once your details are correct.
 
 **Sample values:** K2,900.00 · Please check your payout number in the vendor app.
-

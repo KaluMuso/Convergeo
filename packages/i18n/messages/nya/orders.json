@@ -132,5 +132,26 @@
       "inFlight": "Pempho lili kale pa foni yanu. Vomerezani kapena dikirani pang'ono.",
       "generic": "Pali vuto. Onani intaneti yanu ndipo yesaninso."
     }
+  },
+  "confirm": {
+    "bodyCod": "⚠ Confirming tells us your order arrived. Only confirm when you have received everything and paid the vendor.",
+    "doneBodyCod": "⚠ Thanks for confirming. Your order is complete."
+  },
+  "buyAgain": {
+    "button": "⚠ Buy again",
+    "loading": "⚠ Adding to your cart…",
+    "error": "⚠ Could not add these items. Please try again.",
+    "rateLimited": "⚠ Too many tries. Please wait a moment and try again.",
+    "added": "⚠ Added to your cart: {count}",
+    "nothingAdded": "⚠ Nothing could be added to your cart.",
+    "skippedTitle": "⚠ Not added",
+    "skipped": {
+      "unavailable": "⚠ No longer available",
+      "out_of_stock": "⚠ Out of stock",
+      "variant_unavailable": "⚠ That option is no longer available"
+    },
+    "priceChangeTitle": "⚠ Prices have changed since your last order",
+    "priceChangeLine": "⚠ {title}: was {previous}, now {current}",
+    "goToCart": "⚠ Review cart and checkout"
   }
 }

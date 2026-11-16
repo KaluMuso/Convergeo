@@ -229,6 +229,11 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
         deliveryNoLandmark: t("checkout.review.codGuide.deliveryNoLandmark"),
         pickupFromSeller: t("checkout.review.codGuide.pickupFromSeller"),
         placeOrderCod: t("checkout.review.codGuide.placeOrderCod"),
+        trustLine: createTranslator({
+          locale,
+          messages,
+          namespace: "codTrust",
+        })("line"),
       },
     },
     countdown: {
@@ -256,7 +261,10 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const query = (await searchParams) ?? {};
   const hasSession = Object.prototype.hasOwnProperty.call(query, "session");
   const hasGroup = Object.prototype.hasOwnProperty.call(query, "group");
@@ -294,7 +302,11 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.group)
   ) {
     const labels = buildCheckoutLabels(locale, messages);
-    const checkoutT = createTranslator({ locale, messages, namespace: "checkout" });
+    const checkoutT = createTranslator({
+      locale,
+      messages,
+      namespace: "checkout",
+    });
     const ticketMessages = await loadNamespace(locale as Locale, "events");
     const ticketT = createTranslator({
       locale,

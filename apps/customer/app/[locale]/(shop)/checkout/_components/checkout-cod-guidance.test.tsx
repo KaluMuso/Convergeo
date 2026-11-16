@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
+import commonMessages from "../../../../../../../packages/i18n/messages/en/common.json";
 
 import { StepPayment, type PaymentOptions } from "./step-payment";
 import { StepReview, type ReviewStepLabels } from "./step-review";
@@ -46,7 +47,7 @@ const reviewLabels: ReviewStepLabels = {
   payerNumber: c.review.payerNumber,
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
-  codGuide: c.review.codGuide,
+  codGuide: { ...c.review.codGuide, trustLine: commonMessages.codTrust.line },
 };
 
 const session: CheckoutSession = {
@@ -167,6 +168,10 @@ describe("COD guidance — review step", () => {
       />,
     );
 
+    // I1: the shared COD trust line leads; escrow wording stays out.
+    expect(screen.getByTestId("checkout-review-cod-trust")).toHaveTextContent(
+      "You pay on delivery → We deliver → You confirm",
+    );
     const steps = screen.getByTestId("checkout-review-cod-steps");
     expect(within(steps).getByText(c.review.codGuide.step1)).toBeInTheDocument();
     expect(
@@ -196,6 +201,7 @@ describe("COD guidance — review step", () => {
 
     expect(screen.getByText(c.review.escrowTitle)).toBeInTheDocument();
     expect(screen.queryByTestId("checkout-review-cod-steps")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("checkout-review-cod-trust")).not.toBeInTheDocument();
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(c.review.placeOrder);
   });
 });

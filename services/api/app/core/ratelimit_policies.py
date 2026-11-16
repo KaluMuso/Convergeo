@@ -215,6 +215,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /cart/items": STANDARD_WRITE,
     "POST /cart/items/{listing_id}/save-for-later": STANDARD_WRITE,
     "POST /cart/merge": STANDARD_WRITE,
+    "POST /cart/reorder/{order_id}": SENSITIVE_WRITE,
     "POST /cart/revalidate": STANDARD_WRITE,
     "POST /cart/rfq/{rfq_id}/accept": STANDARD_WRITE,
     "POST /checkout/session": PAYMENT_WRITE,
