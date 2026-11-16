@@ -1,21 +1,27 @@
 "use client";
 
-import { CategorySelection, categoryPath } from "@vergeo/ui/src/category-selection";
+import {
+  CategorySelection,
+  categoryPath,
+} from "@vergeo/ui/src/category-selection";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { listingCreateErrorMessage } from "../_lib/listing-errors";
+import { describeListingError } from "../_lib/listing-errors";
 import { Button, FormField, Input, Spinner } from "../_lib/ui";
 
 import { buildCanonicalSpec, type DetailEntry } from "./canonical-details";
-import { CanonicalDetailsFields, type CanonicalDetailsLabels } from "./canonical-details-fields";
+import {
+  CanonicalDetailsFields,
+  type CanonicalDetailsLabels,
+} from "./canonical-details-fields";
 import { CommissionBanner } from "./commission-banner";
 import {
   DEFAULT_LISTING_FIELDS,
   ListingFields,
+  listingFieldErrors,
   parseListingFieldValues,
   requiresListingEvidence,
-  validateListingFields,
   type ListingFieldValues,
 } from "./listing-fields";
 
@@ -27,7 +33,10 @@ type ListingClient = ReturnType<typeof createListingClient>;
 type NewCanonicalFormProps = {
   client: ListingClient;
   wholesaleEnabled: boolean;
-  onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
+  onSuccess: (
+    response: ListingCreateResponse,
+    requiresEvidence: boolean,
+  ) => void;
   onError: (message: string) => void;
   labels: {
     details: CanonicalDetailsLabels;
@@ -46,6 +55,8 @@ type NewCanonicalFormProps = {
     commission: Parameters<typeof CommissionBanner>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    draftInvalid?: string;
+    fieldErrors?: Record<string, string>;
     /** Listing cap reached (plan or KYC) — friendly upgrade copy. */
     listingLimit?: string;
     required: string;
@@ -67,8 +78,11 @@ export function NewCanonicalForm({
   const [details, setDetails] = useState<DetailEntry[]>([]);
   const [brand, setBrand] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [fields, setFields] = useState<ListingFieldValues>(DEFAULT_LISTING_FIELDS);
+  const [fields, setFields] = useState<ListingFieldValues>(
+    DEFAULT_LISTING_FIELDS,
+  );
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -94,11 +108,15 @@ export function NewCanonicalForm({
     };
   }, [client, labels.submitError, onError]);
 
-  const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
+  const selectedCategory =
+    categories.find((item) => item.id === categoryId) ?? null;
 
   const handleSubmit = async () => {
+    const nextErrors: Record<string, string> = {
+      ...listingFieldErrors(fields, labels.fields),
+    };
+    if (!productName.trim()) nextErrors.product_name = labels.required;
     if (
-      !productName.trim() ||
       !categoryPath(
         categories.map((item) => ({
           id: item.id,
@@ -108,14 +126,18 @@ export function NewCanonicalForm({
         categoryId,
       ).length
     ) {
-      onError(labels.required);
+      nextErrors.category_id = labels.required;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      onError(
+        nextErrors.product_name || nextErrors.category_id
+          ? labels.required
+          : (labels.draftInvalid ?? labels.submitError),
+      );
       return;
     }
-    const validationError = validateListingFields(fields, labels.fields);
-    if (validationError) {
-      onError(validationError);
-      return;
-    }
+    setFieldErrors({});
 
     const spec = buildCanonicalSpec(details);
     if (spec === null || description.length > 5000) {
@@ -139,6 +161,8 @@ export function NewCanonicalForm({
         min_steps: parsed.minSteps,
         condition: fields.condition,
         defect_notes: parsed.defectNotes,
+        condition_detail: parsed.conditionDetail,
+        fulfilment_options: fields.fulfilmentOptions,
         fulfilment_mode: fields.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,
         vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
@@ -148,15 +172,24 @@ export function NewCanonicalForm({
         moq: parsed.moq,
         publish: !requiresListingEvidence(fields),
       });
-      onSuccess(response, response.requires_evidence ?? requiresListingEvidence(fields));
+      onSuccess(
+        response,
+        response.requires_evidence ?? requiresListingEvidence(fields),
+      );
     } catch (caught: unknown) {
-      onError(
-        listingCreateErrorMessage(caught, {
+      const result = describeListingError(
+        caught,
+        {
           standaloneRequired: labels.standaloneRequired,
+          draftInvalid: labels.draftInvalid,
+          fieldErrors: labels.fieldErrors,
           listingLimit: labels.listingLimit,
           fallback: labels.submitError,
-        }),
+        },
+        "draft",
       );
+      setFieldErrors(result.fields);
+      onError([result.message, ...result.unplaced].join(" "));
     } finally {
       setSubmitting(false);
     }
@@ -169,11 +202,18 @@ export function NewCanonicalForm({
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h2 className="font-display text-h4 text-display-ink">{labels.heading}</h2>
+        <h2 className="font-display text-h4 text-display-ink">
+          {labels.heading}
+        </h2>
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 
-      <FormField label={labels.nameLabel} required requiredMarker="*">
+      <FormField
+        label={labels.nameLabel}
+        required
+        requiredMarker="*"
+        errorMessage={fieldErrors.product_name}
+      >
         <Input
           value={productName}
           onChange={(event) => setProductName(event.target.value)}
@@ -207,6 +247,12 @@ export function NewCanonicalForm({
         }}
       />
 
+      {fieldErrors.category_id ? (
+        <p role="alert" className="text-sm text-danger">
+          {fieldErrors.category_id}
+        </p>
+      ) : null}
+
       {selectedCategory ? (
         <CommissionBanner
           commission={selectedCategory.commission}
@@ -228,6 +274,7 @@ export function NewCanonicalForm({
         onChange={(patch) => setFields((current) => ({ ...current, ...patch }))}
         wholesaleEnabled={wholesaleEnabled}
         labels={labels.fields}
+        errors={fieldErrors}
         allowStandaloneClasses={false}
       />
 

@@ -558,5 +558,25 @@
     "pickupToday": "Retrait aujourd'hui",
     "pickupTomorrow": "Retrait demain",
     "pickupDays": "Retrait sous {min} à {max} jours"
+  },
+  "offers": {
+    "badge": {
+      "bxgy": "{buy} achetés = {get} offert",
+      "bundlePercent": "-{percent} % compléments",
+      "bundleFixed": "Offre lot",
+      "buyNPayM": "{n} pour {m}",
+      "freeGift": "Cadeau offert"
+    },
+    "box": {
+      "heading": "Lot et économies",
+      "itemLine": "{title} × {qty}",
+      "youPay": "Payez {pay} au lieu de {list}.",
+      "youSave": "Vous économisez {amount}",
+      "freeGift": "Offert : {title} × {qty} (valeur {value})",
+      "addAll": "Tout ajouter au panier",
+      "adding": "Ajout…",
+      "added": "Lot ajouté au panier",
+      "failed": "Impossible d'ajouter le lot. Réessayez."
+    }
   }
 }

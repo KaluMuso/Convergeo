@@ -80,7 +80,11 @@
     "updating": "Ikusintha…",
     "vendorGroup": "Agulitsa vendor",
     "vendorSubtotal": "Subtotal ya vendor: {amount}",
-    "viewCart": "Onani cart"
+    "viewCart": "Onani cart",
+    "offerSavings": "⚠ Offer savings",
+    "offerSaving": "⚠ Offer saving {amount}",
+    "offerGift": "⚠ Free gift: {title} × {qty}",
+    "offerGiftWorth": "⚠ Worth {value} — free with your offer"
   },
   "checkout": {
     "card": {
@@ -168,7 +172,8 @@
         "cutoffBefore": "Mukatumiza order 14:00 isanakwane (nthawi ya Lusaka), zinthu zomwe zili mu stock zimatumizidwa lero, seller akatsimikiza.",
         "cutoffAfter": "Nthawi yadutsa 14:00 ku Lusaka, choncho zinthu za mu stock zidzatumizidwa mawa, seller akatsimikiza.",
         "cutoffMadeToOrder": "Zinthu zopangidwa pa order zimatumizidwa zikatha — onani nthawi ya chinthu chilichonse."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Zinthu zasungidwa kwa",
@@ -291,6 +296,11 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mudzatenga kwa seller",
         "placeOrderCod": "Tumizani order — lipirani pa delivery"
+      },
+      "deliveryConsent": {
+        "label": "Patsani courier dzina langa, foni ndi address kuti abweretse order iyi",
+        "hint": "Sikokakamiza. Courier wokhala ndi licence angabweretse order yanu. Mukapanda kulola, antchito a Vergeo5 adzabweretsa kapena adzakuyimbirani kaye. Mungasinthe pa Account → Privacy.",
+        "saveFailed": "Talephera kusunga zomwe mwasankha. Mungathebe kuyika order."
       }
     },
     "stepAnnouncement": "Step {current} ya {total}",

@@ -107,5 +107,30 @@
     "beforeDispatch": "Mukufuna kusintha kapena kuletsa? Lankhulani ndi support ndi nambala ya order isanatumizidwe.",
     "afterDispatch": "Pali vuto ndi order yanu? Lankhulani ndi support ndi nambala ya order.",
     "contactCta": "Lankhulani ndi support"
+  },
+  "doorPay": {
+    "title": "Lipirani pa khomo",
+    "intro": "Lipirani {amount} ndi mobile money pamene rider ali pa khomo panu, mutatha kuyang'ana katundu wanu.",
+    "amountDue": "Lipirani {amount} ndi mobile money pa khomo, mutatha kuyang'ana katundu wanu.",
+    "waitingRider": "Batani la kulipira lidzaonekera pano rider akanena kuti wafika.",
+    "payNow": "Lipirani tsopano pa foni",
+    "sending": "Tikutumiza pempho la malipiro…",
+    "otherNumber": "Lipirani kuchokera pa nambala ina",
+    "phoneLabel": "Nambala ya MTN kapena Airtel",
+    "phoneHelp": "Pempho lidzapita ku nambala iyi. Manambala a Zamtel sangalandire pakali pano.",
+    "pending": "Onani foni yanu ndipo lowetsani PIN kuti muvomereze malipiro.",
+    "checkStatus": "Onani ngati mwalipira",
+    "checking": "Tikuona…",
+    "failed": "Malipiro sanadutse. Mungayesenso kapena kugwiritsa ntchito nambala ina.",
+    "attemptsLeft": "{count, plural, one {Kwatsala kuyesa #} other {Kwatsala kuyesa #}}",
+    "noAttemptsLeft": "Palibe mwayi wina. Rider angalandire ndalama za cash, mpaka pa malire.",
+    "paid": "Mwalipira. Khodi yanu yopereka ikuoneka pamwamba. Perekani kwa rider.",
+    "cash": "Lipirani rider {amount} mu cash, kenako mupatseni khodi yanu yopereka.",
+    "errors": {
+      "invalidPhone": "Lowetsani nambala ya MTN kapena Airtel ya ku Zambia.",
+      "operatorUnsupported": "Nambala iyi singalandire pempho. Gwiritsani ntchito nambala ya MTN kapena Airtel.",
+      "inFlight": "Pempho lili kale pa foni yanu. Vomerezani kapena dikirani pang'ono.",
+      "generic": "Pali vuto. Onani intaneti yanu ndipo yesaninso."
+    }
   }
 }

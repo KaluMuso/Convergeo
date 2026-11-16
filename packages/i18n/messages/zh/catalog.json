@@ -558,5 +558,25 @@
     "pickupToday": "今日可自提",
     "pickupTomorrow": "明日可自提",
     "pickupDays": "{min}–{max} 天后可自提"
+  },
+  "offers": {
+    "badge": {
+      "bxgy": "买{buy}送{get}",
+      "bundlePercent": "加购件减{percent}%",
+      "bundleFixed": "组合优惠",
+      "buyNPayM": "买{n}付{m}",
+      "freeGift": "赠品"
+    },
+    "box": {
+      "heading": "组合购更划算",
+      "itemLine": "{title} × {qty}",
+      "youPay": "仅需 {pay}，原价 {list}。",
+      "youSave": "节省 {amount}",
+      "freeGift": "赠送：{title} × {qty}（价值 {value}）",
+      "addAll": "全部加入购物车",
+      "adding": "正在添加…",
+      "added": "组合已加入购物车",
+      "failed": "无法添加组合，请重试。"
+    }
   }
 }

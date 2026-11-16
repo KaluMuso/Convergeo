@@ -34,6 +34,9 @@ export const PNG_ICON_ALLOWLIST = new Set([
   "brand/convergeo-icon-180.png",
   "brand/convergeo-icon-192.png",
   "brand/convergeo-icon-512.png",
+  "brand/convergeo-icon-maskable-512.png",
+  "brand/convergeo-icon-light-32.png",
+  "brand/convergeo-icon-dark-32.png",
 ]);
 
 const OPTIMIZED_IMAGE_EXTENSIONS = new Set([".webp", ".avif", ".svg", ".ico"]);

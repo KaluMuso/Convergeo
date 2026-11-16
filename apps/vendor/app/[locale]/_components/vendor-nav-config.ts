@@ -16,7 +16,9 @@ export type VendorNavItemKey =
   | "profile"
   | "payouts"
   | "disputes"
-  | "intake";
+  | "intake"
+  | "settings"
+  | "offers";
 
 export type VendorNavGroupKey = "operate" | "sell" | "business";
 
@@ -33,13 +35,22 @@ export type VendorNavGroup = {
 
 export const VENDOR_MORE_MENU_KEY = "more" as const;
 
-export type VendorMobilePrimaryKey = VendorNavItemKey | typeof VENDOR_MORE_MENU_KEY;
+export type VendorMobilePrimaryKey =
+  VendorNavItemKey | typeof VENDOR_MORE_MENU_KEY;
 
 /** Bottom-nav tabs that also appear in the mobile More sheet (duplicates avoided). */
-export const VENDOR_MOBILE_TAB_KEYS = new Set<VendorNavItemKey>(["home", "orders", "listings"]);
+export const VENDOR_MOBILE_TAB_KEYS = new Set<VendorNavItemKey>([
+  "home",
+  "orders",
+  "listings",
+]);
 
 /** Primary mobile bottom-nav destinations before capability filtering. */
-export const VENDOR_MOBILE_PRIMARY_TEMPLATE: VendorNavItemKey[] = ["home", "orders", "listings"];
+export const VENDOR_MOBILE_PRIMARY_TEMPLATE: VendorNavItemKey[] = [
+  "home",
+  "orders",
+  "listings",
+];
 
 export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
   {
@@ -56,6 +67,7 @@ export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
     key: "sell",
     items: [
       { key: "analytics", href: "/analytics" },
+      { key: "offers", href: "/offers" },
       { key: "services", href: "/services" },
       { key: "events", href: "/events" },
       { key: "rfq", href: "/rfq" },
@@ -71,6 +83,7 @@ export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
       { key: "payouts", href: "/payouts" },
       { key: "disputes", href: "/disputes" },
       { key: "intake", href: "/intake" },
+      { key: "settings", href: "/settings" },
     ],
   },
 ];
@@ -87,23 +100,33 @@ export function filterVendorNavGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function flattenVendorNavItems(groups: VendorNavGroup[]): VendorNavItem[] {
+export function flattenVendorNavItems(
+  groups: VendorNavGroup[],
+): VendorNavItem[] {
   return groups.flatMap((group) => group.items);
 }
 
 /** Items shown in the mobile More sheet (excludes primary bottom tabs). */
-export function buildVendorMoreMenuGroups(groups: VendorNavGroup[]): VendorNavGroup[] {
+export function buildVendorMoreMenuGroups(
+  groups: VendorNavGroup[],
+): VendorNavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !VENDOR_MOBILE_TAB_KEYS.has(item.key)),
+      items: group.items.filter(
+        (item) => !VENDOR_MOBILE_TAB_KEYS.has(item.key),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }
 
 /** Build mobile bottom-nav keys including More only when secondary items exist. */
-export function buildVendorMobilePrimary(groups: VendorNavGroup[]): VendorMobilePrimaryKey[] {
-  const visibleKeys = new Set(flattenVendorNavItems(groups).map((item) => item.key));
+export function buildVendorMobilePrimary(
+  groups: VendorNavGroup[],
+): VendorMobilePrimaryKey[] {
+  const visibleKeys = new Set(
+    flattenVendorNavItems(groups).map((item) => item.key),
+  );
   const primary: VendorMobilePrimaryKey[] = [];
 
   for (const key of VENDOR_MOBILE_PRIMARY_TEMPLATE) {
@@ -112,7 +135,9 @@ export function buildVendorMobilePrimary(groups: VendorNavGroup[]): VendorMobile
     }
   }
 
-  const moreItems = buildVendorMoreMenuGroups(groups).flatMap((group) => group.items);
+  const moreItems = buildVendorMoreMenuGroups(groups).flatMap(
+    (group) => group.items,
+  );
   if (moreItems.length > 0) {
     primary.push(VENDOR_MORE_MENU_KEY);
   }
@@ -137,7 +162,9 @@ export function resolveVendorActiveItem(
   for (const item of items) {
     const pattern = item.href || "/";
     const matches =
-      pattern === "/" ? rest === "/" : rest === pattern || rest.startsWith(`${pattern}/`);
+      pattern === "/"
+        ? rest === "/"
+        : rest === pattern || rest.startsWith(`${pattern}/`);
     if (matches && pattern.length >= bestLen) {
       best = item;
       bestLen = pattern.length;
@@ -147,8 +174,14 @@ export function resolveVendorActiveItem(
   return best?.key;
 }
 
-export function isVendorMoreMenuActive(pathRest: string, groups: VendorNavGroup[]): boolean {
+export function isVendorMoreMenuActive(
+  pathRest: string,
+  groups: VendorNavGroup[],
+): boolean {
   const moreItems = buildVendorMoreMenuGroups(groups);
-  const active = resolveVendorActiveItem(pathRest, flattenVendorNavItems(moreItems));
+  const active = resolveVendorActiveItem(
+    pathRest,
+    flattenVendorNavItems(moreItems),
+  );
   return active !== undefined;
 }

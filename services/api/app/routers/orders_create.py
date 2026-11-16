@@ -21,6 +21,7 @@ from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.offers.apply import expand_cart_lines_for_order
 from app.services.orders.create import (
     CartLineInput,
     CreateOrdersResult,
@@ -414,6 +415,14 @@ async def create_orders(
             )
         )
 
+    # W8 offers (flag `bundles`): re-priced from live offers with the same engine
+    # the fulfilment step used for the session total; split / gift lines carry
+    # the frozen offer pricing into order_items. A mismatch with the session
+    # (offer ended in between) surfaces as orders.totals_mismatch below.
+    cart_lines, _priced = expand_cart_lines_for_order(
+        cart_lines, service.client, customer_id=current_user.id
+    )
+
     vendor_groups = _authoritative_groups(
         service,
         customer_id=current_user.id,
@@ -427,9 +436,7 @@ async def create_orders(
     # Totals from cart lines (authoritative) + per-vendor delivery fee.
     per_vendor_subtotal: dict[str, int] = defaultdict(int)
     for line in cart_lines:
-        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(
-            line.qty, line.unit_price_ngwee
-        )
+        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(line.qty, line.unit_price_ngwee)
     delivery_by_vendor = {group.vendor_id: group.delivery_fee_ngwee for group in vendor_groups}
     vendor_order_totals = {
         vendor_id: subtotal + delivery_by_vendor.get(vendor_id, 0)

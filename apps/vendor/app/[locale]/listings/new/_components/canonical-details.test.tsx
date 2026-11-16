@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -93,28 +99,43 @@ describe("canonical detail authoring", () => {
     fireEvent.change(screen.getByRole("textbox", { name: labels.brandLabel }), {
       target: { value: "Known brand" },
     });
-    fireEvent.change(screen.getByRole("combobox", { name: labels.categoryLabel }), {
-      target: { value: "category" },
-    });
-    fireEvent.change(screen.getByLabelText(common.categorySelection.subcategory), {
-      target: { value: "child" },
-    });
+    fireEvent.change(
+      screen.getByRole("combobox", { name: labels.categoryLabel }),
+      {
+        target: { value: "category" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(common.categorySelection.subcategory),
+      {
+        target: { value: "child" },
+      },
+    );
     fireEvent.change(screen.getByLabelText(labels.fields.priceLabel), {
       target: { value: "100" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: labels.details.about }), {
-      target: { value: "Supplier description\nCare instructions" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: labels.details.about }),
+      {
+        target: { value: "Supplier description\nCare instructions" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: labels.details.add }));
-    fireEvent.change(screen.getByRole("textbox", { name: `${labels.details.name} 1` }), {
-      target: { value: "materials" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: `${labels.details.name} 1` }),
+      {
+        target: { value: "materials" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: labels.submit }));
     expect(client.createListing).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalledWith(labels.details.invalid);
-    fireEvent.change(screen.getByRole("textbox", { name: `${labels.details.value} 1` }), {
-      target: { value: "Cotton as labelled" },
-    });
+    fireEvent.change(
+      screen.getByRole("textbox", { name: `${labels.details.value} 1` }),
+      {
+        target: { value: "Cotton as labelled" },
+      },
+    );
     fireEvent.click(screen.getByRole("button", { name: labels.submit }));
     await waitFor(() => expect(client.createListing).toHaveBeenCalled());
     expect(client.createListing.mock.calls[0]?.[0]).toMatchObject({

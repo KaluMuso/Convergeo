@@ -241,8 +241,9 @@ export function Comparison({
 
   return (
     <section
+      id="compare"
       data-testid="pdp-comparison"
-      className="rounded border border-border bg-surface"
+      className="scroll-mt-20 rounded border border-border bg-surface"
       style={{ borderRadius: "var(--r)" }}
     >
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3">
