@@ -42,6 +42,12 @@
     },
     "birthday_greeting": {
       "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
+    },
+    "points_earned": {
+      "body": "您获得了 {points} 积分，当前共有 {balance} 积分。达到 {threshold} 积分即可解锁奖励优惠券。"
+    },
+    "vendor_weekly_digest": {
+      "body": "{shop_name} 本周：{orders} 笔订单，销售额 {sales}。热销商品：{top_item}。新增 {new_followers} 位关注者。{pending_actions} 项待处理。下次结算：{next_payout}。"
     }
   },
   "sms": {

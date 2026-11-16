@@ -42,6 +42,12 @@
     },
     "birthday_greeting": {
       "body": "Joyeux anniversaire de la part de Convergeo ! Code {coupon_code} : {amount} de remise dès {min_spend} d'achat, valable {valid_days} jours. Répondez STOP pour vous désabonner."
+    },
+    "points_earned": {
+      "body": "Vous avez gagné {points} points. Vous en avez maintenant {balance}. À {threshold}, vous débloquez un coupon de récompense."
+    },
+    "vendor_weekly_digest": {
+      "body": "Votre semaine, {shop_name} : {orders} commandes, {sales} de ventes. Article phare : {top_item}. {new_followers} nouveaux abonnés. {pending_actions} actions en attente. Prochain versement : {next_payout}."
     }
   },
   "sms": {
