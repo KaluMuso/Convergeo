@@ -30,14 +30,59 @@ def test_required_check_context_names_remain_stable() -> None:
         assert f"    name: {context}\n" in job_block(job_id)
 
 
-def test_authorization_matrix_has_one_unconditional_owner() -> None:
+def _gate_lines(header: str) -> list[str]:
+    return [line.strip() for line in header.splitlines() if line.startswith("    if:")]
+
+
+def _tier_gate(output: str, *, extra: str = "") -> str:
+    """The only job-level condition a blocking gate may carry (CI-SPEED).
+
+    A job skipped by `if:` reports success, so the condition is fail-open: when the
+    `changes` job itself does not succeed, the gate runs.
+    """
+    return (
+        f"if: ${{{{ !cancelled() && {extra}(needs.changes.result != 'success' || "
+        f"needs.changes.outputs.{output} == 'true') }}}}"
+    )
+
+
+def test_python_api_context_aggregates_every_shard() -> None:
     python = job_block("python")
+    shard = job_block("python-shard")
+
+    assert "needs: python-shard" in python
+    assert "if: ${{ always() }}" in python
+    assert 'test "${{ needs.python-shard.result }}" = "success"' in python
+    # The shard matrix covers the whole suite: partition proof + every ignore kept.
+    assert "shard_pytest_files.py --total 3 --check" in shard
+    assert "shard: [1, 2, 3]" in shard
+    assert "--total 3 --shard" in shard
+    for ignored in (
+        "tests/test_authz_matrix.py",
+        "tests/test_f1_payout_real_stack.py",
+        "tests/test_vendor_stock_adjustment_db.py",
+        "tests/test_merchant_review_boundaries_db.py",
+    ):
+        assert f"--ignore {ignored}" in shard
+    assert "uv run pytest -n auto --dist=loadfile --durations=0" in shard
+    # Only the independent, DB-free admin role matrix is spread per test.
+    assert shard.count("--dist=load ") == 1
+    assert "--spread tests/test_admin_role_route_matrix.py" in shard
+    assert "continue-on-error" not in shard
+    assert _gate_lines(shard.split("    steps:", maxsplit=1)[0]) == [
+        _tier_gate("run_python")
+    ]
+    # Lint and typing still gate the API exactly once.
+    assert "uv run ruff check ." in shard and "uv run mypy app tests scripts" in shard
+
+
+def test_authorization_matrix_has_one_unconditional_owner() -> None:
     security = job_block("security-gates")
     security_header = security.split("    steps:", maxsplit=1)[0]
 
-    assert "uv run pytest --ignore=tests/test_authz_matrix.py" in python
     assert CI.count("uv run pytest tests/test_authz_matrix.py") == 1
-    assert "if:" not in security_header
+    # Never skipped on a code change: the only condition is the docs-only tier gate.
+    assert _gate_lines(security_header) == [_tier_gate("run_security")]
     assert re.search(r"(?m)^\s+continue-on-error:", security) is None
     collect = security.index("Collect trusted authorization matrix inventory")
     execute = security.index("Route x role authz matrix (sole owner, no DB)")
@@ -46,7 +91,7 @@ def test_authorization_matrix_has_one_unconditional_owner() -> None:
     assert "assert_authz_matrix_ran.py collect" in security
     assert "--inventory authz-matrix-expected.json" in security
     assert '--checkout-sha "${QUALIFICATION_SHA}"' in security
-    assert "--junitxml=authz-matrix.xml" in security
+    assert "tests/test_authz_matrix.py -n auto -q --junitxml=authz-matrix.xml" in security
     assert "if: always()" in security
     assert "assert_authz_matrix_ran.py validate authz-matrix.xml" in security
     assert "services/api/authz-matrix-expected.json" in security
@@ -79,7 +124,8 @@ def _rls_isolation_contract(ci: str, provision: str, verifier: str, fixture: str
     steps = _rls_steps(rls)
     named = dict(steps)
     names = [name for name, _ in steps]
-    assert "if:" not in header and "continue-on-error:" not in rls, "RLS job must block"
+    assert _gate_lines(header) == [_tier_gate("run_db_light")], "RLS job must block"
+    assert "continue-on-error:" not in rls, "RLS job must block"
 
     service = re.search(r"(?ms)^    services:\n(.*?)(?=^    [a-z][\w-]*:|\Z)", header)
     assert service is not None and re.search(r"(?m)^      postgres:$", service.group(1)), (
