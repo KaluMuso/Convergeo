@@ -510,9 +510,7 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="payout_failed",
         meta_template_name="payout_failed",
         map_variables=_map_payout_failed,
-    )
-
-
+    ),
     "gift_recipient_notice": WhatsAppTemplateDefinition(
         template_id="gift_recipient_notice",
         meta_template_name="gift_recipient_notice",
