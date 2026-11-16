@@ -17,7 +17,6 @@ import {
 } from "../../../../../lib/customer-session";
 import { classifyPlaceOrderError, placeOrder } from "../_lib/place-order";
 
-import { CheckoutExtras, type CheckoutExtrasLabels } from "./checkout-extras";
 import {
   ContactStepIntro,
   ContactStepSkeleton,
@@ -26,6 +25,7 @@ import {
 } from "./step-contact";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
+import type { CheckoutExtrasLabels } from "./checkout-extras";
 import type { PaymentOptions, PaymentStepLabels, ValidatedPayment } from "./step-payment";
 import type { FulfilmentMode, SaleUnit } from "../../_components/sale-quantity";
 
@@ -34,6 +34,13 @@ const StepPayment = dynamic(() => import("./step-payment").then((mod) => mod.Ste
   ssr: false,
   loading: () => <div aria-hidden="true" className="min-h-48" />,
 });
+
+// Coupon + gift options appear only on the review step: keep them out of the
+// checkout entry bundle (customer route budget, bundle guard).
+const CheckoutExtras = dynamic(
+  () => import("./checkout-extras").then((mod) => mod.CheckoutExtras),
+  { ssr: false, loading: () => <div aria-hidden="true" className="min-h-24" /> },
+);
 
 export type PickupLocation = {
   landmark: string;
