@@ -2,6 +2,7 @@
 
 import { searchSessionHeaders } from "@vergeo/analytics/search-session";
 import { formatK } from "@vergeo/i18n";
+import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
@@ -9,6 +10,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { offerBadgeLabel, type OfferBadge, type OfferBadgeLabels } from "../offers/offer-badge";
 import { useLocalWishlist } from "../plp/use-local-wishlist";
 import {
   ProgressiveLoadControls,
@@ -48,6 +50,8 @@ export type SearchHit = {
   distance_km?: number | null;
   /** Whether any branch of the vendor is open now; null when hours unknown. */
   is_open_now?: boolean | null;
+  /** W8 live offer on this product / listing (flag `bundles`), from the API. */
+  offer_badge?: OfferBadge | null;
 };
 
 export type SearchFacetBucket = {
@@ -106,6 +110,8 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   mediaEmpty: string;
   noReviews: string;
   reviewCount: string;
+  /** catalog.offers.badge.* — W8 offer pill on product cards. */
+  offerBadge?: OfferBadgeLabels;
 };
 
 export type ResultsTabsProps = {
@@ -272,6 +278,8 @@ export function SearchProductCard({
   const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
   const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
+  const offerLabel =
+    hit.offer_badge && labels.offerBadge ? offerBadgeLabel(hit.offer_badge, labels.offerBadge) : null;
   const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
   const wishlistMountedRef = useRef(false);
 
@@ -299,6 +307,7 @@ export function SearchProductCard({
       mediaEmptyLabel={labels.mediaEmpty}
       isWishlisted={isWishlisted}
       onWishlistToggle={enabled ? toggleWishlist : undefined}
+      badge={offerLabel ? <Badge variant="promotion" label={offerLabel} /> : undefined}
       media={
         imagePublicId ? (
           <CloudinaryImageStatic

@@ -9,12 +9,14 @@ from uuid import UUID
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
+from app.schemas.offers import OfferBadgeOut
 from app.services.brand_theme import read_brand_theme
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
     fetch_demo_listing_ids,
     fetch_demo_only_vendor_ids,
 )
+from app.services.offers.badges import vendor_listing_badges
 from app.services.vendors.hours import (
     LUSAKA_TZ,
     is_open_at,
@@ -134,6 +136,8 @@ class DirectoryListingItem(BaseModel):
     #: other shops"). Zero for standalone listings.
     other_offers_count: int = 0
     other_min_price_ngwee: int | None = None
+    #: W8 live offer this listing takes part in (flag `bundles`).
+    offer_badge: OfferBadgeOut | None = None
 
 
 class ReviewsSummary(BaseModel):
@@ -1554,7 +1558,14 @@ async def get_directory_vendor(
     cleaned = _sanitize_query(slug)
     if not cleaned:
         raise AppError("vendor.not_found", "Vendor not found", 404)
-    return get_vendor_profile(supabase.client, cleaned)
+    profile = get_vendor_profile(supabase.client, cleaned)
+    if isinstance(profile, VendorProfileResponse) and profile.listings:
+        # W8: offer pills on the storefront grid, from the vendor's live offers.
+        badges = vendor_listing_badges(supabase.client, profile.vendor.id)
+        if badges:
+            for listing in profile.listings:
+                listing.offer_badge = badges.get(listing.id.lower())
+    return profile
 
 
 @router.get("/{slug}/elsewhere", response_model=ElsewhereResponse)

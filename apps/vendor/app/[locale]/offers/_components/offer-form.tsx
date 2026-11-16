@@ -16,6 +16,7 @@ import {
   isoToLocalInput,
   localInputToIso,
   OFFER_TYPES,
+  parsePerCustomerLimit,
   TYPE_ROLES,
   type BundlePricing,
   type Offer,
@@ -70,6 +71,10 @@ export function OfferForm({ locale, mode, initialOffer }: OfferFormProps) {
   const [payM, setPayM] = useState(String(initialOffer?.pay_m ?? 2));
   const [giftStock, setGiftStock] = useState(String(initialOffer?.gift_stock_total ?? 10));
   const [maxApps, setMaxApps] = useState(String(initialOffer?.max_applications_per_order ?? 1));
+  const [perCustomer, setPerCustomer] = useState(
+    initialOffer?.per_customer_limit ? String(initialOffer.per_customer_limit) : "",
+  );
+  const perCustomerLimit = parsePerCustomerLimit(perCustomer);
   const [items, setItems] = useState<DraftItem[]>(
     (initialOffer?.items ?? []).map(({ role, item_kind, ref_id, qty }) => ({
       role,
@@ -129,6 +134,7 @@ export function OfferForm({ locale, mode, initialOffer }: OfferFormProps) {
       pay_m: toInt(payM),
       gift_stock_total: giftTotal,
       max_applications_per_order: toInt(maxApps) ?? 1,
+      per_customer_limit: perCustomerLimit === "invalid" ? null : perCustomerLimit,
       items,
     };
   }, [
@@ -144,6 +150,7 @@ export function OfferForm({ locale, mode, initialOffer }: OfferFormProps) {
     maxApps,
     offerType,
     payM,
+    perCustomerLimit,
     startsAt,
     status,
     t,
@@ -212,6 +219,10 @@ export function OfferForm({ locale, mode, initialOffer }: OfferFormProps) {
   const onSubmit = async () => {
     if (!payload) {
       setError(t("errors.invalidPrice"));
+      return;
+    }
+    if (perCustomerLimit === "invalid") {
+      setError(t("errors.perCustomerLimitInvalid"));
       return;
     }
     setSaving(true);
@@ -521,6 +532,23 @@ export function OfferForm({ locale, mode, initialOffer }: OfferFormProps) {
           />
         </FormField>
       </div>
+
+      <FormField
+        id="offer-per-customer"
+        label={t("form.perCustomerLimit")}
+        helpText={t("form.perCustomerLimitHint")}
+        errorMessage={
+          perCustomerLimit === "invalid" ? t("errors.perCustomerLimitInvalid") : undefined
+        }
+      >
+        <Input
+          id="offer-per-customer"
+          inputMode="numeric"
+          value={perCustomer}
+          placeholder={t("form.perCustomerLimitPlaceholder")}
+          onChange={(e) => setPerCustomer(e.target.value)}
+        />
+      </FormField>
 
       <section
         className="flex flex-col gap-1 rounded-md border border-border bg-bg-2 p-3 text-sm"

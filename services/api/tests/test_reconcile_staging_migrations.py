@@ -116,6 +116,8 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
     "20261116130000",
 }

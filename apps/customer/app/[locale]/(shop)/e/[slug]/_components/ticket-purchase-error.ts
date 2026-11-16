@@ -9,7 +9,8 @@ export type TicketPurchaseErrorKey =
   | "promoInvalid"
   | "rsvpCap"
   | "rsvpInProgress"
-  | "rateLimited";
+  | "rateLimited"
+  | "oneEvent";
 
 const KEY_BY_CODE: Record<string, TicketPurchaseErrorKey> = {
   "tickets.oversell": "oversell",
@@ -25,6 +26,8 @@ const KEY_BY_CODE: Record<string, TicketPurchaseErrorKey> = {
   promo_expired: "promoInvalid",
   promo_exhausted: "promoInvalid",
   promo_not_started: "promoInvalid",
+  // Unified cart: tickets for one event date per checkout.
+  "cart.tickets_one_event": "oneEvent",
 };
 
 /**

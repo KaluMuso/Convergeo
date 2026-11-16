@@ -84,7 +84,26 @@
     "offerSavings": "Offer savings",
     "offerSaving": "Offer saving {amount}",
     "offerGift": "Free gift: {title} × {qty}",
-    "offerGiftWorth": "Worth {value} — free with your offer"
+    "offerGiftWorth": "Worth {value} — free with your offer",
+    "types": {
+      "products": "Products",
+      "eventTickets": "Event tickets",
+      "services": "Services"
+    },
+    "tickets": {
+      "line": "{type} × {qty}",
+      "remove": "Remove",
+      "removeLabel": "Remove tickets for {title}",
+      "unavailable": "These tickets can no longer be bought. Remove them to check out.",
+      "platformFee": "Ticket service fee",
+      "prepaidOnly": "Event tickets are paid online (mobile money or card) and are not available for cash on delivery.",
+      "oneEvent": "Your cart already has tickets for another event or date. Check those out first, or remove them.",
+      "added": "Tickets added to your cart",
+      "addToCart": "Add to cart",
+      "adding": "Adding…",
+      "addFailed": "Could not add these tickets. Try again.",
+      "signInRequired": "Sign in to add tickets to your cart."
+    }
   },
   "checkout": {
     "pageTitle": "Checkout",
@@ -208,7 +227,8 @@
         "capNote": "Cash on delivery is available for orders up to {cap}.",
         "overCap": "Your order total is {total}. To pay cash on delivery, remove some items or place separate orders of {cap} or less.",
         "editCart": "Edit cart"
-      }
+      },
+      "codNotForTickets": "Cash on delivery is not available when your order includes event tickets."
     },
     "review": {
       "title": "Review your order",
@@ -253,7 +273,11 @@
         "label": "Share my name, phone and address with the delivery partner to deliver this order",
         "hint": "Optional. A licensed courier may deliver your order. Without this, Vergeo5 staff deliver it or call you first. Change it any time in Account → Privacy.",
         "saveFailed": "We couldn't save this choice. You can still place your order."
-      }
+      },
+      "typeProducts": "Products",
+      "typeEventTickets": "Event tickets",
+      "ticketLine": "{type} × {qty}",
+      "platformFee": "Ticket service fee"
     },
     "pending": {
       "pageTitle": "Approve payment",
@@ -344,6 +368,9 @@
       "viewOrder": "View my order",
       "viewTickets": "View my tickets",
       "viewJob": "Back to the job"
+    },
+    "tickets": {
+      "unavailable": "A ticket in your cart is no longer available. Review your cart."
     }
   },
   "variant": {

@@ -843,6 +843,71 @@ export type Database = {
           },
         ]
       }
+      cart_ticket_items: {
+        Row: {
+          attendee_names: Json | null
+          cart_id: string
+          created_at: string
+          event_id: string
+          id: string
+          instance_id: string
+          qty: number
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendee_names?: Json | null
+          cart_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          instance_id: string
+          qty: number
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendee_names?: Json | null
+          cart_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          instance_id?: string
+          qty?: number
+          ticket_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_ticket_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_ticket_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_ticket_items_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_ticket_items_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carts: {
         Row: {
           created_at: string
@@ -1005,6 +1070,104 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      checkout_ticket_holds: {
+        Row: {
+          cart_ticket_item_id: string
+          checkout_group_id: string
+          created_at: string
+          event_id: string
+          id: string
+          instance_id: string
+          order_id: string | null
+          organiser_vendor_id: string
+          qty: number
+          status: string
+          ticket_ids: string[]
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          cart_ticket_item_id: string
+          checkout_group_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          instance_id: string
+          order_id?: string | null
+          organiser_vendor_id: string
+          qty: number
+          status?: string
+          ticket_ids: string[]
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          cart_ticket_item_id?: string
+          checkout_group_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          instance_id?: string
+          order_id?: string | null
+          organiser_vendor_id?: string
+          qty?: number
+          status?: string
+          ticket_ids?: string[]
+          ticket_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkout_ticket_holds_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkout_ticket_holds_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clip_comments: {
         Row: {
@@ -5190,6 +5353,7 @@ export type Database = {
           fulfilment: string
           fx_snapshot: Json
           id: string
+          order_lane: string
           pickup_collected_at: string | null
           pickup_pin_hash: string | null
           pickup_qr_secret: string | null
@@ -5211,6 +5375,7 @@ export type Database = {
           fulfilment: string
           fx_snapshot?: Json
           id?: string
+          order_lane?: string
           pickup_collected_at?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
@@ -5232,6 +5397,7 @@ export type Database = {
           fulfilment?: string
           fx_snapshot?: Json
           id?: string
+          order_lane?: string
           pickup_collected_at?: string | null
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null

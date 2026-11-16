@@ -199,3 +199,50 @@ describe("COD guidance — review step", () => {
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(c.review.placeOrder);
   });
 });
+
+describe("unified checkout — review groups lines by type", () => {
+  it("labels products and event tickets, and shows the buyer ticket fee", () => {
+    const withTickets: CheckoutSession = {
+      ...session,
+      subtotal_ngwee: 60_167,
+      ticket_lines: [
+        {
+          id: "t1",
+          item_type: "event_ticket",
+          event_id: "e1",
+          event_title: "Lusaka Jazz Night",
+          ticket_type_id: "tt1",
+          type_name: "VIP",
+          instance_id: "i1",
+          vendor_id: "vendor-a",
+          qty: 2,
+          unit_price_ngwee: 15_050,
+          line_total_ngwee: 20_167,
+        },
+      ],
+      cod_allowed: false,
+    };
+    render(
+      <StepReview
+        locale="en"
+        session={withTickets}
+        totals={{
+          ...eligible,
+          subtotal_ngwee: 60_167,
+          delivery_fee_ngwee: 0,
+          total_ngwee: 61_175,
+          cod_eligible: false,
+        }}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260970000001" }}
+        labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("review-type-products")).toHaveTextContent(c.review.typeProducts);
+    const group = screen.getByTestId("review-ticket-group");
+    expect(group).toHaveTextContent(c.review.typeEventTickets);
+    expect(within(group).getByTestId("review-ticket-line-t1")).toHaveTextContent("VIP × 2");
+    expect(within(group).getByTestId("review-ticket-line-t1")).toHaveTextContent("K201.67");
+    expect(screen.getByTestId("review-platform-fee")).toHaveTextContent("K10.08");
+  });
+});

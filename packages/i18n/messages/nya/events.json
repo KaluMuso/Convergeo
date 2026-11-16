@@ -115,10 +115,15 @@
       "attendeeNamesRequired": "Lembani dzina pa ticket iliyonse.",
       "attendeeNamesMismatch": "Lembani dzina limodzi lokha pa ticket iliyonse.",
       "promoInvalid": "Promo code iyi si valid pa event iyi.",
+      "oneEvent": "⚠ Your cart already has tickets for another event or date. Check those out first, or remove them.",
       "rsvpCap": "⚠ You can reserve at most 4 free spots.",
       "rsvpInProgress": "⚠ Your RSVP is already being processed.",
       "rateLimited": "⚠ Too many requests. Please wait a moment."
     },
+    "addToCart": "⚠ Add to cart",
+    "addingToCart": "⚠ Adding…",
+    "addedToCart": "⚠ Tickets added to your cart. Pay for them with your other items in one checkout.",
+    "viewCart": "⚠ View cart",
     "going": "⚠ You're going",
     "viewTicket": "⚠ View ticket"
   },
