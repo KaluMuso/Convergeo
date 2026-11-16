@@ -54,9 +54,9 @@ def test_python_api_context_aggregates_every_shard() -> None:
     assert "if: ${{ always() }}" in python
     assert 'test "${{ needs.python-shard.result }}" = "success"' in python
     # The shard matrix covers the whole suite: partition proof + every ignore kept.
-    assert "shard_pytest_files.py --total 2 --check" in shard
-    assert "shard: [1, 2]" in shard
-    assert "--total 2 --shard" in shard
+    assert "shard_pytest_files.py --total 3 --check" in shard
+    assert "shard: [1, 2, 3]" in shard
+    assert "--total 3 --shard" in shard
     for ignored in (
         "tests/test_authz_matrix.py",
         "tests/test_f1_payout_real_stack.py",
@@ -64,10 +64,10 @@ def test_python_api_context_aggregates_every_shard() -> None:
         "tests/test_merchant_review_boundaries_db.py",
     ):
         assert f"--ignore {ignored}" in shard
-    assert (
-        'uv run pytest -n auto --dist=loadfile --durations=0 --durations-min=1.0 "${files[@]}"'
-        in shard
-    )
+    assert "uv run pytest -n auto --dist=loadfile --durations=0" in shard
+    # Only the independent, DB-free admin role matrix is spread per test.
+    assert shard.count("--dist=load ") == 1
+    assert "--spread tests/test_admin_role_route_matrix.py" in shard
     assert "continue-on-error" not in shard
     assert _gate_lines(shard.split("    steps:", maxsplit=1)[0]) == [
         _tier_gate("run_python")
