@@ -34,6 +34,15 @@
     "otp_login": {
       "body": "您的 Convergeo 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
     },
+    "gift_recipient_notice": {
+      "body": "{recipient_name} 您好，{sender_name} 在 Convergeo 上从 {shop_name} 给您送了一份礼物。我们只会就此礼物联系您。回复 STOP 退订。"
+    },
+    "gift_ready_pickup": {
+      "body": "您来自 {shop_name} 的礼物已可领取。取货 PIN：{pickup_pin}。请勿泄露。"
+    },
+    "birthday_greeting": {
+      "body": "Convergeo 祝您生日快乐！使用优惠码 {coupon_code}，满 {min_spend} 立减 {amount}，{valid_days} 天内有效。回复 STOP 退订。"
+    },
     "order_cancelled": {
       "body": "您的 Convergeo 订单 {order_reference} 已取消。{refund_detail} 回复 STOP 即可退订。"
     },
@@ -205,6 +214,7 @@
       "order_delivered": "订单 {ref} 已送达。体验如何？",
       "quote_received": "您收到了新的报价。请在应用中比较并接受。",
       "ticket_issued": "您的门票已就绪。入场时请出示二维码。",
+      "birthday_greeting": "生日快乐！在接下来的 {valid_days} 天内使用优惠码 {code} 领取惊喜。",
       "order_cancelled": "订单 {ref} 已取消。已付款项将被退还。",
       "order_completed": "订单 {ref} 已完成。感谢您在 Convergeo 购物！",
       "payment_failed": "您的付款未成功。请打开订单重试。",

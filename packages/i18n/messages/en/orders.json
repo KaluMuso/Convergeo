@@ -33,7 +33,8 @@
     "requestReturn": "Request a return",
     "openDispute": "Open or view dispute",
     "variantOption": "{group}: {value}",
-    "variantSeparator": " · "
+    "variantSeparator": " · ",
+    "discount": "Coupon discount"
   },
   "status": {
     "placed": "Placed",
@@ -275,6 +276,17 @@
       "inFlight": "A prompt is already on your phone. Approve it, or wait a moment and try again.",
       "generic": "Something went wrong. Check your connection and try again."
     }
+  },
+  "gift": {
+    "title": "This is a gift",
+    "body": "You're the buyer. Refunds come back to you.",
+    "receiptLink": "Open the gift receipt (no prices)",
+    "receiptTitle": "Gift receipt",
+    "for": "For {name}",
+    "from": "From {shop}",
+    "qty": "× {qty}",
+    "noPrices": "Gift receipts never show prices.",
+    "pinSentToRecipient": "We sent the pickup PIN to the person you're gifting."
   },
   "buyAgain": {
     "button": "Buy again",

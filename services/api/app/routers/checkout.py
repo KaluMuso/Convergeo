@@ -33,6 +33,7 @@ from app.services.cart.tickets import (
     ticket_subtotal_ngwee,
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.coupons.rules import MIN_PAYABLE_NGWEE
 from app.services.events.gmv_reservation import release_gmv_reservation
 from app.services.listings.class_rules import listing_lead_time_days
 from app.services.offers.apply import OfferPricing, price_unified
@@ -1035,6 +1036,10 @@ def _ensure_session_active(
     return group, expires_at
 
 
+def _int_or_zero(value: object) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
 def _normalize_phone(value: str) -> str:
     digits = "".join(ch for ch in value if ch.isdigit())
     if value.strip().startswith("+"):
@@ -1485,11 +1490,17 @@ async def validate_fulfilment_step(
     ticket_subtotal = ticket_subtotal_ngwee(ticket_lines)
     platform_fee = ticket_platform_fee_ngwee(ticket_lines)
     subtotal += ticket_subtotal
-    total = subtotal + total_delivery_fee + platform_fee
+    # A coupon applied earlier stays applied; it never discounts the delivery
+    # fee or the ticket platform fee and never takes the payable amount below
+    # MIN_PAYABLE_NGWEE.
+    discount = _int_or_zero(active_group.get("discount_ngwee"))
+    discount = min(discount, max(0, subtotal + total_delivery_fee - MIN_PAYABLE_NGWEE))
+    total = subtotal + total_delivery_fee + platform_fee - discount
     service.client.table("checkout_groups").update(
         {
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": total_delivery_fee,
+            "discount_ngwee": discount,
             "platform_fee_ngwee": platform_fee,
             "total_ngwee": total,
             # POST /orders re-prices from these server-recorded choices; the

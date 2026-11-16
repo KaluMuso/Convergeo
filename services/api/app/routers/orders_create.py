@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
@@ -27,10 +28,20 @@ from app.services.cart.tickets import (
     require_purchasable,
 )
 from app.services.cart.totals import line_total_ngwee
+from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
+from app.services.coupons.store import (
+    COUPONS_FLAG,
+    GIFT_ORDERS_FLAG,
+    build_discount_lines,
+    coupon_app_error,
+    load_coupon_by_id,
+    require_flag,
+)
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
 from app.services.offers.apply import expand_unified_for_order
 from app.services.orders.create import (
     CartLineInput,
+    CouponOrderPlan,
     CreateOrdersResult,
     VendorFulfilmentInput,
     create_orders_atomic,
@@ -300,6 +311,73 @@ def _authoritative_groups(
     )
 
 
+def _coupon_plan(
+    service: ServiceRoleClient,
+    *,
+    group: dict[str, Any],
+    customer_id: str,
+    cart_lines: list[CartLineInput],
+    delivery_fee_ngwee: int,
+) -> CouponOrderPlan | None:
+    """Re-derive the coupon from authoritative lines; it must match what was shown."""
+    coupon_id = group.get("coupon_id")
+    discount = group.get("discount_ngwee")
+    if not isinstance(coupon_id, str) or not isinstance(discount, int) or discount <= 0:
+        return None
+    require_flag(service, COUPONS_FLAG)
+    subtotal = sum(line_total_ngwee(line.qty, line.unit_price_ngwee) for line in cart_lines)
+    try:
+        rule = load_coupon_by_id(service, coupon_id)
+        quote = quote_coupon(
+            rule,
+            build_discount_lines(
+                service,
+                (
+                    (
+                        line.listing_id,
+                        line.vendor_id,
+                        line_total_ngwee(line.qty, line.unit_price_ngwee),
+                    )
+                    for line in cart_lines
+                ),
+                needs_categories=rule.scope == "category",
+            ),
+            now=datetime.now(UTC),
+            user_id=customer_id,
+            max_discount_ngwee=subtotal + delivery_fee_ngwee - MIN_PAYABLE_NGWEE,
+        )
+    except CouponError as exc:
+        raise coupon_app_error(exc) from exc
+    if quote.discount_ngwee != discount:
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon amount changed; apply it again",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    return CouponOrderPlan(
+        coupon_id=quote.coupon_id,
+        funder=quote.funder,
+        discount_ngwee=quote.discount_ngwee,
+        line_discounts=dict(quote.line_discounts),
+    )
+
+
+def _checkout_is_gift(service: ServiceRoleClient, session_id: str) -> bool:
+    response = (
+        service.client.table("gift_details")
+        .select("checkout_group_id")
+        .eq("checkout_group_id", session_id)
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    if not (isinstance(data, list) and data):
+        return False
+    require_flag(service, GIFT_ORDERS_FLAG)
+    return True
+
+
 @router.post("", response_model=CreateOrderResponse)
 async def create_orders(
     body: CreateOrderRequest,
@@ -323,7 +401,10 @@ async def create_orders(
 
     group_response = (
         service.client.table("checkout_groups")
-        .select("subtotal_ngwee, delivery_fee_ngwee, total_ngwee, fulfilment_choices")
+        .select(
+            "subtotal_ngwee, delivery_fee_ngwee, total_ngwee, fulfilment_choices, "
+            "coupon_id, discount_ngwee"
+        )
         .eq("id", body.session_id)
         .eq("customer_id", current_user.id)
         .maybe_single()
@@ -471,6 +552,15 @@ async def create_orders(
     }
     enforce_first_order_caps_for_vendors(service, vendor_order_totals)
 
+    coupon_plan = _coupon_plan(
+        service,
+        group=group,
+        customer_id=current_user.id,
+        cart_lines=cart_lines,
+        delivery_fee_ngwee=sum(delivery_by_vendor.values()),
+    )
+    is_gift = _checkout_is_gift(service, body.session_id)
+
     result = create_orders_atomic(
         client=service.client,
         customer_id=current_user.id,
@@ -480,6 +570,8 @@ async def create_orders(
         cart_lines=cart_lines,
         vendor_groups=vendor_groups,
         address_id=body.address_id,
+        coupon=coupon_plan,
+        is_gift=is_gift,
         ticket_order=ticket_order,
     )
 
