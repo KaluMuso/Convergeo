@@ -9,6 +9,7 @@ from uuid import UUID
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
+from app.schemas.offers import OfferBadgeOut
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids
 from app.services.vendor_plans.canonical_photos import load_canonical_images
@@ -74,6 +75,9 @@ class CatalogListingItem(BaseModel):
     below_median: bool = False
     delivery_available: bool = False
     pickup_available: bool = False
+    #: W8 live offer this listing takes part in (flag `bundles`); attached
+    #: server-side by surfaces that render cards (home feed, stream).
+    offer_badge: OfferBadgeOut | None = None
 
 
 class CatalogListResponse(BaseModel):

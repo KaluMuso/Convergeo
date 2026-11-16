@@ -107,6 +107,9 @@ def role_client(
         ("/admin/events/high-value-queue", "GET", {"events.manage"}),
         ("/admin/products/merge", "POST", {"products.manage"}),
         ("/admin/roles", "GET", set()),
+        ("/admin/offers", "GET", {"ads.manage"}),
+        ("/admin/offers/{offer_id}/pause", "POST", {"ads.manage"}),
+        ("/admin/offers/{offer_id}/unpause", "POST", {"ads.manage"}),
         ("/admin/unknown", "GET", set()),
     ],
 )

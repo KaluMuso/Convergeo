@@ -14,6 +14,7 @@ export type AdminNavItemKey =
   | "merch"
   | "homeFeed"
   | "advertising"
+  | "offers"
   | "clips"
   | "events"
   | "config"
@@ -65,6 +66,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "merch", href: "merch" },
       { key: "homeFeed", href: "home-feed" },
       { key: "advertising", href: "advertising" },
+      { key: "offers", href: "offers" },
       { key: "clips", href: "clips" },
       { key: "services", href: "services" },
       { key: "inventory", href: "inventory" },

@@ -41,6 +41,10 @@ import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
+import {
+  buildOfferBadgeLabels,
+  type OfferBadge,
+} from "../../_components/offers/offer-badge";
 import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
 import { catalogLogisticsLabels } from "../../_components/plp/logistics-pills";
 
@@ -97,6 +101,8 @@ type VendorProfileApiResponse = {
     pickup_available?: boolean;
     other_offers_count?: number;
     other_min_price_ngwee?: number | null;
+    /** W8 live offer (flag `bundles`), attached server-side by the API. */
+    offer_badge?: OfferBadge | null;
   }>;
   services: Array<{
     id: string;
@@ -451,6 +457,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
       otherMinPriceNgwee: listing.other_min_price_ngwee ?? null,
       labels: compareLabels,
     }),
+    offerBadge: listing.offer_badge ?? undefined,
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
@@ -484,6 +491,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionUsed: tCatalog("plp.card.conditionUsed"),
             logistics: catalogLogisticsLabels(tCatalog),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
+            offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),

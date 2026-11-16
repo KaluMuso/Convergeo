@@ -110,6 +110,20 @@ def load_targets(client: Any, items: list[dict[str, Any]]) -> dict[str, dict[str
                 "available": row.get("status") != "paused",
             }
     if event_ids:
+        # Reference price of an event = its cheapest paid ticket type (the
+        # cart prices each ticket line at its own type's price).
+        cheapest: dict[str, int] = {}
+        for row in _rows(
+            client.table("ticket_types")
+            .select("event_id, kind, price_ngwee")
+            .in_("event_id", event_ids)
+            .execute()
+        ):
+            price = row.get("price_ngwee")
+            if row.get("kind") == "free_rsvp" or not isinstance(price, int) or price <= 0:
+                continue
+            key = str(row.get("event_id"))
+            cheapest[key] = min(price, cheapest.get(key, price))
         for row in _rows(
             client.table("events")
             .select("id, organiser_vendor_id, title, status")
@@ -120,7 +134,7 @@ def load_targets(client: Any, items: list[dict[str, Any]]) -> dict[str, dict[str
                 "kind": "event",
                 "vendor_id": str(row.get("organiser_vendor_id")),
                 "title": row.get("title"),
-                "unit_price_ngwee": None,
+                "unit_price_ngwee": cheapest.get(str(row["id"])),
                 "available": row.get("status") in ("draft", "published"),
             }
     return out
@@ -260,13 +274,18 @@ def preview_offer(
     for index, (ref, role, qty) in enumerate(basket):
         price = targets.get(ref, {}).get("unit_price_ngwee")
         target_kind = targets.get(ref, {}).get("kind")
-        if not isinstance(price, int) or price <= 0 or target_kind != "product":
+        if not isinstance(price, int) or price <= 0 or target_kind not in ("product", "event"):
             continue
         key = f"preview-{index}"
         roles[key] = role
         lines.append(
             PricingLine(
-                key=key, listing_id=ref, vendor_id=vendor_id, qty=qty, unit_price_ngwee=price
+                key=key,
+                listing_id=ref,
+                vendor_id=vendor_id,
+                qty=qty,
+                unit_price_ngwee=price,
+                item_kind="event" if target_kind == "event" else "product",
             )
         )
     if not lines:

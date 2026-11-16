@@ -15,12 +15,12 @@ from typing import Annotated, Any
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.schemas.offers import (
-    OfferBadgeOut,
     OfferBadgesResponse,
     PublicOfferItemOut,
     PublicOfferOut,
     PublicOffersResponse,
 )
+from app.services.offers.badges import advertisable, badge_for, listing_badges_unchecked
 from app.services.offers.engine import OfferDef, PricingLine, price_cart
 from app.services.offers.manage import listing_title
 from app.services.offers.store import (
@@ -68,27 +68,6 @@ def _rate_limit(request: Request, supabase: Any) -> None:
         )
 
 
-def advertisable(offer: OfferDef) -> bool:
-    if not offer.cart_applicable:
-        return False
-    if offer.offer_type in ("bxgy", "free_gift"):
-        return bool(offer.gift_available) and offer.reward_unit_price_ngwee is not None
-    return True
-
-
-def badge_for(offer: OfferDef) -> OfferBadgeOut:
-    return OfferBadgeOut(
-        offer_id=offer.id,
-        offer_type=offer.offer_type,
-        buy_qty=offer.buy_qty,
-        get_qty=offer.get_qty,
-        buy_n=offer.buy_n,
-        pay_m=offer.pay_m,
-        addon_percent_off=offer.addon_percent_off,
-        bundle_pricing=offer.bundle_pricing,
-    )
-
-
 def _offers_touching(client: Any, listing_ids: list[str]) -> list[OfferDef]:
     item_rows = _rows(
         client.table("offer_items").select("offer_id").in_("listing_id", listing_ids).execute()
@@ -110,13 +89,7 @@ def offer_badges(
     if not ids or not offers_enabled(supabase.client):
         return OfferBadgesResponse(badges={})
     _rate_limit(request, supabase)
-    badges: dict[str, OfferBadgeOut] = {}
-    wanted = set(ids)
-    for offer in sorted(_offers_touching(supabase.client, ids), key=lambda o: o.id):
-        # Badge the item the customer buys (not the free reward).
-        for item in offer.items:
-            if item.role != "reward" and item.ref_id in wanted and item.ref_id not in badges:
-                badges[item.ref_id] = badge_for(offer)
+    badges = listing_badges_unchecked(supabase.client, ids)
     return OfferBadgesResponse(badges=badges)
 
 
