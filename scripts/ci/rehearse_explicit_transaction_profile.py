@@ -95,10 +95,10 @@ REVIEWED_SUFFIX = (
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500_business_home_offers_flag.sql",
     "20261115235600_business_home_section_flags.sql",
-    # Unpaid-order auto-cancel window config row (additive, reversible).
-    "20261116000000_unpaid_order_cancel_hours.sql",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000_unified_cart_event_tickets.sql",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261116150000_unpaid_order_cancel_hours.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

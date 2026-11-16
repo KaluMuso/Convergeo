@@ -116,10 +116,10 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
-    # Unpaid-order auto-cancel window config row (additive, reversible).
-    "20261116000000",
     # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
     "20261116090000",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261116150000",
 }
 
 
