@@ -16,6 +16,7 @@ from app.services.dispatch import service as dispatch_service
 from app.services.dispatch.state import DispatchStatus, fetch_dispatch
 from app.services.logistics import custody
 from app.services.orders.state import ActorRole, OrderEvent, transition_order
+from app.services.payments import door as door_payments
 from tests import test_courier_dispatch as _dispatch_tests
 from tests.rls.conftest import PgConn
 from tests.test_courier_dispatch import (
@@ -147,7 +148,7 @@ class TestCombinedCompleteAndCustody:
         _advance_to_picked_up(dispatch_id)
         dispatch = fetch_dispatch(dispatch_id)
         assert dispatch.cod_amount_ngwee == COD_TOTAL_NGWEE
-        monkeypatch.setattr(dispatch_service.door_payments, "rider_cash_due_ngwee", lambda _d: 0)
+        monkeypatch.setattr(door_payments, "rider_cash_due_ngwee", lambda _d: 0)
         assert (
             dispatch_service.custody_fields(
                 dispatch, cod_collected_ngwee=None, cod_collected_method=None

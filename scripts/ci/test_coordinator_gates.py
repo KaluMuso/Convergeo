@@ -122,7 +122,7 @@ class CoordinatorControls(unittest.TestCase):
         self.assertEqual(len(contract["ui"]), 6)
         self.assertEqual(len(contract["normal"]), 330)
         self.assertEqual(len(contract["migrations"]), 180)
-        self.assertEqual(sum(map(len, financial.financial_identities().values())), 813)
+        self.assertEqual(sum(map(len, financial.financial_identities().values())), 877)
 
     def test_local_host_rejected_before_resource_allocation(self) -> None:
         with patch.dict(os.environ, {}, clear=True), patch.object(gates, "Runner") as factory:
