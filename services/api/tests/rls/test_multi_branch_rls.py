@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Generator
+from typing import Any
 
 import pytest
 from tests.rls.conftest import Persona, PgConn, RoleSession, SqlResult, _extract_sqlstate
@@ -71,7 +72,7 @@ def _payload(
     return json.dumps(body).replace("'", "''")
 
 
-def _create(name: str, payout: str, **kw: object) -> str:
+def _create(name: str, payout: str, **kw: Any) -> str:
     return (
         f"SELECT public.create_vendor_branch('{VENDOR_A}', '{OWNER_A}', "
         f"'{_payload(name, payout, **kw)}'::jsonb) ->> 'id';"

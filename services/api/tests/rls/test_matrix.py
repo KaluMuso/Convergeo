@@ -3372,6 +3372,7 @@ EXPECTATIONS: TableExpectations = {
             "vendor_branch_flags",
             "vendor_business_staff",
         )
+    },
     # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.
     "privacy_consents": {

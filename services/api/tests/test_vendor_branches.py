@@ -233,9 +233,10 @@ def test_middleware_sets_and_resets_acting_branch() -> None:
 
     middleware = context.ActingBranchMiddleware(app)
     headers = [(b"x-vendor-branch", BRANCH_A2.encode())]
-    asyncio.run(middleware({"type": "http", "headers": headers}, None, None))
+    noop: Any = None  # the test app never calls receive/send
+    asyncio.run(middleware({"type": "http", "headers": headers}, noop, noop))
     asyncio.run(
-        middleware({"type": "http", "headers": [(b"x-vendor-branch", b"nope")]}, None, None)
+        middleware({"type": "http", "headers": [(b"x-vendor-branch", b"nope")]}, noop, noop)
     )
     assert seen == [BRANCH_A2, None]
     assert context.acting_branch_id() is None
@@ -514,7 +515,7 @@ def test_staff_invite_maps_seat_limit(h: Harness) -> None:
             raise DbRefusal("staff_seat_limit")
         return original(self)
 
-    BranchQuery.execute = refuse  # type: ignore[method-assign]
+    BranchQuery.execute = refuse  # type: ignore[method-assign,assignment]
     try:
         response = h.client.post(
             f"/vendor/businesses/{BIZ_A}/staff",
