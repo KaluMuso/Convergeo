@@ -44,5 +44,7 @@ export function resolveAdminNavCapabilities(
     auditLog: permissions.includes("audit.read"),
     services: any("services.read", "services.manage"),
     inventory: has("inventory.read"),
+    // Platform-funded coupons spend the promotions budget: admin / superadmin only.
+    coupons: unrestricted,
   };
 }

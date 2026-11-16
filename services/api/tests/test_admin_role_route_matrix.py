@@ -241,6 +241,9 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         "GET /admin/kyc/{kyc_record_id}",
         "GET /admin/licences",
         "GET /admin/licences/expiring",
+        "DELETE /admin/products/{product_id}/images/{image_id}",
+        "GET /admin/products/{product_id}/images",
+        "POST /admin/products/{product_id}/images",
         "GET /admin/products/canonical",
         "GET /admin/products/duplicates",
         "GET /admin/vendors",
@@ -294,6 +297,11 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/vendor-plans",
         "PUT /admin/vendors/{vendor_id}/plan",
         "PUT /admin/vendors/{vendor_id}/plan/override",
+        # Coupons (#792, flag off): platform coupon management stays with the
+        # unrestricted roles until a founder decision maps it to a permission.
+        "GET /admin/coupons",
+        "PATCH /admin/coupons/{coupon_id}",
+        "POST /admin/coupons",
         # Pay at the door (#795, flag off): not delegated to rbac roles until a
         # founder decision maps them (logistics.manage / finance.operate).
         "GET /admin/dispatch/door-payment/exceptions",
