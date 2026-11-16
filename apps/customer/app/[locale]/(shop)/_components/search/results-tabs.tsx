@@ -1,6 +1,8 @@
 "use client";
 
+import { searchSessionHeaders } from "@vergeo/analytics/search-session";
 import { formatK } from "@vergeo/i18n";
+import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
@@ -8,6 +10,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  offerBadgeLabel,
+  type OfferBadge,
+  type OfferBadgeLabels,
+} from "../offers/offer-badge";
 import { useLocalWishlist } from "../plp/use-local-wishlist";
 import {
   ProgressiveLoadControls,
@@ -15,7 +22,10 @@ import {
 } from "../progressive-load/progressive-load-controls";
 import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
 
-import { appendSearchFiltersToApiParams, type SearchFilterState } from "./search-filters";
+import {
+  appendSearchFiltersToApiParams,
+  type SearchFilterState,
+} from "./search-filters";
 import {
   SEARCH_KINDS,
   searchTabKinds,
@@ -47,6 +57,8 @@ export type SearchHit = {
   distance_km?: number | null;
   /** Whether any branch of the vendor is open now; null when hours unknown. */
   is_open_now?: boolean | null;
+  /** W8 live offer on this product / listing (flag `bundles`), from the API. */
+  offer_badge?: OfferBadge | null;
 };
 
 export type SearchFacetBucket = {
@@ -105,6 +117,8 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   mediaEmpty: string;
   noReviews: string;
   reviewCount: string;
+  /** catalog.offers.badge.* — W8 offer pill on product cards. */
+  offerBadge?: OfferBadgeLabels;
 };
 
 export type ResultsTabsProps = {
@@ -124,7 +138,11 @@ export type ResultsTabsProps = {
   userLng?: number | null;
 };
 
-function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: number): string {
+function tabLabel(
+  labels: ResultsTabsLabels,
+  kind: SearchKindFilter,
+  count: number,
+): string {
   const nameMap: Record<SearchKindFilter, string> = {
     all: labels.all,
     products: labels.products,
@@ -132,7 +150,9 @@ function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: numb
     events: labels.events,
     vendors: labels.vendors,
   };
-  return labels.count.replace("{label}", nameMap[kind]).replace("{count}", String(count));
+  return labels.count
+    .replace("{label}", nameMap[kind])
+    .replace("{count}", String(count));
 }
 
 function readImagePublicId(hit: SearchHit): string | null {
@@ -159,7 +179,10 @@ function formatCategoryLabel(categoryPath: string | null): string | null {
 }
 
 /** "3.2 km away" under 10 km, "18 km away" beyond — from a hit's distance_km. */
-function distanceLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null {
+function distanceLabel(
+  hit: SearchHit,
+  labels: ResultsTabsLabels,
+): string | null {
   const km = hit.distance_km;
   if (km == null || !Number.isFinite(km)) {
     return null;
@@ -168,7 +191,10 @@ function distanceLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null
   return labels.distanceAway.replace("{km}", value);
 }
 
-function openNowLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null {
+function openNowLabel(
+  hit: SearchHit,
+  labels: ResultsTabsLabels,
+): string | null {
   if (hit.is_open_now === true) {
     return labels.openNow;
   }
@@ -223,7 +249,9 @@ function SearchResultRow({
             {hit.title}
           </Link>
         </h3>
-        {hit.body ? <p className="mt-1 line-clamp-2 text-sm text-text-2">{hit.body}</p> : null}
+        {hit.body ? (
+          <p className="mt-1 line-clamp-2 text-sm text-text-2">{hit.body}</p>
+        ) : null}
         {category ? (
           <p className="mt-1 text-xs text-text-3">
             {labels.category.replace("{category}", category)}
@@ -235,12 +263,18 @@ function SearchResultRow({
           </p>
         ) : null}
         {distance ? (
-          <p className="mt-1 text-xs font-medium text-primary" data-testid="search-result-distance">
+          <p
+            className="mt-1 text-xs font-medium text-primary"
+            data-testid="search-result-distance"
+          >
             {distance}
           </p>
         ) : null}
         {openStatus ? (
-          <p className="mt-1 text-xs text-text-3" data-testid="search-result-open-now">
+          <p
+            className="mt-1 text-xs text-text-3"
+            data-testid="search-result-open-now"
+          >
             {openStatus}
           </p>
         ) : null}
@@ -268,10 +302,16 @@ export function SearchProductCard({
   const category = formatCategoryLabel(hit.category_path);
   const distance = distanceLabel(hit, labels);
   const openStatus = openNowLabel(hit, labels);
-  const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
+  const slug =
+    typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
   const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
-  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
+  const offerLabel =
+    hit.offer_badge && labels.offerBadge
+      ? offerBadgeLabel(hit.offer_badge, labels.offerBadge)
+      : null;
+  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] =
+    useState("");
   const wishlistMountedRef = useRef(false);
 
   useEffect(() => {
@@ -298,6 +338,11 @@ export function SearchProductCard({
       mediaEmptyLabel={labels.mediaEmpty}
       isWishlisted={isWishlisted}
       onWishlistToggle={enabled ? toggleWishlist : undefined}
+      badge={
+        offerLabel ? (
+          <Badge variant="promotion" label={offerLabel} />
+        ) : undefined
+      }
       media={
         imagePublicId ? (
           <CloudinaryImageStatic
@@ -432,7 +477,10 @@ export function ResultsTabs({
         params.set("lat", String(userLat));
         params.set("lng", String(userLng));
       }
-      const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
+      const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, {
+        signal,
+        headers: searchSessionHeaders(),
+      });
       if (!res.ok) {
         throw new Error(`Search load failed (${res.status})`);
       }
@@ -442,7 +490,15 @@ export function ResultsTabs({
         nextCursor: nextPageCursor(body),
       };
     },
-    [activeKind, apiBaseUrl, filterState, query, response.page_size, userLat, userLng],
+    [
+      activeKind,
+      apiBaseUrl,
+      filterState,
+      query,
+      response.page_size,
+      userLat,
+      userLng,
+    ],
   );
 
   const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =
@@ -492,15 +548,23 @@ export function ResultsTabs({
       ),
       panel: (
         <div className="space-y-4">
-          <p className="text-sm text-text-2" aria-live="polite" data-testid="search-results-count">
+          <p
+            className="text-sm text-text-2"
+            aria-live="polite"
+            data-testid="search-results-count"
+          >
             {labels.resultsCount}
           </p>
-          {response.degraded ? <p className="text-xs text-text-3">{labels.degraded}</p> : null}
+          {response.degraded ? (
+            <p className="text-xs text-text-3">{labels.degraded}</p>
+          ) : null}
           <ResultsList
             hits={items}
             locale={locale}
             labels={labels}
-            preferProductGrid={activeKind === "products" || activeKind === "all"}
+            preferProductGrid={
+              activeKind === "products" || activeKind === "all"
+            }
           />
           <ProgressiveLoadControls
             status={status}

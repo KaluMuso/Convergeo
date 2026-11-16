@@ -112,11 +112,20 @@ type StepPaymentProps = {
   sessionId: string;
   accessToken: string;
   labels: PaymentStepLabels;
-  onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void | Promise<void>;
+  onComplete: (
+    payment: ValidatedPayment,
+    options: PaymentOptions,
+  ) => void | Promise<void>;
   preset?: PresetPayment;
 };
 
-function MethodOption({ selected, children }: { selected: boolean; children: ReactNode }) {
+function MethodOption({
+  selected,
+  children,
+}: {
+  selected: boolean;
+  children: ReactNode;
+}) {
   return (
     <div
       className={[
@@ -142,7 +151,9 @@ export function StepPayment({
 }: StepPaymentProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
   const groupLabelId = useId();
-  const [options, setOptions] = useState<PaymentOptions | null>(preset?.options ?? null);
+  const [options, setOptions] = useState<PaymentOptions | null>(
+    preset?.options ?? null,
+  );
   const [method, setMethod] = useState<PaymentMethod>(
     preset && !preset.methods.includes("momo") ? "card" : "momo",
   );
@@ -156,7 +167,8 @@ export function StepPayment({
   const offered: ReadonlyArray<PaymentMethod> | null = preset
     ? (preset.methods as ReadonlyArray<PaymentMethod>)
     : (options?.available_methods ?? null);
-  const offers = (candidate: PaymentMethod) => (offered ? offered.includes(candidate) : true);
+  const offers = (candidate: PaymentMethod) =>
+    offered ? offered.includes(candidate) : true;
   const nothingOffered = offered !== null && offered.length === 0;
 
   useEffect(() => {
@@ -234,7 +246,9 @@ export function StepPayment({
             method,
             rail: method === "momo" ? rail : null,
             payer_number:
-              method === "momo" ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber) : null,
+              method === "momo"
+                ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber)
+                : null,
           },
           preset.options,
         );
@@ -243,7 +257,8 @@ export function StepPayment({
         setErrorMessage(
           error instanceof ApiError && error.code === "payments_disabled"
             ? labels.paymentsDisabled
-            : error instanceof ApiError && error.code === "checkout.invalid_payer_number"
+            : error instanceof ApiError &&
+                error.code === "checkout.invalid_payer_number"
               ? labels.invalidPayer
               : labels.error,
         );
@@ -257,7 +272,9 @@ export function StepPayment({
         getToken: () => accessToken,
       });
       const payerNumber =
-        method === "momo" ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber) : undefined;
+        method === "momo"
+          ? formatE164(DEFAULT_COUNTRY_CODE, nationalNumber)
+          : undefined;
       const response = await client.request<PaymentOptions & ValidatedPayment>(
         "/checkout/steps/payment",
         {
@@ -325,7 +342,9 @@ export function StepPayment({
   const codCapFormatted = formatK(options.cod_cap_ngwee, {
     locale: `${locale}-ZM`,
   });
-  const totalFormatted = formatK(options.total_ngwee, { locale: `${locale}-ZM` });
+  const totalFormatted = formatK(options.total_ngwee, {
+    locale: `${locale}-ZM`,
+  });
   const codGuide = labels.codGuide;
 
   return (
@@ -361,7 +380,9 @@ export function StepPayment({
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">
+              {labels.momoHelp}
+            </p>
           </MethodOption>
         ) : null}
 
@@ -383,7 +404,9 @@ export function StepPayment({
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">
+              {labels.cardHelp}
+            </p>
           </MethodOption>
         ) : null}
 
@@ -405,13 +428,17 @@ export function StepPayment({
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.codHelp}</p>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">
+              {labels.codHelp}
+            </p>
             {codGuide && method === "cod" ? (
               <div
                 className="mt-3 space-y-2 rounded-md bg-bg-2 px-3 py-3"
                 data-testid="checkout-cod-guide"
               >
-                <p className="font-body text-sm font-semibold text-text">{codGuide.title}</p>
+                <p className="font-body text-sm font-semibold text-text">
+                  {codGuide.title}
+                </p>
                 <ul className="list-disc space-y-1 pl-5 font-body text-sm text-text-2">
                   <li>{codGuide.step1}</li>
                   <li>{fill(codGuide.step2, { amount: totalFormatted })}</li>
@@ -430,7 +457,9 @@ export function StepPayment({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-body text-sm font-semibold text-text-3">{labels.cod}</p>
+                <p className="font-body text-sm font-semibold text-text-3">
+                  {labels.cod}
+                </p>
                 <p className="mt-1 font-body text-sm font-medium text-text">
                   {labels.codUnavailableTitle}
                 </p>
@@ -464,7 +493,11 @@ export function StepPayment({
 
       {method === "momo" && offers("momo") ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
-          <div className="flex flex-col gap-2" role="radiogroup" aria-label={labels.momo}>
+          <div
+            className="flex flex-col gap-2"
+            role="radiogroup"
+            aria-label={labels.momo}
+          >
             <PaymentRailChoice
               name="momo-rail"
               rail="mtn"
@@ -516,7 +549,9 @@ export function StepPayment({
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
                 onChange={(event) => {
-                  setNationalNumber(normalizeNationalNumber(event.target.value));
+                  setNationalNumber(
+                    normalizeNationalNumber(event.target.value),
+                  );
                 }}
               />
             </div>
@@ -526,7 +561,9 @@ export function StepPayment({
 
       {method === "card" && offers("card") ? (
         <div className="rounded-card border border-border bg-bg-2 px-4 py-3">
-          <p className="font-body text-sm text-text-2">{labels.cardExplainer}</p>
+          <p className="font-body text-sm text-text-2">
+            {labels.cardExplainer}
+          </p>
         </div>
       ) : null}
 

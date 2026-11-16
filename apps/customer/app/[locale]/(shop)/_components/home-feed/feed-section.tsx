@@ -77,13 +77,18 @@ export function FeedAdCard({
   variant?: "feed" | "carousel";
 }) {
   const href = localizeHref(ad.cta_href, locale);
-  const sponsoredBy = labels.sponsoredBy.replace("{advertiser}", ad.advertiser_name);
+  const sponsoredBy = labels.sponsoredBy.replace(
+    "{advertiser}",
+    ad.advertiser_name,
+  );
   return (
     <AdTracker placementId={ad.placement_id}>
       <a
         href={href}
         data-ad-click={ad.placement_id}
-        {...(ad.external ? { target: "_blank", rel: "sponsored noopener noreferrer" } : {})}
+        {...(ad.external
+          ? { target: "_blank", rel: "sponsored noopener noreferrer" }
+          : {})}
         aria-label={`${labels.sponsored}: ${ad.headline} — ${sponsoredBy}`}
         className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-surface no-underline shadow-1 sm:flex-row"
       >
@@ -174,7 +179,10 @@ export function FeedSectionView({
 
   if (section.services.length > 0) {
     return (
-      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-3 lg:gap-4">
+      <section
+        aria-labelledby={headingId}
+        className="home-rail flex flex-col gap-3 lg:gap-4"
+      >
         {header}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {section.services.map((service) => (
@@ -185,7 +193,10 @@ export function FeedSectionView({
             >
               <ServiceCard
                 title={service.title}
-                providerLabel={labels.provider.replace("{provider}", service.provider.display_name)}
+                providerLabel={labels.provider.replace(
+                  "{provider}",
+                  service.provider.display_name,
+                )}
                 media={
                   service.portfolio_images[0] ? (
                     <CloudinaryImageStatic
@@ -202,7 +213,11 @@ export function FeedSectionView({
                 reviewCount={0}
                 noReviewsLabel={labels.noReviews}
                 fromNgwee={service.from_price_ngwee ?? undefined}
-                fromPriceLabel={service.from_price_ngwee !== null ? labels.fromPrice : undefined}
+                fromPriceLabel={
+                  service.from_price_ngwee !== null
+                    ? labels.fromPrice
+                    : undefined
+                }
                 ctaLabel={labels.viewService}
               />
             </Link>
@@ -225,7 +240,10 @@ export function FeedSectionView({
       },
     );
     return (
-      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-3 lg:gap-4">
+      <section
+        aria-labelledby={headingId}
+        className="home-rail flex flex-col gap-3 lg:gap-4"
+      >
         {header}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {section.events.map((event) => (
@@ -237,7 +255,9 @@ export function FeedSectionView({
               <EventCard
                 title={event.title}
                 dateLabel={
-                  event.next_starts_at ? dateFormat.format(new Date(event.next_starts_at)) : ""
+                  event.next_starts_at
+                    ? dateFormat.format(new Date(event.next_starts_at))
+                    : ""
                 }
                 venueLabel={event.venue ?? ""}
                 isFree={event.is_free}
@@ -270,7 +290,10 @@ export function FeedSectionView({
 
   if (section.vendors.length > 0) {
     return (
-      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-3 lg:gap-4">
+      <section
+        aria-labelledby={headingId}
+        className="home-rail flex flex-col gap-3 lg:gap-4"
+      >
         {header}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {section.vendors.map((vendor) => (

@@ -1,9 +1,15 @@
 "use client";
 
+import {
+  getAnalyticsConsent,
+  isGlobalPrivacyControlOn,
+  setAnalyticsConsent,
+} from "@vergeo/analytics/consent";
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
+import { Switch } from "@vergeo/ui/src/switch";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -11,6 +17,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { clearUserCaches } from "../../../../lib/clear-user-caches";
+import {
+  type DeliveryConsent,
+  isConsentCurrent,
+  loadDeliveryConsent,
+  saveDeliveryConsent,
+} from "../../../../lib/delivery-consent";
 
 const API_BASE_URL = getApiBaseUrl();
 const DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT";
@@ -40,6 +52,8 @@ export default function AccountPrivacyPage() {
   return (
     <div className="flex w-full max-w-lg flex-col gap-8">
       <PrivacyIntro locale={locale} />
+      <DeliveryConsentSection locale={locale} />
+      <AnalyticsSection />
       <ExportSection locale={locale} />
       <DeleteSection locale={locale} />
     </div>
@@ -64,6 +78,125 @@ function PrivacyIntro({ locale }: { locale: string }) {
         {t("retentionNote")}
       </p>
     </>
+  );
+}
+
+function DeliveryConsentSection({ locale }: { locale: string }) {
+  const t = useTranslations("account.privacy.deliveryConsent");
+  const [consent, setConsent] = useState<DeliveryConsent | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    loadDeliveryConsent().then(
+      (value) => {
+        if (active) {
+          setConsent(value);
+          setLoaded(true);
+        }
+      },
+      () => {
+        if (active) {
+          setError(t("loadFailed"));
+          setLoaded(true);
+        }
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
+  const granted = isConsentCurrent(consent);
+
+  const toggle = async (next: boolean) => {
+    setSaving(true);
+    setError(null);
+    try {
+      setConsent(await saveDeliveryConsent(next, "settings"));
+    } catch {
+      setError(t("saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="delivery-consent-heading"
+      className="space-y-3 rounded-xl border border-border p-4"
+    >
+      <h2 id="delivery-consent-heading" className="text-lg font-semibold">
+        {t("title")}
+      </h2>
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
+      <label className="flex min-h-11 items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1 h-5 w-5"
+          checked={granted}
+          disabled={!loaded || saving}
+          onChange={(event) => void toggle(event.target.checked)}
+          data-testid="delivery-consent-toggle"
+        />
+        <span>{t("label")}</span>
+      </label>
+      <p className="text-xs text-muted" role="status">
+        {!loaded
+          ? t("loading")
+          : granted && consent?.recorded_at
+            ? t("grantedAt", {
+                at: new Date(consent.recorded_at).toLocaleDateString(`${locale}-ZM`),
+              })
+            : t("notGranted")}
+      </p>
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * Analytics opt-out (1A-09). Off keeps anonymous counts only: no visitor id, no journeys,
+ * no sign-in link. Only an explicit "denied" turns it off; absent a choice it is on. Global
+ * Privacy Control forces it off and locks the switch (the browser setting is respected).
+ */
+function AnalyticsSection() {
+  const t = useTranslations("account.privacy.analytics");
+  const [enabled, setEnabled] = useState(true);
+  const [gpc, setGpc] = useState(false);
+
+  useEffect(() => {
+    const gpcOn = isGlobalPrivacyControlOn();
+    setGpc(gpcOn);
+    setEnabled(!gpcOn && getAnalyticsConsent() !== "denied");
+  }, []);
+
+  const handleChange = (next: boolean) => {
+    setAnalyticsConsent(next ? "granted" : "denied");
+    setEnabled(next);
+  };
+
+  return (
+    <section
+      aria-labelledby="analytics-heading"
+      className="space-y-3 rounded-xl border border-border p-4"
+    >
+      <h2 id="analytics-heading" className="text-lg font-semibold">
+        {t("title")}
+      </h2>
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
+      <Switch
+        checked={enabled}
+        disabled={gpc}
+        label={t("toggleLabel")}
+        onChange={(event) => handleChange(event.target.checked)}
+      />
+      <p aria-live="polite" className="text-sm leading-relaxed text-muted">
+        {gpc ? t("gpc") : enabled ? t("on") : t("off")}
+      </p>
+    </section>
   );
 }
 

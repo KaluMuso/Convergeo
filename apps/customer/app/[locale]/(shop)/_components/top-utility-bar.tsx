@@ -36,7 +36,13 @@ type TopUtilityBarProps = {
 
 function ZambiaFlag({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 36 24" className={className} aria-hidden focusable="false" role="img">
+    <svg
+      viewBox="0 0 36 24"
+      className={className}
+      aria-hidden
+      focusable="false"
+      role="img"
+    >
       <rect width="36" height="24" fill="#198A00" />
       <rect x="24" width="4" height="24" fill="#000" />
       <rect x="28" width="4" height="24" fill="#EF7D00" />
@@ -50,25 +56,44 @@ function ZambiaFlag({ className }: { className?: string }) {
   );
 }
 
-function SocialIcon({ kind }: { kind: "facebook" | "twitter" | "instagram" | "mail" }) {
+function SocialIcon({
+  kind,
+}: {
+  kind: "facebook" | "twitter" | "instagram" | "mail";
+}) {
   const common = "h-3.5 w-3.5";
   if (kind === "facebook") {
     return (
-      <svg viewBox="0 0 24 24" className={common} aria-hidden fill="currentColor">
+      <svg
+        viewBox="0 0 24 24"
+        className={common}
+        aria-hidden
+        fill="currentColor"
+      >
         <path d="M14 8h3V5h-3c-2.2 0-4 1.8-4 4v2H7v3h3v7h3v-7h3l1-3h-4V9c0-.6.4-1 1-1z" />
       </svg>
     );
   }
   if (kind === "twitter") {
     return (
-      <svg viewBox="0 0 24 24" className={common} aria-hidden fill="currentColor">
+      <svg
+        viewBox="0 0 24 24"
+        className={common}
+        aria-hidden
+        fill="currentColor"
+      >
         <path d="M18.2 3H21l-6.5 7.4L22 21h-6.2l-4.3-5.5L6.2 21H3.4l7-8L2.2 3h6.3l3.9 5.1L18.2 3zm-1.1 16.2h1.7L7 4.7H5.2l11.9 14.5z" />
       </svg>
     );
   }
   if (kind === "instagram") {
     return (
-      <svg viewBox="0 0 24 24" className={common} aria-hidden fill="currentColor">
+      <svg
+        viewBox="0 0 24 24"
+        className={common}
+        aria-hidden
+        fill="currentColor"
+      >
         <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7zm5 2.5A4.5 4.5 0 1 1 7.5 12 4.5 4.5 0 0 1 12 7.5zm0 2A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5zM17.8 6.6a1 1 0 1 1-1 1 1 1 0 0 1 1-1z" />
       </svg>
     );
@@ -124,7 +149,11 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
               className="max-w-[7.5rem] cursor-pointer truncate border-0 bg-transparent py-1 pr-1 font-medium text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {PUBLIC_LOCALES.map((code) => (
-                <option key={code} value={code} className="bg-panel text-panel-text">
+                <option
+                  key={code}
+                  value={code}
+                  className="bg-panel text-panel-text"
+                >
                   {code} · {labels.localeNames[code] ?? code}
                 </option>
               ))}
@@ -149,7 +178,10 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
           </a>
         </div>
 
-        <nav aria-label={labels.socialAria} className="flex shrink-0 items-center gap-0.5">
+        <nav
+          aria-label={labels.socialAria}
+          className="flex shrink-0 items-center gap-0.5"
+        >
           {links.facebook ? (
             <a
               href={links.facebook}
@@ -183,7 +215,11 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
               <SocialIcon kind="instagram" />
             </a>
           ) : null}
-          <a href={links.emailHref} className={socialClass} aria-label={labels.emailAria}>
+          <a
+            href={links.emailHref}
+            className={socialClass}
+            aria-label={labels.emailAria}
+          >
             <SocialIcon kind="mail" />
           </a>
         </nav>

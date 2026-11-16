@@ -22,7 +22,6 @@ type CustomerAuthBarrierLabels = {
   conflictLine: string;
   priceLine: string;
   unnamedItem: string;
-  wholesaleTerms: string;
   priceNeedsReview: string;
   accountChoice: string;
   guestChoice: string;
@@ -180,15 +179,11 @@ export function CustomerAuthBarrier({ labels }: { labels: CustomerAuthBarrierLab
                         ? priceConflictLine(labels.priceLine, conflict, name)
                         : null;
                     if (price) {
-                      const wholesale =
-                        conflict.details.wholesale === true
-                          ? ` ${labels.wholesaleTerms.replace("{moq}", String(conflict.details.moq ?? 1))}`
-                          : "";
                       const review =
                         typeof conflict.details.proposal_token === "string"
                           ? ""
                           : ` ${labels.priceNeedsReview}`;
-                      return `${price}${wholesale}${review}`;
+                      return `${price}${review}`;
                     }
                     return formatConflictLine(labels.conflictLine, name, conflict.code);
                   })()}

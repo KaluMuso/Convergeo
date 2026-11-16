@@ -75,11 +75,16 @@ describe("fetchCategoriesResult", () => {
 
   it("returns an honest empty success when the catalogue has no rows", async () => {
     mockQuery({ data: [], error: null, status: 200 });
-    await expect(fetchCategoriesResult()).resolves.toEqual({ ok: true, categories: [] });
+    await expect(fetchCategoriesResult()).resolves.toEqual({
+      ok: true,
+      categories: [],
+    });
   });
 
   it("returns malformed when every row fails validation", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     mockQuery({ data: [{ id: 1 }, { foo: "bar" }], error: null, status: 200 });
 
     await expect(fetchCategoriesResult()).resolves.toEqual({
@@ -90,7 +95,9 @@ describe("fetchCategoriesResult", () => {
   });
 
   it("returns unauthorized for permission / JWT failures", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     mockQuery({
       data: null,
       error: { code: "PGRST301", message: "JWT expired" },
@@ -103,11 +110,15 @@ describe("fetchCategoriesResult", () => {
       code: "PGRST301",
       status: 401,
     });
-    expect(JSON.parse(String(errorSpy.mock.calls[0]?.[0])).reason).toBe("unauthorized");
+    expect(JSON.parse(String(errorSpy.mock.calls[0]?.[0])).reason).toBe(
+      "unauthorized",
+    );
   });
 
   it("returns upstream for generic Supabase failures", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     mockQuery({
       data: null,
       error: { code: "PGRST002", message: "schema cache" },
@@ -124,10 +135,14 @@ describe("fetchCategoriesResult", () => {
   });
 
   it("returns config when the server client cannot be created", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     cookiesMock.mockResolvedValue({ getAll: () => [], set: () => undefined });
     createServerClientMock.mockImplementation(() => {
-      throw new Error("Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL");
+      throw new Error(
+        "Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL",
+      );
     });
 
     await expect(fetchCategoriesResult()).resolves.toEqual({

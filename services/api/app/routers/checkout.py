@@ -12,7 +12,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.business.access import resolve_business_eligibility
+from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
 from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import (
     CartLineView,
@@ -23,8 +23,19 @@ from app.services.cart.grouping import (
 from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.cart.read_path import listing_cart_access_conflict, variant_stock_conflict
 from app.services.cart.store import fetch_listings_for_items
+from app.services.cart.tickets import (
+    claim_session_holds,
+    load_cart_ticket_lines,
+    release_session_holds,
+    require_purchasable,
+    reserve_ticket_gmv,
+    ticket_platform_fee_ngwee,
+    ticket_subtotal_ngwee,
+)
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.events.gmv_reservation import release_gmv_reservation
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.offers.apply import OfferPricing, price_unified
 from app.services.payments.state import expire_checkout_group_if_unpaid
 from app.services.rfq.listing_cart_authority import (
     fetch_rfq_threads_for_items,
@@ -126,6 +137,17 @@ class CartLineOut(BaseModel):
     defect_notes: str | None = None
     listing_variant_id: str | None = None
     variant_options: list[VariantOptionOut] = Field(default_factory=list)
+    #: W8 offers — list total before the offer; None when no offer priced the line.
+    list_line_total_ngwee: int | None = None
+    offer_id: str | None = None
+
+
+class OfferGiftOut(BaseModel):
+    offer_id: str
+    listing_id: str
+    qty: int
+    title: str | None = None
+    reference_unit_price_ngwee: int
 
 
 class PickupLocationOut(BaseModel):
@@ -141,7 +163,13 @@ class VendorGroupOut(BaseModel):
     items: list[CartLineOut]
     subtotal_ngwee: int
     delivery_eligible: bool
+    # What every listing in the group lets the buyer choose; the fulfilment
+    # step hides a route the seller does not offer instead of failing later.
+    delivery_offered: bool = True
+    pickup_offered: bool = True
     pickup_location: PickupLocationOut | None = None
+    gifts: list[OfferGiftOut] = Field(default_factory=list)
+    savings_ngwee: int = 0
 
 
 class ReservationClaimOut(BaseModel):
@@ -159,6 +187,13 @@ class CheckoutSessionResponse(BaseModel):
     subtotal_ngwee: int
     reservations: list[ReservationClaimOut]
     contact_skipped: bool = False
+    #: Unified checkout: event tickets (own order, prepaid only).
+    ticket_lines: list[TicketLineOut] = Field(default_factory=list)
+    #: Buyer-paid ticket platform fee (0 unless the organiser passes it on).
+    platform_fee_ngwee: int = 0
+    total_ngwee: int = 0
+    #: False when the cart holds event tickets (they are never cash on delivery).
+    cod_allowed: bool = True
 
 
 class SessionStatusResponse(BaseModel):
@@ -193,7 +228,8 @@ class FulfilmentAddress(BaseModel):
 class FulfilmentStepRequest(BaseModel):
     session_id: str
     address: FulfilmentAddress | None = None
-    groups: list[GroupFulfilmentChoice] = Field(min_length=1)
+    #: One choice per product vendor; empty only for a tickets-only checkout.
+    groups: list[GroupFulfilmentChoice] = Field(default_factory=list, max_length=50)
 
 
 class GroupFulfilmentResult(BaseModel):
@@ -212,6 +248,9 @@ class FulfilmentStepResponse(BaseModel):
     subtotal_ngwee: int
     delivery_fee_ngwee: int
     total_ngwee: int
+    #: Unified checkout: event-ticket subtotal (inside subtotal_ngwee) and fee.
+    ticket_subtotal_ngwee: int = 0
+    platform_fee_ngwee: int = 0
     resolved_zone_key: str | None = None
     pickup_only: bool = False
 
@@ -533,6 +572,98 @@ def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> di
     }
 
 
+_PICKUP_OPTIONS = frozenset({"pickup_shop", "pickup_nationwide"})
+_DEFAULT_LISTING_FULFILMENT = ("lusaka_delivery", "pickup_shop")
+
+
+def _listing_fulfilment_options(
+    service: ServiceRoleClient,
+    listing_ids: list[str],
+) -> dict[str, set[str]]:
+    """Fulfilment routes each listing offers; legacy rows get delivery + pickup."""
+    if not listing_ids:
+        return {}
+    response = (
+        service.client.table("vendor_listings")
+        .select("id, fulfilment_options")
+        .in_("id", sorted(set(listing_ids)))
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    options_by_listing: dict[str, set[str]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        raw = row.get("fulfilment_options")
+        options_by_listing[str(row.get("id"))] = (
+            {str(option) for option in raw}
+            if isinstance(raw, list) and raw
+            else set(_DEFAULT_LISTING_FULFILMENT)
+        )
+    return options_by_listing
+
+
+def _group_offered_routes(
+    items: list[Any] | tuple[Any, ...],
+    options_by_listing: dict[str, set[str]],
+) -> tuple[bool, bool]:
+    """(delivery_offered, pickup_offered): a route is offered only if every line offers it."""
+    delivery = True
+    pickup = True
+    for item in items:
+        offered = options_by_listing.get(str(item.listing_id), set(_DEFAULT_LISTING_FULFILMENT))
+        delivery = delivery and "lusaka_delivery" in offered
+        pickup = pickup and bool(offered & _PICKUP_OPTIONS)
+    return delivery, pickup
+
+
+def _enforce_listing_fulfilment_options(
+    service: ServiceRoleClient,
+    groups_by_vendor: dict[str, Any],
+    choices_by_vendor: dict[str, Any],
+) -> None:
+    """Refuse a hand-over route a vendor did not offer for a line in the group.
+
+    Each listing declares ``fulfilment_options``; a vendor group can only use a
+    route that every line in it offers. Rows without the column (older data)
+    fall back to the pre-existing behaviour: delivery and pickup both offered.
+    """
+    listing_ids = [
+        str(item.listing_id) for group in groups_by_vendor.values() for item in group.items
+    ]
+    if not listing_ids:
+        return
+    options_by_listing = _listing_fulfilment_options(service, listing_ids)
+    for vendor_id, group in groups_by_vendor.items():
+        choice = choices_by_vendor[vendor_id]
+        for item in group.items:
+            offered = options_by_listing.get(str(item.listing_id), set(_DEFAULT_LISTING_FULFILMENT))
+            allowed = (
+                "lusaka_delivery" in offered
+                if choice.fulfilment == "delivery"
+                else bool(offered & _PICKUP_OPTIONS)
+            )
+            if not allowed:
+                raise AppError(
+                    code="checkout.fulfilment_not_offered",
+                    message="The seller does not offer this hand-over option for an item",
+                    http_status=422,
+                    details={
+                        "message_key": "checkout.fulfilment.notOffered",
+                        "vendor_id": vendor_id,
+                        "listing_id": str(item.listing_id),
+                        "fulfilment": choice.fulfilment,
+                        "fields": [
+                            {
+                                "field": "fulfilment",
+                                "code": "fulfilment_not_offered",
+                                "message": "The seller does not offer this option for an item.",
+                            }
+                        ],
+                    },
+                )
+
+
 def _fetch_vendor_locations(
     service: ServiceRoleClient, vendor_ids: list[str]
 ) -> dict[str, PickupLocationOut]:
@@ -729,6 +860,21 @@ def _build_line_views(
     return line_views
 
 
+def _gift_outs(pricing: OfferPricing | None, vendor_id: str) -> list[OfferGiftOut]:
+    if pricing is None:
+        return []
+    return [
+        OfferGiftOut(
+            offer_id=gift.offer_id,
+            listing_id=gift.listing_id,
+            qty=gift.qty,
+            title=gift.title,
+            reference_unit_price_ngwee=gift.reference_unit_price_ngwee,
+        )
+        for gift in pricing.gifts_for_vendor(vendor_id)
+    ]
+
+
 def _fetch_checkout_group(
     service: ServiceRoleClient, session_id: str, customer_id: str
 ) -> dict[str, Any]:
@@ -782,6 +928,14 @@ def _release_session_holds(session_id: str) -> int:
     for listing_id in sorted({row for row in held.rows if row}):
         if release_reservation(listing_id=listing_id, checkout_group_id=session_id).released:
             released += 1
+    # Unified checkout: void the session's unconsumed ticket claims and free its
+    # GMV headroom (both idempotent; no-ops for a products-only session). Best
+    # effort like the stock path: the stale-claim / GMV sweepers reclaim at TTL.
+    try:
+        released += release_session_holds(session_id)
+        release_gmv_reservation(session_id)
+    except Exception:
+        logger.warning("checkout.release_ticket_holds_failed", exc_info=True)
     return released
 
 
@@ -805,8 +959,14 @@ WITH superseded AS (
   SET status = 'abandoned'
   WHERE cg.customer_id = {customer_sql}
     AND cg.status = 'pending'
-    AND EXISTS (
-      SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.checkout_ticket_holds th
+        WHERE th.checkout_group_id = cg.id AND th.status = 'held'
+      )
     )
     AND NOT EXISTS (SELECT 1 FROM public.orders o WHERE o.checkout_group_id = cg.id)
     AND NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.checkout_group_id = cg.id)
@@ -904,33 +1064,46 @@ async def create_checkout_session(
 
     cart_id = str(cart["id"])
     items = _fetch_cart_items(user_client, cart_id)
-    if not items:
+    ticket_lines = load_cart_ticket_lines(cart_id, client=service.client)
+    if not items and not ticket_lines:
         raise AppError(
             code="checkout.cart_empty",
             message="Your cart is empty",
             http_status=400,
             details={"redirect_to": "cart"},
         )
+    require_purchasable(ticket_lines)
 
     listings = fetch_listings_for_items(items)
 
     # B0-P02a: prices re-derived before any money number is computed. Raises
     # 409 checkout.cart_changed on divergence; see _rederive_line_prices.
-    access = resolve_business_eligibility(current_user.id, service)
+    # Wholesale/tier pricing is vendor-app only: checkout always re-derives at
+    # retail, so a verified business buyer is charged the same as anyone else.
     items = _rederive_line_prices(
         items,
         listings,
-        business_eligible=access.eligible,
+        business_eligible=False,
         service=service,
         customer_id=current_user.id,
     )
 
     line_views = _build_line_views(items, listings)
+    line_views, ticket_lines, offer_pricing = price_unified(
+        line_views, ticket_lines, service.client, customer_id=current_user.id
+    )
     vendor_groups = group_by_vendor(
         line_views,
         free_delivery_threshold_ngwee=_load_free_delivery_threshold(service),
     )
-    subtotal = cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
+    product_subtotal = (
+        sum(line.line_total_ngwee for line in line_views)
+        if offer_pricing is not None
+        else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
+    )
+    ticket_subtotal = ticket_subtotal_ngwee(ticket_lines)
+    platform_fee = ticket_platform_fee_ngwee(ticket_lines)
+    subtotal = product_subtotal + ticket_subtotal
 
     try:
         _supersede_own_pending_sessions(current_user.id)
@@ -947,7 +1120,8 @@ async def create_checkout_session(
             "idempotency_key": idempotency_key,
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": 0,
-            "total_ngwee": subtotal,
+            "platform_fee_ngwee": platform_fee,
+            "total_ngwee": subtotal + platform_fee,
             "status": "pending",
         }
     ).execute()
@@ -994,6 +1168,34 @@ async def create_checkout_session(
                 },
             )
 
+    if ticket_lines:
+        # Same oversell-safe claim (instance row lock) and Tier-1 GMV reservation
+        # as a ticket bought alone; a failure leaves no hold behind.
+        try:
+            claim_session_holds(
+                service.client,
+                checkout_group_id=session_id,
+                customer_id=current_user.id,
+                lines=ticket_lines,
+            )
+            reserve_ticket_gmv(
+                service.client,
+                checkout_group_id=session_id,
+                organiser_vendor_id=ticket_lines[0].vendor_id,
+                event_id=ticket_lines[0].event_id,
+                amount_ngwee=ticket_subtotal,
+                ttl_minutes=ttl_min,
+            )
+        except Exception:
+            expire_checkout_group_if_unpaid(
+                service.client, checkout_group_id=session_id, terminal_status="abandoned"
+            )
+            try:
+                _release_session_holds(session_id)
+            except Exception:
+                logger.warning("checkout.release_partial_holds_failed", exc_info=True)
+            raise
+
     expires_at = datetime.now(UTC) + timedelta(minutes=ttl_min)
     vendor_ids = [group.vendor_id for group in vendor_groups]
     vendor_names = _fetch_vendor_names(service, vendor_ids)
@@ -1020,6 +1222,15 @@ async def create_checkout_session(
             "total_ngwee": subtotal,
         },
     )
+
+    offered_options = _listing_fulfilment_options(
+        service,
+        [str(item.listing_id) for group in vendor_groups for item in group.items],
+    )
+    offered_by_vendor = {
+        group.vendor_id: _group_offered_routes(group.items, offered_options)
+        for group in vendor_groups
+    }
 
     return CheckoutSessionResponse(
         session_id=session_id,
@@ -1052,18 +1263,31 @@ async def create_checkout_session(
                             VariantOptionOut(group=group_name, value=value)
                             for group_name, value in item.variant_options
                         ],
+                        list_line_total_ngwee=item.list_line_total_ngwee,
+                        offer_id=item.offer_id,
                     )
                     for item in group.items
                 ],
                 subtotal_ngwee=group.subtotal_ngwee,
                 delivery_eligible=group.delivery_eligible,
+                delivery_offered=offered_by_vendor[group.vendor_id][0],
+                pickup_offered=offered_by_vendor[group.vendor_id][1],
                 pickup_location=pickup_locations.get(group.vendor_id),
+                gifts=_gift_outs(offer_pricing, group.vendor_id),
+                savings_ngwee=sum(
+                    (item.list_line_total_ngwee or item.line_total_ngwee) - item.line_total_ngwee
+                    for item in group.items
+                ),
             )
             for group in vendor_groups
         ],
         subtotal_ngwee=subtotal,
         reservations=reservations,
         contact_skipped=contact_skipped,
+        ticket_lines=[ticket_line_out(line) for line in ticket_lines],
+        platform_fee_ngwee=platform_fee,
+        total_ngwee=subtotal + platform_fee,
+        cod_allowed=not ticket_lines,
     )
 
 
@@ -1161,8 +1385,15 @@ async def validate_fulfilment_step(
         )
 
     items = _fetch_cart_items(user_client, str(cart["id"]))
+    ticket_lines = load_cart_ticket_lines(str(cart["id"]), client=service.client)
+    require_purchasable(ticket_lines)
     listings = fetch_listings_for_items(items)
     line_views = _build_line_views(items, listings)
+    # Same offer engine as the session and order placement (W8, flag `bundles`);
+    # event tickets are priced in the same pass (unified checkout).
+    line_views, ticket_lines, _offer_pricing = price_unified(
+        line_views, ticket_lines, service.client, customer_id=current_user.id
+    )
     free_threshold = _load_free_delivery_threshold(service)
     vendor_groups = group_by_vendor(line_views, free_delivery_threshold_ngwee=free_threshold)
     groups_by_vendor = {group.vendor_id: group for group in vendor_groups}
@@ -1210,6 +1441,8 @@ async def validate_fulfilment_step(
                         },
                     )
 
+    _enforce_listing_fulfilment_options(service, groups_by_vendor, choices_by_vendor)
+
     pickup_locations = _fetch_vendor_locations(service, list(groups_by_vendor))
     results: list[GroupFulfilmentResult] = []
     total_delivery_fee = 0
@@ -1249,11 +1482,15 @@ async def validate_fulfilment_step(
             )
         )
 
-    total = subtotal + total_delivery_fee
+    ticket_subtotal = ticket_subtotal_ngwee(ticket_lines)
+    platform_fee = ticket_platform_fee_ngwee(ticket_lines)
+    subtotal += ticket_subtotal
+    total = subtotal + total_delivery_fee + platform_fee
     service.client.table("checkout_groups").update(
         {
             "subtotal_ngwee": subtotal,
             "delivery_fee_ngwee": total_delivery_fee,
+            "platform_fee_ngwee": platform_fee,
             "total_ngwee": total,
             # POST /orders re-prices from these server-recorded choices; the
             # groups a client sends there are only checked against them.
@@ -1276,4 +1513,6 @@ async def validate_fulfilment_step(
         total_ngwee=total,
         resolved_zone_key=resolved_zone,
         pickup_only=pickup_only,
+        ticket_subtotal_ngwee=ticket_subtotal,
+        platform_fee_ngwee=platform_fee,
     )

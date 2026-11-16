@@ -40,9 +40,15 @@ describe("HomeTrustStrip (CUST-HOME-01)", () => {
   it("renders localised trust items and the escrow ladder", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
     expect(screen.getByTestId("home-trust-strip")).toBeInTheDocument();
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("You order");
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("You pay on arrival");
-    expect(screen.getByTestId("home-trust-escrow-ladder")).not.toHaveTextContent(/held by/i);
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent(
+      "You order",
+    );
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent(
+      "You pay on arrival",
+    );
+    expect(
+      screen.getByTestId("home-trust-escrow-ladder"),
+    ).not.toHaveTextContent(/held by/i);
     expect(screen.getByTestId("home-trust-sellers")).toHaveTextContent(
       catalogMessages.home.trust.sellers,
     );

@@ -5,7 +5,10 @@ import { Suspense } from "react";
 
 import { buildPageMetadata } from "../../../../lib/page-title";
 import { CartPageSkeleton } from "../_components/cart/cart-page-skeleton";
-import { CartPageView, type CartPageLabels } from "../_components/cart/vendor-groups";
+import {
+  CartPageView,
+  type CartPageLabels,
+} from "../_components/cart/vendor-groups";
 import { readLeadTimePhrases } from "../_components/sale-quantity";
 
 import type { Metadata } from "next";
@@ -16,7 +19,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return buildPageMetadata(locale, "checkout", "cart.title", { index: false, follow: false });
+  return buildPageMetadata(locale, "checkout", "cart.title", {
+    index: false,
+    follow: false,
+  });
 }
 
 type CartPageProps = {
@@ -29,7 +35,10 @@ export default async function CartPage({ params }: CartPageProps) {
 
   const baseMessages = await getMessages();
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
-  const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    checkout: checkoutMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "checkout" });
   // Labels cross the server→client boundary as serializable strings, so messages
   // that still carry `{…}` placeholders must be read with `t.raw` — `t()` cannot
@@ -61,6 +70,17 @@ export default async function CartPage({ params }: CartPageProps) {
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
+    offerSavings: t("cart.offerSavings"),
+    tickets: {
+      typeProducts: t("cart.types.products"),
+      typeEventTickets: t("cart.types.eventTickets"),
+      line: raw("cart.tickets.line"),
+      remove: t("cart.tickets.remove"),
+      removeLabel: raw("cart.tickets.removeLabel"),
+      unavailable: t("cart.tickets.unavailable"),
+      platformFee: t("cart.tickets.platformFee"),
+      prepaidOnly: t("cart.tickets.prepaidOnly"),
+    },
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
       vendorSubtotal: raw("cart.vendorSubtotal"),
@@ -71,6 +91,8 @@ export default async function CartPage({ params }: CartPageProps) {
       freeDeliveryProgress: raw("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
       sellerIndex: raw("cart.sellerIndex"),
+      offerGift: raw("cart.offerGift"),
+      offerGiftWorth: raw("cart.offerGiftWorth"),
     },
     line: {
       decrease: t("cart.qtyDecrease"),
@@ -90,7 +112,9 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
-      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
+      leadTimeWhen: readLeadTimePhrases((form) =>
+        raw(`cart.leadTimeWhen.${form}`),
+      ),
       lineTotal: raw("cart.lineTotal"),
       quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
@@ -100,6 +124,7 @@ export default async function CartPage({ params }: CartPageProps) {
       outOfStockLine: t("cart.outOfStockLine"),
       variantOption: raw("variant.option"),
       variantSeparator: raw("variant.separator"),
+      offerSaving: raw("cart.offerSaving"),
     },
     notices: {
       title: t("cart.noticesTitle"),
@@ -136,7 +161,9 @@ export default async function CartPage({ params }: CartPageProps) {
         sqm: t("cart.saleUnits.sqm"),
       },
       madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
-      leadTimeWhen: readLeadTimePhrases((form) => raw(`cart.leadTimeWhen.${form}`)),
+      leadTimeWhen: readLeadTimePhrases((form) =>
+        raw(`cart.leadTimeWhen.${form}`),
+      ),
     },
   };
 

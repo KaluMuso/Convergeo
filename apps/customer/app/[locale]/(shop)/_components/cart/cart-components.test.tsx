@@ -11,9 +11,18 @@ import checkoutMessages from "../../../../../../../packages/i18n/messages/en/che
 import { ChangeNotices } from "./change-notices";
 import { MiniCartEmptyState, vendorGroupLabel } from "./mini-cart-drawer";
 import { QtyStepper } from "./qty-stepper";
-import { CartEmptyState, VendorGroups, indexNoticesByListing } from "./vendor-groups";
+import {
+  CartEmptyState,
+  VendorGroups,
+  indexNoticesByListing,
+} from "./vendor-groups";
 
-import type { CartLine, CartResponse, ChangeNotice, VendorGroup } from "./mini-cart-drawer";
+import type {
+  CartLine,
+  CartResponse,
+  ChangeNotice,
+  VendorGroup,
+} from "./mini-cart-drawer";
 
 const lineLabels = {
   decrease: checkoutMessages.cart.qtyDecrease,
@@ -83,7 +92,14 @@ const eligibleGroup: VendorGroup = {
   ...belowThresholdGroup,
   subtotal_ngwee: 250_000,
   delivery_eligible: true,
-  items: [{ ...sampleLine, line_total_ngwee: 250_000, qty: 5, unit_price_ngwee: 50_000 }],
+  items: [
+    {
+      ...sampleLine,
+      line_total_ngwee: 250_000,
+      qty: 5,
+      unit_price_ngwee: 50_000,
+    },
+  ],
 };
 
 afterEach(() => {
@@ -99,17 +115,31 @@ describe("checkout.cart i18n", () => {
     // Pilot is COD-first: never claim online payment/escrow is active here.
     expect(checkoutMessages.cart.emptyTrustEscrow).toMatch(/cash/i);
     expect(checkoutMessages.cart.emptyTrustEscrow).not.toMatch(/held by/i);
-    expect(checkoutMessages.cart.emptyTrustDelivery.toLowerCase()).toContain("lusaka");
-    expect(checkoutMessages.cart.emptyTrustPickup.toLowerCase()).toContain("pickup");
+    expect(checkoutMessages.cart.emptyTrustDelivery.toLowerCase()).toContain(
+      "lusaka",
+    );
+    expect(checkoutMessages.cart.emptyTrustPickup.toLowerCase()).toContain(
+      "pickup",
+    );
   });
 
   it("keeps free-delivery copy Lusaka/zone honest (LB-P2-04)", () => {
     expect(checkoutMessages.cart.deliveryThreshold).toContain("{threshold}");
-    expect(checkoutMessages.cart.deliveryThreshold.toLowerCase()).toContain("lusaka");
-    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toContain("lusaka");
-    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toMatch(/zone|pickup/);
-    expect(checkoutMessages.cart.freeDeliveryUnlocked.toLowerCase()).toContain("qualifies");
-    expect(checkoutMessages.cart.deliveryEligible.toLowerCase()).toContain("checkout");
+    expect(checkoutMessages.cart.deliveryThreshold.toLowerCase()).toContain(
+      "lusaka",
+    );
+    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toContain(
+      "lusaka",
+    );
+    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toMatch(
+      /zone|pickup/,
+    );
+    expect(checkoutMessages.cart.freeDeliveryUnlocked.toLowerCase()).toContain(
+      "qualifies",
+    );
+    expect(checkoutMessages.cart.deliveryEligible.toLowerCase()).toContain(
+      "checkout",
+    );
   });
 });
 
@@ -143,10 +173,12 @@ describe("ChangeNotices", () => {
     );
 
     expect(screen.getByTestId("cart-change-notices")).toBeInTheDocument();
-    expect(screen.getByTestId("cart-notice-price_changed-listing-1")).toHaveTextContent("K500.00");
-    expect(screen.getByTestId("cart-notice-out_of_stock-listing-2")).toHaveTextContent(
-      checkoutMessages.cart.noticeOutOfStock,
-    );
+    expect(
+      screen.getByTestId("cart-notice-price_changed-listing-1"),
+    ).toHaveTextContent("K500.00");
+    expect(
+      screen.getByTestId("cart-notice-out_of_stock-listing-2"),
+    ).toHaveTextContent(checkoutMessages.cart.noticeOutOfStock);
   });
 });
 
@@ -164,10 +196,16 @@ describe("VendorGroups", () => {
       />,
     );
 
-    expect(screen.getByTestId("cart-free-delivery-progress")).toBeInTheDocument();
-    expect(screen.queryByTestId("cart-free-delivery-unlocked")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("cart-free-delivery-progress"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("cart-free-delivery-unlocked"),
+    ).not.toBeInTheDocument();
     // Threshold comes from the API value, not a hard-coded K200.
-    expect(screen.getByTestId("cart-delivery-nudge-vendor-a")).toHaveTextContent("K350.00");
+    expect(
+      screen.getByTestId("cart-delivery-nudge-vendor-a"),
+    ).toHaveTextContent("K350.00");
   });
 
   it.each([null, undefined, 0])(
@@ -185,9 +223,13 @@ describe("VendorGroups", () => {
         />,
       );
 
-      expect(screen.queryByTestId("cart-free-delivery-progress")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("cart-free-delivery-progress"),
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-      expect(screen.getByTestId("cart-delivery-scope-note")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("cart-delivery-scope-note"),
+      ).toBeInTheDocument();
     },
   );
 
@@ -203,7 +245,9 @@ describe("VendorGroups", () => {
       />,
     );
 
-    expect(screen.getByTestId("cart-free-delivery-unlocked")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("cart-free-delivery-unlocked"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("cart-free-delivery-eligible")).toHaveTextContent(
       checkoutMessages.cart.deliveryEligible,
     );
@@ -280,15 +324,22 @@ describe("VendorGroups", () => {
       />,
     );
 
-    expect(screen.getByTestId("cart-line-lead-time-listing-1")).toHaveTextContent(
-      "Made to order · ready within a week",
-    );
+    expect(
+      screen.getByTestId("cart-line-lead-time-listing-1"),
+    ).toHaveTextContent("Made to order · ready within a week");
   });
 
   it("labels multi-seller groups with seller index", () => {
     const secondGroup: VendorGroup = {
       vendor_id: "vendor-b",
-      items: [{ ...sampleLine, id: "line-2", listing_id: "listing-2", vendor_id: "vendor-b" }],
+      items: [
+        {
+          ...sampleLine,
+          id: "line-2",
+          listing_id: "listing-2",
+          vendor_id: "vendor-b",
+        },
+      ],
       subtotal_ngwee: 100_000,
       delivery_eligible: false,
     };
@@ -313,9 +364,15 @@ describe("cart presentation i18n", () => {
   it("includes load-error and multi-seller honesty keys", () => {
     expect(checkoutMessages.cart.loadErrorTitle).toBeTruthy();
     expect(checkoutMessages.cart.loadErrorRetry).toBeTruthy();
-    expect(checkoutMessages.cart.multiSellerNote.toLowerCase()).toContain("different");
-    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).toContain("cash on delivery");
-    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).not.toContain("holds");
+    expect(checkoutMessages.cart.multiSellerNote.toLowerCase()).toContain(
+      "different",
+    );
+    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).toContain(
+      "cash on delivery",
+    );
+    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).not.toContain(
+      "holds",
+    );
     expect(checkoutMessages.cart.summaryHeading).toBeTruthy();
   });
 });
@@ -380,10 +437,9 @@ describe("empty cart render state", () => {
       checkoutMessages.cart.emptyTrustEscrow,
     );
     expect(screen.getByTestId("cart-empty-panel")).not.toHaveTextContent("🛒");
-    expect(screen.getByRole("link", { name: checkoutMessages.cart.browseCta })).toHaveAttribute(
-      "href",
-      "/en",
-    );
+    expect(
+      screen.getByRole("link", { name: checkoutMessages.cart.browseCta }),
+    ).toHaveAttribute("href", "/en");
   });
 
   it("renders mini-cart empty state with the same trust cues", () => {
@@ -405,10 +461,9 @@ describe("empty cart render state", () => {
     expect(screen.getByTestId("cart-empty-trust-list")).toHaveTextContent(
       checkoutMessages.cart.emptyTrustPickup,
     );
-    expect(screen.getByRole("link", { name: checkoutMessages.cart.browseCta })).toHaveAttribute(
-      "href",
-      "/en",
-    );
+    expect(
+      screen.getByRole("link", { name: checkoutMessages.cart.browseCta }),
+    ).toHaveAttribute("href", "/en");
   });
 
   it("indexes notices by listing id", () => {
@@ -423,7 +478,9 @@ describe("empty cart render state", () => {
       },
     ];
 
-    expect(indexNoticesByListing(notices)["listing-1"]?.kind).toBe("qty_reduced");
+    expect(indexNoticesByListing(notices)["listing-1"]?.kind).toBe(
+      "qty_reduced",
+    );
   });
 
   it("recognises an empty cart response", () => {
@@ -441,13 +498,18 @@ describe("empty cart render state", () => {
 
 describe("vendorGroupLabel", () => {
   it("prefers vendor_name when the API provides one", () => {
-    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: "Lusaka Phones" })).toBe(
-      "Lusaka Phones",
-    );
+    expect(
+      vendorGroupLabel({
+        vendor_id: "abcdef12-3456",
+        vendor_name: "Lusaka Phones",
+      }),
+    ).toBe("Lusaka Phones");
   });
 
   it("falls back to truncated vendor_id when name is missing", () => {
-    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: null })).toBe("abcdef12");
+    expect(
+      vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: null }),
+    ).toBe("abcdef12");
     expect(vendorGroupLabel({ vendor_id: "abcdef12-3456" })).toBe("abcdef12");
   });
 
@@ -463,7 +525,9 @@ describe("vendorGroupLabel", () => {
       />,
     );
 
-    expect(screen.getByTestId("cart-vendor-name-vendor-a")).toHaveTextContent("Cairo Corner");
+    expect(screen.getByTestId("cart-vendor-name-vendor-a")).toHaveTextContent(
+      "Cairo Corner",
+    );
     expect(screen.queryByText("vendor-a")).not.toBeInTheDocument();
   });
 });
@@ -471,6 +535,8 @@ describe("vendorGroupLabel", () => {
 describe("checkout address label i18n", () => {
   it("keeps checkout address create label in i18n (not hardcoded EN)", () => {
     expect(checkoutMessages.checkout.fulfilment.addressLabel).toBeTruthy();
-    expect(checkoutMessages.checkout.fulfilment.addressLabel.toLowerCase()).toContain("checkout");
+    expect(
+      checkoutMessages.checkout.fulfilment.addressLabel.toLowerCase(),
+    ).toContain("checkout");
   });
 });

@@ -65,6 +65,38 @@ REVIEWED_SUFFIX = (
     "20261113120500_delivery_revenue_ledger_account.sql",
     # In-app notification center tables + triggers (additive, reversible).
     "20261113130000_in_app_notifications.sql",
+    # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
+    "20261114050000_rate_counter_scope_constraint_sync.sql",
+    # Listing fulfilment options + Class D may be sold new (additive, reversible).
+    "20261115090000_listing_fulfilment_options_class_d_any_condition.sql",
+    # W8 bundles & offers: offers/offer_items/gift reservations + order_items snapshot (additive, reversible).
+    "20261115120000_bundles_offers.sql",
+    # Events collaboration: requests, audit, splits, organiser opt-in (additive, reversible).
+    "20261115130000_event_collaboration.sql",
+    # Events collaboration rate-limit scopes (additive, reversible).
+    "20261115130100_event_collaboration_rate_scopes.sql",
+    # Analytics/RBAC audit S1: admin read-only on money tables (additive).
+    "20261115140000_admin_money_tables_read_only.sql",
+    # Admin governance: D1 admin writes read-only; permissions, audit, consent (additive).
+    "20261115140100_admin_direct_writes_read_only.sql",
+    "20261115140200_admin_governance_audit_consent.sql",
+    # Analytics v2 (Intelligence 1A/1B, flags default off): additive tables/functions.
+    "20261115150000_analytics_v2_foundation.sql",
+    "20261115150100_analytics_rollups.sql",
+    "20261115150200_analytics_commercial.sql",
+    "20261115150300_analytics_search_sessions.sql",
+    "20261115150400_analytics_lusaka_day.sql",
+    "20261115150500_analytics_search_daily_retention.sql",
+    "20261115150600_analytics_session_links.sql",
+    # Pay at the door: door payment tables + suspense account (additive, flag off).
+    "20261115200000_pay_at_door.sql",
+    # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
+    "20261115210000_event_ticket_integrity.sql",
+    # Business Home: offers + section flags, default off (additive, reversible).
+    "20261115235500_business_home_offers_flag.sql",
+    "20261115235600_business_home_section_flags.sql",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000_unified_cart_event_tickets.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -618,9 +650,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 158 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 178 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 158 source migrations",
+            "disposable copy does not match 178 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -703,10 +735,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_158|PASS")
+                    print("failure_cleanup|restored_178|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 158 migrations",
+                        "error: disposable failure cleanup could not restore 178 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1059,7 +1091,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 158 migrations"
+                    "normal full replay did not restore 178 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

@@ -3,6 +3,7 @@
  * plus pure mappers shared by the server renderer and the lazy client loader.
  * No server-only imports — this module is bundled into the client chunk.
  */
+import type { OfferBadge, OfferBadgeLabels } from "../offers/offer-badge";
 import type { CatalogListing } from "../plp/listing-grid";
 
 export type FeedListingWire = {
@@ -25,6 +26,8 @@ export type FeedListingWire = {
   unit_step_milli?: number;
   min_steps?: number;
   product_class?: string;
+  /** W8 live offer (flag `bundles`), attached server-side by the API. */
+  offer_badge?: OfferBadge | null;
 };
 
 export type FeedServiceWire = {
@@ -75,7 +78,14 @@ export type AdCreative = {
 };
 
 export type FeedSectionType =
-  "category" | "collection" | "rule" | "services" | "events" | "vendors" | "for_you" | "ad_slot";
+  | "category"
+  | "collection"
+  | "rule"
+  | "services"
+  | "events"
+  | "vendors"
+  | "for_you"
+  | "ad_slot";
 
 export type FeedSection = {
   id: string;
@@ -147,6 +157,8 @@ export type FeedLabels = {
       delivery: string;
       pickup: string;
     };
+    /** catalog.offers.badge.* — W8 offer pill on feed cards. */
+    offerBadge?: OfferBadgeLabels;
   };
 };
 
@@ -171,13 +183,17 @@ export function mapFeedListing(item: FeedListingWire): CatalogListing {
     unitStepMilli: item.unit_step_milli,
     minSteps: item.min_steps,
     productClass: item.product_class,
+    offerBadge: item.offer_badge ?? undefined,
   };
 }
 
 const SECTION_KEY_PREFIX = "home.feed.sections.";
 
 /** Per-locale admin text wins; otherwise the i18n key; otherwise no heading. */
-export function resolveSectionTitle(section: FeedSection, labels: FeedLabels): string | null {
+export function resolveSectionTitle(
+  section: FeedSection,
+  labels: FeedLabels,
+): string | null {
   if (section.title) return section.title;
   if (section.title_key?.startsWith(SECTION_KEY_PREFIX)) {
     const short = section.title_key.slice(SECTION_KEY_PREFIX.length);

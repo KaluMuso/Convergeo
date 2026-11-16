@@ -108,12 +108,18 @@ describe("COD guidance — payment step", () => {
 
     await user.click(await screen.findByLabelText(c.payment.cod));
     const guide = screen.getByTestId("checkout-cod-guide");
-    expect(within(guide).getByText(c.payment.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.step2.replace("{amount}", "K425.00")),
+      within(guide).getByText(c.payment.codGuide.step1),
     ).toBeInTheDocument();
     expect(
-      within(guide).getByText(c.payment.codGuide.capNote.replace("{cap}", "K500.00")),
+      within(guide).getByText(
+        c.payment.codGuide.step2.replace("{amount}", "K425.00"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(guide).getByText(
+        c.payment.codGuide.capNote.replace("{cap}", "K500.00"),
+      ),
     ).toBeInTheDocument();
   });
 
@@ -132,13 +138,14 @@ describe("COD guidance — payment step", () => {
     const card = await screen.findByTestId("checkout-cod-unavailable");
     expect(
       within(card).getByText(
-        c.payment.codGuide.overCap.replace("{total}", "K600.00").replace("{cap}", "K500.00"),
+        c.payment.codGuide.overCap
+          .replace("{total}", "K600.00")
+          .replace("{cap}", "K500.00"),
       ),
     ).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: c.payment.codGuide.editCart })).toHaveAttribute(
-      "href",
-      "/en/cart",
-    );
+    expect(
+      within(card).getByRole("link", { name: c.payment.codGuide.editCart }),
+    ).toHaveAttribute("href", "/en/cart");
   });
 });
 
@@ -168,14 +175,21 @@ describe("COD guidance — review step", () => {
     );
 
     const steps = screen.getByTestId("checkout-review-cod-steps");
-    expect(within(steps).getByText(c.review.codGuide.step1)).toBeInTheDocument();
     expect(
-      within(steps).getByText(c.review.codGuide.step3.replace("{amount}", "K425.00")),
+      within(steps).getByText(c.review.codGuide.step1),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByText(
+        c.review.codGuide.step3.replace("{amount}", "K425.00"),
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowStep1)).not.toBeInTheDocument();
     expect(screen.queryByText(c.review.escrowTitle)).not.toBeInTheDocument();
     expect(screen.getByTestId("review-fulfilment-vendor-a")).toHaveTextContent(
-      c.review.codGuide.deliveryTo.replace("{landmark}", "Woodlands, near the church"),
+      c.review.codGuide.deliveryTo.replace(
+        "{landmark}",
+        "Woodlands, near the church",
+      ),
     );
     expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(
       c.review.codGuide.placeOrderCod,
@@ -195,7 +209,66 @@ describe("COD guidance — review step", () => {
     );
 
     expect(screen.getByText(c.review.escrowTitle)).toBeInTheDocument();
-    expect(screen.queryByTestId("checkout-review-cod-steps")).not.toBeInTheDocument();
-    expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(c.review.placeOrder);
+    expect(
+      screen.queryByTestId("checkout-review-cod-steps"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("checkout-place-order")).toHaveTextContent(
+      c.review.placeOrder,
+    );
+  });
+});
+
+describe("unified checkout — review groups lines by type", () => {
+  it("labels products and event tickets, and shows the buyer ticket fee", () => {
+    const withTickets: CheckoutSession = {
+      ...session,
+      subtotal_ngwee: 60_167,
+      ticket_lines: [
+        {
+          id: "t1",
+          item_type: "event_ticket",
+          event_id: "e1",
+          event_title: "Lusaka Jazz Night",
+          ticket_type_id: "tt1",
+          type_name: "VIP",
+          instance_id: "i1",
+          vendor_id: "vendor-a",
+          qty: 2,
+          unit_price_ngwee: 15_050,
+          line_total_ngwee: 20_167,
+        },
+      ],
+      cod_allowed: false,
+    };
+    render(
+      <StepReview
+        locale="en"
+        session={withTickets}
+        totals={{
+          ...eligible,
+          subtotal_ngwee: 60_167,
+          delivery_fee_ngwee: 0,
+          total_ngwee: 61_175,
+          cod_eligible: false,
+        }}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260970000001" }}
+        labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("review-type-products")).toHaveTextContent(
+      c.review.typeProducts,
+    );
+    const group = screen.getByTestId("review-ticket-group");
+    expect(group).toHaveTextContent(c.review.typeEventTickets);
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("VIP × 2");
+    expect(
+      within(group).getByTestId("review-ticket-line-t1"),
+    ).toHaveTextContent("K201.67");
+    expect(screen.getByTestId("review-platform-fee")).toHaveTextContent(
+      "K10.08",
+    );
   });
 });

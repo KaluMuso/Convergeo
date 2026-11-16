@@ -5,7 +5,11 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isVerifiedPurchase, ReviewsSection, type ReviewsSectionLabels } from "./reviews-section";
+import {
+  isVerifiedPurchase,
+  ReviewsSection,
+  type ReviewsSectionLabels,
+} from "./reviews-section";
 
 const insertMock = vi.fn();
 const getUserMock = vi.fn();
@@ -66,8 +70,12 @@ const labels: ReviewsSectionLabels = {
 
 describe("isVerifiedPurchase", () => {
   it("prefers the explicit verified_purchase field from the API", () => {
-    expect(isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: true })).toBe(true);
-    expect(isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: false })).toBe(false);
+    expect(
+      isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: true }),
+    ).toBe(true);
+    expect(
+      isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: false }),
+    ).toBe(false);
   });
 
   it("falls back to non-empty order_item_id as the DB verified-purchase gate", () => {
@@ -140,7 +148,9 @@ describe("ReviewsSection verified purchase", () => {
       />,
     );
 
-    expect(screen.getByTestId("review-verified-review-1")).toHaveTextContent("Verified purchase");
+    expect(screen.getByTestId("review-verified-review-1")).toHaveTextContent(
+      "Verified purchase",
+    );
   });
 
   it("hides the badge when verified_purchase is explicitly false", () => {
@@ -164,7 +174,9 @@ describe("ReviewsSection verified purchase", () => {
       />,
     );
 
-    expect(screen.queryByTestId("review-verified-review-2")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("review-verified-review-2"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -201,7 +213,9 @@ describe("ReviewsSection photo lightbox", () => {
 
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByTestId("review-photo-lightbox")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("review-photo-lightbox"),
+      ).not.toBeInTheDocument();
     });
   });
 });
@@ -229,7 +243,9 @@ describe("ReviewsSection rating distribution", () => {
     );
 
     expect(screen.getByTestId("review-distribution")).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Rating breakdown" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Rating breakdown" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "5★: 2" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "4★: 1" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "3★: 0" })).toBeInTheDocument();

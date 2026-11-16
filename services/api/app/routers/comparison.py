@@ -6,7 +6,6 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.products import _aggregate_vendor_ratings, _parse_vendor_row
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.demo import fetch_demo_listing_ids
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -89,10 +88,7 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     phi2 = math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lng2 - lng1)
-    a = (
-        math.sin(d_phi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
-    )
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
     return EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -118,8 +114,6 @@ def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
 def build_comparison(
     client: Any,
     slug: str,
-    *,
-    include_wholesale: bool = False,
 ) -> ComparisonResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None:
@@ -148,16 +142,14 @@ def build_comparison(
         .execute()
     )
     listing_rows = listings_response.data or []
-    if not include_wholesale:
-        # Wholesale-only listings are B2B supplies: excluded from the consumer
-        # price comparison unless the caller is a verified business buyer.
-        retail_rows = [row for row in listing_rows if not row.get("wholesale")]
-        # D36: an emptied comparison must be indistinguishable from a product
-        # that does not exist — an empty-but-200 comparison confirms the product
-        # is real and merely withheld. Same rule the demo filter applies below.
-        if listing_rows and not retail_rows:
-            raise AppError("product.not_found", "Product not found", 404)
-        listing_rows = retail_rows
+    # Wholesale prices live only in the vendor app: wholesale listings are
+    # excluded from the customer price comparison.
+    retail_rows = [row for row in listing_rows if not row.get("wholesale")]
+    # D36: an emptied comparison must be indistinguishable from a product that
+    # does not exist — an empty-but-200 comparison confirms the product is real.
+    if listing_rows and not retail_rows:
+        raise AppError("product.not_found", "Product not found", 404)
+    listing_rows = retail_rows
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
@@ -229,6 +221,5 @@ def build_comparison(
 async def get_product_comparison(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ComparisonResponse:
-    return build_comparison(supabase.client, slug, include_wholesale=access.eligible)
+    return build_comparison(supabase.client, slug)

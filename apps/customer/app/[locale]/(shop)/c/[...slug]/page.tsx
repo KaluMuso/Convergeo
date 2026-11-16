@@ -23,6 +23,7 @@ import {
   categoryDisplayName,
 } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
+import { attachOfferBadges } from "../../_components/offers/attach-offer-badges";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
 import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
 import {
@@ -264,7 +265,10 @@ export default async function CategoryPlpPage({
   const sort = (resolvedSearch.sort as CatalogSort | undefined) ?? "relevance";
   const hasLocation = Boolean(filterState.lat && filterState.lng);
 
-  const listings = (catalog?.items ?? []).map(mapListing);
+  // W8: offer pills ("Buy 2 get 1 free") — one cached read; no-op when `bundles` is off.
+  const listings = await attachOfferBadges(
+    (catalog?.items ?? []).map(mapListing),
+  );
   const facets: FacetCounts = catalog?.facets ?? {
     condition: [],
     availability: [],
@@ -336,6 +340,13 @@ export default async function CategoryPlpPage({
     },
     delivery: catalogDeliveryLabels((key) => t.raw(key)),
     madeToOrder: catalogMadeToOrderLabels((key) => t.raw(key)),
+    offerBadge: {
+      bxgy: String(t.raw("offers.badge.bxgy")),
+      bundlePercent: String(t.raw("offers.badge.bundlePercent")),
+      bundleFixed: t("offers.badge.bundleFixed"),
+      buyNPayM: String(t.raw("offers.badge.buyNPayM")),
+      freeGift: t("offers.badge.freeGift"),
+    },
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [

@@ -64,7 +64,10 @@ const redirect = {
 };
 
 vi.mock("../../../../../lib/customer-session", () => ({
-  useSession: () => ({ session: { access_token: "test-access-token" }, loading: false }),
+  useSession: () => ({
+    session: { access_token: "test-access-token" },
+    loading: false,
+  }),
 }));
 
 vi.mock("next/navigation", () => {
@@ -124,7 +127,9 @@ const pendingLabels: PendingLabels = {
   codConfirmation: pendingMessages.cod,
 };
 
-function statusPayload(overrides: Partial<PaymentStatusPayload> = {}): PaymentStatusPayload {
+function statusPayload(
+  overrides: Partial<PaymentStatusPayload> = {},
+): PaymentStatusPayload {
   return {
     checkout_group_id: "chk-e2e-1",
     payment_id: "pay-1",
@@ -139,7 +144,10 @@ function statusPayload(overrides: Partial<PaymentStatusPayload> = {}): PaymentSt
 }
 
 /** Render the shell with `GET /payments/status` answering with `payload`. */
-function renderPendingShell(payload: PaymentStatusPayload, ticketCheckout = false) {
+function renderPendingShell(
+  payload: PaymentStatusPayload,
+  ticketCheckout = false,
+) {
   redirect.confirmingInDomAtFirstReplace = null;
   redirect.targets = [];
   apiRequest.mockImplementation(async (endpoint: string) => {
@@ -167,13 +175,24 @@ afterEach(() => {
 
 describe("UssdWait", () => {
   it("renders waiting state with formatted amount", () => {
-    render(<UssdWait locale="en" amountNgwee={25_000} rail="mtn" labels={ussdLabels} />);
+    render(
+      <UssdWait
+        locale="en"
+        amountNgwee={25_000}
+        rail="mtn"
+        labels={ussdLabels}
+      />,
+    );
 
     expect(screen.getByTestId("ussd-wait")).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.ussd.title)).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.ussd.title),
+    ).toBeInTheDocument();
     expect(screen.getByText("K250.00")).toBeInTheDocument();
     expect(
-      screen.getByText(checkoutMessages.checkout.ussd.mtnHelp.replace("{amount}", "K250.00")),
+      screen.getByText(
+        checkoutMessages.checkout.ussd.mtnHelp.replace("{amount}", "K250.00"),
+      ),
     ).toBeInTheDocument();
   });
 });
@@ -211,7 +230,9 @@ describe("PaymentFailed state transitions", () => {
     );
 
     expect(screen.getByTestId("payment-cancelled")).toBeInTheDocument();
-    expect(screen.getByText(checkoutMessages.checkout.pending.cancelledTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.pending.cancelledTitle),
+    ).toBeInTheDocument();
   });
 
   it("shows retry error message", () => {
@@ -226,7 +247,9 @@ describe("PaymentFailed state transitions", () => {
       />,
     );
 
-    expect(screen.getByTestId("payment-failed-error")).toHaveTextContent(failedLabels.retryError);
+    expect(screen.getByTestId("payment-failed-error")).toHaveTextContent(
+      failedLabels.retryError,
+    );
   });
 });
 
@@ -254,13 +277,19 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
     // The honest confirming surface exists.
     const confirming = await screen.findByTestId("payment-confirming");
     expect(confirming).toBeInTheDocument();
-    expect(screen.getByText(pendingMessages.confirmingTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(pendingMessages.confirmingTitle),
+    ).toBeInTheDocument();
 
     // It is NOT a final-paid representation.
     expect(screen.queryByTestId("payment-success")).toBeNull();
     expect(screen.queryByTestId("payment-card-success")).toBeNull();
     expect(screen.queryByTestId("payment-cod")).toBeNull();
-    expect(screen.queryByText(/you paid|paid upfront|payment complete|paid in full/i)).toBeNull();
+    expect(
+      screen.queryByText(
+        /you paid|paid upfront|payment complete|paid in full/i,
+      ),
+    ).toBeNull();
 
     // The authoritative order redirect still happens…
     await waitFor(() => {
@@ -286,7 +315,9 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
   });
 
   it("does not redirect while the provider is still pushing — ussd-wait holds", async () => {
-    const { replace } = renderPendingShell(statusPayload({ status: "ussd_pushed" }));
+    const { replace } = renderPendingShell(
+      statusPayload({ status: "ussd_pushed" }),
+    );
 
     await screen.findByTestId("ussd-wait");
     expect(screen.queryByTestId("payment-confirming")).toBeNull();
@@ -294,7 +325,9 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
   });
 
   it("keeps COD on its own honest surface — never the confirming one", async () => {
-    const { replace } = renderPendingShell(statusPayload({ status: "pending", cod: true }));
+    const { replace } = renderPendingShell(
+      statusPayload({ status: "pending", cod: true }),
+    );
 
     await screen.findByTestId("payment-cod");
     expect(screen.queryByTestId("payment-confirming")).toBeNull();
@@ -313,15 +346,18 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
     );
 
     await screen.findByTestId("payment-cod");
-    expect(screen.getByTestId("payment-cod-order-number")).toHaveTextContent("A1B2C3D4");
+    expect(screen.getByTestId("payment-cod-order-number")).toHaveTextContent(
+      "A1B2C3D4",
+    );
     const steps = screen.getByTestId("payment-cod-next-steps");
     expect(steps).toHaveTextContent(pendingMessages.cod.step1Title);
     expect(steps).toHaveTextContent(pendingMessages.cod.step2Title);
-    expect(steps).toHaveTextContent(pendingMessages.cod.step3Body.replace("{amount}", "K250.00"));
-    expect(screen.getByRole("link", { name: pendingMessages.cod.contactCta })).toHaveAttribute(
-      "href",
-      "/en/contact",
+    expect(steps).toHaveTextContent(
+      pendingMessages.cod.step3Body.replace("{amount}", "K250.00"),
     );
+    expect(
+      screen.getByRole("link", { name: pendingMessages.cod.contactCta }),
+    ).toHaveAttribute("href", "/en/contact");
     // Honesty: COD never claims an online payment happened.
     expect(screen.queryByText(/you paid|held by/i)).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 2700));
@@ -339,28 +375,31 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
   it("shows an honest ticket cancellation with an order link, preserving product checkout behavior", async () => {
     const user = userEvent.setup();
     renderPendingShell(statusPayload({ status: "cancelled" }), true);
-    expect(await screen.findByTestId("ticket-payment-unavailable")).toHaveTextContent(
-      pendingMessages.ticketUnavailableBody,
-    );
-    expect(screen.getByRole("link", { name: pendingMessages.viewOrder })).toHaveAttribute(
-      "href",
-      "/en/account/orders/order-9",
-    );
+    expect(
+      await screen.findByTestId("ticket-payment-unavailable"),
+    ).toHaveTextContent(pendingMessages.ticketUnavailableBody);
+    expect(
+      screen.getByRole("link", { name: pendingMessages.viewOrder }),
+    ).toHaveAttribute("href", "/en/account/orders/order-9");
     expect(routerPush).not.toHaveBeenCalled();
 
     cleanup();
     routerPush.mockClear();
     renderPendingShell(statusPayload({ status: "cancelled" }));
-    await user.click(await screen.findByRole("button", { name: failedLabels.cancelledCta }));
+    await user.click(
+      await screen.findByRole("button", { name: failedLabels.cancelledCta }),
+    );
     expect(routerPush).toHaveBeenCalledWith("/en/checkout");
   });
 
   it("does not promise a retry for an expired ticket attempt", async () => {
     renderPendingShell(statusPayload({ status: "expired" }), true);
-    expect(await screen.findByTestId("ticket-payment-unavailable")).toHaveTextContent(
-      pendingMessages.ticketUnavailableBody,
-    );
-    expect(screen.queryByTestId("payment-retry-button")).not.toBeInTheDocument();
+    expect(
+      await screen.findByTestId("ticket-payment-unavailable"),
+    ).toHaveTextContent(pendingMessages.ticketUnavailableBody);
+    expect(
+      screen.queryByTestId("payment-retry-button"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -386,7 +425,9 @@ describe("PendingPaymentShell group routes (paid ticket / service deposit)", () 
 
   it("lands a confirmed ticket payment in the ticket wallet, not the order page", async () => {
     renderGroupShell(statusPayload({ status: "success" }));
-    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/en/account/tickets"));
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith("/en/account/tickets"),
+    );
     expect(redirect.targets).not.toContain("/en/account/orders/order-9");
   });
 

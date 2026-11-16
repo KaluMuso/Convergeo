@@ -2,12 +2,15 @@ import { loadNamespace, type Locale } from "@vergeo/i18n";
 import {
   IconAccount,
   IconAsk,
-  IconCart,
   IconHome,
   IconOrders,
   IconSearch,
 } from "@vergeo/ui/src/icons";
-import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import {
+  createTranslator,
+  NextIntlClientProvider,
+  type AbstractIntlMessages,
+} from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { NotificationBellIsland } from "../_components/notification-bell-island";
@@ -25,17 +28,21 @@ type ShopLayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function ShopLayout({ children, params }: ShopLayoutProps) {
+export default async function ShopLayout({
+  children,
+  params,
+}: ShopLayoutProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
   const baseMessages = await getMessages();
-  const [catalogMessages, searchMessages, navMessages, checkoutMessages] = await Promise.all([
-    loadNamespace(locale as Locale, "catalog"),
-    loadNamespace(locale as Locale, "search"),
-    loadNamespace(locale as Locale, "nav"),
-    loadNamespace(locale as Locale, "checkout"),
-  ]);
+  const [catalogMessages, searchMessages, navMessages, checkoutMessages] =
+    await Promise.all([
+      loadNamespace(locale as Locale, "catalog"),
+      loadNamespace(locale as Locale, "search"),
+      loadNamespace(locale as Locale, "nav"),
+      loadNamespace(locale as Locale, "checkout"),
+    ]);
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
@@ -47,7 +54,11 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tSearch = createTranslator({ locale, messages, namespace: "search" });
-  const tCheckout = createTranslator({ locale, messages, namespace: "checkout" });
+  const tCheckout = createTranslator({
+    locale,
+    messages,
+    namespace: "checkout",
+  });
   const bottomItems = [
     {
       key: "home",
@@ -80,13 +91,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       href: `/${locale}/account`,
     },
   ];
-
-  const suppliesItem = {
-    key: "supplies",
-    icon: <IconCart />,
-    label: t("shop.supplies"),
-    href: `/${locale}/supplies`,
-  };
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
@@ -129,7 +133,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           services: t("shop.services"),
           events: t("shop.events"),
           askVergeo: t("shop.askVergeo"),
-          supplies: t("shop.supplies"),
           account: t("shop.account"),
           cart: t("shop.cart"),
           // Interpolated with the live cart count in the header client component.
@@ -168,7 +171,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         items={bottomItems}
         ariaLabel={t("shop.bottomAriaLabel")}
         locale={locale}
-        suppliesItem={suppliesItem}
       />
       <LazyCartHostSlot locale={locale} />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}

@@ -15,7 +15,11 @@ export function FaqList({ title, items }: FaqListProps) {
     return null;
   }
   return (
-    <section aria-labelledby="ask-faq-title" className="space-y-2" data-testid="ask-faq">
+    <section
+      aria-labelledby="ask-faq-title"
+      className="space-y-2"
+      data-testid="ask-faq"
+    >
       <h2 id="ask-faq-title" className="text-sm font-semibold text-text">
         {title}
       </h2>

@@ -54,7 +54,9 @@ export function ReservationCountdown({
       aria-label={ariaLiveLabel(display)}
     >
       <span className="font-body text-sm text-text">{label}</span>
-      <span className="font-mono text-lg font-semibold tabular-nums text-warning">{display}</span>
+      <span className="font-mono text-lg font-semibold tabular-nums text-warning">
+        {display}
+      </span>
     </div>
   );
 }

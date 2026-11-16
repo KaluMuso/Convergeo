@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.offers.badges import listing_badges, product_badges
 from app.services.search import SearchResponse, SuggestResponse, run_search, run_suggest
 from app.services.search.nearby import (
     DEFAULT_RADIUS_KM,
@@ -19,9 +20,13 @@ from app.services.search.query_builder import (
     MAX_PAGE_SIZE,
     SearchKind,
 )
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+# Anonymous analytics_v2 session id (OD-8): lets the term k-threshold count distinct
+# sessions. Optional, unauthenticated, never used for authz; validated as a UUID downstream.
+AnalyticsSessionHeader = Annotated[str | None, Header(alias="X-Analytics-Session", max_length=36)]
 
 # Geo endpoints are cheap per call but enumerable — cap aggressively per IP.
 _GEO_RATE_LIMIT_PER_MINUTE = 20
@@ -59,10 +64,11 @@ async def search(
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     include_kind_totals: Annotated[bool, Query()] = False,
+    analytics_session: AnalyticsSessionHeader = None,
 ) -> SearchResponse:
     if lat is not None and lng is not None:
         _rate_limit_geo_read(request, supabase)
-    return await run_search(
+    response = await run_search(
         supabase.client,
         query=q,
         kind=kind,
@@ -71,13 +77,31 @@ async def search(
         price_max_ngwee=price_max_ngwee,
         page=page,
         page_size=page_size,
-        include_wholesale=access.eligible,
         user_id=access.user_id,
         # Only a complete lat/lng pair drives proximity ranking; a lone coord is ignored.
         user_lat=lat if lng is not None else None,
         user_lng=lng if lat is not None else None,
         include_kind_totals=include_kind_totals,
+        analytics_session_id=analytics_session,
     )
+    _attach_offer_badges(supabase.client, response)
+    return response
+
+
+def _attach_offer_badges(client: Any, response: SearchResponse) -> None:
+    """W8: offer pills on product / listing hits (fail closed, flag `bundles`)."""
+    product_ids = [h.entity_id for h in response.results if h.entity_kind == "product"]
+    listing_ids = [h.entity_id for h in response.results if h.entity_kind == "listing"]
+    if not product_ids and not listing_ids:
+        return
+    by_product = product_badges(client, product_ids) if product_ids else {}
+    by_listing = listing_badges(client, listing_ids) if listing_ids else {}
+    for hit in response.results:
+        key = hit.entity_id.lower()
+        if hit.entity_kind == "product":
+            hit.offer_badge = by_product.get(key)
+        elif hit.entity_kind == "listing":
+            hit.offer_badge = by_listing.get(key)
 
 
 @router.get("/nearby", response_model=NearbyResponse)
@@ -116,5 +140,4 @@ async def suggest(
         query=q,
         kind=kind,
         limit=limit,
-        include_wholesale=access.eligible,
     )

@@ -12,7 +12,11 @@ type DesktopHeaderSearchProps = {
  * Desktop sticky header search with live suggestions (audit §4.2 / F04).
  * Wraps the shared SearchInput in compact header chrome.
  */
-export function DesktopHeaderSearch({ locale, labels, askLabel }: DesktopHeaderSearchProps) {
+export function DesktopHeaderSearch({
+  locale,
+  labels,
+  askLabel,
+}: DesktopHeaderSearchProps) {
   return (
     <SearchInput
       locale={locale}

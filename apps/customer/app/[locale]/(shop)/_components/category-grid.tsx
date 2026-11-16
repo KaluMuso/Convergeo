@@ -30,15 +30,22 @@ const CATEGORY_ICON_PATHS = [
 ] as const;
 
 function pastelForIndex(index: number): string {
-  return CATEGORY_PASTELS[index % CATEGORY_PASTELS.length] ?? "var(--cat-beauty)";
+  return (
+    CATEGORY_PASTELS[index % CATEGORY_PASTELS.length] ?? "var(--cat-beauty)"
+  );
 }
 
 function iconPathForIndex(index: number): string {
-  return CATEGORY_ICON_PATHS[index % CATEGORY_ICON_PATHS.length] ?? CATEGORY_ICON_PATHS[0];
+  return (
+    CATEGORY_ICON_PATHS[index % CATEGORY_ICON_PATHS.length] ??
+    CATEGORY_ICON_PATHS[0]
+  );
 }
 
 function readWideIndex(payload: Record<string, unknown>): number {
-  return typeof payload.wide_index === "number" && payload.wide_index >= 0 ? payload.wide_index : 0;
+  return typeof payload.wide_index === "number" && payload.wide_index >= 0
+    ? payload.wide_index
+    : 0;
 }
 
 /**
@@ -55,7 +62,9 @@ export function readCategoryImageMap(
 
   const images = payload.images;
   if (images && typeof images === "object" && !Array.isArray(images)) {
-    for (const [slug, value] of Object.entries(images as Record<string, unknown>)) {
+    for (const [slug, value] of Object.entries(
+      images as Record<string, unknown>,
+    )) {
       if (typeof value === "string" && value.trim().length > 0) {
         map.set(slug, value.trim());
       }
@@ -107,13 +116,22 @@ function CategoryFallbackMark({ index }: { index: number }) {
         strokeWidth="1.75"
         aria-hidden
       >
-        <path d={iconPathForIndex(index)} strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={iconPathForIndex(index)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     </span>
   );
 }
 
-export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps) {
+export function CategoryGrid({
+  slot,
+  categories,
+  locale,
+  t,
+}: CategoryGridProps) {
   if (categories.length === 0) {
     return null;
   }
@@ -122,9 +140,15 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
   const imageMap = readCategoryImageMap(slot?.payload);
 
   return (
-    <section aria-labelledby="home-categories-heading" className="motion-rise flex flex-col gap-3">
+    <section
+      aria-labelledby="home-categories-heading"
+      className="motion-rise flex flex-col gap-3"
+    >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="home-categories-heading" className="font-display text-h2 text-display-ink">
+        <h2
+          id="home-categories-heading"
+          className="font-display text-h2 text-display-ink"
+        >
           {t("home.categories.title")}
         </h2>
         <Link
@@ -143,7 +167,8 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
         {categories.map((category, index) => {
           const isWide = index === wideIndex;
           const fill = pastelForIndex(index);
-          const imagePublicId = imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
+          const imagePublicId =
+            imageMap.get(category.slug) ?? defaultCategoryImage(category.slug);
 
           return (
             <li
@@ -152,7 +177,9 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
             >
               <Link
                 href={`/${locale}/c/${category.slug}`}
-                aria-label={t("home.categories.browseLabel", { category: category.name })}
+                aria-label={t("home.categories.browseLabel", {
+                  category: category.name,
+                })}
                 className="group flex min-h-11 flex-col gap-2 rounded-lg text-text focus-visible:outline-none focus-visible:shadow-focusRing"
                 data-testid={`home-category-${category.slug}`}
               >
@@ -161,7 +188,10 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                   style={{ backgroundColor: fill }}
                 >
                   {imagePublicId ? (
-                    <span className="absolute inset-0" data-testid="category-image">
+                    <span
+                      className="absolute inset-0"
+                      data-testid="category-image"
+                    >
                       <CloudinaryImageStatic
                         publicId={imagePublicId}
                         alt=""

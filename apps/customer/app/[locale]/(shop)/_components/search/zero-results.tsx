@@ -35,7 +35,10 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
       <div className="rounded-lg border border-border bg-surface p-4 text-center">
         <p className="font-medium text-text">{labels.title}</p>
         {labels.body ? (
-          <p className="mt-1 text-sm text-text-2" data-testid="search-zero-results-body">
+          <p
+            className="mt-1 text-sm text-text-2"
+            data-testid="search-zero-results-body"
+          >
             {labels.body}
           </p>
         ) : null}
@@ -53,7 +56,10 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
       </div>
 
       <section aria-labelledby="search-suggestion-terms">
-        <h2 id="search-suggestion-terms" className="mb-2 text-sm font-semibold text-text">
+        <h2
+          id="search-suggestion-terms"
+          className="mb-2 text-sm font-semibold text-text"
+        >
           {labels.suggestionsTitle}
         </h2>
         <ul className="flex flex-wrap gap-2">
@@ -74,7 +80,10 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
 
       {labels.categories.length > 0 ? (
         <section aria-labelledby="search-category-suggestions">
-          <h2 id="search-category-suggestions" className="mb-2 text-sm font-semibold text-text">
+          <h2
+            id="search-category-suggestions"
+            className="mb-2 text-sm font-semibold text-text"
+          >
             {labels.categoriesTitle}
           </h2>
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -98,7 +107,10 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
         aria-labelledby="ask-vergeo-title"
         className="rounded-lg border border-dashed border-border bg-bg-2 p-4"
       >
-        <h2 id="ask-vergeo-title" className="mb-1 font-display text-h3 text-display-ink">
+        <h2
+          id="ask-vergeo-title"
+          className="mb-1 font-display text-h3 text-display-ink"
+        >
           {labels.askVergeoTitle}
         </h2>
         <p className="mb-3 text-sm text-text-2">{labels.askVergeoTeaser}</p>

@@ -9,7 +9,10 @@ import {
   type SearchCategoryOption,
   type SearchFilterPanelLabels,
 } from "./search-filter-panel";
-import { hasActiveSearchFilters, type SearchFilterState } from "./search-filters";
+import {
+  hasActiveSearchFilters,
+  type SearchFilterState,
+} from "./search-filters";
 
 type SearchMobileFilterDrawerProps = {
   labels: SearchFilterPanelLabels & {

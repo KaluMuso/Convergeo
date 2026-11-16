@@ -46,7 +46,10 @@ export function ServiceReviewsSection({
   return (
     <section aria-labelledby="service-reviews-heading" className="space-y-4">
       <header className="space-y-1">
-        <h2 id="service-reviews-heading" className="font-display text-h3 text-display-ink">
+        <h2
+          id="service-reviews-heading"
+          className="font-display text-h3 text-display-ink"
+        >
           {labels.heading}
         </h2>
         <p className="text-sm text-text-2">{labels.subheading}</p>
@@ -59,22 +62,37 @@ export function ServiceReviewsSection({
           <div
             className="flex items-center gap-2"
             role="img"
-            aria-label={starsAriaFor(labels.starsAria, Math.round((ratingAvg ?? 0) * 10) / 10)}
+            aria-label={starsAriaFor(
+              labels.starsAria,
+              Math.round((ratingAvg ?? 0) * 10) / 10,
+            )}
           >
             <StarRating mode="display" value={ratingAvg ?? 0} />
-            <span className="text-sm text-text-2">{labels.reviewCountLabel}</span>
+            <span className="text-sm text-text-2">
+              {labels.reviewCountLabel}
+            </span>
           </div>
 
           <ul className="space-y-4">
             {reviews.map((review) => (
-              <li key={review.id} className="space-y-2 rounded border border-border bg-surface p-4">
-                <span role="img" aria-label={starsAriaFor(labels.starsAria, review.rating)}>
+              <li
+                key={review.id}
+                className="space-y-2 rounded border border-border bg-surface p-4"
+              >
+                <span
+                  role="img"
+                  aria-label={starsAriaFor(labels.starsAria, review.rating)}
+                >
                   <StarRating mode="display" value={review.rating} />
                 </span>
-                {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
+                {review.body ? (
+                  <p className="text-sm text-display-ink">{review.body}</p>
+                ) : null}
                 {review.vendor_reply ? (
                   <div className="rounded bg-bg-2 px-3 py-2 text-sm">
-                    <p className="font-medium text-display-ink">{labels.vendorReply}</p>
+                    <p className="font-medium text-display-ink">
+                      {labels.vendorReply}
+                    </p>
                     <p className="text-text-2">{review.vendor_reply}</p>
                   </div>
                 ) : null}

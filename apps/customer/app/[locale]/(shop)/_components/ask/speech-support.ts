@@ -41,7 +41,11 @@ export function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
     return null;
   }
   const speechWindow = window as SpeechWindow;
-  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
+  return (
+    speechWindow.SpeechRecognition ??
+    speechWindow.webkitSpeechRecognition ??
+    null
+  );
 }
 
 export function isSpeechRecognitionSupported(): boolean {
@@ -53,6 +57,10 @@ export function preferredEnglishLang(): "en-GB" | "en-US" {
   if (typeof navigator === "undefined") {
     return "en-GB";
   }
-  const languages = [navigator.language, ...(navigator.languages ?? [])].filter(Boolean);
-  return languages.some((lang) => lang.toLowerCase() === "en-us") ? "en-US" : "en-GB";
+  const languages = [navigator.language, ...(navigator.languages ?? [])].filter(
+    Boolean,
+  );
+  return languages.some((lang) => lang.toLowerCase() === "en-us")
+    ? "en-US"
+    : "en-GB";
 }

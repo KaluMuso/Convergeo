@@ -44,9 +44,9 @@ class LencoWebhookVerifyResult(StrictModel):
 
 def canonical_payload_sha256(raw: dict[str, Any]) -> str:
     """Bind the persisted JSON document to the ingress verification result."""
-    document = json.dumps(
-        raw, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
+    document = json.dumps(raw, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
     return hashlib.sha256(document).hexdigest()
 
 

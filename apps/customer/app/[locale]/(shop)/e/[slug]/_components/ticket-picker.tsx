@@ -8,10 +8,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
-import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
+import {
+  attendeeNamesComplete,
+  cleanedAttendeeNames,
+  resizeNames,
+} from "../_lib/attendee-names";
 import { isPastEventInstance } from "../_lib/instance-time";
-import { buyerPlatformFeeNgwee, parsePlatformFeeBps } from "../_lib/platform-fee";
-import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
+import {
+  buyerPlatformFeeNgwee,
+  parsePlatformFeeBps,
+} from "../_lib/platform-fee";
+import {
+  isEarlyBirdActive,
+  nextTierUpsell,
+  resolveUnitPriceNgwee,
+} from "../_lib/resolve-price";
 
 import { ticketPurchaseErrorKey } from "./ticket-purchase-error";
 
@@ -79,7 +90,10 @@ function formatEarlyBirdUntil(iso: string, locale: string): string {
   }).format(new Date(iso));
 }
 
-function maxQtyForType(ticket: TicketPickerType, instance: TicketPickerInstance | null): number {
+function maxQtyForType(
+  ticket: TicketPickerType,
+  instance: TicketPickerInstance | null,
+): number {
   if (!instance || ticket.is_sold_out || instance.is_sold_out) {
     return 0;
   }
@@ -104,13 +118,18 @@ export function TicketPicker({
   const tEvents = useTranslations("events");
   const locale = useLocale();
   const [selectedInstanceId, setSelectedInstanceId] = useState(
-    () => instances.find((instance) => !isPastEventInstance(instance))?.id ?? "",
+    () =>
+      instances.find((instance) => !isPastEventInstance(instance))?.id ?? "",
   );
-  const [selectedTypeId, setSelectedTypeId] = useState(() => ticketTypes[0]?.id ?? "");
+  const [selectedTypeId, setSelectedTypeId] = useState(
+    () => ticketTypes[0]?.id ?? "",
+  );
   const [qty, setQty] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>([]);
   const [promoCode, setPromoCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
@@ -121,7 +140,10 @@ export function TicketPicker({
   );
 
   const selectedInstance = useMemo(
-    () => upcomingInstances.find((instance) => instance.id === selectedInstanceId) ?? null,
+    () =>
+      upcomingInstances.find(
+        (instance) => instance.id === selectedInstanceId,
+      ) ?? null,
     [upcomingInstances, selectedInstanceId],
   );
 
@@ -152,7 +174,9 @@ export function TicketPicker({
   // Buyer pays the fee but the API gave no rate: never show a total that omits it.
   const feeUnknown = buyerPaysFee && feeBps === null;
   const platformFeeNgwee =
-    buyerPaysFee && feeBps !== null ? buyerPlatformFeeNgwee(lineTotalNgwee, feeBps) : 0;
+    buyerPaysFee && feeBps !== null
+      ? buyerPlatformFeeNgwee(lineTotalNgwee, feeBps)
+      : 0;
   const checkoutTotalNgwee = lineTotalNgwee + platformFeeNgwee;
 
   const earlyBirdActive = useMemo(
@@ -161,7 +185,9 @@ export function TicketPicker({
   );
 
   const hasDiscounts = Boolean(
-    selectedType && !selectedType.is_free && (earlyBirdActive || selectedType.tiers.length > 0),
+    selectedType &&
+    !selectedType.is_free &&
+    (earlyBirdActive || selectedType.tiers.length > 0),
   );
 
   const namesRequired = Boolean(selectedType?.attendee_named);
@@ -174,13 +200,16 @@ export function TicketPicker({
     setAttendeeNames((prev) => resizeNames(prev, qty));
   }, [namesRequired, qty]);
 
-  const namesComplete = !namesRequired || attendeeNamesComplete(attendeeNames, qty);
+  const namesComplete =
+    !namesRequired || attendeeNamesComplete(attendeeNames, qty);
 
   // Contextual nudge: the nearest higher group tier that would lower the price at
   // the current quantity ("add N more to pay K… each"). Null when nothing improves.
   const upsell = useMemo(
     () =>
-      selectedType && !selectedType.is_free ? nextTierUpsell(selectedType, qty, new Date()) : null,
+      selectedType && !selectedType.is_free
+        ? nextTierUpsell(selectedType, qty, new Date())
+        : null,
     [selectedType, qty],
   );
 
@@ -217,7 +246,10 @@ export function TicketPicker({
       return;
     }
 
-    if (selectedType.attendee_named && !attendeeNamesComplete(attendeeNames, qty)) {
+    if (
+      selectedType.attendee_named &&
+      !attendeeNamesComplete(attendeeNames, qty)
+    ) {
       setError(t("errors.attendeeNamesRequired"));
       return;
     }
@@ -225,26 +257,31 @@ export function TicketPicker({
     setLoading(true);
     const path = selectedType.is_free ? "/tickets/rsvp" : "/tickets/checkout";
     try {
-      const response = await fetch(`${getApiBaseUrl().replace(/\/$/, "")}${path}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${getApiBaseUrl().replace(/\/$/, "")}${path}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            instance_id: selectedInstance.id,
+            ticket_type_id: selectedType.id,
+            qty,
+            ...(eventAccessProof
+              ? { event_access_proof: eventAccessProof }
+              : {}),
+            ...(selectedType.attendee_named
+              ? { attendee_names: cleanedAttendeeNames(attendeeNames, qty) }
+              : {}),
+            ...(!selectedType.is_free && promoCode.trim()
+              ? { promo_code: promoCode.trim().toUpperCase() }
+              : {}),
+          }),
         },
-        credentials: "include",
-        body: JSON.stringify({
-          instance_id: selectedInstance.id,
-          ticket_type_id: selectedType.id,
-          qty,
-          ...(eventAccessProof ? { event_access_proof: eventAccessProof } : {}),
-          ...(selectedType.attendee_named
-            ? { attendee_names: cleanedAttendeeNames(attendeeNames, qty) }
-            : {}),
-          ...(!selectedType.is_free && promoCode.trim()
-            ? { promo_code: promoCode.trim().toUpperCase() }
-            : {}),
-        }),
-      });
+      );
 
       const payload: unknown = await response.json();
       if (!response.ok) {
@@ -252,8 +289,8 @@ export function TicketPicker({
           payload &&
           typeof payload === "object" &&
           "error" in payload &&
-          typeof (payload as { error?: { code?: string; message?: string } }).error?.code ===
-            "string"
+          typeof (payload as { error?: { code?: string; message?: string } })
+            .error?.code === "string"
             ? (payload as { error: { code: string; message: string } }).error
             : null;
         setError(t(`errors.${ticketPurchaseErrorKey(apiError?.code)}`));
@@ -268,7 +305,9 @@ export function TicketPicker({
           ? (payload as { redirect_to: string }).redirect_to
           : null;
 
-      setMessage(selectedType.is_free ? t("successRsvp") : t("successCheckout"));
+      setMessage(
+        selectedType.is_free ? t("successRsvp") : t("successCheckout"),
+      );
       if (redirectTo) {
         window.location.assign(`/${locale}${redirectTo}`);
       }
@@ -289,6 +328,60 @@ export function TicketPicker({
     t,
   ]);
 
+  // Unified cart: put the tickets in the cart next to products and pay once.
+  // The cart module is loaded on demand so the event page bundle stays lean.
+  const handleAddToCart = useCallback(async () => {
+    setError(null);
+    setMessage(null);
+    setAddedToCart(false);
+    if (!selectedInstance || !selectedType || selectedType.is_free) {
+      return;
+    }
+    const token = await checkAuth();
+    if (!token) {
+      setError(t("loginRequired"));
+      return;
+    }
+    if (
+      selectedType.attendee_named &&
+      !attendeeNamesComplete(attendeeNames, qty)
+    ) {
+      setError(t("errors.attendeeNamesRequired"));
+      return;
+    }
+    setAdding(true);
+    try {
+      const cart = await import("../../../_components/cart/mini-cart-drawer");
+      await cart.putCartTicketLine({
+        instanceId: selectedInstance.id,
+        ticketTypeId: selectedType.id,
+        qty,
+        ...(selectedType.attendee_named
+          ? { attendeeNames: cleanedAttendeeNames(attendeeNames, qty) }
+          : {}),
+        ...(eventAccessProof ? { eventAccessProof } : {}),
+      });
+      setAddedToCart(true);
+      setMessage(t("addedToCart"));
+    } catch (caught) {
+      const code =
+        caught && typeof caught === "object" && "code" in caught
+          ? String((caught as { code: unknown }).code)
+          : null;
+      setError(t(`errors.${ticketPurchaseErrorKey(code)}`));
+    } finally {
+      setAdding(false);
+    }
+  }, [
+    attendeeNames,
+    checkAuth,
+    eventAccessProof,
+    qty,
+    selectedInstance,
+    selectedType,
+    t,
+  ]);
+
   if (ticketTypes.length === 0) {
     return null;
   }
@@ -298,7 +391,10 @@ export function TicketPicker({
       className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-2"
       aria-labelledby={`ticket-picker-${eventSlug}`}
     >
-      <h2 id={`ticket-picker-${eventSlug}`} className="font-display text-h3 text-display-ink">
+      <h2
+        id={`ticket-picker-${eventSlug}`}
+        className="font-display text-h3 text-display-ink"
+      >
         {tEvents("detail.tickets")}
       </h2>
 
@@ -314,7 +410,11 @@ export function TicketPicker({
             }}
           >
             {upcomingInstances.map((instance) => (
-              <option key={instance.id} value={instance.id} disabled={instance.is_sold_out}>
+              <option
+                key={instance.id}
+                value={instance.id}
+                disabled={instance.is_sold_out}
+              >
                 {formatInstanceDate(instance.starts_at, locale)}
                 {instance.is_sold_out ? ` — ${t("soldOut")}` : ""}
               </option>
@@ -335,7 +435,11 @@ export function TicketPicker({
           }}
         >
           {ticketTypes.map((ticket) => (
-            <option key={ticket.id} value={ticket.id} disabled={ticket.is_sold_out}>
+            <option
+              key={ticket.id}
+              value={ticket.id}
+              disabled={ticket.is_sold_out}
+            >
               {ticket.name}
               {ticket.is_free ? "" : ` — ${formatK(ticket.price_ngwee)}`}
               {ticket.is_sold_out ? ` (${t("soldOut")})` : ""}
@@ -347,12 +451,17 @@ export function TicketPicker({
       {selectedType && selectedType.qty_cap !== null ? (
         <p className="text-xs text-text-3">
           {t("remaining", {
-            count: Math.max((selectedType.qty_cap ?? 0) - selectedType.tickets_sold, 0),
+            count: Math.max(
+              (selectedType.qty_cap ?? 0) - selectedType.tickets_sold,
+              0,
+            ),
           })}
         </p>
       ) : null}
 
-      {selectedType?.perks ? <p className="text-xs text-text-2">{selectedType.perks}</p> : null}
+      {selectedType?.perks ? (
+        <p className="text-xs text-text-2">{selectedType.perks}</p>
+      ) : null}
 
       {hasDiscounts && selectedType ? (
         <div className="flex flex-col gap-1 rounded-md bg-bg-2 px-3 py-2 text-xs">
@@ -362,7 +471,10 @@ export function TicketPicker({
             <p className="font-medium text-success">
               {t("earlyBird", {
                 price: formatK(selectedType.early_bird_price_ngwee),
-                until: formatEarlyBirdUntil(selectedType.early_bird_until, locale),
+                until: formatEarlyBirdUntil(
+                  selectedType.early_bird_until,
+                  locale,
+                ),
               })}
             </p>
           ) : null}
@@ -393,7 +505,9 @@ export function TicketPicker({
           >
             {t("decreaseSymbol")}
           </button>
-          <span className="min-w-8 text-center font-mono text-sm font-semibold">{qty}</span>
+          <span className="min-w-8 text-center font-mono text-sm font-semibold">
+            {qty}
+          </span>
           <button
             type="button"
             className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-lg font-semibold text-text transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:text-text"
@@ -408,7 +522,9 @@ export function TicketPicker({
 
       {namesRequired ? (
         <fieldset className="flex flex-col gap-2 border-0 p-0">
-          <legend className="text-sm font-medium text-text-2">{t("attendeeNamesLabel")}</legend>
+          <legend className="text-sm font-medium text-text-2">
+            {t("attendeeNamesLabel")}
+          </legend>
           {attendeeNames.map((name, index) => (
             <input
               key={index}
@@ -480,7 +596,9 @@ export function TicketPicker({
         </div>
       ) : null}
 
-      {selectedType && !selectedType.is_free && resolvedUnitNgwee < selectedType.price_ngwee ? (
+      {selectedType &&
+      !selectedType.is_free &&
+      resolvedUnitNgwee < selectedType.price_ngwee ? (
         <p className="text-right text-xs text-success">
           {t("discountApplied", { price: formatK(resolvedUnitNgwee) })}
         </p>
@@ -488,7 +606,10 @@ export function TicketPicker({
 
       {isAuthed === false ? (
         <p className="text-sm text-text-2">
-          <Link href={`/${locale}/login`} className="font-semibold text-primary">
+          <Link
+            href={`/${locale}/login`}
+            className="font-semibold text-primary"
+          >
             {t("loginRequired")}
           </Link>
         </p>
@@ -508,8 +629,37 @@ export function TicketPicker({
         {selectedType?.is_free ? t("freeRsvpCta") : t("payCta")}
       </Button>
 
-      {message ? <p className="text-center text-sm text-success">{message}</p> : null}
-      {error ? <p className="text-center text-sm text-danger">{error}</p> : null}
+      {selectedType && !selectedType.is_free ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={!canSubmit || adding}
+          loading={adding}
+          loadingLabel={t("addingToCart")}
+          data-testid="ticket-add-to-cart"
+          onClick={() => {
+            void handleAddToCart();
+          }}
+        >
+          {t("addToCart")}
+        </Button>
+      ) : null}
+
+      {addedToCart ? (
+        <p className="text-center text-sm">
+          <Link href={`/${locale}/cart`} className="font-semibold text-primary">
+            {t("viewCart")}
+          </Link>
+        </p>
+      ) : null}
+
+      {message ? (
+        <p className="text-center text-sm text-success">{message}</p>
+      ) : null}
+      {error ? (
+        <p className="text-center text-sm text-danger">{error}</p>
+      ) : null}
     </section>
   );
 }

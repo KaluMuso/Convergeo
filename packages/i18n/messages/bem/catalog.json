@@ -500,6 +500,26 @@
     "pickupTomorrow": "Pickup tomorrow",
     "pickupDays": "Pickup in {min}–{max} days"
   },
+  "offers": {
+    "badge": {
+      "bxgy": "⚠ Buy {buy} get {get} free",
+      "bundlePercent": "⚠ -{percent}% add-ons",
+      "bundleFixed": "⚠ Bundle deal",
+      "buyNPayM": "⚠ {n} for {m}",
+      "freeGift": "⚠ Free gift"
+    },
+    "box": {
+      "heading": "⚠ Bundle & save",
+      "itemLine": "⚠ {title} × {qty}",
+      "youPay": "⚠ Pay {pay} instead of {list}.",
+      "youSave": "⚠ You save {amount}",
+      "freeGift": "⚠ Free: {title} × {qty} (worth {value})",
+      "addAll": "⚠ Add all to cart",
+      "adding": "⚠ Adding…",
+      "added": "⚠ Bundle added to cart",
+      "failed": "⚠ Could not add the bundle. Try again."
+    }
+  },
   "madeToOrder": {
     "when": {
       "oneDay": "⚠ within a day",

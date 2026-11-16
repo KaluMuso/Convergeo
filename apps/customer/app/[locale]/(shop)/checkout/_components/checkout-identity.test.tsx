@@ -44,7 +44,10 @@ vi.mock("@vergeo/config", () => ({
       path === "/checkout/steps/contact"
         ? Promise.resolve({ verified: true })
         : path.startsWith("/checkout/steps/payment-options")
-          ? Promise.resolve({ cod_cap_ngwee: 50_000, available_methods: ["cod"] })
+          ? Promise.resolve({
+              cod_cap_ngwee: 50_000,
+              available_methods: ["cod"],
+            })
           : request(getToken(), path, options),
   }),
 }));
@@ -67,7 +70,10 @@ const labels = {
   fulfilment: messages.fulfilment,
   payment: messages.payment,
   review: messages.review,
-  countdown: { ...messages.countdown, ariaLiveTemplate: messages.countdown.ariaLive },
+  countdown: {
+    ...messages.countdown,
+    ariaLiveTemplate: messages.countdown.ariaLive,
+  },
   reservationExpired: messages.reservationExpired,
   loading: messages.loading,
   error: messages.error,
@@ -138,7 +144,9 @@ for (const nextAccount of ["account-b", "account-a"]) {
       });
       expect(screen.queryByText("Private A Vendor")).not.toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-      expect(screen.getByTestId("checkout-loading-skeleton")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("checkout-loading-skeleton"),
+      ).toBeInTheDocument();
       await act(async () => resolveB(checkout("Current Vendor")));
       // The fulfilment step is lazy-loaded; wait for it, then prove A never rendered.
       expect(await screen.findByText("Current Vendor")).toBeInTheDocument();

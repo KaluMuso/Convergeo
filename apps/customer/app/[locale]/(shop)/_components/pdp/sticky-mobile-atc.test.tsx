@@ -60,7 +60,9 @@ const listing: BuyBoxListing = {
   inStock: true,
 };
 
-function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): ListingPurchaseControls {
+function makePurchase(
+  overrides: Partial<ListingPurchaseControls> = {},
+): ListingPurchaseControls {
   return {
     quantity: 2,
     decrease: vi.fn(),
@@ -133,7 +135,9 @@ describe("StickyMobileAtc", () => {
       {} as IntersectionObserver,
     );
 
-    expect(screen.queryByTestId("pdp-sticky-mobile-atc")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pdp-sticky-mobile-atc"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows qty + ATC when buy box leaves the viewport and syncs controls", async () => {
@@ -162,10 +166,14 @@ describe("StickyMobileAtc", () => {
       {} as IntersectionObserver,
     );
 
-    expect(await screen.findByTestId("pdp-sticky-mobile-atc")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("pdp-sticky-mobile-atc"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("pdp-sticky-qty-value")).toHaveTextContent("2");
     expect(screen.getByTestId("pdp-sticky-price")).toHaveTextContent(/K/);
-    expect(screen.getByTestId("pdp-sticky-stock")).toHaveTextContent("In stock");
+    expect(screen.getByTestId("pdp-sticky-stock")).toHaveTextContent(
+      "In stock",
+    );
 
     await user.click(screen.getByTestId("pdp-sticky-qty-increase"));
     expect(purchase.increase).toHaveBeenCalled();
@@ -206,7 +214,10 @@ describe("StickyMobileAtc", () => {
   it("disables the sticky Add to Cart button until a required branch is selected", async () => {
     const observeRef = createRef<HTMLElement | null>();
     observeRef.current = document.createElement("section");
-    const purchase = makePurchase({ pickupBranchTracked: true, selectedPickupLocationId: null });
+    const purchase = makePurchase({
+      pickupBranchTracked: true,
+      selectedPickupLocationId: null,
+    });
 
     render(
       <StickyMobileAtc
@@ -271,11 +282,16 @@ describe("StickyMobileAtc", () => {
     expect(row.className).toContain("sm:flex-row");
 
     // The price is clipped inside its own column, never painted over a control.
-    expect(screen.getByTestId("pdp-sticky-price").className).toContain("truncate");
+    expect(screen.getByTestId("pdp-sticky-price").className).toContain(
+      "truncate",
+    );
 
     // The stepper and the CTA still share one line.
-    const controls = screen.getByTestId("pdp-sticky-qty-decrease").parentElement!.parentElement!;
-    expect(controls).toContainElement(screen.getByTestId("pdp-sticky-add-to-cart"));
+    const controls = screen.getByTestId("pdp-sticky-qty-decrease")
+      .parentElement!.parentElement!;
+    expect(controls).toContainElement(
+      screen.getByTestId("pdp-sticky-add-to-cart"),
+    );
   });
 
   it("does not render when listing is out of stock", () => {
@@ -303,7 +319,9 @@ describe("StickyMobileAtc", () => {
       {} as IntersectionObserver,
     );
 
-    expect(screen.queryByTestId("pdp-sticky-mobile-atc")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pdp-sticky-mobile-atc"),
+    ).not.toBeInTheDocument();
   });
 
   it("routes the buyer back to the picker while colour/size is incomplete", async () => {
@@ -324,12 +342,21 @@ describe("StickyMobileAtc", () => {
       />,
     );
     observerCallback?.(
-      [{ isIntersecting: false, target: buyBox } as unknown as IntersectionObserverEntry],
+      [
+        {
+          isIntersecting: false,
+          target: buyBox,
+        } as unknown as IntersectionObserverEntry,
+      ],
       {} as IntersectionObserver,
     );
 
-    expect(await screen.findByTestId("pdp-sticky-choose-options")).toBeInTheDocument();
-    expect(screen.queryByTestId("pdp-sticky-add-to-cart")).not.toBeInTheDocument();
+    expect(
+      await screen.findByTestId("pdp-sticky-choose-options"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pdp-sticky-add-to-cart"),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByTestId("pdp-sticky-choose-options"));
     expect(purchase.handleAddToCart).toHaveBeenCalledTimes(1);
     expect(buyBox.scrollIntoView).toHaveBeenCalled();

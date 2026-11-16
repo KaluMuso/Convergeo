@@ -11,7 +11,9 @@ type LayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
-export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: LayoutProps): Promise<Metadata> {
   const { locale } = await params;
   return buildPageMetadata(locale, "checkout", "checkout.card.pageTitle", {
     index: false,
@@ -28,7 +30,10 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
  * perf-budgeted public shop pages. `common` is included to match the namespaces
  * the (shop) provider otherwise supplies to shared UI on this route.
  */
-export default async function CheckoutCardLayout({ children, params }: LayoutProps) {
+export default async function CheckoutCardLayout({
+  children,
+  params,
+}: LayoutProps) {
   const { locale } = await params;
   if (!LOCALES.includes(locale as Locale)) {
     return null;

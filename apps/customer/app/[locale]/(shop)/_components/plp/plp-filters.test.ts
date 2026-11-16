@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAppliedFilterChips, decodePlpFilters, hasActivePlpFilters } from "./plp-filters";
+import {
+  buildAppliedFilterChips,
+  decodePlpFilters,
+  hasActivePlpFilters,
+} from "./plp-filters";
 
 describe("buildAppliedFilterChips", () => {
   it("is empty for a blank filter state", () => {
@@ -10,7 +14,9 @@ describe("buildAppliedFilterChips", () => {
         availability: [],
       }),
     ).toEqual([]);
-    expect(hasActivePlpFilters({ condition: [], availability: [] })).toBe(false);
+    expect(hasActivePlpFilters({ condition: [], availability: [] })).toBe(
+      false,
+    );
   });
 
   it("emits chips for price, condition, availability, rating, and location", () => {
@@ -33,6 +39,10 @@ describe("buildAppliedFilterChips", () => {
       "rating:4",
       "location",
     ]);
-    expect(hasActivePlpFilters(decodePlpFilters(new URLSearchParams("condition=new")))).toBe(true);
+    expect(
+      hasActivePlpFilters(
+        decodePlpFilters(new URLSearchParams("condition=new")),
+      ),
+    ).toBe(true);
   });
 });

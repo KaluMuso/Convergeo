@@ -2,7 +2,10 @@ import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
-import { BrowseDiscoveryChips, type BrowseDiscoveryChip } from "../browse-discovery-chips";
+import {
+  BrowseDiscoveryChips,
+  type BrowseDiscoveryChip,
+} from "../browse-discovery-chips";
 
 export type SearchUnavailablePanelLabels = {
   title: string;
@@ -42,7 +45,10 @@ export function SearchUnavailablePanel({
         }
       />
       <section aria-labelledby="search-unavailable-browse">
-        <h2 id="search-unavailable-browse" className="mb-2 text-sm font-semibold text-text">
+        <h2
+          id="search-unavailable-browse"
+          className="mb-2 text-sm font-semibold text-text"
+        >
           {labels.browseHeading}
         </h2>
         <BrowseDiscoveryChips ariaLabel={browseAriaLabel} chips={chips} />

@@ -29,6 +29,7 @@ import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shel
 import { CustomerAuthBarrier } from "./_components/customer-auth-barrier";
 import { LazyFloatingActions } from "./_components/lazy-floating-actions";
 import { LocaleSwitcher } from "./_components/locale-switcher";
+import { PageViewTracker } from "./_components/page-view-tracker";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
 import type { FloatingActionsLabels } from "./_components/floating-actions";
@@ -78,6 +79,19 @@ export async function generateMetadata({
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
+        // Light/dark browser chrome get a tuned mark (soft contour vs. soft glow).
+        {
+          url: "/brand/convergeo-icon-light-32.png",
+          sizes: "32x32",
+          type: "image/png",
+          media: "(prefers-color-scheme: light)",
+        },
+        {
+          url: "/brand/convergeo-icon-dark-32.png",
+          sizes: "32x32",
+          type: "image/png",
+          media: "(prefers-color-scheme: dark)",
+        },
         { url: "/brand/convergeo-icon-192.png", sizes: "192x192", type: "image/png" },
         { url: "/brand/convergeo-icon-512.png", sizes: "512x512", type: "image/png" },
       ],
@@ -260,6 +274,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               <AnalyticsProvider
                 measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}
               />
+              {/* analytics_v2 page_view (no-op unless NEXT_PUBLIC_ANALYTICS_V2_TRACKING=1). */}
+              <PageViewTracker />
               <CustomerAuthBarrier
                 labels={{
                   title: tCheckout("cart.mergeRecoveryTitle"),
@@ -267,9 +283,6 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                   conflictLine: String(tCheckout.raw("cart.mergeConflictLine")),
                   priceLine: String(tCheckout.raw("cart.mergePriceLine")),
                   unnamedItem: String(tCheckout.raw("cart.mergeUnnamedItem")),
-                  wholesaleTerms: String(
-                    tCheckout.raw("cart.mergeWholesaleTerms"),
-                  ),
                   priceNeedsReview: tCheckout("cart.mergePriceNeedsReview"),
                   accountChoice: tCheckout("cart.mergeAccountChoice"),
                   guestChoice: tCheckout("cart.mergeGuestChoice"),

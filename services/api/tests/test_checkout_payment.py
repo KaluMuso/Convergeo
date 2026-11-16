@@ -393,3 +393,77 @@ class TestPaymentMethodEndpoint:
 
         assert response.status_code == 200
         assert response.json()["cod_cap_ngwee"] == 50_000
+
+
+def _with_ticket_holds(service: MagicMock) -> MagicMock:
+    """Unified checkout: the session holds event tickets (prepaid only)."""
+    base = service.client.table.side_effect
+
+    def table_side_effect(name: str) -> MagicMock:
+        if name == "checkout_ticket_holds":
+            table = MagicMock()
+            chain = table.select.return_value.eq.return_value.limit.return_value
+            chain.execute.return_value = MagicMock(data=[{"id": str(uuid.uuid4())}])
+            return table
+        result: MagicMock = base(name)
+        return result
+
+    service.client.table.side_effect = table_side_effect
+    return service
+
+
+class TestUnifiedCheckoutTicketsAreNeverCod:
+    def test_payment_options_hide_cod_when_tickets_are_in_the_checkout(self) -> None:
+        session_id = str(uuid.uuid4())
+        client = _client_with_service(
+            _with_ticket_holds(
+                _mock_service(session_id=session_id, subtotal=10_000, delivery_fee=0, total=10_000)
+            )
+        )
+        response = client.get(
+            f"/checkout/steps/payment-options?session_id={session_id}",
+            headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        # Well under the K500 cap, but tickets are prepaid only.
+        assert payload["cod_eligible"] is False
+        assert "cod" not in payload["available_methods"]
+
+    def test_cod_is_refused_for_a_checkout_with_tickets(self) -> None:
+        session_id = str(uuid.uuid4())
+        client = _client_with_service(
+            _with_ticket_holds(
+                _mock_service(session_id=session_id, subtotal=10_000, delivery_fee=0, total=10_000)
+            )
+        )
+        response = client.post(
+            "/checkout/steps/payment",
+            json={"session_id": session_id, "method": "cod"},
+            headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["error"]["code"] == "checkout.cod_not_allowed"
+
+    def test_cod_within_cap_still_allowed_without_tickets(self) -> None:
+        session_id = str(uuid.uuid4())
+        client = _client_with_service(
+            _mock_service(session_id=session_id, subtotal=10_000, delivery_fee=0, total=10_000)
+        )
+        response = client.get(
+            f"/checkout/steps/payment-options?session_id={session_id}",
+            headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["cod_eligible"] is True
+
+
+def test_cart_ticket_routes_require_sign_in() -> None:
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    body = {
+        "instance_id": str(uuid.uuid4()),
+        "ticket_type_id": str(uuid.uuid4()),
+        "qty": 1,
+    }
+    assert client.post("/cart/tickets", json=body).status_code == 401
+    assert client.delete(f"/cart/tickets/{uuid.uuid4()}").status_code == 401

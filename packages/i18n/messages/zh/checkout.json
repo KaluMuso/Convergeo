@@ -71,7 +71,6 @@
     "mergeConflictLine": "商品 {listing}：{code}",
     "mergePriceLine": "{item}：单价 {previous} → {current}，数量 {quantity}，合计 {total}",
     "mergeUnnamedItem": "商品 #{id}",
-    "mergeWholesaleTerms": "批发最低数量：{moq} 件。",
     "mergePriceNeedsReview": "此报价不能在这里接受，将从购物车移除；购买前请重新查看。",
     "mergeAccountChoice": "保留账户取货点",
     "mergeGuestChoice": "使用访客取货点",
@@ -79,6 +78,29 @@
     "mergeRetry": "重试购物车合并",
     "mergeSignOut": "退出登录",
     "mergeFailure": "无法完成购物车保护。您的商品仍已保存。",
+    "offerSavings": "优惠节省",
+    "offerSaving": "优惠节省 {amount}",
+    "offerGift": "赠品：{title} × {qty}",
+    "offerGiftWorth": "价值 {value}，随优惠免费赠送",
+    "types": {
+      "products": "商品",
+      "eventTickets": "活动门票",
+      "services": "服务"
+    },
+    "tickets": {
+      "line": "{type} × {qty}",
+      "remove": "移除",
+      "removeLabel": "移除 {title} 的门票",
+      "unavailable": "这些门票已无法购买。请移除后再结账。",
+      "platformFee": "票务服务费",
+      "prepaidOnly": "活动门票需在线支付（移动钱包或银行卡），不支持货到付款。",
+      "oneEvent": "您的购物车中已有其他活动或其他场次的门票。请先结算或移除它们。",
+      "added": "门票已加入购物车",
+      "addToCart": "加入购物车",
+      "adding": "正在加入…",
+      "addFailed": "无法添加这些门票，请重试。",
+      "signInRequired": "请登录后再将门票加入购物车。"
+    },
     "codStep1": "您下单",
     "codStep2": "我们配送",
     "codStep3": "送达时付款",
@@ -159,7 +181,8 @@
         "cutoffBefore": "在14:00（卢萨卡时间）前下单，现货商品通常在卖家确认后当天发出。",
         "cutoffAfter": "卢萨卡时间已过14:00，现货商品通常会在卖家确认后于明天发出。",
         "cutoffMadeToOrder": "定制商品在制作完成后发出——请查看每件商品的制作周期。"
-      }
+      },
+      "notOffered": "卖家不为您购物车中的某件商品提供该交付方式。"
     },
     "countdown": {
       "label": "商品已预留",
@@ -212,7 +235,8 @@
         "capNote": "货到付款适用于不超过 {cap} 的订单。",
         "overCap": "您的订单总额为 {total}。如需货到付款，请移除部分商品，或分成每笔不超过 {cap} 的订单。",
         "editCart": "编辑购物车"
-      }
+      },
+      "codNotForTickets": "订单包含活动门票时，不支持货到付款。"
     },
     "review": {
       "title": "确认您的订单",
@@ -253,6 +277,15 @@
         "pickupFromSeller": "您将到卖家处自取",
         "placeOrderCod": "提交订单——货到付款"
       },
+      "deliveryConsent": {
+        "label": "同意将我的姓名、电话和地址提供给配送合作方，用于配送此订单",
+        "hint": "可选。持证快递员可能配送您的订单。若不同意，将由 Vergeo5 员工配送或先致电您。可随时在“账户 → 隐私”中更改。",
+        "saveFailed": "无法保存此选择。您仍可以下单。"
+      },
+      "typeProducts": "商品",
+      "typeEventTickets": "活动门票",
+      "ticketLine": "{type} × {qty}",
+      "platformFee": "票务服务费",
       "estimatedReady": "预计 {date} 备妥",
       "estimatedDelivery": "预计 {date} 送达"
     },
@@ -322,6 +355,9 @@
       "widgetUnavailable": "银行卡付款暂时不可用。请尝试移动支付或稍后重试。",
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
+    },
+    "tickets": {
+      "unavailable": "购物车中的某张门票已无法购买，请检查购物车。"
     }
   },
   "variant": {

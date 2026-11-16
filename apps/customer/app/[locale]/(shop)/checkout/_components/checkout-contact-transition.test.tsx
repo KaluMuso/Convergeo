@@ -76,7 +76,10 @@ const checkout = {
   ],
 };
 const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 const failure = () =>
   json(
     {
@@ -103,7 +106,8 @@ beforeEach(() => {
   mocks.fetch.mockImplementation(async (url: string) => {
     const path = new URL(url, "http://localhost").pathname;
     events.push(path);
-    if (path.endsWith("/steps/contact")) return json({ verified: true, skipped: false });
+    if (path.endsWith("/steps/contact"))
+      return json({ verified: true, skipped: false });
     if (path.endsWith("/checkout/session")) return json(checkout);
     return json({});
   });
@@ -116,7 +120,10 @@ async function start() {
   const { CheckoutShell } = await import("./step-fulfilment");
   const user = userEvent.setup();
   const view = render(<CheckoutShell locale="en" labels={labels} />);
-  await user.type(await screen.findByLabelText(m.contact.nationalNumber), "971234567");
+  await user.type(
+    await screen.findByLabelText(m.contact.nationalNumber),
+    "971234567",
+  );
   await user.click(screen.getByRole("button", { name: m.contact.sendOtp }));
   await user.click(screen.getByLabelText("Digit 1 of 6"));
   await user.keyboard("123456");
@@ -127,7 +134,9 @@ it("persists accepted contact before creating checkout across the real auth-stor
   await start();
   await screen.findByText("Fixture vendor");
   // Then the advisory payment-options read behind the over-COD-cap notice.
-  await waitFor(() => expect(events).toContain("/checkout/steps/payment-options"));
+  await waitFor(() =>
+    expect(events).toContain("/checkout/steps/payment-options"),
+  );
   expect(events).toEqual([
     "verify",
     "/cart/merge",
@@ -136,7 +145,9 @@ it("persists accepted contact before creating checkout across the real auth-stor
     "/checkout/steps/payment-options",
   ]);
   expect(screen.getAllByRole("radio")).toHaveLength(2);
-  const contact = mocks.fetch.mock.calls.find(([url]) => String(url).endsWith("/steps/contact"));
+  const contact = mocks.fetch.mock.calls.find(([url]) =>
+    String(url).endsWith("/steps/contact"),
+  );
   expect(JSON.parse(contact![1].body)).toEqual({ phone: account.user.phone });
   expect(mocks.verify).toHaveBeenCalledOnce();
 });
@@ -198,9 +209,11 @@ for (const verified of [false, "error"]) {
     );
     await start();
     expect(await screen.findByRole("alert")).toHaveTextContent(m.error);
-    expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/checkout/session"))).toBe(
-      false,
-    );
+    expect(
+      mocks.fetch.mock.calls.some(([url]) =>
+        String(url).endsWith("/checkout/session"),
+      ),
+    ).toBe(false);
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 }
@@ -213,14 +226,20 @@ it("drops a late old-account contact response before requesting its checkout ses
   const normal = mocks.fetch.getMockImplementation()!;
   mocks.fetch.mockImplementation(async (url, init) => {
     const token = new Headers(init?.headers).get("Authorization");
-    if (String(url).endsWith("/steps/contact") && token === "Bearer fixture-token") return pending;
+    if (
+      String(url).endsWith("/steps/contact") &&
+      token === "Bearer fixture-token"
+    )
+      return pending;
     return normal(url, init);
   });
   await start();
   await waitFor(() =>
-    expect(mocks.fetch.mock.calls.some(([url]) => String(url).endsWith("/steps/contact"))).toBe(
-      true,
-    ),
+    expect(
+      mocks.fetch.mock.calls.some(([url]) =>
+        String(url).endsWith("/steps/contact"),
+      ),
+    ).toBe(true),
   );
   await act(async () => {
     mocks.authEvent("SIGNED_OUT", null);
@@ -235,5 +254,7 @@ it("drops a late old-account contact response before requesting its checkout ses
     String(url).endsWith("/checkout/session"),
   );
   expect(sessions).toHaveLength(1);
-  expect(new Headers(sessions[0]![1].headers).get("Authorization")).toBe("Bearer fixture-token-b");
+  expect(new Headers(sessions[0]![1].headers).get("Authorization")).toBe(
+    "Bearer fixture-token-b",
+  );
 });

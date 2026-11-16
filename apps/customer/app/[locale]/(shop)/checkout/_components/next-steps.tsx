@@ -34,7 +34,10 @@ export function NextSteps({
       className="space-y-3 rounded-card border border-border bg-surface p-4"
       data-testid={testId}
     >
-      <Heading id={headingId} className="font-body text-sm font-semibold text-text">
+      <Heading
+        id={headingId}
+        className="font-body text-sm font-semibold text-text"
+      >
         {heading}
       </Heading>
       <ol className="space-y-3">
@@ -54,8 +57,12 @@ export function NextSteps({
                 {index + 1}
               </span>
               <div className="min-w-0 space-y-0.5">
-                <p className="font-body text-sm font-medium text-text">{step.title}</p>
-                {step.body ? <p className="font-body text-sm text-text-2">{step.body}</p> : null}
+                <p className="font-body text-sm font-medium text-text">
+                  {step.title}
+                </p>
+                {step.body ? (
+                  <p className="font-body text-sm text-text-2">{step.body}</p>
+                ) : null}
               </div>
             </li>
           );

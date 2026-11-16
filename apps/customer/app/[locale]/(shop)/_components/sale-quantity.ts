@@ -1,6 +1,13 @@
 import { formatSaleQuantity } from "@vergeo/i18n";
 
-export const SALE_UNITS = ["each", "metre", "kg", "litre", "bag", "sqm"] as const;
+export const SALE_UNITS = [
+  "each",
+  "metre",
+  "kg",
+  "litre",
+  "bag",
+  "sqm",
+] as const;
 
 export type SaleUnit = (typeof SALE_UNITS)[number];
 export type SaleUnitLabels = Record<SaleUnit, string>;
@@ -11,11 +18,15 @@ export function resolveSaleUnit(value: string | null | undefined): SaleUnit {
 }
 
 export function resolveUnitStepMilli(value: number | null | undefined): number {
-  return Number.isSafeInteger(value) && (value ?? 0) > 0 ? (value as number) : 1_000;
+  return Number.isSafeInteger(value) && (value ?? 0) > 0
+    ? (value as number)
+    : 1_000;
 }
 
 export function resolveMinimumSteps(value: number | null | undefined): number {
-  return Number.isSafeInteger(value) && (value ?? 0) > 0 ? (value as number) : 1;
+  return Number.isSafeInteger(value) && (value ?? 0) > 0
+    ? (value as number)
+    : 1;
 }
 
 export function catalogSaleUnitLabels(
@@ -75,18 +86,25 @@ export type LeadTimeForm = keyof LeadTimePhrases;
  * 7 days = "within a week", whole weeks / months round to "about N weeks / months",
  * anything else stays an honest "about N days".
  */
-export function describeLeadTime(days: number): { form: LeadTimeForm; count: number } {
+export function describeLeadTime(days: number): {
+  form: LeadTimeForm;
+  count: number;
+} {
   const whole = Math.max(1, Math.round(days));
   if (whole === 1) return { form: "oneDay", count: 1 };
   if (whole === 7) return { form: "oneWeek", count: 1 };
   if (whole === 30) return { form: "oneMonth", count: 1 };
-  if (whole % 30 === 0 && whole > 30) return { form: "months", count: whole / 30 };
-  if (whole % 7 === 0 && whole > 7 && whole < 30) return { form: "weeks", count: whole / 7 };
+  if (whole % 30 === 0 && whole > 30)
+    return { form: "months", count: whole / 30 };
+  if (whole % 7 === 0 && whole > 7 && whole < 30)
+    return { form: "weeks", count: whole / 7 };
   return { form: "days", count: whole };
 }
 
 /** Build {@link LeadTimePhrases} from a raw-message reader (`form` → template). */
-export function readLeadTimePhrases(read: (form: LeadTimeForm) => string): LeadTimePhrases {
+export function readLeadTimePhrases(
+  read: (form: LeadTimeForm) => string,
+): LeadTimePhrases {
   return {
     oneDay: read("oneDay"),
     days: read("days"),
@@ -109,10 +127,18 @@ export function formatMadeToOrderBadge(
   leadTimeDays: number | null | undefined,
   labels: MadeToOrderLabels,
 ): string | null {
-  return formatMadeToOrderLeadTime(fulfilmentMode, leadTimeDays, labels.badge, labels.when);
+  return formatMadeToOrderLeadTime(
+    fulfilmentMode,
+    leadTimeDays,
+    labels.badge,
+    labels.when,
+  );
 }
 
-export function formatLeadTimeWhen(days: number, phrases: LeadTimePhrases): string {
+export function formatLeadTimeWhen(
+  days: number,
+  phrases: LeadTimePhrases,
+): string {
   const { form, count } = describeLeadTime(days);
   return phrases[form].replace("{count}", String(count));
 }
@@ -146,5 +172,7 @@ export function translateMadeToOrder(
   days: number,
 ): string {
   const { form, count } = describeLeadTime(days);
-  return t("madeToOrder.badge", { when: t(`madeToOrder.when.${form}`, { count }) });
+  return t("madeToOrder.badge", {
+    when: t(`madeToOrder.when.${form}`, { count }),
+  });
 }

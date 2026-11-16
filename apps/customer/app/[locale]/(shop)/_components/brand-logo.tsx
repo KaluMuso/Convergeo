@@ -14,7 +14,11 @@ type BrandLogoProps = {
  * surface: `multiply` erases white on light themes, `screen` erases black on
  * dark. next/image serves a resized WebP, so the header pays a few KB.
  */
-export function BrandLogo({ appName, compact = false, className }: BrandLogoProps) {
+export function BrandLogo({
+  appName,
+  compact = false,
+  className,
+}: BrandLogoProps) {
   // Artwork ratio ≈ 5.85:1 (1024×175).
   const height = compact ? 22 : 26;
   const width = Math.round(height * 5.85);
@@ -22,7 +26,9 @@ export function BrandLogo({ appName, compact = false, className }: BrandLogoProp
 
   return (
     <span
-      className={["inline-flex items-center", className].filter(Boolean).join(" ")}
+      className={["inline-flex items-center", className]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="brand-logo"
     >
       <Image

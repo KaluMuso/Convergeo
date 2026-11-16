@@ -10,13 +10,17 @@ describe("event instance end times", () => {
       starts_at: "2026-09-10T18:00:00Z",
       ends_at: "2026-09-13T18:00:00Z",
     };
-    expect(effectiveInstanceEndMs(instance)).toBe(new Date(instance.ends_at).getTime());
+    expect(effectiveInstanceEndMs(instance)).toBe(
+      new Date(instance.ends_at).getTime(),
+    );
     expect(isPastEventInstance(instance, NOW)).toBe(false);
   });
 
   it("falls back to start plus two hours for legacy instances", () => {
     const instance = { starts_at: "2026-09-12T18:00:00Z", ends_at: null };
-    expect(effectiveInstanceEndMs(instance)).toBe(new Date("2026-09-12T20:00:00Z").getTime());
+    expect(effectiveInstanceEndMs(instance)).toBe(
+      new Date("2026-09-12T20:00:00Z").getTime(),
+    );
     expect(isPastEventInstance(instance, NOW)).toBe(true);
   });
 
@@ -27,6 +31,8 @@ describe("event instance end times", () => {
         ends_at: "2026-09-12T17:00:00Z",
       }),
     ).toBe(new Date("2026-09-12T20:00:00Z").getTime());
-    expect(isPastEventInstance({ starts_at: "not-a-date", ends_at: null }, NOW)).toBe(false);
+    expect(
+      isPastEventInstance({ starts_at: "not-a-date", ends_at: null }, NOW),
+    ).toBe(false);
   });
 });

@@ -41,7 +41,9 @@ type EventGridProps = {
 };
 
 function formatCapacity(template: string, sold: number, total: number): string {
-  return template.replace("{sold}", String(sold)).replace("{total}", String(total));
+  return template
+    .replace("{sold}", String(sold))
+    .replace("{total}", String(total));
 }
 
 function formatEventDate(iso: string | null, locale: string): string {
@@ -84,7 +86,9 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
                 venueLabel={venueLabel}
                 isFree={item.is_free}
                 freeLabel={labels.free}
-                ngwee={item.is_free ? undefined : (item.min_price_ngwee ?? undefined)}
+                ngwee={
+                  item.is_free ? undefined : (item.min_price_ngwee ?? undefined)
+                }
                 spotsFilled={item.spots_sold}
                 spotsTotal={item.spots_total}
                 capacityLabel={formatCapacity(

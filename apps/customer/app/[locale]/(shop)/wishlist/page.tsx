@@ -17,7 +17,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  return buildPageMetadata(locale, "account", "saved.title", { index: false, follow: false });
+  return buildPageMetadata(locale, "account", "saved.title", {
+    index: false,
+    follow: false,
+  });
 }
 
 type PageProps = {
@@ -45,7 +48,10 @@ export default async function WishlistPage({ params }: PageProps) {
   const baseMessages = await getMessages();
   const accountMessages = await loadNamespace(locale as Locale, "account");
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, account: accountMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    account: accountMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCatalog = createTranslator({
     locale,

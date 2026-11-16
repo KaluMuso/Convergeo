@@ -290,9 +290,7 @@ def sign_kyc_documents(
             result = bucket.create_signed_url(path, SIGNED_URL_TTL_SECONDS)
             if isinstance(result, dict):
                 signed_url = (
-                    result.get("signedURL")
-                    or result.get("signedUrl")
-                    or result.get("signed_url")
+                    result.get("signedURL") or result.get("signedUrl") or result.get("signed_url")
                 )
                 expires_in = result.get("expires_in") or result.get("expiresIn")
                 if isinstance(expires_in, int | float):
@@ -324,9 +322,7 @@ def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchOut | 
         phone=str(payload.get("phone", "")),
         operator=str(payload.get("operator", "")),
         resolved_name=(
-            str(payload["resolved_name"])
-            if isinstance(payload.get("resolved_name"), str)
-            else None
+            str(payload["resolved_name"]) if isinstance(payload.get("resolved_name"), str) else None
         ),
         legal_name=str(payload.get("legal_name", "")),
         match_score=float(payload.get("match_score", 0.0)),
@@ -368,7 +364,9 @@ def _load_kyc_record_row(
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None (not an empty response) when no
+    # row matches, so reading `.data` blindly turns an unknown id into a 500.
+    data = response.data if response is not None else None
     row: dict[str, Any] | None
     if isinstance(data, dict):
         row = data
@@ -389,7 +387,9 @@ def _load_vendor_row(service_client: ServiceRoleClient, vendor_id: str) -> dict[
         .maybe_single()
         .execute()
     )
-    data = response.data
+    # PostgREST's maybe_single() returns None (not an empty response) when no
+    # row matches, so reading `.data` blindly turns an unknown id into a 500.
+    data = response.data if response is not None else None
     row: dict[str, Any] | None
     if isinstance(data, dict):
         row = data
@@ -521,7 +521,8 @@ def _upsert_verified_licence_on_approve(
         .maybe_single()
         .execute()
     )
-    row = existing.data if isinstance(existing.data, dict) else None
+    existing_data = existing.data if existing is not None else None
+    row = existing_data if isinstance(existing_data, dict) else None
     payload = {
         "vendor_id": vendor_id,
         "regulated_class": regulated_class,
@@ -535,12 +536,7 @@ def _upsert_verified_licence_on_approve(
         "reviewer_notes": body.reviewer_notes,
     }
     if row is not None:
-        (
-            _table(service_client, "vendor_licences")
-            .update(payload)
-            .eq("id", row["id"])
-            .execute()
-        )
+        (_table(service_client, "vendor_licences").update(payload).eq("id", row["id"]).execute())
     else:
         _table(service_client, "vendor_licences").insert(payload).execute()
 

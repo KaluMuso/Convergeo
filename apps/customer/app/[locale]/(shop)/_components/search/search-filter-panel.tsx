@@ -36,7 +36,10 @@ type SearchFilterPanelProps = {
   showPriceFilters?: boolean;
 };
 
-function mergeSearchParams(current: URLSearchParams, filters: SearchFilterState): URLSearchParams {
+function mergeSearchParams(
+  current: URLSearchParams,
+  filters: SearchFilterState,
+): URLSearchParams {
   const next = new URLSearchParams(current.toString());
   next.delete("page");
   next.delete("min_price");
@@ -71,7 +74,9 @@ export function SearchFilterPanel({
       const params = mergeSearchParams(searchParams, next);
       const query = params.toString();
       startTransition(() => {
-        router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        router.push(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
         onApplied?.();
       });
     },
@@ -89,11 +94,15 @@ export function SearchFilterPanel({
       aria-label={labels.heading}
       data-testid="search-filter-panel"
     >
-      <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">{labels.heading}</h2>
+      <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">
+        {labels.heading}
+      </h2>
 
       {showPriceFilters ? (
         <fieldset className="flex flex-col gap-2 border-0 p-0">
-          <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.price}</legend>
+          <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+            {labels.price}
+          </legend>
           <div className="grid grid-cols-2 gap-2">
             <Input
               type="number"
@@ -102,7 +111,10 @@ export function SearchFilterPanel({
               placeholder={labels.minPrice}
               value={state.minPrice ?? ""}
               onChange={(event) =>
-                setState((current) => ({ ...current, minPrice: event.target.value || undefined }))
+                setState((current) => ({
+                  ...current,
+                  minPrice: event.target.value || undefined,
+                }))
               }
               aria-label={labels.minPrice}
             />
@@ -113,7 +125,10 @@ export function SearchFilterPanel({
               placeholder={labels.maxPrice}
               value={state.maxPrice ?? ""}
               onChange={(event) =>
-                setState((current) => ({ ...current, maxPrice: event.target.value || undefined }))
+                setState((current) => ({
+                  ...current,
+                  maxPrice: event.target.value || undefined,
+                }))
               }
               aria-label={labels.maxPrice}
             />
@@ -122,7 +137,9 @@ export function SearchFilterPanel({
       ) : null}
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.category}</legend>
+        <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+          {labels.category}
+        </legend>
         <Select
           value={state.categoryPath ?? ""}
           onChange={(event) =>

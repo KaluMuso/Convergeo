@@ -29,13 +29,13 @@ def inputs() -> dict[str, Any]:
     data: dict[str, Any] = json.loads(INPUTS.read_text())
     if data.get("schema") != "convergeo.coordinator.new-proposal.v1":
         raise RuntimeError("Unknown coordinator input contract")
-    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 323)):
+    for key, count in (("f3", 7), ("db", 26), ("review_db", 18), ("ui", 6), ("normal", 330)):
         if len(data[key]) != count or len(set(data[key])) != count:
             raise RuntimeError("Retained identity inventory changed: " + key)
     actual = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sorted((ROOT / "supabase/migrations").glob("*.sql"))}
-    if len(actual) != 158 or actual != data["migrations"]:
-        raise RuntimeError("Qualified 158-input source inventory differs")
+    if len(actual) != 178 or actual != data["migrations"]:
+        raise RuntimeError("Qualified 178-input source inventory differs")
     if any(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() != digest
            for path, digest in data["source_sha256"].items()):
         raise RuntimeError("Retained test/runner source binding differs")
@@ -285,7 +285,7 @@ class Runner(financial.Runner):
             raise RuntimeError("Merchant review database regressions incomplete")
         if not self.test_gate("merchant-normal", self.contract["normal_selectors"],
                               self.contract["normal"]):
-            raise RuntimeError("Merchant 322 compatibility identities incomplete")
+            raise RuntimeError("Merchant 330 compatibility identities incomplete")
         _, version = self.command("node-version", ["node", "-p", "process.versions.node"])
         _, pnpm = self.command("pnpm-version", ["pnpm", "--version"])
         if version.split(".")[0] != "22" or pnpm.strip() != "9.15.4":
