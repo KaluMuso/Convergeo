@@ -17,6 +17,7 @@ from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import (
     CartLineView,
@@ -38,6 +39,12 @@ from app.services.cart.store import (
     fetch_listings_for_items,
     service_db_client,
 )
+from app.services.cart.tickets import (
+    TicketCartLine,
+    load_cart_ticket_lines,
+    ticket_platform_fee_ngwee,
+    ticket_subtotal_ngwee,
+)
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.clips.attribution import validate_clip_attribution
 from app.services.inventory.location_stock import resolve_stock_location_id
@@ -55,7 +62,7 @@ from app.services.listings.variants import (
     overlay_listing_for_variant,
     resolve_variant_for_purchase,
 )
-from app.services.offers.apply import OfferPricing, price_line_views
+from app.services.offers.apply import OfferPricing, price_line_views, price_unified
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
@@ -192,7 +199,16 @@ class CartResponse(BaseModel):
     cart_id: str
     items: list[CartLineResponse]
     vendor_groups: list[VendorGroupResponse]
+    #: Products + event tickets (after offers).
     subtotal_ngwee: int
+    #: Unified cart: event-ticket lines (signed-in buyers only), priced live.
+    ticket_lines: list[TicketLineOut] = Field(default_factory=list)
+    #: Ticket lines that can no longer be bought (event unpublished, etc.).
+    unavailable_ticket_line_ids: list[str] = Field(default_factory=list)
+    #: Buyer-paid ticket platform fee, added at checkout.
+    platform_fee_ngwee: int = 0
+    #: False when the cart holds event tickets (prepaid only).
+    cod_allowed: bool = True
     conflicts: list[MergeConflictResponse] = Field(default_factory=list)
     notices: list[ChangeNoticeResponse] = Field(default_factory=list)
     savings_ngwee: int = 0
@@ -444,6 +460,34 @@ def _price_cart_offers(
         return line_views, None
 
 
+def _load_ticket_lines_for_read(cart_id: str, customer_id: str | None) -> list[TicketCartLine]:
+    """Unified cart: a signed-in buyer's ticket lines; never fails the cart read."""
+    if customer_id is None or not cart_id:
+        return []
+    try:
+        return load_cart_ticket_lines(cart_id, client=service_db_client())
+    except Exception:
+        logger.warning("cart.ticket_lines_read_failed", exc_info=True)
+        return []
+
+
+def _price_cart_with_tickets(
+    line_views: list[CartLineView],
+    ticket_lines: list[TicketCartLine],
+    customer_id: str | None,
+) -> tuple[list[CartLineView], list[TicketCartLine], OfferPricing | None]:
+    if not ticket_lines:
+        views, pricing = _price_cart_offers(line_views, customer_id)
+        return views, ticket_lines, pricing
+    try:
+        return price_unified(
+            line_views, ticket_lines, service_db_client(), customer_id=customer_id
+        )
+    except Exception:
+        logger.warning("cart.offer_pricing_failed", exc_info=True)
+        return line_views, ticket_lines, None
+
+
 def _build_cart_response(
     *,
     cart_id: str,
@@ -494,13 +538,18 @@ def _build_cart_response(
             )
         )
 
-    line_views, offer_pricing = _price_cart_offers(line_views, customer_id)
+    ticket_lines = _load_ticket_lines_for_read(cart_id, customer_id)
+    line_views, ticket_lines, offer_pricing = _price_cart_with_tickets(
+        line_views, ticket_lines, customer_id
+    )
     vendor_groups = group_by_vendor(line_views)
     subtotal = (
         sum(line.line_total_ngwee for line in line_views)
         if offer_pricing is not None
         else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
     )
+    purchasable_tickets = [line for line in ticket_lines if line.available]
+    subtotal += ticket_subtotal_ngwee(purchasable_tickets)
 
     return CartResponse(
         cart_id=cart_id,
@@ -583,6 +632,10 @@ def _build_cart_response(
             for group in vendor_groups
         ],
         subtotal_ngwee=subtotal,
+        ticket_lines=[ticket_line_out(line) for line in ticket_lines],
+        unavailable_ticket_line_ids=[line.id for line in ticket_lines if not line.available],
+        platform_fee_ngwee=ticket_platform_fee_ngwee(purchasable_tickets),
+        cod_allowed=not ticket_lines,
         savings_ngwee=offer_pricing.priced.savings_ngwee if offer_pricing else 0,
         offers=[
             AppliedOfferResponse(

@@ -2336,7 +2336,7 @@
       "edit": "编辑",
       "archive": "归档",
       "giftStock": "剩余赠品：{available} / {total}",
-      "notInCart": "结账目前只对商品应用优惠；此优惠会展示，但暂不生效。"
+      "notInCart": "结账时会对商品和活动门票应用优惠；含服务的优惠，或由活动触发的赠品，会显示但暂不生效。"
     },
     "types": {
       "bxgy": {
@@ -2411,7 +2411,10 @@
       "status": "状态",
       "maxApplications": "每单最多次数",
       "save": "保存优惠",
-      "saving": "正在保存…"
+      "saving": "正在保存…",
+      "perCustomerLimit": "每位顾客可用次数",
+      "perCustomerLimitHint": "每位顾客可以在多少个订单中使用此优惠。留空表示不限。",
+      "perCustomerLimitPlaceholder": "不限"
     },
     "status": {
       "draft": "草稿",
@@ -2451,7 +2454,8 @@
       "tooManyActive": "进行中的优惠已达上限。",
       "giftStockBelowReserved": "赠品库存不能低于已承诺的数量。",
       "typeImmutable": "优惠类型不能更改。",
-      "rateLimited": "修改过于频繁，请稍候再试。"
+      "rateLimited": "修改过于频繁，请稍候再试。",
+      "perCustomerLimitInvalid": "请输入 1 到 1000 之间的整数，或留空。"
     }
   }
 }

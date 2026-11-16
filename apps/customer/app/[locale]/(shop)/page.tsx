@@ -44,6 +44,7 @@ import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail"
 import { HomeTrustStrip } from "./_components/home-trust-strip";
 import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
 import { MerchPreviewBanner } from "./_components/merch-preview-banner";
+import { buildOfferBadgeLabels } from "./_components/offers/offer-badge";
 
 import type { Metadata } from "next";
 
@@ -236,6 +237,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
     },
+    offerBadge: buildOfferBadgeLabels(raw),
   };
 
   // Admin-governed feed (home_feed_sections) supersedes the hard-coded default

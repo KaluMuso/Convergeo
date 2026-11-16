@@ -118,6 +118,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261115235600",
     # In-app rows for never-silent lifecycle templates (additive, reversible).
     "20261116010000",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 }
 
 

@@ -5,7 +5,10 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { isConsentCurrent, saveDeliveryConsent } from "../../../../../lib/delivery-consent";
+import {
+  isConsentCurrent,
+  saveDeliveryConsent,
+} from "../../../../../lib/delivery-consent";
 import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
@@ -54,6 +57,12 @@ export type ReviewStepLabels = {
   nextCod: string;
   /** UX pass 4 — COD-specific review copy. Templates use {amount} / {landmark}. */
   codGuide?: ReviewCodGuideLabels;
+  /** Unified checkout: line-type captions, ticket line template, ticket fee row. */
+  typeProducts?: string;
+  typeEventTickets?: string;
+  /** "{type} × {qty}" */
+  ticketLine?: string;
+  platformFee?: string;
   /** Zambia DPA notice: share delivery details with the courier (optional choice). */
   deliveryConsent?: ReviewDeliveryConsentLabels;
 };
@@ -98,7 +107,9 @@ type StepReviewProps = {
   onPlaceOrder?: () => void | Promise<void>;
 };
 
-function lineTitle(item: CheckoutSession["vendor_groups"][number]["items"][number]): string {
+function lineTitle(
+  item: CheckoutSession["vendor_groups"][number]["items"][number],
+): string {
   return item.title_override?.trim() || item.listing_id;
 }
 
@@ -118,11 +129,18 @@ export function StepReview({
   const [shareConsent, setShareConsent] = useState(false);
   const [shareSaving, setShareSaving] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
-  const hasDelivery = fulfilment?.groups.some((group) => group.fulfilment === "delivery") ?? false;
+  const hasDelivery =
+    fulfilment?.groups.some((group) => group.fulfilment === "delivery") ??
+    false;
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const amountLocale = `${locale}-ZM`;
+  // Server-computed total = subtotal + delivery + buyer ticket fee; show the fee row.
+  const platformFee = Math.max(
+    0,
+    totals.total_ngwee - totals.subtotal_ngwee - totals.delivery_fee_ngwee,
+  );
   const placeOrderAvailable = typeof onPlaceOrder === "function";
 
   const paymentLabel = (() => {
@@ -132,7 +150,8 @@ export function StepReview({
     if (payment.method === "card") {
       return labels.methodCard;
     }
-    const railLabel = payment.rail === "airtel" ? labels.railAirtel : labels.railMtn;
+    const railLabel =
+      payment.rail === "airtel" ? labels.railAirtel : labels.railMtn;
     return labels.methodMomo.replace("{rail}", railLabel);
   })();
 
@@ -142,7 +161,9 @@ export function StepReview({
 
   const fulfilmentLine = (vendorId: string): string | null => {
     const guide = labels.codGuide;
-    const group = fulfilment?.groups.find((entry) => entry.vendor_id === vendorId);
+    const group = fulfilment?.groups.find(
+      (entry) => entry.vendor_id === vendorId,
+    );
     if (!guide || !group) {
       return null;
     }
@@ -207,7 +228,9 @@ export function StepReview({
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        <h2 className="font-display text-h2 text-display-ink">
+          {labels.title}
+        </h2>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
       </div>
 
@@ -215,12 +238,22 @@ export function StepReview({
         <h3 className="font-body text-sm font-semibold uppercase tracking-wide text-text-3">
           {labels.lineItems}
         </h3>
+        {session.vendor_groups.length > 0 && labels.typeProducts ? (
+          <p
+            className="m-0 font-body text-xs font-semibold uppercase tracking-wide text-text-3"
+            data-testid="review-type-products"
+          >
+            {labels.typeProducts}
+          </p>
+        ) : null}
         {session.vendor_groups.map((group) => (
           <div
             key={group.vendor_id}
             className="space-y-2 rounded-card border border-border bg-surface p-4"
           >
-            <p className="font-body text-sm font-semibold text-text">{group.vendor_name}</p>
+            <p className="font-body text-sm font-semibold text-text">
+              {group.vendor_name}
+            </p>
             {fulfilmentLine(group.vendor_id) ? (
               <p
                 className="font-body text-xs text-text-2"
@@ -238,7 +271,10 @@ export function StepReview({
                 );
 
                 return (
-                  <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
+                  <li
+                    key={item.id}
+                    className="flex items-start justify-between gap-2 text-sm"
+                  >
                     <span className="min-w-0 break-words font-body text-text-2">
                       <span>
                         {lineTitle(item)}
@@ -279,17 +315,61 @@ export function StepReview({
             </ul>
           </div>
         ))}
+        {(session.ticket_lines ?? []).length > 0 ? (
+          <div
+            className="space-y-2 rounded-card border border-border bg-surface p-4"
+            data-testid="review-ticket-group"
+          >
+            <p className="m-0 font-body text-xs font-semibold uppercase tracking-wide text-text-3">
+              {labels.typeEventTickets ?? ""}
+            </p>
+            <ul className="space-y-2">
+              {(session.ticket_lines ?? []).map((line) => (
+                <li
+                  key={line.id}
+                  className="flex items-start justify-between gap-2 text-sm"
+                  data-testid={`review-ticket-line-${line.id}`}
+                >
+                  <span className="min-w-0 break-words font-body text-text-2">
+                    <span className="block text-text">{line.event_title}</span>
+                    <span className="text-text-3">
+                      {(labels.ticketLine ?? "{type} × {qty}")
+                        .replace("{type}", line.type_name)
+                        .replace("{qty}", String(line.qty))}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-mono text-text">
+                    {formatK(line.line_total_ngwee, { locale: amountLocale })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
         <div className="flex justify-between gap-3">
           <span>{labels.subtotal}</span>
-          <span>{formatK(totals.subtotal_ngwee, { locale: amountLocale })}</span>
+          <span>
+            {formatK(totals.subtotal_ngwee, { locale: amountLocale })}
+          </span>
         </div>
         <div className="flex justify-between gap-3">
           <span>{labels.deliveryFees}</span>
-          <span>{formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}</span>
+          <span>
+            {formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}
+          </span>
         </div>
+        {platformFee > 0 && labels.platformFee ? (
+          <div
+            className="flex justify-between gap-3"
+            data-testid="review-platform-fee"
+          >
+            <span>{labels.platformFee}</span>
+            <span>{formatK(platformFee, { locale: amountLocale })}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-3 font-semibold text-text">
           <span>{labels.total}</span>
           <span>{formatK(totals.total_ngwee, { locale: amountLocale })}</span>
@@ -297,7 +377,9 @@ export function StepReview({
       </div>
 
       <div className="rounded-card border border-border bg-surface px-4 py-3 text-sm">
-        <p className="font-body font-semibold text-text">{labels.paymentMethod}</p>
+        <p className="font-body font-semibold text-text">
+          {labels.paymentMethod}
+        </p>
         <p className="font-body text-text-2">{paymentLabel}</p>
         {payment.method === "momo" && payment.payer_number ? (
           <p className="font-mono text-xs text-text-3">
@@ -330,14 +412,19 @@ export function StepReview({
             className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
             aria-labelledby={nextId}
           >
-            <p id={nextId} className="font-body text-sm font-semibold text-text">
+            <p
+              id={nextId}
+              className="font-body text-sm font-semibold text-text"
+            >
               {labels.whatHappensNext}
             </p>
             <p className="font-body text-sm text-text-2">{nextCopy}</p>
           </div>
 
           <div className="space-y-2 rounded-card border border-primary/20 bg-primary/5 px-4 py-3">
-            <p className="font-body text-sm font-semibold text-text">{labels.escrowTitle}</p>
+            <p className="font-body text-sm font-semibold text-text">
+              {labels.escrowTitle}
+            </p>
             <ol className="list-decimal space-y-1 pl-5 font-body text-sm text-text-2">
               <li>{labels.escrowStep1}</li>
               <li>{labels.escrowStep2}</li>
@@ -371,12 +458,15 @@ export function StepReview({
               void saveDeliveryConsent(next, "checkout")
                 .then(
                   (saved) => setShareConsent(isConsentCurrent(saved)),
-                  () => setShareError(labels.deliveryConsent?.saveFailed ?? null),
+                  () =>
+                    setShareError(labels.deliveryConsent?.saveFailed ?? null),
                 )
                 .finally(() => setShareSaving(false));
             }}
           />
-          <p className="font-body text-xs text-muted">{labels.deliveryConsent.hint}</p>
+          <p className="font-body text-xs text-muted">
+            {labels.deliveryConsent.hint}
+          </p>
           {shareError ? (
             <p role="alert" className="font-body text-xs text-danger">
               {shareError}
@@ -398,7 +488,11 @@ export function StepReview({
       />
 
       {errorMessage ? (
-        <p ref={errorRef} role="alert" className="font-body text-sm text-danger">
+        <p
+          ref={errorRef}
+          role="alert"
+          className="font-body text-sm text-danger"
+        >
           {errorMessage}
         </p>
       ) : null}

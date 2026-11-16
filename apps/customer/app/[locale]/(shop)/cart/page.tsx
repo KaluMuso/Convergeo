@@ -62,6 +62,16 @@ export default async function CartPage({ params }: CartPageProps) {
     reservationExpiredNotice: t("checkout.reservationExpired"),
     summaryHeading: t("cart.summaryHeading"),
     offerSavings: t("cart.offerSavings"),
+    tickets: {
+      typeProducts: t("cart.types.products"),
+      typeEventTickets: t("cart.types.eventTickets"),
+      line: raw("cart.tickets.line"),
+      remove: t("cart.tickets.remove"),
+      removeLabel: raw("cart.tickets.removeLabel"),
+      unavailable: t("cart.tickets.unavailable"),
+      platformFee: t("cart.tickets.platformFee"),
+      prepaidOnly: t("cart.tickets.prepaidOnly"),
+    },
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
       vendorSubtotal: raw("cart.vendorSubtotal"),

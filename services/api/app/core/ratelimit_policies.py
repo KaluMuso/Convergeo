@@ -218,6 +218,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /cart/reorder/{order_id}": SENSITIVE_WRITE,
     "POST /cart/revalidate": STANDARD_WRITE,
     "POST /cart/rfq/{rfq_id}/accept": STANDARD_WRITE,
+    # Unified cart: event-ticket lines (the price is resolved server-side).
+    "POST /cart/tickets": STANDARD_WRITE,
+    "DELETE /cart/tickets/{line_id}": STANDARD_WRITE,
     "POST /checkout/session": PAYMENT_WRITE,
     "POST /checkout/steps/contact": PAYMENT_WRITE,
     "POST /checkout/steps/fulfilment": PAYMENT_WRITE,

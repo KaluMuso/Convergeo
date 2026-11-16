@@ -70,6 +70,10 @@ class OfferWriteRequest(StrictModel):
     pay_m: int | None = Field(default=None, ge=1, le=99)
     gift_stock_total: int | None = Field(default=None, ge=0, le=1_000_000)
     max_applications_per_order: int = Field(default=1, ge=1, le=20)
+    #: Orders per customer that may use this offer (None = unlimited). Mirrors
+    #: offers_per_customer_limit_check; enforced under the offer row lock at
+    #: order placement (services/orders/create.py).
+    per_customer_limit: int | None = Field(default=None, ge=1, le=1000)
     items: list[OfferItemIn] = Field(min_length=1, max_length=MAX_TRIGGERS + 1)
 
     @model_validator(mode="after")
@@ -114,7 +118,9 @@ class OfferWriteRequest(StrictModel):
                 errors["items"] = "exactly_one_anchor"
             elif not 1 <= roles.count("addon") <= MAX_ADDONS:
                 errors["items"] = "addons_required"
-            elif any(i.item_kind != "product" for i in self.items):
+            elif any(i.item_kind == "service" for i in self.items):
+                # Products and event tickets share the unified cart; services
+                # are still booked on their own flow.
                 errors["items"] = "bundle_products_only"
             if self.bundle_pricing is None:
                 errors["bundle_pricing"] = "required"
@@ -131,7 +137,7 @@ class OfferWriteRequest(StrictModel):
         else:  # buy_n_pay_m
             if not 1 <= roles.count("eligible") <= MAX_ELIGIBLE:
                 errors["items"] = "eligible_required"
-            elif any(i.item_kind != "product" for i in self.items):
+            elif any(i.item_kind == "service" for i in self.items):
                 errors["items"] = "buy_n_pay_m_products_only"
             if self.buy_n is None:
                 errors["buy_n"] = "required"
