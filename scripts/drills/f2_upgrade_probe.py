@@ -37,17 +37,38 @@ def fingerprint(order: str, payment: str) -> list[str]:
         ON t.id=lp.transaction_id WHERE t.order_id='{order}'))::text;""")
 
 
+# Reviewed additive NOT NULL columns whose declared default is the neutral "no
+# effect" value, so legacy rows read it after the upgrade without any backfill:
+# 20261115120000_bundles_offers order_items (no offer, zero discount, not a gift).
+ADDITIVE_NEUTRAL_DEFAULTS: dict[str, Any] = {
+    "offer_snapshot": {},
+    "offer_discount_ngwee": 0,
+    "is_offer_gift": False,
+}
+
+
+def _additive(key: str, value: Any) -> bool:
+    if value is None:
+        return True
+    if key not in ADDITIVE_NEUTRAL_DEFAULTS:
+        return False
+    neutral = ADDITIVE_NEUTRAL_DEFAULTS[key]
+    return type(value) is type(neutral) and value == neutral
+
+
 def without_additive_nulls(after: Any, before: Any) -> Any:
-    """Drop columns a reviewed additive migration introduced as NULL.
+    """Drop columns a reviewed additive migration introduced as NULL or neutral.
 
     A forward migration may add a nullable column (e.g. 20261113070000
     checkout_groups.fulfilment_choices) without backfilling legacy rows. Such a
-    key is absent from the pre-upgrade snapshot and NULL afterwards. Every column
-    that existed before must still match exactly, and a new column carrying any
-    non-NULL value still counts as changed legacy evidence.
+    key is absent from the pre-upgrade snapshot and NULL afterwards. A reviewed
+    NOT NULL column whose default is the neutral value (ADDITIVE_NEUTRAL_DEFAULTS)
+    is treated the same way. Every column that existed before must still match
+    exactly, and a new column carrying any other value still counts as changed
+    legacy evidence.
     """
     if isinstance(after, dict) and isinstance(before, dict):
-        return {k: v for k, v in after.items() if k in before or v is not None}
+        return {k: v for k, v in after.items() if k in before or not _additive(k, v)}
     if isinstance(after, list) and isinstance(before, list) and len(after) == len(before):
         return [without_additive_nulls(a, b) for a, b in zip(after, before, strict=True)]
     return after
