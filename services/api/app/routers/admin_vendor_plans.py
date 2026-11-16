@@ -18,7 +18,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.core.auth import CurrentUser, get_current_user, require_role
+from app.core.auth import CurrentUser, get_current_user, require_moderator
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.ratelimit_policies import ADMIN_WRITE
 from app.deps import get_supabase_client
@@ -46,8 +46,9 @@ vendor_plan_router = APIRouter(prefix="/vendors/{vendor_id}/plan", tags=["admin-
 product_images_router = APIRouter(
     prefix="/products/{product_id}/images",
     tags=["admin-product-images"],
-    # Admins, plus rbac roles holding products.manage; not the fixed moderator role.
-    dependencies=[Depends(require_role("admin"))],
+    # Admins, moderators (catalogue moderation, like canonical status) and rbac
+    # roles holding products.manage.
+    dependencies=[Depends(require_moderator())],
 )
 
 MAX_PRICE_NGWEE = 100_000_000  # K1,000,000 / month — a typo guard, not a business rule.
