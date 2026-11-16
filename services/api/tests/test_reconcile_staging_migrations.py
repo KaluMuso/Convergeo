@@ -113,11 +113,11 @@ PENDING_REPAIR_VERSIONS = {
     "20261115200000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
     "20261115210000",
-    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
-    "20261115220000",
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 }
 
 

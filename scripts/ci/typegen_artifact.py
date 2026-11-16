@@ -74,11 +74,11 @@ POST_REPAIR_ORDER = [
     "20261115200000",
     # Event ticket integrity: sold-ticket validity, promo limit, organiser advance receivable (additive).
     "20261115210000",
-    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
-    "20261115220000",
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

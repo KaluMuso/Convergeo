@@ -126,11 +126,11 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261115200000",
     # Event ticket integrity: ticket validity, promo limit, advance receivable.
     "20261115210000",
-    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
-    "20261115220000",
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
 ]
 
 def _module() -> Any:
@@ -212,8 +212,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     ]
     pay_at_door = ["20261115200000"]
     event_integrity = ["20261115210000"]
-    unified_cart = ["20261115220000"]
     business_home = ["20261115235500", "20261115235600"]
+    unified_cart = ["20261116090000"]
     assert actual_versions[-39:] == (
         repairs
         + post_repair
@@ -230,8 +230,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + analytics_v2
         + pay_at_door
         + event_integrity
-        + unified_cart
         + business_home
+        + unified_cart
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

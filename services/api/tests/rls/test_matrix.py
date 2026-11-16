@@ -3311,7 +3311,7 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "offer_gift_reservations": client_invisible(),
-    # Unified cart (20261115220000): ticket lines are read by their cart owner
+    # Unified cart (20261116090000): ticket lines are read by their cart owner
     # (RLS-scoped SELECT); every write is service-role only like cart_items, so
     # client INSERT/UPDATE/DELETE are permission denials. Anon has no grant.
     # Session ticket holds are service-role only.
