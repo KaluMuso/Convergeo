@@ -565,8 +565,8 @@
     "20261113120500_delivery_revenue_ledger_account.sql": "76144826d81dac54f17d1a47330939751ae314acd0ae750af8bd82b63327ce72",
     "20261113130000_in_app_notifications.sql": "911bd1b5b18bcc7d02fb0ef6a48a995a79a788613fcbe995cc3ad1826c29aefa",
     "20261114050000_rate_counter_scope_constraint_sync.sql": "bab73ce25c50b29adda6ec291dc6062269cd38aea4d7e62a0b35011a96d4d472",
-    "20261115190000_coupons_gifts_birthdays.sql": "4b83483243dec687ad057cdd9622f9ab130b3081bf980a0cda2be7e239f34661",
-    "20261115190100_collection_coupon_funding.sql": "638fa24b1ae4b2d485d335cca4f44f066f714f22b4e94b720304a117b5b0c3b9"
+    "20261116100000_coupons_gifts_birthdays.sql": "4b83483243dec687ad057cdd9622f9ab130b3081bf980a0cda2be7e239f34661",
+    "20261116100100_collection_coupon_funding.sql": "638fa24b1ae4b2d485d335cca4f44f066f714f22b4e94b720304a117b5b0c3b9"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

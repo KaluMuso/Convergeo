@@ -101,9 +101,9 @@ POST_REPAIR_PENDING_VERSIONS = [
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Coupons, gift orders, birthday greetings (additive; flags default off).
-    "20261115190000",
+    "20261116100000",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).
-    "20261115190100",
+    "20261116100100",
 ]
 
 def _module() -> Any:
@@ -169,7 +169,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     money_dispatch = ["20261113120500"]
     notification_center = ["20261113130000"]
     rate_scope_sync = ["20261114050000"]
-    coupons_gifts = ["20261115190000", "20261115190100"]
+    coupons_gifts = ["20261116100000", "20261116100100"]
     assert actual_versions[-22:] == (
         repairs
         + post_repair

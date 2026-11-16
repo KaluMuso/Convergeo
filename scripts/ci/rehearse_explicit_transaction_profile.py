@@ -68,9 +68,9 @@ REVIEWED_SUFFIX = (
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive, reversible).
     "20261114050000_rate_counter_scope_constraint_sync.sql",
     # Coupons, gift orders, birthday greetings (additive; flags default off).
-    "20261115190000_coupons_gifts_birthdays.sql",
+    "20261116100000_coupons_gifts_birthdays.sql",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).
-    "20261115190100_collection_coupon_funding.sql",
+    "20261116100100_collection_coupon_funding.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

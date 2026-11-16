@@ -88,9 +88,9 @@ PENDING_REPAIR_VERSIONS = {
     # Rate-limit scope constraint re-sync: notification/checkout-group scopes (additive).
     "20261114050000",
     # Coupons, gift orders, birthday greetings (additive; flags default off).
-    "20261115190000",
+    "20261116100000",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).
-    "20261115190100",
+    "20261116100100",
 }
 
 
