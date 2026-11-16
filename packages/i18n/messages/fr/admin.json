@@ -31,7 +31,8 @@
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "Comptes admin",
-    "auditLog": "Journal d'audit"
+    "auditLog": "Journal d'audit",
+    "offers": "Offres"
   },
   "hubs": {
     "moderation": {
@@ -1417,6 +1418,71 @@
         "operatorUnsupported": "Seuls les numéros MTN et Airtel peuvent recevoir la demande.",
         "required": "La commande doit être payée avant la remise."
       }
+    }
+  },
+  "offers": {
+    "title": "Offres des vendeurs",
+    "subtitle": "Examinez les lots et offres de tous les vendeurs. Une suspension par l'administration arrête l'offre immédiatement et le vendeur ne peut pas la lever.",
+    "loading": "Chargement des offres…",
+    "error": "Impossible de charger les offres.",
+    "permissionDenied": "Vous n'avez pas accès aux offres.",
+    "permissionDeniedHint": "Demandez l'autorisation publicité à un super administrateur.",
+    "retry": "Réessayer",
+    "empty": "Aucune offre ne correspond à ces filtres.",
+    "listLabel": "Offres",
+    "truncated": "Affichage des 200 premières offres. Affinez les filtres pour voir les autres.",
+    "vendor": "Vendeur : {name}",
+    "window": "Du {starts} au {ends}",
+    "windowOpen": "À partir du {starts}, sans date de fin",
+    "perCustomer": "{count, plural, one {# utilisation par client} other {# utilisations par client}}",
+    "perCustomerUnlimited": "Pas de limite par client",
+    "giftStock": "Cadeaux : {reserved} sur {total} utilisés",
+    "note": "Note de l'administration : {note}",
+    "pausedToast": "Offre suspendue.",
+    "unpausedToast": "Suspension levée.",
+    "filters": {
+      "label": "Filtrer les offres",
+      "state": "État",
+      "status": "Statut vendeur",
+      "type": "Type",
+      "search": "Titre",
+      "searchPlaceholder": "Rechercher un titre",
+      "apply": "Rechercher",
+      "all": "Toutes"
+    },
+    "state": {
+      "live": "En cours",
+      "admin_paused": "Suspendue par l'administration",
+      "scheduled": "Programmée",
+      "ended": "Terminée"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "Active",
+      "paused": "Suspendue par le vendeur",
+      "archived": "Archivée"
+    },
+    "type": {
+      "bundle": "Lot",
+      "buy_n_pay_m": "N achetés, M payés",
+      "bxgy": "X achetés, Y offerts",
+      "free_gift": "Cadeau offert"
+    },
+    "actions": {
+      "pause": "Suspendre",
+      "unpause": "Lever la suspension",
+      "pauseTitle": "Suspendre cette offre ?",
+      "unpauseTitle": "Lever la suspension ?",
+      "pauseBody": "« {title} » ne s'applique plus aux paniers et aux paiements, immédiatement. Les commandes déjà passées gardent leur prix.",
+      "unpauseBody": "« {title} » s'appliquera de nouveau si le vendeur l'a toujours activée et si elle est dans ses dates.",
+      "noteLabel": "Note (visible des administrateurs)",
+      "notePlaceholder": "Pourquoi modifiez-vous cette offre ?",
+      "audited": "Cette action est enregistrée dans le journal d'audit.",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "confirmPause": "Suspendre l'offre",
+      "confirmUnpause": "Lever la suspension",
+      "failure": "Impossible de mettre à jour l'offre. Réessayez."
     }
   },
   "common": {

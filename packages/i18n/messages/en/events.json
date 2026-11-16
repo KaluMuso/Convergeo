@@ -114,8 +114,13 @@
       "oversell": "No longer available",
       "attendeeNamesRequired": "Enter a name for each ticket.",
       "attendeeNamesMismatch": "Enter exactly one name per ticket.",
-      "promoInvalid": "That promo code is not valid for this event."
-    }
+      "promoInvalid": "That promo code is not valid for this event.",
+      "oneEvent": "Your cart already has tickets for another event or date. Check those out first, or remove them."
+    },
+    "addToCart": "Add to cart",
+    "addingToCart": "Adding…",
+    "addedToCart": "Tickets added to your cart. Pay for them with your other items in one checkout.",
+    "viewCart": "View cart"
   },
   "wallet": {
     "title": "My tickets",

@@ -98,6 +98,8 @@ FORWARD = [
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500_business_home_offers_flag.sql",
     "20261115235600_business_home_section_flags.sql",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000_unified_cart_event_tickets.sql",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261116110000_vendor_plans.sql",
     # Shared canonical photos + sha256 dedup (additive, reversible).
@@ -474,7 +476,7 @@ class Runner:
         current = ROOT / "supabase/migrations"
         old = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in baseline.glob("*.sql")}
         new = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in current.glob("*.sql")}
-        if len(old) != 127 or len(new) != 179 or set(new) - set(old) != set(FORWARD):
+        if len(old) != 127 or len(new) != 180 or set(new) - set(old) != set(FORWARD):
             raise RuntimeError("Unexpected source-bound migration inventory")
         if any(new.get(k) != v for k, v in old.items()):
             raise RuntimeError("An accepted baseline migration was modified or removed")

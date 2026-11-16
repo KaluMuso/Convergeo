@@ -116,6 +116,8 @@ PENDING_REPAIR_VERSIONS = {
     # Business Home: offers + section flags, default off (additive, reversible).
     "20261115235500",
     "20261115235600",
+    # Unified cart slice 1: event tickets in the cart + order lanes (additive, reversible).
+    "20261116090000",
     # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
     "20261116110000",
     # Shared canonical photos + sha256 dedup (additive, reversible).

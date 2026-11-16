@@ -50,7 +50,8 @@
     "homeFeed": "Home feed",
     "advertising": "Advertising",
     "accounts": "Admin accounts",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "offers": "Offers"
   },
   "hubs": {
     "moderation": {
@@ -2285,6 +2286,71 @@
         "clipNote": "Clip views are signed-in views of 3 seconds or more. Clip orders are paid orders whose buyer added the product to the cart from the clip in the {days} days before.",
         "viewsNote": "View counters are kept per UTC day, so at the edges of a period up to two hours of views can fall on the next or previous day."
       }
+    }
+  },
+  "offers": {
+    "title": "Vendor offers",
+    "subtitle": "Review bundles and offers across vendors. An admin pause stops an offer at once and the vendor cannot lift it.",
+    "loading": "Loading offers…",
+    "error": "Could not load offers.",
+    "permissionDenied": "You do not have access to offers.",
+    "permissionDeniedHint": "Ask a super admin for the advertising permission.",
+    "retry": "Try again",
+    "empty": "No offers match these filters.",
+    "listLabel": "Offers",
+    "truncated": "Showing the first 200 offers. Narrow the filters to see the rest.",
+    "vendor": "Vendor: {name}",
+    "window": "{starts} to {ends}",
+    "windowOpen": "From {starts}, no end date",
+    "perCustomer": "{count, plural, one {# use per customer} other {# uses per customer}}",
+    "perCustomerUnlimited": "No per-customer limit",
+    "giftStock": "Gifts {reserved} of {total} used",
+    "note": "Admin note: {note}",
+    "pausedToast": "Offer paused.",
+    "unpausedToast": "Admin pause lifted.",
+    "filters": {
+      "label": "Filter offers",
+      "state": "State",
+      "status": "Vendor status",
+      "type": "Type",
+      "search": "Title",
+      "searchPlaceholder": "Search titles",
+      "apply": "Search",
+      "all": "All"
+    },
+    "state": {
+      "live": "Live",
+      "admin_paused": "Paused by admin",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused by vendor",
+      "archived": "Archived"
+    },
+    "type": {
+      "bundle": "Bundle",
+      "buy_n_pay_m": "Buy N pay M",
+      "bxgy": "Buy X get Y",
+      "free_gift": "Free gift"
+    },
+    "actions": {
+      "pause": "Pause",
+      "unpause": "Lift pause",
+      "pauseTitle": "Pause this offer?",
+      "unpauseTitle": "Lift the admin pause?",
+      "pauseBody": "“{title}” stops applying in carts and checkouts straight away. Orders already placed keep their price.",
+      "unpauseBody": "“{title}” applies again if the vendor still has it active and it is within its dates.",
+      "noteLabel": "Note (shown to admins)",
+      "notePlaceholder": "Why are you changing this offer?",
+      "audited": "This action is recorded in the audit log.",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "confirmPause": "Pause offer",
+      "confirmUnpause": "Lift pause",
+      "failure": "Could not update the offer. Try again."
     }
   },
   "productImages": {
