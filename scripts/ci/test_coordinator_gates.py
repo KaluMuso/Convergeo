@@ -104,9 +104,9 @@ class CoordinatorControls(unittest.TestCase):
 
     def test_db_only_modules_retain_blocking_owners(self) -> None:
         workflow = (gates.ROOT / ".github/workflows/ci.yml").read_text()
-        broad = re.search(r"(?ms)^  python:\n.*?(?=^  [a-z0-9-]+:)", workflow)
+        broad = re.search(r"(?ms)^  python-shard:\n.*?(?=^  [a-z0-9-]+:)", workflow)
         assert broad is not None
-        self.assertEqual(re.findall(r"--ignore=([^\s]+)", broad.group()), [
+        self.assertEqual(list(dict.fromkeys(re.findall(r"--ignore[= ](tests/\w+\.py)", broad.group()))), [
             "tests/test_authz_matrix.py", "tests/test_f1_payout_real_stack.py",
             "tests/test_vendor_stock_adjustment_db.py",
             "tests/test_merchant_review_boundaries_db.py"])
