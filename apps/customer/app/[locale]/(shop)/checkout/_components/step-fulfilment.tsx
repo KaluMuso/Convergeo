@@ -68,6 +68,24 @@ export type VendorGroupSession = {
   pickup_location: PickupLocation | null;
 };
 
+/** Unified checkout: an event-ticket line (own order, prepaid only). */
+export type CheckoutTicketLine = {
+  id: string;
+  item_type: "event_ticket";
+  event_id: string;
+  event_title: string;
+  ticket_type_id: string;
+  type_name: string;
+  instance_id: string;
+  starts_at?: string | null;
+  vendor_id: string;
+  qty: number;
+  unit_price_ngwee: number;
+  line_total_ngwee: number;
+  list_line_total_ngwee?: number | null;
+  offer_id?: string | null;
+};
+
 export type CheckoutSession = {
   session_id: string;
   expires_at: string;
@@ -75,6 +93,10 @@ export type CheckoutSession = {
   vendor_groups: VendorGroupSession[];
   subtotal_ngwee: number;
   contact_skipped: boolean;
+  ticket_lines?: CheckoutTicketLine[];
+  platform_fee_ngwee?: number;
+  total_ngwee?: number;
+  cod_allowed?: boolean;
 };
 
 export type FulfilmentStepLabels = {
@@ -213,6 +235,10 @@ export type CheckoutShellLabels = {
     nextCard: string;
     nextCod: string;
     codGuide?: ReviewStepLabels["codGuide"];
+    typeProducts?: string;
+    typeEventTickets?: string;
+    ticketLine?: string;
+    platformFee?: string;
   };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
@@ -375,6 +401,10 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       nextCard: messages.review.nextCard,
       nextCod: messages.review.nextCod,
       codGuide: messages.review.codGuide,
+      typeProducts: messages.review.typeProducts,
+      typeEventTickets: messages.review.typeEventTickets,
+      ticketLine: messages.review.ticketLine,
+      platformFee: messages.review.platformFee,
     },
     countdown: {
       label: messages.countdown.label,
@@ -480,7 +510,7 @@ function IdentityCheckoutShell({
           method: "POST",
         });
         if (!isCurrent()) return;
-        if (!response.vendor_groups.length) {
+        if (!response.vendor_groups.length && !(response.ticket_lines ?? []).length) {
           setErrorMessage(labels.error);
           started.current = false;
           return;

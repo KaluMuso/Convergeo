@@ -192,6 +192,29 @@ def _validate_payment_method(
     )
 
 
+def _session_has_tickets(service: ServiceRoleClient, session_id: str) -> bool:
+    """Unified checkout: event tickets in the session (they are prepaid only)."""
+    response = (
+        service.client.table("checkout_ticket_holds")
+        .select("id")
+        .eq("checkout_group_id", session_id)
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    return isinstance(data, list) and len(data) > 0
+
+
+def _reject_cod_for_tickets(method: str) -> None:
+    if method == "cod":
+        raise AppError(
+            code="checkout.cod_not_allowed",
+            message="Event tickets must be paid online",
+            http_status=422,
+            details={"message_key": "checkout.payment.codNotForTickets", "field": "method"},
+        )
+
+
 @router.get("/steps/payment-options", response_model=PaymentOptionsResponse)
 async def get_payment_options(
     session_id: str,
@@ -202,7 +225,8 @@ async def get_payment_options(
     group = _fetch_checkout_group(service, session_id, current_user.id)
     subtotal, delivery_fee, total = _session_totals(group)
     cod_cap = _load_cod_cap_ngwee(service)
-    cod_eligible = total <= cod_cap
+    # COD only within the cap (D9) and never for event tickets.
+    cod_eligible = total <= cod_cap and not _session_has_tickets(service, session_id)
 
     return PaymentOptionsResponse(
         session_id=session_id,
@@ -226,6 +250,9 @@ async def validate_payment_method(
     subtotal, delivery_fee, total = _session_totals(group)
     cod_cap = _load_cod_cap_ngwee(service)
 
+    has_tickets = _session_has_tickets(service, body.session_id)
+    if has_tickets:
+        _reject_cod_for_tickets(body.method)
     rail_value = body.rail
     validated_rail, validated_payer = _validate_payment_method(
         method=body.method,
@@ -252,5 +279,5 @@ async def validate_payment_method(
         delivery_fee_ngwee=delivery_fee,
         total_ngwee=total,
         cod_cap_ngwee=cod_cap,
-        cod_eligible=total <= cod_cap,
+        cod_eligible=total <= cod_cap and not has_tickets,
     )

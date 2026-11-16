@@ -2336,7 +2336,7 @@
       "edit": "Modifier",
       "archive": "Archiver",
       "giftStock": "Cadeaux restants : {available} sur {total}",
-      "notInCart": "Pour l'instant, le paiement applique les offres aux produits ; celle-ci est affichée mais pas encore appliquée."
+      "notInCart": "Le paiement applique les offres aux produits et aux billets d'événement ; les offres avec un service, ou un cadeau déclenché par un événement, sont affichées mais pas encore appliquées."
     },
     "types": {
       "bxgy": {
@@ -2411,7 +2411,10 @@
       "status": "Statut",
       "maxApplications": "Nombre max. par commande",
       "save": "Enregistrer l'offre",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "perCustomerLimit": "Utilisations par client",
+      "perCustomerLimitHint": "Nombre de commandes sur lesquelles un même client peut utiliser cette offre. Laissez vide pour ne pas limiter.",
+      "perCustomerLimitPlaceholder": "Sans limite"
     },
     "status": {
       "draft": "Brouillon",
@@ -2451,7 +2454,8 @@
       "tooManyActive": "Vous avez atteint la limite d'offres actives.",
       "giftStockBelowReserved": "Le stock de cadeaux ne peut pas descendre sous les cadeaux déjà promis.",
       "typeImmutable": "Le type d'offre ne peut pas être modifié.",
-      "rateLimited": "Trop de modifications. Patientez une minute et réessayez."
+      "rateLimited": "Trop de modifications. Patientez une minute et réessayez.",
+      "perCustomerLimitInvalid": "Saisissez un nombre entier de 1 à 1 000, ou laissez vide."
     }
   }
 }

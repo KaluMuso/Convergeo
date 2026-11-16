@@ -41,6 +41,10 @@ import {
   buildVendorLadderLabels,
   vendorTrustRibbon,
 } from "../../_components/directory/vendor-ladder-labels";
+import {
+  buildOfferBadgeLabels,
+  type OfferBadge,
+} from "../../_components/offers/offer-badge";
 import { catalogDeliveryLabels } from "../../_components/plp/delivery-labels";
 import { catalogLogisticsLabels } from "../../_components/plp/logistics-pills";
 
@@ -97,6 +101,8 @@ type VendorProfileApiResponse = {
     pickup_available?: boolean;
     other_offers_count?: number;
     other_min_price_ngwee?: number | null;
+    /** W8 live offer (flag `bundles`), attached server-side by the API. */
+    offer_badge?: OfferBadge | null;
   }>;
   services: Array<{
     id: string;
@@ -138,7 +144,9 @@ type DirectoryTranslator = {
   raw: (key: string) => unknown;
 };
 
-async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getDirectoryTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
   const messages = {
@@ -153,7 +161,9 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
   }) as unknown as DirectoryTranslator;
 }
 
-async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
+async function getCatalogTranslator(
+  locale: string,
+): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
@@ -168,7 +178,9 @@ async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator
   }) as unknown as DirectoryTranslator;
 }
 
-async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
+async function fetchVendorProfile(
+  slug: string,
+): Promise<VendorProfileApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
     if (!url) {
@@ -213,7 +225,9 @@ function buildVendorJsonLd(
   });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
@@ -289,12 +303,19 @@ function VendorServicesGrid({
             ) : null}
           </div>
           <div className="space-y-1 p-3">
-            <p className="truncate text-sm font-medium text-text">{service.title}</p>
-            <p className="text-sm font-semibold text-text" data-testid="service-price">
+            <p className="truncate text-sm font-medium text-text">
+              {service.title}
+            </p>
+            <p
+              className="text-sm font-semibold text-text"
+              data-testid="service-price"
+            >
               {servicePriceLine(service, labels)}
             </p>
             {service.service_area ? (
-              <p className="truncate text-xs text-text-2">{labels.area(service.service_area)}</p>
+              <p className="truncate text-xs text-text-2">
+                {labels.area(service.service_area)}
+              </p>
             ) : null}
           </div>
         </Link>
@@ -330,7 +351,9 @@ function VendorEventsGrid({
             ) : null}
           </div>
           <div className="p-3">
-            <p className="truncate text-sm font-medium text-text">{event.title}</p>
+            <p className="truncate text-sm font-medium text-text">
+              {event.title}
+            </p>
           </div>
         </Link>
       ))}
@@ -362,7 +385,13 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
+  const {
+    vendor,
+    listings,
+    services,
+    events,
+    reviews_summary: reviews,
+  } = profile;
   const clips = profile.clips ?? [];
   const offers = profile.offers ?? [];
   const show = visibleSections({
@@ -383,7 +412,8 @@ export default async function VendorProfilePage({ params }: PageProps) {
   );
   const compareLabels = {
     count: (count: number) => t("profile.home.compareOthers", { count }),
-    from: (priceNgwee: number) => t("profile.home.compareFrom", { price: formatK(priceNgwee) }),
+    from: (priceNgwee: number) =>
+      t("profile.home.compareFrom", { price: formatK(priceNgwee) }),
     aria: (title: string) => t("profile.home.compareAria", { title }),
   };
   // Commercial tier (Bronze…Platinum) is a vendor plan — never shown to buyers.
@@ -418,6 +448,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
       otherMinPriceNgwee: listing.other_min_price_ngwee ?? null,
       labels: compareLabels,
     }),
+    offerBadge: listing.offer_badge ?? undefined,
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
@@ -451,6 +482,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             conditionUsed: tCatalog("plp.card.conditionUsed"),
             logistics: catalogLogisticsLabels(tCatalog),
             delivery: catalogDeliveryLabels((key) => tCatalog.raw(key)),
+            offerBadge: buildOfferBadgeLabels((key) => tCatalog.raw(key)),
           }}
         />
       ),
@@ -492,7 +524,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
     : null;
 
   const branchSource =
-    vendor.locations.length > 0 ? vendor.locations : vendor.location ? [vendor.location] : [];
+    vendor.locations.length > 0
+      ? vendor.locations
+      : vendor.location
+        ? [vendor.location]
+        : [];
   const branches: BusinessBranch[] = branchSource.map((branch) => ({
     landmark: branch.landmark,
     lat: branch.lat,
@@ -565,14 +601,18 @@ export default async function VendorProfilePage({ params }: PageProps) {
               <h1 className="m-0 font-display text-h1 font-bold text-display-ink">
                 {vendor.display_name}
               </h1>
-              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
+              <CornerRibbon
+                trust={trustRibbon.trust}
+                trustLabel={trustRibbon.trustLabel}
+              />
             </div>
             <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-2">
               {hasRating ? (
                 <span className="font-semibold text-text">
                   ★ {reviews.rating_avg?.toFixed(1)}{" "}
                   <span className="font-normal text-text-2">
-                    ({reviews.rating_count} {t("profile.statReviews").toLowerCase()})
+                    ({reviews.rating_count}{" "}
+                    {t("profile.statReviews").toLowerCase()})
                   </span>
                 </span>
               ) : null}
@@ -650,7 +690,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
         </div>
       </header>
 
-      <StorySection heading={t("profile.home.storyHeading")} story={vendor.description} />
+      <StorySection
+        heading={t("profile.home.storyHeading")}
+        story={vendor.description}
+      />
 
       <ClipsRow
         locale={locale}
@@ -668,9 +711,10 @@ export default async function VendorProfilePage({ params }: PageProps) {
           title: offer.title,
           endsLabel: offer.ends_at
             ? t("profile.home.offersEnds", {
-                date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(
-                  new Date(offer.ends_at),
-                ),
+                date: new Intl.DateTimeFormat(locale, {
+                  day: "numeric",
+                  month: "short",
+                }).format(new Date(offer.ends_at)),
               })
             : null,
         }))}
@@ -678,7 +722,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
       />
 
       {offeringTabs.length > 0 ? (
-        <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} mountInactivePanels />
+        <Tabs
+          items={offeringTabs}
+          ariaLabel={t("profile.offeringsAria")}
+          mountInactivePanels
+        />
       ) : null}
 
       <ReviewsSection
@@ -702,7 +750,8 @@ export default async function VendorProfilePage({ params }: PageProps) {
           directions: t("profile.home.directions"),
           directionsTo: (place) => t("profile.home.directionsTo", { place }),
           hoursNotShared: t("profile.home.hoursNotShared"),
-          hoursRange: (opens, closes) => t("profile.home.hoursRange", { opens, closes }),
+          hoursRange: (opens, closes) =>
+            t("profile.home.hoursRange", { opens, closes }),
           day: (day) => t(`profile.home.${dayKey[day]}`),
           open: t("profile.home.openNow"),
           closed: t("profile.home.closedNow"),
