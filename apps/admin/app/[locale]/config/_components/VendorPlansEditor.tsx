@@ -11,6 +11,9 @@ import { ConfirmDiffDialog } from "./ConfirmDiffDialog";
 import {
   ANALYTICS_DEPTHS,
   EMPTY_DRAFT,
+  INTEGRATIONS_LEVELS,
+  PAYOUT_SPEEDS,
+  SUPPORT_LEVELS,
   UUID_RE,
   draftToPayload,
   isValidPlanKey,
@@ -57,6 +60,40 @@ function DraftFields({ draft, onChange, idPrefix }: DraftFieldsProps) {
       />
     </label>
   );
+  const choice = (
+    key: "integrationsLevel" | "payoutSpeed" | "supportLevel",
+    options: readonly string[],
+    group: string,
+  ) => (
+    <label className="flex flex-col gap-1 text-xs text-text-2" htmlFor={`${idPrefix}-${key}`}>
+      {t(`vendorPlans.fields.${key}`)}
+      <select
+        id={`${idPrefix}-${key}`}
+        className={INPUT}
+        value={draft[key]}
+        onChange={(event) => onChange({ ...draft, [key]: event.target.value })}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {t(`vendorPlans.${group}.${option}`)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const toggle = (
+    key: "officialStoreBadge" | "clickAndCollect" | "multiBranchStock",
+    label: string,
+  ) => (
+    <label className="flex min-h-11 items-center gap-2 text-sm text-text">
+      <input
+        type="checkbox"
+        checked={draft[key]}
+        onChange={(event) => onChange({ ...draft, [key]: event.target.checked })}
+      />
+      {label}
+    </label>
+  );
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {field("name", t("vendorPlans.fields.name"))}
@@ -92,6 +129,17 @@ function DraftFields({ draft, onChange, idPrefix }: DraftFieldsProps) {
         />
         {t("vendorPlans.fields.wholesaleTools")}
       </label>
+      {field("includedShops", t("vendorPlans.fields.includedShops"), "numeric")}
+      {field("extraShopPrice", t("vendorPlans.fields.extraShopPrice"), "decimal")}
+      {field("staffSeats", t("vendorPlans.fields.staffSeats"), "numeric")}
+      {field("broadcasts", t("vendorPlans.fields.broadcasts"), "numeric")}
+      {field("adCredit", t("vendorPlans.fields.adCredit"), "decimal")}
+      {choice("integrationsLevel", INTEGRATIONS_LEVELS, "integrations")}
+      {choice("payoutSpeed", PAYOUT_SPEEDS, "payoutSpeed")}
+      {choice("supportLevel", SUPPORT_LEVELS, "support")}
+      {toggle("officialStoreBadge", t("vendorPlans.fields.officialStoreBadge"))}
+      {toggle("clickAndCollect", t("vendorPlans.fields.clickAndCollect"))}
+      {toggle("multiBranchStock", t("vendorPlans.fields.multiBranchStock"))}
       <label className="flex min-h-11 items-center gap-2 text-sm text-text">
         <input
           type="checkbox"

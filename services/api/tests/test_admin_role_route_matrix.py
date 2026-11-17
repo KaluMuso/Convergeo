@@ -113,6 +113,15 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
     ),
     "vendors.manage": frozenset(
         {
+            # Multi-branch review (#807): mapped to vendors.manage in auth.py.
+            "GET /admin/branches",
+            "GET /admin/branches/flags",
+            "GET /admin/branches/{branch_id}",
+            "POST /admin/branches/businesses/{business_id}/pacra",
+            "POST /admin/branches/flags/{flag_id}/resolve",
+            "POST /admin/branches/{branch_id}/approve",
+            "POST /admin/branches/{branch_id}/reject",
+            "POST /admin/branches/{branch_id}/request-info",
             "GET /admin/business",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",

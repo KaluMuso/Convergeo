@@ -2,6 +2,27 @@ import { ngweeToKwachaInput, parseKwachaToNgwee } from "../../home-feed/_compone
 
 export const ANALYTICS_DEPTHS = ["basic", "standard", "advanced"] as const;
 export type AnalyticsDepth = (typeof ANALYTICS_DEPTHS)[number];
+export const INTEGRATIONS_LEVELS = ["none", "basic", "sheets_webhooks", "api"] as const;
+export const PAYOUT_SPEEDS = ["standard", "fast", "priority"] as const;
+export const SUPPORT_LEVELS = ["community", "standard", "priority", "dedicated"] as const;
+export type IntegrationsLevel = (typeof INTEGRATIONS_LEVELS)[number];
+export type PayoutSpeed = (typeof PAYOUT_SPEEDS)[number];
+export type SupportLevel = (typeof SUPPORT_LEVELS)[number];
+
+/** Multi-branch entitlements (shops + staff seats enforced; the rest stored). */
+export type PlanEntitlements = {
+  included_shops: number | null;
+  extra_shop_price_ngwee: number | null;
+  staff_seats: number | null;
+  whatsapp_broadcasts_per_month: number;
+  integrations_level: IntegrationsLevel;
+  ad_credit_ngwee: number;
+  payout_speed: PayoutSpeed;
+  support_level: SupportLevel;
+  official_store_badge: boolean;
+  click_and_collect: boolean;
+  multi_branch_stock: boolean;
+};
 
 export type VendorPlan = {
   key: string;
@@ -16,7 +37,7 @@ export type VendorPlan = {
   active: boolean;
   position: number;
   vendor_count: number;
-};
+} & Partial<PlanEntitlements>;
 
 export type VendorPlanDetail = {
   vendor_id: string;
@@ -53,9 +74,23 @@ export type PlanDraft = {
   analyticsDepth: AnalyticsDepth;
   wholesaleTools: boolean;
   active: boolean;
+  /** Empty = unlimited shops. */
+  includedShops: string;
+  /** Kwacha; empty = extra shops not sold. */
+  extraShopPrice: string;
+  /** Empty = unlimited seats. */
+  staffSeats: string;
+  broadcasts: string;
+  integrationsLevel: IntegrationsLevel;
+  adCredit: string;
+  payoutSpeed: PayoutSpeed;
+  supportLevel: SupportLevel;
+  officialStoreBadge: boolean;
+  clickAndCollect: boolean;
+  multiBranchStock: boolean;
 };
 
-export type PlanPayload = {
+export type PlanPayload = PlanEntitlements & {
   name: string;
   price_ngwee: number;
   max_listings: number | null;
@@ -72,7 +107,12 @@ export type DraftError =
   | "priceInvalid"
   | "listingsInvalid"
   | "imagesInvalid"
-  | "slotsInvalid";
+  | "slotsInvalid"
+  | "shopsInvalid"
+  | "extraShopPriceInvalid"
+  | "seatsInvalid"
+  | "broadcastsInvalid"
+  | "adCreditInvalid";
 
 export const EMPTY_DRAFT: PlanDraft = {
   key: "",
@@ -84,6 +124,17 @@ export const EMPTY_DRAFT: PlanDraft = {
   analyticsDepth: "basic",
   wholesaleTools: false,
   active: true,
+  includedShops: "1",
+  extraShopPrice: "",
+  staffSeats: "0",
+  broadcasts: "0",
+  integrationsLevel: "none",
+  adCredit: "0",
+  payoutSpeed: "standard",
+  supportLevel: "standard",
+  officialStoreBadge: false,
+  clickAndCollect: false,
+  multiBranchStock: false,
 };
 
 export function planToDraft(plan: VendorPlan): PlanDraft {
@@ -97,6 +148,20 @@ export function planToDraft(plan: VendorPlan): PlanDraft {
     analyticsDepth: plan.analytics_depth,
     wholesaleTools: plan.wholesale_tools,
     active: plan.active,
+    includedShops: plan.included_shops === null ? "" : String(plan.included_shops ?? 1),
+    extraShopPrice:
+      plan.extra_shop_price_ngwee === null || plan.extra_shop_price_ngwee === undefined
+        ? ""
+        : ngweeToKwachaInput(plan.extra_shop_price_ngwee),
+    staffSeats: plan.staff_seats === null ? "" : String(plan.staff_seats ?? 0),
+    broadcasts: String(plan.whatsapp_broadcasts_per_month ?? 0),
+    integrationsLevel: plan.integrations_level ?? "none",
+    adCredit: ngweeToKwachaInput(plan.ad_credit_ngwee ?? 0),
+    payoutSpeed: plan.payout_speed ?? "standard",
+    supportLevel: plan.support_level ?? "standard",
+    officialStoreBadge: plan.official_store_badge ?? false,
+    clickAndCollect: plan.click_and_collect ?? false,
+    multiBranchStock: plan.multi_branch_stock ?? false,
   };
 }
 
@@ -122,6 +187,27 @@ export function draftToPayload(
   if (maxImages === null) return { ok: false, error: "imagesInvalid" };
   const slots = wholeNumber(draft.featuredSlots, 0, 100);
   if (slots === null) return { ok: false, error: "slotsInvalid" };
+  let includedShops: number | null = null;
+  if (draft.includedShops.trim() !== "") {
+    includedShops = wholeNumber(draft.includedShops, 1, 10_000);
+    if (includedShops === null) return { ok: false, error: "shopsInvalid" };
+  }
+  let extraShopPrice: number | null = null;
+  if (draft.extraShopPrice.trim() !== "") {
+    extraShopPrice = parseKwachaToNgwee(draft.extraShopPrice);
+    if (extraShopPrice === null || extraShopPrice > 100_000_000) {
+      return { ok: false, error: "extraShopPriceInvalid" };
+    }
+  }
+  let staffSeats: number | null = null;
+  if (draft.staffSeats.trim() !== "") {
+    staffSeats = wholeNumber(draft.staffSeats, 0, 10_000);
+    if (staffSeats === null) return { ok: false, error: "seatsInvalid" };
+  }
+  const broadcasts = wholeNumber(draft.broadcasts, 0, 10_000_000);
+  if (broadcasts === null) return { ok: false, error: "broadcastsInvalid" };
+  const adCredit = parseKwachaToNgwee(draft.adCredit);
+  if (adCredit === null || adCredit > 100_000_000) return { ok: false, error: "adCreditInvalid" };
   return {
     ok: true,
     payload: {
@@ -133,6 +219,17 @@ export function draftToPayload(
       analytics_depth: draft.analyticsDepth,
       wholesale_tools: draft.wholesaleTools,
       active: draft.active,
+      included_shops: includedShops,
+      extra_shop_price_ngwee: extraShopPrice,
+      staff_seats: staffSeats,
+      whatsapp_broadcasts_per_month: broadcasts,
+      integrations_level: draft.integrationsLevel,
+      ad_credit_ngwee: adCredit,
+      payout_speed: draft.payoutSpeed,
+      support_level: draft.supportLevel,
+      official_store_badge: draft.officialStoreBadge,
+      click_and_collect: draft.clickAndCollect,
+      multi_branch_stock: draft.multiBranchStock,
     },
   };
 }

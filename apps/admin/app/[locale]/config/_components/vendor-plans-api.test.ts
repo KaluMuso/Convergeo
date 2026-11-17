@@ -23,6 +23,17 @@ const STARTER: VendorPlan = {
   active: true,
   position: 1,
   vendor_count: 3,
+  included_shops: 1,
+  extra_shop_price_ngwee: 9900,
+  staff_seats: 2,
+  whatsapp_broadcasts_per_month: 100,
+  integrations_level: "basic",
+  ad_credit_ngwee: 0,
+  payout_speed: "standard",
+  support_level: "standard",
+  official_store_badge: false,
+  click_and_collect: true,
+  multi_branch_stock: false,
 };
 
 describe("draftToPayload", () => {
@@ -116,5 +127,43 @@ describe("overrideToPayload", () => {
     [{ maxListings: "10", reason: "  " }, "reasonRequired"],
   ])("rejects %o with %s", (patch, error) => {
     expect(overrideToPayload({ ...base, ...patch }, now)).toEqual({ ok: false, error });
+  });
+});
+
+describe("multi-branch entitlements", () => {
+  it("round-trips unlimited shops / seats and an extra-shop add-on price in ngwee", () => {
+    const result = draftToPayload({
+      ...EMPTY_DRAFT,
+      name: "Chain",
+      includedShops: "5",
+      extraShopPrice: "150",
+      staffSeats: "",
+      adCredit: "500",
+      integrationsLevel: "api",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.payload.included_shops).toBe(5);
+    expect(result.payload.extra_shop_price_ngwee).toBe(15000);
+    expect(result.payload.staff_seats).toBeNull();
+    expect(result.payload.ad_credit_ngwee).toBe(50000);
+    expect(result.payload.integrations_level).toBe("api");
+  });
+
+  it("treats an empty extra-shop price as 'not sold' and rejects bad values", () => {
+    const notSold = draftToPayload({ ...EMPTY_DRAFT, name: "Free", extraShopPrice: "" });
+    expect(notSold.ok && notSold.payload.extra_shop_price_ngwee).toBeNull();
+    expect(draftToPayload({ ...EMPTY_DRAFT, name: "X", includedShops: "0" })).toEqual({
+      ok: false,
+      error: "shopsInvalid",
+    });
+    expect(draftToPayload({ ...EMPTY_DRAFT, name: "X", extraShopPrice: "abc" })).toEqual({
+      ok: false,
+      error: "extraShopPriceInvalid",
+    });
+    expect(draftToPayload({ ...EMPTY_DRAFT, name: "X", staffSeats: "-1" })).toEqual({
+      ok: false,
+      error: "seatsInvalid",
+    });
   });
 });

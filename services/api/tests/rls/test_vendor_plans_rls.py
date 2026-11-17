@@ -120,10 +120,13 @@ def test_inactive_plan_hidden_from_vendors_visible_to_admin(seeded: PgConn) -> N
     sql = f"SELECT count(*) FROM public.vendor_plans WHERE key = '{HIDDEN_PLAN}'"
     assert _value(_q(_as(seeded, Persona.VENDOR), sql)) == "0"
     assert _value(_q(_as(seeded, Persona.ADMIN), sql)) == "1"
+    # 20261117000000 ladder: Pro is merged into Business (inactive, admin-only).
     active = (
-        "SELECT count(*) FROM public.vendor_plans WHERE key IN ('free','starter','business','pro')"
+        "SELECT count(*) FROM public.vendor_plans WHERE key IN "
+        "('free','starter','business','chain','enterprise','enterprise_plus','pro')"
     )
-    assert _value(_q(_as(seeded, Persona.VENDOR), active)) == "4"
+    assert _value(_q(_as(seeded, Persona.VENDOR), active)) == "6"
+    assert _value(_q(_as(seeded, Persona.ADMIN), active)) == "7"
 
 
 @pytest.mark.parametrize(

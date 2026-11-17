@@ -125,7 +125,11 @@
       "serviceQuote": "Ipusheni umutengo",
       "serviceArea": "Serves {area}",
       "browseOtherShops": "See other shops like this"
-    }
+    },
+    "otherBranches": "Other branches",
+    "otherBranchesAria": "Other branches of {name}",
+    "partOfBusiness": "Part of {name}",
+    "branchWithLandmark": "{name} · {landmark}"
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",

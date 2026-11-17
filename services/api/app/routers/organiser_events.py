@@ -11,6 +11,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.events.access import hash_access_code
 from app.services.events.cancellation import process_event_cancellation
 from app.services.events.recurrence import RecurrenceError, materialize_recurrence_instances
@@ -463,9 +464,10 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select("id, owner_user_id, status, kyc_tier")
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

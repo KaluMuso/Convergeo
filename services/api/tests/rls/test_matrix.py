@@ -3401,6 +3401,32 @@ EXPECTATIONS: TableExpectations = {
     # Shared canonical product photos (20261116110100): public read of ACTIVE
     # products' photos (same visibility as the product); no client writes.
     "product_images": {persona: select_only() for persona in Persona},
+    # Multi-branch businesses (20261117000000). Clients read only: owners their
+    # OWN businesses / branch evidence / history / staff; duplicate flags are
+    # admin-only rows (row isolation in test_multi_branch_rls.py). Every write is
+    # API-only (service role + transition_vendor_branch). Anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "vendor_businesses",
+            "vendor_branch_evidence",
+            "vendor_branch_events",
+            "vendor_branch_flags",
+            "vendor_business_staff",
+        )
+    },
     # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.
     "privacy_consents": {

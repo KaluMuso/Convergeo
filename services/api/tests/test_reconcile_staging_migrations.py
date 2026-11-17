@@ -127,6 +127,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261116110100",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
     "20261116130000",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000",
 }
 
 

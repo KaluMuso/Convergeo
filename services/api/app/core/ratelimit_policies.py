@@ -372,6 +372,21 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PUT /products/{product_id}/relations": ADMIN_WRITE,
     # Vendor plans + canonical product photos (admin sub-routers, un-prefixed
     # keys). Enforced in-router (admin_vendor_plans._limit, keyed by admin id).
+    # Multi-branch businesses (flag multi_branch). Enforced in-router: vendor
+    # routes keyed by the owner (vendor_branches._limit), admin routes by the
+    # acting admin (admin_branches._limit, un-prefixed admin keys).
+    "PATCH /vendor/businesses/{business_id}": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/branches": SENSITIVE_WRITE,
+    "POST /vendor/businesses/{business_id}/evidence/sign": SENSITIVE_WRITE,
+    "PUT /vendor/businesses/{business_id}/branches/{branch_id}/evidence": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/branches/{branch_id}/submit": STANDARD_WRITE,
+    "POST /vendor/businesses/{business_id}/staff": SENSITIVE_WRITE,
+    "DELETE /vendor/businesses/{business_id}/staff/{staff_id}": STANDARD_WRITE,
+    "POST /branches/{branch_id}/approve": ADMIN_WRITE,
+    "POST /branches/{branch_id}/request-info": ADMIN_WRITE,
+    "POST /branches/{branch_id}/reject": ADMIN_WRITE,
+    "POST /branches/flags/{flag_id}/resolve": ADMIN_WRITE,
+    "POST /branches/businesses/{business_id}/pacra": ADMIN_WRITE,
     "POST /vendor-plans": ADMIN_WRITE,
     "PATCH /vendor-plans/{plan_key}": ADMIN_WRITE,
     "DELETE /vendor-plans/{plan_key}": ADMIN_WRITE,
