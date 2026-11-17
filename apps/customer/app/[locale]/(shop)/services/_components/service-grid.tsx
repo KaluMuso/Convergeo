@@ -11,6 +11,7 @@ export type ServiceBrowseItem = {
   description: string | null;
   service_area: string | null;
   from_price_ngwee: number | null;
+  is_free?: boolean;
   portfolio_images: string[];
   provider: {
     id: string;
@@ -30,6 +31,7 @@ type ServiceGridProps = {
     askForQuote: string;
     badges: Record<string, string>;
     preferredBadge: string;
+    free?: string;
   };
 };
 
@@ -71,6 +73,9 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
               )}
               <div className="flex flex-1 flex-col gap-1.5 p-3.5">
                 <div className="flex flex-wrap items-center gap-2">
+                  {item.is_free && labels.free ? (
+                    <Badge variant="free" label={labels.free} />
+                  ) : null}
                   {tier ? (
                     <Badge
                       variant={badgeVariant(tier)}
@@ -112,12 +117,14 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                 ) : null}
                 <div className="mt-auto flex items-end justify-between gap-2 pt-2">
                   <p className="m-0 font-display text-body font-bold text-text">
-                    {item.from_price_ngwee
-                      ? labels.fromPrice.replace(
-                          "{price}",
-                          formatK(item.from_price_ngwee),
-                        )
-                      : labels.askForQuote}
+                    {item.is_free && labels.free
+                      ? labels.free
+                      : item.from_price_ngwee
+                        ? labels.fromPrice.replace(
+                            "{price}",
+                            formatK(item.from_price_ngwee),
+                          )
+                        : labels.askForQuote}
                   </p>
                   <span className="inline-flex min-h-9 shrink-0 items-center rounded-pill bg-primary-tint px-3 text-sm font-semibold text-primary-deep group-hover:bg-primary group-hover:text-[var(--primary-btn-fg)]">
                     {labels.viewService}

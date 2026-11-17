@@ -22,6 +22,7 @@ export function resolveAdminNavCapabilities(
     // Analytics dashboards: operational tabs need analytics.read, money tabs finance.read (D3).
     analytics: any("analytics.read", "finance.read", "finance.operate"),
     kyc: has("vendors.manage"),
+    branches: has("vendors.manage"),
     moderation: has("products.manage"),
     disputes: any("finance.operate", "support.manage"),
     support: has("support.manage"),

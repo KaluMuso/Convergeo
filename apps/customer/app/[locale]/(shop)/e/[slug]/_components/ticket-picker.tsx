@@ -132,6 +132,7 @@ export function TicketPicker({
   const [addedToCart, setAddedToCart] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [goingHref, setGoingHref] = useState<string | null>(null);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   const upcomingInstances = useMemo(
@@ -305,9 +306,13 @@ export function TicketPicker({
           ? (payload as { redirect_to: string }).redirect_to
           : null;
 
-      setMessage(
-        selectedType.is_free ? t("successRsvp") : t("successCheckout"),
-      );
+      if (selectedType.is_free) {
+        // RSVP is idempotent server-side; show "You're going" instead of a redirect.
+        setGoingHref(redirectTo ? `/${locale}${redirectTo}` : null);
+        setMessage(t("successRsvp"));
+        return;
+      }
+      setMessage(t("successCheckout"));
       if (redirectTo) {
         window.location.assign(`/${locale}${redirectTo}`);
       }
@@ -615,6 +620,22 @@ export function TicketPicker({
         </p>
       ) : null}
 
+      {goingHref !== null || (selectedType?.is_free && message) ? (
+        <p
+          className="w-full rounded-md bg-success/10 py-3 text-center font-semibold text-success"
+          role="status"
+        >
+          {t("going")}
+          {goingHref ? (
+            <>
+              {" · "}
+              <a className="underline" href={goingHref}>
+                {t("viewTicket")}
+              </a>
+            </>
+          ) : null}
+        </p>
+      ) : (
       <Button
         type="button"
         variant="primary"
@@ -628,6 +649,7 @@ export function TicketPicker({
       >
         {selectedType?.is_free ? t("freeRsvpCta") : t("payCta")}
       </Button>
+      )}
 
       {selectedType && !selectedType.is_free ? (
         <Button

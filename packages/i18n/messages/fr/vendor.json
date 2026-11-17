@@ -384,7 +384,9 @@
       "uploading": "Envoi en cours…",
       "upload_failed": "Échec de l'envoi",
       "minimum_required": "Au moins {count} photo justificative doit rester jointe tant que cette annonce est publiée.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "duplicate": "Cette photo figure déjà sur l'annonce.",
+      "dedupCanonical": "Cette photo est déjà la photo principale du produit : les acheteurs la voient sur votre annonce. Inutile de la téléverser à nouveau."
     },
     "meta": {
       "title": "Créer une annonce — Vendeur Convergeo",
@@ -1996,7 +1998,9 @@
       "attendeeNamedBadge": "Noms requis",
       "perksLabel": "Avantages (facultatif)",
       "perksHelp": "Affichés à l'acheteur — lounge, goodies, jetons boisson. Laissez vide s'il n'y en a pas.",
-      "perksPlaceholder": "ex. Inclut un jeton boisson"
+      "perksPlaceholder": "ex. Inclut un jeton boisson",
+      "isFreeLabel": "C'est gratuit",
+      "isFreeHint": "Les invités réservent sans payer. Ils reçoivent quand même un billet QR et la capacité s'applique."
     },
     "actions": {
       "save": "Enregistrer le type",
@@ -2525,6 +2529,159 @@
         "listing": "Cette annonce n'est pas dans votre boutique.",
         "archived": "Un coupon terminé ne peut pas reprendre. Créez-en un nouveau."
       }
+    }
+  },
+  "plans": {
+    "heading": "Votre formule : {name}",
+    "free": "Gratuit",
+    "perMonth": "{price}/mois",
+    "usage": "{count} annonces utilisées sur {max}",
+    "usageUnlimited": "{count} annonces · sans limite",
+    "kycLimit": "Vous avez atteint la limite d'annonces de votre niveau de vérification. Faites vérifier votre entreprise pour en publier davantage.",
+    "atLimit": "Vous avez utilisé toutes les annonces de votre formule.",
+    "overLimit": "Vous avez plus d'annonces que votre formule ne le permet.",
+    "keepSelling": "Rien n'a été supprimé : vos annonces restent en ligne, et vous pouvez continuer à les modifier et à ajouter du stock. Pour ajouter de nouveaux produits, passez à une formule supérieure.",
+    "option": "{name} : {max} annonces pour {price}/mois",
+    "optionUnlimited": "{name} : annonces illimitées pour {price}/mois",
+    "howToUpgrade": "Pour changer de formule, écrivez à notre équipe. Aucun prélèvement automatique.",
+    "limitReachedShort": "Vous avez atteint votre limite d'annonces. Vos annonces existantes restent en ligne ; consultez votre formule ci-dessus pour évoluer.",
+    "limitReached": "Vous avez atteint la limite d'annonces de votre formule. Vos annonces restent en ligne ; passez à une formule supérieure pour en ajouter.",
+    "photoLimitReached": "Votre formule autorise {max} photos par annonce. Passez à une formule supérieure pour en ajouter.",
+    "billingUnavailable": "Le paiement des formules n'est pas encore disponible. Notre équipe vous aidera à changer de formule."
+  },
+  "branches": {
+    "title": "Mes entreprises et boutiques",
+    "intro": "Gérez toutes les succursales de votre entreprise depuis un seul compte. Chaque boutique a sa vitrine, son stock, son numéro de paiement et son forfait.",
+    "loading": "Chargement de vos entreprises…",
+    "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
+    "primary": "Boutique principale",
+    "acting": "Vous travaillez ici",
+    "payoutHold": "Les versements de cette boutique sont suspendus jusqu'à ce que notre équipe vérifie le numéro MoMo partagé.",
+    "reviewNote": "Note de notre équipe : {note}",
+    "ownerKycNeeded": "Terminez la vérification du propriétaire (KYC) avant d'ajouter des boutiques.",
+    "switcher": {
+      "label": "Boutique en cours",
+      "withStatus": "{name} ({status})",
+      "manage": "Mes boutiques"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "pending_review": "En vérification",
+      "info_requested": "Infos demandées",
+      "approved": "En ligne",
+      "rejected": "Refusée"
+    },
+    "allowance": {
+      "used": "{used} boutiques sur {limit}",
+      "usedUnlimited": "{used} boutiques",
+      "blockedUnregistered": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez votre enregistrement PACRA pour en ouvrir d'autres.",
+      "blockedPlan": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur pour ajouter une succursale.",
+      "nextAddon": "Boutique suivante : option à {price}/mois",
+      "nextIncluded": "La boutique suivante est incluse dans votre forfait"
+    },
+    "staff": {
+      "seats": "Places employés : {used} sur {seats}",
+      "unlimited": "Places employés : {used} (illimité)"
+    },
+    "registration": {
+      "title": "Enregistrement de l'entreprise (PACRA)",
+      "help": "Les entreprises enregistrées peuvent ouvrir plusieurs boutiques. Nous vérifions le numéro et le certificat PACRA.",
+      "typeLabel": "Enregistrement",
+      "company": "Société enregistrée",
+      "business_name": "Nom commercial enregistré",
+      "unregistered": "Non enregistré (commerçant de marché)",
+      "unspecified": "Enregistrement non renseigné",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA vérifié",
+      "pacraNumber": "Numéro PACRA",
+      "certificate": "Photo du certificat",
+      "unregisteredNote": "Les commerçants non enregistrés sont limités à une boutique.",
+      "save": "Enregistrer",
+      "saved": "Enregistrement sauvegardé."
+    },
+    "actions": {
+      "addShop": "Ajouter une boutique/succursale",
+      "workHere": "Travailler dans cette boutique",
+      "submit": "Envoyer pour vérification",
+      "submitting": "Envoi…",
+      "saving": "Enregistrement…",
+      "createShop": "Créer la boutique"
+    },
+    "evidence": {
+      "help": "Pour une boutique physique, il nous faut une photo de la devanture et une preuve d'occupation des locaux.",
+      "onlineHelp": "Une boutique en ligne n'a pas besoin de preuve de locaux. Envoyez-la pour vérification quand elle est prête.",
+      "storefront_photo": "Photo de la devanture",
+      "premises_proof": "Preuve des locaux",
+      "uploaded": "envoyée",
+      "proofType": "Type de preuve",
+      "proof": {
+        "lease": "Contrat de bail",
+        "utility_bill": "Facture d'eau ou d'électricité",
+        "council_permit": "Permis commercial municipal"
+      }
+    },
+    "form": {
+      "title": "Ajouter une boutique/succursale",
+      "intro": "Chaque succursale a sa vitrine, son stock, son numéro de paiement et son forfait. Notre équipe la vérifie avant sa mise en ligne.",
+      "shop": "Boutique",
+      "name": "Nom de la boutique",
+      "kind": "Type",
+      "kindPhysical": "Boutique physique",
+      "kindOnline": "En ligne uniquement",
+      "location": "Emplacement",
+      "useMyLocation": "Utiliser ma position",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "landmark": "Point de repère",
+      "landmarkHelp": "Par exemple : en face de la station Total, Great East Road.",
+      "address": "Adresse (facultatif)",
+      "mapUrl": "Lien de carte (facultatif, https)",
+      "opens": "Ouverture",
+      "closes": "Fermeture",
+      "sundayClosed": "Fermé le dimanche",
+      "contacts": "Contacts",
+      "phone": "Téléphone de la boutique",
+      "whatsapp": "Numéro WhatsApp (facultatif)",
+      "email": "E-mail (facultatif)",
+      "payout": "Versements",
+      "payoutNumber": "Numéro MoMo de versement",
+      "payoutHelp": "Un numéro utilisé par une autre entreprise est interdit. Partager un numéro entre vos propres boutiques nécessite une vérification par notre équipe.",
+      "rail": "Réseau",
+      "reviewNote": "Après la création, ajoutez la photo de la devanture et la preuve des locaux, puis envoyez pour vérification.",
+      "priceAddon": "Cette boutique est une option payante : {price}/mois sur votre forfait.",
+      "priceIncluded": "Cette boutique est incluse dans votre forfait.",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "Les boutiques multiples ne sont pas encore disponibles.",
+      "businessNotFound": "Entreprise introuvable.",
+      "branchNotFound": "Boutique introuvable.",
+      "businessSuspended": "Cette entreprise est suspendue.",
+      "ownerKycRequired": "Terminez d'abord la vérification du propriétaire (KYC).",
+      "locationRequired": "Ajoutez l'emplacement de la boutique et un point de repère.",
+      "slugInvalid": "Utilisez un nom de boutique avec des lettres ou des chiffres.",
+      "unregisteredLimit": "Les commerçants non enregistrés peuvent gérer une boutique. Ajoutez d'abord votre enregistrement PACRA.",
+      "planLimit": "Votre forfait n'inclut plus de boutiques. Passez à un forfait supérieur.",
+      "tooClose": "Cette boutique est à {nearest} m d'une autre de vos boutiques. Les succursales doivent être espacées d'au moins {min} m.",
+      "payoutTaken": "Ce numéro MoMo appartient à une autre entreprise. Utilisez votre propre numéro.",
+      "evidenceRequired": "Ajoutez d'abord la photo de la devanture et la preuve des locaux.",
+      "evidenceLocked": "Les justificatifs ne peuvent changer qu'avant la vérification.",
+      "evidencePath": "Ce fichier n'est pas valide. Veuillez le renvoyer.",
+      "evidenceFile": "Utilisez une photo JPG, PNG ou WebP de 10 Mo maximum.",
+      "invalidTransition": "Cette boutique ne peut pas être envoyée pour vérification maintenant.",
+      "pacraRequired": "Les entreprises enregistrées ont besoin d'un numéro et d'un certificat PACRA.",
+      "pacraTaken": "Ce numéro PACRA est déjà enregistré pour une autre entreprise.",
+      "staffSeatLimit": "Votre forfait n'a plus de place employé libre.",
+      "staffDuplicate": "Cet employé est déjà invité.",
+      "rateLimited": "Trop de tentatives. Patientez une minute et réessayez.",
+      "validation": "Vérifiez les informations et réessayez.",
+      "network": "Pas de connexion. Vérifiez vos données et réessayez.",
+      "locationDenied": "Impossible de lire votre position. Saisissez-la manuellement.",
+      "generic": "Une erreur est survenue. Veuillez réessayer."
     }
   }
 }

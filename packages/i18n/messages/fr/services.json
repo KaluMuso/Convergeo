@@ -48,7 +48,8 @@
     "requestQuoteHint": "Décrivez votre travail et recevez des devis de prestataires correspondants.",
     "provider": "Prestataire",
     "providerCta": "Voir le profil du prestataire",
-    "imageAlt": "Photo du portfolio {position}"
+    "imageAlt": "Photo du portfolio {position}",
+    "free": "Gratuit"
   },
   "vendor": {
     "eyebrow": "Services",
@@ -81,13 +82,16 @@
       "save": "Enregistrer",
       "publish": "Publier",
       "pause": "Mettre en pause",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "isFreeLabel": "C'est gratuit",
+      "isFreeHint": "Ni prix, ni commission, ni paiement. Les clients envoient une demande que vous acceptez."
     },
     "errors": {
       "loadFailed": "Impossible de charger les services.",
       "saveFailed": "Impossible d'enregistrer le service.",
       "titleInvalid": "Saisissez un titre d'au moins deux caractères.",
-      "authRequired": "Connectez-vous pour gérer vos services."
+      "authRequired": "Connectez-vous pour gérer vos services.",
+      "freeHasPrice": "Un service gratuit ne peut pas avoir de prix."
     }
   },
   "postJob": {
@@ -297,5 +301,18 @@
       "success": "Receipt under review"
     },
     "backToJob": "Return to job and check completion"
+  },
+  "freeBooking": {
+    "title": "Réserver ce service gratuit",
+    "intro": "Aucun paiement requis. Envoyez une demande et le prestataire confirmera.",
+    "cta": "Demander une réservation",
+    "submitting": "Envoi…",
+    "sent": "Demande envoyée — le prestataire confirmera bientôt.",
+    "errors": {
+      "authRequired": "Veuillez vous connecter pour demander ce service.",
+      "alreadyRequested": "Vous avez déjà une demande en cours pour ce service.",
+      "rateLimited": "Trop de demandes. Veuillez patienter un instant.",
+      "generic": "Impossible d'envoyer votre demande. Veuillez réessayer."
+    }
   }
 }

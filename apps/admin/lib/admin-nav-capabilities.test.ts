@@ -83,7 +83,7 @@ describe("admin navigation from current API permissions", () => {
     ["finance.read", ["analytics", "orders"]],
     ["events.manage", ["events"]],
     ["products.manage", ["moderation"]],
-    ["vendors.manage", ["kyc", "intake", "business"]],
+    ["vendors.manage", ["kyc", "branches", "intake", "business"]],
     ["ads.manage", ["merch", "homeFeed", "advertising", "offers"]],
     ["analytics.read", ["home", "analytics"]],
     ["services.read", ["services"]],
@@ -109,6 +109,7 @@ describe("admin navigation from current API permissions", () => {
     ).toEqual([
       "analytics",
       "kyc",
+      "branches",
       "moderation",
       "intake",
       "orders",
@@ -131,7 +132,7 @@ describe("admin navigation from current API permissions", () => {
     expect(keys).toContain("config");
     expect(keys).toContain("disputes");
     expect(keys).toContain("coupons");
-    expect(keys).toHaveLength(21);
+    expect(keys).toHaveLength(22);
     expect(keys).not.toContain("roles");
     expect(visible([], true, true)).toContain("roles");
   });

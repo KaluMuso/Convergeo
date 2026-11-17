@@ -3,7 +3,14 @@
 import { isValidUnitDecimal, unitDecimalToMilli } from "../_lib/measure";
 import { isValidZmwDecimal, zmwDecimalToNgwee } from "../_lib/money";
 import { FULFILMENT_OPTIONS, USED_GRADES } from "../_lib/types";
-import { Checkbox, FormField, Input, Select, Switch, Textarea } from "../_lib/ui";
+import {
+  Checkbox,
+  FormField,
+  Input,
+  Select,
+  Switch,
+  Textarea,
+} from "../_lib/ui";
 
 import type {
   FulfilmentMode,
@@ -199,11 +206,16 @@ export function parseListingFieldValues(values: ListingFieldValues): {
 } {
   return {
     priceNgwee: zmwDecimalToNgwee(values.priceZmw),
-    unitStepMilli: values.saleUnit === "each" ? 1_000 : unitDecimalToMilli(values.unitStep),
+    unitStepMilli:
+      values.saleUnit === "each" ? 1_000 : unitDecimalToMilli(values.unitStep),
     minSteps: values.saleUnit === "each" ? 1 : Number(values.minSteps),
     defectNotes: values.condition === "used" ? values.defectNotes.trim() : null,
-    conditionDetail: values.condition === "used" ? values.conditionDetail : null,
-    leadTimeDays: values.fulfilmentMode === "made_to_order" ? Number(values.leadTimeDays) : null,
+    conditionDetail:
+      values.condition === "used" ? values.conditionDetail : null,
+    leadTimeDays:
+      values.fulfilmentMode === "made_to_order"
+        ? Number(values.leadTimeDays)
+        : null,
     vendorCapacityPerWeek:
       values.productClass === "E" ? Number(values.vendorCapacityPerWeek) : null,
     stockQty: values.stockMode === "tracked" ? Number(values.stockQty) : null,
@@ -220,7 +232,8 @@ export function validateListingFields(
   }
   if (
     values.saleUnit !== "each" &&
-    (!isValidUnitDecimal(values.unitStep) || unitDecimalToMilli(values.unitStep) < 1)
+    (!isValidUnitDecimal(values.unitStep) ||
+      unitDecimalToMilli(values.unitStep) < 1)
   ) {
     return labels.unitStepInvalid;
   }
@@ -242,7 +255,10 @@ export function validateListingFields(
   }
   if (
     values.productClass === "E" &&
-    (!isSafeIntegerInput(values.vendorCapacityPerWeek, POSITIVE_INTEGER_PATTERN) ||
+    (!isSafeIntegerInput(
+      values.vendorCapacityPerWeek,
+      POSITIVE_INTEGER_PATTERN,
+    ) ||
       Number(values.vendorCapacityPerWeek) > 9_999)
   ) {
     return labels.capacityInvalid;
@@ -256,7 +272,10 @@ export function validateListingFields(
   if (values.wholesale && values.saleUnit !== "each") {
     return labels.wholesaleMeasureUnavailable;
   }
-  if (values.wholesale && !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)) {
+  if (
+    values.wholesale &&
+    !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)
+  ) {
     return labels.required;
   }
   if (values.fulfilmentOptions.length === 0) {
@@ -271,10 +290,12 @@ export function listingFieldErrors(
   labels: ListingFieldLabels,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!isValidZmwDecimal(values.priceZmw)) errors.price_ngwee = labels.priceInvalid;
+  if (!isValidZmwDecimal(values.priceZmw))
+    errors.price_ngwee = labels.priceInvalid;
   if (
     values.saleUnit !== "each" &&
-    (!isValidUnitDecimal(values.unitStep) || unitDecimalToMilli(values.unitStep) < 1)
+    (!isValidUnitDecimal(values.unitStep) ||
+      unitDecimalToMilli(values.unitStep) < 1)
   ) {
     errors.unit_step_milli = labels.unitStepInvalid;
   }
@@ -290,7 +311,10 @@ export function listingFieldErrors(
   }
   if (
     values.productClass === "E" &&
-    (!isSafeIntegerInput(values.vendorCapacityPerWeek, POSITIVE_INTEGER_PATTERN) ||
+    (!isSafeIntegerInput(
+      values.vendorCapacityPerWeek,
+      POSITIVE_INTEGER_PATTERN,
+    ) ||
       Number(values.vendorCapacityPerWeek) > 9_999)
   ) {
     errors.vendor_capacity_per_week = labels.capacityInvalid;
@@ -301,7 +325,10 @@ export function listingFieldErrors(
   ) {
     errors.stock_qty = labels.required;
   }
-  if (values.wholesale && !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)) {
+  if (
+    values.wholesale &&
+    !isSafeIntegerInput(values.moq, POSITIVE_INTEGER_PATTERN)
+  ) {
     errors.moq = labels.required;
   }
   if (values.fulfilmentOptions.length === 0) {
@@ -330,7 +357,10 @@ export function ListingFields({
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField label={labels.productClassLabel} errorMessage={errors.product_class}>
+      <FormField
+        label={labels.productClassLabel}
+        errorMessage={errors.product_class}
+      >
         <Select
           disabled={inventoryReadOnly}
           value={values.productClass}
@@ -399,7 +429,10 @@ export function ListingFields({
               }
             />
           </FormField>
-          <FormField label={labels.minStepsLabel} errorMessage={errors.min_steps}>
+          <FormField
+            label={labels.minStepsLabel}
+            errorMessage={errors.min_steps}
+          >
             <Input
               inputMode="numeric"
               disabled={inventoryReadOnly}
@@ -416,7 +449,11 @@ export function ListingFields({
 
       <FormField
         label={labels.priceLabel}
-        helpText={values.saleUnit === "each" ? labels.priceHelp : labels.pricePerStepHelp}
+        helpText={
+          values.saleUnit === "each"
+            ? labels.priceHelp
+            : labels.pricePerStepHelp
+        }
         errorMessage={priceError}
       >
         <Input
@@ -448,11 +485,16 @@ export function ListingFields({
           <p className="text-xs text-text-2" role="note">
             {labels.conditionUsedHint}
           </p>
-          <FormField label={labels.conditionGradeLabel} errorMessage={errors.condition_detail}>
+          <FormField
+            label={labels.conditionGradeLabel}
+            errorMessage={errors.condition_detail}
+          >
             <Select
               value={values.conditionDetail}
               onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                handleChange({ conditionDetail: event.target.value as UsedGrade })
+                handleChange({
+                  conditionDetail: event.target.value as UsedGrade,
+                })
               }
             >
               {USED_GRADES.map((grade) => (
@@ -494,7 +536,10 @@ export function ListingFields({
         </p>
       ) : null}
 
-      <FormField label={labels.fulfilmentLabel} errorMessage={errors.fulfilment_mode}>
+      <FormField
+        label={labels.fulfilmentLabel}
+        errorMessage={errors.fulfilment_mode}
+      >
         <Select
           disabled={inventoryReadOnly}
           value={values.fulfilmentMode}
@@ -557,7 +602,10 @@ export function ListingFields({
 
       {!inventoryReadOnly ? (
         <>
-          <FormField label={labels.stockModeLabel} errorMessage={errors.stock_mode}>
+          <FormField
+            label={labels.stockModeLabel}
+            errorMessage={errors.stock_mode}
+          >
             <Select
               value={values.stockMode}
               onChange={(event: ChangeEvent<HTMLSelectElement>) =>
@@ -578,7 +626,10 @@ export function ListingFields({
           ) : null}
 
           {values.stockMode === "tracked" ? (
-            <FormField label={labels.stockQtyLabel} errorMessage={errors.stock_qty}>
+            <FormField
+              label={labels.stockQtyLabel}
+              errorMessage={errors.stock_qty}
+            >
               <Input
                 inputMode="numeric"
                 min={0}
@@ -614,7 +665,9 @@ export function ListingFields({
               onChange={(event: ChangeEvent<HTMLInputElement>) => {
                 const next = event.target.checked
                   ? [...values.fulfilmentOptions, option]
-                  : values.fulfilmentOptions.filter((current) => current !== option);
+                  : values.fulfilmentOptions.filter(
+                      (current) => current !== option,
+                    );
                 handleChange({
                   fulfilmentOptions: FULFILMENT_OPTIONS.filter((candidate) =>
                     next.includes(candidate),
@@ -630,13 +683,17 @@ export function ListingFields({
         <div className="space-y-3 rounded-lg border border-border p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-text">{labels.wholesaleLabel}</p>
+              <p className="text-sm font-medium text-text">
+                {labels.wholesaleLabel}
+              </p>
               <p className="text-xs text-text-2">{labels.wholesaleHelp}</p>
             </div>
             <Switch
               label={labels.wholesaleLabel}
               checked={values.wholesale}
-              onChange={(event) => handleChange({ wholesale: event.target.checked })}
+              onChange={(event) =>
+                handleChange({ wholesale: event.target.checked })
+              }
             />
           </div>
           {values.wholesale ? (

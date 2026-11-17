@@ -14,6 +14,9 @@ describe("ticketPurchaseErrorKey", () => {
     ["promo_exhausted", "promoInvalid"],
     ["promo_inactive", "promoInvalid"],
     ["promo_not_started", "promoInvalid"],
+    ["tickets.rsvp_cap", "rsvpCap"],
+    ["tickets.rsvp_in_progress", "rsvpInProgress"],
+    ["rate_limited", "rateLimited"],
   ])("maps %s to the translated %s line", (code, key) => {
     expect(ticketPurchaseErrorKey(code)).toBe(key);
   });

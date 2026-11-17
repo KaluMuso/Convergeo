@@ -115,12 +115,17 @@
       "attendeeNamesRequired": "Enter a name for each ticket.",
       "attendeeNamesMismatch": "Enter exactly one name per ticket.",
       "promoInvalid": "That promo code is not valid for this event.",
-      "oneEvent": "Your cart already has tickets for another event or date. Check those out first, or remove them."
+      "oneEvent": "Your cart already has tickets for another event or date. Check those out first, or remove them.",
+      "rsvpCap": "You can reserve at most 4 free spots.",
+      "rsvpInProgress": "Your RSVP is already being processed.",
+      "rateLimited": "Too many requests. Please wait a moment."
     },
     "addToCart": "Add to cart",
     "addingToCart": "Adding…",
     "addedToCart": "Tickets added to your cart. Pay for them with your other items in one checkout.",
-    "viewCart": "View cart"
+    "viewCart": "View cart",
+    "going": "You're going",
+    "viewTicket": "View ticket"
   },
   "wallet": {
     "title": "My tickets",

@@ -7,6 +7,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.branches.context import scope_owner_vendor_query
 from app.services.brand_theme import HEX_RE, read_brand_theme, sanitize_brand_theme
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator
@@ -282,12 +283,13 @@ def _load_vendor_for_owner(
     owner_user_id: str,
 ) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
+        scope_owner_vendor_query(
+            service_client.client.table("vendors")
         .select(
             "id, owner_user_id, slug, display_name, description, logo_url, cover_url, "
             "whatsapp_msisdn, status, kyc_tier, preferred_badge, caps_snapshot, brand_theme"
         )
-        .eq("owner_user_id", owner_user_id)
+        .eq("owner_user_id", owner_user_id))
         .maybe_single()
         .execute()
     )

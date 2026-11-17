@@ -1,5 +1,6 @@
 import { createApiClient } from "@vergeo/config";
 
+import { actingBranchHeaders } from "../../../../../../lib/acting-branch";
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
 export type RosterAttendee = {
@@ -37,7 +38,10 @@ export function createRosterClient(getToken: () => string | null | Promise<strin
       const baseUrl = getApiBaseUrl().replace(/\/$/, "");
       const token = await getToken();
       const response = await fetch(`${baseUrl}/organiser/events/${eventId}/roster.csv`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: {
+          ...actingBranchHeaders(),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       if (!response.ok) {
         throw new Error("roster_csv_download_failed");
