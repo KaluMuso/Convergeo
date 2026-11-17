@@ -7827,6 +7827,287 @@ export type Database = {
           },
         ]
       }
+      vendor_branch_events: {
+        Row: {
+          actor: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string
+          vendor_id: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status: string
+          vendor_id: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_branch_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_branch_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_branch_evidence: {
+        Row: {
+          content_sha256: string | null
+          created_at: string
+          id: string
+          kind: string
+          proof_type: string | null
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+          vendor_id: string
+        }
+        Insert: {
+          content_sha256?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          proof_type?: string | null
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+          vendor_id: string
+        }
+        Update: {
+          content_sha256?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          proof_type?: string | null
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_branch_evidence_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_branch_evidence_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_branch_flags: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          kind: string
+          matched_vendor_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          score: number
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          kind: string
+          matched_vendor_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          score?: number
+          status?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          kind?: string
+          matched_vendor_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          score?: number
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_branch_flags_matched_vendor_id_fkey"
+            columns: ["matched_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_branch_flags_matched_vendor_id_fkey"
+            columns: ["matched_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_branch_flags_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_branch_flags_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_business_staff: {
+        Row: {
+          branch_ids: string[]
+          business_id: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          id: string
+          invite_msisdn: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          branch_ids?: string[]
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          id?: string
+          invite_msisdn?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          branch_ids?: string[]
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          id?: string
+          invite_msisdn?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_business_staff_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_business_staff_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_businesses: {
+        Row: {
+          created_at: string
+          id: string
+          legal_name: string
+          owner_user_id: string
+          pacra_cert_path: string | null
+          pacra_number: string | null
+          pacra_verified_at: string | null
+          pacra_verified_by: string | null
+          registration_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          legal_name: string
+          owner_user_id: string
+          pacra_cert_path?: string | null
+          pacra_number?: string | null
+          pacra_verified_at?: string | null
+          pacra_verified_by?: string | null
+          registration_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          legal_name?: string
+          owner_user_id?: string
+          pacra_cert_path?: string | null
+          pacra_number?: string | null
+          pacra_verified_at?: string | null
+          pacra_verified_by?: string | null
+          registration_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_businesses_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_businesses_pacra_verified_by_fkey"
+            columns: ["pacra_verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_follows: {
         Row: {
           created_at: string
@@ -8155,6 +8436,7 @@ export type Database = {
       }
       vendor_locations: {
         Row: {
+          address: string | null
           area: string | null
           city: string | null
           created_at: string
@@ -8165,6 +8447,7 @@ export type Database = {
           landmark: string
           lat: number
           lng: number
+          map_url: string | null
           phone_e164: string | null
           province: string | null
           status: string
@@ -8173,6 +8456,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          address?: string | null
           area?: string | null
           city?: string | null
           created_at?: string
@@ -8183,6 +8467,7 @@ export type Database = {
           landmark: string
           lat: number
           lng: number
+          map_url?: string | null
           phone_e164?: string | null
           province?: string | null
           status?: string
@@ -8191,6 +8476,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          address?: string | null
           area?: string | null
           city?: string | null
           created_at?: string
@@ -8201,6 +8487,7 @@ export type Database = {
           landmark?: string
           lat?: number
           lng?: number
+          map_url?: string | null
           phone_e164?: string | null
           province?: string | null
           status?: string
@@ -8227,10 +8514,12 @@ export type Database = {
       }
       vendor_plan_assignments: {
         Row: {
+          addon_price_ngwee: number | null
           assigned_at: string
           assigned_by: string | null
           billing_reference: string | null
           billing_status: string
+          branch_billing_role: string
           created_at: string
           id: string
           note: string | null
@@ -8241,10 +8530,12 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          addon_price_ngwee?: number | null
           assigned_at?: string
           assigned_by?: string | null
           billing_reference?: string | null
           billing_status?: string
+          branch_billing_role?: string
           created_at?: string
           id?: string
           note?: string | null
@@ -8255,10 +8546,12 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          addon_price_ngwee?: number | null
           assigned_at?: string
           assigned_by?: string | null
           billing_reference?: string | null
           billing_status?: string
+          branch_billing_role?: string
           created_at?: string
           id?: string
           note?: string | null
@@ -8349,47 +8642,80 @@ export type Database = {
       vendor_plans: {
         Row: {
           active: boolean
+          ad_credit_ngwee: number
           analytics_depth: string
+          click_and_collect: boolean
           created_at: string
+          extra_shop_price_ngwee: number | null
           featured_slots: number
+          included_shops: number | null
+          integrations_level: string
           is_default: boolean
           key: string
           max_images_per_listing: number
           max_listings: number | null
+          multi_branch_stock: boolean
           name: string
+          official_store_badge: boolean
+          payout_speed: string
           position: number
           price_ngwee: number
+          staff_seats: number | null
+          support_level: string
           updated_at: string
+          whatsapp_broadcasts_per_month: number
           wholesale_tools: boolean
         }
         Insert: {
           active?: boolean
+          ad_credit_ngwee?: number
           analytics_depth?: string
+          click_and_collect?: boolean
           created_at?: string
+          extra_shop_price_ngwee?: number | null
           featured_slots?: number
+          included_shops?: number | null
+          integrations_level?: string
           is_default?: boolean
           key: string
           max_images_per_listing?: number
           max_listings?: number | null
+          multi_branch_stock?: boolean
           name: string
+          official_store_badge?: boolean
+          payout_speed?: string
           position?: number
           price_ngwee?: number
+          staff_seats?: number | null
+          support_level?: string
           updated_at?: string
+          whatsapp_broadcasts_per_month?: number
           wholesale_tools?: boolean
         }
         Update: {
           active?: boolean
+          ad_credit_ngwee?: number
           analytics_depth?: string
+          click_and_collect?: boolean
           created_at?: string
+          extra_shop_price_ngwee?: number | null
           featured_slots?: number
+          included_shops?: number | null
+          integrations_level?: string
           is_default?: boolean
           key?: string
           max_images_per_listing?: number
           max_listings?: number | null
+          multi_branch_stock?: boolean
           name?: string
+          official_store_badge?: boolean
+          payout_speed?: string
           position?: number
           price_ngwee?: number
+          staff_seats?: number | null
+          support_level?: string
           updated_at?: string
+          whatsapp_broadcasts_per_month?: number
           wholesale_tools?: boolean
         }
         Relationships: []
@@ -8553,15 +8879,21 @@ export type Database = {
       vendors: {
         Row: {
           archetype: string | null
+          branch_kind: string
+          branch_status: string
           brand_theme: Json | null
           business_archetype: string | null
+          business_id: string | null
           caps_snapshot: Json
           commercial_tier: string | null
+          contact_email: string | null
+          contact_phone: string | null
           cover_url: string | null
           created_at: string
           description: string | null
           display_name: string
           id: string
+          is_primary_branch: boolean
           kyc_tier: number | null
           logo_url: string | null
           owner_user_id: string
@@ -8576,15 +8908,21 @@ export type Database = {
         }
         Insert: {
           archetype?: string | null
+          branch_kind?: string
+          branch_status?: string
           brand_theme?: Json | null
           business_archetype?: string | null
+          business_id?: string | null
           caps_snapshot?: Json
           commercial_tier?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           display_name: string
           id?: string
+          is_primary_branch?: boolean
           kyc_tier?: number | null
           logo_url?: string | null
           owner_user_id: string
@@ -8599,15 +8937,21 @@ export type Database = {
         }
         Update: {
           archetype?: string | null
+          branch_kind?: string
+          branch_status?: string
           brand_theme?: Json | null
           business_archetype?: string | null
+          business_id?: string | null
           caps_snapshot?: Json
           commercial_tier?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           display_name?: string
           id?: string
+          is_primary_branch?: boolean
           kyc_tier?: number | null
           logo_url?: string | null
           owner_user_id?: string
@@ -8621,6 +8965,13 @@ export type Database = {
           whatsapp_msisdn?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vendors_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_businesses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vendors_owner_user_id_fkey"
             columns: ["owner_user_id"]
@@ -8986,6 +9337,7 @@ export type Database = {
         Returns: number
       }
       ask_resolve_tier: { Args: { p_user_id: string }; Returns: string }
+      branch_min_sibling_distance_m: { Args: never; Returns: number }
       bump_rate_counter: {
         Args: {
           p_key: string
@@ -8997,6 +9349,13 @@ export type Database = {
           allowed: boolean
           retry_after_seconds: number
         }[]
+      }
+      business_owner_kyc: { Args: { p_business_id: string }; Returns: string }
+      business_plan_key: { Args: { p_business_id: string }; Returns: string }
+      business_shop_limit: { Args: { p_business_id: string }; Returns: number }
+      business_staff_seat_limit: {
+        Args: { p_business_id: string }
+        Returns: number
       }
       cart_guest_token: { Args: never; Returns: string }
       cart_merge_authority: {
@@ -9087,6 +9446,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_vendor_branch: {
+        Args: { p_business_id: string; p_owner: string; p_payload: Json }
+        Returns: Json
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       deactivate_admin_account: {
         Args: {
@@ -9164,6 +9527,10 @@ export type Database = {
           success: boolean
         }[]
       }
+      geo_distance_m: {
+        Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
+        Returns: number
+      }
       has_delivery_partner_consent: {
         Args: { p_user: string }
         Returns: boolean
@@ -9214,7 +9581,9 @@ export type Database = {
         }
         Returns: Json
       }
+      multi_branch_enabled: { Args: never; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
+      normalize_zm_msisdn: { Args: { p_raw: string }; Returns: string }
       order_has_collected_money: { Args: { p_order: string }; Returns: boolean }
       order_payment_checkouts: {
         Args: { p_order: string }
@@ -9434,6 +9803,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      transition_vendor_branch: {
+        Args: {
+          p_actor: string
+          p_note?: string
+          p_to: string
+          p_vendor_id: string
+        }
+        Returns: Json
+      }
       transition_vendor_suspend: {
         Args: {
           p_actor: string
@@ -9442,6 +9820,10 @@ export type Database = {
           p_vendor_id: string
         }
         Returns: string
+      }
+      vendor_branch_dedup_scan: {
+        Args: { p_vendor_id: string }
+        Returns: number
       }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {
