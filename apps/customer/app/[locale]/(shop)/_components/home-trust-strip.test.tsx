@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { createTranslator } from "next-intl";
 import { afterEach, describe, expect, it } from "vitest";
 
+import bemCatalog from "../../../../../../packages/i18n/messages/bem/catalog.json";
 import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog.json";
 import frCatalog from "../../../../../../packages/i18n/messages/fr/catalog.json";
+import nyaCatalog from "../../../../../../packages/i18n/messages/nya/catalog.json";
 import zhCatalog from "../../../../../../packages/i18n/messages/zh/catalog.json";
 
 import { HomeTrustStrip } from "./home-trust-strip";
@@ -22,58 +24,63 @@ function labelsFrom(messages: typeof catalogMessages) {
     namespace: "catalog",
   });
   return {
-    ariaLabel: t("home.trust.ariaLabel"),
-    sellers: t("home.trust.sellers"),
-    fulfillment: t("home.trust.fulfillment"),
-    returns: t("home.trust.returns"),
-    escrow: t("home.trust.escrow"),
-    escrowStep1: t("home.hero.escrowStep1"),
-    escrowStep2: t("home.hero.escrowStep2"),
-    escrowStep3: t("home.hero.escrowStep3"),
+    ariaLabel: t("home.trustStrip.ariaLabel"),
+    cod: t("home.trustStrip.cod"),
+    verified: t("home.trustStrip.verified"),
+    lusaka: t("home.trustStrip.lusaka"),
+    returns: t("home.trustStrip.returns"),
   };
 }
 
-const ACTIVE_PAYMENT_CLAIMS =
-  /pay with mobile money|mobile-money payouts|card checkout is live|momo checkout is live|start selling today/i;
+/** COD-only pilot: the strip must never advertise escrow, mobile money or cards. */
+const PAYMENT_CLAIMS = /escrow|held by|mobile money|momo|card|visa|airtel|mtn/i;
 
-describe("HomeTrustStrip (CUST-HOME-01)", () => {
-  it("renders localised trust items and the escrow ladder", () => {
+describe("HomeTrustStrip", () => {
+  it("renders the four COD-pilot trust items in order", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
-    expect(screen.getByTestId("home-trust-strip")).toBeInTheDocument();
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent(
-      "You order",
-    );
-    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent(
-      "You pay on arrival",
-    );
-    expect(
-      screen.getByTestId("home-trust-escrow-ladder"),
-    ).not.toHaveTextContent(/held by/i);
-    expect(screen.getByTestId("home-trust-sellers")).toHaveTextContent(
-      catalogMessages.home.trust.sellers,
-    );
-    expect(screen.getByTestId("home-trust-fulfillment")).toHaveTextContent(
-      catalogMessages.home.trust.fulfillment,
-    );
-    expect(screen.getByTestId("home-trust-returns")).toHaveTextContent(
-      catalogMessages.home.trust.returns,
-    );
-    expect(screen.getByTestId("home-trust-escrow")).toHaveTextContent(
-      catalogMessages.home.trust.escrow,
-    );
+    const strip = screen.getByTestId("home-trust-strip");
+    expect(strip).toHaveAttribute("aria-label", "Why shop on Convergeo");
+    const items = within(strip).getAllByRole("listitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "Pay on delivery",
+      "Verified sellers",
+      "Lusaka delivery",
+      "Easy returns",
+    ]);
+  });
+
+  it("keeps decorative glyphs out of the accessibility tree", () => {
+    const { container } = render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
+    for (const svg of container.querySelectorAll("svg")) {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("ships en/fr/zh strings and flags bem/nya as untranslated placeholders", () => {
+    for (const messages of [catalogMessages, frCatalog, zhCatalog]) {
+      const strip = messages.home.trustStrip;
+      expect(Object.values(strip).every((value) => value.length > 0)).toBe(true);
+      expect(Object.values(strip).join(" ")).not.toMatch(PAYMENT_CLAIMS);
+      expect(strip.cod).not.toMatch(/^⚠/);
+    }
+    expect(frCatalog.home.trustStrip.cod).not.toBe(catalogMessages.home.trustStrip.cod);
+    expect(zhCatalog.home.trustStrip.cod).not.toBe(catalogMessages.home.trustStrip.cod);
+    for (const messages of [bemCatalog, nyaCatalog]) {
+      expect(messages.home.trustStrip.cod).toBe(`⚠ ${catalogMessages.home.trustStrip.cod}`);
+    }
   });
 
   it("keeps en/fr/zh trust + sell copy free of false active-payment language", () => {
+    const claims =
+      /pay with mobile money|mobile-money payouts|card checkout is live|momo checkout is live|start selling today/i;
     for (const messages of [catalogMessages, frCatalog, zhCatalog]) {
       const blob = [
-        messages.home.trust.escrow,
-        messages.home.trust.fulfillment,
         messages.home.hero.escrowLine,
         messages.home.hero.fallbackSubtitle,
         messages.home.sellCta.body,
         messages.home.sellCta.cta,
       ].join(" ");
-      expect(blob).not.toMatch(ACTIVE_PAYMENT_CLAIMS);
+      expect(blob).not.toMatch(claims);
     }
   });
 });

@@ -48,7 +48,7 @@ function SectionHeader({
   return (
     <div className="flex items-baseline justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
         {subtitle ? <p className="text-sm text-muted">{subtitle}</p> : null}
@@ -56,7 +56,7 @@ function SectionHeader({
       {viewAllHref ? (
         <Link
           href={localizeHref(viewAllHref, locale)}
-          className="shrink-0 text-sm font-medium text-primary"
+          className="-my-3 shrink-0 py-3 text-sm font-medium text-primary"
         >
           {viewAllLabel}
         </Link>
@@ -162,7 +162,7 @@ export function FeedSectionView({
     return (
       <section
         aria-labelledby={headingId}
-        className="home-rail motion-fade flex flex-col gap-3 lg:gap-4"
+        className="home-rail motion-fade flex flex-col gap-2"
         data-feed-section={section.key}
       >
         {header}
@@ -172,6 +172,7 @@ export function FeedSectionView({
           labels={labels.card}
           priorityCount={priorityCount}
           density="compact"
+          layout="rail"
         />
       </section>
     );
@@ -179,10 +180,7 @@ export function FeedSectionView({
 
   if (section.services.length > 0) {
     return (
-      <section
-        aria-labelledby={headingId}
-        className="home-rail flex flex-col gap-3 lg:gap-4"
-      >
+      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-2">
         {header}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {section.services.map((service) => (
@@ -240,10 +238,7 @@ export function FeedSectionView({
       },
     );
     return (
-      <section
-        aria-labelledby={headingId}
-        className="home-rail flex flex-col gap-3 lg:gap-4"
-      >
+      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-2">
         {header}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {section.events.map((event) => (
@@ -290,10 +285,7 @@ export function FeedSectionView({
 
   if (section.vendors.length > 0) {
     return (
-      <section
-        aria-labelledby={headingId}
-        className="home-rail flex flex-col gap-3 lg:gap-4"
-      >
+      <section aria-labelledby={headingId} className="home-rail flex flex-col gap-2">
         {header}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {section.vendors.map((vendor) => (

@@ -136,7 +136,7 @@ export function ListingCard({
   labels,
   media,
   showSampleBadge = shouldShowSampleListingBadge(),
-  density = "default",
+  density = "compact",
 }: ListingCardProps) {
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(
     listing.productSlug,
@@ -292,6 +292,9 @@ export function ListingCard({
       )
     : null;
 
+  // Dense cards already carry the delivery line; the pill row is for roomy layouts only.
+  const showLogisticsPills = Boolean(labels.logistics) && density !== "compact";
+
   const card = (
     <>
       <ProductCard
@@ -316,10 +319,10 @@ export function ListingCard({
         mediaEmptyLabel={labels.mediaEmpty}
         meta={
           conditionLabel ||
-          labels.logistics ||
+          showLogisticsPills ||
           deliveryLine ||
           madeToOrderLine ? (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-0.5">
               {madeToOrderLine ? (
                 <span
                   className="font-semibold text-text-2"
@@ -337,7 +340,7 @@ export function ListingCard({
                   {deliveryLine}
                 </span>
               ) : null}
-              {labels.logistics ? (
+              {showLogisticsPills && labels.logistics ? (
                 <ListingLogisticsPills
                   listing={listing}
                   labels={labels.logistics}

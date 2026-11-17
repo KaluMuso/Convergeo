@@ -125,6 +125,7 @@ function makeListing(overrides: Partial<CatalogListing> = {}): CatalogListing {
 }
 
 const emptyDefaultData: HomeDefaultData = {
+  deals: [],
   newest: [],
   departmentRails: [],
   services: [],

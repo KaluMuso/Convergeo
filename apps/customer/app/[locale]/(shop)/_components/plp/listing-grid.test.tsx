@@ -72,6 +72,80 @@ describe("ListingGrid", () => {
     );
   });
 
+  it("is 2 columns at 360px and steps up to 6 on wide desktop", () => {
+    render(<ListingGrid locale="en" listings={[listing()]} labels={labels} />);
+    expect(screen.getByTestId("listing-grid")).toHaveClass(
+      "grid-cols-2",
+      "md:grid-cols-3",
+      "lg:grid-cols-4",
+      "xl:grid-cols-5",
+      "2xl:grid-cols-6",
+    );
+  });
+
+  it("renders a snap-scrolling single-row list in rail layout", () => {
+    render(
+      <ListingGrid
+        locale="en"
+        layout="rail"
+        listings={[listing(), listing({ id: "listing-2", title: "Second" })]}
+        labels={labels}
+      />,
+    );
+    const rail = screen.getByTestId("listing-grid");
+    expect(rail.tagName).toBe("UL");
+    expect(rail).toHaveAttribute("data-layout", "rail");
+    expect(rail).toHaveClass("flex", "overflow-x-auto", "snap-x");
+    expect(rail).not.toHaveClass("grid");
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("shows a discount badge and struck price only when a compare-at price exists", () => {
+    render(
+      <ListingGrid
+        locale="en"
+        listings={[
+          listing({ id: "sale", title: "On sale", priceNgwee: 75_00, oldNgwee: 100_00 }),
+          listing({ id: "full", title: "Full price" }),
+        ]}
+        labels={{ ...labels, discount: "−{percent}%" }}
+      />,
+    );
+    const badges = screen.getAllByTestId("product-card-discount");
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveTextContent("−25%");
+    const struck = document.querySelectorAll(".line-through");
+    expect(struck).toHaveLength(1);
+    expect(struck[0]).toHaveTextContent("K100.00");
+  });
+
+  it("renders stars and a count only when the listing has reviews", () => {
+    render(
+      <ListingGrid
+        locale="en"
+        listings={[
+          listing({ id: "r", title: "Reviewed", rating: 4.5, reviewCount: 12 }),
+          listing({ id: "n", title: "Unreviewed" }),
+        ]}
+        labels={labels}
+      />,
+    );
+    expect(screen.getByText("(12)")).toBeInTheDocument();
+    expect(screen.queryByText("No reviews yet")).not.toBeInTheDocument();
+  });
+
+  it("drops the logistics pill row in dense cards but keeps it in the roomy layout", () => {
+    const delivering = listing({ deliveryAvailable: true, pickupAvailable: true });
+    const { rerender } = render(
+      <ListingGrid locale="en" listings={[delivering]} labels={labels} />,
+    );
+    expect(screen.queryByText("Pickup available")).not.toBeInTheDocument();
+    rerender(
+      <ListingGrid locale="en" listings={[delivering]} labels={labels} density="default" />,
+    );
+    expect(screen.getByText("Pickup available")).toBeInTheDocument();
+  });
+
   it("links standalone listings by listing id when productSlug is null", () => {
     render(
       <ListingGrid

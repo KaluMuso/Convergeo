@@ -37,6 +37,7 @@ vi.mock("next-intl/server", () => ({
   setRequestLocale: vi.fn(),
 }));
 
+vi.mock("./_components/back-to-top", () => ({ BackToTop: () => null }));
 vi.mock("./_components/banner-row", () => ({ BannerRow: () => null }));
 vi.mock("./_components/category-grid", () => ({ CategoryGrid: () => null }));
 vi.mock("./_components/directory/vendor-ladder-labels", () => ({

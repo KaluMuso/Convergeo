@@ -240,6 +240,16 @@
         "loadMore": "加载更多",
         "moreLoaded": "已加载更多 {count} 件商品。"
       }
+    },
+    "trustStrip": {
+      "ariaLabel": "为何选择 Convergeo",
+      "cod": "货到付款",
+      "verified": "认证卖家",
+      "lusaka": "卢萨卡配送",
+      "returns": "轻松退货"
+    },
+    "dealsRail": {
+      "title": "今日特惠"
     }
   },
   "pdp": {

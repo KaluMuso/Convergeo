@@ -54,6 +54,33 @@ describe("ProductCard", () => {
     expect(screen.getByText("Wireless Earbuds")).toBeInTheDocument();
   });
 
+  it("shows stars and a count only when reviews exist", () => {
+    const { rerender } = render(<ProductCard {...baseProps} />);
+    expect(screen.getByText("(18)")).toBeInTheDocument();
+    rerender(
+      <ProductCard
+        {...baseProps}
+        rating={0}
+        reviewCount={0}
+        noReviewsLabel="No reviews yet"
+        reviewCountLabel="(0)"
+      />,
+    );
+    expect(screen.queryByText("No reviews yet")).not.toBeInTheDocument();
+    expect(screen.queryByText("(0)")).not.toBeInTheDocument();
+  });
+
+  it("renders title, price, then vendor line in a tight padded body", () => {
+    render(<ProductCard {...baseProps} density="compact" />);
+    const card = screen.getByTestId("product-card");
+    const title = screen.getByText("Wireless Earbuds");
+    const price = screen.getByTestId("price-block");
+    const vendor = screen.getByText("TechHub Lusaka");
+    expect(title.compareDocumentPosition(price) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(price.compareDocumentPosition(vendor) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.children[1]).toHaveClass("gap-0.5");
+  });
+
   it("renders skeleton variant", () => {
     render(<ProductCard {...baseProps} skeleton />);
     expect(screen.getByTestId("product-card-skeleton")).toBeInTheDocument();
@@ -83,7 +110,7 @@ describe("ProductCard", () => {
     expect(card).toHaveAttribute("data-density", "compact");
     expect(card).toHaveAttribute("data-unavailable", "true");
     expect(card.firstElementChild).toHaveClass("aspect-[4/3]");
-    expect(card.children[1]).toHaveClass("p-[var(--sp-2)]");
+    expect(card.children[1]).toHaveClass("p-[var(--card-pad,var(--sp-2))]");
   });
 
   it("renders optional meta without inventing content", () => {

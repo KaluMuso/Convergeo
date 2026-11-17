@@ -138,7 +138,7 @@ export function ProductCard({
           <div
             className={cx(
               "absolute z-[1] flex flex-col items-start gap-1",
-              compact ? "left-1.5 top-1.5" : "left-2 top-2",
+              "left-1.5 top-1.5",
             )}
           >
             {discountLabel ? (
@@ -197,36 +197,23 @@ export function ProductCard({
           </button>
         ) : null}
       </div>
-      <div
-        className={cx(
-          "flex min-w-0 flex-col",
-          compact ? "gap-1 p-[var(--sp-2)]" : "gap-1.5 p-[var(--sp-2)] sm:p-[var(--sp-3)]",
-        )}
-      >
+      <div className="flex min-w-0 flex-col gap-0.5 p-[var(--card-pad,var(--sp-2))]">
         <h3 className={cx("v-card__title m-0 line-clamp-2", compact && "v-card__title--compact")}>
           {title}
         </h3>
-        <p className="v-card__vendor m-0 truncate">{vendorLabel}</p>
-        {!compact ? (
+        {/* Stars only when real reviews exist: no "no reviews" filler, no zero-star rows. */}
+        {reviewCount > 0 ? (
           <StarRating
             value={rating}
             reviewCount={reviewCount}
-            noReviewsSlot={noReviewsLabel}
             reviewCountLabel={reviewCountLabel}
           />
         ) : null}
         {ngwee != null ? (
           <PriceBlock ngwee={ngwee} oldNgwee={oldNgwee} savingsLabel={savingsLabel} />
         ) : null}
+        <p className="v-card__vendor m-0 truncate">{vendorLabel}</p>
         {meta ? <div className="text-xs text-text-2">{meta}</div> : null}
-        {compact && reviewCount > 0 ? (
-          <StarRating
-            value={rating}
-            reviewCount={reviewCount}
-            noReviewsSlot={noReviewsLabel}
-            reviewCountLabel={reviewCountLabel}
-          />
-        ) : null}
       </div>
     </Component>
   );

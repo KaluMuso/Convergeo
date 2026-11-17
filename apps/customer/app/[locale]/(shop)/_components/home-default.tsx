@@ -7,6 +7,7 @@ import Link from "next/link";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { fetchJson } from "../../../../lib/fetch-json";
 
+import { dealToListing, fetchDeals } from "./deals-data";
 import {
   vendorCommercialTier,
   vendorTrustForCard,
@@ -17,7 +18,7 @@ import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { AdCreative } from "./home-feed/feed-types";
 import type { CategoryRow } from "./merch-data";
-import type { LogisticsPillLabels } from "./plp/logistics-pills";
+import type { ListingCardLabels } from "./plp/listing-card";
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -93,6 +94,8 @@ export type VendorRailItem = {
 };
 
 export type HomeDefaultData = {
+  /** Live flash deals (GET /deals), rendered as the "Today's deals" rail. */
+  deals: CatalogListing[];
   newest: CatalogListing[];
   departmentRails: DepartmentRail[];
   services: ServiceRailItem[];
@@ -242,9 +245,22 @@ export function hasDefaultHomeContent(
   );
 }
 
+const DEALS_RAIL_LIMIT = 12;
+
+/** Empty-safe: an unreachable /deals simply hides the rail. */
+async function loadDealListings(): Promise<CatalogListing[]> {
+  const data = await fetchDeals(DEALS_RAIL_LIMIT);
+  return (data?.items ?? []).filter((deal) => deal.listing.in_stock).map(dealToListing);
+}
+
 export async function loadHomeDefaultData(
   categories: CategoryRow[],
 ): Promise<HomeDefaultData> {
+  const [core, deals] = await Promise.all([loadCoreHomeData(categories), loadDealListings()]);
+  return { ...core, deals };
+}
+
+async function loadCoreHomeData(categories: CategoryRow[]): Promise<Omit<HomeDefaultData, "deals">> {
   const departments = pickRailDepartments(categories);
   const departmentPaths = departments
     .map((category) => category.path)
@@ -393,19 +409,7 @@ export function HomeHeroBand({
   );
 }
 
-type RailLabels = {
-  vendor: string;
-  noReviews: string;
-  reviewCount: string;
-  quickAdd: string;
-  quickAddError?: string;
-  wishlist: string;
-  wishlistRemove?: string;
-  outOfStock: string;
-  logistics?: LogisticsPillLabels;
-  sampleListing?: string;
-  mediaEmpty?: string;
-};
+type RailLabels = ListingCardLabels;
 
 type HomeProductRailProps = {
   id: string;
@@ -436,18 +440,15 @@ export function HomeProductRail({
     <section
       aria-labelledby={id}
       className={[
-        "home-rail flex flex-col gap-3 lg:gap-4",
+        "home-rail flex flex-col gap-2",
         id === "home-rail-new" ? "motion-rise" : "motion-fade",
       ].join(" ")}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link
-          href={viewAllHref}
-          className="shrink-0 text-sm font-medium text-primary"
-        >
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>
@@ -457,6 +458,7 @@ export function HomeProductRail({
         labels={labels}
         priorityCount={priorityCount}
         density="compact"
+        layout="rail"
       />
     </section>
   );
@@ -525,18 +527,12 @@ export function HomeServicesRail({
   }
 
   return (
-    <section
-      aria-labelledby={id}
-      className="home-rail flex flex-col gap-3 lg:gap-4"
-    >
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link
-          href={viewAllHref}
-          className="shrink-0 text-sm font-medium text-primary"
-        >
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>
@@ -638,18 +634,12 @@ export function HomeVendorsRail({
   }
 
   return (
-    <section
-      aria-labelledby={id}
-      className="home-rail flex flex-col gap-3 lg:gap-4"
-    >
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id={id} className="font-display text-h2 text-display-ink">
+        <h2 id={id} className="font-display text-h3 font-bold text-display-ink">
           {title}
         </h2>
-        <Link
-          href={viewAllHref}
-          className="shrink-0 text-sm font-medium text-primary"
-        >
+        <Link href={viewAllHref} className="-my-3 shrink-0 py-3 text-sm font-medium text-primary">
           {viewAllLabel}
         </Link>
       </div>

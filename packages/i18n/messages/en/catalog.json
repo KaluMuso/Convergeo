@@ -243,6 +243,16 @@
         "loadMore": "Load more",
         "moreLoaded": "{count} more items loaded."
       }
+    },
+    "trustStrip": {
+      "ariaLabel": "Why shop on Convergeo",
+      "cod": "Pay on delivery",
+      "verified": "Verified sellers",
+      "lusaka": "Lusaka delivery",
+      "returns": "Easy returns"
+    },
+    "dealsRail": {
+      "title": "Today's deals"
     }
   },
   "pdp": {

@@ -240,6 +240,16 @@
         "loadMore": "Voir plus",
         "moreLoaded": "{count} articles de plus chargés."
       }
+    },
+    "trustStrip": {
+      "ariaLabel": "Pourquoi acheter sur Convergeo",
+      "cod": "Paiement à la livraison",
+      "verified": "Vendeurs vérifiés",
+      "lusaka": "Livraison à Lusaka",
+      "returns": "Retours faciles"
+    },
+    "dealsRail": {
+      "title": "Offres du jour"
     }
   },
   "pdp": {

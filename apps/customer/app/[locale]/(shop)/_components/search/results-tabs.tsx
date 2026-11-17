@@ -411,7 +411,7 @@ function ResultsList({
     <div className="space-y-3" data-testid="search-results-list">
       {showProductGrid && productHits.length > 0 ? (
         <ul
-          className="grid list-none grid-cols-2 gap-2 p-0 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+          className="grid list-none grid-cols-2 gap-2 p-0 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
           data-testid="search-product-grid"
           aria-label={labels.productGridAria}
         >
