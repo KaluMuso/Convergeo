@@ -13,10 +13,14 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const vendorMessages = await loadNamespace(locale as Locale, "vendor");
-  const listings = vendorMessages.listings as { meta: { title: string; description: string } };
+  const listings = vendorMessages.listings as {
+    meta: { title: string; description: string };
+  };
   return {
     title: listings.meta.title,
     description: listings.meta.description,

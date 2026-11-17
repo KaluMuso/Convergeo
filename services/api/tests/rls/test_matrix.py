@@ -3379,6 +3379,28 @@ EXPECTATIONS: TableExpectations = {
             )
         },
     },
+    # Vendor plans (20261116110000). Clients read only — active plans, and their
+    # OWN assignment/override (row isolation proven in test_vendor_plans_rls.py);
+    # every write is API-only (service role + admin audit_log). Anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in ("vendor_plans", "vendor_plan_assignments", "vendor_plan_overrides")
+    },
+    # Shared canonical product photos (20261116110100): public read of ACTIVE
+    # products' photos (same visibility as the product); no client writes.
+    "product_images": {persona: select_only() for persona in Persona},
     # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.
     "privacy_consents": {

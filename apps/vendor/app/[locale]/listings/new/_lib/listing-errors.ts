@@ -13,6 +13,8 @@ export type ListingErrorMessages = {
   publishBlocked?: string;
   /** code -> localized text for server field errors (vendor.listings.fieldErrors). */
   fieldErrors?: Record<string, string>;
+  /** Plan or KYC listing cap reached (`listing_cap_exceeded`): never a generic failure. */
+  listingLimit?: string;
   fallback: string;
 };
 
@@ -83,7 +85,10 @@ export function listingCreateErrorMessage(
   messages: ListingErrorMessages,
   intent: ListingErrorIntent = "draft",
 ): string {
-  if (error instanceof ApiError && error.code === "standalone_product_class_required") {
+  if (
+    error instanceof ApiError &&
+    error.code === "standalone_product_class_required"
+  ) {
     return messages.standaloneRequired;
   }
   if (error instanceof ApiError) {
@@ -92,17 +97,25 @@ export function listingCreateErrorMessage(
     if (error.code === "standalone_details_required")
       return messages.standaloneDetailsRequired ?? messages.fallback;
     if (error.code === "listing_publish_blocked")
-      return messages.publishBlocked ?? messages.policyBlocked ?? messages.fallback;
-    if (error.code === "listing_draft_invalid") return messages.draftInvalid ?? messages.fallback;
-    if (error.code === "listing_policy_blocked") return messages.policyBlocked ?? messages.fallback;
+      return (
+        messages.publishBlocked ?? messages.policyBlocked ?? messages.fallback
+      );
+    if (error.code === "listing_draft_invalid")
+      return messages.draftInvalid ?? messages.fallback;
+    if (error.code === "listing_policy_blocked")
+      return messages.policyBlocked ?? messages.fallback;
+    if (error.code === "listing_cap_exceeded")
+      return messages.listingLimit ?? messages.fallback;
     // Pydantic field errors (422 validation_error) and strategy-rule failures.
     if (
-      (error.code === "validation_error" || error.code === "listing_strategy_invalid") &&
+      (error.code === "validation_error" ||
+        error.code === "listing_strategy_invalid") &&
       readFieldIssues(error).length > 0
     ) {
       return (
-        (intent === "publish" ? messages.publishBlocked : messages.draftInvalid) ??
-        messages.fallback
+        (intent === "publish"
+          ? messages.publishBlocked
+          : messages.draftInvalid) ?? messages.fallback
       );
     }
   }
