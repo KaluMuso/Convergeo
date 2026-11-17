@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.kyc.state_machine import ServiceRoleClient
-from fastapi import APIRouter, Depends
+from app.services.vendor_plans.canonical_photos import find_duplicate, normalize_sha256
+from app.services.vendor_plans.resolver import resolve_effective_plan, shared_photos_enabled
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(prefix="/vendor/listings", tags=["listing-images"])
@@ -26,6 +28,15 @@ class ListingImageResponse(BaseModel):
 class AttachImageRequest(BaseModel):
     cloudinary_public_id: str = Field(min_length=1, max_length=500)
     position: int | None = Field(default=None, ge=1, le=MAX_IMAGES_PER_LISTING)
+    # sha256 of the uploaded bytes (vendor app, WebCrypto). Recorded only while
+    # `shared_canonical_photos` is on; used for scoped dedup, never trusted as
+    # proof of content across vendors (see services/vendor_plans/canonical_photos).
+    content_sha256: str | None = Field(default=None, min_length=64, max_length=64)
+
+    @field_validator("content_sha256")
+    @classmethod
+    def validate_sha256(cls, value: str | None) -> str | None:
+        return normalize_sha256(value) if value is not None else None
 
     @field_validator("cloudinary_public_id")
     @classmethod
@@ -36,6 +47,12 @@ class AttachImageRequest(BaseModel):
         if ".." in trimmed or trimmed.startswith("/"):
             raise ValueError("cloudinary_public_id is invalid")
         return trimmed
+
+
+class DedupCheckResponse(BaseModel):
+    enabled: bool
+    match: Literal["none", "listing", "own", "canonical"]
+    cloudinary_public_id: str | None = None
 
 
 class ReorderImagesRequest(BaseModel):
@@ -104,7 +121,7 @@ def _load_listing(
 ) -> dict[str, Any]:
     response = (
         service_client.client.table("vendor_listings")
-        .select("id, vendor_id, status")
+        .select("id, vendor_id, status, product_id")
         .eq("id", listing_id)
         .maybe_single()
         .execute()
@@ -167,7 +184,7 @@ def _list_images(
 ) -> list[dict[str, Any]]:
     response = (
         service_client.client.table("listing_images")
-        .select("id, listing_id, cloudinary_public_id, position")
+        .select("id, listing_id, cloudinary_public_id, position, content_sha256")
         .eq("listing_id", listing_id)
         .order("position")
         .execute()
@@ -184,16 +201,27 @@ def _next_position(images: list[dict[str, Any]]) -> int:
     return max(int(row.get("position", 0)) for row in images) + 1
 
 
-def _enforce_image_cap(images: list[dict[str, Any]], *, listing_id: str) -> None:
-    if len(images) >= MAX_IMAGES_PER_LISTING:
+def _enforce_image_cap(
+    images: list[dict[str, Any]],
+    *,
+    listing_id: str,
+    max_images: int = MAX_IMAGES_PER_LISTING,
+) -> None:
+    if len(images) >= max_images:
+        plan_limited = max_images < MAX_IMAGES_PER_LISTING
         raise AppError(
             code="image_limit_reached",
-            message="A listing cannot have more than 8 images",
+            message=f"A listing cannot have more than {max_images} images",
             http_status=400,
             details={
                 "listing_id": listing_id,
-                "max_images": MAX_IMAGES_PER_LISTING,
-                "message_key": "vendor.listings.images.limit_reached",
+                "max_images": max_images,
+                "upgrade_available": plan_limited,
+                "message_key": (
+                    "vendor.plans.photoLimitReached"
+                    if plan_limited
+                    else "vendor.listings.images.limit_reached"
+                ),
             },
         )
 
@@ -242,7 +270,27 @@ async def attach_listing_image(
     _assert_listing_editable(listing, listing_id=parsed_listing_id)
 
     existing = _list_images(service_client, parsed_listing_id)
-    _enforce_image_cap(existing, listing_id=parsed_listing_id)
+    # Plan photo cap (flag `vendor_plans`): own uploads only, never above the
+    # hard ≤8 rule. Photos already attached are never removed on a downgrade.
+    max_images = MAX_IMAGES_PER_LISTING
+    plan = resolve_effective_plan(service_client.client, str(vendor["id"]))
+    if plan is not None:
+        max_images = min(max_images, plan.max_images_per_listing)
+    _enforce_image_cap(existing, listing_id=parsed_listing_id, max_images=max_images)
+
+    content_sha256: str | None = None
+    if body.content_sha256 is not None and shared_photos_enabled(service_client.client):
+        content_sha256 = body.content_sha256
+        if any(row.get("content_sha256") == content_sha256 for row in existing):
+            raise AppError(
+                code="duplicate_image",
+                message="This photo is already on the listing",
+                http_status=409,
+                details={
+                    "listing_id": parsed_listing_id,
+                    "message_key": "vendor.listings.images.duplicate",
+                },
+            )
 
     position = body.position if body.position is not None else _next_position(existing)
     if position < 1 or position > MAX_IMAGES_PER_LISTING:
@@ -267,6 +315,7 @@ async def attach_listing_image(
                 "listing_id": parsed_listing_id,
                 "cloudinary_public_id": body.cloudinary_public_id,
                 "position": position,
+                **({"content_sha256": content_sha256} if content_sha256 else {}),
             }
         )
         .execute()
@@ -286,6 +335,35 @@ async def attach_listing_image(
         )
 
     return _serialize_image(row)
+
+
+@router.get("/{listing_id}/images/dedup", response_model=DedupCheckResponse)
+async def check_listing_image_duplicate(
+    sha256: Annotated[str, Query(min_length=64, max_length=64, pattern="^[0-9a-fA-F]{64}$")],
+    context: Annotated[tuple[dict[str, Any], dict[str, Any]], Depends(_require_owned_listing)],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> DedupCheckResponse:
+    """Pre-upload dedup: lets the vendor app skip uploading bytes we already hold.
+
+    Read-only. Scope: this listing, the listing's canonical product photos, and
+    the caller's own earlier uploads — never another vendor's photos.
+    """
+    if not shared_photos_enabled(service_client.client):
+        return DedupCheckResponse(enabled=False, match="none")
+    vendor, listing = context
+    product_id = listing.get("product_id")
+    result = find_duplicate(
+        service_client.client,
+        vendor_id=str(vendor["id"]),
+        listing_id=str(listing["id"]),
+        product_id=str(product_id) if product_id else None,
+        sha256=normalize_sha256(sha256),
+    )
+    return DedupCheckResponse(
+        enabled=True,
+        match=result.match,
+        cloudinary_public_id=result.cloudinary_public_id or None,
+    )
 
 
 @router.delete("/{listing_id}/images/{image_id}", status_code=204)

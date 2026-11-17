@@ -14,8 +14,15 @@ type CommissionBannerProps = {
   };
 };
 
-export function CommissionBanner({ commission, categoryName, labels }: CommissionBannerProps) {
-  const rateLabel = labels.rate.replace("{rate}", String(commission.rate_percent));
+export function CommissionBanner({
+  commission,
+  categoryName,
+  labels,
+}: CommissionBannerProps) {
+  const rateLabel = labels.rate.replace(
+    "{rate}",
+    String(commission.rate_percent),
+  );
 
   return (
     <aside
@@ -26,7 +33,9 @@ export function CommissionBanner({ commission, categoryName, labels }: Commissio
         <div className="space-y-1">
           <p className="text-sm font-medium text-text">{labels.heading}</p>
           <p className="text-sm text-text-2">{labels.body}</p>
-          {categoryName ? <p className="text-xs text-text-3">{categoryName}</p> : null}
+          {categoryName ? (
+            <p className="text-xs text-text-3">{categoryName}</p>
+          ) : null}
         </div>
         <Badge variant="new" label={rateLabel} />
       </div>
