@@ -593,14 +593,18 @@
     "20261116090000_unified_cart_event_tickets.sql": "9554630426b0b07c05fad3e2d9324499bb1798048d25d7a388b545668b8edd7f",
     "20261116100000_coupons_gifts_birthdays.sql": "4b83483243dec687ad057cdd9622f9ab130b3081bf980a0cda2be7e239f34661",
     "20261116100100_collection_coupon_funding.sql": "638fa24b1ae4b2d485d335cca4f44f066f714f22b4e94b720304a117b5b0c3b9",
-    "20261116110000_vendor_plans.sql": "c9ce1934beb07af8cd3177baafc95778cba3085085ce80aecf89efc0cce06848",
-    "20261116110100_shared_canonical_photos.sql": "d20f9759eb5cc71a0d24366afb1216594fc301a071579fc625a9100b03b40fe7",
+    "20261116110000_vendor_plans.sql": "3cb0d145ceaf879df425894f88311cc93c449d78b58f14aa9f6f772bddcb7e68",
+    "20261116110100_shared_canonical_photos.sql": "e8eb658d9b10c0c2a52ee82202d0d35f5ae950043732d7ad5a82726734f5da96",
     "20261116130000_free_events_services.sql": "c609d61f7de6b1c51600da82d521670f322ebda3a3ddd46888af9027eb3de05d",
+<<<<<<< HEAD
     "20261117000000_multi_branch_businesses.sql": "2461c663a22ddd58da8963f16c3dc5aebb62694ba0b1883dc8b698c00ed484ef",
     "20261117010000_unpaid_order_cancel_hours.sql": "98cf2b7467417d99ab5c2b824595997f22a431e276278e1d7b96f54c1953a8e5",
     "20261117010100_loyalty_points.sql": "a622dc1b4497a6c7baa1b1e90c1bb99723572b8f4770c63752cd53532fdeee90",
     "20261117010200_vendor_weekly_digest.sql": "fe0837fb6d9dc42339684b8921f32ed7c2e1310cb21aaf300e362c490c6b1b5f",
     "20261117010300_in_app_never_silent_events.sql": "351190517f3bc88e297d623596ab2aa5e08d98db3d20a954bdbd3317021a644c"
+=======
+    "20261117000000_multi_branch_businesses.sql": "8a47d113a79553419120419d365805f6474c47fdb8a2794441a12397dcf5b449"
+>>>>>>> origin/release/2026-11-next
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",
