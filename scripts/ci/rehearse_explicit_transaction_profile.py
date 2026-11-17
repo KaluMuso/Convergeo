@@ -781,6 +781,19 @@ def assert_prefix(container: str, expected: list[list[object]], count: int) -> N
         )
 
 
+def batch_end(files: list[Path], start: int) -> int:
+    """Index of the last file in the consecutive non-BOUND run from start."""
+    end = start
+    while end + 1 < len(files) and files[end + 1].name not in BOUND_FILES:
+        end += 1
+    return end
+
+
+def assert_batch_ledger(current: list[list[object]], files: list[Path], end: int) -> None:
+    if [row[0] for row in current] != [p.stem.split("_", 1)[0] for p in files[: end + 1]]:
+        raise RehearsalError("intervening CLI migration order changed")
+
+
 def rejection_trigger(container: str, version: str, *, create: bool) -> None:
     if re.fullmatch(r"[0-9]+", version) is None:
         raise RehearsalError("unreviewed trigger version")
@@ -844,7 +857,9 @@ def commit_without_ack(container: str, version: str, body: bytes) -> None:
                         raise RehearsalError(
                             "fixture client finished before acknowledgement was cut"
                         )
-                    process.terminate()
+                    # SIGKILL, not SIGTERM: newer runner docker CLIs exit 0 on
+                    # SIGTERM, which falsely reads as an acknowledged commit.
+                    process.kill()
                     process.wait(timeout=5)
                     if process.returncode == 0:
                         raise RehearsalError(
@@ -974,7 +989,10 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         code="HISTORY_MISMATCH",
                     )
             completed: list[list[object]] = []
+            batched_through = first_index - 1
             for index in range(first_index, len(files)):
+                if index <= batched_through:
+                    continue
                 tracker.enter("suffix_replay")
                 path = files[index]
                 before = ledger(container)
@@ -1034,15 +1052,14 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
                         f"original_body_atomicity|{boundary.version}|PASS|{before_catalog}|{after_catalog}"
                     )
                 else:
-                    # Let pinned CLI apply the two intervening migrations and
-                    # final ACL hardening in order, using the same workdir.
-                    with visible_prefix(files, index, holding):
+                    # One push applies the whole consecutive run of non-BOUND
+                    # migrations in order; the ledger guard is unchanged.
+                    end = batch_end(files, index)
+                    with visible_prefix(files, end, holding):
                         cli(workdir, "push", "--db-url", URL, "--include-all", "--yes")
                     assert_prefix(container, baseline, first_index)
-                    if [row[0] for row in ledger(container)] != [
-                        p.stem.split("_", 1)[0] for p in files[: index + 1]
-                    ]:
-                        raise RehearsalError("intervening CLI migration order changed")
+                    assert_batch_ledger(ledger(container), files, end)
+                    batched_through = end
             tracker.enter("final_ledger")
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
