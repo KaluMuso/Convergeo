@@ -8378,6 +8378,20 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
+            foreignKeyName: "vendor_extras_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_extras_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
             foreignKeyName: "vendor_extras_requests_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
@@ -9635,10 +9649,7 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
-      business_trial_ends_at: {
-        Args: { p_vendor_id: string }
-        Returns: string
-      }
+      business_trial_ends_at: { Args: { p_vendor_id: string }; Returns: string }
       cart_guest_token: { Args: never; Returns: string }
       cart_merge_authority: {
         Args: {
