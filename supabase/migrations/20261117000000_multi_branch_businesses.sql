@@ -61,7 +61,6 @@
 --   delete from public.vendor_plans where key in ('chain','enterprise','enterprise_plus');
 --   delete from public.platform_config where key = 'branch_min_sibling_distance_m';
 --   delete from public.feature_flags where flag = 'multi_branch';
-begin;
 
 insert into public.feature_flags (flag, enabled, description) values
   ('multi_branch', false,
@@ -1131,4 +1130,3 @@ create policy vendor_business_staff_select_own
                where b.id = vendor_business_staff.business_id and b.owner_user_id = (select auth.uid()))
   );
 
-commit;
