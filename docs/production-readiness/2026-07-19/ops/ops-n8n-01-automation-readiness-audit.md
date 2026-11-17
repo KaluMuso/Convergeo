@@ -135,6 +135,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `admin-digest.json`               | Notifications (founder)                     | no                      | DORMANT                                                               |
 | `points-sweep.json`               | Engagement (points, A1)                     | no                      | DORMANT (added 2026-11-16, inactive; flag `loyalty_points` off)       |
 | `vendor-weekly-digest.json`       | Notifications (vendor, E3)                  | no                      | DORMANT (added 2026-11-16, inactive; flag `vendor_weekly_digest` off) |
+| `unpaid-order-cancel.json`        | Order jobs (unpaid prepaid auto-cancel)     | no                      | DORMANT (added 2026-11-16, inactive; hourly `POST /internal/order-jobs/cancel-unpaid`) |
 | `daily-summary.json`              | Reporting (n8n webhook)                     | no                      | DORMANT                                                               |
 | `kyc-nudge.json`                  | Notifications                               | no                      | DORMANT                                                               |
 | `payout-failure-alert.json`       | Notifications                               | no                      | DORMANT                                                               |
