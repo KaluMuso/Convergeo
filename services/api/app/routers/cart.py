@@ -7,13 +7,16 @@ import re
 import secrets
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 import jwt
 from app.core.auth import CurrentUser, get_current_user
+from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.schemas.base import StrictModel
 from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import (
@@ -1960,4 +1963,220 @@ async def accept_rfq_into_cart(
         listings_by_id=listings,
         business_eligible=business_eligible,
         customer_id=owner.user_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# F1 — "Buy again": rebuild the cart from a delivered/completed order
+# ---------------------------------------------------------------------------
+
+_REORDERABLE_STATUSES = frozenset({"delivered", "completed"})
+_REORDER_MAX_LINES = 50
+#: Reuses the declared ``write_sensitive`` rate scope (no new manifest entry).
+_REORDER_RATE_SCOPE = "write_sensitive"
+_REORDER_RATE_LIMIT = 10
+
+ReorderSkipReason = Literal["unavailable", "out_of_stock", "variant_unavailable"]
+
+
+class ReorderAddedLine(StrictModel):
+    listing_id: str
+    title: str
+    qty: int
+    unit_price_ngwee: int
+
+
+class ReorderSkippedLine(StrictModel):
+    listing_id: str
+    title: str
+    reason: ReorderSkipReason
+
+
+class ReorderPriceChange(StrictModel):
+    listing_id: str
+    title: str
+    previous_unit_price_ngwee: int
+    current_unit_price_ngwee: int
+
+
+class ReorderResponse(StrictModel):
+    order_id: str
+    added: list[ReorderAddedLine]
+    skipped: list[ReorderSkippedLine]
+    price_changes: list[ReorderPriceChange]
+
+
+def _reorder_skip_reason(exc: AppError) -> ReorderSkipReason:
+    code = exc.code
+    if code in {"cart.variant_unavailable", "cart.variant_invalid", "cart.variant_required"}:
+        return "variant_unavailable"
+    if "stock" in code or code in {"cart.insufficient_stock", "cart.qty_exceeds_stock"}:
+        return "out_of_stock"
+    return "unavailable"
+
+
+def _load_owned_reorder_lines(service: Any, *, order_id: str, user_id: str) -> list[dict[str, Any]]:
+    """Product lines of one of the caller's OWN delivered/completed orders.
+
+    Unknown ids and other customers' orders answer the same 404 (no existence leak).
+    """
+    not_found = AppError(code="not_found", message="Order not found", http_status=404)
+    try:
+        order_id = str(uuid.UUID(order_id))
+    except ValueError as exc:
+        raise not_found from exc
+    order = (
+        service.table("orders")
+        .select("id, customer_id, status")
+        .eq("id", order_id)
+        .maybe_single()
+        .execute()
+    )
+    row = order.data if order is not None and isinstance(order.data, dict) else None
+    if row is None or str(row.get("customer_id")) != user_id:
+        raise not_found
+    if str(row.get("status")) not in _REORDERABLE_STATUSES:
+        raise AppError(
+            code="cart.reorder_not_available",
+            message="Only delivered or completed orders can be bought again",
+            http_status=409,
+        )
+    items = (
+        service.table("order_items")
+        .select(
+            "id, qty, unit_price_ngwee, title_snapshot, item_kind, "
+            "order_item_products(listing_id, listing_variant_id)"
+        )
+        .eq("order_id", order_id)
+        .execute()
+    )
+    lines: list[dict[str, Any]] = []
+    for item in items.data if isinstance(items.data, list) else []:
+        if not isinstance(item, dict) or item.get("item_kind", "product") != "product":
+            continue
+        link = item.get("order_item_products")
+        if isinstance(link, list):
+            link = link[0] if link else None
+        if not isinstance(link, dict) or not link.get("listing_id"):
+            continue
+        title = item.get("title_snapshot")
+        lines.append(
+            {
+                "listing_id": str(link["listing_id"]),
+                "listing_variant_id": (
+                    str(link["listing_variant_id"]) if link.get("listing_variant_id") else None
+                ),
+                "qty": int(item["qty"]),
+                "previous_unit_price_ngwee": int(item["unit_price_ngwee"]),
+                "title": str(title).strip() if isinstance(title, str) and title.strip() else "Item",
+            }
+        )
+    return lines[:_REORDER_MAX_LINES]
+
+
+@router.post("/reorder/{order_id}", response_model=ReorderResponse)
+async def reorder_into_cart(
+    order_id: str,
+    owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+    request: Request,
+) -> ReorderResponse:
+    """Re-add a past order's lines at CURRENT price and stock through the atomic add path.
+
+    Each line goes through the same keyed add (``apply_cart_add_idempotent_v2``) as
+    ``POST /cart/items``, so merge, variant, stock and class rules all apply. Lines that
+    cannot be added are reported (never silently dropped), and lines whose price moved
+    are returned so the customer sees the change before checkout.
+    """
+    if owner.is_guest or owner.user_id is None:
+        raise AppError(
+            code="cart.auth_required",
+            message="Sign in to buy again",
+            http_status=401,
+            details={},
+        )
+    allowed, retry_after = bump_rate_counter(
+        scope=_REORDER_RATE_SCOPE,
+        key=f"reorder:{owner.user_id}",
+        window=timedelta(minutes=1),
+        limit=_REORDER_RATE_LIMIT,
+        client=getattr(service_client, "client", service_client),
+    )
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="cart.reorder.rateLimited",
+            message="Too many buy-again requests",
+        )
+
+    lines = _load_owned_reorder_lines(service_db_client(), order_id=order_id, user_id=owner.user_id)
+    client = _db_client_for_owner(
+        owner, settings=settings, user_token=_extract_bearer_token(request)
+    )
+    business_eligible = _business_eligible_for_user(owner.user_id)
+    supplied = request.headers.get("Idempotency-Key")
+    base_key = supplied if supplied and _CART_ADD_KEY.fullmatch(supplied[:64]) else uuid.uuid4().hex
+    base_key = base_key[:64]
+
+    added: list[tuple[dict[str, Any], int]] = []
+    skipped: list[ReorderSkippedLine] = []
+    for index, line in enumerate(lines):
+        body = CartItemInput(
+            listing_id=line["listing_id"],
+            qty=line["qty"],
+            listing_variant_id=line["listing_variant_id"],
+        )
+        try:
+            _keyed_add_result(
+                body=body,
+                key=f"reorder:{base_key}:{index}",
+                owner=owner,
+                client=client,
+                business_eligible=business_eligible,
+            )
+        except AppError as exc:
+            if exc.code in {"cart.idempotency_mismatch", "cart.concurrent_add_retry"}:
+                raise
+            skipped.append(
+                ReorderSkippedLine(
+                    listing_id=line["listing_id"],
+                    title=line["title"],
+                    reason=_reorder_skip_reason(exc),
+                )
+            )
+            continue
+        added.append((line, index))
+
+    current_prices: dict[str, int] = {}
+    if added:
+        for row in _fetch_cart_items(client, owner.cart_id or ""):
+            current_prices[str(row.get("listing_id"))] = int(row.get("unit_price_ngwee") or 0)
+
+    added_out: list[ReorderAddedLine] = []
+    changes: list[ReorderPriceChange] = []
+    for line, _index in added:
+        current = current_prices.get(line["listing_id"], line["previous_unit_price_ngwee"])
+        added_out.append(
+            ReorderAddedLine(
+                listing_id=line["listing_id"],
+                title=line["title"],
+                qty=line["qty"],
+                unit_price_ngwee=current,
+            )
+        )
+        if current != line["previous_unit_price_ngwee"]:
+            changes.append(
+                ReorderPriceChange(
+                    listing_id=line["listing_id"],
+                    title=line["title"],
+                    previous_unit_price_ngwee=line["previous_unit_price_ngwee"],
+                    current_unit_price_ngwee=current,
+                )
+            )
+    return ReorderResponse(
+        order_id=str(uuid.UUID(order_id)),
+        added=added_out,
+        skipped=skipped,
+        price_changes=changes,
     )

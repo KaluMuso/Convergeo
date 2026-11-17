@@ -113,5 +113,8 @@
   "paymentTrust": {
     "footerSeal": "Pay cash when your order arrives",
     "footerPaymentNote": "Cash on delivery · Online payment coming soon"
+  },
+  "codTrust": {
+    "line": "You pay on delivery → We deliver → You confirm"
   }
 }

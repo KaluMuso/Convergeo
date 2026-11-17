@@ -187,7 +187,9 @@ def test_next_marketing_send_at_before_seven_same_day() -> None:
 
 
 #: WhatsApp templates that are marketing by design (opt-in, quiet hours, opt-out).
-MARKETING_WHATSAPP_TEMPLATES = frozenset({"birthday_greeting"})
+MARKETING_WHATSAPP_TEMPLATES = frozenset(
+    {"birthday_greeting", "points_earned", "vendor_weekly_digest"}
+)
 
 
 @pytest.mark.parametrize(

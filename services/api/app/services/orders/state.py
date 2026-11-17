@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -180,7 +181,8 @@ TRANSITION_TABLE: tuple[TransitionSpec, ...] = (
         OrderStatus.PLACED,
         OrderEvent.CANCEL,
         OrderStatus.CANCELLED,
-        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN}),
+        # SYSTEM: the unpaid-prepaid auto-cancel sweeper (internal_order_jobs).
+        frozenset({ActorRole.CUSTOMER, ActorRole.ADMIN, ActorRole.SYSTEM}),
     ),
     TransitionSpec(
         OrderStatus.CONFIRMED,
@@ -628,6 +630,10 @@ COMMIT;
             actor_role=actor_role.value,
         )
 
+    # The guarded transition has committed: tell the customer. Best-effort and
+    # idempotent (outbox dedupe on event + order); never blocks or rolls back.
+    _notify_committed_transition(order_id, to_status)
+
     return TransitionOutcome(
         order_id=order_id,
         from_status=snapshot.status,
@@ -636,6 +642,17 @@ COMMIT;
         actor_id=actor_id,
         note=note,
     )
+
+
+def _notify_committed_transition(order_id: str, to_status: str) -> None:
+    try:
+        from app.services.notifications.lifecycle import notify_order_transition
+
+        notify_order_transition(order_id, to_status)
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "order transition notification failed for %s", order_id, exc_info=True
+        )
 
 
 def fetch_latest_audit_event(order_id: str) -> dict[str, Any] | None:

@@ -124,7 +124,10 @@ const pendingLabels: PendingLabels = {
   ticketUnavailableBody: pendingMessages.ticketUnavailableBody,
   ussd: ussdLabels,
   failed: failedLabels,
-  codConfirmation: pendingMessages.cod,
+  codConfirmation: {
+    ...pendingMessages.cod,
+    trustLine: "You pay on delivery → We deliver → You confirm",
+  },
 };
 
 function statusPayload(
@@ -346,8 +349,9 @@ describe("PendingPaymentShell — provider success commits payment-confirming be
     );
 
     await screen.findByTestId("payment-cod");
-    expect(screen.getByTestId("payment-cod-order-number")).toHaveTextContent(
-      "A1B2C3D4",
+    expect(screen.getByTestId("payment-cod-order-number")).toHaveTextContent("A1B2C3D4");
+    expect(screen.getByTestId("payment-cod-trust")).toHaveTextContent(
+      "You pay on delivery → We deliver → You confirm",
     );
     const steps = screen.getByTestId("payment-cod-next-steps");
     expect(steps).toHaveTextContent(pendingMessages.cod.step1Title);

@@ -3279,6 +3279,21 @@ EXPECTATIONS: TableExpectations = {
             "door_payment_exceptions",
         )
     },
+    # Convergeo Points (20261117010100): SELECT own rows only (RLS); no client
+    # INSERT/UPDATE/DELETE grant — writes only via private.points_* definers.
+    "points_ledger": {
+        Persona.ANON: deny_all(),
+        **{
+            persona: {"select": "permit", "insert": "deny", "update": "deny", "delete": "deny"}
+            for persona in (
+                Persona.CUSTOMER,
+                Persona.OTHER_CUSTOMER,
+                Persona.VENDOR,
+                Persona.OTHER_VENDOR,
+                Persona.ADMIN,
+            )
+        },
+    },
     # W8 bundles & offers (20261115120000). Public SELECT of live offers; the
     # owner vendor holds ALL policies and admins a SELECT policy (D1: no admin
     # writes). Non-owners and admins match zero rows on the WHERE-false

@@ -303,6 +303,12 @@ def open_dispute(
         to_status=DisputeStatus.OPEN.value,
         note=note,
     )
+    try:
+        from app.services.notifications.lifecycle import notify_dispute_opened
+
+        notify_dispute_opened(dispute_id, order_id, client=service_client.client)
+    except Exception:
+        pass
     return OpenDisputeResult(
         dispute_id=dispute_id,
         order_id=order_id,

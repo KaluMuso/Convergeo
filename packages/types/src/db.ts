@@ -6072,6 +6072,70 @@ export type Database = {
         }
         Relationships: []
       }
+      points_ledger: {
+        Row: {
+          actor: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          note: string | null
+          order_id: string | null
+          points: number
+          reason: string
+          reverses_entry_id: string | null
+          review_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          note?: string | null
+          order_id?: string | null
+          points: number
+          reason: string
+          reverses_entry_id?: string | null
+          review_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          note?: string | null
+          order_id?: string | null
+          points?: number
+          reason?: string
+          reverses_entry_id?: string | null
+          review_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_reverses_entry_id_fkey"
+            columns: ["reverses_entry_id"]
+            isOneToOne: false
+            referencedRelation: "points_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       privacy_consents: {
         Row: {
           granted: boolean
@@ -9717,6 +9781,8 @@ export type Database = {
           checkout_group_id: string
         }[]
       }
+      points_liability: { Args: never; Returns: Json }
+      points_summary: { Args: { p_user: string }; Returns: Json }
       product_class_customer_released: {
         Args: { p_class: string }
         Returns: boolean

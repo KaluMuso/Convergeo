@@ -109,6 +109,13 @@ REVIEWED_SUFFIX = (
     "20261116130000_free_events_services.sql",
     # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
     "20261117000000_multi_branch_businesses.sql",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000_unpaid_order_cancel_hours.sql",
+    # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
+    "20261117010100_loyalty_points.sql",
+    "20261117010200_vendor_weekly_digest.sql",
+    # In-app rows for never-silent lifecycle templates (additive, reversible).
+    "20261117010300_in_app_never_silent_events.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"
@@ -662,9 +669,9 @@ def source_inventory(workdir: Path) -> tuple[list[Path], int]:
         )
     files = sorted((workdir / "supabase/migrations").glob("*.sql"))
     committed = sorted((ROOT / "supabase/migrations").glob("*.sql"))
-    if len(files) != 184 or [p.name for p in files] != [p.name for p in committed]:
+    if len(files) != 188 or [p.name for p in files] != [p.name for p in committed]:
         raise RehearsalError(
-            "disposable copy does not match 184 source migrations",
+            "disposable copy does not match 188 source migrations",
             code="SOURCE_MISMATCH",
         )
     for source, copy in zip(committed, files, strict=True):
@@ -747,10 +754,10 @@ def owned_window(workdir: Path, files: list[Path]) -> Iterator[WindowState]:
                         raise RehearsalError(
                             "failure cleanup did not restore full history"
                         )
-                    print("failure_cleanup|restored_184|PASS")
+                    print("failure_cleanup|restored_188|PASS")
                 except Exception:
                     print(
-                        "error: disposable failure cleanup could not restore 184 migrations",
+                        "error: disposable failure cleanup could not restore 188 migrations",
                         file=sys.stderr,
                     )
             elif state.owned_network is not None:
@@ -1105,7 +1112,7 @@ def run(workdir: Path, tracker: StageTracker | None = None) -> None:
             assert_native_ledger_schema(container)
             if len(ledger(container)) != len(files):
                 raise RehearsalError(
-                    "normal full replay did not restore 184 migrations"
+                    "normal full replay did not restore 188 migrations"
                 )
             print(f"qualified_source|{source}|{tree}")
             print("qualified_original_body_replay|PASS|5")

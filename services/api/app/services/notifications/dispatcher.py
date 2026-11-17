@@ -60,6 +60,17 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "otp_login": TemplateClass.TRANSACTIONAL,
     "event_cancelled": TemplateClass.TRANSACTIONAL,
     "event_schedule_changed": TemplateClass.TRANSACTIONAL,
+    # Never-silent lifecycle events (E1/E4) — transactional, never deferred.
+    "rfq_quoted": TemplateClass.TRANSACTIONAL,
+    "service_quote_accepted": TemplateClass.TRANSACTIONAL,
+    "order_cancelled": TemplateClass.TRANSACTIONAL,
+    "payment_failed": TemplateClass.TRANSACTIONAL,
+    "order_completed": TemplateClass.TRANSACTIONAL,
+    "ticket_issued": TemplateClass.TRANSACTIONAL,
+    "dispute_opened": TemplateClass.TRANSACTIONAL,
+    "dispute_resolved": TemplateClass.TRANSACTIONAL,
+    "payout_sent": TemplateClass.TRANSACTIONAL,
+    "payout_failed": TemplateClass.TRANSACTIONAL,
     "gift_recipient_notice": TemplateClass.TRANSACTIONAL,
     "gift_ready_pickup": TemplateClass.TRANSACTIONAL,
     # Birthday offers are marketing: quiet hours + channel opt-out apply.
@@ -83,6 +94,9 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "price_drop_alert": TemplateClass.MARKETING,
     "back_in_stock_alert": TemplateClass.MARKETING,
     "saved_search_alert": TemplateClass.MARKETING,
+    # Engagement digests (quiet hours + consent apply; in-app always lands).
+    "points_earned": TemplateClass.MARKETING,
+    "vendor_weekly_digest": TemplateClass.MARKETING,
 }
 
 

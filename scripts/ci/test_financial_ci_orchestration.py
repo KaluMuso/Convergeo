@@ -84,8 +84,10 @@ class FinancialOrchestrationControls(unittest.TestCase):
         #   audit_log/deactivation/consent (all additive).
         # + 7 reviewed: analytics v2 foundation, rollups, commercial, search sessions,
         #   Lusaka day, search-daily retention, session links (additive, flag-gated).
-        self.assertEqual(len(runner.FORWARD), 57)
-        self.assertEqual(len(set(runner.FORWARD)), 57)
+        # + 1 reviewed: In-app rows for never-silent lifecycle templates (additive, reversible).
+        # + 2 reviewed: Convergeo Points ledger + weekly seller digest (additive, flag-gated).
+        self.assertEqual(len(runner.FORWARD), 61)
+        self.assertEqual(len(set(runner.FORWARD)), 61)
         self.assertEqual(len(runner.RELATED), 4)
         self.assertEqual(len((HERE.parents[1] / "docs/ops/lenco/f2-required-nodes.txt")
                              .read_text().splitlines()), 43)
