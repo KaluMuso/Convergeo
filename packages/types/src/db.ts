@@ -6082,8 +6082,8 @@ export type Database = {
           order_id: string | null
           points: number
           reason: string
-          review_id: string | null
           reverses_entry_id: string | null
+          review_id: string | null
           user_id: string
         }
         Insert: {
@@ -6095,8 +6095,8 @@ export type Database = {
           order_id?: string | null
           points: number
           reason: string
-          review_id?: string | null
           reverses_entry_id?: string | null
+          review_id?: string | null
           user_id: string
         }
         Update: {
@@ -6108,8 +6108,8 @@ export type Database = {
           order_id?: string | null
           points?: number
           reason?: string
-          review_id?: string | null
           reverses_entry_id?: string | null
+          review_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -6121,17 +6121,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "points_ledger_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: false
-            referencedRelation: "reviews"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "points_ledger_reverses_entry_id_fkey"
             columns: ["reverses_entry_id"]
             isOneToOne: false
             referencedRelation: "points_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
             referencedColumns: ["id"]
           },
         ]
