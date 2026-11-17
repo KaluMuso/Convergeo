@@ -138,6 +138,8 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261116110000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
 ]
 
 def _module() -> Any:
@@ -180,7 +182,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     # Bind the expected repair union to actual canonical SQL files.
     sql_files = sorted((REPO_ROOT / "supabase/migrations").glob("*.sql"))
     actual_versions = [path.name.split("_", 1)[0] for path in sql_files]
-    assert len(sql_files) == len(migrations) == 182
+    assert len(sql_files) == len(migrations) == 183
     assert [migration.version for migration in migrations] == actual_versions
     repairs = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
     # Reviewed #762 variants and #759-into-#718 money reconciliation replay after repairs,
@@ -223,7 +225,8 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     unified_cart = ["20261116090000"]
     coupons_gifts = ["20261116100000", "20261116100100"]
     capacity_plans_photos = ["20261116110000", "20261116110100"]
-    assert actual_versions[-43:] == (
+    free_events_services = ["20261116130000"]
+    assert actual_versions[-44:] == (
         repairs
         + post_repair
         + queued_features
@@ -243,6 +246,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
         + unified_cart
         + coupons_gifts
         + capacity_plans_photos
+        + free_events_services
     )
     assert all(path.stat().st_size > 0 for path in sql_files)
 

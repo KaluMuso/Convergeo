@@ -125,6 +125,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261116110000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
 }
 
 

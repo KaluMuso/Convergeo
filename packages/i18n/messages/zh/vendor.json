@@ -1997,7 +1997,9 @@
       "attendeeNamedBadge": "需要姓名",
       "perksLabel": "权益（可选）",
       "perksHelp": "向买家展示 — 休息室、周边、饮品券。没有则留空。",
-      "perksPlaceholder": "例如含一张饮品券"
+      "perksPlaceholder": "例如含一张饮品券",
+      "isFreeLabel": "这是免费的",
+      "isFreeHint": "来宾无需付款即可报名，仍会获得二维码门票，并受名额限制。"
     },
     "actions": {
       "save": "保存类型",

@@ -3141,6 +3141,65 @@ export type Database = {
           },
         ]
       }
+      event_rsvps: {
+        Row: {
+          created_at: string
+          event_id: string
+          instance_id: string
+          order_id: string | null
+          qty: number
+          ticket_type_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          instance_id: string
+          order_id?: string | null
+          qty: number
+          ticket_type_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          instance_id?: string
+          order_id?: string | null
+          qty?: number
+          ticket_type_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_settlement_snapshots: {
         Row: {
           created_at: string
@@ -7135,6 +7194,70 @@ export type Database = {
           },
         ]
       }
+      service_free_bookings: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          idempotency_key: string
+          note: string | null
+          preferred_date: string | null
+          responded_at: string | null
+          service_id: string
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          idempotency_key: string
+          note?: string | null
+          preferred_date?: string | null
+          responded_at?: string | null
+          service_id: string
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          idempotency_key?: string
+          note?: string | null
+          preferred_date?: string | null
+          responded_at?: string | null
+          service_id?: string
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_free_bookings_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_free_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "service_free_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_payment_obligations: {
         Row: {
           amount_ngwee: number
@@ -7271,6 +7394,7 @@ export type Database = {
           from_price_ngwee: number | null
           id: string
           includes: string[]
+          is_free: boolean
           portfolio_images: string[]
           service_area: string | null
           status: string
@@ -7287,6 +7411,7 @@ export type Database = {
           from_price_ngwee?: number | null
           id?: string
           includes?: string[]
+          is_free?: boolean
           portfolio_images?: string[]
           service_area?: string | null
           status?: string
@@ -7303,6 +7428,7 @@ export type Database = {
           from_price_ngwee?: number | null
           id?: string
           includes?: string[]
+          is_free?: boolean
           portfolio_images?: string[]
           service_area?: string | null
           status?: string
@@ -9433,6 +9559,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      transition_service_free_booking: {
+        Args: { p_actor: string; p_booking_id: string; p_to: string }
+        Returns: string
       }
       transition_vendor_suspend: {
         Args: {

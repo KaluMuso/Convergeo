@@ -3329,6 +3329,16 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "checkout_ticket_holds": client_invisible(),
+    # Free events / services (#813): SELECT-only grants with owner, organiser /
+    # provider and admin read policies; writes go through the API (service role).
+    "event_rsvps": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
+    "service_free_bookings": {
+        Persona.ANON: deny_all(),
+        **{p: select_only() for p in Persona if p is not Persona.ANON},
+    },
     # Coupons, gift orders, birthdays (#792): SELECT-only grants with owner/admin
     # read policies; every write goes through the API (service role).
     "coupons": {
