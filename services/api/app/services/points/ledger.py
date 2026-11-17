@@ -1,4 +1,4 @@
-"""Thin wrappers over the SECURITY DEFINER points functions (migration 20261116160000).
+"""Thin wrappers over the SECURITY DEFINER points functions (migration 20261117010100).
 
 Every transition lives in SQL so it is idempotent by ``points_ledger.idempotency_key``
 and serialised per user; Python only triggers it and reads results.

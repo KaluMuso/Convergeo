@@ -1,7 +1,10 @@
 import { ApiError } from "@vergeo/config";
 import { describe, expect, it } from "vitest";
 
-import { describeListingError } from "./listing-errors";
+import {
+  describeListingError,
+  listingCreateErrorMessage,
+} from "./listing-errors";
 
 const messages = {
   standaloneRequired: "standalone",
@@ -13,7 +16,10 @@ const messages = {
 };
 
 function fieldError(code: string, fields: unknown) {
-  return new ApiError(code, "Validation failed", { status: 422, details: { fields } });
+  return new ApiError(code, "Validation failed", {
+    status: 422,
+    details: { fields },
+  });
 }
 
 describe("describeListingError", () => {
@@ -37,7 +43,11 @@ describe("describeListingError", () => {
   it("uses different wording for a blocked publish", () => {
     const result = describeListingError(
       fieldError("listing_publish_blocked", [
-        { field: "product_class", code: "release_policy", message: "Class not released" },
+        {
+          field: "product_class",
+          code: "release_policy",
+          message: "Class not released",
+        },
       ]),
       messages,
       "publish",
@@ -63,5 +73,36 @@ describe("describeListingError", () => {
     const result = describeListingError(new Error("boom"), messages);
     expect(result.message).toBe("fallback");
     expect(result.fields).toEqual({});
+  });
+});
+
+const limitMessages = {
+  standaloneRequired: "standalone",
+  listingLimit: "limit reached, listings stay live",
+  fallback: "failed",
+};
+
+describe("listingCreateErrorMessage", () => {
+  it("shows the friendly limit message when the plan/KYC listing cap is reached", () => {
+    const error = new ApiError("listing_cap_exceeded", "cap", {
+      status: 403,
+      details: {
+        message_key: "vendor.plans.limitReached",
+        upgrade_available: true,
+      },
+    });
+    expect(listingCreateErrorMessage(error, limitMessages)).toBe(
+      limitMessages.listingLimit,
+    );
+  });
+
+  it("falls back when no limit copy is supplied", () => {
+    const error = new ApiError("listing_cap_exceeded", "cap", { status: 403 });
+    expect(
+      listingCreateErrorMessage(error, {
+        standaloneRequired: "s",
+        fallback: "f",
+      }),
+    ).toBe("f");
   });
 });

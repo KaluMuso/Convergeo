@@ -7,6 +7,9 @@ export type TicketPurchaseErrorKey =
   | "attendeeNamesRequired"
   | "attendeeNamesMismatch"
   | "promoInvalid"
+  | "rsvpCap"
+  | "rsvpInProgress"
+  | "rateLimited"
   | "oneEvent";
 
 const KEY_BY_CODE: Record<string, TicketPurchaseErrorKey> = {
@@ -15,6 +18,9 @@ const KEY_BY_CODE: Record<string, TicketPurchaseErrorKey> = {
   "tickets.paid_use_checkout": "paidUseCheckout",
   "tickets.attendee_names_required": "attendeeNamesRequired",
   "tickets.attendee_names_mismatch": "attendeeNamesMismatch",
+  "tickets.rsvp_cap": "rsvpCap",
+  "tickets.rsvp_in_progress": "rsvpInProgress",
+  rate_limited: "rateLimited",
   promo_not_found: "promoInvalid",
   promo_inactive: "promoInvalid",
   promo_expired: "promoInvalid",

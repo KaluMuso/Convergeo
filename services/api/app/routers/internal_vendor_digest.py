@@ -1,7 +1,7 @@
 """Internal weekly seller digest (proposal E3; flag ``vendor_weekly_digest``).
 
 n8n calls this Monday 08:00 Lusaka. Computation and enqueue live in
-``private.vendor_weekly_digest`` (migration 20261116160100): one WhatsApp outbox
+``private.vendor_weekly_digest`` (migration 20261117010200): one WhatsApp outbox
 row + one in-app vendor notification per active vendor with activity, keyed by
 vendor + ISO week so a retried tick never sends twice. Inactive vendors are skipped.
 """

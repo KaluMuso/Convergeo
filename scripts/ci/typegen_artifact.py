@@ -23,7 +23,7 @@ META_IMAGE = (
     "a84cc713585eea7b401e4a2561ec4a1e48c87083d1c7ecb4502f204bb4391300"
 )
 META_ALIAS = "public.ecr.aws/supabase/postgres-meta:v0.96.6"
-MIGRATION_COUNT = 182
+MIGRATION_COUNT = 187
 REPAIR_ORDER = ["20261009100000", "20261009110000", "20261009124801", "20261011120000"]
 # Reviewed variants (#762), money-path reconciliation (#759 into #718) and the
 # 2026-11 queued features (#764-#768) replay after repairs, in filename order.
@@ -83,9 +83,19 @@ POST_REPAIR_ORDER = [
     "20261116100000",
     # Coupons: collection net of the coupon + coupon_funding leg (additive).
     "20261116100100",
+    # Vendor listing plans + least(KYC, plan) admission guard (additive, reversible).
+    "20261116110000",
+    # Shared canonical photos + sha256 dedup (additive, reversible).
+    "20261116110100",
+    # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
+    "20261116130000",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000",
+    # Unpaid-order auto-cancel window config row (additive, reversible).
+    "20261117010000",
     # Convergeo Points ledger + weekly seller digest, default off (additive, reversible).
-    "20261116160000",
-    "20261116160100",
+    "20261117010100",
+    "20261117010200",
 ]
 TAIL_ORDER = REPAIR_ORDER + POST_REPAIR_ORDER
 Run = Callable[[list[str], Path], str]

@@ -2,7 +2,7 @@
 
 Read-only. Every query filters on ``user_id = current_user.id`` (service client
 round-trip; the table also has FORCE RLS limiting direct reads to own rows).
-Points are earned/reversed only by the database (migration 20261116160000);
+Points are earned/reversed only by the database (migration 20261117010100);
 redemption into a coupon waits for PR #792 (see app/services/points/redeem.py).
 """
 

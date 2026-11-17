@@ -397,7 +397,9 @@
       "uploading": "Uploading…",
       "upload_failed": "Upload failed",
       "minimum_required": "At least {count} evidence photo must remain attached while this listing is live.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "duplicate": "This photo is already on the listing.",
+      "dedupCanonical": "This photo is already the product's main photo, so shoppers see it on your listing. No need to upload it again."
     },
     "meta": {
       "title": "Create listing — Convergeo Vendor",
@@ -2082,7 +2084,9 @@
       "attendeeNamedBadge": "Names required",
       "perksLabel": "Perks (optional)",
       "perksHelp": "Shown to buyers — lounge access, merch, drink tokens. Leave blank if none.",
-      "perksPlaceholder": "e.g. Includes one drink token"
+      "perksPlaceholder": "e.g. Includes one drink token",
+      "isFreeLabel": "This is free",
+      "isFreeHint": "Guests RSVP instead of paying. They still get a QR ticket and capacity applies."
     },
     "actions": {
       "save": "Save type",
@@ -2842,6 +2846,159 @@
         "listing": "That listing isn't in your shop.",
         "archived": "Ended coupons can't be restarted. Create a new one."
       }
+    }
+  },
+  "plans": {
+    "heading": "Your plan: {name}",
+    "free": "Free",
+    "perMonth": "{price}/month",
+    "usage": "{count} of {max} listings used",
+    "usageUnlimited": "{count} listings · no limit",
+    "kycLimit": "You've reached the listing limit for your verification level. Verify your business to list more.",
+    "atLimit": "You've used all the listings on your plan.",
+    "overLimit": "You have more listings than your plan allows.",
+    "keepSelling": "Nothing has been removed: your listings stay live, and you can keep editing them and adding stock. To add new products, upgrade your plan.",
+    "option": "{name}: {max} listings for {price}/month",
+    "optionUnlimited": "{name}: unlimited listings for {price}/month",
+    "howToUpgrade": "To upgrade, message our team. Nothing is charged automatically.",
+    "limitReachedShort": "You've reached your listing limit. Your existing listings stay live; see your plan above to upgrade.",
+    "limitReached": "You've reached your plan's listing limit. Your listings stay live; upgrade to add more.",
+    "photoLimitReached": "Your plan allows {max} photos per listing. Upgrade your plan to add more.",
+    "billingUnavailable": "Plan payments aren't available yet. Our team will help you upgrade."
+  },
+  "branches": {
+    "title": "My businesses & shops",
+    "intro": "Run every branch of your business from one account. Each shop has its own storefront, stock, payout number and plan.",
+    "loading": "Loading your businesses…",
+    "disabled": "Multiple shops are not available yet.",
+    "primary": "Main shop",
+    "acting": "You are working here",
+    "payoutHold": "Payouts for this shop are on hold until our team checks the shared MoMo number.",
+    "reviewNote": "Note from our team: {note}",
+    "ownerKycNeeded": "Finish your owner verification (KYC) before adding shops.",
+    "switcher": {
+      "label": "Shop you are working on",
+      "withStatus": "{name} ({status})",
+      "manage": "My shops"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending_review": "In review",
+      "info_requested": "Needs info",
+      "approved": "Live",
+      "rejected": "Rejected"
+    },
+    "allowance": {
+      "used": "{used} of {limit} shops",
+      "usedUnlimited": "{used} shops",
+      "blockedUnregistered": "Unregistered traders can run one shop. Add your PACRA registration to open more.",
+      "blockedPlan": "Your plan has no more shops. Upgrade your plan to add a branch.",
+      "nextAddon": "Next shop: {price}/month add-on",
+      "nextIncluded": "Next shop is included in your plan"
+    },
+    "staff": {
+      "seats": "Staff seats: {used} of {seats}",
+      "unlimited": "Staff seats: {used} (unlimited)"
+    },
+    "registration": {
+      "title": "Business registration (PACRA)",
+      "help": "Registered businesses can open more than one shop. We check the PACRA number and certificate.",
+      "typeLabel": "Registration",
+      "company": "Registered company",
+      "business_name": "Registered business name",
+      "unregistered": "Not registered (market trader)",
+      "unspecified": "Registration not set",
+      "pacraLine": "PACRA {number}",
+      "verified": "PACRA checked",
+      "pacraNumber": "PACRA number",
+      "certificate": "Certificate photo",
+      "unregisteredNote": "Unregistered traders are limited to one shop.",
+      "save": "Save registration",
+      "saved": "Registration saved."
+    },
+    "actions": {
+      "addShop": "Add a shop/branch",
+      "workHere": "Work in this shop",
+      "submit": "Send for review",
+      "submitting": "Sending…",
+      "saving": "Saving…",
+      "createShop": "Create shop"
+    },
+    "evidence": {
+      "help": "For a physical shop we need a photo of the shopfront and proof that you use the premises.",
+      "onlineHelp": "Online-only shops need no premises proof. Send it for review when ready.",
+      "storefront_photo": "Shopfront photo",
+      "premises_proof": "Proof of premises",
+      "uploaded": "uploaded",
+      "proofType": "Type of proof",
+      "proof": {
+        "lease": "Lease agreement",
+        "utility_bill": "Utility bill",
+        "council_permit": "Council trading permit"
+      }
+    },
+    "form": {
+      "title": "Add a shop/branch",
+      "intro": "Each branch gets its own storefront, stock, payout number and plan. Our team verifies it before it goes live.",
+      "shop": "Shop",
+      "name": "Shop name",
+      "kind": "Type",
+      "kindPhysical": "Physical shop",
+      "kindOnline": "Online only",
+      "location": "Location",
+      "useMyLocation": "Use my current location",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "landmark": "Landmark",
+      "landmarkHelp": "For example: opposite Total filling station, Great East Road.",
+      "address": "Street address (optional)",
+      "mapUrl": "Map link (optional, https)",
+      "opens": "Opens",
+      "closes": "Closes",
+      "sundayClosed": "Closed on Sundays",
+      "contacts": "Contacts",
+      "phone": "Shop phone",
+      "whatsapp": "WhatsApp number (optional)",
+      "email": "Email (optional)",
+      "payout": "Payout",
+      "payoutNumber": "MoMo payout number",
+      "payoutHelp": "A number used by another business is not allowed. Sharing a number between your own shops needs a check by our team.",
+      "rail": "Network",
+      "reviewNote": "After creating the shop, add the shopfront photo and proof of premises, then send it for review.",
+      "priceAddon": "This shop is a paid add-on: {price}/month on your plan.",
+      "priceIncluded": "This shop is included in your plan.",
+      "rails": {
+        "mtn": "MTN MoMo",
+        "airtel": "Airtel Money",
+        "zamtel": "Zamtel Kwacha"
+      }
+    },
+    "errors": {
+      "disabled": "Multiple shops are not available yet.",
+      "businessNotFound": "We could not find that business.",
+      "branchNotFound": "We could not find that shop.",
+      "businessSuspended": "This business is suspended.",
+      "ownerKycRequired": "Finish your owner verification (KYC) first.",
+      "locationRequired": "Add the shop location and a landmark.",
+      "slugInvalid": "Use a shop name with letters or numbers.",
+      "unregisteredLimit": "Unregistered traders can run one shop. Add your PACRA registration first.",
+      "planLimit": "Your plan has no more shops. Upgrade to add a branch.",
+      "tooClose": "This shop is {nearest} m from another of your shops. Branches must be at least {min} m apart.",
+      "payoutTaken": "That MoMo number belongs to another business. Use your own number.",
+      "evidenceRequired": "Add the shopfront photo and proof of premises first.",
+      "evidenceLocked": "Evidence can only change before review.",
+      "evidencePath": "That upload is not valid. Please upload again.",
+      "evidenceFile": "Use a JPG, PNG or WebP photo up to 10 MB.",
+      "invalidTransition": "This shop cannot be sent for review right now.",
+      "pacraRequired": "Registered businesses need a PACRA number and certificate.",
+      "pacraTaken": "That PACRA number is already registered to another business.",
+      "staffSeatLimit": "Your plan has no free staff seats.",
+      "staffDuplicate": "That staff member is already invited.",
+      "rateLimited": "Too many attempts. Wait a minute and try again.",
+      "validation": "Check the details and try again.",
+      "network": "No connection. Check your data and try again.",
+      "locationDenied": "We could not read your location. Enter it by hand.",
+      "generic": "Something went wrong. Please try again."
     }
   }
 }

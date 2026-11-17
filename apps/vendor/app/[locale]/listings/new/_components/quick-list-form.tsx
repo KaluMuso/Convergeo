@@ -54,6 +54,8 @@ type QuickListFormProps = {
     fields: Parameters<typeof ListingFields>[0]["labels"];
     submitError: string;
     standaloneRequired: string;
+    /** Listing cap reached (plan or KYC) — friendly upgrade copy. */
+    listingLimit?: string;
     /** Server category/release-policy rejection (listing_policy_blocked). */
     policyBlocked?: string;
     /** "We couldn't save this draft" — structural field problems. */
@@ -189,6 +191,7 @@ export function QuickListForm({
         caught,
         {
           standaloneRequired: labels.standaloneRequired,
+          listingLimit: labels.listingLimit,
           policyBlocked: labels.policyBlocked,
           draftInvalid: labels.draftInvalid,
           fieldErrors: labels.fieldErrors,

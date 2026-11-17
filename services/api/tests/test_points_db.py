@@ -1,5 +1,5 @@
 # ruff: noqa: E501 — long inline SQL fixtures read better unwrapped.
-"""Convergeo Points + weekly seller digest on real Postgres (migrations 20261116160000/020100).
+"""Convergeo Points + weekly seller digest on real Postgres (migrations 20261117010100/020100).
 
 Disposable-database contract as test_offers_order_db.py: ``ORDER_TEST_DB_URL`` = a
 fully migrated database, else a local 5432 Postgres that this module migrates.
