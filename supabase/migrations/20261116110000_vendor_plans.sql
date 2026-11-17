@@ -24,7 +24,6 @@
 --   drop table public.vendor_plan_overrides, public.vendor_plan_assignments,
 --     public.vendor_plans;
 --   delete from public.feature_flags where flag = 'vendor_plans';
-begin;
 
 insert into public.feature_flags (flag, enabled, description) values
   ('vendor_plans', false,
@@ -291,4 +290,3 @@ $$;
 
 revoke all on function public.guard_vendor_listing_admission() from public, anon, authenticated;
 
-commit;
