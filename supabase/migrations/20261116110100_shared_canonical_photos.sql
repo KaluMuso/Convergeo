@@ -20,7 +20,6 @@
 --   drop index public.listing_images_content_sha256_idx;
 --   alter table public.listing_images drop column content_sha256;
 --   delete from public.feature_flags where flag = 'shared_canonical_photos';
-begin;
 
 insert into public.feature_flags (flag, enabled, description) values
   ('shared_canonical_photos', false,
@@ -101,4 +100,3 @@ create policy product_images_public_active_select
     )
   );
 
-commit;
