@@ -253,11 +253,16 @@
       "vendor_weekly_digest": "⚠ Your week: {orders} orders, {sales} in sales, {followers} new followers.",
       "payout_sent": "⚠ Your payout is on its way to your mobile money number.",
       "payout_failed": "⚠ Your payout could not be sent. Check your payout number.",
-      "quote_accepted": "⚠ A customer accepted your quote. Open it to start the job."
+      "quote_accepted": "⚠ A customer accepted your quote. Open it to start the job.",
+      "extras_quoted": "⚠ We sent you a quote for {name}.",
+      "extras_approved": "⚠ Your request for {name} is approved.",
+      "extras_fulfilled": "⚠ {name} is done.",
+      "extras_cancelled": "⚠ Your request for {name} was cancelled."
     },
     "admin": {
       "kyc_submitted": "KYC iipya ilelolela ukumonwa.",
-      "dispute_opened": "Ubwafya bupya pa order {ref}."
+      "dispute_opened": "Ubwafya bupya pa order {ref}.",
+      "extras_requested": "⚠ A seller requested an extra: {name}."
     }
   }
 }

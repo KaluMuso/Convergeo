@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { readActingBranch, writeActingBranch } from "../../../../lib/acting-branch";
+import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { branchErrorKey } from "../_lib/branch-errors";
 import {
   createBusinessesClient,
@@ -92,6 +93,27 @@ function allowanceLine(business: Business, t: ReturnType<typeof useTranslations>
   return `${usage} · ${t("allowance.nextIncluded")}`;
 }
 
+/** Shops customers can see (and that appear as "Other branches" to each other). */
+export function liveShopCount(business: Business): number {
+  return business.branches.filter((b) => b.branch_status === "approved" && b.status === "active")
+    .length;
+}
+
+function ShopLink({ locale, slug, label }: { locale: string; slug: string; label: string }) {
+  const href = getVendorStorefrontUrl(locale, slug);
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex min-h-9 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+    >
+      {label}
+    </a>
+  );
+}
+
 function BusinessCard({
   business,
   client,
@@ -132,7 +154,15 @@ function BusinessCard({
         ) : null}
       </header>
 
-      <ul className="m-0 list-none space-y-2 p-0">
+      <div className="space-y-1">
+        <h3 className="m-0 text-base font-semibold text-text">
+          {t("shops.heading", { count: business.branches.length })}
+        </h3>
+        <p className="m-0 text-sm text-text-2" data-testid="branches-customer-note">
+          {liveShopCount(business) > 1 ? t("shops.otherBranchesLive") : t("shops.otherBranchesHint")}
+        </p>
+      </div>
+      <ul className="m-0 list-none space-y-2 p-0" data-testid="business-shops">
         {business.branches.map((branch) => (
           <li key={branch.id} className="space-y-2 rounded border border-border p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -160,6 +190,11 @@ function BusinessCard({
                 </button>
               )}
             </div>
+            {branch.branch_status === "approved" && branch.status === "active" ? (
+              <ShopLink locale={locale} slug={branch.slug} label={t("shops.viewShop")} />
+            ) : (
+              <p className="m-0 text-micro text-text-2">{t("shops.notListedYet")}</p>
+            )}
             {branch.payout_on_hold ? (
               <p className="m-0 text-sm text-accent-deep">{t("payoutHold")}</p>
             ) : null}

@@ -239,11 +239,16 @@
       "vendor_weekly_digest": "Votre semaine : {orders} commandes, {sales} de ventes, {followers} nouveaux abonnés.",
       "payout_sent": "Votre versement est en route vers votre numéro mobile money.",
       "payout_failed": "Votre versement n'a pas pu être envoyé. Vérifiez votre numéro de versement.",
-      "quote_accepted": "Un client a accepté votre devis. Ouvrez-le pour démarrer le travail."
+      "quote_accepted": "Un client a accepté votre devis. Ouvrez-le pour démarrer le travail.",
+      "extras_quoted": "Nous vous avons envoyé un devis pour {name}.",
+      "extras_approved": "Votre demande pour {name} est approuvée.",
+      "extras_fulfilled": "{name} est terminé.",
+      "extras_cancelled": "Votre demande pour {name} a été annulée."
     },
     "admin": {
       "kyc_submitted": "Nouvelle demande KYC en attente d'examen.",
-      "dispute_opened": "Nouveau litige ouvert sur la commande {ref}."
+      "dispute_opened": "Nouveau litige ouvert sur la commande {ref}.",
+      "extras_requested": "Un vendeur a demandé une option : {name}."
     }
   }
 }

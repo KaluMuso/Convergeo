@@ -136,6 +136,8 @@ PENDING_REPAIR_VERSIONS = {
     "20261117010200",
     # In-app rows for never-silent lifecycle templates (additive, reversible).
     "20261117010300",
+    # Plan limits on active listings, trials, paid extras (additive, reversible).
+    "20261117020000",
 }
 
 

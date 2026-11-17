@@ -129,7 +129,15 @@
     "otherBranches": "Other branches",
     "otherBranchesAria": "Other branches of {name}",
     "partOfBusiness": "Part of {name}",
-    "branchWithLandmark": "{name} · {landmark}"
+    "branchWithLandmark": "{name} · {landmark}",
+    "branchOpenNow": "⚠ Open now",
+    "branchClosedNow": "⚠ Closed now",
+    "branchHours": "⚠ Opening hours",
+    "branchPhone": "⚠ Phone:",
+    "branchMap": "⚠ Map",
+    "branchVisit": "⚠ Visit {name}",
+    "branchKmAway": "⚠ {km} km away",
+    "branchMetresAway": "⚠ {m} m away"
   },
   "listings": {
     "vendor": "Ashitisha {vendor}",

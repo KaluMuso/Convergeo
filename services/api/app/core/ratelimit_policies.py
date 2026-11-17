@@ -391,6 +391,16 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /branches/{branch_id}/reject": ADMIN_WRITE,
     "POST /branches/flags/{flag_id}/resolve": ADMIN_WRITE,
     "POST /branches/businesses/{business_id}/pacra": ADMIN_WRITE,
+    # Paid extras + free trials (20261117020000). Enforced in-router: vendor routes
+    # keyed by user (vendor_extras._limit), admin routes by the acting admin
+    # (admin_extras._limit, un-prefixed admin keys).
+    "POST /vendor/extras/requests": STANDARD_WRITE,
+    "POST /vendor/extras/requests/{request_id}/cancel": STANDARD_WRITE,
+    "POST /vendor/extras/requests/{request_id}/accept": STANDARD_WRITE,
+    "POST /extras": ADMIN_WRITE,
+    "PATCH /extras/{extra_key}": ADMIN_WRITE,
+    "POST /extras/requests/{request_id}/transition": ADMIN_WRITE,
+    "POST /trials/{business_id}": ADMIN_WRITE,
     "POST /vendor-plans": ADMIN_WRITE,
     "PATCH /vendor-plans/{plan_key}": ADMIN_WRITE,
     "DELETE /vendor-plans/{plan_key}": ADMIN_WRITE,

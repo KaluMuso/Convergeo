@@ -3442,6 +3442,29 @@ EXPECTATIONS: TableExpectations = {
             "vendor_business_staff",
         )
     },
+    # Paid extras (20261117020000): active catalogue readable by signed-in users;
+    # owners read their OWN shops' requests/history (isolation in
+    # test_plan_limits_extras_rls.py). Writes are API-only; anon: no grant.
+    **{
+        table: {
+            Persona.ANON: deny_all(),
+            **{
+                persona: select_only()
+                for persona in (
+                    Persona.CUSTOMER,
+                    Persona.OTHER_CUSTOMER,
+                    Persona.VENDOR,
+                    Persona.OTHER_VENDOR,
+                    Persona.ADMIN,
+                )
+            },
+        }
+        for table in (
+            "vendor_extras",
+            "vendor_extras_requests",
+            "vendor_extras_request_events",
+        )
+    },
     # 20261115140200: append-only consent log. Owners read their own rows; the API
     # writes as service_role, so no client holds a write grant.
     "privacy_consents": {

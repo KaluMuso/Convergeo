@@ -239,11 +239,16 @@
       "vendor_weekly_digest": "本周：{orders} 笔订单，销售额 {sales}，新增 {followers} 位关注者。",
       "payout_sent": "您的提现款项正在汇往您的移动支付号码。",
       "payout_failed": "您的提现款项发送失败。请检查收款号码。",
-      "quote_accepted": "有顾客接受了您的报价。打开即可开始工作。"
+      "quote_accepted": "有顾客接受了您的报价。打开即可开始工作。",
+      "extras_quoted": "我们已为 {name} 向您报价。",
+      "extras_approved": "您对 {name} 的申请已获批准。",
+      "extras_fulfilled": "{name} 已完成。",
+      "extras_cancelled": "您对 {name} 的申请已取消。"
     },
     "admin": {
       "kyc_submitted": "有新的 KYC 申请待审核。",
-      "dispute_opened": "订单 {ref} 有新的争议。"
+      "dispute_opened": "订单 {ref} 有新的争议。",
+      "extras_requested": "有卖家申请了增值服务：{name}。"
     }
   }
 }

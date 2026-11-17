@@ -12,6 +12,8 @@ export type PlanSummary = {
   key: string;
   name: string;
   price_ngwee: number;
+  /** 12 x monthly less the annual prepay discount (integer ngwee, rounded down). */
+  annual_price_ngwee: number;
   max_listings: number | null;
   max_images_per_listing: number;
   featured_slots: number;
@@ -31,6 +33,10 @@ export type VendorPlanStatus = {
   limited_by: "plan" | "kyc" | "none";
   override_expires_at: string | null;
   upgrade_options: PlanSummary[];
+  plans: PlanSummary[];
+  annual_discount_pct: number;
+  trial_ends_at: string | null;
+  in_trial: boolean;
 };
 
 type PlanUsageCardProps = {
@@ -79,7 +85,12 @@ export function PlanUsageCard({ refreshKey = 0 }: PlanUsageCardProps) {
   const usage =
     status.effective_max_listings === null
       ? t("plans.usageUnlimited", { count: status.listing_count })
-      : t("plans.usage", { count: status.listing_count, max: status.effective_max_listings });
+      : status.limited_by === "plan"
+        ? t("plans.usageActive", {
+            count: status.listing_count,
+            max: status.effective_max_listings,
+          })
+        : t("plans.usage", { count: status.listing_count, max: status.effective_max_listings });
   const showPrompt = status.at_limit && status.limited_by === "plan";
 
   return (

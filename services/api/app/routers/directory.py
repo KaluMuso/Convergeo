@@ -211,9 +211,21 @@ class VendorClipItem(BaseModel):
 
 
 class BranchLink(BaseModel):
+    """A sibling shop card ("Other branches" on /v/[slug])."""
+
     slug: str
     display_name: str
     landmark: str | None = None
+    address: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    hours: dict[str, Any] = Field(default_factory=dict)
+    #: None = the branch publishes no usable hours (not "closed").
+    open_now: bool | None = None
+    #: Plain phone digits shown as text (contact phone, else WhatsApp number).
+    phone: str | None = None
+    #: Vendor-supplied https map link, else a map search on the branch GPS.
+    map_url: str | None = None
 
 
 class BusinessSummary(BaseModel):
@@ -1533,6 +1545,39 @@ def build_elsewhere(
     )
 
 
+def _branch_link(sibling: Any, *, now: datetime | None = None) -> BranchLink | None:
+    if not isinstance(sibling, dict) or not sibling.get("slug"):
+        return None
+    locations = sibling.get("vendor_locations") or []
+    location = locations[0] if locations and isinstance(locations[0], dict) else {}
+    hours = location.get("hours")
+    has_hours = isinstance(hours, dict) and bool(hours)
+    lat = location.get("lat")
+    lng = location.get("lng")
+    lat_f = float(lat) if isinstance(lat, int | float) and not isinstance(lat, bool) else None
+    lng_f = float(lng) if isinstance(lng, int | float) and not isinstance(lng, bool) else None
+    map_url = location.get("map_url")
+    if not (isinstance(map_url, str) and map_url.startswith("https://")):
+        map_url = (
+            f"https://www.google.com/maps/search/?api=1&query={lat_f},{lng_f}"
+            if lat_f is not None and lng_f is not None
+            else None
+        )
+    phone = sibling.get("contact_phone") or sibling.get("whatsapp_msisdn")
+    return BranchLink(
+        slug=str(sibling["slug"]),
+        display_name=str(sibling.get("display_name") or sibling["slug"]),
+        landmark=location.get("landmark") or None,
+        address=location.get("address") or None,
+        lat=lat_f,
+        lng=lng_f,
+        hours=hours if isinstance(hours, dict) else {},
+        open_now=is_open_at(hours, now or datetime.now(LUSAKA_TZ)) if has_hours else None,
+        phone=str(phone) if phone else None,
+        map_url=map_url,
+    )
+
+
 def _business_summary(client: Any, row: dict[str, Any]) -> BusinessSummary | None:
     """Parent business + other live branches. Never fails the storefront."""
     business_id = row.get("business_id")
@@ -1543,7 +1588,10 @@ def _business_summary(client: Any, row: dict[str, Any]) -> BusinessSummary | Non
             return None
         siblings = (
             client.table("vendors")
-            .select("slug, display_name, status, branch_status, vendor_locations(landmark)")
+            .select(
+                "slug, display_name, status, branch_status, contact_phone, whatsapp_msisdn, "
+                "vendor_locations(landmark, lat, lng, hours, address, map_url)"
+            )
             .eq("business_id", str(business_id))
             .neq("id", str(row.get("id")))
             .eq("status", "active")
@@ -1566,23 +1614,7 @@ def _business_summary(client: Any, row: dict[str, Any]) -> BusinessSummary | Non
     except Exception:  # noqa: BLE001 — optional enrichment
         return None
     name = business[0].get("legal_name") if business and isinstance(business[0], dict) else None
-    links: list[BranchLink] = []
-    for sibling in siblings:
-        if not isinstance(sibling, dict) or not sibling.get("slug"):
-            continue
-        locations = sibling.get("vendor_locations") or []
-        landmark = (
-            locations[0].get("landmark")
-            if locations and isinstance(locations[0], dict)
-            else None
-        )
-        links.append(
-            BranchLink(
-                slug=str(sibling["slug"]),
-                display_name=str(sibling.get("display_name") or sibling["slug"]),
-                landmark=landmark,
-            )
-        )
+    links = [link for link in (_branch_link(sibling) for sibling in siblings) if link]
     if not links:
         return None
     return BusinessSummary(name=str(name or row.get("display_name") or ""), other_branches=links)
