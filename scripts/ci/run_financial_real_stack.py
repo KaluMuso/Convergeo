@@ -108,10 +108,10 @@ FORWARD = [
     "20261116110000_vendor_plans.sql",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100_shared_canonical_photos.sql",
-    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
-    "20261117000000_multi_branch_businesses.sql",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
     "20261116130000_free_events_services.sql",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000_multi_branch_businesses.sql",
 ]
 F1_MODULE = "tests/test_f1_payout_real_stack.py"
 F1_NODES = [

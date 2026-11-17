@@ -105,10 +105,10 @@ REVIEWED_SUFFIX = (
     "20261116110000_vendor_plans.sql",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100_shared_canonical_photos.sql",
-    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
-    "20261117000000_multi_branch_businesses.sql",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
     "20261116130000_free_events_services.sql",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000_multi_branch_businesses.sql",
 )
 CONTAINER = "supabase_db_vergeo5-typegen"
 NETWORK = "supabase_network_vergeo5-typegen"

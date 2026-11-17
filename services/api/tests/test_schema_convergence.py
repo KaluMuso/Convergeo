@@ -138,10 +138,10 @@ POST_REPAIR_PENDING_VERSIONS = [
     "20261116110000",
     # Shared canonical photos + sha256 dedup (additive, reversible).
     "20261116110100",
-    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
-    "20261117000000",
     # Free events + free services: RSVP anchor, free bookings, money guards (additive, reversible).
     "20261116130000",
+    # Multi-branch businesses: business -> shops, branch review, anti-dup (additive, flag off).
+    "20261117000000",
 ]
 
 def _module() -> Any:
@@ -229,7 +229,7 @@ def test_repository_migrations_have_unique_versions_and_manifest_is_deterministi
     capacity_plans_photos = ["20261116110000", "20261116110100"]
     free_events_services = ["20261116130000"]
     multi_branch = ["20261117000000"]
-    assert actual_versions[-45:] == (
+    assert actual_versions[-0:] == (
         repairs
         + post_repair
         + queued_features
