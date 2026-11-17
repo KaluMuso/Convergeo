@@ -9,11 +9,11 @@ import {
   isConsentCurrent,
   saveDeliveryConsent,
 } from "../../../../../lib/delivery-consent";
-import { CodTrustLine } from "../../../_components/cod-trust-line";
 import {
   estimateReadyDate,
   formatEstimateDate,
 } from "../../../../../lib/delivery-estimate";
+import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { VariantLineLabel } from "../../_components/cart/variant-line-label";
 import {
   formatListingQuantity,

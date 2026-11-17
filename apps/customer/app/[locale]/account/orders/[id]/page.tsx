@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { buildPageMetadata } from "../../../../../lib/page-title";
+import { CodTrustLine } from "../../../_components/cod-trust-line";
 import { AccountListBoundary } from "../../_components/account-list-boundary";
 import { getAccountListSession } from "../../_components/account-list-server";
 import { BuyAgain } from "../_components/buy-again";
