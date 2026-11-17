@@ -221,6 +221,10 @@ def _plan_at(count: int) -> str:
         INSERT INTO public.vendor_plans (key, name, max_listings)
           VALUES ('rls_tiny', 'Tiny', {count});
         UPDATE public.vendor_plan_assignments SET plan_key = 'rls_tiny' {WHERE_A};
+        -- 20261117020000: a running pilot trial grants Business entitlements; end it so
+        -- the assigned plan's limit is what is tested.
+        UPDATE public.vendor_businesses SET trial_ends_at = now() - interval '1 day'
+         WHERE id = (SELECT business_id FROM public.vendors WHERE id = '{VENDOR_A}');
     """
 
 

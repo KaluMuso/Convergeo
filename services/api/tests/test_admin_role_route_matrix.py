@@ -122,7 +122,10 @@ PERMISSION_ROUTES: dict[str, frozenset[str]] = {
             "POST /admin/branches/{branch_id}/approve",
             "POST /admin/branches/{branch_id}/reject",
             "POST /admin/branches/{branch_id}/request-info",
+            "POST /admin/extras/requests/{request_id}/transition",
             "GET /admin/business",
+            # Paid extras requests (20261117020000): mapped to vendors.manage in auth.py.
+            "GET /admin/extras/requests",
             "GET /admin/intake",
             "GET /admin/intake/{session_id}",
             "GET /admin/kyc",
@@ -241,6 +244,9 @@ MODERATOR_ROUTES: frozenset[str] = frozenset(
         "GET /admin/kyc/{kyc_record_id}",
         "GET /admin/licences",
         "GET /admin/licences/expiring",
+        # Paid extras requests: moderators hold vendors.manage.
+        "GET /admin/extras/requests",
+        "POST /admin/extras/requests/{request_id}/transition",
         "DELETE /admin/products/{product_id}/images/{image_id}",
         "GET /admin/products/{product_id}/images",
         "POST /admin/products/{product_id}/images",
@@ -297,6 +303,13 @@ UNRESTRICTED_ONLY_ROUTES: frozenset[str] = frozenset(
         "POST /admin/vendor-plans",
         "PUT /admin/vendors/{vendor_id}/plan",
         "PUT /admin/vendors/{vendor_id}/plan/override",
+        # Paid extras catalogue + pilot trials (20261117020000): commercial config,
+        # unrestricted only.
+        "GET /admin/extras",
+        "GET /admin/trials",
+        "PATCH /admin/extras/{extra_key}",
+        "POST /admin/extras",
+        "POST /admin/trials/{business_id}",
         # Coupons (#792, flag off): platform coupon management stays with the
         # unrestricted roles until a founder decision maps it to a permission.
         "GET /admin/coupons",

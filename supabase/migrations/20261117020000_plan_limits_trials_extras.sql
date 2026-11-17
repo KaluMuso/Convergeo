@@ -476,7 +476,7 @@ grant execute on function public.transition_vendor_extras_request(uuid, text, uu
 
 -- In-app notifications: admins on a new request; the shop owner when an admin
 -- moves it. Never blocks the write (same contract as 20261113130000).
-create function private.in_app_from_extras_request() returns trigger
+create or replace function private.in_app_from_extras_request() returns trigger
 language plpgsql security definer set search_path = public, private
 as $$
 declare

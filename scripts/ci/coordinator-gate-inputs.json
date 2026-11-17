@@ -597,7 +597,7 @@
     "20261116110100_shared_canonical_photos.sql": "d20f9759eb5cc71a0d24366afb1216594fc301a071579fc625a9100b03b40fe7",
     "20261116130000_free_events_services.sql": "c609d61f7de6b1c51600da82d521670f322ebda3a3ddd46888af9027eb3de05d",
     "20261117000000_multi_branch_businesses.sql": "2461c663a22ddd58da8963f16c3dc5aebb62694ba0b1883dc8b698c00ed484ef",
-    "20261117020000_plan_limits_trials_extras.sql": "f3358fe8cded7a15a3510b78e2cc6afbb470d0cf15ffaf8a577f98f71a3078d7"
+    "20261117020000_plan_limits_trials_extras.sql": "aaaed2737bb9b20b70eac86fa545b74e4a78af0984896dfd15078bccfdae8a13"
   },
   "schema": "convergeo.coordinator.new-proposal.v1",
   "candidate": "f8cba729236c54200757f6f59ddf884df39a03fd",

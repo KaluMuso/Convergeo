@@ -27,6 +27,7 @@ from app.services.vendor_plans.billing import (
     plan_fee_due_ngwee,
     trial_end_for_signup,
 )
+from app.services.vendors.hours import LUSAKA_TZ
 from fastapi.testclient import TestClient
 from tests.test_vendor_plans import (
     ADMIN_ID,
@@ -499,7 +500,7 @@ def test_trial_change_rate_limited(h: Harness) -> None:
 # Other branches (directory card data)
 # ---------------------------------------------------------------------------
 def test_branch_card_fields() -> None:
-    now = datetime(2026, 11, 16, 10, 0, tzinfo=directory.LUSAKA_TZ)  # a Monday, 10:00
+    now = datetime(2026, 11, 16, 10, 0, tzinfo=LUSAKA_TZ)  # a Monday, 10:00
     link = directory._branch_link(
         {
             "slug": "mwila-kabwata",
