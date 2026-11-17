@@ -18,7 +18,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_moderator
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
 from app.core.ratelimit_policies import ADMIN_WRITE
 from app.deps import get_supabase_client
@@ -44,7 +44,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 plans_router = APIRouter(prefix="/vendor-plans", tags=["admin-vendor-plans"])
 vendor_plan_router = APIRouter(prefix="/vendors/{vendor_id}/plan", tags=["admin-vendor-plans"])
 product_images_router = APIRouter(
-    prefix="/products/{product_id}/images", tags=["admin-product-images"]
+    prefix="/products/{product_id}/images",
+    tags=["admin-product-images"],
+    # Admins, moderators (catalogue moderation, like canonical status) and rbac
+    # roles holding products.manage.
+    dependencies=[Depends(require_moderator())],
 )
 
 MAX_PRICE_NGWEE = 100_000_000  # K1,000,000 / month — a typo guard, not a business rule.
@@ -55,7 +59,7 @@ AnalyticsDepth = Literal["basic", "standard", "advanced"]
 IntegrationsLevel = Literal["none", "basic", "sheets_webhooks", "api"]
 PayoutSpeed = Literal["standard", "fast", "priority"]
 SupportLevel = Literal["community", "standard", "priority", "dedicated"]
-# Multi-branch entitlements (20261115100000). Shops and staff seats are enforced
+# Multi-branch entitlements (20261117000000). Shops and staff seats are enforced
 # (flag multi_branch); the rest is stored for later features.
 ENTITLEMENT_COLUMNS = (
     "included_shops, extra_shop_price_ngwee, staff_seats, whatsapp_broadcasts_per_month, "

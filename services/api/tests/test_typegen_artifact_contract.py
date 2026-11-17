@@ -94,7 +94,7 @@ def test_successful_generation_capture_is_exact_and_nonsecret(stage: Fixture) ->
         "migrations",
         "generated",
     }
-    assert d["migration_count"] == len(d["migrations"]) == h.MIGRATION_COUNT == 162
+    assert d["migration_count"] == len(d["migrations"]) == h.MIGRATION_COUNT == 185
     assert [r["version"] for r in d["migrations"]][-len(h.TAIL_ORDER) :] == h.TAIL_ORDER
     assert d["generated"]["path"] == h.TYPES_PATH
     assert "PRIVATE_" not in (stage.root / h.MANIFEST_PATH).read_text()
@@ -185,7 +185,7 @@ def test_final_proof_rejects_changed_file_or_unapproved_manifest(
 def test_workflow_preserves_reset_preload_and_failing_drift_gate() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     job: dict[str, Any] = workflow["jobs"]["db"]
-    assert job["needs"] == "migrations"
+    assert job["needs"] == ["changes", "migrations"]  # CI-SPEED adds the tier gate
     steps = job["steps"]
     pin = next(s for s in steps if s["name"] == "Setup Supabase CLI")
     assert pin["with"]["version"] == "2.109.1"

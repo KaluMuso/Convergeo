@@ -16,7 +16,11 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { fetchStorefrontConfig } from "../../../../../lib/storefront-config";
-import { formatListingQuantity, type SaleUnitLabels } from "../../_components/sale-quantity";
+import {
+  formatListingQuantity,
+  translateMadeToOrder,
+  type SaleUnitLabels,
+} from "../../_components/sale-quantity";
 import {
   fetchStandaloneListing,
   type StandaloneListing,
@@ -353,9 +357,11 @@ export default async function StandaloneListingPage({ params }: PageProps) {
                 {t("pdp.standalone.leadTimeLabel")}
               </dt>
               <dd className="font-medium text-text">
-                {t("pdp.standalone.leadTimeDays", {
-                  days: listing.lead_time_days,
-                })}
+                {listing.fulfilment_mode === "made_to_order"
+                  ? translateMadeToOrder(t, listing.lead_time_days)
+                  : t("pdp.standalone.leadTimeDays", {
+                      days: listing.lead_time_days,
+                    })}
               </dd>
             </div>
           ) : null}

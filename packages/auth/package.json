@@ -16,6 +16,7 @@
     "./roles": "./src/roles.ts",
     "./portal": "./src/portal.ts",
     "./google-auth": "./src/google-auth.ts",
+    "./phone-otp": "./src/phone-otp.ts",
     "./safe-next": "./src/safe-next.ts"
   },
   "scripts": {

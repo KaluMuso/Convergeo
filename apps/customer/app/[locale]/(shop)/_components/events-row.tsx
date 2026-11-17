@@ -21,7 +21,10 @@ type EventItem = {
   spotsTotal: number;
 };
 
-function parseEventItems(payload: Record<string, unknown>, locale: string): EventItem[] {
+function parseEventItems(
+  payload: Record<string, unknown>,
+  locale: string,
+): EventItem[] {
   const rawItems = payload.events;
   if (!Array.isArray(rawItems)) {
     return [];
@@ -34,8 +37,10 @@ function parseEventItems(payload: Record<string, unknown>, locale: string): Even
 
     const record = entry as Record<string, unknown>;
     const title = typeof record.title === "string" ? record.title : undefined;
-    const dateLabel = typeof record.date_label === "string" ? record.date_label : undefined;
-    const venueLabel = typeof record.venue_label === "string" ? record.venue_label : undefined;
+    const dateLabel =
+      typeof record.date_label === "string" ? record.date_label : undefined;
+    const venueLabel =
+      typeof record.venue_label === "string" ? record.venue_label : undefined;
 
     if (!title || !dateLabel || !venueLabel) {
       return [];
@@ -47,13 +52,18 @@ function parseEventItems(payload: Record<string, unknown>, locale: string): Even
         title,
         dateLabel,
         venueLabel,
-        href: typeof record.href === "string" ? record.href : `/${locale}/events`,
+        href:
+          typeof record.href === "string" ? record.href : `/${locale}/events`,
         imagePublicId:
-          typeof record.image_public_id === "string" ? record.image_public_id : undefined,
+          typeof record.image_public_id === "string"
+            ? record.image_public_id
+            : undefined,
         isFree: record.is_free === true,
         ngwee: typeof record.ngwee === "number" ? record.ngwee : undefined,
-        spotsFilled: typeof record.spots_filled === "number" ? record.spots_filled : 0,
-        spotsTotal: typeof record.spots_total === "number" ? record.spots_total : 0,
+        spotsFilled:
+          typeof record.spots_filled === "number" ? record.spots_filled : 0,
+        spotsTotal:
+          typeof record.spots_total === "number" ? record.spots_total : 0,
       },
     ];
   });
@@ -73,12 +83,21 @@ export function EventsRow({ slot, locale, t }: EventsRowProps) {
   }
 
   return (
-    <section aria-labelledby="home-events-heading" className="flex flex-col gap-3">
+    <section
+      aria-labelledby="home-events-heading"
+      className="flex flex-col gap-3"
+    >
       <div className="flex items-center justify-between gap-2">
-        <h2 id="home-events-heading" className="font-display text-h2 text-display-ink">
+        <h2
+          id="home-events-heading"
+          className="font-display text-h2 text-display-ink"
+        >
           {t("home.events.title")}
         </h2>
-        <Link href={`/${locale}/events`} className="min-h-11 text-sm font-semibold text-primary">
+        <Link
+          href={`/${locale}/events`}
+          className="min-h-11 text-sm font-semibold text-primary"
+        >
           {t("home.events.viewAll")}
         </Link>
       </div>

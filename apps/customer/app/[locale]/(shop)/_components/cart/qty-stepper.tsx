@@ -44,7 +44,10 @@ export function QtyStepper({
 
   const applyChange = useCallback(
     async (nextQty: number) => {
-      const clamped = max === null ? Math.max(min, nextQty) : Math.min(Math.max(min, nextQty), max);
+      const clamped =
+        max === null
+          ? Math.max(min, nextQty)
+          : Math.min(Math.max(min, nextQty), max);
       if (clamped === syncValue) {
         return;
       }

@@ -59,7 +59,10 @@ function writeEntries(entries: RecentlyViewedEntry[]): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(entries));
+  window.localStorage.setItem(
+    RECENTLY_VIEWED_STORAGE_KEY,
+    JSON.stringify(entries),
+  );
 }
 
 function emit(): void {
@@ -147,7 +150,11 @@ export function useRecentlyViewed(): {
   clear: () => void;
   remove: (slug: string) => void;
 } {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

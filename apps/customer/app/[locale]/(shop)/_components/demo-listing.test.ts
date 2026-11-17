@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isDemoListingPublicId, shouldShowSampleListingBadge } from "./demo-listing";
+import {
+  isDemoListingPublicId,
+  shouldShowSampleListingBadge,
+} from "./demo-listing";
 
 describe("isDemoListingPublicId", () => {
   it("detects demo/ seed public IDs", () => {
@@ -20,11 +23,15 @@ describe("isDemoListingPublicId", () => {
 
 describe("shouldShowSampleListingBadge", () => {
   it("hides sample badges in production by default", () => {
-    expect(shouldShowSampleListingBadge({ NODE_ENV: "production" })).toBe(false);
+    expect(shouldShowSampleListingBadge({ NODE_ENV: "production" })).toBe(
+      false,
+    );
   });
 
   it("shows sample badges outside production", () => {
-    expect(shouldShowSampleListingBadge({ NODE_ENV: "development" })).toBe(true);
+    expect(shouldShowSampleListingBadge({ NODE_ENV: "development" })).toBe(
+      true,
+    );
     expect(shouldShowSampleListingBadge({ NODE_ENV: "test" })).toBe(true);
   });
 

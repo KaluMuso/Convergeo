@@ -24,8 +24,7 @@
     "directory": "Malo a basellers",
     "services": "Imilimo",
     "events": "Ificitike",
-    "askVergeo": "Ipusheni Vergeo",
-    "supplies": "Ifya business",
+    "askVergeo": "Ipusheni Convergeo",
     "browseChipsAria": "Twaleni ukulingana na ifyo mulefwaya"
   },
   "marketing": {
@@ -34,7 +33,8 @@
     "contact": "Twalicilileni",
     "help": "Ulubuto",
     "sell": "Gulitseni pa Convergeo",
-    "signIn": "Ingilani"
+    "signIn": "Ingilani",
+    "account": "Akaunti"
   },
   "account": {
     "ariaLabel": "Navigation ya account",

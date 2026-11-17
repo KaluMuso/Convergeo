@@ -1,4 +1,4 @@
-"""Readers for the plan trial + annual discount (migration 20261115230000)."""
+"""Readers for the plan trial + annual discount (migration 20261117020000)."""
 
 from __future__ import annotations
 

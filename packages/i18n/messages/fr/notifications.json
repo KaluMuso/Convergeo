@@ -33,6 +33,15 @@
     },
     "otp_login": {
       "body": "Votre code de connexion Convergeo est {otp_code}. Il expire dans 10 minutes. Ne partagez pas ce code."
+    },
+    "gift_recipient_notice": {
+      "body": "Bonjour {recipient_name}, {sender_name} vous a envoyé un cadeau de {shop_name} sur Convergeo. Nous vous écrirons uniquement à propos de ce cadeau. Répondez STOP pour vous désabonner."
+    },
+    "gift_ready_pickup": {
+      "body": "Votre cadeau de {shop_name} est prêt à être retiré. Code PIN : {pickup_pin}. Ne le partagez pas."
+    },
+    "birthday_greeting": {
+      "body": "Joyeux anniversaire de la part de Convergeo ! Code {coupon_code} : {amount} de remise dès {min_spend} d'achat, valable {valid_days} jours. Répondez STOP pour vous désabonner."
     }
   },
   "sms": {
@@ -150,7 +159,8 @@
       "order_ready_pickup": "La commande {ref} est prête à être retirée. Ouvrez-la pour voir votre code de retrait.",
       "order_delivered": "La commande {ref} a été livrée. Comment cela s'est-il passé ?",
       "quote_received": "Vous avez reçu un nouveau devis. Comparez-le et acceptez-le dans l'application.",
-      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée."
+      "ticket_issued": "Votre billet est prêt. Ouvrez-le pour présenter le QR code à l'entrée.",
+      "birthday_greeting": "Joyeux anniversaire ! Utilisez le code {code} pour une surprise dans les {valid_days} prochains jours."
     },
     "vendor": {
       "order_placed": "Nouvelle commande {ref}. Confirmez-la pour commencer.",

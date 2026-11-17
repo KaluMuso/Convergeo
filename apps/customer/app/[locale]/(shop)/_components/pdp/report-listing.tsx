@@ -34,7 +34,13 @@ type ReportListingProps = {
 
 type Status = "idle" | "submitting" | "done" | "error";
 
-const REPORT_REASONS = new Set(["counterfeit", "prohibited", "scam", "misleading", "other"]);
+const REPORT_REASONS = new Set([
+  "counterfeit",
+  "prohibited",
+  "scam",
+  "misleading",
+  "other",
+]);
 
 /**
  * Customer "report this listing" control — posts to the authenticated API
@@ -113,7 +119,14 @@ export function ReportListing({ listingId, labels }: ReportListingProps) {
       setStatus("error");
       setMessage(labels.error);
     }
-  }, [detail, labels.error, labels.rateLimited, labels.signedOut, listingId, reason]);
+  }, [
+    detail,
+    labels.error,
+    labels.rateLimited,
+    labels.signedOut,
+    listingId,
+    reason,
+  ]);
 
   return (
     <>
@@ -147,7 +160,9 @@ export function ReportListing({ listingId, labels }: ReportListingProps) {
             }}
           >
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-text">{labels.reasonLegend}</legend>
+              <legend className="mb-2 text-sm font-medium text-text">
+                {labels.reasonLegend}
+              </legend>
               <ul className="space-y-2">
                 {labels.reasons.map((entry) => (
                   <li key={entry.value}>

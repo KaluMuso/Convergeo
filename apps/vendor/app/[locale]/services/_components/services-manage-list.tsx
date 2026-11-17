@@ -104,12 +104,6 @@ export function ServicesManageList({ locale }: ServicesManageListProps) {
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
           <p className="text-sm text-text-2">{ts("vendor.list.empty")}</p>
-          <Link
-            href={`/${locale}/services/new`}
-            className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary"
-          >
-            {ts("vendor.list.createCta")}
-          </Link>
         </div>
       ) : (
         <ul className="space-y-3">

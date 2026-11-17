@@ -47,7 +47,10 @@ type FacetPanelProps = {
   onApplied?: () => void;
 };
 
-function facetCount(buckets: { value: string; count: number }[], value: string): number {
+function facetCount(
+  buckets: { value: string; count: number }[],
+  value: string,
+): number {
   return buckets.find((bucket) => bucket.value === value)?.count ?? 0;
 }
 
@@ -75,24 +78,29 @@ export function FacetPanel({
       }
       const query = params.toString();
       startTransition(() => {
-        router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        router.push(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
         onApplied?.();
       });
     },
     [onApplied, pathname, router, sortParam, startTransition],
   );
 
-  const toggleValue = useCallback((key: "condition" | "availability", value: string) => {
-    setState((current) => {
-      const selected = new Set(current[key]);
-      if (selected.has(value)) {
-        selected.delete(value);
-      } else {
-        selected.add(value);
-      }
-      return { ...current, [key]: [...selected] };
-    });
-  }, []);
+  const toggleValue = useCallback(
+    (key: "condition" | "availability", value: string) => {
+      setState((current) => {
+        const selected = new Set(current[key]);
+        if (selected.has(value)) {
+          selected.delete(value);
+        } else {
+          selected.add(value);
+        }
+        return { ...current, [key]: [...selected] };
+      });
+    },
+    [],
+  );
 
   const radiusLabel = useMemo(() => {
     const km = state.radiusKm ?? "10";
@@ -110,10 +118,14 @@ export function FacetPanel({
       aria-label={labels.heading}
       data-testid="plp-facet-panel"
     >
-      <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">{labels.heading}</h2>
+      <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">
+        {labels.heading}
+      </h2>
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.price}</legend>
+        <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+          {labels.price}
+        </legend>
         <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
@@ -122,7 +134,10 @@ export function FacetPanel({
             placeholder={labels.minPrice}
             value={state.minPrice ?? ""}
             onChange={(event) =>
-              setState((current) => ({ ...current, minPrice: event.target.value || undefined }))
+              setState((current) => ({
+                ...current,
+                minPrice: event.target.value || undefined,
+              }))
             }
             aria-label={labels.minPrice}
           />
@@ -133,7 +148,10 @@ export function FacetPanel({
             placeholder={labels.maxPrice}
             value={state.maxPrice ?? ""}
             onChange={(event) =>
-              setState((current) => ({ ...current, maxPrice: event.target.value || undefined }))
+              setState((current) => ({
+                ...current,
+                maxPrice: event.target.value || undefined,
+              }))
             }
             aria-label={labels.maxPrice}
           />
@@ -141,7 +159,9 @@ export function FacetPanel({
       </fieldset>
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.condition}</legend>
+        <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+          {labels.condition}
+        </legend>
         <Checkbox
           checked={state.condition.includes("new")}
           onChange={() => toggleValue("condition", "new")}
@@ -176,7 +196,9 @@ export function FacetPanel({
       </fieldset>
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.rating}</legend>
+        <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+          {labels.rating}
+        </legend>
         <Checkbox
           checked={state.minRating === "4"}
           onChange={() =>
@@ -200,7 +222,9 @@ export function FacetPanel({
       </fieldset>
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.location}</legend>
+        <legend className="mb-1 text-sm font-medium text-[var(--text)]">
+          {labels.location}
+        </legend>
         <Input
           type="number"
           inputMode="decimal"
@@ -209,7 +233,10 @@ export function FacetPanel({
           placeholder={radiusLabel}
           value={state.radiusKm ?? ""}
           onChange={(event) =>
-            setState((current) => ({ ...current, radiusKm: event.target.value || undefined }))
+            setState((current) => ({
+              ...current,
+              radiusKm: event.target.value || undefined,
+            }))
           }
           aria-label={radiusLabel}
         />
@@ -222,7 +249,11 @@ export function FacetPanel({
           loading={isPending}
           loadingLabel={labels.apply}
           onClick={() => {
-            if (state.radiusKm && (!state.lat || !state.lng) && navigator.geolocation) {
+            if (
+              state.radiusKm &&
+              (!state.lat || !state.lng) &&
+              navigator.geolocation
+            ) {
               navigator.geolocation.getCurrentPosition(
                 (position) => {
                   const withLocation: PlpFilterState = {
@@ -261,7 +292,9 @@ export function FacetPanel({
             }
             const query = params.toString();
             startTransition(() => {
-              router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+              router.push(query ? `${pathname}?${query}` : pathname, {
+                scroll: false,
+              });
               onApplied?.();
             });
           }}

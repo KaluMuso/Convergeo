@@ -60,7 +60,10 @@ describe("PlpBrowseClient progressive loading", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "IntersectionObserver",
-      vi.fn(function MockIO(this: { observe: () => void; disconnect: () => void }) {
+      vi.fn(function MockIO(this: {
+        observe: () => void;
+        disconnect: () => void;
+      }) {
         this.observe = vi.fn();
         this.disconnect = vi.fn();
       }),
@@ -81,7 +84,10 @@ describe("PlpBrowseClient progressive loading", () => {
     );
 
     expect(screen.getByText("Listing One")).toBeInTheDocument();
-    expect(screen.getByTestId("product-card")).toHaveAttribute("data-density", "compact");
+    expect(screen.getByTestId("product-card")).toHaveAttribute(
+      "data-density",
+      "compact",
+    );
     expect(screen.getByTestId("plp-load-more")).toBeInTheDocument();
   });
 
@@ -146,6 +152,8 @@ describe("PlpBrowseClient progressive loading", () => {
       "https://api.example.test/catalog/listings?category_path=electronics&cursor=cursor-2",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    expect(screen.getByTestId("plp-aria-live")).toHaveTextContent("1 more results loaded.");
+    expect(screen.getByTestId("plp-aria-live")).toHaveTextContent(
+      "1 more results loaded.",
+    );
   });
 });

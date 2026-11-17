@@ -8,7 +8,6 @@ import pytest
 from app.errors import AppError
 from app.main import create_app
 from app.routers import products as products_router
-from app.services.business.access import BusinessAccess, get_business_access
 from app.services.listings.availability import is_listing_available
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -585,18 +584,6 @@ class TestProductDetailWholesale:
         assert ids == {LISTING_IN_STOCK}
         assert result.listing_count == 1
 
-    def test_build_includes_wholesale_when_eligible(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed(store)
-        result = products_router.build_product_detail(
-            store, "itel-a70", include_wholesale=True
-        )
-        assert not isinstance(result, RedirectResponse)
-        ids = {listing.id for listing in result.listings}
-        assert ids == {LISTING_IN_STOCK, LISTING_QUICK}
-        assert result.listing_count == 2
-
     def test_endpoint_guest_hides_wholesale(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
@@ -605,32 +592,6 @@ class TestProductDetailWholesale:
         assert response.status_code == 200
         ids = {listing["id"] for listing in response.json()["listings"]}
         assert ids == {LISTING_IN_STOCK}
-
-    def test_endpoint_verified_business_sees_wholesale(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed(store)
-        app: FastAPI = create_app()
-        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
-            user_id="11111111-1111-1111-1111-111111111111",
-            status="verified",
-            eligible=True,
-        )
-
-        class FakeServiceClient:
-            def __init__(self) -> None:
-                self.client = store
-
-        with patch(
-            "app.deps.get_supabase_service_client", return_value=FakeServiceClient()
-        ):
-            with TestClient(app, raise_server_exceptions=False) as test_client:
-                response = test_client.get("/products/itel-a70")
-        app.dependency_overrides.clear()
-        assert response.status_code == 200
-        ids = {listing["id"] for listing in response.json()["listings"]}
-        assert ids == {LISTING_IN_STOCK, LISTING_QUICK}
-
 
 class TestProductDetailWholesaleOnlyIsOmitted:
     """D36: a product whose every active listing is wholesale-only must be
@@ -686,16 +647,6 @@ class TestProductDetailWholesaleOnlyIsOmitted:
         assert hidden.status_code == absent.status_code == 404
         assert hidden.json()["error"]["code"] == absent.json()["error"]["code"]
         assert hidden.json()["error"]["message"] == absent.json()["error"]["message"]
-
-    def test_verified_business_still_sees_the_wholesale_only_product(
-        self, store: FakeSupabaseStore
-    ) -> None:
-        self._seed_wholesale_only(store)
-        result = products_router.build_product_detail(
-            store, "itel-a70", include_wholesale=True
-        )
-        assert not isinstance(result, RedirectResponse)
-        assert result.listing_count == 2
 
     def test_dual_mode_product_still_renders_retail_for_consumer(
         self, store: FakeSupabaseStore

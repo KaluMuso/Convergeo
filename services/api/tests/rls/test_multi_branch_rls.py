@@ -1,4 +1,4 @@
-"""Multi-branch businesses at the database (migration 20261115100000).
+"""Multi-branch businesses at the database (migration 20261117000000).
 
 Proves, against the real migrated schema:
   * backfill: every vendor is a business (same id) with one primary approved branch;
@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Generator
+from typing import Any
 
 import pytest
 from tests.rls.conftest import Persona, PgConn, RoleSession, SqlResult, _extract_sqlstate
@@ -71,7 +72,7 @@ def _payload(
     return json.dumps(body).replace("'", "''")
 
 
-def _create(name: str, payout: str, **kw: object) -> str:
+def _create(name: str, payout: str, **kw: Any) -> str:
     return (
         f"SELECT public.create_vendor_branch('{VENDOR_A}', '{OWNER_A}', "
         f"'{_payload(name, payout, **kw)}'::jsonb) ->> 'id';"
@@ -123,12 +124,17 @@ def _last(result: SqlResult) -> str:
 # Backfill + RLS isolation
 # ---------------------------------------------------------------------------
 def test_backfill_every_vendor_is_a_business_with_one_primary_branch(db: PgConn) -> None:
+    # Every vendor is linked to a business. Ownership is checked on the seeded
+    # shops: other modules in a shared database delete and re-create vendors with
+    # reused ids, which can leave an older business row behind under that id.
+    result = db.run("SELECT count(*) FROM public.vendors WHERE business_id IS NULL")
+    assert result.rows == ["0"]
     result = db.run(
         "SELECT count(*) FROM public.vendors v "
-        "LEFT JOIN public.vendor_businesses b ON b.id = v.business_id "
-        "WHERE b.id IS NULL OR b.owner_user_id <> v.owner_user_id"
+        "JOIN public.vendor_businesses b ON b.id = v.business_id "
+        f"WHERE v.id IN ('{VENDOR_A}', '{VENDOR_B}') AND b.owner_user_id = v.owner_user_id"
     )
-    assert result.rows == ["0"]
+    assert result.rows == ["2"]
     assert db.run(
         f"SELECT business_id::text || ',' || is_primary_branch::text || ',' || branch_status "
         f"FROM public.vendors WHERE id = '{VENDOR_A}'"
@@ -155,10 +161,23 @@ def _as(db: PgConn, persona: Persona) -> RoleSession:
 
 
 def test_owner_sees_only_own_business(db: PgConn) -> None:
-    sql = "SELECT coalesce(string_agg(id::text, ','), 'none') FROM public.vendor_businesses"
-    assert _as(db, Persona.VENDOR).execute(sql).rows[-1] == VENDOR_A
-    assert _as(db, Persona.OTHER_VENDOR).execute(sql).rows[-1] == VENDOR_B
-    assert _as(db, Persona.CUSTOMER).execute(sql).rows[-1] == "none"
+    # Other modules may add businesses for the same owners; the isolation claim
+    # is that an owner sees their own business and never anyone else's.
+    seeded = (
+        "SELECT coalesce(string_agg(id::text, ',' ORDER BY id), 'none') "
+        f"FROM public.vendor_businesses WHERE id IN ('{VENDOR_A}', '{VENDOR_B}')"
+    )
+    foreign = "SELECT count(*) FROM public.vendor_businesses WHERE owner_user_id <> auth.uid()"
+    assert _as(db, Persona.VENDOR).execute(seeded).rows[-1] == VENDOR_A
+    assert _as(db, Persona.VENDOR).execute(foreign).rows[-1] == "0"
+    assert _as(db, Persona.OTHER_VENDOR).execute(seeded).rows[-1] == VENDOR_B
+    assert _as(db, Persona.OTHER_VENDOR).execute(foreign).rows[-1] == "0"
+    assert (
+        _as(db, Persona.CUSTOMER)
+        .execute("SELECT coalesce(string_agg(id::text, ','), 'none') FROM public.vendor_businesses")
+        .rows[-1]
+        == "none"
+    )
     admin = _as(db, Persona.ADMIN).execute(
         f"SELECT count(*) FROM public.vendor_businesses WHERE id IN ('{VENDOR_A}', '{VENDOR_B}')"
     )

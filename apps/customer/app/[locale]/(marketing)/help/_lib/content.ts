@@ -13,6 +13,8 @@ export type HelpArticle = {
   category: HelpCategory;
   keywords: string[];
   order: number;
+  /** True for articles describing features that are not live during the pilot. */
+  comingSoon: boolean;
   body: string;
 };
 
@@ -70,6 +72,7 @@ export function toArticle(slug: string, raw: string): HelpArticle {
     category,
     keywords,
     order: Number.parseInt(data.order ?? "100", 10) || 100,
+    comingSoon: data.status === "coming-soon",
     body,
   };
 }

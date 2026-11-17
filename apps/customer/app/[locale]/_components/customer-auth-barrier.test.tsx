@@ -28,7 +28,6 @@ const labels = {
   conflictLine: "{listing}:{code}",
   priceLine: "{item}: {previous} -> {current} x {quantity} = {total}",
   unnamedItem: "Item #{id}",
-  wholesaleTerms: "Wholesale minimum {moq}",
   priceNeedsReview: "Review quote",
   accountChoice: "Keep account pickup",
   guestChoice: "Keep guest pickup",
@@ -92,7 +91,7 @@ describe("CustomerAuthBarrier", () => {
     });
   });
 
-  it("shows wholesale terms and requires explicit removal for a changed RFQ quote", async () => {
+  it("requires explicit removal for a changed RFQ quote", async () => {
     mocks.retry.mockResolvedValue(null);
     mocks.error = new ApiError("cart.merge_conflict", "conflict", {
       status: 409,
@@ -105,8 +104,6 @@ describe("CustomerAuthBarrier", () => {
             previous_unit_prices_ngwee: [10000],
             current_unit_price_ngwee: 12000,
             quantity: 3,
-            wholesale: true,
-            moq: 3,
             proposal_token: null,
           },
         }],
@@ -114,7 +111,7 @@ describe("CustomerAuthBarrier", () => {
     });
     render(<CustomerAuthBarrier labels={labels} />);
     expect(screen.getByRole("dialog")).toHaveTextContent("Steel rods: K100.00 -> K120.00 x 3 = K360.00");
-    expect(screen.getByRole("dialog")).toHaveTextContent("Wholesale minimum 3 Review quote");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Review quote");
     await userEvent.setup().click(screen.getByRole("button", { name: labels.apply }));
     expect(mocks.retry).toHaveBeenCalledWith({
       accept_price_changes: [],

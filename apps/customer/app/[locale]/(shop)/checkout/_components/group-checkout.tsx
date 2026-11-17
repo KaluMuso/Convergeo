@@ -52,7 +52,10 @@ type Phase =
   | { kind: "closed"; message: string; summary: CheckoutGroupSummary }
   | { kind: "ready"; summary: CheckoutGroupSummary };
 
-function fill(template: string, values: Record<string, string | number>): string {
+function fill(
+  template: string,
+  values: Record<string, string | number>,
+): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
   );
@@ -111,15 +114,24 @@ export function GroupCheckout({
         const summary = await api.request<CheckoutGroupSummary>(
           `/checkout/groups/${encodeURIComponent(groupId)}`,
         );
-        if (summary.checkout_group_id !== groupId) throw new Error("group mismatch");
-        const paths = groupPaths(locale, groupId, summary.kind, summary.service?.job_id ?? null);
+        if (summary.checkout_group_id !== groupId)
+          throw new Error("group mismatch");
+        const paths = groupPaths(
+          locale,
+          groupId,
+          summary.kind,
+          summary.service?.job_id ?? null,
+        );
         let status: GroupPaymentStatus | null = null;
         try {
           status = await api.request<GroupPaymentStatus>(
             `/payments/status?group=${encodeURIComponent(groupId)}`,
           );
         } catch (cause) {
-          if (!(cause instanceof ApiError && cause.code === "payment.not_found")) throw cause;
+          if (!(
+            cause instanceof ApiError && cause.code === "payment.not_found"
+          ))
+            throw cause;
         }
         if (cancelled) return;
         // A refresh mid-payment resumes the live attempt instead of starting another.
@@ -162,11 +174,17 @@ export function GroupCheckout({
     sessionLoading,
   ]);
 
-  const summary = phase.kind === "ready" || phase.kind === "closed" ? phase.summary : null;
+  const summary =
+    phase.kind === "ready" || phase.kind === "closed" ? phase.summary : null;
   const paths = useMemo(
     () =>
       summary && groupId
-        ? groupPaths(locale, groupId, summary.kind, summary.service?.job_id ?? null)
+        ? groupPaths(
+            locale,
+            groupId,
+            summary.kind,
+            summary.service?.job_id ?? null,
+          )
         : null,
     [groupId, locale, summary],
   );
@@ -185,7 +203,10 @@ export function GroupCheckout({
         method: "POST",
         body: JSON.stringify({ checkout_group_id: summary.checkout_group_id }),
       });
-      if (card.checkout_group_id !== summary.checkout_group_id || !isUuid(card.payment_id)) {
+      if (
+        card.checkout_group_id !== summary.checkout_group_id ||
+        !isUuid(card.payment_id)
+      ) {
         throw new Error("card session mismatch");
       }
       router.replace(paths.card(card.payment_id));
@@ -208,11 +229,19 @@ export function GroupCheckout({
     router.replace(paths.pending);
   };
 
-  const heading = <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>;
+  const heading = (
+    <h1 className="font-display text-h1 text-display-ink">
+      {labels.pageTitle}
+    </h1>
+  );
 
   if (sessionLoading || (phase.kind === "loading" && accessToken)) {
     return (
-      <section className="space-y-4 px-4 py-6" data-testid="group-checkout" aria-busy="true">
+      <section
+        className="space-y-4 px-4 py-6"
+        data-testid="group-checkout"
+        aria-busy="true"
+      >
         {heading}
         <p className="font-body text-sm text-text-3" aria-live="polite">
           {labels.loading}
@@ -281,7 +310,9 @@ export function GroupCheckout({
               {labels.ticketHeading}
             </p>
             {summary.event ? (
-              <h2 className="font-display text-h3 text-display-ink">{summary.event.title}</h2>
+              <h2 className="font-display text-h3 text-display-ink">
+                {summary.event.title}
+              </h2>
             ) : null}
             {when || summary.event?.venue ? (
               <p className="font-body text-sm text-text-2">
@@ -297,24 +328,33 @@ export function GroupCheckout({
             {summary.service ? (
               <p className="font-body text-sm text-text">
                 {labels.providerLabel}:{" "}
-                <span className="font-semibold">{summary.service.vendor_name}</span>
+                <span className="font-semibold">
+                  {summary.service.vendor_name}
+                </span>
               </p>
             ) : null}
-            <p className="font-body text-sm text-text-2">{labels.serviceNote}</p>
+            <p className="font-body text-sm text-text-2">
+              {labels.serviceNote}
+            </p>
           </div>
         ) : null}
 
         {summary.kind === "ticket" ? (
           <ul className="space-y-1" data-testid="group-lines">
             {summary.lines.map((line) => (
-              <li key={line.order_item_id} className="flex justify-between gap-3 text-sm">
+              <li
+                key={line.order_item_id}
+                className="flex justify-between gap-3 text-sm"
+              >
                 <span className="text-text">
                   {fill(labels.tierLineTemplate, {
                     tier: line.ticket_type_name ?? line.title ?? "",
                     qty: line.qty,
                   })}
                 </span>
-                <span className="font-mono text-text">{money(line.line_total_ngwee)}</span>
+                <span className="font-mono text-text">
+                  {money(line.line_total_ngwee)}
+                </span>
               </li>
             ))}
           </ul>
@@ -325,11 +365,18 @@ export function GroupCheckout({
             <>
               <div className="flex justify-between">
                 <dt className="text-text-2">{labels.subtotal}</dt>
-                <dd className="font-mono text-text">{money(summary.subtotal_ngwee)}</dd>
+                <dd className="font-mono text-text">
+                  {money(summary.subtotal_ngwee)}
+                </dd>
               </div>
-              <div className="flex justify-between" data-testid="group-platform-fee">
+              <div
+                className="flex justify-between"
+                data-testid="group-platform-fee"
+              >
                 <dt className="text-text-2">{labels.platformFee}</dt>
-                <dd className="font-mono text-text">{money(summary.platform_fee_ngwee)}</dd>
+                <dd className="font-mono text-text">
+                  {money(summary.platform_fee_ngwee)}
+                </dd>
               </div>
             </>
           ) : null}
@@ -367,7 +414,9 @@ export function GroupCheckout({
       ) : (
         <>
           <div className="rounded-card bg-bg-2 p-3">
-            <p className="font-body text-xs font-semibold text-text">{labels.escrowTitle}</p>
+            <p className="font-body text-xs font-semibold text-text">
+              {labels.escrowTitle}
+            </p>
             <ol className="mt-1 list-decimal space-y-0.5 pl-5 font-body text-xs text-text-2">
               {labels.escrowSteps.map((step) => (
                 <li key={step}>{step}</li>

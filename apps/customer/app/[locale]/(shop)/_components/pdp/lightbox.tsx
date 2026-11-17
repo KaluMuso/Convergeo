@@ -60,7 +60,10 @@ export function clampPan(
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return;
     }
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -72,7 +75,8 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-const FOCUSABLE = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
 /**
  * Full-screen image viewer with zoom. Dependency-free:
@@ -81,9 +85,17 @@ const FOCUSABLE = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"
  * - keyboard: ←/→ change image, +/- zoom, 0 resets, Escape closes; focus is trapped
  *   and returned to the opener on close.
  */
-export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: LightboxProps) {
+export function Lightbox({
+  images,
+  initialIndex,
+  cloudName,
+  labels,
+  onClose,
+}: LightboxProps) {
   const total = images.length;
-  const [index, setIndex] = useState(() => Math.min(Math.max(initialIndex, 0), total - 1));
+  const [index, setIndex] = useState(() =>
+    Math.min(Math.max(initialIndex, 0), total - 1),
+  );
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const reducedMotion = usePrefersReducedMotion();
@@ -111,7 +123,9 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
       const clamped = clampZoom(next);
       setZoom(clamped);
       setPan((current) =>
-        clamped === MIN_ZOOM ? { x: 0, y: 0 } : clampPan(current, clamped, stageBox()),
+        clamped === MIN_ZOOM
+          ? { x: 0, y: 0 }
+          : clampPan(current, clamped, stageBox()),
       );
     },
     [stageBox],
@@ -172,7 +186,8 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
           applyZoom(MIN_ZOOM);
           return;
         case "Tab": {
-          const nodes = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+          const nodes =
+            dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
           if (!nodes || nodes.length === 0) {
             return;
           }
@@ -204,7 +219,10 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.currentTarget.setPointerCapture?.(event.pointerId);
-      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      pointers.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
       const points = [...pointers.current.values()];
       const [a, b] = points;
       gesture.current = {
@@ -227,14 +245,20 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
       if (!pointers.current.has(event.pointerId) || !gesture.current) {
         return;
       }
-      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      pointers.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
       const points = [...pointers.current.values()];
       const start = gesture.current;
       if (points.length >= 2 && start.startDistance > 0) {
         const [a, b] = points;
         if (a && b) {
           start.moved = true;
-          applyZoom((start.startZoom * Math.hypot(a.x - b.x, a.y - b.y)) / start.startDistance);
+          applyZoom(
+            (start.startZoom * Math.hypot(a.x - b.x, a.y - b.y)) /
+              start.startDistance,
+          );
         }
         return;
       }
@@ -244,7 +268,13 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
         start.moved = true;
       }
       if (zoom > MIN_ZOOM) {
-        setPan(clampPan({ x: start.startPan.x + dx, y: start.startPan.y + dy }, zoom, stageBox()));
+        setPan(
+          clampPan(
+            { x: start.startPan.x + dx, y: start.startPan.y + dy },
+            zoom,
+            stageBox(),
+          ),
+        );
       }
     },
     [applyZoom, stageBox, zoom],
@@ -285,10 +315,16 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
       data-testid="pdp-lightbox"
       onKeyDown={onKeyDown}
       className="fixed inset-0 z-50 flex flex-col text-bg"
-      style={{ backgroundColor: "color-mix(in srgb, var(--text) 94%, transparent)" }}
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--text) 94%, transparent)",
+      }}
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <p aria-live="polite" data-testid="pdp-lightbox-indicator" className="text-sm">
+        <p
+          aria-live="polite"
+          data-testid="pdp-lightbox-indicator"
+          className="text-sm"
+        >
           {formatPdpGalleryIndicator(labels.indicator, index + 1, total)}
         </p>
         <div className="flex items-center gap-1">
@@ -330,7 +366,10 @@ export function Lightbox({ images, initialIndex, cloudName, labels, onClose }: L
         data-testid="pdp-lightbox-stage"
         data-zoom={zoom.toFixed(2)}
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
-        style={{ touchAction: "none", cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in" }}
+        style={{
+          touchAction: "none",
+          cursor: zoom > MIN_ZOOM ? "zoom-out" : "zoom-in",
+        }}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

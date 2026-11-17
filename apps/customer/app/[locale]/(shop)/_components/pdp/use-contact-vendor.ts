@@ -19,7 +19,10 @@ export type UseContactVendorResult = {
   errorKey: string | null;
   reusedExistingThread: boolean;
   maxBodyChars: number;
-  sendMessage: (listingId: string, body: string) => Promise<CreateEnquiryResponse | null>;
+  sendMessage: (
+    listingId: string,
+    body: string,
+  ) => Promise<CreateEnquiryResponse | null>;
   reset: () => void;
 };
 
@@ -33,7 +36,10 @@ export function useContactVendor(): UseContactVendorResult {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [reusedExistingThread, setReusedExistingThread] = useState(false);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
   const client = useMemo(() => createEnquiriesApiClient(getToken), [getToken]);
 
   const reset = useCallback(() => {
@@ -77,7 +83,10 @@ export function useContactVendor(): UseContactVendorResult {
         if (err instanceof ApiError) {
           if (err.code === "enquiry.prohibited_content") {
             setErrorKey("prohibited");
-          } else if (err.code === "rate_limited" || err.code === "enquiries.errors.rateLimited") {
+          } else if (
+            err.code === "rate_limited" ||
+            err.code === "enquiries.errors.rateLimited"
+          ) {
             setErrorKey("rateLimited");
           } else if (err.code === "enquiry.own_subject") {
             setErrorKey("ownListing");

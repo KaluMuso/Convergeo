@@ -1,6 +1,9 @@
 "use client";
 
-import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gallery";
+import {
+  ImageGallery,
+  type GalleryImage,
+} from "@vergeo/ui/src/media/image-gallery";
 import { Modal } from "@vergeo/ui/src/modal";
 
 export type ReviewPhotoLightboxProps = {

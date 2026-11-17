@@ -56,6 +56,8 @@ CHITENGE_HIT = _hit(
     entity_id=CHITENGE_ID,
     title="6-Yard Chitenge Print",
     category_path="fashion-beauty/chitenge-fabric",
+    price_min_ngwee=15000,
+    price_max_ngwee=15000,
     locale_terms=["chitenge", "chitange"],
     score=1.0,
 )
@@ -63,6 +65,8 @@ DRESS_HIT = _hit(
     entity_id=DRESS_ID,
     title="Women's Clothing Standard",
     category_path="fashion-beauty/womens-clothing",
+    price_min_ngwee=25000,
+    price_max_ngwee=25000,
     locale_terms=["dress", "nguwafwila"],
     score=0.95,
 )
@@ -70,6 +74,8 @@ KITCHEN_HIT = _hit(
     entity_id=KITCHEN_ID,
     title="Kitchenware Standard",
     category_path="home-living/kitchenware",
+    price_min_ngwee=9000,
+    price_max_ngwee=9000,
     locale_terms=["kitchenware", "pots", "pans"],
     score=0.7,
 )
@@ -308,6 +314,18 @@ def test_exact_query_returns_itel_a70(search_client: TestClient) -> None:
     assert body["total"] >= 1
 
 
+def test_short_query_with_only_unrelated_neighbours_returns_no_results(
+    search_client: TestClient,
+) -> None:
+    """The fake RPC returns three unrelated catalogue hits for an unknown short
+    query (as the vector lane would); none is a lexical match for "t-shirt"."""
+    response = search_client.get("/search", params={"q": "t-shirt"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["results"] == []
+    assert body["total"] == 0
+
+
 def test_fuzzy_query_chitange_returns_chitenge(search_client: TestClient) -> None:
     response = search_client.get("/search", params={"q": "chitange"})
     assert response.status_code == 200
@@ -432,6 +450,8 @@ def test_suggest_includes_route_slugs(
                 entity_id=product_id,
                 title="Itel A70 Smartphone",
                 entity_kind="product",
+                price_min_ngwee=450000,
+                price_max_ngwee=450000,
                 score=1.0,
             ),
         ]
@@ -673,6 +693,8 @@ def test_search_attaches_public_slugs_for_product_and_listing_hits(
                 entity_id=product_id,
                 title="Itel A70 Smartphone",
                 entity_kind="product",
+                price_min_ngwee=450000,
+                price_max_ngwee=450000,
                 score=1.0,
             ),
         ]
@@ -930,3 +952,25 @@ def test_zero_result_is_logged(
 
     assert result.total == 0
     assert any(record.message == "search_zero_result" for record in caplog.records)
+
+
+def test_search_forwards_anonymous_analytics_session_to_query_log(
+    search_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """OD-8: the optional X-Analytics-Session header reaches the search log (never authz)."""
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        "app.services.search.log_search_query", lambda **kwargs: calls.append(kwargs)
+    )
+    sid = "0d080000-0000-4000-8000-000000000001"
+    resp = search_client.get(
+        "/search", params={"q": "itel"}, headers={"X-Analytics-Session": sid}
+    )
+    assert resp.status_code == 200
+    assert calls[-1]["session_id"] == sid
+    assert search_client.get("/search", params={"q": "itel"}).status_code == 200
+    assert calls[-1]["session_id"] is None
+    too_long = search_client.get(
+        "/search", params={"q": "itel"}, headers={"X-Analytics-Session": "x" * 37}
+    )
+    assert too_long.status_code == 422

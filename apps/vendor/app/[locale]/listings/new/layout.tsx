@@ -14,7 +14,10 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export default async function NewListingLayout({ children, params }: LayoutProps) {
+export default async function NewListingLayout({
+  children,
+  params,
+}: LayoutProps) {
   const { locale } = await params;
 
   if (!LOCALES.includes(locale as Locale)) {
@@ -26,7 +29,9 @@ export default async function NewListingLayout({ children, params }: LayoutProps
   const vendorMessages = await loadNamespace(locale as Locale, "vendor");
 
   return (
-    <NextIntlClientProvider messages={{ ...baseMessages, vendor: vendorMessages }}>
+    <NextIntlClientProvider
+      messages={{ ...baseMessages, vendor: vendorMessages }}
+    >
       {children}
     </NextIntlClientProvider>
   );

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -13,7 +14,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.business.access import fetch_business_buyer
+from app.schemas.cart_tickets import TicketLineOut, ticket_line_out
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import (
     CartLineView,
@@ -35,6 +36,12 @@ from app.services.cart.store import (
     fetch_listings_for_items,
     service_db_client,
 )
+from app.services.cart.tickets import (
+    TicketCartLine,
+    load_cart_ticket_lines,
+    ticket_platform_fee_ngwee,
+    ticket_subtotal_ngwee,
+)
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.clips.attribution import validate_clip_attribution
 from app.services.inventory.location_stock import resolve_stock_location_id
@@ -52,6 +59,7 @@ from app.services.listings.variants import (
     overlay_listing_for_variant,
     resolve_variant_for_purchase,
 )
+from app.services.offers.apply import OfferPricing, price_line_views, price_unified
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
@@ -59,6 +67,8 @@ from jwt.exceptions import InvalidTokenError
 from postgrest.exceptions import APIError
 from pydantic import BaseModel, Field
 from supabase import Client
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
@@ -134,6 +144,27 @@ class CartLineResponse(BaseModel):
     is_rfq_quote: bool = False
     listing_variant_id: str | None = None
     variant_options: list[VariantOptionResponse] = Field(default_factory=list)
+    #: W8 offers — list total before the offer (None when no offer priced the line).
+    list_line_total_ngwee: int | None = None
+    offer_id: str | None = None
+
+
+class OfferGiftResponse(BaseModel):
+    offer_id: str
+    listing_id: str
+    qty: int
+    title: str | None = None
+    reference_unit_price_ngwee: int
+
+
+class AppliedOfferResponse(BaseModel):
+    offer_id: str
+    offer_type: str
+    title: str
+    vendor_id: str
+    discount_ngwee: int
+    gift_qty: int
+    applications: int
 
 
 class VendorGroupResponse(BaseModel):
@@ -141,6 +172,8 @@ class VendorGroupResponse(BaseModel):
     items: list[CartLineResponse]
     subtotal_ngwee: int
     delivery_eligible: bool
+    gifts: list[OfferGiftResponse] = Field(default_factory=list)
+    savings_ngwee: int = 0
 
 
 class MergeConflictResponse(BaseModel):
@@ -163,9 +196,20 @@ class CartResponse(BaseModel):
     cart_id: str
     items: list[CartLineResponse]
     vendor_groups: list[VendorGroupResponse]
+    #: Products + event tickets (after offers).
     subtotal_ngwee: int
+    #: Unified cart: event-ticket lines (signed-in buyers only), priced live.
+    ticket_lines: list[TicketLineOut] = Field(default_factory=list)
+    #: Ticket lines that can no longer be bought (event unpublished, etc.).
+    unavailable_ticket_line_ids: list[str] = Field(default_factory=list)
+    #: Buyer-paid ticket platform fee, added at checkout.
+    platform_fee_ngwee: int = 0
+    #: False when the cart holds event tickets (prepaid only).
+    cod_allowed: bool = True
     conflicts: list[MergeConflictResponse] = Field(default_factory=list)
     notices: list[ChangeNoticeResponse] = Field(default_factory=list)
+    savings_ngwee: int = 0
+    offers: list[AppliedOfferResponse] = Field(default_factory=list)
 
 
 class RevalidateResponse(BaseModel):
@@ -250,11 +294,11 @@ async def _optional_current_user(request: Request) -> CurrentUser | None:
 
 
 def _business_eligible_for_user(user_id: str | None) -> bool:
-    """Verified-business gate for wholesale pricing. Guests are never eligible."""
-    if not user_id:
-        return False
-    row = fetch_business_buyer(service_db_client(), user_id)
-    return bool(row and row.get("status") == "verified")
+    """Wholesale/tier pricing is vendor-app only (founder decision): no customer
+    cart is ever priced as a business buyer, whatever the account's business
+    status. Wholesale listings are therefore rejected and every line stays at
+    retail. Kept as one seam so no cart path can drift back to a status lookup."""
+    return False
 
 
 def _resolve_guest_token(request: Request, settings: Settings) -> str | None:
@@ -398,7 +442,47 @@ def _cart_response(
         items=prepared.items,
         listings_by_id=listings_by_id,
         conflicts=merged_conflicts or None,
+        customer_id=customer_id,
     )
+
+
+def _price_cart_offers(
+    line_views: list[CartLineView], customer_id: str | None
+) -> tuple[list[CartLineView], OfferPricing | None]:
+    """W8: apply live offers to the cart view; never fails the cart read."""
+    try:
+        return price_line_views(line_views, service_db_client(), customer_id=customer_id)
+    except Exception:
+        logger.warning("cart.offer_pricing_failed", exc_info=True)
+        return line_views, None
+
+
+def _load_ticket_lines_for_read(cart_id: str, customer_id: str | None) -> list[TicketCartLine]:
+    """Unified cart: a signed-in buyer's ticket lines; never fails the cart read."""
+    if customer_id is None or not cart_id:
+        return []
+    try:
+        return load_cart_ticket_lines(cart_id, client=service_db_client())
+    except Exception:
+        logger.warning("cart.ticket_lines_read_failed", exc_info=True)
+        return []
+
+
+def _price_cart_with_tickets(
+    line_views: list[CartLineView],
+    ticket_lines: list[TicketCartLine],
+    customer_id: str | None,
+) -> tuple[list[CartLineView], list[TicketCartLine], OfferPricing | None]:
+    if not ticket_lines:
+        views, pricing = _price_cart_offers(line_views, customer_id)
+        return views, ticket_lines, pricing
+    try:
+        return price_unified(
+            line_views, ticket_lines, service_db_client(), customer_id=customer_id
+        )
+    except Exception:
+        logger.warning("cart.offer_pricing_failed", exc_info=True)
+        return line_views, ticket_lines, None
 
 
 def _build_cart_response(
@@ -407,6 +491,7 @@ def _build_cart_response(
     items: list[dict[str, Any]],
     listings_by_id: dict[str, dict[str, Any]],
     conflicts: list[MergeConflict] | None = None,
+    customer_id: str | None = None,
 ) -> CartResponse:
     line_views: list[CartLineView] = []
     for item in items:
@@ -450,10 +535,18 @@ def _build_cart_response(
             )
         )
 
-    vendor_groups = group_by_vendor(line_views)
-    subtotal = cart_subtotal_ngwee(
-        [(line.qty, line.unit_price_ngwee) for line in line_views],
+    ticket_lines = _load_ticket_lines_for_read(cart_id, customer_id)
+    line_views, ticket_lines, offer_pricing = _price_cart_with_tickets(
+        line_views, ticket_lines, customer_id
     )
+    vendor_groups = group_by_vendor(line_views)
+    subtotal = (
+        sum(line.line_total_ngwee for line in line_views)
+        if offer_pricing is not None
+        else cart_subtotal_ngwee([(line.qty, line.unit_price_ngwee) for line in line_views])
+    )
+    purchasable_tickets = [line for line in ticket_lines if line.available]
+    subtotal += ticket_subtotal_ngwee(purchasable_tickets)
 
     return CartResponse(
         cart_id=cart_id,
@@ -479,6 +572,8 @@ def _build_cart_response(
                 is_rfq_quote=line.is_rfq_quote,
                 listing_variant_id=line.listing_variant_id,
                 variant_options=_variant_option_responses(line),
+                list_line_total_ngwee=line.list_line_total_ngwee,
+                offer_id=line.offer_id,
             )
             for line in line_views
         ],
@@ -507,15 +602,50 @@ def _build_cart_response(
                         is_rfq_quote=item.is_rfq_quote,
                         listing_variant_id=item.listing_variant_id,
                         variant_options=_variant_option_responses(item),
+                        list_line_total_ngwee=item.list_line_total_ngwee,
+                        offer_id=item.offer_id,
                     )
                     for item in group.items
                 ],
                 subtotal_ngwee=group.subtotal_ngwee,
                 delivery_eligible=group.delivery_eligible,
+                gifts=[
+                    OfferGiftResponse(
+                        offer_id=gift.offer_id,
+                        listing_id=gift.listing_id,
+                        qty=gift.qty,
+                        title=gift.title,
+                        reference_unit_price_ngwee=gift.reference_unit_price_ngwee,
+                    )
+                    for gift in (
+                        offer_pricing.gifts_for_vendor(group.vendor_id) if offer_pricing else []
+                    )
+                ],
+                savings_ngwee=sum(
+                    (item.list_line_total_ngwee or item.line_total_ngwee) - item.line_total_ngwee
+                    for item in group.items
+                ),
             )
             for group in vendor_groups
         ],
         subtotal_ngwee=subtotal,
+        ticket_lines=[ticket_line_out(line) for line in ticket_lines],
+        unavailable_ticket_line_ids=[line.id for line in ticket_lines if not line.available],
+        platform_fee_ngwee=ticket_platform_fee_ngwee(purchasable_tickets),
+        cod_allowed=not ticket_lines,
+        savings_ngwee=offer_pricing.priced.savings_ngwee if offer_pricing else 0,
+        offers=[
+            AppliedOfferResponse(
+                offer_id=application.offer_id,
+                offer_type=application.offer_type,
+                title=application.title,
+                vendor_id=application.vendor_id,
+                discount_ngwee=application.discount_ngwee,
+                gift_qty=application.gift_qty,
+                applications=application.applications,
+            )
+            for application in (offer_pricing.priced.applications if offer_pricing else ())
+        ],
         conflicts=[
             MergeConflictResponse(
                 listing_id=conflict.listing_id,
@@ -1364,7 +1494,8 @@ def _price_proposal_terms(
         ),
         "location_stock": sorted(
             (
-                row for row in authority.get("location_stock", [])
+                row
+                for row in authority.get("location_stock", [])
                 if str(row.get("listing_id")) == listing_id
             ),
             key=lambda row: str(row.get("location_id")),
@@ -1382,9 +1513,7 @@ def _price_proposal_terms(
         "currency": "ZMW",
         "lines": lines,
         "quantity": sum(int(item["qty"]) for item in lines),
-        "previous_unit_prices_ngwee": sorted(
-            {int(item["unit_price_ngwee"]) for item in lines}
-        ),
+        "previous_unit_prices_ngwee": sorted({int(item["unit_price_ngwee"]) for item in lines}),
         "current_unit_price_ngwee": int(conflict.details["current_unit_price_ngwee"]),
         "wholesale": bool(listing and listing.get("wholesale")),
         "moq": int(listing.get("moq", 1)) if listing else 1,
@@ -1408,7 +1537,8 @@ def _price_conflicts_with_proposals(
     for conflict in conflicts:
         listing = next(
             (
-                row for row in authority.get("listings", [])
+                row
+                for row in authority.get("listings", [])
                 if str(row.get("id")) == conflict.listing_id
             ),
             None,
@@ -1416,12 +1546,14 @@ def _price_conflicts_with_proposals(
         title = listing.get("display_name") if listing else None
         name = title if isinstance(title, str) and title.strip() else None
         if conflict.code != "cart.price_changed":
-            result.append(MergeConflict(
-                listing_id=conflict.listing_id,
-                code=conflict.code,
-                message_key=conflict.message_key,
-                details={**conflict.details, "item_name": name},
-            ))
+            result.append(
+                MergeConflict(
+                    listing_id=conflict.listing_id,
+                    code=conflict.code,
+                    message_key=conflict.message_key,
+                    details={**conflict.details, "item_name": name},
+                )
+            )
             continue
         terms = _price_proposal_terms(
             conflict,
@@ -1456,7 +1588,9 @@ def _price_conflicts_with_proposals(
                         {"typ": "cart_price_proposal", "terms": terms},
                         settings.supabase_service_role_key,
                         algorithm="HS256",
-                    ) if can_accept else None,
+                    )
+                    if can_accept
+                    else None,
                 },
             )
         )
@@ -1501,8 +1635,11 @@ def _validate_merge_resolution(
     invalid_proposals = set(body.accepted_price_proposals).difference(accept_price_changes)
     for listing_id in accept_price_changes:
         price_conflict = next(
-            (conflict for conflict in conflicts_by_listing.get(listing_id, [])
-             if conflict.code == "cart.price_changed"),
+            (
+                conflict
+                for conflict in conflicts_by_listing.get(listing_id, [])
+                if conflict.code == "cart.price_changed"
+            ),
             None,
         )
         if price_conflict is None:
@@ -1583,9 +1720,7 @@ async def merge_cart_on_login(
         guest_items = []
         for item in source_guest_items:
             listing_key = str(item["listing_id"])
-            if listing_key in user_variants and user_variants[listing_key] != line_variant_id(
-                item
-            ):
+            if listing_key in user_variants and user_variants[listing_key] != line_variant_id(item):
                 variant_conflicts.append(
                     MergeConflict(
                         listing_id=listing_key,
@@ -1628,7 +1763,7 @@ async def merge_cart_on_login(
             if isinstance(stock_rows, list)
             else []
         )
-        business_eligible = authority.get("business_status") == "verified"
+        business_eligible = _business_eligible_for_user(current_user.id)
 
         _, current_conflicts = merge_cart_items(
             user_items=user_items,

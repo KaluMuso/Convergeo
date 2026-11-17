@@ -3,10 +3,21 @@
   "shell": {
     "eyebrow": "Convergeo 运营",
     "environment": "加固管理源",
-    "signOut": "退出登录"
+    "signOut": "退出登录",
+    "account": {
+      "menuLabel": "账户菜单",
+      "unknownUser": "已登录",
+      "roleLine": "角色：{role}",
+      "roles": {
+        "superadmin": "超级管理员",
+        "admin": "管理员",
+        "custom": "自定义角色"
+      }
+    }
   },
   "nav": {
     "home": "仪表板",
+    "analytics": "数据分析",
     "kyc": "KYC 队列",
     "business": "商户",
     "moderation": "内容审核",
@@ -19,6 +30,10 @@
     "events": "高价值活动",
     "homeFeed": "Home feed",
     "advertising": "Advertising",
+    "accounts": "管理员账户",
+    "auditLog": "审计日志",
+    "offers": "优惠活动",
+    "coupons": "优惠券",
     "branches": "分店审核",
     "extras": "增值服务申请",
     "trials": "免费试用"
@@ -82,6 +97,7 @@
     },
     "pages": {
       "common": "所有应用——共享界面、导航、主题",
+      "nav": "所有应用 — 导航标签",
       "auth": "所有应用——登录与注册",
       "catalog": "客户端——商品列表、详情、对比",
       "search": "客户端——搜索与建议",
@@ -175,6 +191,10 @@
       "aiCapUsd": "AI 每月上限（USD）",
       "releaseDelivered": "送达后自动释放（小时）",
       "releaseShipped": "发货后自动释放（天）",
+      "advanceBps": "已验证主办方活动前预付比例（基点，最多 5000）",
+      "advanceMinKycTier": "活动前预付：最低 KYC 等级",
+      "advanceMinEvents": "活动前预付：最少成功举办的活动数",
+      "advanceRepaymentDays": "活动前预付：还款期限（天）",
       "dangerousHint": "货到付款上限的更改仅影响新的结账资格。",
       "branchMinDistance": "分店最小间距（米）",
       "planAnnualDiscount": "套餐年付折扣（%）"
@@ -250,6 +270,46 @@
       "threshold": "阈值 {amount}",
       "projected": "预计 GMV {amount}",
       "status": "状态：{status}"
+    },
+    "advanceDebts": {
+      "title": "主办方预付款欠款",
+      "subtitle": "活动前已支付、但活动随后取消的预付款。在此登记现金还款；在到期日前全额还清的欠款即结清，永远不会触发停用。",
+      "loading": "正在加载预付款欠款…",
+      "empty": "没有符合筛选条件的预付款欠款。",
+      "error": "无法加载预付款欠款。",
+      "forbidden": "权限不足 — 需要管理员角色。",
+      "event": "活动：{title}",
+      "amounts": "未还 {outstanding}，共 {amount}",
+      "due": "到期 {date}",
+      "blacklisted": "已逾期：主办方已列入黑名单并标记法律跟进。",
+      "filters": {
+        "status": "状态",
+        "all": "全部",
+        "organiser": "主办方 ID",
+        "organiserPlaceholder": "商家 UUID（可选）",
+        "apply": "应用筛选"
+      },
+      "status": {
+        "open": "未结",
+        "settled": "已结清",
+        "written_off": "已核销"
+      },
+      "form": {
+        "title": "登记现金还款",
+        "hint": "只登记财务已确认收到的款项。金额以克瓦查为单位；参考号为银行或移动支付收据。",
+        "organiser": "主办方 ID",
+        "amount": "金额（K）",
+        "reference": "收据参考号",
+        "submit": "登记还款",
+        "saving": "正在保存…",
+        "saved": "已登记还款。仍欠：{remaining}。",
+        "failed": "无法登记还款。",
+        "exceeds": "该金额超过主办方的欠款。",
+        "vendorRequired": "请输入主办方 ID。",
+        "amountInvalid": "请输入最多两位小数的正克瓦查金额。",
+        "referenceInvalid": "参考号须为 3–80 个字母、数字、点、短横线或下划线。",
+        "useOrganiser": "为该主办方登记还款"
+      }
     }
   },
   "kyc": {
@@ -329,7 +389,9 @@
       "cancel": "取消",
       "submitting": "正在保存决定…",
       "success": "决定已记录——商家将收到通知。",
-      "failure": "无法保存决定。"
+      "failure": "无法保存决定。",
+      "notFound": "未找到",
+      "notFoundBody": "此 KYC 申请不存在或已被删除。"
     },
     "reasons": {
       "blurry_document": "文件模糊或无法辨认",
@@ -400,7 +462,9 @@
     },
     "canonical": {
       "dialog": {
-        "details": "商品详情"
+        "details": "商品详情",
+        "failureRetryHint": "未保存任何内容。请检查网络后再次点击按钮；如果仍然失败，请刷新页面。",
+        "failureReference": "参考编号：{id}"
       }
     }
   },
@@ -718,9 +782,9 @@
     "emptyTrafficBody": "来自实时 API 的 GMV、订单流水线、漏斗与账本负债均为零——这些不是占位分析数据。",
     "emptyTrafficDependency": "非零磁贴缺少的后端依赖：真实结账/订单量、账本分录（MR-B01）以及对账报告。",
     "gmv": {
-      "title": "商品交易总额（GMV）",
-      "subtitle": "商品交易总额（不含已取消订单）",
-      "empty": "K0.00——账本支撑的汇总中尚无未取消订单。"
+      "title": "订单金额（未取消）",
+      "subtitle": "所有未取消订单的商品与配送费合计，无论是否付款。这不是已收款项，也不是平台收入。",
+      "empty": "K0.00——尚无未取消的订单。"
     },
     "payoutLiabilities": {
       "title": "结算负债",
@@ -800,7 +864,9 @@
         "orders_placed": "下单",
         "orders_completed": "完成订单"
       }
-    }
+    },
+    "financeWithheldTitle": "财务数据已隐藏",
+    "financeWithheldBody": "托管余额、待付款项和对账需要 finance.read 权限。如工作需要，请联系超级管理员。"
   },
   "disputes": {
     "title": "纠纷控制台",
@@ -1169,6 +1235,323 @@
     },
     "placeholders": {
       "path": "/c/electronics"
+    }
+  },
+  "auditLogUi": {
+    "title": "审计日志",
+    "subtitle": "所有已记录的管理操作，最新的在前。只读：条目不能修改或删除。",
+    "permissionDenied": "需要 audit.read 权限才能查看审计日志。",
+    "filters": "审计日志筛选",
+    "actor": "操作者账户 ID",
+    "action": "操作（以点结尾表示一类，例如 admin.orders.）",
+    "resource": "资源类型",
+    "resourceId": "资源 ID",
+    "outcome": "结果",
+    "outcomeAny": "全部结果",
+    "outcomeSuccess": "成功",
+    "outcomeDenied": "被拒绝",
+    "outcomeFailed": "失败",
+    "from": "开始日期",
+    "to": "结束日期",
+    "apply": "应用筛选",
+    "reset": "清除筛选",
+    "maskingNote": "电话、邮箱、姓名、地址和验证码均已遮盖。",
+    "loading": "正在加载审计条目…",
+    "empty": "没有符合筛选条件的条目。",
+    "loadFailed": "无法加载审计日志。",
+    "invalid": "请检查筛选条件：ID 必须完整。",
+    "when": "时间：{at}",
+    "who": "操作者：{actor}（{roles}）",
+    "system": "系统",
+    "noRoles": "无角色记录",
+    "what": "对象：{resource} {id}",
+    "reason": "原因：{reason}",
+    "requestId": "请求 {id}",
+    "details": "变更前后",
+    "more": "加载更早的条目"
+  },
+  "accountsUi": {
+    "title": "管理员账户",
+    "subtitle": "所有持有管理员角色的人员及其姓名和邮箱。",
+    "deactivateHelp": "停用会一次性撤销该账户的全部管理员角色，并将您的原因写入审计日志。在其下一次请求时生效。最后一位超级管理员不能被移除，您也不能停用自己。",
+    "manageRolesLink": "分配或撤销单个角色",
+    "permissionDenied": "只有超级管理员可以管理管理员账户。",
+    "loading": "正在加载管理员账户…",
+    "loadFailed": "无法加载管理员账户。",
+    "mutationFailed": "账户未被停用，请重试。",
+    "lastSuperadmin": "这是最后一位超级管理员，无法停用。",
+    "retry": "重试",
+    "empty": "没有账户持有管理员角色。",
+    "noName": "资料中无姓名",
+    "noEmail": "无邮箱记录",
+    "roles": "角色：{roles}",
+    "selfNote": "这是您的账户。",
+    "reason": "停用原因（必填）",
+    "deactivate": "停用",
+    "confirmDeactivate": "停用 {name}？将撤销以下角色：{roles}。"
+  },
+  "analytics": {
+    "title": "数据分析",
+    "subtitle": "汇总的平台与购物者行为数据。不显示任何个人购物者或原始搜索文本。",
+    "tabs": {
+      "label": "分析栏目",
+      "overview": "概览",
+      "search": "搜索与需求",
+      "products": "商品与转化漏斗",
+      "insights": "洞察"
+    },
+    "range": {
+      "label": "日期范围",
+      "days": "最近 {days} 天"
+    },
+    "loading": "正在加载分析数据…",
+    "error": "无法加载分析数据。",
+    "retry": "重试",
+    "permissionDenied": "只有平台管理员可以查看分析数据。",
+    "disabled": {
+      "title": "数据分析未启用",
+      "body": "每日汇总已关闭（功能开关 analytics_v2_rollups）。启用之前，此处不会收集或显示任何数据。"
+    },
+    "dataThrough": "行为数据截至 {day}（UTC）。订单和付款为实时数据。",
+    "dataPending": "行为数据尚未汇总。订单和付款为实时数据。",
+    "insufficient": "数据不足（至少需要 {n}）",
+    "notAvailable": "—",
+    "empty": "此范围内没有数据。",
+    "delta": {
+      "none": "没有上一周期的基准",
+      "value": "较上一周期 {change}"
+    },
+    "columns": {
+      "day": "日期",
+      "term": "搜索词",
+      "product": "商品",
+      "page": "页面类型"
+    },
+    "session": {
+      "rule": "无活动 30 分钟后会话结束。",
+      "activeSpan": "平均活跃时长",
+      "estimatedEnd": "会话结束时间根据最后一次活动估算，并非站内停留时间。",
+      "duration": "{minutes} 分 {seconds} 秒"
+    },
+    "overview": {
+      "commercialTitle": "订单与付款",
+      "commercialHint": "仅来自订单和付款数据。已付款指付款成功。",
+      "behaviourTitle": "购物者行为",
+      "dailyTitle": "每日已付款 GMV",
+      "reconciliation": {
+        "mismatch": "以下日期的付款与已付款结账不一致：{days}。请先核查付款再使用这些数字。"
+      },
+      "kpi": {
+        "gmvPaid": "已付款 GMV",
+        "ordersPaid": "已付款订单",
+        "aov": "平均已付款结账金额",
+        "checkoutsStarted": "已开始结账",
+        "ordersPlacedHint": "已下单 {placed} 笔",
+        "sessions": "会话",
+        "visitorDays": "访客日",
+        "bounceRate": "跳出率",
+        "searches": "搜索次数",
+        "zeroResultShare": "无结果搜索占比"
+      }
+    },
+    "search": {
+      "kNotice": "在此范围内搜索少于 {k} 次的词会归入“其他”，且从不显示。",
+      "zeroResults": "无结果搜索",
+      "zeroTitle": "有人搜索但未找到",
+      "zeroHint": "目录尚未满足的需求。",
+      "topTitle": "热门搜索词",
+      "other": "其他：{terms} 个词，{searches} 次搜索"
+    },
+    "products": {
+      "funnelTitle": "转化漏斗",
+      "funnelHint": "浏览步骤来自会话；结账和订单步骤来自订单和付款。",
+      "shareOfSessions": "占会话的 {share}",
+      "steps": {
+        "sessions": "会话",
+        "search_sessions": "有搜索的会话",
+        "product_view_sessions": "有商品浏览的会话",
+        "cart_adds": "加入购物车",
+        "checkouts_started": "已开始结账",
+        "orders_placed": "已下单",
+        "orders_paid": "已付款订单"
+      },
+      "topTitle": "浏览最多的商品",
+      "views": "浏览次数",
+      "unnamed": "未命名商品",
+      "pageViewsTitle": "按页面类型的浏览量",
+      "entryTitle": "入口页面"
+    },
+    "insights": {
+      "placeholder": "自动洞察将在后续版本推出。目前此处列出数据质量检查。",
+      "none": "此范围内没有数据质量问题。",
+      "kinds": {
+        "payment_mismatch": "{day} 的付款与已付款结账不一致。",
+        "rollup_failed": "{day} 的每日汇总失败。",
+        "rollup_stale": "汇总已滞后（最新：{day}）。"
+      }
+    }
+  },
+  "dispatch": {
+    "doorPayment": {
+      "title": "上门付款",
+      "states": {
+        "arrived": "骑手已到门口：等待付款",
+        "pending": "付款提示已发送到客户手机",
+        "paid": "已通过手机钱包付款：交接码已发放",
+        "cash": "改用现金：交接码已发放",
+        "failed": "付款失败或超时",
+        "exception": "付款异常：请查看队列"
+      },
+      "actions": {
+        "arrived": "骑手已到达",
+        "request": "请求付款",
+        "poll": "查询付款",
+        "cash": "改收现金"
+      },
+      "done": {
+        "arrived": "已记录到达",
+        "request": "已发送付款提示",
+        "poll": "状态已刷新",
+        "cash": "已记录现金收款"
+      },
+      "errors": {
+        "inFlight": "客户手机上仍有有效的付款提示，请先查询状态。",
+        "attemptsExhausted": "付款提示次数已用完。请改收现金或退回包裹。",
+        "cashOverCap": "订单金额超过现金限额。",
+        "alreadySettled": "此订单已付款。",
+        "orderNotPayable": "此订单已无法付款。",
+        "invalidPhone": "请输入赞比亚手机号码。",
+        "operatorUnsupported": "只有 MTN 和 Airtel 号码可以接收付款提示。",
+        "required": "交接前必须完成付款。"
+      }
+    }
+  },
+  "offers": {
+    "title": "商家优惠",
+    "subtitle": "查看所有商家的组合与优惠。管理员暂停会立即停止优惠，商家无法自行解除。",
+    "loading": "正在加载优惠…",
+    "error": "无法加载优惠。",
+    "permissionDenied": "您无权查看优惠。",
+    "permissionDeniedHint": "请向超级管理员申请广告权限。",
+    "retry": "重试",
+    "empty": "没有符合筛选条件的优惠。",
+    "listLabel": "优惠",
+    "truncated": "仅显示前 200 条优惠。请缩小筛选范围查看其余内容。",
+    "vendor": "商家：{name}",
+    "window": "{starts} 至 {ends}",
+    "windowOpen": "自 {starts} 起，无结束日期",
+    "perCustomer": "每位顾客 {count} 次",
+    "perCustomerUnlimited": "每位顾客不限次数",
+    "giftStock": "赠品已用 {reserved}/{total}",
+    "note": "管理员备注：{note}",
+    "pausedToast": "优惠已暂停。",
+    "unpausedToast": "已解除管理员暂停。",
+    "filters": {
+      "label": "筛选优惠",
+      "state": "状态",
+      "status": "商家设置状态",
+      "type": "类型",
+      "search": "标题",
+      "searchPlaceholder": "搜索标题",
+      "apply": "搜索",
+      "all": "全部"
+    },
+    "state": {
+      "live": "进行中",
+      "admin_paused": "已被管理员暂停",
+      "scheduled": "待开始",
+      "ended": "已结束"
+    },
+    "status": {
+      "draft": "草稿",
+      "active": "已启用",
+      "paused": "商家已暂停",
+      "archived": "已归档"
+    },
+    "type": {
+      "bundle": "组合",
+      "buy_n_pay_m": "买 N 付 M",
+      "bxgy": "买 X 送 Y",
+      "free_gift": "赠品"
+    },
+    "actions": {
+      "pause": "暂停",
+      "unpause": "解除暂停",
+      "pauseTitle": "暂停此优惠？",
+      "unpauseTitle": "解除管理员暂停？",
+      "pauseBody": "“{title}”将立即停止在购物车和结账中生效。已下的订单保持原价。",
+      "unpauseBody": "如果商家仍启用该优惠且在有效期内，“{title}”将重新生效。",
+      "noteLabel": "备注（仅管理员可见）",
+      "notePlaceholder": "为什么要更改此优惠？",
+      "audited": "此操作将记录在审计日志中。",
+      "cancel": "取消",
+      "submitting": "正在保存…",
+      "confirmPause": "暂停优惠",
+      "confirmUnpause": "解除暂停",
+      "failure": "无法更新优惠，请重试。"
+    }
+  },
+  "coupons": {
+    "manager": {
+      "title": "平台优惠券",
+      "intro": "由 Convergeo 承担的优惠码，店铺仍收到全价。",
+      "fundingNote": "每笔平台优惠都从每月促销预算中支出。预算用完后，平台优惠券将停用至下月。",
+      "createTitle": "新建优惠券",
+      "code": "优惠码",
+      "codeHelp": "3–32 个字母、数字或连字符，例如 SAVE20。",
+      "kind": "优惠类型",
+      "kindPercent": "百分比折扣",
+      "kindFixed": "固定金额（克瓦查）",
+      "percent": "百分比（例如 10）",
+      "amount": "金额（克瓦查，例如 20）",
+      "maxDiscount": "最高优惠（K，可选）",
+      "maxDiscountHelp": "限制大额订单的百分比优惠。",
+      "minSpend": "最低消费（K，可选）",
+      "minSpendHelp": "按适用商品计算。",
+      "scope": "适用范围",
+      "scopeAll": "全部",
+      "scopeShop": "我的整个店铺",
+      "scopeVendor": "某个店铺",
+      "scopeCategory": "某个类别",
+      "scopeListing": "某个商品",
+      "scopeId": "ID",
+      "scopeIdHelp": "从店铺、类别或商品页面复制 ID。",
+      "startsOn": "开始日期",
+      "endsOn": "结束日期（可选）",
+      "endsOnHelp": "优惠码在当天结束前有效（卢萨卡时间）。",
+      "totalLimit": "总使用次数（可选）",
+      "totalLimitHelp": "留空表示不限总次数。",
+      "perUserLimit": "每位顾客可用次数",
+      "create": "创建优惠券",
+      "creating": "正在创建…",
+      "created": "优惠券已创建。",
+      "listTitle": "平台优惠券",
+      "empty": "暂无优惠券。",
+      "loading": "正在加载…",
+      "usage": "已使用 {used} 次",
+      "usageLimited": "已使用 {used}/{limit} 次",
+      "summaryOff": "优惠 {value}",
+      "summaryMin": "最低 {amount}",
+      "statusActive": "进行中",
+      "statusPaused": "已暂停",
+      "statusArchived": "已结束",
+      "pause": "暂停",
+      "resume": "恢复",
+      "archive": "结束",
+      "errors": {
+        "generic": "出错了，请重试。",
+        "disabled": "优惠券功能尚未开启。",
+        "forbidden": "只有管理员可以管理平台优惠券。",
+        "code": "请使用 3–32 个字母、数字或连字符。",
+        "codeTaken": "该优惠码已被使用。",
+        "percent": "请输入 1 到 100 之间的百分比。",
+        "percentTooHigh": "该百分比超过允许的上限。",
+        "amount": "请输入金额，例如 20 或 12.50。",
+        "dates": "结束日期须不早于开始日期，且不能是过去的日期。",
+        "scope": "请选择适用范围并粘贴其 ID。",
+        "listing": "该商品不属于您的店铺。",
+        "archived": "已结束的优惠券不能重新开始，请新建一个。"
+      }
     }
   },
   "common": {

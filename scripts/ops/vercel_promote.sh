@@ -102,6 +102,10 @@ vercel_rest_post() {
       sleep "$delay"; delay=$((delay * 2)); attempt=$((attempt + 1)); continue
     fi
     if [[ "$code" =~ ^2 ]]; then rm -f "$tmp"; return 0; fi
+    # Re-promoting the deployment that is already production is a no-op, not a failure.
+    if [[ "$code" == "409" ]] && grep -q 'already the current' "$tmp" 2>/dev/null; then
+      rm -f "$tmp"; return 0
+    fi
     warn "Vercel POST ${path%%\?*} -> HTTP ${code}: $(head -c 300 "$tmp" 2>/dev/null)"
     rm -f "$tmp"; return 1
   done

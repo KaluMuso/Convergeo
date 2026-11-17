@@ -28,14 +28,19 @@ vi.mock("next-intl", () => ({
     return Object.assign(translate, { raw: translate });
   },
 }));
-vi.mock("next-intl/server", () => ({ getMessages: async () => ({}), setRequestLocale: () => {} }));
+vi.mock("next-intl/server", () => ({
+  getMessages: async () => ({}),
+  setRequestLocale: () => {},
+}));
 vi.mock("./_components/step-fulfilment", () => ({
   CheckoutShell: () => null,
 }));
 vi.mock("./_components/existing-checkout-status-lazy", () => ({
   ExistingCheckoutStatus: () => null,
 }));
-vi.mock("./_components/lazy-ticket-checkout", () => ({ LazyTicketCheckout: () => null }));
+vi.mock("./_components/lazy-ticket-checkout", () => ({
+  LazyTicketCheckout: () => null,
+}));
 
 import CheckoutPage from "./page";
 
@@ -43,24 +48,31 @@ describe("checkout route", () => {
   it("mounts ticket checkout for a group and preserves the product checkout without one", async () => {
     const ticket = await CheckoutPage({
       params: Promise.resolve({ locale: "en" }),
-      searchParams: Promise.resolve({ group: "00000000-0000-4000-8000-000000000001" }),
+      searchParams: Promise.resolve({
+        group: "00000000-0000-4000-8000-000000000001",
+      }),
     });
     const product = await CheckoutPage({
       params: Promise.resolve({ locale: "en" }),
       searchParams: Promise.resolve({}),
     });
     expect(
-      (ticket as React.ReactElement<{ children: React.ReactElement }>).props.children.type,
+      (ticket as React.ReactElement<{ children: React.ReactElement }>).props
+        .children.type,
     ).toHaveProperty("name", "LazyTicketCheckout");
     expect(
       (
         ticket as React.ReactElement<{
-          children: React.ReactElement<{ loginLabel: string; payLabel: string }>;
+          children: React.ReactElement<{
+            loginLabel: string;
+            payLabel: string;
+          }>;
         }>
       ).props.children.props,
     ).toMatchObject({ loginLabel: "Sign in", payLabel: "Get tickets" });
     expect(
-      (product as React.ReactElement<{ children: React.ReactElement }>).props.children.type,
+      (product as React.ReactElement<{ children: React.ReactElement }>).props
+        .children.type,
     ).toHaveProperty("name", "CheckoutShell");
   });
 
@@ -73,8 +85,11 @@ describe("checkout route", () => {
       params: Promise.resolve({ locale: "en" }),
       searchParams: Promise.resolve(query),
     });
-    const child = (page as React.ReactElement<{ children: React.ReactElement<{ groupId: unknown }> }>)
-      .props.children;
+    const child = (
+      page as React.ReactElement<{
+        children: React.ReactElement<{ groupId: unknown }>;
+      }>
+    ).props.children;
     expect(child.type).toHaveProperty("name", "ExistingCheckoutStatus");
     expect(child.props.groupId).toBeNull();
   });

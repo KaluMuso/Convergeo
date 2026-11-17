@@ -35,6 +35,18 @@ def reset_caches() -> Generator[None, None, None]:
     get_supabase_service_client.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def analytics_v2_flags_off() -> Generator[None, None, None]:
+    """Pin the analytics_v2 DB flags OFF (their production default) so DB-free tests
+    never query feature_flags. Tests exercising the v2 paths override explicitly."""
+    from app.services.analytics import flags as analytics_flags
+
+    analytics_flags.override_for_tests(analytics_flags.COLLECT_FLAG, False)
+    analytics_flags.override_for_tests(analytics_flags.ROLLUPS_FLAG, False)
+    yield
+    analytics_flags.clear_cache()
+
+
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
     from app.errors import AppError

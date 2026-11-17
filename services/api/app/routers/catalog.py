@@ -9,13 +9,9 @@ from uuid import UUID
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.comparison import is_lusaka_delivery_available
-from app.services.business.access import (
-    BusinessAccess,
-    get_business_access,
-    require_wholesale_access,
-)
+from app.schemas.offers import OfferBadgeOut
 from app.services.listings.availability import is_listing_available
-from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
+from app.services.listings.demo import fetch_demo_listing_ids
 from app.services.vendor_plans.canonical_photos import load_canonical_images
 from app.services.vendor_plans.resolver import shared_photos_enabled
 from fastapi import APIRouter, Depends, Query
@@ -79,10 +75,9 @@ class CatalogListingItem(BaseModel):
     below_median: bool = False
     delivery_available: bool = False
     pickup_available: bool = False
-    # B2B wholesale fields — populated only on the gated wholesale/supplies feed.
-    wholesale: bool | None = None
-    moq: int | None = None
-    price_tiers: list[dict[str, Any]] | None = None
+    #: W8 live offer this listing takes part in (flag `bundles`); attached
+    #: server-side by surfaces that render cards (home feed, stream).
+    offer_badge: OfferBadgeOut | None = None
 
 
 class CatalogListResponse(BaseModel):
@@ -240,18 +235,16 @@ class _ListingRow(BaseModel):
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    return (
-        EARTH_RADIUS_M
-        * math.acos(
-            min(
-                1.0,
-                max(
-                    -1.0,
-                    math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
-                    * math.cos(math.radians(lng2) - math.radians(lng1))
-                    + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
-                ),
-            )
+    return EARTH_RADIUS_M * math.acos(
+        min(
+            1.0,
+            max(
+                -1.0,
+                math.cos(math.radians(lat1))
+                * math.cos(math.radians(lat2))
+                * math.cos(math.radians(lng2) - math.radians(lng1))
+                + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
+            ),
         )
     )
 
@@ -373,9 +366,7 @@ def _response_rows(response: Any) -> list[dict[str, Any]]:
 def _fetch_search_documents(client: Any, category_path: str | None) -> list[_SearchDocRow]:
     query = (
         client.table("search_documents")
-        .select(
-            "entity_id,title,category_path,price_min_ngwee,lat,lng,boost_signals,updated_at"
-        )
+        .select("entity_id,title,category_path,price_min_ngwee,lat,lng,boost_signals,updated_at")
         .eq("entity_kind", "listing")
         .eq("is_public", True)
     )
@@ -479,8 +470,6 @@ def _standalone_listing_location(
 def get_standalone_listing(
     client: Any,
     listing_id: str,
-    *,
-    include_wholesale: bool = False,
 ) -> StandaloneListingResponse:
     """Fetch one public standalone listing through the server-only client.
 
@@ -507,7 +496,7 @@ def get_standalone_listing(
         raise _standalone_listing_not_found()
     if str(row.get("product_class") or "A") not in _customer_released_product_classes(client):
         raise _standalone_listing_not_found()
-    if bool(row.get("wholesale")) and not include_wholesale:
+    if bool(row.get("wholesale")):
         raise _standalone_listing_not_found()
     if listing_id in fetch_demo_listing_ids(client, [listing_id]):
         raise _standalone_listing_not_found()
@@ -517,9 +506,7 @@ def get_standalone_listing(
     title_raw = row.get("title_override")
     title = title_raw.strip() if isinstance(title_raw, str) else ""
     vendor_name_raw = vendor.get("display_name") if vendor is not None else None
-    vendor_name = (
-        vendor_name_raw.strip() if isinstance(vendor_name_raw, str) else ""
-    )
+    vendor_name = vendor_name_raw.strip() if isinstance(vendor_name_raw, str) else ""
     if vendor is None or not title or not vendor_name:
         raise _standalone_listing_not_found()
 
@@ -563,9 +550,7 @@ def get_standalone_listing(
             row.get("fulfilment_mode") or "stocked"
         ),
         lead_time_days=int(lead_time_raw) if lead_time_raw is not None else None,
-        vendor_capacity_per_week=(
-            int(capacity_raw) if capacity_raw is not None else None
-        ),
+        vendor_capacity_per_week=(int(capacity_raw) if capacity_raw is not None else None),
         stock_mode=str(row.get("stock_mode") or "tracked"),  # type: ignore[arg-type]
         stock_qty=int(stock_qty_raw) if stock_qty_raw is not None else None,
         moq=int(row.get("moq") or 1),
@@ -610,10 +595,7 @@ def _customer_released_product_classes(client: Any) -> set[str]:
     }
     try:
         response = (
-            client.table("feature_flags")
-            .select("flag,enabled")
-            .in_("flag", list(flags))
-            .execute()
+            client.table("feature_flags").select("flag,enabled").in_("flag", list(flags)).execute()
         )
         rows = _response_rows(response)
     except Exception:  # pragma: no cover - defensive fail-closed boundary
@@ -1068,106 +1050,6 @@ def _listing_logistics_fields(
     }
 
 
-class _WholesaleRow(BaseModel):
-    id: str
-    vendor_id: str
-    product_id: str | None = None
-    title_override: str | None = None
-    condition: str = "new"
-    product_class: ProductClass = "A"
-    sale_unit: SaleUnit = "each"
-    unit_step_milli: int = Field(default=1000, ge=1)
-    min_steps: int = Field(default=1, ge=1)
-    fulfilment_mode: FulfilmentMode = "stocked"
-    lead_time_days: int | None = None
-    vendor_capacity_per_week: int | None = None
-    stock_mode: StockMode = "tracked"
-    stock_qty: int | None = None
-    price_ngwee: int
-    moq: int = 1
-    price_tiers: list[dict[str, Any]] | None = None
-
-
-def _fetch_wholesale_listings(client: Any, limit: int) -> list[_WholesaleRow]:
-    response = (
-        client.table("vendor_listings")
-        .select(
-            "id, vendor_id, product_id, title_override, condition, product_class, "
-            "sale_unit, unit_step_milli, min_steps, fulfilment_mode, lead_time_days, "
-            "vendor_capacity_per_week, stock_mode, stock_qty, price_ngwee, moq, "
-            "price_tiers, status, wholesale"
-        )
-        .eq("status", "active")
-        .eq("wholesale", True)
-        .limit(limit)
-        .execute()
-    )
-    rows = _response_rows(response)
-    return [_WholesaleRow.model_validate(row) for row in rows]
-
-
-def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
-    """Wholesale/supplies feed. Callers MUST gate this behind verified-business access;
-    the endpoint enforces that, this function assumes it and returns B2B pricing."""
-    capped_limit = min(max(limit, 1), MAX_PAGE_SIZE)
-    listings = _fetch_wholesale_listings(client, capped_limit)
-    demo_listing_ids = fetch_demo_listing_ids(client, [row.id for row in listings])
-    if demo_listing_ids:
-        listings = [row for row in listings if row.id not in demo_listing_ids]
-    enriched = _fetch_listings_enriched(client, [row.id for row in listings])
-
-    items: list[CatalogListingItem] = []
-    for row in listings:
-        bundle = enriched.get(row.id)
-        if bundle is None:
-            continue
-        vendor = bundle["vendor"]
-        product = bundle.get("product")
-        title = str(product["name"]) if product else (row.title_override or "")
-        image_public_id = bundle.get("image_public_id")
-        # Defence in depth: never surface a demo public_id even if the batch
-        # probe missed an edge-case row shape.
-        if is_non_genuine_public_id(image_public_id):
-            continue
-        items.append(
-            CatalogListingItem(
-                id=row.id,
-                title=title,
-                product_slug=str(product["slug"]) if product else None,
-                vendor_name=str(vendor["display_name"]),
-                vendor_slug=str(vendor.get("slug")) if vendor.get("slug") else None,
-                price_ngwee=row.price_ngwee,
-                condition=row.condition,
-                product_class=row.product_class,
-                sale_unit=row.sale_unit,
-                unit_step_milli=row.unit_step_milli,
-                min_steps=row.min_steps,
-                fulfilment_mode=row.fulfilment_mode,
-                lead_time_days=row.lead_time_days,
-                in_stock=is_listing_available(
-                    row.stock_mode,
-                    row.stock_qty,
-                    min_steps=row.min_steps,
-                    moq=row.moq,
-                    product_class=row.product_class,
-                    fulfilment_mode=row.fulfilment_mode,
-                    vendor_capacity_per_week=row.vendor_capacity_per_week,
-                ),
-                image_public_id=image_public_id,
-                wholesale=True,
-                moq=row.moq,
-                price_tiers=row.price_tiers,
-            )
-        )
-
-    return CatalogListResponse(
-        items=items,
-        facets=FacetCounts(),
-        total=len(items),
-        next_cursor=None,
-    )
-
-
 def catalog_item_from_candidate(row: _CatalogCandidate) -> CatalogListingItem:
     """Project an enriched catalogue candidate onto the public wire item."""
     logistics = _listing_logistics_fields(row)
@@ -1203,27 +1085,20 @@ def catalog_item_from_candidate(row: _CatalogCandidate) -> CatalogListingItem:
 def build_catalog_candidates(
     client: Any,
     category_path: str | None = None,
-    *,
-    include_wholesale: bool = False,
 ) -> list[_CatalogCandidate]:
     """Public seam for discovery surfaces (home feed, recommendations)."""
     candidates = _build_candidates(client, category_path)
-    if include_wholesale:
-        return candidates
     return [row for row in candidates if not row.listing.wholesale]
 
 
 def list_catalog(
     client: Any,
     filters: PlpFilterState,
-    *,
-    include_wholesale: bool = False,
 ) -> CatalogListResponse:
     candidates = _build_candidates(client, filters.category_path)
-    if not include_wholesale:
-        # Wholesale-only listings are B2B supplies: hidden from the consumer PLP
-        # (and its facet counts) unless the caller is a verified business buyer.
-        candidates = [row for row in candidates if not row.listing.wholesale]
+    # Wholesale prices live only in the vendor app: wholesale listings never
+    # appear in the customer PLP or its facet counts, for any caller.
+    candidates = [row for row in candidates if not row.listing.wholesale]
     facets = compute_facet_counts(candidates, filters)
 
     filtered = [row for row in candidates if _matches_filters(row, filters=filters)]
@@ -1250,10 +1125,8 @@ def list_catalog(
 @router.get("/listings", response_model=CatalogListResponse)
 async def catalog_listings(
     supabase: Annotated[Any, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
     category_path: Annotated[str | None, Query(max_length=200)] = None,
     sort: Annotated[CatalogSort, Query()] = "relevance",
-    wholesale: Annotated[bool, Query()] = False,
     min_price: Annotated[int | None, Query(ge=0, alias="min_price")] = None,
     max_price: Annotated[int | None, Query(ge=0, alias="max_price")] = None,
     condition: Annotated[str | None, Query(max_length=40)] = None,
@@ -1265,11 +1138,6 @@ async def catalog_listings(
     cursor: Annotated[str | None, Query(max_length=32)] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> CatalogListResponse:
-    if wholesale:
-        # B2B supplies feed: hidden from consumers/guests — verified businesses only.
-        require_wholesale_access(access)
-        return list_wholesale_supplies(supabase.client, limit=limit)
-
     raw_params: dict[str, str | list[str] | None] = {
         "category_path": category_path,
         "sort": sort,
@@ -1285,17 +1153,12 @@ async def catalog_listings(
         "limit": str(limit),
     }
     filters = decode_plp_filters(raw_params)
-    return list_catalog(supabase.client, filters, include_wholesale=access.eligible)
+    return list_catalog(supabase.client, filters)
 
 
 @router.get("/listings/{listing_id}", response_model=StandaloneListingResponse)
 async def catalog_listing_detail(
     listing_id: UUID,
     supabase: Annotated[Any, Depends(get_supabase_client)],
-    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> StandaloneListingResponse:
-    return get_standalone_listing(
-        supabase.client,
-        str(listing_id),
-        include_wholesale=access.eligible,
-    )
+    return get_standalone_listing(supabase.client, str(listing_id))

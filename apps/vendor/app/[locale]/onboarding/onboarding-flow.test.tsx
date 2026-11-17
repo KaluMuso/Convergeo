@@ -397,6 +397,66 @@ describe("account-scoped mounted onboarding", () => {
   });
 });
 
+describe("back and save-and-continue-later", () => {
+  it("goes back from review to the documents step and keeps the draft", async () => {
+    writeLocalDraft("A", completedDraft());
+    mock.bootstrap.mockResolvedValue(application("A"));
+    render(<OnboardingFlow locale="en" />);
+    await review();
+    fireEvent.click(screen.getByTestId("onboarding-back"));
+    await docs();
+    expect(readLocalDraft("A")?.legalName).toBe("A Shop Ltd");
+  });
+
+  it("has no Back button on the first step", async () => {
+    mock.bootstrap.mockResolvedValue({
+      ...application("A"),
+      business_name: null,
+      business_category: null,
+      business_archetype: null,
+    });
+    render(<OnboardingFlow locale="en" />);
+    await screen.findByRole("heading", { name: businessHeading });
+    expect(screen.queryByTestId("onboarding-back")).not.toBeInTheDocument();
+    expect(screen.getByTestId("onboarding-save-later")).toBeInTheDocument();
+  });
+
+  it("saves the business basics to the server and says where you will resume", async () => {
+    writeLocalDraft("A", completedDraft());
+    mock.bootstrap.mockResolvedValue(application("A"));
+    mock.save.mockResolvedValue(application("A"));
+    render(<OnboardingFlow locale="en" />);
+    await review();
+    fireEvent.click(screen.getByTestId("onboarding-save-later"));
+    await waitFor(() =>
+      expect(screen.getByTestId("onboarding-save-notice")).toHaveTextContent(
+        "onboarding.saveLater.saved",
+      ),
+    );
+    expect(mock.save).toHaveBeenCalledWith("A", {
+      business_name: "A Shop",
+      archetype: "electronics",
+      business_archetype: "registered_retailer",
+    });
+    expect(readLocalDraft("A")?.step).toBe(2);
+  });
+
+  it("still keeps the draft on this device when the server save fails", async () => {
+    writeLocalDraft("A", completedDraft());
+    mock.bootstrap.mockResolvedValue(application("A"));
+    mock.save.mockRejectedValue(new Error("offline"));
+    render(<OnboardingFlow locale="en" />);
+    await review();
+    fireEvent.click(screen.getByTestId("onboarding-save-later"));
+    await waitFor(() =>
+      expect(screen.getByTestId("onboarding-save-notice")).toHaveTextContent(
+        "onboarding.saveLater.savedLocal",
+      ),
+    );
+    expect(readLocalDraft("A")?.businessName).toBe("A Shop");
+  });
+});
+
 describe("resume validation and existing permission policy", () => {
   it.each([
     { momoPhone: "0123456789" },

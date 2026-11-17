@@ -57,12 +57,15 @@ export type EventJsonLdInput = {
 
 function sortByStart(instances: EventJsonLdInstance[]): EventJsonLdInstance[] {
   return [...instances].sort(
-    (left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+    (left, right) =>
+      new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
   );
 }
 
 /** Millis of the last-starting instance, or null when the event has none. */
-export function latestInstanceStart(instances: EventJsonLdInstance[]): number | null {
+export function latestInstanceStart(
+  instances: EventJsonLdInstance[],
+): number | null {
   const times = instances
     .map((instance) => new Date(instance.startsAt).getTime())
     .filter((time) => Number.isFinite(time));
@@ -70,8 +73,12 @@ export function latestInstanceStart(instances: EventJsonLdInstance[]): number | 
 }
 
 /** Millis of the latest-ending instance (using effective ends), or null. */
-export function latestInstanceEnd(instances: EventJsonLdInstance[]): number | null {
-  const times = instances.map(instanceEndMs).filter((time) => Number.isFinite(time));
+export function latestInstanceEnd(
+  instances: EventJsonLdInstance[],
+): number | null {
+  const times = instances
+    .map(instanceEndMs)
+    .filter((time) => Number.isFinite(time));
   return times.length > 0 ? Math.max(...times) : null;
 }
 
@@ -118,13 +125,19 @@ export function buildEventOffers(
       name: ticket.name,
       price: ngweeToZmwDecimal(ticket.priceNgwee),
       priceCurrency: "ZMW",
-      availability: ticket.isSoldOut ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+      availability: ticket.isSoldOut
+        ? "https://schema.org/SoldOut"
+        : "https://schema.org/InStock",
       url: pageUrl,
     }));
 }
 
-export function buildEventJsonLd(input: EventJsonLdInput): Record<string, unknown> {
-  const pageUrl = buildAbsoluteUrl(buildLocaleCanonical(input.locale, "e", input.slug));
+export function buildEventJsonLd(
+  input: EventJsonLdInput,
+): Record<string, unknown> {
+  const pageUrl = buildAbsoluteUrl(
+    buildLocaleCanonical(input.locale, "e", input.slug),
+  );
   const sorted = sortByStart(input.instances);
   const primary = sorted[0];
   const offers = buildEventOffers(input, pageUrl);
@@ -170,7 +183,9 @@ export function buildEventJsonLd(input: EventJsonLdInput): Record<string, unknow
           endDate: new Date(instanceEndMs(primary)).toISOString(),
         }
       : {}),
-    ...(input.imageUrls && input.imageUrls.length > 0 ? { image: input.imageUrls } : {}),
+    ...(input.imageUrls && input.imageUrls.length > 0
+      ? { image: input.imageUrls }
+      : {}),
     ...(location ? { location } : {}),
     organizer: {
       "@type": "Organization",
@@ -180,7 +195,9 @@ export function buildEventJsonLd(input: EventJsonLdInput): Record<string, unknow
       "@type": "Organization",
       name: input.organiserName,
     },
-    ...(offers.length > 0 ? { offers: offers.length === 1 ? offers[0] : offers } : {}),
+    ...(offers.length > 0
+      ? { offers: offers.length === 1 ? offers[0] : offers }
+      : {}),
   };
 }
 

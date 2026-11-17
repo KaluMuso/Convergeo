@@ -14,7 +14,10 @@ export type SearchResultHrefHit = {
   slug?: string | null;
 };
 
-export function searchResultHref(locale: string, hit: SearchResultHrefHit): string {
+export function searchResultHref(
+  locale: string,
+  hit: SearchResultHrefHit,
+): string {
   const slug = hit.slug?.trim() || null;
   const searchFallback = `/${locale}/search?q=${encodeURIComponent(hit.title)}`;
 

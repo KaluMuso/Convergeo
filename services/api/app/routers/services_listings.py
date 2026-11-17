@@ -111,6 +111,7 @@ class ServiceBrowseItem(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
+    is_free: bool = False
     portfolio_images: list[str] = Field(default_factory=list)
     provider: ProviderSummary
 
@@ -129,6 +130,7 @@ class ServiceDetailResponse(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
+    is_free: bool = False
     bookable: bool = False
     booking_price_ngwee: int | None = None
     portfolio_images: list[str] = Field(default_factory=list)
@@ -144,6 +146,7 @@ class ServiceSummary(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
+    is_free: bool = False
     bookable: bool = False
     booking_price_ngwee: int | None = None
     status: ServiceStatus
@@ -161,6 +164,7 @@ class ServiceCreateRequest(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
+    is_free: bool = False
     bookable: bool = False
     booking_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] = Field(default_factory=list, max_length=MAX_PORTFOLIO_IMAGES)
@@ -177,6 +181,13 @@ class ServiceCreateRequest(StrictModel):
 
     @model_validator(mode="after")
     def validate_bookable_price(self) -> ServiceCreateRequest:
+        if self.is_free and (
+            self.from_price_ngwee is not None
+            or self.booking_price_ngwee is not None
+            or self.bookable
+        ):
+            msg = "a free service cannot have a price or be bookable"
+            raise ValueError(msg)
         if self.bookable and not self.booking_price_ngwee:
             msg = "booking_price_ngwee is required (and must be > 0) when bookable is true"
             raise ValueError(msg)
@@ -203,6 +214,7 @@ class ServiceUpdateRequest(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
+    is_free: bool | None = None
     bookable: bool | None = None
     booking_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] | None = Field(default=None, max_length=MAX_PORTFOLIO_IMAGES)
@@ -402,10 +414,7 @@ def _fetch_response_tiers(
         return {}
 
     vendors_response = (
-        client.table("vendors")
-        .select("id, caps_snapshot")
-        .in_("id", vendor_ids)
-        .execute()
+        client.table("vendors").select("id, caps_snapshot").in_("id", vendor_ids).execute()
     )
     caps_by_vendor: dict[str, dict[str, Any] | None] = {}
     for row in _rows(vendors_response):
@@ -424,9 +433,7 @@ def _fetch_response_tiers(
 
     jobs_by_id: dict[str, dict[str, Any]] = {}
     if job_ids:
-        jobs_response = (
-            client.table("jobs").select("id, created_at").in_("id", job_ids).execute()
-        )
+        jobs_response = client.table("jobs").select("id, created_at").in_("id", job_ids).execute()
         for row in _rows(jobs_response):
             jobs_by_id[str(row["id"])] = row
 
@@ -486,6 +493,7 @@ def _to_browse_item(
         description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
+        is_free=bool(row.get("is_free")),
         portfolio_images=_parse_images(row.get("portfolio_images")),
         provider=_provider_from_vendor(
             vendor_row,
@@ -509,6 +517,7 @@ def _to_detail(
         description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
+        is_free=bool(row.get("is_free")),
         bookable=bool(row.get("bookable")),
         booking_price_ngwee=row.get("booking_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
@@ -530,6 +539,7 @@ def _to_summary(row: dict[str, Any]) -> ServiceSummary:
         description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
+        is_free=bool(row.get("is_free")),
         bookable=bool(row.get("bookable")),
         booking_price_ngwee=row.get("booking_price_ngwee"),
         status=row["status"],
@@ -555,7 +565,7 @@ def build_browse_response(
         client.table("services")
         .select(
             "id, vendor_id, category, title, description, service_area, "
-            "from_price_ngwee, portfolio_images, status, "
+            "from_price_ngwee, is_free, portfolio_images, status, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("status", "active")
@@ -572,9 +582,7 @@ def build_browse_response(
     service_ids = [str(row.get("id")) for row in rows if row.get("id")]
     demo_service_ids = fetch_demo_service_ids(client, service_ids)
     public_rows = [row for row in rows if str(row.get("id") or "") not in demo_service_ids]
-    vendor_ids = list(
-        {str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")}
-    )
+    vendor_ids = list({str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")})
     tiers = _fetch_response_tiers(client, vendor_ids)
 
     items = [
@@ -619,7 +627,8 @@ def get_service_detail(
         service_client.client.table("services")
         .select(
             "id, vendor_id, category, title, description, service_area, "
-            "from_price_ngwee, bookable, booking_price_ngwee, portfolio_images, includes, status, "
+            "from_price_ngwee, is_free, bookable, booking_price_ngwee, portfolio_images, includes, "
+            "status, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("id", service_id)
@@ -652,7 +661,7 @@ def list_vendor_services(
         service_client.client.table("services")
         .select(
             "id, category, title, description, service_area, from_price_ngwee, "
-            "bookable, booking_price_ngwee, portfolio_images, includes, status"
+            "is_free, bookable, booking_price_ngwee, portfolio_images, includes, status"
         )
         .eq("vendor_id", vendor["id"])
         .order("updated_at", desc=True)
@@ -670,9 +679,7 @@ def create_vendor_service(
 ) -> ServiceMutationResponse:
     vendor = _load_vendor_for_owner(service_client, user.id)
     title = _validated_title(payload.title)
-    guard = screen_listing(
-        title=title, description=payload.description, category=payload.category
-    )
+    guard = screen_listing(title=title, description=payload.description, category=payload.category)
     if not guard.allowed:
         raise AppError(
             code="prohibited_listing",
@@ -692,6 +699,7 @@ def create_vendor_service(
         "description": payload.description,
         "service_area": payload.service_area,
         "from_price_ngwee": payload.from_price_ngwee,
+        "is_free": payload.is_free,
         "bookable": payload.bookable,
         "booking_price_ngwee": payload.booking_price_ngwee,
         "portfolio_images": payload.portfolio_images,
@@ -718,6 +726,32 @@ def update_vendor_service(
 ) -> ServiceMutationResponse:
     _vendor, existing = _assert_vendor_owns_service(service_client, user.id, service_id)
     updates = payload.model_dump(exclude_unset=True)
+
+    # "This is free" toggle: switching on clears every price; a free service may
+    # not be given a price (mirrors services_free_price_check).
+    if updates.get("is_free") is True:
+        if any(
+            updates.get(key) not in (None, False)
+            for key in ("from_price_ngwee", "booking_price_ngwee", "bookable")
+        ):
+            raise AppError(
+                code="validation_error",
+                message="A free service cannot have a price",
+                http_status=422,
+                details={"message_key": "vendor.services.errors.freeHasPrice"},
+            )
+        updates.update(from_price_ngwee=None, booking_price_ngwee=None, bookable=False)
+    elif updates.get("is_free") is None and existing.get("is_free"):
+        if any(
+            updates.get(key) not in (None, False)
+            for key in ("from_price_ngwee", "booking_price_ngwee", "bookable")
+        ):
+            raise AppError(
+                code="validation_error",
+                message="A free service cannot have a price",
+                http_status=422,
+                details={"message_key": "vendor.services.errors.freeHasPrice"},
+            )
 
     # Mirror the DB CHECK with a clean 422: the resulting service must have a
     # positive booking price if it is (or stays) bookable.
@@ -756,10 +790,7 @@ def update_vendor_service(
         )
 
     response = (
-        service_client.client.table("services")
-        .update(updates)
-        .eq("id", service_id)
-        .execute()
+        service_client.client.table("services").update(updates).eq("id", service_id).execute()
     )
     row = _single_row(response)
     if row is None:

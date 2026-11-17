@@ -43,7 +43,9 @@ describe("AppliedFilterBar", () => {
     render(
       <AppliedFilterBar
         pathname="/en/c/electronics"
-        searchParams={new URLSearchParams("condition=new&min_price=10&sort=newest")}
+        searchParams={
+          new URLSearchParams("condition=new&min_price=10&sort=newest")
+        }
         filterState={{
           condition: ["new"],
           availability: [],
@@ -58,14 +60,12 @@ describe("AppliedFilterBar", () => {
       "href",
       "/en/c/electronics?sort=newest",
     );
-    expect(screen.getByRole("link", { name: "Remove filter New" })).toHaveAttribute(
-      "href",
-      "/en/c/electronics?min_price=10&sort=newest",
-    );
-    expect(screen.getByRole("link", { name: "Remove filter From K10" })).toHaveAttribute(
-      "href",
-      "/en/c/electronics?condition=new&sort=newest",
-    );
+    expect(
+      screen.getByRole("link", { name: "Remove filter New" }),
+    ).toHaveAttribute("href", "/en/c/electronics?min_price=10&sort=newest");
+    expect(
+      screen.getByRole("link", { name: "Remove filter From K10" }),
+    ).toHaveAttribute("href", "/en/c/electronics?condition=new&sort=newest");
   });
 
   it("renders and removes a used-condition chip", () => {
@@ -78,9 +78,8 @@ describe("AppliedFilterBar", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Remove filter Used" })).toHaveAttribute(
-      "href",
-      "/en/c/electronics?condition=new",
-    );
+    expect(
+      screen.getByRole("link", { name: "Remove filter Used" }),
+    ).toHaveAttribute("href", "/en/c/electronics?condition=new");
   });
 });

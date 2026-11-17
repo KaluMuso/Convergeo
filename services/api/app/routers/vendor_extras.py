@@ -1,4 +1,4 @@
-"""Vendor: paid extras catalogue + requests (migration 20261115230000).
+"""Vendor: paid extras catalogue + requests (migration 20261117020000).
 
 Payments are off: a request records interest (``vendor_extras_requests``) and
 notifies admins in-app; no money is collected. Status changes only through the

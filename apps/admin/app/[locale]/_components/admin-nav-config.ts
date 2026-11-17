@@ -2,6 +2,7 @@ import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
 
 export type AdminNavItemKey =
   | "home"
+  | "analytics"
   | "kyc"
   | "branches"
   | "moderation"
@@ -13,14 +14,18 @@ export type AdminNavItemKey =
   | "merch"
   | "homeFeed"
   | "advertising"
+  | "offers"
   | "clips"
   | "events"
   | "config"
   | "translations"
   | "theme"
   | "roles"
+  | "accounts"
+  | "auditLog"
   | "services"
   | "inventory"
+  | "coupons"
   | "extras"
   | "trials";
 
@@ -39,7 +44,10 @@ export type AdminNavGroup = {
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     key: "overview",
-    items: [{ key: "home", href: "" }],
+    items: [
+      { key: "home", href: "" },
+      { key: "analytics", href: "analytics" },
+    ],
   },
   {
     key: "trust",
@@ -61,9 +69,11 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "merch", href: "merch" },
       { key: "homeFeed", href: "home-feed" },
       { key: "advertising", href: "advertising" },
+      { key: "offers", href: "offers" },
       { key: "clips", href: "clips" },
       { key: "services", href: "services" },
       { key: "inventory", href: "inventory" },
+      { key: "coupons", href: "coupons" },
       { key: "extras", href: "extras" },
       { key: "trials", href: "trials" },
     ],
@@ -75,6 +85,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "translations", href: "translations" },
       { key: "theme", href: "theme" },
       { key: "roles", href: "roles" },
+      { key: "accounts", href: "accounts" },
+      { key: "auditLog", href: "audit-log" },
     ],
   },
 ];

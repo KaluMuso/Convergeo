@@ -85,6 +85,12 @@ const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
     keeps: ["generateMetadata", "setRequestLocale", "VendorDisputeDetailView"],
   },
   {
+    label: "ƒ /[locale]/events/collaborate/[id]",
+    segments: ["[locale]", "events", "collaborate", "[id]"],
+    param: "id",
+    keeps: ["generateMetadata", "setRequestLocale", "CollabDetail"],
+  },
+  {
     label: "ƒ /[locale]/events/[id]/dashboard",
     segments: ["[locale]", "events", "[id]", "dashboard"],
     param: "id",
@@ -119,6 +125,13 @@ const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
     segments: ["[locale]", "services", "[id]", "edit"],
     param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "ServiceEditView"],
+  },
+  {
+    // W8 bundles & offers: flag-gated (`bundles`, default off), owner-scoped.
+    label: "ƒ /[locale]/offers/[id]/edit",
+    segments: ["[locale]", "offers", "[id]", "edit"],
+    param: "id",
+    keeps: ["generateMetadata", "setRequestLocale", "OfferEditView"],
   },
   {
     // Flag-gated (multi_branch, default off): owner-scoped business id.
@@ -215,7 +228,9 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
       });
 
       it("declares no page-level generateStaticParams for the arbitrary param", () => {
-        expect(readCode(routeFile(route.segments))).not.toMatch(/generateStaticParams/);
+        expect(readCode(routeFile(route.segments))).not.toMatch(
+          /generateStaticParams/,
+        );
       });
 
       it("does not re-enable prerendering through a sibling export", () => {
@@ -247,13 +262,17 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
   for (const route of CLIENT_DYNAMIC_ROUTES) {
     describe(`${route.label} (client page — inventoried, not converted)`, () => {
       it("is a client component, so it is not a server prerender candidate", () => {
-        expect(readFileSync(routeFile(route.segments), "utf8")).toMatch(/^\s*"use client";/m);
+        expect(readFileSync(routeFile(route.segments), "utf8")).toMatch(
+          /^\s*"use client";/m,
+        );
       });
 
       it("introduces no incomplete generateStaticParams contract", () => {
         // The defect the other nine had: a generateStaticParams that cannot
         // enumerate `id`. Adding one here would reintroduce it.
-        expect(readCode(routeFile(route.segments))).not.toMatch(/generateStaticParams/);
+        expect(readCode(routeFile(route.segments))).not.toMatch(
+          /generateStaticParams/,
+        );
       });
 
       it("does not opt into prerendering through a route-segment export", () => {
@@ -287,7 +306,7 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
       .sort();
 
     expect(discovered).toEqual(covered);
-    expect(discovered).toHaveLength(12);
+    expect(discovered).toHaveLength(14);
   });
 
   it("no ancestor segment forces these routes back to static", () => {
@@ -295,7 +314,10 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
     // would override the page-level intent. Walk the REAL chain from each
     // route file up to app/, so a layout added later is covered automatically.
     const ancestors = new Set<string>();
-    for (const route of [...PROTECTED_DYNAMIC_ROUTES, ...CLIENT_DYNAMIC_ROUTES]) {
+    for (const route of [
+      ...PROTECTED_DYNAMIC_ROUTES,
+      ...CLIENT_DYNAMIC_ROUTES,
+    ]) {
       let dir = path.dirname(routeFile(route.segments));
       while (dir.startsWith(APP_DIR)) {
         const layout = path.join(dir, "layout.tsx");
@@ -310,11 +332,15 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
     }
     // The root locale layout is on every chain — a zero-length walk would
     // make this assertion vacuous.
-    expect(ancestors.has(path.join(APP_DIR, "[locale]", "layout.tsx"))).toBe(true);
+    expect(ancestors.has(path.join(APP_DIR, "[locale]", "layout.tsx"))).toBe(
+      true,
+    );
 
     for (const file of ancestors) {
       const code = readCode(file);
-      expect(code, `${file} forces static rendering`).not.toMatch(/["']force-static["']/);
+      expect(code, `${file} forces static rendering`).not.toMatch(
+        /["']force-static["']/,
+      );
       expect(code, `${file} disables dynamicParams`).not.toMatch(
         /export\s+const\s+dynamicParams\s*=\s*false/,
       );
@@ -326,7 +352,9 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
     // make the whole Vendor app request-rendered, which is out of scope.
     const code = readCode(path.join(APP_DIR, "[locale]", "layout.tsx"));
     expect(code).toMatch(/generateStaticParams/);
-    expect(code).not.toMatch(/export\s+const\s+dynamic\s*=\s*["']force-dynamic["']/);
+    expect(code).not.toMatch(
+      /export\s+const\s+dynamic\s*=\s*["']force-dynamic["']/,
+    );
   });
 
   it("the fix is scoped — the Vendor app is not made dynamic wholesale", () => {
@@ -344,10 +372,13 @@ describe("vendor protected dynamic routes cannot regress to static generation", 
     for (const segments of stillStatic) {
       const file = path.join(APP_DIR, ...segments);
       const code = readCode(file);
-      expect(code, `${file} lost its locale generateStaticParams`).toMatch(/generateStaticParams/);
-      expect(code, `${file} was made dynamic outside the repair scope`).not.toMatch(
-        /export\s+const\s+dynamic\s*=\s*["']force-dynamic["']/,
+      expect(code, `${file} lost its locale generateStaticParams`).toMatch(
+        /generateStaticParams/,
       );
+      expect(
+        code,
+        `${file} was made dynamic outside the repair scope`,
+      ).not.toMatch(/export\s+const\s+dynamic\s*=\s*["']force-dynamic["']/);
     }
   });
 });

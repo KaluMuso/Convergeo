@@ -20,5 +20,46 @@
       "title": "Peji sichipezeka"
     },
     "search": "Sakani mu marketplace"
+  },
+  "about": {
+    "meta": {
+      "description": "⚠ Convergeo is Zambia's mobile-first marketplace for products, services and events — pay when your order arrives during our pilot."
+    },
+    "hero": {
+      "subhead": "⚠ Convergeo brings products, services and events into one place — and during our pilot you pay when your order arrives."
+    },
+    "mission": {
+      "body": "⚠ Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every conversation can happen on WhatsApp, and online payment with buyer protection is coming soon."
+    },
+    "values": {
+      "trust": {
+        "body": "⚠ You order, we deliver, you pay on arrival. No paying upfront and hoping a stranger delivers."
+      },
+      "local": {
+        "body": "⚠ Cash on delivery, landmark addressing, Lusaka delivery and nationwide pickup, priced in Kwacha."
+      },
+      "fair": {
+        "body": "⚠ Transparent commissions shown before you publish. Online payouts are coming soon."
+      }
+    },
+    "howItWorks": {
+      "step2": "⚠ Place your order and pay cash when it arrives. Online payment is coming soon.",
+      "step3": "⚠ Your order is delivered or ready for pickup.",
+      "step4": "⚠ We step in if anything goes wrong."
+    }
+  },
+  "help": {
+    "meta": {
+      "description": "⚠ Answers about payments, delivery, returns, tickets and selling on Convergeo."
+    },
+    "search": {
+      "placeholder": "⚠ Search — e.g. payment, delivery, refund"
+    },
+    "categories": {
+      "escrow": "⚠ Payments & safety"
+    },
+    "article": {
+      "comingSoon": "⚠ Coming soon: online payment is not available during the pilot. For now you pay cash when your order arrives."
+    }
   }
 }

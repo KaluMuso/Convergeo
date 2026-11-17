@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
@@ -94,8 +101,10 @@ describe("cart response ordering", () => {
         const path = new URL(String(input)).pathname;
         requests.push(`${init?.method ?? "GET"} ${path}`);
         if (path === "/cart" && !init?.method) return oldGet.promise;
-        if (path === "/cart/items/listing-1") return Promise.resolve(json(cart(3)));
-        if (path === "/cart/revalidate") return Promise.resolve(json({ notices: [] }));
+        if (path === "/cart/items/listing-1")
+          return Promise.resolve(json(cart(3)));
+        if (path === "/cart/revalidate")
+          return Promise.resolve(json({ notices: [] }));
         throw new Error(`Unexpected request ${path}`);
       }),
     );
@@ -132,7 +141,8 @@ describe("cart response ordering", () => {
         if (path === "/cart/items/listing-1" && init?.method === "PATCH")
           return pendingPatch.promise;
         if (path === "/cart" && !init?.method) return oldGet.promise;
-        if (path === "/cart/revalidate") return Promise.resolve(json({ notices: [] }));
+        if (path === "/cart/revalidate")
+          return Promise.resolve(json({ notices: [] }));
         throw new Error(`Unexpected request ${path}`);
       }),
     );
@@ -169,7 +179,8 @@ describe("cart response ordering", () => {
         return patchCount === 1 ? firstPatch.promise : secondPatch.promise;
       }
       if (path === "/cart") return Promise.resolve(json(cart(3)));
-      if (path === "/cart/revalidate") return Promise.resolve(json({ notices: [] }));
+      if (path === "/cart/revalidate")
+        return Promise.resolve(json({ notices: [] }));
       throw new Error(`Unexpected request ${path}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -190,10 +201,14 @@ describe("cart response ordering", () => {
       firstPatch.resolve(json(cart(3)));
       await first;
     });
-    await waitFor(() => expect(state.result.current.cart?.items[0]?.qty).toBe(3));
+    await waitFor(() =>
+      expect(state.result.current.cart?.items[0]?.qty).toBe(3),
+    );
     expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
     expect(
-      fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/cart"),
+      fetchMock.mock.calls.some(
+        ([input]) => new URL(String(input)).pathname === "/cart",
+      ),
     ).toBe(true);
   });
 
@@ -216,7 +231,8 @@ describe("cart response ordering", () => {
           readCount += 1;
           return readCount === 1 ? oldRead.promise : finalRead.promise;
         }
-        if (path === "/cart/revalidate") return Promise.resolve(json({ notices: [] }));
+        if (path === "/cart/revalidate")
+          return Promise.resolve(json({ notices: [] }));
         throw new Error(`Unexpected request ${path}`);
       }),
     );
@@ -244,7 +260,9 @@ describe("cart response ordering", () => {
     await act(async () => {
       finalRead.resolve(json(cart(3)));
     });
-    await waitFor(() => expect(state.result.current.cart?.items[0]?.qty).toBe(3));
+    await waitFor(() =>
+      expect(state.result.current.cart?.items[0]?.qty).toBe(3),
+    );
     await act(async () => {
       oldRead.resolve(json(cart(4)));
       await pendingOldRead;
@@ -260,7 +278,8 @@ describe("cart response ordering", () => {
         return Promise.reject(new TypeError("connection lost"));
       }
       if (path === "/cart") return Promise.resolve(json(cart(3)));
-      if (path === "/cart/revalidate") return Promise.resolve(json({ notices: [] }));
+      if (path === "/cart/revalidate")
+        return Promise.resolve(json({ notices: [] }));
       throw new Error(`Unexpected request ${path}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -269,7 +288,9 @@ describe("cart response ordering", () => {
     await act(async () => {
       await expect(updateCartItemQty("listing-1", 3)).rejects.toThrow();
     });
-    await waitFor(() => expect(state.result.current.cart?.items[0]?.qty).toBe(3));
+    await waitFor(() =>
+      expect(state.result.current.cart?.items[0]?.qty).toBe(3),
+    );
     expect(state.result.current.cart?.subtotal_ngwee).toBe(150_000);
     expect(state.result.current.loading).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -320,7 +341,9 @@ it("retains new price and stock notices when an older cart snapshot arrives", as
   };
   final.items = [line];
   final.subtotal_ngwee = 60_000;
-  final.vendor_groups = [{ ...final.vendor_groups[0]!, items: [line], subtotal_ngwee: 60_000 }];
+  final.vendor_groups = [
+    { ...final.vendor_groups[0]!, items: [line], subtotal_ngwee: 60_000 },
+  ];
   final.notices = [
     {
       listing_id: "listing-1",
@@ -393,7 +416,10 @@ describe("lightweight and compatibility cart consumers", () => {
     expect(light.result.current).toBe(compatibility.result.current);
     expect(light.result.current.cart?.subtotal_ngwee).toBe(150_000);
     expect(screen.getByTestId("cart-nav-trigger")).toHaveTextContent("1");
-    expect(screen.getByRole("button", { name: "Open cart" })).toHaveClass("min-h-11", "min-w-11");
+    expect(screen.getByRole("button", { name: "Open cart" })).toHaveClass(
+      "min-h-11",
+      "min-w-11",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Open cart" }));
     expect(compatibility.result.current.drawerOpen).toBe(true);
     act(() => {
@@ -420,7 +446,10 @@ describe("lightweight and compatibility cart consumers", () => {
     expect(state.result.current.loading).toBe(true);
     expect(state.result.current.cart).toBeNull();
     const trigger = (
-      <light.CartNavTrigger labels={{ openCart: "Open cart" }} cartIcon={<span>Cart</span>} />
+      <light.CartNavTrigger
+        labels={{ openCart: "Open cart" }}
+        cartIcon={<span>Cart</span>}
+      />
     );
     const container = document.createElement("div");
     container.innerHTML = renderToString(trigger);
@@ -429,10 +458,15 @@ describe("lightweight and compatibility cart consumers", () => {
     let root: Root | undefined;
     try {
       await act(async () => {
-        root = hydrateRoot(container, trigger, { onRecoverableError: recoverable });
+        root = hydrateRoot(container, trigger, {
+          onRecoverableError: recoverable,
+        });
       });
       expect(recoverable).not.toHaveBeenCalled();
-      expect(container.querySelector("button")).toHaveAttribute("aria-label", "Open cart");
+      expect(container.querySelector("button")).toHaveAttribute(
+        "aria-label",
+        "Open cart",
+      );
       act(() => {
         light.setStoreStateForTests({ cart: cart(2), loading: false });
         light.openMiniCart();
@@ -445,7 +479,9 @@ describe("lightweight and compatibility cart consumers", () => {
       expect(state.result.current).toBe(snapshot);
       expect(state.result.current.cart?.items[0]?.qty).toBe(2);
       expect(state.result.current.drawerOpen).toBe(true);
-      expect(state.result.current.lastAddedMessage).toBe("Added before runtime import");
+      expect(state.result.current.lastAddedMessage).toBe(
+        "Added before runtime import",
+      );
       expect(container.querySelector("button")).toHaveTextContent("1");
     } finally {
       act(() => root?.unmount());

@@ -127,10 +127,15 @@ export function ContactVendorButton({
             </Link>
           </div>
         ) : status === "success" ? (
-          <div className="mt-4 space-y-2" data-testid="pdp-contact-vendor-success">
+          <div
+            className="mt-4 space-y-2"
+            data-testid="pdp-contact-vendor-success"
+          >
             <p className="font-medium text-text">{labels.successTitle}</p>
             <p className="text-sm text-text-2">
-              {reusedExistingThread ? labels.successContinued : labels.successBody}
+              {reusedExistingThread
+                ? labels.successContinued
+                : labels.successBody}
             </p>
             <Button
               type="button"
@@ -149,7 +154,10 @@ export function ContactVendorButton({
               void handleSubmit();
             }}
           >
-            <FormField label={labels.messageLabel} errorMessage={errorMessage ?? undefined}>
+            <FormField
+              label={labels.messageLabel}
+              errorMessage={errorMessage ?? undefined}
+            >
               <Textarea
                 name="message"
                 value={message}

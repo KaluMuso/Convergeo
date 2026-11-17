@@ -56,7 +56,8 @@ export type GroupPaymentStatus = {
   order_id: string;
 };
 
-export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const WAITING = new Set(["initiated", "ussd_pushed", "pay_offline"]);
 
@@ -65,7 +66,10 @@ export function isUuid(value: string | null | undefined): value is string {
 }
 
 /** Query string carried through pending/card pages so they know where success lands. */
-export function groupContextQuery(kind: GroupKind | null, jobId: string | null): string {
+export function groupContextQuery(
+  kind: GroupKind | null,
+  jobId: string | null,
+): string {
   const params = new URLSearchParams();
   if (kind === "ticket" || kind === "service_deposit") params.set("kind", kind);
   if (kind === "service_deposit" && isUuid(jobId)) params.set("job", jobId);
@@ -95,8 +99,11 @@ export function groupPaths(
       `/${locale}/checkout/card/${encodeURIComponent(paymentId)}?group=${encodeURIComponent(groupId)}${suffix}`,
     success: (orderId) => {
       if (kind === "ticket") return `/${locale}/account/tickets`;
-      if (kind === "service_deposit" && isUuid(jobId)) return `/${locale}/account/jobs/${jobId}`;
-      return orderId ? `/${locale}/account/orders/${orderId}` : `/${locale}/account/orders`;
+      if (kind === "service_deposit" && isUuid(jobId))
+        return `/${locale}/account/jobs/${jobId}`;
+      return orderId
+        ? `/${locale}/account/orders/${orderId}`
+        : `/${locale}/account/orders`;
     },
   };
 }
@@ -106,11 +113,15 @@ export function groupPaths(
  * again. Terminal failures (failed/expired/cancelled) return null: the buyer picks a
  * rail and `/payments/retry` or `/payments/card/session` opens a fresh attempt.
  */
-export function resumeTarget(status: GroupPaymentStatus | null, paths: GroupPaths): string | null {
+export function resumeTarget(
+  status: GroupPaymentStatus | null,
+  paths: GroupPaths,
+): string | null {
   if (!status || status.cod) return null;
   if (status.status === "success") return paths.pending;
   if (!WAITING.has(status.status)) return null;
-  if (status.rail === "card" && isUuid(status.payment_id)) return paths.card(status.payment_id);
+  if (status.rail === "card" && isUuid(status.payment_id))
+    return paths.card(status.payment_id);
   return paths.pending;
 }
 
@@ -125,10 +136,15 @@ function single(value: string | string[] | undefined): string | null {
  * checkout. `?group=` is canonical; `?session=…&kind=service_deposit` is the legacy
  * hand-off older clients still send. `undefined` means the cart checkout.
  */
-export function resolveGroupParam(query: SearchParams | undefined): string | null | undefined {
+export function resolveGroupParam(
+  query: SearchParams | undefined,
+): string | null | undefined {
   if (!query) return undefined;
   if (Object.hasOwn(query, "group")) return single(query.group);
-  if (single(query.kind) === "service_deposit" && Object.hasOwn(query, "session")) {
+  if (
+    single(query.kind) === "service_deposit" &&
+    Object.hasOwn(query, "session")
+  ) {
     return single(query.session);
   }
   return undefined;
@@ -145,7 +161,8 @@ export function groupRoutesFromQuery(
   query: SearchParams | undefined,
 ): { success: string; checkout: string } | undefined {
   const kind = single(query?.kind);
-  if (!isUuid(groupId) || (kind !== "ticket" && kind !== "service_deposit")) return undefined;
+  if (!isUuid(groupId) || (kind !== "ticket" && kind !== "service_deposit"))
+    return undefined;
   const paths = groupPaths(locale, groupId, kind, single(query?.job));
   return { success: paths.success(null), checkout: paths.checkout };
 }

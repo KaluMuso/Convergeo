@@ -156,9 +156,7 @@ def test_is_quiet_hours_boundaries(hour: int, expected_quiet: bool) -> None:
 )
 def test_should_send_now_marketing_quiet_hours(hour: int, marketing_sends: bool) -> None:
     now = _lusaka_local(hour)
-    assert (
-        should_send_now(TemplateClass.MARKETING, now, DEFAULT_RECIPIENT_TZ) is marketing_sends
-    )
+    assert should_send_now(TemplateClass.MARKETING, now, DEFAULT_RECIPIENT_TZ) is marketing_sends
 
 
 @pytest.mark.parametrize("hour", [20, 21, 6, 7, 12])
@@ -188,9 +186,19 @@ def test_next_marketing_send_at_before_seven_same_day() -> None:
     assert local_next.date() == datetime(2026, 7, 10).date()
 
 
-@pytest.mark.parametrize("template_id", list(WHATSAPP_TEMPLATES.keys()))
+#: WhatsApp templates that are marketing by design (opt-in, quiet hours, opt-out).
+MARKETING_WHATSAPP_TEMPLATES = frozenset({"birthday_greeting"})
+
+
+@pytest.mark.parametrize(
+    "template_id", [t for t in WHATSAPP_TEMPLATES if t not in MARKETING_WHATSAPP_TEMPLATES]
+)
 def test_whatsapp_templates_classified_transactional(template_id: str) -> None:
     assert get_template_class(template_id) is TemplateClass.TRANSACTIONAL
+
+
+def test_birthday_greeting_is_marketing() -> None:
+    assert get_template_class("birthday_greeting") is TemplateClass.MARKETING
 
 
 @pytest.mark.parametrize(

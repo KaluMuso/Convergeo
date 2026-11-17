@@ -23,7 +23,7 @@ export default function VendorNotificationsPage() {
   const copy = useMemo(() => buildNotificationCopy(t), [t]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <main className="mx-auto w-full max-w-3xl px-4 py-3">
       <h1 className="font-display text-h2 text-display-ink">{t("center.title")}</h1>
       <p className="mb-4 mt-1 text-sm text-text-2">{t("center.pageDescription")}</p>
       <WebPushOptIn

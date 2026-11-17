@@ -8,7 +8,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const messagesRoot = join(here, "../../../packages/i18n/messages");
 
 function loadJson(locale: string, namespace: string): Record<string, unknown> {
-  const raw = readFileSync(join(messagesRoot, locale, `${namespace}.json`), "utf8");
+  const raw = readFileSync(
+    join(messagesRoot, locale, `${namespace}.json`),
+    "utf8",
+  );
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
@@ -32,7 +35,8 @@ const SHELL_NAV_KEYS = [
   "payouts",
   "disputes",
   "intake",
-  "plan",
+  "settings",
+  "offers",
   "extras",
 ] as const;
 

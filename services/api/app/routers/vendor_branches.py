@@ -9,7 +9,7 @@ shops).
 Every route: vendor role (authz) + ownership resolved from the DB (another
 owner's business/branch -> 404, never 403, so ids are not probeable) + Pydantic
 validation; every mutation: an in-router rate limit keyed by the caller. The
-database enforces every limit (see migration 20261115100000); refusals map to
+database enforces every limit (see migration 20261117000000); refusals map to
 stable ``vendor.branches.errors.*`` message keys.
 """
 

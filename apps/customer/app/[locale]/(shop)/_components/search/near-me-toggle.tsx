@@ -31,7 +31,13 @@ function roundCoord(value: number): number {
   return Math.round(value * factor) / factor;
 }
 
-export function NearMeToggle({ locale, labels }: { locale: string; labels: NearMeToggleLabels }) {
+export function NearMeToggle({
+  locale,
+  labels,
+}: {
+  locale: string;
+  labels: NearMeToggleLabels;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>("idle");
@@ -84,7 +90,11 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        applyCoords(position.coords.latitude, position.coords.longitude, "idle");
+        applyCoords(
+          position.coords.latitude,
+          position.coords.longitude,
+          "idle",
+        );
       },
       () => {
         // Permission denied — fall back to Lusaka rather than leaving proximity off.
@@ -137,7 +147,12 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
         strokeLinejoin="round"
       >
         <path d="M12 21s-7-6.4-7-11a7 7 0 1 1 14 0c0 4.6-7 11-7 11Z" />
-        <circle cx="12" cy="10" r="2.5" fill={active ? "var(--surface)" : "none"} />
+        <circle
+          cx="12"
+          cy="10"
+          r="2.5"
+          fill={active ? "var(--surface)" : "none"}
+        />
       </svg>
       <span>{label}</span>
     </button>

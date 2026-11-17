@@ -13,7 +13,7 @@
   "ai.ask.viewEvent": "Onani event",
   "ai.quota.remaining": "{count, plural, one {# funso lotsala} other {# mafunso atsala}} mwezi uno",
   "ai.disclaimer": "Mayankho a AI ndi suggestions — tsimikizani musanagule",
-  "ai.quota.guestExceeded": "Mwagwiritsa ntchito mafunso onse a alendo opanda malipiro. Lembani account kuti mupitirize kufunsa Vergeo.",
+  "ai.quota.guestExceeded": "⚠ You've used your free guest questions. Sign in to keep asking Convergeo.",
   "ai.quota.monthlyExceeded": "Mwafika pa malire a mafunso a mwezi.",
   "ai.quota.killSwitch": "Ask Convergeo silikupezeka pano. Yesaninso posachedwa.",
   "ai.quota.tooLong": "Funso lanu latali kwambiri. Chonde lifupikitseni.",
@@ -23,5 +23,9 @@
   "ai.quota.signupPrompt": "Lembani account kuti mupeze mafunso 25 opanda malipiro pa mwezi.",
   "ai.answer.not_found": "Sinapeze izi pa Convergeo.",
   "ai.answer.rate_limited": "Mafunso ambiri — lemanani pang'ono ndi kuyesanso.",
-  "ai.answer.unavailable": "Ask Convergeo silikupezeka pano. Yesaninso posachedwa."
+  "ai.answer.unavailable": "Ask Convergeo silikupezeka pano. Yesaninso posachedwa.",
+  "ai.faq.cod.a": "⚠ During the pilot every order is cash on delivery: nothing is charged online and you pay when your order arrives. Some orders may not qualify; checkout tells you before you place it.",
+  "ai.faq.escrow.a": "⚠ Online payment with escrow buyer protection is coming soon. Until then, you pay cash when your order arrives.",
+  "ai.faq.payment.a": "⚠ During the pilot you pay cash on delivery. Mobile money and card payments are coming soon.",
+  "ai.faq.returns.a": "⚠ Report a problem from your order page and our team will review it. We will arrange any approved refund with you directly."
 }

@@ -17,7 +17,7 @@ import type { Metadata, Viewport } from "next";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "Vergeo5 Vendor",
+  title: "Convergeo Vendor",
 };
 
 export const viewport: Viewport = {

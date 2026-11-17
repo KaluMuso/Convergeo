@@ -23,7 +23,7 @@
     "itemCount": "{count, plural, one {# item} other {# ama-items}}",
     "loading": "Ileleleta cart yenu…",
     "lineTotal": "Total ya line: {amount}",
-    "madeToOrderLeadTime": "Cipangwa pa order · ifwile {days} masiku ya kulanga",
+    "madeToOrderLeadTime": "⚠ Made to order · ready {when}",
     "miniCartClose": "Isaleni cart",
     "miniCartTitle": "Summary ya cart",
     "noticeOutOfStock": "Ici cintu tacili mu stock",
@@ -47,7 +47,6 @@
     "mergeConflictLine": "Icintu {listing}: {code}",
     "mergePriceLine": "{item}: {previous} → {current} cimo cimo × {quantity} = {total} yonse",
     "mergeUnnamedItem": "Icintu #{id}",
-    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}.",
     "mergePriceNeedsReview": "Iyi quote tayasuminishiwe pano; ilefumishiwa mu cart. Ilolesheni nakabili ilyo tamulashita.",
     "mergeAccountChoice": "Sungani pickup ya account",
     "mergeGuestChoice": "Bomfyeni pickup ya guest",
@@ -81,7 +80,42 @@
     "updating": "Ileluka…",
     "vendorGroup": "Ashitisha vendor",
     "vendorSubtotal": "Subtotal ya vendor: {amount}",
-    "viewCart": "Loleni cart"
+    "viewCart": "Loleni cart",
+    "offerSavings": "⚠ Offer savings",
+    "offerSaving": "⚠ Offer saving {amount}",
+    "offerGift": "⚠ Free gift: {title} × {qty}",
+    "offerGiftWorth": "⚠ Worth {value} — free with your offer",
+    "types": {
+      "products": "⚠ Products",
+      "eventTickets": "⚠ Event tickets",
+      "services": "⚠ Services"
+    },
+    "tickets": {
+      "line": "⚠ {type} × {qty}",
+      "remove": "⚠ Remove",
+      "removeLabel": "⚠ Remove tickets for {title}",
+      "unavailable": "⚠ These tickets can no longer be bought. Remove them to check out.",
+      "platformFee": "⚠ Ticket service fee",
+      "prepaidOnly": "⚠ Event tickets are paid online (mobile money or card) and are not available for cash on delivery.",
+      "oneEvent": "⚠ Your cart already has tickets for another event or date. Check those out first, or remove them.",
+      "added": "⚠ Tickets added to your cart",
+      "addToCart": "⚠ Add to cart",
+      "adding": "⚠ Adding…",
+      "addFailed": "⚠ Could not add these tickets. Try again.",
+      "signInRequired": "⚠ Sign in to add tickets to your cart."
+    },
+    "mergeWholesaleTerms": "Ifya wholesale fyaleposa ubwingi ubusuma {moq}.",
+    "codStep1": "⚠ You order",
+    "codStep2": "⚠ We deliver",
+    "codStep3": "⚠ You pay on arrival",
+    "leadTimeWhen": {
+      "oneDay": "⚠ within a day",
+      "days": "⚠ in about {count} days",
+      "oneWeek": "⚠ within a week",
+      "weeks": "⚠ in about {count} weeks",
+      "oneMonth": "⚠ in about a month",
+      "months": "⚠ in about {count} months"
+    }
   },
   "checkout": {
     "card": {
@@ -115,7 +149,7 @@
       "title": "Amashiwi yenu",
       "subtitle": "Tukatungila uku pakuti mutume updates pa WhatsApp nangu SMS.",
       "phoneLabel": "Nambala ya mobile",
-      "phoneHelp": "MTN, Airtel, nangu Zamtel — tukatuma code imo.",
+      "phoneHelp": "⚠ MTN, Airtel, or Zamtel — we'll use it to confirm your delivery.",
       "phonePlaceholder": "97X XXX XXX",
       "countryCode": "Code ya calo",
       "nationalNumber": "Nambala ya mobile",
@@ -169,7 +203,8 @@
         "cutoffBefore": "Nga mwatuma order pa ntanshi ya 14:00 (inshita ya Lusaka), ifintu ifili mu stock kuti fyatumwa lelo, seller nga asuminisha.",
         "cutoffAfter": "Ninshita ya pa numa ya 14:00 mu Lusaka, e ico ifili mu stock kuti fyatumwa mailo, seller nga asuminisha.",
         "cutoffMadeToOrder": "Ifintu ifipangwa pa order fitumwa ilyo fyapwa — moneni inshita ya cila cintu."
-      }
+      },
+      "notOffered": "⚠ This seller does not offer that hand-over option for an item in your cart."
     },
     "countdown": {
       "label": "Ifintu fyasungwa pa",
@@ -214,7 +249,8 @@
         "capNote": "Cash on delivery ilipo ku ma-order ayafika {cap}.",
         "overCap": "Order yenu yonse ni {total}. Pa kulipila cash on delivery, fumyamo ifintu fimo nangu tumeni ama-order ayalekanalekana aya {cap} nangu panono.",
         "editCart": "Lungikeni cart"
-      }
+      },
+      "codNotForTickets": "⚠ Cash on delivery is not available when your order includes event tickets."
     },
     "pending": {
       "cancelledBody": "Mwakana mobile money prompt. Mungawesha limbi nangu saleni payment method yambi pa checkout.",
@@ -261,7 +297,7 @@
       "escrowStep1": "Mwalipila",
       "escrowStep2": "Yikwata bwino na Convergeo",
       "escrowStep3": "Yasuminishwa pa kufika",
-      "escrowTitle": "Ifyo payment yenu ilindililwa",
+      "escrowTitle": "⚠ How it works",
       "lineItems": "Ifintu",
       "loading": "Lemeni…",
       "methodCard": "Card (secure hosted page)",
@@ -292,7 +328,19 @@
         "deliveryNoLandmark": "Delivery mu Lusaka",
         "pickupFromSeller": "Mukasenda ku seller",
         "placeOrderCod": "Tumeni order — lipileni pa delivery"
-      }
+      },
+      "deliveryConsent": {
+        "label": "Peeleni courier ishina lyandi, foni ne address pa kuleta iyi order",
+        "hint": "Te ca kukakatila. Courier uwakwata licence kuti aleta order yenu. Nga tamusuminishe, abantu ba Vergeo5 e balaleta nangu balamwita intanshi. Kuti mwalula pa Account → Privacy.",
+        "saveFailed": "Twafilwa ukusunga ifi mwasala. Kuti mwatwalilila ukushita order."
+      },
+      "typeProducts": "⚠ Products",
+      "typeEventTickets": "⚠ Event tickets",
+      "ticketLine": "⚠ {type} × {qty}",
+      "platformFee": "⚠ Ticket service fee",
+      "discount": "Kuponi {code}",
+      "estimatedReady": "⚠ Estimated ready by {date}",
+      "estimatedDelivery": "⚠ Estimated delivery by {date}"
     },
     "stepAnnouncement": "Step {current} ya {total}",
     "steps": {
@@ -311,6 +359,64 @@
       "subtitle": "Suminisheni prompt ya {amount} pa phone yenu pakuti mukomplete payment.",
       "title": "Loleni phone yenu",
       "waiting": "Tuletekele approval…"
+    },
+    "tickets": {
+      "unavailable": "⚠ A ticket in your cart is no longer available. Review your cart."
+    },
+    "coupon": {
+      "toggle": "Bushe muli ne kuponi?",
+      "label": "Kuponi",
+      "apply": "Bomfya",
+      "applying": "Checking code…",
+      "remove": "Fumyapo",
+      "applied": "{code} applied: {amount} off",
+      "paidByPlatform": "Convergeo pays this discount. The shop still gets its full price.",
+      "paidByShop": "This discount is a gift from the shop.",
+      "prepaidOnly": "Coupons work with mobile money or card, not cash on delivery.",
+      "errors": {
+        "generic": "That code didn't work. Check it and try again.",
+        "not_found": "We couldn't find that code.",
+        "inactive": "This code is paused right now.",
+        "not_started": "This code isn't active yet.",
+        "expired": "This code has expired.",
+        "min_spend": "Spend a bit more on eligible items to use this code.",
+        "not_applicable": "This code doesn't cover anything in your cart.",
+        "limit_reached": "This code has been used up.",
+        "already_used": "You've already used this code.",
+        "budget_exhausted": "This offer has ended for this month.",
+        "changed": "Your cart changed. Apply the code again.",
+        "cod_not_allowed": "Coupons need mobile money or card payment.",
+        "tooManyAttempts": "Too many tries. Wait a few minutes and try again.",
+        "featureUnavailable": "Coupons aren't available yet."
+      }
+    },
+    "gift": {
+      "toggle": "Tuma nge cabupe",
+      "intro": "We'll deliver to the person you're gifting. You stay the buyer: any refund comes back to you.",
+      "recipientName": "Ishina lyakwe",
+      "recipientPhone": "Nambala ya foni yakwe",
+      "recipientPhoneHelp": "A Zambian mobile number. We send them one message about the gift.",
+      "message": "Gift message (optional)",
+      "messageHelp": "Up to 200 characters. No links.",
+      "consent": "They agreed to share their phone (and address, for delivery) with Convergeo for this gift.",
+      "pickupNote": "Pickup: we send the pickup PIN to them, not to you.",
+      "deliveryNote": "Delivery: use their landmark in the delivery step.",
+      "privacyNote": "We use their details only for this gift and delete them after it's done. Their receipt shows no prices.",
+      "save": "Save gift details",
+      "saving": "Saving…",
+      "remove": "Te cabupe",
+      "saved": "Gift for {name} ({phone})",
+      "prepaidOnly": "Gifts need mobile money or card payment.",
+      "errors": {
+        "generic": "We couldn't save the gift details. Try again.",
+        "consent": "Tick the box to confirm they agreed.",
+        "name": "Enter their name.",
+        "phone": "Enter a Zambian mobile number, like 097 123 4567.",
+        "message": "Gift messages can't include links.",
+        "codNotAllowed": "Gifts need mobile money or card payment.",
+        "tooMany": "Too many changes. Wait a few minutes.",
+        "featureUnavailable": "Gifts aren't available yet."
+      }
     }
   },
   "variant": {

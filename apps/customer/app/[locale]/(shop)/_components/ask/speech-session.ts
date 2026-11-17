@@ -1,4 +1,7 @@
-import { getSpeechRecognitionCtor, type SpeechRecognitionLike } from "./speech-support";
+import {
+  getSpeechRecognitionCtor,
+  type SpeechRecognitionLike,
+} from "./speech-support";
 
 export type SpeechSessionOptions = {
   lang: "en-GB" | "en-US";
@@ -17,7 +20,9 @@ export type SpeechSession = {
  * Start one single-utterance recognition session. Lazy-loaded from the mic button,
  * so none of this ships until a user actually taps it.
  */
-export function startSpeechSession(options: SpeechSessionOptions): SpeechSession | null {
+export function startSpeechSession(
+  options: SpeechSessionOptions,
+): SpeechSession | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) {
     options.onError("unsupported");

@@ -843,7 +843,7 @@ def test_search_and_suggest_exclude_demo_service_and_event_hits(
     ]
     monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
 
-    result = asyncio.run(run_search(store, query="laptop", include_wholesale=True))
+    result = asyncio.run(run_search(store, query="laptop cleaning music", include_wholesale=True))
     ids = {(hit.entity_kind, hit.entity_id) for hit in result.results}
     assert ("service", REAL_SERVICE_ID) in ids
     assert ("service", DEMO_SERVICE_ID) not in ids
@@ -851,7 +851,9 @@ def test_search_and_suggest_exclude_demo_service_and_event_hits(
     assert ("event", DEMO_EVENT_ID) not in ids
     assert result.total == 2
 
-    suggestions = run_suggest(store, query="laptop", include_wholesale=True).suggestions
+    suggestions = run_suggest(
+        store, query="laptop cleaning music", include_wholesale=True
+    ).suggestions
     titles = {item.title for item in suggestions}
     assert "Laptop & Phone Repair (demo)" not in titles
     assert "Office Cleaning" in titles
@@ -921,7 +923,7 @@ def test_demo_service_and_event_excluded_for_all_personas(
     result = asyncio.run(
         run_search(
             store,
-            query="laptop",
+            query="laptop cleaning music",
             include_wholesale=include_wholesale,
             user_id=user_id,
         )
@@ -933,7 +935,7 @@ def test_demo_service_and_event_excluded_for_all_personas(
     assert ("event", REAL_EVENT_ID) in ids, persona
 
     suggestions = run_suggest(
-        store, query="laptop", include_wholesale=include_wholesale
+        store, query="laptop cleaning music", include_wholesale=include_wholesale
     ).suggestions
     titles = {item.title for item in suggestions}
     assert "Laptop & Phone Repair (demo)" not in titles, persona

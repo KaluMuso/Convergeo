@@ -2,7 +2,11 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 
-import type { CartResponse, ChangeNotice, MiniCartLabels } from "./mini-cart-drawer";
+import type {
+  CartResponse,
+  ChangeNotice,
+  MiniCartLabels,
+} from "./mini-cart-drawer";
 
 type CartStoreState = {
   cart: CartResponse | null;
@@ -58,7 +62,7 @@ export function getCartItemCount(cart: CartResponse | null): number {
   }
   // Quantities can represent incompatible measures (for example kg and metres),
   // so the cart badge counts distinct lines instead of adding unlike units.
-  return cart.items.length;
+  return cart.items.length + (cart.ticket_lines?.length ?? 0);
 }
 
 export function openMiniCart() {
@@ -74,7 +78,11 @@ export function setLastAddedMessage(message: string | null) {
 }
 
 export function useCartStore() {
-  const state = useSyncExternalStore(subscribeStore, getStoreSnapshot, getStoreSnapshot);
+  const state = useSyncExternalStore(
+    subscribeStore,
+    getStoreSnapshot,
+    getStoreSnapshot,
+  );
   return state;
 }
 
@@ -86,7 +94,12 @@ export type CartNavTriggerProps = {
   label?: ReactNode;
 };
 
-export function CartNavTrigger({ labels, cartIcon, className, label }: CartNavTriggerProps) {
+export function CartNavTrigger({
+  labels,
+  cartIcon,
+  className,
+  label,
+}: CartNavTriggerProps) {
   const { cart } = useCartStore();
   const count = getCartItemCount(cart);
   const badge =

@@ -1,4 +1,4 @@
-"""Vendor plans + canonical photos at the database (migrations 20261114030000/235100).
+"""Vendor plans + canonical photos at the database (migrations 20261116110000/235100).
 
 Row isolation (a vendor never sees another vendor's plan assignment or override),
 client write denial, and the listing admission trigger's least(KYC, plan) cap.
@@ -120,7 +120,7 @@ def test_inactive_plan_hidden_from_vendors_visible_to_admin(seeded: PgConn) -> N
     sql = f"SELECT count(*) FROM public.vendor_plans WHERE key = '{HIDDEN_PLAN}'"
     assert _value(_q(_as(seeded, Persona.VENDOR), sql)) == "0"
     assert _value(_q(_as(seeded, Persona.ADMIN), sql)) == "1"
-    # 20261115100000 ladder: Pro is merged into Business (inactive, admin-only).
+    # 20261117000000 ladder: Pro is merged into Business (inactive, admin-only).
     active = (
         "SELECT count(*) FROM public.vendor_plans WHERE key IN "
         "('free','starter','business','chain','enterprise','enterprise_plus','pro')"
@@ -189,7 +189,7 @@ def _counted_listings(db: PgConn, vendor_id: str) -> int:
 
 
 def _active_listings(db: PgConn, vendor_id: str) -> int:
-    """The plan limit counts ACTIVE listings only (20261115230000); drafts are free."""
+    """The plan limit counts ACTIVE listings only (20261117020000); drafts are free."""
     result = db.run(
         "SELECT count(*) FROM public.vendor_listings "
         f"WHERE vendor_id = '{vendor_id}' AND status = 'active'"

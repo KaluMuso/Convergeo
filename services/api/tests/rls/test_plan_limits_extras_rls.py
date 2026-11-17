@@ -1,5 +1,5 @@
 # ruff: noqa: E501 — long inline SQL fixtures
-"""Plan active-listing limits, trials and paid extras at the DB (20261115230000).
+"""Plan active-listing limits, trials and paid extras at the DB (20261117020000).
 
 Publish guard boundaries (drafts free; Nth active ok, N+1th refused), seeds,
 trial default/backfill + billing seam, the guarded extras state machine and RLS

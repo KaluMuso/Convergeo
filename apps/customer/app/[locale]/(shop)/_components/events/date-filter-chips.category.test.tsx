@@ -6,7 +6,8 @@ const replace = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   usePathname: () => "/en/events",
-  useSearchParams: () => new URLSearchParams("date_window=all&category=concerts&city=Lusaka"),
+  useSearchParams: () =>
+    new URLSearchParams("date_window=all&category=concerts&city=Lusaka"),
 }));
 afterEach(() => {
   cleanup();
@@ -48,18 +49,30 @@ const taxonomy = [
 ];
 it("hydrates deep category links and switches parent without retaining child while preserving other filters", () => {
   render(<DateFilterChips {...props} taxonomy={taxonomy} />);
-  expect((screen.getByLabelText("Subcategory") as HTMLSelectElement).value).toBe("concerts");
-  fireEvent.change(screen.getByLabelText("Category"), { target: { value: "sports" } });
-  expect(replace).toHaveBeenCalledWith("/en/events?date_window=all&category=sports&city=Lusaka");
+  expect(
+    (screen.getByLabelText("Subcategory") as HTMLSelectElement).value,
+  ).toBe("concerts");
+  fireEvent.change(screen.getByLabelText("Category"), {
+    target: { value: "sports" },
+  });
+  expect(replace).toHaveBeenCalledWith(
+    "/en/events?date_window=all&category=sports&city=Lusaka",
+  );
 });
 it("clears the parent and category query while retaining other filters", () => {
   render(<DateFilterChips {...props} taxonomy={taxonomy} />);
-  fireEvent.change(screen.getByLabelText("Category"), { target: { value: "" } });
-  expect(replace).toHaveBeenCalledWith("/en/events?date_window=all&city=Lusaka");
+  fireEvent.change(screen.getByLabelText("Category"), {
+    target: { value: "" },
+  });
+  expect(replace).toHaveBeenCalledWith(
+    "/en/events?date_window=all&city=Lusaka",
+  );
 });
 it("retains existing category chips when taxonomy read is unavailable or empty", () => {
   render(<DateFilterChips {...props} taxonomy={[]} />);
   expect(screen.queryByLabelText("Subcategory")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Sports" }));
-  expect(replace).toHaveBeenCalledWith("/en/events?date_window=all&category=sports&city=Lusaka");
+  expect(replace).toHaveBeenCalledWith(
+    "/en/events?date_window=all&category=sports&city=Lusaka",
+  );
 });

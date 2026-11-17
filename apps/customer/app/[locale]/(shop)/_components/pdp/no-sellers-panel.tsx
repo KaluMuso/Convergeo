@@ -11,7 +11,12 @@ export type NoSellersPanelProps = {
 /**
  * Honest zero-offer state. Never invents a seller or a fake “add to cart”.
  */
-export function NoSellersPanel({ title, body, browseLabel, browseHref }: NoSellersPanelProps) {
+export function NoSellersPanel({
+  title,
+  body,
+  browseLabel,
+  browseHref,
+}: NoSellersPanelProps) {
   return (
     <section
       data-testid="pdp-no-sellers"

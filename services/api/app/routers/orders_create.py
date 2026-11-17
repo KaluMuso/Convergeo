@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
@@ -18,12 +19,29 @@ from app.routers.checkout import (
     resolve_address_zone,
 )
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
-from app.services.business.access import resolve_business_eligibility
 from app.services.cart.store import fetch_listings_for_items
+from app.services.cart.tickets import (
+    TicketCartLine,
+    load_cart_ticket_lines,
+    load_session_holds,
+    match_holds,
+    require_purchasable,
+)
 from app.services.cart.totals import line_total_ngwee
+from app.services.coupons.rules import MIN_PAYABLE_NGWEE, CouponError, quote_coupon
+from app.services.coupons.store import (
+    COUPONS_FLAG,
+    GIFT_ORDERS_FLAG,
+    build_discount_lines,
+    coupon_app_error,
+    load_coupon_by_id,
+    require_flag,
+)
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
+from app.services.offers.apply import expand_unified_for_order
 from app.services.orders.create import (
     CartLineInput,
+    CouponOrderPlan,
     CreateOrdersResult,
     VendorFulfilmentInput,
     create_orders_atomic,
@@ -38,6 +56,7 @@ from app.services.orders.fulfilment import (
     parse_stored_choices,
 )
 from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
+from app.services.orders.ticket_lane import build_ticket_order
 from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, BackgroundTasks, Depends
@@ -67,7 +86,8 @@ class CreateOrderRequest(BaseModel):
     rail: str | None = None
     payer_number: str | None = Field(default=None, max_length=20)
     address_id: str | None = None
-    groups: list[VendorGroupRequest] = Field(min_length=1)
+    #: One entry per product vendor. Empty only for a tickets-only checkout.
+    groups: list[VendorGroupRequest] = Field(default_factory=list, max_length=50)
 
 
 class CreatedOrderItemOut(BaseModel):
@@ -291,6 +311,73 @@ def _authoritative_groups(
     )
 
 
+def _coupon_plan(
+    service: ServiceRoleClient,
+    *,
+    group: dict[str, Any],
+    customer_id: str,
+    cart_lines: list[CartLineInput],
+    delivery_fee_ngwee: int,
+) -> CouponOrderPlan | None:
+    """Re-derive the coupon from authoritative lines; it must match what was shown."""
+    coupon_id = group.get("coupon_id")
+    discount = group.get("discount_ngwee")
+    if not isinstance(coupon_id, str) or not isinstance(discount, int) or discount <= 0:
+        return None
+    require_flag(service, COUPONS_FLAG)
+    subtotal = sum(line_total_ngwee(line.qty, line.unit_price_ngwee) for line in cart_lines)
+    try:
+        rule = load_coupon_by_id(service, coupon_id)
+        quote = quote_coupon(
+            rule,
+            build_discount_lines(
+                service,
+                (
+                    (
+                        line.listing_id,
+                        line.vendor_id,
+                        line_total_ngwee(line.qty, line.unit_price_ngwee),
+                    )
+                    for line in cart_lines
+                ),
+                needs_categories=rule.scope == "category",
+            ),
+            now=datetime.now(UTC),
+            user_id=customer_id,
+            max_discount_ngwee=subtotal + delivery_fee_ngwee - MIN_PAYABLE_NGWEE,
+        )
+    except CouponError as exc:
+        raise coupon_app_error(exc) from exc
+    if quote.discount_ngwee != discount:
+        raise AppError(
+            code="coupon.changed",
+            message="The coupon amount changed; apply it again",
+            http_status=409,
+            details={"message_key": "checkout.coupon.errors.changed"},
+        )
+    return CouponOrderPlan(
+        coupon_id=quote.coupon_id,
+        funder=quote.funder,
+        discount_ngwee=quote.discount_ngwee,
+        line_discounts=dict(quote.line_discounts),
+    )
+
+
+def _checkout_is_gift(service: ServiceRoleClient, session_id: str) -> bool:
+    response = (
+        service.client.table("gift_details")
+        .select("checkout_group_id")
+        .eq("checkout_group_id", session_id)
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    if not (isinstance(data, list) and data):
+        return False
+    require_flag(service, GIFT_ORDERS_FLAG)
+    return True
+
+
 @router.post("", response_model=CreateOrderResponse)
 async def create_orders(
     body: CreateOrderRequest,
@@ -314,7 +401,10 @@ async def create_orders(
 
     group_response = (
         service.client.table("checkout_groups")
-        .select("subtotal_ngwee, delivery_fee_ngwee, total_ngwee, fulfilment_choices")
+        .select(
+            "subtotal_ngwee, delivery_fee_ngwee, total_ngwee, fulfilment_choices, "
+            "coupon_id, discount_ngwee"
+        )
         .eq("id", body.session_id)
         .eq("customer_id", current_user.id)
         .maybe_single()
@@ -351,11 +441,13 @@ async def create_orders(
         )
 
     user_client = get_user_client(current_user.token, settings)
+    ticket_lines: list[TicketCartLine] = []
     try:
         cart = _fetch_active_cart_by_user(user_client, current_user.id)
         cart_id = str(cart["id"])
         items = _fetch_cart_items(user_client, cart_id)
-        if not items:
+        ticket_lines = load_cart_ticket_lines(cart_id, client=service.client)
+        if not items and not ticket_lines:
             raise AppError(
                 code="checkout.cart_empty",
                 message="Your cart is empty",
@@ -379,11 +471,11 @@ async def create_orders(
     listings_by_id = fetch_listings_for_items(
         [dict(item) for item in items if isinstance(item, dict)]
     )
-    access = resolve_business_eligibility(current_user.id, service)
+    # Wholesale/tier pricing is vendor-app only: always re-derive at retail.
     items = _rederive_line_prices(
         [dict(item) for item in items if isinstance(item, dict)],
         listings_by_id,
-        business_eligible=access.eligible,
+        business_eligible=False,
         service=service,
         customer_id=current_user.id,
     )
@@ -415,6 +507,30 @@ async def create_orders(
             )
         )
 
+    # W8 offers (flag `bundles`): re-priced from live offers with the same engine
+    # the fulfilment step used for the session total; split / gift lines carry
+    # the frozen offer pricing into order_items. A mismatch with the session
+    # (offer ended in between) surfaces as orders.totals_mismatch below.
+    # Unified checkout: event tickets are priced in the same engine pass (an
+    # offer may span a product and a ticket) and must be exactly covered by the
+    # capacity the session claimed. Tickets are prepaid only.
+    ticket_order = None
+    if ticket_lines:
+        require_purchasable(ticket_lines)
+        if body.method == "cod":
+            raise AppError(
+                code="checkout.cod_not_allowed",
+                message="Event tickets must be paid online",
+                http_status=422,
+                details={"message_key": "checkout.payment.codNotForTickets", "field": "method"},
+            )
+        holds = match_holds(ticket_lines, load_session_holds(body.session_id))
+    cart_lines, priced_tickets, _priced = expand_unified_for_order(
+        cart_lines, ticket_lines, service.client, customer_id=current_user.id
+    )
+    if ticket_lines:
+        ticket_order = build_ticket_order(priced_tickets, holds)
+
     vendor_groups = _authoritative_groups(
         service,
         customer_id=current_user.id,
@@ -428,15 +544,22 @@ async def create_orders(
     # Totals from cart lines (authoritative) + per-vendor delivery fee.
     per_vendor_subtotal: dict[str, int] = defaultdict(int)
     for line in cart_lines:
-        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(
-            line.qty, line.unit_price_ngwee
-        )
+        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(line.qty, line.unit_price_ngwee)
     delivery_by_vendor = {group.vendor_id: group.delivery_fee_ngwee for group in vendor_groups}
     vendor_order_totals = {
         vendor_id: subtotal + delivery_by_vendor.get(vendor_id, 0)
         for vendor_id, subtotal in per_vendor_subtotal.items()
     }
     enforce_first_order_caps_for_vendors(service, vendor_order_totals)
+
+    coupon_plan = _coupon_plan(
+        service,
+        group=group,
+        customer_id=current_user.id,
+        cart_lines=cart_lines,
+        delivery_fee_ngwee=sum(delivery_by_vendor.values()),
+    )
+    is_gift = _checkout_is_gift(service, body.session_id)
 
     result = create_orders_atomic(
         client=service.client,
@@ -447,6 +570,9 @@ async def create_orders(
         cart_lines=cart_lines,
         vendor_groups=vendor_groups,
         address_id=body.address_id,
+        coupon=coupon_plan,
+        is_gift=is_gift,
+        ticket_order=ticket_order,
     )
 
     # Fire-and-forget funnel event (order_placed); server operational, consent-independent.

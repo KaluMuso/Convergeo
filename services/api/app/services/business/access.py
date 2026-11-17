@@ -1,10 +1,9 @@
 """Shared B2B business-buyer access resolver.
 
-Single source of truth for "is this request allowed to see/buy wholesale?" so the
-same rule is enforced identically at every wholesale entry point — discovery
-(``/catalog/listings?wholesale=true``), cart mutation, and checkout. Guests and
-consumers are never eligible; only a user with a ``verified`` ``business_buyers``
-row is (see migration 0038 / ``public.is_verified_business``).
+Resolves a user's ``business_buyers`` status for the business-application flow
+(``/business/status``) and search personalisation. Wholesale and tier prices are
+vendor-app only (founder decision): this eligibility never unlocks wholesale
+listings or tier pricing on any customer path (catalog, PDP, cart, checkout).
 """
 
 from __future__ import annotations
@@ -96,18 +95,3 @@ async def get_business_access(
     if user is None:
         return ANON_ACCESS
     return resolve_business_eligibility(user.id, service)
-
-
-def require_wholesale_access(access: BusinessAccess) -> None:
-    """Raise 403 unless the caller is a verified business buyer."""
-    if access.eligible:
-        return
-    raise AppError(
-        code="business.wholesale_forbidden",
-        message="Wholesale is available to verified businesses only",
-        http_status=403,
-        details={
-            "status": access.status,
-            "message_key": "supplies.gate.forbidden",
-        },
-    )

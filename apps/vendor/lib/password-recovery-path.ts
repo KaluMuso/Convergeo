@@ -5,7 +5,8 @@ export function isVendorPasswordRecoveryPath(pathname: string): boolean {
   const path = pathname.replace(/\/$/, "");
   return LOCALES.some(
     (locale) =>
-      path === `/${locale}/reset-password` || path === `/${locale}/reset-password/confirm`,
+      path === `/${locale}/reset-password` ||
+      path === `/${locale}/reset-password/confirm`,
   );
 }
 

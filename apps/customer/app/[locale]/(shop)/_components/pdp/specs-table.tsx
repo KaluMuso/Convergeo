@@ -14,11 +14,18 @@ function formatSpecKey(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function SpecsTable({ rows, heading, emptyLabel, hideHeading = false }: SpecsTableProps) {
+export function SpecsTable({
+  rows,
+  heading,
+  emptyLabel,
+  hideHeading = false,
+}: SpecsTableProps) {
   return (
     <section data-testid="pdp-specs-table" className="flex flex-col gap-3">
       {hideHeading ? null : (
-        <h2 className="font-display text-lg font-semibold text-text">{heading}</h2>
+        <h2 className="font-display text-lg font-semibold text-text">
+          {heading}
+        </h2>
       )}
 
       {rows.length === 0 ? (
@@ -47,7 +54,10 @@ export function SpecsTable({ rows, heading, emptyLabel, hideHeading = false }: S
 export function specRowsFromJson(spec: Record<string, unknown>): SpecRow[] {
   return Object.entries(spec).flatMap(([key, value]) => {
     if (!key.trim() || value === null || value === undefined) return [];
-    const text = typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+    const text =
+      typeof value === "object"
+        ? JSON.stringify(value, null, 2)
+        : String(value);
     return text.trim() ? [{ key, value: text }] : [];
   });
 }

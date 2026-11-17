@@ -36,7 +36,7 @@ export function PriceBlock({ ngwee, oldNgwee, savingsLabel, className }: PriceBl
   const formattedOldPrice = hasOldPrice ? formatK(oldNgwee) : undefined;
 
   return (
-    <div className={cx("flex flex-wrap items-baseline gap-2", className)} data-testid="price-block">
+    <div className={cx("flex flex-wrap items-baseline gap-x-1.5 gap-y-0", className)} data-testid="price-block">
       <span className="v-price" data-price>
         {formattedPrice}
       </span>

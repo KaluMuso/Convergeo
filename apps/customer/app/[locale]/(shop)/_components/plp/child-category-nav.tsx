@@ -27,7 +27,11 @@ export function ChildCategoryNav({
   }
 
   return (
-    <nav aria-label={heading} data-testid="plp-child-categories" className="flex flex-col gap-2">
+    <nav
+      aria-label={heading}
+      data-testid="plp-child-categories"
+      className="flex flex-col gap-2"
+    >
       <p className="text-sm font-medium text-text">{heading}</p>
       <ul className="flex list-none flex-wrap gap-2 p-0">
         {categories.map((category) => {
